@@ -321,9 +321,10 @@ pub struct ClimateView {
     /// Weft's 22 registrations) each read a different summary off the SAME
     /// per-vertex sweep, and without this cache the registry would pay for
     /// a fresh 40,962-vertex sweep once PER METRIC rather than once per
-    /// world (measured: ~524 ms release-mode for one sweep of all four
-    /// kinds — see `weft_grid_pool`'s own doc for the full cost accounting
-    /// this cache exists to avoid multiplying).
+    /// world (Task 11's post-fix lefford profile attributes 3.51% of a
+    /// 3,196.69-CPU-second, 150-world all-metrics run to the grid pool,
+    /// about 0.75 CPU-s/world — see `weft_grid_pool`'s own doc for the full
+    /// cost accounting this cache exists to avoid multiplying).
     weft_grid: std::cell::OnceCell<WeftGridPool>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
     /// The Weft's (Task 9) encounter-rate walk pool — the SAME shape,
     /// shared by the remaining 13 of the 22 registrations: H1's five
@@ -8932,10 +8933,12 @@ const WEFT_LAND_ELIGIBILITY_THRESHOLD: f64 = 0.5;
 /// [`hornvale_worldgen::FieldPack`]. Cached once via [`ClimateView::
 /// weft_ctx`] rather than built twice — measured on this tree, release,
 /// `NearestVertexIndex::new` ~1.9-2.0 ms and `field_pack_from` ~0.4-0.8 ms,
-/// so the duplication this closes is ~2.3-2.8 ms per world, not the whole
-/// grid sweep's own 524 ms. Small in isolation; still duplicated work with
-/// no reason to duplicate it, and free to remove once both pool builders
-/// read from the same view.
+/// so the duplication this closes is ~2.3-2.8 ms per world, not the grid
+/// sweep's own cost. Small in isolation; still duplicated work with no
+/// reason to duplicate it, and free to remove once both pool builders read
+/// from the same view. See [`weft_grid_pool`] for the current measured sweep
+/// cost; the earlier 524-ms Mac wall figure is not comparable to its lefford
+/// CPU accounting.
 struct WeftContext {
     index: hornvale_kernel::NearestVertexIndex,
     pack: hornvale_worldgen::FieldPack,
@@ -8968,19 +8971,26 @@ struct WeftGridPool {
 /// `hornvale_terrain::GLOBE_LEVEL = 6`), not every walk-depth facet on the
 /// grid (there are ~4e8 of those; this is the same 1-in-9,830 vertex-
 /// centred subsample spec §7's own gate-component diagnostic uses) —
-/// reading `hornvale_worldgen::{prevalence, occurs}` and
-/// [`hornvale_worldgen::WeftKind::macro_state`] for all four kinds.
+/// reading `hornvale_worldgen::{prevalence_with_weights, occurs}` and
+/// [`hornvale_worldgen::WeftKind::macro_state`] for all four kinds. The
+/// prepared-prevalence seam is what lets all four kinds share the one
+/// corner-weight value this loop already owns.
 ///
-/// **Cost, measured on this tree (seed 42, release):** this sweep alone —
-/// all 40,962 vertices, all four kinds — took 524 ms, landing exactly on
-/// the known cross-check figures (11,218 land-eligible vertices, 3,191
-/// summed per-kind occurrences: 403 + 843 + 1,517 + 428). This is on top
-/// of the ordinary `ClimateView` build (`seed_42_world` + `terrain_of` +
-/// `climate_from`, ~280 ms, paid by every Climate-rung metric regardless
-/// of the Weft) — `NearestVertexIndex::new` and `field_pack_from`
-/// themselves are Weft-specific additions, not part of that baseline (see
-/// [`WeftContext`]'s own doc for their measured cost, now paid once per
-/// view rather than once per pool). [`ClimateView::weft_grid`]'s caching
+/// **Cost, remeasured after Task 11 on lefford (150 worlds, all metrics,
+/// profiling build):** the two same-named `weft_grid_pool` symbols sum to
+/// 3.51% of 3,196.69 user CPU-seconds, about 112.2 CPU-seconds for the panel
+/// or 0.75 CPU-s/world. The matched release A/B over the isolated 22 Weft
+/// metrics reduced their whole 150-world bill from 627.01 to 399.90 user
+/// CPU-seconds (-36.2%); all four before/after rows files were byte-identical.
+/// The old 524-ms figure was a single-world Mac wall measurement, not a
+/// census CPU cost, and is deliberately not carried forward. The sweep
+/// still lands exactly on the known cross-check figures (11,218
+/// land-eligible vertices, 3,191 summed per-kind occurrences: 403 + 843 +
+/// 1,517 + 428). This is on top of the ordinary `ClimateView` build —
+/// `NearestVertexIndex::new` and `field_pack_from` themselves are
+/// Weft-specific additions, not part of that baseline (see [`WeftContext`]'s
+/// own doc for their measured cost, now paid once per view rather than once
+/// per pool). [`ClimateView::weft_grid`]'s caching
 /// is why this file registers 9 metrics against this sweep (H1's five
 /// existence-density readings and H3's four `weft-legibility-mi-*`
 /// readings, the latter needing this pool's `macro_state` field the
@@ -9017,8 +9027,7 @@ fn weft_grid_pool(view: &ClimateView) -> WeftGridPool {
         let mut per_kind = [(0.0, 0.0, false); 4];
         for (slot, kind) in hornvale_worldgen::WeftKind::ALL.into_iter().enumerate() {
             let macro_state = kind.macro_state(weights, pack);
-            let p = hornvale_worldgen::prevalence(kind, &facet, geo, index, pack, seed)
-                .expect("corner_weights just returned Some above");
+            let p = hornvale_worldgen::prevalence_with_weights(kind, &facet, weights, pack, seed);
             let occ = hornvale_worldgen::occurs(kind, &facet, seed, p);
             per_kind[slot] = (macro_state, p, occ);
         }
@@ -11352,8 +11361,9 @@ mod tests {
         // cached whole-grid sweep or walk pool per world
         // (`ClimateView::weft_grid`/`weft_walks`) rather than paying for
         // their own sweep each — see `weft_grid_pool`'s own doc for the
-        // measured per-world cost (524 ms release-mode for the grid sweep
-        // alone) this caching exists to avoid multiplying by 22.
+        // post-Task-11 lefford profile (3.51% of the 150-world all-metrics
+        // run, about 0.75 CPU-s/world) this caching exists to avoid
+        // multiplying by 22.
         assert_eq!(registry().len(), 249);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-

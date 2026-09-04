@@ -178,7 +178,7 @@ pub use vestige::{
 pub use volcano::{EruptionStyle, Volcano, volcano_at, volcano_name};
 pub use weft::{
     WeftFeature, WeftKey, WeftKind, WeftWindow, all_features_at_cached, features_at_cached, occurs,
-    prevalence,
+    prevalence, prevalence_with_weights,
 };
 
 /// Errors from building a world.

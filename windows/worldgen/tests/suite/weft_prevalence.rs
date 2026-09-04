@@ -232,6 +232,68 @@ const AUTOCORR_BOUNDS: [(WeftKind, f64); 4] = [
     (WeftKind::Erratic, 0.5),
 ];
 
+/// A caller that already paid for a facet's corner weights must be able to
+/// reuse that exact prepared value across every kind without changing any
+/// prevalence bit. This is the behavioral oracle for the prepared-weight
+/// seam the grid pool uses; the pool owns one `weights` value per facet,
+/// while the public wrapper remains available to callers that own only
+/// geometry.
+///
+/// The sample admits only land-eligible facets and requires at least one
+/// nonzero answer, so an implementation returning the eligibility sentinel
+/// for every kind cannot pass vacuously.
+#[test]
+fn prepared_weights_preserve_every_kinds_prevalence_bits() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let geo = terrain.geosphere();
+    let index = NearestVertexIndex::new(geo);
+    let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
+
+    let mut eligible_facets = 0usize;
+    let mut nonzero_answers = 0usize;
+    for v in 0..geo.vertex_count() {
+        let facet = Facet::containing(geo.position(Vertex(v as u32)), walk_depth);
+        let Some(weights) = facet.corner_weights(geo, &index) else {
+            continue;
+        };
+        if blend_corner_weights(weights, &pack.land) < 0.5 {
+            continue;
+        }
+
+        eligible_facets += 1;
+        for kind in WeftKind::ALL {
+            let wrapped =
+                hornvale_worldgen::prevalence(kind, &facet, geo, &index, &pack, world.seed)
+                    .expect("corner_weights just returned Some above");
+            let prepared = hornvale_worldgen::prevalence_with_weights(
+                kind, &facet, weights, &pack, world.seed,
+            );
+            assert_eq!(
+                prepared.to_bits(),
+                wrapped.to_bits(),
+                "{kind:?}: prepared weights changed prevalence at vertex {v}"
+            );
+            nonzero_answers += usize::from(wrapped != 0.0);
+        }
+
+        if eligible_facets == 32 {
+            break;
+        }
+    }
+
+    assert!(
+        eligible_facets > 0,
+        "the sample found no land-eligible facet, so it exercised nothing"
+    );
+    assert!(
+        nonzero_answers > 0,
+        "every prepared prevalence was the eligibility sentinel, so the comparison was vacuous"
+    );
+}
+
 /// Adjacent facets mostly agree, because prevalence is position-continuous —
 /// checked across every walk [`land_eligible_walks`] returns, for every kind
 /// in [`KIND_BOUNDS`]. The secondary check, since fix round 1 — see

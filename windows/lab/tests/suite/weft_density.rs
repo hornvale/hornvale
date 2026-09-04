@@ -123,9 +123,11 @@
 //! `#[ignore]`d rather than left in the commit or stage gate: this test
 //! builds one `Full`-depth-adjacent (`Climate` rung) seed-42 world and reads
 //! all 22 Weft metrics off it, which (via `ClimateView::weft_grid`'s and
-//! `weft_walks`'s caching) pays for one ~524 ms release-mode grid sweep and
-//! one cheaper walk sweep — cheap in isolation, but this file's job is to
-//! RECORD a preregistered reading once, not to re-run it on every commit.
+//! `weft_walks`'s caching) pays for one whole-grid sweep and one cheaper walk
+//! sweep. Task 11's post-fix lefford profile attributes about 0.75
+//! CPU-s/world to the grid pool in a 150-world all-metrics run — cheap in
+//! isolation, but this file's job is to RECORD a preregistered reading once,
+//! not to re-run it on every commit.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
@@ -154,9 +156,8 @@ fn number(built: &BuiltView, name: &str) -> f64 {
 
 /// claim: readout(preregistered, 0016) — H1/H2/H3's seed-42 measurement,
 /// recorded once (builds one Climate-rung world and reads all 22 registered
-/// Weft metrics off it, ~524 ms release-mode for the shared grid sweep
-/// alone; see this file's own module doc for the cost accounting and the
-/// full readout table)
+/// Weft metrics off it; see this file's own module doc for the current cost
+/// accounting and the full readout table)
 #[test]
 #[ignore = "claim: readout(preregistered, 0016) — builds one seed-42 Climate-rung world and reads all 22 weft-* metrics off it (~524ms release-mode grid sweep, measured); see this file's module doc for the full table"]
 fn the_preregistered_readout_is_measured_and_recorded() {

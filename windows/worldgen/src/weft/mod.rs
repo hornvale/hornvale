@@ -64,7 +64,7 @@ pub use kinds::WeftKind;
 pub use window::{WeftFeature, WeftKey, WeftWindow, all_features_at_cached, features_at_cached};
 
 use hornvale_kernel::seed::StreamLabel;
-use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex};
 use hornvale_terrain::SphereFbm;
 
 use crate::FieldPack;
@@ -122,8 +122,27 @@ pub fn prevalence(
     seed: Seed,
 ) -> Option<f64> {
     let weights = facet.corner_weights(geo, index)?;
+    Some(prevalence_with_weights(kind, facet, weights, pack, seed))
+}
+
+/// `prevalence ∈ [0,1]` at `facet`, using corner `weights` the caller has
+/// already prepared. This is the same computation as [`prevalence`] after
+/// its geometry lookup; callers evaluating several kinds at one facet can
+/// reuse one [`Facet::corner_weights`] result without changing the
+/// eligibility, macro-state, noise, or abundance evaluation order.
+///
+/// Returns `0.0` when `kind` is not eligible at this ground (Task 7, R1),
+/// before any macro-state read or noise draw.
+/// type-audit: bare-ok(count: weights), bare-ok(ratio: return)
+pub fn prevalence_with_weights(
+    kind: WeftKind,
+    facet: &Facet,
+    weights: [(Vertex, u64); 4],
+    pack: &FieldPack,
+    seed: Seed,
+) -> f64 {
     if !kind.eligible(weights, pack) {
-        return Some(0.0);
+        return 0.0;
     }
     let macro_state = kind.macro_state(weights, pack);
 
@@ -135,7 +154,7 @@ pub fn prevalence(
 
     let contextuality = kind.contextuality();
     let mixed = contextuality * macro_state + (1.0 - contextuality) * noise;
-    Some((kind.abundance() * mixed).clamp(0.0, 1.0))
+    (kind.abundance() * mixed).clamp(0.0, 1.0)
 }
 
 /// Whether `facet` actually carries a `kind` feature, given a `prevalence`
