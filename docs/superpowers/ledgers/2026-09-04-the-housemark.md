@@ -1,7 +1,7 @@
 # The Housemark — decision ledger
 
 Campaign: **The Housemark** — The Staple's R1, “a dwelling belongs to its
-people.” Branch: `campaign/the-housemark`.
+people.” Branch: `campaign/the-housemark`. Decision block: **0746–0755**.
 
 ## Entries
 
@@ -35,6 +35,34 @@ housemark, not an eternal species essence, and it does not preserve a previous
 people's style in ruins. · Capture: this entry; the design's architecture,
 non-goals, and preregistered distinguishability claim; the browser companion at
 `.superpowers/visualizations/housemark-design.html`.
+
+#2 [Q] — **Which society axes should architecture read, and how should they be
+represented?** · **Decision: read `sociality` as an authority mark and
+`in_group_radius` as a three-band threshold posture; represent them as two
+independent fields, not one six-case cultural type. Do not read `status_basis`
+in this campaign.** · Why: authority has a direct spatial expression in
+seating — `Hierarchic` admits the existing command seat, while `Communal`
+admits one new common bench. The documented radius already means how widely
+“us” is drawn, so it directly supports an inward threshold (screen), an
+unmarked middle, and an outward threshold (guest water). Bands `≤ 0.35`,
+`0.5..=0.6`, and `≥ 0.65` contain all fifteen current peoples and make all six
+cross-product cells non-empty; there are no current values in the gaps. The
+gaps remain deliberately unclassified rather than silently rounded: adding a
+people there must force a design choice. `status_basis` produced no equally
+direct chamber relation — mapping Knowledge to a loom or Generosity to a jar
+would turn a social value into an occupational stereotype — and a consumer is
+not required to consume every field it can see. · Alternatives discarded:
+(a) one enum with six variants — freezes today's cross-product and couples two
+independent axes; (b) thresholding at the neutral midpoint only — gives two
+postures and erases the roster's real middle cluster; (c) using exact floating
+values as style identities — makes all fifteen rows distinct on paper while
+providing no architectural meaning; (d) consume `status_basis` for symmetry —
+symmetry is not evidence. · ideonomy passes / overturns: **1 pass, 1 material
+improvement** (substitution; periodic grid; modularity and
+discovery-vs-invention). It replaced the proposed six-case enum with two
+recombinable fields and surfaced the band thresholds as newly authored policy
+whose gaps must fail rather than round. · Capture: this entry; the design's
+type/API section and six-cell acceptance probe.
 
 ## Follow-ups
 
