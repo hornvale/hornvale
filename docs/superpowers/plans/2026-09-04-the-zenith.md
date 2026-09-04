@@ -434,6 +434,45 @@ figure (~16 s at `BuildDepth::Terrain`). 24 generated builds replace 24
 generated + 24 constant, so the expectation is *down or flat* — but report
 the number, do not assert it.
 
+- [ ] **Step 6b: Write the `sky_of` error test now, and record it RED**
+
+Task 4 makes `sky_of` error on a world with no `sky-provider` fact (decision
+0737). The test is written **here**, while `sky_of` still returns `Ok`, so its
+red is BEHAVIOURAL — an `expect_err` panic — rather than a compile error. By
+Task 4 there is no pre-change behaviour left to fail against, and a red from a
+compile error proves nothing about whether an assertion would have caught the
+behaviour (ruling R3).
+
+Add to `windows/worldgen/src/lib.rs`'s test module, alongside the retiring
+`absent_sky_provider_fact_falls_back_to_constant`:
+
+```rust
+#[test]
+fn a_world_with_no_sky_provider_fact_is_an_error_not_a_fallback() {
+    // A bare world, never built — the only way to reach this arm, since
+    // every build commits the fact unconditionally (decision 0737).
+    let mut world = World::new(Seed(1));
+    register_all(&mut world.registry).unwrap();
+    let err = sky_of(&world).expect_err("a never-built world has no sky");
+    assert!(
+        format!("{err:?}").contains("no sky-provider fact"),
+        "the error must name the missing predicate: {err:?}"
+    );
+}
+```
+
+Run it and **paste the failure into the task report**:
+```bash
+cargo test -p hornvale-worldgen a_world_with_no_sky_provider_fact -- --nocapture
+```
+Expected: **FAIL** — `sky_of` returns `Ok`, so `expect_err` panics. That
+panic is the evidence the test discriminates.
+
+Then mark it `#[ignore = "green from Task 4: sky_of errors on an absent \
+sky-provider fact (decision 0737); red here is the recorded pre-change \
+behaviour"]` so the branch stays green between tasks. Task 4 removes the
+attribute.
+
 - [ ] **Step 7: Confirm the population is empty and commit**
 
 Run:
@@ -469,320 +508,14 @@ Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
 
 ---
 
-### Task 3: Delete the type, the surface, and the parameter
-
-Mechanical, and large. The compiler does the enumeration.
-
-**Files:**
-- Modify: `domains/astronomy/src/lib.rs:504-553` (delete `ConstantSun` + impls)
-- Modify: `windows/worldgen/src/lib.rs:228-236, 310-316, 8135-8138, 8154-8159` and every `build_world*` signature
-- Modify: `cli/src/main.rs:14, 237-245`
-- Modify: `clients/world-wasm/src/lib.rs:92-99`
-- Modify: ~335 `build_world*` call sites workspace-wide
-
-**Interfaces:**
-- Consumes: Task 2's empty `SkyChoice::Constant` population.
-- Produces: `pub fn build_world(seed: Seed, sky: &SkyPins, terrain:
-  &TerrainPins, settlements: &SettlementPins) -> Result<World, BuildError>`
-  — the third positional parameter is gone. `build_world_to` loses it in the
-  same position. Every later task uses the four-argument form.
-
-- [ ] **Step 1: Verify the compiler will enumerate — the precondition**
-
-Run:
-```bash
-grep -n "_ =>" windows/worldgen/src/lib.rs | head -40
-grep -rn "match .*sky\b" -A8 --include=*.rs windows/worldgen/src/lib.rs | grep "_ =>"
-```
-Expected: **no wildcard arm on any `Sky` or `SkyChoice` match.** Checked on
-`main`: there are none. A `_ =>` arm would silently absorb the deletion
-instead of erroring, and the enumeration would be incomplete without saying
-so. If one has appeared, replace it with explicit arms *before* proceeding.
-
-- [ ] **Step 2: Delete `ConstantSun`**
-
-In `domains/astronomy/src/lib.rs`, delete `pub struct ConstantSun` (504-505),
-`impl ConstantSun` (522-541), `impl PhenomenaSource for ConstantSun`
-(543-553), and the two unit tests Task 2 marked kind A
-(`the_sky_never_changes`, `phenomena_are_constant_and_maximally_salient`).
-Leave `SkyReport` — it is the shared report type every provider returns.
-
-- [ ] **Step 3: Collapse `Sky` and delete `SkyChoice`**
-
-`windows/worldgen/src/lib.rs` — `Sky` becomes a single-provider wrapper:
-
-```rust
-/// The live astronomy provider a world uses, reconstructed from its ledger.
-///
-/// One provider, since The Zenith (decision 0736): every Hornvale world has
-/// a generated sky. The enum this replaced carried a `Constant` variant for
-/// the retired tier-0 stub.
-pub struct Sky(Box<GeneratedSky>);
-```
-
-with `sky_at_visibility`, `calendar`, `system`, `notes` and the
-`PhenomenaSource` impl delegating straight through. Delete `pub enum
-SkyChoice` (229-236) and the `choice_text` match (8135-8138); the
-`sky-provider` fact is now always `"generated"`:
-
-```rust
-world.ledger.commit(
-    scenario_fact(
-        world_entity,
-        facts::SKY_PROVIDER,
-        Value::Text("generated".to_string()),
-    ),
-    &world.registry,
-)?;
-```
-
-**Keep committing the fact.** It is a save-format contract and a world's
-self-description; a reader must still be able to ask what sky a world has.
-Removing it would change every world's ledger and is out of scope.
-
-Make the astronomy stage unconditional — this is the `if let
-SkyChoice::Generated = sky` at 8154:
-
-```rust
-stage("astronomy", || -> Result<(), BuildError> {
-    let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
-    facts::genesis(&mut world, world_entity, &outcome)?;
-    Ok(())
-})?;
-```
-
-- [ ] **Step 4: Drop the parameter and let the compiler find the call sites**
-
-Remove the `sky: SkyChoice` parameter from `build_world`, `build_world_to`
-and any `build_world_observed` variant. Then:
-
-```bash
-cargo check --workspace --all-targets 2>&1 | tee /tmp/zenith-errors.txt
-grep -c "^error" /tmp/zenith-errors.txt
-```
-
-Work the list to zero. **Do not use `sed`, `rg -r`, or any scripted rewrite.**
-Measured: 372 of the 382 `SkyChoice::Generated` sites are the plain
-trailing-comma argument form, but **10 are not** — three `assert_eq!`
-comparisons (`cli/src/main.rs:2509, 2560, 2651`), an array literal
-(`pin_enumeration.rs:66`), a match arm (`lib.rs:8137`), an `if let`
-(`lib.rs:8155`), a doc-comment example (`fixture.rs:62`), and three prose
-comments. A regex sweep corrupts each of those and leaves a plausible tree.
-
-Update `windows/worldgen/src/fixture.rs:60-64`'s doc comment, which spells
-out the old five-argument call.
-
-- [ ] **Step 5: Delete the CLI and wasm surface**
-
-`cli/src/main.rs` — delete the `[--sky constant|generated]` usage line (14)
-and the `--sky` arm of `parse_sky_args` (237-245); the function returns
-`Result<SkyPins, String>` now. Delete `sky_flag_selects_constant` (2552) and
-fix the three `assert_eq!(sky, SkyChoice::Generated)` sites (2509, 2560,
-2651), which no longer have a second element to compare.
-
-`clients/world-wasm/src/lib.rs:92-99` — delete the `if key == "sky"` branch
-so `sky` falls through to the unknown-key error. **Note in the task report
-whether the wasm catalog needs a version bump**: decision 0356 retired the
-external consumers, so no cross-repo contract binds it, but the released
-catalog is cut by hand and the removal is a real ABI narrowing.
-
-- [ ] **Step 6: Verify and commit**
-
-```bash
-cargo check --workspace --all-targets 2>&1 | grep -c "^error"   # expect 0
-grep -rn "ConstantSun\|SkyChoice\|Sky::Constant" --include=*.rs . | grep -v '^./target'
-```
-Expected: zero errors; the second command returns nothing except prose
-comments you have deliberately left.
-
-```bash
-cargo fmt && make gate-commit
-git add -A
-git commit -m "refactor(the-zenith)!: delete ConstantSun, SkyChoice, and the sky parameter
-
-Sky becomes a one-provider wrapper; build_world and build_world_to lose
-their SkyChoice argument at ~335 call sites. The --sky flag and the wasm
-'sky' pin key go with them.
-
-Compiler-driven, never a scripted rewrite: 372 of 382 SkyChoice::Generated
-sites are the plain argument form and 10 are not (match arms, assert_eq!
-comparisons, an array literal, a doc example), so a regex sweep would have
-left a plausible wrong tree. Verified beforehand that no '_ =>' wildcard
-arm exists on any Sky match, so the compiler enumerates the work completely.
-
-The sky-provider fact is still committed, always 'generated'. It is a
-save-format contract and a world's self-description; dropping it would
-move every world's ledger.
-
-Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
-```
-
----
-
-### Task 4: Collapse the Option-ness, and delete the guards it justified
-
-**Files:**
-- Modify: `windows/worldgen/src/lib.rs:334-350, 564-598, 2605-2655, 3646, 3902, 5192, 8691, 10007, 10273`
-- Modify: `windows/lab/src/metrics.rs:78-90, 180-190`
-- Modify: `windows/lab/src/health.rs:403-407`
-- Modify: `windows/book/src/lib.rs:783-806`
-- Modify: `windows/vessel/tests/suite/the_detent.rs:153-157`, `windows/vessel/examples/agent_scaling.rs:489`, `windows/vessel/examples/session_length_scaling.rs:757`, `windows/vessel/src/liveness_tests/emitter_scan.rs:489`
-
-**Interfaces:**
-- Consumes: Task 3's one-provider `Sky`.
-- Produces: `pub fn calendar(&self) -> &hornvale_astronomy::Calendar` and
-  `pub fn system(&self) -> &hornvale_astronomy::StarSystem` — both
-  non-`Option`. `sky_of` returns `Err(BuildError::Pins(_))` for a world with
-  no `sky-provider` fact.
-
-- [ ] **Step 1: Re-read Trap 1 before touching a single guard**
-
-`Sky::calendar()` / `Sky::system()` returning `Option` is **the tier** and
-goes. `Calendar::day_length()` returning `Option` is **tidal locking** and
-stays. Verified stacked instances: `lib.rs:5192`, `the_detent.rs:153`. Name
-which kind each guard is before deleting it.
-
-- [ ] **Step 2: Make the accessors non-`Option`**
-
-```rust
-/// The derived calendar. Every world has one, since The Zenith
-/// (decision 0736) — a `Calendar` whose `day_length()` is `None` is a
-/// tidally locked world, which is a different thing and still expressible.
-pub fn calendar(&self) -> &hornvale_astronomy::Calendar {
-    self.0.calendar()
-}
-
-/// The generated star system. Every world has one; the star-chart command
-/// reads this.
-pub fn system(&self) -> &hornvale_astronomy::StarSystem {
-    self.0.system()
-}
-```
-
-- [ ] **Step 3: Make `sky_of` error on an absent fact**
-
-Decision 0737. A world is a seed plus a ledger; no compatibility shim.
-
-```rust
-/// Reconstruct the live astronomy provider from this world's ledger: fold
-/// every `scenario-pin` fact back through `parse_pin` and regenerate
-/// deterministically from the world's own seed.
-///
-/// A world with no `sky-provider` fact is an error, not a fallback
-/// (decision 0737). Every build commits the fact unconditionally, so its
-/// absence means the world was never built — and a world is a seed plus a
-/// ledger, re-derivable with `hornvale new --seed <seed>`, so there is
-/// nothing a shim could recover that regeneration cannot.
-pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
-    let Some(provider_fact) = world.ledger.find(facts::SKY_PROVIDER).next() else {
-        return Err(BuildError::Pins(
-            "world has no sky-provider fact: it was never built; \
-             regenerate it from its seed and pins".to_string(),
-        ));
-    };
-    // ... unchanged: parse pins, regenerate, wrap in Sky
-}
-```
-
-- [ ] **Step 4: Write the test for the new error, and see it RED first**
-
-Add to `windows/worldgen/src/lib.rs`'s test module, replacing the retired
-`absent_sky_provider_fact_falls_back_to_constant`:
-
-```rust
-#[test]
-fn a_world_with_no_sky_provider_fact_is_an_error_not_a_fallback() {
-    // A bare world, never built — the only way to reach this arm now that
-    // every build commits the fact unconditionally (decision 0737).
-    let mut world = World::new(Seed(1));
-    register_all(&mut world.registry).unwrap();
-    let err = sky_of(&world).expect_err("a never-built world has no sky");
-    assert!(
-        format!("{err:?}").contains("no sky-provider fact"),
-        "the error must name the missing predicate: {err:?}"
-    );
-}
-```
-
-Run it against the **pre-change** `sky_of` first if you have not yet applied
-Step 3:
-```bash
-cargo test -p hornvale-worldgen a_world_with_no_sky_provider_fact -- --nocapture
-```
-Expected before Step 3: **FAIL** — `sky_of` returns `Ok`. That red is the
-evidence the test discriminates; a test written after the change would prove
-nothing about whether it can fail.
-
-- [ ] **Step 5: Delete every guard whose producer is gone**
-
-Work `cargo check --workspace --all-targets` to zero. For each site, the
-treatment:
-
-| site | today | after |
-| --- | --- | --- |
-| `lib.rs:3646` | `let Some(system) = sky.system() else { return empty paleoclimate }` | delete the guard; the early return goes with it |
-| `lib.rs:3902` | `let Some(system) = sky.system() else { one present-era mask }` | delete the guard and its whole `else` block |
-| `lib.rs:5192` | two stacked guards | delete the **calendar** one; **keep** `day_length()` |
-| `lib.rs:8691` | `let Some(calendar) = sky.calendar() else { return Ok(()) }` | delete the guard |
-| `lib.rs:10007` | `Sky::Constant(_) => Vec::new()` in `genesis_notes` | delete the arm |
-| `lib.rs:10273` | `if let Sky::Generated(sky) = sky_of(world)?` | unconditional |
-| `lib.rs:2609` | `stellar_inputs`' `Sky::Constant` Earth-baseline arm | delete the arm and its five-tuple of Earth defaults |
-| `lib.rs:2648` | `greenhouse_forcing_k`'s `Sky::Constant => 0.0` | delete the arm; update the doc comment, which explains the constant-sky case at length |
-| `lab/metrics.rs:80` | `let Sky::Generated(sky) = sky else { return Err("expected Generated sky, got Constant") }` | delete the guard. Also fix `WorldView::system`'s doc, which reads *"The star system, reconstructed or constant"* — already false today, since this guard refuses constant worlds |
-| `lab/health.rs:405` | `.and_then(\|sky\| sky.calendar().cloned())` | `.map(\|sky\| sky.calendar().clone())` |
-| `book/lib.rs:802` | `Sky::Constant(_) => 0` in `true_event_count` | delete the arm; rewrite the 12-line doc comment, which is entirely about the tier-0 case |
-| `the_detent.rs:153` | two stacked `and_then`s | first becomes `.map`; **keep** the second (`day_ticks`) |
-
-**The obligation from Task 2 Step 2 lands here.** Every production branch
-that task recorded as having lost its only producer is deleted in this step.
-None is left as `unreachable!()`; none is left as a `None` arm nothing can
-return.
-
-- [ ] **Step 6: Verify no branch survives on absence**
-
-Run:
-```bash
-grep -rn "constant sky\|constant-sky\|tier-0\|tier 0" --include=*.rs . | grep -v '^./target' | grep -v 'tier_comparison_spike'
-cargo nextest run --workspace 2>&1 | tail -20
-```
-Expected: the grep returns only deliberate historical prose; the suite is
-green. **`tier_comparison_spike` is excluded on purpose — Trap 2.**
-
-- [ ] **Step 7: Commit**
-
-```bash
-cargo fmt && make gate-commit
-git add -A
-git commit -m "refactor(the-zenith)!: Sky::calendar and Sky::system are no longer Option
-
-Every world has a calendar and a star system, so the ten production guards
-that existed only for the acyclic case are deleted rather than stubbed. A
-guard that can never fire, sitting in a healthy-looking tree, is worse than
-an absent one.
-
-Kept, deliberately: Calendar::day_length()'s Option. That is tidal locking
-— a real regime the generated sky still produces — not the tier. Two sites
-stacked the two guards adjacently (lib.rs:5192, the_detent.rs:153) and only
-the tier half is gone.
-
-sky_of now errors on a world with no sky-provider fact instead of silently
-falling back (decision 0737, on 0189's precedent: a world is a seed plus a
-ledger, and no compatibility shim). Its test was written against the old
-behaviour first and observed to fail.
-
-Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
-```
-
----
-
-### Task 5: Promote the battery
+### Task 3: Promote the battery
 
 **Files:**
 - Rename: `domains/astronomy/tests/suite/tier_refinement.rs` → `sky_conformance.rs`
 - Modify: `domains/astronomy/tests/suite.rs` (the module list)
 
 **Interfaces:**
-- Consumes: Task 3's deleted `ConstantSun`.
+- Consumes: Task 2's flipped sites. **Runs BEFORE Task 4 deletes `ConstantSun`** — the battery imports and calls it (lines 10, 51, 119), so the deletion cannot compile until this task has removed those uses (ruling R1).
 - Produces: nothing later tasks depend on.
 
 - [ ] **Step 1: Rename the file and its module declaration**
@@ -892,6 +625,306 @@ implementation they check, so this is stronger than what it replaces.
 
 The claim: sanctioned-sweep tags are preserved verbatim; the sweep's cost
 and census-homelessness are unchanged by a rename.
+
+Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
+```
+
+---
+
+### Task 4: Delete the type, the surface, and the parameter
+
+Mechanical, and large. The compiler does the enumeration.
+
+**Files:**
+- Modify: `domains/astronomy/src/lib.rs:504-553` (delete `ConstantSun` + impls)
+- Modify: `windows/worldgen/src/lib.rs:228-236, 310-316, 8135-8138, 8154-8159` and every `build_world*` signature
+- Modify: `cli/src/main.rs:14, 237-245`
+- Modify: `clients/world-wasm/src/lib.rs:92-99`
+- Modify: ~335 `build_world*` call sites workspace-wide
+
+**Interfaces:**
+- Consumes: Task 3's de-`ConstantSun`-ed battery, and Task 2's empty `SkyChoice::Constant` population.
+- Produces: `pub fn build_world(seed: Seed, sky: &SkyPins, terrain:
+  &TerrainPins, settlements: &SettlementPins) -> Result<World, BuildError>`
+  — the third positional parameter is gone. `build_world_to` loses it in the
+  same position. Every later task uses the four-argument form.
+
+- [ ] **Step 1: Verify the compiler will enumerate — the precondition**
+
+Run:
+```bash
+grep -n "_ =>" windows/worldgen/src/lib.rs | head -40
+grep -rn "match .*sky\b" -A8 --include=*.rs windows/worldgen/src/lib.rs | grep "_ =>"
+```
+Expected: **no wildcard arm on any `Sky` or `SkyChoice` match.** Checked on
+`main`: there are none. A `_ =>` arm would silently absorb the deletion
+instead of erroring, and the enumeration would be incomplete without saying
+so. If one has appeared, replace it with explicit arms *before* proceeding.
+
+- [ ] **Step 2: Delete `ConstantSun`**
+
+In `domains/astronomy/src/lib.rs`, delete `pub struct ConstantSun` (504-505),
+`impl ConstantSun` (522-541), `impl PhenomenaSource for ConstantSun`
+(543-553), and its two unit tests
+(`the_sky_never_changes` at 568, `phenomena_are_constant_and_maximally_salient`
+at 578 — they live inside the block being deleted and cannot outlive it;
+ruling R4 keeps them here rather than splitting them into Task 2).
+Leave `SkyReport` — it is the shared report type every provider returns.
+
+- [ ] **Step 3: Collapse `Sky` and delete `SkyChoice`**
+
+`windows/worldgen/src/lib.rs` — `Sky` becomes a single-provider wrapper:
+
+```rust
+/// The live astronomy provider a world uses, reconstructed from its ledger.
+///
+/// One provider, since The Zenith (decision 0736): every Hornvale world has
+/// a generated sky. The enum this replaced carried a `Constant` variant for
+/// the retired tier-0 stub.
+pub struct Sky(Box<GeneratedSky>);
+```
+
+with `sky_at_visibility`, `notes` and the `PhenomenaSource` impl delegating
+straight through.
+
+**`calendar()` and `system()` keep returning `Option` in this task** — wrap in
+`Some(...)`. They collapse in Task 5 (ruling R2). Collapsing them here would
+force this task to also fix all ten `let … else` guard sites, which is exactly
+the coupling the stage split exists to prevent: this task is mechanical, and
+Task 5 needs Trap 1 judgment at every site. Delete `pub enum
+SkyChoice` (229-236) and the `choice_text` match (8135-8138); the
+`sky-provider` fact is now always `"generated"`:
+
+```rust
+world.ledger.commit(
+    scenario_fact(
+        world_entity,
+        facts::SKY_PROVIDER,
+        Value::Text("generated".to_string()),
+    ),
+    &world.registry,
+)?;
+```
+
+**Keep committing the fact.** It is a save-format contract and a world's
+self-description; a reader must still be able to ask what sky a world has.
+Removing it would change every world's ledger and is out of scope.
+
+Make the astronomy stage unconditional — this is the `if let
+SkyChoice::Generated = sky` at 8154:
+
+```rust
+stage("astronomy", || -> Result<(), BuildError> {
+    let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
+    facts::genesis(&mut world, world_entity, &outcome)?;
+    Ok(())
+})?;
+```
+
+- [ ] **Step 4: Drop the parameter and let the compiler find the call sites**
+
+Remove the `sky: SkyChoice` parameter from `build_world`, `build_world_to`
+and any `build_world_observed` variant. Then:
+
+```bash
+cargo check --workspace --all-targets 2>&1 | tee /tmp/zenith-errors.txt
+grep -c "^error" /tmp/zenith-errors.txt
+```
+
+Work the list to zero. **Do not use `sed`, `rg -r`, or any scripted rewrite.**
+Measured: 372 of the 382 `SkyChoice::Generated` sites are the plain
+trailing-comma argument form, but **10 are not** — three `assert_eq!`
+comparisons (`cli/src/main.rs:2509, 2560, 2651`), an array literal
+(`pin_enumeration.rs:66`), a match arm (`lib.rs:8137`), an `if let`
+(`lib.rs:8155`), a doc-comment example (`fixture.rs:62`), and three prose
+comments. A regex sweep corrupts each of those and leaves a plausible tree.
+
+Update `windows/worldgen/src/fixture.rs:60-64`'s doc comment, which spells
+out the old five-argument call.
+
+- [ ] **Step 5: Delete the CLI and wasm surface**
+
+`cli/src/main.rs` — delete the `[--sky constant|generated]` usage line (14)
+and the `--sky` arm of `parse_sky_args` (237-245); the function returns
+`Result<SkyPins, String>` now. Delete `sky_flag_selects_constant` (2552) and
+fix the three `assert_eq!(sky, SkyChoice::Generated)` sites (2509, 2560,
+2651), which no longer have a second element to compare.
+
+`clients/world-wasm/src/lib.rs:92-99` — delete the `if key == "sky"` branch
+so `sky` falls through to the unknown-key error. **Note in the task report
+whether the wasm catalog needs a version bump**: decision 0356 retired the
+external consumers, so no cross-repo contract binds it, but the released
+catalog is cut by hand and the removal is a real ABI narrowing.
+
+- [ ] **Step 5b: Make `sky_of` error on an absent fact**
+
+Decision 0737. A world is a seed plus a ledger; no compatibility shim.
+
+```rust
+/// Reconstruct the live astronomy provider from this world's ledger: fold
+/// every `scenario-pin` fact back through `parse_pin` and regenerate
+/// deterministically from the world's own seed.
+///
+/// A world with no `sky-provider` fact is an error, not a fallback
+/// (decision 0737). Every build commits the fact unconditionally, so its
+/// absence means the world was never built — and a world is a seed plus a
+/// ledger, re-derivable with `hornvale new --seed <seed>`, so there is
+/// nothing a shim could recover that regeneration cannot.
+pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
+    let Some(provider_fact) = world.ledger.find(facts::SKY_PROVIDER).next() else {
+        return Err(BuildError::Pins(
+            "world has no sky-provider fact: it was never built; \
+             regenerate it from its seed and pins".to_string(),
+        ));
+    };
+    // ... unchanged: parse pins, regenerate, wrap in Sky
+}
+```
+
+This is not optional in this task: `sky_of`'s fallback at `lib.rs:571`
+constructs `Sky::Constant(ConstantSun)`, so deleting the variant makes the
+function uncompilable. Ruling R3 moved it here from Task 5 for that reason.
+Task 2 already wrote the test and recorded it RED against the old behaviour;
+it should go green here.
+
+Run:
+```bash
+cargo test -p hornvale-worldgen a_world_with_no_sky_provider_fact -- --nocapture
+```
+Expected: **PASS**, having been recorded FAIL in Task 2.
+
+- [ ] **Step 6: Verify and commit**
+
+```bash
+cargo check --workspace --all-targets 2>&1 | grep -c "^error"   # expect 0
+grep -rn "ConstantSun\|SkyChoice\|Sky::Constant" --include=*.rs . | grep -v '^./target'
+```
+Expected: zero errors; the second command returns nothing except prose
+comments you have deliberately left.
+
+```bash
+cargo fmt && make gate-commit
+git add -A
+git commit -m "refactor(the-zenith)!: delete ConstantSun, SkyChoice, and the sky parameter
+
+Sky becomes a one-provider wrapper; build_world and build_world_to lose
+their SkyChoice argument at ~335 call sites. The --sky flag and the wasm
+'sky' pin key go with them.
+
+Compiler-driven, never a scripted rewrite: 372 of 382 SkyChoice::Generated
+sites are the plain argument form and 10 are not (match arms, assert_eq!
+comparisons, an array literal, a doc example), so a regex sweep would have
+left a plausible wrong tree. Verified beforehand that no '_ =>' wildcard
+arm exists on any Sky match, so the compiler enumerates the work completely.
+
+The sky-provider fact is still committed, always 'generated'. It is a
+save-format contract and a world's self-description; dropping it would
+move every world's ledger.
+
+sky_of now errors on a world carrying no sky-provider fact instead of
+silently falling back (decision 0737, on 0189's precedent: a world is a
+seed plus a ledger, and no compatibility shim). The change is forced here
+rather than chosen — the fallback constructed Sky::Constant, which this
+commit deletes. Its test was written in Task 2 against the old behaviour
+and recorded failing there, so the red is behavioural, not a compile error.
+
+Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
+```
+
+---
+
+### Task 5: Collapse the Option-ness, and delete the guards it justified
+
+**Files:**
+- Modify: `windows/worldgen/src/lib.rs:334-350, 564-598, 2605-2655, 3646, 3902, 5192, 8691, 10007, 10273`
+- Modify: `windows/lab/src/metrics.rs:78-90, 180-190`
+- Modify: `windows/lab/src/health.rs:403-407`
+- Modify: `windows/book/src/lib.rs:783-806`
+- Modify: `windows/vessel/tests/suite/the_detent.rs:153-157`, `windows/vessel/examples/agent_scaling.rs:489`, `windows/vessel/examples/session_length_scaling.rs:757`, `windows/vessel/src/liveness_tests/emitter_scan.rs:489`
+
+**Interfaces:**
+- Consumes: Task 4's one-provider `Sky`.
+- Produces: `pub fn calendar(&self) -> &hornvale_astronomy::Calendar` and
+  `pub fn system(&self) -> &hornvale_astronomy::StarSystem` — both
+  non-`Option`. `sky_of` returns `Err(BuildError::Pins(_))` for a world with
+  no `sky-provider` fact.
+
+- [ ] **Step 1: Re-read Trap 1 before touching a single guard**
+
+`Sky::calendar()` / `Sky::system()` returning `Option` is **the tier** and
+goes. `Calendar::day_length()` returning `Option` is **tidal locking** and
+stays. Verified stacked instances: `lib.rs:5192`, `the_detent.rs:153`. Name
+which kind each guard is before deleting it.
+
+- [ ] **Step 2: Make the accessors non-`Option`**
+
+```rust
+/// The derived calendar. Every world has one, since The Zenith
+/// (decision 0736) — a `Calendar` whose `day_length()` is `None` is a
+/// tidally locked world, which is a different thing and still expressible.
+pub fn calendar(&self) -> &hornvale_astronomy::Calendar {
+    self.0.calendar()
+}
+
+/// The generated star system. Every world has one; the star-chart command
+/// reads this.
+pub fn system(&self) -> &hornvale_astronomy::StarSystem {
+    self.0.system()
+}
+```
+
+- [ ] **Step 3: Delete every guard whose producer is gone**
+
+Work `cargo check --workspace --all-targets` to zero. For each site, the
+treatment:
+
+| site | today | after |
+| --- | --- | --- |
+| `lib.rs:3646` | `let Some(system) = sky.system() else { return empty paleoclimate }` | delete the guard; the early return goes with it |
+| `lib.rs:3902` | `let Some(system) = sky.system() else { one present-era mask }` | delete the guard and its whole `else` block |
+| `lib.rs:5192` | two stacked guards | delete the **calendar** one; **keep** `day_length()` |
+| `lib.rs:8691` | `let Some(calendar) = sky.calendar() else { return Ok(()) }` | delete the guard |
+| `lib.rs:10007` | `Sky::Constant(_) => Vec::new()` in `genesis_notes` | delete the arm |
+| `lib.rs:10273` | `if let Sky::Generated(sky) = sky_of(world)?` | unconditional |
+| `lib.rs:2609` | `stellar_inputs`' `Sky::Constant` Earth-baseline arm | delete the arm and its five-tuple of Earth defaults |
+| `lib.rs:2648` | `greenhouse_forcing_k`'s `Sky::Constant => 0.0` | delete the arm; update the doc comment, which explains the constant-sky case at length |
+| `lab/metrics.rs:80` | `let Sky::Generated(sky) = sky else { return Err("expected Generated sky, got Constant") }` | delete the guard. Also fix `WorldView::system`'s doc, which reads *"The star system, reconstructed or constant"* — already false today, since this guard refuses constant worlds |
+| `lab/health.rs:405` | `.and_then(\|sky\| sky.calendar().cloned())` | `.map(\|sky\| sky.calendar().clone())` |
+| `book/lib.rs:802` | `Sky::Constant(_) => 0` in `true_event_count` | delete the arm; rewrite the 12-line doc comment, which is entirely about the tier-0 case |
+| `the_detent.rs:153` | two stacked `and_then`s | first becomes `.map`; **keep** the second (`day_ticks`) |
+
+**The obligation from Task 2 Step 2 lands here.** Every production branch
+that task recorded as having lost its only producer is deleted in this step.
+None is left as `unreachable!()`; none is left as a `None` arm nothing can
+return.
+
+- [ ] **Step 4: Verify no branch survives on absence**
+
+Run:
+```bash
+grep -rn "constant sky\|constant-sky\|tier-0\|tier 0" --include=*.rs . | grep -v '^./target' | grep -v 'tier_comparison_spike'
+cargo nextest run --workspace 2>&1 | tail -20
+```
+Expected: the grep returns only deliberate historical prose; the suite is
+green. **`tier_comparison_spike` is excluded on purpose — Trap 2.**
+
+- [ ] **Step 5: Commit**
+
+```bash
+cargo fmt && make gate-commit
+git add -A
+git commit -m "refactor(the-zenith)!: Sky::calendar and Sky::system are no longer Option
+
+Every world has a calendar and a star system, so the ten production guards
+that existed only for the acyclic case are deleted rather than stubbed. A
+guard that can never fire, sitting in a healthy-looking tree, is worse than
+an absent one.
+
+Kept, deliberately: Calendar::day_length()'s Option. That is tidal locking
+— a real regime the generated sky still produces — not the tier. Two sites
+stacked the two guards adjacently (lib.rs:5192, the_detent.rs:153) and only
+the tier half is gone.
+
 
 Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
 ```
