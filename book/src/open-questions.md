@@ -3740,17 +3740,23 @@ like the two before it, it is allowed to fail.
 **A second horizon is now quantified rather than merely felt.** *The Prospect*
 (2026-09-03) measured the density of the inhabited surface for the first time:
 across five seeds, **one enterable site per ~84,200 land facets**. A facet at
-depth 13 is 1.126 km on a side, so a square mile is 2.04 of them and the aim of
-something worth finding in every square mile is **~41,200x away — 4.6 orders of
-magnitude.** No bet in the map above moved, because no bet covered this;
-what the measurement adds is a **ceiling**, and the ceiling is what makes it a
-horizon rather than a defect.
+depth 13 is 1.126 km on a side, and the aim is **one thing worth finding per
+facet** — not per square mile, which is 2.04 facets and was the framing this
+paragraph published on 2026-09-03. So the shortfall is **~84,200x — 4.9 orders
+of magnitude.** (The rate did not move; the target did. An earlier draft here
+read ~41,200x, which is the same measurement stated against the square-mile
+aim.) No bet in the map above moved, because no bet covered this; what the
+measurement adds is a **ceiling**, and the ceiling is what makes it a horizon
+rather than a defect.
 
 Placed features are born on the 40,962-vertex geosphere and addressed onto the
 402,653,184-facet walk band, so **at most one facet in 9,830 can hold a placed
 feature of a given kind**, before a seed is built. Worlds today sit at 5.8% of
-that ceiling; saturating it buys about 17x and leaves the surface ~2,400x
-short. So the shortfall is not a tuning question at any
+that ceiling; saturating it buys about 17x and leaves the surface **~4,915x**
+short. (Those first two figures are ratios against the ceiling itself and are
+independent of the target, so the re-aim above does not touch them; only the
+last one, a gap against the aim, doubles with it.) So the shortfall is not a
+tuning question at any
 threshold, and the campaign's own falsified hypothesis is the evidence — H2
 predicted a per-facet cave *percentage* and missed by ~1,070× because a placed
 point process on a 41,000-point lattice cannot express one.
@@ -3758,12 +3764,34 @@ point process on a 41,000-point lattice cannot express one.
 What that bounds is the class of answer. Density at facet resolution has to come
 from **derived** features — a pure function of seed and position, unbounded,
 stored nowhere, outside the ledger and therefore outside world history — which
-decision 0669 names but no campaign has yet built. The checkable form of the bet
+decision 0669 names. The checkable form of the bet
 is whether a derived surface can be dense *and* legible at once: whether noise
 interacting with macro features produces places that feel found rather than
 extruded, and whether a player can tell the difference. That is gradeable by the
 world against itself — the same shape as the bets above — and it is allowed to
 fail.
+
+**The horizon now has a measured first crossing, and the two halves of the bet
+came apart.** [The Weft](./chronicle/the-weft.md) (2026-09-04) built the derived
+tier this paragraph described as the class of answer, and the **density half
+holds**: four kinds of derived feature occupy **0.2563 of land-eligible facets**
+at seed 42 — one facet in about four — some **21,500x** the placed rate above,
+which is more than the three orders of magnitude that campaign froze in advance.
+So the shortfall is no longer bounded only from above by a ceiling; there is a
+reading on the other side of it.
+
+**The legibility half was falsified, and that is the part this chapter should
+carry.** The prediction frozen before the code was an ordering — spring, then
+thicket, then overhang, then the erratic control near zero — of how much a
+kind's features tell a walker about the conditions that made them. Measured in
+bits: thicket 0.0386, spring 0.0078, overhang 0.0025, erratic 0.0000. The
+control behaved exactly as designed (its cause is a constant, so its score is
+algebraically zero) and spring still outscored overhang, but the sign case —
+the kind chosen *because* it should be the most diagnostic — came second to
+plain texture. Nothing was retuned on the strength of that reading. The bet
+above therefore keeps its position on the gradient rather than being promoted
+by the density result: dense is settled, *found rather than extruded* is not,
+and the campaign's own instrument now says so with a number.
 
 **A partial rescore, now that population has a field to vary.** The
 carrying-capacity field promoted above (see the high-confidence tier) is an

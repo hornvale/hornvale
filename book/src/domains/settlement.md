@@ -264,6 +264,18 @@ site's layers and their flesh render through a read-only surface (the `history`
 CLI verb and the almanac); see [The Living
 Community](../chronicle/the-living-community.md).
 
+**A walker now hears about the dead too, and until recently did not.** For as
+long as ruins existed they were legible only to those two read-only surfaces:
+you could stand on a dead occupation and be told the biome and the weather and
+nothing else. [The Weft](../chronicle/the-weft.md) gave the walking band the
+ruin's own sentence — *Something ended here: flight* — as a second clause
+beside the settlement clause rather than in place of it, because a living town
+standing on a dead one is an ordinary outcome of settlements grown by a history
+run. What a ruin still cannot report is **ground**: an occupation records a
+single point and the only territory notion the world has is per-people and
+alive-only, so a ruin's extent would have to be invented rather than
+recovered, and that was declined.
+
 The "committed fact" that flesh is a function of is specifically the
 occupation's **material core** — its people, site, span, size, tech, function,
 cause and notability — and deliberately *not* its entity id, which is a mint
