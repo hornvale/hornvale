@@ -320,6 +320,44 @@ impl View for AtlasView {
         let volcanoes = BTreeSet::new();
         let waterfalls: Vec<Vertex> = Vec::new();
 
+        // NO SPECTRAL CONTEXT HERE, AND THAT IS THE ANSWER THIS VIEW GIVES
+        // (The Wash, Task 6). `plate::Spectral` takes `Option<&LocaleContext>`
+        // exactly so the two shipped callers of `draw_with` may answer
+        // differently, and this one answers `None`.
+        //
+        // **What it costs, stated rather than hidden:** land tiles claim no
+        // colour at all in the overture. `RELIEF_COLORS` — the six-entry
+        // elevation ramp this view used to paint from — is deleted, so
+        // "fall back to the ladder" is not on the menu; the honest fallback
+        // is no ink, and relief is carried by the glyph ladder, which is
+        // decision 0389's whole point. Ocean and salt basin keep their
+        // invented palette claims (`plate::color_for`'s own doc), so the
+        // coastline still reads in colour.
+        //
+        // **Why not build one. The reason is COST, at every rung this view
+        // speaks at.** `LocaleContext::build_from` builds a second
+        // `NearestVertexIndex` (~200 ms — the cost this module's whole memo
+        // exists to avoid paying twice) plus a `StrangenessBudget`, per
+        // distinct terrain, on the STARTUP path, and `Frame::observe`
+        // renders every speaking view at every rung it can speak at. Paying
+        // that so a progressive title sequence can tint its land is the
+        // wrong trade; the live session, which is where a reader actually
+        // studies the map, gets the real thing.
+        //
+        // **Availability rules out only the FIRST rung, and this comment
+        // used to claim more than that** (fix round 1). `build_from` needs a
+        // `GeneratedClimate`, and `RungArtifacts::climate` is `Some` iff the
+        // fired rung is at least `BuildDepth::Settlements` — so at
+        // `BuildDepth::Terrain` there is genuinely no climate at any price.
+        // But `can_speak` admits `rung >= Terrain`, so this view also
+        // renders at `Settlements` and `Full`, where a climate IS on the
+        // artifacts. "Could not have one at any price" was true of one rung
+        // out of three and was written as though it settled the question;
+        // the cost argument above is what actually settles it, and it holds
+        // at all three.
+        let light = plate::PlateLight::for_terminal();
+        let mut spectral = light.unlit();
+
         plate::draw_with(
             terrain,
             geo,
@@ -333,6 +371,7 @@ impl View for AtlasView {
             &volcanoes,
             &waterfalls,
             &discovered,
+            &mut spectral,
         )
     }
 }

@@ -484,6 +484,44 @@ pub struct Driver {
     /// prompt is a MODE, not a picker — the client still sends text
     /// unconditionally, and the sim answers unknown nouns in its own prose.
     noun_prompt: Option<NounPrompt>,
+    /// The world's derived [`hornvale_astronomy::Calendar`], if it has one —
+    /// `None` for a tier-0 `ConstantSun` world, which has no generated star
+    /// system and therefore no cycles (`Sky::calendar`'s own doc). Read
+    /// once here via [`hornvale_worldgen::sky_of`], the same "derive once,
+    /// never per-frame" discipline `terrain`/`geo`/`nearest` already
+    /// follow above: `sky_of` regenerates the sky deterministically from
+    /// the world's own committed seed and pins (the same reconstruction
+    /// idiom `terrain_of` uses for `Self::terrain`), so paying it once at
+    /// `start` and reading a plain field from then on is strictly cheaper
+    /// than re-deriving it wherever a season is needed.
+    // Task 6 IS the reader now: `Driver::plate_light` folds this field
+    // through `season_bucket_for` and `plate_illuminant` on every plate
+    // draw, so the `#[allow(dead_code)]` this carried is gone.
+    calendar: Option<hornvale_astronomy::Calendar>,
+    /// The plate's `(FacetId, season)` reflectance cache (The Wash, Task 4):
+    /// the store [`plate::terrain_at_tile`] will consult and fill once a
+    /// real [`hornvale_locale::LocaleContext`] is threaded through it.
+    /// Reflectance is seasonal-rate (the rate spine's own invariant, Task
+    /// 1), so the key carries the season a tile was drawn in — a season
+    /// change mints a new entry rather than serving a stale one, which is
+    /// what makes it safe to sit above the plate's own never-invalidated
+    /// TERRAIN layer cache ([`Self::tiles`]'s own doc).
+    // Task 6 IS the reader now (it was `#[allow(dead_code)]` until this
+    // task): `Driver::world_plate` and `Driver::world_plate_for_redraw`
+    // both hand it to `plate::Spectral`, which is what makes the ~1,920
+    // per-frame reflectance consults cost one locale call per
+    // `(facet, season)` instead of one per drawn tile.
+    //
+    // `plate::ReflectanceCache`, not a bare `ComponentStore`: the wrapper
+    // carries the hit/miss counters that make the cache's hit path
+    // observable without timing anything (`Instant` is banned) — see its
+    // own doc for the assertion that could not fail before it existed.
+    //
+    // `world_view_vertex` still does NOT thread it (fix round 1, Fix 1):
+    // that call site reads `.vertex` alone and can never populate or read a
+    // hit here, so making three read-only queries advertise mutation to
+    // reach it would buy nothing.
+    reflectance_cache: plate::ReflectanceCache,
 }
 
 /// What [`Driver::noun_prompt`] saves for `Esc` to restore.
@@ -648,6 +686,127 @@ fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> S
     }
 }
 
+/// The `(FacetId, season)` cache's season component for `at`, resolved
+/// against `calendar` (The Wash, Task 4) — the glue between
+/// [`Driver::calendar`] and [`plate::season_bucket`], and the ONE place
+/// that glue is written: [`plate::terrain_at_tile`]'s own doc names this
+/// function as the contract every caller of `season` must route through
+/// rather than re-deriving. `pub` (fix round 1) so `wash.rs`'s test fixture
+/// can call the real derivation instead of hardcoding a bucket that may not
+/// correspond to its own `at`.
+///
+/// **Two `None`s fold to the same bucket 0, and both are legitimate
+/// worlds, not errors.** `calendar` itself is `None` for a tier-0
+/// `ConstantSun` world (no generated star system, no cycles). A `Some`
+/// calendar can still report `Calendar::season_phase(..) == None` — its own
+/// documented contract, for zero obliquity AND zero eccentricity — which is
+/// the same "no seasons to render" case reached a different way. Neither is
+/// a silent `unwrap_or(0)` standing in for a default this comment is the
+/// only record of: both branches are named here because "no calendar" and
+/// "a calendar with nothing to report" are the two ways a world can
+/// honestly have no seasons.
+pub fn season_bucket_for(
+    calendar: Option<&hornvale_astronomy::Calendar>,
+    at: hornvale_kernel::WorldTime,
+) -> u32 {
+    let Some(calendar) = calendar else {
+        return 0;
+    };
+    let Ok(instant) = hornvale_astronomy::StdInstant::new(at.as_std_days()) else {
+        return 0;
+    };
+    calendar
+        .season_phase(instant)
+        .map(plate::season_bucket)
+        .unwrap_or(0)
+}
+
+/// A flat, colourless illuminant — every band at unit weight (The Wash,
+/// Task 5's plate-scale echo of [`hornvale_vessel`]'s own room-scale
+/// `flat_illuminant`, `windows/vessel/src/eyes.rs:58` — private to that
+/// crate, so this is a deliberate second copy of the same one-line
+/// definition rather than a shared symbol). The fallback for a world with
+/// no solar geometry to place a real sun by, used by both
+/// [`plate_illuminant`]'s `None` cases.
+pub fn flat_illuminant() -> hornvale_kernel::color::Illuminant {
+    hornvale_kernel::color::Illuminant::new([1.0; hornvale_kernel::color::BANDS])
+        .expect("a unit illuminant is finite and non-negative")
+}
+
+/// The illuminant at a given sun elevation: [`hornvale_astronomy::daylight`]
+/// for `world`'s own star, reddened by [`hornvale_astronomy::at_elevation`]
+/// for `sun_elevation_deg`.
+///
+/// Separated from [`plate_illuminant`] so a test can drive the elevation
+/// directly (The Wash, Task 5's own brief) rather than needing to find a
+/// world time and latitude that happen to produce one.
+///
+/// **The star is `generate_star(world.seed.derive(streams::ROOT))`, never
+/// `Sky::system()`.** The generated star is a pure function of the world's
+/// own seed, defined for every world — tier-0 `ConstantSun` included — so
+/// this never needs the `Option<&StarSystem>` `Sky::system()` would hand
+/// back `None` for there. What a constant-sun world genuinely lacks is a
+/// CALENDAR to place a sun altitude with, which is [`plate_illuminant`]'s
+/// concern, not this one: by the time a caller has a `sun_elevation_deg` to
+/// pass here, that question is already answered.
+pub fn plate_illuminant_at(
+    world: &World,
+    sun_elevation_deg: f64,
+) -> hornvale_kernel::color::Illuminant {
+    let star =
+        hornvale_astronomy::generate_star(world.seed.derive(hornvale_astronomy::streams::ROOT));
+    let base = hornvale_astronomy::daylight(&star);
+    hornvale_astronomy::at_elevation(&base, sun_elevation_deg)
+}
+
+/// The illuminant for one whole draw, anchored to the OBSERVER rather than
+/// the tile (spec §4.5, corrected before this task was dispatched). An
+/// earlier draft of the spec claimed the illuminant is "diurnal and uniform
+/// across the plate" — false at coarse rungs, where one plate spans every
+/// latitude and longitude a globe has, so a single illuminant computed
+/// per-tile would light the night side as noon. The map is instead lit as
+/// it is *where the reader stands*: one call, at the observer's own
+/// `latitude_deg` and `day`, applied uniformly across the whole plate. That
+/// is a stated cartographic convention, not an approximation pretending to
+/// be a fact — and the cost is named rather than hidden: no terminator
+/// sweeps the map, so at a coarse rung the far side of the world carries
+/// the reader's own sunlight.
+///
+/// Follows the exact composition [`hornvale_vessel`]'s own room-scale
+/// `eyes::daylight_at` uses (`windows/vessel/src/eyes.rs:81-97`): resolve
+/// the sun altitude from `calendar` at `(day, latitude_deg)`, then hand it
+/// to [`plate_illuminant_at`]. Meant to be called **once per draw**, above
+/// the tile loop, and the result threaded through by reference — nothing
+/// about its inputs (`world`, `calendar`, `day`, `latitude_deg`) varies per
+/// tile, so there is no tile-shaped parameter for a caller to loop over.
+///
+/// **Two `None` cases, both modelled worlds, never errors — see
+/// [`season_bucket_for`]'s own doc for the identical fold.** `calendar`
+/// itself is `None` for a tier-0 `ConstantSun` world (no generated star
+/// system, no solar geometry to place a sun by); a `Some` calendar can
+/// still report [`hornvale_astronomy::Calendar::solar_altitude_at`] as
+/// `None` (zero obliquity AND zero eccentricity — that method's own
+/// documented contract). Both resolve to [`flat_illuminant`] rather than
+/// guessing a sun that cannot be honestly placed — the same fallback
+/// [`hornvale_vessel`]'s `eyes::flat_illuminant` uses, for the same reason.
+/// type-audit: bare-ok(diagnostic-value: latitude_deg)
+pub fn plate_illuminant(
+    world: &World,
+    calendar: Option<&hornvale_astronomy::Calendar>,
+    day: hornvale_kernel::WorldTime,
+    latitude_deg: f64,
+) -> hornvale_kernel::color::Illuminant {
+    let altitude = calendar.and_then(|cal| {
+        hornvale_astronomy::StdInstant::new(day.as_std_days())
+            .ok()
+            .and_then(|t| cal.solar_altitude_at(t, latitude_deg))
+    });
+    match altitude {
+        Some(sun_elevation_deg) => plate_illuminant_at(world, sun_elevation_deg),
+        None => flat_illuminant(),
+    }
+}
+
 impl Driver {
     /// Build a fresh world for `seed` (default sky/terrain/settlement pins,
     /// generated sky — the same defaults `clients/vessel/wasm`'s `hv_start`
@@ -741,6 +900,27 @@ impl Driver {
         let features = gazetteer_features(world_ref.seed, &geo, &terrain);
         let index = VertexFeatureIndex::build(&features);
         let nearest = NearestVertexIndex::new(&geo);
+
+        // The Wash, Task 4: the world's own calendar, read once here (the
+        // same "derive once, never per-frame" idiom `terrain`/`geo`/
+        // `nearest` above already follow) via the same `sky_of`
+        // reconstruction idiom `terrain_of` uses for `terrain` — never a
+        // second, drifting genesis. A build failure here is folded to
+        // `None` rather than propagated: a world whose sky cannot be
+        // reconstructed still has a terrain and a session (both already
+        // built above), and a plate that cannot resolve a season is
+        // exactly the "no calendar" case below, not a harder failure.
+        //
+        // `Sky::calendar()` is `None` for a tier-0 `ConstantSun` world —
+        // provider tiers coexist, and a world with no generated star
+        // system genuinely has no seasons to render. That is a modelled
+        // case, not an error: `season_bucket_for` below folds it (and the
+        // sibling case where a generated sky's own `season_phase` reports
+        // `None`, for zero obliquity and zero eccentricity) to bucket 0
+        // rather than panicking or guessing.
+        let calendar = hornvale_worldgen::sky_of(world_ref)
+            .ok()
+            .and_then(|sky| sky.calendar().cloned());
 
         // The Portolan part II, Task 5: the point-site roster — every
         // terrain vertex a live settlement's own committed `(latitude,
@@ -905,6 +1085,8 @@ impl Driver {
             noun_prompt: None,
             on_walk_band: true,
             walk_scene: None,
+            calendar,
+            reflectance_cache: plate::ReflectanceCache::new(),
         };
         driver.refresh();
         Ok(driver)
@@ -1081,8 +1263,21 @@ impl Driver {
     /// The Quadrat's Task 3, not 49 spatial searches (`plate.rs`'s own
     /// doc) — but a full redraw is still a full redraw, so a caller
     /// reaching this directly still owns not paying it needlessly.
-    pub fn world_plate(&self, w: u16, h: u16) -> hornvale_game_core::Grid {
+    pub fn world_plate(&mut self, w: u16, h: u16) -> hornvale_game_core::Grid {
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        // `&mut self` since The Wash's Task 6, and the reason is the cache:
+        // the plate is drawn through `Self::reflectance_cache`, the one
+        // store that keeps a `(facet, season)` reflectance from being
+        // recomputed for every tile of every draw.
+        let (illuminant, observer, at, season) = self.plate_light();
+        let mut spectral = plate::Spectral {
+            ctx: Some(self.session.context()),
+            illuminant: &illuminant,
+            observer: &observer,
+            at,
+            season,
+            cache: Some(&mut self.reflectance_cache),
+        };
         plate::draw(
             &self.terrain,
             &self.geo,
@@ -1095,6 +1290,45 @@ impl Driver {
             &self.volcanoes,
             &self.waterfalls,
             &self.discovered,
+            &mut spectral,
+        )
+    }
+
+    /// The light, the observer, the instant and the season this session's
+    /// plate is resolved through (The Wash, Task 6) — everything
+    /// [`plate::Spectral`] needs EXCEPT the two halves that are borrows of
+    /// this struct's own fields (the locale context and the reflectance
+    /// cache), which is why they are not returned here: a `&self` method
+    /// handing back a `Spectral` would borrow the whole `Driver` and make
+    /// `&mut self.reflectance_cache` impossible at the call site.
+    ///
+    /// **The illuminant is resolved ONCE per draw, above the tile loop**, as
+    /// [`plate_illuminant`]'s own doc requires: it is anchored to where the
+    /// reader stands (`session.day()` and the possession's own latitude),
+    /// never to the tile, so a coarse rung lights the whole plate with the
+    /// reader's own sunlight rather than sweeping a terminator across it.
+    ///
+    /// **The observer is two-valued because `NO_COLOR` is the only depth
+    /// probe this client has** — see [`crate::observer::terminal_observer`].
+    fn plate_light(
+        &self,
+    ) -> (
+        hornvale_kernel::color::Illuminant,
+        crate::observer::TerminalObserver,
+        hornvale_kernel::WorldTime,
+        u32,
+    ) {
+        // SAFETY: `world` was allocated by `Box::into_raw` in `start`, is
+        // reclaimed only in `Drop`, and is never aliased mutably — this is
+        // the same shared read `Self::sites`' own construction takes.
+        let world = unsafe { &*self.world };
+        let at = self.session.day();
+        let latitude_deg = self.session.position().coord().latitude;
+        (
+            plate_illuminant(world, self.calendar.as_ref(), at, latitude_deg),
+            crate::observer::terminal_observer(plate::colour_allowed()),
+            at,
+            season_bucket_for(self.calendar.as_ref(), at),
         )
     }
 
@@ -1186,6 +1420,21 @@ impl Driver {
             return None;
         }
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        // THE LIVE SESSION'S OWN PATH (The Wash, Task 6). `main.rs`'s
+        // `redraw` calls this method and never `world_plate`, so this is the
+        // call that decides what a player actually sees — it is threaded
+        // with a real `Some(ctx)` for that reason, and `TileCache`'s key
+        // carries `(season, illuminant)` so a cached tile can never outlive
+        // the light it was drawn under.
+        let (illuminant, observer, at, season) = self.plate_light();
+        let mut spectral = plate::Spectral {
+            ctx: Some(self.session.context()),
+            illuminant: &illuminant,
+            observer: &observer,
+            at,
+            season,
+            cache: Some(&mut self.reflectance_cache),
+        };
         let mut grid = self.tiles.compose(
             &self.terrain,
             &self.geo,
@@ -1195,6 +1444,7 @@ impl Driver {
             plate_width,
             plate_height,
             plate::colour_allowed(),
+            &mut spectral,
         );
         // No `w`/`h` here, deliberately: the feature layer reads the window's
         // size from the grid it is drawing onto, so this path cannot hand it a
@@ -2294,6 +2544,22 @@ impl Driver {
     /// exactly ONE tile per keypress: a session-lived memo would save at
     /// most the three `nearest_to_position` scans of a repeated cursor
     /// position, against holding cross-call state for a pure function.
+    ///
+    /// **Stays `&self` (fix round 1, Fix 1: reverted from an earlier `&mut
+    /// self`).** This method's own next line reads only `.vertex` off the
+    /// result and discards the rest — a context here "would buy a discarded
+    /// reflectance per keypress", and that argument is STRUCTURAL, not
+    /// until-Task-6: this call site can never populate the `(FacetId,
+    /// season)` cache and can never read a hit from it, so threading
+    /// [`Self::reflectance_cache`] through by `&mut` here bought a false
+    /// appearance of use at the cost of making three read-only queries
+    /// (`resolve`/`resolve_world_view`/this one) advertise mutation to
+    /// every future caller. `season`/`reflectance_cache` below stay `0`/
+    /// `None` for that reason — and note that this is now the ONLY
+    /// `terrain_at_tile` call in the shipped tree that passes `ctx: None`
+    /// deliberately: [`plate::draw_terrain_layer`]'s call was the other one
+    /// and The Wash's Task 6 flipped it. See [`Self::reflectance_cache`]'s
+    /// own doc for where the field's real readers are.
     fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         plate::terrain_at_tile(
@@ -2307,6 +2573,12 @@ impl Driver {
             virtual_h,
             u32::from(self.cursor.y),
             u32::from(self.cursor.x),
+            // This reads `.vertex` and nothing else, so a context here would
+            // buy a discarded reflectance per keypress.
+            None,
+            hornvale_kernel::WorldTime::GENESIS,
+            0,
+            None,
         )
         .vertex
     }
@@ -2962,6 +3234,20 @@ mod portolan_tests {
     /// acceptance test in `tests/driver.rs` uses.
     fn test_driver() -> Driver {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
+    }
+
+    /// The Wash, Task 4: the two `None` cases `season_bucket_for` folds to
+    /// bucket 0 are BOTH legitimate worlds, not errors — see the function's
+    /// own doc. This exercises the case with no calendar to consult at all
+    /// (a bare `None`, the tier-0 `ConstantSun` shape) directly, without
+    /// needing to construct one.
+    #[test]
+    fn a_starless_world_resolves_season_bucket_zero() {
+        assert_eq!(
+            season_bucket_for(None, hornvale_kernel::WorldTime::GENESIS),
+            0,
+            "no calendar to consult must resolve to bucket 0, not panic or guess"
+        );
     }
 
     /// **The roster the map draws from holds all three site kinds, and the
@@ -4122,6 +4408,10 @@ mod portolan_tests {
                     virtual_h,
                     u32::from(d.cursor.y),
                     u32::from(d.cursor.x),
+                    None,
+                    hornvale_kernel::WorldTime::GENESIS,
+                    0,
+                    None,
                 )
                 .vertex;
                 let (species, ph, morph) = &d.namer;
@@ -4456,6 +4746,10 @@ mod portolan_tests {
                     virtual_h,
                     u32::from(y),
                     u32::from(x),
+                    None,
+                    hornvale_kernel::WorldTime::GENESIS,
+                    0,
+                    None,
                 )
                 .vertex;
                 let resolved_ocean = d.terrain.is_ocean(vertex);
