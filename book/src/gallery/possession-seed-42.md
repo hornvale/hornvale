@@ -101,7 +101,7 @@ Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > go n
 [room 3733134593, day 0.16425]
-Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight.
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > map out 2
 [lens: colour · depth 11 · radius 4 · north-up]
@@ -122,17 +122,17 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 There is nothing here to enter.
 > look
 [room 3733134593, day 0.16425]
-Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight.
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > out
 You are already out of doors.
 > go ne
 [room 3733134689, day 0.32997]
-Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight.
+Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > back
 [room 3733134593, day 0.49631]
-Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight.
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > wait 90
 Time passes. You sense movement nearby (3819 stirred).
