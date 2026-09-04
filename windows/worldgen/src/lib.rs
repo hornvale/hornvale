@@ -12091,17 +12091,6 @@ mod tests {
         );
     }
 
-    fn constant(seed: u64) -> World {
-        build_world(
-            Seed(seed),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .unwrap()
-    }
-
     /// A generated-sky world at `seed`. Seed 42 — 39 of this helper's 49
     /// callers — is read from the committed fixture rather than rebuilt
     /// (decision 0607); it is byte-identical to the build, pinned by
@@ -12159,7 +12148,7 @@ mod tests {
     /// is that race's capitalized word for "earth" (its endonym).
     #[test]
     fn dominant_people_weights_by_mass_not_headcount() {
-        let world = constant(1);
+        let world = generated(1);
         let d = dominant_people(&world).expect("a peopled world has a dominant race");
         // deterministic across rebuilds
         assert_eq!(dominant_people(&world), Some(d));
@@ -12172,15 +12161,15 @@ mod tests {
     }
 
     /// Mutation check ([[measure-dont-narrate-the-mechanism]]): assert the
-    /// weighing MECHANISM, not a hard-coded winner. Seed 1's constant world
-    /// places goblin (population 1) and hobgoblin (population 18); hobgoblin
+    /// weighing MECHANISM, not a hard-coded winner. Seed 1's world places
+    /// goblin (population 1) and hobgoblin (population 18); hobgoblin
     /// wins on `Σ(population × mass)` (18 × 74.8 kg ≫ 1 × 18.1 kg). Crushing
     /// hobgoblin's mass to near-zero in a rebuilt component set must flip the
     /// winner to goblin — if it didn't, `dominant_people` would be reading
     /// headcount alone and this test would catch it.
     #[test]
     fn dominant_people_changes_when_the_winners_mass_is_crushed() {
-        let world = constant(1);
+        let world = generated(1);
         let wc = WorldComponents::assemble().unwrap();
         let winner = dominant_people_in(&world, &wc).expect("a peopled world has a dominant race");
 
@@ -12228,7 +12217,7 @@ mod tests {
     /// A minimal peopled world: one settlement per `(kind, population)`
     /// pair, each `peopled-by` its kind, with NO other facts. Lets a test
     /// hold every candidate's canonical (`wc`) mass fixed while choosing its
-    /// population freely — `constant(1)`'s real settlements already carry a
+    /// population freely — `generated(1)`'s real settlements already carry a
     /// committed `population` fact, and that predicate is functional (a
     /// second commit to the same subject would be rejected as a
     /// contradiction), so population can only be varied on fresh entities.
@@ -12294,7 +12283,7 @@ mod tests {
     /// ignoring population entirely — would still pass it, because crushing
     /// the winner's mass flips the mass-only ranking too. This test isolates
     /// the OTHER factor: hold both candidates' masses at their canonical
-    /// (`wc`) values (mass ranking unchanged from `constant(1)`) and instead
+    /// (`wc`) values (mass ranking unchanged from `generated(1)`) and instead
     /// invert POPULATION — give the real winner a population of 1 and the
     /// real loser a landslide population. A mass-only mutant, which never
     /// looks at population, would still declare the same winner (mass
@@ -12302,7 +12291,7 @@ mod tests {
     /// `Σ(population × mass)` formula flips.
     #[test]
     fn dominant_people_changes_when_the_winners_population_is_crushed() {
-        let world = constant(1);
+        let world = generated(1);
         let wc = WorldComponents::assemble().unwrap();
         let winner = dominant_people_in(&world, &wc).expect("a peopled world has a dominant race");
         let loser = if winner == KindId("goblin") {
@@ -12328,7 +12317,7 @@ mod tests {
     /// that merely tied at weight zero.
     #[test]
     fn dominant_people_is_always_a_placed_race() {
-        let world = constant(1);
+        let world = generated(1);
         let kind = dominant_people(&world).expect("a peopled world has a dominant race");
         assert!(
             flagship_of(&world, kind.0).is_some(),
@@ -12342,7 +12331,7 @@ mod tests {
     /// alone.
     #[test]
     fn built_world_names_and_classifies_its_planet() {
-        let world = constant(1);
+        let world = generated(1);
         let p = planet_entity(&world).expect("a built world has a planet entity");
         assert_eq!(world.ledger.text_of(p, "is-a"), Some("planet"));
         let n = world
@@ -12375,7 +12364,7 @@ mod tests {
     /// committed fact — no draw, no wall-clock, no entity-order sensitivity.
     #[test]
     fn planet_facts_are_deterministic() {
-        assert_eq!(constant(1).to_json(), constant(1).to_json());
+        assert_eq!(generated(1).to_json(), generated(1).to_json());
     }
 
     /// C1 T2 review regression: `dominant_people_in`'s candidacy loop must
@@ -12452,7 +12441,7 @@ mod tests {
     /// the test the ticket never had; it fails on the pre-campaign renderer.
     #[test]
     fn seed_42_names_both_its_peoples_pantheons() {
-        let world = constant(42);
+        let world = generated(42);
         assert!(
             placed_peoples(&world).len() > 1,
             "seed 42 places two peoples"
@@ -12530,7 +12519,7 @@ mod tests {
         build_world_from_components(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Constant,
+            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -12756,7 +12745,7 @@ mod tests {
     /// so they can never disagree about whether to name a world's peoples.
     #[test]
     fn placed_peoples_lists_flagship_holders_in_registry_order() {
-        let world = constant(42);
+        let world = generated(42);
         let placed = placed_peoples(&world);
         assert!(!placed.is_empty(), "seed 42 places at least one people");
         let names: Vec<&str> = placed.iter().map(|(s, _)| *s).collect();
@@ -12773,7 +12762,7 @@ mod tests {
     /// for "person" (the autonym).
     #[test]
     fn each_placed_people_has_a_named_instance_of_collective() {
-        let world = constant(1);
+        let world = generated(1);
         // at least one entity carries instance-of a placed species kind + a name
         let has = world.ledger.find("instance-of").any(|f| {
             matches!(&f.object, Value::Text(_)) && world.ledger.text_of(f.subject, "name").is_some()
@@ -12783,7 +12772,7 @@ mod tests {
 
     #[test]
     fn build_world_produces_the_full_cascade() {
-        let world = constant(42);
+        let world = generated(42);
         let places = hornvale_terrain::places(&world);
         assert!(!places.is_empty());
         let village = hornvale_settlement::village_info(&world).expect("village");
@@ -12815,16 +12804,37 @@ mod tests {
         // Same "incidental count, the cascade running is what matters"
         // basis this test's own comment has stated every time. Post-
         // unblinding re-measure, declared per decision 0016.
+        //
+        // THE ZENITH re-pin (2026-09-04): 1 -> 9. Not a reseating this time
+        // but a CHANGE OF SUBJECT — the world under this assertion is now
+        // seed 42's generated sky rather than the constant sun, and a
+        // generated sky affords far more phenomena for a vantage to observe
+        // and a faith to mythologize. Same "incidental count, the cascade
+        // running is what matters" basis.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            1
+            9
         );
     }
 
+    /// Rule-1 site (decision 0606's `build-path` reason): the subject IS the
+    /// build, so this keeps a local builder rather than calling `generated`,
+    /// whose seed-42 arm reads the committed fixture — two reads of one file
+    /// would compare the fixture against itself and go vacuous.
     #[test]
     fn build_world_is_deterministic() {
-        let a = constant(42).to_json();
-        let b = constant(42).to_json();
+        fn built() -> World {
+            build_world(
+                Seed(42),
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &hornvale_terrain::TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .unwrap()
+        }
+        let a = built().to_json();
+        let b = built().to_json();
         assert_eq!(a, b);
     }
 
@@ -12993,16 +13003,16 @@ mod tests {
     }
 
     /// claim: reachability(seed: 1..=4) — non-degeneracy: some adjacent pair of
-    /// constant-sky worlds differs
+    /// generated-sky worlds differs
     #[test]
     fn different_seeds_differ() {
-        let worlds: Vec<String> = (1..=4).map(|s| constant(s).to_json()).collect();
+        let worlds: Vec<String> = (1..=4).map(|s| generated(s).to_json()).collect();
         assert!(worlds.windows(2).any(|w| w[0] != w[1]));
     }
 
     #[test]
     fn almanac_context_gathers_everything() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seed, 42);
         assert!(!ctx.places.is_empty());
@@ -13028,9 +13038,25 @@ mod tests {
 
     #[test]
     fn sky_and_climate_reports_come_from_the_composition_root() {
-        let world = constant(42);
+        let world = generated(42);
         let sky = sky_report(&world, hornvale_kernel::WorldTime::GENESIS).unwrap();
-        assert!(sky.description.contains("zenith"));
+        // THE ZENITH (2026-09-04): this read `contains("zenith")`, which was
+        // the constant sun's own wording and proved only that `sky_of`
+        // returned tier 0 — nothing about the composition root this test is
+        // named for. The replacement asserts the CLIMATE half reached the
+        // report: `sky_report` derives terrain and climate from the world and
+        // folds the weather in through `sky_phrase`, so a sky condition word
+        // in the description is evidence the wiring ran. Same vocabulary
+        // `firmament_lines_report_the_sky_at_both_sample_sites` asserts on.
+        assert!(
+            ["clear", "fair", "overcast", "rain", "storm"]
+                .iter()
+                .any(|w| sky.description.contains(w)),
+            "the sky report must name a sky condition drawn from the climate: {}",
+            sky.description
+        );
+        // `climate_report` is `UniformClimate` and ignores its world, so this
+        // half is tier-independent and did not move with the flip.
         let climate = climate_report(&world);
         assert_eq!(climate.temperature_c, 18.0);
     }
@@ -13110,29 +13136,34 @@ mod tests {
         assert_eq!(before, after);
     }
 
+    /// The successor to `absent_sky_provider_fact_falls_back_to_constant`,
+    /// written while the fallback is still live so its red is BEHAVIOURAL —
+    /// a runtime panic — rather than a compile error once the arm is gone.
+    ///
+    /// **It cites no decision number, and that is deliberate.** The record
+    /// this behaviour answers to is written later in the same campaign (The
+    /// Zenith), and `docs_consistency::decision_cites_in_sources_resolve`
+    /// reddens on a cite to a record that does not exist yet — which is the
+    /// exact abuse that check was hardened against. The task that ratifies
+    /// the record adds the cite here, in the same commit as the record.
     #[test]
-    fn constant_choice_yields_constant_sky_and_unchanged_almanac_context() {
-        let world = constant(42);
-        assert!(matches!(sky_of(&world).unwrap(), Sky::Constant(_)));
-        let ctx = almanac_context(&world).unwrap();
-        assert!(ctx.sky.description.contains("zenith"));
-    }
-
-    #[test]
-    fn absent_sky_provider_fact_falls_back_to_constant() {
-        // A 1a/1b-era world never committed a sky-provider fact at all.
+    #[ignore = "green from The Zenith's Task 4: sky_of errors on an absent sky-provider fact; red here is the recorded pre-change behaviour"]
+    fn a_world_with_no_sky_provider_fact_is_an_error_not_a_fallback() {
+        // A bare world, never built — the only way to reach this arm once
+        // every build commits the fact unconditionally.
         let mut world = World::new(Seed(1));
         register_all(&mut world.registry).unwrap();
-        assert!(matches!(sky_of(&world).unwrap(), Sky::Constant(_)));
-    }
-
-    #[test]
-    fn constant_world_has_no_calendar_or_night_sky_or_notes() {
-        let world = constant(42);
-        assert!(calendar_lines(&world).unwrap().is_empty());
-        assert!(night_sky_line(&world).unwrap().is_none());
-        assert!(night_sky_lines(&world).unwrap().is_none());
-        assert!(genesis_notes(&world).unwrap().is_empty());
+        // `Sky` is not `Debug`, so `expect_err` will not compile here; the
+        // match keeps the red BEHAVIOURAL (a runtime panic on the `Ok` arm)
+        // rather than turning it into the compile error ruling R3 forbids.
+        let err = match sky_of(&world) {
+            Ok(_) => panic!("a never-built world has no sky"),
+            Err(e) => e,
+        };
+        assert!(
+            format!("{err:?}").contains("no sky-provider fact"),
+            "the error must name the missing predicate: {err:?}"
+        );
     }
 
     #[test]
@@ -13420,18 +13451,8 @@ mod tests {
     }
 
     #[test]
-    fn sky_calendar_accessor_present_for_generated_absent_for_constant() {
-        assert!(sky_of(&constant(42)).unwrap().calendar().is_none());
-        let generated_sky = sky_of(&generated(42)).unwrap();
-        let cal = generated_sky
-            .calendar()
-            .expect("generated sky has a calendar");
-        assert!(cal.year_length().get() > 0.0);
-    }
-
-    #[test]
     fn terrain_reconstructs_from_seed_and_pins() {
-        let world = constant(42);
+        let world = generated(42);
         let a = terrain_of(&world).unwrap();
         let b = terrain_of(&world).unwrap();
         assert_eq!(a.globe(), b.globe());
@@ -13466,7 +13487,7 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Constant,
+            SkyChoice::Generated,
             &pins,
             &SettlementPins::default(),
         )
@@ -13516,7 +13537,7 @@ mod tests {
 
     #[test]
     fn terrain_facts_are_committed_at_build() {
-        let world = constant(42);
+        let world = generated(42);
         assert!(
             world
                 .ledger
@@ -13535,7 +13556,7 @@ mod tests {
 
     #[test]
     fn land_lines_describe_the_globe() {
-        let world = constant(42);
+        let world = generated(42);
         let lines = land_lines(&world).unwrap();
         // Seed 42's default canonical-level globe carries a delta lobe and
         // playa fill but no waterfall (measured directly against the
@@ -13549,7 +13570,7 @@ mod tests {
 
     #[test]
     fn land_lines_name_point_observation_notables_when_present() {
-        let world = constant(42);
+        let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
         // Ground truth the notable line against the provider directly,
         // rather than re-asserting the exact seed-42 bytes twice.
@@ -13566,7 +13587,7 @@ mod tests {
 
     #[test]
     fn ground_lines_name_the_dominant_rock_and_soil() {
-        let world = constant(42);
+        let world = generated(42);
         let lines = ground_lines(&world).unwrap();
         assert!(!lines.is_empty());
         assert!(lines[0].contains("The land is mostly"));
@@ -13575,7 +13596,7 @@ mod tests {
 
     #[test]
     fn ground_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.ground_lines, ground_lines(&world).unwrap());
         let doc = hornvale_almanac::render(&ctx);
@@ -13584,7 +13605,7 @@ mod tests {
 
     #[test]
     fn water_lines_report_a_nonzero_fresh_water_share() {
-        let world = constant(42);
+        let world = generated(42);
         let lines = water_lines(&world).unwrap();
         assert_eq!(lines.len(), 1);
         assert!(lines[0].contains("Fresh water"));
@@ -13593,7 +13614,7 @@ mod tests {
 
     #[test]
     fn water_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.water_lines, water_lines(&world).unwrap());
         let doc = hornvale_almanac::render(&ctx);
@@ -13695,7 +13716,7 @@ mod tests {
 
     #[test]
     fn diurnal_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.diurnal_lines, diurnal_lines(&world).unwrap());
     }
@@ -13741,7 +13762,7 @@ mod tests {
 
     #[test]
     fn seas_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seas_lines, seas_lines(&world).unwrap());
     }
@@ -13817,7 +13838,7 @@ mod tests {
 
     #[test]
     fn rains_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.rains_lines, rains_lines(&world).unwrap());
     }
@@ -13846,16 +13867,9 @@ mod tests {
 
     #[test]
     fn firmament_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.firmament_lines, firmament_lines(&world).unwrap());
-    }
-
-    #[test]
-    fn constant_sky_world_still_has_a_climate() {
-        let world = constant(42);
-        let climate = climate_of(&world).unwrap();
-        assert!(climate.geosphere().vertex_count() > 0);
     }
 
     #[test]
@@ -14383,16 +14397,33 @@ mod tests {
         );
     }
 
+    /// `observation_time` returns 0.0 down two branches: a sky with no
+    /// calendar, and a calendar with no day length (tidally locked). This
+    /// test was named for both and only ever built the first — the constant
+    /// arm — so the locked arm, the one that outlives the tier, had no
+    /// coverage at all. It does now, and the name says only what is asserted.
     #[test]
-    fn observation_time_is_zero_for_constant_and_locked_skies() {
+    fn observation_time_is_zero_for_a_locked_sky() {
+        use hornvale_astronomy::RotationPin;
         let world = build_world(
             Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Constant,
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
         .unwrap();
+        let sky = sky_of(&world).unwrap();
+        assert!(
+            sky.calendar()
+                .expect("a generated sky has a calendar")
+                .day_length()
+                .is_none(),
+            "precondition: a locked world has no day length for this branch to take"
+        );
         let t = observation_time(&world, hornvale_species::ActivityCycle::Nocturnal).unwrap();
         assert_eq!(t, 0.0);
     }

@@ -2775,32 +2775,6 @@ mod tests {
     }
 
     #[test]
-    fn star_chart_on_a_constant_sun_world_is_a_loud_error() {
-        use hornvale_kernel::Seed;
-        use world_builder::{SettlementPins, SkyChoice, build_world};
-        let world = build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .unwrap();
-        let path = std::env::temp_dir().join(format!(
-            "hornvale-star-chart-test-{}.json",
-            std::process::id()
-        ));
-        world.save(&path).unwrap();
-        let err =
-            cmd_star_chart(&args(&["star-chart", "--world", path.to_str().unwrap()])).unwrap_err();
-        std::fs::remove_file(&path).ok();
-        assert!(
-            err.contains("no generated sky"),
-            "unexpected error text: {err}"
-        );
-    }
-
-    #[test]
     fn lab_run_unknown_path_is_an_error() {
         let err = cmd_lab(&args(&["lab", "run", "studies/does-not-exist.study.json"])).unwrap_err();
         assert!(!err.is_empty());

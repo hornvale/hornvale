@@ -33,8 +33,8 @@
 # merits, so `unmigrated` did not move and UNMIGRATED_CEILING stayed 334.
 #
 cli/src/dictionary.rs	1	unmigrated:1
-cli/src/main.rs	10	unmigrated:9 production:1
-cli/src/repl.rs	9	unmigrated:9
+cli/src/main.rs	9	unmigrated:8 production:1
+cli/src/repl.rs	6	unmigrated:6
 cli/src/tropes.rs	1	unmigrated:1
 cli/tests/suite/branches_coverage.rs	1	unmigrated:1
 cli/tests/suite/branches_identity.rs	1	unmigrated:1
@@ -55,7 +55,7 @@ cli/tests/suite/star_class_is_a_concept.rs	1	unmigrated:1
 cli/tests/suite/the_unnameable.rs	2	unmigrated:2
 cli/tests/suite/trope_witness.rs	1	unmigrated:1
 windows/almanac/tests/suite/interlinear.rs	1	unmigrated:1
-windows/book/src/lib.rs	3	unmigrated:3
+windows/book/src/lib.rs	2	unmigrated:2
 windows/hearsay/tests/common/mod.rs	1	unmigrated:1
 windows/hearsay/tests/probe_argmin_defect_crossing_arms.rs	1	unmigrated:1
 windows/hearsay/tests/probe_crossing_scale.rs	1	unmigrated:1
@@ -91,7 +91,7 @@ windows/lab/tests/suite/the_explanations.rs	1	unmigrated:1
 windows/lab/tests/suite/the_fare_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/the_mire_calibration.rs	1	unmigrated:1
 windows/locale/tests/suite/surface_mixture.rs	1	unmigrated:1
-windows/scene/src/lib.rs	7	unmigrated:7
+windows/scene/src/lib.rs	6	unmigrated:6
 windows/scene/src/region.rs	2	unmigrated:2
 windows/scene/src/surrounds.rs	1	identity:1
 windows/scene/tests/common/mod.rs	1	unmigrated:1

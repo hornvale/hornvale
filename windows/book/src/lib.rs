@@ -3158,24 +3158,9 @@ mod tests {
         assert_eq!(a.argument, Argument::Count(2));
     }
 
-    fn constant(seed: u64) -> World {
-        use hornvale_astronomy::SkyPins;
-        use hornvale_terrain::TerrainPins;
-        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
-
-        build_world(
-            hornvale_kernel::Seed(seed),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .expect("constant world builds")
-    }
-
     #[test]
     fn coverage_flags_name_as_uncovered() {
-        let world = constant(1);
+        let world = generated(1);
         let gaps = uncovered_predicates(&world);
         assert!(
             gaps.contains(&"name".to_string()),
@@ -3198,15 +3183,22 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(1),
             &SkyPins::default(),
-            SkyChoice::Constant,
+            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
         .expect("seed 1 builds");
 
         let vol = render_volume(&world);
+        // `contains`, not `ends_with`. Under the constant sun the sentence
+        // stopped at the classification; a generated sky commits moon-count,
+        // star-class and day-length facts that the volume appends as further
+        // clauses ("... is a planet with two moons, orbiting a yellow-white
+        // dwarf (F); its day lasts about 1.5 standard days."). The claim this
+        // test makes is that the volume CLASSIFIES the planet, and that is
+        // what the substring holds.
         assert!(
-            vol.lines.iter().any(|l| l.ends_with(" is a planet.")),
+            vol.lines.iter().any(|l| l.contains(" is a planet")),
             "the volume classifies the planet: {:?}",
             vol.lines
         );

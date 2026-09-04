@@ -30,13 +30,6 @@ mod wash_support {
     pub const W: u16 = 80;
     /// See [`W`].
     pub const H: u16 = 24;
-    /// A representative mid-northern latitude, degrees — the observer
-    /// latitude Task 5's illuminant tests sample at. Not seed 42's flagship
-    /// latitude (this file has no need of that one specifically): any fixed
-    /// latitude for which the sun clears the horizon at both sample
-    /// elevations below serves the directional claim just as well.
-    pub const SAMPLE_LATITUDE_DEG: f64 = 45.0;
-
     /// Seed 42's locale context, built from a bare world. Everything else
     /// this file needs — the terrain, the geosphere, the nearest-vertex
     /// index — is read back off it, so the world is derived once.
@@ -435,44 +428,6 @@ fn plate_illuminant_at_is_deterministic_across_repeated_calls() {
     assert_eq!(
         first, second,
         "the same (world, elevation) must produce the identical illuminant"
-    );
-}
-
-/// FIRES WHEN: a starless world (tier-0 `ConstantSun`, no calendar) stops
-/// falling back to a flat, colourless illuminant and instead panics or
-/// silently guesses a sun it cannot honestly place. The two `None` cases
-/// [`hornvale_game::driver::plate_illuminant`] documents are modelled
-/// worlds, not errors — this is the first of them; the repo's own keystone
-/// fixture is generated `--sky constant`, so it is not exotic.
-#[test]
-fn a_starless_world_lights_the_plate_flat() {
-    let world = hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(42),
-        &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Constant,
-        &hornvale_terrain::TerrainPins::default(),
-        &hornvale_worldgen::SettlementPins::default(),
-    )
-    .expect("seed 42 generates under a constant sun");
-    let calendar = hornvale_worldgen::sky_of(&world)
-        .ok()
-        .and_then(|sky| sky.calendar().cloned());
-    assert!(
-        calendar.is_none(),
-        "a tier-0 constant sun must have no calendar to place a sun by"
-    );
-
-    let lit = hornvale_game::driver::plate_illuminant(
-        &world,
-        calendar.as_ref(),
-        hornvale_kernel::WorldTime::GENESIS,
-        wash_support::SAMPLE_LATITUDE_DEG,
-    );
-
-    assert_eq!(
-        *lit.get(),
-        [1.0; hornvale_kernel::color::BANDS],
-        "a starless world must fall back to a flat unit illuminant"
     );
 }
 

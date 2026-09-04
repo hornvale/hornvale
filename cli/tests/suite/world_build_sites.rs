@@ -115,7 +115,7 @@ const ENTRY_POINTS: &[&str] = &[
 /// row's tally and lower this constant by the same amount") mandatory instead
 /// of aspirational: a migration and its ceiling drop land in one commit, or
 /// the guard reddens.
-const UNMIGRATED_CEILING: usize = 333;
+const UNMIGRATED_CEILING: usize = 327;
 
 /// The workspace root — the parent of `cli/`, where this test crate lives.
 fn workspace_root() -> PathBuf {

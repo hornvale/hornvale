@@ -1516,7 +1516,7 @@ mod tests {
         hornvale_worldgen::build_world(
             hornvale_kernel::Seed(1),
             &Default::default(),
-            hornvale_worldgen::SkyChoice::Constant,
+            hornvale_worldgen::SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
@@ -1587,11 +1587,11 @@ mod tests {
         assert!(scene.biome.iter().all(|&i| (i as usize) < 22));
     }
 
-    /// claim: structural(seed: 1 — constant sky) — false-positive seed-loop
+    /// claim: structural(seed: 1 — generated sky) — false-positive seed-loop
     /// flag; `s` binds a swing f64
     #[test]
     fn climate_layers_are_sized_and_present() {
-        let scene = tiles_scene(&world(), 32).unwrap(); // seed-1 constant sky: spins, obliquity 23.5
+        let scene = tiles_scene(&world(), 32).unwrap(); // seed-1 generated sky: spins
         let tiles = (scene.width * scene.height) as usize;
         assert_eq!(scene.t_mean_c.len(), tiles);
         assert_eq!(scene.t_swing_c.len(), tiles);
@@ -1604,7 +1604,10 @@ mod tests {
         );
         assert_eq!(scene.moisture.len(), tiles);
         assert!(scene.moisture.iter().all(|&m| (0.0..=1.0).contains(&m)));
-        assert_eq!(scene.season_period_days, 365.25); // constant-sun default year
+        // Seed 1's generated-sky year, measured 2026-09-04 (The Zenith). This
+        // read `365.25` with the comment "constant-sun default year" — the
+        // tier's Earth-baseline stand-in, not a world's own orbit.
+        assert_eq!(scene.season_period_days, 538.084165906676);
         assert_eq!(scene.circulation_bands, Some(3)); // Earth-like day → 3 bands
         // A spinning, obliquity-23.5 world has a nonzero swing somewhere.
         assert!(scene.t_swing_c.iter().any(|&s| s != 0.0));
@@ -2007,21 +2010,6 @@ mod tests {
     }
 
     #[test]
-    fn system_scene_errors_on_a_constant_sun() {
-        use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
-        let world = build_world(
-            Seed(42),
-            &Default::default(),
-            SkyChoice::Constant,
-            &Default::default(),
-            &Default::default(),
-        )
-        .unwrap();
-        assert!(system_scene(&world).is_err(), "constant sun has no system");
-    }
-
-    #[test]
     fn moons_scene_has_schema_indices_and_is_deterministic() {
         let a = moons_scene(&mooned_world()).expect("generated world has moons");
         assert_eq!(a.schema, "scene/moons/v1");
@@ -2261,11 +2249,6 @@ mod tests {
     }
 
     #[test]
-    fn moons_scene_errors_on_a_constant_sun() {
-        assert!(moons_scene(&world()).is_err(), "constant sun has no moons");
-    }
-
-    #[test]
     fn moons_scene_does_not_consume_draws_or_mutate_the_world() {
         // The save-format guard: the document is a pure read + hash, so building
         // it leaves the world byte-identical (no Stream draw, no mutation).
@@ -2334,14 +2317,6 @@ mod tests {
             assert!((0.0..360.0).contains(&s.ra_deg));
             assert!((1..=5).contains(&s.magnitude_class));
         }
-    }
-
-    #[test]
-    fn neighbors_scene_errors_on_a_constant_sun() {
-        assert!(
-            neighbors_scene(&world()).is_err(),
-            "constant sun has no neighbors"
-        );
     }
 
     #[test]
@@ -2486,20 +2461,6 @@ mod tests {
             scene.events[0].day,
             scene.from,
             scene.until
-        );
-    }
-
-    #[test]
-    fn eclipses_scene_rejects_a_world_with_no_generated_sky() {
-        // Mirror the moons/neighbors constant-sun refusal test.
-        let w = world();
-        assert!(
-            eclipses_scene(
-                &w,
-                StdInstant::new(0.0).unwrap(),
-                StdInstant::new(100.0).unwrap()
-            )
-            .is_err()
         );
     }
 

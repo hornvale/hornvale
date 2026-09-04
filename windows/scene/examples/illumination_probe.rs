@@ -576,7 +576,7 @@ fn main() {
     let seed1_world = build_world(
         Seed(1),
         &Default::default(),
-        SkyChoice::Constant,
+        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )
