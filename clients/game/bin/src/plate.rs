@@ -2322,8 +2322,10 @@ pub struct ReflectanceKey {
 /// eviction policy (what to drop, on what pressure) that is a design
 /// decision belonging to its own campaign with a measurement behind it, not
 /// a documentation fix wave. A realistic session's entry count is
-/// UNMEASURED — reading it needs an accessor this cache does not expose and
-/// adding one is out of scope here.
+/// UNMEASURED. [`ReflectanceCache::len`] exists, but the `Driver` holds its
+/// cache in a private field and never calls it, so nothing outside
+/// `driver.rs` can observe a live session's count. Surfacing it is a
+/// behaviour change and out of scope for a documentation pass.
 ///
 /// [`ComponentStore`]: hornvale_kernel::component::ComponentStore
 /// [`LocaleContext::reflectance_at_facet_cached`]: hornvale_locale::LocaleContext::reflectance_at_facet_cached
