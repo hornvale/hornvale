@@ -148,8 +148,12 @@ against the surface silently becoming address-hashed speckle — a real hazard,
 since hashing a facet's address is the obvious cheap way to draw per-facet
 noise and produces something that looks fine until it is measured — and it is
 not independent evidence that the surface is coherent. It reads 0.90, 0.81,
-0.96 and 0.59 for the four kinds, all far from the near-zero band a hashed
-surface would produce.
+0.96 and 0.59 for the four kinds — no mutant Moran's I was measured, so this
+statistic's own hashed-baseline is unknown, and for thicket the margin is
+known to be thin on a related check: at contextuality 0.90 (above the
+shipped 0.85), an address-hashed mutant's lag-1 prevalence autocorrelation
+reads 0.955, above the 0.95 threshold that same guard uses. Whether Moran's I
+would discriminate as cleanly is not established by this reading alone.
 
 The evidence that actually discriminates was taken separately, by mutating the
 mechanism into the defect and re-measuring. Real prevalence autocorrelation

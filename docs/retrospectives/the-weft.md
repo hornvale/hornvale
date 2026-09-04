@@ -1,6 +1,8 @@
 # Campaign The Weft — retrospective
 
-**Merged:** 2026-09-04 (pending)
+**Merged:** pending (queued 2026-09-04) · **Ledger:**
+`docs/superpowers/ledgers/2026-09-03-the-weft.md` (16 entries) · **Chronicle:**
+[the-weft](../../book/src/chronicle/the-weft.md) · **Decisions:** 0686, 0687
 
 ## The headline: ten defects in the controller's spec and plan text, and approximately zero in implementer code
 
@@ -249,6 +251,6 @@ were overwhelmingly in *sentences*, wherever they were written.
 | the brief's occupation fields at a settlement's facet name the *containing vertex's* occupation, not the settlement | registry row filed; inherited, and nothing renders those fields today |
 | the rumor producer, and the region invariant withdrawn with it | registry row filed; restoring the invariant is that campaign's first task |
 | a ruin still reports a point, not ground | registry row filed by Task 3; the reason is written beside the enum |
-| the overhang's abundance was not re-derived after its slope constant moved materially | recorded in the ledger; a future task should re-measure its occurrence rate against the corrected recipe |
+| `OVERHANG_ABUNDANCE` was calibrated against the pre-I2 slope recipe, which then moved that kind's occurrence count **−24.5%** (1,117 → 843) in the same commit — the shipped frequency is not the frequency the constant was tuned for | recorded in the ledger; a future task should re-derive `OVERHANG_ABUNDANCE` against the corrected `GORGE_SLOPE`-based recipe |
 | the coherence guard's own threshold was chosen after unblinding and is not a frozen floor | corrected in the metric's documentation, which now says so rather than claiming a preregistration that did not happen |
 | the walking band and one architecture chapter still quote a pre-lattice-change facet size (~1.7 km rather than 1.126 km) | pre-existing, unrelated to this campaign; noted, not fixed here |

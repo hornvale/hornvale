@@ -7,8 +7,15 @@
 //! which depends on `hornvale-worldgen` (not the reverse — the same
 //! layering [`super`]'s module doc states for `LocaleContext`), so this
 //! crate cannot reference that vocabulary at all. [`WeftKind::Overhang`]'s
-//! own doc states the affordance claim in prose; wiring an `overhang` row
-//! into `windows/vessel`'s `object_registry` is a later task's work.
+//! own doc states the affordance claim in prose; the wiring shipped in this
+//! campaign (Task 8) as `windows/vessel::affordance::weft_object_registry`,
+//! a **separate** `ComponentStore<WeftKind, ObjectTraits>` — not a row in
+//! `object_registry` itself. `object_registry`'s keys are gated closed
+//! against `hornvale_thing::THING_KINDS`, which registers into the world's
+//! `ConceptRegistry` and so serializes into `world.json`; admitting
+//! `"overhang"` there would move `cli/tests/fixtures/world-seed-42.json`,
+//! which this campaign's own spec §6 forbids. Spec §5.6 has the full
+//! account of why the single-registry route was never available to take.
 //!
 //! **Eligibility is a per-kind gate, tested before any noise is drawn (Task
 //! 7, controller ruling R1).** Task 5's review measured that 59% of all
@@ -44,10 +51,10 @@ pub enum WeftKind {
     /// affords shelter and fire: "a place to get out of the rain and start
     /// a fire" is a component bundle in the existing `ObjectProperty`
     /// vocabulary (`SupportsRest`-adjacent shelter plus a warmth variant),
-    /// once wired at `windows/vessel`'s `object_registry` — see this
-    /// module's own doc for why that wiring is not, and cannot be, done
-    /// here. Proves the affordance path end to end (spec §5.6's "what it
-    /// proves" column), once that later wiring lands.
+    /// wired at `windows/vessel::affordance::weft_object_registry` — a
+    /// separate table from `object_registry`, not a row in it; see this
+    /// module's own doc for why that route was never available. Proves the
+    /// affordance path end to end (spec §5.6's "what it proves" column).
     Overhang,
     /// Thicket / brake — spec §5.6: high contextuality (productivity —
     /// temperature × moisture, Liebig-combined), long correlation length.
