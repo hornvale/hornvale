@@ -30,10 +30,8 @@ Neighbors are anonymous — the sim names no star (proper names are a
 captured future direction, not a gap here). Identity for display is
 `color` + `class_name` ("the amber giant"), the almanac's own convention.
 
-Only a world with a **generated** sky has a neighborhood or a starfield to
-describe. Tier-0 constant-sun worlds have no orrery and no neighbors;
-asking one for `scene/neighbors/v1` fails with a description of why —
-mirroring `scene/system/v1` and `scene/moons/v1`'s same refusal.
+Every valid world has a generated sky and therefore a neighborhood and
+starfield to describe.
 
 ## The document
 
@@ -209,6 +207,4 @@ hornvale scene neighbors [--world <PATH>]
 ```
 
 This prints one `scene/neighbors/v1` document to standard output. `--world`
-defaults to `world.json`. A world with no generated sky (the tier-0
-constant sun) has no neighborhood or starfield to describe, and the
-command fails with a message saying so.
+defaults to `world.json`.

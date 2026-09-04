@@ -223,10 +223,9 @@ hornvale scene eclipses --from <day> --until <day> [--world <PATH>]
 ```
 
 This prints one `scene/eclipses/v2` document to standard output. `--world`
-defaults to `world.json`; `--from` and `--until` are required. A world with
-no generated sky (the tier-0 constant sun, or a sky with no moons to raise
-an eclipse) has no eclipses to describe, and the command fails with a
-message saying so.
+defaults to `world.json`; `--from` and `--until` are required. A sky with no
+moons capable of raising an eclipse has no eclipses to describe, and the
+command fails with a message saying so.
 
 ## What changed in v2
 

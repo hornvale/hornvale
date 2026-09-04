@@ -12216,10 +12216,9 @@ mod tests {
     /// the "is a planet" sentence names.
     #[test]
     fn the_planet_is_the_world_root_fact_holder() {
-        // Generated (not Constant) sky: moon-count is only ever committed
-        // under `SkyChoice::Generated` (`astronomy::facts::genesis` is
-        // gated on it), so this is the sky choice that actually exercises
-        // "the planet carries the astronomical facts."
+        // A generated sky commits moon-count through
+        // `astronomy::facts::genesis`, so this exercises "the planet carries
+        // the astronomical facts."
         let world = generated(1);
         let p = planet_entity(&world).expect("a planet entity");
         assert!(

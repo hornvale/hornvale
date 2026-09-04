@@ -22,7 +22,7 @@
 //! ## Population (frozen, spec §6)
 //!
 //! 200 seeds (`1..=200`), default pins (`SkyPins`/`TerrainPins`/
-//! `SettlementPins::default()`, `SkyChoice::Generated`), the standard
+//! `SettlementPins::default()`), the standard
 //! icosphere mesh (`hornvale_terrain::GLOBE_LEVEL`, unconditionally 6 —
 //! there is no smaller "study mesh" in this codebase), **land vertices only**
 //! (`!Biome::is_marine()`), evaluated at 12 days evenly spaced across one

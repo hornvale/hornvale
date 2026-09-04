@@ -1,5 +1,9 @@
 # The Zenith — retiring the provider-tier system
 
+> **Status: IMPLEMENTED (2026-09-04), pending close review and merge.** The
+> shipped-status registry transition is prepared on the campaign branch; main
+> remains authoritative until the merge queue lands it.
+>
 *"A golden sun hangs fixed at zenith. It has never been seen to move."*
 That sentence is the entire content of Hornvale's tier-0 astronomy. This
 campaign deletes it, and with it the last surviving instance of the

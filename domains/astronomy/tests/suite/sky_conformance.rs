@@ -10,8 +10,8 @@
 //! part doing the work, so they are asserted directly (decisions 0736 and
 //! 0738).
 //!
-//! The two constants below were previously read out of `ConstantSun` at
-//! test time — production code inside the crate under test. Frozen here,
+//! The three constants below were previously read out of the retired provider
+//! at test time — production code inside the crate under test. Frozen here,
 //! they can no longer drift with the implementation they check.
 
 use hornvale_astronomy::{GeneratedSky, MoonsPin, RotationPin, SkyPins, generate};

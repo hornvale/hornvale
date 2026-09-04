@@ -1595,8 +1595,9 @@ mod tests {
         // read `365.25` with the comment "constant-sun default year" — the
         // tier's Earth-baseline stand-in, not a world's own orbit.
         assert_eq!(scene.season_period_days, 538.084165906676);
-        assert_eq!(scene.circulation_bands, Some(3)); // Earth-like day → 3 bands
-        // A spinning, obliquity-23.5 world has a nonzero swing somewhere.
+        // Seed 1's drawn spinning regime resolves to three circulation bands.
+        assert_eq!(scene.circulation_bands, Some(3));
+        // Its drawn nonzero obliquity produces a nonzero swing somewhere.
         assert!(scene.t_swing_c.iter().any(|&s| s != 0.0));
         // Signed: some tile north-positive, some south-negative.
         assert!(scene.t_swing_c.iter().any(|&s| s > 0.0));

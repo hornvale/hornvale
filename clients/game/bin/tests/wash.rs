@@ -442,10 +442,10 @@ fn plate_illuminant_at_is_deterministic_across_repeated_calls() {
 /// game-check` asserts nothing about this path, and no ratchet binds it, so
 /// a regression here is silent.
 ///
-/// **It is not a tier-0 test, and the version it replaces only looked like
-/// one.** The Zenith retired `a_starless_world_lights_the_plate_flat`,
-/// which built a `SkyChoice::Constant` world purely to obtain a `None`
-/// calendar. `plate_illuminant` documents TWO `None` cases and the second —
+/// **It is not a retired-provider test, and the version it replaces only
+/// looked like one.** The Zenith retired `a_starless_world_lights_the_plate_flat`,
+/// which built a stipulated acyclic world purely to obtain a `None` calendar.
+/// `plate_illuminant` documents TWO `None` cases and the second —
 /// a `Some` calendar whose `solar_altitude_at` returns `None` under zero
 /// obliquity AND zero eccentricity — outlives the tier entirely. A literal
 /// `None` reaches the same arm from both, the way

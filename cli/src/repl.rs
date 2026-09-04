@@ -546,11 +546,15 @@ mod tests {
         // now builds. Every figure below moved, and the sweep's own conclusion
         // moved with them, so none of it is a renumbering of the old note:
         //
-        //   at seed 0   constant sky (pre-Zenith)   generated sky (today)
+        //   at seed 0   inherited pre-Zenith note   measured 2026-09-04
         //   settlements               180                        222
         //   repeated lines             18                         12
         //   colliding groups            9                          6
-        //   name-colliding            101                        110
+        //   name-colliding            101*                       110
+        //
+        // * The old note did not define its population, so 101 is provenance,
+        //   not a like-for-like baseline. Only today's 110 has the definition
+        //   below and carries this test's argument.
         //
         // "name-colliding" counts SETTLEMENTS whose name is shared with at
         // least one other, which is the population a name-scoped qualifier

@@ -1,5 +1,9 @@
 # The Zenith Implementation Plan
 
+> **Status: IMPLEMENTED (2026-09-04), pending close review and merge.** All
+> eight tasks are locally committed or represented by the close commit this
+> plan accompanies; canonical queue status remains external to this marker.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Delete Hornvale's astronomy provider-tier system — `ConstantSun`,
@@ -1292,6 +1296,12 @@ Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
 - Modify: `book/src/SUMMARY.md`
 - Modify: `book/src/frontier/idea-registry.md` (the `SKY-retire-the-tier-system` row)
 - Modify: `docs/superpowers/ledgers/2026-09-04-the-zenith.md`
+- Modify: `domains/astronomy/tests/suite/sky_conformance.rs`
+- Modify: `windows/worldgen/tests/suite/brief_axis_probe.rs`
+- Modify: absorbed stale comments in `clients/game/bin/tests/wash.rs`,
+  `windows/worldgen/src/lib.rs`, and
+  `windows/lab/tests/suite/the_mire_calibration.rs`
+- Modify: current sky-facing book chapters found by the freshness sweep
 
 - [ ] **Step 1: Verify the DoD by measurement**
 
@@ -1300,7 +1310,7 @@ grep -rn "ConstantSun\|SkyChoice\|Sky::Constant" --include=*.rs . | grep -v '^./
 grep -rn "Sky::Constant" --include=*.sh --include=*.toml . | grep -v '^./target'
 ls book/src/gallery/almanac-seed-42*.md
 ```
-Expected: no `.rs` hits; two almanacs (`almanac-seed-42.md`,
+Expected after reconciling any post-absorb callers: no `.rs` hits; two almanacs (`almanac-seed-42.md`,
 `almanac-seed-42-locked.md`).
 
 **Do NOT add a committed source-scan test asserting these are zero.** The

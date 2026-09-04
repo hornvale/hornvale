@@ -478,6 +478,32 @@ not one ordered class — exact-output pins and preregistered verdicts require
 different responses to the same population move.
 · Capture: this ledger entry; Task 5 report; Task 8 retrospective.
 
+#16 [G5] — **The close gained a narrow code reconciliation because absorbed
+`main` added one world-build site after The Zenith's original census.**
+· **Finding:** The Staple's committed `brief_axis_probe` still passed the
+retired provider choice to `build_world`; three absorbed comments also named
+the retired types. The one-time Definition-of-Done grep therefore returned
+four Rust hits after a clean absorption even though the pre-absorb branch had
+none.
+· **Decision:** update the probe to the post-Zenith API without changing its
+measurement, rewrite the three comments historically, and record those files
+in Task 8's scope. This is merge reconciliation, not a reopening of the
+retirement design.
+· **Why:** the probe is durable evidence for The Staple and must survive; the
+compiler is the correct guard for its API call, while the close grep is the
+only instrument that catches stale identifiers in comments. Hiding the files
+from the plan would make the close's actual scope false.
+· **Incoming context read:** The Staple's chronicle and retrospective explain
+why this ignored probe is committed rather than scratch: its four-thousand-
+occupation measurement is the metaplan's load-bearing evidence. Deleting or
+quieting it would destroy another campaign's product.
+· **Cost if wrong:** the probe could silently change population or depth while
+being made to compile; focused execution must preserve its output shape, and
+review must inspect the call rather than accept compilation alone.
+· ideonomy passes: 0 — a forced absorb-time reconciliation with one minimal
+answer.
+· Capture: Task 8 plan correction; Task 8 report and retrospective.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding
