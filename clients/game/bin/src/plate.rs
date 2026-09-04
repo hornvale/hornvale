@@ -2304,6 +2304,27 @@ pub struct ReflectanceKey {
 /// [`LocaleContext::reflectance_at_facet_cached`] is invoked and nowhere
 /// else, so it is a count OF that call and not a proxy for it.
 ///
+/// **UNBOUNDED, AND DELIBERATELY UNDOCUMENTED UNTIL NOW.** Unlike
+/// [`crate::tiles::TileCache`] — the sibling cache whose unbounded growth
+/// was this campaign's one Critical, one level up — this struct has no
+/// [`Self::hits`]/[`Self::misses`] counterpart to `evict`: no `clear`, no
+/// `retain`, no bound, and nothing ever drops an entry for the life of the
+/// session. At [`BAND_B_RUNG`] each drawn raster position addresses its own
+/// facet, so panning mints roughly one `(FacetId, season)` entry per tile
+/// drawn — new ground, not a repeat — at roughly 96 bytes an entry
+/// (`FacetId` + `SEASON_BUCKETS`'s column + the stored
+/// [`hornvale_kernel::color::Reflectance`], plus the `BTreeMap` node
+/// overhead). **Correctness does not need a bound here**: the season column
+/// already prevents staleness the way [`crate::tiles::TileCache`]'s season
+/// and illuminant columns do, so an entry never goes wrong, only stale
+/// entries would ever need evicting and none exist. This is a pure memory
+/// bound, and it was accepted rather than overlooked: bounding it needs an
+/// eviction policy (what to drop, on what pressure) that is a design
+/// decision belonging to its own campaign with a measurement behind it, not
+/// a documentation fix wave. A realistic session's entry count is
+/// UNMEASURED — reading it needs an accessor this cache does not expose and
+/// adding one is out of scope here.
+///
 /// [`ComponentStore`]: hornvale_kernel::component::ComponentStore
 /// [`LocaleContext::reflectance_at_facet_cached`]: hornvale_locale::LocaleContext::reflectance_at_facet_cached
 #[derive(Debug, Default)]
@@ -2531,7 +2552,7 @@ impl Spectral<'_> {
 /// nothing. That limit is real and is why the declaration sits next to the
 /// code it describes rather than in the spine's own module.
 ///
-/// **`terrain` is declared [`Rate::Diurnal`], not `Seasonal`, and the
+/// **`terrain` is declared [`crate::rate::Rate::Diurnal`], not `Seasonal`, and the
 /// difference is the whole point of writing this down.** The brief for this
 /// task proposed `Seasonal` — reflectance is seasonal-rate, which is true —
 /// but the terrain layer's drawn `Grid` does not hold a reflectance. It
@@ -2637,7 +2658,7 @@ pub const LAYERS: &[crate::rate::LayerDecl] = &[
 /// MUST be `season_bucket(calendar.season_phase(at))` for whichever
 /// calendar governs the world `at` belongs to** (bucket `0` when that
 /// calendar is `None`, or when its own `season_phase` reports `None` —
-/// [`hornvale_game::driver::season_bucket_for`] is the one place that fold
+/// [`crate::driver::season_bucket_for`] is the one place that fold
 /// is written out, and every caller should route through it rather than
 /// re-deriving it). This function CANNOT check the contract itself and
 /// cannot derive `season` on its own: neither `hornvale_locale::

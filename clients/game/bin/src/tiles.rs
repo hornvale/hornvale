@@ -13,7 +13,7 @@
 //! drawn tile used to hold nothing but geometry, so one answer lasted a
 //! session. It now holds INK — the observer's collapse of the ground's
 //! seasonal reflectance under the sun's diurnal light — and nothing here
-//! invalidates by age. [`TileKey::illum_bits`] carries the full argument;
+//! invalidates by age. [`TileLight::illum_bits`] carries the full argument;
 //! the short version is that a cache with no clock must put the clock in
 //! its key, or it freezes the picture at the first frame and looks correct
 //! while doing it. The feature layer is composed over
@@ -172,12 +172,29 @@ pub struct TileLight {
     /// illuminants can collide onto one — where a 64-bit fingerprint would
     /// have traded that guarantee for 72 bytes.
     ///
-    /// **The cost is real and is the correct cost.** The sun moving evicts
-    /// nothing but does mint a fresh generation of tiles, so a plate redrawn
-    /// after the possession has slept costs a cold draw. Scrolling, resizing
-    /// and rung changes — the motions this cache was actually built for, and
-    /// the ones that happen between turns — do not move the sun, so they
-    /// still hit.
+    /// **The cost is real, lands per turn, and is currently unpaid — this
+    /// paragraph used to say the opposite of all three.** [`TileCache::evict`]
+    /// correctly drops every tile of a superseded light (a tile holding ink
+    /// must not outlive its illuminant), so the sun moving evicts the WHOLE
+    /// cache, not nothing. And it is not a sleep-scale event: a walk step
+    /// costs 10,000 ticks — 0.1 std day (`windows/vessel/src/clock.rs`) —
+    /// and there are ~435 distinct illuminants per standard day at latitude
+    /// 45, so most turns move this key column.
+    ///
+    /// **Measured on this branch** (release, `Driver::tile_renders()` as the
+    /// instrument, a `wait` turn so window and frame are provably
+    /// unchanged): the cache flushed on 11/20 turns at every size tried,
+    /// with the redraw-after-flush costing tens of milliseconds against an
+    /// on-hit cost near half a millisecond —
+    /// `104x56`: 79.30 ms median flush vs. 0.454 ms on-hit;
+    /// `200x60`: 76.69 ms median flush vs. 0.433 ms on-hit;
+    /// `80x24`: 30.49 ms median flush vs. 0.426 ms on-hit. Against a sim
+    /// turn that already costs 100-180 ms end to end, that is a 30-70% rise
+    /// on roughly half of turns — real, but not the ~170x the raw redraw
+    /// numbers alone would suggest. The eviction design is correct; this
+    /// cost is simply unpaid, and fixing it is a separate campaign.
+    /// Scrolling, resizing and rung changes — the motions this cache was
+    /// actually built for — do not move the sun, so they still hit.
     ///
     /// **`ColorDepth` and `colour_allowed` are deliberately NOT here**, and
     /// the omission is latent rather than a hazard: both are resolved from

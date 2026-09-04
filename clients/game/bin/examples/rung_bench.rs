@@ -10,6 +10,18 @@
 //! time at `--tiles 200x200`, and a number at or above 50 ms is a NULL
 //! result to be reported, never retuned away.
 //!
+//! **THE 50 MS FIGURE WAS CALIBRATED AGAINST AN UNLIT DRAW, AND THIS
+//! HARNESS NO LONGER DRAWS UNLIT.** Since The Wash's Task 6 fix round 1
+//! (see `main`'s own note), every timed call here goes through
+//! [`plate::PlateLight`] and the observer's reflectance collapse, measured
+//! **1.65x costlier** than the unlit path the 50 ms threshold was set
+//! against. Comparing today's number to the original 50 ms therefore
+//! compares a different quantity to an old threshold and can read a false
+//! NULL on a draw that is actually fine. Re-derived for the lit path the
+//! rule is **~83 ms** (50 ms x 1.65) at `--tiles 200x200`; treat THAT as
+//! the decision rule until a fresh preregistration retires H1 or restates
+//! it explicitly against the lit draw.
+//!
 //! `104x52 --rung 6` is the OLD reference size, kept so the before/after is
 //! a comparison rather than a claim.
 //!
