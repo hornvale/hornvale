@@ -231,3 +231,21 @@ Capture: metaplan §3 and §3.1; `SOC-staple-ladder`.
   loop with no declared claim shape), `docs_consistency` (three registry Idea
   cells over the 600-char budget), `world_build_sites` (an unrostered world
   build).
+
+#6 [Q] — **Self-correction to #1's registry finding, made before the G3 stop.** ·
+**Decision: credit decision 0145; the ROW is stale, the decision log is not.** ·
+Why: #1 and the first draft of metaplan §1.3 said the cited enforcer no longer
+exists and left the impression the change went unrecorded. Checked: **decision
+0145** (2026-08-18, relating 0102 and 0143) ratified the re-key to
+`(CellId, DelveRung)` explicitly. The correct finding is narrower and more
+useful — a ratified amendment landed and the live index never absorbed it, and
+nothing mechanical propagates one to the other. Caught by grepping for
+supersessions of 0102 rather than trusting my own correction, which is the
+standing rule that a correction is itself unaudited text. ·
+Alternatives discarded: editing decision 0102 (append-only — supersede, never
+edit; and 0102 correctly records what was true when it was ratified); amending
+the pushed commit (a force-push is an owner carve-out, and a follow-up commit
+costs nothing). ·
+ideonomy passes / overturns: 0 — a factual correction with one right answer,
+not a choice between candidates. ·
+Capture: metaplan §1.3; the `SOC-dense-settlement` row.

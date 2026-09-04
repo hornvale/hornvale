@@ -103,13 +103,20 @@ because the index has no values.
 
 `SOC-dense-settlement` (ratified 0102) says at most one alive community per
 geosphere cell, *"`Bake::vacant_habitable` enforces it"*. **That function no
-longer exists.** It is `Bake::vacant_for` (`history_bake.rs:1751`), and it
-keys `node_index` by **`(vertex, rung)`**, not by cell — so a drow hall and a
+longer exists**, and the change was properly ratified: **decision 0145**
+(2026-08-18, relating 0102 and 0143) re-keyed the index on `(CellId, DelveRung)`
+because "the exclusion rule the world actually wants is one community per
+*place*, and a cell is not a place once the world has a vertical coordinate".
+The enforcer is now `Bake::vacant_for` (`history_bake.rs:1751`), keying
+`node_index` by **`(vertex, rung)`**, not by cell — so a drow hall and a
 human town already coexist in one cell, by design (The Underworld, spec §4.6).
 What remains forbidden is two communities at the *same rung*. Three doc
 comments still cite the vanished name, one of them (`cli/src/systems.rs:856`)
 quoting the registry row back at itself. The row's *intent* stands; its
 mechanism claim is stale, and the work it implies is smaller than it reads.
+**The decision log did its job here and the registry row did not** — 0145
+landed and the row never absorbed it. That is the failure mode worth naming:
+nothing mechanical propagates a ratified amendment to the live index.
 
 ---
 
