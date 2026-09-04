@@ -325,6 +325,35 @@ from `at_elevation`'s own attenuation rather than from the test's arithmetic.
 the plate's spectral consumption present is **byte-identical** to one
 without. The campaign's acceptance gate.
 
+**AMENDED 2026-09-04 — as originally worded this hypothesis is
+UNFALSIFIABLE, and saying so is the point of the amendment.** "A world
+generated with the plate's spectral consumption present is byte-identical to
+one without" cannot fail: every method the client calls takes `&self`, so a
+renderer cannot move world state, and Rust's type system guarantees it before
+any test runs. A test asserting it could never go red under any source
+mutation, which is precisely the vacuous guard this campaign spent its
+reviews finding elsewhere.
+
+**What is actually at risk, and what is therefore tested.** The campaign's
+only non-client production change is the extraction in
+`windows/locale/src/lib.rs`. So the real question is whether *that* moved a
+committed byte. The control is
+`cli/tests/suite/wash_byte_identity.rs::seed_42_surrounds_flagship_is_unmoved_by_the_wash`,
+which rebuilds the seed-42 flagship `scene/surrounds/v1` document through
+`LocaleContext::describe` and compares it byte-for-byte against the committed
+fixture.
+
+**Why that fixture and not an easier one.** None of
+`repose_byte_identity.rs`'s three existing probes — world JSON, almanac,
+`scene/tiles` — reach `windows/locale` at all. Copying their shape would have
+produced a guard blind to the only code this campaign changed. The surrounds
+fixture's `micro.wetness` field is the one committed, gated surface that *is*
+`grounded_wetness_for`/`blend_at_corners`'s composed output.
+
+**Seen to fail, twice.** A 1% scale on `blend_at_corners`'s mean and a 5%
+scale on `grounded_wetness_for`'s moisture input each moved `micro.wetness`
+and reddened the test with a byte-offset diff; both restored, tree clean.
+
 **H4 — the rate invariant holds.** No layer reads data changing faster than
 its own rate. A deliberately mis-declared layer must be caught: **red before
 green.**
