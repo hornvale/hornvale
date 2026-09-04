@@ -300,8 +300,7 @@ impl RungArtifacts<'_> {
 ///
 /// One provider, since The Zenith: every Hornvale world has
 /// a generated sky. The enum this replaced carried a `Constant` variant for
-/// the retired tier-0 stub. This cites no decision number until The Zenith's
-/// records land.
+/// the retired tier-0 stub (decision 0736).
 pub struct Sky(Box<GeneratedSky>);
 
 impl Sky {
@@ -549,8 +548,8 @@ fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
 ///
 /// A world with no `sky-provider` fact is an error, not a fallback. Every
 /// build commits the fact unconditionally, so its absence means the world was
-/// never built and should be regenerated from its seed and pins. This cites
-/// no decision number until The Zenith's records land.
+/// never built and should be regenerated from its seed and pins (decision
+/// 0737).
 pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
     let Some(provider_fact) = world.ledger.find(facts::SKY_PROVIDER).next() else {
         return Err(BuildError::Pins(
@@ -12963,12 +12962,7 @@ mod tests {
     /// written while the fallback is still live so its red is BEHAVIOURAL —
     /// a runtime panic — rather than a compile error once the arm is gone.
     ///
-    /// **It cites no decision number, and that is deliberate.** The record
-    /// this behaviour answers to is written later in the same campaign (The
-    /// Zenith), and `docs_consistency::decision_cites_in_sources_resolve`
-    /// reddens on a cite to a record that does not exist yet — which is the
-    /// exact abuse that check was hardened against. The task that ratifies
-    /// the record adds the cite here, in the same commit as the record.
+    /// This is the behavioural witness for decision 0737.
     #[test]
     fn a_world_with_no_sky_provider_fact_is_an_error_not_a_fallback() {
         // A bare world, never built — the only way to reach this arm once

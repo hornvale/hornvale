@@ -7,14 +7,8 @@
 //! These were the claims the retired tier-0 provider stipulated and the
 //! cross-tier refinement battery checked the generated sky against
 //! ("coarse constrains fine"). The tier is gone; the claims were always the
-//! part doing the work, so they are asserted directly.
-//!
-//! **This cites no decision number, and that is deliberate.** The record
-//! this retirement answers to is written later in the same campaign (The
-//! Zenith), and `docs_consistency::decision_cites_in_sources_resolve`
-//! reddens on a cite to a record that does not exist yet. The task that
-//! ratifies the record adds the cite here, in the same commit as the
-//! record.
+//! part doing the work, so they are asserted directly (decisions 0736 and
+//! 0738).
 //!
 //! The two constants below were previously read out of `ConstantSun` at
 //! test time — production code inside the crate under test. Frozen here,
