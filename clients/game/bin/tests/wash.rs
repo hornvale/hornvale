@@ -494,9 +494,18 @@ mod wash_collapse {
     /// every assertion below depend on whether `NO_COLOR` happened to be set
     /// in the runner — the exact hermeticity the `draw_with` seam exists to
     /// give (`plate::draw_with`'s own doc, and the threaded-tests incident
-    /// its fix round records). `draw_with` is also the composed surface a
-    /// reader actually sees, feature layer included, so a claim proved here
-    /// is a claim about the picture rather than about one of its layers.
+    /// its fix round records).
+    ///
+    /// **What this composes, exactly** (fix round 1 — the sentence here used
+    /// to say "the composed surface a reader actually sees", which claims
+    /// two layers this never reaches): the terrain layer, its river line
+    /// layer, and `draw_feature_layer` **over empty rosters**, so the
+    /// feature layer paints nothing. `draw_perception_layer` is not in
+    /// `draw_with` at all — `Driver::world_plate_for_redraw` composes it
+    /// separately, band B only. So every claim below is a claim about the
+    /// TERRAIN layer's own output; neither of the other two carries its
+    /// colours through an observer, and nothing here would notice if they
+    /// stopped.
     fn plate_at(colour_allowed: bool, depth: ColorDepth) -> Grid {
         let ctx = super::wash_support::seed_42_context();
         let terrain = ctx.terrain();

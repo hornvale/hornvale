@@ -46,8 +46,8 @@ use hornvale_game::discovery::Discovered;
 use hornvale_game::mercator;
 use hornvale_game::plate::{self, Window};
 use hornvale_game::tiles::{TILE_EDGE, TileCache};
-use hornvale_kernel::{Geosphere, NearestVertexIndex, Seed};
-use hornvale_terrain::{GeneratedTerrain, TerrainPins};
+use hornvale_kernel::{Seed, World};
+use hornvale_locale::LocaleContext;
 use std::collections::BTreeSet;
 
 /// Runs per measured quantity, unless `--runs` says otherwise — matches
@@ -97,6 +97,24 @@ fn args() -> (u16, u16, u32, usize) {
     (w, h, rung, runs)
 }
 
+/// One draw's [`plate::Spectral`], lit by `light` and read through `ctx`.
+///
+/// A free function and not a closure: the `Spectral` borrows the store it is
+/// handed, and a closure cannot name that relationship between its argument
+/// and its return.
+fn lit<'a>(
+    light: &'a plate::PlateLight,
+    ctx: &'a LocaleContext,
+    store: &'a mut plate::ReflectanceCache,
+) -> plate::Spectral<'a> {
+    light.lit(
+        ctx,
+        hornvale_kernel::WorldTime::GENESIS,
+        plate::season_bucket(0.0),
+        Some(store),
+    )
+}
+
 fn main() {
     // `#[allow]` because the root `clippy.toml`'s `disallowed-types` bans
     // `Instant` workspace-wide (decision 0001: time is `WorldTime`) and
@@ -108,17 +126,34 @@ fn main() {
 
     let (w, h, rung, runs) = args();
 
-    // The same world `plate.rs`'s own tests build — `hornvale_terrain::
-    // generate` directly, never a full `build_world`, since nothing here
-    // reads the ledger.
-    let geo = Geosphere::new(hornvale_terrain::GLOBE_LEVEL);
-    let outcome = hornvale_terrain::generate(Seed(42), &geo, &TerrainPins::default())
-        .expect("default pins generate seed 42");
-    let terrain = GeneratedTerrain::new(geo.clone(), outcome);
-    // Built ONCE, outside the timed loop — `plate.rs`'s module doc's own
+    // **Through a `LocaleContext`, and drawn LIT, since The Wash's Task 6
+    // fix round 1.** This harness used to derive terrain directly and
+    // compose with `PlateLight::flat(false).unlit()`, which after Task 6
+    // measured a path the client does not ship: the shipped draw asks the
+    // locale for every tile's reflectance and collapses it through the
+    // observer, and that is where the cost this harness exists to watch now
+    // lives. Terrain, geosphere and index come OFF the context rather than
+    // being derived beside it, so the context and the plate are answering
+    // about the same ground.
+    //
+    // Built ONCE, outside every timed loop — `plate.rs`'s module doc's own
     // build-once-pass-in discipline.
-    let index = NearestVertexIndex::new(&geo);
+    let ctx = LocaleContext::build(&World::new(Seed(42))).expect("seed 42 builds a context");
+    let terrain = ctx.terrain();
+    let geo = terrain.geosphere();
+    let index = ctx.nearest_index();
     let f = mercator::frame_for(false);
+
+    // One illuminant and one observer for the whole harness, exactly as a
+    // real draw resolves them once above the tile loop.
+    //
+    // **The reflectance cache is FRESH at every call site**, not shared. Each
+    // measurement below is a COLD draw repeated `runs` times and reduced to a
+    // median; a shared cache would make replicate 1 cold and the rest warm and
+    // drag every median toward the warm figure. `Driver` keeps one per
+    // session because a session redraws the same ground; this harness is
+    // measuring the first draw of it.
+    let light = plate::PlateLight::flat(false);
 
     let (vw, vh) = plate::virtual_dims(rung);
     // Park the window near the equator, where Mercator's stretch is least
@@ -159,9 +194,9 @@ fn main() {
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
         let grid = plate::draw_with(
-            &terrain,
-            &geo,
-            &index,
+            terrain,
+            geo,
+            index,
             &f,
             &win,
             w,
@@ -171,7 +206,7 @@ fn main() {
             &empty,
             &[],
             &undiscovered,
-            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+            &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
         );
         draws.push(t0.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
@@ -190,9 +225,9 @@ fn main() {
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
         let grid = plate::draw_with(
-            &terrain,
-            &geo,
-            &index,
+            terrain,
+            geo,
+            index,
             &f,
             &aligned,
             w,
@@ -202,7 +237,7 @@ fn main() {
             &empty,
             &[],
             &undiscovered,
-            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+            &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
         );
         draws_aligned.push(t0.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
@@ -219,9 +254,9 @@ fn main() {
     for row in 0..u32::from(h) {
         for col in 0..u32::from(w) {
             let _ = plate::terrain_at_tile(
-                &terrain,
-                &geo,
-                &index,
+                terrain,
+                geo,
+                index,
                 &mut memo,
                 &f,
                 &win,
@@ -252,15 +287,15 @@ fn main() {
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
         let grid = cache.compose(
-            &terrain,
-            &geo,
-            &index,
+            terrain,
+            geo,
+            index,
             &f,
             &aligned,
             w,
             h,
             false,
-            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+            &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
         );
         cold.push(t0.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
@@ -269,15 +304,15 @@ fn main() {
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t1 = Instant::now();
         let grid = cache.compose(
-            &terrain,
-            &geo,
-            &index,
+            terrain,
+            geo,
+            index,
             &f,
             &aligned,
             w,
             h,
             false,
-            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+            &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
         );
         warm.push(t1.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
@@ -290,15 +325,15 @@ fn main() {
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t2 = Instant::now();
         let grid = cache.compose(
-            &terrain,
-            &geo,
-            &index,
+            terrain,
+            geo,
+            index,
             &f,
             &scrolled,
             w,
             h,
             false,
-            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+            &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
         );
         boundary.push(t2.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
@@ -311,30 +346,30 @@ fn main() {
     let mut cache = TileCache::default();
     let mut walk = aligned;
     let _ = cache.compose(
-        &terrain,
-        &geo,
-        &index,
+        terrain,
+        geo,
+        index,
         &f,
         &walk,
         w,
         h,
         false,
-        &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+        &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
     );
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t3 = Instant::now();
     for _ in 0..TILE_EDGE {
         walk.origin_col += 1;
         let grid = cache.compose(
-            &terrain,
-            &geo,
-            &index,
+            terrain,
+            geo,
+            index,
             &f,
             &walk,
             w,
             h,
             false,
-            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+            &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
         );
         std::hint::black_box(&grid);
     }
@@ -374,15 +409,15 @@ fn main() {
     let mut base = {
         let mut c = TileCache::default();
         c.compose(
-            &terrain,
-            &geo,
-            &index,
+            terrain,
+            geo,
+            index,
             &f,
             &aligned,
             w,
             h,
             false,
-            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+            &mut lit(&light, &ctx, &mut plate::ReflectanceCache::new()),
         )
     };
     let mut feature_none = Vec::new();
@@ -392,7 +427,7 @@ fn main() {
         let t0 = Instant::now();
         plate::draw_feature_layer(
             &mut base,
-            &geo,
+            geo,
             &f,
             &aligned,
             false,
@@ -406,7 +441,7 @@ fn main() {
         let t1 = Instant::now();
         plate::draw_feature_layer(
             &mut base,
-            &geo,
+            geo,
             &f,
             &aligned,
             false,

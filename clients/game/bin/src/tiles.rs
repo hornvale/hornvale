@@ -126,9 +126,28 @@ struct TileKey {
     /// The tile's column in the chart's own tile grid.
     /// type-audit: bare-ok(count)
     tile_col: u32,
+    /// The light this tile was drawn under — see [`TileLight`].
+    light: TileLight,
+}
+
+/// The LIGHT half of a tile's identity: which season its reflectances were
+/// read in, and exactly which illuminant lit them.
+///
+/// **Its own type, and not two more columns on [`TileKey`], because
+/// [`TileCache::evict`] has to compare it as a unit.** The first draft did
+/// carry them as bare fields, and the bug that followed is the whole reason
+/// this struct exists: `evict` was never taught about them, so nothing ever
+/// dropped a tile of a superseded light and the cache grew 8 tiles per sun
+/// position, forever, past a [`CAPACITY`] its own test could not see it
+/// break (`a_moving_sun_does_not_grow_the_cache_without_bound`). Naming the
+/// thing makes "is this tile's light the current light" one comparison a
+/// reader can find, rather than a conjunction someone has to remember to
+/// extend.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TileLight {
     /// The season bucket the tile's reflectances were read in
     /// (`plate::season_bucket`). See [`Self::illum_bits`] for why the two
-    /// spectral inputs are in this key at all.
+    /// spectral inputs are in the key at all.
     /// type-audit: bare-ok(count)
     season: u32,
     /// The bit patterns of the illuminant this tile was lit by, band for
@@ -159,19 +178,30 @@ struct TileKey {
     /// and rung changes — the motions this cache was actually built for, and
     /// the ones that happen between turns — do not move the sun, so they
     /// still hit.
+    ///
+    /// **`ColorDepth` and `colour_allowed` are deliberately NOT here**, and
+    /// the omission is latent rather than a hazard: both are resolved from
+    /// `NO_COLOR` exactly once and cannot change under a running process
+    /// (`plate::colour_allowed`'s own doc, and `PlateKey`'s counterpart note
+    /// in `driver.rs`). A future depth probe that could answer differently
+    /// mid-session would have to add them, for the identical reason the two
+    /// fields above are here.
     /// type-audit: bare-ok(opaque bits)
     illum_bits: [u64; hornvale_kernel::color::BANDS],
 }
 
-/// The illuminant's own bits, for [`TileKey::illum_bits`].
-fn illum_bits(
-    illuminant: &hornvale_kernel::color::Illuminant,
-) -> [u64; hornvale_kernel::color::BANDS] {
-    let mut out = [0u64; hornvale_kernel::color::BANDS];
-    for (slot, band) in out.iter_mut().zip(illuminant.get().iter()) {
-        *slot = band.to_bits();
+impl TileLight {
+    /// The light a [`plate::Spectral`] carries, as a key column.
+    fn of(spectral: &plate::Spectral<'_>) -> Self {
+        let mut illum_bits = [0u64; hornvale_kernel::color::BANDS];
+        for (slot, band) in illum_bits.iter_mut().zip(spectral.illuminant.get().iter()) {
+            *slot = band.to_bits();
+        }
+        Self {
+            season: spectral.season,
+            illum_bits,
+        }
     }
-    out
 }
 
 /// A frame's two `f64` as their exact bit patterns — the module doc's
@@ -284,8 +314,7 @@ impl TileCache {
             depth,
             tile_row,
             tile_col,
-            season: spectral.season,
-            illum_bits: illum_bits(spectral.illuminant),
+            light: TileLight::of(spectral),
         };
         if self.tiles.contains_key(&key) {
             self.hits += 1;
@@ -419,7 +448,7 @@ impl TileCache {
             row += band_h;
         }
 
-        self.evict(f, win, w, h);
+        self.evict(f, win, w, h, TileLight::of(spectral));
         out
     }
 
@@ -428,12 +457,24 @@ impl TileCache {
     ///
     /// Three rules, in the order they bite:
     ///
-    /// 1. **A tile of another FRAME goes immediately.** The projection has
-    ///    moved; `centre_on` produces a fresh pair of `f64` from the
-    ///    cursor's own position, so the odds of returning to a previous
-    ///    frame's exact bit pattern are the odds of re-centring on the
-    ///    identical chart cell. Keeping them would grow the cache without
-    ///    bound for a hit that is not coming.
+    /// 1. **A tile of another FRAME, or of another LIGHT, goes
+    ///    immediately.** The projection has moved; `centre_on` produces a
+    ///    fresh pair of `f64` from the cursor's own position, so the odds of
+    ///    returning to a previous frame's exact bit pattern are the odds of
+    ///    re-centring on the identical chart square. Keeping them would grow
+    ///    the cache without bound for a hit that is not coming.
+    ///
+    ///    **The light is the same argument, and it took a bug to notice**
+    ///    (The Wash, Task 6 fix round 1). A [`TileLight`] is a season plus
+    ///    ten `f64` bit patterns off a sun that moves continuously — seed
+    ///    42's generated sky at latitude 45 reaches 435 distinct illuminants
+    ///    in one standard day — so a superseded light is exactly as
+    ///    unreachable as a superseded frame, and the bit-pattern argument
+    ///    above transfers verbatim. Rule 3 could not clean up after the
+    ///    omission either: its retain keeps anything at the current rung
+    ///    inside [`HOT_RADIUS`], which every generation satisfies at once,
+    ///    so past [`CAPACITY`] it re-kept the very tiles it was called to
+    ///    shed.
     /// 2. **A tile of the current frame's current rung, further than
     ///    [`WARM_RADIUS`] from the window, goes** — the far field a scroll
     ///    leaves behind. Other RUNGS are untouched here, so a zoom out and
@@ -446,7 +487,7 @@ impl TileCache {
     /// rectangle — **wrapped in the column direction and not in the row
     /// direction**, the same asymmetry `move_cursor`'s scroll obeys, so a
     /// window straddling the seam does not evict the tiles just behind it.
-    pub fn evict(&mut self, f: &Frame, win: &Window, w: u16, h: u16) {
+    pub fn evict(&mut self, f: &Frame, win: &Window, w: u16, h: u16, light: TileLight) {
         let (pole_lat_bits, pole_lon_bits) = frame_bits(f);
         let (vw, vh) = plate::virtual_dims(win.depth);
         if vw == 0 || vh == 0 {
@@ -484,7 +525,10 @@ impl TileCache {
         };
 
         self.tiles.retain(|k, _| {
-            if k.pole_lat_bits != pole_lat_bits || k.pole_lon_bits != pole_lon_bits {
+            if k.pole_lat_bits != pole_lat_bits
+                || k.pole_lon_bits != pole_lon_bits
+                || k.light != light
+            {
                 return false; // rule 1
             }
             if k.depth != win.depth {
@@ -545,6 +589,22 @@ mod tests {
         w: u16,
         h: u16,
     ) -> Grid {
+        render_through_lit(cache, world, f, win, w, h, &plate::PlateLight::flat(false))
+    }
+
+    /// [`render_through`] under a NAMED light — the seam every claim about
+    /// the light half of [`TileKey`] has to drive, because the flat default
+    /// is one fixed illuminant and a cache keyed on the light cannot be
+    /// exercised by a caller that only ever supplies one.
+    fn render_through_lit(
+        cache: &mut TileCache,
+        world: &Fixture,
+        f: &Frame,
+        win: &Window,
+        w: u16,
+        h: u16,
+        light: &plate::PlateLight,
+    ) -> Grid {
         cache.compose(
             &world.terrain,
             &world.geo,
@@ -554,7 +614,18 @@ mod tests {
             w,
             h,
             false,
-            &mut plate::PlateLight::flat(false).unlit(),
+            &mut light.unlit(),
+        )
+    }
+
+    /// A flat light of magnitude `level` — a distinct illuminant per call,
+    /// which is all a key-and-eviction test needs. The real thing moves
+    /// because the sun does (`driver::plate_illuminant`); this moves because
+    /// the test says so, and the two produce the same shape of key.
+    fn light_at(level: f64) -> plate::PlateLight {
+        plate::PlateLight::flat(false).with_illuminant(
+            hornvale_kernel::color::Illuminant::new([level; hornvale_kernel::color::BANDS])
+                .expect("a finite non-negative illuminant"),
         )
     }
 
@@ -1103,6 +1174,97 @@ mod tests {
             cache.misses(),
             after_away,
             "one window's pan gave up the warm halo — the two radii have collapsed into one"
+        );
+    }
+
+    /// FIRES WHEN: the cache stops bounding itself as the sun moves.
+    ///
+    /// **The defect this was written for, and why nothing already here could
+    /// see it.** The Wash's Task 6 put `(season, illuminant)` into
+    /// [`TileKey`] so a cached tile could never outlive the light it was
+    /// drawn under — and left [`TileCache::evict`] blind to both columns.
+    /// Rule 1 dropped a tile of another FRAME; rules 2 and 3 are distance
+    /// tests; **nothing dropped a tile of another LIGHT.** Rule 3's own
+    /// retain (`k.depth == win.depth && distance <= HOT_RADIUS`) is
+    /// satisfied by every generation at once, so past [`CAPACITY`] it could
+    /// not bring the cache back under the bound at all — it re-kept the very
+    /// tiles it was called to shed.
+    ///
+    /// `cache_pressure_gives_up_the_warm_halo_and_keeps_the_hot_ring` below
+    /// already asserts `len() <= CAPACITY`, and passed the whole time,
+    /// because it composes under ONE light. An invariant that already exists
+    /// is not covered by a test that cannot reach the axis breaking it.
+    ///
+    /// Measured before the fix, at this test's own window: 8 tiles per
+    /// light, linearly, never recovering — 1,600 resident after 200 composes
+    /// against a bound of 320.
+    ///
+    /// **Two hundred lights is not an arbitrary sweep.** Seed 42's generated
+    /// sky at latitude 45 produces 435 distinct illuminants across ONE
+    /// standard day, so a session that watches the map through an afternoon
+    /// walks further than this.
+    #[test]
+    fn a_moving_sun_does_not_grow_the_cache_without_bound() {
+        let world = fixture();
+        let f = mercator::frame_for(false);
+        let (w, h) = (104u16, 52u16);
+        let (vw, vh) = plate::virtual_dims(GLOBE_RUNG);
+        let win = Window {
+            depth: GLOBE_RUNG,
+            origin_col: vw / 2,
+            origin_row: (vh / 2).saturating_sub(u32::from(h) / 2),
+        };
+
+        // THE CONTROL, first: one light, the same window, however many
+        // composes. This is the resident count a correctly bounded cache
+        // must return to, and taking it first means the assertion below
+        // compares against an observation rather than a guess.
+        let mut control = TileCache::default();
+        for _ in 0..8 {
+            let _ = render_through_lit(&mut control, &world, &f, &win, w, h, &light_at(1.0));
+        }
+        let under_one_light = control.len();
+        assert!(
+            under_one_light > 0,
+            "the control composed nothing; the window is degenerate"
+        );
+
+        let mut cache = TileCache::default();
+        let mut widest = 0usize;
+        let mut per_step_misses = Vec::new();
+        for step in 0..200u32 {
+            // A distinct illuminant per step — see `light_at`.
+            let before = cache.misses();
+            let _ = render_through_lit(
+                &mut cache,
+                &world,
+                &f,
+                &win,
+                w,
+                h,
+                &light_at(1.0 + f64::from(step) / 1000.0),
+            );
+            per_step_misses.push(cache.misses() - before);
+            widest = widest.max(cache.len());
+        }
+
+        // NON-VACUITY: every step must genuinely have been a new light. If
+        // the illuminants collided onto one key the sweep would hit
+        // throughout and the bound would hold for the wrong reason.
+        assert!(
+            per_step_misses.iter().all(|m| *m > 0),
+            "some step served entirely from cache, so the lights were not distinct: {per_step_misses:?}"
+        );
+
+        assert!(
+            widest <= CAPACITY,
+            "a moving sun left {widest} tiles resident at its peak, over the \
+             {CAPACITY} bound; the cache is not shedding old light"
+        );
+        assert_eq!(
+            cache.len(),
+            under_one_light,
+            "after 200 lights the cache holds more than one light's worth of tiles"
         );
     }
 

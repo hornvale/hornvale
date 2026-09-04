@@ -2448,6 +2448,16 @@ impl PlateLight {
         Self::flat(colour_allowed())
     }
 
+    /// This light with a specific illuminant, for a caller that must place
+    /// a sun this bundle's own [`Self::flat`] fallback cannot — a benchmark
+    /// measuring the lit path, or a test that needs two draws to be lit
+    /// DIFFERENTLY (`crate::tiles`'s own capacity-under-a-moving-sun test,
+    /// which cannot vary the light any other way).
+    pub fn with_illuminant(mut self, illuminant: hornvale_kernel::color::Illuminant) -> Self {
+        self.illuminant = illuminant;
+        self
+    }
+
     /// This light with a specific observer, for a caller that wants to name
     /// a [`crate::observer::ColorDepth`] the `NO_COLOR` probe cannot express.
     pub fn with_observer(mut self, observer: crate::observer::TerminalObserver) -> Self {
