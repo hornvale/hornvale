@@ -49,13 +49,15 @@ A domain defines its logic and its provider *trait*/implementations, but the
 place where providers are *constructed and wired* is `windows/worldgen` — the
 composition root. Don't reach across to build another domain's provider.
 
-## Provider tiers coexist
+## One provider per domain
 
-The tier-0 constant provider (e.g. `ConstantSun`) and the generated one are
-both valid; a world chooses. Keep tier-0 paths byte-identical when you touch
-shared code — the `strongest`/`None`-branch comments in `terrain/crust.rs`
-are a live example of code kept "instruction-for-instruction" unperturbed to
-protect a byte-identity contract.
+Provider tiers are retired (decision 0736): each domain has one provider of
+its truth, constructed at the composition root. A materially contradictory
+generator remains an epoch rather than an alternative provider. Keep
+byte-identical paths byte-identical when you touch shared code — the
+`strongest`/`None`-branch comments in `terrain/crust.rs` are a live terrain
+example of code kept "instruction-for-instruction" unperturbed to protect a
+byte-identity contract.
 
 Subdirectories with extra guidance: `terrain/` (the most determinism-sensitive
 domain).
