@@ -813,7 +813,34 @@ fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
 /// module) — a large body still rests exactly as it could before this
 /// campaign, just not via a bed too small for it.
 pub fn offered_to(kind: KindId, body: &Body) -> BTreeSet<OfferedVerb> {
-    offered_by(kind)
+    let reg = object_registry();
+    offered_to_traits(&reg.get(&kind).cloned().unwrap_or_default(), body)
+}
+
+/// [`offered_to`] reading traits the caller already holds — the body-relative
+/// member of the [`offered`] / [`offered_by`] pair above, standing to
+/// `offered_to` exactly as `offered` stands to `offered_by` (The Tenon, Task
+/// 6).
+///
+/// **It exists for cost, and the cost it removes is real rather than
+/// theoretical.** [`offered_by`] builds a whole [`object_registry`] per call,
+/// so asking `offered_to` of every anchor in a room built one
+/// `ComponentStore` PER ANCHOR — on `liveness::room_affords_rest`'s path,
+/// which runs inside the fatigue fold. A caller that already holds the roster
+/// (`liveness::object_roster`, built once per fold) can now ask the same
+/// question against it and build nothing.
+///
+/// **Same answer, by construction.** `offered_to` is now this function
+/// applied to the registry's own row for `kind`, with the same
+/// `unwrap_or_default()` treatment of an unregistered kind
+/// [`offered_by`]'s doc explains — so the two cannot drift, and the public
+/// entry point's behaviour is byte-for-byte what it was.
+///
+/// `pub(crate)`, not `pub`, for the reason [`body_can_use`]'s own narrowing
+/// records: a caller supplying its own traits is a caller stating what an
+/// object is, and that is a statement this crate should keep inside itself.
+pub(crate) fn offered_to_traits(traits: &ObjectTraits, body: &Body) -> BTreeSet<OfferedVerb> {
+    offered(traits)
         .into_iter()
         .filter(|v| {
             required_properties(*v)

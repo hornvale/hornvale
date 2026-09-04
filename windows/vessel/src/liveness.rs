@@ -3773,9 +3773,32 @@ pub struct RestSites<'a> {
 /// same boolean read off the SAME scan, so this delegation changes no
 /// behaviour: both ask "does at least one anchor offer Sleep to this body,"
 /// they just no longer risk drifting into two different answers to it.
-fn room_affords_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
+///
+/// **The delegate is now [`crate::sleep_site::room_offers_sleep`], not
+/// `select_sleep_site` (The Tenon, Task 6), and the single-definition
+/// discipline above is intact.** Both entry points still run one
+/// `sleep_site::sleep_candidates` scan and differ only in what they do with
+/// it. They had to split because CHOOSING a site now needs the sleeper's
+/// species-resolved [`SleepTraits`], and this function does not have one:
+/// [`rest_timeline`], the fold it runs inside, folds bouts for an ENTITY and
+/// resolves no species at all. Threading traits down here to rank candidates
+/// that `.is_some()` would immediately discard would have bought coupling and
+/// cost for no answer.
+///
+/// **`objects` is BORROWED, never built here** — the same [`object_roster`]
+/// the fold already holds, built once per fold, so this path constructs no
+/// `ComponentStore` whatever. It used to construct one per ANCHOR, inside
+/// `crate::affordance::offered_to`, which calls
+/// `crate::affordance::object_registry` on every call;
+/// `crate::affordance::offered_to_traits` is what removed that.
+fn room_affords_rest(
+    room: &Facet,
+    body: &Body,
+    terrain: &dyn Terrain,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+) -> bool {
     let interior = interior_of(room, terrain);
-    crate::sleep_site::select_sleep_site(&interior, body).is_some()
+    crate::sleep_site::room_offers_sleep(&interior, body, objects)
 }
 
 /// Where `entity` stood over time, as `(day, room)` pairs in commit order —
@@ -3928,7 +3951,7 @@ fn rest_timeline(
         let slot = usize::from(sites.terrain.is_built(&room)) * 2
             + usize::from(sites.terrain.is_cold(&room));
         let affords = *graded[slot]
-            .get_or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain));
+            .get_or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain, objects));
         if affords {
             bout.3 = SiteGrade::Afforded;
         }
@@ -4334,23 +4357,47 @@ fn creature_fatigue(
         pending,
         npc.entity,
         day,
-        SleepTraits {
-            rise: fatigue_rise_for(
-                &npc.species,
-                Some(&hornvale_species::fatigue_rise_registry()),
-            ),
-            afforded_gain: sleep_grade_for(
-                &npc.species,
-                Some(&hornvale_species::sleep_grade_registry()),
-            ),
-            substrate: substrate_for(
-                &npc.species,
-                Some(&hornvale_species::habitat_realm_registry()),
-            ),
-        },
+        sleep_traits_of(npc),
         terrain.day_ticks(),
         Some(&RestSites { terrain, body: npc }),
     )
+}
+
+/// A body's three species-resolved sleep numbers, resolved against the
+/// SHIPPED registries — the one place they are looked up from a [`Body`],
+/// lifted out of [`creature_fatigue`] in The Tenon's Task 6.
+///
+/// **It was lifted because a second kind of caller appeared.** Ranking a
+/// room's sleep sites ([`crate::sleep_site::select_sleep_site`]) needs the
+/// same [`SleepTraits`] the fatigue fold does, at the two COMMIT-time sites
+/// that record a `SLEPT_ON` fact (`advance_one`'s `Action::Sleep` arm and
+/// `Session::sleep`). Spelling the three lookups out a third and fourth time
+/// is exactly the divergence [`creature_fatigue`]'s own doc records closing
+/// for the rate table: a hoisted registry at one site and not another is
+/// invisible until the two answers differ.
+///
+/// **Cost, stated rather than implied.** This builds three
+/// `ComponentStore`s per call. That is unchanged for the fatigue path — it
+/// is byte-for-byte the expression `creature_fatigue` inlined before — and
+/// for the two commit-time callers it is paid once per SLEEP ACT, inside the
+/// arm that is about to commit a fact, not per tick and not per anchor. The
+/// path this campaign had to keep clean is the fatigue FOLD's
+/// [`room_affords_rest`], and that one resolves no species at all.
+pub(crate) fn sleep_traits_of(body: &Body) -> SleepTraits {
+    SleepTraits {
+        rise: fatigue_rise_for(
+            &body.species,
+            Some(&hornvale_species::fatigue_rise_registry()),
+        ),
+        afforded_gain: sleep_grade_for(
+            &body.species,
+            Some(&hornvale_species::sleep_grade_registry()),
+        ),
+        substrate: substrate_for(
+            &body.species,
+            Some(&hornvale_species::habitat_realm_registry()),
+        ),
+    }
 }
 
 /// The NEUTRAL fallback rate for a species `fatigue_rise_for` cannot
@@ -4539,8 +4586,14 @@ const _: () = assert!(
 /// in advance. It is reached for exactly one grade, [`SiteGrade::On`] — a
 /// bout whose [`SLEPT_ON`] fact the fold resolved to a kind this build
 /// carries — and for nothing else.
+///
+/// **`pub(crate)`, widened from a bare `fn` in The Tenon's Task 6** so
+/// [`crate::sleep_site::select_sleep_site`] — a SIBLING module, not a child,
+/// so a bare `fn` here is out of its reach — can rank a room's candidates by
+/// it. Widened no further, for the reason `crate::affordance::body_can_use`'s
+/// own narrowing records: this family of questions stays inside the crate.
 /// type-audit: bare-ok(ratio: return)
-fn grade_of(
+pub(crate) fn grade_of(
     sleeper: &SleepTraits,
     kind: KindId,
     objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
@@ -8173,8 +8226,20 @@ impl<'a> DriveMovements<'a> {
                 // through the affordance choice `select_sleep_site` answers —
                 // so only this arm asks. Bare ground (`None`) commits nothing,
                 // exactly as `slept_on_fact`'s own doc requires.
+                //
+                // THE SLEEPER AND THE ROSTER ARE BUILT INSIDE THIS ARM (The
+                // Tenon, Task 6), not hoisted out of the loop: ranking needs
+                // both, and this arm runs once per sleep ACT while the loop
+                // around it runs once per tick per creature. Hoisting would
+                // move a four-registry build onto the hot path to save it on
+                // the cold one.
                 if matches!(action, Action::Sleep)
-                    && let Some(anchor) = crate::sleep_site::select_sleep_site(&st.interior, npc)
+                    && let Some(anchor) = crate::sleep_site::select_sleep_site(
+                        &st.interior,
+                        npc,
+                        &sleep_traits_of(npc),
+                        &crate::affordance::object_registry(),
+                    )
                 {
                     out.push(slept_on_fact(
                         npc.entity,

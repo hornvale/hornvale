@@ -3875,9 +3875,20 @@ impl<'w> Session<'w> {
         let room = self.position();
         let terrain = self.terrain_here();
         let room_interior = crate::interior::interior_of(&room, &terrain);
-        if let Some(anchor) =
-            crate::sleep_site::select_sleep_site(&room_interior, self.driven_body())
-        {
+        // The sleeper's traits and the object roster are resolved HERE, once,
+        // for this one act (The Tenon, Task 6) — `select_sleep_site` now ranks
+        // the room's candidates rather than taking the first, and both are what
+        // a grade is read against. `sleep_traits_of` is the same resolution the
+        // fatigue fold uses, so a player's sleep and a creature's cannot be
+        // graded against different registries.
+        let sleeper = crate::liveness::sleep_traits_of(self.driven_body());
+        let objects = crate::affordance::object_registry();
+        if let Some(anchor) = crate::sleep_site::select_sleep_site(
+            &room_interior,
+            self.driven_body(),
+            &sleeper,
+            &objects,
+        ) {
             let site_fact = slept_on_fact(
                 self.agent_entity(),
                 room_interior.anchor(anchor).kind,
