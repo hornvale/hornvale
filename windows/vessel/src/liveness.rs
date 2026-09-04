@@ -3523,35 +3523,34 @@ const _: () = assert!(
      the grade is a no-op wearing a constant's clothes"
 );
 
-/// What the room a bout was taken in offered the body that took it (The
-/// Wicket, Task 10) — the OBJECT half of spec §6a's grade.
+/// What the durable record knows about the site of a rest bout (The Wicket,
+/// Task 10; The Tenon, Task 5).
 ///
-/// Two-valued today because the question the offer answers is two-valued:
-/// either some anchor in the room offered [`crate::affordance::
-/// OfferedVerb::Sleep`] to this body, or none did.
+/// Three-valued today because the room offer and the committed sleep kind
+/// carry different amounts of evidence:
 ///
-/// **THE TWO RUNGS THIS TYPE STILL DOES NOT CARRY, DECLARED HERE BECAUSE
-/// THERE IS NOWHERE ELSE TO DECLARE THEM** (The Pallet, Task 4, spec §4d).
-/// The SPECIES rung shipped — how much an afforded site helps a body is now
-/// `hornvale_species::sleep_grade_registry`, one row per kind. Two remain,
-/// and both are absences of a NUMBER rather than wrong numbers, so neither
-/// has a constant to hang a `plumb:` tag on and neither appears in the
-/// committed roster's Fidelity findings table:
+/// - [`SiteGrade::Bare`] means the room offered no place to lie down.
+/// - [`SiteGrade::Afforded`] is the room-level fallback: the room offered a
+///   place, but no [`SLEPT_ON`] kind is available. Conscious rest records no
+///   sleep kind, and neither does history written before The Pallet.
+/// - [`SiteGrade::On`] carries the thing kind recorded for a sleep, allowing
+///   the fold to distinguish a bed from bracken in the same room.
 ///
-/// - **`per-people`** — *which thing a people tends to sleep on*. This enum
-///   collapses every afforded anchor to one value, so a bed and a heap of
-///   bracken are indistinguishable to the fold. Making them distinct is a
-///   `species x thing` matrix and needs the kind-to-kind edges the object
-///   registry does not have; there is no authored scalar standing in for it
-///   today, only this two-valued type.
-/// - **`per-individual`** — *this one likes a sleeping bag*. An idiosyncratic
-///   preference varying below the species, which
-///   `hornvale_kernel::Lineage` would derive and never store. Nothing here
-///   varies per body at all, so again there is no number to tag.
+/// `Afforded` and `On(kind)` are both supported grades, but they carry
+/// different evidence. The fallback returns the sleeper's species-wide gain;
+/// the recorded kind reaches [`grade_of`], which also reads the surface's
+/// offer and hardness and the sleeper's substrate response. Thus bed and
+/// bracken in one room need not grade alike.
 ///
-/// Both would refine this into a graded scalar, which is why it is a named
-/// type with a `gain()` rather than a bare `bool` threaded through the fold.
-/// A campaign that builds either one starts here.
+/// **THE PER-PEOPLE RUNG SHIPPED WITHOUT AN AUTHORED MATRIX** (The Tenon).
+/// [`grade_of`] combines the sleeper's species traits with the recorded
+/// thing's traits to derive the species×thing grade. There is no authored
+/// entry for each pair.
+///
+/// **ONLY THE PER-INDIVIDUAL RUNG REMAINS UNBUILT.** A particular body's
+/// preference — *this one likes a sleeping bag* — would vary below species,
+/// derived from `hornvale_kernel::Lineage` rather than stored. Nothing in the
+/// grade varies per individual today.
 ///
 /// Carried through the timeline as an `Ord` TAG beside [`BoutKind`], for the
 /// same reason that one is: the sort stays an integer sort with no `total_cmp`
@@ -3665,9 +3664,10 @@ pub struct SleepTraits {
     /// The multiplier a bout repays at when the room it was taken in
     /// afforded somewhere to lie down — `hornvale_species::
     /// sleep_grade_registry`'s row for this body's kind, via
-    /// [`sleep_grade_for`]. Read only by [`SiteGrade::gain`], and only for a
-    /// bout graded [`SiteGrade::Afforded`]; `1.0` means *no bonus*, never
-    /// *no recovery*.
+    /// [`sleep_grade_for`]. Read by [`SiteGrade::gain`] for both supported
+    /// grades: returned directly for [`SiteGrade::Afforded`], and used by
+    /// [`grade_of`] when pricing [`SiteGrade::On`]. `1.0` means *no bonus*,
+    /// never *no recovery*.
     pub afforded_gain: f64,
     /// The sleeper's substrate preference — how much this body gets out of
     /// lying on a FOUND surface of a given hardness, resolved from its
@@ -4059,8 +4059,8 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// the only producer). `traits` is the caller's [`SleepTraits`] — the
 /// sleeping body's species-resolved sleep-debt rate ([`fatigue_rise_for`])
 /// and its species-resolved site-grade multiplier ([`sleep_grade_for`], read
-/// only by [`SiteGrade::gain`] and only for a bout graded
-/// [`SiteGrade::Afforded`]); `day` is the world's local day length
+/// by [`SiteGrade::gain`] directly for [`SiteGrade::Afforded`] and through
+/// [`grade_of`] for [`SiteGrade::On`]); `day` is the world's local day length
 /// (`Terrain::day_ticks`), `None` on a tidally locked world.
 ///
 /// **The site grade reaches this fold the way the rate already did** (The
