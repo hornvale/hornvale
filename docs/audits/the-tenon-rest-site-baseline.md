@@ -104,6 +104,37 @@ never for a `RESTED` one. Seed 13 is the clean witness — 201 afforded bouts,
 0 `SLEPT` bouts, 0 `SLEPT_ON` facts. The two numbers count different things and
 agree wherever they can be compared.
 
+### 3b. The cross-check that makes the grade believable
+
+The `Afforded` grade above is a reconstruction (see the last section); the
+`SLEPT_ON` count is written by production code. They are countable against
+each other, and the arithmetic holds:
+
+`afforded - slept_on` should be the number of afforded **`RESTED`** bouts,
+because `SLEPT_ON` is committed for a `SLEPT` bout only. So it must be
+non-negative and never exceed that seed's `RESTED` count. It never is and
+never does, on any of the 24 seeds:
+
+| seed | afforded − slept-on | rested |
+|---:|---:|---:|
+| 1234 | 1 | 3 |
+| 13 | 201 | 301 |
+| 17 | 8 | 58 |
+| 23 | 20 | 22 |
+| 29 | 37 | 153 |
+| 53 | **15** | **15** |
+| 59 | 1 | 40 |
+| 61 | 3 | 119 |
+| 67 | 4 | 36 |
+| 73 | 0 | 3 |
+| 83 | 0 | 7 |
+
+Seed 53 is the tight one: every one of its 15 `RESTED` bouts was afforded, and
+the two numbers meet exactly. Sweep-wide, 601 − 311 = 290 afforded `RESTED`
+bouts against 1,407 `RESTED` bouts total. A reconstruction that over-graded
+would break the upper bound; one that under-graded would go negative. Neither
+happens.
+
 ### 4. Walked rooms by `(is_built, is_cold)` quadrant
 
 Distinct `FacetId`s per seed, summed across the sweep, from each body's
