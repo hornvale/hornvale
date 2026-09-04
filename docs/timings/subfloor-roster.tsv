@@ -1276,7 +1276,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1344,7 +1343,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2561,6 +2559,10 @@ hornvale-vessel::hornvale_vessel$affordance::tests::lockable_kinds_are_also_open
 hornvale-vessel::hornvale_vessel$affordance::tests::only_supports_rest_is_body_relative_in_iv_a
 hornvale-vessel::hornvale_vessel$affordance::tests::the_certain_carriers_named_by_the_spec_carry_their_property
 hornvale-vessel::hornvale_vessel$brief::tests::a_built_brief_carries_a_settlement_site_and_an_unbuilt_one_carries_none
+hornvale-vessel::hornvale_vessel$brief::tests::a_living_occupation_carries_the_housemark_of_its_authored_society_row
+hornvale-vessel::hornvale_vessel$brief::tests::a_living_occupation_with_no_society_row_refuses_with_its_people_id
+hornvale-vessel::hornvale_vessel$brief::tests::an_empty_production_occupation_register_carries_no_people_or_housemark
+hornvale-vessel::hornvale_vessel$brief::tests::an_unclassifiable_society_row_refuses_with_its_people_id
 hornvale-vessel::hornvale_vessel$brief::tests::from_parts_assigns_the_occupation_axes_and_flags
 hornvale-vessel::hornvale_vessel$brief::tests::from_parts_with_no_occupation_axes_still_carries_climate
 hornvale-vessel::hornvale_vessel$brief::tests::two_briefs_differing_only_in_tech_are_not_equal
@@ -2612,6 +2614,9 @@ hornvale-vessel::hornvale_vessel$focalize::tests::significant_words_skip_stopwor
 hornvale-vessel::hornvale_vessel$focalize::tests::the_nameable_part_can_differ_from_the_display_name
 hornvale-vessel::hornvale_vessel$ground::tests::a_miss_computes_and_a_hit_does_not
 hornvale-vessel::hornvale_vessel$ground::tests::evicting_everything_recomputes_the_same_value
+hornvale-vessel::hornvale_vessel$housemark::tests::classifies_authority_and_every_admitted_radius_boundary
+hornvale-vessel::hornvale_vessel$housemark::tests::live_society_registry_populates_the_six_housemark_classes
+hornvale-vessel::hornvale_vessel$housemark::tests::refuses_open_gaps_and_out_of_range_radii_with_their_admitted_bands
 hornvale-vessel::hornvale_vessel$interior::anchor::tests::adjacency_reads_ec_and_non_adjacency_reads_dc
 hornvale-vessel::hornvale_vessel$interior::anchor::tests::connectivity_is_detected_in_both_directions
 hornvale-vessel::hornvale_vessel$interior::anchor::tests::containment_reads_ntpp_and_its_converse
@@ -2621,6 +2626,7 @@ hornvale-vessel::hornvale_vessel$interior::derive::tests::a_chamber_in_a_built_l
 hornvale-vessel::hornvale_vessel$interior::derive::tests::a_chamber_in_an_unbuilt_locale_draws_wild_patterns
 hornvale-vessel::hornvale_vessel$interior::derive::tests::a_chamber_no_longer_composes_exactly_as_its_locale_does
 hornvale-vessel::hornvale_vessel$interior::derive::tests::a_wilderness_room_draws_no_built_anchors
+hornvale-vessel::hornvale_vessel$interior::derive::tests::chamber_zero_reads_both_axes_of_all_six_housemarks
 hornvale-vessel::hornvale_vessel$interior::derive::tests::derivation_is_a_pure_function_of_the_room
 hornvale-vessel::hornvale_vessel$interior::derive::tests::every_derived_interior_has_a_landing
 hornvale-vessel::hornvale_vessel$interior::derive::tests::every_derived_interior_is_well_formed
@@ -3136,6 +3142,7 @@ hornvale-vessel::suite$gate_table::in_character_is_refused_while_asleep_and_perm
 hornvale-vessel::suite$gate_table::in_character_is_refused_while_possessed_by_another
 hornvale-vessel::suite$gate_table::out_of_character_is_permitted_in_every_body_state
 hornvale-vessel::suite$gate_table::the_refusal_does_not_name_the_possessor
+hornvale-vessel::suite$housemark_readout::recovery_metadata_does_not_consult_the_claimed_housemark_label
 hornvale-vessel::suite$kind_totality::every_chamber_prose_row_is_a_roster_kind
 hornvale-vessel::suite$kind_totality::every_kind_the_grammar_names_is_a_roster_row
 hornvale-vessel::suite$kind_totality::every_propertied_kind_is_a_roster_row
@@ -3212,6 +3219,7 @@ hornvale-vessel::suite$testimony::two_cultures_report_different_words_for_the_sa
 hornvale-vessel::suite$the_blocking::a_locale_composition_is_untouched_by_the_role_layer
 hornvale-vessel::suite$the_blocking::a_role_admits_a_different_composition_not_a_bigger_one
 hornvale-vessel::suite$the_blocking::the_role_table_reads_a_different_room_for_every_role
+hornvale-vessel::suite$the_blocking::threshold_patterns_admit_each_housemark_relation_once
 hornvale-vessel::suite$the_first_mark::the_two_grievance_npc_copies_agree
 hornvale-vessel::suite$the_prospect::a_sites_facet_is_stable_and_vertex_distinct
 hornvale-vessel::suite$the_terrier::no_session_path_re_surveys_the_occupation_register
@@ -3234,7 +3242,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
