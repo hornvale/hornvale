@@ -5323,3 +5323,47 @@ something else are, structurally, the cheapest independence available.
 Unscored, and for this chapter's own stated reason: the claim is about the
 whole rather than about a location, and nothing in its filing records the state
 it was observed against.
+
+### The other branch of the constant column (2026-09-04)
+
+[The Confidant](./chronicle/the-confidant.md) established, above, that a
+constant column has one benign cause and one broken one, and found the benign
+one: forty-five conceptual-deficiency columns read constant across a thousand
+seeds because they branch on whether a culture *has* a concept, which is
+exposure-determined and does not vary with the seed. Correctly seed-invariant,
+not a broken read.
+
+[The Staple](./chronicle/the-staple.md) is the other branch, found by the same
+discipline and reported here because a fork with only one worked example is a
+rule nobody can apply. Four fields of the brief — the record that is the only
+thing micro generation may read about a place — were measured across four
+thousand and two occupations in five worlds. `notability` was `Common` on every
+one of them. `function` was `Agrarian` on 98.7%. `tech` was `Classical` on
+every living occupation, on every seed. All three look exactly like The
+Confidant's columns; none of them is benign. Two are hardcoded literals at the
+single site a community is founded, and the third is derived from the year,
+which makes it a world clock that can separate eras and never two places
+standing at the same moment.
+
+**The tell that separates the two cases is not in the number.** It is whether
+the mechanism has a reachable path to a second value, and the only way to know
+is to go and look at the thing that writes the field. The Confidant checked and
+found a real invariance; this campaign checked and found three fields nobody had
+ever written more than once. In both cases the column looked identical, and in
+both cases the check was cheap — a probe here is sixteen seconds — while the
+cost of accepting the number was a whole campaign designing a vocabulary
+indexed on values that do not occur.
+
+The sharper form, because it generalizes past constants: **a design whose
+substance is a contrast between two configurations is a claim that both
+configurations occur, and a specification has no way to check one.** The plan
+this campaign was opened to execute stated its target as a contrast between a
+`Trade`/`Seat`/`Classical` city and a `Backwater`/`Agrarian`/`Neolithic`
+hamlet. Both poles are unreachable. Nothing was wrong with the grammar, every
+gate would have stayed green throughout, and the failure would have surfaced
+only when someone walked into a city expecting a market.
+
+Unscored as a bet — it resolves nothing that was open. It is filed as an
+instrument correction: the population a measurement is taken over decides
+whether a constant is a finding or a fact, and this chapter now carries one
+example of each.
