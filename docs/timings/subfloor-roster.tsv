@@ -1284,6 +1284,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -2953,12 +2954,20 @@ hornvale-vessel::hornvale_vessel$roster::tests::every_column_shares_one_length
 hornvale-vessel::hornvale_vessel$roster::tests::the_driven_slot_is_the_one_dropped
 hornvale-vessel::hornvale_vessel$session::tests::a_costly_truth_names_its_residue_and_an_empty_one_reads_as_ordinary
 hornvale-vessel::hornvale_vessel$session::tests::a_deliberate_lie_carries_the_claim_and_never_the_truth
+hornvale-vessel::hornvale_vessel$session::tests::a_later_wake_already_set_is_kept
+hornvale-vessel::hornvale_vessel$session::tests::a_rest_is_not_a_sleep_for_the_wake
+hornvale-vessel::hornvale_vessel$session::tests::a_walk_sleep_already_over_sets_no_wake
+hornvale-vessel::hornvale_vessel$session::tests::a_walk_sleep_that_outlasts_the_tick_sets_the_wake
+hornvale-vessel::hornvale_vessel$session::tests::a_walks_wake_is_taken_when_none_is_set
 hornvale-vessel::hornvale_vessel$session::tests::advanced_by_checks_the_increment_and_the_sum_separately
+hornvale-vessel::hornvale_vessel$session::tests::an_earlier_wake_gives_way_to_the_walks_own
+hornvale-vessel::hornvale_vessel$session::tests::an_equal_wake_agrees_with_the_walks_own
 hornvale-vessel::hornvale_vessel$session::tests::every_bare_verb_help_lists_is_classified
 hornvale-vessel::hornvale_vessel$session::tests::every_bearing_has_a_delta_that_agrees_with_its_bearing
 hornvale-vessel::hornvale_vessel$session::tests::every_passage_outcome_reads_distinctly
 hornvale-vessel::hornvale_vessel$session::tests::further_in_is_the_deeper_aperture_and_stops_at_the_last_chamber
 hornvale-vessel::hornvale_vessel$session::tests::help_names_warm_with_the_offer_modules_own_word_and_carrier
+hornvale-vessel::hornvale_vessel$session::tests::minutes_are_one_per_kind_in_first_appearance_order_with_the_move_first
 hornvale-vessel::hornvale_vessel$session::tests::neighbours_reads_the_link_graph_in_both_directions
 hornvale-vessel::hornvale_vessel$session::tests::render_testimony_direct_reports_the_word_and_its_own_concept
 hornvale-vessel::hornvale_vessel$session::tests::render_testimony_none_says_nothing_and_lands_nothing
@@ -2966,6 +2975,7 @@ hornvale-vessel::hornvale_vessel$session::tests::render_testimony_withheld_lands
 hornvale-vessel::hornvale_vessel$session::tests::session_control_is_never_an_in_character_verb
 hornvale-vessel::hornvale_vessel$session::tests::the_arbitration_never_reaches_a_divergent_utterance
 hornvale-vessel::hornvale_vessel$session::tests::the_compass_rose_is_locales_own_order
+hornvale-vessel::hornvale_vessel$session::tests::the_latest_outlasting_sleep_wins
 hornvale-vessel::hornvale_vessel$session::tests::the_lock_wants_a_property_and_exactly_one_kind_supplies_it
 hornvale-vessel::hornvale_vessel$site::tests::a_placed_site_is_a_point
 hornvale-vessel::hornvale_vessel$site::tests::derived_sets_tier_derived
@@ -3224,6 +3234,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
