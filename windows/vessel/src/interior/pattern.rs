@@ -16,8 +16,34 @@
 //! off the centre, is the degenerate case and is what the anti-hub test forbids.
 
 use super::anchor::{AnchorId, Interior};
+use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
 use hornvale_kernel::KindId;
 use hornvale_thing::kinds;
+
+/// The cultural condition under which a chamber pattern is admitted.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HousemarkGate {
+    /// Every housemark admits this pattern.
+    Universal,
+    /// Only a matching authority reading admits this pattern.
+    Authority(AuthorityMark),
+    /// Only a matching threshold posture admits this pattern.
+    Threshold(ThresholdPosture),
+}
+
+impl HousemarkGate {
+    fn admits(self, housemark: Option<Housemark>) -> bool {
+        match self {
+            Self::Universal => true,
+            Self::Authority(authority) => {
+                matches!(housemark, Some(mark) if mark.authority == authority)
+            }
+            Self::Threshold(threshold) => {
+                matches!(housemark, Some(mark) if mark.threshold == threshold)
+            }
+        }
+    }
+}
 
 /// Where a pattern's anchor attaches to what is already composed.
 pub enum Attach {
@@ -101,32 +127,29 @@ pub struct Pattern {
     /// role withholds — including the two the GRAMMAR confines anyway
     /// (`the-fire`, `the-fireside-bed`), which is the point.
     pub roles: &'static [Role],
-    /// Whether the LOCALE band draws this pattern — the epoch gate, and the one
-    /// field in this struct that exists for a determinism reason rather than a
-    /// world reason.
+    /// Whether the LOCALE band draws this pattern — the committed-derivation
+    /// gate, and the one field in this struct that exists for a determinism
+    /// reason rather than a world reason.
     ///
     /// [`selection`] admits only patterns with `at_locale: true`. A creature
     /// stands at a LOCALE, and its thermal drive reads the warmth of the
-    /// interior composed there, which is committed history. So a pattern with
-    /// `at_locale: false` cannot move a **world file**: no read that writes a
-    /// [`hornvale_kernel::Fact`] can reach it, and decision 0069 keeps
-    /// `Interior` unserialized. Setting one to `true` is what turns a latent
-    /// pattern into an epoch, and
+    /// interior composed there, which is committed history. A pattern with
+    /// `at_locale: false` stays outside that derivation: chamber composition
+    /// consumes no stream, writes no [`hornvale_kernel::Fact`], and decision
+    /// 0069 keeps `Interior` unserialized. Setting one to `true` changes the
+    /// locale derivation and requires an epoch classification;
     /// `a_locale_composition_is_untouched_by_the_role_layer` is the check that
     /// makes that deliberate rather than accidental.
     ///
-    /// **IT CAN STILL MOVE A RENDERED ARTIFACT, AND THIS SENTENCE SAID
-    /// OTHERWISE UNTIL THE WICKET'S CLOSE.** It read *"a pattern with
-    /// `at_locale: false` **cannot** move a world: no live read can reach
-    /// it"* — the same over-broad reading of "commits" that [`INVENTORY`]'s
-    /// own rule 3, thirty lines below, exists to correct, and it is falsified
-    /// by this very file: `the-brazier` is `at_locale: false` and renders in
-    /// `book/src/gallery/possession-carry-seed-14.md`. **Read rule 3 for the
-    /// full statement; do not restate it here.** The two must not drift
-    /// apart, and they did: The Wicket corrected the `INVENTORY` doc it had
-    /// grepped for and left this twin one screen away untouched since The
-    /// Blocking (`f2cfb0974`, 2026-07-28) — its own lesson, *grep the claim
-    /// and not the identifier*, unapplied to its own correction (ledger #60).
+    /// This flag does not promise world-file byte identity. If an appended
+    /// pattern names a newly registered kind, that kind may extend the
+    /// serialized [`hornvale_kernel::ConceptRegistry`] independently of room
+    /// composition; the accession and its epoch cost must be classified and
+    /// approved. An `at_locale: false` pattern can also move a rendered
+    /// artifact: `the-brazier` renders in
+    /// `book/src/gallery/possession-carry-seed-14.md`. Rule 3 below states both
+    /// boundaries in full; whoever edits either contract must keep them in
+    /// step.
     pub at_locale: bool,
     /// Whether this pattern is drawn only where the place held more people than
     /// a hamlet ([`crate::brief::Brief::is_populous`]). The `needs_cold` of
@@ -150,6 +173,9 @@ pub struct Pattern {
     /// uses_it`. Setting this to `true` on a real pattern is therefore a
     /// deliberate act with a working filter under it, not an untested one.
     pub needs_populous: bool,
+    /// The housemark condition for a CHAMBER to admit this pattern. Locale
+    /// selection deliberately ignores it: the walk band has no housemark input.
+    pub housemark_gate: HousemarkGate,
 }
 
 /// The authored inventory.
@@ -167,17 +193,23 @@ pub struct Pattern {
 /// 2. **Appending a pattern with `at_locale: true` is an epoch.** A locale
 ///    composition feeds [`crate::interior::warmth_at`], which feeds a creature's
 ///    thermal drive, which is committed history.
-/// 3. **Appending a pattern with `at_locale: false` is LATENT — and "commits"
-///    here means one specific thing, stated precisely because the word used
-///    to do double duty.** No live read reaches it through the LEDGER:
+/// 3. **Appending a pattern with `at_locale: false` is LATENT to seeded
+///    derivation — and "commits" here means one specific thing, stated
+///    precisely because the word used to do double duty.** No live read
+///    reaches its chamber composition through the LEDGER:
 ///    [`selection`] filters it out, and the only other consumer is
-///    [`selection_for`], whose output feeds the chamber renderer and nothing
-///    that writes a [`hornvale_kernel::Fact`]. A chamber's composed content
-///    is never serialized into a `World`'s ledger (decision 0069 keeps
-///    `Interior` unserialized — derived per room, bubble-scoped, discarded
-///    with the bubble), so no world FILE moves when a pattern is appended
-///    here: no saved world's determinism and no previously-committed fact
-///    changes. That half is permanent and does not decay.
+///    [`selection_for`], whose output feeds chamber composition without
+///    consuming a stream or writing a [`hornvale_kernel::Fact`]. A chamber's
+///    composed content is never serialized into a `World`'s ledger (decision
+///    0069 keeps `Interior` derived per room, bubble-scoped, and discarded with
+///    the bubble), so no ledger fact or seeded derivation changes. That half is
+///    permanent and does not decay.
+///
+///    It is not a promise that no world file moves. If the pattern references
+///    a newly registered kind, registering that kind may extend the serialized
+///    [`hornvale_kernel::ConceptRegistry`]. That accession is independent of
+///    chamber composition and requires its own epoch classification and
+///    approval, as The Housemark's `BENCH` accession did at epoch 20.
 ///
 ///    **The other half of "commits" already decayed by the time this
 ///    sentence first named a date, and a first correction got the date right
@@ -205,16 +237,13 @@ pub struct Pattern {
 ///    newly deepened) committed transcript/fixture, not for an append here.
 ///
 ///    So: appending an `at_locale: false` pattern is LATENT with respect to
-///    the LEDGER — this remains the guarantee that matters, and is why such
-///    an append is not an epoch — but it is **not** latent with respect to a
-///    RENDERED artifact like a gallery transcript, which may show anything
-///    the world now contains and is expected to move. A census column or
-///    `book/src/domesday/` moving would be the real signal something has
-///    changed — not because decision 0069 promises those readers never touch
-///    a chamber (that a census or `book/src/domesday/` does not walk one is
-///    a property of those readers, not a guarantee 0069 issues), but because
-///    0069 keeps `Interior` unserialized, so no world FILE — census or
-///    otherwise — can move on account of a room gaining furniture.
+///    the LEDGER and seeded derivation — no Fact or stream changes through
+///    chamber composition — but a newly referenced registered kind is a
+///    separate accession question, and a RENDERED artifact like a gallery
+///    transcript may show anything the world now contains and is expected to
+///    move. A census column or `book/src/domesday/` ledger field moving would
+///    still be the signal that chamber composition crossed its promised
+///    boundary; serialized `ConceptRegistry` growth is classified separately.
 ///
 ///    **This clause has a twin, and keeping them in step is the point.**
 ///    [`Pattern::at_locale`]'s own field doc states the same latency, and
@@ -225,7 +254,7 @@ pub struct Pattern {
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
-pub const INVENTORY: [Pattern; 17] = [
+pub const INVENTORY: [Pattern; 20] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
@@ -237,6 +266,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: EVERY_ROLE,
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-threshold",
@@ -250,6 +280,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: EVERY_ROLE,
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-alcove",
@@ -262,6 +293,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Hearthroom],
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-fire",
@@ -278,6 +310,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: EVERY_ROLE,
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-fireside-bed",
@@ -291,6 +324,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: EVERY_ROLE,
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-water-jar",
@@ -302,6 +336,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: STORING_ROLES,
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-screen",
@@ -315,6 +350,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Threshold],
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Threshold(ThresholdPosture::Inward),
     },
     // --- wild ---
     Pattern {
@@ -329,6 +365,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: EVERY_ROLE,
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-pool",
@@ -340,6 +377,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: EVERY_ROLE,
         at_locale: true,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     // --- built, CHAMBER BAND ONLY (`at_locale: false`) ---
     //
@@ -362,6 +400,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Store],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-high-seat",
@@ -375,6 +414,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Hall],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-loom",
@@ -388,6 +428,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Loomroom],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-anvil",
@@ -402,6 +443,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Smithy],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     Pattern {
         name: "the-altar",
@@ -414,6 +456,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Shrine],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     // --- The Chattel (Task 11): the first authored CONTENTS ---
     //
@@ -456,6 +499,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Store],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     // --- The Chattel (Task 13, fix round 1): the SECOND key ---
     // --- The Custodian: moved off the doorway ---
@@ -552,6 +596,7 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Loomroom],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
     },
     // --- The Wicket, Task 5: the brazier ---
     //
@@ -584,8 +629,8 @@ pub const INVENTORY: [Pattern; 17] = [
     // `requires` kind is present, so `the-loom` must precede this row or the
     // brazier is silently dropped from every composition it would otherwise
     // join. `at_locale: false` keeps the append LATENT under `INVENTORY`'s
-    // own three-part epoch rule (the chamber renderer reads it; nothing that
-    // commits does).
+    // own three-part epoch rule (the chamber renderer reads it; no derivation
+    // that writes a Fact or consumes a stream does).
     Pattern {
         name: "the-brazier",
         kind: kinds::BRAZIER,
@@ -596,6 +641,48 @@ pub const INVENTORY: [Pattern; 17] = [
         roles: &[Role::Loomroom],
         at_locale: false,
         needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
+    },
+    // --- The Housemark: culturally diagnostic threshold relations ---
+    //
+    // These are chamber-only appendages. Their gate is read only by
+    // `selection_for`, so the locale composition remains the frozen one that
+    // feeds the walk band's thermal history.
+    Pattern {
+        name: "the-command-seat-at-the-threshold",
+        kind: kinds::HIGH_SEAT,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Threshold],
+        at_locale: false,
+        needs_populous: false,
+        housemark_gate: HousemarkGate::Authority(AuthorityMark::Command),
+    },
+    Pattern {
+        name: "the-common-bench-by-the-ground",
+        kind: kinds::BENCH,
+        attach: Attach::Beside(kinds::GROUND),
+        requires: Some(kinds::GROUND),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Threshold],
+        at_locale: false,
+        needs_populous: false,
+        housemark_gate: HousemarkGate::Authority(AuthorityMark::Common),
+    },
+    Pattern {
+        name: "the-guest-water-at-the-threshold",
+        kind: kinds::VESSEL,
+        attach: Attach::Beside(kinds::THRESHOLD),
+        requires: Some(kinds::THRESHOLD),
+        needs_cold: false,
+        built: true,
+        roles: &[Role::Threshold],
+        at_locale: false,
+        needs_populous: false,
+        housemark_gate: HousemarkGate::Threshold(ThresholdPosture::Outward),
     },
 ];
 
@@ -621,14 +708,23 @@ pub fn selection(built: bool, cold: bool) -> Vec<&'static Pattern> {
 /// declared vocabulary") reduced to one predicate argument.
 ///
 /// `populous` is [`crate::brief::Brief::is_populous`]: whether the place ever
-/// held more people than a hamlet.
+/// held more people than a hamlet. `housemark` is absent until a caller has a
+/// living society to derive one from, and then admits only matching typed gates.
 ///
 /// It does NOT filter on `at_locale`: a chamber draws the shared vocabulary
 /// *and* the chamber-only patterns. That asymmetry is the whole gate — see
 /// [`Pattern::at_locale`].
 /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(flag: populous)
-pub fn selection_for(role: Role, built: bool, cold: bool, populous: bool) -> Vec<&'static Pattern> {
-    draw(built, cold, populous, |p| p.roles.contains(&role))
+pub fn selection_for(
+    role: Role,
+    built: bool,
+    cold: bool,
+    populous: bool,
+    housemark: Option<Housemark>,
+) -> Vec<&'static Pattern> {
+    draw(built, cold, populous, |p| {
+        p.roles.contains(&role) && p.housemark_gate.admits(housemark)
+    })
 }
 
 /// The one admissibility walk over the authored [`INVENTORY`]. `admits` is the
@@ -928,6 +1024,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             false,
@@ -1071,7 +1168,7 @@ mod tests {
                                 "selection_for({role:?}, built={built}, cold={cold}, \
                                  populous={populous})"
                             ),
-                            selection_for(*role, built, cold, populous),
+                            selection_for(*role, built, cold, populous, None),
                         );
                     }
                 }
@@ -1136,7 +1233,7 @@ mod tests {
             for built in [true, false] {
                 for cold in [true, false] {
                     for populous in [true, false] {
-                        census(selection_for(*role, built, cold, populous));
+                        census(selection_for(*role, built, cold, populous, None));
                     }
                 }
             }
@@ -1190,7 +1287,7 @@ mod tests {
             "the fire must be withheld from NO role; its confinement is grammatical"
         );
         for &role in EVERY_ROLE {
-            let has_fire = selection_for(role, true, true, true)
+            let has_fire = selection_for(role, true, true, true, None)
                 .iter()
                 .any(|p| p.kind == kinds::HEARTH);
             assert_eq!(
@@ -1214,7 +1311,7 @@ mod tests {
                 (true, false, false),
                 (false, false, false),
             ] {
-                let interior = compose(&selection_for(role, built, cold, populous));
+                let interior = compose(&selection_for(role, built, cold, populous, None));
                 assert!(
                     permits(&interior),
                     "{role:?} (built={built}, cold={cold}, populous={populous}) \
@@ -1244,6 +1341,7 @@ mod tests {
             None,
             Some(Notability::Common),
             None,
+            None,
             0,
             true,
             false,
@@ -1254,6 +1352,7 @@ mod tests {
             Some(Function::Agrarian),
             None,
             Some(Notability::Common),
+            None,
             None,
             0,
             true,
@@ -1272,6 +1371,7 @@ mod tests {
             Some(Function::Agrarian),
             None,
             Some(Notability::Seat),
+            None,
             None,
             0,
             true,
@@ -1296,13 +1396,14 @@ mod tests {
                 None,
                 Some(Notability::Common),
                 None,
+                None,
                 0,
                 true,
                 false,
                 settlement_site(),
                 None,
             );
-            selection_for(role_for(2, &b), true, false, false)
+            selection_for(role_for(2, &b), true, false, false, None)
                 .iter()
                 .map(|p| p.name)
                 .collect::<Vec<_>>()
@@ -1337,6 +1438,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             ceiling,
             true,
             false,
@@ -1344,7 +1446,7 @@ mod tests {
             None,
         );
         assert!(!hamlet.is_populous(), "at the ceiling is still a hamlet");
-        let names = selection_for(Role::Store, true, false, hamlet.is_populous())
+        let names = selection_for(Role::Store, true, false, hamlet.is_populous(), None)
             .iter()
             .map(|p| p.name)
             .collect::<Vec<_>>();
@@ -1361,7 +1463,7 @@ mod tests {
         // Scale is no longer a gate on this vocabulary AT ALL — asserted in
         // both directions so that relaxing one pattern and not the other
         // cannot pass here.
-        let populous = selection_for(Role::Store, true, false, true)
+        let populous = selection_for(Role::Store, true, false, true, None)
             .iter()
             .map(|p| p.name)
             .collect::<Vec<_>>();
@@ -1470,7 +1572,7 @@ mod tests {
         // container beside it. `built=true, cold=false` is the plainest
         // production gate; `no_production_room_composes_two_anchors_of_one_kind`
         // sweeps the rest.
-        let loomroom: Vec<&str> = selection_for(Role::Loomroom, true, false, false)
+        let loomroom: Vec<&str> = selection_for(Role::Loomroom, true, false, false, None)
             .iter()
             .map(|p| p.name)
             .collect();
@@ -1479,7 +1581,7 @@ mod tests {
             "a loomroom draws no key, so closing `take`'s lid bypass leaves \
              the strongbox unopenable: {loomroom:?}"
         );
-        let stands_a_container = selection_for(Role::Loomroom, true, false, false)
+        let stands_a_container = selection_for(Role::Loomroom, true, false, false, None)
             .iter()
             .any(|p| {
                 crate::affordance::carries(p.kind, crate::affordance::ObjectProperty::Encloses)
@@ -1494,7 +1596,7 @@ mod tests {
         // THE KEY IS NOT IN EVERY BUILT ROOM ANY MORE — the whole point of
         // the move, asserted rather than described. The threshold chamber is
         // the one every structure has, and it must no longer furnish a key.
-        let door: Vec<&str> = selection_for(Role::Threshold, true, false, false)
+        let door: Vec<&str> = selection_for(Role::Threshold, true, false, false, None)
             .iter()
             .map(|p| p.name)
             .collect();
@@ -1510,6 +1612,7 @@ mod tests {
         // reaches a strongbox HERE has already passed this key.
         let agrarian = crate::brief::Brief::from_parts(
             Some(hornvale_history::record::Function::Agrarian),
+            None,
             None,
             None,
             None,
@@ -1572,6 +1675,7 @@ mod tests {
                 roles: EVERY_ROLE,
                 at_locale: true,
                 needs_populous: false,
+                housemark_gate: HousemarkGate::Universal,
             },
             Pattern {
                 name: "test-town-only",
@@ -1583,6 +1687,7 @@ mod tests {
                 roles: EVERY_ROLE,
                 at_locale: true,
                 needs_populous: true,
+                housemark_gate: HousemarkGate::Universal,
             },
         ];
         let names = |populous: bool| {
@@ -1618,6 +1723,7 @@ mod tests {
         let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
         let at = |n: u32| {
             crate::brief::Brief::from_parts(
+                None,
                 None,
                 None,
                 None,

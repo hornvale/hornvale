@@ -24,8 +24,10 @@ fn a_dead_occupation_reports_a_ruin_signature() {
     let walk = hornvale_locale::walk_depth(&ctx);
     let terrain = hornvale_vessel::liveness::LocaleTerrain::new(&ctx);
     let place = hornvale_kernel::Facet::containing(geo.position(ruin_vertex), walk);
+    let living_occupations = std::collections::BTreeMap::new();
 
     let brief = brief_of(
+        &living_occupations,
         &occupations,
         geo,
         ctx.nearest_index(),
@@ -35,7 +37,8 @@ fn a_dead_occupation_reports_a_ruin_signature() {
         world.seed,
         &ctx.strange_sites(),
         &ctx.terrain().cave_site_vertices(),
-    );
+    )
+    .expect("the ruin facet has a valid production brief");
 
     let ruin = brief
         .ruin

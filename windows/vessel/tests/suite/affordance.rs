@@ -1706,7 +1706,7 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Close, Drink, Drop, Enter, Examine, Open, Put, Sleep, Take, Warm};
-    let expected: [(KindId, &[OfferedVerb]); 18] = [
+    let expected: [(KindId, &[OfferedVerb]); 19] = [
         // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
         // not by the offer query), so an enclosing kind offers Examine and
         // nothing more.
@@ -1714,6 +1714,7 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         (kinds::ALTAR, &[Examine]),
         (kinds::ANVIL, &[Examine]),
         (kinds::BED, &[Sleep, Examine]),
+        (kinds::BENCH, &[Examine]),
         // THE BRAZIER'S ROW IS NEW (The Wicket, Task 5): the campaign's own
         // proof that a kind can arrive with data rows only. `RadiatesHeat`
         // gates `Warm` the same way `hearth`'s row does; `Examine` is

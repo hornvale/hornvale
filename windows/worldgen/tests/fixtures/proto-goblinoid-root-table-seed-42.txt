@@ -9,6 +9,7 @@ bait-ball: Dee /dee/
 barley: Nadae /nadae/
 bathypelagic: Neogeo /neogeo/
 bed: Koaqo /koaqo/
+bench: Gaenae /gaenae/
 black-dragon-kind: Negoo /negoo/
 blood: Tae /tae/
 blue: Ta /ta/

@@ -12,6 +12,7 @@ bait-ball: gap (experiential): goblin has no exposure to 'bait-ball'
 barley: gap (experiential): goblin has no exposure to 'barley'
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): goblin has no exposure to 'bed'
+bench: gap (experiential): goblin has no exposure to 'bench'
 black-dragon-kind: gap (experiential): goblin has no exposure to 'black-dragon-kind'
 blood: root Tae /tae/
 blue: root Ta /ta/
@@ -270,6 +271,7 @@ bait-ball: gap (experiential): hobgoblin has no exposure to 'bait-ball'
 barley: root Nabae /nabae/
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): hobgoblin has no exposure to 'bed'
+bench: gap (experiential): hobgoblin has no exposure to 'bench'
 black-dragon-kind: gap (experiential): hobgoblin has no exposure to 'black-dragon-kind'
 blood: root Tae /tae/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
@@ -528,6 +530,7 @@ bait-ball: gap (experiential): bugbear has no exposure to 'bait-ball'
 barley: root Dadao /dadao/
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): bugbear has no exposure to 'bed'
+bench: gap (experiential): bugbear has no exposure to 'bench'
 black-dragon-kind: gap (experiential): bugbear has no exposure to 'black-dragon-kind'
 blood: root Dao /dao/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
@@ -786,6 +789,7 @@ bait-ball: gap (experiential): kobold has no exposure to 'bait-ball'
 barley: root Xaxaaroo /xaxaaroo/
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): kobold has no exposure to 'bed'
+bench: gap (experiential): kobold has no exposure to 'bench'
 black-dragon-kind: gap (experiential): kobold has no exposure to 'black-dragon-kind'
 blood: root Roo /roo/
 blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
@@ -1044,6 +1048,7 @@ bait-ball: gap (experiential): gnoll has no exposure to 'bait-ball'
 barley: gap (experiential): gnoll has no exposure to 'barley'
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): gnoll has no exposure to 'bed'
+bench: gap (experiential): gnoll has no exposure to 'bench'
 black-dragon-kind: gap (experiential): gnoll has no exposure to 'black-dragon-kind'
 blood: root Gshaazhnoa /gʃaaʒnoa/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75
@@ -1302,6 +1307,7 @@ bait-ball: gap (experiential): human has no exposure to 'bait-ball'
 barley: root Vakvee /vakvee/
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): human has no exposure to 'bed'
+bench: gap (experiential): human has no exposure to 'bench'
 black-dragon-kind: gap (experiential): human has no exposure to 'black-dragon-kind'
 blood: root Ka /ka/
 blue: root Rea /rea/
@@ -1560,6 +1566,7 @@ bait-ball: gap (experiential): desert-dwarf has no exposure to 'bait-ball'
 barley: root Dajaj /dajaj/
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): desert-dwarf has no exposure to 'bed'
+bench: gap (experiential): desert-dwarf has no exposure to 'bench'
 black-dragon-kind: gap (experiential): desert-dwarf has no exposure to 'black-dragon-kind'
 blood: root Napad /napad/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.65
@@ -1818,6 +1825,7 @@ bait-ball: gap (experiential): gully-dwarf has no exposure to 'bait-ball'
 barley: gap (experiential): gully-dwarf has no exposure to 'barley'
 bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 bed: gap (experiential): gully-dwarf has no exposure to 'bed'
+bench: gap (experiential): gully-dwarf has no exposure to 'bench'
 black-dragon-kind: gap (experiential): gully-dwarf has no exposure to 'black-dragon-kind'
 blood: root Nabab /nabab/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
@@ -2076,6 +2084,7 @@ bait-ball: gap (experiential): hill-dwarf has no exposure to 'bait-ball'
 barley: root Sajaj /sajaj/
 bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
 bed: gap (experiential): hill-dwarf has no exposure to 'bed'
+bench: gap (experiential): hill-dwarf has no exposure to 'bench'
 black-dragon-kind: gap (experiential): hill-dwarf has no exposure to 'black-dragon-kind'
 blood: root Mabab /mabab/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6

@@ -47,6 +47,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `barley` | a staple crop | *Sruengzhreng | /srueŋʒreŋ/ |
 | `bathypelagic` | a biome class | *Shrong | /ʃroŋ/ |
 | `bed` | a place made for lying down and sleeping | *Ngaengpoeng | /ŋaeŋpoeŋ/ |
+| `bench` | a long shared seat | *Shrungngaung | /ʃruŋŋauŋ/ |
 | `black-dragon-kind` | a black dragon | *Doang | /doaŋ/ |
 | `blood` | the circulating fluid of a body | *Beengtung | /beeŋtuŋ/ |
 | `blue` | the color term for blue | *Shraeng | /ʃraeŋ/ |

@@ -73,6 +73,7 @@ pub fn chamber_interior_of(
         built,
         cold,
         brief.is_populous(),
+        brief.housemark,
     ))
 }
 
@@ -235,7 +236,7 @@ mod tests {
     /// `chamber_interior_of`'s debug assertions hold.
     fn brief(built: bool) -> crate::brief::Brief {
         let site = built.then(|| Site::placed(SiteKind::Settlement, None));
-        crate::brief::Brief::from_parts(None, None, None, None, 0, built, true, site, None)
+        crate::brief::Brief::from_parts(None, None, None, None, None, 0, built, true, site, None)
     }
 
     #[test]
@@ -324,6 +325,74 @@ mod tests {
             assert!(
                 landing(&i, seam_kind(true)).is_some(),
                 "chamber {index}'s role leaves a possession nowhere to arrive"
+            );
+        }
+    }
+
+    #[test]
+    fn chamber_zero_reads_both_axes_of_all_six_housemarks() {
+        use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
+
+        let terrain = WalkKeyedTerrain {
+            built_walk_ids: [walk_addr().pack().unwrap().0].into_iter().collect(),
+        };
+        let marks = [
+            Housemark {
+                authority: AuthorityMark::Command,
+                threshold: ThresholdPosture::Inward,
+            },
+            Housemark {
+                authority: AuthorityMark::Command,
+                threshold: ThresholdPosture::Plain,
+            },
+            Housemark {
+                authority: AuthorityMark::Command,
+                threshold: ThresholdPosture::Outward,
+            },
+            Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Inward,
+            },
+            Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            },
+            Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Outward,
+            },
+        ];
+
+        for mark in marks {
+            let mut cultural = brief(true);
+            cultural.housemark = Some(mark);
+            let interior = chamber_interior_of(&chamber_addr(), &terrain, WALK, &cultural, 0);
+            let has = |kind| {
+                interior
+                    .ids()
+                    .iter()
+                    .any(|&id| interior.anchor(id).kind == kind)
+            };
+
+            assert_eq!(
+                has(kinds::HIGH_SEAT),
+                mark.authority == AuthorityMark::Command,
+                "chamber zero does not express {mark:?}'s command axis"
+            );
+            assert_eq!(
+                has(kinds::BENCH),
+                mark.authority == AuthorityMark::Common,
+                "chamber zero does not express {mark:?}'s common axis"
+            );
+            assert_eq!(
+                has(kinds::SCREEN),
+                mark.threshold == ThresholdPosture::Inward,
+                "chamber zero does not express {mark:?}'s inward posture"
+            );
+            assert_eq!(
+                has(kinds::VESSEL),
+                mark.threshold == ThresholdPosture::Outward,
+                "chamber zero does not express {mark:?}'s outward posture"
             );
         }
     }

@@ -53,7 +53,7 @@ Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
 [chamber 1098173175083363, day 0.00985]
-A small room in Vapatkapak, holding a doorway and a screen.
+A small room in Vapatkapak, holding a doorway, a bench and a water jar.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > carrying
@@ -104,7 +104,7 @@ Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
 [chamber 1098173175083363, day 0.1182]
-A small room in Vapatkapak, holding a doorway and a screen.
+A small room in Vapatkapak, holding a doorway, a bench and a water jar.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > carrying

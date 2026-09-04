@@ -100,12 +100,16 @@ to predict, exactly, which ones cost an epoch.
 
 Some are **readings**: a dwelling belongs to its people, a building's shape has
 a reason, a city has districts. These are pure functions over a finished world.
-They occur at derivation time, commit nothing, move no saved world, and can be
-ordered independently of each other. The others are **dynamics**: worked land,
-flows, the return flow, specialization, the city itself, and decay. These give
-the bake mechanism, they run at the pace of years and generations and
-centuries, and every one of them moves world identity — and they compound, so
-each one invalidates the calibration of the one before it.
+They occur at derivation time, commit nothing, consume no stream, and can be
+ordered independently of each other. *The Housemark* later sharpened the
+saved-world clause: its derivation stayed pure, but the new `bench` concept
+entered the serialized concept registry and therefore took concept accession
+epoch 20. A reading need not move a world derivation to owe an accession for
+new vocabulary. The others are **dynamics**: worked land, flows, the return
+flow, specialization, the city itself, and decay. These give the bake
+mechanism, they run at the pace of years and generations and centuries, and
+every one of them moves world identity — and they compound, so each one
+invalidates the calibration of the one before it.
 
 The consequence worth having is that the district rung needs the dynamics arc
 for its *subject* but not for its *machinery*. It can be built and proven

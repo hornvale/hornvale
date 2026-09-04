@@ -225,17 +225,14 @@ than by `domains/species`, keyed to the same kind. See
 [Language](./language.md) for the vector itself and what it let every name
 in the world become.
 
-**In-group radius went idle, the reverse direction.** Where deliberation
-latency and nocturnality were banked *before* a consumer existed, in-group
-radius lost its only consumer: it used to scale the coastal term of the
-settlement-placement suitability formula, and *The Gathering* retired that
-formula outright in favor of a carrying-capacity field whose coastal bonus
-is a fixed constant, not psychology-scaled. The dimension stays authored
-and committed to the ledger — nothing about the vector's shape changed —
-but nothing reads it today. It is captured here rather than silently
-dropped, exactly the discipline this chapter already applies to dimensions
-banked before their time; a future consumer (a coexistence-stack home-range
-term is the natural candidate) can pick it back up without re-authoring it.
+**In-group radius went idle, then acquired two new readers.** It once scaled
+the coastal term of the settlement-placement suitability formula, and *The
+Gathering* retired that formula for a carrying-capacity field whose coastal
+bonus is fixed rather than psychology-scaled. *The Tithe* later read the same
+authored scalar as how much a vassal conceals from an outsider. *The Housemark*
+now reads it again as threshold posture: inward, plain or outward. The vector's
+shape never changed while its consumers did, which is the value of banking an
+authored dimension instead of deleting it when one use disappears.
 
 **The ontology-trap posture.** This closedness is a stance, not an
 oversight. The frontier map warns, more than once, against traits that grow
@@ -330,8 +327,8 @@ the two differ for one row, called out below the table.
 | Mind | Threat response (flee ↔ stand) | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's warrior-rung threshold; demography's hostility factor (carrying-capacity field) |
 | Mind | Deliberation latency | authored, scalar `[0,1]` | 0.5 | 0.7 | language's formality voice knob (partial — see below) |
 | Mind | Time horizon | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's artisan-rung threshold; demography's freshwater factor (carrying-capacity field) |
-| Society | In-group radius | authored, scalar `[0,1]` | 0.5 | 0.2 | idle since *The Gathering* — see below |
-| Society | Sociality mode | authored, enum | Hierarchic | Communal | language's repetition voice knob |
+| Society | In-group radius | authored, scalar `[0,1]` | 0.5 | 0.2 | history's tribute concealment; vessel's inward/plain/outward housemark threshold |
+| Society | Sociality mode | authored, enum | Hierarchic | Communal | language's repetition voice knob; vessel's command/common housemark authority |
 | Society | Status basis | authored, enum | Rank | Knowledge | culture's slave-rung gate; language's formality/epithet-density knobs and honorific gate |
 | Perception | Activity cycle | authored, enum | Diurnal | Nocturnal | perception's characteristic hour and lens activity factor (Crepuscular carried by `white-dragon` — see below) |
 | Perception | Night vision | authored, scalar `[0,1]` | 0.5 | 0.9 | perception's night-sky lens weight |
@@ -362,6 +359,14 @@ perception vector, so the three dragons diverge in activity even though
 they share one clade eye (`night_vision = 0.9`). Click and Ejective still
 wait in the articulation vector's own enumeration for a species anatomy
 that claims one.
+
+**The two Society rows now meet again at a dwelling's threshold.** *The
+Housemark* reads sociality as command versus common seating and bands
+`in_group_radius` into inward, plain and outward threshold postures. The two
+readings remain independent, producing six reachable chamber signatures over
+the current fifteen peoples. This is a vessel-owned, seedless reading of the
+authored vector; it does not move society into the vessel or make culture a
+species-name table.
 
 **A solitary dragon carries three of this table's four vectors, and none of
 its Society row.** The three chromatic dragons are `Solitary`, not

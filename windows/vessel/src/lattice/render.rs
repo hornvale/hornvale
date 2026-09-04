@@ -188,6 +188,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
@@ -197,7 +198,7 @@ mod tests {
     }
 
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true, None, None)
+        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
     }
 
     /// Every (structure, lattice) pair the render is checked over: both methods,

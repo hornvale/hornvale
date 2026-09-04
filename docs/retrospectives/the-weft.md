@@ -373,3 +373,42 @@ were overwhelmingly in *sentences*, wherever they were written.
 | `Derived::peek` deliberately bypasses hit/miss accounting | accepted API wrinkle, recorded in ledger #13: the read-only tenant needs an uncounted `&self` lookup; callers must not interpret `hits()` as including `peek` |
 | `weft_offers` reconstructs its tiny registry on every call | accepted existing `offered_by` pattern; the performance profile found no material residual here, so a new cache would have no measured reuse case |
 | dense nearest-index self-resolution is pinned for levels 2–6, not permitted level 7 | accepted explicit test limit after Task 12's correction; `kernel/src/geosphere.rs` names level 7 as uncovered rather than allowing the old universal claim to survive |
+
+## Merge contact: a short refusal exposed a wide semantic seam
+
+The first G6-authorized Sluice request was correctly cheap: Housemark landed
+ahead of it, the mouth held The Weft at the merge step with rc=10, no expensive
+phase ran, and `main` did not move. Its status named five representative vessel
+paths. The subsequent `make absorb` exposed fourteen actual conflicts—twelve
+source files plus the plumb and type-audit reports. A queue summary is therefore
+diagnosis, not a hand-resolution cap; the worktree's merge index is the complete
+inventory.
+
+The semantic collision was real. Housemark had changed `brief_of` from a
+vertex lookup to a fallible exact-room living-occupation lookup; The Weft had
+retained vertex history so a ruin can cover the facet containing its source.
+Taking either side would silently erase the other campaign. The resolved shape
+keeps two views from one ledger scan: exact room for living `people`/`housemark`,
+containing vertex for ended occupation history. It also keeps Housemark's
+built-room collision accounting and The Weft's field pack and residency window.
+The generated reports were regenerated rather than hand-merged.
+
+The combined tree passed the 63 prose-subject tests and the complete local
+commit gate after rebaseline. That ordering mattered: the generated reports
+were first made products of the semantic union, then the gate checked their
+freshness alongside the code that authored them.
+
+That union passed all 1,145 non-ignored vessel tests, and rebaseline completed
+without running a census. More importantly, all 70 canonical census paths still
+matched the delivered SHA, and the 22-column original-string oracle still
+matched all 44,000 cells. Conflict work near a generated surface needs both
+proofs: behavioral tests show the two meanings survived; byte comparison shows
+the already-approved measurement did not move under the reconciliation.
+
+The close also absorbed a late scope correction to commit the repository's
+workflow scaffolding. The four campaign skills, dispatch preamble, two `.codex`
+configuration files, and root `AGENTS.md` were copied from the primary checkout
+and verified byte-for-byte before staging. The earlier classification of them
+as merely local was explicitly superseded; recording that reversal matters
+because an untracked-file judgment is not durable authority when the owner
+later says the files belong to the repository.

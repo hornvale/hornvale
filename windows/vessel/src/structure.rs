@@ -145,6 +145,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
@@ -158,6 +159,7 @@ mod tests {
     /// the case that distinguishes the post-0666 gate from the one it replaced.
     fn cave_brief() -> Brief {
         Brief::from_parts(
+            None,
             None,
             None,
             None,
@@ -182,7 +184,7 @@ mod tests {
     /// admitted, which is the half that used to be impossible.
     #[test]
     fn the_site_gates_the_structure_and_built_does_not() {
-        let no_site = Brief::from_parts(None, None, None, None, 0, false, true, None, None);
+        let no_site = Brief::from_parts(None, None, None, None, None, 0, false, true, None, None);
         assert!(
             structure_at(&locale(), &no_site, Seed(42), WALK).is_none(),
             "a facet with no site has nothing to enter"
