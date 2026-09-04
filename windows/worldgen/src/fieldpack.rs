@@ -19,12 +19,26 @@
 //! `carbonate` is the karst driver that physically governs springs and caves
 //! (spec §5.3).
 //!
-//! **Scope.** Spec §5.6's four kinds read exactly three terrain-sourced
-//! causes between them — `carbonate` and `drainage` (spring/seep) and
-//! `induration` (overhang/hollow) — which is exactly [`FieldPack`]'s field
-//! set. `crust_age_at`/`boundary_distance_at` remain available on
-//! [`GeneratedTerrain`] directly; no kind in this plan reads them, so they
-//! are not packed speculatively — a field nothing consumes is untested code.
+//! **Scope: a starting set, not a complete one.** These are the
+//! terrain-sourced causes needed so far — `carbonate`/`drainage` for
+//! spring/seep, `induration` for overhang/hollow (spec §5.6) — and the pack
+//! is expected to grow as more kinds are built. Spec §5.6's rows also name
+//! `elevation` (spring/seep) and `slope` (overhang/hollow), and thicket/brake
+//! needs `moisture`/`temperature`; none of those are packed yet, because no
+//! kind reads them yet — that is Task 7's work, added when the kind that
+//! needs it is built, not packed speculatively ahead of a consumer.
+//! `crust_age_at`/`boundary_distance_at` remain plain [`GeneratedTerrain`]
+//! accessors for the same reason.
+//!
+//! **Never add a `productivity` field.** `LocaleContext` computes it
+//! blend-then-combine: blend temperature, blend moisture, *then* apply a
+//! Liebig minimum. A materialized `productivity` `VertexMap` would compute
+//! combine-then-blend instead, and because the minimum is non-linear,
+//! `blend(f(a, b)) != f(blend(a), blend(b))` — not a last-bit rounding
+//! difference, a different quantity wearing the right name. A kind that needs
+//! productivity (thicket/brake) reads `temperature`/`moisture` fields
+//! directly and combines *after* blending, the same order `LocaleContext`
+//! itself uses.
 
 use hornvale_kernel::{Vertex, VertexMap};
 use hornvale_terrain::GeneratedTerrain;
