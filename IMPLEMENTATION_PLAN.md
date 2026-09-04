@@ -26,4 +26,4 @@
 **Goal**: Classify actual artifact drift, update binding documentation, and pass the local commit gate.
 **Success Criteria**: Drift follows the spec branch table; reports are fresh; `make gate-commit` passes.
 **Tests**: Artifact regeneration/diff, formatter, focused tests, audit reports, commit gate.
-**Status**: Complete
+**Status**: In Progress

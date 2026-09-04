@@ -69,9 +69,9 @@ fn signature_of(interior: &Interior, brief: &Brief) -> Signature {
 
     let mut signature = Vec::new();
     for (pattern, anchor) in selected.into_iter().zip(anchors.iter().copied()) {
+        let actual_kind = interior.anchor(anchor).kind;
         assert_eq!(
-            interior.anchor(anchor).kind,
-            pattern.kind,
+            actual_kind, pattern.kind,
             "composition must preserve selected pattern order"
         );
         let Some(required_kind) = pattern.requires else {
@@ -87,7 +87,7 @@ fn signature_of(interior: &Interior, brief: &Brief) -> Signature {
                     pattern.kind, required_kind
                 )
             });
-        signature.push((pattern.kind, interior.relation(anchor, required)));
+        signature.push((actual_kind, interior.relation(anchor, required)));
     }
     signature
 }
