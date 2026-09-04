@@ -403,10 +403,12 @@ impl NearestVertexIndex {
     }
 
     /// The vertex nearest a unit-sphere position, by maximum dot product. A
-    /// position read from [`Geosphere::position`] resolves to that exact vertex
-    /// (self-dot = 1.0 wins). A cube-sphere room corner generally is *not* an
-    /// icosphere vertex and still needs the nearest search; see
-    /// [`crate::Facet::corners`]'s mesh-boundary contract.
+    /// position read from [`Geosphere::position`] resolves to that same vertex,
+    /// as pinned across every live mesh level by the all-levels regression
+    /// below. This is not an exact-self-dot argument: normalized `f64` vectors
+    /// need not have a self-dot bit-equal to `1.0`. A cube-sphere room corner
+    /// generally is *not* an icosphere vertex and still needs the nearest
+    /// search; see [`crate::Facet::corners`]'s mesh-boundary contract.
     /// type-audit: pending(wave-1)
     pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> Vertex {
         let latitude = math::asin(pos[2]).to_degrees();
@@ -545,7 +547,9 @@ mod tests {
                     );
                 }
             }
-            // Every vertex center must resolve to its own vertex (self-dot = 1).
+            // Every vertex centre must resolve to its originating vertex. This
+            // pins the observed ordering directly; normalized f64 vectors do
+            // not all have a self-dot bit-equal to 1.0.
             for c in geo.vertices() {
                 assert_eq!(
                     index.nearest_to_position(&geo, geo.position(c)),
