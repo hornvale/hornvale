@@ -5499,3 +5499,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T12:10:43Z | gate-commit | 39.892 | 72.464 | 16.433 | 2.23 | 0 | b88fc4147 | campaign/the-tenon | MacBookPro | 10 |
 | 2026-09-04T12:36:58Z | rebaseline | 456.922 | 470.901 | 18.722 | 1.07 | 0 | 038f06323 | campaign/the-tenon | MacBookPro | 10 |
 | 2026-09-04T12:42:26Z | gate-commit | 131.406 | 290.122 | 36.686 | 2.49 | 0 | 038f06323 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:55:03Z | quick | 36.141 | 44.670 | 17.629 | 1.72 | 0 | 307f3eafc | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:57:02Z | gate-commit | 101.763 | 381.035 | 45.032 | 4.19 | 0 | 307f3eafc | campaign/the-tenon | MacBookPro | 10 |
