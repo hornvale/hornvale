@@ -12091,18 +12091,28 @@ mod tests {
         );
     }
 
-    /// A generated-sky world at `seed`. Seed 42 — 39 of this helper's 49
-    /// callers — is read from the committed fixture rather than rebuilt
-    /// (decision 0607); it is byte-identical to the build, pinned by
-    /// `windows/worldgen/tests/suite/fixture.rs`. Every other seed still
-    /// builds, because no fixture exists for it.
+    /// A generated-sky world at `seed`. Seed 42 — 55 of this helper's 74
+    /// callers, re-counted 2026-09-04 when The Zenith's flips repointed the
+    /// retired `constant` helper's callers here — is read from the committed
+    /// fixture rather than rebuilt (decision 0607); it is byte-identical to
+    /// the build, pinned by `windows/worldgen/tests/suite/fixture.rs`. Every
+    /// other seed still builds, because no fixture exists for it.
     ///
-    /// **Two former seed-42 callers deliberately do not use this helper.**
-    /// `generated_worlds_are_deterministic` and
-    /// `glossed_names_are_stable_across_two_builds` compare two independent
+    /// **THREE seed-42 sites deliberately do not use this helper**, and the
+    /// count is now three rather than two. `generated_worlds_are_deterministic`,
+    /// `glossed_names_are_stable_across_two_builds` and — added by The
+    /// Zenith — `build_world_is_deterministic` each compare two independent
     /// builds, so reading one file twice would make them vacuous; each keeps
     /// its own local builder. A migrated helper's callers must be swept for
-    /// that shape — see spec §5's residue list.
+    /// that shape — see spec §5's residue list. This list is where
+    /// `cli/tests/suite/world_build_sites.rs`'s module doc sends the next
+    /// sweeper, so it is the place a new local builder must be recorded.
+    ///
+    /// **`build_world_is_deterministic` is a literal duplicate of
+    /// `generated_worlds_are_deterministic` as of The Zenith** — both build
+    /// seed 42 twice at default pins and compare `to_json()`. Recorded here
+    /// rather than silently deduplicated: the flip that produced it was
+    /// mechanical, and which of the two should go is a review decision.
     fn generated(seed: u64) -> World {
         if seed == 42 {
             return crate::seed_42_world();

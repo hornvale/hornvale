@@ -532,9 +532,9 @@ mod tests {
     /// Both halves are load-bearing. Without the first this test would pass
     /// on any world whose names happen not to collide, so it asserts against
     /// an independently computed count of what the *bare* listing would
-    /// duplicate (18 lines in 9 groups at seed 0). Without the second it
+    /// duplicate (12 lines in 6 groups at seed 0). Without the second it
     /// would pass on a name-scoped qualifier that spends a coordinate on all
-    /// 101 name-colliding settlements.
+    /// 110 name-colliding settlements.
     #[test]
     fn the_settlements_listing_qualifies_exactly_the_lines_that_would_repeat() {
         // SEED 0, not the module's usual 42, and that is the whole repair.
@@ -543,13 +543,31 @@ mod tests {
         // first half asserts nothing. The Tense left seed 42 with 122
         // settlements, every one of them a distinct (name, population, biome)
         // triple — so the anti-vacuity guard reddened, which is exactly its
-        // job. Swept 0..30 for a world that still collides; all
-        // thirty do, and seed 0 is the earliest, which keeps the choice
-        // reproducible rather than hand-picked.
+        // job. Seed 0 is the earliest seed that still collides, which keeps
+        // the choice reproducible rather than hand-picked.
         //
-        // Measured at seed 0: 180 settlements, 18 lines across 9 colliding
-        // groups, and 101 name-colliding settlements — so both halves bite,
-        // the second harder than at seed 42 ever did.
+        // RE-MEASURED 2026-09-04 (The Zenith), on the GENERATED sky this test
+        // now builds. Every figure below moved, and the sweep's own conclusion
+        // moved with them, so none of it is a renumbering of the old note:
+        //
+        //   at seed 0   constant sky (pre-Zenith)   generated sky (today)
+        //   settlements               180                        222
+        //   repeated lines             18                         12
+        //   colliding groups            9                          6
+        //   name-colliding            101                        110
+        //
+        // "name-colliding" counts SETTLEMENTS whose name is shared with at
+        // least one other, which is the population a name-scoped qualifier
+        // would spend a coordinate on — the quantity the second half of this
+        // test's own doc argues about.
+        //
+        // THE OLD NOTE ALSO SAID "swept 0..30 ... all thirty do", AND THAT IS
+        // NO LONGER TRUE: re-swept 0..=30 on the generated sky, 29 of the 31
+        // collide and **seeds 8 and 20 do not** (0 distinct-triple repeats
+        // each). Anyone re-picking a seed off the old sentence would have had
+        // a one-in-fifteen chance of landing on a vacuous one — which the
+        // `would_repeat > 0` precondition below would have caught, loudly,
+        // but only after the fact.
         let world = build_world(
             Seed(0),
             &SkyPins::default(),

@@ -431,6 +431,50 @@ fn plate_illuminant_at_is_deterministic_across_repeated_calls() {
     );
 }
 
+/// FIRES WHEN: [`hornvale_game::driver::plate_illuminant`] stops folding an
+/// absent sun altitude to [`hornvale_game::driver::flat_illuminant`] and
+/// instead panics or guesses a sun it cannot honestly place.
+///
+/// **This is the WRAPPER, and it is the only test that touches it.** Every
+/// other illuminant test in this file calls the inner
+/// `plate_illuminant_at`, which never sees a calendar; the `None` arm lives
+/// in the wrapper alone. `gate-commit` does not scan `clients/`, `make
+/// game-check` asserts nothing about this path, and no ratchet binds it, so
+/// a regression here is silent.
+///
+/// **It is not a tier-0 test, and the version it replaces only looked like
+/// one.** The Zenith retired `a_starless_world_lights_the_plate_flat`,
+/// which built a `SkyChoice::Constant` world purely to obtain a `None`
+/// calendar. `plate_illuminant` documents TWO `None` cases and the second —
+/// a `Some` calendar whose `solar_altitude_at` returns `None` under zero
+/// obliquity AND zero eccentricity — outlives the tier entirely. A literal
+/// `None` reaches the same arm from both, the way
+/// `driver.rs`'s `a_starless_world_resolves_season_bucket_zero` already
+/// does for `season_bucket_for`'s identical fold.
+///
+/// The world is bare (`World::new`) because on this arm the function never
+/// reads it: `plate_illuminant` short-circuits to `flat_illuminant()`
+/// before `plate_illuminant_at` would derive the star from `world.seed`.
+/// That also keeps it clear of `sky_of`, so it is unaffected by the sky
+/// provider's own refusal work.
+#[test]
+fn an_unplaceable_sun_lights_the_plate_flat() {
+    let world = hornvale_kernel::World::new(hornvale_kernel::Seed(42));
+
+    let lit = hornvale_game::driver::plate_illuminant(
+        &world,
+        None,
+        hornvale_kernel::WorldTime::GENESIS,
+        45.0,
+    );
+
+    assert_eq!(
+        *lit.get(),
+        [1.0; hornvale_kernel::color::BANDS],
+        "a sun that cannot be placed must fall back to a flat unit illuminant"
+    );
+}
+
 // =====================================================================
 // Task 6: the collapse — colour stops being keyed on elevation.
 // =====================================================================

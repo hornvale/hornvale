@@ -3190,15 +3190,21 @@ mod tests {
         .expect("seed 1 builds");
 
         let vol = render_volume(&world);
-        // `contains`, not `ends_with`. Under the constant sun the sentence
-        // stopped at the classification; a generated sky commits moon-count,
-        // star-class and day-length facts that the volume appends as further
-        // clauses ("... is a planet with two moons, orbiting a yellow-white
-        // dwarf (F); its day lasts about 1.5 standard days."). The claim this
-        // test makes is that the volume CLASSIFIES the planet, and that is
-        // what the substring holds.
+        // `contains(" is a planet ")`, not `ends_with(" is a planet.")`.
+        // Under the constant sun the sentence stopped at the classification;
+        // a generated sky commits moon-count, star-class and day-length facts
+        // that the volume appends as further clauses ("... is a planet with
+        // two moons, orbiting a yellow-white dwarf (F); its day lasts about
+        // 1.5 standard days."), so the end anchor cannot survive.
+        //
+        // The TRAILING SPACE is doing the work the lost period used to: it
+        // keeps " is a planetoid" (and any other suffixed noun) from
+        // matching, which a bare `contains(" is a planet")` would have
+        // allowed. A sibling ~30 lines below asserts the whole sentence by
+        // equality, so this one only has to hold the classification claim —
+        // but holding it loosely would still have been a real weakening.
         assert!(
-            vol.lines.iter().any(|l| l.contains(" is a planet")),
+            vol.lines.iter().any(|l| l.contains(" is a planet ")),
             "the volume classifies the planet: {:?}",
             vol.lines
         );
