@@ -34,6 +34,7 @@ pub mod resident;
 pub mod residents;
 pub mod roll;
 pub mod roster;
+pub mod ruin_prose;
 mod session;
 pub mod site;
 pub mod snapshot;

@@ -44,3 +44,34 @@ fn a_dead_occupation_reports_a_ruin_signature() {
         ruin.ended
     );
 }
+
+/// The line names the ruin and its cause, and says nothing when there is no
+/// cause on the record rather than inventing one.
+#[test]
+fn the_ruin_line_names_a_cause_only_when_the_record_has_one() {
+    use hornvale_vessel::brief::RuinSignature;
+    use hornvale_vessel::ruin_prose::ruin_line;
+
+    let with = RuinSignature {
+        cause: Some(hornvale_history::record::CauseOfEnd::Famine),
+        ended: 100.0,
+        by_hand: false,
+    };
+    let without = RuinSignature {
+        cause: None,
+        ended: 100.0,
+        by_hand: false,
+    };
+
+    let a = ruin_line(&with);
+    let b = ruin_line(&without);
+    assert!(
+        a.to_lowercase().contains("famine"),
+        "cause must reach the prose: {a}"
+    );
+    assert!(
+        !b.to_lowercase().contains("famine"),
+        "no cause must invent none: {b}"
+    );
+    assert!(!b.is_empty(), "a causeless ruin is still a ruin: {b}");
+}

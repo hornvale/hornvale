@@ -6757,12 +6757,23 @@ impl<'w> Session<'w> {
         // NOTE ON COST: this re-derives the whole brief on every `look`, the
         // same accepted cost `brief_of`'s own doc names for `enter` and
         // `Self::brief_here`'s cost note — hoist only if a profile shows it
-        // mattering.
-        let site_clause = self
-            .brief_here()
+        // mattering. Bound ONCE (The Weft, Task 2, controller ruling): the
+        // ruin clause below reads the same `Brief` rather than deriving a
+        // second one.
+        let brief = self.brief_here();
+        let site_clause = brief
             .site
             .as_ref()
             .map(Self::site_clause)
+            .unwrap_or_default();
+        // The ruin clause (The Weft, Task 2, spec Half A): a SECOND sentence
+        // beside the site clause, not a replacement for it — a facet can
+        // hold both a ruin and an enterable site (a settlement rebuilt on a
+        // dead one, say), so one must never gate out the other.
+        let ruin_clause = brief
+            .ruin
+            .as_ref()
+            .map(crate::ruin_prose::ruin_line)
             .unwrap_or_default();
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
@@ -6822,7 +6833,7 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}{ruin_clause}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
