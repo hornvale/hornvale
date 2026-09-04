@@ -70,6 +70,7 @@ pub const THING_KINDS: &[&str] = &[
     "altar",
     "anvil",
     "bed",
+    "bracken",
     "brazier",
     "cave-mouth",
     "door",
@@ -77,9 +78,11 @@ pub const THING_KINDS: &[&str] = &[
     "hearth",
     "high-seat",
     "key",
+    "ledge",
     "log",
     "loom",
     "pool",
+    "rushes",
     "screen",
     "strongbox",
     "threshold",
@@ -111,6 +114,8 @@ pub mod kinds {
     pub const ANVIL: KindId = KindId("anvil");
     /// A place to sleep.
     pub const BED: KindId = KindId("bed");
+    /// A yielding bed of wild fern.
+    pub const BRACKEN: KindId = KindId("bracken");
     /// A vessel of fire, standing apart from a hearth.
     pub const BRAZIER: KindId = KindId("brazier");
     /// The mouth of a cave — a `Vertex`/`ChamberAddr`, never an anchor.
@@ -126,12 +131,16 @@ pub mod kinds {
     pub const HIGH_SEAT: KindId = KindId("high-seat");
     /// A small key.
     pub const KEY: KindId = KindId("key");
+    /// A shelf of exposed stone broad enough to lie on.
+    pub const LEDGE: KindId = KindId("ledge");
     /// A fallen log.
     pub const LOG: KindId = KindId("log");
     /// An upright loom.
     pub const LOOM: KindId = KindId("loom");
     /// A natural pool.
     pub const POOL: KindId = KindId("pool");
+    /// A loose bed of dried rushes.
+    pub const RUSHES: KindId = KindId("rushes");
     /// A screen or pillar: affords nothing, shapes sightlines.
     pub const SCREEN: KindId = KindId("screen");
     /// A locked chest.
@@ -155,6 +164,7 @@ pub mod kinds {
         ("ALTAR", ALTAR),
         ("ANVIL", ANVIL),
         ("BED", BED),
+        ("BRACKEN", BRACKEN),
         ("BRAZIER", BRAZIER),
         ("CAVE_MOUTH", CAVE_MOUTH),
         ("DOOR", DOOR),
@@ -162,9 +172,11 @@ pub mod kinds {
         ("HEARTH", HEARTH),
         ("HIGH_SEAT", HIGH_SEAT),
         ("KEY", KEY),
+        ("LEDGE", LEDGE),
         ("LOG", LOG),
         ("LOOM", LOOM),
         ("POOL", POOL),
+        ("RUSHES", RUSHES),
         ("SCREEN", SCREEN),
         ("STRONGBOX", STRONGBOX),
         ("THRESHOLD", THRESHOLD),
@@ -205,6 +217,13 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
             ThingTraits {
                 display: "bed",
                 doc: Some("a place made for lying down and sleeping"),
+            },
+        ),
+        (
+            KindId("bracken"),
+            ThingTraits {
+                display: "bracken",
+                doc: Some("a dense growth of fern that makes a yielding place to lie"),
             },
         ),
         (
@@ -260,6 +279,13 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
             },
         ),
         (
+            KindId("ledge"),
+            ThingTraits {
+                display: "ledge",
+                doc: Some("a broad shelf of exposed stone"),
+            },
+        ),
+        (
             KindId("log"),
             ThingTraits {
                 display: "log",
@@ -278,6 +304,13 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
             ThingTraits {
                 display: "pool",
                 doc: Some("a small standing body of water"),
+            },
+        ),
+        (
+            KindId("rushes"),
+            ThingTraits {
+                display: "rushes",
+                doc: Some("cut wetland reeds laid down as a loose place to lie"),
             },
         ),
         (
@@ -882,6 +915,7 @@ mod tests {
             "altar",
             "anvil",
             "bed",
+            "bracken",
             "brazier",
             "cave-mouth",
             "door",
@@ -889,9 +923,11 @@ mod tests {
             "hearth",
             "high-seat",
             "key",
+            "ledge",
             "log",
             "loom",
             "pool",
+            "rushes",
             "screen",
             "strongbox",
             "threshold",

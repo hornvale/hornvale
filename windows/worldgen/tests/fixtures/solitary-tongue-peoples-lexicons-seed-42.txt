@@ -18,6 +18,7 @@ blue: root Ta /ta/
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Badea /badea/
 boreal-stand: gap (experiential): goblin has no exposure to 'boreal-stand'
+bracken: gap (experiential): goblin has no exposure to 'bracken'
 brazier: gap (experiential): goblin has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5
 bugbear-kind: root Deetee /deetee/
@@ -111,6 +112,7 @@ killer-whale-kind: gap (experiential): goblin has no exposure to 'killer-whale-k
 know: gap (experiential): goblin has no exposure to 'know'
 kobold-kind: root Naeno /naeno/
 lake: compound little+water -> Neodoeta /neodoeta/
+ledge: gap (experiential): goblin has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): goblin has no exposure to 'liana-forest'
 light: root Noataa /noataa/
@@ -175,6 +177,7 @@ rest: root Neane /neane/
 rhinoceros-kind: gap (experiential): goblin has no exposure to 'rhinoceros-kind'
 rice: gap (experiential): goblin has no exposure to 'rice'
 river: root Tata /tata/
+rushes: gap (experiential): goblin has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): goblin has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): goblin has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
@@ -276,6 +279,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Babea /babea/
 boreal-stand: root Boane /boane/
+bracken: gap (experiential): hobgoblin has no exposure to 'bracken'
 brazier: gap (experiential): hobgoblin has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
 bugbear-kind: root Beetee /beetee/
@@ -369,6 +373,7 @@ killer-whale-kind: gap (experiential): hobgoblin has no exposure to 'killer-whal
 know: gap (experiential): hobgoblin has no exposure to 'know'
 kobold-kind: root Naeno /naeno/
 lake: gap (experiential): hobgoblin has no exposure to 'lake'
+ledge: gap (experiential): hobgoblin has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: root Neene /neene/
 light: root Noaqaa /noaqaa/
@@ -433,6 +438,7 @@ rest: root Neane /neane/
 rhinoceros-kind: gap (experiential): hobgoblin has no exposure to 'rhinoceros-kind'
 rice: root Gaebae /gaebae/
 river: root Qata /qata/
+rushes: gap (experiential): hobgoblin has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): hobgoblin has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): hobgoblin has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
@@ -534,6 +540,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Badoa /badoa/
 boreal-stand: gap (experiential): bugbear has no exposure to 'boreal-stand'
+bracken: gap (experiential): bugbear has no exposure to 'bracken'
 brazier: gap (experiential): bugbear has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7
 bugbear-kind: root Doodoo /doodoo/
@@ -627,6 +634,7 @@ killer-whale-kind: gap (experiential): bugbear has no exposure to 'killer-whale-
 know: gap (experiential): bugbear has no exposure to 'know'
 kobold-kind: root Daodo /daodo/
 lake: compound little+water -> Doodooqa /doodooqa/
+ledge: gap (experiential): bugbear has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: root Doodo /doodo/
 light: root Doaqaa /doaqaa/
@@ -691,6 +699,7 @@ rest: root Doado /doado/
 rhinoceros-kind: gap (experiential): bugbear has no exposure to 'rhinoceros-kind'
 rice: root Gaodao /gaodao/
 river: root Qada /qada/
+rushes: gap (experiential): bugbear has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): bugbear has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): bugbear has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
@@ -792,6 +801,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Xaaraa /xaaraa/
 boreal-stand: root Raxaa /raxaa/
+bracken: gap (experiential): kobold has no exposure to 'bracken'
 brazier: gap (experiential): kobold has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9
 bugbear-kind: root Roxo /roxo/
@@ -885,6 +895,7 @@ killer-whale-kind: gap (experiential): kobold has no exposure to 'killer-whale-k
 know: gap (experiential): kobold has no exposure to 'know'
 kobold-kind: root Rara /rara/
 lake: compound little+water -> Xoroaroaroaroa /xoroaroaroaroa/
+ledge: gap (experiential): kobold has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): kobold has no exposure to 'liana-forest'
 light: root Rooxa /rooxa/
@@ -949,6 +960,7 @@ rest: root Roxaora /roxaora/
 rhinoceros-kind: gap (experiential): kobold has no exposure to 'rhinoceros-kind'
 rice: gap (experiential): kobold has no exposure to 'rice'
 river: root Xoroxoora /xoroxoora/
+rushes: gap (experiential): kobold has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): kobold has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): kobold has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
@@ -1050,6 +1062,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Zngogzho /zŋogʒo/
 boreal-stand: gap (experiential): gnoll has no exposure to 'boreal-stand'
+bracken: gap (experiential): gnoll has no exposure to 'bracken'
 brazier: gap (experiential): gnoll has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75
 bugbear-kind: root Znoosnov /znoosnov/
@@ -1143,6 +1156,7 @@ killer-whale-kind: gap (experiential): gnoll has no exposure to 'killer-whale-ki
 know: gap (experiential): gnoll has no exposure to 'know'
 kobold-kind: root Shmoox /ʃmoox/
 lake: gap (experiential): gnoll has no exposure to 'lake'
+ledge: gap (experiential): gnoll has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): gnoll has no exposure to 'liana-forest'
 light: root Dshozmoax /dʃozmoax/
@@ -1207,6 +1221,7 @@ rest: root Smoaxdzav /smoaxdzav/
 rhinoceros-kind: gap (experiential): gnoll has no exposure to 'rhinoceros-kind'
 rice: gap (experiential): gnoll has no exposure to 'rice'
 river: root Dzhap /dʒap/
+rushes: gap (experiential): gnoll has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): gnoll has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): gnoll has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no compound recipe for 'savanna'
@@ -1308,6 +1323,7 @@ blue: root Rea /rea/
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Re /re/
 boreal-stand: gap (experiential): human has no exposure to 'boreal-stand'
+bracken: gap (experiential): human has no exposure to 'bracken'
 brazier: gap (experiential): human has no exposure to 'brazier'
 brown: root Pea /pea/
 bugbear-kind: root Koreo /koreo/
@@ -1401,6 +1417,7 @@ killer-whale-kind: gap (experiential): human has no exposure to 'killer-whale-ki
 know: gap (experiential): human has no exposure to 'know'
 kobold-kind: root Raarao /raarao/
 lake: compound little+water -> Teatxaofoo /teatxaofoo/
+ledge: gap (experiential): human has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): human has no exposure to 'liana-forest'
 light: root Raapvea /raapvea/
@@ -1465,6 +1482,7 @@ rest: root Rooga /rooga/
 rhinoceros-kind: gap (experiential): human has no exposure to 'rhinoceros-kind'
 rice: gap (experiential): human has no exposure to 'rice'
 river: root Roere /roere/
+rushes: gap (experiential): human has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): human has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): human has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
@@ -1566,6 +1584,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.65
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Jagap /jagap/
 boreal-stand: gap (experiential): desert-dwarf has no exposure to 'boreal-stand'
+bracken: gap (experiential): desert-dwarf has no exposure to 'bracken'
 brazier: gap (experiential): desert-dwarf has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.65
 bugbear-kind: root Xaqad /xaqad/
@@ -1659,6 +1678,7 @@ killer-whale-kind: gap (experiential): desert-dwarf has no exposure to 'killer-w
 know: gap (experiential): desert-dwarf has no exposure to 'know'
 kobold-kind: root Sadag /sadag/
 lake: compound little+water -> Xanapdanag /xanapdanag/
+ledge: gap (experiential): desert-dwarf has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: root Saxad /saxad/
 light: root Pangas /paŋas/
@@ -1723,6 +1743,7 @@ rest: root Jashash /jaʃaʃ/
 rhinoceros-kind: gap (experiential): desert-dwarf has no exposure to 'rhinoceros-kind'
 rice: root Qangaj /qaŋaj/
 river: root Dadash /dadaʃ/
+rushes: gap (experiential): desert-dwarf has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): desert-dwarf has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): desert-dwarf has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
@@ -1824,6 +1845,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Jagab /jagab/
 boreal-stand: gap (experiential): gully-dwarf has no exposure to 'boreal-stand'
+bracken: gap (experiential): gully-dwarf has no exposure to 'bracken'
 brazier: gap (experiential): gully-dwarf has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7
 bugbear-kind: root Xaqab /xaqab/
@@ -1917,6 +1939,7 @@ killer-whale-kind: gap (experiential): gully-dwarf has no exposure to 'killer-wh
 know: gap (experiential): gully-dwarf has no exposure to 'know'
 kobold-kind: root Tatag /tatag/
 lake: compound little+water -> Xanabbanag /xanabbanag/
+ledge: gap (experiential): gully-dwarf has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): gully-dwarf has no exposure to 'liana-forest'
 light: root Bangat /baŋat/
@@ -1981,6 +2004,7 @@ rest: root Jashash /jaʃaʃ/
 rhinoceros-kind: gap (experiential): gully-dwarf has no exposure to 'rhinoceros-kind'
 rice: root Qangaj /qaŋaj/
 river: root Tabash /tabaʃ/
+rushes: gap (experiential): gully-dwarf has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): gully-dwarf has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): gully-dwarf has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna
@@ -2082,6 +2106,7 @@ blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
 blue-giant: gap (unnameable): no culture here has encountered the main sequence
 bone: root Jagab /jagab/
 boreal-stand: root Vabat /vabat/
+bracken: gap (experiential): hill-dwarf has no exposure to 'bracken'
 brazier: gap (experiential): hill-dwarf has no exposure to 'brazier'
 brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6
 bugbear-kind: root Xaqab /xaqab/
@@ -2175,6 +2200,7 @@ killer-whale-kind: gap (experiential): hill-dwarf has no exposure to 'killer-wha
 know: gap (experiential): hill-dwarf has no exposure to 'know'
 kobold-kind: root Satag /satag/
 lake: compound little+water -> Xamabbamag /xamabbamag/
+ledge: gap (experiential): hill-dwarf has no exposure to 'ledge'
 lens: gap (extradiegetic): lens is an operator instrument; it has no referent in the world
 liana-forest: gap (experiential): hill-dwarf has no exposure to 'liana-forest'
 light: root Bangas /baŋas/
@@ -2239,6 +2265,7 @@ rest: root Jashash /jaʃaʃ/
 rhinoceros-kind: gap (experiential): hill-dwarf has no exposure to 'rhinoceros-kind'
 rice: root Qangaj /qaŋaj/
 river: root Tabash /tabaʃ/
+rushes: gap (experiential): hill-dwarf has no exposure to 'rushes'
 rust-monster-kind: gap (experiential): hill-dwarf has no exposure to 'rust-monster-kind'
 sargassum-drift: gap (experiential): hill-dwarf has no exposure to 'sargassum-drift'
 savanna: gap (experiential): no settlement in or beside savanna

@@ -595,8 +595,19 @@ mod tests {
     /// as many cases. A count that had moved as a RATE would have been a
     /// finding about the scan; this one is a finding about how many cases were
     /// being looked at.
+    ///
+    /// # 20 → 28 WITH THE TENON'S TWO BUILT+COLD SURFACES
+    ///
+    /// The Tenon's epoch appends `rushes` and `ledge` to every built+cold
+    /// interior this fixture derives. The placement scan is unchanged, but
+    /// each corpus chamber therefore carries two more anchors: the ordinary
+    /// cases move from five to seven, and the smaller-role cases from three to
+    /// five. Measured over the same 1,024 cases, the unfaithful count moves
+    /// 20 → 28 (1.95% → 2.73%) and the surplus count 19 → 26. This is a
+    /// harder corpus for the same reason decision 0398's 5 → 6 was: the
+    /// room vocabulary grew, while this module's algorithm did not change.
     /// type-audit: bare-ok(count)
-    const GROWN_RELAXATIONS: usize = 20;
+    const GROWN_RELAXATIONS: usize = 28;
 
     /// The same sweep as [`every_placement_is_faithful`], against the GROWN
     /// embedding — and this is the one where the scan's filter does work.
@@ -630,11 +641,11 @@ mod tests {
     /// silently).
     ///
     /// **What it asserts is a CEILING, not universality**, because the honest
-    /// answer is that some blobs cannot be embedded faithfully at all: five of
-    /// 256 fall back to the stated relaxation. Asserting zero here would be
+    /// answer is that some blobs cannot be embedded faithfully at all: 28 of
+    /// 1,024 fall back to the stated relaxation. Asserting zero here would be
     /// asserting something false.
     /// claim: rate(forall-seed, unfaithful.len() <= GROWN_RELAXATIONS, measured
-    /// ceiling) — with a non-vacuity guard (surplus not empty), over 256 cases
+    /// ceiling) — with a non-vacuity guard (surplus not empty), over 1,024 cases
     #[test]
     fn the_grown_corpus_is_where_the_filter_binds() {
         let mut unfaithful: Vec<(usize, u64, usize, usize, usize)> = Vec::new();

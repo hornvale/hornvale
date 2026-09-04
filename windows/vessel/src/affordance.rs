@@ -197,6 +197,32 @@ pub struct ObjectTraits {
 /// plumb: universal(the unit of the offer scale itself, against which every per-kind offer is expressed -- a definition, not a quantity that varies)
 const BED_OFFER: f64 = 1.0;
 
+/// How much a loose bed of rushes offers against the made-bed reference: most
+/// of a bed's support, while withholding the fitted construction it lacks.
+/// plumb: universal(the fixed share of a made bed's benefit offered by the rushes thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const RUSHES_OFFER: f64 = 0.7;
+/// Where rushes lie on the hardness axis: close to fully yielding, with a
+/// little resistance left in bundled stems.
+/// plumb: universal(the fixed hardness of the rushes thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const RUSHES_HARDNESS: f64 = 0.1;
+/// How much a ledge offers against the made-bed reference. It matches the
+/// other found surfaces so the relation's ordering comes from substrate fit,
+/// not a hidden generosity advantage authored into one kind.
+/// plumb: universal(the fixed share of a made bed's benefit offered by the ledge thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const LEDGE_OFFER: f64 = 0.7;
+/// Where a weathered stone ledge lies on the hardness axis: nearly rock, but
+/// short of the scale's bare, unyielding endpoint.
+/// plumb: universal(the fixed hardness of the ledge thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const LEDGE_HARDNESS: f64 = 0.85;
+/// How much wild bracken offers against the made-bed reference: the same
+/// found-surface share as rushes and ledge, before a sleeper's fit is applied.
+/// plumb: universal(the fixed share of a made bed's benefit offered by the bracken thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const BRACKEN_OFFER: f64 = 0.7;
+/// Where a springy stand of bracken lies on the hardness axis: the same
+/// yielding point as loose rushes.
+/// plumb: universal(the fixed hardness of the bracken thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const BRACKEN_HARDNESS: f64 = 0.1;
+
 /// The canonical object-kind registry: which thing-kind carries which
 /// [`ObjectProperty`]. **Keyed on [`KindId`], not on an anchor-kind enum
 /// (The Chattel, Task 7, spec §3.6; the enum itself is gone since The
@@ -217,6 +243,9 @@ const BED_OFFER: f64 = 1.0;
 /// `cave-mouth`→`AffordsPassage` (spec §3.7); and Task 5 adds
 /// `brazier`→`RadiatesHeat`, the proof kind that arrived as data rows and no
 /// dispatcher edit. A kind absent from this table carries no property.
+/// The Tenon adds `rushes`, `ledge`, and `bracken` as three more
+/// `SupportsRest` carriers, each with the [`RestSurface`] payload the recovery
+/// fold and sleep-site chooser read.
 ///
 /// **This paragraph used to claim "`key` and `cave-mouth` were the first
 /// rows with no anchor-kind variant behind them at all", past-tensed as a
@@ -310,12 +339,12 @@ const BED_OFFER: f64 = 1.0;
 ///   here" while the field says 0.0 °C. Fixing it means reading
 ///   `object_registry` from `warmth_at`; nothing in this campaign's scope
 ///   asked for it, so it is named rather than taken.
-/// - `kinds::BED` is the only kind ever pushed in a rest/fatigue
-///   context anywhere in this crate (`session.rs`'s `SLEPT_PROVENANCE`,
-///   every `Rest`-adjacent test); `high-seat` ("a carved chair... sees the
-///   door first") and `alcove` ("deep enough to sit in") both afford
-///   sitting, not the fatigue-resetting rest `Action::Rest` models, so
-///   neither earns `SupportsRest`.
+/// - `bed`, `rushes`, `ledge`, and `bracken` are the four rest surfaces. The
+///   last three are the natural surfaces The Tenon's locale patterns make
+///   reachable; `high-seat` ("a carved chair... sees the door first") and
+///   `alcove` ("deep enough to sit in") both afford sitting, not the
+///   fatigue-resetting rest `Action::Rest` models, so neither earns
+///   `SupportsRest`.
 /// - `threshold` is the only kind ever described as "ALSO a room-graph
 ///   edge" (`interior/anchor.rs`); every other seam concept
 ///   (`interior/seam.rs`) is a property of the room-graph EDGE, not of an
@@ -345,6 +374,36 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
                 Some(RestSurface {
                     offer: BED_OFFER,
                     substrate: Substrate::Made,
+                }),
+            ),
+        ),
+        (
+            KindId("rushes"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: RUSHES_OFFER,
+                    substrate: Substrate::Natural(RUSHES_HARDNESS),
+                }),
+            ),
+        ),
+        (
+            KindId("ledge"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: LEDGE_OFFER,
+                    substrate: Substrate::Natural(LEDGE_HARDNESS),
+                }),
+            ),
+        ),
+        (
+            KindId("bracken"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: BRACKEN_OFFER,
+                    substrate: Substrate::Natural(BRACKEN_HARDNESS),
                 }),
             ),
         ),

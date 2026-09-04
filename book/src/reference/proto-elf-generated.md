@@ -52,6 +52,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `blue` | the color term for blue | *Shraeng | /ʃraeŋ/ |
 | `bone` | the rigid frame of a body | *Ngengtaang | /ŋeŋtaaŋ/ |
 | `boreal-stand` | A stand of northern conifers. | *Geangngaong | /geaŋŋaoŋ/ |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | *Pungsroang | /puŋsroaŋ/ |
 | `brazier` | a metal basin that holds a fire apart from a hearth | *Paangsraeng | /paaŋsraeŋ/ |
 | `brown` | the color term for brown | *Zraangteng | /zraaŋteŋ/ |
 | `bugbear-kind` | a bugbear | *Sreng | /sreŋ/ |
@@ -143,6 +144,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `know` | to hold something in memory or understanding — `knows` | *Shraung | /ʃrauŋ/ |
 | `kobold-kind` | a kobold | *Zhreeng | /ʒreeŋ/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Boongngong | /booŋŋoŋ/ |
+| `ledge` | a broad shelf of exposed stone | *Dongngong | /doŋŋoŋ/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Shrunggung | /ʃruŋguŋ/ |
 | `light` | the color term for white/light hues | *Ngaong | /ŋaoŋ/ |
 | `lightless-water` | Water below all light. | *Ngangngung | /ŋaŋŋuŋ/ |
@@ -200,6 +202,7 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `rhinoceros-kind` | a rhinoceros | *Zrungdung | /zruŋduŋ/ |
 | `rice` | a staple crop | *Gaengngeong | /gaeŋŋeoŋ/ |
 | `river` | fresh water running across land | *Peungpaung | /peuŋpauŋ/ |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | *Tangngong | /taŋŋoŋ/ |
 | `rust-monster-kind` | a rust monster | *Zhrong | /ʒroŋ/ |
 | `sargassum-drift` | A drifting raft of floating weed. | *Pungguang | /puŋguaŋ/ |
 | `savanna` | a biome class | *Ngeng | /ŋeŋ/ |

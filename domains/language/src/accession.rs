@@ -615,6 +615,12 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // from the cohort, plus the committed world bytes that carry the
     // registry. Two campaigns have now paid it.
     &["door"],
+    // Epoch 20 — The Tenon, Task 7: three natural rest surfaces. One NEW
+    // cohort, appended rather than seating the labels beside older thing
+    // kinds in epoch 16: `domains/thing::register_concepts` registers all
+    // three, and editing an earlier cohort would re-sort concepts whose
+    // proto-root assignments are already part of saved worlds.
+    &["bracken", "ledge", "rushes"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

@@ -88,6 +88,13 @@ pub fn chamber_prose_registry() -> ComponentStore<KindId, ChamberProse> {
             },
         ),
         (
+            KindId("bracken"),
+            ChamberProse {
+                noun: Some("a bed of bracken"),
+                detail: "A thick stand of fern, bent into a deep, springy hollow.",
+            },
+        ),
+        (
             KindId("brazier"),
             ChamberProse {
                 noun: Some("a brazier"),
@@ -137,6 +144,13 @@ pub fn chamber_prose_registry() -> ComponentStore<KindId, ChamberProse> {
             },
         ),
         (
+            KindId("ledge"),
+            ChamberProse {
+                noun: Some("a stone ledge"),
+                detail: "A broad shelf of stone, flat enough to lie on and cold to the touch.",
+            },
+        ),
+        (
             KindId("log"),
             ChamberProse {
                 noun: Some("a fallen log"),
@@ -155,6 +169,13 @@ pub fn chamber_prose_registry() -> ComponentStore<KindId, ChamberProse> {
             ChamberProse {
                 noun: Some("a still pool"),
                 detail: "Still water, holding the light that reaches it.",
+            },
+        ),
+        (
+            KindId("rushes"),
+            ChamberProse {
+                noun: Some("a heap of rushes"),
+                detail: "Dried rushes laid deep on the floor, loose enough to yield under a body.",
             },
         ),
         (
@@ -731,15 +752,16 @@ mod tests {
         }
         // Anti-vacuity, and the accounting a census owes: a future edit that
         // dropped a slot from the walk above would satisfy every assertion by
-        // measuring less. 17 patterns, each naming a `kind`; 11 of them also
-        // name a `requires`; 13 also name an `Attach` target (The Wicket's
+        // measuring less. 20 patterns, each naming a `kind`; 11 of them also
+        // name a `requires`; 16 also name an `Attach` target (The Wicket's
         // Task 5 appended `the-brazier`, which names all three: `kind`,
         // `requires: Some(kinds::LOOM)`, `attach: Attach::Beside(kinds::LOOM)`
-        // — moving this from 38 to 41).
+        // — moving this from 38 to 41; The Tenon's three natural surfaces
+        // each add a `kind` and `Attach` target, moving it to 47).
         assert_eq!(
-            checked, 41,
+            checked, 47,
             "the sweep no longer reads every kind INVENTORY names: {checked} \
-             slots, not 41"
+             slots, not 47"
         );
     }
 
@@ -758,9 +780,10 @@ mod tests {
             assert!(!d.trim().is_empty(), "{label:?}: an empty detail");
         }
         // `ground` and `cave-mouth` have no noun and every other roster kind
-        // does, so eighteen kinds must yield sixteen nouns (The Wicket's Task
+        // does, so twenty-one kinds must yield nineteen nouns (The Wicket's Task
         // 5 appended `brazier`, moving this from 14 to 15; The Brattice's Task
-        // 5 appended `door`, moving it to 16 — both have a noun). This
+        // 5 appended `door`, moving it to 16 — both have a noun; The Tenon's
+        // three surfaces move it to 19). This
         // used to catch
         // an APPENDED enum variant on the run that first compiled it (that is
         // how The Chattel's `Key` was caught, going red at 13 against 14). It
@@ -772,7 +795,7 @@ mod tests {
                 .iter()
                 .filter(|&&label| noun(label).is_some())
                 .count(),
-            16,
+            19,
             "the roster has drifted from `noun`'s own table"
         );
     }

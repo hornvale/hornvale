@@ -14,6 +14,7 @@ blood: Tae /tae/
 blue: Ta /ta/
 bone: Padea /padea/
 boreal-stand: Doane /doane/
+bracken: Noene /noene/
 brazier: Teo /teo/
 brown: Paane /paane/
 bugbear-kind: Deetee /deetee/
@@ -105,6 +106,7 @@ killer-whale-kind: Gaqo /gaqo/
 know: Naena /naena/
 kobold-kind: Naeno /naeno/
 lake: Qao /qao/
+ledge: Notoe /notoe/
 liana-forest: Neene /neene/
 light: Noaqaa /noaqaa/
 lightless-water: Pao /pao/
@@ -162,6 +164,7 @@ rest: Neane /neane/
 rhinoceros-kind: Pea /pea/
 rice: Gaedae /gaedae/
 river: Qata /qata/
+rushes: Qea /qea/
 rust-monster-kind: Teko /teko/
 sargassum-drift: Nogea /nogea/
 savanna: Ga /ga/

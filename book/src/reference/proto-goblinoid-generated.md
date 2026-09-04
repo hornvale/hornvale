@@ -51,6 +51,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `blue` | the color term for blue | *Ta | /ta/ |
 | `bone` | the rigid frame of a body | *Padea | /padea/ |
 | `boreal-stand` | A stand of northern conifers. | *Doane | /doane/ |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | *Noene | /noene/ |
 | `brazier` | a metal basin that holds a fire apart from a hearth | *Teo | /teo/ |
 | `brown` | the color term for brown | *Paane | /paane/ |
 | `bugbear-kind` | a bugbear | *Deetee | /deetee/ |
@@ -142,6 +143,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `know` | to hold something in memory or understanding — `knows` | *Naena | /naena/ |
 | `kobold-kind` | a kobold | *Naeno | /naeno/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Qao | /qao/ |
+| `ledge` | a broad shelf of exposed stone | *Notoe | /notoe/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Neene | /neene/ |
 | `light` | the color term for white/light hues | *Noaqaa | /noaqaa/ |
 | `lightless-water` | Water below all light. | *Pao | /pao/ |
@@ -199,6 +201,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `rhinoceros-kind` | a rhinoceros | *Pea | /pea/ |
 | `rice` | a staple crop | *Gaedae | /gaedae/ |
 | `river` | fresh water running across land | *Qata | /qata/ |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | *Qea | /qea/ |
 | `rust-monster-kind` | a rust monster | *Teko | /teko/ |
 | `sargassum-drift` | A drifting raft of floating weed. | *Nogea | /nogea/ |
 | `savanna` | a biome class | *Ga | /ga/ |

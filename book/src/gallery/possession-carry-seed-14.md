@@ -53,7 +53,7 @@ Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
 [chamber 1098173175083363, day 0.00985]
-A small room in Vapatkapak, holding a doorway and a screen.
+A small room in Vapatkapak, holding a doorway, a screen and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > carrying
@@ -62,12 +62,12 @@ You are carrying nothing.
 You see no a key here.
 > enter further in
 [chamber 1098173178103715, day 0.0197]
-A small room in Vapatkapak, holding a doorway and an alcove.
+A small room in Vapatkapak, holding a doorway, an alcove and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > enter further in
 [chamber 1098173182570403, day 0.02955]
-A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key and a brazier.
+A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key, a brazier and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > take a key
@@ -76,7 +76,7 @@ You take the key.
 You are carrying a key.
 > enter further in
 [chamber 1098173179279043, day 0.04925]
-A small room in Vapatkapak, holding a doorway, a water jar, a strongbox and a key.
+A small room in Vapatkapak, holding a doorway, a water jar, a strongbox, a key and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out.
 > examine a strongbox
@@ -104,7 +104,7 @@ Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
 [chamber 1098173175083363, day 0.1182]
-A small room in Vapatkapak, holding a doorway and a screen.
+A small room in Vapatkapak, holding a doorway, a screen and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > carrying

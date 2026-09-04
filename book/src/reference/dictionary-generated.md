@@ -25,6 +25,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Doggood | /doggood/ | Pengkéém | Pengkéém → no change → Doggood |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): black-dragon has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): black-dragon has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): black-dragon has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): black-dragon has no exposure to 'bugbear-kind' |
@@ -118,6 +119,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): black-dragon has no exposure to 'know' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): black-dragon has no exposure to 'kobold-kind' |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): black-dragon has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): black-dragon has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): black-dragon has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Dod | /dod/ | Dem | Dem → no change → Dod |
@@ -182,6 +184,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): black-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): black-dragon has no exposure to 'river' |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): black-dragon has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): black-dragon has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): black-dragon has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -284,6 +287,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Badoa | /badoa/ | Padea | Padea → lenition → Badoa |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): bugbear has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): bugbear has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): bugbear has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Doodoo | /doodoo/ | Deetee | Deetee → lenition → Doodoo |
@@ -377,6 +381,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): bugbear has no exposure to 'know' |
 | `kobold-kind` | a kobold | Daodo | /daodo/ | Naeno | Naeno → no change → Daodo |
 | `lake` | still water held in a hollow that has no outlet to the sea | Doodooqa | /doodooqa/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): bugbear has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | Doodo | /doodo/ | Neene | Neene → no change → Doodo |
 | `light` | the color term for white/light hues | Doaqaa | /doaqaa/ | Noaqaa | Noaqaa → no change → Doaqaa |
@@ -441,6 +446,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): bugbear has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Gaodao | /gaodao/ | Gaedae | Gaedae → no change → Gaodao |
 | `river` | fresh water running across land | Qada | /qada/ | Qata | Qata → lenition → Qada |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): bugbear has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): bugbear has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): bugbear has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -543,6 +549,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Jagap | /jagap/ | Jagab | Jagab → no change → Jagap |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): desert-dwarf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): desert-dwarf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.65 |
 | `bugbear-kind` | a bugbear | Xaqad | /xaqad/ | Xaqad | Xaqad → no change → Xaqad |
@@ -636,6 +643,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): desert-dwarf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Sadag | /sadag/ | Satag | Satag → lenition → Sadag |
 | `lake` | still water held in a hollow that has no outlet to the sea | Xanapdanag | /xanapdanag/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): desert-dwarf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | Saxad | /saxad/ | Saxaz | Saxaz → no change → Saxad |
 | `light` | the color term for white/light hues | Pangas | /paŋas/ | Bangas | Bangas → no change → Pangas |
@@ -700,6 +708,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Qangaj | /qaŋaj/ | Qangaj | Qangaj → no change → Qangaj |
 | `river` | fresh water running across land | Dadash | /dadaʃ/ | Tadash | Tadash → lenition → Dadash |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): desert-dwarf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): desert-dwarf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -802,6 +811,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Ṅeṅpaaṅ | /ŋeŋpaaŋ/ | Ngengtaang | Ngengtaang → no change → Ṅeṅpaaṅ |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): desert-elf has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): desert-elf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): desert-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Szeṅ | /szeŋ/ | Sreng | Sreng → no change → Szeṅ |
@@ -895,6 +905,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): desert-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Žzeeṅ | /ʒzeeŋ/ | Zhreeng | Zhreeng → no change → Žzeeṅ |
 | `lake` | still water held in a hollow that has no outlet to the sea | Ṅoaṅszaoṅ | /ŋoaŋszaoŋ/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): desert-elf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): desert-elf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Ṅaoṅ | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ṅaoṅ |
@@ -959,6 +970,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): desert-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): desert-elf has no exposure to 'rice' |
 | `river` | fresh water running across land | Peuṅpauṅ | /peuŋpauŋ/ | Peungpaung | Peungpaung → no change → Peuṅpauṅ |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): desert-elf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): desert-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): desert-elf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -1061,6 +1073,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Gogpaa | /gogpaa/ | Ngengtaang | Ngengtaang → finalloss → Gogpaa |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): drow has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): drow has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): drow has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.95 |
 | `bugbear-kind` | a bugbear | Ro | /ro/ | Sreng | Sreng → clustersimplify → finalloss → Ro |
@@ -1154,6 +1167,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): drow has no exposure to 'know' |
 | `kobold-kind` | a kobold | Roo | /roo/ | Zhreeng | Zhreeng → clustersimplify → finalloss → Roo |
 | `lake` | still water held in a hollow that has no outlet to the sea | Goarao | /goarao/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): drow has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): drow has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Gao | /gao/ | Ngaong | Ngaong → finalloss → Gao |
@@ -1218,6 +1232,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): drow has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Gaoggoo | /gaoggoo/ | Gaengngeong | Gaengngeong → finalloss → Gaoggoo |
 | `river` | fresh water running across land | Poogpao | /poogpao/ | Peungpaung | Peungpaung → finalloss → Poogpao |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): drow has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): drow has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): drow has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -1320,6 +1335,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Zngogzho | /zŋogʒo/ | Zngogzho | Zngogzho → no change → Zngogzho |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): gnoll has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): gnoll has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): gnoll has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Znoosnov | /znoosnov/ | Znoosnov | Znoosnov → no change → Znoosnov |
@@ -1413,6 +1429,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): gnoll has no exposure to 'know' |
 | `kobold-kind` | a kobold | Shmoox | /ʃmoox/ | Shmoox | Shmoox → no change → Shmoox |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): gnoll has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): gnoll has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): gnoll has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Dshozmoax | /dʃozmoax/ | Dshozmoax | Dshozmoax → no change → Dshozmoax |
@@ -1477,6 +1494,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): gnoll has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): gnoll has no exposure to 'rice' |
 | `river` | fresh water running across land | Dzhap | /dʒap/ | Dzhaf | Dzhaf → fortition → Dzhap |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): gnoll has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): gnoll has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): gnoll has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
@@ -1579,6 +1597,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Badea | /badea/ | Padea | Padea → no change → Badea |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): goblin has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): goblin has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): goblin has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
 | `bugbear-kind` | a bugbear | Deetee | /deetee/ | Deetee | Deetee → no change → Deetee |
@@ -1672,6 +1691,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): goblin has no exposure to 'know' |
 | `kobold-kind` | a kobold | Naeno | /naeno/ | Naeno | Naeno → no change → Naeno |
 | `lake` | still water held in a hollow that has no outlet to the sea | Neodoeta | /neodoeta/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): goblin has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): goblin has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Noataa | /noataa/ | Noaqaa | Noaqaa → no change → Noataa |
@@ -1736,6 +1756,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): goblin has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): goblin has no exposure to 'rice' |
 | `river` | fresh water running across land | Tata | /tata/ | Qata | Qata → no change → Tata |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): goblin has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): goblin has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): goblin has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -1838,6 +1859,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Jagab | /jagab/ | Jagab | Jagab → no change → Jagab |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): gully-dwarf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): gully-dwarf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Xaqab | /xaqab/ | Xaqad | Xaqad → no change → Xaqab |
@@ -1931,6 +1953,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): gully-dwarf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Tatag | /tatag/ | Satag | Satag → no change → Tatag |
 | `lake` | still water held in a hollow that has no outlet to the sea | Xanabbanag | /xanabbanag/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): gully-dwarf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Bangat | /baŋat/ | Bangas | Bangas → no change → Bangat |
@@ -1995,6 +2018,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Qangaj | /qaŋaj/ | Qangaj | Qangaj → no change → Qangaj |
 | `river` | fresh water running across land | Tabash | /tabaʃ/ | Tadash | Tadash → no change → Tabash |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): gully-dwarf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): gully-dwarf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -2097,6 +2121,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Memdaam | /memdaam/ | Ngengtaang | Ngengtaang → lenition → Memdaam |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): high-elf has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): high-elf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): high-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Srem | /srem/ | Sreng | Sreng → no change → Srem |
@@ -2190,6 +2215,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): high-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Žreem | /ʒreem/ | Zhreeng | Zhreeng → no change → Žreem |
 | `lake` | still water held in a hollow that has no outlet to the sea | Sraommoam | /sraommoam/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): high-elf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): high-elf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Maom | /maom/ | Ngaong | Ngaong → no change → Maom |
@@ -2254,6 +2280,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): high-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): high-elf has no exposure to 'rice' |
 | `river` | fresh water running across land | Beombaom | /beombaom/ | Peungpaung | Peungpaung → lenition → Beombaom |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): high-elf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): high-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): high-elf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -2356,6 +2383,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Jagab | /jagab/ | Jagab | Jagab → no change → Jagab |
 | `boreal-stand` | A stand of northern conifers. | Vabat | /vabat/ | Vadat | Vadat → no change → Vabat |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): hill-dwarf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): hill-dwarf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
 | `bugbear-kind` | a bugbear | Xaqab | /xaqab/ | Xaqad | Xaqad → no change → Xaqab |
@@ -2449,6 +2477,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): hill-dwarf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Satag | /satag/ | Satag | Satag → no change → Satag |
 | `lake` | still water held in a hollow that has no outlet to the sea | Xamabbamag | /xamabbamag/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): hill-dwarf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Bangas | /baŋas/ | Bangas | Bangas → no change → Bangas |
@@ -2513,6 +2542,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Qangaj | /qaŋaj/ | Qangaj | Qangaj → no change → Qangaj |
 | `river` | fresh water running across land | Tabash | /tabaʃ/ | Tadash | Tadash → no change → Tabash |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): hill-dwarf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): hill-dwarf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -2615,6 +2645,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Babea | /babea/ | Padea | Padea → no change → Babea |
 | `boreal-stand` | A stand of northern conifers. | Boane | /boane/ | Doane | Doane → no change → Boane |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): hobgoblin has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): hobgoblin has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
 | `bugbear-kind` | a bugbear | Beetee | /beetee/ | Deetee | Deetee → no change → Beetee |
@@ -2708,6 +2739,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): hobgoblin has no exposure to 'know' |
 | `kobold-kind` | a kobold | Naeno | /naeno/ | Naeno | Naeno → no change → Naeno |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): hobgoblin has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): hobgoblin has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | Neene | /neene/ | Neene | Neene → no change → Neene |
 | `light` | the color term for white/light hues | Noaqaa | /noaqaa/ | Noaqaa | Noaqaa → no change → Noaqaa |
@@ -2772,6 +2804,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): hobgoblin has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Gaebae | /gaebae/ | Gaedae | Gaedae → no change → Gaebae |
 | `river` | fresh water running across land | Qata | /qata/ | Qata | Qata → no change → Qata |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): hobgoblin has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): hobgoblin has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): hobgoblin has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -2874,6 +2907,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Re | /re/ | Re | Re → no change → Re |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): human has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): human has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): human has no exposure to 'brazier' |
 | `brown` | the color term for brown | Pea | /pea/ | Pea | Pea → no change → Pea |
 | `bugbear-kind` | a bugbear | Koreo | /koreo/ | Koreo | Koreo → no change → Koreo |
@@ -2967,6 +3001,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): human has no exposure to 'know' |
 | `kobold-kind` | a kobold | Raarao | /raarao/ | Raarao | Raarao → no change → Raarao |
 | `lake` | still water held in a hollow that has no outlet to the sea | Teatxaofoo | /teatxaofoo/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): human has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): human has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Raapvea | /raapvea/ | Raapvea | Raapvea → no change → Raapvea |
@@ -3031,6 +3066,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): human has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): human has no exposure to 'rice' |
 | `river` | fresh water running across land | Roere | /roere/ | Roere | Roere → no change → Roere |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): human has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): human has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): human has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -3133,6 +3169,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Xaaraa | /xaaraa/ | Xaaraa | Xaaraa → no change → Xaaraa |
 | `boreal-stand` | A stand of northern conifers. | Raxaa | /raxaa/ | Raxaa | Raxaa → no change → Raxaa |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): kobold has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): kobold has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | Roxo | /roxo/ | Roxo | Roxo → no change → Roxo |
@@ -3226,6 +3263,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): kobold has no exposure to 'know' |
 | `kobold-kind` | a kobold | Rara | /rara/ | Rara | Rara → no change → Rara |
 | `lake` | still water held in a hollow that has no outlet to the sea | Xoroaroaroaroa | /xoroaroaroaroa/ | — | compound: `little` + `water` |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): kobold has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): kobold has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Rooxa | /rooxa/ | Rooxa | Rooxa → no change → Rooxa |
@@ -3290,6 +3328,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): kobold has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): kobold has no exposure to 'rice' |
 | `river` | fresh water running across land | Xoroxoora | /xoroxoora/ | Xoroxoora | Xoroxoora → no change → Xoroxoora |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): kobold has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): kobold has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): kobold has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -3392,6 +3431,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Kodkood | /kodkood/ | Pengkéém | Pengkéém → no change → Kodkood |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): red-dragon has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): red-dragon has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): red-dragon has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): red-dragon has no exposure to 'bugbear-kind' |
@@ -3485,6 +3525,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): red-dragon has no exposure to 'know' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): red-dragon has no exposure to 'kobold-kind' |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): red-dragon has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): red-dragon has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): red-dragon has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Dod | /dod/ | Dem | Dem → no change → Dod |
@@ -3549,6 +3590,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): red-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): red-dragon has no exposure to 'river' |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): red-dragon has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): red-dragon has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): red-dragon has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -3651,6 +3693,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Nentaan | /nentaan/ | Ngengtaang | Ngengtaang → no change → Nentaan |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): sea-elf has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): sea-elf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): sea-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Sren | /sren/ | Sreng | Sreng → no change → Sren |
@@ -3744,6 +3787,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): sea-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Žreen | /ʒreen/ | Zhreeng | Zhreeng → no change → Žreen |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): sea-elf has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): sea-elf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): sea-elf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Naun | /naun/ | Ngaong | Ngaong → vowelshift → Naun |
@@ -3808,6 +3852,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): sea-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): sea-elf has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): sea-elf has no exposure to 'river' |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): sea-elf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): sea-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): sea-elf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
@@ -3910,6 +3955,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Ṅoṅtaaṅ | /ŋoŋtaaŋ/ | Ngengtaang | Ngengtaang → no change → Ṅoṅtaaṅ |
 | `boreal-stand` | A stand of northern conifers. | Boaṅṅaoṅ | /boaŋŋaoŋ/ | Geangngaong | Geangngaong → no change → Boaṅṅaoṅ |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): snow-elf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): snow-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.8 |
 | `bugbear-kind` | a bugbear | Sroṅ | /sroŋ/ | Sreng | Sreng → no change → Sroṅ |
@@ -4003,6 +4049,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): snow-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Zrooṅ | /zrooŋ/ | Zhreeng | Zhreeng → no change → Zrooṅ |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): snow-elf has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): snow-elf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): snow-elf has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Ṅaoṅ | /ŋaoŋ/ | Ngaong | Ngaong → no change → Ṅaoṅ |
@@ -4067,6 +4114,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): snow-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): snow-elf has no exposure to 'rice' |
 | `river` | fresh water running across land | Booṅbaoṅ | /booŋbaoŋ/ | Peungpaung | Peungpaung → lenition → Booṅbaoṅ |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): snow-elf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): snow-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): snow-elf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -4169,6 +4217,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Kongkoon | /koŋkoon/ | Pengkéém | Pengkéém → no change → Kongkoon |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): white-dragon has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): white-dragon has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): white-dragon has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): white-dragon has no exposure to 'bugbear-kind' |
@@ -4262,6 +4311,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): white-dragon has no exposure to 'know' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): white-dragon has no exposure to 'kobold-kind' |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): white-dragon has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): white-dragon has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | — | — | — | gap (experiential): white-dragon has no exposure to 'liana-forest' |
 | `light` | the color term for white/light hues | Don | /don/ | Dem | Dem → no change → Don |
@@ -4326,6 +4376,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): white-dragon has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'rice' |
 | `river` | fresh water running across land | — | — | — | gap (experiential): white-dragon has no exposure to 'river' |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): white-dragon has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): white-dragon has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): white-dragon has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -4428,6 +4479,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `blue-giant` | a hot, brilliant, short-lived star | — | — | — | gap (unnameable): no culture here has encountered the main sequence |
 | `bone` | the rigid frame of a body | Ṅeṅtaa | /ŋeŋtaa/ | Ngengtaang | Ngengtaang → finalloss → Ṅeṅtaa |
 | `boreal-stand` | A stand of northern conifers. | — | — | — | gap (experiential): wood-elf has no exposure to 'boreal-stand' |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | — | — | — | gap (experiential): wood-elf has no exposure to 'bracken' |
 | `brazier` | a metal basin that holds a fire apart from a hearth | — | — | — | gap (experiential): wood-elf has no exposure to 'brazier' |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
 | `bugbear-kind` | a bugbear | Sde | /sde/ | Sreng | Sreng → finalloss → Sde |
@@ -4521,6 +4573,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `know` | to hold something in memory or understanding — `knows` | — | — | — | gap (experiential): wood-elf has no exposure to 'know' |
 | `kobold-kind` | a kobold | Zdee | /zdee/ | Zhreeng | Zhreeng → finalloss → Zdee |
 | `lake` | still water held in a hollow that has no outlet to the sea | — | — | — | gap (experiential): wood-elf has no exposure to 'lake' |
+| `ledge` | a broad shelf of exposed stone | — | — | — | gap (experiential): wood-elf has no exposure to 'ledge' |
 | `lens` | to choose or report which colour lens one's sight uses — `!eyes` | — | — | — | gap (extradiegetic): lens is an operator instrument; it has no referent in the world |
 | `liana-forest` | Tropical forest tangled with climbing vines. | Sduṅgu | /sduŋgu/ | Shrunggung | Shrunggung → finalloss → Sduṅgu |
 | `light` | the color term for white/light hues | Ṅau | /ŋau/ | Ngaong | Ngaong → finalloss → vowelshift → Ṅau |
@@ -4585,6 +4638,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): wood-elf has no exposure to 'rhinoceros-kind' |
 | `rice` | a staple crop | Gaeṅṅeu | /gaeŋŋeu/ | Gaengngeong | Gaengngeong → finalloss → vowelshift → Gaeṅṅeu |
 | `river` | fresh water running across land | Teuṅtau | /teuŋtau/ | Peungpaung | Peungpaung → finalloss → Teuṅtau |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | — | — | — | gap (experiential): wood-elf has no exposure to 'rushes' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): wood-elf has no exposure to 'rust-monster-kind' |
 | `sargassum-drift` | A drifting raft of floating weed. | — | — | — | gap (experiential): wood-elf has no exposure to 'sargassum-drift' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |

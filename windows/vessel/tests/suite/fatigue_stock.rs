@@ -618,15 +618,16 @@ fn one_full_cycle(local_day: TickSpan) -> f64 {
 
 // --- P7: the room grades the bout (The Wicket, Task 10) ------------------
 
-/// A world of exactly two rooms, told apart by `is_built` alone.
+/// A world of exactly two rooms, told apart by `is_built` and temperature.
 ///
 /// `interior_of` reads exactly two things — `is_built` and `is_cold` — so a
 /// terrain that answers them is a complete fixture for the composition that
 /// decides what a room offers, and a real world would cost a full genesis to
-/// answer two booleans. Everything is COLD (`-20.0`, well under
-/// `FURNISHING_COLD_C`), so `furnished` composes the built+cold locale
-/// vocabulary — which is the one that draws `the-fireside-bed` — while the
-/// other room, unbuilt, composes wilderness and draws no bed at all.
+/// answer two booleans. The furnished room is COLD (`-20.0`, well under
+/// `FURNISHING_COLD_C`), so it composes the built+cold locale vocabulary and
+/// draws `the-fireside-bed`. Every other room is WARM (`20.0`), so it composes
+/// the deliberately bare wild+warm quadrant after The Tenon's epoch; cold
+/// wilderness now draws `the-bracken` and is no longer a valid bare fixture.
 struct OneFurnishedRoom {
     /// The one room this terrain calls built.
     furnished: Facet,
@@ -639,8 +640,8 @@ impl Terrain for OneFurnishedRoom {
     fn is_fresh_water(&self, _room: &Facet) -> bool {
         false
     }
-    fn temperature(&self, _room: &Facet, _day: WorldTime) -> f64 {
-        -20.0
+    fn temperature(&self, room: &Facet, _day: WorldTime) -> f64 {
+        if *room == self.furnished { -20.0 } else { 20.0 }
     }
     fn is_built(&self, room: &Facet) -> bool {
         *room == self.furnished
@@ -841,7 +842,7 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
     );
     assert!(
         !room_offers_sleep(&road, &roadside_body, &terrain),
-        "the unbuilt room must offer nowhere to lie down (fixture precondition)"
+        "the warm unbuilt room must offer nowhere to lie down (fixture precondition)"
     );
 
     let lay_down = at(2.0);
@@ -1122,7 +1123,7 @@ fn slept_on(entity: EntityId, label: &str, day: WorldTime) -> Fact {
 /// and on the bout that fact DATES** (The Tenon, Task 5; spec §6; decision
 /// 0698, which committed `SLEPT_ON` and left it unread on purpose).
 ///
-/// Every bout here is taken in the ROAD, which offers nothing, so the
+/// Every bout here is taken in the warm ROAD, which offers nothing, so the
 /// room-level read cannot supply a grade to any of them. The only thing that
 /// can is the committed `slept-on` fact — which is what makes this red
 /// against the pre-task fold rather than a restatement of P7.
@@ -1173,7 +1174,7 @@ fn p9_a_bout_grades_on_the_kind_the_ledger_says_it_slept_on() {
     // below can only have come from the committed fact.
     assert!(
         !room_offers_sleep(&road, &body, &terrain),
-        "the unbuilt room must offer nowhere to lie down, or a grade below \
+        "the warm unbuilt room must offer nowhere to lie down, or a grade below \
          could be the room-level read rather than the committed kind"
     );
 
@@ -1351,12 +1352,12 @@ fn p9b_a_bout_with_no_slept_on_fact_still_grades_through_the_room() {
     );
 
     // (2) AN UNRECOGNISED LABEL IS NO RECORD, not an empty surface.
-    let mut bracken = base.clone();
-    bracken
-        .commit(slept_on(bedded, "bracken", lay_down), &reg)
+    let mut unknown_surface = base.clone();
+    unknown_surface
+        .commit(slept_on(bedded, "unrostered-rest-fixture", lay_down), &reg)
         .expect("`slept-on` is non-functional");
     assert_eq!(
-        debt(&bracken, bedded, &bedded_body).to_bits(),
+        debt(&unknown_surface, bedded, &bedded_body).to_bits(),
         in_a_furnished_room.to_bits(),
         "a `slept-on` naming a kind this build's object registry has never \
          heard of must fold exactly what no fact at all folds — the label \

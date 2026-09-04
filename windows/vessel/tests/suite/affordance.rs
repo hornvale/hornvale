@@ -40,8 +40,8 @@ use hornvale_kernel::{ConditionResponse, EntityId, Facet, KindId, ResourceVector
 use hornvale_thing::kinds;
 use hornvale_vessel::Knowledge;
 use hornvale_vessel::affordance::{
-    ObjectProperty, ObjectTraits, OfferedVerb, object_registry, offered, offered_by, offered_to,
-    offered_to_observer,
+    ObjectProperty, ObjectTraits, OfferedVerb, Substrate, object_registry, offered, offered_by,
+    offered_to, offered_to_observer,
 };
 use hornvale_vessel::body::Body;
 use hornvale_vessel::clock::{REFERENCE_MASS_KG, mass_for_species};
@@ -272,6 +272,58 @@ fn warm_appears_on_hearth_with_no_object_table_edit() {
 fn a_brazier_offers_warm_with_no_dispatcher_edit() {
     assert!(offered_by(kinds::BRAZIER).contains(&OfferedVerb::Warm));
     assert!(!offered_by(kinds::ALTAR).contains(&OfferedVerb::Warm));
+}
+
+/// The Tenon's three authored kinds are real sleep surfaces, not prose-only
+/// roster rows: each advertises `Sleep` through `SupportsRest`, and the
+/// payloads distinguish the yielding pair from the hard ledge. These literals
+/// are the pre-implementation authorship decision — changing a row's offer or
+/// hardness changes the edge the recovery fold and sleep-site chooser read.
+///
+/// MUTATIONS THIS MUST FAIL AGAINST: omit any one of the three rows; omit its
+/// `SupportsRest`; swap the ledge's hard substrate with either yielding one;
+/// or change any authored offer/hardness value.
+#[test]
+fn three_natural_surfaces_offer_sleep_with_their_authored_substrates() {
+    let reg = object_registry();
+    let expected = [
+        (
+            KindId("rushes"),
+            hornvale_vessel::affordance::RestSurface {
+                offer: 0.7,
+                substrate: Substrate::Natural(0.1),
+            },
+        ),
+        (
+            KindId("ledge"),
+            hornvale_vessel::affordance::RestSurface {
+                offer: 0.7,
+                substrate: Substrate::Natural(0.85),
+            },
+        ),
+        (
+            KindId("bracken"),
+            hornvale_vessel::affordance::RestSurface {
+                offer: 0.7,
+                substrate: Substrate::Natural(0.1),
+            },
+        ),
+    ];
+
+    for (kind, surface) in expected {
+        let traits = reg
+            .get(&kind)
+            .unwrap_or_else(|| panic!("{kind:?} has no ObjectTraits row"));
+        assert!(
+            traits.properties.contains(&ObjectProperty::SupportsRest),
+            "{kind:?} does not advertise Sleep"
+        );
+        assert_eq!(traits.rest, Some(surface), "{kind:?} surface moved");
+        assert!(
+            offered_by(kind).contains(&OfferedVerb::Sleep),
+            "{kind:?} carries a surface but the offer query cannot reach it"
+        );
+    }
 }
 
 /// `Examine` requires the empty property set (spec §3.3: universal), and the
@@ -1696,7 +1748,7 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Close, Drink, Drop, Enter, Examine, Open, Put, Sleep, Take, Warm};
-    let expected: [(KindId, &[OfferedVerb]); 18] = [
+    let expected: [(KindId, &[OfferedVerb]); 21] = [
         // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
         // not by the offer query), so an enclosing kind offers Examine and
         // nothing more.
@@ -1704,6 +1756,7 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         (kinds::ALTAR, &[Examine]),
         (kinds::ANVIL, &[Examine]),
         (kinds::BED, &[Sleep, Examine]),
+        (kinds::BRACKEN, &[Sleep, Examine]),
         // THE BRAZIER'S ROW IS NEW (The Wicket, Task 5): the campaign's own
         // proof that a kind can arrive with data rows only. `RadiatesHeat`
         // gates `Warm` the same way `hearth`'s row does; `Examine` is
@@ -1747,9 +1800,11 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         // be is a precondition on the act read against a second object, the
         // way `Lockable` is for `Open`, and this query holds one object.
         (kinds::KEY, &[Examine, Take, Drop, Put]),
+        (kinds::LEDGE, &[Sleep, Examine]),
         (kinds::LOG, &[Examine]),
         (kinds::LOOM, &[Examine]),
         (kinds::POOL, &[Drink, Examine]),
+        (kinds::RUSHES, &[Sleep, Examine]),
         (kinds::SCREEN, &[Examine]),
         // THE STRONGBOX'S ROW MOVED, AND THAT IS THE TASK-11 DELIVERABLE
         // ARRIVING AT THE FROZEN TABLE. `Openable` gated no verb until Task
@@ -1877,14 +1932,12 @@ fn a_registered_multi_property_kind_discriminates_subset_from_equality() {
 /// effect — would share a gate that only one of them chose.
 ///
 /// The room this test sleeps in is the walk-band start position
-/// `Session::start` opens in, which is a room with no rest-affording anchor
-/// **by construction**: `object_registry` grants `SupportsRest` to `bed`
-/// alone, `bed` is only ever pushed as a CHAMBER anchor (`interior::pattern`,
-/// `liveness.rs`'s rest tests, `chamber_prose.rs`), and `Session::
-/// chamber_interior_here` answers `None` out of doors — there is no anchor
-/// graph at all until `enter` finds a structure. So this is not merely A room
-/// with no bed; it is the class of room (every walk-band room, on every
-/// world) that can never contain one.
+/// `Session::start` opens in, so it has no made bed: `the-fireside-bed` still
+/// requires a built, cold room. The Tenon's natural surfaces mean an outdoor
+/// locale may now carry bracken, so the older claim that every walk-band room
+/// had no rest-affording anchor at all is deliberately gone. The contract this
+/// test pins is unchanged and narrower: the `sleep` command takes no object
+/// argument and never requires a bed.
 ///
 /// MUTATION THIS MUST FAIL AGAINST: add an early return to `Session::sleep`
 /// refusing when no anchor in the current interior offers `OfferedVerb::Sleep`
@@ -1899,8 +1952,8 @@ fn sleeping_needs_no_bed() {
     };
     assert!(
         reply.contains("You lie down"),
-        "sleep must succeed with no bed, no home and no anchor in reach at \
-         all — sleeping is gated on nothing: {reply}"
+        "sleep must succeed with no made bed or home in reach — sleeping is \
+         gated on nothing: {reply}"
     );
 }
 

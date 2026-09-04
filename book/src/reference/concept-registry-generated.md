@@ -176,6 +176,7 @@
 | `blue-giant` | astronomy | celestial | a hot, brilliant, short-lived star |
 | `bone` | language | body | the rigid frame of a body |
 | `boreal-stand` | climate | substance | A stand of northern conifers. |
+| `bracken` | thing | object | a dense growth of fern that makes a yielding place to lie |
 | `brazier` | thing | object | a metal basin that holds a fire apart from a hearth |
 | `brown` | language | quality | the color term for brown |
 | `bugbear-kind` | species | living | a bugbear |
@@ -269,6 +270,7 @@
 | `know` | language | act | to hold something in memory or understanding — `knows` |
 | `kobold-kind` | species | living | a kobold |
 | `lake` | terrain | terrain | still water held in a hollow that has no outlet to the sea |
+| `ledge` | thing | object | a broad shelf of exposed stone |
 | `lens` | language | act | to choose or report which colour lens one's sight uses — `!eyes` |
 | `liana-forest` | climate | substance | Tropical forest tangled with climbing vines. |
 | `light` | language | quality | the color term for white/light hues |
@@ -333,6 +335,7 @@
 | `rhinoceros-kind` | species | living | a rhinoceros |
 | `rice` | climate | substance | a staple crop |
 | `river` | terrain | terrain | fresh water running across land |
+| `rushes` | thing | object | cut wetland reeds laid down as a loose place to lie |
 | `rust-monster-kind` | species | living | a rust monster |
 | `sargassum-drift` | climate | substance | A drifting raft of floating weed. |
 | `savanna` | climate | terrain | a biome class |

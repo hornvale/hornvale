@@ -66,11 +66,12 @@ fn every_kind_the_grammar_names_is_a_roster_row() {
     //
     // Task 5 appended `the-brazier`, which names all three slots (`kind`,
     // `requires: Some(kinds::LOOM)`, `attach: Attach::Beside(kinds::LOOM)`),
-    // moving this from 38 to 41.
+    // moving this from 38 to 41. The Tenon's three natural surfaces each
+    // name two (`kind` and `attach`, with no requirement), moving it to 47.
     assert_eq!(
-        checked, 41,
+        checked, 47,
         "the sweep no longer reads every kind INVENTORY names: {checked} \
-         slots, not 41"
+         slots, not 47"
     );
 }
 
@@ -109,11 +110,12 @@ fn every_propertied_kind_is_a_roster_row() {
     //
     // Task 5 added the `brazier` row (`RadiatesHeat`), moving this from 9 to
     // 10; The Brattice's Task 5 added the `door` row (`AffordsPassage`,
-    // `Openable`, `Lockable`), moving it from 10 to 11.
+    // `Openable`, `Lockable`), moving it from 10 to 11. The Tenon's three
+    // rest-surface rows move it to 14.
     assert_eq!(
         reg.len(),
-        11,
-        "object_registry has {} rows, not 11 — the population this sweep \
+        14,
+        "object_registry has {} rows, not 14 — the population this sweep \
          measures has changed",
         reg.len()
     );
