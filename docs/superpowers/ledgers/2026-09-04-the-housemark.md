@@ -81,6 +81,27 @@ headline on a legal production structure). · ideonomy passes / overturns:
 substitution exposed the missing one-chamber leaf. · Capture: corrected spec
 §3 and H2/H3; corrected visual matrix.
 
+#4 [G4] — **Does the implementation plan faithfully and executably cover the
+approved design?** · **Decision: execute the five-task plan at
+`docs/superpowers/plans/2026-09-04-the-housemark.md`: pure derivation, shared
+inventory admission, production `Brief` wiring, living five-seed readout, then
+artifact/document closure.** · Why: every preregistered claim H1–H4 has a named
+test surface; the locale/epoch boundary is tested before the chamber signature
+is admitted; fallibility is propagated at the production boundary; and the
+artifact step is a response table over observed paths rather than a prediction.
+The tasks follow the existing vessel split and keep the one-inventory
+architecture binding. · Alternatives discarded: combine all implementation
+into one task (too broad for meaningful review); put the five-seed proof in the
+lab (the observable belongs to the vessel and is not a census golden); defer
+artifact classification to close (would let an epoch misclassification survive
+the implementation). · ideonomy passes / overturns: **1 pass during G4
+self-review, no overturns, one material sharpening** — tree-finding across the
+plan's intentional and inherited branches exposed the old locale-visible screen
+as a separate-age constraint: chamber cultural admission may split or append a
+diagnostic screen row, but may not narrow the inherited locale row. · Capture:
+this entry; the committed
+plan; the temporary repository-required `IMPLEMENTATION_PLAN.md` stage tracker.
+
 ## Capture manifest
 
 - `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` now points from
