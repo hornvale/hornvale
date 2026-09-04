@@ -5397,3 +5397,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T03:09:31Z | game-check | 157.970 | 634.360 | 14.729 | 4.11 | 0 | 27cd3382e | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T03:10:10Z | gate-commit | 36.804 | 67.863 | 14.963 | 2.25 | 0 | 27cd3382e | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T03:11:09Z | gate-commit | 34.315 | 67.155 | 15.202 | 2.40 | 0 | 27cd3382e | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:39:27Z | game-check | 104.573 | 720.702 | 33.620 | 7.21 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:40:06Z | gate-commit | 33.275 | 58.412 | 12.156 | 2.12 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:40:43Z | gate-commit | 33.072 | 58.627 | 12.138 | 2.14 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:42:56Z | gate-commit | 34.077 | 67.010 | 14.733 | 2.40 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:44:41Z | game-check | 101.933 | 671.707 | 29.056 | 6.87 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |

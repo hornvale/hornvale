@@ -18,10 +18,8 @@
 
 mod wash_support {
     use hornvale_game::mercator::{self, Frame};
-    use hornvale_game::plate::{self, ReflectanceKey, Window};
-    use hornvale_kernel::{
-        ComponentStore, Geosphere, NearestVertexIndex, RoomMeshMemo, Seed, World,
-    };
+    use hornvale_game::plate::{self, ReflectanceCache, Window};
+    use hornvale_kernel::{Geosphere, NearestVertexIndex, RoomMeshMemo, Seed, World};
     use hornvale_locale::LocaleContext;
     use hornvale_terrain::GeneratedTerrain;
     use hornvale_vessel::Session;
@@ -193,7 +191,7 @@ mod wash_support {
         ctx: &LocaleContext,
         at: hornvale_kernel::WorldTime,
         calendar: Option<&hornvale_astronomy::Calendar>,
-        store: &mut ComponentStore<ReflectanceKey, hornvale_kernel::color::Reflectance>,
+        store: &mut ReflectanceCache,
     ) {
         let (f, win, vw, vh) = frame_and_window();
         let season = hornvale_game::driver::season_bucket_for(calendar, at);
@@ -358,7 +356,7 @@ fn two_instants_in_one_season_share_a_bucket() {
 #[test]
 fn a_redraw_in_the_same_season_adds_no_cache_entries() {
     let (session, geo, terrain, index, mut memo, calendar, _world) = wash_support::seed_42_world();
-    let mut store = hornvale_kernel::component::ComponentStore::new();
+    let mut store = hornvale_game::plate::ReflectanceCache::new();
     let ctx = session.context();
     let at = session.day();
     let calendar = calendar.as_ref();
@@ -475,5 +473,548 @@ fn a_starless_world_lights_the_plate_flat() {
         *lit.get(),
         [1.0; hornvale_kernel::color::BANDS],
         "a starless world must fall back to a flat unit illuminant"
+    );
+}
+
+// =====================================================================
+// Task 6: the collapse — colour stops being keyed on elevation.
+// =====================================================================
+
+mod wash_collapse {
+    use hornvale_game::observer::{ColorDepth, TerminalObserver};
+    use hornvale_game::plate::{self, PlateLight};
+    use hornvale_game_core::{Grid, Ink};
+    use std::collections::BTreeSet;
+
+    /// One whole terrain-layer plate, drawn through a REAL locale context at
+    /// the given colour regime and display depth.
+    ///
+    /// **`draw_with`, not `draw_terrain_layer`, and not `draw`.** `draw`
+    /// resolves `colour_allowed` from the environment, which would make
+    /// every assertion below depend on whether `NO_COLOR` happened to be set
+    /// in the runner — the exact hermeticity the `draw_with` seam exists to
+    /// give (`plate::draw_with`'s own doc, and the threaded-tests incident
+    /// its fix round records). `draw_with` is also the composed surface a
+    /// reader actually sees, feature layer included, so a claim proved here
+    /// is a claim about the picture rather than about one of its layers.
+    fn plate_at(colour_allowed: bool, depth: ColorDepth) -> Grid {
+        let ctx = super::wash_support::seed_42_context();
+        let terrain = ctx.terrain();
+        let geo = terrain.geosphere();
+        let index = ctx.nearest_index();
+        let (f, win, _, _) = super::wash_support::frame_and_window();
+
+        // A flat unit illuminant, deliberately: this file's illuminant
+        // claims are Task 5's (`a_low_sun_is_warmer_than_a_high_one`), and
+        // a flat light is the one that CANNOT manufacture the chromatic
+        // variation asserted below — every band weighted 1.0 contributes no
+        // colour of its own, so whatever hue difference appears came from
+        // the ground. Reaching for a real sun here would have made the
+        // strongest assertion in this module ambiguous about its own cause.
+        let light = PlateLight::flat(colour_allowed).with_observer(TerminalObserver::new(depth));
+        let mut spectral = light.lit(
+            &ctx,
+            hornvale_kernel::WorldTime::GENESIS,
+            plate::season_bucket(0.0),
+            None,
+        );
+
+        plate::draw_with(
+            terrain,
+            geo,
+            index,
+            &f,
+            &win,
+            super::wash_support::W,
+            super::wash_support::H,
+            colour_allowed,
+            &[],
+            &BTreeSet::new(),
+            &[],
+            &Default::default(),
+            &mut spectral,
+        )
+    }
+
+    /// Every drawn position of a grid as `(glyph, ink)`, in row-major
+    /// order.
+    ///
+    /// The pair rather than the grid's own struct, deliberately: that
+    /// struct is named for the raster-area word the Lexicon of Place guard
+    /// counts (`cli/tests/suite/lexicon_guard.rs`), and these two fields are
+    /// the whole of what this module reads. Destructuring at the boundary
+    /// costs nothing and keeps a token this file has no need of out of the
+    /// inventory.
+    fn drawn_positions(g: &Grid) -> Vec<(Option<char>, Ink)> {
+        (0..g.height())
+            .flat_map(|y| (0..g.width()).filter_map(move |x| g.get(x, y).map(|c| (c.glyph, c.ink))))
+            .collect()
+    }
+
+    /// Every distinct colour a grid claims.
+    fn distinct_colours(g: &Grid) -> BTreeSet<[u8; 3]> {
+        drawn_positions(g)
+            .iter()
+            .filter_map(|(_, ink)| match ink {
+                Ink::Rgb(rgb) => Some(*rgb),
+                Ink::Plain => None,
+            })
+            .collect()
+    }
+
+    /// Every colour the SPECTRAL arm of [`plate::color_for`] claims over the
+    /// sample window, plus how many tiles were asked — the population the
+    /// deleted `RELIEF_COLORS` ladder used to colour, and the ONLY
+    /// population a claim about the spectral collapse may be made over.
+    ///
+    /// **Why this is not read off the drawn grid.** A drawn `Grid` position carries an
+    /// ink and no water class, so a whole-plate colour set mixes the
+    /// spectral answers with the three invented water-palette entries — and
+    /// those three are chromatic. Measured, not reasoned: collapsing the
+    /// spectral arm to greyscale (`[g, g, g]`) and re-running left the
+    /// whole-plate form of the hue assertion GREEN, satisfied entirely by
+    /// ocean, salt basin and river. That is finding (c)'s blind spot
+    /// reproduced one level up from where it was first found.
+    ///
+    /// `water >= 2` is exactly [`plate::color_for`]'s own `_` arm — ocean
+    /// (0) and salt basin (1) take the palette, every wetter-or-drier class
+    /// from the river class up takes the spectrum.
+    fn spectral_land_colours() -> (BTreeSet<[u8; 3]>, usize) {
+        let ctx = super::wash_support::seed_42_context();
+        let terrain = ctx.terrain();
+        let geo = terrain.geosphere();
+        let index = ctx.nearest_index();
+        let (f, win, vw, vh) = super::wash_support::frame_and_window();
+        let mut memo = super::wash_support::memo();
+        let light = PlateLight::flat(true);
+
+        let mut colours = BTreeSet::new();
+        let mut sampled = 0usize;
+        for (row, col) in super::wash_support::sample_tiles() {
+            let t = plate::terrain_at_tile(
+                terrain,
+                geo,
+                index,
+                &mut memo,
+                &f,
+                &win,
+                vw,
+                vh,
+                row,
+                col,
+                Some(&ctx),
+                hornvale_kernel::WorldTime::GENESIS,
+                plate::season_bucket(0.0),
+                None,
+            );
+            if t.water < 2 {
+                continue;
+            }
+            sampled += 1;
+            if let Some(c) = plate::color_for(&t, light.illuminant(), light.observer()) {
+                colours.insert(c);
+            }
+        }
+        (colours, sampled)
+    }
+
+    /// A colour's CHROMATICITY — its `(r, g)` share of total intensity.
+    ///
+    /// **The instrument finding (c) asked for.** Counting distinct colours
+    /// cannot tell a spectral render from a greyscale one: a bug that copied
+    /// one channel into all three would still produce many distinct values,
+    /// and Task 2's own palette test used `r == g == b` inputs throughout,
+    /// so nothing upstream had ever exercised an unequal channel. Dividing
+    /// out intensity leaves only the part a greyscale render cannot vary —
+    /// every grey, black to white, maps to the same `(1/3, 1/3)`.
+    fn chromaticity(rgb: [u8; 3]) -> (f64, f64) {
+        let total = f64::from(rgb[0]) + f64::from(rgb[1]) + f64::from(rgb[2]);
+        if total <= 0.0 {
+            return (1.0 / 3.0, 1.0 / 3.0);
+        }
+        (f64::from(rgb[0]) / total, f64::from(rgb[1]) / total)
+    }
+
+    /// Every colour the pre-Wash plate could possibly claim: the six-entry
+    /// `RELIEF_COLORS` ladder plus the three invented water-palette entries
+    /// (`OCEAN_COLOR`, `SALT_BASIN_COLOR`, `RIVER_COLOR`).
+    ///
+    /// **This ceiling is 9, and the brief for this task said 6.** Six is the
+    /// ladder alone, and it is not the number a whole-plate colour count has
+    /// to beat: a plate also carries water, so a render with the ladder
+    /// fully restored produces 6 + 3 = 9 distinct colours and clears a
+    /// `> 6` bar without difficulty. Measured, not reasoned: restoring the
+    /// deleted ladder inside `plate::color_for` and re-running left the
+    /// `> 6` form of this test GREEN. A threshold that the defect itself
+    /// passes is not a threshold.
+    ///
+    /// The feature layer contributes nothing to this count — `plate_at`
+    /// passes empty site, volcano and waterfall rosters — so 9 really is
+    /// the whole of what the old vocabulary could paint here.
+    const PRE_WASH_PALETTE: usize = 9;
+
+    /// H1: the category error is fixed. Distinct rendered colours per plate
+    /// strictly exceed what the whole pre-Wash palette could produce.
+    ///
+    /// Measured on COLOUR COUNT, never on a banded value: The Hachure's H2
+    /// was falsified because it asserted about a quantity whose quantizer
+    /// was coarse enough to erase the refinement, and colour count is
+    /// downstream of no band.
+    ///
+    /// Measured on the DRAWN GRID rather than on `color_for`'s return value,
+    /// so what it witnesses is the picture a reader sees and not a function
+    /// nothing calls — which is the failure mode this whole task exists to
+    /// close.
+    #[test]
+    fn the_plate_renders_more_distinct_colours_than_the_elevation_ladder_could() {
+        let colours = distinct_colours(&plate_at(true, ColorDepth::TrueColor));
+        assert!(
+            colours.len() > PRE_WASH_PALETTE,
+            "the whole pre-Wash palette was {PRE_WASH_PALETTE} entries              (six relief bands plus ocean, salt basin and river);              the spectral path rendered {}",
+            colours.len()
+        );
+    }
+
+    /// H1, the half a count cannot witness: the plate's colours differ in
+    /// HUE, not merely in value.
+    ///
+    /// **FIRES WHEN: the collapse goes achromatic** — a channel copied into
+    /// all three, an observer that lost its colour-matching curves, an
+    /// illuminant applied as a scalar. Every one of those leaves the
+    /// distinct-colour count healthy while destroying the thing H1 is
+    /// actually about, because a greyscale ramp has as many distinct values
+    /// as a coloured one.
+    ///
+    /// The tolerance is not a tuned threshold — it is a floor well under
+    /// what any real spectral difference produces and well over float noise;
+    /// the failure message prints the observed spread so a future reader can
+    /// see how much headroom the claim actually has.
+    #[test]
+    fn the_plates_colours_differ_in_hue_and_not_only_in_value() {
+        let (set, sampled) = spectral_land_colours();
+        let colours: Vec<[u8; 3]> = set.iter().copied().collect();
+
+        // NON-VACUITY, both halves. A window that held no land at all, or a
+        // context that refused every address, would leave nothing to compare
+        // and the assertion below would hold for the wrong reason.
+        assert!(
+            sampled > 100,
+            "only {sampled} tiles of the window took the spectral arm; the sample is degenerate"
+        );
+        assert!(
+            colours.len() > 1,
+            "the spectral arm produced {} distinct colours over {sampled} tiles; \
+             a hue comparison needs at least two",
+            colours.len()
+        );
+
+        let mut widest = 0.0f64;
+        for a in &colours {
+            for b in &colours {
+                let (ax, ay) = chromaticity(*a);
+                let (bx, by) = chromaticity(*b);
+                widest = widest.max((ax - bx).abs()).max((ay - by).abs());
+            }
+        }
+        assert!(
+            widest > 0.01,
+            "the spectral arm's {} distinct colours span only {widest:.6} of \
+             chromaticity — a greyscale render would look exactly like this to a \
+             count, which is what this assertion exists to catch",
+            colours.len()
+        );
+
+        // WIRING: the colours measured above must be the colours DRAWN. This
+        // test reaches `color_for` directly, so without this it would prove a
+        // property of a function the renderer might not call — the exact
+        // failure ("shipped with no consumer") this whole task exists to
+        // close, and the one Task 1's `violations` actually committed.
+        let drawn = distinct_colours(&plate_at(true, ColorDepth::TrueColor));
+        let shared = set.intersection(&drawn).count();
+        assert!(
+            // A MAJORITY, not all of them, and the shortfall is accounted
+            // for rather than tolerated: `rasterize_rivers` paints its line
+            // layer OVER the relief inside the same cached tile, so a land
+            // colour whose every tile carries a river is genuinely not on
+            // the finished plate. Measured at 138 of 156 (88%) on this
+            // window; half is the floor, chosen far enough below that
+            // figure that a river-density change cannot flap it, and far
+            // enough above zero that a renderer ignoring `color_for`
+            // entirely still fails.
+            shared * 2 > colours.len(),
+            "only {shared} of the spectral arm's {} colours reached the drawn plate; \
+             the renderer is not painting what `color_for` answers",
+            colours.len()
+        );
+    }
+
+    /// FIRES WHEN: the glyph stops carrying elevation. 0389 gives the glyph
+    /// the order, and the NO_COLOR path depends on it entirely.
+    #[test]
+    fn the_glyph_still_carries_elevation_order() {
+        // Water class 3 is `WaterKind::DryLand` — the only class whose mark
+        // the relief band decides (`plate::glyph_for`'s own doc). Asking
+        // this of an ocean tile would compare a glyph against itself.
+        let a = plate::glyph_for(3, 2);
+        let b = plate::glyph_for(3, 4);
+        assert_ne!(a, b, "two different bands must draw different glyphs");
+    }
+
+    /// H5: the observer degrades without loss of legibility. Under NO_COLOR
+    /// the plate emits no colour at all AND still distinguishes elevation,
+    /// because the glyph carries it. Neither half alone is the claim — a
+    /// plate that emits no colour and no distinction is "degraded" into
+    /// uselessness, and a plate that still emits colour has not degraded at
+    /// all. This is the test that 0389's "nothing a reader must trust may
+    /// live only in colour" is honoured on the shipped surface rather than
+    /// in principle.
+    ///
+    /// **Two arms, and the second is the load-bearing one.** The first
+    /// drives the shipped coupling (`NO_COLOR` sets both `colour_allowed`
+    /// and the observer's depth, `observer::terminal_observer`), which
+    /// `Ink::resolve` alone would satisfy — it forces `Ink::Plain` whenever
+    /// colour is disallowed, so arm one cannot tell whether the OBSERVER
+    /// degraded or merely whether the ink gate closed. Arm two allows colour
+    /// and hands the plate a `ColorDepth::None` observer, so the only thing
+    /// that can produce a colourless plate is the observer itself. That is
+    /// also why `plate::color_for` routes its two invented water-palette
+    /// claims through `TerminalObserver::show` rather than emitting them
+    /// raw: without that, arm two would find ocean tiles still coloured.
+    #[test]
+    fn a_no_colour_plate_emits_no_colour_and_still_shows_relief() {
+        for (colour_allowed, depth, arm) in [
+            (false, ColorDepth::None, "the shipped NO_COLOR coupling"),
+            (
+                true,
+                ColorDepth::None,
+                "a colour-allowing terminal that shows none",
+            ),
+        ] {
+            let drawn = plate_at(colour_allowed, depth);
+            let positions = drawn_positions(&drawn);
+
+            assert!(
+                positions.iter().all(|(_, ink)| *ink == Ink::Plain),
+                "{arm}: must emit no colour anywhere; {} of {} positions claimed one",
+                positions
+                    .iter()
+                    .filter(|(_, ink)| *ink != Ink::Plain)
+                    .count(),
+                positions.len()
+            );
+
+            let glyphs: BTreeSet<char> = positions.iter().filter_map(|(g, _)| *g).collect();
+            assert!(
+                glyphs.len() > 1,
+                "{arm}: the plate must still distinguish relief without colour; \
+                 got {} distinct glyphs",
+                glyphs.len()
+            );
+        }
+    }
+
+    /// The positive control for the arms above: the SAME plate, same window,
+    /// with a truecolor observer, must claim colour. Without it both arms
+    /// would pass on a plate that had stopped drawing anything at all.
+    #[test]
+    fn the_same_plate_does_claim_colour_when_the_terminal_can_show_it() {
+        let drawn = plate_at(true, ColorDepth::TrueColor);
+        assert!(
+            drawn_positions(&drawn)
+                .iter()
+                .any(|(_, ink)| *ink != Ink::Plain),
+            "a truecolor plate claimed no colour anywhere"
+        );
+    }
+
+    /// H4 over the REAL layers, not hand-built ones. FIRES WHEN: a layer is
+    /// declared at a rate coarser than something it reads — e.g. if
+    /// `terrain` were declared `Seasonal` while reading the diurnal
+    /// illuminant, which is exactly the bug the spine exists to prevent and
+    /// exactly what this campaign would have shipped without this step.
+    ///
+    /// **The honest limit, restated here because a green assertion is where
+    /// a reader will look for it:** `plate::LAYERS` is a DECLARATION.
+    /// Nothing derives it from what the code reads, so if a layer's reads
+    /// change and the declaration does not, this stays green and says
+    /// nothing. What it does buy is that the declaration and the spine can
+    /// no longer disagree silently, which is strictly more than Task 1
+    /// shipped — `violations` had no consumer at all, so H4 was vacuous.
+    #[test]
+    fn the_plates_declared_layers_satisfy_the_rate_spine() {
+        let found = hornvale_game::rate::violations(plate::LAYERS);
+        assert_eq!(
+            found,
+            Vec::<String>::new(),
+            "rate-spine violations: {found:?}"
+        );
+    }
+
+    /// The non-vacuity arm for the assertion above: the spine must still
+    /// object to a layer that IS mis-declared. Without this,
+    /// `the_plates_declared_layers_satisfy_the_rate_spine` would pass for a
+    /// `violations` that had been changed to return an empty vector.
+    #[test]
+    fn the_spine_still_objects_to_a_terrain_layer_declared_coarser_than_its_light() {
+        let bad = [hornvale_game::rate::LayerDecl {
+            name: "terrain",
+            rate: hornvale_game::rate::Rate::Seasonal,
+            reads: &[hornvale_game::rate::Rate::Diurnal],
+        }];
+        let found = hornvale_game::rate::violations(&bad);
+        assert_eq!(found.len(), 1, "expected one violation, got {found:?}");
+    }
+
+    /// FIRES WHEN: [`hornvale_game::rate::Rate`]'s coarse-to-fine ORDER
+    /// moves.
+    ///
+    /// **Written because Task 6 made one of the unpinned middle variants
+    /// load-bearing.** Task 1's own tests pin only `Geological` vs
+    /// `Seasonal`; the relative position of `Built`, `Diurnal`, `PerTurn`
+    /// and `Ornamental` rested on a doc comment. `plate::LAYERS` now
+    /// declares the terrain layer `Diurnal` and asserts the spine over it,
+    /// and `violations` compares variants with `>` — so a reordering of this
+    /// enum would silently change what that green assertion MEANS without
+    /// changing a character of either file.
+    ///
+    /// **The exhaustive `match` is the ratchet.** A new variant fails to
+    /// compile here rather than slipping into the middle of the ladder
+    /// unnoticed, which a list of pairwise `<` assertions would have
+    /// allowed.
+    #[test]
+    fn the_rate_ladder_runs_coarse_to_fine_in_the_declared_order() {
+        use hornvale_game::rate::Rate;
+
+        fn rung(r: Rate) -> usize {
+            match r {
+                Rate::Geological => 0,
+                Rate::Built => 1,
+                Rate::Seasonal => 2,
+                Rate::Diurnal => 3,
+                Rate::PerTurn => 4,
+                Rate::Ornamental => 5,
+                Rate::Instantaneous => 6,
+            }
+        }
+
+        let ladder = [
+            Rate::Geological,
+            Rate::Built,
+            Rate::Seasonal,
+            Rate::Diurnal,
+            Rate::PerTurn,
+            Rate::Ornamental,
+            Rate::Instantaneous,
+        ];
+
+        for (i, a) in ladder.iter().enumerate() {
+            assert_eq!(
+                rung(*a),
+                i,
+                "{a:?} is not at rung {i} of the declared ladder"
+            );
+            for b in &ladder[i + 1..] {
+                assert!(
+                    a < b,
+                    "{a:?} must compare coarser than {b:?}; the enum's discriminant order moved"
+                );
+            }
+        }
+    }
+}
+
+/// FIRES WHEN: the `(FacetId, season)` cache stops SERVING and starts
+/// silently recomputing.
+///
+/// **Why this test exists (Task 6, carried finding (d)).** Task 4's
+/// `a_redraw_in_the_same_season_adds_no_cache_entries` above asserts that a
+/// second draw leaves `store.len()` unchanged — and it cannot fail:
+/// `BTreeMap::insert` under an identical key never grows the map, so a hit
+/// path replaced by "recompute and reinsert" passes it exactly as well. The
+/// hit path was a structural guarantee that nothing tested. Task 6 puts it
+/// under ~1,920 consults a frame, which is where an unnoticed miss stops
+/// being free.
+///
+/// **Counted, not timed.** `Instant` is banned in this project, tests
+/// included, so the question "was it served from the cache" is answered by
+/// how many times the expensive locale call was MADE
+/// (`plate::ReflectanceCache::misses`, incremented at that call and nowhere
+/// else) rather than by how long the draw took. Nothing in `windows/locale`
+/// was touched to get this: the counter sits in the client's own wrapper.
+#[test]
+fn a_same_season_redraw_is_served_from_the_cache_rather_than_recomputed() {
+    let (session, geo, terrain, index, mut memo, calendar, _world) = wash_support::seed_42_world();
+    let mut store = hornvale_game::plate::ReflectanceCache::new();
+    let ctx = session.context();
+    let at = session.day();
+    let calendar = calendar.as_ref();
+
+    wash_support::draw_once(
+        &terrain, &geo, &index, &mut memo, ctx, at, calendar, &mut store,
+    );
+    assert_eq!(
+        (store.hits(), store.misses(), store.len()),
+        (0, 1, 1),
+        "the first draw of one tile must be exactly one miss and one entry"
+    );
+
+    wash_support::draw_once(
+        &terrain, &geo, &index, &mut memo, ctx, at, calendar, &mut store,
+    );
+    assert_eq!(
+        (store.hits(), store.misses(), store.len()),
+        (1, 1, 1),
+        "the second draw must be served from the cache: the locale must not be \
+         called again, and no entry may be added"
+    );
+}
+
+/// The non-vacuity arm the test above needs, and the spine's own claim made
+/// concrete: a draw at an instant in a DIFFERENT season must MISS.
+///
+/// Without this, `a_same_season_redraw_is_served_from_the_cache_rather_than_
+/// recomputed` would pass just as happily for a cache whose key had dropped
+/// the season column entirely — which is the freeze-on-the-first-frame
+/// defect `plate::ReflectanceKey`'s own doc describes.
+///
+/// **The second instant is SEARCHED for, never assumed.** `season` must be
+/// `season_bucket_for(calendar, at)` for the `at` it is filed under
+/// (`plate::terrain_at_tile`'s own contract), so this walks forward a day at
+/// a time until the world's own calendar reports a different bucket rather
+/// than passing a hand-picked `season` beside an unchanged `at` — which
+/// would file a value under a key that lies about it, exactly the
+/// mislabeling that contract exists to forbid.
+#[test]
+fn a_redraw_in_a_different_season_misses_and_mints_a_new_entry() {
+    let (session, geo, terrain, index, mut memo, calendar, _world) = wash_support::seed_42_world();
+    let mut store = hornvale_game::plate::ReflectanceCache::new();
+    let ctx = session.context();
+    let at = session.day();
+    let calendar = calendar.as_ref();
+    let here = hornvale_game::driver::season_bucket_for(calendar, at);
+
+    // A year is bounded above by a few hundred standard days for any world
+    // this client can possess, so a full year's walk is a bounded search and
+    // never an open-ended one.
+    let elsewhere = (1..=400i64)
+        .map(|d| {
+            hornvale_kernel::WorldTime::from_ticks(
+                at.ticks() + d * hornvale_kernel::WorldTime::TICKS_PER_STD_DAY,
+            )
+        })
+        .find(|t| hornvale_game::driver::season_bucket_for(calendar, *t) != here)
+        .expect("seed 42's calendar must reach a second season within a year");
+
+    wash_support::draw_once(
+        &terrain, &geo, &index, &mut memo, ctx, at, calendar, &mut store,
+    );
+    wash_support::draw_once(
+        &terrain, &geo, &index, &mut memo, ctx, elsewhere, calendar, &mut store,
+    );
+
+    assert_eq!(
+        (store.hits(), store.misses(), store.len()),
+        (0, 2, 2),
+        "a second season must not be served the first season's reflectance"
     );
 }

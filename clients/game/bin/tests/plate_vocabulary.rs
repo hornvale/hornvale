@@ -79,6 +79,7 @@ fn seed_42_terrain_layer() -> Grid {
         &BTreeSet::new(),
         &[],
         &Default::default(),
+        &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
     )
 }
 
@@ -263,6 +264,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     &volcanoes,
                     &[],
                     &discovered,
+                    &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
                 )
             });
         assert!(
@@ -295,6 +297,7 @@ fn seed_42_draws_at_least_one_of_each_landform_it_actually_has() {
                     &BTreeSet::new(),
                     &waterfalls,
                     &Discovered::default(),
+                    &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
                 )
             },
         );

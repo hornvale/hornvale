@@ -171,6 +171,7 @@ fn main() {
             &empty,
             &[],
             &undiscovered,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
         );
         draws.push(t0.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
@@ -201,6 +202,7 @@ fn main() {
             &empty,
             &[],
             &undiscovered,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
         );
         draws_aligned.push(t0.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
@@ -249,14 +251,34 @@ fn main() {
         let mut cache = TileCache::default();
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
-        let grid = cache.compose(&terrain, &geo, &index, &f, &aligned, w, h, false);
+        let grid = cache.compose(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &aligned,
+            w,
+            h,
+            false,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+        );
         cold.push(t0.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
         cold_tiles = cache.misses();
 
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t1 = Instant::now();
-        let grid = cache.compose(&terrain, &geo, &index, &f, &aligned, w, h, false);
+        let grid = cache.compose(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &aligned,
+            w,
+            h,
+            false,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+        );
         warm.push(t1.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
 
@@ -267,7 +289,17 @@ fn main() {
         let before = cache.misses();
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t2 = Instant::now();
-        let grid = cache.compose(&terrain, &geo, &index, &f, &scrolled, w, h, false);
+        let grid = cache.compose(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &scrolled,
+            w,
+            h,
+            false,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+        );
         boundary.push(t2.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
         scroll_tiles = cache.misses() - before;
@@ -278,12 +310,32 @@ fn main() {
     // which exactly one crosses a tile boundary.
     let mut cache = TileCache::default();
     let mut walk = aligned;
-    let _ = cache.compose(&terrain, &geo, &index, &f, &walk, w, h, false);
+    let _ = cache.compose(
+        &terrain,
+        &geo,
+        &index,
+        &f,
+        &walk,
+        w,
+        h,
+        false,
+        &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+    );
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t3 = Instant::now();
     for _ in 0..TILE_EDGE {
         walk.origin_col += 1;
-        let grid = cache.compose(&terrain, &geo, &index, &f, &walk, w, h, false);
+        let grid = cache.compose(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &walk,
+            w,
+            h,
+            false,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+        );
         std::hint::black_box(&grid);
     }
     let scroll_mean = t3.elapsed().as_secs_f64() * 1000.0 / f64::from(TILE_EDGE);
@@ -321,7 +373,17 @@ fn main() {
     };
     let mut base = {
         let mut c = TileCache::default();
-        c.compose(&terrain, &geo, &index, &f, &aligned, w, h, false)
+        c.compose(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &aligned,
+            w,
+            h,
+            false,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+        )
     };
     let mut feature_none = Vec::new();
     let mut feature_all = Vec::new();

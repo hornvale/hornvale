@@ -320,6 +320,34 @@ impl View for AtlasView {
         let volcanoes = BTreeSet::new();
         let waterfalls: Vec<Vertex> = Vec::new();
 
+        // NO SPECTRAL CONTEXT HERE, AND THAT IS THE ANSWER THIS VIEW GIVES
+        // (The Wash, Task 6). `plate::Spectral` takes `Option<&LocaleContext>`
+        // exactly so the two shipped callers of `draw_with` may answer
+        // differently, and this one answers `None`.
+        //
+        // **What it costs, stated rather than hidden:** land tiles claim no
+        // colour at all in the overture. `RELIEF_COLORS` — the six-entry
+        // elevation ramp this view used to paint from — is deleted, so
+        // "fall back to the ladder" is not on the menu; the honest fallback
+        // is no ink, and relief is carried by the glyph ladder, which is
+        // decision 0389's whole point. Ocean and salt basin keep their
+        // invented palette claims (`plate::color_for`'s own doc), so the
+        // coastline still reads in colour.
+        //
+        // **Why not build one.** This view holds no `LocaleContext` and
+        // cannot cheaply reach one. `LocaleContext::build_from` needs a
+        // `GeneratedClimate`, which `RungArtifacts` supplies only from
+        // `BuildDepth::Settlements` up — so the `Terrain` rung, which this
+        // view speaks at, could not have one at any price — and it then
+        // builds a second `NearestVertexIndex` (~200 ms, the cost this
+        // module's whole memo exists to avoid paying twice) plus a
+        // `StrangenessBudget`, per distinct terrain, on the STARTUP path.
+        // Paying that so a progressive title sequence can tint its land is
+        // the wrong trade; the live session, which is where a reader
+        // actually studies the map, gets the real thing.
+        let light = plate::PlateLight::for_terminal();
+        let mut spectral = light.unlit();
+
         plate::draw_with(
             terrain,
             geo,
@@ -333,6 +361,7 @@ impl View for AtlasView {
             &volcanoes,
             &waterfalls,
             &discovered,
+            &mut spectral,
         )
     }
 }

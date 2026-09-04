@@ -96,14 +96,34 @@ fn main() {
     let mut cache = TileCache::default();
     // Prime the cache once (the COLD draw), then measure only the WARM
     // redraws below — the quantity H1 names, not the cold fill.
-    let grid = cache.compose(&terrain, &geo, &index, &f, &win, w, h, false);
+    let grid = cache.compose(
+        &terrain,
+        &geo,
+        &index,
+        &f,
+        &win,
+        w,
+        h,
+        false,
+        &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+    );
     std::hint::black_box(&grid);
 
     let mut warm = Vec::with_capacity(runs);
     for _ in 0..runs {
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
-        let grid = cache.compose(&terrain, &geo, &index, &f, &win, w, h, false);
+        let grid = cache.compose(
+            &terrain,
+            &geo,
+            &index,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &mut hornvale_game::plate::PlateLight::flat(false).unlit(),
+        );
         warm.push(t0.elapsed().as_secs_f64() * 1000.0);
         std::hint::black_box(&grid);
     }

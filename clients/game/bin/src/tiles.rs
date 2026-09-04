@@ -3,11 +3,20 @@
 //!
 //! **What it caches, and why it can.** [`crate::plate::draw_terrain_layer`]
 //! is a pure function of `(frame, rung, window origin, size,
-//! colour_allowed)` and the world's own fixed terrain — Task 4's layer
-//! split is exactly the statement that it reads no `Discovered`, no
-//! settlement roster and no cave roster. So a fixed-size block of the
-//! VIRTUAL chart at a given rung has one right answer for the whole
-//! session, and this module stores it. The feature layer is composed over
+//! colour_allowed)`, the world's own fixed terrain, and — since The Wash's
+//! Task 6 — `(season, illuminant)` — Task 4's layer split is exactly the
+//! statement that it reads no `Discovered`, no settlement roster and no
+//! cave roster. So a fixed-size block of the VIRTUAL chart at a given rung
+//! and a given light has one right answer, and this module stores it.
+//!
+//! **"For the whole session" is no longer true, and the key says so.** A
+//! drawn tile used to hold nothing but geometry, so one answer lasted a
+//! session. It now holds INK — the observer's collapse of the ground's
+//! seasonal reflectance under the sun's diurnal light — and nothing here
+//! invalidates by age. [`TileKey::illum_bits`] carries the full argument;
+//! the short version is that a cache with no clock must put the clock in
+//! its key, or it freezes the picture at the first frame and looks correct
+//! while doing it. The feature layer is composed over
 //! the assembled terrain per redraw, unchanged and uncached, exactly as
 //! [`crate::driver`] already does it.
 //!
@@ -117,6 +126,52 @@ struct TileKey {
     /// The tile's column in the chart's own tile grid.
     /// type-audit: bare-ok(count)
     tile_col: u32,
+    /// The season bucket the tile's reflectances were read in
+    /// (`plate::season_bucket`). See [`Self::illum_bits`] for why the two
+    /// spectral inputs are in this key at all.
+    /// type-audit: bare-ok(count)
+    season: u32,
+    /// The bit patterns of the illuminant this tile was lit by, band for
+    /// band — `Illuminant::get()[i].to_bits()`.
+    ///
+    /// **THIS PAIR IS WHAT KEEPS THE RATE SPINE HONEST (The Wash, Task 6).**
+    /// Before this campaign the drawn tile was a pure function of geometry,
+    /// so a tile cached at session start stayed right forever — the module
+    /// doc's "one right answer for the whole session". A tile now carries
+    /// INK derived from the ground's seasonal reflectance and the sun's
+    /// diurnal light, and the cache is still never invalidated by age. A key
+    /// that ignored both would have frozen the plate's colour at whatever
+    /// season and sun angle first drew each tile: correct on the first
+    /// frame, silently stale after — which is the exact defect
+    /// `crate::rate` exists to prevent, reproduced one level below the
+    /// `(FacetId, season)` cache that was built to prevent it.
+    ///
+    /// **Bits, not a rounded value or a fold, for the reason the module doc
+    /// already gives for the frame.** Over-missing costs time; over-hitting
+    /// is a wrong picture. The full 10-band array is exact — two illuminants
+    /// that differ anywhere get two entries, and no two distinct
+    /// illuminants can collide onto one — where a 64-bit fingerprint would
+    /// have traded that guarantee for 72 bytes.
+    ///
+    /// **The cost is real and is the correct cost.** The sun moving evicts
+    /// nothing but does mint a fresh generation of tiles, so a plate redrawn
+    /// after the possession has slept costs a cold draw. Scrolling, resizing
+    /// and rung changes — the motions this cache was actually built for, and
+    /// the ones that happen between turns — do not move the sun, so they
+    /// still hit.
+    /// type-audit: bare-ok(opaque bits)
+    illum_bits: [u64; hornvale_kernel::color::BANDS],
+}
+
+/// The illuminant's own bits, for [`TileKey::illum_bits`].
+fn illum_bits(
+    illuminant: &hornvale_kernel::color::Illuminant,
+) -> [u64; hornvale_kernel::color::BANDS] {
+    let mut out = [0u64; hornvale_kernel::color::BANDS];
+    for (slot, band) in out.iter_mut().zip(illuminant.get().iter()) {
+        *slot = band.to_bits();
+    }
+    out
 }
 
 /// A frame's two `f64` as their exact bit patterns — the module doc's
@@ -220,6 +275,7 @@ impl TileCache {
         tile_col: u32,
         tile_row: u32,
         colour_allowed: bool,
+        spectral: &mut plate::Spectral<'_>,
     ) -> &Grid {
         let (pole_lat_bits, pole_lon_bits) = frame_bits(f);
         let key = TileKey {
@@ -228,6 +284,8 @@ impl TileCache {
             depth,
             tile_row,
             tile_col,
+            season: spectral.season,
+            illum_bits: illum_bits(spectral.illuminant),
         };
         if self.tiles.contains_key(&key) {
             self.hits += 1;
@@ -255,6 +313,7 @@ impl TileCache {
                 w,
                 h,
                 colour_allowed,
+                spectral,
             );
             self.tiles.insert(key, drawn);
         }
@@ -298,6 +357,7 @@ impl TileCache {
         w: u16,
         h: u16,
         colour_allowed: bool,
+        spectral: &mut plate::Spectral<'_>,
     ) -> Grid {
         let mut out = Grid::new(w, h);
         let (vw, vh) = plate::virtual_dims(win.depth);
@@ -345,6 +405,7 @@ impl TileCache {
                     tile_col,
                     tile_row,
                     colour_allowed,
+                    spectral,
                 );
                 for dy in 0..band_h {
                     for dx in 0..band_w {
@@ -493,6 +554,7 @@ mod tests {
             w,
             h,
             false,
+            &mut plate::PlateLight::flat(false).unlit(),
         )
     }
 
@@ -511,6 +573,7 @@ mod tests {
             w,
             h,
             false,
+            &mut plate::PlateLight::flat(false).unlit(),
         )
     }
 
@@ -550,6 +613,7 @@ mod tests {
                         tile_col,
                         tile_row,
                         false,
+                        &mut plate::PlateLight::flat(false).unlit(),
                     )
                     .to_plain_text();
                 seen.insert(text);
@@ -845,6 +909,7 @@ mod tests {
             3,
             3,
             false,
+            &mut plate::PlateLight::flat(false).unlit(),
         );
         let _ = cache.terrain(
             &world.terrain,
@@ -855,6 +920,7 @@ mod tests {
             3,
             3,
             false,
+            &mut plate::PlateLight::flat(false).unlit(),
         );
         assert_eq!(cache.misses(), 2, "the two frames shared an entry");
         assert_eq!(cache.hits(), 0);
@@ -934,6 +1000,7 @@ mod tests {
                 0,
                 down - 1,
                 false,
+                &mut plate::PlateLight::flat(false).unlit(),
             );
             assert_eq!(
                 u32::from(tile.height()),
@@ -959,6 +1026,7 @@ mod tests {
             0,
             down + 4,
             false,
+            &mut plate::PlateLight::flat(false).unlit(),
         );
         assert_eq!(tile.height(), 0, "a tile below the chart drew ground");
     }

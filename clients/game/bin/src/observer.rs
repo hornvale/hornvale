@@ -6,7 +6,7 @@
 //! 0389 says nothing a reader must trust may live only in colour; here the
 //! glyph carries elevation, so `None` is a legal render and never an error.
 
-use hornvale_kernel::color::{Observer, Signal, standard_observer};
+use hornvale_kernel::color::{Illuminant, Observer, Reflectance, Signal, standard_observer};
 
 /// What this terminal can display.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,13 +48,60 @@ impl TerminalObserver {
     /// terminal shows no colour; the caller still emits the glyph.
     pub fn render(&self, signal: &Signal) -> Option<[u8; 3]> {
         let full = self.observer.to_srgb(signal)?;
+        self.show(full)
+    }
+
+    /// The whole collapse, from the ground's own curve and the light falling
+    /// on it to what this terminal can show — [`Observer::sense`] followed by
+    /// [`Self::render`], through this observer's OWN
+    /// [`standard_observer`] rather than a second one built at the call site.
+    ///
+    /// **Named because the plate calls it ~1,920 times a frame** (The Wash,
+    /// Task 6). Spelling it `standard_observer().sense(r, i)` in `plate.rs`
+    /// would build a fresh [`Observer`] — four spectra — per drawn tile, to
+    /// reach the one this struct already holds.
+    pub fn observe(&self, reflectance: &Reflectance, illuminant: &Illuminant) -> Option<[u8; 3]> {
+        self.render(&self.observer.sense(reflectance, illuminant))
+    }
+
+    /// Put an ALREADY-sRGB colour through this terminal's own depth — the
+    /// half of [`Self::render`] below the observer.
+    ///
+    /// **Why this exists (The Wash, Task 6).** The plate's water classes
+    /// (`plate::OCEAN_COLOR`, `plate::SALT_BASIN_COLOR`) are invented
+    /// client-side palette claims, not spectra: there is no reflectance to
+    /// sense for the surface of an ocean, whose facet reflectance describes
+    /// the GROUND cover under it. Routing them through here rather than
+    /// emitting them raw keeps ONE rule — "the observer decides what colour
+    /// reaches this terminal" — instead of two, so a `ColorDepth::None`
+    /// terminal emits no colour on ANY terrain tile, which is what spec H5
+    /// actually claims.
+    pub fn show(&self, rgb: [u8; 3]) -> Option<[u8; 3]> {
         match self.depth {
             ColorDepth::None => None,
-            ColorDepth::TrueColor => Some(full),
-            ColorDepth::Palette256 => Some(quantize_channels(full, 6)),
-            ColorDepth::Palette16 => Some(quantize_channels(full, 2)),
+            ColorDepth::TrueColor => Some(rgb),
+            ColorDepth::Palette256 => Some(quantize_channels(rgb, 6)),
+            ColorDepth::Palette16 => Some(quantize_channels(rgb, 2)),
         }
     }
+}
+
+/// The observer THIS terminal is, from the one `NO_COLOR` answer the client
+/// already resolves ([`crate::plate::colour_allowed`]).
+///
+/// **The mapping is deliberately two-valued, and that is a statement about
+/// what the client can currently probe, not about what the pipeline
+/// supports.** [`ColorDepth`] carries four rungs and
+/// [`TerminalObserver::render`] honours all four; nothing in this client
+/// probes `COLORTERM` or the terminfo database, so the only honest answer
+/// available is the one `NO_COLOR` gives. Adding a real depth probe changes
+/// this function and nothing else.
+pub fn terminal_observer(colour_allowed: bool) -> TerminalObserver {
+    TerminalObserver::new(if colour_allowed {
+        ColorDepth::TrueColor
+    } else {
+        ColorDepth::None
+    })
 }
 
 /// Snap each channel to `levels` evenly spaced values. `levels` is the count

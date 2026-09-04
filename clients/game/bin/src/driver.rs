@@ -494,9 +494,9 @@ pub struct Driver {
     /// idiom `terrain_of` uses for `Self::terrain`), so paying it once at
     /// `start` and reading a plain field from then on is strictly cheaper
     /// than re-deriving it wherever a season is needed.
-    // Task 6 is the reader (fix round 1, Fix 1): no shipped call site
-    // resolves a season through this field yet.
-    #[allow(dead_code)]
+    // Task 6 IS the reader now: `Driver::plate_light` folds this field
+    // through `season_bucket_for` and `plate_illuminant` on every plate
+    // draw, so the `#[allow(dead_code)]` this carried is gone.
     calendar: Option<hornvale_astronomy::Calendar>,
     /// The plate's `(FacetId, season)` reflectance cache (The Wash, Task 4):
     /// the store [`plate::terrain_at_tile`] will consult and fill once a
@@ -506,17 +506,22 @@ pub struct Driver {
     /// change mints a new entry rather than serving a stale one, which is
     /// what makes it safe to sit above the plate's own never-invalidated
     /// TERRAIN layer cache ([`Self::tiles`]'s own doc).
-    // Task 6 is the reader (fix round 1, Fix 1: reverted from an earlier
-    // `&mut self` thread through `world_view_vertex` — that call site can
-    // never populate or read a hit here, see its own doc). Both shipped
-    // callers of `plate::terrain_at_tile` still pass `ctx: None`, so this
-    // field is left visible and unread rather than threaded somewhere that
-    // only pretends to use it.
-    #[allow(dead_code)]
-    reflectance_cache: hornvale_kernel::component::ComponentStore<
-        plate::ReflectanceKey,
-        hornvale_kernel::color::Reflectance,
-    >,
+    // Task 6 IS the reader now (it was `#[allow(dead_code)]` until this
+    // task): `Driver::world_plate` and `Driver::world_plate_for_redraw`
+    // both hand it to `plate::Spectral`, which is what makes the ~1,920
+    // per-frame reflectance consults cost one locale call per
+    // `(facet, season)` instead of one per drawn tile.
+    //
+    // `plate::ReflectanceCache`, not a bare `ComponentStore`: the wrapper
+    // carries the hit/miss counters that make the cache's hit path
+    // observable without timing anything (`Instant` is banned) — see its
+    // own doc for the assertion that could not fail before it existed.
+    //
+    // `world_view_vertex` still does NOT thread it (fix round 1, Fix 1):
+    // that call site reads `.vertex` alone and can never populate or read a
+    // hit here, so making three read-only queries advertise mutation to
+    // reach it would buy nothing.
+    reflectance_cache: plate::ReflectanceCache,
 }
 
 /// What [`Driver::noun_prompt`] saves for `Esc` to restore.
@@ -723,7 +728,7 @@ pub fn season_bucket_for(
 /// definition rather than a shared symbol). The fallback for a world with
 /// no solar geometry to place a real sun by, used by both
 /// [`plate_illuminant`]'s `None` cases.
-fn flat_illuminant() -> hornvale_kernel::color::Illuminant {
+pub fn flat_illuminant() -> hornvale_kernel::color::Illuminant {
     hornvale_kernel::color::Illuminant::new([1.0; hornvale_kernel::color::BANDS])
         .expect("a unit illuminant is finite and non-negative")
 }
@@ -1081,7 +1086,7 @@ impl Driver {
             on_walk_band: true,
             walk_scene: None,
             calendar,
-            reflectance_cache: hornvale_kernel::component::ComponentStore::new(),
+            reflectance_cache: plate::ReflectanceCache::new(),
         };
         driver.refresh();
         Ok(driver)
@@ -1258,8 +1263,21 @@ impl Driver {
     /// The Quadrat's Task 3, not 49 spatial searches (`plate.rs`'s own
     /// doc) — but a full redraw is still a full redraw, so a caller
     /// reaching this directly still owns not paying it needlessly.
-    pub fn world_plate(&self, w: u16, h: u16) -> hornvale_game_core::Grid {
+    pub fn world_plate(&mut self, w: u16, h: u16) -> hornvale_game_core::Grid {
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        // `&mut self` since The Wash's Task 6, and the reason is the cache:
+        // the plate is drawn through `Self::reflectance_cache`, the one
+        // store that keeps a `(facet, season)` reflectance from being
+        // recomputed for every tile of every draw.
+        let (illuminant, observer, at, season) = self.plate_light();
+        let mut spectral = plate::Spectral {
+            ctx: Some(self.session.context()),
+            illuminant: &illuminant,
+            observer: &observer,
+            at,
+            season,
+            cache: Some(&mut self.reflectance_cache),
+        };
         plate::draw(
             &self.terrain,
             &self.geo,
@@ -1272,6 +1290,45 @@ impl Driver {
             &self.volcanoes,
             &self.waterfalls,
             &self.discovered,
+            &mut spectral,
+        )
+    }
+
+    /// The light, the observer, the instant and the season this session's
+    /// plate is resolved through (The Wash, Task 6) — everything
+    /// [`plate::Spectral`] needs EXCEPT the two halves that are borrows of
+    /// this struct's own fields (the locale context and the reflectance
+    /// cache), which is why they are not returned here: a `&self` method
+    /// handing back a `Spectral` would borrow the whole `Driver` and make
+    /// `&mut self.reflectance_cache` impossible at the call site.
+    ///
+    /// **The illuminant is resolved ONCE per draw, above the tile loop**, as
+    /// [`plate_illuminant`]'s own doc requires: it is anchored to where the
+    /// reader stands (`session.day()` and the possession's own latitude),
+    /// never to the tile, so a coarse rung lights the whole plate with the
+    /// reader's own sunlight rather than sweeping a terminator across it.
+    ///
+    /// **The observer is two-valued because `NO_COLOR` is the only depth
+    /// probe this client has** — see [`crate::observer::terminal_observer`].
+    fn plate_light(
+        &self,
+    ) -> (
+        hornvale_kernel::color::Illuminant,
+        crate::observer::TerminalObserver,
+        hornvale_kernel::WorldTime,
+        u32,
+    ) {
+        // SAFETY: `world` was allocated by `Box::into_raw` in `start`, is
+        // reclaimed only in `Drop`, and is never aliased mutably — this is
+        // the same shared read `Self::sites`' own construction takes.
+        let world = unsafe { &*self.world };
+        let at = self.session.day();
+        let latitude_deg = self.session.position().coord().latitude;
+        (
+            plate_illuminant(world, self.calendar.as_ref(), at, latitude_deg),
+            crate::observer::terminal_observer(plate::colour_allowed()),
+            at,
+            season_bucket_for(self.calendar.as_ref(), at),
         )
     }
 
@@ -1363,6 +1420,21 @@ impl Driver {
             return None;
         }
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        // THE LIVE SESSION'S OWN PATH (The Wash, Task 6). `main.rs`'s
+        // `redraw` calls this method and never `world_plate`, so this is the
+        // call that decides what a player actually sees — it is threaded
+        // with a real `Some(ctx)` for that reason, and `TileCache`'s key
+        // carries `(season, illuminant)` so a cached tile can never outlive
+        // the light it was drawn under.
+        let (illuminant, observer, at, season) = self.plate_light();
+        let mut spectral = plate::Spectral {
+            ctx: Some(self.session.context()),
+            illuminant: &illuminant,
+            observer: &observer,
+            at,
+            season,
+            cache: Some(&mut self.reflectance_cache),
+        };
         let mut grid = self.tiles.compose(
             &self.terrain,
             &self.geo,
@@ -1372,6 +1444,7 @@ impl Driver {
             plate_width,
             plate_height,
             plate::colour_allowed(),
+            &mut spectral,
         );
         // No `w`/`h` here, deliberately: the feature layer reads the window's
         // size from the grid it is drawing onto, so this path cannot hand it a
@@ -2481,10 +2554,12 @@ impl Driver {
     /// [`Self::reflectance_cache`] through by `&mut` here bought a false
     /// appearance of use at the cost of making three read-only queries
     /// (`resolve`/`resolve_world_view`/this one) advertise mutation to
-    /// every future caller. `season`/`reflectance_cache` below are `0`/
-    /// `None`, exactly like [`plate::draw_terrain_layer`]'s own call — see
-    /// [`Self::reflectance_cache`]'s own doc for where the field's real
-    /// reader lives.
+    /// every future caller. `season`/`reflectance_cache` below stay `0`/
+    /// `None` for that reason — and note that this is now the ONLY
+    /// `terrain_at_tile` call in the shipped tree that passes `ctx: None`
+    /// deliberately: [`plate::draw_terrain_layer`]'s call was the other one
+    /// and The Wash's Task 6 flipped it. See [`Self::reflectance_cache`]'s
+    /// own doc for where the field's real readers are.
     fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         plate::terrain_at_tile(
