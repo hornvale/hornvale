@@ -716,6 +716,92 @@ pub fn season_bucket_for(
         .unwrap_or(0)
 }
 
+/// A flat, colourless illuminant — every band at unit weight (The Wash,
+/// Task 5's plate-scale echo of [`hornvale_vessel`]'s own room-scale
+/// `flat_illuminant`, `windows/vessel/src/eyes.rs:58` — private to that
+/// crate, so this is a deliberate second copy of the same one-line
+/// definition rather than a shared symbol). The fallback for a world with
+/// no solar geometry to place a real sun by, used by both
+/// [`plate_illuminant`]'s `None` cases.
+fn flat_illuminant() -> hornvale_kernel::color::Illuminant {
+    hornvale_kernel::color::Illuminant::new([1.0; hornvale_kernel::color::BANDS])
+        .expect("a unit illuminant is finite and non-negative")
+}
+
+/// The illuminant at a given sun elevation: [`hornvale_astronomy::daylight`]
+/// for `world`'s own star, reddened by [`hornvale_astronomy::at_elevation`]
+/// for `sun_elevation_deg`.
+///
+/// Separated from [`plate_illuminant`] so a test can drive the elevation
+/// directly (The Wash, Task 5's own brief) rather than needing to find a
+/// world time and latitude that happen to produce one.
+///
+/// **The star is `generate_star(world.seed.derive(streams::ROOT))`, never
+/// `Sky::system()`.** The generated star is a pure function of the world's
+/// own seed, defined for every world — tier-0 `ConstantSun` included — so
+/// this never needs the `Option<&StarSystem>` `Sky::system()` would hand
+/// back `None` for there. What a constant-sun world genuinely lacks is a
+/// CALENDAR to place a sun altitude with, which is [`plate_illuminant`]'s
+/// concern, not this one: by the time a caller has a `sun_elevation_deg` to
+/// pass here, that question is already answered.
+pub fn plate_illuminant_at(
+    world: &World,
+    sun_elevation_deg: f64,
+) -> hornvale_kernel::color::Illuminant {
+    let star =
+        hornvale_astronomy::generate_star(world.seed.derive(hornvale_astronomy::streams::ROOT));
+    let base = hornvale_astronomy::daylight(&star);
+    hornvale_astronomy::at_elevation(&base, sun_elevation_deg)
+}
+
+/// The illuminant for one whole draw, anchored to the OBSERVER rather than
+/// the tile (spec §4.5, corrected before this task was dispatched). An
+/// earlier draft of the spec claimed the illuminant is "diurnal and uniform
+/// across the plate" — false at coarse rungs, where one plate spans every
+/// latitude and longitude a globe has, so a single illuminant computed
+/// per-tile would light the night side as noon. The map is instead lit as
+/// it is *where the reader stands*: one call, at the observer's own
+/// `latitude_deg` and `day`, applied uniformly across the whole plate. That
+/// is a stated cartographic convention, not an approximation pretending to
+/// be a fact — and the cost is named rather than hidden: no terminator
+/// sweeps the map, so at a coarse rung the far side of the world carries
+/// the reader's own sunlight.
+///
+/// Follows the exact composition [`hornvale_vessel`]'s own room-scale
+/// `eyes::daylight_at` uses (`windows/vessel/src/eyes.rs:81-97`): resolve
+/// the sun altitude from `calendar` at `(day, latitude_deg)`, then hand it
+/// to [`plate_illuminant_at`]. Meant to be called **once per draw**, above
+/// the tile loop, and the result threaded through by reference — nothing
+/// about its inputs (`world`, `calendar`, `day`, `latitude_deg`) varies per
+/// tile, so there is no tile-shaped parameter for a caller to loop over.
+///
+/// **Two `None` cases, both modelled worlds, never errors — see
+/// [`season_bucket_for`]'s own doc for the identical fold.** `calendar`
+/// itself is `None` for a tier-0 `ConstantSun` world (no generated star
+/// system, no solar geometry to place a sun by); a `Some` calendar can
+/// still report [`hornvale_astronomy::Calendar::solar_altitude_at`] as
+/// `None` (zero obliquity AND zero eccentricity — that method's own
+/// documented contract). Both resolve to [`flat_illuminant`] rather than
+/// guessing a sun that cannot be honestly placed — the same fallback
+/// [`hornvale_vessel`]'s `eyes::flat_illuminant` uses, for the same reason.
+/// type-audit: bare-ok(diagnostic-value: latitude_deg)
+pub fn plate_illuminant(
+    world: &World,
+    calendar: Option<&hornvale_astronomy::Calendar>,
+    day: hornvale_kernel::WorldTime,
+    latitude_deg: f64,
+) -> hornvale_kernel::color::Illuminant {
+    let altitude = calendar.and_then(|cal| {
+        hornvale_astronomy::StdInstant::new(day.as_std_days())
+            .ok()
+            .and_then(|t| cal.solar_altitude_at(t, latitude_deg))
+    });
+    match altitude {
+        Some(sun_elevation_deg) => plate_illuminant_at(world, sun_elevation_deg),
+        None => flat_illuminant(),
+    }
+}
+
 impl Driver {
     /// Build a fresh world for `seed` (default sky/terrain/settlement pins,
     /// generated sky — the same defaults `clients/vessel/wasm`'s `hv_start`

@@ -32,6 +32,12 @@ mod wash_support {
     pub const W: u16 = 80;
     /// See [`W`].
     pub const H: u16 = 24;
+    /// A representative mid-northern latitude, degrees — the observer
+    /// latitude Task 5's illuminant tests sample at. Not seed 42's flagship
+    /// latitude (this file has no need of that one specifically): any fixed
+    /// latitude for which the sun clears the horizon at both sample
+    /// elevations below serves the directional claim just as well.
+    pub const SAMPLE_LATITUDE_DEG: f64 = 45.0;
 
     /// Seed 42's locale context, built from a bare world. Everything else
     /// this file needs — the terrain, the geosphere, the nearest-vertex
@@ -68,6 +74,14 @@ mod wash_support {
     /// satisfy. Derived the same way `Driver::start_from_world` derives
     /// `Driver::calendar`: `hornvale_worldgen::sky_of(world)`, never a
     /// second, drifting genesis.
+    ///
+    /// **The leaked `&'static World` (Task 5) is the same reference `ctx`
+    /// and `session` already borrow** — not a second genesis, just the one
+    /// this function already built, handed back so a caller can reach
+    /// [`hornvale_game::driver::plate_illuminant`]/`plate_illuminant_at`,
+    /// neither of which `Session`'s own public API can answer (it exposes
+    /// no seed or world accessor — confirmed by grep, not assumed; see
+    /// Task 5's own report for the citation this replaces).
     // Named construction site (decision 0092): `terrain_of` re-derives the
     // tectonic globe once here, the same reason `Driver::start_from_world`
     // carries this same allow at its own `terrain_of` call.
@@ -79,6 +93,7 @@ mod wash_support {
         NearestVertexIndex,
         RoomMeshMemo,
         Option<hornvale_astronomy::Calendar>,
+        &'static World,
     ) {
         let world = hornvale_worldgen::build_world(
             Seed(42),
@@ -114,6 +129,7 @@ mod wash_support {
             index,
             RoomMeshMemo::default(),
             calendar,
+            world,
         )
     }
 
@@ -341,7 +357,7 @@ fn two_instants_in_one_season_share_a_bucket() {
 /// season must not grow the store.
 #[test]
 fn a_redraw_in_the_same_season_adds_no_cache_entries() {
-    let (session, geo, terrain, index, mut memo, calendar) = wash_support::seed_42_world();
+    let (session, geo, terrain, index, mut memo, calendar, _world) = wash_support::seed_42_world();
     let mut store = hornvale_kernel::component::ComponentStore::new();
     let ctx = session.context();
     let at = session.day();
@@ -360,5 +376,104 @@ fn a_redraw_in_the_same_season_adds_no_cache_entries() {
         store.len(),
         after_first,
         "a same-season redraw must add nothing"
+    );
+}
+
+/// FIRES WHEN: the illuminant stops varying with the sun's altitude. Dawn
+/// and noon must differ, and DIRECTIONALLY — a low sun is warmer, so its
+/// long-wavelength bands carry relatively more. Mere inequality would be
+/// satisfied by any change at all.
+///
+/// **Adapted from the brief's own `session: &Session` signature.** `Session`
+/// exposes no seed or world accessor anywhere in its public API (grepped,
+/// not assumed: `windows/vessel/src/session.rs`'s one `impl<'w> Session<'w>`
+/// block has 77 `pub fn`s and none of them hands back `&World`, `Seed`, or
+/// anything that reaches one), so `plate_illuminant_at`/`plate_illuminant`
+/// take `&World` directly instead — the same thing
+/// [`hornvale_vessel`]'s own room-scale `eyes::daylight_at` takes, which
+/// this task's brief named as the pattern to follow. `wash_support::
+/// seed_42_world` hands back the `&'static World` it already built rather
+/// than a second genesis.
+#[test]
+fn a_low_sun_is_warmer_than_a_high_one() {
+    let (.., world) = wash_support::seed_42_world();
+
+    let dawn = hornvale_game::driver::plate_illuminant_at(world, 2.0);
+    let noon = hornvale_game::driver::plate_illuminant_at(world, 60.0);
+
+    let warmth = |i: &hornvale_kernel::color::Illuminant| -> f64 {
+        let b = i.get();
+        let n = b.len();
+        let long: f64 = b[n / 2..].iter().sum();
+        let short: f64 = b[..n / 2].iter().sum();
+        long / short
+    };
+
+    assert!(
+        warmth(&dawn) > warmth(&noon),
+        "a low sun must be warmer: dawn {:.4} vs noon {:.4}",
+        warmth(&dawn),
+        warmth(&noon)
+    );
+}
+
+/// FIRES WHEN: `plate_illuminant_at` stops being a pure function of its
+/// arguments — the property that lets [`plate_illuminant`] be called
+/// **once per draw** rather than once per tile. Per this task's own
+/// constraint, "computed once" cannot be shown by timing anything
+/// (`Instant` is banned even in tests); this shows it structurally instead,
+/// the way the brief's own hint puts it ("restructure so computing it twice
+/// would not type-check"): neither function takes a tile/facet parameter at
+/// all, so there is nothing tile-shaped for a second call to vary on — two
+/// calls with the identical `(world, sun_elevation_deg)` must return the
+/// identical `Illuminant`, bit for bit, which is what this test pins.
+#[test]
+fn plate_illuminant_at_is_deterministic_across_repeated_calls() {
+    let (.., world) = wash_support::seed_42_world();
+
+    let first = hornvale_game::driver::plate_illuminant_at(world, 30.0);
+    let second = hornvale_game::driver::plate_illuminant_at(world, 30.0);
+
+    assert_eq!(
+        first, second,
+        "the same (world, elevation) must produce the identical illuminant"
+    );
+}
+
+/// FIRES WHEN: a starless world (tier-0 `ConstantSun`, no calendar) stops
+/// falling back to a flat, colourless illuminant and instead panics or
+/// silently guesses a sun it cannot honestly place. The two `None` cases
+/// [`hornvale_game::driver::plate_illuminant`] documents are modelled
+/// worlds, not errors — this is the first of them; the repo's own keystone
+/// fixture is generated `--sky constant`, so it is not exotic.
+#[test]
+fn a_starless_world_lights_the_plate_flat() {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Constant,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .expect("seed 42 generates under a constant sun");
+    let calendar = hornvale_worldgen::sky_of(&world)
+        .ok()
+        .and_then(|sky| sky.calendar().cloned());
+    assert!(
+        calendar.is_none(),
+        "a tier-0 constant sun must have no calendar to place a sun by"
+    );
+
+    let lit = hornvale_game::driver::plate_illuminant(
+        &world,
+        calendar.as_ref(),
+        hornvale_kernel::WorldTime::GENESIS,
+        wash_support::SAMPLE_LATITUDE_DEG,
+    );
+
+    assert_eq!(
+        *lit.get(),
+        [1.0; hornvale_kernel::color::BANDS],
+        "a starless world must fall back to a flat unit illuminant"
     );
 }
