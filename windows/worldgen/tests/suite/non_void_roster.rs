@@ -104,9 +104,7 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let climate = climate_of(&world).expect("climate reconstructs");
     let sky = sky_of(&world).expect("sky reconstructs");
     let geo = terrain.geosphere();
-    let system = sky
-        .system()
-        .unwrap_or_else(|| panic!("seed {seed} has a generated star system"));
+    let system = sky.system();
     let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {

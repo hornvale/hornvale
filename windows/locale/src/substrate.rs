@@ -53,13 +53,12 @@ mod tests {
     // sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
-    use hornvale_kernel::World;
     use hornvale_worldgen::{climate_of, terrain_of};
 
     #[test]
     fn substrate_is_deterministic_and_total() {
         // Every vertex resolves to a substrate; twice-sampled is identical.
-        let w = World::new(hornvale_kernel::Seed(42));
+        let w = hornvale_worldgen::fixture::seed_42_world();
         let climate = climate_of(&w).unwrap();
         let terrain = terrain_of(&w).unwrap();
         let geo = climate.geosphere();
@@ -74,7 +73,7 @@ mod tests {
     fn high_unrest_vertices_read_volcanic() {
         // Every high-unrest land vertex reads Basaltic or Ashen (a total
         // implication — never vacuously misleading).
-        let w = World::new(hornvale_kernel::Seed(42));
+        let w = hornvale_worldgen::fixture::seed_42_world();
         let climate = climate_of(&w).unwrap();
         let terrain = terrain_of(&w).unwrap();
         let geo = climate.geosphere();

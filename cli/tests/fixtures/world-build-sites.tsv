@@ -90,6 +90,7 @@ windows/lab/tests/suite/the_doctrine.rs	1	unmigrated:1
 windows/lab/tests/suite/the_explanations.rs	1	unmigrated:1
 windows/lab/tests/suite/the_fare_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/the_mire_calibration.rs	1	unmigrated:1
+windows/locale/src/budget.rs	1	identity:1
 windows/locale/tests/suite/surface_mixture.rs	1	unmigrated:1
 windows/scene/src/lib.rs	6	unmigrated:6
 windows/scene/src/region.rs	2	unmigrated:2

@@ -321,17 +321,17 @@ impl Sky {
         self.0.sky_at_visibility(time, vis)
     }
 
-    /// The derived calendar, if this world has a generated sky. `None` for
-    /// the tier-0 constant sun, which has no cycles. Climate consumes this
-    /// at the composition root (spec §13 opener).
-    pub fn calendar(&self) -> Option<&hornvale_astronomy::Calendar> {
-        Some(self.0.calendar())
+    /// The derived calendar. Every world has one, since The Zenith — a
+    /// `Calendar` whose `day_length()` is `None` is a tidally locked world,
+    /// which is a different thing and still expressible.
+    pub fn calendar(&self) -> &hornvale_astronomy::Calendar {
+        self.0.calendar()
     }
 
-    /// The generated star system, if this world has one. `None` for the
-    /// tier-0 constant sun. The star-chart command reads this.
-    pub fn system(&self) -> Option<&hornvale_astronomy::StarSystem> {
-        Some(self.0.system())
+    /// The generated star system. Every world has one; the star-chart
+    /// command reads this.
+    pub fn system(&self) -> &hornvale_astronomy::StarSystem {
+        self.0.system()
     }
 }
 
@@ -2589,8 +2589,6 @@ pub fn demography_report_from_masked(
 }
 
 /// The scalar stellar inputs climate needs, derived from this world's sky.
-/// Constant-sky worlds get an Earth baseline so the biome map exists for
-/// every world (spec: the coarse globe is generated for all).
 fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
     let generated = &sky.0;
     let system = generated.system();
@@ -2617,9 +2615,6 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
 /// tuple: most of that function's ten call sites need insolation/obliquity/
 /// regime for demography or substrate queries that never touch temperature,
 /// so widening its return would touch every one of them for no reason.
-/// Constant-sky worlds have no `Anchor` at all, so they get `0.0` — the
-/// residual's own mean, i.e. the Earth anchor with no drawn spread, matching
-/// `stellar_inputs`'s own Earth-baseline default for the constant-sky arm.
 fn greenhouse_forcing_k(sky: &Sky) -> f64 {
     GREENHOUSE_FORCING_WIDTH_K * sky.0.system().anchor.greenhouse_residual
 }
@@ -3614,15 +3609,7 @@ pub fn paleoclimate_from(
     let elevation = terrain.globe().elevation.clone();
     let present_sea_level = terrain.sea_level();
 
-    // No forcing to read (constant sky) → no deep time; empty record.
-    let Some(system) = sky.system() else {
-        return Ok(hornvale_paleoclimate::extract(
-            geo,
-            &elevation,
-            present_sea_level,
-            &[],
-        ));
-    };
+    let system = sky.system();
     let forcing = &system.forcing;
 
     let seafloor = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
@@ -3797,14 +3784,6 @@ pub fn paleoclimate_from(
 ///   `EraClimate.day` gets the era's true deep-time day on BOTH paths, from
 ///   the identical expression.
 ///
-/// On the constant sky (no orbital forcing) there is no deep time: a single
-/// present-era mask is returned and the bake sees a stable world — no vertex
-/// ever flips habitability, so climate displacement cannot fire at all. What
-/// displacement remains is **predation**: The Tumult made crowding a growth
-/// term only (it no longer starts fights), and a raid keys off the *value*
-/// gradient between neighbouring vertices, which a frozen mask preserves intact.
-/// A constant-sky world is therefore quiet in migrations and not in conquests.
-///
 /// The `ice` field is left empty on every era: the snowline is already folded
 /// into `habitable` (an iced vertex reads below-freezing, hence not habitable),
 /// so `factor` gates purely on habitability and never double-counts ice.
@@ -3870,34 +3849,7 @@ fn bake_eras(
         hornvale_kernel::VertexMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
     };
 
-    // No forcing to replay (constant sky) → one present-era mask, no swing.
-    let Some(system) = sky.system() else {
-        let habitable = livable_mask(
-            present_sea_level,
-            hornvale_kernel::TempAnomaly::from_offset_c(0.0),
-        );
-        return Ok((
-            vec![EraClimate {
-                // The present, in absolute standard days — the same instant
-                // `paleoclimate_from`'s newest era carries (`-WINDOW + 24 *
-                // WINDOW / 24` is exactly `0.0`). This slot used to hold
-                // `cfg.start_year`, a bake YEAR; see the doc above.
-                // `WorldTime::GENESIS` is the same committed value (0.0 days)
-                // by construction.
-                day: WorldTime::GENESIS,
-                ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
-                habitable,
-                sea_level: present_sea_level,
-                ice_fraction: 0.0,
-            }],
-            // No forcing to replay: the one era IS the present.
-            vec![EraAdjust::present(terrain)],
-            // ...and it opens the bake window. With one era, `era_index_for`
-            // returns 0 for every year regardless, so this value binds
-            // nothing; it is here because the vectors are parallel.
-            vec![cfg.start_year],
-        ));
-    };
+    let system = sky.system();
     let forcing = &system.forcing;
 
     // Fine ice integration across the deep-time window — the identical
@@ -5149,8 +5101,8 @@ pub fn perception_lens(p: &hornvale_species::PerceptionVector) -> PerceptionLens
 /// byte-identical); Nocturnal at the first non-daylight instant found by a
 /// deterministic scan of 1/24-local-day steps over two local days;
 /// Crepuscular at the first light/dark boundary the same scan finds.
-/// Worlds without a day/night cycle (constant sun, tidal lock) observe at
-/// day 0.0 regardless.
+/// Worlds without a day/night cycle (tidal lock) observe at day 0.0
+/// regardless.
 /// type-audit: pending(wave-3: return)
 pub fn observation_time(
     world: &World,
@@ -5161,9 +5113,7 @@ pub fn observation_time(
         return Ok(0.0);
     }
     let sky = sky_of(world)?;
-    let Some(calendar) = sky.calendar() else {
-        return Ok(0.0);
-    };
+    let calendar = sky.calendar();
     let Some(day_len) = calendar.day_length() else {
         return Ok(0.0); // locked: no day/night cycle
     };
@@ -8619,16 +8569,14 @@ fn build_to(
     stage("alignments", || -> Result<(), BuildError> {
         // The Long Count: each settlement's founding sightline. Skipped
         // wholesale on locked worlds / polar latitudes (the azimuth
-        // function returns None) and on the constant sky (no calendar).
+        // function returns None).
         // Placed before the settlement-depth early return (below) so a
         // world built only to `BuildDepth::Settlements` still carries
         // alignments — collecting first to avoid holding the sky borrow
         // across commits.
         let pairs: Vec<(EntityId, f64)> = {
             let sky = sky_of(&world)?;
-            let Some(calendar) = sky.calendar() else {
-                return Ok(());
-            };
+            let calendar = sky.calendar();
             hornvale_terrain::places(&world)
                 .iter()
                 // founding-solstice-azimuth-degrees is documented as a
@@ -9599,8 +9547,7 @@ fn moon_ordinal(index: usize) -> &'static str {
 
 /// The world's cycles as reader-facing lines: year length, the seasonal
 /// swell of daylight (if the world has axial tilt), and one line per moon.
-/// Empty for constant-sky worlds, which have no generated calendar to
-/// describe.
+/// Includes the locked-world case, whose calendar has no local day.
 /// type-audit: bare-ok(prose: return)
 pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
@@ -9676,8 +9623,7 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
 }
 
 /// The night sky as a single sentence naming its notable neighbor stars,
-/// brightest first. `None` for constant-sky worlds, which have no
-/// neighborhood to describe.
+/// brightest first.
 /// type-audit: bare-ok(prose: return)
 pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
     let sky = sky_of(world)?;
@@ -9701,8 +9647,7 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
 /// flagship vantage reaches the almanac, if no place resolves), plus one
 /// sentence per wandering sibling planet, innermost order, plus a single
 /// figure count/ecliptic summary line (night-sky stage 3; omitted for a sky
-/// with no figures at all). `None` for constant-sky worlds, which have no
-/// neighborhood to describe.
+/// with no figures at all).
 /// type-audit: bare-ok(prose: return)
 pub fn night_sky_lines(
     world: &World,
@@ -9929,8 +9874,7 @@ pub fn night_sky_lines(
     }))
 }
 
-/// Notes recorded during sky genesis. Empty for constant-sky worlds, which
-/// are never generated.
+/// Notes recorded during sky genesis.
 /// type-audit: bare-ok(prose: return)
 pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
@@ -10153,7 +10097,7 @@ fn land_list_labels(world: &World) -> Vec<String> {
 }
 
 /// Gather everything the almanac renders, reconstructing the stateless
-/// tier-0 providers.
+/// providers.
 // Named construction site (decision 0092): The Single Sculpt — one
 // terrain/climate build threaded into every accessor below.
 #[allow(clippy::disallowed_methods)]
@@ -10194,8 +10138,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
     // The deep-time lines, plus the secular-brightening sentence (The Long
-    // Count) for a generated sky only — constant-sky worlds have no star to
-    // brighten.
+    // Count).
     let mut deep_time_lines = deep_time_lines_from(world, &terrain)?;
     {
         let sky = sky_of(world)?;
@@ -12719,8 +12662,8 @@ mod tests {
         // again and its vantage observes two salient phenomena. Same
         // "incidental count, the cascade running is what matters" basis.
         //
-        // THE GLASSHOUSE re-pin (Stage B Task 5): 2 -> 1. Constant-sky
-        // worlds still read climate through the latitude profile (only
+        // THE GLASSHOUSE re-pin (Stage B Task 5): 2 -> 1. The then-current
+        // constant-sky worlds read climate through the latitude profile (only
         // insolation is fixed at `S = 1`; the profile's SHAPE still moved),
         // so the area-mean-zero profile reseats even this world's flagship.
         // Same "incidental count, the cascade running is what matters"
@@ -14276,10 +14219,7 @@ mod tests {
         .unwrap();
         let sky = sky_of(&world).unwrap();
         assert!(
-            sky.calendar()
-                .expect("a generated sky has a calendar")
-                .day_length()
-                .is_none(),
+            sky.calendar().day_length().is_none(),
             "precondition: a locked world has no day length for this branch to take"
         );
         let t = observation_time(&world, hornvale_species::ActivityCycle::Nocturnal).unwrap();

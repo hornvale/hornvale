@@ -503,7 +503,7 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
     }
     let vocab = hornvale_worldgen::common_vocabulary(&world.registry);
     let out = hornvale_explain::explain_sky(&world, &vocab)
-        .ok_or("this world has no generated sky to explain")?;
+        .ok_or("this world is missing the sky facts needed to explain it")?;
     print!("{out}");
     Ok(())
 }
@@ -1002,16 +1002,12 @@ fn cmd_vestige_map(args: &[String]) -> Result<(), String> {
 /// Render the world's star chart: a markdown page (title, sun line, ASCII
 /// chart, star legend, moon phase strips) to stdout and, with `--out`, the
 /// planisphere PNG to disk. Both are deterministic; CI drift-checks the
-/// committed copies. Errors on a world with no generated sky.
+/// committed copies.
 fn cmd_star_chart(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let sky = world_builder::sky_of(&world).map_err(|e| e.to_string())?;
-    let Some(system) = sky.system() else {
-        return Err("this world has no generated sky; no chart to draw".to_string());
-    };
-    let calendar = sky
-        .calendar()
-        .expect("a generated sky always has a calendar");
+    let system = sky.system();
+    let calendar = sky.calendar();
     let mut doc = format!("# The Night Sky of Seed {}\n\n", world.seed.0);
     doc.push_str(&format!("The sun is a {}.\n\n", system.star.class_name));
     doc.push_str("```text\n");
@@ -2220,7 +2216,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                 // and a picture end up disagreeing (The Beholding, F1).
                 let calendar = world_builder::sky_of(&world)
                     .ok()
-                    .and_then(|sky| sky.calendar().cloned());
+                    .map(|sky| sky.calendar().clone());
                 let latitude = room.coord().latitude;
                 let (light, sun_altitude_deg) = hornvale_vessel::eyes::daylight_at(
                     &world,

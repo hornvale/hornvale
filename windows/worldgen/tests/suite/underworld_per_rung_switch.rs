@@ -134,9 +134,7 @@ fn world_at(
         .climate
         .expect("climate is Some at BuildDepth::Settlements");
     let sky = sky_of(&artifacts.world).expect("sky reconstructs");
-    let system = sky
-        .system()
-        .unwrap_or_else(|| panic!("seed {SEED} has a generated star system"));
+    let system = sky.system();
     let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {

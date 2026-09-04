@@ -141,12 +141,13 @@ mod tests {
         // itself already returns `None` — `settlement_position` is never
         // reachable without a real settlement to pass it.
         let world = World::new(Seed(42));
-        let ctx = LocaleContext::build(&world).unwrap();
         assert!(hornvale_settlement::village_info(&world).is_none());
         // `walk_depth` has no settlement dependency at all. Compared against
         // the re-export's source rather than a restated `+ 7`: this crate no
         // longer states the arithmetic anywhere, which is the whole point of
         // the move (see the re-export's doc above).
+        let built = hornvale_worldgen::fixture::seed_42_world();
+        let ctx = LocaleContext::build(&built).unwrap();
         assert_eq!(walk_depth(&ctx), hornvale_locale::walk_depth(&ctx));
     }
 }

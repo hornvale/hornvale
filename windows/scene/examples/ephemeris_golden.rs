@@ -15,8 +15,8 @@ fn main() {
     )
     .expect("seed 42 builds");
     let sky = sky_of(&world).expect("generated sky");
-    let system = sky.system().expect("system");
-    let cal = sky.calendar().expect("calendar");
+    let system = sky.system();
+    let cal = sky.calendar();
     let day_length = match &system.anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => day.as_std_days(),
         hornvale_astronomy::Rotation::Locked => f64::INFINITY,

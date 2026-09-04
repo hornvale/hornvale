@@ -2104,7 +2104,12 @@ mod tests {
     #[test]
     fn unbindable_cultures_stay_plain_lost() {
         let world = World::new(Seed(1));
-        let climate = crate::climate_of(&world).unwrap();
+        // The unbuilt world is intentional: it supplies the absent flagship.
+        // Climate is an independent input to `explain`, so take it from the
+        // valid committed world rather than relying on the retired skyless
+        // climate fallback.
+        let fixture = crate::fixture::seed_42_world();
+        let climate = crate::climate_of(&fixture).unwrap();
         assert!(
             cyclic_beliefs_from(&world, "goblin", &climate).is_empty(),
             "a bare world places no settlement, so there is no flagship to hold a pantheon"

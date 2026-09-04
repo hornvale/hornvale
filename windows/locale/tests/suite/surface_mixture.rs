@@ -28,7 +28,7 @@
 
 use hornvale_kernel::color::BANDS;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
-use hornvale_kernel::{Facet, Seed, Vertex, World, WorldTime};
+use hornvale_kernel::{Facet, Seed, Vertex, WorldTime};
 use hornvale_locale::{LocaleContext, MicroField};
 use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeSet;
@@ -102,7 +102,7 @@ fn spread() -> Vec<Facet> {
 
 #[test]
 fn integrating_the_kept_mixture_equals_integrating_immediately() {
-    let world = World::new(Seed(42));
+    let world = hornvale_worldgen::fixture::seed_42_world();
     let ctx = LocaleContext::build(&world).unwrap();
     let addrs = spread();
     assert_eq!(

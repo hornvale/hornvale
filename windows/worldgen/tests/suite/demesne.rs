@@ -163,7 +163,7 @@ fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
     let climate = hornvale_worldgen::climate_of(&world).expect("climate reconstructs");
     let geo = terrain.geosphere();
     let sky = hornvale_worldgen::sky_of(&world).expect("sky reconstructs");
-    let system = sky.system().expect("seed 42 has a generated star system");
+    let system = sky.system();
     let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {

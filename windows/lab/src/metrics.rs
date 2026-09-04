@@ -32,7 +32,7 @@ use hornvale_astronomy::SkyPins;
 pub struct WorldView {
     /// The world ledger.
     pub world: World,
-    /// The star system, reconstructed or constant.
+    /// The reconstructed star system.
     pub system: StarSystem,
     /// The calendar, derived from the system.
     pub calendar: Calendar,
@@ -106,7 +106,7 @@ pub struct AstronomyView {
     /// The world ledger (astronomy-depth facts, or deeper if this view was
     /// reconstructed as part of a deeper rung's build).
     pub world: World,
-    /// The reconstructed or constant star system.
+    /// The reconstructed star system.
     pub system: StarSystem,
     /// The calendar derived from the system.
     pub calendar: Calendar,

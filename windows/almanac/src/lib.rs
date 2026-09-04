@@ -98,9 +98,7 @@ pub struct PantheonBlock {
 /// The night instrument's additional lines under **The Sky** (night-sky
 /// stage 1/2): the pole star, if a bright star stands within the pole-star
 /// radius of either celestial pole at genesis, the heliacal returns of the
-/// brightest neighbors, and one line per wandering sibling planet. `None`
-/// for constant-sky worlds, which have no neighborhood to describe (see
-/// [`AlmanacContext::night_sky_lines`]).
+/// brightest neighbors, and one line per wandering sibling planet.
 /// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures), bare-ok(prose: eclipses), bare-ok(prose: alignment)
 pub struct NightSkyLines {
     /// The pole-star sentence, if one exists at genesis.
@@ -262,17 +260,17 @@ pub struct AlmanacContext {
     /// description of the sky on the almanac's reference day (0.0). Level
     /// 0 — a pure observation over the weather field, never empty.
     pub firmament_lines: Vec<String>,
-    /// Deep-time headline lines (the glacial history); empty for worlds with
-    /// no glacial past (constant sky, or zero forcing).
+    /// Deep-time headline lines (the glacial history); empty when forcing
+    /// produces no glacial past.
     pub deep_time_lines: Vec<String>,
-    /// The world's cycles, reader-facing; empty for constant-sky worlds.
+    /// The world's cycles, reader-facing.
     pub calendar_lines: Vec<String>,
-    /// The night sky as a sentence; `None` for constant-sky worlds.
+    /// The night sky as a sentence.
     pub night_sky: Option<String>,
     /// The pole-star and heliacal-return lines under **The Sky** (night-sky
-    /// stage 1); `None` for constant-sky worlds.
+    /// stage 1).
     pub night_sky_lines: Option<NightSkyLines>,
-    /// Notes recorded during sky genesis; empty for constant-sky worlds.
+    /// Notes recorded during sky genesis.
     pub genesis_notes: Vec<String>,
     /// Headline lines describing the world's people: how many settlements,
     /// and the flagship's name, population, and biome.
@@ -456,9 +454,8 @@ pub fn render(ctx: &AlmanacContext) -> String {
         }
         doc.push('\n');
         // Nested inside the calendar-lines check deliberately: genesis
-        // notes only ever exist alongside a generated calendar (both are
-        // empty for constant-sky worlds), so this stays in lockstep with
-        // world_builder's calendar_lines/genesis_notes pairing.
+        // notes describe the same generated calendar, so this stays in
+        // lockstep with world_builder's calendar_lines/genesis_notes pairing.
         if !ctx.genesis_notes.is_empty() {
             doc.push_str("Notes from genesis:\n\n");
             for note in &ctx.genesis_notes {

@@ -753,7 +753,7 @@ fn main() {
         .id;
     let day_ticks = hornvale_worldgen::sky_of(&world)
         .ok()
-        .and_then(|sky| sky.calendar().cloned())
+        .map(|sky| sky.calendar().clone())
         .and_then(|c| c.day_ticks());
 
     assert!(

@@ -2247,7 +2247,7 @@ mod tests {
 
     fn land_world() -> World {
         // Seed 42 is the project's canonical fixture; it has land.
-        World::new(Seed(42))
+        hornvale_worldgen::fixture::seed_42_world()
     }
 
     /// FINDING 2 (Task 2b fix round): `reflectance_mixture_at` scales
@@ -2706,7 +2706,12 @@ mod tests {
         // account for, and a reader must NOT read this row as a climate
         // result: it is the same climate field sampled at a different place
         // through a different stencil.
-        assert_eq!(loc.fields.temperature_c, 25.154255);
+        //
+        // THE ZENITH re-pin: 25.154255 -> 21.91116. Ruling 0737 now makes
+        // the generated sky mandatory, so this test samples the valid
+        // generated-sky seed-42 population instead of the retired skyless
+        // fallback. This is population movement, not a climate-model tune.
+        assert_eq!(loc.fields.temperature_c, 21.91116);
         assert_eq!(
             loc.corners,
             vec![

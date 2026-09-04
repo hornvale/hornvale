@@ -50,7 +50,7 @@ fn which_axis_binds_for_a_subterranean_kind() {
     let terrain = terrain_of(&world).unwrap();
     let climate = climate_of(&world).unwrap();
     let sky = sky_of(&world).unwrap();
-    let system = sky.system().expect("generated system");
+    let system = sky.system();
     let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {

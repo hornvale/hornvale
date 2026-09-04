@@ -1,5 +1,4 @@
-//! Astronomy, tier 0: a sun that never sets. All downstream systems see
-//! astronomy only through phenomena — never this crate.
+//! Astronomy: generated star systems, calendars, and observable phenomena.
 #![warn(missing_docs)]
 
 pub mod anchor;

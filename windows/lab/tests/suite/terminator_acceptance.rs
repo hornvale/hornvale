@@ -103,9 +103,7 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(sky) = sky_of(&world) else {
         return false;
     };
-    let Some(system) = sky.system() else {
-        return false;
-    };
+    let system = sky.system();
     matches!(system.anchor.rotation, Rotation::Locked)
 }
 

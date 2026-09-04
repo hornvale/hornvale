@@ -1870,7 +1870,7 @@ impl<'w> Session<'w> {
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
-            .and_then(|sky| sky.calendar().cloned());
+            .map(|sky| sky.calendar().clone());
         // The predator-pressure field (The Quarry), so the danger drive
         // senses carnivore territory — from the shared `report` above (The
         // Weir, Stage 1b) rather than its own fit. `None` on a missing
@@ -11103,12 +11103,11 @@ mod tests {
         }
     }
 
-    /// The walk band, from the one definition — a bare `World::new` needs no
-    /// genesis, so this costs nothing and restates no arithmetic.
+    /// The walk band, from the one definition, using the committed built-world
+    /// fixture so this costs no genesis and restates no arithmetic.
     fn bare_walk_depth() -> u32 {
-        let world = World::new(Seed(42));
-        let ctx =
-            hornvale_locale::LocaleContext::build(&world).expect("a bare world builds a context");
+        let world = hornvale_worldgen::fixture::seed_42_world();
+        let ctx = hornvale_locale::LocaleContext::build(&world).expect("seed 42 builds a context");
         crate::agent::walk_depth(&ctx)
     }
 

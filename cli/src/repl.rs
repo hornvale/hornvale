@@ -148,10 +148,6 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 }
             }
             "calendar" => match world_builder::calendar_lines(world) {
-                Ok(lines) if lines.is_empty() => writeln!(
-                    output,
-                    "this world has no generated sky; time is measured in standard days"
-                )?,
                 Ok(lines) => {
                     for line in lines {
                         writeln!(output, "{line}")?;

@@ -910,13 +910,10 @@ pub struct SystemScene {
     pub moons: Vec<MoonElem>,
 }
 
-/// Build the `scene/system/v1` scene for `world`. Errors when the world has no
-/// generated sky (the tier-0 constant sun has no orrery to draw).
+/// Build the `scene/system/v1` scene for `world`.
 pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     let anchor = &system.anchor;
     let day_length_days = match &anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => Some(day.as_std_days()),
@@ -1173,14 +1170,11 @@ pub struct MoonsScene {
     pub moons: Vec<MoonSurface>,
 }
 
-/// Build the `scene/moons/v1` scene for `world`. Errors when the world has
-/// no generated sky (the tier-0 constant sun has no moons) — mirrors
-/// [`system_scene`]. A pure read plus hash: consumes no `Stream` draws.
+/// Build the `scene/moons/v1` scene for `world`. Mirrors [`system_scene`].
+/// A pure read plus hash: consumes no `Stream` draws.
 pub fn moons_scene(world: &World) -> Result<MoonsScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     let moons = system
         .moons
         .iter()
@@ -1283,15 +1277,12 @@ pub struct NeighborsScene {
     pub stars: Vec<FieldStarElem>,
 }
 
-/// Build the `scene/neighbors/v1` scene for `world`. Errors when the world
-/// has no generated sky — mirrors [`moons_scene`]. Pure reads: consumes no
-/// genesis draws (the starfield derives on demand from the astronomy seed,
-/// exactly as the almanac's figures path does).
+/// Build the `scene/neighbors/v1` scene for `world`. Mirrors [`moons_scene`].
+/// Pure reads: consumes no genesis draws (the starfield derives on demand
+/// from the astronomy seed, exactly as the almanac's figures path does).
 pub fn neighbors_scene(world: &World) -> Result<NeighborsScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     let neighbors = system
         .neighbors
         .iter()
@@ -1435,18 +1426,16 @@ pub struct EclipsesScene {
 }
 
 /// Build the `scene/eclipses/v1` scene for `world` over `[from, until]`
-/// standard days. Errors when the world has no generated sky (no moons, no
-/// eclipses) or when the window itself is invalid (`from`/`until` negative
-/// or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no draws.
+/// standard days. Errors when the window itself is invalid (`from`/`until`
+/// negative or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no
+/// draws.
 pub fn eclipses_scene(
     world: &World,
     from: StdInstant,
     until: StdInstant,
 ) -> Result<EclipsesScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     // The bounds arrive already typed and already validated -- StdInstant's
     // constructor refuses a non-finite value, so the caller cannot hand in
     // one. This is what closes The Escapement review's Minor 5: the bound
@@ -2055,7 +2044,7 @@ mod tests {
         // `radius_follows_from_mass_and_real_density_not_an_assumption` uses.
         let w = mooned_world();
         let sky = hornvale_worldgen::sky_of(&w).unwrap();
-        let base = sky.system().unwrap().moons[0].clone();
+        let base = sky.system().moons[0].clone();
         let luna = hornvale_astronomy::Moon {
             mass: LunarMasses::new(1.0).unwrap(),
             density: GramsPerCm3::new(3.34).unwrap(),

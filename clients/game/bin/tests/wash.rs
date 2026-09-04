@@ -30,11 +30,12 @@ mod wash_support {
     pub const W: u16 = 80;
     /// See [`W`].
     pub const H: u16 = 24;
-    /// Seed 42's locale context, built from a bare world. Everything else
+    /// Seed 42's locale context, built from the committed world. Everything else
     /// this file needs — the terrain, the geosphere, the nearest-vertex
     /// index — is read back off it, so the world is derived once.
     pub fn seed_42_context() -> LocaleContext {
-        LocaleContext::build(&World::new(Seed(42))).expect("a bare seed-42 world builds a context")
+        LocaleContext::build(&hornvale_worldgen::fixture::seed_42_world())
+            .expect("seed 42 builds a context")
     }
 
     /// A live seed-42 possession, plus the terrain/geosphere/index triple a
@@ -110,7 +111,7 @@ mod wash_support {
         let index = NearestVertexIndex::new(&geo);
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
-            .and_then(|sky| sky.calendar().cloned());
+            .map(|sky| sky.calendar().clone());
 
         (
             session,

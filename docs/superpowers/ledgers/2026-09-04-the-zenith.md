@@ -434,6 +434,50 @@ spectrum) / overturns 0; it separated short-lived forced enum cleanup from the
 intentionally preserved Option seam.
 · Capture: plan Task 5 controller-correction note; SDD progress ledger.
 
+#15 [G5] — **Retiring the fallback changes invalid bare-world test
+populations; exact fixtures move, preregistered failures remain failures.**
+· **Question:** Task 5's removal of the last sky-absence guards forces locale
+tests that derived climate from `World::new(Seed(42))` onto a valid built
+world. The generated population moves a desert count (15 → 0), a column
+golden, one exact temperature (25.154255 → 21.91116), and the already-ignored
+riparian witness (3/138 → 4/152). Is this an out-of-scope rebaseline, or the
+required consequence of decision 0737?
+· **Decision:** use the valid generated-sky population and accept ordinary
+exact fixture/value movement with explicit provenance. Preserve the
+preregistered riparian verdict unchanged — still ignored, still unmet — and
+update its ignore reason, heavy-tier roster text, and registry evidence in one
+commit so all three describe the newly measured witness. Do not widen its zero
+tolerance. The vanished seed-42 desert exemplar must be replaced by a direct
+deterministic test construction or another principled fixture; do not seed-hunt
+until a convenient desert appears and do not weaken the assertion.
+· **Why:** 0737 makes a bare world without `sky-provider` invalid; retaining
+its constant-sky-derived values would preserve measurements of a population
+the program no longer admits. Decisions 0016/0134 govern the asymmetric half:
+a moved world may move a witness, but a preregistered failed criterion is not
+rescued by retuning. Exact goldens and temperatures describe outputs and may
+move; the riparian zero-tolerance claim describes a verdict and may not.
+· **Alternatives discarded:** keep constructing bare worlds through a local
+shim (reverses 0737); update only the riparian number (splits one evidence
+claim across three disagreeing surfaces); re-enable/widen the riparian test
+(rescues an unmet preregistration); search seeds for a desired desert
+(decision 0093's seed-hunting anti-pattern); revert all locale fixtures
+(leaves the suite asserting an impossible retired-provider population).
+· **Distribution/symmetry lattice:** ordinary exact fixtures and
+preregistered verdicts share the generated population but are incomparable
+contracts. Population movement distributes across both; the response is
+intentionally asymmetric — rebaseline the former, preserve and re-witness the
+latter. The join is one coordinated commit whose prose names the population
+change.
+· **Cost if wrong:** generated-sky climate movement may be over-attributed to
+the retirement rather than fixture validity; review must inspect each changed
+test's stated subject, and the later campaign census remains the distributional
+check.
+· ideonomy passes: 1 (cross-domain re-instantiation captured as a
+distribution/symmetry lattice) / overturns 0; it exposed that “calibration” is
+not one ordered class — exact-output pins and preregistered verdicts require
+different responses to the same population move.
+· Capture: this ledger entry; Task 5 report; Task 8 retrospective.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding

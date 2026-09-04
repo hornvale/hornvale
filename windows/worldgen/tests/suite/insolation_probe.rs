@@ -103,9 +103,7 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(sky) = sky_of(&world) else {
         return false;
     };
-    let Some(system) = sky.system() else {
-        return false;
-    };
+    let system = sky.system();
     matches!(system.anchor.rotation, Rotation::Locked)
 }
 
@@ -278,9 +276,7 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
     let climate = climate_of(&world).expect("climate reconstructs");
     let geo = terrain.geosphere();
     let sky = sky_of(&world).expect("sky reconstructs");
-    let system = sky
-        .system()
-        .expect("a locked seed always has a generated star system");
+    let system = sky.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();
     assert!(

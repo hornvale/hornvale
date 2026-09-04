@@ -784,14 +784,9 @@ pub fn reckoning_at_from(
 /// `[0, at]`, solar AND lunar, regardless of any culture's witnessing
 /// capability — the world's own physical record, as opposed to
 /// [`hornvale_worldgen::observations_from`]'s per-culture WITNESSED subset.
-/// The margin law compares each culture's held count against this. A
-/// tier-0 constant-sun world ([`hornvale_worldgen::Sky::Constant`]) has no
-/// calendar and so no eclipses ever — honestly zero, never a panic, so
-/// `render_volume` stays total over every world `hornvale_worldgen` can
-/// build (not just the Book's own `SkyChoice::Generated` worlds); the
-/// zero short-circuits [`reckoning_epoch`] straight to the empty arm
-/// before it ever calls `observations_from`/`ladder_from` (both of which
-/// themselves require a Generated sky).
+/// The margin law compares each culture's held count against this. Every
+/// built world has the calendar and star system needed to derive the full
+/// physical record.
 fn true_event_count(world: &World, at: hornvale_astronomy::StdInstant) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable sky: {e}"));

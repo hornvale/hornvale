@@ -40,7 +40,7 @@
 //! would be a defect. The walk-band facet edge is the project-native unit
 //! the numbers are reported in.
 
-use hornvale_kernel::{Facet, Seed, Vertex, World, quantize};
+use hornvale_kernel::{Facet, Seed, Vertex, quantize};
 use hornvale_locale::{LocaleContext, walk_depth};
 use hornvale_worldgen::{SiteReason, site_facet_for};
 
@@ -53,11 +53,9 @@ fn separation(u: [f64; 3], v: [f64; 3]) -> f64 {
     hornvale_kernel::math::acos(dp.clamp(-1.0, 1.0))
 }
 
-/// The context every test here reads. `World::new` is sufficient: the
-/// strangeness budget is derived from climate and terrain, never from the
-/// ledger, so no genesis is paid for.
+/// The context every test here reads, from the committed built-world fixture.
 fn context() -> LocaleContext {
-    let world = World::new(SEED);
+    let world = hornvale_worldgen::fixture::seed_42_world();
     LocaleContext::build(&world).expect("seed 42 builds a locale context")
 }
 
