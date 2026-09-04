@@ -343,7 +343,8 @@ fn lon_bucket(longitude: f64) -> usize {
 /// inside it by the measured coverage bound; near the poles the window
 /// saturates to the full ring, i.e. the earlier band-only scan. Returns the
 /// bit-identical vertex the full band scan did (same max dot, same
-/// first-in-scan-order tie-break) — pinned by an all-levels equality test.
+/// first-in-scan-order tie-break) — pinned at levels 2–6 by the equality test
+/// below. A terrain pin may request level 7, which that test does not cover.
 #[derive(Debug, Clone)]
 pub struct NearestVertexIndex {
     /// Vertices by `band * LON_BUCKETS + lon_bucket`, ascending `Vertex` within
