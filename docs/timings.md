@@ -5540,3 +5540,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T10:43:06Z | gate-commit | 45.586 | 72.257 | 15.651 | 1.93 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T10:45:19Z | game-check | 130.305 | 682.612 | 25.653 | 5.44 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T10:47:38Z | gate-commit | 52.486 | 73.114 | 15.812 | 1.69 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:54:05Z | rebaseline | 225.834 | 447.103 | 16.244 | 2.05 | 0 | 1999b5012 | campaign/the-wash | MacBookPro | 10 |

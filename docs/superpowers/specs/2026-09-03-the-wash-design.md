@@ -388,6 +388,19 @@ as a test, not an intention.
 
 ## 8. Decisions needing ratification
 
+> **RESOLVED 2026-09-04. Three of the four became records; one is reported,
+> not decided.** Item 1 →
+> [0716](../../decisions/0716-a-view-consumes-spectra-and-owns-its-observer.md);
+> item 2 → [0717](../../decisions/0717-a-layers-rate-is-its-cache-key.md),
+> which states in its own consequences that a declaration is not an
+> observation; item 3 →
+> [0718](../../decisions/0718-appearance-is-derived-never-committed.md),
+> which records that this campaign's first attempt at the byte-identity test
+> was unfalsifiable. Item 4 stays a report: no change to `biome_class` is
+> proposed, and the observation is recorded so a later reader does not "fix"
+> one question by breaking the other. The list below is the request as it was
+> made, unedited.
+
 1. **A view consumes spectra and owns its observer; the sim never emits a
    colour.** The world says what the ground returns and what light falls on
    it; the display says what it can show. Quantize-at-emit-only applied to
