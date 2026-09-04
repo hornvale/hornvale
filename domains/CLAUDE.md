@@ -38,10 +38,11 @@ hardest:
   integration tests (e.g. `genesis_properties.rs`, `tectonic_properties.rs`)
   hold the **pin-isolation** tests that catch a violation — run them after any
   change to a drawn quantity.
-- **Coarse constrains fine, and epochs replace, tiers refine** (decision
-  0039). A higher-fidelity provider may *refine* a coarser one but must never
-  *contradict* it; a generator that contradicts an existing one is a new
-  epoch, not a coexisting tier.
+- **Coarse constrains fine; epochs replace contradictory mechanisms**
+  (decisions 0039 and 0736). Refinement remains valid inside one provider or
+  implementation — a finer component may elaborate a coarser answer but must
+  not contradict it. A mechanism that does contradict its predecessor is a
+  new epoch, not a selectable alternative.
 
 ## Providers live at the composition root, not here
 
@@ -49,12 +50,14 @@ A domain defines its logic and its provider *trait*/implementations, but the
 place where providers are *constructed and wired* is `windows/worldgen` — the
 composition root. Don't reach across to build another domain's provider.
 
-## One provider per domain
+## One selectable provider path
 
-Provider tiers are retired (decision 0736): each domain has one provider of
-its truth, constructed at the composition root. A materially contradictory
-generator remains an epoch rather than an alternative provider. Keep
-byte-identical paths byte-identical when you touch shared code — the
+Coexisting, world-selectable provider tiers are retired (decision 0736);
+astronomy's constant and generated skies were the last such pair. This does
+not retire refinement inside a provider or implementation. Providers are
+still constructed at the composition root, and a materially contradictory
+mechanism remains an epoch rather than an alternative. Keep byte-identical
+paths byte-identical when you touch shared code — the
 `strongest`/`None`-branch comments in `terrain/crust.rs` are a live terrain
 example of code kept "instruction-for-instruction" unperturbed to protect a
 byte-identity contract.
