@@ -1,0 +1,318 @@
+//! The Kerf's campaign-time identity witness: two committed ledger-hash
+//! constants, minted from the merge base with their positive control run
+//! FIRST (spec §3 rule 1), against the `KnownWater` tenant this campaign is
+//! about to delete.
+//!
+//! # WHAT THESE ARE FOR, AND WHEN THEY DIE
+//!
+//! The campaign moves `water_at` off [`hornvale_vessel::resident::KnownWater`]
+//! (per entity: each visited room → its FIRST visit instant) onto
+//! `LatestVisit` (per entity: each visited room → its ascending list of visit
+//! instants), and deletes `KnownWater`. The change is byte-identical BY
+//! CONSTRUCTION — the spec's §5 gives the four-step argument — and no
+//! committed artifact carries a ticked session ledger, so the generated-
+//! artifact drift check is structurally blind to it. These constants are that
+//! drift check's stand-in for the duration of the migration, which is exactly
+//! the instrument decision 0541 sanctions.
+//!
+//! **They retire at the campaign's close, per decision 0541.** What survives
+//! is this module's doc — the constants, the controls, and the seed sweep
+//! below, kept as dated history that nothing re-checks — plus the two
+//! constant-free determinism witnesses already on `main`
+//! (`the_detent::the_detent_seed_42_walk_is_deterministic` and
+//! `the_detent::the_detent_emitter_walk_is_deterministic`), which this file
+//! deliberately does not duplicate: they run each script twice for the
+//! two-fresh-runs-agree guarantee, and paying that a second time here would
+//! double the cost for something the suite already holds.
+//!
+//! # CONTROL A (REACH): `KnownWater::absorb` MADE A NO-OP
+//!
+//! ```text
+//! python3 scripts/mutate.py windows/vessel/src/resident.rs \
+//!   '<KnownWater::absorb body>' '<same, prefixed by an immediate return>'
+//! cargo nextest run -p hornvale-vessel --test suite -E 'test(/the_kerf_/)' --no-capture
+//! ```
+//!
+//! With the fold emptied at every instant, every `believed_water` read is
+//! ignorant, so any script whose committed trail depends on the belief at all
+//! MUST move. Measured on this Mac, 2026-09-04, at merge base `f20fdbecb`:
+//!
+//! ```text
+//! script                        green (minted)        control A             moved?
+//! seed 17, 12 waits             0x739488239689ce2a    0xb214b6413e99986e    YES
+//! seed 11, 12 waits             0xd4e4a793ed706478    0xa05a0e2dc0bc7748    YES
+//! seed 42 fixed script          0xc566d07e4d76ffbd    0xc566d07e4d76ffbd    no
+//! seed 6 emitter, 2 waits       0x5d3d768236e116c9    0x5d3d768236e116c9    no
+//!   (its hazard digest)         0x92ddc47a37de3d9e    0x92ddc47a37de3d9e    no
+//! ```
+//!
+//! **THE TWO SCRIPTS THIS CAMPAIGN INHERITED ARE BLIND, AND THAT IS WHY THIS
+//! FILE PINS TWO NEW SEEDS INSTEAD.** The seed-42 fixed script and the seed-6
+//! two-wait emitter script — the pair `ledger_hash_witness.rs` and
+//! `the_detent.rs` both build on — produced byte-identical ledgers with the
+//! whole tenant neutralised. That is the same shape of finding The Detent
+//! recorded for its own seed-42 half (a green seed-42 witness was never
+//! evidence about the fear path), reached here for a different path: seed 42's
+//! flagship condenses onto fresh water and its residents commit no positional
+//! fact at all, so `KnownWater` is empty on that walk whether or not `absorb`
+//! runs. The emitter script is two waits long, which is not enough walking for
+//! any resident's water belief to reach a route. Minting a constant on either
+//! would have produced a number that could not fail for the reason this
+//! campaign needs it to.
+//!
+//! # HOW THE TWO SEEDS WERE CHOSEN (the sweep, not a guess)
+//!
+//! Seeds 0..24 were walked for 12 `wait`s each, clean and under control A, and
+//! the hash compared. Eight moved — 3, 6, 11, 12, 16, 17, 21, 23 — so the
+//! campaign has an identity proof available and STOP was not reached. Of the
+//! eight, five also record belief reads at an instant strictly before a
+//! committed sighting (`resident_beliefs_in_the_past() > 0`): 6, 16, 17, 21,
+//! 23. Cost decided between them, against the campaign's standing 60 s ceiling
+//! for a witness, measured in a four-test parallel `nextest` run of this crate:
+//!
+//! ```text
+//! seed  bodies  agent_at  beliefs  past    wall     verdict
+//!   17      67       928    28601   1194   22.1 s   MINTED
+//!   11      27       290     7973      0    7.3 s   MINTED (cheap, present-instant only)
+//!   21     101       391   104376    103   49.7 s   passed over: 2.2x seed 17 for no more reach
+//!   16      83      2452    52697  11716  248.2 s   REFUSED: 4.1x over the 60 s ceiling
+//! ```
+//!
+//! Seed 6 at 12 waits also moves, but it carries 127 bodies and the emitter
+//! search already owns that seed for a different property; seed 17 is the same
+//! evidence for a fifth of the walk. Both minted witnesses together cost
+//! ~29.4 s, which is under the ceiling for either one alone.
+//!
+//! **THE WALL TIMES ABOVE ARE QUIET-BOX NUMBERS, AND THE CEILING VERDICT IS
+//! TAKEN ON THEM DELIBERATELY.** Later readings on the same Mac, same binary,
+//! same tests, ranged 38.4–45.3 s (seed 11) and 92.8–125.4 s (seed 17) — a
+//! 5.7x spread with nothing about the tests changed. The confound is the box:
+//! `uptime` reported load averages of `78.99 49.74 29.59` at the start of that
+//! sequence and `262.01 157.25 83.42` at the end, on ten cores, from other
+//! sessions' work. Recording the slow figure as this witness's cost would
+//! freeze another campaign's contention into this file, and shortening the
+//! script to chase it would trade real reach for a number that was never the
+//! test's. So both are recorded, with the loads that separate them, and the
+//! 60 s comparison is made against the quiet readings. The durable per-host
+//! figure is `docs/timings/test-baseline-<host>.tsv`'s, which is host-keyed
+//! for exactly this reason; a first stage-gate run on lefford will produce it.
+//!
+//! # CONTROL B (SHARPNESS): THE MIN-KEEPING BRANCH FLIPPED — AND IT CANNOT FIRE
+//!
+//! `if day < *first` → `if day > *first` in `KnownWater::absorb` (keep the
+//! LATEST visit rather than the first), which changes `water_at`'s admission
+//! only at a past instant. **It moved nothing — not one of the four scripts,
+//! including seed 17 with its 1,194 past-instant belief reads.** Per the plan
+//! that is a result to record, not a failure; but a null with no mechanism is
+//! just an absence, so the mechanism was measured rather than guessed. A third
+//! mutation replaced the branch body with a `panic!`:
+//!
+//! ```text
+//! if day < *first {
+//!     panic!("KERF-DIAG: the min-keeping branch FIRED (descending arrival)");
+//! }
+//! ```
+//!
+//! **No script panicked.** The branch is never taken on any session-derived
+//! ledger, because a session commits an entity's `agent-at` facts in ascending
+//! day order: the first sighting absorbed for a room already IS its minimum,
+//! so `and_modify`'s comparison is a structural no-op and flipping its sense
+//! is unobservable. Control B is therefore not a weak control on these shapes,
+//! it is an impossible one, and no longer or luckier script could rescue it.
+//!
+//! **What that costs the campaign, said plainly.** These constants prove that
+//! the migrated `water_at` admits the same ROOMS from the same key set; they
+//! cannot prove anything about the min-vs-`days.first()` equivalence at the
+//! heart of §5's step 2, because no real walk distinguishes those. That
+//! equivalence is exactly what the spec's own descending-order fixture (§4,
+//! Task 3) is for — a hand-built ledger that commits one room's sightings in
+//! DESCENDING day order — and this measurement is the reason that fixture is
+//! load-bearing rather than belt-and-braces. It is the only instrument that
+//! can reach the branch at all.
+//!
+//! # RESTORATION DISCIPLINE
+//!
+//! Every mutation was applied with `scripts/mutate.py` (which refuses to
+//! no-op) and restored with `git checkout -- windows/vessel/src/resident.rs`,
+//! never by retyping. The green readings above were re-taken on a REBUILT
+//! binary after the last restore and reproduced exactly — a restored source
+//! with a stale binary is a known trap in this repo.
+
+use crate::common;
+use crate::ledger_hash_witness::fnv1a;
+use hornvale_vessel::{PossessOpts, Session};
+
+/// The seed whose residents walk far enough for a water belief to reach a
+/// route AND whose belief reads run at past instants — the sharper of the two
+/// witnesses. Pinned rather than searched: a search over this property costs a
+/// world build and a twelve-wait walk per candidate seed, which is minutes,
+/// and the sweep that selected it is recorded in the module doc instead. If an
+/// epoch moves the world under it the constant below fails loudly, which is
+/// the same protection a search would buy.
+/// type-audit: bare-ok(index)
+const WATER_BELIEF_SEED: u64 = 17;
+
+/// The cheap second world, for the reason one world is an anecdote. It moves
+/// under control A on a quarter of seed 17's wall time; it records no
+/// past-instant belief read, so it witnesses the present-instant admission
+/// only. See [`WATER_BELIEF_SEED`] on why both are pinned rather than searched.
+/// type-audit: bare-ok(index)
+const CHEAP_WATER_BELIEF_SEED: u64 = 11;
+
+/// How many `wait`s each witness's script takes. Twelve is
+/// `resident_folds.rs`'s `WITNESS_WAITS` for the same reason — it is the
+/// shortest script the sweep found that lets a resident's water belief reach a
+/// committed route — and each file keeps its own copy, as every seed constant
+/// in this crate does.
+/// type-audit: bare-ok(count)
+const WITNESS_WAITS: usize = 12;
+
+/// [`WATER_BELIEF_SEED`]'s committed ledger, hashed. Minted 2026-09-04 at
+/// merge base `f20fdbecb`; moves to `0xb214_b641_3e99_986e` under control A.
+/// Retires at the campaign's close (decision 0541).
+/// type-audit: bare-ok(id)
+const KERF_SEED_17_LEDGER: u64 = 0x7394_8823_9689_ce2a;
+
+/// [`CHEAP_WATER_BELIEF_SEED`]'s committed ledger, hashed. Minted 2026-09-04
+/// at merge base `f20fdbecb`; moves to `0xa05a_0e2d_c0bc_7748` under control
+/// A. Retires at the campaign's close (decision 0541).
+/// type-audit: bare-ok(id)
+const KERF_SEED_11_LEDGER: u64 = 0xd4e4_a793_ed70_6478;
+
+/// What one fresh run of a witness script produced.
+struct WalkRun {
+    /// FNV-1a over the session's own committed-ledger JSON.
+    ledger_hash: u64,
+    /// How many bodies the session derived.
+    bodies: usize,
+    /// Committed `agent-at` facts — what the fold under test absorbs.
+    agent_at: usize,
+    /// `believed_water` calls the walk made.
+    beliefs: u64,
+    /// How many of those ran at an instant strictly before a committed
+    /// sighting of the same entity.
+    beliefs_in_the_past: u64,
+}
+
+/// One fresh session on `seed`, [`WITNESS_WAITS`] waits, and everything the
+/// witness reads off it.
+///
+/// ONE run, not two. The two-fresh-runs-agree determinism guarantee is not
+/// this file's job — `the_detent.rs` holds it on `main` for two other scripts
+/// and is not being replaced — and paying for a second walk here would double
+/// the cost of every witness for a property the suite already asserts.
+fn walk(seed: u64) -> WalkRun {
+    let world = common::build(seed).expect("the pinned witness seed builds a world");
+    let (mut session, _) =
+        Session::start(&world, &PossessOpts::default()).expect("the pinned seed starts a session");
+    for _ in 0..WITNESS_WAITS {
+        session.handle("wait");
+    }
+    WalkRun {
+        ledger_hash: fnv1a(session.session_ledger_json().as_bytes()),
+        bodies: session.bodies().len(),
+        agent_at: session.committed_agent_at_count(),
+        beliefs: session.resident_belief_lookups(),
+        beliefs_in_the_past: session.resident_beliefs_in_the_past(),
+    }
+}
+
+/// The floors every witness here asserts rather than prints, so an agreeing
+/// hash cannot be the hash of a walk that never reached the fold.
+///
+/// A hash constant is only evidence about `KnownWater` if the walk actually
+/// committed sightings for it to absorb AND actually asked it questions.
+/// Neither is implied by the other: seed 42 makes tens of thousands of belief
+/// reads over an EMPTY trail, which is precisely the shape that made it blind
+/// to control A.
+fn assert_the_floors(label: &str, run: &WalkRun) {
+    assert!(
+        run.bodies >= 2,
+        "{label}: the session must derive at least two bodies, saw {}",
+        run.bodies
+    );
+    assert!(
+        run.agent_at > 0,
+        "{label}: the walk must commit `agent-at` sightings, or `KnownWater` is empty and \
+         this hash would not move for any change to the fold — which is exactly why the \
+         seed-42 script is not one of this file's witnesses (see the module doc)",
+    );
+    assert!(
+        run.beliefs > 0,
+        "{label}: the walk must actually READ the belief ({} lookups), or the fold's \
+         output never reaches a route and the hash witnesses nothing about it",
+        run.beliefs
+    );
+}
+
+/// The sharper witness: [`WATER_BELIEF_SEED`]'s walk, whose belief reads
+/// include past instants.
+///
+/// **Runtime.** 22.079 s and 23.189 s in two four-test parallel runs of this
+/// crate on a quiet Mac, against the campaign's 60 s ceiling for a witness;
+/// 92.816-125.359 s in three later runs of the same binary at load averages
+/// from `78.99 49.74 29.59` to `262.01 157.25 83.42` on ten cores. See the
+/// module doc on why the ceiling is judged against the first pair.
+///
+/// **Control A moved this hash** (`0x7394_8823_9689_ce2a` →
+/// `0xb214_b641_3e99_986e`), which is what makes the constant an instrument
+/// rather than a decoration. Control B did not, and cannot — see the module
+/// doc's mechanism.
+#[test]
+fn the_kerf_seed_17_walk_commits_the_expected_ledger_bytes() {
+    let run = walk(WATER_BELIEF_SEED);
+    println!(
+        "--- the-kerf seed-{WATER_BELIEF_SEED} walk ---\nledger {:#018x} over {} bodies, \
+         {} agent-at facts, {} belief reads ({} at a past instant)",
+        run.ledger_hash, run.bodies, run.agent_at, run.beliefs, run.beliefs_in_the_past
+    );
+    assert_the_floors("seed 17", &run);
+    assert!(
+        run.beliefs_in_the_past > 0,
+        "seed 17 is minted as the PAST-INSTANT witness and made {} belief reads before a \
+         committed sighting — if this is now zero the seed no longer buys what it was \
+         chosen for, and that is a finding about the sim, not a broken test",
+        run.beliefs_in_the_past
+    );
+    assert_eq!(
+        run.ledger_hash, KERF_SEED_17_LEDGER,
+        "seed {WATER_BELIEF_SEED}'s walk committed different ledger bytes ({:#018x}) than \
+         the constant minted at this campaign's merge base ({KERF_SEED_17_LEDGER:#018x}). \
+         If this campaign's own change caused it, the `water_at` migration is NOT \
+         byte-identical and the spec's §5 argument has a hole in it. If an absorption of \
+         main caused it, re-record MAIN-FIRST per spec §3 rule 6 — a constant minted \
+         against a merge base that has moved is not a control",
+        run.ledger_hash
+    );
+}
+
+/// The cheap second world: [`CHEAP_WATER_BELIEF_SEED`]'s walk, present-instant
+/// belief reads only.
+///
+/// **Runtime.** 7.283 s and 7.575 s in two four-test parallel runs of this
+/// crate on a quiet Mac; 38.427-45.329 s in three later runs of the same
+/// binary on a box other sessions had taken to load 79-262 (module doc).
+///
+/// It exists because one world is an anecdote: seed 17 and seed 11 derive
+/// different rosters over different terrain, and control A moved both. It
+/// asserts no past-instant floor, deliberately — it records zero such reads,
+/// and asserting a floor a shape cannot meet is how a witness gets quietly
+/// weakened to make it pass.
+#[test]
+fn the_kerf_seed_11_walk_commits_the_expected_ledger_bytes() {
+    let run = walk(CHEAP_WATER_BELIEF_SEED);
+    println!(
+        "--- the-kerf seed-{CHEAP_WATER_BELIEF_SEED} walk ---\nledger {:#018x} over {} \
+         bodies, {} agent-at facts, {} belief reads ({} at a past instant)",
+        run.ledger_hash, run.bodies, run.agent_at, run.beliefs, run.beliefs_in_the_past
+    );
+    assert_the_floors("seed 11", &run);
+    assert_eq!(
+        run.ledger_hash, KERF_SEED_11_LEDGER,
+        "seed {CHEAP_WATER_BELIEF_SEED}'s walk committed different ledger bytes \
+         ({:#018x}) than the constant minted at this campaign's merge base \
+         ({KERF_SEED_11_LEDGER:#018x}). See the seed-17 witness's message for what the \
+         two explanations are and how to tell them apart",
+        run.ledger_hash
+    );
+}

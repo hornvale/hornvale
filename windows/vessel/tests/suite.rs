@@ -119,6 +119,8 @@ mod the_detent;
 mod the_first_mark;
 #[path = "suite/the_handle.rs"]
 mod the_handle;
+#[path = "suite/the_kerf.rs"]
+mod the_kerf;
 #[path = "suite/the_lintel.rs"]
 mod the_lintel;
 #[path = "suite/the_minute.rs"]
