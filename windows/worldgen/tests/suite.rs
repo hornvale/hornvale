@@ -27,6 +27,8 @@ mod beta_calibration_sweep;
 mod branch_character;
 #[path = "suite/breach.rs"]
 mod breach;
+#[path = "suite/brief_axis_probe.rs"]
+mod brief_axis_probe;
 #[path = "suite/capacity_cost_probe.rs"]
 mod capacity_cost_probe;
 #[path = "suite/chorus_params.rs"]
