@@ -24,6 +24,135 @@ fn read(path: &Path) -> String {
     fs::read_to_string(path).unwrap_or_else(|e| panic!("reading {}: {e}", path.display()))
 }
 
+const RECONCILIATION: &str = "docs/audits/campaign-reconciliation.tsv";
+const RECONCILIATION_HEADER: [&str; 10] = [
+    "key",
+    "disposition",
+    "residue_kind",
+    "residue_target",
+    "evidence",
+    "specs",
+    "plans",
+    "ledgers",
+    "chronicles",
+    "retrospectives",
+];
+
+/// One campaign's reconciliation record. `record_paths` preserves the five
+/// document-kind columns in schema order for later coverage checks.
+struct ReconciliationRow {
+    /// 1-based line number in `campaign-reconciliation.tsv`.
+    line: usize,
+    key: String,
+    disposition: String,
+    residue_kind: String,
+    residue_target: String,
+    evidence: String,
+    record_paths: Vec<String>,
+}
+
+/// Parse the committed campaign reconciliation TSV, preserving the five
+/// record columns after its five descriptive columns.
+fn parse_reconciliation_result(text: &str) -> Result<Vec<ReconciliationRow>, String> {
+    let mut rows = Vec::new();
+    let mut saw_header = false;
+
+    for (idx, raw_line) in text.lines().enumerate() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let columns: Vec<&str> = raw_line.split('\t').map(str::trim).collect();
+        if !saw_header {
+            if columns.as_slice() != RECONCILIATION_HEADER {
+                return Err(format!(
+                    "line {}: expected reconciliation header {RECONCILIATION_HEADER:?}",
+                    idx + 1
+                ));
+            }
+            saw_header = true;
+            continue;
+        }
+
+        if columns.len() != RECONCILIATION_HEADER.len() {
+            return Err(format!(
+                "line {}: expected {} reconciliation columns, found {}",
+                idx + 1,
+                RECONCILIATION_HEADER.len(),
+                columns.len()
+            ));
+        }
+
+        let mut record_paths = Vec::new();
+        for column in &columns[5..] {
+            for path in column.split(',').map(str::trim) {
+                if path.is_empty() {
+                    return Err(format!(
+                        "line {}: reconciliation record paths must not contain empty elements",
+                        idx + 1
+                    ));
+                }
+                record_paths.push(path.to_string());
+            }
+        }
+
+        rows.push(ReconciliationRow {
+            line: idx + 1,
+            key: columns[0].to_string(),
+            disposition: columns[1].to_string(),
+            residue_kind: columns[2].to_string(),
+            residue_target: columns[3].to_string(),
+            evidence: columns[4].to_string(),
+            record_paths,
+        });
+    }
+
+    if saw_header {
+        Ok(rows)
+    } else {
+        Err("line 1: missing reconciliation header".to_string())
+    }
+}
+
+fn parse_reconciliation(text: &str) -> Vec<ReconciliationRow> {
+    parse_reconciliation_result(text).unwrap_or_else(|e| panic!("parsing {RECONCILIATION}: {e}"))
+}
+
+/// Every row in the committed campaign reconciliation TSV.
+///
+/// Task 1 establishes this reader before later reconciliation checks consume
+/// it, so it is intentionally not called by the schema-only tests yet.
+#[allow(dead_code)]
+fn reconciliation_rows() -> Vec<ReconciliationRow> {
+    parse_reconciliation(&read(&repo_root().join(RECONCILIATION)))
+}
+
+#[test]
+fn reconciliation_parser_keeps_all_five_record_columns() {
+    let text = "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n\
+                the-example\tpartial\tregistry\tMAP-example\tledger #1\t\
+                docs/superpowers/specs/example.md\tdocs/superpowers/plans/example.md\t\
+                docs/superpowers/ledgers/example.md\tbook/src/chronicle/example.md\t\
+                docs/retrospectives/example.md\n";
+    let rows = parse_reconciliation(text);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].line, 2);
+    assert_eq!(rows[0].key, "the-example");
+    assert_eq!(rows[0].disposition, "partial");
+    assert_eq!(rows[0].residue_kind, "registry");
+    assert_eq!(rows[0].residue_target, "MAP-example");
+    assert_eq!(rows[0].evidence, "ledger #1");
+    assert_eq!(rows[0].record_paths.len(), 5);
+}
+
+#[test]
+fn reconciliation_parser_rejects_a_short_row() {
+    let text = "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n\
+                the-example\tshipped\tnone\t\tevidence\n";
+    assert!(parse_reconciliation_result(text).is_err());
+}
+
 /// The GitHub-flavored heading anchor (a github-slugger approximation):
 /// lowercase, drop every character that is not alphanumeric, space, hyphen,
 /// or underscore, then map spaces to hyphens. Removed runs leave repeated
