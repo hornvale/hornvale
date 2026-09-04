@@ -412,3 +412,7 @@ and verified byte-for-byte before staging. The earlier classification of them
 as merely local was explicitly superseded; recording that reversal matters
 because an untracked-file judgment is not durable authority when the owner
 later says the files belong to the repository.
+
+The resolved merge commit is `0efa51c7642ea1118880e3f66ebdfd382e24a1f0`.
+Its commit hook repeated the complete gate in 34.663 seconds and passed, leaving
+only that run's timing row for the final docs-only close-evidence commit.
