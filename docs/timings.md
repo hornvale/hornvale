@@ -5532,6 +5532,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T03:56:24Z | sluice:gate | 722.021 | 19571.191 | 484.274 | 27.78 | 0 | 1b64305ba |  | lefford | 40 |
 | 2026-09-04T03:58:21Z | sluice:clients | 116.611 | 2015.365 | 162.070 | 18.67 | 0 | 3312ccda7 |  | lefford | 40 |
 | 2026-09-04T04:06:01Z | sluice:heavy | 459.863 | 9883.831 | 158.903 | 21.84 | 0 | c44165de0 |  | lefford | 40 |
+| 2026-09-04T10:31:32Z | prewarm | 149.633 | 1028.104 | 56.144 | 7.25 | 0 | f20fdbecb | campaign/the-precincts | MacBookPro | 10 |
+| 2026-09-04T11:21:32Z | gate-commit | 175.033 | 894.741 | 144.616 | 5.94 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:23:09Z | gate-commit | 40.465 | 62.315 | 13.386 | 1.87 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:24:07Z | gate-commit | 37.197 | 69.266 | 15.407 | 2.28 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:25:40Z | gate-commit | 35.357 | 67.299 | 14.699 | 2.32 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:27:23Z | gate-commit | 34.598 | 67.123 | 14.450 | 2.36 | 0 | 4e954a815 | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T11:28:27Z | gate-commit | 34.628 | 67.008 | 14.440 | 2.35 | 0 | 4e954a815 | campaign/the-staple | MacBookPro | 10 |
 | 2026-09-04T10:12:53Z | rebaseline | 207.076 | 460.799 | 18.581 | 2.31 | 0 | 2ce669f38 | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T10:14:54Z | gate-commit | 108.689 | 562.647 | 45.705 | 5.60 | 0 | 07214a2e8 | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-04T10:17:14Z | game-check | 139.632 | 711.448 | 29.072 | 5.30 | 0 | 07214a2e8 | campaign/the-wash | MacBookPro | 10 |
@@ -5548,3 +5555,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T11:25:09Z | sluice:gate | 749.440 | 19820.651 | 542.949 | 27.17 | 0 | 2d36de0cb |  | lefford | 40 |
 | 2026-09-04T11:27:45Z | sluice:clients | 156.420 | 2376.705 | 190.409 | 16.41 | 0 | a460a9ce2 |  | lefford | 40 |
 | 2026-09-04T11:35:29Z | sluice:heavy | 463.904 | 9816.132 | 167.656 | 21.52 | 0 | 6d6a6858a |  | lefford | 40 |
+| 2026-09-04T12:15:44Z | rebaseline | 291.431 | 473.094 | 19.811 | 1.69 | 0 | 97a7e42b3 | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T12:25:23Z | gate-commit | 262.127 | 189.958 | 63.016 | 0.97 | 0 | 97a7e42b3 | campaign/the-staple | MacBookPro | 10 |
