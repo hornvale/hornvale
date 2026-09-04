@@ -1903,3 +1903,28 @@ fn sleeping_needs_no_bed() {
          all — sleeping is gated on nothing: {reply}"
     );
 }
+
+/// The two-way agreement between [`ObjectProperty::SupportsRest`] and
+/// `ObjectTraits::rest` (The Tenon, Task 2, spec §4.1).
+///
+/// **Direction: BOTH.** A marker without an offer is a kind the fold will
+/// grade as afforded and then find nothing to grade it by; an offer without
+/// a marker is data no verb can reach. A one-directional check here would be
+/// blind to exactly the half that broke `RadiatesHeat` (two carriers in
+/// `object_registry`, one in `warmth_at`) and would still read as total.
+#[test]
+fn supports_rest_and_a_rest_surface_imply_each_other() {
+    let reg = hornvale_vessel::affordance::object_registry();
+    for (kind, traits) in reg.iter() {
+        let marked = traits
+            .properties
+            .contains(&hornvale_vessel::affordance::ObjectProperty::SupportsRest);
+        assert_eq!(
+            marked,
+            traits.rest.is_some(),
+            "{kind:?} carries SupportsRest={marked} but rest={:?}; the two must \
+             agree in both directions",
+            traits.rest.is_some()
+        );
+    }
+}

@@ -127,14 +127,75 @@ impl ObjectProperty {
     }
 }
 
-/// What a thing-kind offers: the properties it carries. Thin and honest
+/// What a rest surface is made of, from the sleeping body's point of view.
+///
+/// **Two variants, not a single hardness scalar, because a made surface has
+/// no hardness of its own that matters.** 0697's own words: "a made bed is
+/// made by, and for, the body that made it." A `Made` surface is fitted to
+/// whoever built it, so the sleeper's substrate preference does not
+/// discriminate against it and `fit` is `1.0` — the species' own
+/// `sleep_grade_registry` row already encodes whether that species can
+/// collect the fit half at all (`INSULATION_ONLY` 1.35 is exactly "endotherm,
+/// cannot collect fit"), so applying a second fit penalty here would charge
+/// it twice.
+///
+/// (The `type-audit:` tag sits on the TYPE, not on the variant: the extractor
+/// reads an item's own doc and names the primitive by position, so a tag on
+/// `Natural`'s doc line is invisible to it.)
+/// type-audit: bare-ok(ratio: Natural.0)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Substrate {
+    /// Built by, and sized to, whoever built it.
+    Made,
+    /// Found rather than made, at this hardness — `0.0` fully yielding,
+    /// `1.0` rock.
+    Natural(f64),
+}
+
+/// What a kind offers a body that lies down on it (The Tenon).
+///
+/// **Held in the same row as [`ObjectProperty::SupportsRest`] rather than in
+/// a sibling table, and that is a correctness choice.** See
+/// [`object_registry`] and `supports_rest_and_a_rest_surface_imply_each_other`.
+/// type-audit: bare-ok(ratio: offer)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RestSurface {
+    /// The fraction of a fully-offering made surface's benefit this kind
+    /// gives, in `[0, 1]`. `1.0` is a bed.
+    pub offer: f64,
+    /// What the surface is, for the sleeper's substrate preference.
+    pub substrate: Substrate,
+}
+
+/// What a thing-kind offers: the properties it carries, and — for a kind that
+/// carries [`ObjectProperty::SupportsRest`] — what lying down on it is worth.
+/// Thin and honest
 /// (the `MaterialTraits` model) — a set, not a bitmask or a table of bools,
 /// because most kinds carry zero or one property and a set says so directly.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+///
+/// **No `Eq` derive, and its absence is load-bearing rather than an
+/// oversight**: [`RestSurface`] carries an `f64`, so `Eq` cannot survive the
+/// field. Nothing in the workspace required it (measured before the field was
+/// added: dropping `Eq` produced no errors under
+/// `cargo check --workspace --all-targets`).
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ObjectTraits {
     /// The properties this kind carries.
     pub properties: BTreeSet<ObjectProperty>,
+    /// What this kind offers a body that lies down on it, or `None` for a
+    /// kind with nowhere to lie down — which is every kind not carrying
+    /// [`ObjectProperty::SupportsRest`], asserted in both directions by
+    /// `supports_rest_and_a_rest_surface_imply_each_other`.
+    pub rest: Option<RestSurface>,
 }
+
+/// A bed is the reference surface: the one this campaign's grade is
+/// calibrated against, and the value that makes `grade(species, bed)`
+/// reproduce `sleep_grade_registry`'s row for every species byte for byte
+/// (spec §5.2). It is `1.0` by definition of the scale, not by measurement —
+/// every other surface is stated as a fraction of it.
+/// plumb: universal(the unit of the offer scale itself, against which every per-kind offer is expressed -- a definition, not a quantity that varies)
+const BED_OFFER: f64 = 1.0;
 
 /// The canonical object-kind registry: which thing-kind carries which
 /// [`ObjectProperty`]. **Keyed on [`KindId`], not on an anchor-kind enum
@@ -270,34 +331,59 @@ pub struct ObjectTraits {
 ///   ever picks one up; inventing a carrier here would be the Cyc bound
 ///   spec §3.8 names.
 pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
-    fn traits(properties: &[ObjectProperty]) -> ObjectTraits {
+    fn traits(properties: &[ObjectProperty], rest: Option<RestSurface>) -> ObjectTraits {
         ObjectTraits {
             properties: properties.iter().copied().collect(),
+            rest,
         }
     }
     [
-        (KindId("bed"), traits(&[ObjectProperty::SupportsRest])),
-        (KindId("pool"), traits(&[ObjectProperty::HoldsLiquid])),
-        (KindId("vessel"), traits(&[ObjectProperty::HoldsLiquid])),
+        (
+            KindId("bed"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: BED_OFFER,
+                    substrate: Substrate::Made,
+                }),
+            ),
+        ),
+        (KindId("pool"), traits(&[ObjectProperty::HoldsLiquid], None)),
+        (
+            KindId("vessel"),
+            traits(&[ObjectProperty::HoldsLiquid], None),
+        ),
         (
             KindId("threshold"),
-            traits(&[ObjectProperty::AffordsPassage]),
+            traits(&[ObjectProperty::AffordsPassage], None),
         ),
         (
             KindId("strongbox"),
-            traits(&[
-                ObjectProperty::Encloses,
-                ObjectProperty::Openable,
-                ObjectProperty::Lockable,
-            ]),
+            traits(
+                &[
+                    ObjectProperty::Encloses,
+                    ObjectProperty::Openable,
+                    ObjectProperty::Lockable,
+                ],
+                None,
+            ),
         ),
-        (KindId("alcove"), traits(&[ObjectProperty::Encloses])),
-        (KindId("hearth"), traits(&[ObjectProperty::RadiatesHeat])),
-        (KindId("brazier"), traits(&[ObjectProperty::RadiatesHeat])),
-        (KindId("key"), traits(&[ObjectProperty::Portable])),
+        (KindId("alcove"), traits(&[ObjectProperty::Encloses], None)),
+        (
+            KindId("hearth"),
+            traits(&[ObjectProperty::RadiatesHeat], None),
+        ),
+        (
+            KindId("brazier"),
+            traits(&[ObjectProperty::RadiatesHeat], None),
+        ),
+        (KindId("key"), traits(&[ObjectProperty::Portable], None)),
         (
             KindId("cave-mouth"),
-            traits(&[ObjectProperty::AffordsPassage, ObjectProperty::Openable]),
+            traits(
+                &[ObjectProperty::AffordsPassage, ObjectProperty::Openable],
+                None,
+            ),
         ),
         // The Brattice, spec §3.7: the cave mouth's properties plus the
         // strongbox's lock — a passage a body walks through, with a lid and a
@@ -306,11 +392,14 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
         // (`session.rs`) is the test that would redden if it were.
         (
             KindId("door"),
-            traits(&[
-                ObjectProperty::AffordsPassage,
-                ObjectProperty::Openable,
-                ObjectProperty::Lockable,
-            ]),
+            traits(
+                &[
+                    ObjectProperty::AffordsPassage,
+                    ObjectProperty::Openable,
+                    ObjectProperty::Lockable,
+                ],
+                None,
+            ),
         ),
     ]
     .into_iter()
