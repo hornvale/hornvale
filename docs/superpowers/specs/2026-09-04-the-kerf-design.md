@@ -257,8 +257,16 @@ Stage 2.
   instrument already exists and this campaign builds none**: the bench's
   `probe_believed_water_us` and `probe_shared_believed_water_us` already
   report `believed_water_us` and `shared_believed_water_us` per band, and
-  each carries its own non-vacuity panic ("probe agent has no known water
-  across `FOLD_REPS` calls at this band"). Checked in the source before this
+  each carries its own vacuity check. **That check is a `println!`, not a
+  panic, and this line said "panic" until Task 2 read it** — it fails nothing,
+  and it has been firing at every band since The Detent. What it reports is
+  that the bench's PROBE agent (the roster's max-history member) holds an
+  empty belief set; a roster sweep at Task 2 found 11 of 50 members holding
+  real sets, up to 46 rooms, so the probe is unrepresentative and the column
+  must never be read as a statement about `believed_water` across the roster.
+  For THIS campaign that is a gift rather than a defect: with the probe's set
+  empty, `plan_to_room` contributes nothing and the column isolates exactly
+  the function Task 4 rewrites. Checked in the source before this
   line was written, rather than assumed from the fact that The Detent quotes
   a per-call figure. The BEFORE and AFTER readings simply record the column.
   `water_at` moves from walking a `BTreeMap<Facet, WorldTime>` to walking a
