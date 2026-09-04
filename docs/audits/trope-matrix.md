@@ -41,7 +41,7 @@ future reader diff the two eras' counts meaningfully.
 
 ## Columns
 
-All columns resolve against one provision table of 406 served tokens, built
+All columns resolve against one provision table of 407 served tokens, built
 once per run, so a difference between columns is a difference between
 catalogues and never between two worlds.
 

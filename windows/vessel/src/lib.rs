@@ -20,6 +20,7 @@ pub mod fabric;
 mod focalize;
 pub mod gate;
 pub mod ground;
+pub mod housemark;
 pub mod interior;
 mod knowledge;
 pub mod lattice;
@@ -51,9 +52,9 @@ pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
-// `brief_of`'s occupation-register parameter is keyed on `OccupationRecord`
-// (`hornvale_history::record`); re-exported so a caller can name the
-// parameter type without a direct dependency on `hornvale-history`.
+// `brief_of`'s room-keyed occupation-register value is `OccupationRecord`
+// (`hornvale_history::record`); re-exported so a caller can name that map
+// without a direct dependency on `hornvale-history`.
 pub use chamber_prose::describe_chamber;
 pub use controller::{Controller, DefaultController, ImposedController, PlayerController};
 pub use depth::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};
@@ -96,6 +97,8 @@ pub enum VesselError {
     NoPosition(String),
     /// The locale window could not describe a room.
     Locale(hornvale_locale::LocaleError),
+    /// A living occupation could not be reduced to a production brief.
+    Brief(crate::brief::BriefError),
     /// Building a coarse-world view failed (worldgen).
     Build(String),
     /// [`PossessTarget::Creature`] named an entity this session's derived
@@ -112,6 +115,7 @@ impl std::fmt::Display for VesselError {
             VesselError::NoSpecies(m) => write!(f, "no species known for {m}"),
             VesselError::NoPosition(m) => write!(f, "no position: {m}"),
             VesselError::Locale(e) => write!(f, "locale: {e}"),
+            VesselError::Brief(e) => write!(f, "brief: {e}"),
             VesselError::Build(m) => write!(f, "building the coarse world: {m}"),
             VesselError::NoSuchCreature(id) => write!(
                 f,
@@ -119,6 +123,12 @@ impl std::fmt::Display for VesselError {
                 id.get()
             ),
         }
+    }
+}
+
+impl From<crate::brief::BriefError> for VesselError {
+    fn from(error: crate::brief::BriefError) -> Self {
+        Self::Brief(error)
     }
 }
 

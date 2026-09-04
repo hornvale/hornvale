@@ -622,11 +622,11 @@ fn a_role_admits_a_different_composition_not_a_bigger_one() {
     // The fourth argument is `populous`, which the plan's snippet did not have:
     // the strongbox is population-gated, so the draw needs the flag. Held false
     // here so the pair compared is the ordinary case.
-    let a: Vec<&str> = selection_for(Role::Threshold, true, false, false)
+    let a: Vec<&str> = selection_for(Role::Hearthroom, true, false, false, None)
         .iter()
         .map(|p| p.name)
         .collect();
-    let b: Vec<&str> = selection_for(Role::Store, true, false, false)
+    let b: Vec<&str> = selection_for(Role::Store, true, false, false, None)
         .iter()
         .map(|p| p.name)
         .collect();
@@ -659,6 +659,183 @@ fn a_locale_composition_is_untouched_by_the_role_layer() {
 }
 
 #[test]
+fn threshold_patterns_admit_each_housemark_relation_once() {
+    // H2: the threshold chamber is the common grammar surface where a culture's
+    // authority and threshold posture become separately observable.  This walks
+    // the generated two-by-three housemark product rather than sampling one row:
+    // an authority relation must follow authority, a posture relation must follow
+    // posture, and Plain deliberately contributes neither posture pattern.
+    use hornvale_kernel::KindId;
+    use hornvale_thing::kinds;
+    use hornvale_vessel::housemark::{AuthorityMark, Housemark, ThresholdPosture};
+    use hornvale_vessel::interior::compose;
+    use hornvale_vessel::interior::pattern::{Attach, Pattern, Role, permits, selection_for};
+
+    fn assert_beside_relation(
+        selected: &[&Pattern],
+        name: &str,
+        expected_kind: KindId,
+        expected_target: KindId,
+        mark: Housemark,
+    ) {
+        let pattern = selected
+            .iter()
+            .find(|pattern| pattern.name == name)
+            .unwrap_or_else(|| panic!("{mark:?} has no relation {name}"));
+        assert_eq!(
+            pattern.kind, expected_kind,
+            "{mark:?} gives {name} the wrong anchor kind"
+        );
+        match &pattern.attach {
+            Attach::Beside(actual_target) => assert_eq!(
+                *actual_target, expected_target,
+                "{mark:?} attaches {name} beside the wrong anchor"
+            ),
+            Attach::Hub | Attach::Within(_) => {
+                panic!("{mark:?} does not attach {name} beside its required anchor")
+            }
+        }
+        assert_eq!(
+            pattern.requires,
+            Some(expected_target),
+            "{mark:?} gives {name} the wrong prerequisite"
+        );
+    }
+
+    let authorities = [AuthorityMark::Command, AuthorityMark::Common];
+    let postures = [
+        ThresholdPosture::Inward,
+        ThresholdPosture::Plain,
+        ThresholdPosture::Outward,
+    ];
+    let marks: Vec<Housemark> = authorities
+        .into_iter()
+        .flat_map(|authority| {
+            postures.into_iter().map(move |threshold| Housemark {
+                authority,
+                threshold,
+            })
+        })
+        .collect();
+    let combinations: std::collections::BTreeSet<_> = marks
+        .iter()
+        .map(|mark| (mark.authority, mark.threshold))
+        .collect();
+    let expected_combinations = std::collections::BTreeSet::from([
+        (AuthorityMark::Command, ThresholdPosture::Inward),
+        (AuthorityMark::Command, ThresholdPosture::Plain),
+        (AuthorityMark::Command, ThresholdPosture::Outward),
+        (AuthorityMark::Common, ThresholdPosture::Inward),
+        (AuthorityMark::Common, ThresholdPosture::Plain),
+        (AuthorityMark::Common, ThresholdPosture::Outward),
+    ]);
+    assert_eq!(
+        marks.len(),
+        6,
+        "the housemark product must emit six combinations"
+    );
+    assert_eq!(
+        combinations.len(),
+        6,
+        "the housemark product must not duplicate a combination"
+    );
+    assert_eq!(
+        combinations, expected_combinations,
+        "the housemark product must cover every combination"
+    );
+
+    for mark in marks {
+        let selected = selection_for(Role::Threshold, true, false, false, Some(mark));
+        let names: Vec<&str> = selected.iter().map(|pattern| pattern.name).collect();
+        assert!(
+            names.contains(&"the-ground"),
+            "{mark:?} has no ground: {names:?}"
+        );
+        assert!(
+            names.contains(&"the-threshold"),
+            "{mark:?} has no threshold: {names:?}"
+        );
+
+        let (authority_relation, authority_kind, authority_target) = match mark.authority {
+            AuthorityMark::Command => (
+                "the-command-seat-at-the-threshold",
+                kinds::HIGH_SEAT,
+                kinds::THRESHOLD,
+            ),
+            AuthorityMark::Common => (
+                "the-common-bench-by-the-ground",
+                kinds::BENCH,
+                kinds::GROUND,
+            ),
+        };
+        assert_beside_relation(
+            &selected,
+            authority_relation,
+            authority_kind,
+            authority_target,
+            mark,
+        );
+        let other_authority_relation = match mark.authority {
+            AuthorityMark::Command => "the-common-bench-by-the-ground",
+            AuthorityMark::Common => "the-command-seat-at-the-threshold",
+        };
+        assert!(
+            !names.contains(&other_authority_relation),
+            "{mark:?} admits the non-matching authority relation \
+             {other_authority_relation}: {names:?}"
+        );
+
+        let posture_relation = match mark.threshold {
+            ThresholdPosture::Inward => Some(("the-screen", kinds::SCREEN, kinds::THRESHOLD)),
+            ThresholdPosture::Plain => None,
+            ThresholdPosture::Outward => Some((
+                "the-guest-water-at-the-threshold",
+                kinds::VESSEL,
+                kinds::THRESHOLD,
+            )),
+        };
+        if let Some((posture_relation, posture_kind, posture_target)) = posture_relation {
+            assert_beside_relation(
+                &selected,
+                posture_relation,
+                posture_kind,
+                posture_target,
+                mark,
+            );
+            let other_posture_relation = match mark.threshold {
+                ThresholdPosture::Inward => "the-guest-water-at-the-threshold",
+                ThresholdPosture::Outward => "the-screen",
+                ThresholdPosture::Plain => unreachable!("Plain has no posture relation"),
+            };
+            assert!(
+                !names.contains(&other_posture_relation),
+                "{mark:?} admits the non-matching posture relation \
+                 {other_posture_relation}: {names:?}"
+            );
+        } else {
+            assert!(
+                !names.contains(&"the-screen")
+                    && !names.contains(&"the-guest-water-at-the-threshold"),
+                "Plain admits a posture pattern: {names:?}"
+            );
+        }
+
+        let interior = compose(&selected);
+        assert!(
+            permits(&interior),
+            "{mark:?} produces an inadmissible interior"
+        );
+        let kinds: std::collections::BTreeSet<_> =
+            selected.iter().map(|pattern| pattern.kind).collect();
+        assert_eq!(
+            kinds.len(),
+            selected.len(),
+            "{mark:?} composes a duplicate kind: {names:?}"
+        );
+    }
+}
+
+#[test]
 fn the_role_table_reads_a_different_room_for_every_role() {
     // THE ROLE TABLE, OBSERVED. The plan shipped a PREDICTED table and said to
     // run it and print the prose before building on it, so the prose is built
@@ -674,6 +851,7 @@ fn the_role_table_reads_a_different_room_for_every_role() {
             None,
             None,
             None,
+            None,
             0,
             true,
             cold,
@@ -684,7 +862,7 @@ fn the_role_table_reads_a_different_room_for_every_role() {
     for &role in EVERY_ROLE {
         for (cold, populous) in [(false, false), (true, false), (false, true)] {
             let text = describe_chamber(
-                &compose(&selection_for(role, true, cold, populous)),
+                &compose(&selection_for(role, true, cold, populous, None)),
                 &brief(cold),
             );
             let tag = if cold { "cold" } else { "warm" };

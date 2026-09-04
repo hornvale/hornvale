@@ -31,6 +31,12 @@ a people's sounds from the space of possible sounds, and it has the same
 consequence: houses of one people resemble each other, and that resemblance *is*
 the culture, visible without anyone having authored a culture's architecture.
 
+That last consequence was a design promise here, not yet an output: selection
+at this point read only built/wild and cold/warm, so it could not distinguish
+two peoples in the same conditions. *The Housemark* later fulfilled the
+promise by admitting six threshold signatures from two authored society axes,
+through this same inventory and composer rather than a people-indexed catalogue.
+
 The distinction that mattered most is the one easiest to lose. A pattern is
 smaller than a room. A fire with seating turned toward it is a pattern; a floor
 plan is not. Author whole rooms and you have a catalogue of solutions, which is

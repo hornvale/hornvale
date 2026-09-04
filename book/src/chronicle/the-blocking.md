@@ -296,6 +296,13 @@ cost of a permanent manifest row, and it poisons the baseline that the first *ge
 will diff against. Saying the bytes stopped being reproducible when they did not is the same
 defect as failing to say so when they did, pointed the other way.
 
+*The Housemark* later added a sixth case the taxonomy above did not name:
+**concept accession**. Its chamber composition still committed nothing and
+consumed no stream, but the new `bench` kind entered the concept registry
+serialized with every world. That additive registry movement took epoch 20.
+Thus “the composer is only a readout” rules out a derivation epoch; it does not
+rule out the separate save-format cost of teaching the world a new kind.
+
 **The latent condition holds at the same time, and separately.** Five patterns were appended
 behind a flag that no live composition opens, so no live read reaches them. The
 discontinuity is **deferred, not absent**, and a deferred epoch nobody writes down is an

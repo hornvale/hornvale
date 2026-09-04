@@ -5572,3 +5572,42 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T15:51:54Z | sluice:gate | 724.108 | 19598.915 | 483.523 | 27.73 | 0 | fd9bb74ee |  | lefford | 40 |
 | 2026-09-04T15:54:14Z | sluice:clients | 140.027 | 2075.643 | 196.796 | 16.23 | 0 | 78fae757a |  | lefford | 40 |
 | 2026-09-04T16:01:51Z | sluice:heavy | 456.032 | 9816.380 | 160.497 | 21.88 | 0 | 558b0e189 |  | lefford | 40 |
+| 2026-09-04T16:25:36Z | gate-commit | 23.883 | 58.590 | 5.141 | 2.67 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:26:36Z | gate-commit | 21.325 | 21.440 | 1.454 | 1.07 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:27:49Z | gate-commit | 49.555 | 28.203 | 0.846 | 0.59 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:32:00Z | gate-commit | 229.006 | 786.202 | 44.677 | 3.63 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:33:18Z | gate-commit | 38.963 | 73.331 | 22.525 | 2.46 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:34:38Z | gate-commit | 32.674 | 60.605 | 16.086 | 2.35 | 0 | 5827a76ab | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:46:49Z | gate-commit | 45.666 | 49.568 | 3.993 | 1.17 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:49:16Z | gate-commit | 108.365 | 271.056 | 25.856 | 2.74 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:52:18Z | gate-commit | 90.596 | 122.764 | 19.483 | 1.57 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:55:07Z | gate-commit | 111.398 | 102.590 | 33.373 | 1.22 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:57:08Z | gate-commit | 57.511 | 64.754 | 15.920 | 1.40 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:58:39Z | gate-commit | 62.167 | 63.951 | 15.966 | 1.29 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T16:59:54Z | gate-commit | 39.534 | 63.742 | 17.536 | 2.06 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T17:02:19Z | gate-commit | 33.718 | 61.397 | 16.774 | 2.32 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T17:04:14Z | gate-commit | 54.834 | 68.833 | 16.975 | 1.56 | 0 | 91849b107 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T17:38:43Z | gate-commit | 39.443 | 68.904 | 21.385 | 2.29 | 0 | bf0186139 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T17:40:19Z | gate-commit | 35.378 | 63.251 | 17.389 | 2.28 | 0 | bf0186139 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T17:41:30Z | gate-commit | 33.270 | 61.175 | 16.633 | 2.34 | 0 | bf0186139 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T18:01:51Z | gate-commit | 78.698 | 313.535 | 31.580 | 4.39 | 0 | 9e7e7ce38 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T18:04:15Z | gate-commit | 39.755 | 63.329 | 17.120 | 2.02 | 0 | 9e7e7ce38 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T18:21:01Z | gate-commit | 41.509 | 74.917 | 24.292 | 2.39 | 0 | ddf355717 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T18:21:54Z | gate-commit | 33.553 | 61.136 | 16.240 | 2.31 | 0 | ddf355717 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:22:24Z | gate-commit | 10.246 | 11.099 | 1.044 | 1.19 | 0 | 3ce3c8179 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:23:01Z | gate-commit | 16.627 | 21.090 | 2.225 | 1.40 | 0 | 3ce3c8179 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:23:44Z | gate-commit | 23.734 | 22.815 | 0.603 | 0.99 | 0 | 3ce3c8179 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:27:00Z | gate-commit | 63.806 | 284.549 | 24.971 | 4.85 | 0 | 3ce3c8179 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:29:03Z | gate-commit | 35.312 | 64.208 | 17.328 | 2.31 | 0 | 3ce3c8179 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:30:42Z | gate-commit | 32.378 | 60.483 | 16.210 | 2.37 | 0 | 3ce3c8179 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:41:21Z | gate-commit | 38.070 | 83.431 | 17.585 | 2.65 | 0 | 0e5cbe4c8 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:42:46Z | gate-commit | 32.519 | 60.604 | 16.125 | 2.36 | 0 | 0e5cbe4c8 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:49:48Z | rebaseline | 197.020 | 395.866 | 16.392 | 2.09 | 0 | 819eb5b65 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T19:58:46Z | rebaseline | 133.825 | 378.450 | 15.679 | 2.95 | 0 | 819eb5b65 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T20:00:37Z | gate-commit | 32.673 | 60.631 | 16.226 | 2.35 | 0 | 819eb5b65 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T20:20:08Z | gate-commit | 31.891 | 60.124 | 16.127 | 2.39 | 0 | cb829fafa | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T20:22:27Z | gate-commit | 31.971 | 60.281 | 16.204 | 2.39 | 0 | cb829fafa | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T20:55:44Z | gate-commit | 37.109 | 68.052 | 21.717 | 2.42 | 0 | b657bdad9 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T20:57:13Z | gate-commit | 32.655 | 60.417 | 16.292 | 2.35 | 0 | b657bdad9 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T21:05:03Z | gate-commit | 33.327 | 61.339 | 16.810 | 2.34 | 0 | 5bc11ccf6 | campaign/the-housemark | MacBookPro | 10 |
+| 2026-09-04T21:30:39Z | gate-commit | 34.081 | 61.826 | 17.190 | 2.32 | 0 | be6b0f1a7 | campaign/the-housemark | MacBookPro | 10 |

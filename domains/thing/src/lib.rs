@@ -70,6 +70,7 @@ pub const THING_KINDS: &[&str] = &[
     "altar",
     "anvil",
     "bed",
+    "bench",
     "brazier",
     "cave-mouth",
     "door",
@@ -111,6 +112,8 @@ pub mod kinds {
     pub const ANVIL: KindId = KindId("anvil");
     /// A place to sleep.
     pub const BED: KindId = KindId("bed");
+    /// A shared seat.
+    pub const BENCH: KindId = KindId("bench");
     /// A vessel of fire, standing apart from a hearth.
     pub const BRAZIER: KindId = KindId("brazier");
     /// The mouth of a cave — a `Vertex`/`ChamberAddr`, never an anchor.
@@ -155,6 +158,7 @@ pub mod kinds {
         ("ALTAR", ALTAR),
         ("ANVIL", ANVIL),
         ("BED", BED),
+        ("BENCH", BENCH),
         ("BRAZIER", BRAZIER),
         ("CAVE_MOUTH", CAVE_MOUTH),
         ("DOOR", DOOR),
@@ -205,6 +209,13 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
             ThingTraits {
                 display: "bed",
                 doc: Some("a place made for lying down and sleeping"),
+            },
+        ),
+        (
+            KindId("bench"),
+            ThingTraits {
+                display: "bench",
+                doc: Some("a long shared seat"),
             },
         ),
         (
@@ -882,6 +893,7 @@ mod tests {
             "altar",
             "anvil",
             "bed",
+            "bench",
             "brazier",
             "cave-mouth",
             "door",
