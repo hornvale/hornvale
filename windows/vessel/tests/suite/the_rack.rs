@@ -286,37 +286,60 @@ fn walk_a_script(seed: u64) -> (bool, bool) {
 }
 
 /// The invariant under POSSESSION, which the free-session sweep above cannot
-/// reach — and the case that broke it (Task 3 fix round 1).
+/// reach — and the case that broke it (Task 3 fix round 1), and the case The
+/// Minute repaired (spec §3.1, §3.2).
 ///
-/// **Why possession is a different question.** `Session::wait` runs the driven
-/// body through `step_one_with_controller` and discards `_driven_facts`
-/// UNCONDITIONALLY: the player's verbs are what the body DOES, and that walk
-/// only ever supplies what the host WANTS. Free, the walk is asked through a
-/// `PlayerController` that always Holds, and `Hold` never moves `st.pos` — so
-/// the walk's ending room and the ledger's agree by accident. Possessed, it is
-/// asked through an `ImposedController`, which acts: the body walks to water
-/// and drinks mid-wait (`session.rs`'s own comment at the call site says so).
-/// Its ending room is then a room **the ledger never recorded**, because the
-/// facts that would have recorded it were thrown away one line later.
+/// **Why possession is a different question.** Free, the walk is asked
+/// through a `PlayerController` that always Holds, and `Hold` never moves
+/// `st.pos` — so the walk's ending room and the ledger's agree trivially.
+/// Possessed, it is asked through an `ImposedController`, which acts: the
+/// body walks to water and drinks mid-wait (`session.rs`'s own comment at
+/// the call site says so). Before The Minute, `Session::wait` discarded that
+/// walk's facts UNCONDITIONALLY — the player's verbs were what the body DID,
+/// and that walk only ever supplied what the host WANTED — so the walk's
+/// ending room was one **the ledger never recorded**, and fix round 1 (Task
+/// 3) kept the `position` column from repeating that lie by writing it from
+/// `commit_agent_at`'s own `Roster::place` only, never the discarded walk.
 ///
-/// Writing that room into the `position` column is what fix round 1 removed.
-/// The column is a VIEW: it may only ever be written from something the
-/// ledger agrees with, and for the driven slot that is `commit_agent_at`'s
-/// own `Roster::place`, never the discarded walk.
+/// **Since The Minute, the walk's facts ARE committed**, so the column may
+/// now be written from the walk too: `Roster::write` sets `position` and
+/// `felt` together, and the position it writes is one `agent_position` will
+/// agree with because the facts that make it true were just committed. The
+/// column is still a VIEW — every writer of it must agree with the
+/// ledger — and this test is what holds both writers (`place` from the
+/// player's own verbs, `write` from the tick) to that.
 ///
 /// Seed 7 because seed 42's flagship population never moves at all (see
 /// `every_slots_position_is_the_ledgers`), and a possessed body that never
 /// walks cannot exhibit this.
 ///
-/// MUTATION THIS MUST FAIL AGAINST — and this one is not hypothetical, it is
-/// the code as it stood before this fix round: write the driven slot's
-/// position from the solo walk (`self.roster.write(driven_slot,
-/// driven_written.position, driven_written.felt);` in place of the
-/// `resolve`). Run and observed:
+/// MUTATION THIS MUST FAIL AGAINST — sever the OTHER half of the agreement.
+/// Leave `self.roster.write(driven_slot, driven_written.position,
+/// driven_written.felt)` in place and neutralise the body of the driven
+/// commit loop in `Session::wait` (`for fact in driven_facts { let _ = fact;
+/// }` in place of the `self.ledger.commit(fact, &self.registry)` match), so
+/// the column is written from the walk while the ledger never hears about
+/// it. Run and observed (2026-09-03, seed 7):
 /// `assertion `left == right` failed: after "!wait 5", slot 0 (Zhaqbwawshow) —
 /// the column and the ledger's own fold disagree
 ///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 3, 1, 3, 3] }
 ///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
+///
+/// THE MUTATION THIS CLAUSE USED TO NAME IS NOW THE SHIPPED CODE, and it is
+/// kept only as history. It was: write the driven slot's position from the
+/// solo walk (`self.roster.write(driven_slot, driven_written.position,
+/// driven_written.felt);`) in place of the felt-only `resolve` method that
+/// preceded it. That run reddened with the identical assertion quoted above,
+/// which is not a coincidence — both mutations break the same agreement from
+/// opposite ends, one by writing a column the ledger cannot support and the
+/// other by withholding the facts that support it. `resolve` is gone now
+/// (The Minute, spec §3.2 deleted it), because the walk's facts ARE
+/// committed and `write` is honest for every slot; naming the shipped line
+/// as the mutation would leave this test with no live one at all.
+///
+/// The Minute extended the script to the nine-wait shape its P2 measures,
+/// so the column is checked after every accumulating step of the walk, not
+/// just three.
 #[test]
 fn a_possessed_sessions_columns_are_the_ledgers_too() {
     let world = world_at(7);
@@ -327,18 +350,24 @@ fn a_possessed_sessions_columns_are_the_ledgers_too() {
         "possession must actually be open, or this is the free sweep again"
     );
     check_view_equals_scan(&session, "!possess");
-    for verb in ["!wait 1", "!wait 5", "!wait 30"] {
+    for verb in [
+        "!wait 1", "!wait 5", "!wait 5", "!wait 5", "!wait 5", "!wait 5", "!wait 5", "!wait 5",
+        "!wait 30",
+    ] {
         let _ = session.handle(verb);
         check_view_equals_scan(&session, verb);
     }
     // The felt column must have been written, or the driven walk never ran
-    // and this test proves nothing about it. (Position is deliberately NOT
-    // asserted to have moved: the whole point is that the possessed body's
-    // own walk moves nothing the ledger records.)
+    // and this test proves nothing about it. (Position is not asserted to
+    // have moved to any PARTICULAR place — the walk is real GOAP arbitration
+    // and seed-dependent — but `check_view_equals_scan` above already holds
+    // the column to the ledger's own fold after every one of the nine waits,
+    // which is the actual point now that the walk's facts commit: wherever
+    // it moved, the column agrees with the ledger there too.)
     assert!(
         session.driven_mode().is_some(),
-        "the driven body's own walk must have resolved something across three \
-         waits, or nothing here exercised the driven writer"
+        "the driven body's own walk must have resolved something across the \
+         nine-wait script, or nothing here exercised the driven writer"
     );
 }
 

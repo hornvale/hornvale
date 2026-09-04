@@ -106,6 +106,8 @@ pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod placement;
+pub mod plat;
+pub mod plat_readout;
 pub mod render;
 pub mod residents;
 pub mod resolve;

@@ -24,27 +24,38 @@
 //! a false impression of coverage — the interesting half is bit-identity, and
 //! this file cannot reach the mover to test it.
 //!
-//! **The rate and the day length are now explicit arguments (The Wicket,
-//! Task 9).** `fatigue_at` no longer has an implicit constant rate: the
-//! production rate is per-species, resolved from `hornvale_species::
+//! **The species traits and the day length are now explicit arguments (The
+//! Wicket, Task 9).** `fatigue_at` no longer has an implicit constant rate:
+//! the production rate is per-species, resolved from `hornvale_species::
 //! fatigue_rise_registry`, and the accrual now converts against the world's
 //! LOCAL day rather than the kernel's standard one. Every call below passes
-//! [`RATE`] (human's row, unchanged by Task 9) and `day: None` — the
+//! [`TRAITS`] (human's rows, unchanged by Task 9) and `day: None` — the
 //! tidally-locked/no-calendar convention `windows/vessel::clock::
 //! ticks_per_local_day` documents, which is also what a bare `Ledger` with no
 //! world behind it actually is here — so `to_local_days` reduces to exactly
 //! `TickSpan::as_std_days` and every property below is unchanged in shape
 //! from before this task; only the call signature grew.
 //!
-//! **The site grade is a sixth argument, and P1-P6 pass `None` (The Wicket,
+//! **The site grade is a `sites` argument, and P1-P6 pass `None` (The Wicket,
 //! Task 10).** A bout is now graded by what the room it was taken in offered
 //! the body that took it, which needs a terrain and a body neither a bare
 //! `Ledger` nor any of the six properties below has. `None` means UNGRADED —
 //! every bout reads as bare ground, which is exactly the arithmetic P1-P6
 //! were frozen against — so those six are unchanged in meaning as well as in
-//! shape. P7 below is the one property that supplies a world, and it pins
-//! that bare ground and `None` agree BIT for bit, so the two readings of
-//! "ungraded" cannot drift apart.
+//! shape. P7 and P8 below are the two properties that supply a world, and P7
+//! pins that bare ground and `None` agree BIT for bit, so the two readings of
+//! "ungraded" cannot drift apart. This paragraph used to call the grade "a
+//! sixth argument"; it was an ordinal, not a name, and Task 4 below made it
+//! wrong by adding a seventh.
+//!
+//! **How much an afforded site helps is per-SPECIES now, and rides in the
+//! same struct the rate does (The Pallet, Task 4).** `SleepTraits` carries
+//! both of the sleeping body's species-resolved numbers — `rise` and
+//! `afforded_gain` — resolved at the caller, because the fold holds no
+//! species state. P1-P7 are unchanged in meaning: they pass human's rows,
+//! and `afforded_gain` is human's `1.5`, the value the old universal
+//! `AFFORDED_REST_GAIN` constant carried for every kind alike. P8 is the one
+//! property that varies it.
 
 use hornvale_kernel::{
     ConceptRegistry, ConditionResponse, EntityId, Facet, Ledger, Lineage, ResourceVector, TickSpan,
@@ -54,17 +65,26 @@ use hornvale_vessel::affordance::{OfferedVerb, offered_to};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::interior::interior_of;
 use hornvale_vessel::liveness::{
-    AGENT_AT, RESTED, RestSites, SLEPT, Terrain, ThreatNiche, fatigue_at, place_agent, record_rest,
-    record_sleep,
+    AGENT_AT, RESTED, RestSites, SLEPT, SleepTraits, Terrain, ThreatNiche, fatigue_at, place_agent,
+    record_rest, record_sleep,
 };
 
-/// The rate every fixture below folds against — human's row in
-/// `hornvale_species::fatigue_rise_registry`, and the same `0.3` the old
-/// `FATIGUE_RISE` constant carried before Task 9 moved it into that table.
-/// This file asserts ordering/monotonicity/bounds, never the constant's
-/// magnitude, so its exact value is not load-bearing here — only that it is
-/// shared and nonzero.
-const RATE: f64 = 0.3;
+/// The species traits every fixture below folds against — human's rows in
+/// `hornvale_species::fatigue_rise_registry` and `sleep_grade_registry`, the
+/// same `0.3` and `1.5` the old `FATIGUE_RISE` and `AFFORDED_REST_GAIN`
+/// constants carried before those tables existed.
+///
+/// This file asserts ordering/monotonicity/bounds, never a constant's
+/// magnitude, so neither value is load-bearing here — only that `rise` is
+/// shared and nonzero. **P1-P6 pass `sites: None`, so `afforded_gain` never
+/// reaches an `Afforded` bout and cannot move them**; only P7 and P8 supply
+/// a world, and P8 is the one that varies the gain. Named rather than
+/// inlined because the point of the argument is that the fold holds no
+/// species state of its own, and a literal at thirty call sites hides that.
+const TRAITS: SleepTraits = SleepTraits {
+    rise: 0.3,
+    afforded_gain: 1.5,
+};
 
 /// A fresh ledger with one entity in it, the entity, and a registry that knows
 /// the one predicate this file writes.
@@ -138,13 +158,13 @@ fn p1_fatigue_is_a_pure_fold_over_committed_facts() {
     let probes = [0.5, 6.0, 1.2, 3.0, 4.25, 2.0];
     let first: Vec<u64> = probes
         .iter()
-        .map(|&d| fatigue_at(&ledger, e, at(d), RATE, None, None).to_bits())
+        .map(|&d| fatigue_at(&ledger, e, at(d), TRAITS, None, None).to_bits())
         .collect();
     for _ in 0..3 {
         let again: Vec<u64> = probes
             .iter()
             .rev()
-            .map(|&d| fatigue_at(&ledger, e, at(d), RATE, None, None).to_bits())
+            .map(|&d| fatigue_at(&ledger, e, at(d), TRAITS, None, None).to_bits())
             .collect();
         let again: Vec<u64> = again.into_iter().rev().collect();
         assert_eq!(
@@ -158,8 +178,8 @@ fn p1_fatigue_is_a_pure_fold_over_committed_facts() {
     let reloaded: Ledger = serde_json::from_str(&json).expect("and deserializes");
     for &d in &probes {
         assert_eq!(
-            fatigue_at(&ledger, e, at(d), RATE, None, None).to_bits(),
-            fatigue_at(&reloaded, e, at(d), RATE, None, None).to_bits(),
+            fatigue_at(&ledger, e, at(d), TRAITS, None, None).to_bits(),
+            fatigue_at(&reloaded, e, at(d), TRAITS, None, None).to_bits(),
             "fatigue at day {d} must survive a save/load round trip"
         );
     }
@@ -185,7 +205,7 @@ fn p2_fatigue_stays_in_range_and_rises_while_awake() {
     let mut previous = f64::NEG_INFINITY;
     for step in 0..60 {
         let d = step as f64 * 0.25;
-        let f = fatigue_at(&ledger, e, at(d), RATE, None, None);
+        let f = fatigue_at(&ledger, e, at(d), TRAITS, None, None);
         assert!(
             (0.0..=1.0).contains(&f),
             "fatigue left [0, 1] at day {d}: {f}"
@@ -198,12 +218,12 @@ fn p2_fatigue_stays_in_range_and_rises_while_awake() {
         previous = f;
     }
     assert!(
-        fatigue_at(&ledger, e, at(0.0), RATE, None, None)
-            < fatigue_at(&ledger, e, at(1.0), RATE, None, None),
+        fatigue_at(&ledger, e, at(0.0), TRAITS, None, None)
+            < fatigue_at(&ledger, e, at(1.0), TRAITS, None, None),
         "a day awake must cost something"
     );
     assert_eq!(
-        fatigue_at(&ledger, e, at(1000.0), RATE, None, None),
+        fatigue_at(&ledger, e, at(1000.0), TRAITS, None, None),
         1.0,
         "and the ceiling must hold however long it stays up"
     );
@@ -237,10 +257,10 @@ fn p3_a_short_rest_does_not_zero_the_debt() {
     // Five days awake, then a rest of one twentieth of a day (the finest jump
     // `next_awake_day`'s scan can produce: a real, if minimal, nap).
     let (mut ledger, e, reg) = body();
-    let exhausted = fatigue_at(&ledger, e, at(5.0), RATE, None, None);
+    let exhausted = fatigue_at(&ledger, e, at(5.0), TRAITS, None, None);
     assert_eq!(exhausted, 1.0, "five days awake is a saturated debt");
     push_rest(&mut ledger, &reg, e, 5.0, 0.05);
-    let after_nap = fatigue_at(&ledger, e, at(5.05), RATE, None, None);
+    let after_nap = fatigue_at(&ledger, e, at(5.05), TRAITS, None, None);
 
     assert!(
         after_nap > 0.5,
@@ -284,7 +304,7 @@ fn p4_a_longer_rest_restores_strictly_more() {
     for span in [0.05_f64, 0.1, 0.2, 0.4, 0.8] {
         let (mut ledger, e, reg) = body();
         push_rest(&mut ledger, &reg, e, 3.0, span);
-        let f = fatigue_at(&ledger, e, at(3.0 + span), RATE, None, None);
+        let f = fatigue_at(&ledger, e, at(3.0 + span), TRAITS, None, None);
         assert!(
             f < previous,
             "a {span}-day rest must leave STRICTLY less debt at the moment it \
@@ -327,19 +347,19 @@ fn p4b_two_rests_restore_more_than_either_alone() {
     push_rest(&mut two, &reg2, e2, 1.0, 0.2);
     push_rest(&mut two, &reg2, e2, 2.9, 0.05);
     assert!(
-        fatigue_at(&one, e1, read_at, RATE, None, None) < 1.0
-            && fatigue_at(&two, e2, read_at, RATE, None, None) > 0.0,
+        fatigue_at(&one, e1, read_at, TRAITS, None, None) < 1.0
+            && fatigue_at(&two, e2, read_at, TRAITS, None, None) > 0.0,
         "both bodies must sit strictly inside the clamps for this comparison \
          to mean anything: {} and {}",
-        fatigue_at(&one, e1, read_at, RATE, None, None),
-        fatigue_at(&two, e2, read_at, RATE, None, None)
+        fatigue_at(&one, e1, read_at, TRAITS, None, None),
+        fatigue_at(&two, e2, read_at, TRAITS, None, None)
     );
     assert!(
-        fatigue_at(&two, e2, read_at, RATE, None, None)
-            < fatigue_at(&one, e1, read_at, RATE, None, None),
+        fatigue_at(&two, e2, read_at, TRAITS, None, None)
+            < fatigue_at(&one, e1, read_at, TRAITS, None, None),
         "the second rest must count ON TOP of the first: {} vs {}",
-        fatigue_at(&two, e2, read_at, RATE, None, None),
-        fatigue_at(&one, e1, read_at, RATE, None, None)
+        fatigue_at(&two, e2, read_at, TRAITS, None, None),
+        fatigue_at(&one, e1, read_at, TRAITS, None, None)
     );
 }
 
@@ -358,7 +378,7 @@ fn p6_fatigue_never_goes_negative() {
     let (mut ledger, e, reg) = body();
     push_rest(&mut ledger, &reg, e, 0.5, 40.0);
     for d in [0.5, 1.0, 10.0, 40.0, 40.5, 41.0] {
-        let f = fatigue_at(&ledger, e, at(d), RATE, None, None);
+        let f = fatigue_at(&ledger, e, at(d), TRAITS, None, None);
         assert!(f >= 0.0, "a 40-day sleep drove fatigue to {f} at day {d}");
     }
     let (mut many, e2, reg2) = body();
@@ -367,7 +387,7 @@ fn p6_fatigue_never_goes_negative() {
     }
     for step in 0..60 {
         let d = step as f64 * 0.5;
-        let f = fatigue_at(&many, e2, at(d), RATE, None, None);
+        let f = fatigue_at(&many, e2, at(d), TRAITS, None, None);
         assert!(
             (0.0..=1.0).contains(&f),
             "fifty back-to-back rests left fatigue at {f} on day {d}"
@@ -391,10 +411,10 @@ fn p6_fatigue_never_goes_negative() {
 fn a_rest_in_progress_credits_only_the_sleep_already_had() {
     let (mut ledger, e, reg) = body();
     push_rest(&mut ledger, &reg, e, 2.0, 1.0);
-    let start = fatigue_at(&ledger, e, at(2.0), RATE, None, None);
-    let quarter = fatigue_at(&ledger, e, at(2.25), RATE, None, None);
-    let half = fatigue_at(&ledger, e, at(2.5), RATE, None, None);
-    let done = fatigue_at(&ledger, e, at(3.0), RATE, None, None);
+    let start = fatigue_at(&ledger, e, at(2.0), TRAITS, None, None);
+    let quarter = fatigue_at(&ledger, e, at(2.25), TRAITS, None, None);
+    let half = fatigue_at(&ledger, e, at(2.5), TRAITS, None, None);
+    let done = fatigue_at(&ledger, e, at(3.0), TRAITS, None, None);
     assert!(
         start > quarter && quarter > half && half >= done,
         "fatigue must fall monotonically THROUGH a rest, not jump at its \
@@ -424,7 +444,7 @@ fn a_rest_in_progress_credits_only_the_sleep_already_had() {
 /// the "not equal" one.
 ///
 /// No rests are pushed, so this is a pure ramp from genesis: `fatigue_from_
-/// rests` reduces to exactly `RATE * to_local_days(t - GENESIS, day)`, clamped
+/// rests` reduces to exactly `TRAITS.rise * to_local_days(t - GENESIS, day)`, clamped
 /// (never reached here — see the strictly-inside-the-clamps assertion below).
 /// That makes the predicted numbers exact, not merely ordered.
 ///
@@ -462,24 +482,24 @@ fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
     // turned — so it must owe a quarter of the debt.
     let long_day = TickSpan::from_ticks(400_000);
 
-    let debt_short = fatigue_at(&ledger, e, t, RATE, Some(short_day), None);
-    let debt_long = fatigue_at(&ledger, e, t, RATE, Some(long_day), None);
+    let debt_short = fatigue_at(&ledger, e, t, TRAITS, Some(short_day), None);
+    let debt_long = fatigue_at(&ledger, e, t, TRAITS, Some(long_day), None);
 
     assert!(
         debt_short > 0.0 && debt_short < 1.0 && debt_long > 0.0 && debt_long < 1.0,
         "both readings must sit strictly inside the clamps or the ratio below \
          proves nothing: short={debt_short}, long={debt_long}"
     );
-    // The exact predicted values: RATE * 2.0 std days over a 1-std-day local
-    // day, and RATE * 0.5 std days over a 4-std-day local day.
+    // The exact predicted values: TRAITS.rise * 2.0 std days over a 1-std-day local
+    // day, and TRAITS.rise * 0.5 std days over a 4-std-day local day.
     assert!(
-        (debt_short - RATE * 2.0).abs() < 1e-12,
-        "the short (Earth-like) day world must read exactly RATE * 2.0: got \
+        (debt_short - TRAITS.rise * 2.0).abs() < 1e-12,
+        "the short (Earth-like) day world must read exactly TRAITS.rise * 2.0: got \
          {debt_short}"
     );
     assert!(
-        (debt_long - RATE * 0.5).abs() < 1e-12,
-        "the long (4x) day world must read exactly RATE * 0.5: got {debt_long}"
+        (debt_long - TRAITS.rise * 0.5).abs() < 1e-12,
+        "the long (4x) day world must read exactly TRAITS.rise * 0.5: got {debt_long}"
     );
     assert!(
         (debt_short - 4.0 * debt_long).abs() < 1e-9,
@@ -502,10 +522,10 @@ fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
 /// FALL terms convert through `to_local_days`.
 ///
 /// **Why 0.9/0.1 and not a 0.5/0.5 "normal night".** Tried first, and it is
-/// vacuous: `RATE * 0.5 = 0.15` accrued against `REST_FALL * 0.5 = 0.25`
+/// vacuous: `TRAITS.rise * 0.5 = 0.15` accrued against `REST_FALL * 0.5 = 0.25`
 /// repaid clamps to EXACTLY `0.0` on both worlds, so the equality holds for a
 /// reason that has nothing to do with `L`-invariance — the clamp, not the
-/// arithmetic, is doing the agreeing. An unbalanced cycle (`RATE * 0.9 =
+/// arithmetic, is doing the agreeing. An unbalanced cycle (`TRAITS.rise * 0.9 =
 /// 0.27` accrued against `REST_FALL * 0.1 = 0.05` repaid, net `0.22`) lands
 /// strictly inside both clamps, so the equality below is a real property of
 /// the fold.
@@ -516,7 +536,7 @@ fn the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one() {
 /// (`FATIGUE_FALL`/`REST_FALL` are not named by Nathan's ruling). That
 /// reasoning missed that a sleep bout is not a standard-day span: the walk's
 /// own `act_span` runs a sleep to roughly half a LOCAL day. With `L` the
-/// local day in standard days, the waking phase accrues `RATE * 0.9`
+/// local day in standard days, the waking phase accrues `TRAITS.rise * 0.9`
 /// (`L`-invariant, once RISE converts) while an unconverted fall term repays
 /// `REST_FALL * 0.1 * L` — a recovery rate that SCALES with `L` while the
 /// accrual it must outpace does not. Break-even was at `L = 0.3` standard
@@ -582,7 +602,7 @@ fn one_full_cycle(local_day: TickSpan) -> f64 {
         .commit(record_rest(e, lay_down, span), &reg)
         .expect("`rested` is non-functional");
     let woke = lay_down + span;
-    fatigue_at(&ledger, e, woke, RATE, Some(local_day), None)
+    fatigue_at(&ledger, e, woke, TRAITS, Some(local_day), None)
 }
 
 // --- P7: the room grades the bout (The Wicket, Task 10) ------------------
@@ -828,7 +848,7 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
             &ledger,
             bedded,
             woke,
-            RATE,
+            TRAITS,
             None,
             Some(&RestSites {
                 terrain: &terrain,
@@ -839,7 +859,7 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
             &ledger,
             roadside,
             woke,
-            RATE,
+            TRAITS,
             None,
             Some(&RestSites {
                 terrain: &terrain,
@@ -858,7 +878,7 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
         // the road folds exactly what an UNGRADED read folds.
         assert_eq!(
             in_the_road.to_bits(),
-            fatigue_at(&ledger, roadside, woke, RATE, None, None).to_bits(),
+            fatigue_at(&ledger, roadside, woke, TRAITS, None, None).to_bits(),
             "a {act} bout on bare ground must fold exactly the ungraded \
              arithmetic — the grade is a bonus a room can give, never \
              something every roadside body is quietly given too"
@@ -886,7 +906,7 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
         &ledger,
         bedded,
         woke,
-        RATE,
+        TRAITS,
         None,
         Some(&RestSites {
             terrain: &terrain,
@@ -900,7 +920,7 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
         &ledger,
         bedded,
         woke,
-        RATE,
+        TRAITS,
         None,
         Some(&RestSites {
             terrain: &terrain,
@@ -912,5 +932,139 @@ fn p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more() {
         after_walking_out.to_bits(),
         "walking off a bed must not retroactively un-repay the night spent \
          on it: {at_the_bed} became {after_walking_out}"
+    );
+}
+
+/// P8 — **the same room, the same span, the same body: how much the bed helps
+/// depends on the SPECIES sleeping in it** (The Pallet, Task 4; spec §6a's
+/// per-species rung).
+///
+/// P7 above proves the room matters. It cannot prove the species does: it
+/// varies the room while holding one gain, so a table with every row set to
+/// the same number would leave it green. This test varies exactly the thing
+/// P7 holds fixed — the `afforded_gain` scalar `creature_fatigue` resolves
+/// from `hornvale_species::sleep_grade_registry` — and holds the room, the
+/// span, the act and the body constant.
+///
+/// The three gains are read from the registry itself rather than written as
+/// literals, so re-authoring a row moves this test's inputs with it and the
+/// test keeps asserting the ORDERING rather than three frozen numbers. They
+/// are the ladder's two ends and its floor:
+///
+/// - `human` — a settled endotherm, the ceiling the old constant calibrated;
+/// - `reef-shark` — a fully marine kind the water already supports;
+/// - `xorn` — ametabolic stone, the floor, whose row is exactly `1.0`.
+///
+/// Four things are pinned:
+///
+/// 1. the room really does offer this body somewhere to sleep — the positive
+///    control, without which every comparison below is vacuous;
+/// 2. every reading is strictly inside the `[0, 1]` clamp, so the
+///    inequalities are real and not three saturated values;
+/// 3. a human carries strictly LESS debt than a reef-shark, which carries
+///    strictly less than a xorn — the claim, and the assertion a flat table
+///    fails;
+/// 4. the xorn's graded reading is BIT-identical to the UNGRADED one. Its row
+///    is `1.0`, which is `SiteGrade::Bare`'s own multiplier, so a body that
+///    gains nothing from a bed must fold exactly the bare arithmetic even
+///    while lying on one. This is the assertion that says `1.0` means *no
+///    bonus* rather than *no recovery*.
+///
+/// MUTATION THIS MUST FAIL AGAINST: **the species scalar is ignored** —
+/// `SiteGrade::Afforded => DEFAULT_SLEEP_GRADE` in `liveness.rs`, which is
+/// the pre-Task-4 behaviour written in the new signature's clothes, and the
+/// one mutation P7 cannot see at all. Red at (3):
+/// `human=0.15000000000000002, reef-shark=0.15000000000000002`.
+#[test]
+fn p8_how_much_the_bed_helps_depends_on_the_species_sleeping_in_it() {
+    let furnished = Facet::containing([0.10, 0.10, 0.0], 6);
+    let elsewhere = Facet::containing([-0.40, -0.40, 0.0], 6);
+    let terrain = OneFurnishedRoom {
+        furnished: furnished.clone(),
+    };
+    let (mut ledger, sleeper, _unused, reg) = two_bodies();
+    let body = resting_body(sleeper, elsewhere);
+
+    // (1) THE POSITIVE CONTROL.
+    assert!(
+        room_offers_sleep(&furnished, &body, &terrain),
+        "the fixture's furnished room must actually offer this body somewhere \
+         to sleep, or every comparison below is measuring nothing"
+    );
+
+    let lay_down = at(2.0);
+    // P7's own span, and not an arbitrary one: at `FATIGUE_FALL = 1.0` a
+    // half-day sleep repays `1.5 * 0.5 = 0.75` against the `0.3 * 2.0 = 0.6`
+    // accrued by `lay_down`, so the human reading saturates at the clamp's
+    // floor and every inequality below collapses into `0 < x`. Measured, not
+    // reasoned: the first draft used 0.5 and failed assertion (2) with
+    // `human's reading 0`. At 0.3 the three readings are 0.15 / 0.285 / 0.3,
+    // all strictly inside.
+    let span = TickSpan::from_std_days(0.3).expect("a finite span");
+    let woke = lay_down + span;
+    ledger
+        .commit(place_agent(sleeper, &furnished, WorldTime::GENESIS), &reg)
+        .expect("`agent-at` is non-functional");
+    ledger
+        .commit(record_sleep(sleeper, lay_down, span), &reg)
+        .expect("`slept` is non-functional");
+
+    let grades = hornvale_species::sleep_grade_registry();
+    let gain_of = |species: &str| {
+        grades
+            .get_by_label(species)
+            .copied()
+            .unwrap_or_else(|| panic!("{species} must carry a sleep-grade row"))
+    };
+    let debt_with = |gain: f64| {
+        fatigue_at(
+            &ledger,
+            sleeper,
+            woke,
+            SleepTraits {
+                afforded_gain: gain,
+                ..TRAITS
+            },
+            None,
+            Some(&RestSites {
+                terrain: &terrain,
+                body: &body,
+            }),
+        )
+    };
+
+    let human = debt_with(gain_of("human"));
+    let shark = debt_with(gain_of("reef-shark"));
+    let xorn = debt_with(gain_of("xorn"));
+
+    // (2) All three strictly inside the clamp.
+    for (who, d) in [("human", human), ("reef-shark", shark), ("xorn", xorn)] {
+        assert!(
+            d > 0.0 && d < 1.0,
+            "{who}'s reading {d} must land strictly inside [0, 1] or the \
+             ordering below proves nothing"
+        );
+    }
+
+    // (3) THE CLAIM: the ladder is real, and it is ordered.
+    assert!(
+        human < shark,
+        "a human must get more out of a bed than a creature the sea already \
+         holds up: human={human}, reef-shark={shark}"
+    );
+    assert!(
+        shark < xorn,
+        "a reef-shark must still get something out of lying down, where a \
+         creature of stone gets nothing: reef-shark={shark}, xorn={xorn}"
+    );
+
+    // (4) The floor means NO BONUS, not no recovery.
+    let ungraded = fatigue_at(&ledger, sleeper, woke, TRAITS, None, None);
+    assert_eq!(
+        xorn.to_bits(),
+        ungraded.to_bits(),
+        "a kind whose sleep grade is exactly 1.0 must fold the bare-ground \
+         arithmetic bit for bit even on a bed — 1.0 is `no bonus`, never `no \
+         recovery`: graded={xorn}, ungraded={ungraded}"
     );
 }

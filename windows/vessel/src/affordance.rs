@@ -498,13 +498,29 @@ pub enum OfferedVerb {
     /// property is no longer advertisement-only —
     /// `liveness::room_affords_rest` asks this verb of every anchor in the
     /// room a recovery bout was taken in, and a bout in a room that offers it
-    /// repays `AFFORDED_REST_GAIN` times what one on bare ground repays. That
-    /// is the GRADE half of the grade/gate split going live, not the gate
-    /// half arriving late: the same act is available everywhere and is worth
-    /// more in some places. Only the OBJECT side of spec §6a is built; the
-    /// people side (a `(species, thing)` edge) and the individual side (a
-    /// `Lineage`-derived per-instance preference) are still where that
-    /// registry row leaves them.
+    /// repays MORE than one on bare ground. That is the GRADE half of the
+    /// grade/gate split going live, not the gate half arriving late: the same
+    /// act is available everywhere and is worth more in some places.
+    ///
+    /// **HOW MUCH more is a property of the SLEEPER, not of this verb** (The
+    /// Pallet, Task 4). This sentence used to name a constant,
+    /// `AFFORDED_REST_GAIN`, and say a bout "repays `AFFORDED_REST_GAIN`
+    /// times" — one uniform multiplier for every creature alive. That
+    /// constant no longer exists under that name, so a reader who grepped it
+    /// from here landed on nothing, and a reader who did not grep learned
+    /// something false. The multiplier is now
+    /// `hornvale_species::sleep_grade_registry`, one row per kind: a settled
+    /// people gets the authored ceiling, a fully marine kind almost nothing,
+    /// and an ametabolic one exactly `1.0` — no bonus, so a xorn on a bed
+    /// folds the road's arithmetic. `liveness::sleep_grade_for` is the read.
+    ///
+    /// So of spec §6a, the OBJECT side and the SPECIES side are both built.
+    /// The people side (a `(species, thing)` edge — which thing a people
+    /// tends to sleep on, needing kind-to-kind edges) and the individual side
+    /// (a `Lineage`-derived per-instance preference) are still where that
+    /// registry row leaves them, and are declared as named seams on
+    /// `liveness::SiteGrade`'s own doc, which is the type that would carry
+    /// either one.
     Sleep,
     /// Drink from a source — gates on `HoldsLiquid`.
     Drink,

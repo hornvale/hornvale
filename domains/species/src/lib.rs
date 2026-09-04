@@ -4233,6 +4233,203 @@ pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
     .collect()
 }
 
+/// How much MORE a rest or a sleep repays a body of this kind when the room
+/// it was taken in afforded somewhere to lie down (The Pallet, Task 4) — a
+/// multiplier on the ACT's own recovery rate, read by `windows/vessel::
+/// liveness::SiteGrade::gain` through `sleep_grade_for`.
+///
+/// **The key is the SLEEPER'S SPECIES, not the site's kind.** This answers
+/// *how much does an afforded site help a body of this kind*, and it does
+/// **not** answer *how good is a bed against bracken* — that second question
+/// is a `species x thing` matrix needing kind-to-kind edges, it is the
+/// `per-people` rung of `MAP-one-kind-model`, and it is deliberately not
+/// built here. Keeping the SITE two-valued — afforded or bare, as
+/// `windows/vessel::liveness::SiteGrade` already is — is what makes this a
+/// one-dimensional table.
+///
+/// **Why this replaces a constant.** The value was one authored `1.5` for
+/// every creature alive, tagged `universal` on the reasoning that it was
+/// "bounded rather than derived — not a species property". That verdict
+/// answered where the number came from, not which axis it varies along, and
+/// it is wrong on its face: a `xorn` is ametabolic stone and gains nothing
+/// whatever from a bed.
+///
+/// # The ladder, and how each row is derived
+///
+/// An afforded site pays a body in at most **two** ways, and every value
+/// below is which of the two a kind can actually collect. Both halves are
+/// read off traits [`biosphere_registry`] already carries — nothing here
+/// invents biology the roster does not already state.
+///
+/// - **Insulation.** A body lying on a surface loses heat into it. Only an
+///   [`ThermalStrategy::Endothermic`] body pays that bill — it is the one
+///   strategy whose basal rate is temperature-stable and must be *held*
+///   there (see the variant's own doc, and `allometry`'s `B0_ENDOTHERM`).
+///   An [`ThermalStrategy::Ectothermic`] body's realized rate couples to
+///   ambient temperature instead, so insulating it from the floor buys it
+///   much less.
+/// - **Fit.** A made bed is made by, and for, the body that made it. A
+///   [`SocialForm::Settled`] kind is the one that builds — `Settled` is this
+///   model's sole settlement-forming value — so its own bedding fits it, and
+///   it is habituated to using it.
+///
+/// | Value | Collects | Kinds |
+/// |---|---|---|
+/// | `MADE_FOR_THE_BODY` 1.50 | both | the settled peoples |
+/// | `INSULATION_ONLY` 1.35 | insulation | wild endotherms under a tonne |
+/// | `HABITUATION_ONLY` 1.30 | fit | `kobold` — the one settled ectotherm |
+/// | `CONTACT_ONLY` 1.20 | neither, but still lies down | wild ectotherms under a tonne |
+/// | `TOO_LARGE_TO_FIT` 1.15 | neither | any land kind at or above a tonne |
+/// | `ALREADY_BUOYED` 1.05 | neither | the fully marine kinds |
+/// | `NO_GAIN` 1.00 | nothing at all | ametabolic or sessile |
+///
+/// **`1.50` is the CEILING, not the midpoint, and that is deliberate.** It
+/// is the exact value the old constant carried, and that constant's own
+/// calibration argument — half again is the plainest reading of "prefer"
+/// that a body sleeping in the road can still live with, and `2.0` would
+/// make a bed a necessity — is an argument about the MOST a site may be
+/// worth. So the table descends from it and never exceeds it: no body in any
+/// world gains more from a bed than it did before this table existed, and
+/// the peoples, whose value that calibration was actually authored for, keep
+/// it byte for byte.
+///
+/// **Why insulation outranks fit** — 1.35 above 1.30, which is the one
+/// ordering in the ladder that is a judgement rather than a reading.
+/// Insulation is a mechanism this model already carries a trait for and
+/// already computes with; habituation is a softer claim about custom, and
+/// the softer claim gets the smaller share.
+///
+/// # Where rows share a value, and why
+///
+/// Two blocks are deliberately flat, and neither is a placeholder:
+///
+/// - the **fourteen settled peoples** at `MADE_FOR_THE_BODY` are flat
+///   because they are flat in every trait this table reads — all
+///   endothermic, all `Settled`, all between 18 and 137 kg. Separating, say,
+///   `bugbear` from `goblin` would need a softness or a posture axis the
+///   roster does not have, and inventing one to avoid a repeated number is
+///   the worse error.
+/// - the **four rows at `NO_GAIN`** reach the floor by two different roads:
+///   `xorn` has no metabolism to restore
+///   ([`ThermalStrategy::Absent`] — "no life-history"), while the three
+///   [`SocialForm::Sessile`] kinds have no lying posture to support. Both
+///   land on 1.00 because 1.00 is *no bonus*, which is the whole of what
+///   each of them can collect.
+///
+/// **The floor is 1.00 — no bonus — never below it.** A value under 1.00
+/// would make an afforded room repay LESS than open ground, turning the
+/// grade from a preference into a penalty, which is the inverse framing
+/// `windows/vessel::liveness::SiteGrade`'s own doc records as rejected.
+///
+/// # `sea-elf` and `giant-crocodile`, the two rows a rule alone gets wrong
+///
+/// `sea-elf` carries a `MARINE_FORAGE`-dominant niche and still takes the
+/// peoples' value, because [`biosphere_registry`]'s own row says why: "a
+/// settled coastal people does not live entirely in the water", and its
+/// terrestrial residue is the shore it builds on. `giant-crocodile` is the
+/// roster's stated amphibious case — land-dominant at 0.6 `ANIMAL_PREY` —
+/// so it is graded as the tonne-weight land ectotherm it is, not as a marine
+/// kind.
+///
+/// # Coverage
+///
+/// A TOTAL map over [`biosphere_registry`]'s roster, ratcheted by
+/// `coverage::every_biosphere_kind_carries_a_sleep_grade_row`, for exactly
+/// the reason [`fatigue_rise_registry`]'s own doc gives: a caller-side
+/// fallback makes a coverage gap invisible, and a `Body.species` typo
+/// reaches the same path a genuinely unauthored kind does. The caller-side
+/// miss default (`windows/vessel::liveness::DEFAULT_SLEEP_GRADE`) is
+/// reserved for a species this table has never heard of at all.
+/// type-audit: bare-ok(identifier-text), bare-ok(ratio: return)
+pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
+    /// Both halves: an endothermic body sleeping on bedding its own settled
+    /// people built to fit it. The ceiling, and the value the old universal
+    /// constant carried for every creature alive.
+    /// plumb: per-species(what a body gains from something to lie on is set by its own thermoregulation and by whether its kind builds bedding that fits it -- the settled endothermic peoples collect both halves and sit at the ceiling)
+    const MADE_FOR_THE_BODY: f64 = 1.50;
+    /// Insulation only: a wild endotherm still pays the conductive-heat bill
+    /// a surface under it relieves, but nothing in the room was built for it.
+    /// plumb: per-species(a wild endotherm collects the thermal half of an afforded site and not the fit half -- ThermalStrategy::Endothermic is the trait that sets it)
+    const INSULATION_ONLY: f64 = 1.35;
+    /// Fit only: a settled ectotherm builds and uses bedding sized to itself,
+    /// but its realized metabolic rate couples to ambient temperature, so
+    /// insulating it from the floor is worth much less.
+    /// plumb: per-species(a settled ectotherm collects the fit half of an afforded site and not the thermal half -- the ThermalStrategy and SocialForm pair is what sets it)
+    const HABITUATION_ONLY: f64 = 1.30;
+    /// Neither half, but a body that still lies its length down on a surface
+    /// rather than on rock: the residual worth of contact alone.
+    /// plumb: per-species(a wild ectotherm collects neither the thermal nor the fit half and keeps only the residual worth of lying on a surface at all)
+    const CONTACT_ONLY: f64 = 1.20;
+    /// A land body at or above a tonne: nothing a room contains is scaled to
+    /// it, and its own surface-to-volume ratio makes the floor a small part
+    /// of its heat budget.
+    /// plumb: per-species(a kind's adult mass sets whether anything a room contains is scaled to it -- at or above a tonne nothing is)
+    const TOO_LARGE_TO_FIT: f64 = 1.15;
+    /// A fully marine body: the water already supports it everywhere, so a
+    /// floor to lie on adds almost nothing.
+    /// plumb: per-species(a fully marine kind is already supported by the medium it lives in -- MARINE_FORAGE dominance in the kind's own niche is what marks it)
+    const ALREADY_BUOYED: f64 = 1.05;
+    /// No bonus at all — the floor. Reached by an ametabolic kind, which has
+    /// nothing to restore, and by a sessile one, which never lies down.
+    /// plumb: per-species(a kind with no metabolism or no lying posture collects nothing from an afforded site -- ThermalStrategy::Absent and SocialForm::Sessile are the two traits that reach this floor)
+    const NO_GAIN: f64 = 1.00;
+    [
+        // --- the settled peoples: both halves -----------------------------
+        (KindId("goblin"), MADE_FOR_THE_BODY),
+        (KindId("hobgoblin"), MADE_FOR_THE_BODY),
+        (KindId("bugbear"), MADE_FOR_THE_BODY),
+        (KindId("gnoll"), MADE_FOR_THE_BODY),
+        (KindId("human"), MADE_FOR_THE_BODY),
+        (KindId("desert-dwarf"), MADE_FOR_THE_BODY),
+        (KindId("gully-dwarf"), MADE_FOR_THE_BODY),
+        (KindId("hill-dwarf"), MADE_FOR_THE_BODY),
+        (KindId("desert-elf"), MADE_FOR_THE_BODY),
+        (KindId("drow"), MADE_FOR_THE_BODY),
+        (KindId("high-elf"), MADE_FOR_THE_BODY),
+        // Settled and endothermic, and marine-dominant: the roster's own row
+        // says a settled coastal people does not live entirely in the water,
+        // so it sleeps ashore, on what it built. Not `ALREADY_BUOYED`.
+        (KindId("sea-elf"), MADE_FOR_THE_BODY),
+        (KindId("snow-elf"), MADE_FOR_THE_BODY),
+        (KindId("wood-elf"), MADE_FOR_THE_BODY),
+        // --- the one settled ectotherm: fit, without insulation -----------
+        (KindId("kobold"), HABITUATION_ONLY),
+        // --- wild endotherms under a tonne: insulation, without fit -------
+        (KindId("giant-elk"), INSULATION_ONLY),
+        (KindId("giant-goat"), INSULATION_ONLY),
+        (KindId("otyugh"), INSULATION_ONLY),
+        (KindId("owlbear"), INSULATION_ONLY),
+        (KindId("giant-hyena"), INSULATION_ONLY),
+        (KindId("dire-wolf"), INSULATION_ONLY),
+        (KindId("carrion-crawler"), INSULATION_ONLY),
+        // --- wild ectotherms under a tonne: contact alone -----------------
+        (KindId("rust-monster"), CONTACT_ONLY),
+        (KindId("giant-scorpion"), CONTACT_ONLY),
+        (KindId("giant-constrictor-snake"), CONTACT_ONLY),
+        // --- land kinds at or above a tonne -------------------------------
+        (KindId("woolly-mammoth"), TOO_LARGE_TO_FIT),
+        (KindId("rhinoceros"), TOO_LARGE_TO_FIT),
+        (KindId("white-dragon"), TOO_LARGE_TO_FIT),
+        (KindId("red-dragon"), TOO_LARGE_TO_FIT),
+        (KindId("black-dragon"), TOO_LARGE_TO_FIT),
+        // The roster's stated amphibious case: land-dominant niche, a tonne
+        // of ectotherm. Graded by its mass, not as a marine kind.
+        (KindId("giant-crocodile"), TOO_LARGE_TO_FIT),
+        // --- the fully marine kinds ---------------------------------------
+        (KindId("reef-shark"), ALREADY_BUOYED),
+        (KindId("giant-octopus"), ALREADY_BUOYED),
+        (KindId("giant-squid"), ALREADY_BUOYED),
+        (KindId("killer-whale"), ALREADY_BUOYED),
+        // --- the floor: nothing to restore, or nothing to lie down --------
+        (KindId("xorn"), NO_GAIN),
+        (KindId("treant"), NO_GAIN),
+        (KindId("twig-blight"), NO_GAIN),
+        (KindId("shrieker"), NO_GAIN),
+    ]
+    .into_iter()
+    .collect()
+}
+
 /// The individual-mind component — authored directly, present for every
 /// minded kind (the fifteen settling peoples and the three solitary dragons).
 /// Goblin's row happens to sit at [`MindVector::MANIKIN`] — a fact about

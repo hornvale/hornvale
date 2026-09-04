@@ -149,6 +149,8 @@ mod ore_viability_probe;
 mod person_promotion;
 #[path = "suite/pin_enumeration.rs"]
 mod pin_enumeration;
+#[path = "suite/plat_reading_probe.rs"]
+mod plat_reading_probe;
 #[path = "suite/portolan_resolution.rs"]
 mod portolan_resolution;
 #[path = "suite/profile.rs"]
