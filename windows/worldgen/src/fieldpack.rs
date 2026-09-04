@@ -19,16 +19,27 @@
 //! `carbonate` is the karst driver that physically governs springs and caves
 //! (spec §5.3).
 //!
-//! **Scope: a starting set, not a complete one.** These are the
-//! terrain-sourced causes needed so far — `carbonate`/`drainage` for
-//! spring/seep — plus `land` (Task 7, R1 — see below), and the pack is
-//! expected to grow as more kinds are built. Spec §5.6's rows also name
-//! `elevation` (spring/seep), `slope` (overhang/hollow), and thicket/brake
-//! needs `moisture`/`temperature`; none of those are packed yet, because no
-//! kind reads them yet — added when the kind that needs it is built, not
-//! packed speculatively ahead of a consumer. `crust_age_at`/
-//! `boundary_distance_at` remain plain [`GeneratedTerrain`] accessors for the
-//! same reason.
+//! **Scope: a starting set, not a complete one.** `carbonate`/`drainage` fed
+//! spring/seep (Task 5), `land` closed the eligibility defect (Task 7, R1),
+//! and `slope` now feeds overhang/hollow (Task 7). Spec §5.6's rows also
+//! name `elevation` (spring/seep), and thicket/brake needs
+//! `moisture`/`temperature`; none of those are packed yet, because no kind
+//! reads them yet — added when the kind that needs it is built, not packed
+//! speculatively ahead of a consumer. `crust_age_at`/`boundary_distance_at`
+//! remain plain [`GeneratedTerrain`] accessors for the same reason.
+//!
+//! **`slope` is [`hornvale_terrain::local_slope`], promoted rather than
+//! reimplemented (Task 7, controller ruling R4).** `local_slope` already
+//! feeds `domains/terrain/src/channel.rs`'s committed confinement/floodplain
+//! geometry; a worldgen-side reformulation of "how steep is it here" would
+//! be a second implementation of a formula the world already depends on —
+//! the exact shape this campaign has closed three times before (the blend
+//! promoted to the kernel, `SphereFbm`, `room_edge`). Materialized here as
+//! the raw signed metres-of-fall-per-radian value `local_slope` returns
+//! (unbounded, occasionally negative); a kind's own macro-state recipe does
+//! its own unit conversion into `[0,1]`, the same division of labour
+//! `drainage`/`spring_macro_state` already established (`kinds.rs`'s
+//! `SPRING_DRAINAGE_SATURATION`).
 //!
 //! **Never add a `productivity` field.** `LocaleContext` computes it
 //! blend-then-combine: blend temperature, blend moisture, *then* apply a
@@ -61,9 +72,8 @@ use hornvale_terrain::GeneratedTerrain;
 /// `windows/locale`'s `LocaleContext::blend_at` (which takes a
 /// `&VertexMap<f64>`) can bilinearly blend them at any walk facet. Built by
 /// [`field_pack_from`]; every field is total over `terrain.geosphere()`'s
-/// vertices and in the range documented on the `GeneratedTerrain` accessor it
-/// materializes.
-/// type-audit: bare-ok(ratio: carbonate), bare-ok(ratio: induration), bare-ok(count: drainage), bare-ok(ratio: land)
+/// vertices and in the range documented on the accessor it materializes.
+/// type-audit: bare-ok(ratio: carbonate), bare-ok(ratio: induration), bare-ok(count: drainage), pending(wave-2: slope), bare-ok(ratio: land)
 pub struct FieldPack {
     /// Carbonate content, `[0,1]`
     /// (`GeneratedTerrain::material_at(v).carbonate`) — the karst driver
@@ -77,6 +87,13 @@ pub struct FieldPack {
     /// ocean (`GeneratedTerrain::drainage_at`). A count, not `[0,1]`-scaled —
     /// a water-source signal for spring/seep.
     pub drainage: VertexMap<f64>,
+    /// Local gradient, metres of fall per radian toward the vertex's own
+    /// downhill target (`hornvale_terrain::local_slope`, promoted from
+    /// `domains/terrain/src/channel.rs`; see this module's own doc). `0.0`
+    /// at a terminal sink. Unbounded and occasionally negative — a raw
+    /// physical rate, not `[0,1]`-scaled — overhang/hollow's own recipe
+    /// saturates it (`kinds.rs`'s `OVERHANG_SLOPE_SATURATION`).
+    pub slope: VertexMap<f64>,
     /// Ground eligibility, `1.0` land / `0.0` ocean
     /// (`!GeneratedTerrain::is_ocean(v)` as a blendable flag) — every kind's
     /// shared ground test (Task 7, R1; see this module's own doc and
@@ -90,10 +107,14 @@ pub struct FieldPack {
 /// across calls for the same `terrain`.
 pub fn field_pack_from(terrain: &GeneratedTerrain) -> FieldPack {
     let geo = terrain.geosphere();
+    let globe = terrain.globe();
     FieldPack {
         carbonate: VertexMap::from_fn(geo, |v: Vertex| terrain.material_at(v).carbonate),
         induration: VertexMap::from_fn(geo, |v: Vertex| terrain.material_at(v).induration),
         drainage: VertexMap::from_fn(geo, |v: Vertex| terrain.drainage_at(v)),
+        slope: VertexMap::from_fn(geo, |v: Vertex| {
+            hornvale_terrain::local_slope(globe, geo, v)
+        }),
         land: VertexMap::from_fn(geo, |v: Vertex| if terrain.is_ocean(v) { 0.0 } else { 1.0 }),
     }
 }

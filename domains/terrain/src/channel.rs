@@ -374,10 +374,19 @@ pub(crate) fn vertex_spacing(geo: &Geosphere, c: Vertex) -> f64 {
 /// target. `0.0` where there is no target (a terminal sink), which reads as
 /// perfectly unconfined — the wide, flat margin of a playa.
 ///
-/// `pub(crate)` for `branch.rs`, for the reason [`vertex_spacing`] is: a branch
-/// takes its confinement from the vertex it is a share of, so that a rill in a
-/// gorge has no floodplain for the same reason the trunk beside it has none.
-pub(crate) fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: Vertex) -> f64 {
+/// **Promoted to `pub` (The Weft, Task 7)**, for a second, external caller
+/// with the same shape `branch.rs`'s own use has: a kind's macro-state
+/// recipe needing the vertex's own local steepness, computed once and
+/// reused rather than re-derived a second, disagreeing way. `pub(crate)` was
+/// already load-bearing for `branch.rs` (a branch takes its confinement from
+/// the vertex it is a share of, so that a rill in a gorge has no floodplain
+/// for the same reason the trunk beside it has none); this widens the same
+/// promise to any crate holding a [`TectonicGlobe`]
+/// ([`crate::provider::GeneratedTerrain::globe`] is `pub`), rather than a
+/// worldgen-side reimplementation of the same formula disagreeing with this
+/// one at the next byte.
+/// type-audit: pending(wave-2: return)
+pub fn local_slope(globe: &TectonicGlobe, geo: &Geosphere, c: Vertex) -> f64 {
     let Some(target) = *globe.downhill.get(c) else {
         return 0.0;
     };

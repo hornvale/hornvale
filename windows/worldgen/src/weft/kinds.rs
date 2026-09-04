@@ -1,14 +1,18 @@
 //! A derived-feature kind, as data — spec §5.7: "a kind is three things and
 //! nothing else — a component bundle, a prevalence recipe, and the three
-//! scalars." This file carries the recipe and the scalars; the component
-//! bundle (the affordance vocabulary a placed feature carries, `ObjectProperty`
-//! / `object_registry`) is Task 7's addition, once an enterable/affording kind
-//! exists to need one.
+//! scalars." This file carries the recipe and the scalars for every kind
+//! built so far. The component bundle for the one enterable-adjacent kind
+//! (overhang/hollow's shelter-and-fire affordance) is **not** wired here:
+//! `ObjectProperty`/`object_registry` live in `windows/vessel`, which
+//! depends on `hornvale-worldgen` (not the reverse — the same layering
+//! [`super`]'s module doc states for `LocaleContext`), so this crate cannot
+//! reference that vocabulary at all. [`WeftKind::Overhang`]'s own doc states
+//! the affordance claim in prose; wiring an `overhang` row into
+//! `windows/vessel`'s `object_registry` is a later task's work.
 //!
-//! **Only [`WeftKind::Spring`] exists through Task 5.** Spec §5.7's whole
-//! point is that kind N+1 is an append: Task 7 adds the remaining three
-//! (overhang/hollow, thicket/brake, erratic/scatter) as new match arms
-//! alongside this one, never by editing it.
+//! **`WeftKind::Spring` and `WeftKind::Overhang` exist so far.** Spec §5.7's
+//! whole point is that kind N+1 is an append: Task 7 adds thicket/brake and
+//! erratic/scatter as new match arms alongside these, never by editing them.
 //!
 //! **Eligibility is a per-kind gate, tested before any noise is drawn (Task
 //! 7, controller ruling R1).** Task 5's review measured that 59% of all
@@ -20,7 +24,8 @@
 //! `GeneratedTerrain::cave_at`'s own `if self.is_ocean(id) { return None; }`
 //! one level down (`domains/terrain/src/provider.rs`). See
 //! `crate::weft::mod`'s [`super::prevalence`] for where the gate is applied,
-//! and this file's `land_eligible` for the shared ground test.
+//! and this file's `land_eligible` for the shared ground test every kind
+//! currently uses.
 
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
@@ -38,16 +43,25 @@ pub enum WeftKind {
     /// correlation length, an enterable water source diagnostic of what is
     /// underfoot (karst carbonate crossed with channelized drainage).
     Spring,
+    /// Overhang / hollow — spec §5.6: medium contextuality (induration ×
+    /// slope), short–medium correlation length. **Not enterable**, but
+    /// affords shelter and fire: "a place to get out of the rain and start
+    /// a fire" is a component bundle in the existing `ObjectProperty`
+    /// vocabulary (`SupportsRest`-adjacent shelter plus a warmth variant),
+    /// once wired at `windows/vessel`'s `object_registry` — see this
+    /// module's own doc for why that wiring is not, and cannot be, done
+    /// here. Proves the affordance path end to end (spec §5.6's "what it
+    /// proves" column), once that later wiring lands.
+    Overhang,
 }
 
 impl WeftKind {
     /// Every kind that exists, in a fixed order. [`super::window::WeftWindow`]
     /// enumerates this once per facet entering its radius (Task 6) — the one
     /// place a new kind must be added for the residency window to pick it up.
-    /// Task 7 grows this by appending a new element alongside a new match arm
-    /// in every method below, never by editing an existing entry (spec §5.7:
-    /// "kind N+1 is an append").
-    pub const ALL: [WeftKind; 1] = [WeftKind::Spring];
+    /// Task 7 grows this by appending, never editing an existing entry (spec
+    /// §5.7: "kind N+1 is an append").
+    pub const ALL: [WeftKind; 2] = [WeftKind::Spring, WeftKind::Overhang];
 
     /// This kind's seed-derivation root leg (a save-format contract; see
     /// `windows/worldgen/src/streams.rs`). [`super::prevalence`] and
@@ -55,6 +69,7 @@ impl WeftKind {
     pub(crate) fn stream_label(self) -> StreamLabel<'static> {
         match self {
             WeftKind::Spring => streams::WEFT_SPRING,
+            WeftKind::Overhang => streams::WEFT_OVERHANG,
         }
     }
 
@@ -63,6 +78,7 @@ impl WeftKind {
     pub(crate) fn abundance(self) -> f64 {
         match self {
             WeftKind::Spring => SPRING_ABUNDANCE,
+            WeftKind::Overhang => OVERHANG_ABUNDANCE,
         }
     }
 
@@ -74,6 +90,7 @@ impl WeftKind {
     pub(crate) fn correlation_length_facets(self) -> f64 {
         match self {
             WeftKind::Spring => SPRING_CORRELATION_LENGTH_FACETS,
+            WeftKind::Overhang => OVERHANG_CORRELATION_LENGTH_FACETS,
         }
     }
 
@@ -106,6 +123,7 @@ impl WeftKind {
     pub(crate) fn contextuality(self) -> f64 {
         match self {
             WeftKind::Spring => SPRING_CONTEXTUALITY,
+            WeftKind::Overhang => OVERHANG_CONTEXTUALITY,
         }
     }
 
@@ -119,16 +137,23 @@ impl WeftKind {
                 let drainage = blend_corner_weights(weights, &pack.drainage);
                 spring_macro_state(carbonate, drainage)
             }
+            WeftKind::Overhang => {
+                let induration = blend_corner_weights(weights, &pack.induration);
+                let slope = blend_corner_weights(weights, &pack.slope);
+                overhang_macro_state(induration, slope)
+            }
         }
     }
 
     /// Whether `self` may occur at all at `weights`' blended ground — the
     /// early eligibility gate [`super::prevalence`] tests *before* reading a
     /// macro-state cause or drawing any noise (Task 7, R1; see this file's
-    /// own module doc).
+    /// own module doc). Per-kind, not a single free-standing test, so a
+    /// future kind may diverge (spec §5.7: kind N+1 is an append) even
+    /// though every kind today shares [`land_eligible`]'s ground test.
     pub(crate) fn eligible(self, weights: [(Vertex, u64); 4], pack: &FieldPack) -> bool {
         match self {
-            WeftKind::Spring => land_eligible(weights, pack),
+            WeftKind::Spring | WeftKind::Overhang => land_eligible(weights, pack),
         }
     }
 }
@@ -143,10 +168,11 @@ impl WeftKind {
 /// plumb: universal(a majority-land threshold on the blended [0,1] ground-eligibility flag, fixed across every world and shared by every kind)
 const LAND_ELIGIBILITY_THRESHOLD: f64 = 0.5;
 
-/// The shared ground-eligibility test [`WeftKind::eligible`] delegates to
-/// (Task 7, R1): `weights`' blend of [`FieldPack::land`] at or above
-/// [`LAND_ELIGIBILITY_THRESHOLD`]. `pub(crate)` rather than a private free
-/// function so `crate::fieldpack`'s own module doc can point at it by name.
+/// The shared ground-eligibility test every [`WeftKind::eligible`] arm
+/// currently delegates to (Task 7, R1): `weights`' blend of
+/// [`FieldPack::land`] at or above [`LAND_ELIGIBILITY_THRESHOLD`]. `pub(crate)`
+/// rather than a private free function so `crate::fieldpack`'s own module
+/// doc can point at it by name.
 pub(crate) fn land_eligible(weights: [(Vertex, u64); 4], pack: &FieldPack) -> bool {
     blend_corner_weights(weights, &pack.land) >= LAND_ELIGIBILITY_THRESHOLD
 }
@@ -188,7 +214,7 @@ const SPRING_CORRELATION_LENGTH_FACETS: f64 = 40.0;
 /// spec §5.6's "high" reads most naturally against, and matches spec §5.2's
 /// own contextuality-endpoint labels once their inverted wording is
 /// corrected (see the spec's own fix in fix round 1, and
-/// [`Self::contextuality`]'s doc).
+/// [`WeftKind::contextuality`]'s doc).
 /// plumb: universal(an authored design choice fixing how strongly spring/seep tracks macro state versus free noise, identical across every world)
 const SPRING_CONTEXTUALITY: f64 = 0.85;
 
@@ -221,4 +247,52 @@ const SPRING_DRAINAGE_SATURATION: f64 = 12.0;
 fn spring_macro_state(carbonate: f64, drainage: f64) -> f64 {
     let wet = math::tanh(drainage / SPRING_DRAINAGE_SATURATION);
     (carbonate * wet).clamp(0.0, 1.0)
+}
+
+/// Abundance ceiling for overhang/hollow (spec §5.2). Lower than spring's —
+/// a rock overhang big enough to shelter under and light a fire in is a
+/// rarer landmark than a seep — and independently dialable (spec §5.2).
+/// plumb: universal(an authored design ceiling on overhang/hollow frequency, fixed across every world and not derived from any seed or pin)
+const OVERHANG_ABUNDANCE: f64 = 0.20;
+
+/// Overhang/hollow's correlation length, in facets (spec §5.2, §5.6:
+/// "short–medium"). Shorter than spring's `40.0`: a rock face's own
+/// character changes over a smaller footprint than a karst zone's, but an
+/// overhang is still a feature of a *stretch* of terrain, not a per-step
+/// coin flip — hence "medium", not spring's own erratic-adjacent floor.
+/// plumb: universal(an authored texture-vs-landmark design choice fixed across every world; spec section 5.6 names overhang/hollow's correlation length "short-medium" and this is the chosen magnitude)
+const OVERHANG_CORRELATION_LENGTH_FACETS: f64 = 15.0;
+
+/// Overhang/hollow's contextuality (spec §5.2, §5.6: "medium — induration ×
+/// slope"). Between spring's `0.85` (diagnostic of what is underfoot) and
+/// erratic's near-zero (uncorrelated with any cause): an overhang is more
+/// likely on hard, steep rock, but plenty of texture is legitimately free —
+/// not every qualifying cliff face grows one.
+/// plumb: universal(an authored design choice fixing how strongly overhang/hollow tracks macro state versus free noise, identical across every world)
+const OVERHANG_CONTEXTUALITY: f64 = 0.5;
+
+/// Soft-cap scale for blended slope (metres of fall per radian,
+/// [`FieldPack::slope`]) before it enters overhang/hollow's `[0,1]`
+/// macro-state mix — the same `tanh(x / SCALE)` saturation
+/// [`SPRING_DRAINAGE_SATURATION`] uses for a different unbounded cause.
+/// An order of magnitude gentler than
+/// [`hornvale_terrain::GORGE_SLOPE`] (`40_000.0`, the slope at which a
+/// channel's floodplain band fully closes): an overhang needs a steep rock
+/// face, not a canyon wall, so this saturates well before terrain reaches
+/// gorge-grade steepness. **Not one of spec §5.2's three per-kind scalars**
+/// — a units-conversion constant, the same carve-out
+/// [`SPRING_DRAINAGE_SATURATION`]'s own doc states.
+/// plumb: universal(a units-conversion constant bringing an unbounded slope reading into the same [0,1] register induration already occupies; not itself a design dial)
+const OVERHANG_SLOPE_SATURATION: f64 = 8_000.0;
+
+/// Overhang/hollow's macro-state recipe (spec §5.6: "induration × slope"):
+/// blended induration (rock hardness — a soft rock cannot hold its own
+/// roof) times a saturating read of blended slope's steepness (a rock
+/// overhang needs a steep face to undercut). `slope.abs()` because
+/// [`hornvale_terrain::local_slope`] is signed (fall toward a downhill
+/// target) and steepness itself is not directional — an overhang forms on a
+/// steep face regardless of which way the local drainage happens to run.
+fn overhang_macro_state(induration: f64, slope: f64) -> f64 {
+    let steep = math::tanh(slope.abs() / OVERHANG_SLOPE_SATURATION);
+    (induration * steep).clamp(0.0, 1.0)
 }

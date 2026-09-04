@@ -1,6 +1,6 @@
 //! `field_pack_from` must materialize every field pack scalar over the whole
 //! vertex grid, in range — The Weft, Task 4; extended for `land` (Task 7,
-//! R1's eligibility fix).
+//! R1's eligibility fix) and `slope` (Task 7, overhang/hollow).
 //!
 //! Test fixture (decision 0092): calls the sculpt derivation entry point
 //! (`terrain_of`) directly to build its own world state, once per test — the
@@ -72,6 +72,33 @@ fn drainage_is_total_over_the_grid_and_matches_the_accessor() {
             d,
             terrain.drainage_at(vertex),
             "field pack drainage must match the accessor at {v}"
+        );
+    }
+}
+
+/// `slope` (Task 7) covers every vertex and agrees pointwise with the
+/// promoted `hornvale_terrain::local_slope` it materializes — the same
+/// identity-with-the-accessor shape `drainage` checks above, on the field
+/// R4 of Task 7's dispatch required be a promotion rather than a
+/// reimplementation.
+#[test]
+fn slope_is_total_over_the_grid_and_matches_local_slope() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let n = terrain.geosphere().vertex_count();
+    let geo = terrain.geosphere();
+    let globe = terrain.globe();
+
+    assert_eq!(pack.slope.len(), n, "slope must cover every vertex");
+    for v in 0..n {
+        let vertex = hornvale_kernel::Vertex(v as u32);
+        let s = *pack.slope.get(vertex);
+        assert!(s.is_finite(), "slope must be finite at {v}: {s}");
+        assert_eq!(
+            s,
+            hornvale_terrain::local_slope(globe, geo, vertex),
+            "field pack slope must match the promoted accessor at {v}"
         );
     }
 }

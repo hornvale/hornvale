@@ -497,6 +497,11 @@ mod tests {
                 // perturbs no existing stream.
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
+                // The Weft, Task 7: the derived overhang/hollow surface's
+                // noise root — medium contextuality, not enterable but
+                // affording shelter and fire. A NEW label, additive at v1 —
+                // see `windows/worldgen/src/streams.rs`'s `WEFT_OVERHANG`.
+                "derived/overhang v1",
                 // The Weft: the derived spring/seep surface's noise root
                 // (Task 5). A NEW label, additive at v1 — position-keyed,
                 // never vertex-keyed — see

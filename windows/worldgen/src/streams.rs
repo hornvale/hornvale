@@ -414,4 +414,17 @@ hornvale_kernel::stream_labels! {
     /// [`SITE_PLACEMENT`] states for the same reason: nothing derived from
     /// `derived/spring/*` before this campaign.
     WEFT_SPRING = "derived/spring/v1" => "occurrence of a derived spring at a walk facet, keyed on position";
+    /// The derived overhang/hollow surface's noise root (Task 7; spec
+    /// §5.6): medium contextuality (induration × slope), short–medium
+    /// correlation length. Not enterable, but affords shelter and fire — see
+    /// `crate::weft::kinds::WeftKind::Overhang`'s own doc for the affordance
+    /// wiring this label's kind still needs (a later task's, per the
+    /// layering `windows/vessel` sits on the far side of).
+    ///
+    /// Position-keyed, additive, a NEW label — the same three properties
+    /// [`WEFT_SPRING`] states for itself, for the same reason: a `WeftKind`'s
+    /// own prevalence-modulation and occurrence draws are decorrelated
+    /// sub-legs derived dynamically under this label at the call site
+    /// (`crate::weft`), never a second entry here.
+    WEFT_OVERHANG = "derived/overhang/v1" => "occurrence of a derived overhang at a walk facet, keyed on position";
 }
