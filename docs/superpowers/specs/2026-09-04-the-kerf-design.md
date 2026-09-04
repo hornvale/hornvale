@@ -253,8 +253,14 @@ Stage 2.
   every read". **Prediction: it falls.** The size of the fall is the
   measurement; no number is predicted, because the three folds do different
   amounts of work per fact and this spec has not measured their split.
-- **K3 — the belief read's own time.** µs/call for `believed_water`, timed
-  the way the bench already times `fatigue_at` and `sustenance_at`.
+- **K3 — the belief read's own time.** µs/call for `believed_water`. **The
+  instrument already exists and this campaign builds none**: the bench's
+  `probe_believed_water_us` and `probe_shared_believed_water_us` already
+  report `believed_water_us` and `shared_believed_water_us` per band, and
+  each carries its own non-vacuity panic ("probe agent has no known water
+  across `FOLD_REPS` calls at this band"). Checked in the source before this
+  line was written, rather than assumed from the fact that The Detent quotes
+  a per-call figure. The BEFORE and AFTER readings simply record the column.
   `water_at` moves from walking a `BTreeMap<Facet, WorldTime>` to walking a
   `BTreeMap<Facet, Vec<WorldTime>>`: the same key count, a larger value, so
   the class is identical and the constant may move. **This is measured rather
