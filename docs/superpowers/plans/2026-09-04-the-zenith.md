@@ -889,8 +889,8 @@ Expected: **PASS**, having been recorded FAIL in Task 2.
 
 - [ ] **Step 5c: Delete the duplicate determinism test (ruling R8)**
 
-Task 2's flips made `build_world_is_deterministic` (`lib.rs:12825`) and
-`generated_worlds_are_deterministic` (`lib.rs:13112`) literal duplicates —
+Task 2's flips made `build_world_is_deterministic` (`lib.rs:12835`) and
+`generated_worlds_are_deterministic` (`lib.rs:13122`) literal duplicates —
 same seed, same pins, same assertion. The pair existed to prove determinism
 for BOTH tiers; with one tier there is one test, and the duplicate costs a
 full ~2.6 s world build per suite run for no coverage.
@@ -1217,11 +1217,29 @@ committed study uses a non-empty pin set at all**.
 
 - [ ] **Step 2: Write 0737, then restore the two cites that could not be written yet**
 
-Task 2 had to DROP a `(decision 0737)` cite from an `#[ignore]` reason,
-because `docs_consistency::decision_cites_in_sources_resolve` reds on a cite
-to a record that does not exist — and 0737 did not exist yet. Its report names
-the two sites. Once the record lands in this task, put the cite back and
-re-run that guard.
+**This is a PATTERN, not a one-off — two tasks have now hit it, and the list
+only grows.** `docs_consistency::decision_cites_in_sources_resolve` reds on a
+cite to a record that does not exist, so every task before this one that
+wanted to cite 0736/0737/0738 had to drop the cite and leave a note. Task 2
+dropped a `(decision 0737)` cite from an `#[ignore]` reason; Task 3 dropped a
+`(decision 0736)` cite from `sky_conformance.rs`'s module doc.
+
+Find them all rather than trusting this list — each site carries a
+deliberate marker saying it cites no decision number:
+
+```bash
+grep -rn "cites no decision number" --include='*.rs' . | grep -v '^./target'
+```
+
+Restore the cite at every hit **in the same commit as the records**, then
+re-run the guard:
+
+```bash
+cargo test -p hornvale --test suite -- docs_consistency 2>&1 | tail -12
+```
+
+A dropped cite that is never restored is invisible: the guard is satisfied by
+the absence, so nothing will ever tell you it is missing.
 
 
 Cite 0189 explicitly: a world is a seed plus a ledger; no compatibility shim.
