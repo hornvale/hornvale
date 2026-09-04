@@ -95,7 +95,7 @@ use hornvale_vessel::liveness::{
     DriveParams, HomeNavCache, PrimaryAfraidMemo, SUSTENANCE, Terrain, affect_of_memo_occupied,
     sustenance_at,
 };
-use hornvale_vessel::resident::{KnownWater, LatestVisit, ReadWitness, ResidentFolds, Trail};
+use hornvale_vessel::resident::{LatestVisit, ReadWitness, ResidentFolds, Trail};
 use hornvale_vessel::{PossessOpts, Session};
 
 /// `agent-at`'s exact on-disk spelling, written as a literal rather than
@@ -417,6 +417,20 @@ fn as_days(trail: &[(WorldTime, Facet)]) -> Vec<(f64, Facet)> {
         .collect()
 }
 
+/// The first visit per room, derived locally from [`LatestVisit::of`] for
+/// store-discard comparisons. Production reads use `water_at`; no public
+/// first-visit-map accessor is needed.
+fn first_visits(
+    visits: &LatestVisit,
+    entity: EntityId,
+) -> std::collections::BTreeMap<Facet, WorldTime> {
+    visits
+        .of(entity)
+        .iter()
+        .filter_map(|(room, days)| days.first().map(|day| (room.clone(), *day)))
+        .collect()
+}
+
 /// Guards every ordering assertion below from being vacuous: if the fixture
 /// ever degraded into one whose commits are already in `(day, room)` order, an
 /// appending fold would pass all of them.
@@ -579,9 +593,9 @@ fn store_discard_schedule(every: usize) {
                 "{e:?}'s trail diverged at prefix {i} under a discard-every-{every} schedule"
             );
             assert_eq!(
-                chaotic.known_water(&prefix).of(e),
-                resident.known_water(&prefix).of(e),
-                "{e:?}'s visited-room index diverged at prefix {i} under a \
+                first_visits(chaotic.latest_visit(&prefix), e),
+                first_visits(resident.latest_visit(&prefix), e),
+                "{e:?}'s first-visit map diverged at prefix {i} under a \
                  discard-every-{every} schedule"
             );
         }
@@ -592,12 +606,13 @@ fn store_discard_schedule(every: usize) {
     let scan = fold_one_by_one(&full);
     let _ = resident.trail(&full);
     let _ = chaotic.trail(&full);
-    let water_scan = fold_known_water_one_by_one(&full);
     for e in [a, b] {
         assert_eq!(resident.trail(&full).of(e), scan.state().of(e));
         assert_eq!(chaotic.trail(&full).of(e), scan.state().of(e));
-        assert_eq!(resident.known_water(&full).of(e), water_scan.state().of(e));
-        assert_eq!(chaotic.known_water(&full).of(e), water_scan.state().of(e));
+        assert_eq!(
+            first_visits(resident.latest_visit(&full), e),
+            first_visits(chaotic.latest_visit(&full), e)
+        );
     }
 }
 
@@ -2109,7 +2124,7 @@ fn the_cost_of_a_read_does_not_grow_with_the_tick_index_for_a_creature_that_neve
 }
 
 // ---------------------------------------------------------------------------
-// The Pawl, Task 4: `KnownWater` — the belief tenant.
+// The Pawl, Task 4: the belief read's scan oracle.
 //
 // Step 1 is the rule-6 witness; steps 2 and 3 are FOLD equals SCAN against a
 // VERBATIM copy of `believed_water`'s own set-building loop, plus both chaos
@@ -2138,7 +2153,7 @@ impl Terrain for PoolTerrain {
 }
 
 /// A VERBATIM COPY of `liveness.rs`'s `believed_water` set-building loop — the
-/// SCAN half of FOLD equals SCAN for [`KnownWater`].
+/// SCAN half of FOLD equals SCAN for [`LatestVisit::water_at`].
 ///
 /// Only the loop: the `plan_to_room` ranking below it is untouched by this
 /// migration and is not what the tenant replaced. Copied rather than called
@@ -2162,17 +2177,6 @@ fn known_water_scan_oracle(
         }
     }
     seen
-}
-
-/// The fold half for [`KnownWater`], reached through `absorb_at` one fact at a
-/// time — the path independent of `advance_to`, for the reason
-/// [`fold_one_by_one`] states.
-fn fold_known_water_one_by_one(ledger: &Ledger) -> Folded<KnownWater> {
-    let mut f: Folded<KnownWater> = Folded::new();
-    for (i, fact) in ledger.iter().enumerate() {
-        f.absorb_at(i as u64, fact);
-    }
-    f
 }
 
 /// The fixture's wet rooms: SOME of the rooms [`SCRIPT`] visits, never all of
@@ -2247,10 +2251,10 @@ fn the_fixture_visits_both_wet_and_dry_rooms() {
 }
 
 #[test]
-fn known_water_folded_one_fact_at_a_time_equals_the_scan_oracle() {
+fn latest_visit_water_folded_one_fact_at_a_time_equals_the_scan_oracle() {
     let (l, a, b) = hand_built();
     let terrain = pool_terrain();
-    let folded = fold_known_water_one_by_one(&l);
+    let folded = fold_latest_visit_one_by_one(&l);
     let far = WorldTime::from_ticks(9_999_999);
 
     for e in [a, b] {
@@ -2264,10 +2268,10 @@ fn known_water_folded_one_fact_at_a_time_equals_the_scan_oracle() {
 }
 
 #[test]
-fn known_water_at_every_past_instant_equals_the_oracle_at_that_instant() {
+fn latest_visit_water_at_every_past_instant_equals_the_oracle_at_that_instant() {
     let (l, a, b) = hand_built();
     let terrain = pool_terrain();
-    let folded = fold_known_water_one_by_one(&l);
+    let folded = fold_latest_visit_one_by_one(&l);
 
     for e in [a, b] {
         // Every instant the script names, plus one strictly before the first
@@ -2338,9 +2342,9 @@ fn a_room_visited_twice_keeps_its_first_instant() {
     let terrain = PoolTerrain {
         wet: [wet.clone()].into_iter().collect(),
     };
-    let folded = fold_known_water_one_by_one(&l);
+    let folded = fold_latest_visit_one_by_one(&l);
     assert_eq!(
-        folded.state().of(e).get(&wet),
+        folded.state().of(e).get(&wet).and_then(|days| days.first()),
         Some(&WorldTime::from_ticks(100_000)),
         "the LATER commit of an EARLIER instant must win: the first visit is the minimum"
     );
@@ -2358,7 +2362,7 @@ fn a_room_visited_twice_keeps_its_first_instant() {
 fn an_entity_that_never_moved_knows_no_water() {
     let (l, _a, _b) = hand_built();
     let terrain = pool_terrain();
-    let folded = fold_known_water_one_by_one(&l);
+    let folded = fold_latest_visit_one_by_one(&l);
     let stranger = EntityId::new(9_999).expect("9999 is non-zero");
     assert!(folded.state().of(stranger).is_empty());
     assert!(
@@ -2370,11 +2374,11 @@ fn an_entity_that_never_moved_knows_no_water() {
 }
 
 #[test]
-fn discarding_known_water_at_every_position_is_unobservable() {
+fn discarding_latest_visit_water_at_every_position_is_unobservable() {
     let (l, _a, _b) = hand_built();
-    let resident = fold_known_water_one_by_one(&l);
+    let resident = fold_latest_visit_one_by_one(&l);
 
-    let mut chaotic: Folded<KnownWater> = Folded::new();
+    let mut chaotic: Folded<LatestVisit> = Folded::new();
     for (i, f) in l.iter().enumerate() {
         chaotic.absorb_at(i as u64, f);
         chaotic = Folded::rebuild_upto(&l, chaotic.position());
@@ -2385,11 +2389,11 @@ fn discarding_known_water_at_every_position_is_unobservable() {
 }
 
 #[test]
-fn discarding_known_water_at_every_third_position_is_unobservable() {
+fn discarding_latest_visit_water_at_every_third_position_is_unobservable() {
     let (l, _a, _b) = hand_built();
-    let resident = fold_known_water_one_by_one(&l);
+    let resident = fold_latest_visit_one_by_one(&l);
 
-    let mut chaotic: Folded<KnownWater> = Folded::new();
+    let mut chaotic: Folded<LatestVisit> = Folded::new();
     for (i, f) in l.iter().enumerate() {
         chaotic.absorb_at(i as u64, f);
         if i % 3 == 0 {
@@ -2420,7 +2424,7 @@ fn discarding_known_water_at_every_third_position_is_unobservable() {
 /// **The branch taken, stated exactly, because the number alone would be read
 /// two ways.** On the paths the session actually REACHES — its own belief
 /// lookups, and the present-instant `affect_of_memo_occupied` shape — the exact
-/// count is ZERO. [`KnownWater`] carries a first-visit instant anyway, for two
+/// count is ZERO. [`LatestVisit`] carries an ascending visit list anyway, for two
 /// reasons neither of which is that number:
 ///
 /// 1. `emitter_arousal` (`liveness.rs`) replays `affect_of` at a creature's
@@ -2569,8 +2573,8 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
         if present_past + past_offenders == 0 {
             "found NO past-instant belief read on a reached path"
         } else {
-            "FIRED -- a production belief read runs at a past instant, so KnownWater carries \
-             a first-visit instant and filters by it"
+            "FIRED -- a production belief read runs at a past instant, so LatestVisit carries \
+             an ascending visit list and filters by its first instant"
         }
     );
     println!(
@@ -2589,7 +2593,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
     );
     assert!(
         past_offenders > 0,
-        "spec §3 rule 6's branch: `KnownWater` carries a first-visit instant BECAUSE a \
+        "spec §3 rule 6's branch: `LatestVisit` carries an ascending visit list BECAUSE a \
          production read runs at an instant before a committed sighting. If this is ever \
          zero, that filter is unexercised and the tenant is carrying a day map nothing \
          proves it needs"
@@ -2874,7 +2878,8 @@ fn latest_as_days(
 
 /// Guards the latest-wins assertions from being vacuous: the fixture must
 /// visit at least one room TWICE for the same entity, or a fold that kept the
-/// FIRST instant (which is exactly what [`KnownWater`] does, one tenant over)
+/// FIRST instant (which is exactly what [`LatestVisit::water_at`] uses for
+/// membership)
 /// would pass every comparison below.
 #[test]
 fn the_fixture_visits_at_least_one_room_twice() {
@@ -3526,12 +3531,9 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
 // The Kerf, Task 3: FOLD equals SCAN for the belief read, on two real shapes
 // and on a ledger whose sightings arrive backwards.
 //
-// This section is written against TODAY's `KnownWater`, deliberately and
-// before the migration it exists to police. Task 4 moves `water_at` onto
-// `LatestVisit` and deletes `KnownWater`; a test written after that move
-// could only show that the new code agrees with itself, never that the move
-// preserved anything. So every witness below is green on the OLD tenant
-// first, and Task 4 re-points its comparand and re-runs it.
+// These witnesses compare `LatestVisit::water_at` against the independent
+// scan oracle after the migration. They were green on the old tenant before
+// the cut, then retargeted so they continue to police the read's behaviour.
 //
 // The oracle is [`known_water_scan_oracle`], unchanged and shared with The
 // Pawl's fixture tests. It is a VERBATIM copy of the pre-Pawl
@@ -3541,8 +3543,9 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
 // # THE CONTROLS, RUN BEFORE ANY OF THIS WAS BELIEVED (2026-09-04)
 //
 // A witness that cannot fail is decoration, so both mutations were applied
-// with `scripts/mutate.py` to `KnownWater::absorb` and restored with
-// `git checkout --`, never by retyping. What each one moves:
+// with `scripts/mutate.py` to the old fold and restored with `git checkout
+// --`, never by retyping. Their discrimination is re-proven below against
+// `LatestVisit::water_at`.
 //
 // ```text
 // witness                                    control B   control C
@@ -3835,11 +3838,11 @@ fn kerf_fold_equals_scan(
             prefix.push(facts[p - 1]);
         }
         let l = &prefix.out;
-        let _ = resident.known_water(l);
+        let _ = resident.latest_visit(l);
         if (p - start) % every == 0 {
             chaotic = ResidentFolds::new();
         }
-        let _ = chaotic.known_water(l);
+        let _ = chaotic.latest_visit(l);
         out.prefixes += 1;
         assert_eq!(
             chaotic.position(),
@@ -3848,8 +3851,8 @@ fn kerf_fold_equals_scan(
         );
         for e in entities {
             assert_eq!(
-                chaotic.known_water(l).of(*e),
-                resident.known_water(l).of(*e),
+                first_visits(chaotic.latest_visit(l), *e),
+                first_visits(resident.latest_visit(l), *e),
                 "{label}: {e:?}'s first-visit map diverged at prefix {p} under a \
                  discard-every-{every} schedule"
             );
@@ -3865,13 +3868,13 @@ fn kerf_fold_equals_scan(
                     .into_iter()
                     .collect();
                 assert_eq!(
-                    resident.known_water(l).water_at(*e, t, terrain),
+                    resident.latest_visit(l).water_at(*e, t, terrain),
                     scanned,
                     "{label}: the resident store's water set for {e:?} at {t:?} must equal \
                      the scan oracle's at prefix {p}"
                 );
                 assert_eq!(
-                    chaotic.known_water(l).water_at(*e, t, terrain),
+                    chaotic.latest_visit(l).water_at(*e, t, terrain),
                     scanned,
                     "{label}: the discarded-and-rebuilt store's water set for {e:?} at \
                      {t:?} must equal the scan oracle's at prefix {p}"
@@ -3895,7 +3898,7 @@ fn kerf_fold_equals_scan(
         .max()
         .expect("a real ledger carries at least one dated fact");
     for e in entities {
-        let w = resident.known_water(l).water_at(*e, end, terrain);
+        let w = resident.latest_visit(l).water_at(*e, end, terrain);
         let visited: std::collections::BTreeSet<Facet> = l
             .facts_of(*e, AGENT_AT)
             .filter(|f| f.day.is_some())
@@ -4128,7 +4131,7 @@ fn the_kerf_lab_shape_fold_equals_scan_discarding_at_every_third_position() {
 // THE ONLY INSTRUMENT IN THIS CAMPAIGN THAT REACHES THE MIN-KEEPING BRANCH,
 // AND THE CONTROL TABLE IN THIS SECTION'S SIBLING HEADER IS WHAT ESTABLISHES
 // THAT RATHER THAN AN ARGUMENT. The Kerf's Task 1 proved by panic-mutation
-// that `KnownWater::absorb`'s `if day < *first` arm is NEVER taken on a
+// that the old tenant's `if day < *first` arm is NEVER taken on a
 // walk-derived ledger: `DriveMovements` commits at the tick's own day and
 // ticks advance monotonically, so a room's first absorbed sighting already IS
 // its minimum. Emptying that arm outright (control C) is therefore
@@ -4158,7 +4161,7 @@ fn the_kerf_lab_shape_fold_equals_scan_discarding_at_every_third_position() {
 ///
 /// Each ROOM's own sightings arrive in strictly DESCENDING day order, so for
 /// every one of them the first fact absorbed is NOT its first visit — the
-/// exact condition `KnownWater::absorb`'s min-keeping arm exists for and the
+/// exact condition the old min-keeping arm existed for and the
 /// exact condition no walk produces. Three rooms carry three, two and three
 /// sightings; the entities are interleaved so a fold leaking one entity's
 /// facts into another's is caught too; and one DRY room is visited so the
@@ -4258,8 +4261,8 @@ fn the_kerf_descending_fixture_commits_each_room_backwards() {
 /// A room whose sightings arrive backwards is known from its EARLIEST
 /// instant, not from the first one committed.
 ///
-/// This is spec §5 step 2's equivalence, stated as behaviour: `KnownWater`
-/// keeps the minimum, and after Task 4 `LatestVisit`'s ascending list makes
+/// This is spec §5 step 2's equivalence, stated as behaviour: `LatestVisit`'s
+/// ascending list makes
 /// `days.first()` that same minimum. Both directions are asserted — the room
 /// is admitted AT the earliest instant and at every instant after it, and
 /// is NOT admitted one tick before it — and the whole thing is compared
@@ -4275,12 +4278,12 @@ fn the_kerf_descending_fixture_commits_each_room_backwards() {
 fn the_kerf_a_room_committed_backwards_is_known_from_its_earliest_instant() {
     let (l, a, b) = kerf_descending_fixture();
     let terrain = pool_terrain();
-    let folded = fold_known_water_one_by_one(&l);
+    let folded = fold_latest_visit_one_by_one(&l);
     let wet = room(0, &[0]);
 
     // The fold kept the minimum, not the first commit.
     assert_eq!(
-        folded.state().of(a).get(&wet),
+        folded.state().of(a).get(&wet).and_then(|days| days.first()),
         Some(&WorldTime::from_ticks(200_000)),
         "the room's three sightings committed 900_000, 600_000, 200_000; the fold must \
          hold the EARLIEST"
@@ -4324,7 +4327,7 @@ fn the_kerf_a_room_committed_backwards_is_known_from_its_earliest_instant() {
         .collect();
     probes.push(WorldTime::from_ticks(0));
     probes.push(WorldTime::from_ticks(9_999_999));
-    let mut rebuilt: Folded<KnownWater> = Folded::new();
+    let mut rebuilt: Folded<LatestVisit> = Folded::new();
     for (i, f) in l.iter().enumerate() {
         rebuilt.absorb_at(i as u64, f);
         rebuilt = Folded::rebuild_upto(&l, rebuilt.position());

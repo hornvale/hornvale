@@ -803,12 +803,10 @@ struct Band {
     /// `ground_bytes`.
     index_bytes: usize,
 
-    // ---- The Kerf: K1 and K2 (spec §4) -- what the three `agent-at` fold
-    // tenants HOLD at this band's end, and what advancing a cold store over
-    // the band's whole ledger COSTS per fact. The three indexes are a chain of
-    // strict projections (`Trail` ⊃ `LatestVisit` ⊃ `KnownWater`), and this is
-    // the BEFORE reading against which deleting `KnownWater` is measured. No
-    // threshold: these are figures, not criteria. ----
+    // ---- The Kerf: K1 and K2 (spec §4) -- what the two surviving `agent-at`
+    // fold tenants HOLD at this band's end, and what advancing a cold store
+    // over the band's whole ledger COSTS per fact. No threshold: these are
+    // figures, not criteria. ----
     /// Every entity's sighting count summed, held by `Trail` at this band's
     /// end (`Trail::entries()`) -- every dated `agent-at` fact, once each.
     trail_entries: usize,
@@ -818,14 +816,6 @@ struct Band {
     /// held data, not an allocator measurement, the same caveat
     /// `ground_bytes` states.
     trail_bytes: usize,
-    /// Every entity's DISTINCT visited-room count summed, held by
-    /// `KnownWater` at this band's end (`KnownWater::entries()`). **This
-    /// column and the next are the campaign's predicted saving, exactly.**
-    known_water_entries: usize,
-    /// An estimate of `KnownWater`'s held bytes at this band's end
-    /// (`KnownWater::held_bytes()`) -- every visited room's key size plus one
-    /// `size_of::<WorldTime>()` first-visit instant. Same estimate caveat.
-    known_water_bytes: usize,
     /// Every VISIT INSTANT held by `LatestVisit` at this band's end
     /// (`LatestVisit::entries()`). Identically equal to `trail_entries` --
     /// the same population keyed by room -- so a divergence between the two
@@ -931,27 +921,25 @@ fn main() {
 
     // The Kerf: K1 and K2 (spec §4) -- a THIRD, small table, for the reason
     // the second one gives: the tables above keep their existing columns
-    // untouched. No threshold; these are the BEFORE figures deleting
-    // `KnownWater` is measured against.
+    // untouched. No threshold; the absent BEFORE row is the campaign's
+    // measured saving.
     println!();
     println!(
-        "{:>5} {:>9} {:>9} {:>9} {:>9} {:>9} {:>9} {:>11}",
-        "band", "trail_e", "trail_b", "water_e", "water_b", "visit_e", "visit_b", "adv_ns/fact"
+        "{:>5} {:>9} {:>9} {:>9} {:>9} {:>11}",
+        "band", "trail_e", "trail_b", "visit_e", "visit_b", "adv_ns/fact"
     );
     println!(
-        "  (K1: the three `agent-at` fold tenants' held entries and an ESTIMATE of their held \
+        "  (K1: the two `agent-at` fold tenants' held entries and an ESTIMATE of their held \
          bytes -- not an allocator measurement. `trail_e` and `visit_e` are the SAME population \
-         keyed two ways and must agree exactly; `water_e` is the distinct rooms visited. \
+         keyed two ways and must agree exactly. \
          K2 `adv_ns/fact`: a COLD store advanced over the whole ledger, per committed fact.)"
     );
     for b in &bands {
         println!(
-            "{:>5} {:>9} {:>9} {:>9} {:>9} {:>9} {:>9} {:>11.2}",
+            "{:>5} {:>9} {:>9} {:>9} {:>9} {:>11.2}",
             b.index,
             b.trail_entries,
             b.trail_bytes,
-            b.known_water_entries,
-            b.known_water_bytes,
             b.latest_visit_entries,
             b.latest_visit_bytes,
             b.advance_ns_per_fact
@@ -1496,8 +1484,6 @@ fn run(
             // production caller wants.
             let trail_entries = folds.borrow_mut().trail(&ledger).entries();
             let trail_bytes = folds.borrow_mut().trail(&ledger).held_bytes();
-            let known_water_entries = folds.borrow_mut().known_water(&ledger).entries();
-            let known_water_bytes = folds.borrow_mut().known_water(&ledger).held_bytes();
             let latest_visit_entries = folds.borrow_mut().latest_visit(&ledger).entries();
             let latest_visit_bytes = folds.borrow_mut().latest_visit(&ledger).held_bytes();
             // The Kerf, K2. OUTSIDE the `band_ms` span by construction (that
@@ -1547,8 +1533,6 @@ fn run(
                 index_bytes: folds.borrow().frightening_ground().held_bytes(),
                 trail_entries,
                 trail_bytes,
-                known_water_entries,
-                known_water_bytes,
                 latest_visit_entries,
                 latest_visit_bytes,
                 advance_ns_per_fact,

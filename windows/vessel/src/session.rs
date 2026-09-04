@@ -3261,7 +3261,7 @@ impl<'w> Session<'w> {
     /// How many of this session's belief reads ran at an instant strictly
     /// before a committed sighting of the same entity — spec §3 rule 6's
     /// witness, taken on the real path. Non-zero means
-    /// [`crate::resident::KnownWater`]'s first-visit filter is what keeps the
+    /// [`crate::resident::LatestVisit`]'s first-visit filter is what keeps the
     /// answer identical to the scan it replaced.
     /// type-audit: bare-ok(count: return)
     pub fn resident_beliefs_in_the_past(&self) -> u64 {

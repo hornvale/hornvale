@@ -1183,8 +1183,8 @@ pub fn drive_at(
 /// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
 ///
 /// The candidate set comes off the caller-owned resident store (The Pawl):
-/// [`crate::resident::KnownWater`] holds each entity's DISTINCT visited rooms
-/// with the first instant each was seen, so this read is O(distinct rooms)
+/// [`crate::resident::LatestVisit`] holds each entity's DISTINCT visited rooms
+/// with ascending visit lists, so this read is O(distinct rooms)
 /// where it was O(history). Nothing else moves — the `day <= t` admission, the
 /// `is_water` intersection, the home-anchored `plan_to_room` ranking and the
 /// `(hops, Facet)` tie-break are the same ones this function has always
@@ -1205,7 +1205,7 @@ pub fn believed_water(
 ) -> Option<Facet> {
     let seen: Vec<Facet> = {
         let mut store = folds.borrow_mut();
-        let (known, trail, witness) = store.known_water_and_trail(ledger);
+        let (latest_visit, trail, witness) = store.latest_visit_trail_and_witness(ledger);
         // Spec §3 rule 6's witness, taken where the read actually happens: is
         // this instant behind a sighting the store has already absorbed? See
         // `ReadWitness::note_belief` for what the count means now that the
@@ -1215,7 +1215,7 @@ pub fn believed_water(
             t,
             trail.of(npc.entity).last().map(|(day, _)| *day),
         );
-        known.water_at(npc.entity, t, terrain)
+        latest_visit.water_at(npc.entity, t, terrain)
     };
     seen.into_iter()
         .filter_map(|r| {
@@ -1328,7 +1328,7 @@ fn note_halo(set: &mut std::collections::BTreeSet<Facet>, p: &Facet) {
 ///   — rare, and the reason the copy is affordable at all.
 ///
 /// **The tenant holds the visits and the READ applies the predicate**, exactly
-/// as [`crate::resident::KnownWater`] does for `is_water`: `frightening` needs
+/// as [`crate::resident::LatestVisit`] does for `is_water`: `frightening` needs
 /// terrain and the member's own threat niche, neither of which is a ledger
 /// fact, so none of what this function accumulates could live inside a
 /// `LedgerFold`. The result is memoised per `t` in [`PrimaryAfraidMemo`],
