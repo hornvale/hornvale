@@ -5415,3 +5415,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T05:57:34Z | gate-commit | 44.071 | 83.317 | 42.057 | 2.84 | 0 | d8141ff1a | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T06:26:54Z | gate-commit | 44.832 | 82.968 | 41.676 | 2.78 | 0 | a48649308 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T06:57:18Z | gate-commit | 47.729 | 96.353 | 44.345 | 2.95 | 0 | 26cfa25f8 | campaign/the-weft | MacBookPro | 10 |
+| 2026-09-04T07:11:56Z | gate-commit | 46.315 | 77.709 | 47.928 | 2.71 | 0 | c20be03fc | campaign/the-weft | MacBookPro | 10 |
+| 2026-09-04T07:13:49Z | gate-commit | 34.950 | 67.398 | 15.062 | 2.36 | 0 | c20be03fc | campaign/the-weft | MacBookPro | 10 |
