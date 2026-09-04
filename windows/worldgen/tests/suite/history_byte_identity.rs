@@ -9,7 +9,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to};
+use hornvale_worldgen::{BuildDepth, SettlementPins, WorldComponents, build_world_to};
 
 /// Build seed 42 to `BuildDepth::Settlements` — deep enough to include the
 /// whole history bake (genesis through the present) and the settlement/ruin
@@ -20,7 +20,6 @@ fn build_settlements() -> hornvale_kernel::World {
     build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

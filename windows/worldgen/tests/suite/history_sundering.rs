@@ -36,8 +36,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, collapse_events,
-    migration_events, sundered_landmasses,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, collapse_events, migration_events,
+    sundered_landmasses,
 };
 
 fn build_s(seed: Seed) -> hornvale_kernel::World {
@@ -45,7 +45,6 @@ fn build_s(seed: Seed) -> hornvale_kernel::World {
     build_world_to(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

@@ -30,7 +30,7 @@ use hornvale_kernel::color::BANDS;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
 use hornvale_kernel::{Facet, Seed, Vertex, World, WorldTime};
 use hornvale_locale::{LocaleContext, MicroField};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeSet;
 
 /// A fixed, neutral micro-field — every axis at its midpoint. This test
@@ -187,7 +187,6 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &SettlementPins::default(),
     )

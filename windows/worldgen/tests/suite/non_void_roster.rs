@@ -30,8 +30,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_suitability,
-    sky_of, terrain_of,
+    SettlementPins, WorldComponents, build_world, climate_of, per_species_suitability, sky_of,
+    terrain_of,
 };
 use std::collections::BTreeSet;
 
@@ -95,7 +95,6 @@ fn viable_kinds_on(seed: u64) -> BTreeSet<&'static str> {
     let world = build_world(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

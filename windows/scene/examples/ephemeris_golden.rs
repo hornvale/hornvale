@@ -4,13 +4,12 @@
 //! reproduce from the emitted elements.
 use hornvale_astronomy::units::StdInstant;
 use hornvale_kernel::Seed;
-use hornvale_worldgen::{SkyChoice, build_world, sky_of};
+use hornvale_worldgen::{build_world, sky_of};
 
 fn main() {
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

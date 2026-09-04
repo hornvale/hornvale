@@ -37,8 +37,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed, quantize};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_suitability,
-    sky_of, terrain_of,
+    SettlementPins, WorldComponents, build_world, climate_of, per_species_suitability, sky_of,
+    terrain_of,
 };
 use std::collections::BTreeMap;
 use std::ops::RangeInclusive;
@@ -136,7 +136,6 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
         let world = build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

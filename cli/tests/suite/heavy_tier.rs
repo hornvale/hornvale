@@ -455,18 +455,7 @@ fn the_heavy_roster_is_exactly_this_fixture() {
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
 ///
-/// The Zenith added one, 2026-09-04: the `green from The Zenith's Task 4`
-/// entry, at `windows/worldgen/src/lib.rs::a_world_with_no_sky_provider_fact_
-/// is_an_error_not_a_fallback`. It is neither a cost deferral nor a
-/// preregistered promise but a third thing worth naming — a test written
-/// BEFORE the change it asserts, so that its red is behavioural rather than
-/// a compile error, and ignored only for the interval between the two
-/// commits. It asks for no witness because the red IS the witness, pasted
-/// into that campaign's task report. **It should not survive its campaign**:
-/// the task that makes `sky_of` error removes the attribute, and this row
-/// with it. A future reader finding this entry still here after The Zenith
-/// merged has found a rot, not a convention.
-const EXPECTED_UNTOKENISED: [&str; 37] = [
+const EXPECTED_UNTOKENISED: [&str; 36] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar; six census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing. The sixth is the first taken after the evaluable surface grew, 117 -> 118 columns; an ablation dropping the new column re-reads 72/120 arm for arm, so the surface contributed nothing and the reading stays comparable)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -487,7 +476,6 @@ const EXPECTED_UNTOKENISED: [&str; 37] = [
     "cost: 64 world builds (~4 min); run by hand at stage boundaries, results in the ledger",
     "failing — investigate later",
     "flaky after the refactor",
-    "green from The Zenith's Task 4: sky_of errors on an absent sky-provider fact; red here is the recorded pre-change behaviour",
     "measurement: builds eight full worlds; run explicitly with --ignored",
     "measurement: builds one full world; run explicitly with --ignored",
     "measurement: builds one world to BuildDepth::Terrain; run explicitly with --ignored",

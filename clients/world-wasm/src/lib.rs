@@ -11,7 +11,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_scene::SceneContext;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// The current world, if any.
 static mut WORLD: Option<World> = None;
@@ -60,7 +60,6 @@ const SETTLEMENT_KEYS: &[&str] = &["species"];
 /// Parsed pin bundle: everything `build_world` wants.
 struct Pins {
     sky: SkyPins,
-    choice: SkyChoice,
     terrain: TerrainPins,
     settlement: SettlementPins,
 }
@@ -74,7 +73,6 @@ fn parse_pins(bytes: &[u8]) -> Result<Pins, String> {
     let obj = v.as_object().ok_or("pins JSON must be an object")?;
     let mut pins = Pins {
         sky: SkyPins::default(),
-        choice: SkyChoice::Generated,
         terrain: TerrainPins::default(),
         settlement: SettlementPins::default(),
     };
@@ -89,13 +87,7 @@ fn parse_pins(bytes: &[u8]) -> Result<Pins, String> {
                 ));
             }
         };
-        if key == "sky" {
-            pins.choice = match val.as_str() {
-                "generated" => SkyChoice::Generated,
-                "constant" => SkyChoice::Constant,
-                other => return Err(format!("sky: unknown value '{other}'")),
-            };
-        } else if SKY_KEYS.contains(&key.as_str()) {
+        if SKY_KEYS.contains(&key.as_str()) {
             hornvale_astronomy::parse_pin(&format!("{key}={val}"), &mut pins.sky)
                 .map_err(|e| e.to_string())?;
         } else if TERRAIN_KEYS.contains(&key.as_str()) {
@@ -125,7 +117,6 @@ fn genesis(seed: u64, pins: &Pins) -> i32 {
     match build_world(
         Seed(seed),
         &pins.sky,
-        pins.choice,
         &pins.terrain,
         &pins.settlement,
     ) {
@@ -146,7 +137,6 @@ fn genesis(seed: u64, pins: &Pins) -> i32 {
 pub extern "C" fn hw_new(seed: u64) -> i32 {
     let pins = Pins {
         sky: SkyPins::default(),
-        choice: SkyChoice::Generated,
         terrain: TerrainPins::default(),
         settlement: SettlementPins::default(),
     };

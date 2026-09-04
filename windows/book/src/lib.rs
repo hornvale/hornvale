@@ -795,14 +795,14 @@ pub fn reckoning_at_from(
 fn true_event_count(world: &World, at: hornvale_astronomy::StdInstant) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable sky: {e}"));
-    match sky {
-        hornvale_worldgen::Sky::Generated(sky) => {
-            let from =
-                hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
-            hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at).len()
-        }
-        hornvale_worldgen::Sky::Constant(_) => 0,
-    }
+    let from = hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
+    hornvale_astronomy::eclipse_events(
+        sky.generated().system(),
+        sky.generated().calendar(),
+        from,
+        at,
+    )
+    .len()
 }
 
 /// Whether one placed culture's held knowledge falls short of the true
@@ -3178,12 +3178,11 @@ mod tests {
     fn volume_states_the_planet_is_a_planet() {
         use hornvale_astronomy::SkyPins;
         use hornvale_terrain::TerrainPins;
-        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+        use hornvale_worldgen::{SettlementPins, build_world};
 
         let world = build_world(
             hornvale_kernel::Seed(1),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -3213,12 +3212,11 @@ mod tests {
     fn generated(seed: u64) -> World {
         use hornvale_astronomy::SkyPins;
         use hornvale_terrain::TerrainPins;
-        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+        use hornvale_worldgen::{SettlementPins, build_world};
 
         build_world(
             hornvale_kernel::Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

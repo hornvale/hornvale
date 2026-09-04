@@ -329,7 +329,7 @@ use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exist
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::delve_seating::{chamber_fit, seat_at, seating_for};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to_with_artifacts, per_species_capacity,
+    BuildDepth, SettlementPins, build_world_to_with_artifacts, per_species_capacity,
     per_species_suitability, sky_of,
 };
 
@@ -777,7 +777,6 @@ fn the_separation_readout() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

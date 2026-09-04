@@ -37,8 +37,8 @@
 use hornvale_kernel::sovereignty_floor;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, per_species_capacity, sky_of,
-    substrate_field, terrain_of,
+    SettlementPins, build_world, climate_of, per_species_capacity, sky_of, substrate_field,
+    terrain_of,
 };
 
 /// The settling roster, in registry order.
@@ -87,7 +87,6 @@ fn report(seed_value: u64) {
     let world = build_world(
         seed,
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -98,10 +97,7 @@ fn report(seed_value: u64) {
     let sky = sky_of(&world).expect("sky");
     // The stellar-input triple, resolved exactly as `tilth_probe.rs` does
     // (`stellar_inputs` itself is private to worldgen).
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

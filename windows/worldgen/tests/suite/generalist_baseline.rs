@@ -96,8 +96,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_suitability,
-    sky_of, substrate_field, terrain_of,
+    SettlementPins, WorldComponents, build_world, climate_of, per_species_suitability, sky_of,
+    substrate_field, terrain_of,
 };
 use std::collections::BTreeMap;
 
@@ -235,7 +235,6 @@ fn measure_one(
     let world = build_world(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

@@ -69,9 +69,7 @@
 use hornvale_astronomy::{NeighborClass, RotationPin, SkyPins};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{
-    BuildDepth, BuildError, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-};
+use hornvale_worldgen::{BuildDepth, BuildError, SettlementPins, WorldComponents, build_world_to};
 
 /// Every discrete value of the three enumerated pins, in a stable order.
 fn rotation_choices() -> [RotationPin; 2] {
@@ -139,7 +137,6 @@ fn build(combo: &Combo) -> Result<hornvale_kernel::World, BuildError> {
     build_world_to(
         Seed(42),
         &sky_pins,
-        SkyChoice::Generated,
         &terrain_pins,
         &SettlementPins::default(),
         &wc,

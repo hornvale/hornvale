@@ -26,7 +26,7 @@
 use hornvale_kernel::sovereignty_floor;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    EraAdjust, EraInvariantSupply, SettlementPins, SkyChoice, build_world, climate_of,
+    EraAdjust, EraInvariantSupply, SettlementPins, build_world, climate_of,
     per_species_capacity_at, sky_of, substrate_field_at, terrain_of, tolerance_tiered,
 };
 
@@ -62,7 +62,6 @@ fn temperature_gate_versus_era_mask() {
         let world = build_world(
             hornvale_kernel::Seed(seed),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -71,10 +70,7 @@ fn temperature_gate_versus_era_mask() {
         let climate = climate_of(&world).expect("climate");
         let geo = terrain.geosphere();
         let sky = sky_of(&world).expect("sky");
-        let generated = match &sky {
-            hornvale_worldgen::Sky::Generated(g) => g,
-            _ => panic!("probe expects a generated sky"),
-        };
+        let generated = sky.generated();
         let system = generated.system();
         let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
         let obliquity_deg = system.anchor.obliquity.get();
@@ -192,7 +188,6 @@ fn would_moisture_as_a_gate_add_exclusion() {
     let world = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -201,10 +196,7 @@ fn would_moisture_as_a_gate_add_exclusion() {
     let climate = climate_of(&world).expect("climate");
     let geo = terrain.geosphere();
     let sky = sky_of(&world).expect("sky");
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

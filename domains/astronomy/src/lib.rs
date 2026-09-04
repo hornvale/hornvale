@@ -67,9 +67,8 @@ pub use units::{
 pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
 use hornvale_kernel::{
-    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
-    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, Referent, RegistryError, Venue,
-    Visibility, Void, WorldTime,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest, PerceptKind,
+    RegistryError, Void,
 };
 
 /// Phenomenon kind for bodies visible in the sky.
@@ -501,9 +500,6 @@ impl hornvale_kernel::Domain for Astronomy {
     }
 }
 
-/// Tier-0 astronomy: the sun is always up, fixed at zenith.
-pub struct ConstantSun;
-
 /// What the sky looks like at a given moment.
 /// type-audit: bare-ok(prose: description), bare-ok(identifier-text: bodies), bare-ok(identifier-text: body_phrases)
 #[derive(Debug, Clone, PartialEq)]
@@ -519,71 +515,9 @@ pub struct SkyReport {
     pub body_phrases: Vec<(String, String)>,
 }
 
-impl ConstantSun {
-    /// The sky at `_time` — which, at tier 0, never changes.
-    pub fn sky_at(&self, _time: WorldTime) -> SkyReport {
-        SkyReport {
-            description: "A golden sun hangs fixed at zenith. It has never been seen to move."
-                .to_string(),
-            bodies: vec!["the sun".to_string()],
-            body_phrases: vec![(
-                "the sun".to_string(),
-                "A golden sun hangs fixed at zenith.".to_string(),
-            )],
-        }
-    }
-
-    /// The sky at `_time` through a view of `_vis` — which, at tier 0, is the
-    /// same sky. The tier-0 sun is a stipulation, not a body: nothing dims it.
-    pub fn sky_at_visibility(&self, time: WorldTime, _vis: Visibility) -> SkyReport {
-        self.sky_at(time)
-    }
-}
-
-impl PhenomenaSource for ConstantSun {
-    fn phenomena(&self, _ctx: &ObserverContext) -> Vec<Phenomenon> {
-        vec![Phenomenon {
-            kind: CELESTIAL_BODY.to_string(),
-            referent: Referent::of("sun"),
-            period_days: None,
-            salience: 1.0,
-            venue: Venue::DaySky,
-        }]
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::EntityId;
-
-    fn ctx(day: f64) -> ObserverContext {
-        ObserverContext::at(
-            EntityId::new(1).unwrap(),
-            WorldTime::from_std_days(day).expect("a day value is finite"),
-        )
-    }
-
-    #[test]
-    fn the_sky_never_changes() {
-        let sun = ConstantSun;
-        let a = sun.sky_at(WorldTime::GENESIS);
-        let b = sun.sky_at(WorldTime::from_std_days(9999.5).expect("a day value is finite"));
-        assert_eq!(a.description, b.description);
-        assert_eq!(a.bodies, b.bodies);
-        assert!(a.description.contains("zenith"));
-    }
-
-    #[test]
-    fn phenomena_are_constant_and_maximally_salient() {
-        let sun = ConstantSun;
-        let seen = sun.phenomena(&ctx(0.0));
-        assert_eq!(seen.len(), 1);
-        assert_eq!(seen[0].kind, CELESTIAL_BODY);
-        assert_eq!(seen[0].period_days, None);
-        assert_eq!(seen[0].salience, 1.0);
-        assert_eq!(seen, sun.phenomena(&ctx(500.25)));
-    }
 
     #[test]
     fn concepts_register_idempotently() {

@@ -451,7 +451,6 @@ fn run_scan_shape(
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

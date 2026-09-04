@@ -20,7 +20,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed, Value, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, axis_supply, build_world, carrying_inputs_of,
+    SettlementPins, WorldComponents, axis_supply, build_world, carrying_inputs_of,
     species_carrying_input, terrain_of,
 };
 
@@ -32,7 +32,6 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )
@@ -399,7 +398,6 @@ fn world_42() -> World {
     build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -1021,7 +1019,6 @@ fn seed_42_is_byte_identical_across_two_builds_after_the_demesne() {
         build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

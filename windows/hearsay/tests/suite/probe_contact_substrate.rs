@@ -67,7 +67,6 @@ fn build(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )

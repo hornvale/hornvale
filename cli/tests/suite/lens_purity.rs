@@ -10,14 +10,13 @@
 //! under it this test must never fail.
 
 use hornvale_kernel::Seed;
-use hornvale_worldgen::{SkyChoice, build_world};
+use hornvale_worldgen::build_world;
 
 #[test]
 fn seed_42_world_json_matches_the_committed_fixture() {
     let world = build_world(
         Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )

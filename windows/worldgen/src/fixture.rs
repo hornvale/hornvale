@@ -59,7 +59,6 @@ const FIXTURE: &str = concat!(
 
 /// The seed-42 world under default pins and a generated sky — byte-identical
 /// to what `build_world` returns for `Seed(42), &SkyPins::default(),
-/// SkyChoice::Generated, &TerrainPins::default(),
 /// &SettlementPins::default()`, read from the committed fixture instead of
 /// rebuilt.
 ///

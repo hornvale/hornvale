@@ -116,13 +116,12 @@ mod tests {
     use hornvale_kernel::{Seed, World};
     use hornvale_locale::LocaleContext;
     use hornvale_terrain::TerrainPins;
-    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+    use hornvale_worldgen::{SettlementPins, build_world};
 
     fn seam_world() -> World {
         build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

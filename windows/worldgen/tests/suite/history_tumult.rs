@@ -85,8 +85,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, cascade_sizes, census,
-    history_for,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, cascade_sizes, census, history_for,
 };
 
 /// The seed sample the pooled shape verdict is measured over. Fixed (not a
@@ -134,7 +133,6 @@ fn conflict_fires_at_volume() {
     let h = history_for(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -169,7 +167,6 @@ fn cascades_do_not_depopulate_the_world() {
     let h = history_for(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -187,7 +184,6 @@ fn cascades_do_not_depopulate_the_world() {
     let world = build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -233,7 +229,6 @@ fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
         let h = history_for(
             Seed(s),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

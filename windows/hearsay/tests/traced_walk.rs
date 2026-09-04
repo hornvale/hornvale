@@ -158,7 +158,6 @@ fn traced_agrees_with_the_shipped_walk_holder_for_holder() {
         let world = hornvale_worldgen::build_world(
             hornvale_kernel::Seed(seed),
             &hornvale_astronomy::SkyPins::default(),
-            hornvale_worldgen::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
         )

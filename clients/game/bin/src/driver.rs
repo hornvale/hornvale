@@ -91,7 +91,7 @@ use hornvale_vessel::{
     PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
 use hornvale_worldgen::{
-    BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
+    BuildError, SettlementPins, WorldComponents, build_world, gazetteer_features,
     language_of_in, morph_options, resolve_chain_at, terrain_of,
 };
 use std::collections::BTreeSet;
@@ -821,7 +821,6 @@ impl Driver {
         let world = build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -4604,7 +4603,6 @@ mod portolan_tests {
             let world = build_world(
                 Seed(seed),
                 &pins,
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
             )

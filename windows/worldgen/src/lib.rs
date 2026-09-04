@@ -7,9 +7,8 @@
 
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
-    CELESTIAL_BODY, ConstantSun, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins,
-    SkyReport, facts, figures, generate, parse_pin, pin_strings,
-    streams::ROOT as ASTRONOMY_STREAM_ROOT,
+    CELESTIAL_BODY, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins, SkyReport,
+    facts, figures, generate, parse_pin, pin_strings, streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, PrecipRegime, RotationRegime, SeafloorFeature,
@@ -225,15 +224,6 @@ impl From<LedgerError> for BuildError {
     }
 }
 
-/// Which astronomy provider a world is built with.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SkyChoice {
-    /// Tier-0: the sun never sets.
-    Constant,
-    /// Tiers 1/2: a fully generated star system.
-    Generated,
-}
-
 /// How deep to build the world's fact-committing pipeline (spec §4 / MAP-25).
 /// Earlier rungs are a byte-identical prefix of later ones — the pipeline is
 /// linear, so each rung reads only earlier rungs' facts and stopping early
@@ -307,14 +297,18 @@ impl RungArtifacts<'_> {
 }
 
 /// The live astronomy provider a world uses, reconstructed from its ledger.
-pub enum Sky {
-    /// Tier-0 constant sun.
-    Constant(ConstantSun),
-    /// Tiers 1/2 generated sky.
-    Generated(Box<GeneratedSky>),
-}
+///
+/// One provider, since The Zenith: every Hornvale world has
+/// a generated sky. The enum this replaced carried a `Constant` variant for
+/// the retired tier-0 stub. This cites no decision number until The Zenith's
+/// records land.
+pub struct Sky(Box<GeneratedSky>);
 
 impl Sky {
+    /// The generated provider every world carries.
+    pub fn generated(&self) -> &GeneratedSky {
+        &self.0
+    }
     /// The sky at a moment, rendered, from whichever provider this is.
     pub fn sky_at(&self, time: WorldTime) -> SkyReport {
         self.sky_at_visibility(time, Visibility::CLEAR)
@@ -324,38 +318,26 @@ impl Sky {
     /// whichever provider this is. Each provider decides for itself what
     /// survives a dimmed sky; neither learns what dimmed it.
     pub fn sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
-        match self {
-            Sky::Constant(sun) => sun.sky_at_visibility(time, vis),
-            Sky::Generated(sky) => sky.sky_at_visibility(time, vis),
-        }
+        self.0.sky_at_visibility(time, vis)
     }
 
     /// The derived calendar, if this world has a generated sky. `None` for
     /// the tier-0 constant sun, which has no cycles. Climate consumes this
     /// at the composition root (spec §13 opener).
     pub fn calendar(&self) -> Option<&hornvale_astronomy::Calendar> {
-        match self {
-            Sky::Constant(_) => None,
-            Sky::Generated(sky) => Some(sky.calendar()),
-        }
+        Some(self.0.calendar())
     }
 
     /// The generated star system, if this world has one. `None` for the
     /// tier-0 constant sun. The star-chart command reads this.
     pub fn system(&self) -> Option<&hornvale_astronomy::StarSystem> {
-        match self {
-            Sky::Constant(_) => None,
-            Sky::Generated(sky) => Some(sky.system()),
-        }
+        Some(self.0.system())
     }
 }
 
 impl PhenomenaSource for Sky {
     fn phenomena(&self, ctx: &ObserverContext) -> Vec<Phenomenon> {
-        match self {
-            Sky::Constant(sun) => sun.phenomena(ctx),
-            Sky::Generated(sky) => sky.phenomena(ctx),
-        }
+        self.0.phenomena(ctx)
     }
 }
 
@@ -561,18 +543,23 @@ fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
     }
 }
 
-/// Reconstruct the live astronomy provider from whatever this world's
-/// ledger says: absent `sky-provider` fact (1a/1b-era saves) → `Constant`;
-/// `"constant"` → `Constant`; `"generated"` → fold every `scenario-pin`
-/// fact back through `parse_pin` and regenerate deterministically from the
-/// world's own seed.
+/// Reconstruct the live astronomy provider from this world's ledger: fold
+/// every `scenario-pin` fact back through `parse_pin` and regenerate
+/// deterministically from the world's own seed.
+///
+/// A world with no `sky-provider` fact is an error, not a fallback. Every
+/// build commits the fact unconditionally, so its absence means the world was
+/// never built and should be regenerated from its seed and pins. This cites
+/// no decision number until The Zenith's records land.
 pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
     let Some(provider_fact) = world.ledger.find(facts::SKY_PROVIDER).next() else {
-        return Ok(Sky::Constant(ConstantSun));
+        return Err(BuildError::Pins(
+            "world has no sky-provider fact: it was never built; regenerate it from its seed and pins"
+                .to_string(),
+        ));
     };
     let subject = provider_fact.subject;
     match &provider_fact.object {
-        Value::Text(choice) if choice == "constant" => Ok(Sky::Constant(ConstantSun)),
         Value::Text(choice) if choice == "generated" => {
             let mut pins = SkyPins::default();
             for pin_fact in world
@@ -585,7 +572,7 @@ pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
                 }
             }
             let outcome = generate(world.seed, &pins).map_err(BuildError::Genesis)?;
-            Ok(Sky::Generated(Box::new(GeneratedSky::new(outcome))))
+            Ok(Sky(Box::new(GeneratedSky::new(outcome))))
         }
         other => Err(BuildError::Pins(format!(
             "unrecognized sky-provider value: {other:?}"
@@ -2605,30 +2592,20 @@ pub fn demography_report_from_masked(
 /// Constant-sky worlds get an Earth baseline so the biome map exists for
 /// every world (spec: the coarse globe is generated for all).
 fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
-    match sky {
-        Sky::Constant(_) => (
-            1.0,
-            23.5,
-            RotationRegime::Spinning { day_std: 1.0 },
-            365.25,
-            0.0,
-        ),
-        Sky::Generated(generated) => {
-            let system = generated.system();
-            // Insolation relative to Earth: the single shared definition (SKY-15).
-            let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
-            let obliquity = system.anchor.obliquity.get();
-            let regime = match system.anchor.rotation {
-                hornvale_astronomy::Rotation::Spinning { day, .. } => RotationRegime::Spinning {
-                    day_std: day.as_std_days(),
-                },
-                hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
-            };
-            let year = generated.calendar().year_length().get();
-            let year_phase_offset = system.forcing.year_phase_offset;
-            (insolation, obliquity, regime, year, year_phase_offset)
-        }
-    }
+    let generated = &sky.0;
+    let system = generated.system();
+    // Insolation relative to Earth: the single shared definition (SKY-15).
+    let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
+    let obliquity = system.anchor.obliquity.get();
+    let regime = match system.anchor.rotation {
+        hornvale_astronomy::Rotation::Spinning { day, .. } => RotationRegime::Spinning {
+            day_std: day.as_std_days(),
+        },
+        hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
+    };
+    let year = generated.calendar().year_length().get();
+    let year_phase_offset = system.forcing.year_phase_offset;
+    (insolation, obliquity, regime, year, year_phase_offset)
 }
 
 /// The greenhouse forcing this world's atmosphere carries, in kelvin — the
@@ -2644,12 +2621,7 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
 /// residual's own mean, i.e. the Earth anchor with no drawn spread, matching
 /// `stellar_inputs`'s own Earth-baseline default for the constant-sky arm.
 fn greenhouse_forcing_k(sky: &Sky) -> f64 {
-    match sky {
-        Sky::Constant(_) => 0.0,
-        Sky::Generated(generated) => {
-            GREENHOUSE_FORCING_WIDTH_K * generated.system().anchor.greenhouse_residual
-        }
-    }
+    GREENHOUSE_FORCING_WIDTH_K * sky.0.system().anchor.greenhouse_residual
 }
 
 /// The width, in kelvin, astronomy's dimensionless greenhouse residual
@@ -7557,7 +7529,6 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
 pub fn build_world_from_components(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -7565,7 +7536,6 @@ pub fn build_world_from_components(
     build_to(
         seed,
         pins,
-        sky,
         terrain_pins,
         settlement_pins,
         wc,
@@ -7582,23 +7552,12 @@ pub fn build_world_from_components(
 pub fn build_world_to(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<World, BuildError> {
-    build_to(
-        seed,
-        pins,
-        sky,
-        terrain_pins,
-        settlement_pins,
-        wc,
-        depth,
-        None,
-    )
-    .map(|built| built.world)
+    build_to(seed, pins, terrain_pins, settlement_pins, wc, depth, None).map(|built| built.world)
 }
 
 /// Build a world to `depth` and hand back the artifacts the build already
@@ -7609,22 +7568,12 @@ pub fn build_world_to(
 pub fn build_world_to_with_artifacts(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<BuildArtifacts, BuildError> {
-    build_to(
-        seed,
-        pins,
-        sky,
-        terrain_pins,
-        settlement_pins,
-        wc,
-        depth,
-        None,
-    )
+    build_to(seed, pins, terrain_pins, settlement_pins, wc, depth, None)
 }
 
 /// Build a world to `depth`, calling `observer` once per rung the build
@@ -7656,7 +7605,6 @@ pub fn build_world_to_with_artifacts(
 pub fn build_world_observed(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -7666,7 +7614,6 @@ pub fn build_world_observed(
     build_to(
         seed,
         pins,
-        sky,
         terrain_pins,
         settlement_pins,
         wc,
@@ -8047,7 +7994,6 @@ fn scale_capacity(
 pub fn history_for(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -8055,7 +8001,6 @@ pub fn history_for(
     let built = build_to(
         seed,
         pins,
-        sky,
         terrain_pins,
         settlement_pins,
         wc,
@@ -8104,7 +8049,6 @@ type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World, RungArtifacts<'_>
 fn build_to(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -8132,15 +8076,11 @@ fn build_to(
         role: "world",
         ordinal: 0,
     });
-    let choice_text = match sky {
-        SkyChoice::Constant => "constant",
-        SkyChoice::Generated => "generated",
-    };
     world.ledger.commit(
         scenario_fact(
             world_entity,
             facts::SKY_PROVIDER,
-            Value::Text(choice_text.to_string()),
+            Value::Text("generated".to_string()),
         ),
         &world.registry,
     )?;
@@ -8152,10 +8092,8 @@ fn build_to(
     }
 
     stage("astronomy", || -> Result<(), BuildError> {
-        if let SkyChoice::Generated = sky {
-            let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
-            facts::genesis(&mut world, world_entity, &outcome)?;
-        }
+        let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
+        facts::genesis(&mut world, world_entity, &outcome)?;
         Ok(())
     })?;
 
@@ -9353,12 +9291,11 @@ fn species_genesis(
 pub fn build_world(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
 ) -> Result<World, BuildError> {
     let wc = WorldComponents::assemble()?;
-    build_world_from_components(seed, pins, sky, terrain_pins, settlement_pins, &wc)
+    build_world_from_components(seed, pins, terrain_pins, settlement_pins, &wc)
 }
 
 /// Mint an instance of a known kind: the composition root's validated entry
@@ -9667,9 +9604,7 @@ fn moon_ordinal(index: usize) -> &'static str {
 /// type-audit: bare-ok(prose: return)
 pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
-    let Sky::Generated(sky) = &sky else {
-        return Ok(Vec::new());
-    };
+    let sky = &sky.0;
     let calendar = sky.calendar();
     let system = sky.system();
     let year_std = calendar.year_length().get();
@@ -9746,9 +9681,7 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
 /// type-audit: bare-ok(prose: return)
 pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
     let sky = sky_of(world)?;
-    let Sky::Generated(sky) = &sky else {
-        return Ok(None);
-    };
+    let sky = &sky.0;
     let parts: Vec<String> = sky
         .system()
         .neighbors
@@ -9775,9 +9708,7 @@ pub fn night_sky_lines(
     world: &World,
 ) -> Result<Option<hornvale_almanac::NightSkyLines>, BuildError> {
     let sky = sky_of(world)?;
-    let Sky::Generated(sky) = &sky else {
-        return Ok(None);
-    };
+    let sky = &sky.0;
     let calendar = sky.calendar();
     let system = sky.system();
     let t = hornvale_astronomy::StdInstant::new(0.0).unwrap();
@@ -10003,10 +9934,7 @@ pub fn night_sky_lines(
 /// type-audit: bare-ok(prose: return)
 pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
-    Ok(match &sky {
-        Sky::Constant(_) => Vec::new(),
-        Sky::Generated(sky) => sky.notes().to_vec(),
-    })
+    Ok(sky.0.notes().to_vec())
 }
 
 /// Build one belief's `LineContent` (spec §6). Every field but the period
@@ -10269,8 +10197,9 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     // Count) for a generated sky only — constant-sky worlds have no star to
     // brighten.
     let mut deep_time_lines = deep_time_lines_from(world, &terrain)?;
-    if let Sky::Generated(sky) = sky_of(world)? {
-        let system = sky.system();
+    {
+        let sky = sky_of(world)?;
+        let system = sky.0.system();
         deep_time_lines.push(format!(
             "The sun brightens by {:.0} parts in a hundred over a gigayear — the slow fire under every deeper clock.",
             hornvale_astronomy::brightening_per_gyr(&system.star) * 100.0
@@ -10904,7 +10833,6 @@ mod tests {
         build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11532,7 +11460,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11572,7 +11499,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11927,7 +11853,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11955,7 +11880,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12031,7 +11955,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12120,7 +12043,6 @@ mod tests {
         build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12430,7 +12352,6 @@ mod tests {
         let world = build_world_to(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &fauna_only_wc,
@@ -12529,7 +12450,6 @@ mod tests {
         build_world_from_components(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -12580,7 +12500,6 @@ mod tests {
                 rotation: Some(hornvale_astronomy::RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12722,7 +12641,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12837,11 +12755,10 @@ mod tests {
             build_world(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &hornvale_terrain::TerrainPins::default(),
                 &SettlementPins::default(),
             )
-            .unwrap()
+            .expect("seed 42 builds at default pins")
         }
         let a = built().to_json();
         let b = built().to_json();
@@ -12856,19 +12773,11 @@ mod tests {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();
         for seed in [Seed(7), Seed(42), Seed(1000)] {
-            let a = build_world(
-                seed,
-                &SkyPins::default(),
-                SkyChoice::Generated,
-                &TerrainPins::default(),
-                &sp,
-            )
-            .unwrap();
+            let a = build_world(seed, &SkyPins::default(), &TerrainPins::default(), &sp).unwrap();
             let wc = WorldComponents::assemble().unwrap();
             let b = build_world_from_components(
                 seed,
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &sp,
                 &wc,
@@ -12889,7 +12798,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12966,7 +12874,6 @@ mod tests {
             let world = build_world(
                 Seed(seed),
                 &pins,
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
             )
@@ -13101,39 +13008,8 @@ mod tests {
     #[test]
     fn generated_sky_reconstructs_and_beliefs_are_non_empty() {
         let world = generated(42);
-        assert!(matches!(sky_of(&world).unwrap(), Sky::Generated(_)));
+        sky_of(&world).unwrap();
         assert!(!hornvale_religion::beliefs_of(&world).is_empty());
-    }
-
-    /// Two INDEPENDENT builds of seed 42 serialize identically.
-    ///
-    /// The builder is local rather than the shared `generated` helper, and
-    /// deliberately so: that helper reads the committed fixture for seed 42
-    /// (decision 0607), so calling it twice would compare two reads of one
-    /// file and assert only that `World::from_json(x).to_json()` is a pure
-    /// function of `x`. The build's own determinism — this test's entire
-    /// subject and its name — would go untested, and the test would pass in
-    /// milliseconds while looking healthy.
-    /// `windows/vessel/src/session.rs`'s
-    /// `the_same_seed_and_pins_produce_a_byte_identical_descent_and_pane`
-    /// keeps a local builder for exactly this reason; both files carry
-    /// `build-path` rows on the build-site roster (decision 0606).
-    #[test]
-    fn generated_worlds_are_deterministic() {
-        fn built_at_seed_42() -> World {
-            build_world(
-                Seed(42),
-                &SkyPins::default(),
-                SkyChoice::Generated,
-                &hornvale_terrain::TerrainPins::default(),
-                &SettlementPins::default(),
-            )
-            .expect("seed 42 builds at default pins")
-        }
-
-        let a = built_at_seed_42().to_json();
-        let b = built_at_seed_42().to_json();
-        assert_eq!(a, b);
     }
 
     #[test]
@@ -13141,7 +13017,7 @@ mod tests {
         let world = generated(42);
         let before = sky_report(&world, WorldTime::GENESIS).unwrap();
         let reloaded = World::from_json(&world.to_json()).unwrap();
-        assert!(matches!(sky_of(&reloaded).unwrap(), Sky::Generated(_)));
+        sky_of(&reloaded).unwrap();
         let after = sky_report(&reloaded, WorldTime::GENESIS).unwrap();
         assert_eq!(before, after);
     }
@@ -13157,7 +13033,6 @@ mod tests {
     /// exact abuse that check was hardened against. The task that ratifies
     /// the record adds the cite here, in the same commit as the record.
     #[test]
-    #[ignore = "green from The Zenith's Task 4: sky_of errors on an absent sky-provider fact; red here is the recorded pre-change behaviour"]
     fn a_world_with_no_sky_provider_fact_is_an_error_not_a_fallback() {
         // A bare world, never built — the only way to reach this arm once
         // every build commits the fact unconditionally.
@@ -13186,7 +13061,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13205,7 +13079,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13265,7 +13138,6 @@ mod tests {
         let world = build_world(
             Seed(1),
             &pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13396,7 +13268,6 @@ mod tests {
         let result = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins {
                 species: Some("white-dragon".to_string()),
@@ -13478,7 +13349,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &pins,
             &SettlementPins::default(),
         )
@@ -13497,7 +13367,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &pins,
             &SettlementPins::default(),
         )
@@ -13651,7 +13520,6 @@ mod tests {
         let spinning = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13662,7 +13530,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13693,7 +13560,6 @@ mod tests {
                 rotation: Some(RotationPin::Normal),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13713,7 +13579,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13744,7 +13609,6 @@ mod tests {
                 rotation: Some(RotationPin::Normal),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13759,7 +13623,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13790,7 +13653,6 @@ mod tests {
                 rotation: Some(RotationPin::Normal),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13835,7 +13697,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14108,7 +13969,6 @@ mod tests {
                         rotation: Some(RotationPin::Locked),
                         ..SkyPins::default()
                     },
-                    SkyChoice::Generated,
                     &hornvale_terrain::TerrainPins::default(),
                     &SettlementPins::default(),
                 )
@@ -14183,7 +14043,6 @@ mod tests {
         let world = build_world_to(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -14254,7 +14113,6 @@ mod tests {
         let world = build_world_to(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -14299,7 +14157,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14374,7 +14231,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14390,7 +14246,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14421,7 +14276,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14455,7 +14309,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14894,7 +14747,6 @@ mod tests {
             build_world(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &hornvale_terrain::TerrainPins::default(),
                 &SettlementPins::default(),
             )
@@ -15313,7 +15165,6 @@ mod tests {
                 rotation: Some(hornvale_astronomy::RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )

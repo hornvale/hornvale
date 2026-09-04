@@ -58,8 +58,7 @@ use hornvale_kernel::{Seed, Vertex};
 use hornvale_species::{BiomeAffinity, BiosphereTraits, HabitatRealm};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to_with_artifacts, per_species_suitability,
-    sky_of,
+    BuildDepth, SettlementPins, build_world_to_with_artifacts, per_species_suitability, sky_of,
 };
 
 /// The three kinds `hornvale_species::habitat_realm_registry` places in
@@ -122,7 +121,6 @@ fn world_at(
     let artifacts = build_world_to_with_artifacts(
         Seed(SEED),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
         wc,

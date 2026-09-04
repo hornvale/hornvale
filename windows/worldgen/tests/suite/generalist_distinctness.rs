@@ -120,7 +120,7 @@ use hornvale_kernel::{ConditionResponse, KindId, Seed};
 use hornvale_species::{BiosphereTraits, ConditionNiche, HabitatRealm, biosphere_registry};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
+    SettlementPins, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
 /// The viability floor below which a vertex's K is ecological noise rather
@@ -233,7 +233,6 @@ fn measure_fits(
     let world = build_world(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

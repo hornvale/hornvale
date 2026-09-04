@@ -64,8 +64,8 @@ use hornvale_kernel::{Geosphere, Seed, VertexMap};
 use hornvale_species::BiosphereTraits;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents, build_world_to,
-    carrying_inputs_of, climate_of, sky_of, substrate_field, terrain_of,
+    BuildDepth, SettlementPins, Substrate, WorldComponents, build_world_to, carrying_inputs_of,
+    climate_of, sky_of, substrate_field, terrain_of,
 };
 
 /// First scan window: seeds `1..=200` (brief step 1). Widened by
@@ -93,7 +93,6 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(world) = build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,
@@ -269,7 +268,6 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
     let world = build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

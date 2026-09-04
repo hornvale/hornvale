@@ -5563,3 +5563,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T14:13:36Z | gate-commit | 46.758 | 99.786 | 34.349 | 2.87 | 0 | a66d492e5 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T14:16:20Z | gate-commit | 46.667 | 74.842 | 15.520 | 1.94 | 0 | a66d492e5 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T14:17:31Z | gate-commit | 48.531 | 72.985 | 15.519 | 1.82 | 0 | a66d492e5 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T14:43:11Z | gate-commit | 125.044 | 666.133 | 59.303 | 5.80 | 0 | bb6523a11 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T14:43:52Z | gate-commit | 32.557 | 53.114 | 13.005 | 2.03 | 0 | bb6523a11 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T14:45:48Z | gate-commit | 73.465 | 228.676 | 43.140 | 3.70 | 0 | bb6523a11 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T14:46:45Z | gate-commit | 35.986 | 63.423 | 17.335 | 2.24 | 0 | bb6523a11 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T14:48:09Z | gate-commit | 34.912 | 63.872 | 16.534 | 2.30 | 0 | bb6523a11 | campaign/the-zenith | MacBookPro | 10 |

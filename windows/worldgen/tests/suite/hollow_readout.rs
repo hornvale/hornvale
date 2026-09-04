@@ -20,7 +20,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::{CaveKind, Horizon, TerrainPins};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 use std::collections::BTreeSet;
 
@@ -181,7 +181,6 @@ fn measure_one(seed: Seed, wc: &WorldComponents, out: &mut Readout) {
     let artifacts = build_world_to_with_artifacts(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

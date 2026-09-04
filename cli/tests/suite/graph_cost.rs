@@ -62,9 +62,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, CASCADE_DEPTH_CAP, GraphConfig, SettlementPins, SkyChoice, WorldComponents,
-    build_world_to, cascade_sizes, census, connection_graph_of, history_for,
-    land_route_attempt_count, terrain_of,
+    BuildDepth, CASCADE_DEPTH_CAP, GraphConfig, SettlementPins, WorldComponents, build_world_to,
+    cascade_sizes, census, connection_graph_of, history_for, land_route_attempt_count, terrain_of,
 };
 // The measurement harness times ONE derivation call for a diagnostic
 // (never sim logic, never a fact, never seeded from wall-clock) -- exempt
@@ -126,7 +125,6 @@ fn connection_graph_cost_is_bounded_on_seed_42() {
     let world = build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -233,7 +231,6 @@ fn tumult_predation_bake_stays_within_budget() {
     let _world = build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -261,7 +258,6 @@ fn tumult_predation_bake_stays_within_budget() {
     let h = history_for(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -412,7 +408,6 @@ fn tithe_tribute_bake_stays_within_budget() {
     let h = history_for(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

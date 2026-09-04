@@ -12,8 +12,8 @@
 use hornvale_language::{ExposureClass, GapReason, LexEntry, PackDepths, color_pack, in_ladder};
 use hornvale_species::{ActivityCycle, DRACONIC_NIGHT_VISION, PerceptionVector};
 use hornvale_worldgen::{
-    BuildError, SettlementPins, SkyChoice, build_world, exposure_from, lexicon_from,
-    observed_phenomena_as, pack_depths, placed_peoples,
+    BuildError, SettlementPins, build_world, exposure_from, lexicon_from, observed_phenomena_as,
+    pack_depths, placed_peoples,
 };
 
 /// The seed-42, generated-sky, default-pins world `species_worlds.rs`
@@ -110,7 +110,6 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     let w = build_world(
         hornvale_kernel::Seed(0),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -199,7 +198,6 @@ fn river_exposure_tracks_real_proximity() {
     let w = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins {
             species: Some("goblin".to_string()),
@@ -1087,7 +1085,6 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
     let w = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins {
             species: Some("goblin".to_string()),
@@ -1154,7 +1151,6 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
     let w = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins {
             species: Some("goblin".to_string()),

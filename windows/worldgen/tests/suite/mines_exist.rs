@@ -65,8 +65,7 @@ use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::history_bake::{ORE_CUT, WORKING_REACH};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, occupation_records,
-    terrain_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, occupation_records, terrain_of,
 };
 
 /// The panel the campaign preregisters on (spec §5.1).
@@ -86,7 +85,6 @@ fn functions_and_ore(seed_value: u64) -> Vec<(Function, f64)> {
     let world = build_world_to(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &WorldComponents::assemble().expect("canonical components assemble"),
@@ -250,7 +248,6 @@ fn hops_from_parent(seed_value: u64) -> Vec<(Function, Vertex, Vertex, Option<u3
     let world = build_world_to(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &WorldComponents::assemble().expect("canonical components assemble"),

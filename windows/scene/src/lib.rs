@@ -1516,7 +1516,6 @@ mod tests {
         hornvale_worldgen::build_world(
             hornvale_kernel::Seed(1),
             &Default::default(),
-            hornvale_worldgen::SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
@@ -1531,7 +1530,6 @@ mod tests {
         hornvale_worldgen::build_world(
             hornvale_kernel::Seed(seed),
             &Default::default(),
-            hornvale_worldgen::SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
@@ -1746,19 +1744,13 @@ mod tests {
     fn locked_world_omits_circulation_bands_and_zeroes_swing() {
         use hornvale_astronomy::{RotationPin, SkyPins};
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
+        use hornvale_worldgen::build_world;
         let sky = SkyPins {
             rotation: Some(RotationPin::Locked),
             ..Default::default()
         };
-        let world = build_world(
-            Seed(42),
-            &sky,
-            SkyChoice::Generated,
-            &Default::default(),
-            &Default::default(),
-        )
-        .expect("seed 42 builds locked");
+        let world = build_world(Seed(42), &sky, &Default::default(), &Default::default())
+            .expect("seed 42 builds locked");
         let scene = tiles_scene(&world, 32).unwrap();
         assert_eq!(scene.circulation_bands, None, "locked world has no bands");
         assert!(
@@ -1777,12 +1769,11 @@ mod tests {
     #[test]
     fn tiles_scene_marks_locked_worlds() {
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
+        use hornvale_worldgen::build_world;
         let build = |s| {
             build_world(
                 Seed(s),
                 &Default::default(),
-                SkyChoice::Generated,
                 &Default::default(),
                 &Default::default(),
             )
@@ -1851,14 +1842,13 @@ mod tests {
     #[test]
     fn system_scene_has_the_schema_moons_and_is_deterministic() {
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
+        use hornvale_worldgen::build_world;
         // `gen` is a reserved keyword under this workspace's 2024 edition
         // (the brief's original name); `gen_world` sidesteps it.
         let gen_world = || {
             build_world(
                 Seed(42),
                 &Default::default(),
-                SkyChoice::Generated,
                 &Default::default(),
                 &Default::default(),
             )
@@ -1889,11 +1879,10 @@ mod tests {
     #[test]
     fn temperature_grid_matches_direct_sampling_and_zero_phase_mean() {
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world, climate_of};
+        use hornvale_worldgen::{build_world, climate_of};
         let world = build_world(
             Seed(42),
             &Default::default(),
-            SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )

@@ -3,7 +3,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{BuildProfile, SettlementPins, SkyChoice, build_world, profiled};
+use hornvale_worldgen::{BuildProfile, SettlementPins, build_world, profiled};
 
 #[test]
 fn profiled_records_the_nine_stages() {
@@ -11,7 +11,6 @@ fn profiled_records_the_nine_stages() {
         build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

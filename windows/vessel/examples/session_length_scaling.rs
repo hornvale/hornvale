@@ -183,7 +183,7 @@ use hornvale_vessel::liveness::{
     SleepTraits, Terrain, believed_water, derive_npcs, drive_at, fatigue_at, hazard_memory_memo,
     hunger_at, shared_believed_water,
 };
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 // The measurement harness times each tick for a diagnostic (never sim logic,
 // never a fact, never seeded from wall-clock) -- exempt from the wall-clock
 // ban (clippy.toml / decision 0001), the same pattern `agent_scaling.rs`,
@@ -741,7 +741,6 @@ fn main() {
     let world = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

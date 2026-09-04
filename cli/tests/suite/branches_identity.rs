@@ -67,7 +67,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_kernel::{KindId, Seed, Value, World};
 use hornvale_language::LexEntry;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 fn default_generated_seed_42() -> World {
     generated_world_at(42)
@@ -80,7 +80,6 @@ fn generated_world_at(seed: u64) -> World {
     build_world(
         Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

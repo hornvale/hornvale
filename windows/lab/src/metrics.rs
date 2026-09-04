@@ -17,12 +17,12 @@ use hornvale_terrain::{
     CarveParams, Commodity, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
-    BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, VestigeKind,
-    WorldComponents, accounts_from, build_world_from_components, build_world_to_with_artifacts,
-    climate_from, commodity_name, flagship_of, language_of_in, migration_events,
-    observed_phenomena_as_at_from, observed_phenomena_as_in_from, occupation_records,
-    rock_class_name, settlement_site_concepts as worldgen_settlement_site_concepts, sky_of,
-    soil_of, soil_order_name, terrain_of, vestiges_field,
+    BuildDepth, BuildError, ChorusVoice, HazardKind, Valence, VestigeKind, WorldComponents,
+    accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
+    commodity_name, flagship_of, language_of_in, migration_events, observed_phenomena_as_at_from,
+    observed_phenomena_as_in_from, occupation_records, rock_class_name,
+    settlement_site_concepts as worldgen_settlement_site_concepts, sky_of, soil_of,
+    soil_order_name, terrain_of, vestiges_field,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -66,17 +66,12 @@ impl WorldView {
         let world = build_world_from_components(
             seed,
             pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
             &wc,
         )?;
         let sky = sky_of(&world)?;
-        let Sky::Generated(sky) = sky else {
-            return Err(BuildError::Pins(
-                "expected Generated sky, got Constant".to_string(),
-            ));
-        };
+        let sky = sky.generated();
         let terrain = terrain_of(&world)?;
         let globe = hornvale_terrain::summarize(terrain.globe());
         let climate = climate_from(&world, &terrain)?;
@@ -169,18 +164,13 @@ impl AstronomyView {
         let built = build_world_to_with_artifacts(
             seed,
             pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
             &wc,
             depth,
         )?;
         let sky = sky_of(&built.world)?;
-        let Sky::Generated(sky) = sky else {
-            return Err(BuildError::Pins(
-                "expected Generated sky, got Constant".to_string(),
-            ));
-        };
+        let sky = sky.generated();
         Ok((
             AstronomyView {
                 system: sky.system().clone(),

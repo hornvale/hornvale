@@ -4,7 +4,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, seed_42_world};
+use hornvale_worldgen::{SettlementPins, build_world, seed_42_world};
 
 /// The load and the build agree byte for byte, in both directions of the
 /// serialization boundary.
@@ -13,7 +13,6 @@ fn the_fixture_equals_a_live_build() {
     let built = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

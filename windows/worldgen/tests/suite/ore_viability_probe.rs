@@ -97,7 +97,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, per_species_capacity, terrain_of};
+use hornvale_worldgen::{SettlementPins, build_world, per_species_capacity, terrain_of};
 
 /// Seeds the campaign states its preregistrations on.
 const SEEDS: [u64; 3] = [42, 7, 1234];
@@ -152,7 +152,6 @@ fn ore_viability_probe() {
         let world = build_world(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -161,10 +160,7 @@ fn ore_viability_probe() {
         let climate = hornvale_worldgen::climate_of(&world).expect("climate");
         let geo = terrain.geosphere();
         let sky = hornvale_worldgen::sky_of(&world).expect("sky");
-        let generated = match &sky {
-            hornvale_worldgen::Sky::Generated(g) => g,
-            _ => panic!("probe expects a generated sky"),
-        };
+        let generated = sky.generated();
         let system = generated.system();
         let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
         let obliquity_deg = system.anchor.obliquity.get();

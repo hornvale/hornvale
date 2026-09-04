@@ -10,7 +10,7 @@ use hornvale_kernel::Seed;
 use hornvale_kernel::WorldTime;
 use hornvale_kernel::quantize::quantize;
 use hornvale_scene::{SceneContext, temperature_grid_in};
-use hornvale_worldgen::{SkyChoice, build_world};
+use hornvale_worldgen::build_world;
 
 /// Lattice width; height is width / 2 (matches `scene/tiles/v1`).
 const WIDTH: u32 = 64;
@@ -28,7 +28,6 @@ fn main() {
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

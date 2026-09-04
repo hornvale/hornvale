@@ -64,7 +64,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, almanac_context, build_world};
+use hornvale_worldgen::{SettlementPins, almanac_context, build_world};
 
 /// The repository root: the parent of this crate's manifest dir (`cli/`).
 /// Filesystem-based, not git-based — the heavy tier runs the suite in an
@@ -84,7 +84,6 @@ fn generated_sky_world() -> World {
     build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

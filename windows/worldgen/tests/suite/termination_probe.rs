@@ -207,7 +207,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Band;
 use hornvale_terrain::{CAVE_REACH_CEILING_M, TerrainPins, rung_at_depth, rungs};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// Seeds the campaign preregisters on (spec §5), matching every other
@@ -303,7 +303,6 @@ fn where_does_a_delve_terminate() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -552,7 +551,6 @@ fn could_nadir_be_split_into_a_sixth_rung() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

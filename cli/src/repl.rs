@@ -507,7 +507,7 @@ mod tests {
     use super::*;
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
-    use world_builder::{SkyChoice, build_world};
+    use world_builder::build_world;
 
     /// Seed 42 at default pins, read from the committed fixture rather than
     /// built (decision 0607) — a file read against a full genesis. This was
@@ -571,7 +571,6 @@ mod tests {
         let world = build_world(
             Seed(0),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -753,7 +752,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -919,7 +917,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -935,7 +932,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -996,7 +992,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -1061,7 +1056,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )

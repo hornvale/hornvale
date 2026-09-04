@@ -37,7 +37,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_language::{Disposition, SchemaId, SubFrame};
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from, flagship_of};
+use hornvale_worldgen::{SettlementPins, accounts_from, flagship_of};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -47,7 +47,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

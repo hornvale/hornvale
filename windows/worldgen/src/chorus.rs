@@ -1743,11 +1743,7 @@ pub fn observations_from(
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<Observations, BuildError> {
     let sky = crate::sky_of(world)?;
-    let crate::Sky::Generated(sky) = sky else {
-        return Err(BuildError::Pins(
-            "the diachronic observation ledger requires a Generated sky".to_string(),
-        ));
-    };
+    let sky = sky.0;
     let params = account_params_from(world, species, terrain, climate)?;
     let from = hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
 
@@ -2396,7 +2392,6 @@ mod tests {
         crate::build_world(
             Seed(seed),
             &hornvale_astronomy::SkyPins::default(),
-            crate::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &crate::SettlementPins::default(),
         )
