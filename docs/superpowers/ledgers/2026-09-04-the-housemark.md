@@ -105,6 +105,20 @@ plan; the temporary repository-required `IMPLEMENTATION_PLAN.md` stage tracker.
 
 ## Capture manifest
 
+#5 [G5] — **Does Task 2 append four cultural rows or reuse the existing
+screen?** · **Decision: gate the existing screen row as `Threshold(Inward)` at
+the chamber band and append exactly three new rows.** · Why: approved spec §3
+explicitly says the screen is reused and its locale admission remains
+unchanged; §4 supplies the mechanism because locale `selection` ignores
+`HousemarkGate`. The plan's earlier “append four” imperative contradicted both
+clauses and would duplicate `SCREEN` in inward threshold compositions. ·
+Alternatives discarded: append a second screen row (breaks H2's no-duplicate-
+kind claim); leave the old row universal in chambers (all three threshold
+postures would read inward). · ideonomy passes / overturns: **1 prior G4 pass,
+no new pass** — this is correction of the exact inherited-screen implication
+that pass surfaced, not a new question. · Capture: corrected plan before Task 2
+dispatch; this ruling; scratch pre-flight ledger.
+
 - `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` now points from
   R1 to The Housemark spec; its status remains `elaborated` until implementation.
 - This ledger's Follow-ups retain the temporal-style and cultural-evolution

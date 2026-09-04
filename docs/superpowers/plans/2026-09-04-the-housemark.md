@@ -100,7 +100,7 @@
 
 - [ ] **Step 5: Append the vocabulary**
 
-  Add `BENCH` to thing kinds. Append threshold command-seat beside threshold, common bench beside ground, culturally gated screen beside threshold, and guest-water vessel beside threshold, all `at_locale: false`. Preserve the current locale screen output exactly. Use distinct stable pattern names for hall/threshold seats and store/guest water.
+  Add `BENCH` to thing kinds. Narrow the existing screen row to `Threshold(Inward)` for chamber admission; locale selection ignores that gate and must retain its current screen output. Append exactly three new `at_locale: false` rows: threshold command-seat beside threshold, common bench beside ground, and guest-water vessel beside threshold. Use distinct stable pattern names for hall/threshold seats and store/guest water.
 
 - [ ] **Step 6: Prove mutation sensitivity**
 
