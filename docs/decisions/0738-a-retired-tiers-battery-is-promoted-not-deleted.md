@@ -33,4 +33,3 @@ The old battery read the sun's kind, salience, and rendered name from
 `ConstantSun` itself — production code inside `hornvale-astronomy`. The
 promoted battery freezes those expectations as literals (`celestial-body`,
 `1.0`, and `"the sun"`) so a production change cannot rewrite its own oracle.
-

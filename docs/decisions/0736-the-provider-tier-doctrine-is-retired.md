@@ -45,4 +45,3 @@ that changes world identity remains an epoch under 0039. Neither case
 licenses another world-selectable provider tier. This retires the
 Constitution's provider-tier doctrine across Hornvale, while leaving ordinary
 resolution ladders and observation-time refinement untouched.
-

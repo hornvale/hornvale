@@ -30,4 +30,3 @@ only `World::new`, and corrupt ledgers must be regenerated or completed through
 the normal builder before their sky can be reconstructed. This is the same
 epoch discipline as 0189: deterministic regeneration preserves the world the
 project promises; silently interpreting a missing ledger fact does not.
-

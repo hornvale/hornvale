@@ -14,11 +14,11 @@
 //! test time — production code inside the crate under test. Frozen here,
 //! they can no longer drift with the implementation they check.
 
-use hornvale_astronomy::{CELESTIAL_BODY, GeneratedSky, MoonsPin, RotationPin, SkyPins, generate};
+use hornvale_astronomy::{GeneratedSky, MoonsPin, RotationPin, SkyPins, generate};
 use hornvale_kernel::{EntityId, ObserverContext, PhenomenaSource, Seed, Venue, WorldTime};
 
 /// The registered concept a sun is: every sky's day-sky body reports it.
-const SUN_KIND: &str = CELESTIAL_BODY;
+const SUN_KIND: &str = "celestial-body";
 /// The sun's salience. It is the unique maximum: nothing outranks it, and
 /// nothing ties it.
 const SUN_SALIENCE: f64 = 1.0;
@@ -69,7 +69,7 @@ fn every_sky_has_exactly_one_day_sky_sun() {
                 let fine = sky.phenomena(&ctx(t));
                 let suns: Vec<_> = fine
                     .iter()
-                    .filter(|p| p.venue == Venue::DaySky && p.kind == CELESTIAL_BODY)
+                    .filter(|p| p.venue == Venue::DaySky && p.kind == SUN_KIND)
                     .collect();
                 assert_eq!(suns.len(), 1, "seed {seed} t {t}: exactly one day-sky sun");
                 // The sun keeps its registered concept and its rank: the
@@ -97,7 +97,7 @@ fn nothing_in_a_sky_outranks_its_sun() {
             for t in [0.0, 10.5, 100.75] {
                 let phenomena = sky.phenomena(&ctx(t));
                 for p in &phenomena {
-                    if p.venue == Venue::DaySky && p.kind == CELESTIAL_BODY {
+                    if p.venue == Venue::DaySky && p.kind == SUN_KIND {
                         continue;
                     }
                     assert!(
@@ -157,7 +157,7 @@ fn the_suns_added_period_is_the_day_the_calendar_already_holds() {
             let fine = sky.phenomena(&ctx(0.0));
             let sun = fine
                 .iter()
-                .find(|p| p.venue == Venue::DaySky && p.kind == CELESTIAL_BODY)
+                .find(|p| p.venue == Venue::DaySky && p.kind == SUN_KIND)
                 .expect("the sun is always present");
             match day {
                 // round2: the provider rounds periods for prose stability.

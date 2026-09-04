@@ -5578,3 +5578,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T18:19:35Z | gate-commit | 42.031 | 65.237 | 16.837 | 1.95 | 0 | 68e192023 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T18:23:24Z | gate-commit | 33.357 | 62.844 | 16.792 | 2.39 | 0 | 364e35e70 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T20:50:51Z | gate-commit | 56.177 | 166.137 | 44.194 | 3.74 | 0 | 46b301f53 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T20:57:54Z | gate-commit | 33.103 | 62.352 | 16.423 | 2.38 | 0 | 46b301f53 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T21:02:53Z | gate-commit | 63.187 | 103.084 | 47.565 | 2.38 | 0 | cc08eb8a3 | campaign/the-zenith | MacBookPro | 10 |
