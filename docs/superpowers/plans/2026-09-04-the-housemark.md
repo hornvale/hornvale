@@ -8,6 +8,9 @@
 
 **Tech Stack:** Rust workspace, `hornvale-species` society registry, `hornvale-thing` kind constants, consolidated vessel integration tests, canonical artifact scripts.
 
+**Status:** Complete — implemented and locally verified 2026-09-04; campaign
+close artifacts added before census and sluice submission.
+
 **Spec:** `docs/superpowers/specs/2026-09-04-the-housemark-design.md`
 
 ## Global Constraints

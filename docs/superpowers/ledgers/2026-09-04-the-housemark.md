@@ -308,11 +308,42 @@ unchanged.
 - `.superpowers/visualizations/housemark-design.html` is the ignored visual
   companion; it is explanatory scratch, not a product artifact.
 
+## Close routing
+
+The close sweep read every Task 1–5 brief and report, `progress.md`, both review
+reports, and every capped/full review package under
+`.superpowers/sdd/2026-09-04-the-housemark/`. The diff packages contain no
+independent rulings; they are reproducible copies of the commit ranges supplied
+to reviewers. No ruling was found only in scratch: the exact-room correction is
+entry #7, and the three-attempt-per-issue interpretation is retained in the
+Task 4 implementation-review account and the campaign retrospective.
+
+Every review minor is closed rather than deferred: Task 3's production
+unoccupied regression, Task 4's actual-anchor signature and fixture wording,
+Task 5's 0084 annotation and plumb provenance, and final review's
+label-independent H3 decoder all landed in their named fix rounds above. Their
+process consequences and exact code/document homes are enumerated in
+`docs/retrospectives/the-housemark.md`.
+
+The two speculative limits have registry homes. The measured builder/stratum
+gap is now explicit in `CLIENT-housemark-provenance`, beside
+`CLIENT-ruin-signature` and `CUL-6`; culture changing through time is carried by
+`CUL-14` and `CUL-18`. R2, R3, and the dynamics wheel remain open in
+`SOC-staple-ladder`. The bench's absent sitting interaction is a scope boundary
+routed to `MAP-19` and `MAP-27`. The book freshness sweep updates both species
+accounts, The Hearth's original promise, The Staple's accession boundary, The
+Blocking's epoch taxonomy, the brief-contract registry row, and the frontier's
+architecture entry. The Confidence Gradient is N/A: no standing bet in
+`book/src/open-questions.md` moved.
+
+At close-artifact authoring time no census, merge, or push has occurred.
+
 ## Follow-ups
 
 - A future reading of inherited or hybrid architecture needs a durable builder
   or occupation-stratum signal. `Brief::people` supplies only the living
   occupation, and no R1 code should manufacture historical attribution from it.
+  This measured gap is carried by `CLIENT-housemark-provenance`.
 - Cultural evolution within one people is absent: `SocietyVector` is an authored
   species component, not a world-time value. That is a separate dynamics or
   historiography question, not hidden scope for R1.
