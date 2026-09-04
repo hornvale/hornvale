@@ -12,6 +12,19 @@
 //!    continuous sample decides whether the facet actually carries a
 //!    feature, against the prevalence just computed.
 //!
+//! **Every noise sample is passed through [`uniformize`](hornvale_terrain::features::uniformize)
+//! before use (fix round 1, F1).** `SphereFbm::sample` is the mean of three
+//! fBm slices, so its marginal is concentrated near 0.5 (SD ≈0.076), not
+//! spread over `[0,1]` — comparing it raw against a probability, as `occurs`
+//! did before this fix, can never fire once the probability is smaller than
+//! the field's own floor. `GeneratedTerrain::cave_at` established the fix
+//! this module now shares: `uniformize` maps the same three-slice
+//! construction (any frequency, `CAVE_GATE_OCTAVES`-many octaves — this
+//! module's `WEFT_OCTAVES` matches) onto a genuine `[0,1]` uniform variate,
+//! monotonically, so spatial clustering is untouched and the marginal is
+//! corrected. See that function's own doc for the calibration (measured over
+//! 64 level-5 globes) and why it must not be re-derived here.
+//!
 //! **Noise is keyed on POSITION, never on [`Facet::seed`].** `Facet::seed`
 //! is address-hashed by design
 //! (`kernel/src/room.rs`: "derived from the integer address only ... so all
@@ -65,30 +78,17 @@ const PREVALENCE_LEG: &str = "prevalence";
 /// decorrelated ... sample").
 const OCCURRENCE_LEG: &str = "occurrence";
 
-/// The angular length (radians) of `facet`'s shortest edge. Duplicates the
-/// formula `windows/locale::room_edge` uses (min pairwise great-circle
-/// separation of the four corners) rather than importing it, because that
-/// crate depends on this one (the same circularity the module doc's
-/// `LocaleContext` ruling names) — there is no lower layer either could share
-/// it through without promoting it out of `windows/locale` entirely, which
-/// this task does not need.
-fn facet_edge_rad(facet: &Facet) -> f64 {
-    let [a, b, c, d] = facet.corners();
-    let sep = |u: [f64; 3], v: [f64; 3]| -> f64 {
-        let dp: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
-        hornvale_kernel::math::acos(dp.clamp(-1.0, 1.0))
-    };
-    sep(a, b).min(sep(b, c)).min(sep(c, d)).min(sep(d, a))
-}
-
 /// The [`SphereFbm`] frequency giving `kind`'s correlation length (spec
 /// §5.2's "how far you walk before the answer changes, in facets") at
 /// `facet`'s own scale: a full noise-lattice cycle spans
-/// `correlation_length_facets * facet_edge_rad` — coordinate distance, which
-/// for the tiny angles a walk-band facet subtends is indistinguishable from
-/// great-circle distance (chord length ≈ arc length as the angle → 0).
+/// `correlation_length_facets * facet.edge_rad()` — coordinate distance,
+/// which for the tiny angles a walk-band facet subtends is indistinguishable
+/// from great-circle distance (chord length ≈ arc length as the angle → 0).
+/// [`Facet::edge_rad`] is the promoted, single-implementation form of what
+/// used to be a local duplicate here (The Weft, fix round 1, F4) — see its
+/// own doc for the promotion history.
 fn noise_frequency_for(kind: WeftKind, facet: &Facet) -> f64 {
-    let edge = facet_edge_rad(facet).max(f64::EPSILON);
+    let edge = facet.edge_rad().max(f64::EPSILON);
     1.0 / (kind.correlation_length_facets() * edge)
 }
 
@@ -114,7 +114,7 @@ pub fn prevalence(
         .derive(kind.stream_label())
         .derive(StreamLabel::dynamic(PREVALENCE_LEG));
     let fbm = SphereFbm::new(noise_seed, noise_frequency_for(kind, facet), WEFT_OCTAVES);
-    let noise = fbm.sample(facet.centroid());
+    let noise = hornvale_terrain::features::uniformize(fbm.sample(facet.centroid()));
 
     let contextuality = kind.contextuality();
     let mixed = contextuality * macro_state + (1.0 - contextuality) * noise;
@@ -126,11 +126,19 @@ pub fn prevalence(
 /// SECOND position-continuous sample, drawn under [`OCCURRENCE_LEG`] — a
 /// different stream leg from [`prevalence`]'s own [`PREVALENCE_LEG`], so the
 /// two draws are decorrelated — compared against `p`.
+///
+/// **Uniformized before the comparison (fix round 1, F1).** A raw
+/// `SphereFbm::sample` almost never falls under a small `p` (its marginal
+/// sits near 0.5 with SD ≈0.076), which is why `occurs` fired zero times in
+/// 21,640 seed-42 walk facets before this fix — the threshold was ~5.7
+/// standard deviations into a tail the raw field does not have. Comparing
+/// the uniformized value instead makes this a genuine Bernoulli trial at
+/// rate `p`, matching `GeneratedTerrain::cave_at`'s own gate.
 /// type-audit: bare-ok(ratio: p), bare-ok(flag: return)
 pub fn occurs(kind: WeftKind, facet: &Facet, seed: Seed, p: f64) -> bool {
     let noise_seed = seed
         .derive(kind.stream_label())
         .derive(StreamLabel::dynamic(OCCURRENCE_LEG));
     let fbm = SphereFbm::new(noise_seed, noise_frequency_for(kind, facet), WEFT_OCTAVES);
-    fbm.sample(facet.centroid()) < p
+    hornvale_terrain::features::uniformize(fbm.sample(facet.centroid())) < p
 }

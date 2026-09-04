@@ -58,9 +58,20 @@ impl WeftKind {
     }
 
     /// The macro-state/free-noise mixing weight: `1.0` reads as entirely
-    /// macro-state-driven, `0.0` as entirely free noise (spec §5.2: "0 =
-    /// wallpaper, 1 = speckle"; erratic/scatter, Task 7, sits near the free-
-    /// noise end, matching its own "mostly free noise" description).
+    /// macro-state-driven ("wallpaper" in the sense of a smooth, place-
+    /// grounded texture), `0.0` as entirely free noise ("speckle" —
+    /// spatially incoherent relative to any cause). Erratic/scatter (Task 7)
+    /// sits near the `0.0` end, matching its own §5.6 description ("low —
+    /// mostly free noise").
+    ///
+    /// **Spec §5.2's literal endpoint labels are inverted relative to this
+    /// implementation, and relative to its own §5.6.** §5.2 reads "0 =
+    /// wallpaper, 1 = speckle" — under that wording, spring's "high"
+    /// contextuality would read as speckle and erratic's "low" would read as
+    /// wallpaper, which inverts the negative control §5.6 describes. Fixed
+    /// in the spec (`docs/superpowers/specs/2026-09-03-the-weft-design.md`
+    /// §5.2) as part of fix round 1; this doc states the corrected direction
+    /// rather than quoting the sentence that was wrong.
     pub(crate) fn contextuality(self) -> f64 {
         match self {
             WeftKind::Spring => SPRING_CONTEXTUALITY,
@@ -102,22 +113,24 @@ const SPRING_CORRELATION_LENGTH_FACETS: f64 = 40.0;
 /// textured near it — the opposite end from erratic/scatter's negative
 /// control (Task 7).
 ///
-/// **Not `0.85` — chosen at `0.7` because a higher value was measured to
-/// defeat this campaign's own continuity guard.** At `0.85` (the first value
-/// tried), noise contributes at most `(1 - 0.85) * SPRING_ABUNDANCE = 0.0525`
-/// to any one step's prevalence delta, which is *smaller* than the guard's
-/// bound needs to be to tolerate real macro-state texture — so an
-/// address-hashed noise bug (measured by temporarily swapping
-/// `Facet::centroid()` for `Facet::seed(seed).stream().next_f64()` in
-/// `prevalence`, see `weft_prevalence.rs`'s test doc) produced a max delta of
-/// only `~0.049` over 200 real-world steps, indistinguishable from genuine
-/// texture. At `0.7` the same mutation produces a max delta of `~0.10`
-/// (measured across 6 seed-42 starting vertices, 200 steps each) against a
-/// real-mechanism max of `~0.0025` — a 40x margin — while still reading as
-/// "high" relative to erratic/scatter's own "mostly free noise" (Task 7 must
-/// keep its own contextuality well below this).
-/// plumb: universal(an authored design choice fixing how strongly spring/seep tracks macro state versus free noise, identical across every world; the value is chosen so the campaign's own position-continuity guard actually discriminates an address-hashed regression, per the doc above)
-const SPRING_CONTEXTUALITY: f64 = 0.7;
+/// **`0.85`, restored here after a wrong-headed detour to `0.7` (fix round
+/// 1, F2).** The first pass of this task lowered this constant to `0.7`
+/// after a mutation-discrimination check (see `weft_prevalence.rs`'s test
+/// doc) appeared to pass more comfortably there — but review measured the
+/// real signal-to-noise ratio (real-mechanism max delta vs. address-hashed
+/// mutant max delta, seed 42, 6 starting vertices) at **42.6× at `0.85`** and
+/// **38.7× at `0.7`**: lowering contextuality scales BOTH sides of that ratio
+/// by the same factor, so the move bought no discrimination at all, and was
+/// marginally worse. The actual defect was a `weft_prevalence.rs` bound set
+/// too loose (`0.02`, which the `c=0.85` mutant's `~0.049` max delta slipped
+/// under) — the fix belongs in the test's bound, not in this world constant.
+/// This is decision 0016's forbidden shape mirrored: a world parameter
+/// retuned to rescue a miscalibrated measurement. `0.85` is also the value
+/// spec §5.6's "high" reads most naturally against, and matches spec §5.1's
+/// contextuality-endpoint labels once §5.2's inverted wording is corrected
+/// (see the spec's own fix in this round, and [`Self::contextuality`]'s doc).
+/// plumb: universal(an authored design choice fixing how strongly spring/seep tracks macro state versus free noise, identical across every world)
+const SPRING_CONTEXTUALITY: f64 = 0.85;
 
 /// Soft-cap scale for blended drainage before it enters spring/seep's
 /// `[0,1]` macro-state mix. `FieldPack::drainage` is an unbounded upstream-

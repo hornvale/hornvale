@@ -156,7 +156,7 @@ falsification is that "address-hashed noise leaked into a band edge".
 | --- | --- | --- |
 | **abundance** | absolute frequency over eligible facets | tunable "individually and severally" (#1 rider 4) |
 | **correlation length** | how far you walk before the answer changes, **in facets** | texture vs. rhythm vs. landmark |
-| **contextuality** | mixing ratio, macro state against free noise | 0 = wallpaper, 1 = speckle; the craft is between |
+| **contextuality** | mixing ratio, macro state against free noise | 1 = wallpaper (macro-grounded texture), 0 = speckle (spatially incoherent relative to any cause); the craft is between |
 
 **Nothing normalises across kinds.** Per-kind prevalences do not sum to 1. A
 simplex constraint is exactly the structural cap #1 rider 3 forbids: it would
