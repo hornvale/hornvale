@@ -73,6 +73,7 @@ pub fn chamber_interior_of(
         built,
         cold,
         brief.is_populous(),
+        None,
     ))
 }
 

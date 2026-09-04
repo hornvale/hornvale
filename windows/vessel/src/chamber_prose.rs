@@ -88,6 +88,13 @@ pub fn chamber_prose_registry() -> ComponentStore<KindId, ChamberProse> {
             },
         ),
         (
+            KindId("bench"),
+            ChamberProse {
+                noun: Some("a bench"),
+                detail: "A long plank on sturdy legs, worn smooth where people gather.",
+            },
+        ),
+        (
             KindId("brazier"),
             ChamberProse {
                 noun: Some("a brazier"),
@@ -731,15 +738,14 @@ mod tests {
         }
         // Anti-vacuity, and the accounting a census owes: a future edit that
         // dropped a slot from the walk above would satisfy every assertion by
-        // measuring less. 17 patterns, each naming a `kind`; 11 of them also
-        // name a `requires`; 13 also name an `Attach` target (The Wicket's
-        // Task 5 appended `the-brazier`, which names all three: `kind`,
-        // `requires: Some(kinds::LOOM)`, `attach: Attach::Beside(kinds::LOOM)`
-        // — moving this from 38 to 41).
+        // measuring less. 20 patterns, each naming a `kind`; 14 of them also
+        // name a `requires`; 16 also name an `Attach` target. The Housemark's
+        // three appended relations each name all three slots, moving this from
+        // 41 to 50.
         assert_eq!(
-            checked, 41,
+            checked, 50,
             "the sweep no longer reads every kind INVENTORY names: {checked} \
-             slots, not 41"
+             slots, not 50"
         );
     }
 
@@ -758,7 +764,7 @@ mod tests {
             assert!(!d.trim().is_empty(), "{label:?}: an empty detail");
         }
         // `ground` and `cave-mouth` have no noun and every other roster kind
-        // does, so eighteen kinds must yield sixteen nouns (The Wicket's Task
+        // does, so nineteen kinds must yield seventeen nouns (The Wicket's Task
         // 5 appended `brazier`, moving this from 14 to 15; The Brattice's Task
         // 5 appended `door`, moving it to 16 — both have a noun). This
         // used to catch
@@ -772,7 +778,7 @@ mod tests {
                 .iter()
                 .filter(|&&label| noun(label).is_some())
                 .count(),
-            16,
+            17,
             "the roster has drifted from `noun`'s own table"
         );
     }

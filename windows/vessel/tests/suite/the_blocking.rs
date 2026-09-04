@@ -622,11 +622,11 @@ fn a_role_admits_a_different_composition_not_a_bigger_one() {
     // The fourth argument is `populous`, which the plan's snippet did not have:
     // the strongbox is population-gated, so the draw needs the flag. Held false
     // here so the pair compared is the ordinary case.
-    let a: Vec<&str> = selection_for(Role::Threshold, true, false, false)
+    let a: Vec<&str> = selection_for(Role::Hearthroom, true, false, false, None)
         .iter()
         .map(|p| p.name)
         .collect();
-    let b: Vec<&str> = selection_for(Role::Store, true, false, false)
+    let b: Vec<&str> = selection_for(Role::Store, true, false, false, None)
         .iter()
         .map(|p| p.name)
         .collect();
@@ -659,6 +659,117 @@ fn a_locale_composition_is_untouched_by_the_role_layer() {
 }
 
 #[test]
+fn threshold_patterns_admit_each_housemark_relation_once() {
+    // H2: the threshold chamber is the common grammar surface where a culture's
+    // authority and threshold posture become separately observable.  This walks
+    // the complete two-by-three housemark product rather than sampling one row:
+    // an authority relation must follow authority, a posture relation must follow
+    // posture, and Plain deliberately contributes neither posture pattern.
+    use hornvale_vessel::housemark::{AuthorityMark, Housemark, ThresholdPosture};
+    use hornvale_vessel::interior::compose;
+    use hornvale_vessel::interior::pattern::{Role, permits, selection_for};
+
+    let marks = [
+        Housemark {
+            authority: AuthorityMark::Command,
+            threshold: ThresholdPosture::Inward,
+        },
+        Housemark {
+            authority: AuthorityMark::Command,
+            threshold: ThresholdPosture::Plain,
+        },
+        Housemark {
+            authority: AuthorityMark::Command,
+            threshold: ThresholdPosture::Outward,
+        },
+        Housemark {
+            authority: AuthorityMark::Common,
+            threshold: ThresholdPosture::Inward,
+        },
+        Housemark {
+            authority: AuthorityMark::Common,
+            threshold: ThresholdPosture::Plain,
+        },
+        Housemark {
+            authority: AuthorityMark::Common,
+            threshold: ThresholdPosture::Outward,
+        },
+    ];
+
+    for mark in marks {
+        let selected = selection_for(Role::Threshold, true, false, false, Some(mark));
+        let names: Vec<&str> = selected.iter().map(|pattern| pattern.name).collect();
+        assert!(
+            names.contains(&"the-ground"),
+            "{mark:?} has no ground: {names:?}"
+        );
+        assert!(
+            names.contains(&"the-threshold"),
+            "{mark:?} has no threshold: {names:?}"
+        );
+
+        let authority_relation = match mark.authority {
+            AuthorityMark::Command => "the-command-seat-at-the-threshold",
+            AuthorityMark::Common => "the-common-bench-by-the-ground",
+        };
+        assert!(
+            names.contains(&authority_relation),
+            "{mark:?} has no matching authority relation {authority_relation}: {names:?}"
+        );
+        let other_authority_relation = match mark.authority {
+            AuthorityMark::Command => "the-common-bench-by-the-ground",
+            AuthorityMark::Common => "the-command-seat-at-the-threshold",
+        };
+        assert!(
+            !names.contains(&other_authority_relation),
+            "{mark:?} admits the non-matching authority relation \
+             {other_authority_relation}: {names:?}"
+        );
+
+        let posture_relation = match mark.threshold {
+            ThresholdPosture::Inward => Some("the-screen"),
+            ThresholdPosture::Plain => None,
+            ThresholdPosture::Outward => Some("the-guest-water-at-the-threshold"),
+        };
+        if let Some(posture_relation) = posture_relation {
+            assert!(
+                names.contains(&posture_relation),
+                "{mark:?} has no matching posture relation {posture_relation}: {names:?}"
+            );
+            let other_posture_relation = match mark.threshold {
+                ThresholdPosture::Inward => "the-guest-water-at-the-threshold",
+                ThresholdPosture::Outward => "the-screen",
+                ThresholdPosture::Plain => unreachable!("Plain has no posture relation"),
+            };
+            assert!(
+                !names.contains(&other_posture_relation),
+                "{mark:?} admits the non-matching posture relation \
+                 {other_posture_relation}: {names:?}"
+            );
+        } else {
+            assert!(
+                !names.contains(&"the-screen")
+                    && !names.contains(&"the-guest-water-at-the-threshold"),
+                "Plain admits a posture pattern: {names:?}"
+            );
+        }
+
+        let interior = compose(&selected);
+        assert!(
+            permits(&interior),
+            "{mark:?} produces an inadmissible interior"
+        );
+        let kinds: std::collections::BTreeSet<_> =
+            selected.iter().map(|pattern| pattern.kind).collect();
+        assert_eq!(
+            kinds.len(),
+            selected.len(),
+            "{mark:?} composes a duplicate kind: {names:?}"
+        );
+    }
+}
+
+#[test]
 fn the_role_table_reads_a_different_room_for_every_role() {
     // THE ROLE TABLE, OBSERVED. The plan shipped a PREDICTED table and said to
     // run it and print the prose before building on it, so the prose is built
@@ -684,7 +795,7 @@ fn the_role_table_reads_a_different_room_for_every_role() {
     for &role in EVERY_ROLE {
         for (cold, populous) in [(false, false), (true, false), (false, true)] {
             let text = describe_chamber(
-                &compose(&selection_for(role, true, cold, populous)),
+                &compose(&selection_for(role, true, cold, populous, None)),
                 &brief(cold),
             );
             let tag = if cold { "cold" } else { "warm" };

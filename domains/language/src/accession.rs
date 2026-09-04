@@ -615,6 +615,11 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // from the cohort, plus the committed world bytes that carry the
     // registry. Two campaigns have now paid it.
     &["door"],
+    // Epoch 20 — The Housemark: `bench`, a third `THING_KINDS` label after
+    // epoch 16's snapshot. It is a new cohort rather than an edit to that
+    // earlier object-kind list, because moving an existing concept's cohort
+    // would re-sort its already assigned proto-root.
+    &["bench"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

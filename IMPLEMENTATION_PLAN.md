@@ -8,13 +8,13 @@
 **Goal**: Extend the one pattern inventory with housemark gates and the four diagnostic threshold relations.
 **Success Criteria**: The six-cell cross-product satisfies H2/H4; locale selection is unchanged.
 **Tests**: Pattern selection, composition, duplicate-kind, and mutation-sensitive assertions.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 3: Brief and production wiring
 **Goal**: Derive a housemark once from the living occupation and carry it to chamber composition.
 **Success Criteria**: Living briefs receive the registry-derived mark; absent occupations receive none; missing rows fail with the people id.
 **Tests**: Brief unit/integration tests plus existing vessel tests.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 4: Living-surface acceptance
 **Goal**: Measure five real worlds and prove rendered threshold relations recover the housemark cell.

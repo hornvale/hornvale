@@ -64,13 +64,12 @@ fn every_kind_the_grammar_names_is_a_roster_row() {
     // detail` set inside this campaign — so a future edit that dropped a slot
     // from the walk above would redden rather than silently measuring less.
     //
-    // Task 5 appended `the-brazier`, which names all three slots (`kind`,
-    // `requires: Some(kinds::LOOM)`, `attach: Attach::Beside(kinds::LOOM)`),
-    // moving this from 38 to 41.
+    // The Housemark appended three threshold relations, each naming all three
+    // slots, moving this from 41 to 50.
     assert_eq!(
-        checked, 41,
+        checked, 50,
         "the sweep no longer reads every kind INVENTORY names: {checked} \
-         slots, not 41"
+         slots, not 50"
     );
 }
 
