@@ -132,18 +132,19 @@ impl WeftWindow {
     /// one edge strip of width `2·radius+1` enters and one leaves —
     /// **21 derivations/step at radius 10** (measured `misses()` delta,
     /// constant across 19 consecutive steps and across three direction
-    /// changes among the four edge steps), not the plan's arithmetic
-    /// estimate of ~84 (a quarter of it: `84 / 21 = 4.0` exactly — that
-    /// estimate assumed a full-perimeter turnover every step, which only a
-    /// DIAGONAL step actually produces: measured **41/step** — `2·(2·radius+1)
-    /// − 1`, an L-shaped two-edge turnover minus the one corner both edges
-    /// share). At radius 5, the straight-line figure is 11/step
-    /// (`2·5+1`); at radius 20, 41/step (`2·20+1`) — both exactly
-    /// `2·radius+1`, confirming the formula rather than the radius-10 case
-    /// alone. Cold start (an empty window's first call) always derives the
-    /// whole disc, `(2·radius+1)²` — 441 at radius 10. See
-    /// `docs/superpowers/ledgers/2026-09-03-the-weft.md` for the full
-    /// measurement (commands, radii, and the direction-change detail).
+    /// changes among the four edge steps). The plan's own arithmetic
+    /// estimate was **~84 = `4·(2·radius+1)`** — the whole perimeter, with
+    /// each of the four corners counted on both of the sides that meet
+    /// there — which is 4x the measured straight-line cost, not what any
+    /// single step actually produces: a diagonal step (the more expensive
+    /// case) measures **41/step** — `2·(2·radius+1) − 1`, an L-shaped
+    /// two-edge turnover minus the one corner both edges share. At radius 5,
+    /// the straight-line figure is 11/step (`2·5+1`); at radius 20, 41/step
+    /// (`2·20+1`) — both exactly `2·radius+1`, confirming the formula rather
+    /// than the radius-10 case alone. Cold start (an empty window's first
+    /// call) always derives the whole disc, `(2·radius+1)²` — 441 at radius
+    /// 10. See `docs/superpowers/ledgers/2026-09-03-the-weft.md` for the
+    /// full measurement (commands, radii, and the direction-change detail).
     /// type-audit: bare-ok(count: radius)
     pub fn advance_to(
         &mut self,
@@ -164,9 +165,8 @@ impl WeftWindow {
         let leading: Vec<Facet> = new_resident.difference(&self.resident).cloned().collect();
 
         for facet in &trailing {
-            let id = facet.pack().expect("a resident facet packs");
             for kind in WeftKind::ALL {
-                self.store.evict(&(seed, geo.depth(), id, kind));
+                self.store.evict(&weft_key(facet, kind, geo, seed));
             }
         }
         for facet in &leading {

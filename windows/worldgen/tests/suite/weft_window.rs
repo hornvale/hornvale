@@ -11,7 +11,7 @@
 //! (`terrain_of`) directly to build its own world state, once per test.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_kernel::{Facet, NearestVertexIndex, Vertex};
+use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex, VertexMap};
 use hornvale_worldgen::{FieldPack, WeftFeature, WeftKind, WeftWindow};
 
 /// Same relationship `weft_prevalence.rs` reproduces for the same reason:
@@ -82,22 +82,43 @@ impl Fixture {
     /// independently so a divergence in either implementation shows up as a
     /// test failure rather than being definitionally impossible to observe.
     fn direct_features(&self, kind: WeftKind, facet: &Facet) -> Vec<WeftFeature> {
-        match hornvale_worldgen::prevalence(
+        self.direct_features_with_seed(kind, facet, self.seed())
+    }
+
+    /// Same oracle as [`Self::direct_features`], but against an explicit
+    /// `seed` rather than this fixture's own world seed — [`prevalence`]/
+    /// [`occurs`] take `seed` purely as a derivation parameter, independent
+    /// of which world built `geo`/`index`/`pack`, so this lets a test probe
+    /// many candidate seeds against the one real terrain this fixture
+    /// already paid to build, instead of building a second world per seed.
+    fn direct_features_with_seed(
+        &self,
+        kind: WeftKind,
+        facet: &Facet,
+        seed: Seed,
+    ) -> Vec<WeftFeature> {
+        direct_features_over(kind, facet, self.geo(), &self.index, &self.pack, seed)
+    }
+}
+
+/// The no-window oracle, free-standing (not tied to a `Fixture`'s own
+/// `geo`/`index`/`pack`) so the globe-level isolation test can run it against
+/// a second, independently-built `Geosphere`/`NearestVertexIndex`/`FieldPack`
+/// without a `Fixture` to own them.
+fn direct_features_over(
+    kind: WeftKind,
+    facet: &Facet,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    pack: &FieldPack,
+    seed: Seed,
+) -> Vec<WeftFeature> {
+    match hornvale_worldgen::prevalence(kind, facet, geo, index, pack, seed) {
+        Some(p) if hornvale_worldgen::occurs(kind, facet, seed, p) => vec![WeftFeature {
             kind,
-            facet,
-            self.geo(),
-            &self.index,
-            &self.pack,
-            self.seed(),
-        ) {
-            Some(p) if hornvale_worldgen::occurs(kind, facet, self.seed(), p) => {
-                vec![WeftFeature {
-                    kind,
-                    prevalence: p,
-                }]
-            }
-            _ => Vec::new(),
-        }
+            prevalence: p,
+        }],
+        _ => Vec::new(),
     }
 }
 
@@ -291,5 +312,206 @@ fn window_survives_chaos_eviction() {
          (resident misses {}, chaotic misses {})",
         resident.misses(),
         chaotic.misses()
+    );
+}
+
+/// **Fix round 1 (reviewer IMPORTANT).** The two tests above build exactly
+/// one world at exactly one globe level, so `Seed` and the level never vary
+/// across any read either one performs — a `WeftKey` that silently dropped
+/// either component would be invisible to both, which is precisely how the
+/// reviewer's `weft_key` mutation (hardcode `Seed(0)` and level `0`) passed
+/// them both. This test puts two DIFFERENT seeds through one window at the
+/// SAME facet, level and kind, and asserts neither read contaminates the
+/// other.
+///
+/// The two seeds are FOUND, not assumed: `occurs` is a Bernoulli draw
+/// against a per-seed noise stream, so scanning candidate seeds against the
+/// one real facet is certain to turn up two whose derived features differ
+/// well inside the loop bound — asserted explicitly below rather than
+/// trusted.
+///
+/// claim: reachability(seed: 1..200, local witness search) — finds two
+/// seeds whose derived features at one fixed facet differ, then uses that
+/// pair as the isolation test's fixture; not a claim about seed
+/// distribution or world semantics.
+#[test]
+fn two_seeds_do_not_contaminate_the_same_window() {
+    let fx = Fixture::build();
+    let facet = fx
+        .walk(1)
+        .into_iter()
+        .next()
+        .expect("a walk always has a first facet");
+
+    let mut seed_a: Option<Seed> = None;
+    let mut features_a = Vec::new();
+    let mut found: Option<(Seed, Vec<WeftFeature>)> = None;
+    for base in 1u64..200 {
+        let candidate = Seed(base);
+        let f = fx.direct_features_with_seed(WeftKind::Spring, &facet, candidate);
+        match seed_a {
+            None => {
+                seed_a = Some(candidate);
+                features_a = f;
+            }
+            Some(_) if f != features_a => {
+                found = Some((candidate, f));
+                break;
+            }
+            Some(_) => {}
+        }
+    }
+    let seed_a = seed_a.expect("at least one candidate seed was tried");
+    let (seed_b, features_b) = found.expect(
+        "scanning 200 candidate seeds must find two whose derived features at this facet \
+         differ, or this test cannot discriminate a key that drops Seed",
+    );
+    assert_ne!(
+        features_a, features_b,
+        "the two chosen seeds must actually produce different features, or the reads below \
+         prove nothing"
+    );
+
+    let mut window = WeftWindow::new();
+    let read_a = window
+        .features_at(
+            WeftKind::Spring,
+            &facet,
+            fx.geo(),
+            &fx.index,
+            &fx.pack,
+            seed_a,
+        )
+        .to_vec();
+    let read_b = window
+        .features_at(
+            WeftKind::Spring,
+            &facet,
+            fx.geo(),
+            &fx.index,
+            &fx.pack,
+            seed_b,
+        )
+        .to_vec();
+    // Re-read seed_a AFTER seed_b, through the SAME window: a key that
+    // dropped `Seed` would return seed_b's cached entry here instead.
+    let reread_a = window
+        .features_at(
+            WeftKind::Spring,
+            &facet,
+            fx.geo(),
+            &fx.index,
+            &fx.pack,
+            seed_a,
+        )
+        .to_vec();
+
+    assert_eq!(
+        read_a, features_a,
+        "seed_a's window read must match the direct oracle"
+    );
+    assert_eq!(
+        read_b, features_b,
+        "seed_b's window read must match the direct oracle"
+    );
+    assert_eq!(
+        reread_a, features_a,
+        "re-reading seed_a after seed_b must still return seed_a's own answer"
+    );
+}
+
+/// **Fix round 1 (reviewer IMPORTANT), the globe-level half.** Same shape as
+/// [`two_seeds_do_not_contaminate_the_same_window`], for the level component
+/// instead of `Seed`.
+///
+/// **Built cheaply, not from a second full world.** A second `terrain_of`
+/// build would cost this whole file's fixture again just to get a second
+/// globe level; a `Geosphere`/`NearestVertexIndex` at a different depth is
+/// pure kernel geometry (no tectonic/erosion sculpt) and is cheap to build
+/// directly, and a synthetic `FieldPack` (every vertex saturated) answers
+/// the same key-completeness question a real second sculpt would, since
+/// this test asks only whether the WINDOW keeps two levels' entries apart —
+/// not whether the second level's terrain is physically realistic.
+#[test]
+fn two_globe_levels_do_not_contaminate_the_same_window() {
+    let fx = Fixture::build();
+    let level_a = fx.geo().depth();
+    let level_b = level_a.saturating_sub(1);
+    assert_ne!(
+        level_a, level_b,
+        "need two distinct levels for this test to mean anything (level_a must be >= 1)"
+    );
+
+    let geo_b = Geosphere::new(level_b);
+    let index_b = NearestVertexIndex::new(&geo_b);
+    // Saturated on purpose: real terrain's prevalence sits near a floor
+    // (measured elsewhere in this file at [0.00071, 0.04641]); a synthetic
+    // pack pushed toward spring/seep's abundance ceiling makes the two
+    // levels' answers easy to search apart, not a claim about real geology.
+    let pack_b = FieldPack {
+        carbonate: VertexMap::from_fn(&geo_b, |_| 1.0),
+        induration: VertexMap::from_fn(&geo_b, |_| 1.0),
+        drainage: VertexMap::from_fn(&geo_b, |_| 1000.0),
+    };
+
+    let walk = fx.walk(200);
+    let seed = fx.seed();
+    let mut chosen: Option<(Facet, Vec<WeftFeature>, Vec<WeftFeature>)> = None;
+    for facet in &walk {
+        let a = fx.direct_features_with_seed(WeftKind::Spring, facet, seed);
+        let b = direct_features_over(WeftKind::Spring, facet, &geo_b, &index_b, &pack_b, seed);
+        if a != b {
+            chosen = Some((facet.clone(), a, b));
+            break;
+        }
+    }
+    let (facet, features_a, features_b) = chosen.expect(
+        "scanning 200 walk facets must find one where level_a and level_b's derived features \
+         differ, or this test cannot discriminate a key that drops the globe level",
+    );
+    assert_ne!(
+        features_a, features_b,
+        "the two levels must actually produce different features at this facet, or the reads \
+         below prove nothing"
+    );
+
+    let mut window = WeftWindow::new();
+    let read_a = window
+        .features_at(
+            WeftKind::Spring,
+            &facet,
+            fx.geo(),
+            &fx.index,
+            &fx.pack,
+            seed,
+        )
+        .to_vec();
+    let read_b = window
+        .features_at(WeftKind::Spring, &facet, &geo_b, &index_b, &pack_b, seed)
+        .to_vec();
+    // Re-read level_a AFTER level_b, through the SAME window: a key that
+    // dropped the level would return level_b's cached entry here instead.
+    let reread_a = window
+        .features_at(
+            WeftKind::Spring,
+            &facet,
+            fx.geo(),
+            &fx.index,
+            &fx.pack,
+            seed,
+        )
+        .to_vec();
+
+    assert_eq!(
+        read_a, features_a,
+        "level_a's window read must match the direct oracle"
+    );
+    assert_eq!(
+        read_b, features_b,
+        "level_b's window read must match the direct oracle"
+    );
+    assert_eq!(
+        reread_a, features_a,
+        "re-reading level_a after level_b must still return level_a's own answer"
     );
 }
