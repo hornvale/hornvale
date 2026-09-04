@@ -451,3 +451,96 @@ intent, not a reservation of specific numbers.
 - The derived surface reads continuous causes, never categorical labels.
 - Rumors are degraded observations, never fabrications; the region is never
   empty.
+
+## 12. Pre-merge performance intervention (2026-09-04)
+
+The first canonical census measured The Weft at **+19.9% CPU**. A matched
+merge-base control attributed 5,469 of the 5,598 added CPU-seconds (97.7%) to
+the Weft metrics, with the prediction agreeing with the measured delta within
+-0.4%. The rest of the campaign's kernel, terrain, worldgen, and vessel changes
+measured +1.0%, inside noise. This is therefore a Weft readout problem, not a
+reason to weaken the derived surface or disturb unrelated world construction.
+
+The first hot path is already localized. `weft_grid_pool` computes
+`Facet::corner_weights` once per sampled facet, then calls `prevalence` four
+times; each call recomputes the identical weights before doing kind-specific
+work. That is twenty nearest-index scans where four suffice. The call-path split
+attributes about 72% of the Weft cost, roughly 3,900 CPU-seconds per full
+census, to recoverable duplicate work. This is a hypothesis sized by profiling,
+not a before/after result; the intervention must measure the actual recovery.
+
+The earlier 524 ms/world comment on `weft_grid_pool` is not a usable census
+cost estimate. Both `the-census` and `census-of-the-meeting` select
+`metrics: "all"`; the latter has two 500-seed pin sets. Every registered metric
+is therefore evaluated across **2,000 world rows** per canonical census, not
+1,000. Any per-world estimate scaled by 1,000 accounts for only half the bill.
+The code comment must be corrected from the measured profiler result rather
+than preserved as campaign lore.
+
+### 12.1 Optimization map and ordering
+
+Work is classified by where it multiplies, from widest to narrowest:
+
+| multiplier | question | preferred shape |
+| --- | --- | --- |
+| per study | do two `metrics: "all"` studies rebuild an identical world/view? | share only if the cache key and process lifetime make reuse exact |
+| per world | do metric families derive the same provider or sample pool? | one caller-owned `OnceCell`/context per view |
+| per facet | do several readings recompute geometry from identical inputs? | compute once and pass the value down |
+| per kind | do four kinds repeat kind-independent eligibility, centroid, seed, or noise setup? | split shared preparation from kind-specific evaluation |
+| per metric | does a metric collect or fold a pool a sibling already summarized? | cache a sufficient statistic, not a second source of truth |
+
+The first implementation is the proven per-facet duplicate. After each change,
+profile the residual rather than promoting the next row by intuition. Existing
+ECS/component and `Derived` machinery are candidates only when the profile
+shows repeated construction whose lifetime matches those abstractions. A cache
+with no measured reuse, or one spanning worlds without a complete seed/pins/
+roster key, is rejected.
+
+### 12.2 Proof and measurement contract
+
+- Preserve every registered metric, study population, row, and summary. Editing
+  a study from `"all"` to a narrower metric list is a measurement change, not a
+  performance optimization, and is out of scope.
+- Capture a focused release-profile baseline on the campaign tip and the
+  campaign merge base. Record CPU-seconds, wall, peak RSS, call counts, and the
+  exact ref/command. Profile the tree that will ship.
+- For each accepted optimization, add a behavioral or call-count regression
+  witness first, observe it fail for the intended reason, then implement the
+  smallest seam. Existing bit-equality tests may serve as an oracle but do not
+  replace a red witness for the duplicated call path.
+- Compare matched before/after arms on a quiet machine. A contended arm is
+  labelled and discarded as a performance comparison; its correctness output
+  may still be used.
+- Require exact equality of metric rows and committed generated artifacts. The
+  world golden, stream labels, prevalence/occurrence values, and H1/H2/H3
+  findings must not move. A changed output stops the optimization and is
+  investigated as a correctness defect.
+- Re-profile after every accepted change. Keep a change only when its own A/B
+  clears measurement noise and it does not materially increase peak RSS. Do not
+  batch independent optimizations into one timing arm.
+- Finish with a canonical queued census on `lefford`, because only that host
+  authors the fixtures and only the full two-study run settles the total bill.
+
+### 12.3 Stopping rule and target
+
+Continue until the residual profile contains no credible, in-scope lever worth
+at least **1% of full-census CPU** on its own, or until every such lever would
+change measurement semantics, weaken determinism, add an unbounded cache, or
+cross a campaign boundary. Record rejected and disproved candidates with their
+measurements so the next performance campaign does not repeat them.
+
+The committed target is to remove the measured regression as far as those
+constraints allow. Recovering the known duplicate projects +19.9% to about
++5.6%. Running faster than the pre-Weft census is a stretch outcome, not a gate:
+it is acceptable only if earned by measured general improvements rather than by
+sampling fewer worlds, dropping metrics, or moving work outside the timed path.
+
+### 12.4 Scope boundaries
+
+This intervention may change `windows/worldgen/src/weft/`, the Weft pools and
+summaries in `windows/lab`, and narrowly shared kernel/lab cache seams already
+used by those paths. A general ECS query engine, cross-process cache, census
+study redesign, or unrelated worldgen optimization requires its own campaign
+unless profiling proves it is necessary to remove a >=1% residual and its
+correctness key can be stated completely here. No new save-format decision is
+expected.
