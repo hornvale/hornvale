@@ -2,15 +2,29 @@
 //! address and the seed (Rose Window metaplan §1b.4). Macro answers *who holds
 //! this land*; micro answers *what is standing here*; the brief is the seam.
 //!
-//! It is derived, never persisted — which is why it does NOT carry the fields no
-//! consumer reads yet. The transient indoor frame carries one resolved copy so
-//! every chamber reads the same fallible production result; nothing here is
-//! serialized. The ruin signature (`cause`, `ended_by`, ages) and the district
-//! vocabulary are absent on purpose: the metaplan argued for carrying them from
-//! the start "so that adding a consumer never changes the seam", but that
-//! argument only bites for types that PERSIST. The campaign that first needs
-//! `cause` adds one field, with no save-format consequence and no epoch. Seven
-//! unread `Option`s would be dead weight that reads as evidence of intent.
+//! It is derived, never stored — which is why it does NOT carry every field a
+//! future consumer might want. §1b.4's metaplan reserved a set of fields —
+//! `cause`, `ended_by`, `founded`, `ended`, `tongue`, `deity`,
+//! `peak_population`, `stratigraphy` — and argued for carrying all of them
+//! from the start, "so that adding a consumer never changes the seam". That
+//! argument only bites for types that PERSIST, and nothing here is
+//! serialized: a campaign that needs a reserved field adds just that field,
+//! with no save-format consequence and no epoch. Shipping every reserved
+//! field as an `Option` at genesis, before any consumer existed, would have
+//! been dead weight that reads as evidence of intent, so v1 shipped none of
+//! them.
+//!
+//! **This header used to say the ruin signature was absent on purpose. The
+//! Weft made that false, so this paragraph replaces the claim instead of
+//! correcting it a second time.** `cause`, `ended_by` (as
+//! [`RuinSignature::by_hand`]) and `ended` are carried now, folded into one
+//! [`Brief::ruin`] rather than kept as loose separate fields. `peak_population`
+//! is also carried, as a bare `u32` rather than an `Option` — see below.
+//! The transient indoor frame carries one resolved copy so every chamber reads
+//! the same fallible production result; that copy is likewise never serialized.
+//! `founded`, `tongue`, `deity` and `stratigraphy` remain genuinely absent,
+//! for the same reason: nothing here is serialized, so nothing forces them
+//! in before a consumer needs them.
 //!
 //! THREE fields are read as of decision 0398: `built`, in `structure_at`'s
 //! existence predicate and in `describe_chamber`'s room/hollow word; and
@@ -21,19 +35,21 @@
 //! cultural axis read by `chamber_interior_of`; it never reaches locale
 //! selection or a fact writer.
 //!
-//! `peak_population` was the FOURTH, added here when the `store` role's
-//! strongbox became its first reader — "exactly the one field, no epoch this
-//! doc licenses", as this paragraph used to say. Decision 0398 relaxed that
-//! gate, so the field is now read only by [`Brief::is_populous`], whose value
-//! still reaches `pattern::selection_for` on every chamber derivation and
-//! currently selects nothing. It is kept for the same reason the doc above
-//! gives for keeping the seam thin: removing it would be a second edit to undo
-//! the day a population-gated pattern is written, and unlike the seven absent
-//! `Option`s this one has a live wire behind it.
+//! `peak_population` was added here when the `store` role's strongbox became
+//! its first reader. Decision 0398 relaxed that gate, so the field is now
+//! read only by [`Brief::is_populous`], whose value still reaches
+//! `pattern::selection_for` on every chamber derivation and currently
+//! selects nothing. It is kept for the same reason the doc above gives for
+//! keeping the seam thin: removing it would be a second edit to undo the day
+//! a population-gated pattern is written, and unlike the fields still absent
+//! from this struct — `founded`, `tongue`, `deity`, `stratigraphy` — this
+//! one has a live wire behind it.
 
 use crate::housemark::{Housemark, HousemarkError};
 use crate::site::{Site, SiteKind};
-use hornvale_history::record::{Function, Notability, OccupationRecord, TechHorizon};
+use hornvale_history::record::{
+    CauseOfEnd, Ended, Function, Notability, OccupationRecord, TechHorizon,
+};
 use hornvale_kernel::{Facet, FacetId, Geosphere, KindId, NearestVertexIndex, Seed, Vertex};
 use hornvale_locale::StrangeSite;
 use hornvale_species::{SocietyVector, society_registry};
@@ -74,11 +90,29 @@ impl fmt::Display for BriefError {
 
 impl std::error::Error for BriefError {}
 
+/// What a dead occupation leaves for a walker to read.
+/// type-audit: bare-ok(flag: by_hand), bare-ok(count: ended)
+#[derive(Clone, Debug, PartialEq)]
+pub struct RuinSignature {
+    /// Why it ended, when the record names a cause.
+    pub cause: Option<CauseOfEnd>,
+    /// When it ended, in the same units `Occupation::ended` carries.
+    pub ended: f64,
+    /// Whether another party ended it (`Ended::By`) rather than nature.
+    pub by_hand: bool,
+}
+
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
 /// a catalogue of place types (§1b.4).
+///
+/// **No longer `Eq`, as of The Weft.** [`RuinSignature::ended`] is an `f64`,
+/// and `f64` has no `Eq` impl (NaN), so a struct carrying one transitively
+/// cannot derive it either. Nothing in this crate needed `Brief: Eq` — every
+/// comparison here already went through `PartialEq` (`assert_eq!`,
+/// `assert_ne!`) — so the derive is simply dropped rather than worked around.
 /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Brief {
     /// What the alive occupation here was for, if any occupation is alive.
     pub function: Option<Function>,
@@ -106,13 +140,25 @@ pub struct Brief {
     /// `hornvale_worldgen::SiteReason` so that a vertex warranting both does
     /// not put them at one facet.
     pub site: Option<Site>,
+    /// The dead occupation standing here, if any. Absent on a living
+    /// settlement and on empty ground.
+    ///
+    /// **Why this is here now and was not before.** This module's own header
+    /// states the general rule this field follows: nothing here is
+    /// serialized, so a campaign that needs a reserved field adds just that
+    /// field, with no save-format consequence and no epoch. The Weft is the
+    /// campaign that needed `cause`, and picked up `ended_by` and `ended`
+    /// alongside it, since `cause`, `ended_by` and `ended` each describe the
+    /// one dead occupation and belong together in one [`RuinSignature`]
+    /// rather than as separate loose fields.
+    pub ruin: Option<RuinSignature>,
 }
 
 impl Brief {
     /// Assemble a brief from already-resolved parts. Exists so the type can be
     /// unit-tested without a world; `brief_of` is the production path.
     /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
-    #[allow(clippy::too_many_arguments)] // `site` (Task 2, The Prospect) pushed this to 8; the parameters ARE `Brief`'s fields, and the whole point of this constructor is to assemble them without a world to derive `site` from
+    #[allow(clippy::too_many_arguments)] // `site` (Task 2, The Prospect) pushed this to 8, and `ruin` (Task 1, The Weft) to 9; the parameters ARE `Brief`'s fields, and the whole point of this constructor is to assemble them without a world to derive `site`/`ruin` from
     pub fn from_parts(
         function: Option<Function>,
         tech: Option<TechHorizon>,
@@ -123,6 +169,7 @@ impl Brief {
         built: bool,
         cold: bool,
         site: Option<Site>,
+        ruin: Option<RuinSignature>,
     ) -> Self {
         Self {
             function,
@@ -134,6 +181,7 @@ impl Brief {
             built,
             cold,
             site,
+            ruin,
         }
     }
 
@@ -220,28 +268,27 @@ pub(crate) fn containing_vertex(
 ///
 /// `seed` is the world's seed, the one thing `site_facet_for` needs from a
 /// `World` and the only reason this function ever held one. It is a parameter
-/// for exactly the reason the paragraph below gives for `occupations`: the
+/// for exactly the reason the paragraph below gives for the occupation maps: the
 /// caller has it, and a derivation path should not reach for a whole world to
 /// read one field off it.
 ///
-/// `occupations` is the world's living occupation register keyed by the exact
-/// packed settlement room. `WorldContext::build` constructs it ONCE by joining
+/// `living_occupations` is keyed by the exact packed settlement room.
+/// `WorldContext::build` constructs it ONCE by joining
 /// `hornvale_worldgen::occupations_by_vertex(world)` to the production
-/// settlement roster and hands it in. Looking the room back up through
+/// settlement roster. Looking a living room back up through
 /// [`containing_vertex`] is deliberately forbidden: settlement placement and
 /// the cube-sphere room mesh are independent, so that geometric reverse may
-/// name a neighbour rather than the settlement's source vertex. **History of
-/// this parameter, kept because the note it replaces was right for five weeks
-/// before anyone measured it:** from `4569d883d` (2026-07-27) to The Terrier
-/// (2026-09-03) this function took `&World` and rebuilt the whole map on
-/// every call, under a `NOTE ON COST` that said "if a profile shows it
-/// mattering, hoist the map to the caller … do NOT memoize inside this
-/// function, because a hidden cache in a derivation path is how derived
-/// state stops being derived." The profile showed 8.7-26 ms per call and
-/// two to five calls per indoor turn — the whole of what The Rack had
-/// attributed to a 0.012 ms shadowcast. The note's prescription is what
-/// shipped, and its prohibition still stands: there is no cache here, only
-/// a parameter.
+/// name a neighbour rather than the settlement's source vertex.
+///
+/// `occupation_history` is that same already-hoisted source register, retained
+/// by geosphere vertex for the ruin read. A ruin is an extent around an ended
+/// occupation rather than a production settlement-room identity, so it must
+/// use [`containing_vertex`] and must not be collapsed onto the living-room
+/// index. Both maps are derived once in `WorldContext::build`; neither is a
+/// hidden cache in this derivation path. Before The Terrier, this function
+/// rebuilt the source register on every call (8.7-26 ms, two to five calls per
+/// indoor turn); preserving both views keeps that recovered cost while joining
+/// Housemark's exact-room identity to The Weft's ruin extent.
 ///
 /// A living occupation also resolves its `people` through
 /// `hornvale_species::society_registry` exactly once while assembling the
@@ -250,10 +297,12 @@ pub(crate) fn containing_vertex(
 /// No fallback uses `SocietyVector::MANIKIN`: the manikin is nobody, and a ruin
 /// does not silently acquire occupants.
 /// type-audit: bare-ok(count: walk_depth)
-#[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the things `Session` keeps" and whose only reader is this function
+#[allow(clippy::too_many_arguments)] // The two occupation views plus `index` make ten parameters; each is a value the CALLER already holds and must not re-derive — bundling them into a public one-reader context would only hide the same dependency list
 pub fn brief_of(
-    occupations: &BTreeMap<FacetId, OccupationRecord>,
+    living_occupations: &BTreeMap<FacetId, OccupationRecord>,
+    occupation_history: &BTreeMap<Vertex, Vec<OccupationRecord>>,
     geo: &Geosphere,
+    index: &NearestVertexIndex,
     place: &Facet,
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
@@ -338,7 +387,27 @@ pub fn brief_of(
             .then(|| Site::placed(SiteKind::Cave, None)),
     ];
     let site = candidates.into_iter().flatten().max_by_key(Site::salience);
-    let alive = locale.pack().ok().and_then(|room| occupations.get(&room));
+    let vertex = containing_vertex(&locale, geo, index);
+    // Where more than one occupation at this vertex has ended, the most
+    // RECENT ending is the ruin a walker reads — an older ruin buried under a
+    // younger one is not what stands here. `total_cmp`, never `partial_cmp`:
+    // float ordering must be deterministic (constitutional, see CLAUDE.md).
+    let ruin = vertex
+        .and_then(|vertex| occupation_history.get(&vertex))
+        .and_then(|recs| {
+            recs.iter()
+                .filter(|r| r.core.ended.is_some())
+                .max_by(|a, b| a.core.ended.unwrap().total_cmp(&b.core.ended.unwrap()))
+        })
+        .map(|r| RuinSignature {
+            cause: r.core.cause,
+            ended: r.core.ended.expect("filtered to Some above"),
+            by_hand: matches!(r.ended_by, Ended::By(_)),
+        });
+    let alive = locale
+        .pack()
+        .ok()
+        .and_then(|room| living_occupations.get(&room));
     Ok(match alive {
         Some(o) => {
             let societies = society_registry();
@@ -353,9 +422,10 @@ pub fn brief_of(
                 built,
                 cold,
                 site,
+                ruin,
             )
         }
-        None => Brief::from_parts(None, None, None, None, None, 0, built, cold, site),
+        None => Brief::from_parts(None, None, None, None, None, 0, built, cold, site, ruin),
     })
 }
 
@@ -428,12 +498,15 @@ mod tests {
             founded_from: Founding::Genesis(vertex),
             ended_by: Ended::Nature,
         };
+        let occupation_history = [(vertex, vec![occupation.clone()])].into_iter().collect();
         let occupations = [(place.pack().expect("the test room packs"), occupation)]
             .into_iter()
             .collect();
         brief_of(
             &occupations,
+            &occupation_history,
             &geo,
+            &index,
             &place,
             &StubTerrain,
             0,
@@ -455,6 +528,7 @@ mod tests {
             true,
             true,
             None,
+            None,
         );
         assert_eq!(b.function, Some(Function::Trade));
         assert_eq!(b.tech, Some(TechHorizon::Classical));
@@ -466,7 +540,7 @@ mod tests {
 
     #[test]
     fn from_parts_with_no_occupation_axes_still_carries_climate() {
-        let b = Brief::from_parts(None, None, None, None, None, 0, false, true, None);
+        let b = Brief::from_parts(None, None, None, None, None, 0, false, true, None, None);
         assert!(!b.built);
         assert!(
             b.cold,
@@ -490,6 +564,7 @@ mod tests {
             true,
             false,
             None,
+            None,
         );
         let b = Brief::from_parts(
             Some(Function::Fort),
@@ -500,6 +575,7 @@ mod tests {
             0,
             true,
             false,
+            None,
             None,
         );
         assert_ne!(a, b);
@@ -516,8 +592,10 @@ mod tests {
     #[test]
     fn a_built_brief_carries_a_settlement_site_and_an_unbuilt_one_carries_none() {
         let built_site = Some(Site::placed(SiteKind::Settlement, None));
-        let built = Brief::from_parts(None, None, None, None, None, 0, true, false, built_site);
-        let wild = Brief::from_parts(None, None, None, None, None, 0, false, false, None);
+        let built = Brief::from_parts(
+            None, None, None, None, None, 0, true, false, built_site, None,
+        );
+        let wild = Brief::from_parts(None, None, None, None, None, 0, false, false, None, None);
         assert_eq!(
             built.site.as_ref().map(|site| site.kind),
             Some(SiteKind::Settlement)
@@ -547,15 +625,19 @@ mod tests {
     #[test]
     fn an_empty_production_occupation_register_carries_no_people_or_housemark() {
         let geo = Geosphere::new(0);
+        let index = NearestVertexIndex::new(&geo);
         let place = Facet {
             face: 0,
             path: Vec::new(),
         };
-        let occupations = BTreeMap::new();
+        let occupations: BTreeMap<FacetId, OccupationRecord> = BTreeMap::new();
+        let occupation_history: BTreeMap<Vertex, Vec<OccupationRecord>> = BTreeMap::new();
 
         let brief = brief_of(
             &occupations,
+            &occupation_history,
             &geo,
+            &index,
             &place,
             &StubTerrain,
             0,

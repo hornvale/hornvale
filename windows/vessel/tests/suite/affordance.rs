@@ -908,6 +908,16 @@ fn the_dispatch_scan_reports_the_functions_it_found() {
     assert_eq!(
         found,
         vec![
+            // `weft_offers` (The Weft, Task 8) scans FIRST: it is defined
+            // earlier in `affordance.rs` than `offered_by`, right after
+            // `object_registry` — the scan walks the file in source order,
+            // not alphabetically. It carries the SAME "kind -> verbs"
+            // shape (`weft_object_registry` then `offered`, no verb
+            // variant named in its own body), which is exactly why it is
+            // a legitimate arrival here rather than a defect: a second
+            // key SPACE reusing the one query, never a second dispatch
+            // table.
+            "weft_offers".to_string(),
             "offered_by".to_string(),
             "offered_to".to_string(),
             "offered_to_observer".to_string(),

@@ -343,7 +343,8 @@ fn lon_bucket(longitude: f64) -> usize {
 /// inside it by the measured coverage bound; near the poles the window
 /// saturates to the full ring, i.e. the earlier band-only scan. Returns the
 /// bit-identical vertex the full band scan did (same max dot, same
-/// first-in-scan-order tie-break) — pinned by an all-levels equality test.
+/// first-in-scan-order tie-break) — pinned at levels 2–6 by the equality test
+/// below. A terrain pin may request level 7, which that test does not cover.
 #[derive(Debug, Clone)]
 pub struct NearestVertexIndex {
     /// Vertices by `band * LON_BUCKETS + lon_bucket`, ascending `Vertex` within
@@ -402,9 +403,13 @@ impl NearestVertexIndex {
         self.scan_at(geo, target, latitude, longitude, cos_lat)
     }
 
-    /// The vertex nearest a unit-sphere position, by maximum dot product. Because
-    /// a room's ancestor-corner positions are byte-identical to mesh vertices,
-    /// this returns that exact vertex (self-dot = 1.0 wins).
+    /// The vertex nearest a unit-sphere position, by maximum dot product. At
+    /// levels 2–6, a position read from [`Geosphere::position`] resolves to that
+    /// same vertex, as pinned by the dense regression below. This is not an
+    /// exact-self-dot argument: normalized `f64` vectors need not have a
+    /// self-dot bit-equal to `1.0`. A cube-sphere room corner generally is *not*
+    /// an icosphere vertex and still needs the nearest search; see
+    /// [`crate::Facet::corners`]'s mesh-boundary contract.
     /// type-audit: pending(wave-1)
     pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> Vertex {
         let latitude = math::asin(pos[2]).to_degrees();
@@ -517,8 +522,9 @@ mod tests {
 
     #[test]
     fn a1_grid_matches_the_full_band_scan_over_a_dense_sweep() {
-        // Every level the mesh is built at (2–6 across renders, room, scene,
-        // the climate provider, and the census). The equality assertion IS the
+        // This dense regression covers levels 2–6 used by the default
+        // production paths. A terrain pin may request level 7, which this test
+        // deliberately does not claim to cover. The equality assertion IS the
         // coverage proof: an under-covering window would return a different
         // vertex than the band scan and fail here. Level 2 is the coarse case
         // where the covering radius is largest and the window saturates.
@@ -543,7 +549,9 @@ mod tests {
                     );
                 }
             }
-            // Every vertex center must resolve to its own vertex (self-dot = 1).
+            // Every vertex centre must resolve to its originating vertex. This
+            // pins the observed ordering directly; normalized f64 vectors do
+            // not all have a self-dot bit-equal to 1.0.
             for c in geo.vertices() {
                 assert_eq!(
                     index.nearest_to_position(&geo, geo.position(c)),

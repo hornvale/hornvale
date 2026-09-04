@@ -30,7 +30,7 @@ use crate::{
     reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, World,
+    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, Vertex, World,
     WorldTime,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
@@ -727,12 +727,26 @@ pub struct WorldContext<'w> {
     /// cannot move the order the gallery transcripts guard.
     pub(crate) occupations:
         std::collections::BTreeMap<FacetId, hornvale_history::record::OccupationRecord>,
+    /// The complete occupation history grouped by its geosphere vertex. The
+    /// exact-room map above owns living cultural identity; this source view is
+    /// retained separately because The Weft's ruin extent is read through the
+    /// facet's containing vertex. Both derive from one ledger scan below.
+    pub(crate) occupation_history:
+        std::collections::BTreeMap<Vertex, Vec<hornvale_history::record::OccupationRecord>>,
     /// Every distinct built settlement room and the first settlement's name,
     /// produced by the same ordered reduction as `occupations` above.
     pub(crate) built: std::collections::BTreeMap<FacetId, String>,
     /// Later settlements discarded because an earlier settlement already
     /// occupied their player-addressed room.
     pub(crate) settlement_room_collisions: usize,
+    /// The materialized macro-state field pack (The Weft, Task 8) every
+    /// derived-feature kind reads (`hornvale_worldgen::field_pack_from`),
+    /// built ONCE here from the same `(terrain, climate)` pair rather than
+    /// per session or per read — a pure function of both, the same
+    /// world-scoped posture `ctx`/`occupations` already have. Consumes no
+    /// stream draw (a `VertexMap` materialization, not a derivation), so it
+    /// cannot move the order the gallery transcripts guard either.
+    pub(crate) pack: hornvale_worldgen::FieldPack,
 }
 
 impl<'w> WorldContext<'w> {
@@ -813,8 +827,23 @@ impl<'w> WorldContext<'w> {
         // above so that the order those transcripts guard is visibly not in
         // question. ~9-26 ms once per world (contended), against ~3 s for the
         // block above; it used to be paid on every `brief_of` call.
-        let occupations_by_vertex = hornvale_worldgen::occupations_by_vertex(world);
-        let settlement_rooms = settlement_room_index(world, &ctx, &occupations_by_vertex);
+        let occupation_history = hornvale_worldgen::occupations_by_vertex(world);
+        let settlement_rooms = settlement_room_index(world, &ctx, &occupation_history);
+        // The field pack (The Weft, Task 8): materialized from the SAME
+        // `terrain`/`climate` this function already derived above, never a
+        // second sculpt/fit — the `field_pack_from` construction site every
+        // other caller (`windows/worldgen/tests/suite/weft_window.rs`'s own
+        // fixture) already uses. `terrain`/`climate` are `Some` by
+        // construction here (see their own field docs), so this reads them
+        // straight through rather than re-deriving.
+        let pack = hornvale_worldgen::field_pack_from(
+            terrain
+                .as_ref()
+                .expect("terrain is Some immediately after derivation"),
+            climate
+                .as_ref()
+                .expect("climate is Some immediately after derivation"),
+        );
         Ok(WorldContext {
             world,
             terrain,
@@ -823,8 +852,10 @@ impl<'w> WorldContext<'w> {
             wc,
             report,
             occupations: settlement_rooms.living,
+            occupation_history,
             built: settlement_rooms.built,
             settlement_room_collisions: settlement_rooms.collisions,
+            pack,
         })
     }
 
@@ -1068,6 +1099,21 @@ pub struct Session<'w> {
     /// `step_with_occupancy` (for the neighbours half); `snapshot`/`needs`
     /// (both `&self`) read whatever it already holds without adding to it.
     mesh_memo: hornvale_kernel::RoomMeshMemo,
+    /// The session-lived residency window over the derived weft surface
+    /// (The Weft, Task 8, controller ruling R3): `WeftWindow` is a genuine
+    /// window, not a memo (its own module doc explains the distinction —
+    /// the walk facet space is not naturally small the way a session's own
+    /// rooms are), but it is still session-scoped rather than shared on
+    /// `WorldContext`, because two sessions walking different parts of the
+    /// world would otherwise thrash a single shared window's residency.
+    /// [`Self::go`] prefills it for the destination facet before rendering
+    /// (the one `&mut self` point on the walk-band step path); every other
+    /// reader — [`Self::describe_here`] included — is `&self`-only and
+    /// reads through [`hornvale_worldgen::features_at_cached`]'s own
+    /// "cache: None is byte-identical to deriving directly" contract, so a
+    /// facet this window has not yet resident'd still answers correctly,
+    /// just without the cache's benefit.
+    weft_window: hornvale_worldgen::WeftWindow,
     /// The session-lived, CROSS-tick home-plan cache (the-waymark, Task 4):
     /// unlike `mesh_memo` above (whose per-tick geometry is re-prefilled every
     /// `wait`), this one is never rebuilt — a stationary NPC with an unchanged
@@ -2051,6 +2097,7 @@ impl<'w> Session<'w> {
             submerged: None,
             underground: None,
             mesh_memo,
+            weft_window: hornvale_worldgen::WeftWindow::new(),
             home_nav_cache: HomeNavCache::new(),
             folds,
             ground,
@@ -6900,6 +6947,61 @@ impl<'w> Session<'w> {
             .as_ref()
             .map(Self::site_clause)
             .unwrap_or_default();
+        // The ruin clause (The Weft, Task 2, spec Half A): a SECOND sentence
+        // beside the site clause, not a replacement for it — a facet can
+        // hold both a ruin and an enterable site (a settlement rebuilt on a
+        // dead one, say), so one must never gate out the other.
+        let ruin_clause = brief
+            .ruin
+            .as_ref()
+            .map(crate::ruin_prose::ruin_line)
+            .unwrap_or_default();
+        // The weft clause (The Weft, Task 8, spec §6/Half B): every derived
+        // feature at THIS facet — never through `Brief` (controller ruling
+        // R1: `Brief` is "what macro history says about a place," and a
+        // derived feature is a different kind of fact with a different
+        // lifetime). Read through the session's own residency window where
+        // `Self::go` already prefilled it, or derived directly on a miss —
+        // `all_features_at_cached`'s own "cache: None is byte-identical to
+        // deriving directly" contract (R3), which is what lets this stay
+        // `&self`-only exactly like `site_clause`/`ruin_clause` above.
+        //
+        // **Gated on `vantage.is_none()` (fix round 1, F5).** A derived
+        // feature is land-flavored prose (a thicket, an overhang, a spring
+        // seeping "up out of the ground") and `vantage` is exactly this
+        // render's own "am I on dry ground" answer — `Some` means AFLOAT (or
+        // submerged), the same distinction the paragraph above draws for
+        // "the room's own expression." Without this gate the two vantage
+        // predicates can disagree at the coastline: `vantage` picks the
+        // walk-band facet's single MAX-WEIGHT corner (`Self::column_here`'s
+        // `max_by_key`, a discrete pick), while a weft kind's own eligibility
+        // (`land_eligible`, `windows/worldgen/src/weft/kinds.rs`) is a
+        // BILINEAR BLEND of all four corners at a `>= 0.5` threshold — a
+        // continuous test that can pass even when the single heaviest corner
+        // is ocean. Measured directly on seed 42 (every walk-depth facet over
+        // all 40,962 vertices, comparing the two predicates independently):
+        // 29,713 facets are afloat by the corner-pick test, and of those, 35
+        // (0.118% of afloat facets, 0.085% of all facets) ALSO carry >= 1
+        // weft feature by the blend test — real, not merely constructible,
+        // though rare. This gate closes it at the render, the cheaper of the
+        // two fixes named in review (aligning the eligibility rule with the
+        // corner-pick rule would touch every kind's own derivation instead of
+        // one render site).
+        let weft_clause = if vantage.is_none() {
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
+            let features = hornvale_worldgen::all_features_at_cached(
+                &self.position(),
+                geo,
+                index,
+                &self.wctx.pack,
+                self.wctx.world.seed,
+                Some(&self.weft_window),
+            );
+            crate::weft_prose::weft_clause(&features)
+        } else {
+            String::new()
+        };
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
@@ -6958,7 +7060,7 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
@@ -7067,6 +7169,31 @@ impl<'w> Session<'w> {
         // Committing IS the position update now (spec §3.1) — there is no
         // mutable field left to assign `dest` to.
         self.commit_agent_at(&dest, WALKED_PROVENANCE);
+        // Prefill the session-owned weft window (The Weft, Task 8, controller
+        // ruling R3) for the facet just stepped onto — the one `&mut self`
+        // point on this path, mirroring the mesh-memo prefill `wait`'s own
+        // tick performs (see that call site's own doc). `describe_here`
+        // (below, and every OTHER caller of it) is `&self`-only and reads
+        // through `hornvale_worldgen::features_at_cached`'s "cache: None is
+        // byte-identical to deriving directly" contract, so this prefill is
+        // a genuine cache warm, never a correctness dependency: a `look`
+        // immediately after a `go` hits it, and a bare re-`look` at the same
+        // facet (which never calls this method) still answers correctly by
+        // deriving directly on the resulting miss.
+        {
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
+            for kind in hornvale_worldgen::WeftKind::ALL {
+                self.weft_window.features_at(
+                    kind,
+                    &dest,
+                    geo,
+                    index,
+                    &self.wctx.pack,
+                    self.wctx.world.seed,
+                );
+            }
+        }
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
@@ -7498,7 +7625,9 @@ impl<'w> Session<'w> {
         let terrain = self.terrain_here();
         crate::brief::brief_of(
             &self.wctx.occupations,
+            &self.wctx.occupation_history,
             self.wctx.ctx.climate().geosphere(),
+            self.wctx.ctx.nearest_index(),
             place,
             &terrain,
             self.walk_depth(),
@@ -15532,7 +15661,9 @@ mod tests {
                 let terrain = session.terrain_here();
                 let scanned = crate::brief::brief_of(
                     &fresh,
+                    &fresh_by_vertex,
                     session.wctx.ctx.climate().geosphere(),
+                    session.wctx.ctx.nearest_index(),
                     &session.position(),
                     &terrain,
                     session.walk_depth(),

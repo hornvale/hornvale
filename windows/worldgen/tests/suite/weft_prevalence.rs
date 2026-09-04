@@ -1,0 +1,556 @@
+//! `prevalence` must be position-continuous, never address-hashed — The
+//! Weft, Task 5; spec §5.1. Paired with an anti-vacuity companion (fix round
+//! 1, F3) per spec §7's H2 requirement that coherence be "paired with an
+//! anti-vacuity companion … so a degenerate world cannot score perfectly" —
+//! the same shape The Ford pairs `channel-band-monotonicity` with
+//! `channel-transect-dry-reach`. Task 7 extends both to the three new kinds,
+//! and adds the eligibility regression `spring_never_occurs_off_land` (R1).
+//!
+//! **Fix round 1 (C1/M2/M3) replaced the single-walk calibration with a
+//! broad, representative sample.** The shipped version calibrated
+//! `KIND_BOUNDS` off ONE 200-step walk from vertex 14 — 18% of spring's own
+//! measured global range, per the review. Worse, for erratic/scatter (short
+//! correlation length, near-zero contextuality) a raw max-delta bound is a
+//! genuinely weak discriminator: at the shipped bound (`0.07`, 92% of
+//! erratic's own theoretical amplitude), an address-hashed mutant exceeded
+//! it only 0.5% of the time — the guard could not catch what it exists to
+//! catch, on the one kind least able to absorb that (Task 5's F2 shape
+//! again: a bound loose enough to be decorative).
+//!
+//! The fix is two-part:
+//!
+//! 1. **[`land_eligible_walks`] samples 78 land-eligible 60-step walks**
+//!    (`STRIDE = 137`-spaced starting vertices across all 40,962), not one —
+//!    4,602 adjacent-pair deltas and 4,680 facet evaluations per kind. Every
+//!    bound in [`KIND_BOUNDS`] is now measured against this pool, with a
+//!    per-kind floor read off the pool's OWN measurement (never a shared
+//!    `1`) — see that constant's own doc for the real/mutant numbers.
+//! 2. **A lag-1 autocorrelation check ([`AUTOCORR_BOUNDS`],
+//!    `prevalence_autocorrelation_is_not_address_hashed`) is now the
+//!    PRIMARY discriminator, not the max-delta bound.** Measured on THIS
+//!    tree, real vs. an address-hashed mutant (the same in-place swap Task 5
+//!    used: `fbm.sample(facet.centroid())` → `facet.seed(seed)
+//!    .stream().next_f64()`, both passed through `uniformize`, reverted
+//!    after measuring):
+//!
+//!    | kind | real r | mutant r |
+//!    | --- | --- | --- |
+//!    | spring | 0.99821 | 0.20919 |
+//!    | overhang | 0.98238 | 0.08907 |
+//!    | thicket | 0.99994 | 0.89048 |
+//!    | erratic | 0.86795 | **-0.02545** |
+//!
+//!    Erratic's separation (0.868 vs. -0.025) is the cleanest of the four —
+//!    exactly the opposite of the max-delta bound's own weakest case — because
+//!    erratic's tiny contextuality (`0.05`) means almost the entire mixed
+//!    signal IS the noise term, so decorrelating it destroys the
+//!    correlation outright. The max-delta bound stays as a SECONDARY check
+//!    (a real regression that flattens the field entirely, e.g., or a gross
+//!    scale error, would still trip it), but autocorrelation is what this
+//!    fix round actually leans on for erratic.
+//!
+//! **The eligibility-cliff reasoning from the shipped version is unchanged
+//! and still governs `land_eligible_walks`**: Task 7's R1 gate makes
+//! ineligible ground a hard `prevalence == 0.0` cliff, a REAL geographic
+//! discontinuity (a coastline), not decorrelated noise, so every walk this
+//! file samples is kept only if it stays land-eligible for its entire
+//! length — never mixed into a noise-smoothness measurement. The
+//! eligibility cliff itself is exercised directly by
+//! `spring_never_occurs_off_land` below, over the WHOLE grid.
+//!
+//! Test fixture (decision 0092): calls the sculpt derivation entry point
+//! (`terrain_of`) directly to build its own world state, once per test — the
+//! sanctioned test-fixture posture the weir's spec carves out.
+#![allow(clippy::disallowed_methods)]
+
+use hornvale_kernel::{Facet, NearestVertexIndex, Vertex, blend_corner_weights};
+use hornvale_worldgen::WeftKind;
+
+/// Walk depth used everywhere in this file: `windows/locale::walk_depth`
+/// documents its own value as "the globe level plus 7"
+/// (`windows/worldgen/src/placement.rs` restates the same relationship at its
+/// own call site); this file cannot import `windows/locale` at all (it
+/// depends on `hornvale-worldgen`, the crate under test — the same
+/// circularity Ruling 1 of this task's dispatch names), so the relationship
+/// is reproduced directly rather than imported.
+const WALK_DEPTH_BELOW_GRID: u32 = 7;
+
+/// Steps per sampled walk (fix round 1). Short enough that a walk starting
+/// on a modest island or coastal strip still often qualifies as fully
+/// land-eligible, long enough to give each kind's own correlation length
+/// (5–60 facets) room to move.
+const WALK_LEN: usize = 60;
+
+/// Spacing between candidate starting vertices, in raw vertex index (fix
+/// round 1). `40,962 / 137 ≈ 299` candidates scanned; 78 qualify (stay
+/// land-eligible for the whole walk) — a broad, globally-spread sample
+/// rather than one hand-picked start, closing M2. Prime-ish and unrelated to
+/// the geosphere's own subdivision structure, so it does not alias onto any
+/// lattice regularity.
+const STRIDE: u32 = 137;
+
+/// One sampled walk: [`WALK_LEN`] steps of `(prevalence, occurs)`, kept only
+/// if every step stayed land-eligible — see this file's own module doc for
+/// why a coastline crossing must never enter a noise-smoothness sample.
+type Walk = Vec<(f64, bool)>;
+
+/// Every land-eligible [`WALK_LEN`]-step walk starting at a
+/// [`STRIDE`]-spaced vertex, for `kind` — the representative sample fix
+/// round 1 (M2) replaced the single hand-picked walk with. Builds its own
+/// world/terrain/climate/pack once (not shared across kinds — this file
+/// values the fixture-per-call posture decision 0092 sanctions over a
+/// shared-fixture optimization).
+fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let geo = terrain.geosphere();
+    let index = NearestVertexIndex::new(geo);
+    let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
+    let n = geo.vertex_count() as u32;
+
+    let mut walks = Vec::new();
+    let mut start = 0u32;
+    while start < n {
+        let mut facet = Facet::containing(geo.position(Vertex(start)), walk_depth);
+        let mut walk: Walk = Vec::with_capacity(WALK_LEN);
+        let mut eligible_throughout = true;
+        for _ in 0..WALK_LEN {
+            let Some(weights) = facet.corner_weights(geo, &index) else {
+                eligible_throughout = false;
+                break;
+            };
+            if blend_corner_weights(weights, &pack.land) < 0.5 {
+                eligible_throughout = false;
+                break;
+            }
+            let p = hornvale_worldgen::prevalence(kind, &facet, geo, &index, &pack, world.seed)
+                .expect("corner_weights just returned Some above");
+            let occ = hornvale_worldgen::occurs(kind, &facet, world.seed, p);
+            walk.push((p, occ));
+            facet = facet
+                .neighbors()
+                .into_iter()
+                .next()
+                .expect("a facet always has an edge neighbour");
+        }
+        if eligible_throughout && walk.len() == WALK_LEN {
+            walks.push(walk);
+        }
+        start += STRIDE;
+    }
+    walks
+}
+
+/// Per-kind `(kind, max_allowed_delta, min_pooled_spread,
+/// min_total_occurs)` — every bound measured against
+/// [`land_eligible_walks`]'s full 78-walk, 4,680-facet, 4,602-delta pool
+/// (fix round 1, M2/M3), never a single walk or a shared floor.
+///
+/// **Measured (seed 42, this pool, current post-R1 mechanism) — re-measured
+/// in fix round 2 (N2): the overhang row below was stale.** It was measured
+/// against `OVERHANG_SLOPE_SATURATION = 8_000.0` and never re-run after the
+/// SAME commit (fix round 1) changed the constant to
+/// `hornvale_terrain::GORGE_SLOPE` (`40_000.0`, I2) — a real recipe change
+/// (a gentler `tanh` saturation lowers overhang's typical macro-state
+/// contribution), so its own calibration table drifted under it unnoticed.
+///
+/// **The spring pooled-min cell (lexicon: a markdown table cell, an area,
+/// not the mesh sense) was ALSO stale (fix round 3), for a
+/// different reason: a bug in the standalone calibration probe used to
+/// produce this table, not in [`land_eligible_walks`] itself.** That probe
+/// re-implemented the walk loop and updated its running pooled min/max
+/// INSIDE the per-step loop, unconditionally — so a walk later rejected for
+/// leaving land eligibility (`eligible_throughout = false`) still leaked its
+/// partial prevalence series into the pooled bounds before the rejection
+/// was known. `land_eligible_walks` itself has no such bug (it only pushes
+/// a walk's samples into the returned `Vec` once `eligible_throughout &&
+/// walk.len() == WALK_LEN` both hold), so calling it directly — the same
+/// production path [`prevalence_is_continuous_across_adjacent_facets`] and
+/// [`the_walk_is_not_degenerate`] use — gives the correct figure. Verified
+/// against two independent external re-measurements before correcting:
+///
+/// | kind | max delta | pooled spread | total occurs |
+/// | --- | --- | --- | --- |
+/// | spring | 0.00576 | 0.11268 (`[0.00249, 0.11518]`) | 125 / 4,680 |
+/// | overhang | 0.02982 | 0.13333 (`[0.00560, 0.13893]`) | 275 / 4,680 |
+/// | thicket | 0.00764 | 0.39418 (`[0.00054, 0.39473]`) | 924 / 4,680 |
+/// | erratic | 0.04920 | 0.07594 (`[0.00203, 0.07796]`) | 233 / 4,680 |
+///
+/// `max_allowed_delta` below leaves real headroom over its own kind's
+/// measured max while staying well under that kind's own address-hashed
+/// mutant max (measured the same way, see this file's module doc): spring
+/// `0.010` (1.7x real / 5.4x under mutant `0.0535`), overhang `0.045` (1.5x
+/// real / 2.2x under mutant `0.1009` — the mutant max is unaffected by the
+/// slope-constant fix, since it comes from the fully decorrelated noise
+/// term, not the macro-state recipe), thicket `0.015` (2.0x real / 4.6x
+/// under mutant `0.0690`). **Erratic's `0.060` (1.2x real / only 1.3x under
+/// mutant `0.0760`) is deliberately a weak, secondary check** — see this
+/// file's module doc: erratic's real discrimination comes from
+/// [`AUTOCORR_BOUNDS`] below, not this bound, because a short-correlation,
+/// near-zero-contextuality kind's real deltas already sit close to its own
+/// theoretical amplitude ceiling, the exact shape that made the shipped
+/// `0.07` bound decorative.
+///
+/// `min_pooled_spread`/`min_total_occurs` are set with margin BELOW the
+/// measured real values above (never above — a floor above the real
+/// measurement would fail on real data by construction): spring `0.05`/`50`,
+/// overhang `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`.
+/// **Overhang's and spring's floors both still hold against their corrected
+/// rows** (overhang: `0.08` is 1.67x under `0.13333`, `150` is 1.83x under
+/// `275`; spring: `0.05` is 2.25x under the corrected `0.11268`) — nothing
+/// broke either time; the committed TABLE was false, not the bounds.
+const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
+    (WeftKind::Spring, 0.010, 0.05, 50),
+    (WeftKind::Overhang, 0.045, 0.08, 150),
+    (WeftKind::Thicket, 0.015, 0.20, 400),
+    (WeftKind::Erratic, 0.060, 0.04, 100),
+];
+
+/// Per-kind `(kind, min_lag1_autocorrelation)` — the PRIMARY
+/// decorrelated-noise discriminator fix round 1 added (C1). Pearson
+/// correlation between `prevalence[i]` and `prevalence[i+1]`, pooled across
+/// every pair in every walk [`land_eligible_walks`] returns for the kind
+/// (4,602 pairs each). See this file's own module doc for the real-vs-mutant
+/// table these thresholds sit between; each threshold below leaves
+/// comparable margin on both sides of its own kind's pair (spring: real
+/// `0.998` / mutant `0.209`, threshold `0.6`; overhang: real `0.982`
+/// (re-measured, fix round 2, N2 — the shipped `0.983` was measured against
+/// the pre-I2 slope constant and never re-run) / mutant `0.089`, threshold
+/// `0.5`; thicket: real `0.99994` / mutant
+/// `0.890`, threshold `0.95` — the tightest margin of the four, because
+/// thicket's own high contextuality (`0.85`) means even fully decorrelated
+/// noise is only 15% of the mixed signal, so the mutant's correlation stays
+/// high too; erratic: real `0.868` / mutant `-0.025`, threshold `0.5` — the
+/// widest margin of the four, and not a coincidence: erratic's near-zero
+/// contextuality is exactly what makes this the right primary check for it).
+const AUTOCORR_BOUNDS: [(WeftKind, f64); 4] = [
+    (WeftKind::Spring, 0.6),
+    (WeftKind::Overhang, 0.5),
+    (WeftKind::Thicket, 0.95),
+    (WeftKind::Erratic, 0.5),
+];
+
+/// A caller that already paid for a facet's corner weights must be able to
+/// reuse that exact prepared value across every kind without changing any
+/// prevalence bit. This is the behavioral oracle for the prepared-weight
+/// seam the grid pool uses; the pool owns one `weights` value per facet,
+/// while the public wrapper remains available to callers that own only
+/// geometry.
+///
+/// The sample admits only land-eligible facets and requires at least one
+/// nonzero answer, so an implementation returning the eligibility sentinel
+/// for every kind cannot pass vacuously.
+#[test]
+fn prepared_weights_preserve_every_kinds_prevalence_bits() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let geo = terrain.geosphere();
+    let index = NearestVertexIndex::new(geo);
+    let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
+
+    let mut eligible_facets = 0usize;
+    let mut nonzero_answers = 0usize;
+    for v in 0..geo.vertex_count() {
+        let facet = Facet::containing(geo.position(Vertex(v as u32)), walk_depth);
+        let Some(weights) = facet.corner_weights(geo, &index) else {
+            continue;
+        };
+        if blend_corner_weights(weights, &pack.land) < 0.5 {
+            continue;
+        }
+
+        eligible_facets += 1;
+        for kind in WeftKind::ALL {
+            let wrapped =
+                hornvale_worldgen::prevalence(kind, &facet, geo, &index, &pack, world.seed)
+                    .expect("corner_weights just returned Some above");
+            let prepared = hornvale_worldgen::prevalence_with_weights(
+                kind, &facet, weights, &pack, world.seed,
+            );
+            assert_eq!(
+                prepared.to_bits(),
+                wrapped.to_bits(),
+                "{kind:?}: prepared weights changed prevalence at vertex {v}"
+            );
+            nonzero_answers += usize::from(wrapped != 0.0);
+        }
+
+        if eligible_facets == 32 {
+            break;
+        }
+    }
+
+    assert!(
+        eligible_facets > 0,
+        "the sample found no land-eligible facet, so it exercised nothing"
+    );
+    assert!(
+        nonzero_answers > 0,
+        "every prepared prevalence was the eligibility sentinel, so the comparison was vacuous"
+    );
+}
+
+/// Adjacent facets mostly agree, because prevalence is position-continuous —
+/// checked across every walk [`land_eligible_walks`] returns, for every kind
+/// in [`KIND_BOUNDS`]. The secondary check, since fix round 1 — see
+/// [`AUTOCORR_BOUNDS`] and this file's module doc for the primary one.
+///
+/// **Why this discriminates an address-hashed implementation, measured, not
+/// assumed.** During Task 5, `prevalence`'s noise sample was temporarily
+/// mutated in place — `facet.centroid()` swapped for
+/// `facet.seed(seed).stream().next_f64()`, everything else untouched — and
+/// this exact shape of test re-run against it; fix round 1 re-ran the same
+/// mutation against the broad sample this file now uses (see
+/// [`KIND_BOUNDS`]'s own doc for the resulting real/mutant max deltas).
+///
+/// **Round 0 measured `SPRING_CONTEXTUALITY = 0.7` against a raw (non-
+/// uniformized) noise field: real max delta `~0.0025`, mutant max `~0.10`.**
+/// Review found this comparison unsound: at the round-0 shipped bound
+/// (`0.02`), the ORIGINAL `0.85` also discriminates (mutant: 64 of 199 steps
+/// over bound) — moving `SPRING_CONTEXTUALITY` bought no additional
+/// separation (42.6× at 0.85 vs 38.7× at 0.7, scale-invariant since lowering
+/// contextuality scales both sides identically); the defect was a bound set
+/// too loose, not the constant. `SPRING_CONTEXTUALITY` is restored to `0.85`
+/// (see `kinds.rs`).
+///
+/// **Round 1 also fixed F1: every noise sample is now passed through
+/// [`hornvale_terrain::features::uniformize`]** before use, which widens the
+/// noise term's own variance (from SD ≈0.076 raw to a genuine `[0,1]`
+/// uniform).
+#[test]
+fn prevalence_is_continuous_across_adjacent_facets() {
+    for (kind, max_allowed_delta, _, _) in KIND_BOUNDS {
+        let walks = land_eligible_walks(kind);
+        assert!(
+            !walks.is_empty(),
+            "{kind:?}: no land-eligible walk found in the sample"
+        );
+
+        let mut violations = Vec::new();
+        for (w, walk) in walks.iter().enumerate() {
+            let prevalences: Vec<f64> = walk.iter().map(|(p, _)| *p).collect();
+            for i in 1..prevalences.len() {
+                let delta = (prevalences[i] - prevalences[i - 1]).abs();
+                if delta > max_allowed_delta {
+                    violations.push((w, i, delta));
+                }
+            }
+        }
+        assert!(
+            violations.is_empty(),
+            "{kind:?}: prevalence must stay position-continuous across adjacent facets; \
+             {} step(s) over {} walks exceeded {max_allowed_delta}: {violations:?}",
+            violations.len(),
+            walks.len(),
+        );
+    }
+}
+
+/// The PRIMARY decorrelated-noise discriminator since fix round 1 (C1) — see
+/// this file's own module doc for the real-vs-mutant measurement table and
+/// [`AUTOCORR_BOUNDS`] for the per-kind thresholds. Lag-1 Pearson
+/// correlation, pooled over every adjacent pair in every walk
+/// [`land_eligible_walks`] returns.
+///
+/// **Verified by mutation on this tree** (the same in-place swap described
+/// in [`prevalence_is_continuous_across_adjacent_facets`]'s own doc): every
+/// kind's mutant `r` falls below its [`AUTOCORR_BOUNDS`] threshold —
+/// including erratic's, which the max-delta bound alone could not reliably
+/// catch (0.5% mutant-exceedance at the shipped `0.07` bound, per the
+/// review). Reverted after measuring; this assertion is what pins the
+/// property going forward, not the one-off measurement.
+#[test]
+fn prevalence_autocorrelation_is_not_address_hashed() {
+    for (kind, min_r) in AUTOCORR_BOUNDS {
+        let walks = land_eligible_walks(kind);
+        assert!(
+            !walks.is_empty(),
+            "{kind:?}: no land-eligible walk found in the sample"
+        );
+
+        let mut xs: Vec<f64> = Vec::new();
+        let mut ys: Vec<f64> = Vec::new();
+        for walk in &walks {
+            for i in 1..walk.len() {
+                xs.push(walk[i - 1].0);
+                ys.push(walk[i].0);
+            }
+        }
+
+        let m = xs.len() as f64;
+        let mean_x = xs.iter().sum::<f64>() / m;
+        let mean_y = ys.iter().sum::<f64>() / m;
+        let cov: f64 = xs
+            .iter()
+            .zip(ys.iter())
+            .map(|(x, y)| (x - mean_x) * (y - mean_y))
+            .sum::<f64>()
+            / m;
+        let var_x: f64 = xs.iter().map(|x| (x - mean_x).powi(2)).sum::<f64>() / m;
+        let var_y: f64 = ys.iter().map(|y| (y - mean_y).powi(2)).sum::<f64>() / m;
+        let r = cov / (var_x.sqrt() * var_y.sqrt());
+
+        assert!(
+            r >= min_r,
+            "{kind:?}: lag-1 autocorrelation must stay high — position-continuous noise \
+             correlates with its own neighbour, address-hashed noise does not; measured \
+             r={r:.5} over {} pairs, wanted >= {min_r}",
+            xs.len(),
+        );
+    }
+}
+
+/// The anti-vacuity companion spec §7's H2 requires (F3, fix round 1):
+/// `prevalence_is_continuous_across_adjacent_facets` alone passes for a
+/// **constant** function — `violations.is_empty()` on a flat series is
+/// vacuously true. Checked for every kind in [`KIND_BOUNDS`], over the same
+/// broad sample [`land_eligible_walks`] returns, pooled (spread) and summed
+/// (occurs) across every walk — never a single walk's own floor, closing M3.
+#[test]
+fn the_walk_is_not_degenerate() {
+    for (kind, _, min_pooled_spread, min_total_occurs) in KIND_BOUNDS {
+        let walks = land_eligible_walks(kind);
+        assert!(
+            !walks.is_empty(),
+            "{kind:?}: no land-eligible walk found in the sample"
+        );
+
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+        let mut occurs_count = 0usize;
+        let mut total = 0usize;
+        for walk in &walks {
+            for &(p, occ) in walk {
+                min = min.min(p);
+                max = max.max(p);
+                total += 1;
+                if occ {
+                    occurs_count += 1;
+                }
+            }
+        }
+        let spread = max - min;
+        assert!(
+            spread >= min_pooled_spread,
+            "{kind:?}: prevalence must actually vary over the sample, not sit near a constant \
+             floor; pooled spread was {spread:.5} (min {min:.5}, max {max:.5}) over {total} \
+             facets, wanted >= {min_pooled_spread}"
+        );
+
+        assert!(
+            occurs_count >= min_total_occurs,
+            "{kind:?}: occurs must fire at least {min_total_occurs} time(s) over the \
+             {total}-facet sample of real terrain; it fired {occurs_count} times — a \
+             mechanism that never fires produces an empty surface regardless of how \
+             smoothly prevalence behaves"
+        );
+    }
+}
+
+/// The eligibility regression (Task 7, controller ruling R1) — the
+/// deliverable that number is, not the code: Task 5's review measured **59%
+/// of all spring occurrences landing on facets with `spring_macro_state ==
+/// 0.0`** (654 of 1109, over every seed-42 walk-depth facet across all
+/// 40,962 vertices — a per-kind mathematical population, "zero-macro", not
+/// "ocean" or "off-land"; see [`land_eligible_walks`]'s module-doc-adjacent
+/// discussion of the three populations, and fix round 1's M1 correction for
+/// why the distinction matters). On THAT population, at that time, the
+/// three nearly coincided: the review separately measured zero-macro
+/// restricted to land at only 60 facets (0.58% of land), so the 27,645-facet
+/// zero-macro population (67.5% of the sphere) was overwhelmingly ocean.
+///
+/// This test reproduces the identical measurement — same population, same
+/// definition of "causeless" (recomputed from `blend_corner_weights` over
+/// `pack.carbonate`/`pack.drainage`, mirroring spring/seep's own
+/// `pub(crate)` recipe exactly, rather than reading it directly, the same
+/// posture Task 5's re-review probe used) — against the CURRENT (post-fix)
+/// mechanism, and ALSO checks the geographic claim directly
+/// (`off_land_occurs_n`, `land < 0.5`) rather than only the mathematical
+/// proxy, so a regression that reopens the ocean case wholesale fails on
+/// the literal claim, not just a correlated statistic.
+///
+/// **Measured here (fix round 2, re-confirmed): `occurs_n=403`,
+/// `causeless_occurs_n=0`, `off_land_occurs_n=0`** (seed 42, full grid) —
+/// down from 654 of 1109 (58.97%) causeless before R1. `off_land_occurs_n`
+/// is asserted `== 0` exactly (R1's literal requirement: spring must never
+/// occur off land, full stop). `causeless_share` is asserted `<= 5%` rather
+/// than `== 0` on purpose: the bound leaves headroom for a legitimately
+/// LAND-based zero-macro occurrence (bare rock with no drainage still has a
+/// nonzero prevalence floor via `(1 - contextuality) * noise`; Task 5's
+/// review measured that land-only zero-macro slice at 0.58% of land,
+/// contributing ~1 of the original 654) — a real, physically sensible case
+/// the eligibility gate must NOT suppress, since R1 only forbids OCEAN
+/// occurrences, not rare land ones with no drainage/carbonate signal. `5%`
+/// sits two orders of magnitude above the measured `0%` and one order above
+/// what a fully reopened ocean case would produce (58.97%), so it is a real
+/// regression bound, not a rubber stamp.
+#[test]
+fn spring_never_occurs_off_land() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let geo = terrain.geosphere();
+    let index = NearestVertexIndex::new(geo);
+    let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
+    let n = geo.vertex_count();
+
+    /// Spring/seep's own macro-state recipe, recomputed here rather than
+    /// read from the crate's `pub(crate)` `spring_macro_state` (this file is
+    /// an external integration-test crate and cannot see it) — mirrors
+    /// `kinds.rs`'s `spring_macro_state` exactly: `SPRING_DRAINAGE_SATURATION
+    /// = 12.0`.
+    fn spring_macro(weights: [(Vertex, u64); 4], pack: &hornvale_worldgen::FieldPack) -> f64 {
+        let carbonate = blend_corner_weights(weights, &pack.carbonate);
+        let drainage = blend_corner_weights(weights, &pack.drainage);
+        (carbonate * (drainage / 12.0).tanh()).clamp(0.0, 1.0)
+    }
+
+    let mut occurs_n = 0usize;
+    let mut causeless_occurs_n = 0usize;
+    let mut off_land_occurs_n = 0usize;
+    for v in 0..n {
+        let facet = Facet::containing(geo.position(Vertex(v as u32)), walk_depth);
+        let weights = facet
+            .corner_weights(geo, &index)
+            .expect("a level-0 walk-depth facet always has corner weights");
+        let land = blend_corner_weights(weights, &pack.land);
+        let macro_state = spring_macro(weights, &pack);
+
+        let p =
+            hornvale_worldgen::prevalence(WeftKind::Spring, &facet, geo, &index, &pack, world.seed)
+                .expect("a level-0 walk-depth facet always has corner weights");
+        let occ = hornvale_worldgen::occurs(WeftKind::Spring, &facet, world.seed, p);
+        if occ {
+            occurs_n += 1;
+            if macro_state == 0.0 {
+                causeless_occurs_n += 1;
+            }
+            if land < 0.5 {
+                off_land_occurs_n += 1;
+            }
+        }
+    }
+
+    assert!(
+        occurs_n > 0,
+        "spring must occur somewhere over the full seed-42 grid, or this test measures nothing"
+    );
+    assert_eq!(
+        off_land_occurs_n, 0,
+        "spring must never occur on ineligible (majority-ocean) ground — R1's whole point; \
+         {off_land_occurs_n} of {occurs_n} occurrences did"
+    );
+
+    let causeless_share = causeless_occurs_n as f64 / occurs_n as f64;
+    assert!(
+        causeless_share <= 0.05,
+        "causeless-occurrence share must stay near zero (measured 0/403 at fix time); \
+         got {causeless_occurs_n}/{occurs_n} = {:.4}% (bound 5%)",
+        causeless_share * 100.0
+    );
+}

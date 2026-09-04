@@ -90,9 +90,12 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
     // These probes isolate placed-site identity; culture is intentionally
     // absent from both sides of each comparison.
     let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
@@ -115,7 +118,9 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
     let next: Facet = placed.neighbors()[0].clone();
     let there = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &next,
         &terrain,
         walk,
@@ -163,9 +168,12 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
     // This probe isolates placed-site identity; culture is intentionally
     // absent from both sides of the comparison.
     let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
@@ -192,7 +200,9 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
     let next: Facet = placed.neighbors()[0].clone();
     let there = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &next,
         &terrain,
         walk,
@@ -263,9 +273,12 @@ fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
 
     // This probe isolates site salience; culture is intentionally absent.
     let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
@@ -349,9 +362,12 @@ fn salience_decides_the_winner_at_an_exotic_cave_collision() {
 
     // This probe isolates site salience; culture is intentionally absent.
     let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
@@ -469,9 +485,12 @@ fn a_cave_site_carries_no_name() {
     // This probe isolates placed-site identity; culture is intentionally
     // absent.
     let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &placed,
         &terrain,
         walk,
@@ -525,9 +544,12 @@ fn a_settlement_sites_name_is_keyed_to_the_room() {
     // This probe supplies built/name state explicitly; culture is outside its
     // assertion and remains absent.
     let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
+        ctx.nearest_index(),
         &plain,
         &terrain,
         walk,

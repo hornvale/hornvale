@@ -30,6 +30,13 @@ pub enum SiteKind {
 /// because exotic sites are not uniform in scale — a cursed land is miles
 /// across with components inside it — and modelling extent later would be a
 /// migration of every consumer rather than a fill-in. Decision 0668.
+///
+/// The Weft (Task 3) checked whether a *ruin*'s ground could widen this to a
+/// `Region` and did not: `OccupationRecord` stores a single `Vertex`, not a
+/// territory, and the only territory function in the workspace is per-people
+/// and alive-only. Recovering one for a dead occupation would invent
+/// world-shape rather than read it back, which is out of scope here — see
+/// registry row `SURF-ruin-territory-needs-worldgen-extent`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Extent {
     /// One facet.
