@@ -163,7 +163,20 @@ impl WeftKind {
     /// This kind's blended macro-state signal in `[0,1]`, given `facet`'s
     /// bilinear corner weights ([`hornvale_kernel::Facet::corner_weights`])
     /// and the materialized [`FieldPack`].
-    pub(crate) fn macro_state(self, weights: [(Vertex, u64); 4], pack: &FieldPack) -> f64 {
+    ///
+    /// **Widened from `pub(crate)` to `pub` (The Weft, Task 9).** H3's
+    /// legibility readout (spec §7: "mutual information between the local
+    /// macro state and the feature set, per kind") needs exactly this
+    /// value from `windows/lab`, a different crate — and it is the ONE
+    /// quantity that recipe already computes and nothing else in this
+    /// crate's public surface exposes (`prevalence` mixes it with noise
+    /// before returning). Widening the existing accessor, rather than
+    /// duplicating the four kinds' macro-state recipes in `windows/lab`,
+    /// matches the precedent `Derived::peek` set at Task 8 (widen the one
+    /// accessor a second tenant needs; do not grow a second, parallel
+    /// implementation of the same read). No behavior changes.
+    /// type-audit: bare-ok(count: weights), bare-ok(ratio: return)
+    pub fn macro_state(self, weights: [(Vertex, u64); 4], pack: &FieldPack) -> f64 {
         match self {
             WeftKind::Spring => {
                 let carbonate = blend_corner_weights(weights, &pack.carbonate);

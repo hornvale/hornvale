@@ -84,3 +84,5 @@ mod the_mire_calibration;
 mod tripwire;
 #[path = "suite/wear_funnel.rs"]
 mod wear_funnel;
+#[path = "suite/weft_density.rs"]
+mod weft_density;
