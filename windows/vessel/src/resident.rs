@@ -69,6 +69,33 @@ impl Trail {
     pub fn prefix_len(&self, entity: EntityId, t: WorldTime) -> usize {
         self.of(entity).partition_point(|(d, _)| *d <= t)
     }
+
+    /// Every entity's sighting count summed — every dated `agent-at` fact this
+    /// index has absorbed, counted once each (The Kerf, spec §4 K1).
+    ///
+    /// Equal to [`LatestVisit::entries`] over the same ledger: the two hold the
+    /// identical `(instant, room)` population keyed the other way round, so a
+    /// disagreement is a defect in one of them and
+    /// `the_trail_and_the_visit_lists_hold_the_same_sighting_count` asserts it.
+    /// type-audit: bare-ok(count: return)
+    pub fn entries(&self) -> usize {
+        self.by_entity.values().map(Vec::len).sum()
+    }
+
+    /// An estimate of the bytes this index holds, over every entity: one
+    /// `size_of::<(WorldTime, Facet)>()` per sighting plus that sighting's own
+    /// room `path` heap length, summed the same way
+    /// [`crate::ground::GroundHazards::held_bytes`] sums its key set. An
+    /// ESTIMATE of held data, not an allocator measurement: it counts neither
+    /// `BTreeMap`/`Vec` overhead nor any allocator slack.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        self.by_entity
+            .values()
+            .flat_map(|trail| trail.iter())
+            .map(|(_, room)| std::mem::size_of::<(WorldTime, Facet)>() + room.path.len())
+            .sum()
+    }
 }
 
 impl LedgerFold for Trail {
@@ -151,6 +178,36 @@ impl KnownWater {
             .filter(|(room, first)| **first <= t && is_water(room, terrain))
             .map(|(room, _)| room.clone())
             .collect()
+    }
+
+    /// Every entity's DISTINCT visited-room count summed — this index's held
+    /// entries (The Kerf, spec §4 K1).
+    ///
+    /// Equal to the number of ROOM KEYS [`LatestVisit`] holds, summed over
+    /// entities: both are "the distinct rooms this entity has stood in", and
+    /// that identity is what makes this tenant a strict projection of that one.
+    /// `the_first_visit_map_holds_one_entry_per_room_the_visit_lists_key`
+    /// asserts it.
+    /// type-audit: bare-ok(count: return)
+    pub fn entries(&self) -> usize {
+        self.rooms.values().map(BTreeMap::len).sum()
+    }
+
+    /// An estimate of the bytes this index holds, over every entity: every
+    /// visited room's key size (`size_of::<Facet>()` plus its `path`'s heap
+    /// length) plus one `size_of::<WorldTime>()` first-visit instant, summed
+    /// the same way [`crate::ground::GroundHazards::held_bytes`] sums its key
+    /// set. An ESTIMATE of held data, not an allocator measurement: it counts
+    /// neither `BTreeMap`/`Vec` overhead nor any allocator slack.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        self.rooms
+            .values()
+            .flat_map(|rooms| rooms.keys())
+            .map(|room| {
+                std::mem::size_of::<Facet>() + room.path.len() + std::mem::size_of::<WorldTime>()
+            })
+            .sum()
     }
 }
 
@@ -271,6 +328,42 @@ impl LatestVisit {
             .filter(|(_, days)| days.first().is_some_and(|first| *first <= t))
             .map(|(room, _)| room.clone())
             .collect()
+    }
+
+    /// Every VISIT INSTANT this index holds, summed over every entity and every
+    /// one of its rooms — the same population [`Trail::entries`] counts, keyed
+    /// the other way round (The Kerf, spec §4 K1).
+    ///
+    /// It is NOT the room-key count: a room visited three times contributes
+    /// three here and one to [`KnownWater::entries`]. Both identities are
+    /// asserted in this module's tests.
+    /// type-audit: bare-ok(count: return)
+    pub fn entries(&self) -> usize {
+        self.visits
+            .values()
+            .flat_map(|rooms| rooms.values())
+            .map(Vec::len)
+            .sum()
+    }
+
+    /// An estimate of the bytes this index holds, over every entity: every
+    /// visited room's key size (`size_of::<Facet>()` plus its `path`'s heap
+    /// length) plus one `size_of::<WorldTime>()` per instant in that room's
+    /// visit list, summed the same way
+    /// [`crate::ground::GroundHazards::held_bytes`] sums its key set. An
+    /// ESTIMATE of held data, not an allocator measurement: it counts neither
+    /// `BTreeMap`/`Vec` overhead nor any allocator slack.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        self.visits
+            .values()
+            .flat_map(|rooms| rooms.iter())
+            .map(|(room, days)| {
+                std::mem::size_of::<Facet>()
+                    + room.path.len()
+                    + days.len() * std::mem::size_of::<WorldTime>()
+            })
+            .sum()
     }
 }
 
@@ -1672,6 +1765,149 @@ mod tests {
             face,
             path: path.to_vec(),
         }
+    }
+
+    /// A dated `agent-at` fact, spelled the way a committed one is.
+    fn sighting(subject: EntityId, day: i64, r: &Facet) -> Fact {
+        Fact {
+            subject,
+            predicate: AGENT_AT.to_string(),
+            object: Value::Text(
+                crate::thing::room_key(r).expect("the fixture's rooms are within MAX_DEPTH"),
+            ),
+            place: None,
+            day: Some(WorldTime::from_ticks(day * WorldTime::TICKS_PER_STD_DAY)),
+            provenance: "the-kerf: held-bytes fixture".to_string(),
+        }
+    }
+
+    /// The K1 fixture: TWO entities, one of which visits one room THREE times.
+    /// The revisits are what make the two identities below differ from each
+    /// other — with one visit per room, "every sighting" and "every distinct
+    /// room" are the same number and neither assertion would discriminate.
+    ///
+    /// Also carries the two facts no `agent-at` fold may absorb — a fact of
+    /// another predicate, and an UNDATED `agent-at` — so a count that admitted
+    /// either would be off by one and visible.
+    ///
+    /// Returns the facts in commit order alongside the four distinct rooms.
+    fn k1_fixture() -> (Vec<Fact>, [Facet; 4]) {
+        let a = EntityId::new(1).expect("id");
+        let b = EntityId::new(2).expect("id");
+        // Path digits are child indices in 0..4 and the face is in 0..6; the
+        // `path` lengths deliberately differ (1, 2, 3, 1) so the byte sums
+        // below cannot be satisfied by a wrong-but-uniform room size.
+        let a1 = room(0, &[1]);
+        let a2 = room(0, &[2, 3]);
+        let b1 = room(1, &[0, 1, 2]);
+        let b2 = room(1, &[3]);
+        let mut facts = vec![
+            sighting(a, 1, &a1),
+            sighting(a, 2, &a2),
+            sighting(a, 3, &a1),
+            sighting(a, 5, &a1),
+            sighting(b, 2, &b1),
+            sighting(b, 4, &b2),
+        ];
+        let mut other = sighting(a, 6, &a1);
+        other.predicate = "noise".to_string();
+        facts.push(other);
+        let mut undated = sighting(b, 6, &b2);
+        undated.day = None;
+        facts.push(undated);
+        (facts, [a1, a2, b1, b2])
+    }
+
+    /// Hand-derived: entity 1 posts 4 sightings (rooms A1, A2, A1, A1) and
+    /// entity 2 posts 2 (B1, B2) — 6 dated `agent-at` facts over 4 distinct
+    /// rooms, plus two facts neither fold may absorb.
+    #[test]
+    fn the_three_indexes_hold_the_hand_counted_entries_and_bytes() {
+        let (facts, [a1, a2, b1, b2]) = k1_fixture();
+        let mut trail = Trail::empty();
+        let mut water = KnownWater::empty();
+        let mut visits = LatestVisit::empty();
+        for f in &facts {
+            trail.absorb(f);
+            water.absorb(f);
+            visits.absorb(f);
+        }
+
+        // 6 sightings; 4 distinct rooms.
+        assert_eq!(trail.entries(), 6, "every dated `agent-at`, counted once");
+        assert_eq!(visits.entries(), 6, "the same population, keyed by room");
+        assert_eq!(water.entries(), 4, "distinct rooms, not sightings");
+
+        // The `path` heap lengths: 1 + 2 + 1 + 1 over entity 1's four
+        // sightings, 3 + 1 over entity 2's two = 9 across the trail; 1 + 2 +
+        // 3 + 1 = 7 across the four distinct rooms.
+        let trail_paths: usize = a1.path.len() * 3 + a2.path.len() + b1.path.len() + b2.path.len();
+        let room_paths: usize = a1.path.len() + a2.path.len() + b1.path.len() + b2.path.len();
+        assert_eq!((trail_paths, room_paths), (9, 7));
+        assert_eq!(
+            trail.held_bytes(),
+            6 * std::mem::size_of::<(WorldTime, Facet)>() + trail_paths
+        );
+        assert_eq!(
+            water.held_bytes(),
+            4 * (std::mem::size_of::<Facet>() + std::mem::size_of::<WorldTime>()) + room_paths
+        );
+        assert_eq!(
+            visits.held_bytes(),
+            4 * std::mem::size_of::<Facet>() + room_paths + 6 * std::mem::size_of::<WorldTime>()
+        );
+    }
+
+    /// Identity 1 of the projection chain: [`Trail`] and [`LatestVisit`] hold
+    /// the SAME sighting population, so their entry counts agree on any
+    /// ledger. This is the non-vacuity control on K1 — a `held_bytes` summing
+    /// the wrong collection would still produce plausible growing numbers, and
+    /// a free identity between two independent sums is what catches it.
+    #[test]
+    fn the_trail_and_the_visit_lists_hold_the_same_sighting_count() {
+        let (facts, _) = k1_fixture();
+        let mut trail = Trail::empty();
+        let mut visits = LatestVisit::empty();
+        for (n, f) in facts.iter().enumerate() {
+            trail.absorb(f);
+            visits.absorb(f);
+            assert_eq!(
+                trail.entries(),
+                visits.entries(),
+                "at every prefix, not only at the end (after {} facts)",
+                n + 1
+            );
+        }
+        assert_eq!(trail.entries(), 6, "and the shared count is non-trivial");
+    }
+
+    /// Identity 2 of the projection chain: [`KnownWater`]'s entries are the
+    /// number of ROOM KEYS [`LatestVisit`] holds — both are "the distinct
+    /// rooms visited". It differs from identity 1 by construction on this
+    /// fixture (4 rooms against 6 sightings), so neither is trivially
+    /// satisfied by the other.
+    #[test]
+    fn the_first_visit_map_holds_one_entry_per_room_the_visit_lists_key() {
+        let (facts, _) = k1_fixture();
+        let mut water = KnownWater::empty();
+        let mut visits = LatestVisit::empty();
+        for (n, f) in facts.iter().enumerate() {
+            water.absorb(f);
+            visits.absorb(f);
+            let room_keys: usize = visits.visits.values().map(BTreeMap::len).sum();
+            assert_eq!(
+                water.entries(),
+                room_keys,
+                "at every prefix (after {} facts)",
+                n + 1
+            );
+        }
+        assert_eq!(water.entries(), 4);
+        assert_ne!(
+            water.entries(),
+            visits.entries(),
+            "the fixture revisits a room, so the two identities are distinct claims"
+        );
     }
 
     #[test]
