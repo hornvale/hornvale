@@ -161,10 +161,113 @@ separated its hidden neighbor-substitution side effect from the intended
 reading. · Capture: revised spec §4/§5/H3, revised Task 4, this entry; the raw
 1,275-row diagnostic remains in the task report.
 
+## Implementation reviews
+
+### Task 1 — complete
+
+The pure derivation shipped after a clean review. Boundary tests cover all six
+inclusive band endpoints, both open gaps, and values outside `[0, 1]`; errors
+retain the rejected `f64`. The live registry test derives all fifteen rows,
+populates all six housemark classes, and freezes coverage properties rather
+than proper-name membership. No new ruling was needed beyond #1 and #2; their
+ideonomy passes already cover the implemented shape.
+
+### Task 2 — complete after one fix round
+
+Review found two Important guard gaps and the epoch boundary. The copied
+six-case H2 fixture became a generated authority/posture cross-product with an
+exact six-combination ratchet, and name-only assertions became checks over the
+selected pattern's kind, attachment, and prerequisite. A mutation of the
+command-seat attachment produced the intended semantic RED. The existing
+screen row is chamber-gated to `Inward`; locale selection still ignores that
+gate, and exactly three cultural rows were appended with `at_locale: false`.
+The measured `BENCH` registry movement was accepted as concept accession epoch
+20 under #6. No further finding remained after the fix review.
+
+### Task 3 — complete after one fix round
+
+Review found that `Session::go` could charge time, extend the trail, and commit
+the destination before a fallible arrival brief was validated. The fix derives
+and validates the destination brief before the first mutation, then renders
+from that exact successful value. A production-path regression also proves an
+unoccupied brief carries neither people nor a MANIKIN-derived housemark. The
+review rerun was clean; this preserves #1's explicit `None` boundary.
+
+### Task 4 — complete after one design correction and one fix round
+
+The preregistered H3 first exposed the lossy address reversal recorded in #7:
+1,275 living `(vertex, rung)` records produced 531 neighbour reversals, 222
+absent people, 41 wrong people, and 16 shared-room collisions. Production now
+builds one exact room-keyed ordered index for settlement names and living
+occupations. Review then corrected the Stage 5 status, made the signature push
+the actual composed anchor kind rather than the checked pattern kind, and
+corrected the fixture account to distinguish narration from spatial data.
+Focused regressions, the semantic screen-gate mutation, and the final review
+were green.
+
+## H3 result
+
+The final ignored foreground readout over seeds `[42, 13, 7, 1, 100]` reported:
+
+| Seed | Built | Inhabited | Unoccupied | Later collisions |
+|---:|---:|---:|---:|---:|
+| 42 | 389 | 389 | 0 | 1 |
+| 13 | 259 | 259 | 0 | 3 |
+| 7 | 250 | 250 | 0 | 0 |
+| 1 | 301 | 301 | 0 | 12 |
+| 100 | 60 | 60 | 0 | 0 |
+| **Total** | **1,259** | **1,259** | **0** | **16** |
+
+All 1,259 inhabited threshold structures recovered their housemark class from
+ordered `(kind, relation-to-required-kind)` values: **1,259/1,259**, across 15
+peoples and all six classes. No room was dropped. Temporarily admitting the
+screen universally made a common/plain and common/inward signature collide,
+proving the classifier observes the cultural gate rather than prose.
+
+## Artifact classification
+
+The documented non-census commands were run against the integrated branch:
+`make rebaseline` exited 0 and `make rebaseline-goldens` passed all 46 scoped
+golden tests. The complete observed movement is admitted by accession epoch 20
+and the chamber-rendering arm of design §7:
+
+- `cli/tests/fixtures/world-seed-42.json` gained only the additive six-line
+  `bench` concept object; `windows/worldgen/tests/fixtures/proto-goblinoid-root-table-seed-42.txt`
+  gained one `bench` root row.
+- `windows/vessel/tests/fixtures/snapshot-seed-0-chamber-occupied.json` and
+  `snapshot-seed-42-chamber.json` changed only `narration.prose`, adding a
+  bench; their complete `.spatial` values and narration nouns are identical.
+- The full regeneration added only `bench` projections to the concept registry
+  and manifest, per-people dictionary, three proto-family pages, solitary-tongue
+  lexicon fixture, and trope provision reports.
+- The two gallery possession transcripts changed only their chamber-furnishing
+  sentences. The seed-42 client fixture changed only `narration.prose`. The
+  seed-14 carrying fixture changed only the rendered chamber marks: one screen
+  became one bench plus one guest-water vessel; its chamber grid and every
+  non-mark value are unchanged.
+- `docs/digest/decisions-in-force.md` gained the five accepted records after
+  the final-state regeneration. `docs/timings.md` absorbed the inherited
+  post-Task-4 gate row and records both Task-5 rebaseline runs. No ledger fact,
+  census file, lab golden, stream roster, or unrelated world datum moved.
+
+## Binding records
+
+The implemented technical rulings are now durable in
+[0746](../../decisions/0746-a-dwellings-culture-is-a-derived-admission-signature.md),
+[0747](../../decisions/0747-the-housemark-crosses-authority-with-threshold-posture.md),
+[0748](../../decisions/0748-both-housemark-axes-live-at-the-entry-threshold.md),
+[0749](../../decisions/0749-a-dwelling-reads-the-first-living-occupation-keyed-by-its-exact-room.md),
+and [0750](../../decisions/0750-bench-is-concept-accession-epoch-twenty.md).
+Ledger #4 remains the campaign's execution choice rather than being padded into
+an architectural record. `SOC-staple-ladder` is still an elaborated metaplan;
+only its R1 Housemark slice is marked shipped. R2, R3, and the dynamics arc are
+unchanged.
+
 ## Capture manifest
 
-- `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` now points from
-  R1 to The Housemark spec; its status remains `elaborated` until implementation.
+- `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` now marks only R1
+  shipped and points it to The Housemark spec; the metaplan remains
+  `elaborated`, with R2, R3, and the dynamics arc open.
 - This ledger's Follow-ups retain the temporal-style and cultural-evolution
   branches. Neither is smuggled into R1.
 - Rejected design branches — per-people inventories, a six-case culture enum,
