@@ -1027,3 +1027,298 @@ fn a_redraw_in_a_different_season_misses_and_mints_a_new_entry() {
         "a second season must not be served the first season's reflectance"
     );
 }
+
+// =====================================================================
+// Task 7: the seasonal layer — H2's seasonal half.
+// =====================================================================
+
+/// The seasonal half of H2, measured on the quantity that actually reaches
+/// the map.
+///
+/// # What is measured, and why this and not the snow endmember's weight
+///
+/// **Albedo** — the sum of the ten bands of
+/// [`hornvale_locale::LocaleContext::reflectance_at_facet`] — at one facet,
+/// at midwinter and at midsummer. That call is not a proxy for the map's
+/// ink: it is the *same call the plate makes*, pinned equal to the plate's
+/// own per-tile answer by this file's
+/// `two_tiles_in_one_band_with_different_ground_differ_spectrally`
+/// (`assert_eq!(t.reflectance, ctx.reflectance_at_facet(&t.facet, at))`).
+///
+/// The brief's alternative — count `Snow`-dominant tiles behind a new
+/// `cover_class_at_facet` on `windows/locale` — was not needed, and the
+/// reason is worth recording: `LocaleContext::cover_class_at` is **already**
+/// public and the `MicroField` it wants is **already** reachable, off
+/// `describe(addr, at)?.regime.micro`. Verified line by line, not assumed:
+/// `describe_with_weights` builds it as
+/// `micro_field(addr.seed(self.seed), grounded_wetness_for(addr, expr,
+/// blend(moisture)))` with `expr = climate.biome_expr_at(dominant_corner)`
+/// for `stratum: None`, and `reflectance_at_facet_with_weights` builds it
+/// from the identical three expressions. Task 3's finding — that a client
+/// cannot *construct* a correct `MicroField` — is exact and unchanged; it
+/// does not say a client cannot *obtain* one. So no new public API was
+/// added.
+///
+/// # How the sample is established to actually snow
+///
+/// A tropical facet has no snow in either season, so "no difference" there
+/// would falsify nothing. The precondition is therefore asserted, not
+/// assumed, and through a **different quantity than the one measured**: the
+/// dominant [`hornvale_locale::CoverClass`] must be `Snow` at the winter
+/// instant and something other than `Snow` at the summer instant. Dominance
+/// is an argmax over component *weights*; albedo is a band sum of the
+/// integrated mixture, mineral remainder included. One does not entail the
+/// other arithmetically — it entails it only if the composition is wired
+/// the way spec §3.2 says, which is the claim.
+///
+/// The sweep is over *every* qualifying facet the scan finds, not the first
+/// one: a per-place assertion cannot be satisfied by having picked a lucky
+/// place. Non-vacuity is asserted separately — a scan that qualified nothing
+/// would otherwise pass by finding nothing to check.
+///
+/// # The trap the brief names, and what the code actually does
+///
+/// The brief warns that leaf-off lowers forest albedo in winter, so a
+/// whole-plate mean can cancel to nothing. Grepped rather than trusted:
+/// `windows/locale/src/surface.rs`'s `cover_components` reads `at` in
+/// **exactly one place**, `climate.is_frozen_at(vertex, at)`. There is no
+/// leaf-off term — the chlorophyll/litter split is set by `micro.openness`,
+/// which is time-independent. So the trap does not exist in today's model,
+/// and this test still refuses to average over a plate, because the trap
+/// would return the moment a seasonal vegetation term were added.
+///
+/// # What it measured (seed 42, this commit)
+///
+/// **H2's seasonal half holds, and the effect is large.** 77 of seed 42's
+/// 40,962 grid facets (0.19%) are snow-covered at midwinter and not at
+/// midsummer. Winter albedo exceeds summer albedo at **all 77**;
+/// winter/summer ratio min **1.4661**, median **2.2777**, max **3.9718**.
+/// The first place in scan order, `Vertex(152)` (lat 36.00), reads winter
+/// **7.351812** against summer **3.358797**, its summer cover sand.
+///
+/// # Two red controls, both taken against PRODUCTION code
+///
+/// A directional assertion is worth what it can fail on, so both halves were
+/// witnessed red before this was called green — by mutating
+/// `windows/locale/src/surface.rs`, never the test:
+///
+/// - `is_frozen_at(vertex, at)` -> `is_frozen_at(vertex, WorldTime::GENESIS)`
+///   (the season no longer threaded) reddens the **non-vacuity** clause:
+///   "no sampled facet ... is snow-covered at midwinter and not at
+///   midsummer".
+/// - `endmembers::SNOW` darkened to `[0.02 .. 0.00]` reddens the
+///   **directional** clause while the precondition still passes — cover is
+///   still `Snow` in winter, and the panic reads "winter albedo 1.262014 <=
+///   summer albedo 3.358797". That is the mutation that shows the two
+///   clauses are independent: dominance did not change, brightness did.
+///
+/// FIRES WHEN: `at` stops being threaded to the cover layer (both seasons
+/// then read identical and the strict inequality fails), when the seasonal
+/// freeze gate stops being consulted, or when the composition stops letting
+/// a bright cover raise the ground's albedo.
+mod wash_seasonal {
+    use hornvale_astronomy::{Calendar, StdInstant};
+    use hornvale_kernel::math::unit_sphere_from_lat_lon;
+    use hornvale_kernel::{Facet, Vertex, WorldTime};
+    use hornvale_locale::{CoverClass, LocaleContext};
+
+    /// The season phase of midwinter in the northern hemisphere.
+    ///
+    /// `hornvale_climate`'s seasonal term is
+    /// `mean + amp * latitude.signum() * sin(TAU * phase)`
+    /// (`domains/climate/src/temperature.rs`), and `Calendar::season_phase`
+    /// is the same `frac(day / year + year_phase_offset)`
+    /// (`domains/astronomy/src/calendar.rs`), so `sin = -1` at phase 0.75 is
+    /// the northern coldest and phase 0.25 the northern warmest. Nothing here
+    /// depends on that reading being right, though: the sweep below keeps
+    /// only facets whose cover is snow at [`MIDWINTER_PHASE`] and not at
+    /// [`MIDSUMMER_PHASE`], so a hemisphere convention read backwards would
+    /// simply select southern places instead of northern ones and the
+    /// directional claim would be unaffected.
+    const MIDWINTER_PHASE: f64 = 0.75;
+    /// See [`MIDWINTER_PHASE`]. Half a year away from it.
+    const MIDSUMMER_PHASE: f64 = 0.25;
+
+    /// Distance between two phases on the unit circle, `[0, 0.5]`.
+    fn phase_distance(a: f64, b: f64) -> f64 {
+        let d = (a - b).abs().rem_euclid(1.0);
+        d.min(1.0 - d)
+    }
+
+    /// The **whole** day of the world's first year whose
+    /// [`Calendar::season_phase`] sits nearest `target`.
+    ///
+    /// Whole days, deliberately: `temperature_at` carries a diurnal term
+    /// keyed on `day.rem_euclid(1.0)` as well as the seasonal one, so two
+    /// instants at a fractional offset from each other would differ by an
+    /// hour-of-day term this test makes no claim about. Both samples land at
+    /// fraction zero, which holds that term as nearly fixed as a whole-day
+    /// lattice allows.
+    ///
+    /// Scanned rather than solved algebraically so the phase convention is
+    /// read off the calendar itself instead of re-derived from
+    /// `year_phase_offset` here — a second copy of a formula this test would
+    /// then be asserting against itself.
+    fn whole_day_nearest_phase(
+        calendar: &Calendar,
+        year_length_std: f64,
+        target: f64,
+    ) -> WorldTime {
+        let days = year_length_std.ceil().max(1.0) as i64;
+        let mut best: Option<(f64, i64)> = None;
+        for d in 0..days {
+            let Ok(t) = StdInstant::new(d as f64) else {
+                continue;
+            };
+            let Some(phase) = calendar.season_phase(t) else {
+                continue;
+            };
+            let err = phase_distance(phase, target);
+            if best.is_none_or(|(e, _)| err < e) {
+                best = Some((err, d));
+            }
+        }
+        let (_, day) = best.expect(
+            "seed 42's calendar must report a season phase on at least one day of its own year; \
+             without one there is no midwinter to sample and this measurement has no subject",
+        );
+        WorldTime::from_std_days(day as f64).expect("a whole day inside the first year is a tick")
+    }
+
+    /// The ground's albedo at `addr` on `at`: the sum of the ten bands of the
+    /// reflectance the plate itself draws with. Higher is brighter.
+    fn albedo(ctx: &LocaleContext, addr: &Facet, at: WorldTime) -> Option<f64> {
+        ctx.reflectance_at_facet(addr, at)
+            .ok()
+            .map(|r| r.get().iter().sum())
+    }
+
+    /// The dominant surface cover at `addr` on `at`, taken through the
+    /// `MicroField` the reflectance path itself builds (see this module's
+    /// doc for the line-by-line agreement that makes that true).
+    fn cover(ctx: &LocaleContext, addr: &Facet, at: WorldTime) -> Option<CoverClass> {
+        let micro = ctx.describe(addr, at).ok()?.regime.micro;
+        ctx.cover_class_at(addr, &micro, at).ok()
+    }
+
+    /// One place that snows in winter and not in summer, with both albedos.
+    struct SnowyPlace {
+        /// The vertex whose coordinate seeded the address.
+        vertex: Vertex,
+        /// Its latitude in degrees, for the report.
+        latitude: f64,
+        /// Ground albedo at the midwinter instant.
+        winter: f64,
+        /// Ground albedo at the midsummer instant.
+        summer: f64,
+        /// The dominant cover class in summer (winter is `Snow` by
+        /// selection) — reported so a reader can see what the snow gave way
+        /// to.
+        summer_cover: CoverClass,
+    }
+
+    #[test]
+    fn midwinter_differs_from_midsummer_directionally_at_a_place_that_snows() {
+        let (session, _geo, _terrain, _index, _memo, calendar, _world) =
+            super::wash_support::seed_42_world();
+        let ctx = session.context();
+        let calendar = calendar.expect(
+            "seed 42 under a generated sky must carry a calendar; without one there are no \
+             seasons to sample and this measurement has no subject",
+        );
+
+        let year = ctx.climate().year_length_std();
+        let winter = whole_day_nearest_phase(&calendar, year, MIDWINTER_PHASE);
+        let summer = whole_day_nearest_phase(&calendar, year, MIDSUMMER_PHASE);
+        assert_ne!(
+            winter, summer,
+            "midwinter and midsummer must be different days"
+        );
+
+        let geo = ctx.climate().geosphere();
+        let depth = hornvale_game::plate::GLOBE_RUNG;
+
+        let mut places: Vec<SnowyPlace> = Vec::new();
+        // EVERY vertex, not a stride. Measured before choosing: a stride of
+        // 97 (422 candidates) qualified 2 places, a stride of 13 (3,151
+        // candidates) qualified 5, and the whole grid (40,962) qualifies 77
+        // — a seasonally-snowing facet is rare enough on seed 42 (0.19% of
+        // the grid) that a subsample is a handful of anecdotes. The whole
+        // sweep costs ~6 s on top of the ~5 s the fixture already pays, and
+        // this file is not in the commit gate's sub-floor tier (`clients/
+        // game/bin` is in root `Cargo.toml`'s `exclude`), so `make
+        // game-check` is what pays it.
+        for i in 0..geo.vertex_count() {
+            let vertex = Vertex(i as u32);
+            let coord = geo.coord(vertex);
+            let addr = Facet::containing(
+                unit_sphere_from_lat_lon(coord.latitude, coord.longitude),
+                depth,
+            );
+            let (Some(cw), Some(cs)) = (cover(ctx, &addr, winter), cover(ctx, &addr, summer))
+            else {
+                continue;
+            };
+            if cw != CoverClass::Snow || cs == CoverClass::Snow {
+                continue;
+            }
+            let (Some(aw), Some(asu)) = (albedo(ctx, &addr, winter), albedo(ctx, &addr, summer))
+            else {
+                continue;
+            };
+            places.push(SnowyPlace {
+                vertex,
+                latitude: coord.latitude,
+                winter: aw,
+                summer: asu,
+                summer_cover: cs,
+            });
+        }
+
+        // NON-VACUITY: without this, a scan that qualified nothing would
+        // satisfy the per-place assertion below by having nothing to check.
+        assert!(
+            !places.is_empty(),
+            "no sampled facet on seed 42 is snow-covered at midwinter and not at midsummer, so \
+             there is nowhere the seasonal term can be observed at all; the sample is bad, not \
+             the hypothesis"
+        );
+
+        for p in &places {
+            assert!(
+                p.winter > p.summer,
+                "H2 (seasonal) FALSIFIED at {:?} (lat {:.2}): a place that is snow-covered at \
+                 midwinter and {} at midsummer must be brighter in winter, but winter albedo \
+                 {:.6} <= summer albedo {:.6}",
+                p.vertex,
+                p.latitude,
+                p.summer_cover.name(),
+                p.winter,
+                p.summer
+            );
+        }
+
+        // The measured numbers, printed so the campaign's report carries the
+        // effect SIZE and not merely its sign — a real-but-tiny effect is a
+        // different finding from a robust one, and an assertion cannot tell
+        // the two apart.
+        let first = &places[0];
+        let ratio = |p: &SnowyPlace| p.winter / p.summer;
+        let mut ratios: Vec<f64> = places.iter().map(ratio).collect();
+        ratios.sort_by(f64::total_cmp);
+        println!(
+            "H2 seasonal: {} snowing places sampled; winter/summer albedo ratio min {:.4} \
+             median {:.4} max {:.4}; first place {:?} (lat {:.2}) winter {:.6} summer {:.6} \
+             (summer cover {})",
+            places.len(),
+            ratios[0],
+            ratios[ratios.len() / 2],
+            ratios[ratios.len() - 1],
+            first.vertex,
+            first.latitude,
+            first.winter,
+            first.summer,
+            first.summer_cover.name(),
+        );
+    }
+}
