@@ -266,11 +266,41 @@ freeze it before the reachability property below is measured** — decision
 gate, it is a deletion, and it cost that campaign a strongbox no world could
 contain.
 
-| pattern | kind | band | why |
-|---|---|---|---|
-| `the-bracken` | `bracken` | wild (`built: false`) | the wild band's first sleepable surface; today 100% of wild rooms offer nothing |
-| `the-rushes` | `rushes` | built, not cold | the ~81% of built rooms that are warm; **and co-occurs with the bed in cold rooms**, which is the first room in any world offering a body a choice |
-| `the-ledge` | `ledge` | built | a cut stone shelf — the hard-substrate surface the reversal needs, reachable wherever anything is built |
+**The gating is forced, and the reason was found while planning rather than
+while designing.** `draw_from` (`windows/vessel/src/interior/pattern.rs`) is a
+pure admissibility filter with **no probability anywhere in it** — every
+pattern whose gates pass composes, in every room, always. And the LOCALE band
+ignores `roles` entirely (`selection` passes `|p| p.at_locale` as its `admits`
+predicate), so the only gates a locale-band pattern has are `built` and
+`needs_cold`. **An ungated addition is therefore universal**, and three
+ungated additions would make `SiteGrade::Bare` unreachable in every room in
+every world — deleting *"a creature must be able to pass out in the road"*
+outright. The four cells the two gates produce are the whole design space, and
+the set below fills three of them and deliberately leaves the fourth bare:
+
+| cell | composes | grade |
+|---|---|---|
+| built + cold | `bed` (Made) + `rushes` (soft) + `ledge` (hard) | a three-way choice, and the reversal |
+| built + warm | `ledge` | a dwelling has somewhere to lie down |
+| wild + cold | `bracken` | the wild band's first sleepable surface |
+| **wild + warm** | **nothing** | **bare — the road, and the majority of the world's area** |
+
+| pattern | kind | `built` | `needs_cold` | attach / requires | substrate |
+|---|---|---|---|---|---|
+| `the-rushes` | `rushes` | true | **true** | `Beside(GROUND)` / none | `Natural(soft)` |
+| `the-ledge` | `ledge` | true | false | `Beside(GROUND)` / none | `Natural(hard)` |
+| `the-bracken` | `bracken` | false | **true** | `Beside(GROUND)` / none | `Natural(soft)` |
+
+`is_cold` is a pure temperature read against `FURNISHING_COLD_C` at a frozen
+reference day (`liveness.rs`), applied to any room built or not — so
+`wild + cold` is a real cell, not an empty one. **Its share is unmeasured**:
+the census carries `cold-built-room-share` and has no wild equivalent, so P3
+must measure it before `the-bracken` is believed reachable.
+
+Discarded: **adding a new gate field to `Pattern`.** It would buy a finer
+distribution and `needs_populous`'s history is the argument against — that
+field is set by no authored pattern today, and decision 0398 records what a
+gate whose predicate is false everywhere actually does.
 
 All three are `at_locale: true`. **This is the epoch**, and it is the epoch
 Nathan accepted at G1a: a locale-band pattern feeds the composed interior a
