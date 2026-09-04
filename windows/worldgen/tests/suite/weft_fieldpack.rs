@@ -1,5 +1,6 @@
 //! `field_pack_from` must materialize every field pack scalar over the whole
-//! vertex grid, in range — The Weft, Task 4.
+//! vertex grid, in range — The Weft, Task 4; extended for `land` (Task 7,
+//! R1's eligibility fix).
 //!
 //! Test fixture (decision 0092): calls the sculpt derivation entry point
 //! (`terrain_of`) directly to build its own world state, once per test — the
@@ -73,4 +74,37 @@ fn drainage_is_total_over_the_grid_and_matches_the_accessor() {
             "field pack drainage must match the accessor at {v}"
         );
     }
+}
+
+/// `land` (Task 7, R1) covers every vertex, is exactly `0.0` or `1.0`, and
+/// agrees pointwise with `!GeneratedTerrain::is_ocean` — the field the
+/// eligibility fix reads instead of exposing a typed elevation/sea-level
+/// pair as bare `f64`s (see `crate::fieldpack`'s module doc).
+#[test]
+fn land_is_total_over_the_grid_and_matches_is_ocean() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let n = terrain.geosphere().vertex_count();
+
+    assert_eq!(pack.land.len(), n, "land must cover every vertex");
+    let mut land_count = 0;
+    let mut ocean_count = 0;
+    for v in 0..n {
+        let vertex = hornvale_kernel::Vertex(v as u32);
+        let l = *pack.land.get(vertex);
+        assert!(
+            l == 0.0 || l == 1.0,
+            "land must be exactly 0.0 or 1.0 at {v}: {l}"
+        );
+        let expected = if terrain.is_ocean(vertex) { 0.0 } else { 1.0 };
+        assert_eq!(l, expected, "field pack land must match !is_ocean at {v}");
+        if l == 1.0 {
+            land_count += 1;
+        } else {
+            ocean_count += 1;
+        }
+    }
+    assert!(land_count > 0, "seed 42 must have some land vertices");
+    assert!(ocean_count > 0, "seed 42 must have some ocean vertices");
 }

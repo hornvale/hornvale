@@ -48,6 +48,14 @@
 //! not sum to 1 — a simplex constraint would make raising one kind's
 //! abundance necessarily lower another's, the structural cap on enterable
 //! density the spec forbids.
+//!
+//! **[`prevalence`] gates on ground eligibility before either stage runs
+//! (Task 7, controller ruling R1).** Task 5's review measured 59% of all
+//! spring occurrences landing on facets with no macro cause at all,
+//! including open ocean — the lerp's `(1 - contextuality) * noise` floor is
+//! real and unconditional, so nothing stopped it. [`kinds::WeftKind::eligible`]
+//! is the fix, an early ground test every kind now shares before macro state
+//! is read or noise is drawn — see `kinds`'s own module doc.
 
 pub mod kinds;
 pub mod window;
@@ -99,7 +107,11 @@ fn noise_frequency_for(kind: WeftKind, facet: &Facet) -> f64 {
 /// [`WeftKind::contextuality`], scaled by [`WeftKind::abundance`].
 ///
 /// `None` exactly when [`Facet::corner_weights`] is — `facet` shallower than
-/// `geo`'s own level, which has nothing to blend between.
+/// `geo`'s own level, which has nothing to blend between. `Some(0.0)` when
+/// [`Facet::corner_weights`] succeeds but `kind` is not eligible at this
+/// ground (Task 7, R1 — see `kinds`'s own module doc): a real, measurable
+/// zero rather than skipping the facet, computed *before* any macro-state
+/// read or noise draw.
 /// type-audit: bare-ok(ratio: return)
 pub fn prevalence(
     kind: WeftKind,
@@ -110,6 +122,9 @@ pub fn prevalence(
     seed: Seed,
 ) -> Option<f64> {
     let weights = facet.corner_weights(geo, index)?;
+    if !kind.eligible(weights, pack) {
+        return Some(0.0);
+    }
     let macro_state = kind.macro_state(weights, pack);
 
     let noise_seed = seed

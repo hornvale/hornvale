@@ -9,6 +9,18 @@
 //! point is that kind N+1 is an append: Task 7 adds the remaining three
 //! (overhang/hollow, thicket/brake, erratic/scatter) as new match arms
 //! alongside this one, never by editing it.
+//!
+//! **Eligibility is a per-kind gate, tested before any noise is drawn (Task
+//! 7, controller ruling R1).** Task 5's review measured that 59% of all
+//! spring occurrences (seed 42, every walk-depth facet over all 40,962
+//! vertices) landed on facets with no macro cause at all, including open
+//! ocean — the mixing lerp's `(1 - contextuality) * noise` floor is real and
+//! unconditional, so nothing stopped a spring from surfacing mid-sea.
+//! [`eligible`](WeftKind::eligible) closes it, mirroring
+//! `GeneratedTerrain::cave_at`'s own `if self.is_ocean(id) { return None; }`
+//! one level down (`domains/terrain/src/provider.rs`). See
+//! `crate::weft::mod`'s [`super::prevalence`] for where the gate is applied,
+//! and this file's `land_eligible` for the shared ground test.
 
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
@@ -109,6 +121,34 @@ impl WeftKind {
             }
         }
     }
+
+    /// Whether `self` may occur at all at `weights`' blended ground — the
+    /// early eligibility gate [`super::prevalence`] tests *before* reading a
+    /// macro-state cause or drawing any noise (Task 7, R1; see this file's
+    /// own module doc).
+    pub(crate) fn eligible(self, weights: [(Vertex, u64); 4], pack: &FieldPack) -> bool {
+        match self {
+            WeftKind::Spring => land_eligible(weights, pack),
+        }
+    }
+}
+
+/// The blended land fraction, `[0,1]`, at or above which ground counts as
+/// eligible — `0.5` reads as "the facet's own bilinear blend of
+/// [`FieldPack::land`] is majority-land", the continuous analogue of
+/// `GeneratedTerrain::is_ocean`'s discrete per-vertex test, applied here to
+/// a facet's blended four corners rather than a single vertex (position-
+/// continuous, like every other test this module performs — never a single
+/// discrete vertex flip at a facet straddling the coastline).
+/// plumb: universal(a majority-land threshold on the blended [0,1] ground-eligibility flag, fixed across every world and shared by every kind)
+const LAND_ELIGIBILITY_THRESHOLD: f64 = 0.5;
+
+/// The shared ground-eligibility test [`WeftKind::eligible`] delegates to
+/// (Task 7, R1): `weights`' blend of [`FieldPack::land`] at or above
+/// [`LAND_ELIGIBILITY_THRESHOLD`]. `pub(crate)` rather than a private free
+/// function so `crate::fieldpack`'s own module doc can point at it by name.
+pub(crate) fn land_eligible(weights: [(Vertex, u64); 4], pack: &FieldPack) -> bool {
+    blend_corner_weights(weights, &pack.land) >= LAND_ELIGIBILITY_THRESHOLD
 }
 
 /// Abundance ceiling for spring/seep (spec §5.2). Chosen well under `1.0` —
@@ -171,11 +211,13 @@ const SPRING_DRAINAGE_SATURATION: f64 = 12.0;
 /// water underfoot, so the recipe multiplies rather than averages.
 ///
 /// **`elevation` is spec §5.6's third listed cause and is not read here.**
-/// `FieldPack` does not carry it (Task 4's report records this as a
-/// deliberate, flagged scope decision: the field pack's literal Produces
-/// signature has exactly three fields, none of them elevation) — this recipe
-/// reads the two causes that exist rather than blocking on a third that
-/// would need `FieldPack` extended first. A later task may add it.
+/// `FieldPack` does not carry a raw elevation field (Task 4's report records
+/// this as a deliberate, flagged scope decision, and Task 7's own
+/// `land`-flag addition deliberately avoids reopening the elevation-
+/// convention question rather than adding one — see `crate::fieldpack`'s
+/// module doc) — this recipe reads the two causes that exist rather than
+/// blocking on a third that would need a typed newtype added first. A later
+/// task may add it.
 fn spring_macro_state(carbonate: f64, drainage: f64) -> f64 {
     let wet = math::tanh(drainage / SPRING_DRAINAGE_SATURATION);
     (carbonate * wet).clamp(0.0, 1.0)

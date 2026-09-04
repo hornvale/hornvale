@@ -452,6 +452,11 @@ fn two_globe_levels_do_not_contaminate_the_same_window() {
         carbonate: VertexMap::from_fn(&geo_b, |_| 1.0),
         induration: VertexMap::from_fn(&geo_b, |_| 1.0),
         drainage: VertexMap::from_fn(&geo_b, |_| 1000.0),
+        // Land everywhere (Task 7, R1): this test's whole point is telling
+        // level_a and level_b's DERIVED features apart, not exercising
+        // eligibility — an all-ocean synthetic pack would make every kind
+        // ineligible and collapse both sides to the same `Some(0.0)`.
+        land: VertexMap::from_fn(&geo_b, |_| 1.0),
     };
 
     let walk = fx.walk(200);
