@@ -46,7 +46,7 @@ could:
 > different observer.
 
 Ten spectral bands. `Reflectance`, `Illuminant`, `Observer`, `Signal`. And it
-was **wired**, across five crates: ground reflectance per place from
+was **wired**, across four crates: ground reflectance per place from
 `windows/locale`, a spectral *mixture* of cover endmembers, rock reflectance
 from lithology, built-material reflectance for masonry, daylight and
 golden-hour attenuation from astronomy, a light-field with falloff and
@@ -73,7 +73,9 @@ channel       observer.collapse(reflectance × illuminant)
 ```
 
 The sim supplies **spectra**; the client supplies the **observer** and owns
-the quantization. No sim code emits an RGB triple. This is the kernel's
+the quantization. No sim code on this path emits an RGB triple — elsewhere
+some does, in the plan renderer and the ASCII fallback; the claim is about
+the map pipeline. This is the kernel's
 existing quantize-at-emit-only discipline applied to ink: the world says what
 the ground returns and what light falls on it, and the display says what a
 screen can show.
@@ -168,8 +170,19 @@ that the sample-validity clause and the directional clause fail independently
 computation reads a cover's weight, while albedo reads its reflectance, so
 darkening snow cannot move dominance at all.
 
-The measured quantity was **substituted** during the campaign, and the spec
-says so. The frozen preregistration named a snow-endmember weight; that
+**A third finding, and it is about the gate rather than the world.** H3 — the
+campaign's own acceptance criterion — was found **unfalsifiable as written**.
+It claimed a world is byte-identical with and without the renderer; but every
+method the client calls takes `&self`, and the locale context never retains
+the world at all, so no test could ever go red. The implementer declined to
+write it and said why. What replaced it rebuilds the seed-42 flagship
+surrounds document through the extraction and compares byte-for-byte — and
+was seen to fail twice under mutation, at byte offsets 953 and 952. A gate
+that cannot fail is not a gate, and this campaign discovered that about its
+own.
+
+The seasonal measured quantity was **substituted** during the campaign, and
+the spec says so. The frozen preregistration named a snow-endmember weight; that
 proved unreachable from the client, and composed albedo — what actually
 reaches the map — was measured instead. The substitution was forced by
 reachability and settled before any result was seen. But an unrecorded swap
@@ -189,7 +202,16 @@ missing — and nothing rides it yet. Ocean surface motion is the obvious
 first, and it is a separate campaign.
 
 And the overture's atlas view lost its land colour. It has no locale context
-to ask, and building one would cost roughly 200 ms on the startup path, so it
-passes nothing and its land renders uncoloured — measured at 10.6% of that
-panel, the ocean being unaffected. That is a real regression, contained and
+to ask, and building one would cost a full nearest-vertex index on the
+startup path, so it passes nothing and its land renders uncoloured while the
+ocean is unaffected. That is a real regression, contained and
 reversible, and it is written down rather than discovered later.
+
+**One cost this campaign added and did not pay down.** A tile now carries the
+light it was drawn under, which is correct — ink must not outlive its
+illuminant — but a turn that moves the sun therefore evicts the whole tile
+cache. Measured on the shipped walk path: a redraw after such a turn costs
+30–79 ms against 0.45 ms on a hit, on roughly half of turns. Against a sim
+turn already costing 100–180 ms that is a 30–70% end-to-end rise, not a
+hundredfold one. The design is right and the price is unpaid; it is recorded
+here rather than left for someone to find.
