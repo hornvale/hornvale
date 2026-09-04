@@ -29,7 +29,7 @@
 //!
 //! **The fixture chosen already reaches the changed code, on purpose.**
 //! `windows/scene/tests/fixtures/surrounds-seed-42-flagship.json` is a
-//! `scene/surrounds/v1` document built through `LocaleContext::describe`
+//! `scene/surrounds/v2` document built through `LocaleContext::describe`
 //! (via `surrounds_scene`), and its per-address `micro.wetness` field is
 //! exactly `grounded_wetness_for`'s output composed through
 //! `blend_at_corners`'s moisture blend — the two pieces of arithmetic this
@@ -85,7 +85,7 @@ fn flagship_latlon(world: &hornvale_kernel::World) -> (f64, f64) {
     (lat, lon)
 }
 
-/// The seed-42 flagship `scene/surrounds/v1` document, built exactly as
+/// The seed-42 flagship `scene/surrounds/v2` document, built exactly as
 /// `windows/scene/tests/suite/golden.rs::surrounds_seed_42_flagship_json`
 /// builds it.
 fn surrounds_seed_42_flagship_json() -> String {

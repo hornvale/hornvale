@@ -339,7 +339,7 @@ only non-client production change is the extraction in
 `windows/locale/src/lib.rs`. So the real question is whether *that* moved a
 committed byte. The control is
 `cli/tests/suite/wash_byte_identity.rs::seed_42_surrounds_flagship_is_unmoved_by_the_wash`,
-which rebuilds the seed-42 flagship `scene/surrounds/v1` document through
+which rebuilds the seed-42 flagship `scene/surrounds/v2` document through
 `LocaleContext::describe` and compares it byte-for-byte against the committed
 fixture.
 
