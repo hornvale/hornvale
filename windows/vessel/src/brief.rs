@@ -34,7 +34,7 @@
 use crate::housemark::{Housemark, HousemarkError};
 use crate::site::{Site, SiteKind};
 use hornvale_history::record::{Function, Notability, OccupationRecord, TechHorizon};
-use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Seed, Vertex};
+use hornvale_kernel::{Facet, FacetId, Geosphere, KindId, NearestVertexIndex, Seed, Vertex};
 use hornvale_locale::StrangeSite;
 use hornvale_species::{SocietyVector, society_registry};
 use hornvale_worldgen::{SiteReason, site_facet_for};
@@ -201,7 +201,7 @@ pub(crate) fn containing_vertex(
 /// vertices holding a cave (`GeneratedTerrain::cave_site_vertices`, which is
 /// one pass of `cave_at` over the grid). Both are parameters rather than
 /// something derived here because a `LocaleContext` is expensive and the
-/// caller already holds one; the same reason `geo` and `index` are parameters.
+/// caller already holds one; the same reason `geo` is a parameter.
 /// `cave_sites` is much the longer roster of the two — ~870-2,440 vertices
 /// against ~100 — so a caller that asks per turn should hold it rather than
 /// re-scan the grid, which costs ~2.9 ms (`Session` does exactly that).
@@ -224,10 +224,14 @@ pub(crate) fn containing_vertex(
 /// caller has it, and a derivation path should not reach for a whole world to
 /// read one field off it.
 ///
-/// `occupations` is the world's occupation register,
-/// `hornvale_worldgen::occupations_by_vertex(world)`, built ONCE by the
-/// caller (`WorldContext::build`) and handed in. **History of this
-/// parameter, kept because the note it replaces was right for five weeks
+/// `occupations` is the world's living occupation register keyed by the exact
+/// packed settlement room. `WorldContext::build` constructs it ONCE by joining
+/// `hornvale_worldgen::occupations_by_vertex(world)` to the production
+/// settlement roster and hands it in. Looking the room back up through
+/// [`containing_vertex`] is deliberately forbidden: settlement placement and
+/// the cube-sphere room mesh are independent, so that geometric reverse may
+/// name a neighbour rather than the settlement's source vertex. **History of
+/// this parameter, kept because the note it replaces was right for five weeks
 /// before anyone measured it:** from `4569d883d` (2026-07-27) to The Terrier
 /// (2026-09-03) this function took `&World` and rebuilt the whole map on
 /// every call, under a `NOTE ON COST` that said "if a profile shows it
@@ -246,11 +250,10 @@ pub(crate) fn containing_vertex(
 /// No fallback uses `SocietyVector::MANIKIN`: the manikin is nobody, and a ruin
 /// does not silently acquire occupants.
 /// type-audit: bare-ok(count: walk_depth)
-#[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8, and absorbing The Terrier's `occupations` hoist to 9; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the four things `Session` keeps" and whose only reader is this function
+#[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the things `Session` keeps" and whose only reader is this function
 pub fn brief_of(
-    occupations: &BTreeMap<Vertex, Vec<OccupationRecord>>,
+    occupations: &BTreeMap<FacetId, OccupationRecord>,
     geo: &Geosphere,
-    index: &NearestVertexIndex,
     place: &Facet,
     terrain: &dyn crate::liveness::Terrain,
     walk_depth: u32,
@@ -335,9 +338,7 @@ pub fn brief_of(
             .then(|| Site::placed(SiteKind::Cave, None)),
     ];
     let site = candidates.into_iter().flatten().max_by_key(Site::salience);
-    let alive = containing_vertex(&locale, geo, index)
-        .and_then(|vertex| occupations.get(&vertex))
-        .and_then(|occs| occs.iter().find(|o| o.core.ended.is_none()));
+    let alive = locale.pack().ok().and_then(|room| occupations.get(&room));
     Ok(match alive {
         Some(o) => {
             let societies = society_registry();
@@ -427,11 +428,12 @@ mod tests {
             founded_from: Founding::Genesis(vertex),
             ended_by: Ended::Nature,
         };
-        let occupations = [(vertex, vec![occupation])].into_iter().collect();
+        let occupations = [(place.pack().expect("the test room packs"), occupation)]
+            .into_iter()
+            .collect();
         brief_of(
             &occupations,
             &geo,
-            &index,
             &place,
             &StubTerrain,
             0,
@@ -545,7 +547,6 @@ mod tests {
     #[test]
     fn an_empty_production_occupation_register_carries_no_people_or_housemark() {
         let geo = Geosphere::new(0);
-        let index = NearestVertexIndex::new(&geo);
         let place = Facet {
             face: 0,
             path: Vec::new(),
@@ -555,7 +556,6 @@ mod tests {
         let brief = brief_of(
             &occupations,
             &geo,
-            &index,
             &place,
             &StubTerrain,
             0,

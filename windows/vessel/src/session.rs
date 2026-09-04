@@ -10,9 +10,9 @@ use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
     LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
-    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_herds, renders_unconscious, slept_fact, slept_on_fact, species_activity,
-    village_or_fallback,
+    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
+    derive_wild_herds, renders_unconscious, settlement_room_index, slept_fact, slept_on_fact,
+    species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -30,7 +30,7 @@ use crate::{
     reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, Vertex, World,
+    ConceptRegistry, EntityId, Facet, FacetId, Fact, Ledger, Seed, TickSpan, Value, World,
     WorldTime,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
@@ -715,21 +715,24 @@ pub struct WorldContext<'w> {
     /// pressures and the wild-NPC concentrations. `None` whenever `wc` or the
     /// fit itself fails.
     pub(crate) report: Option<hornvale_worldgen::DemographyReport>,
-    /// The world's occupation register (The Terrier, spec §3.1): every
-    /// committed occupation, grouped by the vertex it stands on, reconstructed
-    /// from `world.ledger` ONCE here and read by every `Brief` this context's
-    /// sessions derive (`brief::brief_of`). A pure function of the immutable
-    /// `World`, which is what makes it world-scoped like everything else on
-    /// this type. Before this field, `brief_of` rebuilt the whole map on every
-    /// call — 8.7-26 ms — and a chamber turn called it two to five times;
-    /// that was the entire cost The Rack's chronicle attributed to "one
-    /// shadowcast" (0.012 ms).
+    /// The world's living settlement occupations, keyed by their exact packed
+    /// production room. The committed vertex register is reconstructed from
+    /// `world.ledger` ONCE in [`Self::build`], then joined to the settlement
+    /// roster by entity id. This address cannot be recovered through
+    /// `brief::containing_vertex`: a placed settlement room may geometrically
+    /// reverse to a neighbouring vertex.
     ///
     /// Built AFTER the five seeded derivations in [`Self::build`] and
     /// consuming no stream draw: a ledger read, not a sixth derivation, so it
     /// cannot move the order the gallery transcripts guard.
     pub(crate) occupations:
-        std::collections::BTreeMap<Vertex, Vec<hornvale_history::record::OccupationRecord>>,
+        std::collections::BTreeMap<FacetId, hornvale_history::record::OccupationRecord>,
+    /// Every distinct built settlement room and the first settlement's name,
+    /// produced by the same ordered reduction as `occupations` above.
+    pub(crate) built: std::collections::BTreeMap<FacetId, String>,
+    /// Later settlements discarded because an earlier settlement already
+    /// occupied their player-addressed room.
+    pub(crate) settlement_room_collisions: usize,
 }
 
 impl<'w> WorldContext<'w> {
@@ -810,7 +813,8 @@ impl<'w> WorldContext<'w> {
         // above so that the order those transcripts guard is visibly not in
         // question. ~9-26 ms once per world (contended), against ~3 s for the
         // block above; it used to be paid on every `brief_of` call.
-        let occupations = hornvale_worldgen::occupations_by_vertex(world);
+        let occupations_by_vertex = hornvale_worldgen::occupations_by_vertex(world);
+        let settlement_rooms = settlement_room_index(world, &ctx, &occupations_by_vertex);
         Ok(WorldContext {
             world,
             terrain,
@@ -818,13 +822,37 @@ impl<'w> WorldContext<'w> {
             ctx,
             wc,
             report,
-            occupations,
+            occupations: settlement_rooms.living,
+            built: settlement_rooms.built,
+            settlement_room_collisions: settlement_rooms.collisions,
         })
     }
 
     /// The locale context this world is observed through (read-only).
     pub fn context(&self) -> &LocaleContext {
         &self.ctx
+    }
+
+    /// Every distinct room occupied by a production settlement, with the
+    /// first settlement's name when multiple settlements share an address.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn built_rooms(&self) -> &std::collections::BTreeMap<FacetId, String> {
+        &self.built
+    }
+
+    /// The selected living occupation for each exact production settlement
+    /// room. A built room absent from this map is genuinely unoccupied.
+    pub fn living_occupations_by_room(
+        &self,
+    ) -> &std::collections::BTreeMap<FacetId, hornvale_history::record::OccupationRecord> {
+        &self.occupations
+    }
+
+    /// How many later settlements shared a room already claimed by the first
+    /// settlement in the production roster.
+    /// type-audit: bare-ok(count: return)
+    pub fn settlement_room_collision_count(&self) -> usize {
+        self.settlement_room_collisions
     }
 }
 
@@ -935,8 +963,9 @@ pub struct Session<'w> {
     /// fails.
     prey: Option<hornvale_kernel::VertexMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
-    /// `built_rooms`), computed once at `start`, so a room a settlement
-    /// actually occupies reads as built and can draw a real hearth.
+    /// `built_rooms`), derived once in `WorldContext` and cloned at `start`, so
+    /// a room a settlement actually occupies reads as built and can draw a
+    /// real hearth.
     /// `Session::start` requires `mint_flagship` to resolve a settlement
     /// first, so in practice this always carries at least the possessed
     /// agent's own home room by the time a session exists.
@@ -1901,12 +1930,11 @@ impl<'w> Session<'w> {
             }
             _ => None,
         };
-        // The settlement-territory set (The Threshold, task 5b), so a room a
-        // settlement actually occupies reads as built and can draw a real
-        // hearth — the real answer Task 5's arming had nothing to read before
-        // this. Built once here, the same one-shot-at-start discipline as
-        // `calendar`/`predator`/`prey`.
-        let built = built_rooms(world, ctx);
+        // The settlement room map was built once with the occupation index in
+        // `WorldContext::build`; a session clones the small derived map so its
+        // existing terrain readers stay session-local without re-surveying the
+        // settlement roster.
+        let built = held.built.clone();
         // The cave roster (The Prospect, Task 4), on the same
         // one-shot-at-start discipline. `GeneratedTerrain::cave_at` decides
         // WHETHER there is a cave at a vertex — the one answer in the tree;
@@ -7471,7 +7499,6 @@ impl<'w> Session<'w> {
         crate::brief::brief_of(
             &self.wctx.occupations,
             self.wctx.ctx.climate().geosphere(),
-            self.wctx.ctx.nearest_index(),
             place,
             &terrain,
             self.walk_depth(),
@@ -11338,26 +11365,19 @@ mod tests {
             .into_iter()
             .find_map(|wanted| heading_neighbour(&here, wanted).map(|dest| (wanted, dest)))
             .expect("a walk-band room has at least seven neighbours");
-        let dest_vertex = crate::brief::containing_vertex(
-            &dest,
-            session.wctx.ctx.climate().geosphere(),
-            session.wctx.ctx.nearest_index(),
-        )
-        .expect("a walk-band destination resolves to a containing vertex");
+        let dest_room = dest.pack().expect("a walk-band destination packs");
         let people = hornvale_kernel::KindId("unregistered-destination-people");
         let mut invalid = session
             .wctx
             .occupations
             .values()
-            .flatten()
-            .find(|occupation| occupation.core.ended.is_none())
+            .next()
             .cloned()
             .expect("seed 42 has a living occupation to place at the destination");
         invalid.core.people = people;
-        invalid.core.site = dest_vertex;
         match &mut session.wctx {
             HeldContext::Owned(wctx) => {
-                wctx.occupations.insert(dest_vertex, vec![invalid]);
+                wctx.occupations.insert(dest_room, invalid);
             }
             HeldContext::Borrowed(_) => panic!("Session::start owns its world context"),
         }
@@ -15446,10 +15466,11 @@ mod tests {
     /// claim: invariant(forall-seed) — two pinned seeds (42, 7), not a sweep;
     /// see spec §5's `invariant(forall-seed)` shape.
     ///
-    /// The Terrier, spec §4 P6: the brief read off the hoisted register equals
-    /// the brief read off a FRESH `occupations_by_vertex(world)` at every
-    /// locale a script visits — VIEW ≡ SCAN for the one world-scoped read that
-    /// used to be done per call.
+    /// The Terrier, spec §4 P6: the brief read off the hoisted, room-keyed
+    /// register equals the brief read off a FRESH vertex register reduced
+    /// through the production settlement-room index at every locale a script
+    /// visits — VIEW ≡ SCAN for the world-scoped read that used to be done per
+    /// call.
     ///
     /// Non-vacuity is asserted in both directions: the script must visit at
     /// least one locale with a living occupation and at least one without, so
@@ -15467,23 +15488,16 @@ mod tests {
     /// geometry, not a bug in the walk. Seed 7 is the opposite shape: the
     /// flagship's own starting vertex carries **no occupation record at
     /// all** (250 of the world's 272 occupied vertices are alive, and the
-    /// start vertex is not one of the 272), so `saw_none` is true at step 0
-    /// and the walk needs to find a living one instead — `go w` does, at
-    /// step 7; `go e`, `go n`, `go s`, `go ne`, `go nw`, `go se` did not
-    /// within 80 steps. Bound 20 covers both measured minima (18 and 7) with
-    /// margin, and the loop still fails loudly rather than silently if a
-    /// future fixture regeneration moves either number past it.
+    /// start vertex is not one of the 272), but the production settlement room
+    /// itself is inhabited. `go w` leaves that exact room at step 7. Bound 20
+    /// covers both measured transitions (18 and 7) with margin, and the loop
+    /// still fails loudly rather than silently if a future fixture regeneration
+    /// moves either number past it.
     ///
-    /// MUTATION THIS MUST FAIL AGAINST: in `WorldContext::build`, replace
-    /// `hornvale_worldgen::occupations_by_vertex(world)` with
-    /// `std::collections::BTreeMap::new()` (applied and restored with
-    /// `scripts/mutate.py`). Observed red: the very FIRST assertion —
-    /// `session.wctx.occupations, fresh` — fails at seed 42, before the walk
-    /// loop ever runs: `left: {}` (the mutated, empty map) vs `right:
-    /// {Vertex(14): [OccupationRecord { … }], …}` (the fresh scan, non-empty).
-    /// An empty register makes every brief's `function` field `None`, so no
-    /// mutation could reach the loop's `saw_alive` branch at all — the
-    /// register-identity assertion is what catches it, exactly as predicted.
+    /// MUTATION THIS MUST FAIL AGAINST: replace `settlement_rooms.living` in
+    /// `WorldContext::build` with an empty map. The first identity assertion
+    /// catches the missing room-indexed register before the walk loop; the
+    /// loop's alive branch then guards the same loss through production briefs.
     #[test]
     fn the_hoisted_brief_is_the_fresh_brief_at_every_visited_locale() {
         for seed in [42u64, 7] {
@@ -15495,13 +15509,15 @@ mod tests {
             } else {
                 world_at(seed).expect("seed 7 builds under default pins")
             };
-            // Measured per-seed (see doc above): seed 42's flagship starts
-            // alive and only `go e` leaves the alive vertex within a bounded
-            // walk; seed 7's flagship starts on unoccupied ground and only
-            // `go w` reaches a living one.
+            // Measured per-seed (see doc above): both flagships start in an
+            // inhabited settlement room; these bearings leave it within the
+            // bound.
             let bearing = if seed == 42 { "go e" } else { "go w" };
             let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-            let fresh = hornvale_worldgen::occupations_by_vertex(&world);
+            let fresh_by_vertex = hornvale_worldgen::occupations_by_vertex(&world);
+            let fresh =
+                crate::liveness::settlement_room_index(&world, &session.wctx.ctx, &fresh_by_vertex)
+                    .living;
             assert_eq!(
                 session.wctx.occupations, fresh,
                 "seed {seed}: the hoisted register is not the fresh one"
@@ -15517,7 +15533,6 @@ mod tests {
                 let scanned = crate::brief::brief_of(
                     &fresh,
                     session.wctx.ctx.climate().geosphere(),
-                    session.wctx.ctx.nearest_index(),
                     &session.position(),
                     &terrain,
                     session.walk_depth(),

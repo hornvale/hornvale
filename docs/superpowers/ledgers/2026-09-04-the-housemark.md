@@ -136,6 +136,31 @@ additive accession point, one level below any stream epoch. · Capture: revised
 spec §7, plan constraints/artifact table, this ledger entry; Task 5 will author
 the binding decision record and re-pin exact observed artifacts.
 
+#7 [Q] — **Should H3 accept the current lossy occupant surface or repair the
+production lookup?** · **Decision: repair the lookup by indexing living
+occupations with the exact production settlement-room address; H3 covers every
+distinct player-addressable built settlement room.** · Why: the diagnostic
+enumerated 1,275 live `(vertex, rung)` occupation records and measured 1,259
+distinct rooms. Only 744 addresses reverse through `containing_vertex` to their
+source vertex; 531 resolve to a direct neighbor, yielding 222 rooms with no
+people and 41 with the wrong people. The existing warning in `brief.rs` already
+states the cube-sphere facet and icosphere vertex meshes are not inverses.
+Accepting only today's 1,037 inhabited outputs would canonize that known lossy
+projection and contradict the campaign's purpose. Sixteen duplicate rooms are
+intentional surface/subterranean coexistence; one player-addressable room can
+expose one occupation, selected in the same deterministic first-settlement
+order already used for its name. · Alternatives discarded: redefine “living”
+as whatever the broken lookup happens to expose (hides 222/41 defects); require
+1,275 distinct dwellings (the product has 1,259 addresses, so sixteen cannot be
+expressed without an R2 topology/rung campaign); silently filter mismatches
+(invalidates preregistration). · ideonomy passes / overturns: **1 pass, no
+overturns, one clarification** (organon-construction; notation over purpose and
+side effects). Writing the flow as `settlement -> room -> brief` made the
+reverse `room -> nearest vertex -> occupation` an inexpressible extra leg and
+separated its hidden neighbor-substitution side effect from the intended
+reading. · Capture: revised spec §4/§5/H3, revised Task 4, this entry; the raw
+1,275-row diagnostic remains in the task report.
+
 ## Capture manifest
 
 - `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` now points from

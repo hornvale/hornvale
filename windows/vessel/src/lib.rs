@@ -52,9 +52,9 @@ pub mod underworld_level;
 mod vantage;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
-// `brief_of`'s occupation-register parameter is keyed on `OccupationRecord`
-// (`hornvale_history::record`); re-exported so a caller can name the
-// parameter type without a direct dependency on `hornvale-history`.
+// `brief_of`'s room-keyed occupation-register value is `OccupationRecord`
+// (`hornvale_history::record`); re-exported so a caller can name that map
+// without a direct dependency on `hornvale-history`.
 pub use chamber_prose::describe_chamber;
 pub use controller::{Controller, DefaultController, ImposedController, PlayerController};
 pub use depth::{CHAMBER_DEPTH_OFFSET, chamber_depth, truncate_to_walk};

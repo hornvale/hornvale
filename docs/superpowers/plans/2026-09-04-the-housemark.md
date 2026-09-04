@@ -157,19 +157,22 @@
 **Files:**
 - Create: `windows/vessel/tests/suite/housemark_readout.rs`
 - Modify: `windows/vessel/tests/suite.rs`
+- Modify: `windows/vessel/src/brief.rs`
+- Modify: `windows/vessel/src/session.rs`
+- Modify: the existing settlement-room/occupation indexing helper at the narrowest owning layer
 - Modify: `IMPLEMENTATION_PLAN.md`
 
 **Interfaces:**
-- Consumes: seeds `[42, 13, 7, 1, 100]`, living occupations, production brief derivation, and threshold composition.
+- Consumes: seeds `[42, 13, 7, 1, 100]`, distinct production settlement rooms, room-keyed living occupations, production brief derivation, and threshold composition.
 - Produces: an ignored H3 readout over ordered `(kind, relation-to-required-kind)` signatures.
 
 - [ ] **Step 1: Build the ignored readout**
 
-  Follow the shallowest existing vessel world-test scaffold exposing settlements, terrain, occupations, and rooms. For every living occupation, build its production brief and chamber zero, reduce it to stable structural tuples, and print seed, people, mark, signature.
+  First capture the failing 1,275-record probe: 531 settlement rooms reverse through `containing_vertex` to a direct neighbor, producing 222 absent and 41 wrong people plus 16 intentional same-room rung collisions. Replace the lossy vertex reverse lookup with an occupation index keyed by the exact production settlement-room address and the same deterministic first-settlement order used by room names. Then follow the shallowest vessel world scaffold and enumerate every distinct built settlement room. Build its production brief and chamber zero, reduce it to stable structural tuples, and print seed, people, mark, signature plus built/inhabited/unoccupied/collision totals.
 
 - [ ] **Step 2: Assert cell recovery**
 
-  Build `BTreeMap<signature, Housemark>`, fail if a signature maps to two marks, and assert `correct == total`. Do not require proper-name uniqueness.
+  Build `BTreeMap<signature, Housemark>`, fail if a signature maps to two marks, and assert `correct == inhabited`. Assert the room census accounts for every distinct built room and reports all intentional collisions; do not require proper-name uniqueness.
 
 - [ ] **Step 3: Run H3 in the foreground**
 

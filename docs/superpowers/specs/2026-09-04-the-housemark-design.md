@@ -172,11 +172,17 @@ mutation pass would create two sources of truth for admissibility and is
 forbidden by the design.
 
 `Housemark` is computed once with the `Brief`, not by rebuilding
-`society_registry()` inside every chamber fold. The production `brief_of` path
-resolves the living occupation's `people` to its society row and fails with
-context if a placed people lacks one. Synthetic and unoccupied briefs carry
-`None` explicitly. `Brief::people` remains present because it is the durable
-identity and future consumers need not reverse a lossy two-field housemark.
+`society_registry()` inside every chamber fold. The production context indexes
+living occupations by the same walk-band settlement room used by `built_rooms`;
+`brief_of` must not reverse that cube-sphere address through
+`containing_vertex`, because the cube-sphere and icosphere meshes are not
+inverses. Where two `(vertex, rung)` occupations share one player-addressable
+room, the same deterministic first-settlement order that supplies the room name
+supplies its people. The selected occupation's `people` resolves to its society
+row and fails with context if the row is absent. Synthetic and genuinely
+unoccupied briefs carry `None` explicitly. `Brief::people` remains present
+because it is the durable identity and future consumers need not reverse a
+lossy two-field housemark.
 
 ## 5. Ownership and data flow
 
@@ -186,7 +192,8 @@ domains/species
                          |
                          v
 windows/vessel::brief_of
-  living occupation.people + society row -> Brief { people, housemark, ... }
+  settlement room -> selected living occupation.people + society row
+                  -> Brief { people, housemark, ... }
                          |
                          v
 windows/vessel::chamber_interior_of
@@ -280,10 +287,13 @@ The test is a cross-product generated from the enums, not six copied fixtures.
 
 ### H3 — the living surface is distinguishable
 
-Over real living occupations from at least the five Staple seeds, render the
-threshold chamber and reduce it to the ordered multiset of
+Over every distinct player-addressable built settlement room from the five
+Staple seeds, resolve the production living brief, render the threshold chamber,
+and reduce it to the ordered multiset of
 `(kind, relation-to-required-kind)`. The housemark cell must be recoverable from
-that structure at **100%**. This is stricter than people recovery because several
+every inhabited brief's structure at **100%**. Report built-room, inhabited,
+unoccupied, collision, people, and cell totals; none may be silently dropped.
+This is stricter than people recovery because several
 peoples intentionally share one housemark; asking architecture to recover the
 proper name would contradict the compression.
 
