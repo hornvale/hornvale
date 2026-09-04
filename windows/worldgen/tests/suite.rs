@@ -233,6 +233,8 @@ mod warren_readout;
 mod waterline_probe;
 #[path = "suite/watershed_measure.rs"]
 mod watershed_measure;
+#[path = "suite/weft_fieldpack.rs"]
+mod weft_fieldpack;
 #[path = "suite/winze_energy_probe.rs"]
 mod winze_energy_probe;
 #[path = "suite/winze_scale_probe.rs"]

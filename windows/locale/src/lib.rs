@@ -1501,14 +1501,15 @@ impl LocaleContext {
 
     /// The shared tail of [`Self::blend_at`]/[`Self::blend_at_cached`] (the-waymark
     /// fix round, round 2). No `&self` needed — the blend reads only `weights`
-    /// and the injected `field`.
+    /// and the injected `field`. Delegates to
+    /// [`hornvale_kernel::blend_corner_weights`] (The Weft, Task 4), which
+    /// promoted this exact expression into the kernel beside
+    /// `Facet::corner_weights` so there is one implementation, not two.
     fn blend_with_weights(
         weights: [(Vertex, u64); 4],
         field: &hornvale_kernel::VertexMap<f64>,
     ) -> f64 {
-        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
-        let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
-        sum / denom as f64
+        hornvale_kernel::blend_corner_weights(weights, field)
     }
 
     /// The room's THREAT in `[0, 1]` — the hazard field the danger drive flees

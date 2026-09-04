@@ -15,6 +15,7 @@
 
 use crate::GeoCoord;
 use crate::Seed;
+use crate::VertexMap;
 use crate::cube;
 use crate::derived::Derived;
 use crate::math;
@@ -773,6 +774,21 @@ impl Facet {
             (vertices[3], w[3] as u64),
         ])
     }
+}
+
+/// Corner-blend a per-vertex `field` using [`Facet::corner_weights`]'s output —
+/// the weighted mean of the four corners, weighted by their bilinear numerators.
+/// Promoted from `windows/locale`'s private `blend_with_weights` (The Weft, Task
+/// 4) so `blend_at`'s bilinear read has exactly one implementation instead of
+/// two; locale's helper now delegates here. The expression is a byte-identity
+/// surface (float summation order decides the result, which flows into every
+/// committed artifact `blend_at` feeds) and must not be reordered or rewritten
+/// with `fold`/`zip` without re-proving neutrality against the seed-42 goldens.
+/// type-audit: bare-ok(count: weights), bare-ok(ratio: field), bare-ok(ratio: return)
+pub fn blend_corner_weights(weights: [(Vertex, u64); 4], field: &VertexMap<f64>) -> f64 {
+    let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+    let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
+    sum / denom as f64
 }
 
 impl Facet {

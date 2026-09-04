@@ -93,6 +93,7 @@ pub mod delve_seating;
 mod descent;
 pub mod disposition;
 pub mod energy;
+pub mod fieldpack;
 pub mod fixture;
 pub mod gazetteer;
 pub mod graph_derive;
@@ -130,6 +131,7 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
+pub use fieldpack::{FieldPack, field_pack_from};
 pub use fixture::seed_42_world;
 pub use gazetteer::{feature_name, feature_salt, gazetteer_features};
 pub use graph_derive::{
