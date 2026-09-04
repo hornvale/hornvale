@@ -50,9 +50,9 @@
 //!
 //! [`GenesisPins`] is the bundle that replaces the brief's bare
 //! `default_pins()`/`other_pins()` helpers with a named, `PartialEq` type —
-//! every field of every pin struct genesis takes already derives `PartialEq`
-//! (`SkyPins`, `TerrainPins`, `SettlementPins`, `SkyChoice`), so bundling adds
-//! no new comparison machinery.
+//! every pin struct genesis takes already derives `PartialEq` (`SkyPins`,
+//! `TerrainPins`, `SettlementPins`), so bundling adds no new comparison
+//! machinery.
 //!
 //! # Why the tripwire compares `Fact`s directly, not JSON strings
 //!
