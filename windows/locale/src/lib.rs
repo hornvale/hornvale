@@ -455,6 +455,20 @@ fn dominant_corner(weights: &[(Vertex, u64); 4]) -> (Vertex, u64) {
     best
 }
 
+/// A room's *continuous* reading at its four corners: the integer-weighted
+/// mean, quantized once at the emit boundary (decision 0033).
+///
+/// Extracted from `describe_with_weights`'s own `blend` closure so
+/// [`LocaleContext::reflectance_at_facet`] can read the SAME moisture the
+/// document emits without a second copy of the arithmetic — a second copy
+/// being how the colour layer and the prose would come to disagree about how
+/// wet a room is.
+fn blend_at_corners(weights: &[(Vertex, u64); 4], value: &dyn Fn(Vertex) -> f64) -> f64 {
+    let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+    let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
+    quantize(sum / denom as f64)
+}
+
 /// What a step from one room to another does to the water between them.
 ///
 /// **Fordability is a property of a path, never of a place** — a ford is a
@@ -805,6 +819,117 @@ impl LocaleContext {
         Ok(self.reflectance_mixture_at(addr, micro, at)?.integrate())
     }
 
+    /// The ground's spectral curve at a facet, with the [`MicroField`]
+    /// computed internally — the facet-level entry point a *view* needs.
+    ///
+    /// [`Self::reflectance_at`] takes the micro-field from its caller, which
+    /// is right for a caller that already has one (`describe`'s `Locale`
+    /// carries it) and impossible for one that does not: every input to the
+    /// wetness grounding — the climate's moisture field, the channel network,
+    /// the globe, the geosphere, the nearest-vertex index and the rill
+    /// partition seed — is private to this context, so a caller outside this
+    /// crate cannot build an equivalent `MicroField` and passing `None`
+    /// would silently swap moisture-and-river-grounded wetness for address
+    /// noise (`surface.rs` reads `micro.wetness` for the cover mixture's
+    /// `wet_share`).
+    ///
+    /// The surface read, so the biome expression is the vertex's own
+    /// ([`GeneratedClimate::biome_expr_at`]) rather than a stratum's —
+    /// `describe_with_weights`'s `stratum: None` arm, which is the only arm
+    /// a map of the ground has.
+    ///
+    /// `Err(LocaleError::AboveGrid)` for an address coarser than the grid:
+    /// there is no four-corner reading to blend there, and a caller (the
+    /// world map) is expected to fall back rather than treat it as a fault.
+    pub fn reflectance_at_facet(
+        &self,
+        addr: &Facet,
+        at: WorldTime,
+    ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        let geo = self.climate.geosphere();
+        let weights = addr
+            .corner_weights(geo, &self.index)
+            .ok_or(LocaleError::AboveGrid)?;
+        self.reflectance_at_facet_with_weights(addr, &weights, at)
+    }
+
+    /// [`Self::reflectance_at_facet`], consulting a caller-owned, READ-ONLY
+    /// [`hornvale_kernel::RoomMeshMemo`] — the same base/`_cached` pair
+    /// [`Self::describe_at_cached`], [`Self::temperature_at_cached`] and
+    /// [`Self::hazards_at_cached`] already offer, for the same reason: a
+    /// caller sweeping many addresses (the world map paints ~1,920 tiles a
+    /// frame) has already resolved most of these corner weights and should
+    /// not pay a second nearest-vertex search for them.
+    ///
+    /// A miss falls through to a fresh [`Facet::corner_weights`], so the
+    /// answer is the cache's or it is the same computation — never a third
+    /// thing. `cache: None` is exactly [`Self::reflectance_at_facet`].
+    pub fn reflectance_at_facet_cached(
+        &self,
+        addr: &Facet,
+        at: WorldTime,
+        cache: Option<&hornvale_kernel::RoomMeshMemo>,
+    ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        let geo = self.climate.geosphere();
+        let weights = self
+            .corner_weights_for(addr, geo, cache)
+            .ok_or(LocaleError::AboveGrid)?;
+        self.reflectance_at_facet_with_weights(addr, &weights, at)
+    }
+
+    /// The shared tail of [`Self::reflectance_at_facet`] and
+    /// [`Self::reflectance_at_facet_cached`]: build the room's own
+    /// [`MicroField`] from `weights`, then compose the mixture through
+    /// [`Self::reflectance_mixture_with_weights`] — the ONE resolution of
+    /// `weights`, threaded all the way down rather than resolved again at
+    /// the composition.
+    fn reflectance_at_facet_with_weights(
+        &self,
+        addr: &Facet,
+        weights: &[(Vertex, u64); 4],
+        at: WorldTime,
+    ) -> Result<hornvale_kernel::color::Reflectance, LocaleError> {
+        let best = dominant_corner(weights);
+        let expr = self.climate.biome_expr_at(best.0);
+        let moisture = blend_at_corners(weights, &|c| self.climate.moisture_at(c));
+        let grounded = self.grounded_wetness_for(addr, expr, moisture);
+        let micro = crate::micro::micro_field(addr.seed(self.seed), grounded);
+        Ok(self
+            .reflectance_mixture_with_weights(weights, &micro, at)?
+            .integrate())
+    }
+
+    /// Wetness is a budget and an allocation (The Rill, R-7/R-8): the
+    /// climate supply this room's vertices receive, redistributed by where the
+    /// room sits relative to its own sub-vertex watercourse. Grounded only
+    /// where the axis means ground wetness — at sea the same axis is the
+    /// set of the current, on ice it is snow cover, and in the rock column
+    /// it is seep, and a river's proximity governs none of those.
+    ///
+    /// Extracted verbatim from `describe_with_weights`, which still calls it,
+    /// so [`Self::reflectance_at_facet`] grounds its wetness through the one
+    /// derivation rather than a second copy of it. `moisture` is the caller's
+    /// already-blended, already-quantized four-corner reading
+    /// ([`blend_at_corners`]), never a raw vertex sample.
+    fn grounded_wetness_for(&self, addr: &Facet, expr: BiomeExpr, moisture: f64) -> Option<f64> {
+        crate::micro::wetness_is_grounded(expr).then(|| {
+            let globe = self.terrain.globe();
+            crate::micro::grounded_wetness(
+                moisture,
+                rill_reading(
+                    addr.centroid(),
+                    self.terrain.channels(),
+                    globe,
+                    self.terrain.geosphere(),
+                    &self.index,
+                    // `Drawn`, never `Even`: `Even` is R-5's falsification
+                    // arm and is not a production partition.
+                    &CatchmentCut::Drawn(globe.rill_partition_seed()),
+                ),
+            )
+        })
+    }
+
     /// The surface mixture at `addr` on `at`, un-integrated, so a caller can
     /// reach the components. [`LocaleContext::reflectance_at`] is this,
     /// integrated.
@@ -828,7 +953,29 @@ impl LocaleContext {
         let weights = addr
             .corner_weights(geo, &self.index)
             .ok_or(LocaleError::AboveGrid)?;
-        let vertex = dominant_corner(&weights).0;
+        self.reflectance_mixture_with_weights(&weights, micro, at)
+    }
+
+    /// The shared tail of [`Self::reflectance_mixture_at`] and
+    /// [`Self::reflectance_at_facet`]: the composition itself, once `weights`
+    /// is resolved — the same base/`_with_weights` split
+    /// [`Self::temperature_with_weights`] and
+    /// [`Self::productivity_with_weights`] already use.
+    ///
+    /// Extracted in Task 3's fix round because `reflectance_at_facet` must
+    /// resolve `weights` ITSELF (it needs the dominant corner for the biome
+    /// expression and the four corners for the moisture blend, both upstream
+    /// of the `MicroField` it builds), and calling
+    /// `reflectance_mixture_at` afterwards resolved them a second time — a
+    /// nearest-vertex search per tile, paid twice, on the path the world map
+    /// is about to run 1,920 times a frame.
+    fn reflectance_mixture_with_weights(
+        &self,
+        weights: &[(Vertex, u64); 4],
+        micro: &MicroField,
+        at: WorldTime,
+    ) -> Result<hornvale_kernel::color::Mixture, LocaleError> {
+        let vertex = dominant_corner(weights).0;
         let buffer = self.terrain.material_at(vertex);
         let rock = self.terrain.rock_at(vertex);
         let mineral = hornvale_terrain::lithology::reflectance(&buffer, rock);
@@ -1056,8 +1203,6 @@ impl LocaleContext {
         id: u64,
         weights: [(Vertex, u64); 4],
     ) -> Result<Locale, LocaleError> {
-        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
-
         // Categorical biome: max weight, tie-break lowest Vertex. Inherited,
         // never re-quantized (decision 0038).
         let best = dominant_corner(&weights);
@@ -1067,11 +1212,10 @@ impl LocaleContext {
         };
 
         // Continuous fields: integer-weighted mean, full precision, quantize
-        // at emit.
-        let blend = |value: &dyn Fn(Vertex) -> f64| -> f64 {
-            let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
-            quantize(sum / denom as f64)
-        };
+        // at emit. The arithmetic itself is `blend_at_corners`, shared with
+        // `reflectance_at_facet` so the moisture that grounds a wetness
+        // reading there is the SAME number this document emits.
+        let blend = |value: &dyn Fn(Vertex) -> f64| -> f64 { blend_at_corners(&weights, value) };
         let elevation_m = blend(&|c| self.terrain.globe().elevation.get(c).get());
         // `from_metres`, not a subtraction: the left operand is a four-corner
         // BLEND, not any single vertex's reading, so there is no pair of
@@ -1093,28 +1237,7 @@ impl LocaleContext {
             Some(st) => self.expr_at_stratum(best.0, st),
             None => self.climate.biome_expr_at(best.0),
         };
-        // Wetness is a budget and an allocation (The Rill, R-7/R-8): the
-        // climate supply this room's vertices receive, redistributed by where the
-        // room sits relative to its own sub-vertex watercourse. Grounded only
-        // where the axis means ground wetness — at sea the same axis is the
-        // set of the current, on ice it is snow cover, and in the rock column
-        // it is seep, and a river's proximity governs none of those.
-        let grounded = crate::micro::wetness_is_grounded(expr).then(|| {
-            let globe = self.terrain.globe();
-            crate::micro::grounded_wetness(
-                fields.moisture,
-                rill_reading(
-                    addr.centroid(),
-                    self.terrain.channels(),
-                    globe,
-                    self.terrain.geosphere(),
-                    &self.index,
-                    // `Drawn`, never `Even`: `Even` is R-5's falsification
-                    // arm and is not a production partition.
-                    &CatchmentCut::Drawn(globe.rill_partition_seed()),
-                ),
-            )
-        });
+        let grounded = self.grounded_wetness_for(addr, expr, fields.moisture);
         let micro = crate::micro::micro_field(addr.seed(self.seed), grounded);
         let mut regime = crate::grammar::derived_regime(self.seed, addr, expr, substrate, micro);
         if let Some(placed) = self.budget.regime_at(best.0) {
@@ -2168,6 +2291,161 @@ mod tests {
             checked > 500,
             "too few (seed, vertex) pairs swept to trust this check; got {checked}"
         );
+    }
+
+    /// The first grid-level facet in `ctx` whose surface biome expression
+    /// grounds its wetness axis, walking the globe's own vertices in order.
+    /// Searched rather than hardcoded: an address literal would silently
+    /// stop naming a grounded room the next time the mesh or the biome fit
+    /// moves, and the test would then pass by testing nothing.
+    fn a_grounded_facet(ctx: &LocaleContext) -> (Facet, [(Vertex, u64); 4]) {
+        let geo = ctx.climate.geosphere();
+        let depth = ctx.globe_level();
+        for i in 0..geo.vertex_count() as u32 {
+            let addr = Facet::containing(geo.position(Vertex(i)), depth);
+            let Some(weights) = addr.corner_weights(geo, &ctx.index) else {
+                continue;
+            };
+            let expr = ctx.climate.biome_expr_at(dominant_corner(&weights).0);
+            if crate::micro::wetness_is_grounded(expr) {
+                return (addr, weights);
+            }
+        }
+        panic!("seed 42 has no facet whose wetness axis is ground wetness");
+    }
+
+    /// The first biome expression on the globe whose wetness axis is NOT
+    /// ground wetness — sea current or snow cover. Searched for the same
+    /// reason [`a_grounded_facet`] is.
+    fn an_ungrounded_expr(ctx: &LocaleContext) -> BiomeExpr {
+        let geo = ctx.climate.geosphere();
+        for i in 0..geo.vertex_count() as u32 {
+            let expr = ctx.climate.biome_expr_at(Vertex(i));
+            if !crate::micro::wetness_is_grounded(expr) {
+                return expr;
+            }
+        }
+        panic!("seed 42 has no vertex whose wetness axis is not ground wetness");
+    }
+
+    /// FIRES WHEN: `grounded_wetness_for` stops being the climate moisture
+    /// supply redistributed by the room's own watercourse — dropped,
+    /// scaled, or resolved against a different catchment partition.
+    ///
+    /// **Why this test exists at the UNIT tier specifically** (Task 3 fix
+    /// round, Finding 1). The extraction that created this helper was
+    /// covered only by `tests/suite/wetness_reading.rs`, and a 0.5x scaling
+    /// of `moisture` inside it was caught by exactly ONE assertion there —
+    /// an integration test absent from `docs/timings/subfloor-roster.tsv`.
+    /// All 57 of this crate's unit tests stayed green under that mutation,
+    /// so `make gate-commit` would have passed a corrupted grounding, on the
+    /// function the world map is about to call for every tile it paints.
+    ///
+    /// Three clauses, because no one of them discriminates alone:
+    ///
+    /// 1. On a grounded expression the helper returns `Some`, and the value
+    ///    is EXACTLY `grounded_wetness(moisture, rill_reading(…))`
+    ///    recomposed here from the crate's own published pieces. This is the
+    ///    clause a scaling, a swapped operand or a `CatchmentCut::Even`
+    ///    fails — the composition is restated on purpose, because a private
+    ///    helper's contract is what it composes.
+    /// 2. That value differs from the ungrounded reading the SAME address
+    ///    would take (`micro_field(seed, None)`, which is address noise), so
+    ///    clause 1 is not pinning a no-op and a dropped grounding reddens.
+    /// 3. On a non-grounded expression the helper returns `None` — the
+    ///    predicate half, which is what keeps sea current and snow cover out
+    ///    of a reading about rivers.
+    #[test]
+    fn the_grounded_wetness_is_the_moisture_redistributed_by_the_watercourse() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let (addr, weights) = a_grounded_facet(&ctx);
+        let expr = ctx.climate.biome_expr_at(dominant_corner(&weights).0);
+        let moisture = blend_at_corners(&weights, &|c| ctx.climate.moisture_at(c));
+
+        let got = ctx
+            .grounded_wetness_for(&addr, expr, moisture)
+            .expect("clause 1: a grounded expression must ground its wetness");
+
+        // Clause 1: the composition, restated from the published pieces.
+        let globe = ctx.terrain.globe();
+        let want = crate::micro::grounded_wetness(
+            moisture,
+            rill_reading(
+                addr.centroid(),
+                ctx.terrain.channels(),
+                globe,
+                ctx.terrain.geosphere(),
+                &ctx.index,
+                &CatchmentCut::Drawn(globe.rill_partition_seed()),
+            ),
+        );
+        assert_eq!(
+            got, want,
+            "grounded_wetness_for is no longer the climate moisture ({moisture}) \
+             redistributed by this room's own drawn-catchment rill reading"
+        );
+
+        // Clause 2: NON-VACUITY — the grounding actually moves the wetness
+        // this room reads, so clause 1 is not pinning a value the ungrounded
+        // path would have produced anyway.
+        let room_seed = addr.seed(ctx.seed);
+        let grounded_field = crate::micro::micro_field(room_seed, Some(got));
+        let ungrounded_field = crate::micro::micro_field(room_seed, None);
+        assert_ne!(
+            grounded_field.wetness, ungrounded_field.wetness,
+            "the grounded and ungrounded wetness agree at this address, so clause 1 \
+             would pass with the grounding removed"
+        );
+
+        // Clause 3: the predicate half. A biome whose wetness axis is not
+        // ground wetness grounds nothing, whatever the moisture reads —
+        // asserted at the SAME address, so the only thing that varies
+        // between this call and the one above is the expression.
+        let ungrounded_expr = an_ungrounded_expr(&ctx);
+        assert_eq!(
+            ctx.grounded_wetness_for(&addr, ungrounded_expr, moisture),
+            None,
+            "a biome whose wetness axis is not ground wetness must ground nothing"
+        );
+    }
+
+    /// [`LocaleContext::reflectance_at_facet_cached`] with a prefilled memo
+    /// must return the identical curve the uncached path does. The cache is
+    /// a nearest-vertex search skipped, never a different answer, and this
+    /// repository's byte-identity guarantee is the reason that has to be
+    /// asserted rather than assumed — no generated artifact exercises this
+    /// path, so `make rebaseline` cannot see it.
+    ///
+    /// **This is the cheap half, on purpose.** The exhaustive check — every
+    /// cached reader, over a walked neighbourhood, on cache HITS and cache
+    /// MISSES both — is
+    /// `every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill`
+    /// below, which costs several seconds and so sits above the sub-floor
+    /// duration threshold `make gate-commit` selects on. This one is a hit
+    /// and a `None` at one address in 0.39 s, which is what makes it
+    /// eligible for the commit gate at all.
+    #[test]
+    fn the_memoized_reflectance_is_the_uncached_one() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let (addr, _) = a_grounded_facet(&ctx);
+        let at = WorldTime::GENESIS;
+
+        let mut memo = hornvale_kernel::RoomMeshMemo::default();
+        let geo = ctx.climate.geosphere();
+        addr.corner_weights_memo(geo, &ctx.index, &mut memo)
+            .expect("a grid-level facet resolves");
+
+        let plain = ctx.reflectance_at_facet(&addr, at).unwrap();
+        let cached = ctx
+            .reflectance_at_facet_cached(&addr, at, Some(&memo))
+            .unwrap();
+        assert_eq!(plain.get(), cached.get());
+
+        // And `cache: None` is the base method exactly.
+        let no_cache = ctx.reflectance_at_facet_cached(&addr, at, None).unwrap();
+        assert_eq!(plain.get(), no_cache.get());
     }
 
     #[test]
@@ -3581,7 +3859,7 @@ mod tests {
     }
 
     #[test]
-    fn the_five_cached_readers_bit_equal_their_recomputing_siblings_with_a_partial_prefill() {
+    fn every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill() {
         // The-waymark fix round, Finding 1: a PREFILLED, READ-ONLY cache
         // (never mutated by the readers themselves) must still be
         // byte-identical to the raw recomputing siblings, on BOTH a cache
@@ -3601,7 +3879,10 @@ mod tests {
 
         // Prefill only the EVEN-indexed rooms (under `&mut`) — the rest stay
         // deliberately un-prefilled, so this run exercises both a hit and a
-        // miss for every one of the five readers.
+        // miss for every one of the readers below. The count is deliberately
+        // NOT in the name or this comment: a sixth (`reflectance_at_facet_
+        // cached`, The Wash) arrived after the name was written, and a name
+        // that carries a tally goes quietly false the moment one does.
         let mut memo = hornvale_kernel::RoomMeshMemo::new();
         let geo = ctx.climate().geosphere();
         let mut prefilled = 0usize;
@@ -3673,6 +3954,21 @@ mod tests {
                 got_hazards, expected_hazards,
                 "hazards_at_cached at {addr:?}"
             );
+
+            // The sixth reader (The Wash, Task 3): the world map's colour
+            // path. `Reflectance` has no `Eq`, so compare the curves.
+            let expected_refl = ctx.reflectance_at_facet(addr, at).map(|r| *r.get());
+            let got_refl = ctx
+                .reflectance_at_facet_cached(addr, at, Some(&memo))
+                .map(|r| *r.get());
+            assert_eq!(
+                expected_refl.is_ok(),
+                got_refl.is_ok(),
+                "reflectance_at_facet_cached Ok/Err mismatch at {addr:?}"
+            );
+            if let (Ok(exp), Ok(got)) = (expected_refl, got_refl) {
+                assert_eq!(exp, got, "reflectance_at_facet_cached at {addr:?}");
+            }
         }
 
         // `cache: None` must also be byte-identical (always a miss).

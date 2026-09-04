@@ -453,6 +453,7 @@
 - [The Minute](./chronicle/the-minute.md)
 - [The Terrier](./chronicle/the-terrier.md)
 - [The Hachure](./chronicle/the-hachure.md)
+- [The Wash](./chronicle/the-wash.md)
 - [The Plat](./chronicle/the-plat.md)
 - [The Pallet](./chronicle/the-pallet.md)
 - [The Weft](./chronicle/the-weft.md)
