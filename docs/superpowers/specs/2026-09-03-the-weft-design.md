@@ -158,6 +158,16 @@ falsification is that "address-hashed noise leaked into a band edge".
 | **correlation length** | how far you walk before the answer changes, **in facets** | texture vs. rhythm vs. landmark |
 | **contextuality** | mixing ratio, macro state against free noise | 1 = wallpaper (macro-grounded texture), 0 = speckle (spatially incoherent relative to any cause); the craft is between |
 
+**Three states, not two, and an earlier draft of this spec collapsed them.**
+Address-hashed noise is *spatially incoherent* — adjacent facets uncorrelated,
+the thing §5.1 bans outright and The Ford's metric catches. Low contextuality is
+something else: the field is still position-continuous and therefore smooth, it
+is simply **uncorrelated with any macro cause**. High contextuality is the third
+— the feature restates the macro field and adds nothing local. H2 forbids the
+first; the erratic is deliberately the second; wallpaper is the third. An
+earlier draft called the erratic "near-wallpaper", which named the wrong failure
+and followed from §5.2's endpoints being written inverted.
+
 **Nothing normalises across kinds.** Per-kind prevalences do not sum to 1. A
 simplex constraint is exactly the structural cap #1 rider 3 forbids: it would
 make raising enterable density necessarily lower something else. Every kind's
@@ -226,7 +236,8 @@ independently rather than all set to a middle value.
 | **thicket / brake** | high — productivity × moisture | long | no, texture | attacks biome monotony directly |
 | **erratic / scatter** | **low — mostly free noise** | short | no | the **negative control** |
 
-The erratic is deliberately near-wallpaper so the legibility metric can be shown
+The erratic sits deliberately at the **low-contextuality** end — mostly free
+noise, uncorrelated with any macro cause — so the legibility metric can be shown
 to **discriminate**. If springs and erratics score alike, the metric measures
 nothing — and that is better learned from a designed control than inferred from
 a uniformly good-looking number.
