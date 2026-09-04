@@ -9112,6 +9112,22 @@ struct WeftWalkPool {
 }
 
 fn weft_walk_pool(view: &ClimateView) -> WeftWalkPool {
+    weft_walk_pool_with_prepared_prevalence(view, hornvale_worldgen::prevalence_with_weights)
+}
+
+/// The walk pool's prepared-prevalence seam. The caller-owned corner weights
+/// live for one eligible facet evaluation and are shared by that facet's four
+/// kind evaluations; no prepared value survives a step or a world view.
+fn weft_walk_pool_with_prepared_prevalence(
+    view: &ClimateView,
+    mut prepared_prevalence: impl FnMut(
+        hornvale_worldgen::WeftKind,
+        &hornvale_kernel::Facet,
+        [(Vertex, u64); 4],
+        &hornvale_worldgen::FieldPack,
+        Seed,
+    ) -> f64,
+) -> WeftWalkPool {
     let terrain = view.terrain();
     let geo = terrain.geosphere();
     let ctx = view.weft_ctx();
@@ -9140,8 +9156,7 @@ fn weft_walk_pool(view: &ClimateView) -> WeftWalkPool {
             }
             let mut step = [false; 4];
             for (slot, kind) in hornvale_worldgen::WeftKind::ALL.into_iter().enumerate() {
-                let p = hornvale_worldgen::prevalence(kind, &facet, geo, index, pack, seed)
-                    .expect("corner_weights just returned Some above");
+                let p = prepared_prevalence(kind, &facet, weights, pack, seed);
                 step[slot] = hornvale_worldgen::occurs(kind, &facet, seed, p);
             }
             walk.push(step);
@@ -10803,6 +10818,48 @@ mod tests {
         assert_eq!(
             prepared_evaluations, expected,
             "the grid path must evaluate four kinds through the prepared-weight seam for every facet"
+        );
+    }
+
+    /// Regression direction: replacing the `prepared_prevalence(...)` call in
+    /// the real walk-pool loop with public `prevalence(...)` leaves every
+    /// metric bit unchanged but makes every count zero. Positive walk, step,
+    /// and eligible-evaluation counts keep the witness tied to the measured
+    /// seed-42 path rather than an empty fixture.
+    #[test]
+    fn weft_walk_uses_prepared_prevalence_for_every_kind() {
+        let view = ClimateView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut prepared_by_kind = [0usize; 4];
+
+        let pool =
+            weft_walk_pool_with_prepared_prevalence(&view, |kind, facet, weights, pack, seed| {
+                let slot = hornvale_worldgen::WeftKind::ALL
+                    .into_iter()
+                    .position(|candidate| candidate == kind)
+                    .expect("the evaluator receives a registered Weft kind");
+                prepared_by_kind[slot] += 1;
+                hornvale_worldgen::prevalence_with_weights(kind, facet, weights, pack, seed)
+            });
+
+        assert!(
+            !pool.walks.is_empty(),
+            "the real seed-42 walk fixture produced no retained walks"
+        );
+        let retained_steps: usize = pool.walks.iter().map(Vec::len).sum();
+        assert!(
+            retained_steps > 0,
+            "the real seed-42 walk fixture retained no steps"
+        );
+        let eligible_steps = prepared_by_kind[0];
+        assert!(
+            eligible_steps > 0,
+            "the real seed-42 walk path evaluated no eligible steps through the prepared seam"
+        );
+        assert!(
+            prepared_by_kind
+                .iter()
+                .all(|&evaluations| evaluations == eligible_steps),
+            "every eligible step must evaluate all four kinds through the prepared-weight seam: {prepared_by_kind:?}"
         );
     }
 
