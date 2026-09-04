@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 708 |
-| … file-level | 665 |
+| Quantity consts judged (the denominator) | 709 |
+| … file-level | 666 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 34 |
-| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 167 |
-| Excluded: declared non-quantity type | 498 |
-| **Every `const` the walk touched** | **1373** |
+| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 170 |
+| Excluded: declared non-quantity type | 499 |
+| **Every `const` the walk touched** | **1378** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **632**: file-level
+nor the whole `file-level` row — it is **633**: file-level
 constants of those five types. The `file-level` row itself is
-**665**, and the denominator is **708**; the difference is
+**666**, and the denominator is **709**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -68,7 +68,7 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 515 |
+| `f64` | 516 |
 | `i32` | 7 |
 | `i64` | 2 |
 | `u32` | 76 |
@@ -99,7 +99,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[Role]` | 2 |
 | `&[VerbRow]` | 1 |
 | `&str` | 255 |
-| `()` | 5 |
+| `()` | 6 |
 | `(…)` | 10 |
 | `AffectLabel` | 1 |
 | `ChannelMask` | 1 |
@@ -157,12 +157,12 @@ bare count would hide a quantity someone had wrongly denied.
 | per-people | 1 |
 | per-species | 32 |
 | per-world | 5 |
-| universal | 87 |
+| universal | 88 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 708 |
+| _total_ | 709 |
 
-Declared: **708 of 708**. Undeclared is backlog; a malformed
+Declared: **709 of 709**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -211,18 +211,18 @@ counts are already the Coverage table above. 40 finding(s).
 | `windows/vessel/src/liveness.rs:3132` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
 | `windows/vessel/src/liveness.rs:3149` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
 | `windows/vessel/src/liveness.rs:3160` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
-| `windows/vessel/src/liveness.rs:4364` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
-| `windows/vessel/src/liveness.rs:4951` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
+| `windows/vessel/src/liveness.rs:4505` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
+| `windows/vessel/src/liveness.rs:5092` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
 | `windows/vessel/src/session.rs:513` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
 | `windows/vessel/src/session.rs:523` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
 
 ## The contested middle
 
-345 of the 708 constants sit in a file mentioning one of
+346 of the 709 constants sit in a file mentioning one of
 the kind-adjacency markers above, across 133 of the 311 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 345 of them are declared.
+where `FATIGUE_RISE` lived. 346 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -249,5 +249,5 @@ in the inclusive direction on purpose.
 | settlement | 4 | 0 | 0 | 4 |
 | species | 39 | 0 | 0 | 39 |
 | terrain | 152 | 0 | 0 | 152 |
-| vessel | 101 | 0 | 0 | 101 |
+| vessel | 102 | 0 | 0 | 102 |
 | worldgen | 133 | 0 | 0 | 133 |

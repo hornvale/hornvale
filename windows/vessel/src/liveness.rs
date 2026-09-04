@@ -23,7 +23,7 @@ use hornvale_kernel::{
     WorldTime,
 };
 use hornvale_locale::LocaleContext;
-use hornvale_species::{ActivityCycle, ThermalStrategy};
+use hornvale_species::{ActivityCycle, HabitatRealm, ThermalStrategy};
 
 /// A game-layer predicate: an agent's room position on a day. Non-functional
 /// (position changes over sim time — c5's kind-change shape); the current
@@ -3610,10 +3610,11 @@ impl SiteGrade {
 /// suppressed often enough here that a further suppression buys nothing a
 /// name would not buy better.
 ///
-/// Both fields are looked up ONCE, at [`creature_fatigue`], which is the
+/// All THREE fields are looked up ONCE, at [`creature_fatigue`], which is the
 /// single door the read and the mover both reach fatigue through; a caller
 /// with no species data of its own (every fixture in
 /// `tests/suite/fatigue_stock.rs`) states whatever it needs the fold to see.
+/// (Two, until The Tenon added `substrate`.)
 /// type-audit: bare-ok(ratio: rise), bare-ok(ratio: afforded_gain)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SleepTraits {
@@ -3628,6 +3629,17 @@ pub struct SleepTraits {
     /// bout graded [`SiteGrade::Afforded`]; `1.0` means *no bonus*, never
     /// *no recovery*.
     pub afforded_gain: f64,
+    /// The sleeper's substrate preference — how much this body gets out of
+    /// lying on a FOUND surface of a given hardness, resolved from its
+    /// habitat realm by [`substrate_for`] (The Tenon).
+    ///
+    /// Read only by [`grade_of`], and only for a
+    /// [`crate::affordance::Substrate::Natural`] surface: a made surface is
+    /// fitted to whoever built it, so the preference does not discriminate
+    /// against it at all (spec §5.2). It is a curve rather than a scalar
+    /// because a scalar cannot say the one thing this relation exists to
+    /// say — that two kinds order two surfaces OPPOSITELY.
+    pub substrate: ConditionResponse,
 }
 
 /// The world-side inputs the rest-site grade needs: the terrain the bout
@@ -4151,6 +4163,10 @@ fn creature_fatigue(
                 &npc.species,
                 Some(&hornvale_species::sleep_grade_registry()),
             ),
+            substrate: substrate_for(
+                &npc.species,
+                Some(&hornvale_species::habitat_realm_registry()),
+            ),
         },
         terrain.day_ticks(),
         Some(&RestSites { terrain, body: npc }),
@@ -4237,6 +4253,131 @@ fn sleep_grade_for(species: &str, registry: Option<&SleepGradeTable>) -> f64 {
         .and_then(|r| r.get_by_label(species))
         .copied()
         .unwrap_or(DEFAULT_SLEEP_GRADE)
+}
+
+/// The authored habitat-realm roster's shape (The Tenon) — the third member
+/// of the [`FatigueRiseTable`] / [`SleepGradeTable`] family above, borrowed
+/// rather than built here for exactly the same reason: [`creature_fatigue`]
+/// builds every roster ONCE so the read and the mover cannot resolve them
+/// differently.
+type HabitatRealmTable =
+    hornvale_kernel::component::ComponentStore<hornvale_kernel::KindId, HabitatRealm>;
+
+/// The species' SUBSTRATE preference — the curve [`grade_of`] evaluates a
+/// found surface's hardness against — derived from a caller-supplied
+/// `hornvale_species::habitat_realm_registry()` (The Tenon).
+///
+/// **The miss case is not a fallback here, and that is the difference from
+/// its two siblings.** [`fatigue_rise_for`] and [`sleep_grade_for`] each read
+/// a TOTAL table and treat absence as a typo, answering a documented neutral
+/// value. `habitat_realm_registry` is SPARSE by construction — its own doc
+/// says "**only** kinds that are not `Surface` appear" — so absence is a
+/// stated fact about the species rather than an unknown, and
+/// [`HabitatRealm::SURFACE`] (whose doc is *"the realm a kind absent from
+/// `habitat_realm_registry` carries"*) is the roster's own answer, not a
+/// guess standing in for one. An absent `registry` argument reads the same
+/// way, because a caller with no species data has no realm to state.
+///
+/// The realm→curve step itself lives in `domains/species`
+/// (`substrate_response`), where the biology is; this function is only the
+/// lookup, and it is here rather than there because a domain crate takes a
+/// resolved realm and never a species name (The Tenon, Task 3).
+/// type-audit: bare-ok(identifier-text: species)
+fn substrate_for(species: &str, registry: Option<&HabitatRealmTable>) -> ConditionResponse {
+    hornvale_species::substrate_response(
+        registry
+            .and_then(|r| r.get_by_label(species))
+            .copied()
+            .unwrap_or(HabitatRealm::SURFACE),
+    )
+}
+
+/// The suitability a species retains on a found surface at ANY hardness —
+/// [`ConditionResponse::eval`]'s `floor` argument, and the only authored
+/// number [`grade_of`] carries (The Tenon, spec §5).
+///
+/// **What the floor IS.** Part of what a found rest surface is worth has
+/// nothing to do with whether its substrate suits the body: there is
+/// something under it that is not the bare road, and that much holds however
+/// wrong the substrate is for the kind lying on it. This is that share — the
+/// residual worth of lying on any surface at all — so a badly matched
+/// surface degrades TOWARD bare ground rather than becoming worthless, which
+/// is what a floor of `0.0` would make it.
+///
+/// **Bounded rather than derived, and the bracket below states both bounds.**
+/// At `0.0` the worst-matched surface is exactly the road and a found surface
+/// a kind dislikes stops being a surface at all; at `1.0` the substrate can
+/// no longer discriminate between two surfaces for anybody, which deletes the
+/// one thing this whole relation exists to express. A fifth is the plainest
+/// reading of "some, and much less than all" between those two refusals.
+/// plumb: universal(the share of a found rest surface's worth that comes from there being anything under the body at all rather than from the substrate suiting its kind -- a residual every body retains on every surface, which is why it does not vary by world, species or people)
+const FIT_FLOOR: f64 = 0.2;
+
+/// Both refusals in [`FIT_FLOOR`]'s doc, at COMPILE time rather than test
+/// time — the same shape [`DEFAULT_SLEEP_GRADE`]'s own bracket above takes.
+const _: () = assert!(
+    FIT_FLOOR > 0.0 && FIT_FLOOR < 1.0,
+    "the fit floor must leave a found surface worth strictly more than the \
+     bare road and strictly less than a perfectly matched one, or the \
+     substrate half of the rest relation says nothing"
+);
+
+/// What a body of this kind gets out of lying down on a thing of this kind:
+/// the multiplier a bout taken on it repays at (The Tenon, spec §5).
+///
+/// ```text
+///   grade(species, kind) = 1.0 + (S - 1.0) * offer(kind) * fit(species, kind)
+///
+///   fit = 1.0                                  if the surface is Made
+///       = substrate.eval(hardness, FIT_FLOOR)  if it is Natural(hardness)
+/// ```
+///
+/// `S` is `sleeper.afforded_gain` — `hornvale_species::
+/// sleep_grade_registry`'s row, already resolved by [`sleep_grade_for`], so a
+/// species that table has never heard of reads [`DEFAULT_SLEEP_GRADE`] here
+/// exactly as it does everywhere else and never a silent `1.0`.
+///
+/// **A kind with no `rest` row reads `1.0`** — no bonus, never no recovery.
+/// That is the same inversion [`DEFAULT_FATIGUE_RISE`]'s doc records
+/// rejecting, and it is the honest answer rather than a fallback: a kind
+/// carrying no [`crate::affordance::RestSurface`] carries no
+/// [`crate::affordance::ObjectProperty::SupportsRest`] either (asserted both
+/// ways by `supports_rest_and_a_rest_surface_imply_each_other`), so there is
+/// nothing to lie on and nothing to grade, not a missing measurement.
+///
+/// **`Made` yields a LITERAL `1.0`, and that literal is load-bearing.**
+/// [`ConditionResponse::eval`] clamps to `[0, 1]` and can answer
+/// `0.9999999999999999` at a hardness that merely happens to sit near a
+/// curve's peak; a literal cannot. It is what makes
+/// `grade(species, bed) == sleep_grade_registry[species]` a bit-for-bit
+/// identity rather than an approximation — see
+/// `the_bed_column_reproduces_the_shipped_sleep_grade_for_every_species`,
+/// which states the arithmetic and the bound it is coupled to.
+/// type-audit: bare-ok(ratio: return)
+// UNCALLED IN THE PRODUCTION BUILD UNTIL THE TENON'S TASK 5, which is what
+// makes this task byte-identical: `SiteGrade::gain` still reads
+// `SleepTraits::afforded_gain` directly, so nothing a world renders passes
+// through here yet and no artifact can move. The two tests below are the only
+// callers today, which is why `dead_code` fires in the lib build and not in
+// the test build. DELETE THIS ALLOW IN TASK 5 — `#[expect]` cannot be used
+// instead, because under `cfg(test)` the lint does not fire at all and the
+// unfulfilled expectation would itself fail `--all-targets -D warnings`.
+#[allow(dead_code)]
+fn grade_of(
+    sleeper: &SleepTraits,
+    kind: KindId,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+) -> f64 {
+    let Some(surface) = objects.get(&kind).and_then(|t| t.rest) else {
+        return 1.0;
+    };
+    let fit = match surface.substrate {
+        crate::affordance::Substrate::Made => 1.0,
+        crate::affordance::Substrate::Natural(hardness) => {
+            sleeper.substrate.eval(hardness, FIT_FLOOR)
+        }
+    };
+    1.0 + (sleeper.afforded_gain - 1.0) * surface.offer * fit
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -8973,6 +9114,23 @@ mod tests {
     /// reads [`SiteGrade::Bare`] and this value is never consulted; the
     /// fixtures' predictions are bit-for-bit what they were before Task 4.
     const SITE_GAIN: f64 = 1.5;
+
+    /// The substrate companion to [`FATIGUE_RISE`] and [`SITE_GAIN`] above
+    /// (The Tenon), mirroring `hornvale_species::substrate_response`'s
+    /// surface curve — the realm every kind absent from
+    /// `habitat_realm_registry` carries, human's included. Every call it is
+    /// passed to also passes `sites: None`, so every bout reads
+    /// [`SiteGrade::Bare`] and this value is never consulted; the fixtures'
+    /// predictions are bit-for-bit what they were before The Tenon.
+    ///
+    /// Written out rather than calling `substrate_response` because a
+    /// fixture that asks production for its own expected value cannot fail
+    /// when production changes, and these fixtures exist to notice that.
+    const FIXTURE_SUBSTRATE: ConditionResponse = ConditionResponse {
+        optimum: 0.0,
+        width: 0.5,
+        devotion: 1.0,
+    };
 
     /// Test-only helper: fits the coexistence stack once and reads the `k`
     /// densest wild concentrations — the prelude `derive_wild_npcs` used to
@@ -17171,7 +17329,8 @@ mod tests {
                         t,
                         SleepTraits {
                             rise: FATIGUE_RISE,
-                            afforded_gain: SITE_GAIN
+                            afforded_gain: SITE_GAIN,
+                            substrate: FIXTURE_SUBSTRATE,
                         },
                         None,
                         None
@@ -17208,6 +17367,7 @@ mod tests {
                         SleepTraits {
                             rise: FATIGUE_RISE,
                             afforded_gain: SITE_GAIN,
+                            substrate: FIXTURE_SUBSTRATE,
                         },
                         None,
                         None,
@@ -17700,7 +17860,8 @@ mod tests {
                 at(0.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17722,7 +17883,8 @@ mod tests {
                 at(2.0),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17740,7 +17902,8 @@ mod tests {
                 at(2.25),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17759,7 +17922,8 @@ mod tests {
                 at(3.0),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17777,7 +17941,8 @@ mod tests {
                 at(100.0),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17801,7 +17966,8 @@ mod tests {
                 at(2.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17817,7 +17983,8 @@ mod tests {
                 at(2.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17827,7 +17994,8 @@ mod tests {
                 at(2.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17902,7 +18070,8 @@ mod tests {
                 day,
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17928,6 +18097,7 @@ mod tests {
                 SleepTraits {
                     rise: FATIGUE_RISE,
                     afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None,
@@ -21086,6 +21256,146 @@ mod tests {
             mismatches.len(),
             field.nodes.len(),
             &mismatches[..mismatches.len().min(5)]
+        );
+    }
+
+    /// A [`SleepTraits`] for one species, built the way [`creature_fatigue`]
+    /// builds one — the three registry lookups and nothing else (The Tenon,
+    /// Task 4). It exists because `grade_of` takes an already-resolved
+    /// sleeper rather than a species name, which is the arrangement decision
+    /// 0697 built the struct for; a test that wants a species must therefore
+    /// resolve one, exactly as the single production door does.
+    fn sleep_traits_for(species: &str) -> SleepTraits {
+        SleepTraits {
+            rise: fatigue_rise_for(species, Some(&hornvale_species::fatigue_rise_registry())),
+            afforded_gain: sleep_grade_for(
+                species,
+                Some(&hornvale_species::sleep_grade_registry()),
+            ),
+            substrate: substrate_for(species, Some(&hornvale_species::habitat_realm_registry())),
+        }
+    }
+
+    /// **P1.** The bed column must reproduce `sleep_grade_registry` for every
+    /// species, EXACTLY — a byte comparison, not a tolerance. Decision 0697
+    /// ruled that no kind in any world gains more from a bed than it did
+    /// before that table existed and that the peoples keep their number byte
+    /// for byte; The Tenon reinterprets the table (it now means "the grade on
+    /// a fully offering made surface") rather than re-authoring it, and this
+    /// is what holds that claim.
+    ///
+    /// **Why a bit comparison is a theorem here and not a hope, and what it
+    /// is coupled to.** `bed` is [`crate::affordance::Substrate::Made`] at
+    /// `offer = 1.0`, so [`grade_of`] reduces to `1.0 + (S - 1.0) * 1.0 * 1.0`
+    /// with both factors LITERAL `1.0`s. Multiplying by a literal `1.0` is
+    /// exact, so the expression is `1.0 + (S - 1.0)`; by **Sterbenz's lemma**
+    /// `S - 1.0` is exact for any `S` in `[1, 2]`, and adding `1.0` back
+    /// recovers `S` exactly because `S` is representable. The table's own
+    /// bound is `[1.0, 1.5]`, asserted in `hornvale_species`'s coverage suite
+    /// — well inside `[1, 2]`.
+    ///
+    /// **So this test and that bound are now COUPLED.** A future
+    /// `sleep_grade_registry` row authored above `2.0` leaves Sterbenz's
+    /// interval and could break the identity. Whoever raises that bound
+    /// should meet this sentence rather than a mystery red: the repair is to
+    /// decide what `grade(species, bed)` is supposed to mean above `2.0`, not
+    /// to loosen this assertion to a tolerance.
+    ///
+    /// The count assertion is not decoration: a loop over an empty or
+    /// truncated store passes every assertion inside it.
+    #[test]
+    fn the_bed_column_reproduces_the_shipped_sleep_grade_for_every_species() {
+        let grades = hornvale_species::sleep_grade_registry();
+        let objects = crate::affordance::object_registry();
+        let mut checked = 0usize;
+        for (kind, shipped) in grades.iter() {
+            let got = grade_of(
+                &sleep_traits_for(kind.0),
+                hornvale_thing::kinds::BED,
+                &objects,
+            );
+            assert_eq!(
+                got.to_bits(),
+                shipped.to_bits(),
+                "{kind:?} on a bed reads {got} but its shipped grade is {shipped}"
+            );
+            checked += 1;
+        }
+        assert_eq!(
+            checked, 39,
+            "the roster is 39 rows; a smaller number means the loop is not \
+             seeing the table this assertion is about"
+        );
+    }
+
+    /// **P2's function half.** Two species order two FOUND surfaces
+    /// oppositely, through [`grade_of`] — not through
+    /// `hornvale_species::substrate_response` (The Tenon, Task 4).
+    ///
+    /// **This is a different claim from Task 3's, and the second can fail
+    /// while the first passes.** Task 3's test proves the two CURVES
+    /// discriminate. This one proves the discrimination survives the
+    /// combination: `offer`, `FIT_FLOOR`, the `S - 1.0` scaling and the
+    /// `Made` short-circuit all sit between a curve and a grade, and any of
+    /// them could flatten the ordering without touching the curves at all.
+    ///
+    /// **The pair is human and drow, and the choice is what makes it a
+    /// REVERSAL rather than two different gains.** Both carry
+    /// `MADE_FOR_THE_BODY` (`1.50`) in `sleep_grade_registry`, so `S` is
+    /// identical and cannot be what orders them; they differ in
+    /// `habitat_realm_registry` and in nothing else this function reads.
+    ///
+    /// **It builds its own [`crate::affordance::ObjectTraits`] rather than
+    /// reading `object_registry`, and that is a limitation to state rather
+    /// than hide**: until The Tenon's Task 7 the only rest surface in the
+    /// registry is `bed`, which is `Made` and therefore graded by no
+    /// substrate at all — there is no second surface to order it against.
+    /// Task 8 is what proves a reversal reaches a WORLD; this test proves
+    /// only that the function expresses one.
+    #[test]
+    fn two_species_order_two_found_surfaces_oppositely_through_the_grade() {
+        use crate::affordance::{ObjectProperty, ObjectTraits, RestSurface, Substrate};
+
+        const YIELDING: KindId = KindId("test-yielding-surface");
+        const HARD: KindId = KindId("test-hard-surface");
+
+        let surface = |substrate| ObjectTraits {
+            properties: [ObjectProperty::SupportsRest].into_iter().collect(),
+            rest: Some(RestSurface {
+                offer: 1.0,
+                substrate,
+            }),
+        };
+        let objects: ComponentStore<KindId, ObjectTraits> = [
+            (YIELDING, surface(Substrate::Natural(0.0))),
+            (HARD, surface(Substrate::Natural(1.0))),
+        ]
+        .into_iter()
+        .collect();
+
+        let human = sleep_traits_for("human");
+        let drow = sleep_traits_for("drow");
+        assert_eq!(
+            human.afforded_gain, drow.afforded_gain,
+            "the pair is only a REVERSAL if the two species' sleep-grade rows \
+             are identical — otherwise the ordering could come from `S` and \
+             say nothing about the substrate"
+        );
+
+        let human_yielding = grade_of(&human, YIELDING, &objects);
+        let human_hard = grade_of(&human, HARD, &objects);
+        let drow_yielding = grade_of(&drow, YIELDING, &objects);
+        let drow_hard = grade_of(&drow, HARD, &objects);
+
+        assert!(
+            human_yielding > human_hard,
+            "a surface kind must rest better on the yielding surface: \
+             yielding {human_yielding} vs hard {human_hard}"
+        );
+        assert!(
+            drow_hard > drow_yielding,
+            "a subterranean kind must rest better on the hard surface: \
+             hard {drow_hard} vs yielding {drow_yielding}"
         );
     }
 }

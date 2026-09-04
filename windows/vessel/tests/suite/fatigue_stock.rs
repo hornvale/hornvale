@@ -81,9 +81,20 @@ use hornvale_vessel::liveness::{
 /// a world, and P8 is the one that varies the gain. Named rather than
 /// inlined because the point of the argument is that the fold holds no
 /// species state of its own, and a literal at thirty call sites hides that.
+///
+/// `substrate` mirrors `hornvale_species::substrate_response`'s SURFACE curve
+/// — the realm every kind absent from `habitat_realm_registry` carries — and
+/// is never consulted either, for the same reason `afforded_gain` is not: a
+/// bout with no `sites` argument is graded `Bare` before any surface is
+/// looked at (The Tenon).
 const TRAITS: SleepTraits = SleepTraits {
     rise: 0.3,
     afforded_gain: 1.5,
+    substrate: hornvale_kernel::ConditionResponse {
+        optimum: 0.0,
+        width: 0.5,
+        devotion: 1.0,
+    },
 };
 
 /// A fresh ledger with one entity in it, the entity, and a registry that knows
