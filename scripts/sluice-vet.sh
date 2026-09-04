@@ -57,10 +57,24 @@ echo
 echo "DECISIONS"
 ledger="$HOME/.local/state/hornvale/decision-blocks/blocks.tsv"
 block="$(grep -iE "	(campaign/)?${branch#campaign/}	" "$ledger" 2>/dev/null | awk -F'\t' '{print $3"-"$4}')"
-minted="$(git diff --name-only "origin/main...$sha" 2>/dev/null | grep '^docs/decisions/0' | sed 's|.*/||; s/-.*//')"
+# ADDED files only. `--diff-filter=A` is the whole fix and it is not cosmetic:
+# a three-dot diff lists every decision file the branch TOUCHED, and an
+# AMENDMENT to a ratified decision is a modification, not a mint. Without the
+# filter, campaign/the-minute's additive amendment to 0226 read as a fresh mint,
+# then "collided" with the seven campaign branches that carry 0226 because it has
+# been on main since February. Seven loud false lines on a clean candidate — the
+# cry-wolf failure that trains an operator to skim the one report that must not
+# be skimmed.
+minted="$(git diff --name-only --diff-filter=A "origin/main...$sha" 2>/dev/null | grep '^docs/decisions/0' | sed 's|.*/||; s/-.*//')"
+# Amendments are still worth SEEING — an append-only amendment to a ratified
+# decision is a real act — they are just not mints and must not drive the block
+# or collision checks below.
+amended="$(git diff --name-only --diff-filter=M "origin/main...$sha" 2>/dev/null | grep '^docs/decisions/0' | sed 's|.*/||; s/-.*//')"
 printf '  reserved block: %s\n' "${block:-<none reserved>}"
 # shellcheck disable=SC2086  # $minted is a deliberate word-split list of numbers
 printf '  minted:         %s\n' "$(printf '%s ' $minted)"
+# shellcheck disable=SC2086  # deliberate word-split of a number list
+[ -n "$amended" ] && printf '  amended:        %s  (existing decisions, not mints)\n' "$(printf '%s ' $amended)"
 if [ -n "$minted" ] && [ -n "$block" ]; then
     lo="${block%%-*}"; hi="${block##*-}"
     for n in $minted; do
