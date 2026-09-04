@@ -116,10 +116,43 @@
 //! **No script panicked.** The branch is never taken on a WALK-DERIVED
 //! ledger, because `DriveMovements` commits at the tick's own day and ticks
 //! advance monotonically: the first sighting absorbed for a room already IS
-//! its minimum, so `and_modify`'s comparison is a structural no-op there and
-//! flipping its sense is unobservable. Control B is therefore not a weak
-//! control on these shapes, it is an impossible one, and no longer or luckier
-//! *script* could rescue it.
+//! its minimum, so the `day < *first` condition is never true there.
+//!
+//! # WHAT THAT DOES NOT LICENSE — A CLAIM MADE HERE AND FALSIFIED AT TASK 3
+//!
+//! This paragraph used to continue: "so `and_modify`'s comparison is a
+//! structural no-op there and flipping its sense is unobservable. Control B
+//! is therefore not a weak control on these shapes, it is an impossible one,
+//! and no longer or luckier *script* could rescue it." **Every clause after
+//! the semicolon is false, and the error is worth more than the sentence
+//! was.**
+//!
+//! A panic proves the branch it sits in never FIRES. It says nothing about
+//! what happens when the branch's condition is REWRITTEN — because the
+//! rewritten condition is a different condition. `day > *first` fires on
+//! every revisit at a later day, which on a monotonic walk is the common
+//! case, not the impossible one: control B turns `KnownWater` into a
+//! LATEST-visit map, and a room is then admitted only from its last visit
+//! onward instead of its first. That is a real behaviour change on a real
+//! walk, and Task 3's FOLD-equals-SCAN witnesses redden on **all four**
+//! real-shape sweeps under it, across 324,535 comparisons.
+//!
+//! What Task 1 actually measured is narrower and still true: control B moves
+//! **neither ledger hash**, on any of four scripts, including seed 17 with
+//! its 1,194 past-instant belief reads. The admitted set differs; it reaches
+//! a committed fact only through past-instant read → different admitted set
+//! → different chosen room → different committed route, and that chain never
+//! completes. **So these constants are the WEAKER instrument of the two this
+//! campaign holds** (ledger ruling 8a): a campaign that minted only hash
+//! constants would have shipped control B's behaviour change unseen. Read
+//! them as what they are.
+//!
+//! The mutation that IS invisible everywhere except the hand-built fixture is
+//! a third one, control C — empty the min-keeping arm entirely, so
+//! first-arrival wins. It reddens the descending-order fixture alone. The two
+//! separate cleanly: **the real shapes hold the comparison's SENSE, the
+//! fixture holds the branch's FIRING**, and neither substitutes for the
+//! other.
 //!
 //! **The branch is NOT dead code, and the paragraph above would read as
 //! saying so if it stopped there.** `agent-at` has a second writer:
@@ -272,9 +305,11 @@ fn assert_the_floors(label: &str, run: &WalkRun) {
 ///
 /// **Control A moved this hash** (`0x7394_8823_9689_ce2a` →
 /// `0xb214_b641_3e99_986e`), which is what makes the constant an instrument
-/// rather than a decoration. Control B did not, and cannot on a walk-derived
-/// ledger — see the module doc's mechanism, and the writer that CAN reach
-/// that branch.
+/// rather than a decoration. **Control B did not move it, and that is a
+/// limit of THIS instrument rather than a fact about the fold** — control B
+/// is a real behaviour change that Task 3's FOLD-equals-SCAN witnesses
+/// catch on every real shape. See the module doc's "WHAT THAT DOES NOT
+/// LICENSE".
 #[test]
 fn the_kerf_seed_17_walk_commits_the_expected_ledger_bytes() {
     let run = walk(WATER_BELIEF_SEED);
