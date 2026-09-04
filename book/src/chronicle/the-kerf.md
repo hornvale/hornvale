@@ -4,7 +4,7 @@ A kerf is the width a saw removes. The Kerf removed one resident index from
 the water-belief path without changing a committed byte: the belief now reads
 the first element of `LatestVisit`'s already-sorted per-room visit list.
 
-The deleted `KnownWater` tenant had held one first-visit instant per water
+The deleted `KnownWater` tenant had held one first-visit instant per visited
 room. `LatestVisit` already held every visit for that room in ascending order,
 so its first element supplied the identical admission rule. The read remained
 `O(rooms)`, its order remained `Facet` order, and `Trail` plus `LatestVisit`

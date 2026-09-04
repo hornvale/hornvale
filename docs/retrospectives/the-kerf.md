@@ -1,6 +1,6 @@
 # The Kerf — retrospective
 
-Process, not product. The product is in [the chronicle](../../book/src/chronicle/the-kerf.md), the rulings are in [the campaign ledger](../superpowers/ledgers/2026-09-04-the-kerf.md), and the paired readings are in the spec's §11.
+Process, not product. The product is in [the chronicle](../../book/src/chronicle/the-kerf.md), the rulings are in [the campaign ledger](../superpowers/ledgers/2026-09-04-the-kerf.md), and the three BEFORE plus three AFTER unpaired observations are in the spec's §11.
 
 ## A subtraction still needed a full measurement
 
@@ -28,3 +28,12 @@ That is a local repair to duplicated logic, not evidence for a repository-wide
 shared-predicate law. The campaign minted decision 0756 for the proven
 resident-index criterion and explicitly left 0757 unminted. A future second
 site can establish whether a common abstraction has a real boundary.
+
+## Deferred review minors
+
+All four ledgered minors found a committed home. Task 4's two were repaired in
+the close commit: `session_length_scaling.rs` now describes the two surviving
+tenants and four statements, and `liveness.rs` says that the visit list's first
+element supplies the first-visit instant. Task 5's two were repaired in the
+final close fix: `the_kerf.rs` now describes its live two-fresh-walk guarantee
+and reports both past-instant counts when that two-run floor fails.

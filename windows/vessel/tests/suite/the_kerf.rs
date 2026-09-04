@@ -192,9 +192,10 @@ use hornvale_vessel::{PossessOpts, Session};
 /// route AND whose belief reads run at past instants — the sharper of the two
 /// witnesses. Pinned rather than searched: a search over this property costs a
 /// world build and a twelve-wait walk per candidate seed, which is minutes,
-/// and the sweep that selected it is recorded in the module doc instead. If an
-/// epoch moves the world under it the constant below fails loudly, which is
-/// the same protection a search would buy.
+/// and the sweep that selected it is recorded in the module doc instead. Each
+/// test takes two fresh walks and requires their ledger hashes to agree, while
+/// asserting the reach floors on both; if an epoch leaves this seed unable to
+/// exercise the path, those floors fail loudly.
 /// type-audit: bare-ok(index)
 const WATER_BELIEF_SEED: u64 = 17;
 
@@ -231,10 +232,9 @@ struct WalkRun {
 /// One fresh session on `seed`, [`WITNESS_WAITS`] waits, and everything the
 /// witness reads off it.
 ///
-/// ONE run, not two. The two-fresh-runs-agree determinism guarantee is not
-/// this file's job — `the_detent.rs` holds it on `main` for two other scripts
-/// and is not being replaced — and paying for a second walk here would double
-/// the cost of every witness for a property the suite already asserts.
+/// This helper performs one run; each witness test calls it twice, asserts the
+/// non-vacuity floors on both results, and compares their ledger hashes for
+/// fresh-run determinism.
 fn walk(seed: u64) -> WalkRun {
     let world = common::build(seed).expect("the pinned witness seed builds a world");
     let (mut session, _) =
@@ -306,10 +306,12 @@ fn the_kerf_seed_17_walk_is_deterministic_with_its_floors() {
     assert_the_floors("seed 17 second run", &second);
     assert!(
         first.beliefs_in_the_past > 0 && second.beliefs_in_the_past > 0,
-        "seed 17 is minted as the PAST-INSTANT witness and made {} belief reads before a \
-         committed sighting — if this is now zero the seed no longer buys what it was \
-         chosen for, and that is a finding about the sim, not a broken test",
-        first.beliefs_in_the_past
+        "seed 17 is minted as the PAST-INSTANT witness: the first run made {} belief reads \
+         before a committed sighting and the second made {} — if either is now zero the seed \
+         no longer buys what it was chosen for, and that is a finding about the sim, not a \
+         broken test",
+        first.beliefs_in_the_past,
+        second.beliefs_in_the_past
     );
     assert_eq!(
         first.ledger_hash, second.ledger_hash,
