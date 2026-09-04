@@ -570,16 +570,58 @@ Claude-Session: https://claude.ai/code/session_01QKhCP8Pr8wWuqejxeKEAGs"
 - Consumes: Task 2's flipped sites. **Runs BEFORE Task 4 deletes `ConstantSun`** — the battery imports and calls it (lines 10, 51, 119), so the deletion cannot compile until this task has removed those uses (ruling R1).
 - Produces: nothing later tasks depend on.
 
-- [ ] **Step 1: Rename the file and its module declaration**
+- [ ] **Step 1: Rename the file, its module declaration, and the roster**
 
 ```bash
 git mv domains/astronomy/tests/suite/tier_refinement.rs domains/astronomy/tests/suite/sky_conformance.rs
-grep -n "tier_refinement" domains/astronomy/tests/suite.rs
+grep -rn "tier_refinement" --include='*.rs' --include='*.tsv' . | grep -v '^./target'
 ```
-Update the `mod` line. **A rename is a commit-gate change** — the sub-floor
-roster is keyed on test names, so `docs/timings/subfloor-roster.tsv` will
-carry stale entries until the next green stage gate rewrites it. Note this in
-the task report; do not hand-edit the roster.
+
+**Three places, not one.** `domains/astronomy/tests/suite.rs:22-23` declares
+the module with a `#[path]` attribute AND a `mod` name — both lines change:
+
+```rust
+#[path = "suite/sky_conformance.rs"]
+mod sky_conformance;
+```
+
+**`docs/timings/subfloor-roster.tsv:430-433` names all four tests, and you
+MUST update them (ruling R7).** An earlier draft of this step said "do not
+hand-edit the roster" and that a later stage gate would fix it. That is wrong
+here, and the reason is measured rather than argued:
+
+```
+$ cargo nextest run -p hornvale-astronomy \
+    -E 'test(=tier_refinement::the_sun_never_leaves_the_visible_bodies_list) |
+        test(=sky_conformance::a_name_that_does_not_exist_yet)'
+   Starting 1 test across 2 binaries (300 tests skipped)
+       PASS (1/1) tier_refinement::the_sun_never_leaves_the_visible_bodies_list
+   Summary: 1 test run: 1 passed, 300 skipped
+exit=0
+```
+
+A stale name among valid ones **does not redden — it exits 0 and the test
+silently vanishes from the commit gate.** Leaving the roster alone would drop
+all four battery tests out of every commit gate until the campaign merges,
+while the gate kept printing green. That is the `hornvale-hearsay` failure
+this repo has already had once: a crate sat at zero roster entries, compiled
+every commit, ran none of its tests, and reported a green number that meant
+nothing for it.
+
+Hand-editing is legitimate here specifically because a **rename preserves
+identity**. `CLAUDE.md:291` is explicit: *"a test's IDENTITY — whether it
+belongs in the commit gate at all — does not vary by machine, even though the
+DURATION that decides membership does."* The prohibition on authoring the
+roster locally is about durations and membership DECISIONS; you are making
+neither. Change only the four names' `tier_refinement::` prefix to
+`sky_conformance::`, and only for tests you actually renamed — touch no other
+row, no duration, and no other crate's entries.
+
+Also update `windows/almanac/src/lib.rs:403`, whose comment cites
+`tier_refinement.rs` by name. Leave the historical references in
+`docs/audits/the-assay-build-volume-audit.md` and
+`docs/retrospectives/eclipse-seasons.md` alone — those are records of what was
+true when they were written.
 
 - [ ] **Step 2: Freeze the two literals the tests used to source from `ConstantSun`**
 
@@ -844,6 +886,24 @@ Run:
 cargo test -p hornvale-worldgen a_world_with_no_sky_provider_fact -- --nocapture
 ```
 Expected: **PASS**, having been recorded FAIL in Task 2.
+
+- [ ] **Step 5c: Delete the duplicate determinism test (ruling R8)**
+
+Task 2's flips made `build_world_is_deterministic` (`lib.rs:12825`) and
+`generated_worlds_are_deterministic` (`lib.rs:13112`) literal duplicates —
+same seed, same pins, same assertion. The pair existed to prove determinism
+for BOTH tiers; with one tier there is one test, and the duplicate costs a
+full ~2.6 s world build per suite run for no coverage.
+
+**Keep `build_world_is_deterministic`; delete `generated_worlds_are_
+deterministic`.** Keep the name that survives the retirement — "generated
+worlds" stops being a distinguishing adjective once every world is generated.
+Adopt the deleted one's better message: `.expect("seed 42 builds at default
+pins")` rather than `.unwrap()`.
+
+Deleting a `build_world` call site moves the ratchet again — expect
+`UNMIGRATED_CEILING` and the `world-build-sites.tsv` row to need updating in
+this same commit, per that test's own doc comment.
 
 - [ ] **Step 6: Verify and commit**
 
@@ -1155,7 +1215,14 @@ question is a census question (`pantheon-cyclic-share`, a `rotation=locked`
 pin set over `census-of-faiths`' 10,000 worlds), with the finding that **no
 committed study uses a non-empty pin set at all**.
 
-- [ ] **Step 2: Write 0737**
+- [ ] **Step 2: Write 0737, then restore the two cites that could not be written yet**
+
+Task 2 had to DROP a `(decision 0737)` cite from an `#[ignore]` reason,
+because `docs_consistency::decision_cites_in_sources_resolve` reds on a cite
+to a record that does not exist — and 0737 did not exist yet. Its report names
+the two sites. Once the record lands in this task, put the cite back and
+re-run that guard.
+
 
 Cite 0189 explicitly: a world is a seed plus a ledger; no compatibility shim.
 Record that `sky-provider` is committed unconditionally
