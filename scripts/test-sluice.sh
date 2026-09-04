@@ -3092,5 +3092,134 @@ else
     esac
 fi
 
+
+# ---------------------------------------------------------------------------
+# `claim` — the atomic select-and-mark that replaces `next` + `set-state`.
+#
+# These run against their OWN HV_SLUICE_DIR with rows written directly, rather
+# than through `add`: `claim` touches no git objects, so building real commits
+# to exercise it would test `add`'s ancestry logic a fourth time and tell us
+# nothing about the transaction under test.
+# ---------------------------------------------------------------------------
+echo "== queue: claim is an atomic select-and-mark"
+cdir="$tmp/claimstate"; mkdir -p "$cdir"
+CQ="$cdir/queue.tsv"
+row() { printf '%s\treq-%s\t%s\t%s\t%s\t%s\t\n' "2026-09-04T00:00:00Z" "$1" "$2" "$3" "$4" "$5"; }
+qq() { HV_SLUICE_DIR="$cdir" bash "$repo_root/scripts/sluice-queue.sh" "$@"; }
+cstate_of() { awk -F'\t' -v i="req-$1" '$2==i{print $5}' "$CQ"; }
+
+# T1 — nothing queued: empty output, exit 0, same contract `next` had.
+: > "$CQ"
+row aaa campaign/a aaaaaaaaaaaa landed merge >> "$CQ"
+out="$(qq claim 2>/dev/null)"; rc=$?
+if [ -z "$out" ] && [ "$rc" = "0" ]; then
+    ok "claim on a drained queue prints nothing and exits 0 (keeps next's contract)"
+else
+    bad "claim on a drained queue printed '$out' rc=$rc — dispatchers test for empty output"
+fi
+
+# T2 — the transaction: after ONE call the row is already running. This is the
+# property `next` could not provide, and the whole reason this subcommand
+# exists.
+: > "$CQ"
+row bbb campaign/b bbbbbbbbbbbb queued merge >> "$CQ"
+out="$(qq claim "taken by the test")"
+if [ -n "$out" ] && [ "$(cstate_of bbb)" = "running" ]; then
+    ok "claim marks the row running in the same call that selects it"
+else
+    bad "after claim the row was '$(cstate_of bbb)' — the TOCTOU window is still open"
+fi
+
+# T3 — the executor's form: claim a specific ref, not merely the head of the queue.
+: > "$CQ"
+row ccc campaign/c cccccccccccc queued merge >> "$CQ"
+row ddd campaign/d dddddddddddd queued merge >> "$CQ"
+out="$(qq claim --sha dddddddddddd "by sha")"
+if [ "$(cstate_of ddd)" = "running" ] && [ "$(cstate_of ccc)" = "queued" ]; then
+    ok "claim --sha takes the named row and leaves the rest queued"
+else
+    bad "claim --sha took ccc=$(cstate_of ccc) ddd=$(cstate_of ddd) — an executor would claim the wrong job"
+fi
+
+# T4 — THE DUPLICATE-EXECUTION GUARD. A second claimant on a row somebody
+# already holds must refuse, and must not touch the row. This is the exact
+# failure of 2026-09-04: a hand-run drain launched a merge that a direct
+# sluice-run.sh was already executing, because the row still read `queued`.
+: > "$CQ"
+row eee campaign/e eeeeeeeeeeee running merge >> "$CQ"
+set +e; err="$(qq claim --sha eeeeeeeeeeee 2>&1 >/dev/null)"; rc=$?; set -e
+if [ "$rc" = "4" ] && [ "$(cstate_of eee)" = "running" ]; then
+    ok "claim --sha on an already-held row refuses rc=4 and changes nothing"
+else
+    bad "claim --sha on a held row gave rc=$rc state=$(cstate_of eee) — duplicate execution is still reachable"
+fi
+
+# T5 — a ref with no row at all is a DIFFERENT answer from a ref somebody
+# holds. An executor run ad hoc (no queue row) is legitimate; an executor
+# racing another run is not. One exit code for each, or the caller cannot
+# tell them apart.
+: > "$CQ"
+row fff campaign/f ffffffffffff queued merge >> "$CQ"
+set +e; qq claim --sha 999999999999 >/dev/null 2>&1; rc=$?; set -e
+if [ "$rc" = "5" ]; then
+    ok "claim --sha for an absent ref exits 5, distinct from the rc=4 already-held"
+else
+    bad "claim --sha for an absent ref exited $rc — ad hoc runs cannot be told from races"
+fi
+
+# T6 — ATOMICITY UNDER CONTENTION, the property the whole design turns on.
+# Twelve simultaneous claimants, ONE queued row: exactly one may win. With
+# `next` + a separate `set-state` this is precisely what failed.
+: > "$CQ"
+row ggg campaign/g gggggggggggg queued merge >> "$CQ"
+winners="$tmp/claim-winners"; : > "$winners"
+for i in $(seq 1 12); do
+    ( out="$(qq claim "racer-$i" 2>/dev/null)"; [ -n "$out" ] && echo "$i" >> "$winners" ) &
+done
+wait
+nwin="$(grep -c . "$winners" 2>/dev/null || echo 0)"
+if [ "$nwin" = "1" ] && [ "$(cstate_of ggg)" = "running" ]; then
+    ok "12 simultaneous claimants, 1 queued row -> exactly 1 winner (select+mark is atomic)"
+else
+    bad "$nwin of 12 claimants won the same row — the queue would dispatch it $nwin times"
+fi
+
+
+# T7 — THE EXECUTOR ITSELF REFUSES A ROW SOMEBODY HOLDS. T4 pins the queue's
+# answer; this pins that sluice-run.sh actually ASKS. The 2026-09-04 duplicate
+# happened because the executor never consulted the queue at all, so a correct
+# queue would not have stopped it. Runs the real script — the claim check sits
+# above the box lock and the worktree, so the refusal is cheap and touches
+# nothing.
+echo "== sluice-run: refuses a ref another run already holds"
+: > "$CQ"
+row hhh campaign/h hhhhhhhhhhhh running merge >> "$CQ"
+set +e
+runout="$(HV_SLUICE_DIR="$cdir" HV_SLUICE_REPO_ROOT="$repo_root" \
+    bash "$repo_root/scripts/sluice-run.sh" campaign/h hhhhhhhhhhhh merge 2>&1)"
+runrc=$?
+set -e
+if [ "$runrc" = "9" ] && printf '%s' "$runout" | grep -q "REFUSING"; then
+    ok "sluice-run refuses rc=9 when the row is already held (the duplicate is unreachable)"
+else
+    bad "sluice-run gave rc=$runrc on a held row — a second run of one job is still reachable"
+fi
+
+# T8 — and it does NOT refuse a ref with no row, because an ad hoc run is a
+# legitimate operator escape hatch. A fix that closed the hatch would have been
+# the wrong fix; this pins that it stayed open. Asserted on the MESSAGE rather
+# than on a full run, which would take the box.
+: > "$CQ"
+row iii campaign/i iiiiiiiiiiii queued merge >> "$CQ"
+set +e
+adhoc="$(HV_SLUICE_DIR="$cdir" HV_SLUICE_REPO_ROOT="$repo_root" \
+    timeout 20 bash "$repo_root/scripts/sluice-run.sh" campaign/zzz 999999999999 merge 2>&1)"
+set -e
+if printf '%s' "$adhoc" | grep -q "AD HOC"; then
+    ok "a ref with no queue row runs ad hoc and says so (the escape hatch stayed open)"
+else
+    bad "an unqueued ref did not report AD HOC — the operator escape hatch may have closed"
+fi
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
