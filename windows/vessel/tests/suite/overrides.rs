@@ -1,4 +1,4 @@
-//! The Reticence, Task 2: the conduct half. `driven_suppressed` is a
+//! The Reticence, Task 2: the conduct half. `suppressed_drives` is a
 //! per-decision read overwritten by every `advance_one` iteration
 //! (`liveness.rs:4996-5010`). This accumulates it across the possession, so the
 //! axis the rider overrides is the axis the host can later go quiet on.

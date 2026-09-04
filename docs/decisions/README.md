@@ -311,6 +311,9 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0647](0647-a-made-chamber-is-written-from-the-ledger-at-the-walk.md) | A made chamber is written from the ledger at the walk, never committed as a fact | Accepted |
 | [0648](0648-the-hoarder-sits-at-the-sanctum-on-what-lies-there.md) | The hoarder sits at the sanctum on what lies there, and holds nothing | Accepted |
 | [0649](0649-a-cut-place-outlives-its-people.md) | A cut place outlives its people: `Made` reads the occupation, and tenancy decides the tense | Accepted |
+| [0656](0656-a-held-bodys-walk-commits-what-it-does.md) | A held body's walk commits what it does | Accepted |
+| [0657](0657-off-the-walk-band-a-held-body-holds.md) | Off the walk band a held body holds | Accepted |
+| [0658](0658-the-wait-line-minutes-the-held-bodys-acts.md) | The wait line minutes the held body's acts | Accepted |
 | [0666](0666-the-enterability-gate-is-a-site-not-built.md) | The enterability gate is a `Site`, and `built` narrows to one kind of it | Accepted |
 | [0667](0667-a-placed-site-is-re-sited-to-a-facet-by-a-seeded-draw.md) | A placed site is re-sited from its vertex to one facet by a seeded draw | Accepted |
 | [0668](0668-a-site-carries-an-extent-and-this-campaign-emits-point.md) | A `Site` carries an `Extent`, and this campaign only ever emits `Point` | Accepted |

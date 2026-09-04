@@ -75,3 +75,40 @@ cheap-looking one was the foreclosing one.
   and the information that would matter is a demonstration that a host's
   computed affect has no use — which `PLAY-host-is-a-narrator` exists to
   refute.
+
+## Amendment (2026-09-03, The Minute)
+
+Additive correction of two consequence bullets. **The ruling above — the host
+is co-present, not displaced — is unchanged**, and nothing here reopens it;
+what changes is the mechanism two of its bullets described.
+
+[0656](0656-a-held-bodys-walk-commits-what-it-does.md) makes the driven
+walk's facts commit to the session ledger, unconditionally on which
+controller drove the walk. Both bullets below were written about the code as
+it stood between this decision and The Minute, and both now read as false in
+the present tense.
+
+- **"The driven walk's facts are discarded, and that is not displacement …
+  Committing both would give one body two competing sources of position."**
+  The facts are no longer discarded, and there are not two sources. The
+  walk's own committed `agent-at` **is** the source of position, and the
+  roster's `position` column is a view that follows it — held to the ledger's
+  own fold by `a_possessed_sessions_columns_are_the_ledgers_too`
+  (`windows/vessel/tests/suite/the_rack.rs`). The provenance rule the bullet
+  was defending survives untouched: [0168](0168-the-effect-of-an-act-belongs-to-the-body-not-the-driver.md)
+  still puts an act's effect with the BODY rather than the driver, which is
+  what makes committing the walk correct rather than what forbade it.
+- **"Because the discard is unconditional, the spec's argument that 'a driven
+  body commits nothing because it holds' is untestable in this design."**
+  It is testable again, and tested. Because the commit is unconditional on
+  the CONTROLLER, a session that never possesses still gets its empty ledger
+  from the walk's own emptiness: its controller is a fresh `PlayerController`
+  whose intent is `Hold`, and a Holding walk emits nothing. Forcing that
+  controller to answer `Do(Rest)` — the mutation that left
+  `the_driven_walks_own_facts_never_reach_the_ledger_while_the_player_says_nothing`
+  (`windows/vessel/tests/suite/controller_swap.rs`) GREEN before The Minute —
+  would redden it today.
+
+What the discard actually cost is measured in 0656 and in the chronicle: at
+seed 42 a held body's walk emitted 29 facts across 40 days and committed
+none of them, while its felt state read `Content` throughout.

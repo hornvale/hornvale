@@ -61,20 +61,17 @@ impl Controller for DefaultController {
 /// never a GOAP fallback: a driven body with nothing queued waits on the
 /// player, it does not quietly act for itself.
 ///
-/// **This is NOT what keeps the driven body's own walk out of the ledger**
-/// (fix round 3, N4 — an earlier version of this comment claimed it was, "the
-/// mechanical content of spec §2.3's commits-on-`Do` argument"; checked
-/// directly and that is false). `Session::wait` discards
-/// `DriveMovements::step_one_with_controller`'s returned facts
-/// UNCONDITIONALLY, regardless of what this `intend` answers — forcing it to
-/// `Intent::Do` still leaves the ledger untouched, because those facts never
-/// reach `tick()` at all. What THIS controller actually guarantees is
-/// narrower and still real: a driven body's own walk (`Session::wait`
-/// constructs a fresh one every tick) never autonomously acts on its own
-/// drives, because its intent is unconditionally `Hold` until a verb routes
-/// a real action through [`queue`](Self::queue) (later Bridle work; today's
-/// verb loop — `go`, `drink`, … — still commits directly, spec §1 "Does not
-/// ship: the host speaking").
+/// What this controller guarantees is narrow and real: a driven body's own
+/// walk (`Session::wait` constructs a fresh one every tick) never
+/// autonomously acts on its own drives, because its intent is
+/// unconditionally `Hold` until a verb routes a real action through
+/// [`queue`](Self::queue) — and a Holding walk emits no facts
+/// (`a_free_walk_emits_nothing_and_ends_in_the_column`). Since The Minute
+/// `Session::wait` COMMITS whatever the driven walk returns, so the moment
+/// something queues an action here, that act reaches the ledger through the
+/// same path a creature's does; nothing queues one yet (today's in-character
+/// verbs — `go`, `sleep`, … — still commit directly; there is no `drink`
+/// verb at all, see `PLAY-free-body-cannot-drink`).
 #[derive(Default)]
 pub struct PlayerController {
     pending: Option<Action>,
@@ -130,12 +127,17 @@ impl Controller for PlayerController {
 /// different intents. Concretely, a possessed body's own solo walk during
 /// `!wait` can now move, drink, rest and eat on its own arbitration instead
 /// of sitting frozen at one position while `wait`'s closed-form `Hold` jump
-/// advances the clock under it. **The ledger stays untouched either way** —
-/// `Session::wait` discards that walk's facts unconditionally, so no
-/// committed fact ever differs — but the body's OWN felt-state read
-/// (`Session::driven_mode`/`driven_affect`/`driven_suppressed`, which
-/// `!ask`'s narration draws from) is not similarly inert: it is read back
-/// from the last decision point of that walk, and an acting controller can
+/// advances the clock under it. **Both the ledger and the felt state move**
+/// (The Minute repaired the half that did not): `Session::wait` commits
+/// that walk's facts, so the held body's drinks, meals, rests and moves are
+/// on the record through the same constructors a creature's are (decision
+/// 0168), and the body's own felt-state read
+/// (`Session::driven_mode`/`driven_affect`/`suppressed_drives`) is read back
+/// from the last decision point of that walk. `ask`'s narration (an
+/// in-character verb) draws from that felt-state read; the wait line,
+/// while held, draws instead from the walk's own committed facts
+/// (`narrate_motion`'s minute clause is built from `minutes_of(&driven_facts)`,
+/// not from the felt column). Either way an acting controller can
 /// leave the body in a different room, and a different felt state, than a
 /// frozen one would have. See
 /// `driven_felt_state_can_move_under_an_imposed_controller_during_wait` in

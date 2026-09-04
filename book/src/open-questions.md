@@ -2670,6 +2670,14 @@ Hand, above) was, for the first time, actually driven by two different
 controllers in the same measured walk, and the divergence was there to find
 once someone looked.
 
+*Corrected 2026-09-03 by [The Minute](./chronicle/the-minute.md): both
+paragraphs above state the discard in the present tense, and the discard was
+itself a defect rather than a design — a held body's walk now commits what it
+does. That does not change either lesson, and it sharpens the first: the
+instrument The Hand called structurally blind was blind because of a bug, and
+the measurement it could not make is now makeable. Read the two present-tense
+sentences as descriptions of the code as it stood on those days.*
+
 [The Offer](./chronicle/the-offer.md) pushes the same thread one step further
 and supplies this chapter's largest single count of the failure. Arc IV.a
 shipped with **seven** checks that could not have failed: two asserting

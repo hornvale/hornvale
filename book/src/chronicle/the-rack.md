@@ -212,6 +212,12 @@ the writer: the driven slot's room is now written only where its `agent-at`
 fact is committed, so the column follows the ledger by construction rather
 than by a second fold agreeing with it.
 
+*Corrected 2026-09-03, by [The Minute](./the-minute.md): `wait` no longer
+discards that walk's facts — it commits them, for every body, and the driven
+column is written from the walk that committed them. The reasoning above is
+why the column had to follow the ledger, and it still does; the route it takes
+there is now the walk's own commit rather than the verb path alone.*
+
 ## Nothing coarse moved
 
 The census, queued at close, moved **zero of its columns** — and a null with
@@ -269,6 +275,10 @@ meantime the counted budget is the instrument that does not have the problem.
 monotonically and a long possession diverges from its own ledger — pre-existing
 since The Coercion, surfaced again here because the driven column's writer had
 to be reasoned about, and parked rather than fixed.
+
+*Closed 2026-09-03 by [The Minute](./the-minute.md), which was the campaign
+this parked finding asked for: the walk's facts commit, the thirst no longer
+diverges, and the held body's acts are reported in the wait line.*
 
 ## What The Pawl left, and what the rack does with it
 

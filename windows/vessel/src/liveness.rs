@@ -7978,10 +7978,11 @@ impl<'a> DriveMovements<'a> {
     /// richness gap, not a correctness one, and later Bridle work can close it
     /// without touching this seam or any other body's walk.
     ///
-    /// Returns the facts this body's OWN walk would commit (empty under
-    /// [`crate::controller::PlayerController`] with nothing queued — see that
-    /// controller's own doc for why nothing here ever double-moves a body the
-    /// player drives through the verb loop), and the [`Written`] its walk
+    /// Returns the facts this body's OWN walk committed — `Session::wait`
+    /// commits them since The Minute (empty under
+    /// [`crate::controller::PlayerController`] with nothing queued, which is
+    /// why a free body's session is unchanged by that commit), and the
+    /// [`Written`] its walk
     /// left behind: where it ended, and the [`Felt`] its LAST resolution
     /// expressed — the commitment mode its own arbitration reached this call,
     /// the [`Affect`] that same resolution carried (The Confidant, Task 2 —
@@ -12459,11 +12460,14 @@ mod tests {
     /// `PlayerController` must HOLD it — returning no action — regardless of
     /// what the body's own arbitration wants. Scope this claim carefully: at
     /// THIS unit's level the `Hold` is what leaves the returned fact vector
-    /// empty, but in the live session the driven walk's facts are discarded
-    /// unconditionally (`Session::wait`), so there the DISCARD and not the
-    /// `Hold` is what keeps the ledger clean. Spec §5.2's "commits on `Do`,
-    /// nothing on `Hold`" wording described the session level and was
-    /// withdrawn for it (The Hand, Task 5); do not re-import it here. Swap
+    /// empty; before The Minute the live session discarded the driven walk's
+    /// facts unconditionally (`Session::wait`), so there the DISCARD and not
+    /// the `Hold` kept the ledger clean — since The Minute `Session::wait`
+    /// commits whatever the walk returns, so a `Hold`ing `PlayerController`
+    /// keeping the ledger clean now depends on the SAME emptiness this unit
+    /// pins, at both levels. Spec §5.2's "commits on `Do`, nothing on
+    /// `Hold`" wording described the session level and was withdrawn for it
+    /// (The Hand, Task 5); do not re-import it here. Swap
     /// `DefaultController` for `PlayerController` in the first call (or vice
     /// versa) and one of the two assertions below reddens; that swap is
     /// exactly what a session-level test cannot always force (seed 42's own
