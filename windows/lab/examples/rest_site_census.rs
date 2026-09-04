@@ -708,13 +708,19 @@ fn quadrant_of(room: &Facet, terrain: &dyn Terrain) -> usize {
 /// probe may not call and must not widen to `pub` — a measurement that changes
 /// the surface it measures is not a measurement.
 ///
-/// It is exact TODAY and is not the same function. `room_affords_rest`
-/// delegates to `sleep_site::select_sleep_site(&interior_of(room, terrain),
-/// body).is_some()`; that function's whole body is
-/// `interior.ids().into_iter().find(|&a| offered_to(interior.anchor(a).kind,
-/// body).contains(&OfferedVerb::Sleep))`, and `.find(..).is_some()` is
-/// `.any(..)`. Both are `pub(crate)`/private, so if either changes, this
-/// drifts silently and nothing will say so.
+/// It is exact TODAY and is not the same function. `room_affords_rest` derives
+/// the interior and delegates to `sleep_site::room_offers_sleep(&interior,
+/// body, objects)`, borrowing the object roster the fold built once. That
+/// delegate asks `.next().is_some()` of private `sleep_candidates`, whose
+/// predicate reads each kind's traits from the borrowed roster and applies
+/// private `offered_to_traits`.
+///
+/// This reconstruction must instead use public [`offered_to`], which rebuilds
+/// the same object registry per anchor; its cost is deliberately different but
+/// its boolean answer is identical today. `room_offers_sleep`,
+/// `sleep_candidates`, and `offered_to_traits` are all crate-private, so a
+/// future change to that production chain can make this public reconstruction
+/// drift without a compile error.
 ///
 /// Through `offered_to`, NOT `offered_to_observer`: physical restoration is
 /// not gated on knowledge, and `room_affords_rest`'s own delegate uses the

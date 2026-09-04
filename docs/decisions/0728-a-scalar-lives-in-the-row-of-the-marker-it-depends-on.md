@@ -32,6 +32,20 @@ The surface values are `universal`: they are properties of the thing kind in
 every world and for every sleeper. Species variation enters through the other
 endpoint; world variation enters through composition.
 
+That `plumb:` ruling rejects all three neighbouring classifications explicitly:
+
+- **Not `per-species`:** the surface row is the invariant endpoint of the
+  relation. A sleeper's variation already enters through
+  `substrate_response`; assigning it to the surface again would double-count
+  the consumer axis.
+- **Not `per-world`:** worlds vary in which patterns compose and therefore
+  which surfaces occur. The authored offer and hardness of a given thing kind
+  do not change between those worlds.
+- **No new rung:** the audit's ladder asks which runtime scope varies the
+  number — world, species, people, or individual. None does. `universal`
+  already names that answer, so a `per-thing` rung would confuse the registry
+  key holding a constant with an axis along which its value varies.
+
 ## Consequences and costs
 
 - There is one source of truth for whether an object offers rest and how its
