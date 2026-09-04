@@ -42,16 +42,16 @@ set -euo pipefail
 # surfaces as intermittent byte drift and gets blamed on determinism):
 #
 #   GROUP A — world builders. The three `hornvale new` calls writing the
-#   throwaway temp files $w42/$wsky/$wlocked. Mutually independent; every
+#   throwaway temp files $wsky/$wlocked. Mutually independent; every
 #   other world-touching invocation below depends on one of these three.
 #
-#   GROUP B — readers of $w42/$wsky/$wlocked (traced: each takes `--world` or
+#   GROUP B — readers of $wsky/$wlocked (traced: each takes `--world` or
 #   `--seed`, and reads it before writing exactly one output). Almanacs,
 #   `explain`, `dictionary`, `locale`, `possess`, `history`, `connections`,
 #   the gallery maps, the scene exports, the surrounds ascii charts. Each
 #   writes to its own file, so independent of every other Group B member.
 #   Two `possess --seed 42 --snapshot …` calls (the committed game-core
-#   fixtures) do NOT read $w42/$wsky/$wlocked at all — traced their args:
+#   fixtures) do NOT read $wsky/$wlocked at all — traced their args:
 #   `--seed` builds a fresh internal genesis, not the temp files — so they
 #   have no dependency on Group A's reap either, but scheduling them with the
 #   rest of B is harmless (no shared write target) and keeps this script
@@ -63,7 +63,7 @@ set -euo pipefail
 #   report, and the digest renders, as the plan names. Tracing turned up four
 #   more of the same shape, not named in the plan: the `first_light` example
 #   (hardcodes `Seed(42)` and builds its own mini-genesis internally — never
-#   touches $w42/$wsky/$wlocked), `book` (loops over `Seed(1..=3)`, its own
+#   touches $wsky/$wlocked), `book` (loops over `Seed(1..=3)`, its own
 #   internal builds), `tropes report`/`report --corpus …`/`matrix` (each
 #   builds its own `Seed(0)` world via `world_builder::build_world`,
 #   independent of Group A), and the seam-guard roster (a source-tree scan,
@@ -72,7 +72,7 @@ set -euo pipefail
 #   because its anchors resolve against the digest, the idea registry, and
 #   the filesystem, never a genesis. `lab confidant` (The Confidant, Task 7
 #   reshape) joined it the same way `first_light` did: it builds its own
-#   internal `Seed(42)` `FullView`, never touches $w42/$wsky/$wlocked, and
+#   internal `Seed(42)` `FullView`, never touches $wsky/$wlocked, and
 #   its answers are world-invariant by measurement (a 1000-seed census run
 #   found all three metric families it reads constant across every seed), so
 #   any seed would do and Group A's already-built worlds are simply not
@@ -189,7 +189,6 @@ cd "$repo_root"
 # bytes. A dedicated temp dir keeps them out of the tree.
 work="$(mktemp -d "${TMPDIR:-/tmp}/hv-regen.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
-w42="$work/hv-42.json"       # seed 42, tier-0 constant sun
 wsky="$work/hv-sky.json"     # seed 42, generated sky (default)
 wlocked="$work/hv-locked.json" # seed 42, tidally locked
 
@@ -225,7 +224,6 @@ run_release() { cargo run -q --release "$@"; }
 gen_sentence_coverage() { HV_SENTENCE_REBASELINE=1 cargo test -q -p hornvale --test suite -- sentence_coverage_report; }
 
 echo "regenerate-artifacts: GROUP A — world builders (parallel)" >&2
-spawn run -p hornvale -- new --seed 42 --sky constant --out "$w42"
 spawn run -p hornvale -- new --seed 42 --out "$wsky"
 spawn run -p hornvale -- new --seed 42 --rotation locked --out "$wlocked"
 reap
@@ -411,7 +409,7 @@ gen_possession_carry() {
 # looking like a pure relocation.
 #
 # `--seed 42` here is self-contained, same note as the turn-0 fixture below:
-# it builds its own internal genesis and never reads $w42/$wsky/$wlocked.
+# it builds its own internal genesis and never reads $wsky/$wlocked.
 gen_chart_reference() {
     local script_tmp shape
     script_tmp="$(mktemp)"
@@ -788,7 +786,7 @@ gen_strange_sites() {
 #
 # World-free (Group C): each `underworld` call builds its own world internally
 # to BuildDepth::Terrain -- the shallowest rung a chamber needs -- and reads
-# none of $w42/$wsky/$wlocked. Measured 0.37 s per seed against a warm binary,
+# none of $wsky/$wlocked. Measured 0.37 s per seed against a warm binary,
 # so the three-seed panel is ~1 s inside a ~50-60 s rebaseline.
 #
 # THREE SEEDS, not one: the campaign's own preregistered panel (spec S5). One
@@ -985,7 +983,7 @@ echo "regenerate-artifacts: GROUP B+C — world readers and world-free dumps (pa
 # ANOTHER GROUP C ARTIFACT: `RepoFacts::gather` reads
 # `docs/digest/decisions-in-force.md`, which `digest render decisions`
 # regenerates a few lines down — and until now nothing in this batch read a
-# sibling's OUTPUT, only $w42/$wsky/$wlocked from the already-reaped Group A.
+# sibling's OUTPUT, only $wsky/$wlocked from the already-reaped Group A.
 # Spawning both in the same untethered batch races: a `systems matrix` that
 # starts before the digest job finishes writing can read a truncated or
 # stale file and fail with "parsed to zero in-force decisions" (caught by
@@ -1032,12 +1030,12 @@ spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
 spawn gen_sentence_coverage
 # The Confidant, Task 7 reshape: world-invariant (builds its own internal
 # Seed(42), like `first_light` above), so it belongs in Group C alongside
-# the other world-free/self-contained dumps rather than among $w42's readers.
+# the other world-free/self-contained dumps rather than among Group B's readers.
 spawn run -p hornvale -- lab confidant > docs/audits/the-confidant-report.md
 # The Reticence, Task 6: builds its own internal Seed(42) too (see
 # `render_reticence_report`'s own doc for why the full sculpt is paid for
 # despite the felt-state half of its answer being world-invariant), so it
-# belongs in Group C beside the Confidant's line rather than among $w42's
+# belongs in Group C beside the Confidant's line rather than among Group B's
 # readers.
 spawn run -p hornvale -- lab reticence > docs/audits/the-reticence-report.md
 spawn run --manifest-path tools/digest/Cargo.toml -- render delta \
@@ -1046,9 +1044,8 @@ spawn gen_underworld_lattice > docs/audits/underworld-lattice-seed-panel.md
 spawn gen_underworld_circuit > docs/audits/underworld-circuit-seed-panel.md
 spawn build_atlas
 
-# Group B: readers of $w42/$wsky/$wlocked.
-spawn run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-42.md
-spawn run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42-sky.md
+# Group B: readers of $wsky/$wlocked.
+spawn run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42.md
 spawn run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42-locked.md
 spawn run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
 spawn run -p hornvale -- gazetteer --world "$wsky" > book/src/gallery/gazetteer-seed-42.md
@@ -1078,7 +1075,7 @@ spawn gen_possession_day0 > book/src/gallery/possession-seed-42.md
 # call this replaced.
 #
 # NOTE (traced, not guessed): `--seed 42` here builds its own internal
-# genesis and never reads $w42/$wsky/$wlocked, so this has no real
+# genesis and never reads $wsky/$wlocked, so this has no real
 # dependency on Group A's reap — it is scheduled here anyway because it
 # shares no write target with anything else in this block.
 # The glyph specimen sheet (The Legend, Task 5): candidate elevation ladders

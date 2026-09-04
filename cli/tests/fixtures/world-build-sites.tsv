@@ -47,7 +47,7 @@ cli/tests/suite/lens_purity.rs	1	unmigrated:1
 cli/tests/suite/prose_is_not_a_contract.rs	1	unmigrated:1
 cli/tests/suite/provision.rs	1	unmigrated:1
 cli/tests/suite/repertory_corpus.rs	1	unmigrated:1
-cli/tests/suite/repose_byte_identity.rs	2	unmigrated:2
+cli/tests/suite/repose_byte_identity.rs	1	unmigrated:1
 cli/tests/suite/scene_context_discipline.rs	1	unmigrated:1
 cli/tests/suite/scene_cost.rs	1	unmigrated:1
 cli/tests/suite/session_cost.rs	1	unmigrated:1
