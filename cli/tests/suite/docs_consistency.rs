@@ -120,10 +120,6 @@ fn parse_reconciliation(text: &str) -> Vec<ReconciliationRow> {
 }
 
 /// Every row in the committed campaign reconciliation TSV.
-///
-/// Task 1 establishes this reader before later reconciliation checks consume
-/// it, so it is intentionally not called by the schema-only tests yet.
-#[allow(dead_code)]
 fn reconciliation_rows() -> Vec<ReconciliationRow> {
     parse_reconciliation(&read(&repo_root().join(RECONCILIATION)))
 }
@@ -151,6 +147,11 @@ fn reconciliation_parser_rejects_a_short_row() {
     let text = "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n\
                 the-example\tshipped\tnone\t\tevidence\n";
     assert!(parse_reconciliation_result(text).is_err());
+}
+
+#[test]
+fn committed_reconciliation_schema_is_parseable() {
+    reconciliation_rows();
 }
 
 /// The GitHub-flavored heading anchor (a github-slugger approximation):
