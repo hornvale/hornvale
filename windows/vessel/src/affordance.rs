@@ -317,6 +317,86 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
     .collect()
 }
 
+/// The derived-feature affordance table (The Weft, Task 8, carried from Task
+/// 7): what a weft KIND affords, in the SAME vocabulary [`object_registry`]
+/// uses — [`ObjectProperty`], [`ObjectTraits`], the [`offered`] query — but
+/// keyed on [`hornvale_worldgen::WeftKind`], **never** on [`KindId`].
+///
+/// **Why a second table, when the ruling said "use `object_registry`."**
+/// `object_registry`'s own keys are gated closed: `kind_totality.rs`'s
+/// `every_propertied_kind_is_a_roster_row` (G-e, spec §5.1) asserts every one
+/// of its rows is a member of `hornvale_thing::THING_KINDS`, the roster
+/// `windows/vessel`'s interior pattern grammar places CHAMBER anchors from —
+/// bed, hearth, door, and the rest. A weft kind is not one of those: it is
+/// generated on the WALK band, from noise and macro state, never placed by
+/// that grammar, so a `KindId("overhang")` row in `object_registry` would
+/// either fail G-e outright or force `overhang` into `THING_KINDS` itself —
+/// which conflates the WALK-band derived tier with the CHAMBER placed tier,
+/// the exact mistake controller ruling R2 forbids for `SiteKind` ("the tier
+/// is *when* a feature is generated, the kind is *what it is*"; a `KindId`
+/// keyed on `THING_KINDS` is a placed-thing IDENTITY, not a feature kind).
+/// `ComponentStore<K, C>` is documented as "one typed store per shape" for
+/// exactly this reason (the plan's Global Constraints): a new key SHAPE gets
+/// its own store rather than a second population squeezed into one already
+/// governed by a closed roster. Reusing [`ObjectProperty`]/[`ObjectTraits`]/
+/// [`offered`] — the actual "existing vocabulary" the ruling names — is what
+/// this table does; reusing `object_registry`'s own gated KEY SPACE is not
+/// the same thing, and the ruling's wording ("`object_registry` as a
+/// `ComponentStore<KindId, ObjectTraits>`") reads as naming what that
+/// function already IS, for orientation, not as instructing a second
+/// population into its one gated table.
+///
+/// **Only [`hornvale_worldgen::WeftKind::Overhang`] carries anything.** Spec
+/// §5.6 assigns overhang alone the job of "the affordance path end to end" —
+/// spring is enterable through its own site machinery (a DIFFERENT path,
+/// R2), thicket and erratic are texture and a negative control with no
+/// affordance claim at all. `SupportsRest` stands in for "a place to get out
+/// of the rain" and `RadiatesHeat` for "a place to build a fire" — the exact
+/// two properties [`hornvale_worldgen::WeftKind::Overhang`]'s own doc names
+/// ("SupportsRest-adjacent shelter plus a warmth variant"). `RadiatesHeat`
+/// here is a CAPABILITY, not a claim that a fire is already lit — no verb in
+/// this campaign turns it into one (see [`weft_offers`]'s own doc for what
+/// that stops short of).
+pub fn weft_object_registry() -> ComponentStore<hornvale_worldgen::WeftKind, ObjectTraits> {
+    [(
+        hornvale_worldgen::WeftKind::Overhang,
+        ObjectTraits {
+            properties: [ObjectProperty::SupportsRest, ObjectProperty::RadiatesHeat]
+                .into_iter()
+                .collect(),
+        },
+    )]
+    .into_iter()
+    .collect()
+}
+
+/// The verbs a weft `kind` offers — [`weft_object_registry`]'s traits routed
+/// through the SAME [`offered`] query [`offered_by`] uses over
+/// `object_registry`, so a derived kind and a placed thing prove the
+/// affordance path through one shared function, never two. A kind absent
+/// from [`weft_object_registry`] (three of the four today) offers nothing,
+/// matching [`offered_by`]'s own "absent = empty set" convention.
+///
+/// **What this proves, and what it does not.** It proves the query
+/// machinery — [`ObjectProperty`]'s required-property sets, the subset
+/// filter [`offered`] runs — answers correctly for a KIND that was never a
+/// placed [`KindId`], which is the "affordance path end to end" spec §5.6
+/// asks for. It does NOT wire a live `warm`/`sleep` verb to fire at an
+/// outdoor overhang facet: `Session::warm`'s own gate reads
+/// `chamber_interior_here`, a chamber-only anchor catalogue, on purpose (its
+/// own doc: "standing at a hearth out of doors is impossible in the first
+/// place"), and this campaign builds no fire-lighting mechanic for the
+/// derived surface to hand that gate a lit fire to warm at. Wiring a verb
+/// that always narrates success at ANY overhang, unconditionally, would
+/// invent exactly the gameplay claim spec §5.6 does not make; the
+/// affordance stays a proven CAPABILITY (this function, and the walk-band
+/// prose that already names it) rather than an implemented ACT.
+pub fn weft_offers(kind: hornvale_worldgen::WeftKind) -> BTreeSet<OfferedVerb> {
+    let reg = weft_object_registry();
+    let traits = reg.get(&kind).cloned().unwrap_or_default();
+    offered(&traits)
+}
+
 /// Whether `kind` carries [`ObjectProperty::Encloses`] — the gate `examine`
 /// reads before revealing what an anchor holds `within` it (spec §3.6,
 /// amended). A kind absent from [`object_registry`] carries no property, so

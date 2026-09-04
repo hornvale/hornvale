@@ -235,6 +235,8 @@ mod waterline_probe;
 mod watershed_measure;
 #[path = "suite/weft_fieldpack.rs"]
 mod weft_fieldpack;
+#[path = "suite/weft_ledger_guard.rs"]
+mod weft_ledger_guard;
 #[path = "suite/weft_prevalence.rs"]
 mod weft_prevalence;
 #[path = "suite/weft_window.rs"]

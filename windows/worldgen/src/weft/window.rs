@@ -205,6 +205,75 @@ impl WeftWindow {
     pub fn evict_all(&mut self) {
         self.store.evict_all();
     }
+
+    /// The read-only sibling of [`Self::features_at`] (The Weft, Task 8,
+    /// controller ruling R3): "the same shape `RoomMeshMemo::
+    /// corner_weights_lookup` already solves" — a caller holding only a
+    /// `&self` (a walk-band prose reader, which must stay `&self` itself
+    /// per `Session::describe_here`'s existing shape) can consult a
+    /// resident entry without the `&mut self` [`Self::features_at`] needs
+    /// to fill one. `None` on a cache miss — never inserted, never
+    /// derived, and counting neither a hit nor a miss, exactly
+    /// [`hornvale_kernel::derived::Derived::peek`]'s own contract. **A
+    /// `None` here is NOT "no feature"** — that answer is `Some(&[])`, a
+    /// cached negative the window already resolved; `None` means the
+    /// caller must fall through to a direct derivation instead (see
+    /// [`features_at_cached`]).
+    pub fn features_lookup(
+        &self,
+        kind: WeftKind,
+        facet: &Facet,
+        geo: &Geosphere,
+        seed: Seed,
+    ) -> Option<&[WeftFeature]> {
+        let key = weft_key(facet, kind, geo, seed);
+        self.store.peek(&key).map(Vec::as_slice)
+    }
+}
+
+/// [`prevalence`]/[`occurs`] (via [`derive_features`]), consulting a
+/// caller-owned, READ-ONLY [`WeftWindow`] first (The Weft, Task 8,
+/// controller ruling R3) — the same `_cached` shape
+/// `LocaleContext::blend_at_cached` already states: **`cache: None` is
+/// byte-identical to deriving directly.** A miss (no window, or a window
+/// that has not yet resident'd this `(facet, kind)`) falls through to
+/// [`derive_features`] rather than mutating the window — "a miss must
+/// derive directly rather than mutate" (R3) — so this function alone can
+/// never insert into `cache`; only [`WeftWindow::features_at`]/
+/// [`WeftWindow::advance_to`] do that, at their own `&mut self` call
+/// sites.
+pub fn features_at_cached(
+    kind: WeftKind,
+    facet: &Facet,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    pack: &FieldPack,
+    seed: Seed,
+    cache: Option<&WeftWindow>,
+) -> Vec<WeftFeature> {
+    if let Some(hit) = cache.and_then(|cache| cache.features_lookup(kind, facet, geo, seed)) {
+        return hit.to_vec();
+    }
+    derive_features(kind, facet, geo, index, pack, seed)
+}
+
+/// [`features_at_cached`], across every [`WeftKind::ALL`] — the whole
+/// derived surface at one facet, in kind order. A walk-band prose reader
+/// (`windows/vessel`'s `describe_here`) wants "every feature here," not one
+/// kind at a time, and building that by hand at each call site would be a
+/// second place kind order could drift from [`WeftKind::ALL`]'s own.
+pub fn all_features_at_cached(
+    facet: &Facet,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    pack: &FieldPack,
+    seed: Seed,
+    cache: Option<&WeftWindow>,
+) -> Vec<WeftFeature> {
+    WeftKind::ALL
+        .iter()
+        .flat_map(|&kind| features_at_cached(kind, facet, geo, index, pack, seed, cache))
+        .collect()
 }
 
 /// `facet`'s key at `kind`, under `geo`'s own level and `seed` — the single
