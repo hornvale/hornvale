@@ -5558,3 +5558,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T13:08:22Z | gate-commit | 40.981 | 70.513 | 16.089 | 2.11 | 0 | 87f7f4af2 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T13:46:28Z | gate-commit | 67.352 | 98.459 | 27.609 | 1.87 | 0 | 6e5e43c7f | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T13:52:17Z | gate-commit | 58.091 | 119.331 | 33.264 | 2.63 | 0 | 6e5e43c7f | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:53:17Z | gate-commit | 43.906 | 73.018 | 16.031 | 2.03 | 0 | 6e5e43c7f | campaign/the-kerf | MacBookPro | 10 |
