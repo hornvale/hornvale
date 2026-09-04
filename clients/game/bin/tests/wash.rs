@@ -67,6 +67,30 @@ mod wash_support {
 /// elevation band with different ground must differ spectrally — that is
 /// the category error this campaign exists to fix, asserted on the datum
 /// rather than on the rendered glyph.
+///
+/// # What this witnesses, and what it does not
+///
+/// It witnesses **wiring**: that `terrain_at_tile` reaches a real
+/// `LocaleContext`, gets a curve back, and that the curve varies with the
+/// ground rather than with the elevation band. That is the whole of its
+/// claim.
+///
+/// It does **not** witness that the wetness behind that curve is
+/// *grounded*. `micro_field(seed, None)` — pure address noise, the exact
+/// degradation `reflectance_at_facet` exists to prevent — would satisfy
+/// every assertion below just as well, because address noise also varies
+/// from tile to tile within a band. Measured, not assumed: dropping the
+/// grounding entirely was caught by two tests in `windows/locale` and by
+/// nothing in this file (Task 3 fix round, Finding 2).
+///
+/// The grounding is owned by
+/// `hornvale_locale`'s unit test
+/// `the_grounded_wetness_is_the_moisture_redistributed_by_the_watercourse`,
+/// which pins `grounded_wetness_for`'s output against the composition it
+/// claims to be and against the ungrounded reading at the same address.
+/// This file is on the wrong side of the crate boundary to check that
+/// cheaply — the moisture blend, the channel network and the catchment
+/// partition are all private to the context — so it does not try.
 #[test]
 fn two_tiles_in_one_band_with_different_ground_differ_spectrally() {
     let ctx = wash_support::seed_42_context();
@@ -99,6 +123,24 @@ fn two_tiles_in_one_band_with_different_ground_differ_spectrally() {
             Some(&ctx),
             at,
         );
+        // THE MEMO IS A SEARCH SKIPPED, NEVER A DIFFERENT ANSWER.
+        // `terrain_at_tile` reads reflectance through
+        // `reflectance_at_facet_cached`, sharing the memo it filled for the
+        // grid-level ancestor; at this rung that address IS the tile's own
+        // facet, so it is a cache HIT on the shipped path. Determinism is
+        // constitutional here, so the equality is asserted on the real
+        // addressing rather than inferred from the locale crate's own
+        // neighbourhood test.
+        let uncached = ctx
+            .reflectance_at_facet(&t.facet, at)
+            .ok()
+            .map(|r| *r.get());
+        assert_eq!(
+            t.reflectance.as_ref().map(|r| *r.get()),
+            uncached,
+            "the memoized reflectance disagreed with the recomputed one at (row {row}, col {col})"
+        );
+
         if let Some(r) = t.reflectance.as_ref() {
             resolved += 1;
             by_band.entry(t.band).or_default().push(*r.get());

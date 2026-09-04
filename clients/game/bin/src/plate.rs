@@ -2283,11 +2283,20 @@ pub fn terrain_at_tile(
     // gets the genuine four-corner bilinear position of the tile's own
     // centre rather than one answer per grid quad.
     //
-    // `.ok()`, never `unwrap`: `reflectance_at_facet` refuses an address
-    // COARSER than the grid (`LocaleError::AboveGrid`), which
-    // `virtual_dims` deliberately still honours, and a map that cannot
-    // colour one tile must still draw the rest.
-    let reflectance = ctx.and_then(|ctx| ctx.reflectance_at_facet(&facet, at).ok());
+    // `.ok()`, never `unwrap`: the context refuses an address COARSER than
+    // the grid (`LocaleError::AboveGrid`), which `virtual_dims` deliberately
+    // still honours, and a map that cannot colour one tile must still draw
+    // the rest.
+    //
+    // Through the `_cached` reader, sharing the very memo the corner-weight
+    // resolution above just filled: at `GLOBE_RUNG` (== the grid level, the
+    // world map's default) `facet` IS `addr`, so this is a hit and the
+    // nearest-vertex search is not paid twice. At a finer rung it misses and
+    // falls through to a fresh `corner_weights` — the same answer either
+    // way, pinned by `hornvale-locale`'s own
+    // `every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill`.
+    let reflectance =
+        ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok());
 
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
