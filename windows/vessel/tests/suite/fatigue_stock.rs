@@ -58,15 +58,15 @@
 //! property that varies it.
 
 use hornvale_kernel::{
-    ConceptRegistry, ConditionResponse, EntityId, Facet, Ledger, Lineage, ResourceVector, TickSpan,
-    WorldTime,
+    ConceptRegistry, ConditionResponse, EntityId, Facet, Fact, Ledger, Lineage, ResourceVector,
+    TickSpan, Value, WorldTime,
 };
 use hornvale_vessel::affordance::{OfferedVerb, offered_to};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::interior::interior_of;
 use hornvale_vessel::liveness::{
-    AGENT_AT, RESTED, RestSites, SLEPT, SleepTraits, Terrain, ThreatNiche, fatigue_at, place_agent,
-    record_rest, record_sleep,
+    AGENT_AT, RESTED, RestSites, SLEPT, SLEPT_ON, SleepTraits, Terrain, ThreatNiche, fatigue_at,
+    place_agent, record_rest, record_sleep,
 };
 
 /// The species traits every fixture below folds against — human's rows in
@@ -699,14 +699,25 @@ fn room_offers_sleep(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
         .any(|&a| offered_to(interior.anchor(a).kind, body).contains(&OfferedVerb::Sleep))
 }
 
-/// A ledger with the three predicates a graded bout needs registered, and two
+/// A ledger with the four predicates a graded bout needs registered, and two
 /// entities: one that will bed down in the furnished room, one in the road.
+///
+/// `SLEPT_ON` joined the list for The Tenon's Task 5 — the fold reads it now,
+/// so a fixture that means to exercise the kind-graded path has to be able to
+/// commit one. Registered on exactly the terms `Session::start` and
+/// `windows/lab`'s health harness register it on (non-functional, same doc
+/// text), because a fold over committed history must not be able to tell a
+/// harness's ledger from a session's.
 fn two_bodies() -> (Ledger, EntityId, EntityId, ConceptRegistry) {
     let mut registry = ConceptRegistry::default();
     for (p, doc) in [
         (AGENT_AT, "an agent's room position on a day"),
         (RESTED, "an agent rested on a day, for this many ticks"),
         (SLEPT, "an agent slept on a day, for this many ticks"),
+        (
+            SLEPT_ON,
+            "the kind of anchor an agent slept on, within the room it slept in",
+        ),
     ] {
         registry
             .register_predicate(p, false, doc)
@@ -1077,5 +1088,300 @@ fn p8_how_much_the_bed_helps_depends_on_the_species_sleeping_in_it() {
         "a kind whose sleep grade is exactly 1.0 must fold the bare-ground \
          arithmetic bit for bit even on a bed — 1.0 is `no bonus`, never `no \
          recovery`: graded={xorn}, ungraded={ungraded}"
+    );
+}
+
+// --- P9: the fold reads the committed KIND (The Tenon, Task 5) ------------
+
+/// A committed `slept-on` fact, assembled here rather than through a builder.
+///
+/// **Deliberately hand-built, and that is the point of the test rather than a
+/// shortcut.** `liveness::slept_on_fact` is `pub(crate)` and there is no
+/// harness twin of `record_sleep` for it, but even if there were, this file
+/// wants to pin the WIRE FORM the fold must read: a `Value::Text` label dated
+/// to the bout's own day, with `place: None` (decision 0698's second half).
+/// The fold folds committed history — including history this crate's own
+/// builders did not write — so the assertions below are stronger for going
+/// through `Ledger::commit` with a fact spelled out in full.
+///
+/// `label` is a `&str` and not a `KindId` for the same reason: a `KindId`
+/// holds a `&'static str` and the ledger cannot carry one, which is exactly
+/// the constraint the fold's own resolution step exists to answer.
+fn slept_on(entity: EntityId, label: &str, day: WorldTime) -> Fact {
+    Fact {
+        subject: entity,
+        predicate: SLEPT_ON.to_string(),
+        object: Value::Text(label.to_string()),
+        place: None,
+        day: Some(day),
+        provenance: "harness-slept-on".to_string(),
+    }
+}
+
+/// P9 — **a bout is graded on the kind the ledger says the body slept on,
+/// and on the bout that fact DATES** (The Tenon, Task 5; spec §6; decision
+/// 0698, which committed `SLEPT_ON` and left it unread on purpose).
+///
+/// Every bout here is taken in the ROAD, which offers nothing, so the
+/// room-level read cannot supply a grade to any of them. The only thing that
+/// can is the committed `slept-on` fact — which is what makes this red
+/// against the pre-task fold rather than a restatement of P7.
+///
+/// **Two bouts of DIFFERENT spans, because one bout cannot see a merge
+/// error.** With a single bout, a fold that handed the fact to whichever bout
+/// it reached first would be indistinguishable from one that matched by day.
+/// Two bouts, and the same fact moved between them, separates those: at
+/// `FATIGUE_FALL = 1.0` the long bout repays twice what the short one does,
+/// so *which* bout got graded is visible in the final debt.
+///
+/// Four things are pinned:
+///
+/// 1. the fixture discriminates — the road offers this body nowhere to lie
+///    down, so nothing below can be the room-level read in disguise;
+/// 2. all three readings land strictly inside the `[0, 1]` clamp, or the
+///    inequalities are comparisons between saturated values;
+/// 3. THE CLAIM — a bout carrying a `slept-on: bed` repays strictly more than
+///    the same bout with no such fact, whichever of the two bouts carries it;
+/// 4. the fact grades the bout it is DATED to: recording it against the long
+///    bout leaves strictly less debt than recording it against the short one.
+///
+/// Reds observed before Task 5's fold change (the pre-task fold ignores
+/// `SLEPT_ON` entirely, so all three readings are the same number):
+///
+/// ```text
+/// (3) a bout the ledger says was slept on a `bed` must repay more ...
+///       recorded=0.27000000000000007 unrecorded=0.27000000000000007
+/// ```
+#[test]
+fn p9_a_bout_grades_on_the_kind_the_ledger_says_it_slept_on() {
+    let furnished = Facet::containing([0.10, 0.10, 0.0], 6);
+    let road = Facet::containing([-0.40, -0.40, 0.0], 6);
+    let elsewhere = Facet::containing([0.30, -0.30, 0.0], 6);
+    assert!(
+        road != furnished && road != elsewhere,
+        "the bouts' room, the furnished room and the body's home must be three \
+         distinct rooms"
+    );
+    let terrain = OneFurnishedRoom {
+        furnished: furnished.clone(),
+    };
+    let (ledger, sleeper, _unused, reg) = two_bodies();
+    let body = resting_body(sleeper, elsewhere);
+
+    // (1) THE FIXTURE DISCRIMINATES, in the opposite direction from P7's: the
+    // room these bouts are taken in must offer NOTHING, so a grade appearing
+    // below can only have come from the committed fact.
+    assert!(
+        !room_offers_sleep(&road, &body, &terrain),
+        "the unbuilt room must offer nowhere to lie down, or a grade below \
+         could be the room-level read rather than the committed kind"
+    );
+
+    // Spans chosen so both bouts and every reading stay strictly inside the
+    // clamp, and so the two bouts are TOLD APART by how much each repays:
+    // debt accrues 0.3/day and repays 1.0/day asleep, so at the query instant
+    // the readings are 0.27 (neither graded), 0.17 (the short one graded) and
+    // 0.07 (the long one graded).
+    let short_at = at(2.0);
+    let short = TickSpan::from_std_days(0.2).expect("a finite span");
+    let long_at = at(3.0);
+    let long = TickSpan::from_std_days(0.4).expect("a finite span");
+    let woke = at(3.5);
+
+    let mut base = ledger;
+    base.commit(place_agent(sleeper, &road, WorldTime::GENESIS), &reg)
+        .expect("`agent-at` is non-functional");
+    base.commit(record_sleep(sleeper, short_at, short), &reg)
+        .expect("`slept` is non-functional");
+    base.commit(record_sleep(sleeper, long_at, long), &reg)
+        .expect("`slept` is non-functional");
+
+    let debt = |l: &Ledger| {
+        fatigue_at(
+            l,
+            sleeper,
+            woke,
+            TRAITS,
+            None,
+            Some(&RestSites {
+                terrain: &terrain,
+                body: &body,
+            }),
+        )
+    };
+    let with_record_on = |day: WorldTime| {
+        let mut l = base.clone();
+        l.commit(slept_on(sleeper, "bed", day), &reg)
+            .expect("`slept-on` is non-functional");
+        debt(&l)
+    };
+
+    let unrecorded = debt(&base);
+    let on_the_long = with_record_on(long_at);
+    let on_the_short = with_record_on(short_at);
+
+    // (2) All three strictly inside the clamp.
+    for (which, d) in [
+        ("unrecorded", unrecorded),
+        ("on the long bout", on_the_long),
+        ("on the short bout", on_the_short),
+    ] {
+        assert!(
+            d > 0.0 && d < 1.0,
+            "the {which} reading {d} must land strictly inside [0, 1] or the \
+             orderings below prove nothing"
+        );
+    }
+
+    // (3) THE CLAIM.
+    for (which, recorded) in [("long", on_the_long), ("short", on_the_short)] {
+        assert!(
+            recorded < unrecorded,
+            "a {which} bout the ledger says was slept on a `bed` must repay \
+             strictly more than the same bout with no such fact, in a room \
+             that affords nothing either way: recorded={recorded} \
+             unrecorded={unrecorded}"
+        );
+    }
+
+    // (4) THE FACT GRADES THE BOUT IT DATES. A fold that handed the record to
+    // whichever bout it reached first would answer `on_the_short` for both.
+    assert!(
+        on_the_long < on_the_short,
+        "a `slept-on` dated to the LONG bout must repay more than the same \
+         fact dated to the short one — the merge matches by day, not by \
+         arrival: long={on_the_long} short={on_the_short}"
+    );
+}
+
+/// P9b — **a bout with no `slept-on` fact still grades through the room**
+/// (The Tenon, Task 5; spec §6's "the fallback is not vestigial").
+///
+/// `Action::Rest` bouts commit no `slept-on` at all, and neither does any
+/// ledger written before The Pallet, so a fold over committed history has to
+/// keep grading them the way it always did. Deleting the room-level read
+/// would silently re-grade every one of them to bare ground.
+///
+/// Three things are pinned, and the third is the one no other test in this
+/// file can see:
+///
+/// 1. THE FALLBACK — a sleep in the furnished room with no `slept-on` fact
+///    still repays more than the same sleep in the road;
+/// 2. an UNRECOGNISED label falls back to the same read, bit for bit. A
+///    `KindId` holds a `&'static str` and a committed label is an owned
+///    `String`, so the fold resolves the label against the object registry's
+///    own keys; a label no row carries resolves to nothing, and "a kind this
+///    build does not have" must read as *no record*, never as *no surface*;
+/// 3. a `rested` bout is not graded by a `slept-on` fact sharing its day.
+///    `SLEPT_ON` is the site of a SLEPT bout by construction — both producers
+///    push it only from the `Action::Sleep` arm — so a fact paired with a
+///    conscious rest is a record about a different act.
+///
+/// MUTATIONS THIS MUST FAIL AGAINST (each run against the finished fold):
+///
+/// ```text
+/// (a) delete the room-level pass in `rest_timeline`, leaving only the
+///     `SLEPT_ON` merge   -> red at (1):
+///       a sleep in a furnished room with no `slept-on` fact must still ...
+///         furnished=0.3 road=0.3
+/// (b) drop the `BoutKind::Sleep` filter from the `SLEPT_ON` merge
+///                        -> red at (3):
+///       a `rested` bout must not be graded by a `slept-on` fact ...
+///         left: 4600427019358961664  right: 4601778099247172812
+/// ```
+#[test]
+fn p9b_a_bout_with_no_slept_on_fact_still_grades_through_the_room() {
+    let furnished = Facet::containing([0.10, 0.10, 0.0], 6);
+    let road = Facet::containing([-0.40, -0.40, 0.0], 6);
+    let elsewhere = Facet::containing([0.30, -0.30, 0.0], 6);
+    let terrain = OneFurnishedRoom {
+        furnished: furnished.clone(),
+    };
+    let (ledger, bedded, roadside, reg) = two_bodies();
+    let bedded_body = resting_body(bedded, elsewhere.clone());
+    let roadside_body = resting_body(roadside, elsewhere);
+    assert!(
+        room_offers_sleep(&furnished, &bedded_body, &terrain)
+            && !room_offers_sleep(&road, &roadside_body, &terrain),
+        "the two rooms must differ in what they offer, or (1) below is a null"
+    );
+
+    let lay_down = at(2.0);
+    let span = TickSpan::from_std_days(0.3).expect("a finite span");
+    let woke = lay_down + span;
+    let mut base = ledger;
+    for (e, room) in [(bedded, &furnished), (roadside, &road)] {
+        base.commit(place_agent(e, room, WorldTime::GENESIS), &reg)
+            .expect("`agent-at` is non-functional");
+        base.commit(record_sleep(e, lay_down, span), &reg)
+            .expect("`slept` is non-functional");
+    }
+    let debt = |l: &Ledger, e: EntityId, b: &Body| {
+        fatigue_at(
+            l,
+            e,
+            woke,
+            TRAITS,
+            None,
+            Some(&RestSites {
+                terrain: &terrain,
+                body: b,
+            }),
+        )
+    };
+
+    // (1) THE FALLBACK. Nothing here commits a `slept-on`, exactly as an
+    // `Action::Rest` bout and every pre-Pallet ledger do not.
+    let in_a_furnished_room = debt(&base, bedded, &bedded_body);
+    let in_the_road = debt(&base, roadside, &roadside_body);
+    assert!(
+        in_a_furnished_room > 0.0
+            && in_a_furnished_room < 1.0
+            && in_the_road > 0.0
+            && in_the_road < 1.0,
+        "both readings must land strictly inside [0, 1]: \
+         furnished={in_a_furnished_room} road={in_the_road}"
+    );
+    assert!(
+        in_a_furnished_room < in_the_road,
+        "a sleep in a furnished room with no `slept-on` fact must still repay \
+         more than one in the road — the room-level read is what grades every \
+         `rested` bout and every ledger written before `slept-on` existed: \
+         furnished={in_a_furnished_room} road={in_the_road}"
+    );
+
+    // (2) AN UNRECOGNISED LABEL IS NO RECORD, not an empty surface.
+    let mut bracken = base.clone();
+    bracken
+        .commit(slept_on(bedded, "bracken", lay_down), &reg)
+        .expect("`slept-on` is non-functional");
+    assert_eq!(
+        debt(&bracken, bedded, &bedded_body).to_bits(),
+        in_a_furnished_room.to_bits(),
+        "a `slept-on` naming a kind this build's object registry has never \
+         heard of must fold exactly what no fact at all folds — the label \
+         resolves to nothing, and nothing is not a surface with no offer"
+    );
+
+    // (3) A `rested` BOUT IS NOT GRADED BY A `slept-on` SHARING ITS DAY.
+    let (ledger, rester, _unused, reg) = two_bodies();
+    let rester_body = resting_body(rester, road.clone());
+    let mut resting = ledger;
+    resting
+        .commit(place_agent(rester, &road, WorldTime::GENESIS), &reg)
+        .expect("`agent-at` is non-functional");
+    resting
+        .commit(record_rest(rester, lay_down, span), &reg)
+        .expect("`rested` is non-functional");
+    let ungraded = debt(&resting, rester, &rester_body);
+    resting
+        .commit(slept_on(rester, "bed", lay_down), &reg)
+        .expect("`slept-on` is non-functional");
+    assert_eq!(
+        debt(&resting, rester, &rester_body).to_bits(),
+        ungraded.to_bits(),
+        "a `rested` bout must not be graded by a `slept-on` fact sharing its \
+         day: `slept-on` is the site of a SLEPT bout by construction, so \
+         pairing it with a conscious rest reads a record about another act"
     );
 }

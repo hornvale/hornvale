@@ -2780,12 +2780,21 @@ pub const SLEPT: &str = "slept";
 /// in the object and cannot be inverted back to a room at all — a real
 /// contract, paid for nothing recoverable.
 ///
-/// **Nothing reads this predicate yet, and that is deliberate, not
-/// accidental** (fix round 1, F3). Grading a body's outcome on WHICH kind it
-/// found — rather than merely recording that it found one — is the
-/// `per-people` rung this campaign's spec declares and defers; wiring it
-/// into `SiteGrade` or the recovery fold is later-campaign work. A fact
-/// written and never (yet) read is correct here.
+/// **THE RECOVERY FOLD READS IT NOW** (The Tenon, Task 5), and this
+/// paragraph used to say the opposite. The Pallet wrote *"nothing reads this
+/// predicate yet, and that is deliberate, not accidental"* — true when
+/// written, and the deferral it names (decision 0698's own consequence:
+/// grading a body's outcome on WHICH kind it found is the `per-people` rung
+/// 0697 defers) is exactly what The Tenon built. [`rest_timeline`] merges
+/// these facts against the bout timeline by day and grades a matching
+/// [`SLEPT`] bout [`SiteGrade::On`] that kind; [`grade_of`] prices it.
+///
+/// Two things the read does NOT do, both of which the old deferral would
+/// have made easy to assume: it does not consult
+/// [`crate::sleep_site::select_sleep_site`] (a fold over committed history
+/// cannot re-derive a within-room choice — decision 0069), and it does not
+/// replace the room-level read, which still grades every [`RESTED`] bout and
+/// every ledger written before this predicate existed.
 /// type-audit: bare-ok(identifier-text)
 pub const SLEPT_ON: &str = "slept-on";
 
@@ -3547,6 +3556,17 @@ const _: () = assert!(
 /// Carried through the timeline as an `Ord` TAG beside [`BoutKind`], for the
 /// same reason that one is: the sort stays an integer sort with no `total_cmp`
 /// anywhere near it.
+///
+/// **[`SiteGrade::On`] carries a [`KindId`] and the sort survives it (The
+/// Tenon, Task 5).** A `KindId` is `Copy + Ord` — it wraps a `&'static str`
+/// and compares as one — so the derived `Ord` here stays a comparison of
+/// exact values with no `total_cmp` anywhere near it. An `f64` in this
+/// position would have destroyed that, which is why the KIND travels through
+/// the timeline and the NUMBER is resolved at [`SiteGrade::gain`], where the
+/// sleeper's [`SleepTraits`] already are. (The ordering between variants is
+/// never consulted for meaning: [`rest_timeline`] sorts its bouts BEFORE any
+/// of them is graded, so every tag is [`SiteGrade::Bare`] at the moment the
+/// sort runs.)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum SiteGrade {
     /// Nothing in the room offered a place to lie down — the road, the open
@@ -3554,9 +3574,20 @@ enum SiteGrade {
     /// unmodified.
     Bare,
     /// Some anchor in the room offered [`crate::affordance::OfferedVerb::
-    /// Sleep`] to this body. Repays the sleeping body's own species-resolved
-    /// gain (`hornvale_species::sleep_grade_registry`) times the act's rate.
+    /// Sleep`] to this body, and the ledger does not say WHICH. Repays the
+    /// sleeping body's own species-resolved gain
+    /// (`hornvale_species::sleep_grade_registry`) times the act's rate.
+    ///
+    /// **Not vestigial, and it must not be deleted** (spec §6). An
+    /// [`Action::Rest`] bout commits no [`SLEPT_ON`] fact at all, and neither
+    /// does any ledger written before The Pallet; a fold over committed
+    /// history has to grade those, and this is the grade it gives them.
     Afforded,
+    /// The ledger records the KIND of thing the body slept on
+    /// ([`SLEPT_ON`], decision 0698) — the room-level read refined by what
+    /// was actually found. Repays what [`grade_of`] makes of that kind for
+    /// this sleeper.
+    On(KindId),
 }
 
 impl SiteGrade {
@@ -3564,23 +3595,32 @@ impl SiteGrade {
     /// the ONE mapping from site to gain, read only by
     /// [`fatigue_from_rests`].
     ///
-    /// **`afforded` is the SLEEPER's species-resolved gain, passed in, not
-    /// looked up here** (The Pallet, Task 4). This type stays a plain `Ord`
-    /// tag carried through the timeline beside [`BoutKind`] — the sort stays
-    /// an integer sort — and the species number arrives the same way the
-    /// sleep-debt `rate` already does: resolved once at [`creature_fatigue`],
-    /// then passed down as a scalar. Making the tag itself species-aware
-    /// would put a `KindId` in the sort key for no gain.
+    /// **The sleeper's numbers are passed in, not looked up here** (The
+    /// Pallet, Task 4). This type stays a plain `Ord` tag carried through the
+    /// timeline beside [`BoutKind`] — the sort stays an integer sort — and
+    /// the species numbers arrive the same way the sleep-debt `rate` already
+    /// does: resolved once at [`creature_fatigue`], then passed down.
     ///
-    /// [`SiteGrade::Bare`] ignores `afforded` entirely and answers `1.0`,
+    /// `objects` is the object roster the KIND half is read against, and it
+    /// is a borrow rather than a lookup here for the same reason: this
+    /// function holds no registry state of its own. A caller with no world
+    /// behind it passes the EMPTY roster and can produce no
+    /// [`SiteGrade::On`] to consult it with — see [`fatigue_at`].
+    ///
+    /// [`SiteGrade::Bare`] ignores both arguments entirely and answers `1.0`,
     /// which is why an UNGRADED read (`sites: None`, every bout `Bare`) folds
-    /// bit for bit what it folded before this parameter existed, whatever
-    /// gain its caller happens to pass.
-    /// type-audit: bare-ok(ratio: afforded), bare-ok(ratio: return)
-    fn gain(self, afforded: f64) -> f64 {
+    /// bit for bit what it folded before either parameter existed, whatever
+    /// its caller happens to pass.
+    /// type-audit: bare-ok(ratio: return)
+    fn gain(
+        self,
+        sleeper: &SleepTraits,
+        objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+    ) -> f64 {
         match self {
             SiteGrade::Bare => 1.0,
-            SiteGrade::Afforded => afforded,
+            SiteGrade::Afforded => sleeper.afforded_gain,
+            SiteGrade::On(kind) => grade_of(sleeper, kind, objects),
         }
     }
 }
@@ -3804,13 +3844,26 @@ fn position_timeline(
 /// a second convention for "where is a body with no position fact" is exactly
 /// the divergence this function exists to avoid.
 ///
+/// **THE KIND, WHERE THE LEDGER RECORDS ONE (The Tenon, Task 5).** Decision
+/// 0698 committed [`SLEPT_ON`] and left it deliberately unread; this is the
+/// function that reads it. A [`SLEPT`] bout carrying a `slept-on` fact on its
+/// own day is graded [`SiteGrade::On`] that kind, by a SECOND ordered merge
+/// in the same cursor idiom the position merge uses — both sides are already
+/// in day order, so the whole function stays `O(bouts + positions + facts)`.
+/// A bout WITHOUT one keeps the room-level read above, and that fallback is
+/// load-bearing rather than legacy: an [`Action::Rest`] bout never commits a
+/// `slept-on` at all, and neither does any ledger written before The Pallet.
+///
 /// `sites` absent ⇒ every bout is [`SiteGrade::Bare`]; see [`RestSites`].
+/// `objects` is the roster a committed kind LABEL is resolved against — see
+/// [`slept_on_timeline`] for why a resolution step is needed at all.
 fn rest_timeline(
     ledger: &Ledger,
     pending: &[Fact],
     entity: EntityId,
     t: WorldTime,
     sites: Option<&RestSites<'_>>,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
 ) -> Vec<(WorldTime, TickSpan, BoutKind, SiteGrade)> {
     let mut rests: Vec<(WorldTime, TickSpan, BoutKind, SiteGrade)> = Vec::new();
     for (predicate, kind) in [(RESTED, BoutKind::Rest), (SLEPT, BoutKind::Sleep)] {
@@ -3880,7 +3933,87 @@ fn rest_timeline(
             bout.3 = SiteGrade::Afforded;
         }
     }
+    // THE KIND, by a SECOND ordered merge — over the entity's own `slept-on`
+    // facts this time (decision 0698; The Tenon, Task 5). It runs AFTER the
+    // room-level pass and overwrites it, which is the whole ruling in one
+    // line: where the ledger records what the body actually found, that
+    // record decides the grade, and the room-level read is what grades every
+    // bout the ledger is silent about.
+    let mut slept_on = slept_on_timeline(ledger, pending, entity, t, objects);
+    slept_on.sort_by_key(|(d, _)| *d);
+    let mut cursor = 0usize;
+    for bout in rests.iter_mut() {
+        // ONLY A SLEEP. `SLEPT_ON` is the site of a `SLEPT` bout by
+        // construction — both producers (`advance_one`'s `Action::Sleep` arm
+        // and `Session::sleep`) push it from that arm and no other — so a
+        // fact sharing a day with a conscious `Action::Rest` is a record
+        // about a different act, and reading it here would grade a rest by
+        // where a sleep happened.
+        if bout.2 != BoutKind::Sleep {
+            continue;
+        }
+        while cursor < slept_on.len() && slept_on[cursor].0 < bout.0 {
+            cursor += 1;
+        }
+        if cursor < slept_on.len() && slept_on[cursor].0 == bout.0 {
+            bout.3 = SiteGrade::On(slept_on[cursor].1);
+            cursor += 1;
+        }
+    }
     rests
+}
+
+/// What `entity` slept ON over time, as `(day, kind)` pairs — the timeline
+/// [`rest_timeline`]'s second merge reads a bout's KIND off (The Tenon, Task
+/// 5), and the first reader [`SLEPT_ON`] has ever had.
+///
+/// **The resolution step is forced by the save format, not chosen.**
+/// [`slept_on_fact`] writes `Value::Text(kind.0.to_string())`, so a committed
+/// fact hands back an owned `String`, while a [`KindId`] wraps a
+/// `&'static str` — its own doc says outright *"Build-state: never
+/// serialized — the label enters the save as `Value::Text`, not as a
+/// `KindId`"*. A `KindId` therefore cannot be CONSTRUCTED from the ledger
+/// without leaking, and the honest conversion is to match the label against a
+/// roster that already owns the static string. That is exactly the shape
+/// `crate::affordance::label_carries` already uses for the same reason, and
+/// [`hornvale_kernel::component::ComponentStore::get_by_label`]'s own doc
+/// states the constraint in the kernel's words.
+///
+/// **An unrecognised label yields nothing, and nothing is the right answer.**
+/// A label no row carries is a kind this build does not have; the bout falls
+/// back to the room-level read, which is what [`SiteGrade::Afforded`] means.
+/// It is deliberately NOT a surface with no offer — that would silently
+/// re-grade a bout to bare ground on the strength of a roster this binary
+/// happens not to carry.
+///
+/// Read from BOTH the committed ledger and the walk's own not-yet-committed
+/// `pending`, exactly as [`rest_timeline`] reads [`RESTED`]/[`SLEPT`] from
+/// both, and filtered to `day <= t` for the same reason: a fact that
+/// chronologically postdates the query instant cannot grade a bout before it.
+fn slept_on_timeline(
+    ledger: &Ledger,
+    pending: &[Fact],
+    entity: EntityId,
+    t: WorldTime,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+) -> Vec<(WorldTime, KindId)> {
+    let read = |f: &Fact| match (&f.object, f.day) {
+        (Value::Text(label), Some(d)) if d <= t => objects
+            .ids()
+            .find(|k| k.0 == label.as_str())
+            .copied()
+            .map(|kind| (d, kind)),
+        _ => None,
+    };
+    let mut seen: Vec<(WorldTime, KindId)> = Vec::new();
+    seen.extend(ledger.facts_of(entity, SLEPT_ON).filter_map(read));
+    seen.extend(
+        pending
+            .iter()
+            .filter(|f| f.subject == entity && f.predicate == SLEPT_ON)
+            .filter_map(read),
+    );
+    seen
 }
 
 /// An elapsed span expressed in LOCAL (planetary) days, rather than
@@ -3922,9 +4055,19 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// (`Terrain::day_ticks`), `None` on a tidally locked world.
 ///
 /// **The site grade reaches this fold the way the rate already did** (The
-/// Pallet, Task 4): looked up at the caller, passed in as a number. No
-/// `Body` and no `KindId` is threaded in here, and [`SiteGrade`] stays the
-/// `Ord` tag it was, so the timeline sort stays an integer sort.
+/// Pallet, Task 4): looked up at the caller, passed in. No `Body` is threaded
+/// in here, and [`SiteGrade`] stays the `Ord` tag it was, so the timeline
+/// sort stays an integer sort.
+///
+/// **A `KindId` DOES travel in the tag now (The Tenon, Task 5), and the sort
+/// is unharmed.** This paragraph used to say no `KindId` was threaded in at
+/// all, which the `SLEPT_ON` read made false: a bout the ledger records a
+/// site for carries [`SiteGrade::On`], whose payload is a `KindId`. That is
+/// `Copy + Ord` over a `&'static str`, so the sort is still a comparison of
+/// exact values — the property the old sentence was protecting — and an
+/// `f64` in that position is what would have broken it. `objects` is the
+/// roster the kind is priced against, borrowed for the same reason `traits`
+/// is passed: this fold holds no registry state of its own.
 ///
 /// **Why the read and the mover must be ONE function, not two agreeing ones.**
 /// They were once two, and they diverged: the mover subtracted two INSTANTS and
@@ -3975,6 +4118,7 @@ fn fatigue_from_rests(
     t: WorldTime,
     traits: SleepTraits,
     day: Option<TickSpan>,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
 ) -> f64 {
     let mut fatigue = 0.0_f64;
     // How far along the creature's timeline the fold has consumed. Starts at
@@ -4007,11 +4151,12 @@ fn fatigue_from_rests(
             // never reaches furniture folds exactly the arithmetic Task 8
             // shipped. `afforded_gain` is the SLEEPER's own species row (The
             // Pallet, Task 4): a xorn's is `1.0`, so an ametabolic body folds
-            // the bare arithmetic even on a bed.
+            // the bare arithmetic even on a bed. Where the ledger records
+            // WHICH kind it lay on, the grade is that kind's (The Tenon, Task
+            // 5) — `bed` reproduces the species row exactly, which is what
+            // makes that task move no artifact.
             fatigue = (fatigue
-                - kind.fall()
-                    * site.gain(traits.afforded_gain)
-                    * to_local_days(woke - cursor, day))
+                - kind.fall() * site.gain(&traits, objects) * to_local_days(woke - cursor, day))
             .max(0.0);
         }
         if end > cursor {
@@ -4059,6 +4204,13 @@ fn fatigue_from_rests(
 /// grade, Nathan's ruling). The grade is per-BOUT and derived from the ledger's
 /// own `agent-at` timeline, so it is permanent: a body that slept on a bed and
 /// then walked into the road keeps what the bed repaid.
+///
+/// **And where the ledger says WHAT it slept on, that is what grades the
+/// bout** (The Tenon, Task 5; decision 0698). `SLEPT_ON` carries a registered
+/// kind, which is 0069-legal where an anchor's identity is not, so the fold
+/// can price the thing the body found rather than only the fact that the room
+/// held one. The room-level read still grades every bout the ledger is silent
+/// about.
 /// type-audit: bare-ok(ratio: return)
 pub fn fatigue_at(
     ledger: &Ledger,
@@ -4068,12 +4220,38 @@ pub fn fatigue_at(
     day: Option<TickSpan>,
     sites: Option<&RestSites<'_>>,
 ) -> f64 {
+    let objects = object_roster(sites);
     fatigue_from_rests(
-        &rest_timeline(ledger, &[], entity, t, sites),
+        &rest_timeline(ledger, &[], entity, t, sites, &objects),
         t,
         traits,
         day,
+        &objects,
     )
+}
+
+/// The object roster a graded fold prices a committed kind against — built
+/// ONCE per fold, at the two entry points, and borrowed from there down (The
+/// Tenon, Task 5).
+///
+/// **`None` gets the EMPTY roster, and that is a statement rather than a
+/// fallback.** A caller with no world behind it ([`RestSites`]'s own
+/// "UNGRADED, not bare by accident") has no rooms to grade and no `SLEPT_ON`
+/// merge run for it at all, so it cannot produce a [`SiteGrade::On`] for a
+/// roster to be consulted with. Building `crate::affordance::object_registry`
+/// for it anyway would spend a dozen allocations, on every fixture call, to
+/// answer a question no bout will ask.
+///
+/// Built here and not inside [`rest_timeline`] because BOTH steps need it —
+/// the merge resolves a label against it, the fold prices a kind against it —
+/// and two builds of the same authored table is the duplicated-read shape
+/// decision 0261 warns about.
+fn object_roster(
+    sites: Option<&RestSites<'_>>,
+) -> ComponentStore<KindId, crate::affordance::ObjectTraits> {
+    sites
+        .map(|_| crate::affordance::object_registry())
+        .unwrap_or_default()
 }
 
 /// [`fatigue_at`], plus rests emitted THIS tick and not yet committed — the
@@ -4098,11 +4276,13 @@ fn fatigue_with_pending(
     day: Option<TickSpan>,
     sites: Option<&RestSites<'_>>,
 ) -> f64 {
+    let objects = object_roster(sites);
     fatigue_from_rests(
-        &rest_timeline(ledger, pending, entity, t, sites),
+        &rest_timeline(ledger, pending, entity, t, sites, &objects),
         t,
         traits,
         day,
+        &objects,
     )
 }
 
@@ -4353,16 +4533,13 @@ const _: () = assert!(
 /// identity rather than an approximation — see
 /// `the_bed_column_reproduces_the_shipped_sleep_grade_for_every_species`,
 /// which states the arithmetic and the bound it is coupled to.
+///
+/// **The production caller is [`SiteGrade::gain`]** (The Tenon, Task 5), and
+/// until that task this function carried an `#[allow(dead_code)]` saying so
+/// in advance. It is reached for exactly one grade, [`SiteGrade::On`] — a
+/// bout whose [`SLEPT_ON`] fact the fold resolved to a kind this build
+/// carries — and for nothing else.
 /// type-audit: bare-ok(ratio: return)
-// UNCALLED IN THE PRODUCTION BUILD UNTIL THE TENON'S TASK 5, which is what
-// makes this task byte-identical: `SiteGrade::gain` still reads
-// `SleepTraits::afforded_gain` directly, so nothing a world renders passes
-// through here yet and no artifact can move. The two tests below are the only
-// callers today, which is why `dead_code` fires in the lib build and not in
-// the test build. DELETE THIS ALLOW IN TASK 5 — `#[expect]` cannot be used
-// instead, because under `cfg(test)` the lint does not fire at all and the
-// unfulfilled expectation would itself fail `--all-targets -D warnings`.
-#[allow(dead_code)]
 fn grade_of(
     sleeper: &SleepTraits,
     kind: KindId,
