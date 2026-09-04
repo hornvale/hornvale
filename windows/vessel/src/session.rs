@@ -6821,6 +6821,24 @@ impl<'w> Session<'w> {
     /// the one place a wider roster than the body can sense is the honest
     /// answer.
     fn describe_here(&self, how: Perceiving) -> Result<String, VesselError> {
+        // NOTE ON COST: this re-derives the whole brief on every `look`, the
+        // same accepted cost `brief_of`'s own doc names for `enter` and
+        // `Self::brief_here`'s cost note — hoist only if a profile shows it
+        // mattering. `go` takes the other path: it must validate the
+        // destination before writing state, so it passes that result through.
+        let brief = self.brief_here()?;
+        self.describe_here_with_brief(how, &brief)
+    }
+
+    /// Render the current room from one already-resolved production brief.
+    /// `go` is the consequential caller: destination culture is fallible, so
+    /// resolving before the move and consuming the same answer here makes a
+    /// brief refusal atomic without a second lookup that could disagree.
+    fn describe_here_with_brief(
+        &self,
+        how: Perceiving,
+        brief: &crate::brief::Brief,
+    ) -> Result<String, VesselError> {
         // Unsubmerged over water, the possession is AFLOAT — on the surface,
         // not down among whatever lives on the floor. Rendering the room's own
         // expression there would put a walker "in" a coral reef while they are
@@ -6844,17 +6862,11 @@ impl<'w> Session<'w> {
         // site gains a clause naming it; a facet with none says NOTHING —
         // silence is honest, and it is what makes the density gap visible
         // rather than papered over (most facets stay silent after this
-        // task, by design). Reads `brief_here().site`, the SAME predicate
+        // task, by design). Reads the resolved brief's site, the SAME predicate
         // `Self::enter` gates on, so the prose and what `enter` will
         // actually do can never disagree — H1's own claim ("surfacing does
         // not change what is enterable") holds by construction rather than
         // by two independently-written predicates staying in sync.
-        //
-        // NOTE ON COST: this re-derives the whole brief on every `look`, the
-        // same accepted cost `brief_of`'s own doc names for `enter` and
-        // `Self::brief_here`'s cost note — hoist only if a profile shows it
-        // mattering.
-        let brief = self.brief_here()?;
         let site_clause = brief
             .site
             .as_ref()
@@ -7003,6 +7015,13 @@ impl<'w> Session<'w> {
         let Some(dest) = heading_neighbour(&here, wanted) else {
             return Turn::Out(CORNER_BEARING_REFUSAL.to_string());
         };
+        // Resolve every fallible destination property before the first write.
+        // Arrival prose consumes THIS answer below: deriving again after the
+        // commit would restore the partial-move bug this preflight closes.
+        let dest_brief = match self.brief_at(&dest) {
+            Ok(brief) => brief,
+            Err(error) => return Turn::Out(format!("error: {error}")),
+        };
         // The Deed, Task 7: a walk-band step is an in-character act, so it
         // pays the action clock against this body's own mass and posts the
         // `agent-at` a creature's step posts. Charged BEFORE the position
@@ -7023,7 +7042,7 @@ impl<'w> Session<'w> {
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        self.out(self.describe_here(Perceiving::Body))
+        self.out(self.describe_here_with_brief(Perceiving::Body, &dest_brief))
     }
 
     /// Retrace one step of the walk-band trail. Like [`Self::go`], reached only
@@ -7442,12 +7461,18 @@ impl<'w> Session<'w> {
     /// context's occupation register rather than re-surveying the world
     /// (The Terrier).
     fn brief_here(&self) -> Result<crate::brief::Brief, VesselError> {
+        self.brief_at(&self.position())
+    }
+
+    /// The production brief for `place`. Unlike [`Self::brief_here`], this can
+    /// validate a prospective destination before a move mutates session state.
+    fn brief_at(&self, place: &Facet) -> Result<crate::brief::Brief, VesselError> {
         let terrain = self.terrain_here();
         crate::brief::brief_of(
             &self.wctx.occupations,
             self.wctx.ctx.climate().geosphere(),
             self.wctx.ctx.nearest_index(),
-            &self.position(),
+            place,
             &terrain,
             self.walk_depth(),
             self.wctx.world.seed,
@@ -11293,6 +11318,82 @@ mod tests {
             );
         }
         assert_eq!(s.position(), start, "n*4 then s*4 must be the identity");
+    }
+
+    /// A destination whose living people cannot be resolved is a refused
+    /// move, not a move followed by a rendering error. The state tuple spans
+    /// every write `go` performs: clock, roster/ledger position, the specific
+    /// `agent-at` predicate, every fact, and the retrace trail.
+    ///
+    /// FIRES WHEN: destination brief validation occurs after `charge`,
+    /// `commit_agent_at`, or the trail push, or arrival rendering derives a
+    /// second brief instead of consuming the validated destination brief.
+    #[test]
+    fn an_invalid_destination_brief_refuses_before_go_changes_any_state() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let here = session.position();
+        let (wanted, dest) = COMPASS_ROSE
+            .into_iter()
+            .find_map(|wanted| heading_neighbour(&here, wanted).map(|dest| (wanted, dest)))
+            .expect("a walk-band room has at least seven neighbours");
+        let dest_vertex = crate::brief::containing_vertex(
+            &dest,
+            session.wctx.ctx.climate().geosphere(),
+            session.wctx.ctx.nearest_index(),
+        )
+        .expect("a walk-band destination resolves to a containing vertex");
+        let people = hornvale_kernel::KindId("unregistered-destination-people");
+        let mut invalid = session
+            .wctx
+            .occupations
+            .values()
+            .flatten()
+            .find(|occupation| occupation.core.ended.is_none())
+            .cloned()
+            .expect("seed 42 has a living occupation to place at the destination");
+        invalid.core.people = people;
+        invalid.core.site = dest_vertex;
+        match &mut session.wctx {
+            HeldContext::Owned(wctx) => {
+                wctx.occupations.insert(dest_vertex, vec![invalid]);
+            }
+            HeldContext::Borrowed(_) => panic!("Session::start owns its world context"),
+        }
+        let before = (
+            session.day,
+            session.position(),
+            session.committed_agent_at_count(),
+            session.committed_fact_count(),
+            session.trail.clone(),
+        );
+        let direction = format!("{wanted:?}").to_lowercase();
+
+        let reply = match session.go(&direction) {
+            Turn::Out(text) => text,
+            Turn::Released(_) => panic!("go must not release the possession"),
+        };
+
+        assert_eq!(
+            reply,
+            format!(
+                "error: brief: living people {} has no society row",
+                people.0
+            ),
+            "the vessel boundary must report the destination brief failure"
+        );
+        assert_eq!(
+            (
+                session.day,
+                session.position(),
+                session.committed_agent_at_count(),
+                session.committed_fact_count(),
+                session.trail.clone(),
+            ),
+            before,
+            "a refused destination brief must leave all go state unchanged"
+        );
     }
 
     /// The cube corner's absent bearing, in BOTH directions — an interior room

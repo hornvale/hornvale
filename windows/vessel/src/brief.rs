@@ -543,6 +543,36 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_production_occupation_register_carries_no_people_or_housemark() {
+        let geo = Geosphere::new(0);
+        let index = NearestVertexIndex::new(&geo);
+        let place = Facet {
+            face: 0,
+            path: Vec::new(),
+        };
+        let occupations = BTreeMap::new();
+
+        let brief = brief_of(
+            &occupations,
+            &geo,
+            &index,
+            &place,
+            &StubTerrain,
+            0,
+            Seed(42),
+            &[],
+            &[],
+        )
+        .expect("an unoccupied production place has a brief");
+
+        assert_eq!(
+            (brief.people, brief.housemark),
+            (None, None),
+            "nobody must not acquire MANIKIN's culture"
+        );
+    }
+
+    #[test]
     fn a_living_occupation_with_no_society_row_refuses_with_its_people_id() {
         let people = KindId("unregistered-test-people");
 
