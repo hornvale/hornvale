@@ -132,8 +132,8 @@ Per tile, replacing `glyph_and_color_for(water, band)`:
 
 ```
   reflectance   locale::reflectance_at(facet, micro, at)   the ground's own curve
-  illuminant    astronomy::at_elevation(daylight(star),    ONE per frame, not per tile
-                                        sun_elevation)
+  illuminant    astronomy::at_elevation(daylight(star),    ONE per frame, at the
+                                        sun_elevation)     OBSERVER's latitude
   observer      the terminal's own                          truecolor / 256 / 16 / none
   ---------------------------------------------------------------------------
   channel       observer.collapse(reflectance x illuminant)
@@ -212,12 +212,36 @@ here.
   never live in a geological or seasonal cache; it belongs with the
   perception layer, which already redraws per turn.
 
-### 4.5 Performance, and where the ECS substrate earns its place
+### 4.5 The illuminant is anchored to the observer, not to the tile
 
-The naive implementation recomputes the illuminant for all ~4,800 tiles of a
-plate. **Hoisting it out of the per-tile loop is the whole optimisation**,
-and the rate spine is what says so: the illuminant is diurnal and uniform
-across the plate; only the reflectance varies per tile.
+**CORRECTION (2026-09-03, before Task 5). An earlier draft of this section
+said the illuminant is "diurnal and uniform across the plate". That is false
+at coarse rungs and the campaign would have shipped it.**
+`Calendar::solar_altitude_at(t, latitude)` depends on latitude *and* hour
+angle. A plate at globe rung spans the whole planet — every latitude and
+every longitude — so a single illuminant lights the night side as if it were
+noon. There is no rung-independent sense in which one illuminant is correct
+for a whole map.
+
+**The decision: the map is lit as it is WHERE THE READER STANDS.** One
+illuminant per draw, computed at the observer's own latitude and the
+session's own instant, applied uniformly. This follows the precedent
+`windows/vessel/src/eyes.rs:81-97` already sets at room scale, where a single
+observer latitude is obviously right; the plate does the same thing at a
+scale where the approximation is weaker, and says so.
+
+**What that costs, stated rather than hidden:** no terminator sweeps the map.
+At a coarse rung the far side of the world is lit by the reader's sun. That is
+a cartographic convention — a map is a document you consult, not a satellite
+photograph — and it is the reading
+`CLIENT-map-is-invitation-not-data-dump` already asks for. A terminator, if
+ever wanted, is a per-tile illuminant and a different campaign; it would
+forfeit the hoist below.
+
+**The hoist is what makes it cheap.** The naive implementation recomputes the
+illuminant for all ~4,800 tiles of a plate; anchoring it to the observer makes
+one computation per draw correct *by construction* rather than by
+approximation. Only the reflectance varies per tile.
 
 Per-tile reflectance is a **derived value keyed by facet**, which is what
 `kernel/src/component.rs`'s `ComponentStore<K: Ord, C>` and
@@ -263,6 +287,11 @@ never a banded value.
 **H2 — the seasonal and diurnal layers are real, and directional.** At one
 seed and location: midwinter differs from midsummer, and dawn differs from
 noon.
+
+**Narrowed by §4.5's correction:** "dawn differs from noon" is about the
+READER's dawn — the observer's own hour — not about a terminator crossing the
+map. H2 asserts the map's ink responds to the reader's time of day. It does
+not assert, and this campaign does not deliver, per-place lighting.
 
 *Failure mode named in advance:* inequality is trivially satisfied by any
 change. So H2 asserts **direction** — snow-endmember weight strictly greater
