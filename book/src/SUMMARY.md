@@ -455,6 +455,7 @@
 - [The Hachure](./chronicle/the-hachure.md)
 - [The Plat](./chronicle/the-plat.md)
 - [The Pallet](./chronicle/the-pallet.md)
+- [The Tenon](./chronicle/the-tenon.md)
 
 # Appendix: The Frontier
 

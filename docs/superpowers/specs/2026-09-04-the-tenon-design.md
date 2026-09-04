@@ -1,5 +1,7 @@
 # The Tenon — design
 
+**Status:** implementation complete — all nine tasks complete; awaiting merge.
+
 **Campaign C of the `MAP-one-kind-model` arc: kind-to-kind edges.**
 Predecessors: The Wicket (a kind is a row), The Plumb (every constant declares
 its axis, decision 0586), The Pallet (a body chooses where to sleep and commits

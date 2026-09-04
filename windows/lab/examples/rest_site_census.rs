@@ -31,11 +31,11 @@
 //! function does not return. Every count below is read off committed facts,
 //! never off a fold.
 //!
-//! **It reconstructs two private things and says so at each site**:
-//! `liveness::room_affords_rest` (private, `liveness.rs:3724`) and the
-//! `SiteGrade` resolution inside `liveness::rest_timeline` (private,
-//! `liveness.rs:3802`). A measurement must not widen the surface it measures,
-//! so neither is made `pub` for this probe's benefit.
+//! **It carries three private reconstructions and says so at each site**:
+//! `liveness::room_affords_rest`; the `SiteGrade` resolution inside
+//! `liveness::rest_timeline`; and `liveness::grade_of` with the inputs resolved
+//! as `liveness::sleep_traits_of` resolves them. A measurement must not widen
+//! the surface it measures, so none is made `pub` for this probe's benefit.
 
 use hornvale_kernel::{
     Facet, FacetId, KindId, Ledger, RoomMeshMemo, Seed, Value, WorldTime,
@@ -574,8 +574,8 @@ fn count(
                 } else {
                     c.rested += 1;
                 }
-                // Mirrors `rest_timeline`'s grade resolution (private,
-                // `liveness.rs:3802`): the room is the last committed
+                // Mirrors `rest_timeline`'s private grade resolution: the
+                // room is the last committed
                 // `agent-at` at or before the bout's day, defaulting to the
                 // body's home, and the grade is `room_affords_rest` of that
                 // room. RECONSTRUCTION, not the same function — it can drift.
@@ -704,10 +704,9 @@ fn quadrant_of(room: &Facet, terrain: &dyn Terrain) -> usize {
     usize::from(terrain.is_built(room)) * 2 + usize::from(terrain.is_cold(room))
 }
 
-/// **A RECONSTRUCTION of `liveness::room_affords_rest`** (private, `fn` at
-/// `windows/vessel/src/liveness.rs:3724`), which this probe may not call and
-/// must not widen to `pub` — a measurement that changes the surface it
-/// measures is not a measurement.
+/// **A RECONSTRUCTION of private `liveness::room_affords_rest`**, which this
+/// probe may not call and must not widen to `pub` — a measurement that changes
+/// the surface it measures is not a measurement.
 ///
 /// It is exact TODAY and is not the same function. `room_affords_rest`
 /// delegates to `sleep_site::select_sleep_site(&interior_of(room, terrain),

@@ -125,8 +125,9 @@ pub(crate) fn room_offers_sleep(
 /// the tie-break. Erasing it would take a chooser that SEARCHES, and adding
 /// one is the decision this doc is telling a successor they would be making.
 ///
-/// This is spec §8's ruling, recorded here rather than resolved silently:
-/// the warning was answered, not stepped over.
+/// This is spec §8's ruling and decision 0730's explicit amendment, recorded
+/// here rather than resolved silently: the warning was answered, not stepped
+/// over.
 ///
 /// **`objects` and `sleeper` are the caller's, built once and lent.** See
 /// [`sleep_candidates`] for why candidacy reads the passed roster, and
