@@ -319,15 +319,38 @@ const OVERHANG_CONTEXTUALITY: f64 = 0.5;
 /// [`FieldPack::slope`]) before it enters overhang/hollow's `[0,1]`
 /// macro-state mix — the same `tanh(x / SCALE)` saturation
 /// [`SPRING_DRAINAGE_SATURATION`] uses for a different unbounded cause.
-/// An order of magnitude gentler than
-/// [`hornvale_terrain::GORGE_SLOPE`] (`40_000.0`, the slope at which a
-/// channel's floodplain band fully closes): an overhang needs a steep rock
-/// face, not a canyon wall, so this saturates well before terrain reaches
-/// gorge-grade steepness. **Not one of spec §5.2's three per-kind scalars**
-/// — a units-conversion constant, the same carve-out
-/// [`SPRING_DRAINAGE_SATURATION`]'s own doc states.
-/// plumb: universal(a units-conversion constant bringing an unbounded slope reading into the same [0,1] register induration already occupies; not itself a design dial)
-const OVERHANG_SLOPE_SATURATION: f64 = 8_000.0;
+///
+/// **`= hornvale_terrain::GORGE_SLOPE` (`40_000.0`), MEASURED, not reasoned
+/// by analogy (Task 7, fix round 1, I2).** The shipped `8_000.0` was picked
+/// as "an order of magnitude gentler than `GORGE_SLOPE`" without checking
+/// against real terrain — and seed 42's actual land `|slope|` distribution
+/// (11,283 land vertices, `pack.land >= 0.5`) falsifies that reasoning:
+/// median `14,853.45`, almost double `8_000.0`, so `tanh(median / 8_000)` is
+/// already `0.9524` — the recipe collapses to bare `induration` over most of
+/// the land (`tanh >= 0.95` above p30, `>= 0.998` above p75), and the slope
+/// half of "induration × slope" was doing almost nothing. `GORGE_SLOPE`
+/// itself, re-measured against the SAME distribution, is the graded curve
+/// this recipe actually wants:
+///
+/// | percentile | `\|slope\|` | `tanh(x / 8_000)` (shipped) | `tanh(x / GORGE_SLOPE)` |
+/// | --- | --- | --- | --- |
+/// | p10 | 3,242 | 0.3845 | 0.0809 |
+/// | p25 | 6,922 | 0.6990 | 0.1714 |
+/// | median | 14,853 | 0.9524 | 0.3552 |
+/// | p75 | 28,150 | 0.9982 | 0.6067 |
+/// | p90 | 41,423 | 0.9999 | 0.7761 |
+/// | p99 | 98,245 | 1.0000 | 0.9854 |
+///
+/// Reused directly rather than duplicated as a second `40_000.0` literal —
+/// not a coincidence that the same number works for both: `GORGE_SLOPE` is
+/// already this world model's own "terrain reads as maximally rugged"
+/// ceiling, and overhang/hollow wants exactly that ceiling, not a
+/// bespoke fraction of it a canyon wall would still fail to reach.
+/// **Not one of spec §5.2's three per-kind scalars** — a units-conversion
+/// constant, the same carve-out [`SPRING_DRAINAGE_SATURATION`]'s own doc
+/// states.
+/// plumb: universal(a units-conversion constant, measured against seed 42's real land-slope distribution and reusing hornvale_terrain::GORGE_SLOPE rather than an unmeasured analogy; not itself a design dial)
+const OVERHANG_SLOPE_SATURATION: f64 = hornvale_terrain::GORGE_SLOPE;
 
 /// Overhang/hollow's macro-state recipe (spec §5.6: "induration × slope"):
 /// blended induration (rock hardness — a soft rock cannot hold its own

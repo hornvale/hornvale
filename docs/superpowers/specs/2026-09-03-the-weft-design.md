@@ -304,6 +304,32 @@ negative control and must score near zero; if it does not, the instrument is
 measuring something other than legibility and the finding is about the
 instrument.
 
+**Amendment (Task 7 fix round 1, I1) — the population is land-eligible
+facets, not the whole sphere.** This amendment lands AFTER Task 7's
+eligibility gate (spec §5.2's own lerp floor, closed by R1: every kind's
+`prevalence` now returns exactly `0.0` on ineligible ground, tested before
+any macro-state read or noise draw) and BEFORE Task 9 measures H3 against
+real data — a confound removed ahead of measurement, not a result rescued
+after seeing one (decision 0016's forbidden shape is the reverse ordering).
+
+**Why:** the eligibility gate makes `occurrence ⇒ land` hold with certainty
+for every kind, uniformly. That shared gate is itself a macro correlation,
+and on a WHOLE-SPHERE population it contributes mutual information the
+erratic did not earn by tracking any real cause — it earns it for free, from
+the same land/ocean split every kind now shares. Measured (Task 7 fix round
+1 review): **≈0.0197 bits of MI for the erratic against ≈0.0186 bits for
+spring** on the whole-sphere population — the negative control OUTSCORES the
+sign case on the gate component alone, which would falsify H3's preregistered
+ordering for a reason that has nothing to do with legibility.
+
+The fix: **compute H3's mutual information over the land-eligible population
+only**, so the gate is held constant (every facet in the population is
+already known to be land) rather than measured as if it were signal. The
+preregistered ordering (`spring > thicket > overhang > erratic`) and the
+erratic's near-zero requirement are otherwise unchanged — only the population
+the statistic is computed over is amended, and it is amended here, in the
+spec, before Task 9 runs the measurement.
+
 **H4 — no goose chases. DEFERRED WITH ITS PRODUCER, and this spec no longer
 preregisters it.** The invariant is "every rumor names a region, and the region
 is never empty". This campaign builds **no rumor producer** — §5.5 names rumors

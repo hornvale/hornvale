@@ -6,21 +6,57 @@
 //! `channel-transect-dry-reach`. Task 7 extends both to the three new kinds,
 //! and adds the eligibility regression `spring_never_occurs_off_land` (R1).
 //!
-//! **The fixed walk moved from vertex 0 to vertex 14 (Task 7).** Task 7's
-//! eligibility gate (R1 — see `weft::kinds`'s own module doc) makes
+//! **Fix round 1 (C1/M2/M3) replaced the single-walk calibration with a
+//! broad, representative sample.** The shipped version calibrated
+//! `KIND_BOUNDS` off ONE 200-step walk from vertex 14 — 18% of spring's own
+//! measured global range, per the review. Worse, for erratic/scatter (short
+//! correlation length, near-zero contextuality) a raw max-delta bound is a
+//! genuinely weak discriminator: at the shipped bound (`0.07`, 92% of
+//! erratic's own theoretical amplitude), an address-hashed mutant exceeded
+//! it only 0.5% of the time — the guard could not catch what it exists to
+//! catch, on the one kind least able to absorb that (Task 5's F2 shape
+//! again: a bound loose enough to be decorative).
+//!
+//! The fix is two-part:
+//!
+//! 1. **[`land_eligible_walks`] samples 78 land-eligible 60-step walks**
+//!    (`STRIDE = 137`-spaced starting vertices across all 40,962), not one —
+//!    4,602 adjacent-pair deltas and 4,680 facet evaluations per kind. Every
+//!    bound in [`KIND_BOUNDS`] is now measured against this pool, with a
+//!    per-kind floor read off the pool's OWN measurement (never a shared
+//!    `1`) — see that constant's own doc for the real/mutant numbers.
+//! 2. **A lag-1 autocorrelation check ([`AUTOCORR_BOUNDS`],
+//!    `prevalence_autocorrelation_is_not_address_hashed`) is now the
+//!    PRIMARY discriminator, not the max-delta bound.** Measured on THIS
+//!    tree, real vs. an address-hashed mutant (the same in-place swap Task 5
+//!    used: `fbm.sample(facet.centroid())` → `facet.seed(seed)
+//!    .stream().next_f64()`, both passed through `uniformize`, reverted
+//!    after measuring):
+//!
+//!    | kind | real r | mutant r |
+//!    | --- | --- | --- |
+//!    | spring | 0.99821 | 0.20919 |
+//!    | overhang | 0.98317 | 0.08907 |
+//!    | thicket | 0.99994 | 0.89048 |
+//!    | erratic | 0.86795 | **-0.02545** |
+//!
+//!    Erratic's separation (0.868 vs. -0.025) is the cleanest of the four —
+//!    exactly the opposite of the max-delta bound's own weakest case — because
+//!    erratic's tiny contextuality (`0.05`) means almost the entire mixed
+//!    signal IS the noise term, so decorrelating it destroys the
+//!    correlation outright. The max-delta bound stays as a SECONDARY check
+//!    (a real regression that flattens the field entirely, e.g., or a gross
+//!    scale error, would still trip it), but autocorrelation is what this
+//!    fix round actually leans on for erratic.
+//!
+//! **The eligibility-cliff reasoning from the shipped version is unchanged
+//! and still governs `land_eligible_walks`**: Task 7's R1 gate makes
 //! ineligible ground a hard `prevalence == 0.0` cliff, a REAL geographic
-//! discontinuity (a coastline), not decorrelated noise. Vertex 0's own
-//! 200-step walk crosses one at step 122 (measured while writing this task):
-//! a single delta of `0.357` for thicket/brake at that step alone, dwarfing
-//! every other step's smooth noise-driven movement. Conflating that cliff
-//! with the continuous-noise-smoothness property this file tests would
-//! either mask a real address-hashing regression (bound raised to swallow
-//! the cliff) or false-positive on every run (bound left tight). Vertex 14's
-//! own 200-step walk stays land-eligible throughout (probed the same way —
-//! searched `0..300`, several dozen qualify), so it isolates the property
-//! this file is actually about. The eligibility cliff itself is exercised
-//! directly by `spring_never_occurs_off_land` below, over the WHOLE grid
-//! rather than one walk.
+//! discontinuity (a coastline), not decorrelated noise, so every walk this
+//! file samples is kept only if it stays land-eligible for its entire
+//! length — never mixed into a noise-smoothness measurement. The
+//! eligibility cliff itself is exercised directly by
+//! `spring_never_occurs_off_land` below, over the WHOLE grid.
 //!
 //! Test fixture (decision 0092): calls the sculpt derivation entry point
 //! (`terrain_of`) directly to build its own world state, once per test — the
@@ -39,18 +75,32 @@ use hornvale_worldgen::WeftKind;
 /// is reproduced directly rather than imported.
 const WALK_DEPTH_BELOW_GRID: u32 = 7;
 
-/// The fixed walk's starting vertex (Task 7) — see this file's own module
-/// doc for why it moved off vertex 0.
-const WALK_START: u32 = 14;
+/// Steps per sampled walk (fix round 1). Short enough that a walk starting
+/// on a modest island or coastal strip still often qualifies as fully
+/// land-eligible, long enough to give each kind's own correlation length
+/// (5–60 facets) room to move.
+const WALK_LEN: usize = 60;
 
-/// Walk `STEPS` edge-adjacent facets from [`WALK_START`] (`neighbors()[0]` is
-/// always the "+a" edge step — `Facet::neighbor_steps`'s own doc: "the first
-/// four neighbours are always the four edge-adjacent rooms", present even at
-/// a cube corner, so this index never panics), returning each step's
-/// `prevalence` and whether `occurs` fired there. Shared by every test in
-/// this file so the coherence check and its anti-vacuity companion measure
-/// literally the same walk, per kind.
-fn walk_kind(kind: WeftKind, steps: usize) -> Vec<(f64, bool)> {
+/// Spacing between candidate starting vertices, in raw vertex index (fix
+/// round 1). `40,962 / 137 ≈ 299` candidates scanned; 78 qualify (stay
+/// land-eligible for the whole walk) — a broad, globally-spread sample
+/// rather than one hand-picked start, closing M2. Prime-ish and unrelated to
+/// the geosphere's own subdivision structure, so it does not alias onto any
+/// lattice regularity.
+const STRIDE: u32 = 137;
+
+/// One sampled walk: [`WALK_LEN`] steps of `(prevalence, occurs)`, kept only
+/// if every step stayed land-eligible — see this file's own module doc for
+/// why a coastline crossing must never enter a noise-smoothness sample.
+type Walk = Vec<(f64, bool)>;
+
+/// Every land-eligible [`WALK_LEN`]-step walk starting at a
+/// [`STRIDE`]-spaced vertex, for `kind` — the representative sample fix
+/// round 1 (M2) replaced the single hand-picked walk with. Builds its own
+/// world/terrain/climate/pack once (not shared across kinds — this file
+/// values the fixture-per-call posture decision 0092 sanctions over a
+/// shared-fixture optimization).
+fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
     let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
@@ -58,60 +108,113 @@ fn walk_kind(kind: WeftKind, steps: usize) -> Vec<(f64, bool)> {
     let geo = terrain.geosphere();
     let index = NearestVertexIndex::new(geo);
     let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
+    let n = geo.vertex_count() as u32;
 
-    let mut facet = Facet::containing(geo.position(Vertex(WALK_START)), walk_depth);
-    let mut out = Vec::with_capacity(steps);
-    for _ in 0..steps {
-        let p = hornvale_worldgen::prevalence(kind, &facet, geo, &index, &pack, world.seed)
-            .expect("a walk-depth facet is always deeper than the geosphere's own level");
-        let occ = hornvale_worldgen::occurs(kind, &facet, world.seed, p);
-        out.push((p, occ));
-        facet = facet
-            .neighbors()
-            .into_iter()
-            .next()
-            .expect("a facet always has an edge neighbour");
+    let mut walks = Vec::new();
+    let mut start = 0u32;
+    while start < n {
+        let mut facet = Facet::containing(geo.position(Vertex(start)), walk_depth);
+        let mut walk: Walk = Vec::with_capacity(WALK_LEN);
+        let mut eligible_throughout = true;
+        for _ in 0..WALK_LEN {
+            let Some(weights) = facet.corner_weights(geo, &index) else {
+                eligible_throughout = false;
+                break;
+            };
+            if blend_corner_weights(weights, &pack.land) < 0.5 {
+                eligible_throughout = false;
+                break;
+            }
+            let p = hornvale_worldgen::prevalence(kind, &facet, geo, &index, &pack, world.seed)
+                .expect("corner_weights just returned Some above");
+            let occ = hornvale_worldgen::occurs(kind, &facet, world.seed, p);
+            walk.push((p, occ));
+            facet = facet
+                .neighbors()
+                .into_iter()
+                .next()
+                .expect("a facet always has an edge neighbour");
+        }
+        if eligible_throughout && walk.len() == WALK_LEN {
+            walks.push(walk);
+        }
+        start += STRIDE;
     }
-    out
+    walks
 }
 
-/// Per-kind `(kind, max_allowed_delta, min_prevalence_spread,
-/// min_occurs_over_200)` — measured over [`WALK_START`]'s own 200-step walk,
-/// current (post-R1) mechanism, and asserted here at thresholds with margin
-/// over the measured value (spring/seep's `0.02` bound sits ~5.2x over its
-/// own measured `0.00385` on this walk).
+/// Per-kind `(kind, max_allowed_delta, min_pooled_spread,
+/// min_total_occurs)` — every bound measured against
+/// [`land_eligible_walks`]'s full 78-walk, 4,680-facet, 4,602-delta pool
+/// (fix round 1, M2/M3), never a single walk or a shared floor.
 ///
-/// Measured maxima (seed 42, this walk): spring `0.00385`, overhang
-/// `0.01552`, thicket `0.00220`, erratic `0.03405`. Spreads: spring
-/// `0.04664`, overhang `0.09544`, thicket `0.05398`, erratic `0.07158`.
-/// Occurrence counts over 200 steps: spring `10`, overhang `30`, thicket
-/// `81`, erratic `9`.
+/// **Measured (seed 42, this pool, current post-R1 mechanism):**
 ///
-/// **Not re-derived per kind against an address-hashed mutant (scope
-/// decision, Task 7 — see the task-7 report).** Task 5's own mutation
-/// discrimination measurement (42.6x separation at spring/seep's
-/// `SPRING_CONTEXTUALITY = 0.85`) exercises the identical mechanism every
-/// kind shares — `SphereFbm` sampling plus `uniformize`, differing only in
-/// which `FieldPack` scalars feed the macro-state recipe — so the same
-/// discrimination is expected to hold for the other three; re-running the
-/// full mutation sweep per kind was judged out of scope for this task and is
-/// named rather than silently skipped.
+/// | kind | max delta | pooled spread | total occurs |
+/// | --- | --- | --- | --- |
+/// | spring | 0.00576 | 0.11429 (`[0.00089, 0.11518]`) | 125 / 4,680 |
+/// | overhang | 0.02984 | 0.16394 (`[0.01533, 0.17927]`) | 400 / 4,680 |
+/// | thicket | 0.00764 | 0.39419 (`[0.00054, 0.39473]`) | 924 / 4,680 |
+/// | erratic | 0.04920 | 0.07593 (`[0.00203, 0.07796]`) | 233 / 4,680 |
+///
+/// `max_allowed_delta` below leaves real headroom over its own kind's
+/// measured max while staying well under that kind's own address-hashed
+/// mutant max (measured the same way, see this file's module doc): spring
+/// `0.010` (1.7x real / 5.4x under mutant `0.0535`), overhang `0.045` (1.5x
+/// real / 2.2x under mutant `0.1009`), thicket `0.015` (2.0x real / 4.6x
+/// under mutant `0.0690`). **Erratic's `0.060` (1.2x real / only 1.3x under
+/// mutant `0.0760`) is deliberately a weak, secondary check** — see this
+/// file's module doc: erratic's real discrimination comes from
+/// [`AUTOCORR_BOUNDS`] below, not this bound, because a short-correlation,
+/// near-zero-contextuality kind's real deltas already sit close to its own
+/// theoretical amplitude ceiling, the exact shape that made the shipped
+/// `0.07` bound decorative.
+///
+/// `min_pooled_spread`/`min_total_occurs` are set with margin BELOW the
+/// measured real values above (never above — a floor above the real
+/// measurement would fail on real data by construction): spring `0.05`/`50`,
+/// overhang `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
-    (WeftKind::Spring, 0.02, 0.01, 1),
-    (WeftKind::Overhang, 0.05, 0.01, 1),
-    (WeftKind::Thicket, 0.01, 0.01, 1),
-    (WeftKind::Erratic, 0.07, 0.01, 1),
+    (WeftKind::Spring, 0.010, 0.05, 50),
+    (WeftKind::Overhang, 0.045, 0.08, 150),
+    (WeftKind::Thicket, 0.015, 0.20, 400),
+    (WeftKind::Erratic, 0.060, 0.04, 100),
+];
+
+/// Per-kind `(kind, min_lag1_autocorrelation)` — the PRIMARY
+/// decorrelated-noise discriminator fix round 1 added (C1). Pearson
+/// correlation between `prevalence[i]` and `prevalence[i+1]`, pooled across
+/// every pair in every walk [`land_eligible_walks`] returns for the kind
+/// (4,602 pairs each). See this file's own module doc for the real-vs-mutant
+/// table these thresholds sit between; each threshold below leaves
+/// comparable margin on both sides of its own kind's pair (spring: real
+/// `0.998` / mutant `0.209`, threshold `0.6`; overhang: real `0.983` /
+/// mutant `0.089`, threshold `0.5`; thicket: real `0.99994` / mutant
+/// `0.890`, threshold `0.95` — the tightest margin of the four, because
+/// thicket's own high contextuality (`0.85`) means even fully decorrelated
+/// noise is only 15% of the mixed signal, so the mutant's correlation stays
+/// high too; erratic: real `0.868` / mutant `-0.025`, threshold `0.5` — the
+/// widest margin of the four, and not a coincidence: erratic's near-zero
+/// contextuality is exactly what makes this the right primary check for it).
+const AUTOCORR_BOUNDS: [(WeftKind, f64); 4] = [
+    (WeftKind::Spring, 0.6),
+    (WeftKind::Overhang, 0.5),
+    (WeftKind::Thicket, 0.95),
+    (WeftKind::Erratic, 0.5),
 ];
 
 /// Adjacent facets mostly agree, because prevalence is position-continuous —
-/// checked for every kind in [`KIND_BOUNDS`].
+/// checked across every walk [`land_eligible_walks`] returns, for every kind
+/// in [`KIND_BOUNDS`]. The secondary check, since fix round 1 — see
+/// [`AUTOCORR_BOUNDS`] and this file's module doc for the primary one.
 ///
-/// **Why this discriminates an address-hashed implementation, measured for
-/// spring/seep, not assumed for the other three — see [`KIND_BOUNDS`]'s own
-/// doc.** During Task 5, `prevalence`'s noise sample was temporarily mutated
-/// in place — `facet.centroid()` swapped for
+/// **Why this discriminates an address-hashed implementation, measured, not
+/// assumed.** During Task 5, `prevalence`'s noise sample was temporarily
+/// mutated in place — `facet.centroid()` swapped for
 /// `facet.seed(seed).stream().next_f64()`, everything else untouched — and
-/// this exact shape of test re-run against it.
+/// this exact shape of test re-run against it; fix round 1 re-ran the same
+/// mutation against the broad sample this file now uses (see
+/// [`KIND_BOUNDS`]'s own doc for the resulting real/mutant max deltas).
 ///
 /// **Round 0 measured `SPRING_CONTEXTUALITY = 0.7` against a raw (non-
 /// uniformized) noise field: real max delta `~0.0025`, mutant max `~0.10`.**
@@ -127,31 +230,85 @@ const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
 /// [`hornvale_terrain::features::uniformize`]** before use, which widens the
 /// noise term's own variance (from SD ≈0.076 raw to a genuine `[0,1]`
 /// uniform).
-///
-/// **Task 7 moved the walk from vertex 0 to [`WALK_START`]** — see this
-/// file's own module doc for why (the eligibility cliff R1 introduced is a
-/// real discontinuity this test must not conflate with noise smoothness).
 #[test]
 fn prevalence_is_continuous_across_adjacent_facets() {
-    const STEPS: usize = 200;
-
     for (kind, max_allowed_delta, _, _) in KIND_BOUNDS {
-        let walk = walk_kind(kind, STEPS);
-        let prevalences: Vec<f64> = walk.iter().map(|(p, _)| *p).collect();
+        let walks = land_eligible_walks(kind);
+        assert!(
+            !walks.is_empty(),
+            "{kind:?}: no land-eligible walk found in the sample"
+        );
 
         let mut violations = Vec::new();
-        for i in 1..prevalences.len() {
-            let delta = (prevalences[i] - prevalences[i - 1]).abs();
-            if delta > max_allowed_delta {
-                violations.push((i, delta));
+        for (w, walk) in walks.iter().enumerate() {
+            let prevalences: Vec<f64> = walk.iter().map(|(p, _)| *p).collect();
+            for i in 1..prevalences.len() {
+                let delta = (prevalences[i] - prevalences[i - 1]).abs();
+                if delta > max_allowed_delta {
+                    violations.push((w, i, delta));
+                }
             }
         }
         assert!(
             violations.is_empty(),
             "{kind:?}: prevalence must stay position-continuous across adjacent facets; \
-             {} of {} steps exceeded {max_allowed_delta}: {violations:?}\nfull series: {prevalences:?}",
+             {} step(s) over {} walks exceeded {max_allowed_delta}: {violations:?}",
             violations.len(),
-            prevalences.len() - 1,
+            walks.len(),
+        );
+    }
+}
+
+/// The PRIMARY decorrelated-noise discriminator since fix round 1 (C1) — see
+/// this file's own module doc for the real-vs-mutant measurement table and
+/// [`AUTOCORR_BOUNDS`] for the per-kind thresholds. Lag-1 Pearson
+/// correlation, pooled over every adjacent pair in every walk
+/// [`land_eligible_walks`] returns.
+///
+/// **Verified by mutation on this tree** (the same in-place swap described
+/// in [`prevalence_is_continuous_across_adjacent_facets`]'s own doc): every
+/// kind's mutant `r` falls below its [`AUTOCORR_BOUNDS`] threshold —
+/// including erratic's, which the max-delta bound alone could not reliably
+/// catch (0.5% mutant-exceedance at the shipped `0.07` bound, per the
+/// review). Reverted after measuring; this assertion is what pins the
+/// property going forward, not the one-off measurement.
+#[test]
+fn prevalence_autocorrelation_is_not_address_hashed() {
+    for (kind, min_r) in AUTOCORR_BOUNDS {
+        let walks = land_eligible_walks(kind);
+        assert!(
+            !walks.is_empty(),
+            "{kind:?}: no land-eligible walk found in the sample"
+        );
+
+        let mut xs: Vec<f64> = Vec::new();
+        let mut ys: Vec<f64> = Vec::new();
+        for walk in &walks {
+            for i in 1..walk.len() {
+                xs.push(walk[i - 1].0);
+                ys.push(walk[i].0);
+            }
+        }
+
+        let m = xs.len() as f64;
+        let mean_x = xs.iter().sum::<f64>() / m;
+        let mean_y = ys.iter().sum::<f64>() / m;
+        let cov: f64 = xs
+            .iter()
+            .zip(ys.iter())
+            .map(|(x, y)| (x - mean_x) * (y - mean_y))
+            .sum::<f64>()
+            / m;
+        let var_x: f64 = xs.iter().map(|x| (x - mean_x).powi(2)).sum::<f64>() / m;
+        let var_y: f64 = ys.iter().map(|y| (y - mean_y).powi(2)).sum::<f64>() / m;
+        let r = cov / (var_x.sqrt() * var_y.sqrt());
+
+        assert!(
+            r >= min_r,
+            "{kind:?}: lag-1 autocorrelation must stay high — position-continuous noise \
+             correlates with its own neighbour, address-hashed noise does not; measured \
+             r={r:.5} over {} pairs, wanted >= {min_r}",
+            xs.len(),
         );
     }
 }
@@ -160,58 +317,49 @@ fn prevalence_is_continuous_across_adjacent_facets() {
 /// `prevalence_is_continuous_across_adjacent_facets` alone passes for a
 /// **constant** function — `violations.is_empty()` on a flat series is
 /// vacuously true. Checked for every kind in [`KIND_BOUNDS`], over the same
-/// walk the coherence test above uses, so a reviewer can hold both results
-/// against literally the same series.
+/// broad sample [`land_eligible_walks`] returns, pooled (spread) and summed
+/// (occurs) across every walk — never a single walk's own floor, closing M3.
 #[test]
 fn the_walk_is_not_degenerate() {
-    const STEPS: usize = 200;
-
-    for (kind, _, min_spread, min_occurs) in KIND_BOUNDS {
-        let walk = walk_kind(kind, STEPS);
-        let prevalences: Vec<f64> = walk.iter().map(|(p, _)| *p).collect();
-        let min = prevalences.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max = prevalences
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, f64::max);
-        let spread = max - min;
+    for (kind, _, min_pooled_spread, min_total_occurs) in KIND_BOUNDS {
+        let walks = land_eligible_walks(kind);
         assert!(
-            spread >= min_spread,
-            "{kind:?}: prevalence must actually vary over the walk, not sit near a constant \
-             floor; spread was {spread:.5} (min {min:.5}, max {max:.5}), wanted >= {min_spread}"
+            !walks.is_empty(),
+            "{kind:?}: no land-eligible walk found in the sample"
         );
 
-        let occurs_count = walk.iter().filter(|(_, occ)| *occ).count();
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+        let mut occurs_count = 0usize;
+        let mut total = 0usize;
+        for walk in &walks {
+            for &(p, occ) in walk {
+                min = min.min(p);
+                max = max.max(p);
+                total += 1;
+                if occ {
+                    occurs_count += 1;
+                }
+            }
+        }
+        let spread = max - min;
         assert!(
-            occurs_count >= min_occurs,
-            "{kind:?}: occurs must fire at least {min_occurs} time(s) over a 200-facet walk of \
-             real terrain; it fired {occurs_count} times — a mechanism that never fires \
-             produces an empty surface regardless of how smoothly prevalence behaves"
+            spread >= min_pooled_spread,
+            "{kind:?}: prevalence must actually vary over the sample, not sit near a constant \
+             floor; pooled spread was {spread:.5} (min {min:.5}, max {max:.5}) over {total} \
+             facets, wanted >= {min_pooled_spread}"
+        );
+
+        assert!(
+            occurs_count >= min_total_occurs,
+            "{kind:?}: occurs must fire at least {min_total_occurs} time(s) over the \
+             {total}-facet sample of real terrain; it fired {occurs_count} times — a \
+             mechanism that never fires produces an empty surface regardless of how \
+             smoothly prevalence behaves"
         );
     }
 }
 
-/// The eligibility regression (Task 7, controller ruling R1) — the
-/// deliverable that number is, not the code: Task 5's review measured **59%
-/// of all spring occurrences landing on facets with no macro cause at all,
-/// including open ocean** (654 of 1109, over every seed-42 walk-depth facet
-/// across all 40,962 vertices; `zero-macro` meaning `spring_macro_state ==
-/// 0.0`, dominated by the ocean's 27,645-vertex zero-macro population). This
-/// test reproduces the identical measurement — same population, same
-/// definition of "causeless" (recomputed from `blend_corner_weights` over
-/// `pack.carbonate`/`pack.drainage`, mirroring spring/seep's own
-/// `pub(crate)` recipe exactly, rather than reading it directly, the same
-/// posture Task 5's re-review probe used) — against the CURRENT (post-fix)
-/// mechanism, and asserts it stays near zero rather than merely printing a
-/// number a human might forget to check.
-///
-/// **Measured here: `0` of `403` occurrences are causeless** (seed 42, full
-/// grid) — down from 654 of 1109 (58.97%). The asserted bound (`5%`) leaves
-/// headroom for a legitimately land-based zero-macro occurrence (bare rock
-/// with no drainage still has a nonzero floor via `(1 - contextuality) *
-/// noise`; Task 5's review measured that land-only slice at `0.58%` of land,
-/// contributing ~1 of the 654) while still catching a regression that
-/// reopens the ocean case wholesale.
 #[test]
 fn spring_never_occurs_off_land() {
     let world = hornvale_worldgen::seed_42_world();
