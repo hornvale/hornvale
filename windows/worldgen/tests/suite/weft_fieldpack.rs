@@ -1,6 +1,7 @@
 //! `field_pack_from` must materialize every field pack scalar over the whole
 //! vertex grid, in range — The Weft, Task 4; extended for `land` (Task 7,
-//! R1's eligibility fix) and `slope` (Task 7, overhang/hollow).
+//! R1's eligibility fix), `slope` (Task 7, overhang/hollow) and
+//! `temperature`/`moisture` (Task 7, thicket/brake).
 //!
 //! Test fixture (decision 0092): calls the sculpt derivation entry point
 //! (`terrain_of`) directly to build its own world state, once per test — the
@@ -14,7 +15,8 @@
 fn the_field_pack_is_total_over_the_grid_and_in_range() {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
     let n = terrain.geosphere().vertex_count();
 
     assert_eq!(pack.carbonate.len(), n, "carbonate must cover every vertex");
@@ -35,7 +37,8 @@ fn the_field_pack_is_total_over_the_grid_and_in_range() {
 fn induration_is_total_over_the_grid_and_in_range() {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
     let n = terrain.geosphere().vertex_count();
 
     assert_eq!(
@@ -60,7 +63,8 @@ fn induration_is_total_over_the_grid_and_in_range() {
 fn drainage_is_total_over_the_grid_and_matches_the_accessor() {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
     let n = terrain.geosphere().vertex_count();
 
     assert_eq!(pack.drainage.len(), n, "drainage must cover every vertex");
@@ -85,7 +89,8 @@ fn drainage_is_total_over_the_grid_and_matches_the_accessor() {
 fn slope_is_total_over_the_grid_and_matches_local_slope() {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
     let n = terrain.geosphere().vertex_count();
     let geo = terrain.geosphere();
     let globe = terrain.globe();
@@ -103,6 +108,60 @@ fn slope_is_total_over_the_grid_and_matches_local_slope() {
     }
 }
 
+/// `temperature` (Task 7) covers every vertex and agrees pointwise with
+/// `GeneratedClimate::mean_temperature_at` — the annual-mean accessor R3 of
+/// Task 7's dispatch required, never the seasonal `temperature_at(v, at)`.
+#[test]
+fn temperature_is_total_over_the_grid_and_matches_mean_temperature_at() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let n = terrain.geosphere().vertex_count();
+
+    assert_eq!(
+        pack.temperature.len(),
+        n,
+        "temperature must cover every vertex"
+    );
+    for v in 0..n {
+        let vertex = hornvale_kernel::Vertex(v as u32);
+        let t = *pack.temperature.get(vertex);
+        assert!(t.is_finite(), "temperature must be finite at {v}: {t}");
+        assert_eq!(
+            t,
+            climate.mean_temperature_at(vertex).get(),
+            "field pack temperature must match mean_temperature_at at {v}"
+        );
+    }
+}
+
+/// `moisture` (Task 7) covers every vertex, stays in `[0,1]`, and agrees
+/// pointwise with `GeneratedClimate::moisture_at`.
+#[test]
+fn moisture_is_total_over_the_grid_and_matches_the_accessor() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let n = terrain.geosphere().vertex_count();
+
+    assert_eq!(pack.moisture.len(), n, "moisture must cover every vertex");
+    for v in 0..n {
+        let vertex = hornvale_kernel::Vertex(v as u32);
+        let m = *pack.moisture.get(vertex);
+        assert!(
+            (0.0..=1.0).contains(&m),
+            "moisture out of range at {v}: {m}"
+        );
+        assert_eq!(
+            m,
+            climate.moisture_at(vertex),
+            "field pack moisture must match moisture_at at {v}"
+        );
+    }
+}
+
 /// `land` (Task 7, R1) covers every vertex, is exactly `0.0` or `1.0`, and
 /// agrees pointwise with `!GeneratedTerrain::is_ocean` — the field the
 /// eligibility fix reads instead of exposing a typed elevation/sea-level
@@ -111,7 +170,8 @@ fn slope_is_total_over_the_grid_and_matches_local_slope() {
 fn land_is_total_over_the_grid_and_matches_is_ocean() {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
     let n = terrain.geosphere().vertex_count();
 
     assert_eq!(pack.land.len(), n, "land must cover every vertex");

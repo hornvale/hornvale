@@ -10,9 +10,10 @@
 //! the affordance claim in prose; wiring an `overhang` row into
 //! `windows/vessel`'s `object_registry` is a later task's work.
 //!
-//! **`WeftKind::Spring` and `WeftKind::Overhang` exist so far.** Spec §5.7's
-//! whole point is that kind N+1 is an append: Task 7 adds thicket/brake and
-//! erratic/scatter as new match arms alongside these, never by editing them.
+//! **`WeftKind::Spring`, `WeftKind::Overhang` and `WeftKind::Thicket` exist
+//! so far.** Spec §5.7's whole point is that kind N+1 is an append: Task 7
+//! adds erratic/scatter (the negative control) as a new match arm alongside
+//! these, never by editing them.
 //!
 //! **Eligibility is a per-kind gate, tested before any noise is drawn (Task
 //! 7, controller ruling R1).** Task 5's review measured that 59% of all
@@ -53,6 +54,13 @@ pub enum WeftKind {
     /// here. Proves the affordance path end to end (spec §5.6's "what it
     /// proves" column), once that later wiring lands.
     Overhang,
+    /// Thicket / brake — spec §5.6: high contextuality (productivity —
+    /// temperature × moisture, Liebig-combined), long correlation length.
+    /// Not enterable; texture, aimed directly at the biome-monotony defect
+    /// this campaign addresses (`Biome` is categorical and `blend_at`
+    /// structurally cannot smooth it; this kind reads the two continuous
+    /// causes underneath instead).
+    Thicket,
 }
 
 impl WeftKind {
@@ -61,7 +69,7 @@ impl WeftKind {
     /// place a new kind must be added for the residency window to pick it up.
     /// Task 7 grows this by appending, never editing an existing entry (spec
     /// §5.7: "kind N+1 is an append").
-    pub const ALL: [WeftKind; 2] = [WeftKind::Spring, WeftKind::Overhang];
+    pub const ALL: [WeftKind; 3] = [WeftKind::Spring, WeftKind::Overhang, WeftKind::Thicket];
 
     /// This kind's seed-derivation root leg (a save-format contract; see
     /// `windows/worldgen/src/streams.rs`). [`super::prevalence`] and
@@ -70,6 +78,7 @@ impl WeftKind {
         match self {
             WeftKind::Spring => streams::WEFT_SPRING,
             WeftKind::Overhang => streams::WEFT_OVERHANG,
+            WeftKind::Thicket => streams::WEFT_THICKET,
         }
     }
 
@@ -79,6 +88,7 @@ impl WeftKind {
         match self {
             WeftKind::Spring => SPRING_ABUNDANCE,
             WeftKind::Overhang => OVERHANG_ABUNDANCE,
+            WeftKind::Thicket => THICKET_ABUNDANCE,
         }
     }
 
@@ -91,6 +101,7 @@ impl WeftKind {
         match self {
             WeftKind::Spring => SPRING_CORRELATION_LENGTH_FACETS,
             WeftKind::Overhang => OVERHANG_CORRELATION_LENGTH_FACETS,
+            WeftKind::Thicket => THICKET_CORRELATION_LENGTH_FACETS,
         }
     }
 
@@ -124,6 +135,7 @@ impl WeftKind {
         match self {
             WeftKind::Spring => SPRING_CONTEXTUALITY,
             WeftKind::Overhang => OVERHANG_CONTEXTUALITY,
+            WeftKind::Thicket => THICKET_CONTEXTUALITY,
         }
     }
 
@@ -142,6 +154,11 @@ impl WeftKind {
                 let slope = blend_corner_weights(weights, &pack.slope);
                 overhang_macro_state(induration, slope)
             }
+            WeftKind::Thicket => {
+                let temperature = blend_corner_weights(weights, &pack.temperature);
+                let moisture = blend_corner_weights(weights, &pack.moisture);
+                thicket_macro_state(temperature, moisture)
+            }
         }
     }
 
@@ -153,7 +170,9 @@ impl WeftKind {
     /// though every kind today shares [`land_eligible`]'s ground test.
     pub(crate) fn eligible(self, weights: [(Vertex, u64); 4], pack: &FieldPack) -> bool {
         match self {
-            WeftKind::Spring | WeftKind::Overhang => land_eligible(weights, pack),
+            WeftKind::Spring | WeftKind::Overhang | WeftKind::Thicket => {
+                land_eligible(weights, pack)
+            }
         }
     }
 }
@@ -295,4 +314,67 @@ const OVERHANG_SLOPE_SATURATION: f64 = 8_000.0;
 fn overhang_macro_state(induration: f64, slope: f64) -> f64 {
     let steep = math::tanh(slope.abs() / OVERHANG_SLOPE_SATURATION);
     (induration * steep).clamp(0.0, 1.0)
+}
+
+/// Abundance ceiling for thicket/brake (spec §5.2). The highest of the four
+/// — texture aimed directly at the biome-monotony defect wants real
+/// coverage, not a rare landmark's sparse frequency — and independently
+/// dialable (spec §5.2).
+/// plumb: universal(an authored design ceiling on thicket/brake frequency, fixed across every world and not derived from any seed or pin)
+const THICKET_ABUNDANCE: f64 = 0.45;
+
+/// Thicket/brake's correlation length, in facets (spec §5.2, §5.6: "long").
+/// The same order as spring/seep's own `40.0` — a stand of vegetation
+/// persists over a comparable stretch of terrain to a karst zone — but
+/// somewhat longer, since a productive belt (a river's gallery forest, a
+/// whole windward slope) is often the larger of the two real-world
+/// analogues.
+/// plumb: universal(an authored texture-vs-landmark design choice fixed across every world; spec section 5.6 names thicket/brake's correlation length "long" and this is the chosen magnitude)
+const THICKET_CORRELATION_LENGTH_FACETS: f64 = 60.0;
+
+/// Thicket/brake's contextuality (spec §5.2, §5.6: "high — productivity ×
+/// moisture"). Matches spring/seep's own `0.85`: a thicket is diagnostic of
+/// where the ground can actually support it, the same "sign case" posture
+/// spring/seep has, just for vegetation instead of water.
+/// plumb: universal(an authored design choice fixing how strongly thicket/brake tracks macro state versus free noise, identical across every world)
+const THICKET_CONTEXTUALITY: f64 = 0.85;
+
+/// The temperature (°C) at which thicket/brake's Liebig temperature
+/// response peaks, mirroring `windows/locale`'s own Miami-model NPP proxy
+/// constant (`NPP_TEMP_OPTIMUM_C`) — the same biologically-motivated
+/// magnitude, independently owned here rather than imported, because
+/// `hornvale-worldgen` may not depend on `windows/locale` (the same
+/// layering [`super`]'s module doc states). Not required to track
+/// `windows/locale`'s constant bit-for-bit: the two recipes answer
+/// different questions (a room's food value vs. a facet's odds of carrying
+/// standing vegetation) and are permitted to diverge if a future tuning
+/// pass finds a reason to.
+/// plumb: universal(an authored biologically-motivated design constant fixed across every world, independently owned from windows/locale's own analogous constant)
+const THICKET_TEMP_OPTIMUM_C: f64 = 20.0;
+
+/// The temperature tolerance (°C) either side of [`THICKET_TEMP_OPTIMUM_C`]
+/// over which thicket/brake's Liebig temperature response falls linearly to
+/// zero — mirrors `windows/locale`'s own `NPP_TEMP_TOLERANCE_C` for the same
+/// reason and under the same independence [`THICKET_TEMP_OPTIMUM_C`]'s doc
+/// states.
+/// plumb: universal(an authored biologically-motivated design constant fixed across every world, independently owned from windows/locale's own analogous constant)
+const THICKET_TEMP_TOLERANCE_C: f64 = 30.0;
+
+/// Thicket/brake's macro-state recipe (spec §5.6: "productivity — temperature
+/// × moisture"): a Miami-model net-primary-productivity proxy, computed
+/// **blend-then-combine** — `temperature`/`moisture` are each already
+/// blended by the caller ([`WeftKind::macro_state`]'s `Thicket` arm) before
+/// this function combines them via a Liebig minimum, the same order
+/// `windows/locale`'s `LocaleContext::productivity_with_weights` uses and
+/// the exact order `crate::fieldpack`'s module doc forbids inverting (a
+/// materialized `productivity` field would combine-then-blend instead, and
+/// the minimum's non-linearity makes that a different quantity). This is an
+/// independent reimplementation, not a call into `windows/locale` — the
+/// same layering [`super`]'s module doc states forbids that dependency
+/// direction outright.
+fn thicket_macro_state(temperature_c: f64, moisture: f64) -> f64 {
+    let temp_response = (1.0
+        - (temperature_c - THICKET_TEMP_OPTIMUM_C).abs() / THICKET_TEMP_TOLERANCE_C)
+        .clamp(0.0, 1.0);
+    temp_response.min(moisture.clamp(0.0, 1.0))
 }

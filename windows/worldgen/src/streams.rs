@@ -427,4 +427,14 @@ hornvale_kernel::stream_labels! {
     /// sub-legs derived dynamically under this label at the call site
     /// (`crate::weft`), never a second entry here.
     WEFT_OVERHANG = "derived/overhang/v1" => "occurrence of a derived overhang at a walk facet, keyed on position";
+    /// The derived thicket/brake surface's noise root (Task 7; spec §5.6):
+    /// high contextuality (productivity — temperature × moisture, Liebig-
+    /// combined AFTER each is blended, never a materialized `productivity`
+    /// field; see `crate::fieldpack`'s own module doc for why), long
+    /// correlation length — texture, aimed directly at the biome-monotony
+    /// defect this campaign addresses.
+    ///
+    /// Position-keyed, additive, a NEW label — see [`WEFT_SPRING`]'s own
+    /// doc for the three properties this restates.
+    WEFT_THICKET = "derived/thicket/v1" => "occurrence of a derived thicket at a walk facet, keyed on position";
 }

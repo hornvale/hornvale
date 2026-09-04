@@ -34,7 +34,9 @@ impl Fixture {
     fn build() -> Self {
         let world = hornvale_worldgen::seed_42_world();
         let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-        let pack = hornvale_worldgen::field_pack_from(&terrain);
+        let climate =
+            hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+        let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
         let index = NearestVertexIndex::new(terrain.geosphere());
         Self {
             world,
@@ -453,6 +455,8 @@ fn two_globe_levels_do_not_contaminate_the_same_window() {
         induration: VertexMap::from_fn(&geo_b, |_| 1.0),
         drainage: VertexMap::from_fn(&geo_b, |_| 1000.0),
         slope: VertexMap::from_fn(&geo_b, |_| 100_000.0),
+        temperature: VertexMap::from_fn(&geo_b, |_| 20.0),
+        moisture: VertexMap::from_fn(&geo_b, |_| 1.0),
         // Land everywhere (Task 7, R1): this test's whole point is telling
         // level_a and level_b's DERIVED features apart, not exercising
         // eligibility — an all-ocean synthetic pack would make every kind

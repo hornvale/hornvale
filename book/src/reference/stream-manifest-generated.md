@@ -245,6 +245,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `site/placement/v1` | where a placed site lands within its vertex's territory, keyed on (vertex, reason) |
 | `derived/spring/v1` | occurrence of a derived spring at a walk facet, keyed on position |
 | `derived/overhang/v1` | occurrence of a derived overhang at a walk facet, keyed on position |
+| `derived/thicket/v1` | occurrence of a derived thicket at a walk facet, keyed on position |
 
 ### hornvale-kernel (internal)
 

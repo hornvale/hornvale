@@ -507,6 +507,12 @@ mod tests {
                 // never vertex-keyed — see
                 // `windows/worldgen/src/streams.rs`'s `WEFT_SPRING`.
                 "derived/spring v1",
+                // The Weft, Task 7: the derived thicket/brake surface's
+                // noise root — high contextuality, texture aimed at the
+                // biome-monotony defect. A NEW label, additive at v1, same
+                // posture as `derived/overhang` above — see
+                // `windows/worldgen/src/streams.rs`'s `WEFT_THICKET`.
+                "derived/thicket v1",
                 // The Signet: the leg every entity id derives through
                 // (`derive(parent, entity/identity/v1)` then the role
                 // label). A NEW label, additive at v1 — it perturbs no

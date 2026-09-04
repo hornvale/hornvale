@@ -50,7 +50,8 @@ const WALK_START: u32 = 14;
 fn walk_kind(kind: WeftKind, steps: usize) -> Vec<(f64, bool)> {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
     let geo = terrain.geosphere();
     let index = NearestVertexIndex::new(geo);
     let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
@@ -77,8 +78,10 @@ fn walk_kind(kind: WeftKind, steps: usize) -> Vec<(f64, bool)> {
 /// measured value. Spring/seep: measured max delta `0.00385`, spread
 /// `0.04664`, occurs `10`/200 — bound `0.02` sits ~5.2x over the measured
 /// max. Overhang/hollow: measured max delta `0.01552`, spread `0.09544`,
-/// occurs `30`/200 — bound `0.05` sits ~3.2x over the measured max. Grows by
-/// one row per kind Task 7 adds.
+/// occurs `30`/200 — bound `0.05` sits ~3.2x over the measured max.
+/// Thicket/brake: measured max delta `0.00220`, spread `0.05398`, occurs
+/// `81`/200 — bound `0.01` sits ~4.5x over the measured max. Grows by one
+/// row per kind Task 7 adds.
 ///
 /// **Not re-derived per kind against an address-hashed mutant (scope
 /// decision, Task 7 — see the task-7 report).** Task 5's own mutation
@@ -89,9 +92,10 @@ fn walk_kind(kind: WeftKind, steps: usize) -> Vec<(f64, bool)> {
 /// discrimination is expected to hold for the others; re-running the full
 /// mutation sweep per kind was judged out of scope for this task and is
 /// named rather than silently skipped.
-const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 2] = [
+const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 3] = [
     (WeftKind::Spring, 0.02, 0.01, 1),
     (WeftKind::Overhang, 0.05, 0.01, 1),
+    (WeftKind::Thicket, 0.01, 0.01, 1),
 ];
 
 /// Adjacent facets mostly agree, because prevalence is position-continuous —
@@ -206,7 +210,8 @@ fn the_walk_is_not_degenerate() {
 fn spring_never_occurs_off_land() {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
-    let pack = hornvale_worldgen::field_pack_from(&terrain);
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
     let geo = terrain.geosphere();
     let index = NearestVertexIndex::new(geo);
     let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
