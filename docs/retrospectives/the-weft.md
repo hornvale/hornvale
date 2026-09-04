@@ -1,7 +1,7 @@
 # Campaign The Weft — retrospective
 
-**Merged:** pending (queued 2026-09-04) · **Ledger:**
-`docs/superpowers/ledgers/2026-09-03-the-weft.md` (16 entries) · **Chronicle:**
+**Merged:** pending G6 approval · **Ledger:**
+`docs/superpowers/ledgers/2026-09-03-the-weft.md` (23 entries) · **Chronicle:**
 [the-weft](../../book/src/chronicle/the-weft.md) · **Decisions:** 0686, 0687
 
 ## The headline: ten defects in the controller's spec and plan text, and approximately zero in implementer code
@@ -144,6 +144,67 @@ but the general shape is worth carrying: **when a correction moves the quantity
 the correction was diagnosed from, every number derived from that quantity is
 stale, including the ones in the same commit.**
 
+## The profile estimate was not the recovery
+
+The first canonical census reopened the campaign: **33,709.137 user
+CPU-seconds**, **+19.9%** over the pre-Weft band maximum. A matched merge-base
+control attributed 5,469 of the 5,598 added seconds (**97.7%**) to the 22 Weft
+metrics, while the campaign's non-metric changes measured +1.0%, inside noise.
+Both `metrics: "all"` studies pay every registration, so the workload is 2,000
+rows, not the 1,000 an early per-world comment assumed.
+
+Profiling then attributed about **72%** of the Weft bill to recoverable duplicate
+work — chiefly four redundant corner-weight computations after the grid pool had
+already computed the same value. That **72% / ~3,900 CPU-second** figure is a
+call-path estimate that selected an experiment. It is not the measured result.
+
+Task 11's actual quiet A/B over matched 150-world panels measured the grid seam
+at **627.01 → 399.90 user CPU-seconds (-36.2%)**, wall **-33.5%**, and mean peak
+RSS **+0.9%**. The independent profile moved `weft_grid_pool` from 10.021% to
+3.51%. Task 12's walk seam was smaller and noisier: all eight
+population-matched pairs improved and the symbol fell 1.69% → 0.69%; converting
+both census populations and the measured non-study remainder projects
+**419.800 CPU-seconds, 1.372% of a 30,599.470-second full census**, while the
+smallest paired extrapolation is only 0.479%. It was kept on the matched mean,
+the all-positive pairs, and the independent profile — not by hiding the spread.
+
+The strongest remaining cache was built and measured before rejection. The
+ancestor-result prototype projected **183.967 CPU-seconds (0.601%)**, with mean
+peak RSS up **5.73% / 6.25%**, so it was removed. Exact reverse lookup had
+already collapsed to 42 hits in 163,848 queries (an ideal 0.000677% ceiling).
+Every retained and rejected arm preserved all 249 metric columns exactly across
+the default and both meeting rosters. The intervention stopped where the
+preregistered floor said to stop; it did not turn several sub-floor operations
+into an unattributable batch.
+
+## The first close sweep did not foot to the scratch
+
+The original close named seven deferred items. Reading the entire ignored SDD
+workspace against the full committed ledger found more: Task 2's reachable
+`ruin_line(None, true)` branch had no dedicated assertion; the final review's
+hard-coded four-label disjointness guard could miss a fifth kind; and Task 9's
+specific estimator-resolution hypothesis existed only in its implementer
+report. None appeared in the original deferred table. The first two are now
+carried below with an explicit ship judgment; the third is
+`SURF-legibility-ranking-may-be-estimator-resolution` in the committed idea
+registry.
+
+The same re-read found a committed close artifact carrying the right claim and
+the wrong metric: decision 0686's per-kind density paragraph had substituted
+H3's mutual-information values for H1's occurrence densities. The raw counts
+beside them were right, which made the paragraph look internally grounded.
+Decision 0686 now carries the actual 0.035924 / 0.075147 / 0.135229 / 0.038153
+density readings and names the correction.
+
+The performance evidence had the same storage hazard at larger scale. The
+canonical profile and its required yellow-census acknowledgement existed as an
+ignored draft even after their conclusions reached the ledger. This close
+promoted the actual A/B, rejected prototype, exact hashes and stopping decision
+into the spec, ledger, chronicle and this page, and put the 2026-09-04 run into
+the committed yellow log. A close sweep is not complete when it has a list; it
+is complete when every scratch finding names a committed destination and the
+list's count reconciles to the source material.
+
 ## Two reviewer numbers lost to measurements, and the implementer was right both times
 
 - A review estimated a duplicated per-world build at **60–160 ms** and
@@ -213,7 +274,7 @@ were overwhelmingly in *sentences*, wherever they were written.
 
 | | planned | actual |
 | --- | --- | --- |
-| tasks | 10 | 10, with 13 fix rounds across them |
+| tasks | 10 | **13**, after the three-task performance intervention; 19 fix rounds across Tasks 1–12 |
 | preregistered hypotheses | 4 | **3** — one withdrawn before measurement, with its producer |
 | hypotheses upheld | 3 of 3 predicted | **2 of 3** (density holds; coherence passes as a construction-validation; legibility falsified) |
 | movement tax per step at radius 10 | ~84 facets | **21** straight-line, 41 diagonal |
@@ -242,6 +303,12 @@ were overwhelmingly in *sentences*, wherever they were written.
    system cannot deduplicate away.
 8. **Prefer a list to a count in a doc header.** A count decays silently and
    nothing checks it.
+9. **Keep estimate, attribution and A/B in different grammatical categories.**
+   “The profile attributes” may select a change; only “the matched arms
+   measured” may state its recovery.
+10. **Make the scratch promotion a reconciled manifest.** A deferred table
+    assembled from memory lost three items on its first pass; file-by-file
+    routing with committed destinations found them.
 
 ## Deferred minors, and where each landed
 
@@ -254,3 +321,11 @@ were overwhelmingly in *sentences*, wherever they were written.
 | `OVERHANG_ABUNDANCE` was calibrated against the pre-I2 slope recipe, which then moved that kind's occurrence count **−24.5%** (1,117 → 843) in the same commit — the shipped frequency is not the frequency the constant was tuned for | recorded in the ledger; a future task should re-derive `OVERHANG_ABUNDANCE` against the corrected `GORGE_SLOPE`-based recipe |
 | the coherence guard's own threshold was chosen after unblinding and is not a frozen floor | corrected in the metric's documentation, which now says so rather than claiming a preregistration that did not happen |
 | the walking band and one architecture chapter still quote a pre-lattice-change facet size (~1.7 km rather than 1.126 km) | pre-existing, unrelated to this campaign; noted, not fixed here |
+| `ruin_line`'s reachable `(None, true)` branch has no dedicated assertion | accepted close minor: its exhaustive match compiles and the sibling cause/causeless branches are tested, but the exact “other hands” wording remains unpinned; this row is its durable home |
+| `no_weft_kind_label_appears_in_thing_kinds` hard-codes today's four labels | accepted close minor: it guards the current roster, while a fifth `WeftKind` could be added without extending this string array; the next kind must replace or extend the guard |
+| spring's design row named elevation, but the shipped recipe reads carbonate × drainage | closed as a deliberate scope drop, not silently deferred: spec §5.6 now records the shipped recipe; adding elevation later would change the measured surface and needs a new design/readout |
+| per-facet frequency prevents a simple derive-once `SphereFbm` hoist | rejected by the intervention's stopping rule: `noise_frequency_for` and `SphereFbm::new` were 0.585% and 0.317% of one study respectively, the per-facet value is output-bearing, and no independently >=1%-of-full-census seam remained |
+| `SphereFbm`'s public `frequency`/`p` arguments still carry `pending(wave-1)` type-audit tags | accepted into the type-audit tool's explicit three-valued backlog; `type-audit check` passes and the tags themselves are committed beside the boundary |
+| `Derived::peek` deliberately bypasses hit/miss accounting | accepted API wrinkle, recorded in ledger #13: the read-only tenant needs an uncounted `&self` lookup; callers must not interpret `hits()` as including `peek` |
+| `weft_offers` reconstructs its tiny registry on every call | accepted existing `offered_by` pattern; the performance profile found no material residual here, so a new cache would have no measured reuse case |
+| dense nearest-index self-resolution is pinned for levels 2–6, not permitted level 7 | accepted explicit test limit after Task 12's correction; `kernel/src/geosphere.rs` names level 7 as uncovered rather than allowing the old universal claim to survive |

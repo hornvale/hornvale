@@ -276,6 +276,41 @@ case, costs 41. The estimate had computed the window's whole perimeter rather
 than the change across a step, and the real cost is two to four times cheaper
 than the design claimed.
 
+## The first census found a tax, and the profile found its multiplication
+
+The first canonical census after the semantic close consumed **33,709.137 CPU
+seconds**, **19.9%** above the pre-Weft band maximum. That number reopened the
+campaign rather than becoming a tolerated cost. A merge-base control made the
+attribution unusually clean: the 22 Weft metrics explain **5,469 of the 5,598
+added CPU-seconds (97.7%)**, while every other campaign change together measures
++1.0%, inside the matched runs' noise. Both census studies select every metric,
+so the new readers are paid across 2,000 rows, not the 1,000 an early source
+comment assumed.
+
+The profile's first estimate was that about **72% of the Weft bill** was
+recoverable duplicate work. It was a call-path attribution, not a measured
+speedup: the grid pool computed a facet's four corner weights, then each of its
+four kind evaluations computed the same weights again — twenty nearest-index
+scans where four suffice. Passing the already-owned value through the call
+boundary measured **627.01 → 399.90 user CPU-seconds (-36.2%)** on matched
+150-world panels, with wall down 33.5%, mean peak RSS up 0.9%, and the grid
+symbol falling from 10.021% to 3.51% of study cycles.
+
+The walk pool had the same smaller shape. Reusing its prepared weights projects
+**419.800 CPU-seconds (1.372% of a 30,599.470-second full census)** recovered;
+all eight population-matched pairs improved and the named symbol fell from
+1.69% to 0.69%, although individual-pair extrapolations cross the 1% decision
+floor. The next apparent shortcut dissolved under measurement: exact reverse
+lookup hit only 42 of 163,848 corner queries. The strongest real cache then
+measured **0.601%** with peak RSS up 5.73%/6.25%, so it was removed and the
+intervention stopped rather than turn several sub-floor operations into an
+unattributable batch.
+
+Every default and meeting-population comparison retained all 249 metric columns
+byte-for-byte. The final total is not extrapolated from those subsets: the close
+authors it by running the complete census on lefford and carries that timing row
+and its exact generated fixtures on the census delivery branch reviewed at G6.
+
 ## What the next campaign inherits
 
 A surface that is dense, and a measurement saying it is not legible in the way

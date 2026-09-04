@@ -231,10 +231,17 @@ independently rather than all set to a middle value.
 
 | kind | contextuality | correlation length | enterable | what it proves |
 | --- | --- | --- | --- | --- |
-| **spring / seep** | high — carbonate × drainage × elevation | long | water source | the sign case: diagnostic of what is underfoot |
+| **spring / seep** | high — carbonate × drainage | long | water source | the sign case: diagnostic of what is underfoot |
 | **overhang / hollow** | medium — induration × slope | short–medium | no, but **affords shelter and fire** | the affordance path end to end |
 | **thicket / brake** | high — productivity × moisture | long | no, texture | attacks biome monotony directly |
 | **erratic / scatter** | **low — mostly free noise** | short | no | the **negative control** |
+
+**Shipped-recipe correction (Task 13 close sweep).** The spring row originally
+also named elevation. Task 4 deliberately materialized only carbonate,
+induration and drainage, and no later task widened that field pack; the shipped
+spring recipe therefore reads carbonate × drainage. This is a record-accuracy
+correction after implementation, not a retuning after H3: no scalar, output or
+preregistered ordering changed.
 
 The erratic sits deliberately at the **low-contextuality** end — mostly free
 noise, uncorrelated with any macro cause — so the legibility metric can be shown
@@ -454,6 +461,9 @@ intent, not a reservation of specific numbers.
 
 ## 12. Pre-merge performance intervention (2026-09-04)
 
+**Status:** implementation complete; canonical authorship is Task 13's queued
+census, and G6 remains a hard stop before its delivery branch may be merged.
+
 The first canonical census measured The Weft at **+19.9% CPU**. A matched
 merge-base control attributed 5,469 of the 5,598 added CPU-seconds (97.7%) to
 the Weft metrics, with the prediction agreeing with the measured delta within
@@ -544,3 +554,40 @@ study redesign, or unrelated worldgen optimization requires its own campaign
 unless profiling proves it is necessary to remove a >=1% residual and its
 correctness key can be stated completely here. No new save-format decision is
 expected.
+
+### 12.5 Measured intervention outcome
+
+The first change reused the grid pool's already-computed corner weights across
+its four kind evaluations. Two quiet interleaved 150-world release pairs
+measured **627.01 → 399.90 user CPU-s (-36.2%)**, **-33.5% wall**, and
+**+0.9% mean peak RSS** for the isolated Weft panel. The residual profile moved
+`weft_grid_pool` from **10.021% to 3.51%** of study cycles. These are actual
+before/after results. The earlier **72% / ~3,900 CPU-s** call-path attribution
+was the hypothesis that selected the change; it is not renamed as its measured
+recovery.
+
+The second kept change reused the same prepared value in the walk pool. Eight
+population-matched pairs were positive and the residual profile moved
+`weft_walk_pool` from **1.69% to 0.69%**. Converting both 1,000-row study
+populations plus the measured non-study remainder projects **419.800 CPU-s,
+1.372%** of a **30,599.470 CPU-s** pre-change full census. That is a
+population-matched projection, not a canonical-census measurement; individual
+pair extrapolations cross the 1% floor, so the variance remains part of the
+ruling.
+
+The loop then rejected two apparent residuals separately. Exact reverse lookup
+found only **42 hits among 163,848** corner queries, an ideal **0.000677%** scan
+avoidance. A real ancestor-result-cache prototype projected **183.967 CPU-s,
+0.601%** while raising mean peak RSS **5.73% / 6.25%** across the two
+populations; it was removed. All other scoped residuals were independently
+below §12.3's 1% floor, so the intervention stopped rather than batch several
+sub-floor operations or invent an incompletely keyed cache.
+
+Every correctness arm retained all 249 metric columns. The default population
+hash remained
+`f1f7bd50aba4c57593ded63246858692f9d3de7ff00506dcde29f72a4da14336`;
+the combined meeting-population hash remained
+`991902c2dc49cfa22e2658d99586075c0b83e1e810d2ba403e4f1b85826d4820`.
+The final canonical total is not inferred from these subsets: Task 13 authors
+it on lefford in `docs/timings.md` and the two census fixture trees, on a
+`census/<ref>-<stamp>` branch whose exact Weft columns are compared before G6.

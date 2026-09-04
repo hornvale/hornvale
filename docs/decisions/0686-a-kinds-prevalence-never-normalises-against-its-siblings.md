@@ -37,12 +37,14 @@ by a shared allocation.
 ## Consequence
 
 **Measured, not merely permitted.** Seed 42's four kinds reach a **combined
-0.256285** of land-eligible facets — thicket 0.038604, spring 0.007812,
-overhang 0.002497, erratic 0.000000 by their own per-kind occurrence tests,
-403/843/1,517/428 raw occurrences respectively — while each kind's own
-abundance constant remained set independently, with no accounting against
-the others. Raising any one kind's abundance toward 1.0 lowers nothing else;
-the four are additive in eligibility, never partitioned.
+0.256285** of land-eligible facets — spring **0.035924** (403), overhang
+**0.075147** (843), thicket **0.135229** (1,517), and erratic **0.038153**
+(428) by their own per-kind occurrence tests — while each kind's own abundance
+constant remained set independently, with no accounting against the others.
+Raising any one kind's abundance toward 1.0 lowers nothing else; the four are
+additive in eligibility, never partitioned. An earlier draft of this paragraph
+put H3's mutual-information readings in those four slots; Task 13's close sweep
+corrected the cross-metric substitution against the pinned readout table.
 
 **A future fifth kind inherits the same freedom.** Spec §5.7's "a kind is
 three things and nothing else" — a component bundle, a prevalence recipe,
