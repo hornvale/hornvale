@@ -3693,6 +3693,28 @@ its honest size.
    so a mechanism correct at one rotation period and wrong across most of the
    legal range was green everywhere, and what found it was an audit asking each
    constant what it varies along — not any measurement of the act.
+   **Annotated by [The Pallet](./chronicle/the-pallet.md) (2026-09-03), on the
+   traversal half again, and it closes the correction above while leaving The
+   Wicket's named ceiling exactly where it was.** The half-conversion is
+   finished: the sleep side is denominated in the world's own day too, so a rest
+   no longer outlasts a sleep at any legally pinnable rotation, and the running
+   test that had been asserting the inversion is gone. On top of that, a body
+   now *chooses* where it sleeps — an anchor within the room it is already in,
+   never travelled to — and the world records the KIND it chose. That is a new
+   kind of legibility rather than a new act: a creature found sleeping in the
+   road is now visible in the ledger instead of inferred from an absence, which
+   is the tuning signal the design was built to preserve, and preserving it is
+   why the chooser is deliberately allowed to choose badly rather than clamped
+   to the best site. **The ceiling is unchanged and now has a route out.** A body
+   that passes out in the street of a cold, built town is still repaid exactly
+   as well as one that found the bed, because the fold re-derives from committed
+   facts and the finest location any fact carries is the room. What changed is
+   that the durable half of the choice is now IN the ledger, so a later campaign
+   that wants the fold to know a bed from a heap of bracken has a fact to read
+   rather than a position it is not allowed to keep. **The score does not move**,
+   and for this chapter's own reason: none of this is a measurement of whether
+   the moment is worth standing in. It is one more act with a consequence, and
+   one more limit whose shape is now stated precisely enough to be attacked.
 
 ## The standing horizon
 

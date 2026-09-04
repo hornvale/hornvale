@@ -453,6 +453,7 @@
 - [The Terrier](./chronicle/the-terrier.md)
 - [The Hachure](./chronicle/the-hachure.md)
 - [The Plat](./chronicle/the-plat.md)
+- [The Pallet](./chronicle/the-pallet.md)
 
 # Appendix: The Frontier
 

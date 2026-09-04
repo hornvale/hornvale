@@ -154,6 +154,17 @@ test must be deleted. An ignored test was written first and rejected. Nothing
 runs an ignored test, nothing validates the roster rows that cite it, and a
 registration a reader takes for coverage is a worse failure than an absent one.
 
+**Closed by [The Pallet](the-pallet.md), 2026-09-03 — the paragraphs above are
+history now, and the present tense in them has expired.** The rest no longer
+outlasts the sleep at any legally pinnable rotation: the sleep's own floor, the
+wake scan's step, the scan's bound and its give-up fallback are all denominated
+in the local day, so both sides of the comparison scale together and the
+ordering is invariant in the rotation period. The running falsifier was deleted,
+which was that campaign's stated success condition rather than collateral. The
+mechanism this section describes — an inverse assertion as an expiry date on a
+knowingly-shipped defect — worked exactly as designed, and it is the part worth
+carrying.
+
 ## What the campaign learned about its own instruments
 
 Two things are worth carrying out of this campaign that have nothing to do with
