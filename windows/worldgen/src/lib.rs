@@ -174,7 +174,7 @@ pub use vestige::{
     vestige_from_occupation, vestiges_at, vestiges_field,
 };
 pub use volcano::{EruptionStyle, Volcano, volcano_at, volcano_name};
-pub use weft::{WeftKind, occurs, prevalence};
+pub use weft::{WeftFeature, WeftKey, WeftKind, WeftWindow, occurs, prevalence};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)

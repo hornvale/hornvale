@@ -237,6 +237,8 @@ mod watershed_measure;
 mod weft_fieldpack;
 #[path = "suite/weft_prevalence.rs"]
 mod weft_prevalence;
+#[path = "suite/weft_window.rs"]
+mod weft_window;
 #[path = "suite/winze_energy_probe.rs"]
 mod winze_energy_probe;
 #[path = "suite/winze_scale_probe.rs"]

@@ -50,8 +50,10 @@
 //! density the spec forbids.
 
 pub mod kinds;
+pub mod window;
 
 pub use kinds::WeftKind;
+pub use window::{WeftFeature, WeftKey, WeftWindow};
 
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed};

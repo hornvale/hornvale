@@ -29,6 +29,14 @@ pub enum WeftKind {
 }
 
 impl WeftKind {
+    /// Every kind that exists, in a fixed order. [`super::window::WeftWindow`]
+    /// enumerates this once per facet entering its radius (Task 6) — the one
+    /// place a new kind must be added for the residency window to pick it up.
+    /// Task 7 grows this by appending a new element alongside a new match arm
+    /// in every method below, never by editing an existing entry (spec §5.7:
+    /// "kind N+1 is an append").
+    pub const ALL: [WeftKind; 1] = [WeftKind::Spring];
+
     /// This kind's seed-derivation root leg (a save-format contract; see
     /// `windows/worldgen/src/streams.rs`). [`super::prevalence`] and
     /// [`super::occurs`] each derive their own decorrelated sub-leg under it.
