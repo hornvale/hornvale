@@ -113,12 +113,28 @@
 //! }
 //! ```
 //!
-//! **No script panicked.** The branch is never taken on any session-derived
-//! ledger, because a session commits an entity's `agent-at` facts in ascending
-//! day order: the first sighting absorbed for a room already IS its minimum,
-//! so `and_modify`'s comparison is a structural no-op and flipping its sense
-//! is unobservable. Control B is therefore not a weak control on these shapes,
-//! it is an impossible one, and no longer or luckier script could rescue it.
+//! **No script panicked.** The branch is never taken on a WALK-DERIVED
+//! ledger, because `DriveMovements` commits at the tick's own day and ticks
+//! advance monotonically: the first sighting absorbed for a room already IS
+//! its minimum, so `and_modify`'s comparison is a structural no-op there and
+//! flipping its sense is unobservable. Control B is therefore not a weak
+//! control on these shapes, it is an impossible one, and no longer or luckier
+//! *script* could rescue it.
+//!
+//! **The branch is NOT dead code, and the paragraph above would read as
+//! saying so if it stopped there.** `agent-at` has a second writer:
+//! `liveness::place_agent(entity, room, day)` is `pub`, takes an ARBITRARY
+//! `WorldTime`, and constrains nothing — and `windows/lab/src/synthetic.rs`
+//! authors whole scenario ledgers with it (`stranded_from_known_water`,
+//! `stranded_in_a_hot_waste`, and their siblings each commit two placements
+//! at days they choose by hand). Those happen to ascend; nothing makes them,
+//! and `windows/lab`'s health calibration reads belief over exactly those
+//! ledgers. So the min-vs-first equivalence at the heart of the spec's §5
+//! step 2 governs a case a sibling window can CONSTRUCT today, not a
+//! hypothetical one. That is the honest reason the descending-order fixture
+//! is load-bearing: not "no walk can reach this branch, so we synthesise
+//! one", but "the writer that can reach it is public, in use one window
+//! over, and unchecked".
 //!
 //! **What that costs the campaign, said plainly.** These constants prove that
 //! the migrated `water_at` admits the same ROOMS from the same key set; they
@@ -256,8 +272,9 @@ fn assert_the_floors(label: &str, run: &WalkRun) {
 ///
 /// **Control A moved this hash** (`0x7394_8823_9689_ce2a` →
 /// `0xb214_b641_3e99_986e`), which is what makes the constant an instrument
-/// rather than a decoration. Control B did not, and cannot — see the module
-/// doc's mechanism.
+/// rather than a decoration. Control B did not, and cannot on a walk-derived
+/// ledger — see the module doc's mechanism, and the writer that CAN reach
+/// that branch.
 #[test]
 fn the_kerf_seed_17_walk_commits_the_expected_ledger_bytes() {
     let run = walk(WATER_BELIEF_SEED);
