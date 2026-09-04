@@ -53,6 +53,7 @@ fn built() -> Brief {
         true,
         true,
         Some(Site::placed(SiteKind::Settlement, None)),
+        None,
     )
 }
 

@@ -192,11 +192,12 @@ mod tests {
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, None)),
+            None,
         )
     }
 
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true, None)
+        Brief::from_parts(None, None, None, None, 0, false, true, None, None)
     }
 
     /// Every (structure, lattice) pair the render is checked over: both methods,

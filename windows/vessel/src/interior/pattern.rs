@@ -923,7 +923,17 @@ mod tests {
 
     /// A brief with no alive occupation — a place whose deep chambers are stores.
     fn plain_brief() -> crate::brief::Brief {
-        crate::brief::Brief::from_parts(None, None, None, None, 0, true, false, settlement_site())
+        crate::brief::Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            false,
+            settlement_site(),
+            None,
+        )
     }
 
     #[test]
@@ -1238,6 +1248,7 @@ mod tests {
             true,
             false,
             settlement_site(),
+            None,
         );
         let farm = crate::brief::Brief::from_parts(
             Some(Function::Agrarian),
@@ -1248,6 +1259,7 @@ mod tests {
             true,
             false,
             settlement_site(),
+            None,
         );
         assert_ne!(
             role_for(2, &fort),
@@ -1265,6 +1277,7 @@ mod tests {
             true,
             false,
             settlement_site(),
+            None,
         );
         assert_eq!(role_for(2, &seat), Role::Hall);
         // The front two rooms are the place's own regardless of its business.
@@ -1287,6 +1300,7 @@ mod tests {
                 true,
                 false,
                 settlement_site(),
+                None,
             );
             selection_for(role_for(2, &b), true, false, false)
                 .iter()
@@ -1327,6 +1341,7 @@ mod tests {
             true,
             false,
             settlement_site(),
+            None,
         );
         assert!(!hamlet.is_populous(), "at the ceiling is still a hamlet");
         let names = selection_for(Role::Store, true, false, hamlet.is_populous())
@@ -1502,6 +1517,7 @@ mod tests {
             true,
             false,
             settlement_site(),
+            None,
         );
         let first_store = (0..=8)
             .find(|i| role_for(*i, &agrarian) == Role::Store)
@@ -1610,6 +1626,7 @@ mod tests {
                 true,
                 false,
                 settlement_site(),
+                None,
             )
         };
         assert!(

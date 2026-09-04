@@ -29,17 +29,37 @@
 //! `Option`s this one has a live wire behind it.
 
 use crate::site::{Site, SiteKind};
-use hornvale_history::record::{Function, Notability, OccupationRecord, TechHorizon};
+use hornvale_history::record::{
+    CauseOfEnd, Ended, Function, Notability, OccupationRecord, TechHorizon,
+};
 use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Seed, Vertex};
 use hornvale_locale::StrangeSite;
 use hornvale_worldgen::{SiteReason, site_facet_for};
 use std::collections::BTreeMap;
 
+/// What a dead occupation leaves for a walker to read.
+/// type-audit: bare-ok(flag: by_hand), bare-ok(count: ended)
+#[derive(Clone, Debug, PartialEq)]
+pub struct RuinSignature {
+    /// Why it ended, when the record names a cause.
+    pub cause: Option<CauseOfEnd>,
+    /// When it ended, in the same units `Occupation::ended` carries.
+    pub ended: f64,
+    /// Whether another party ended it (`Ended::By`) rather than nature.
+    pub by_hand: bool,
+}
+
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
 /// a catalogue of place types (§1b.4).
+///
+/// **No longer `Eq`, as of The Weft.** [`RuinSignature::ended`] is an `f64`,
+/// and `f64` has no `Eq` impl (NaN), so a struct carrying one transitively
+/// cannot derive it either. Nothing in this crate needed `Brief: Eq` — every
+/// comparison here already went through `PartialEq` (`assert_eq!`,
+/// `assert_ne!`) — so the derive is simply dropped rather than worked around.
 /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Brief {
     /// What the alive occupation here was for, if any occupation is alive.
     pub function: Option<Function>,
@@ -65,13 +85,23 @@ pub struct Brief {
     /// `hornvale_worldgen::SiteReason` so that a vertex warranting both does
     /// not put them at one facet.
     pub site: Option<Site>,
+    /// The dead occupation standing here, if any. Absent on a living
+    /// settlement and on empty ground.
+    ///
+    /// **Why this is here now and was not before.** This module's own header
+    /// says the brief "does NOT carry the fields no consumer reads yet. The
+    /// ruin signature (`cause`, `ended_by`, ages) … [is] absent on purpose",
+    /// because nothing here is serialized, so the campaign that first needs
+    /// `cause` adds one field with no save-format consequence and no epoch.
+    /// The Weft is that campaign.
+    pub ruin: Option<RuinSignature>,
 }
 
 impl Brief {
     /// Assemble a brief from already-resolved parts. Exists so the type can be
     /// unit-tested without a world; `brief_of` is the production path.
     /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
-    #[allow(clippy::too_many_arguments)] // `site` (Task 2, The Prospect) pushed this to 8; the parameters ARE `Brief`'s fields, and the whole point of this constructor is to assemble them without a world to derive `site` from
+    #[allow(clippy::too_many_arguments)] // `site` (Task 2, The Prospect) pushed this to 8, and `ruin` (Task 1, The Weft) to 9; the parameters ARE `Brief`'s fields, and the whole point of this constructor is to assemble them without a world to derive `site`/`ruin` from
     pub fn from_parts(
         function: Option<Function>,
         tech: Option<TechHorizon>,
@@ -81,6 +111,7 @@ impl Brief {
         built: bool,
         cold: bool,
         site: Option<Site>,
+        ruin: Option<RuinSignature>,
     ) -> Self {
         Self {
             function,
@@ -91,6 +122,7 @@ impl Brief {
             built,
             cold,
             site,
+            ruin,
         }
     }
 
@@ -285,9 +317,26 @@ pub fn brief_of(
             .then(|| Site::placed(SiteKind::Cave, None)),
     ];
     let site = candidates.into_iter().flatten().max_by_key(Site::salience);
-    let alive = containing_vertex(&locale, geo, index)
+    let vertex = containing_vertex(&locale, geo, index);
+    let alive = vertex
         .and_then(|vertex| occupations.get(&vertex))
         .and_then(|occs| occs.iter().find(|o| o.core.ended.is_none()));
+    // Where more than one occupation at this vertex has ended, the most
+    // RECENT ending is the ruin a walker reads — an older ruin buried under a
+    // younger one is not what stands here. `total_cmp`, never `partial_cmp`:
+    // float ordering must be deterministic (constitutional, see CLAUDE.md).
+    let ruin = vertex
+        .and_then(|vertex| occupations.get(&vertex))
+        .and_then(|recs| {
+            recs.iter()
+                .filter(|r| r.core.ended.is_some())
+                .max_by(|a, b| a.core.ended.unwrap().total_cmp(&b.core.ended.unwrap()))
+        })
+        .map(|r| RuinSignature {
+            cause: r.core.cause,
+            ended: r.core.ended.expect("filtered to Some above"),
+            by_hand: matches!(r.ended_by, Ended::By(_)),
+        });
     match alive {
         Some(o) => Brief::from_parts(
             Some(o.core.function),
@@ -298,8 +347,9 @@ pub fn brief_of(
             built,
             cold,
             site,
+            ruin,
         ),
-        None => Brief::from_parts(None, None, None, None, 0, built, cold, site),
+        None => Brief::from_parts(None, None, None, None, 0, built, cold, site, ruin),
     }
 }
 
@@ -319,6 +369,7 @@ mod tests {
             true,
             true,
             None,
+            None,
         );
         assert_eq!(b.function, Some(Function::Trade));
         assert_eq!(b.tech, Some(TechHorizon::Classical));
@@ -329,7 +380,7 @@ mod tests {
 
     #[test]
     fn from_parts_with_no_occupation_axes_still_carries_climate() {
-        let b = Brief::from_parts(None, None, None, None, 0, false, true, None);
+        let b = Brief::from_parts(None, None, None, None, 0, false, true, None, None);
         assert!(!b.built);
         assert!(
             b.cold,
@@ -352,6 +403,7 @@ mod tests {
             true,
             false,
             None,
+            None,
         );
         let b = Brief::from_parts(
             Some(Function::Fort),
@@ -361,6 +413,7 @@ mod tests {
             0,
             true,
             false,
+            None,
             None,
         );
         assert_ne!(a, b);
@@ -377,8 +430,8 @@ mod tests {
     #[test]
     fn a_built_brief_carries_a_settlement_site_and_an_unbuilt_one_carries_none() {
         let built_site = Some(Site::placed(SiteKind::Settlement, None));
-        let built = Brief::from_parts(None, None, None, None, 0, true, false, built_site);
-        let wild = Brief::from_parts(None, None, None, None, 0, false, false, None);
+        let built = Brief::from_parts(None, None, None, None, 0, true, false, built_site, None);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, false, None, None);
         assert_eq!(
             built.site.as_ref().map(|site| site.kind),
             Some(SiteKind::Settlement)

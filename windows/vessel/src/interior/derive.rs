@@ -235,7 +235,7 @@ mod tests {
     /// `chamber_interior_of`'s debug assertions hold.
     fn brief(built: bool) -> crate::brief::Brief {
         let site = built.then(|| Site::placed(SiteKind::Settlement, None));
-        crate::brief::Brief::from_parts(None, None, None, None, 0, built, true, site)
+        crate::brief::Brief::from_parts(None, None, None, None, 0, built, true, site, None)
     }
 
     #[test]

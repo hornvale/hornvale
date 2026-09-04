@@ -131,6 +131,8 @@ mod the_rack;
 mod the_roll;
 #[path = "suite/the_terrier.rs"]
 mod the_terrier;
+#[path = "suite/the_weft.rs"]
+mod the_weft;
 #[path = "suite/thing.rs"]
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]

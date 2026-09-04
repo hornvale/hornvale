@@ -437,11 +437,12 @@ mod tests {
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, None)),
+            None,
         )
     }
 
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true, None)
+        Brief::from_parts(None, None, None, None, 0, false, true, None, None)
     }
 
     fn embed(seed: u64) -> (crate::structure::Structure, Lattice) {
