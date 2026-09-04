@@ -5,7 +5,7 @@
 //!
 //! [`draw`]/[`draw_with`] paint one glyph per grid cell, from that cell's
 //! water class and elevation band (The Legend, Task 6 — see
-//! [`glyph_and_color_for`]). Since The Quadrat a tile is a MESH FACET and
+//! [`glyph_for`]/[`color_for`]). Since The Quadrat a tile is a MESH FACET and
 //! its terrain is read from that facet's own grid-level triangle by direct
 //! addressing — [`terrain_at_tile`] — never by resampling the screen.
 //!
@@ -28,7 +28,7 @@
 //! (`windows/worldgen/examples/portolan_spike.rs`, `glyph_for`, line
 //! 171 -- deleted at this campaign's close, git history at `0292de87f^`)
 //! — reused rather than invented at the time. The Legend (Task 6) retired
-//! that binary — see [`glyph_and_color_for`] for the vocabulary this
+//! that binary — see [`glyph_for`] for the vocabulary this
 //! module draws now — but the vertex-lookup mechanism it sits on top of
 //! was never the spike's: `glyph_for` asked
 //! [`hornvale_terrain::GeneratedTerrain::nearest_vertex`], an O(vertex count)
@@ -62,7 +62,8 @@
 
 use hornvale_game_core::{Cell, Grid, Ink, Source, Weight};
 use hornvale_kernel::{
-    Facet, FacetId, GeoCoord, Geosphere, NearestVertexIndex, RoomMeshMemo, Value, Vertex, World,
+    ComponentStore, Facet, FacetId, GeoCoord, Geosphere, NearestVertexIndex, RoomMeshMemo, Value,
+    Vertex, World, WorldTime,
 };
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_terrain::landscape::{FeatureClass, FeatureId as LandscapeFeatureId};
@@ -601,7 +602,7 @@ pub fn virtual_dims(depth: u32) -> (u32, u32) {
 /// ([`hornvale_terrain::WaterKind::LEGEND`]). Retained from the spike's own
 /// vocabulary (see the module doc), but it now names one specific water
 /// class rather than "everything the old ocean/land binary called wet" —
-/// see [`glyph_and_color_for`].
+/// see [`glyph_for`].
 const OCEAN_GLYPH: char = '~';
 /// The glyph for a terminal endorheic sink — `WaterKind::SaltBasin`, index
 /// one. New at The Legend: before this task every non-ocean cell drew
@@ -616,7 +617,7 @@ const RIVER_GLYPH: char = '"';
 /// [`hornvale_scene::RELIEF_LEGEND`] (`abyss, shelf, lowland, upland,
 /// highland, alpine`) — drawn only for `WaterKind::DryLand` (index 3;
 /// every wetter class draws its own water glyph instead, see
-/// [`glyph_and_color_for`]).
+/// [`glyph_for`]).
 ///
 /// **The allocation rule in code** (spec §2, restated in this module's own
 /// doc): ink ASCENDS with the band, so adjacent bands stay tellable apart
@@ -662,22 +663,31 @@ const OCEAN_COLOR: [u8; 3] = [20, 60, 160];
 const SALT_BASIN_COLOR: [u8; 3] = [230, 230, 200];
 /// The colour claim for a river. See [`OCEAN_COLOR`].
 const RIVER_COLOR: [u8; 3] = [90, 180, 220];
-/// The RELIEF ladder's colours, index-matched to [`RELIEF_GLYPHS`] — lifted
-/// unchanged from Task 5's specimen sheet (the "stipple" row's own ramp),
-/// since re-tuning them here would silently fork the two artifacts.
-const RELIEF_COLORS: [[u8; 3]; 6] = [
-    [20, 20, 90],
-    [30, 130, 150],
-    [50, 150, 70],
-    [160, 160, 50],
-    [150, 95, 45],
-    [235, 235, 235],
-];
+// THE RELIEF LADDER'S COLOURS ARE GONE (The Wash, Task 6). `RELIEF_COLORS`
+// was a six-entry `[[u8; 3]; 6]` index-matched to [`RELIEF_GLYPHS`], so the
+// glyph and the ink carried the SAME quantity — the elevation band — and
+// biome carried nothing: a rainforest and a high desert at 1200 m rendered
+// identically, in both channels. That is the category error spec H1 names.
+// The glyph keeps elevation ([`glyph_for`], decision 0389's ordinal claim,
+// untouched); the ink is now the observer's collapse of the ground's own
+// reflectance under the plate's illuminant ([`color_for`]).
+//
+// Do not restore it as a "fallback for when reflectance is unavailable".
+// The absence of a spectral answer is rendered as the absence of colour
+// ([`color_for`] returns `None`, [`Ink::resolve`] makes that `Ink::Plain`),
+// which is legible; substituting a band-keyed colour there would reinstate
+// the error in exactly the cases nobody looks at.
 
-/// The terrain-layer glyph and colour for one tile, from its water class
+/// The terrain-layer GLYPH for one tile, from its water class
 /// ([`TileTerrain::water`], `WaterKind::index()`'s own order) and elevation
 /// band ([`TileTerrain::band`], [`hornvale_scene::relief_band`]'s own
 /// order).
+///
+/// **Glyph only since The Wash's Task 6** — this was `glyph_and_color_for`,
+/// returning `(char, [u8; 3])` where both halves were indexed by the same
+/// `band`. The colour half is now [`color_for`], off the spectrum; the glyph
+/// half below is byte-for-byte the behaviour it always had, because decision
+/// 0389 puts the ORDER on the glyph and that part was already right.
 ///
 /// **Water outranks elevation for the three WET classes** (indices 0-2,
 /// ocean/salt-basin/river): a river channel draws as the river mark
@@ -692,10 +702,10 @@ const RELIEF_COLORS: [[u8; 3]; 6] = [
 /// indexing unchecked — [`hornvale_scene::relief_band`]'s own contract
 /// already guarantees `0..6`, so the clamp is a belt no caller is expected
 /// to need, not a silent tolerance for a wider range.
-fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
+pub fn glyph_for(water: u8, band: u32) -> char {
     match water {
-        0 => (OCEAN_GLYPH, OCEAN_COLOR),
-        1 => (SALT_BASIN_GLYPH, SALT_BASIN_COLOR),
+        0 => OCEAN_GLYPH,
+        1 => SALT_BASIN_GLYPH,
         // `WaterKind::River` (index 2) IS DELIBERATELY ABSENT (The Hachure,
         // Stage 2), and its absence is the fix rather than an omission.
         //
@@ -713,8 +723,58 @@ fn glyph_and_color_for(water: u8, band: u32) -> (char, [u8; 3]) {
         // through to its RELIEF here, and the line layer paints over it.
         _ => {
             let i = (band as usize).min(RELIEF_GLYPHS.len() - 1);
-            (RELIEF_GLYPHS[i], RELIEF_COLORS[i])
+            RELIEF_GLYPHS[i]
         }
+    }
+}
+
+/// The terrain-layer COLOUR for one tile: the observer's collapse of the
+/// ground's own spectral curve under the light falling on the plate (spec
+/// H1). `None` means "this tile claims no colour" — never an error.
+///
+/// **This is the campaign's flip.** Colour used to come out of
+/// `glyph_and_color_for` beside the glyph, indexed by the same elevation
+/// band, so the two channels carried one quantity between them. Now the
+/// glyph carries elevation ([`glyph_for`]) and the ink carries substance.
+///
+/// **Three ways to get `None`, all of them modelled and none an error:**
+///
+/// 1. `tile.reflectance` is `None` — no [`hornvale_locale::LocaleContext`]
+///    was supplied, or the context refused the address (a facet coarser
+///    than the grid, [`TileTerrain::reflectance`]'s own doc).
+/// 2. the terminal is `ColorDepth::None` — `NO_COLOR`, or a dumb terminal.
+/// 3. the observer carries no sRGB projection
+///    ([`hornvale_kernel::color::Observer::to_srgb`] returns `None`).
+///
+/// In every one of them the caller still emits the glyph, which is decision
+/// 0389 satisfied rather than an error path: nothing a reader must trust
+/// lives only in colour, so a colourless plate is a degraded plate and never
+/// an unreadable one (spec H5).
+///
+/// **The two WET classes keep an invented client-side palette, and that is
+/// not a leftover of the ladder.** `reflectance_at_facet` integrates the
+/// GROUND's cover mixture — lithology, biome expression, wetness — which is
+/// what lies *under* an ocean, not what its surface looks like from above;
+/// there is no spectrum in the sim for "open water seen from orbit". So
+/// ocean and salt basin claim [`OCEAN_COLOR`]/[`SALT_BASIN_COLOR`] exactly
+/// as [`RIVER_COLOR`] is claimed one layer up in [`rasterize_rivers`]. They
+/// are routed through [`crate::observer::TerminalObserver::show`] rather
+/// than emitted raw, so the observer decides what reaches the terminal for
+/// EVERY tile — which is what makes H5's "no colour at all" a claim about
+/// the plate and not just about its land.
+///
+/// Only `WaterKind::DryLand` (index 3 and up) reads the spectrum, which is
+/// exactly the branch that used to index [`RELIEF_GLYPHS`]'s deleted colour
+/// twin.
+pub fn color_for(
+    tile: &TileTerrain,
+    illum: &hornvale_kernel::color::Illuminant,
+    obs: &crate::observer::TerminalObserver,
+) -> Option<[u8; 3]> {
+    match tile.water {
+        0 => obs.show(OCEAN_COLOR),
+        1 => obs.show(SALT_BASIN_COLOR),
+        _ => obs.observe(tile.reflectance.as_ref()?, illum),
     }
 }
 
@@ -897,6 +957,7 @@ pub fn draw(
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
     discovered: &Discovered,
+    spectral: &mut Spectral<'_>,
 ) -> Grid {
     draw_with(
         terrain,
@@ -911,6 +972,7 @@ pub fn draw(
         volcanoes,
         waterfalls,
         discovered,
+        spectral,
     )
 }
 
@@ -1048,11 +1110,23 @@ pub fn draw_with(
     volcanoes: &BTreeSet<Vertex>,
     waterfalls: &[Vertex],
     discovered: &Discovered,
+    spectral: &mut Spectral<'_>,
 ) -> Grid {
     // One memo for the whole plate — see this function's own doc for why
     // its lifetime is free to be exactly this long.
     let mut memo = RoomMeshMemo::default();
-    let mut grid = draw_terrain_layer(terrain, geo, index, &mut memo, f, win, w, h, colour_allowed);
+    let mut grid = draw_terrain_layer(
+        terrain,
+        geo,
+        index,
+        &mut memo,
+        f,
+        win,
+        w,
+        h,
+        colour_allowed,
+        spectral,
+    );
     draw_feature_layer(
         &mut grid,
         geo,
@@ -1144,7 +1218,7 @@ fn river_threshold(depth: u32) -> f64 {
 
 /// Paint the channel network's own polylines onto `dst` as LINES (The
 /// Hachure, Stage 2) — the half of the water vocabulary
-/// [`glyph_and_color_for`] deliberately no longer carries.
+/// [`glyph_for`] deliberately no longer carries.
 ///
 /// **Rasterised, never sampled, and that distinction is the whole design.** A
 /// per-tile query ("is a channel within half a tile of this tile's centre?")
@@ -1173,6 +1247,7 @@ fn rasterize_rivers(
     f: &Frame,
     win: &Window,
     colour_allowed: bool,
+    obs: &crate::observer::TerminalObserver,
 ) {
     let net = terrain.channels();
     let (virtual_w, virtual_h) = virtual_dims(win.depth);
@@ -1234,7 +1309,7 @@ fn rasterize_rivers(
             } else if ax - bx > half {
                 bx += i64::from(virtual_w);
             }
-            draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed);
+            draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed, obs);
         }
     }
 }
@@ -1296,6 +1371,7 @@ fn draw_segment(
     w: i64,
     h: i64,
     colour_allowed: bool,
+    obs: &crate::observer::TerminalObserver,
 ) {
     // EARLY REJECT: neither end near the plate, and the box between them
     // missing it entirely. Without this a rung-13 segment spanning thousands
@@ -1330,7 +1406,19 @@ fn draw_segment(
             Cell {
                 glyph: Some(RIVER_GLYPH),
                 weight: Weight::Normal,
-                ink: Ink::resolve(Some(RIVER_COLOR), colour_allowed),
+                // Through the OBSERVER, like every other colour this layer
+                // claims (`color_for`'s own doc). [`RIVER_COLOR`] is an
+                // invented palette entry, not a spectrum — a river has no
+                // reflectance to sense any more than an ocean does — but
+                // "the observer decides what reaches this terminal" is one
+                // rule or it is none, and it was none until spec H5's second
+                // arm found 54 of 1,920 tiles still coloured under a
+                // `ColorDepth::None` observer. On every shipped path this
+                // changes nothing: `NO_COLOR` sets `colour_allowed` false
+                // AND the depth to `None`, and `Ink::resolve` already
+                // forced `Plain` there; a truecolor terminal gets the
+                // identical triple back.
+                ink: Ink::resolve(obs.show(RIVER_COLOR), colour_allowed),
                 // Terrain, not chart: a river is the world's own fixed
                 // geometry, the same channel the relief underneath it came off.
                 source: Source::World,
@@ -1351,6 +1439,7 @@ pub(crate) fn draw_terrain_layer(
     w: u16,
     h: u16,
     colour_allowed: bool,
+    spectral: &mut Spectral<'_>,
 ) -> Grid {
     let mut grid = Grid::new(w, h);
     let width = u32::from(w);
@@ -1359,20 +1448,47 @@ pub(crate) fn draw_terrain_layer(
 
     for row in 0..height {
         for col in 0..width {
+            // THE FLIP (The Wash, Task 6). This call used to pass `ctx:
+            // None`, `WorldTime::GENESIS`, `season: 0` and `cache: None` —
+            // four inert arguments, because the layer painted from the
+            // elevation ladder and a reflectance would have been fetched
+            // only to be discarded. It now passes whatever its caller was
+            // handed, which is `Some(ctx)` on the live session's path
+            // (`crate::driver`) and `None` on the overture's
+            // (`crate::overture::atlas`).
             let tile = terrain_at_tile(
-                terrain, geo, index, memo, f, win, virtual_w, virtual_h, row, col,
+                terrain,
+                geo,
+                index,
+                memo,
+                f,
+                win,
+                virtual_w,
+                virtual_h,
+                row,
+                col,
+                spectral.ctx,
+                spectral.at,
+                spectral.season,
+                spectral.cache.as_deref_mut(),
             );
             // TERRAIN ONLY. Sites are PROJECTED by `draw_feature_layer` —
             // see its doc for why asking each screen cell "is your
             // representative a site?" dropped 37.8% of caves.
-            let (glyph, color) = glyph_and_color_for(tile.water, tile.band);
+            //
+            // TWO CHANNELS, TWO QUANTITIES: the glyph is elevation order
+            // (0389), the ink is the ground's own substance under the
+            // plate's light. `color_for` answering `None` is a legal,
+            // modelled outcome and the tile still draws — see its doc.
+            let glyph = glyph_for(tile.water, tile.band);
+            let color = color_for(&tile, spectral.illuminant, spectral.observer);
             grid.set(
                 col as u16,
                 row as u16,
                 Cell {
                     glyph: Some(glyph),
                     weight: Weight::Normal,
-                    ink: Ink::resolve(Some(color), colour_allowed),
+                    ink: Ink::resolve(color, colour_allowed),
                     source: Source::World,
                 },
             );
@@ -1384,7 +1500,15 @@ pub(crate) fn draw_terrain_layer(
     // so riding the tile cache makes it free on redraw rather than merely
     // cheap. Drawn AFTER the relief loop, so a river paints over the
     // ground it runs across.
-    rasterize_rivers(&mut grid, terrain, geo, f, win, colour_allowed);
+    rasterize_rivers(
+        &mut grid,
+        terrain,
+        geo,
+        f,
+        win,
+        colour_allowed,
+        spectral.observer,
+    );
     grid
 }
 
@@ -2065,11 +2189,26 @@ pub struct TileTerrain {
     /// applied to `terrain.elevation_at(vertex).above(terrain.sea_level())`,
     /// the SAME classifier `windows/scene/src/region.rs` uses for the
     /// `scene/surrounds/v2` wire field (Task 3's shared classifier; see
-    /// [`glyph_and_color_for`] for how this and [`Self::water`] together
+    /// [`glyph_for`] for how this and [`Self::water`] together
     /// pick a mark). `u32`, matching `relief_band`'s own return type —
     /// carried at its own width rather than cast to match [`Self::water`].
     /// type-audit: bare-ok(index)
     pub band: u32,
+    /// The ground's own spectral curve at this tile, from
+    /// [`hornvale_locale::LocaleContext::reflectance_at_facet`]. `None`
+    /// where no context was supplied, or where the context cannot resolve
+    /// the address (a facet coarser than the grid).
+    ///
+    /// **What the renderer does with a `None` changed at The Wash's Task 6,
+    /// and this doc said the old thing until then.** It read "the renderer
+    /// falls back to the elevation ladder rather than panicking" — which
+    /// described nothing that existed (no renderer consulted this field at
+    /// all when it was written) and is now false twice over, because the
+    /// elevation ladder's colour half is deleted. [`color_for`] claims NO
+    /// COLOUR for a `None`, and the tile still draws its glyph: a map that
+    /// cannot spectrally resolve one tile must still draw the rest, which
+    /// was the true half of the original sentence.
+    pub reflectance: Option<hornvale_kernel::color::Reflectance>,
     /// The tile's own height above sea level — the CONTINUOUS reading
     /// [`Self::band`] is a lossy quantization of.
     ///
@@ -2093,6 +2232,365 @@ pub struct TileTerrain {
     /// type-audit: bare-ok(index)
     pub water: u8,
 }
+
+/// How many buckets a year is split into for [`ReflectanceKey`]'s season
+/// column (The Wash, Task 4). Four is the coarsest split that separates
+/// midwinter from midsummer, which is what the campaign's H2 asserts; it is
+/// a rendering choice about how finely to key the cache, not a world fact
+/// (contrast [`hornvale_astronomy::Calendar::season_phase`], which reports a
+/// continuous `[0, 1)` phase with no notion of "buckets" at all).
+/// type-audit: bare-ok(count)
+pub const SEASON_BUCKETS: u32 = 4;
+
+/// The cache bucket for a year phase in `[0, 1)` (The Wash, Task 4). Ties at
+/// a bucket boundary round down; `phase` is wrapped with `rem_euclid` first
+/// so a phase supplied slightly outside `[0, 1)` (a boundary float) still
+/// lands in range rather than panicking on the cast.
+/// type-audit: bare-ok(ratio: phase), bare-ok(count: return)
+pub fn season_bucket(phase: f64) -> u32 {
+    let p = phase.rem_euclid(1.0);
+    ((p * f64::from(SEASON_BUCKETS)) as u32).min(SEASON_BUCKETS - 1)
+}
+
+/// The key a cached reflectance hangs on: the facet it belongs to and the
+/// season bucket it was computed for (The Wash, Task 4).
+///
+/// **`FacetId`, not `Facet`** — fix round 1 caught this. `Facet` is
+/// `{ face: u8, path: Vec<u8> }`: building a key from one costs a heap
+/// allocation (`Vec::clone`) on every cache CONSULT, hits included, and the
+/// `BTreeMap` this keys then walks compares `Vec<u8>` lexicographically
+/// rather than a single integer. At Task 6's ~1,920 calls a frame that is
+/// ~1,920 allocations a frame purely to ask a question, in the task whose
+/// whole purpose is cost. [`Facet::pack`] gives a `FacetId` — a `Copy`
+/// `u64` — for the identical address: allocation-free to build, O(1) to
+/// compare, and it is what makes this struct `Copy` too, dissolving the
+/// "`Facet` is not `Copy`, so this derives `Clone` and not `Copy`"
+/// awkwardness the first draft carried.
+///
+/// **Reflectance is seasonal-rate** (the rate spine's own invariant, Task
+/// 1; spec §4.3) — the cover mixture [`hornvale_locale::LocaleContext::
+/// reflectance_at_facet`] integrates varies with the season (snow,
+/// chlorophyll). The plate's TERRAIN layer cache
+/// ([`crate::tiles::TileCache`]) is never invalidated across a session, so a
+/// key that ignored season would bake in whichever season first drew a
+/// facet and never update — correct on the first frame, silently frozen
+/// after. Keying on `(FacetId, season)` instead means a season change mints
+/// a new entry rather than serving a stale one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ReflectanceKey {
+    /// The facet this reflectance describes, packed ([`Facet::pack`]).
+    pub facet: FacetId,
+    /// The season bucket ([`season_bucket`]) it was computed in.
+    pub season: u32,
+}
+
+/// The `(FacetId, season)` reflectance cache, plus the two counters that
+/// make its hit path OBSERVABLE (The Wash, Task 6, carried finding (d)).
+///
+/// **Why the counters exist.** Task 4 shipped this as a bare
+/// [`ComponentStore`], and its covering test asserted that a same-season
+/// redraw leaves `store.len()` unchanged. That assertion cannot fail:
+/// `BTreeMap::insert` under an identical key never grows the map, so a hit
+/// path that had silently been replaced by "recompute and reinsert" would
+/// pass it just as well. The hit path was a structural guarantee (the
+/// `Some(r) => Some(*r)` arm below returns without calling the expensive
+/// function) and nothing tested it — and Task 6 puts it under ~1,920 calls
+/// a frame, which is where a silent miss stops being free.
+///
+/// **Counted, never timed.** `Instant` is banned in this project, tests
+/// included, so "was it served from the cache" is answered by asking how
+/// many times the expensive function was CALLED rather than by how long a
+/// draw took. [`Self::misses`] is incremented exactly where
+/// [`LocaleContext::reflectance_at_facet_cached`] is invoked and nowhere
+/// else, so it is a count OF that call and not a proxy for it.
+///
+/// **UNBOUNDED, AND DELIBERATELY UNDOCUMENTED UNTIL NOW.** Unlike
+/// [`crate::tiles::TileCache`] — the sibling cache whose unbounded growth
+/// was this campaign's one Critical, one level up — this struct has no
+/// [`Self::hits`]/[`Self::misses`] counterpart to `evict`: no `clear`, no
+/// `retain`, no bound, and nothing ever drops an entry for the life of the
+/// session. At [`BAND_B_RUNG`] each drawn raster position addresses its own
+/// facet, so panning mints roughly one `(FacetId, season)` entry per tile
+/// drawn — new ground, not a repeat — at roughly 96 bytes an entry
+/// (`FacetId` + `SEASON_BUCKETS`'s column + the stored
+/// [`hornvale_kernel::color::Reflectance`], plus the `BTreeMap` node
+/// overhead). **Correctness does not need a bound here**: the season column
+/// already prevents staleness the way [`crate::tiles::TileCache`]'s season
+/// and illuminant columns do, so an entry never goes wrong, only stale
+/// entries would ever need evicting and none exist. This is a pure memory
+/// bound, and it was accepted rather than overlooked: bounding it needs an
+/// eviction policy (what to drop, on what pressure) that is a design
+/// decision belonging to its own campaign with a measurement behind it, not
+/// a documentation fix wave. A realistic session's entry count is
+/// UNMEASURED. [`ReflectanceCache::len`] exists, but the `Driver` holds its
+/// cache in a private field and never calls it, so nothing outside
+/// `driver.rs` can observe a live session's count. Surfacing it is a
+/// behaviour change and out of scope for a documentation pass.
+///
+/// [`ComponentStore`]: hornvale_kernel::component::ComponentStore
+/// [`LocaleContext::reflectance_at_facet_cached`]: hornvale_locale::LocaleContext::reflectance_at_facet_cached
+#[derive(Debug, Default)]
+pub struct ReflectanceCache {
+    /// The store itself — one entry per `(facet, season)` this session has
+    /// resolved.
+    store: ComponentStore<ReflectanceKey, hornvale_kernel::color::Reflectance>,
+    /// How many consults were served from [`Self::store`] without calling
+    /// the locale.
+    /// type-audit: bare-ok(count)
+    hits: u64,
+    /// How many consults called the locale because the key was absent.
+    /// A `None` answer from the locale still counts here: the expensive
+    /// call was made.
+    /// type-audit: bare-ok(count)
+    misses: u64,
+}
+
+impl ReflectanceCache {
+    /// An empty cache with both counters at zero.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// How many `(facet, season)` pairs are stored.
+    /// type-audit: bare-ok(count)
+    pub fn len(&self) -> usize {
+        self.store.len()
+    }
+
+    /// Whether nothing has been stored yet.
+    /// type-audit: bare-ok(flag)
+    pub fn is_empty(&self) -> bool {
+        self.store.is_empty()
+    }
+
+    /// Consults served without calling the locale.
+    /// type-audit: bare-ok(count)
+    pub fn hits(&self) -> u64 {
+        self.hits
+    }
+
+    /// Consults that called the locale.
+    /// type-audit: bare-ok(count)
+    pub fn misses(&self) -> u64 {
+        self.misses
+    }
+}
+
+/// Everything one draw needs to turn a tile into a colour: whose ground it
+/// is, what light is falling on it, who is looking, when, and where the
+/// already-answered reflectances are kept (The Wash, Task 6).
+///
+/// **A struct rather than six more parameters.** [`draw_terrain_layer`]
+/// already carries an `#[allow(clippy::too_many_arguments)]` at nine; the
+/// alternative here was fifteen. Bundling also states the invariant the
+/// parameters share — `season` MUST be
+/// [`crate::driver::season_bucket_for`]`(calendar, at)` for the same `at`
+/// this carries ([`terrain_at_tile`]'s own contract) — in one place a
+/// constructor can be read against, rather than spread across a call site.
+///
+/// **`ctx: None` is a legal, shipped configuration and not a stub.** With
+/// no [`hornvale_locale::LocaleContext`] every tile's reflectance resolves
+/// `None`, so [`color_for`] claims no colour for land and the plate draws
+/// relief in glyphs alone. `crate::overture::atlas` is the shipped caller
+/// that does this — see its own note for why.
+pub struct Spectral<'a> {
+    /// The locale to ask for a tile's reflectance, or `None` to draw with
+    /// no spectral colour at all.
+    pub ctx: Option<&'a hornvale_locale::LocaleContext>,
+    /// The light falling on the WHOLE plate — anchored to the observer, not
+    /// to the tile (spec §4.5, [`crate::driver::plate_illuminant`]). Built
+    /// once above the tile loop; nothing about it varies per tile.
+    pub illuminant: &'a hornvale_kernel::color::Illuminant,
+    /// The terminal doing the looking, and the quantization it owns.
+    pub observer: &'a crate::observer::TerminalObserver,
+    /// The instant the reflectance is read at — the cover mixture is
+    /// seasonal, so this picks WHICH season.
+    pub at: hornvale_kernel::WorldTime,
+    /// [`season_bucket`] of `at`'s own year phase. See [`terrain_at_tile`]
+    /// for why this cannot be derived here and must be derived from `at`.
+    /// type-audit: bare-ok(count)
+    pub season: u32,
+    /// The `(facet, season)` cache, or `None` to recompute every tile.
+    pub cache: Option<&'a mut ReflectanceCache>,
+}
+
+/// The two things a [`Spectral`] borrows that a caller must OWN somewhere:
+/// the plate's illuminant and the terminal's observer.
+///
+/// **Why it exists.** [`Spectral`] holds references so that one illuminant
+/// and one observer are built per draw and read per tile — that is the
+/// "computed once, above the tile loop" discipline
+/// [`crate::driver::plate_illuminant`]'s own doc states. References need an
+/// owner, and every caller that is not the live session (the overture, the
+/// examples, every test) has nowhere natural to put one. This is that place.
+///
+/// The live session does NOT use this type: `Driver::plate_light` owns the
+/// same pair as locals for the duration of one draw, and reaches
+/// [`crate::driver::plate_illuminant`] for a REAL sun rather than the flat
+/// fallback below.
+pub struct PlateLight {
+    /// The light falling on the plate.
+    illuminant: hornvale_kernel::color::Illuminant,
+    /// The terminal doing the looking.
+    observer: crate::observer::TerminalObserver,
+}
+
+impl PlateLight {
+    /// A flat, colourless illuminant ([`crate::driver::flat_illuminant`])
+    /// and the observer `colour_allowed` implies
+    /// ([`crate::observer::terminal_observer`]).
+    ///
+    /// Flat is the honest light for a caller with no world to place a sun
+    /// by — the same fallback [`crate::driver::plate_illuminant`] itself
+    /// takes for a tier-0 constant-sun world.
+    /// type-audit: bare-ok(flag: colour_allowed)
+    pub fn flat(colour_allowed: bool) -> Self {
+        Self {
+            illuminant: crate::driver::flat_illuminant(),
+            observer: crate::observer::terminal_observer(colour_allowed),
+        }
+    }
+
+    /// The light this bundle holds, for a caller reaching [`color_for`]
+    /// directly rather than through a whole draw.
+    pub fn illuminant(&self) -> &hornvale_kernel::color::Illuminant {
+        &self.illuminant
+    }
+
+    /// The observer this bundle holds. See [`Self::illuminant`].
+    pub fn observer(&self) -> &crate::observer::TerminalObserver {
+        &self.observer
+    }
+
+    /// [`Self::flat`] for THIS terminal — the same `NO_COLOR` answer
+    /// [`draw`] itself resolves, asked in the one place that already owns
+    /// the question. The public entry point for a caller outside this crate
+    /// (an integration test, an example), which cannot reach
+    /// `colour_allowed` directly.
+    pub fn for_terminal() -> Self {
+        Self::flat(colour_allowed())
+    }
+
+    /// This light with a specific illuminant, for a caller that must place
+    /// a sun this bundle's own [`Self::flat`] fallback cannot — a benchmark
+    /// measuring the lit path, or a test that needs two draws to be lit
+    /// DIFFERENTLY (`crate::tiles`'s own capacity-under-a-moving-sun test,
+    /// which cannot vary the light any other way).
+    pub fn with_illuminant(mut self, illuminant: hornvale_kernel::color::Illuminant) -> Self {
+        self.illuminant = illuminant;
+        self
+    }
+
+    /// This light with a specific observer, for a caller that wants to name
+    /// a [`crate::observer::ColorDepth`] the `NO_COLOR` probe cannot express.
+    pub fn with_observer(mut self, observer: crate::observer::TerminalObserver) -> Self {
+        self.observer = observer;
+        self
+    }
+
+    /// A [`Spectral`] over this light with NO locale and NO cache — every
+    /// tile's reflectance resolves `None`, so [`color_for`] claims colour
+    /// only for the water classes and land draws in glyphs alone.
+    pub fn unlit(&self) -> Spectral<'_> {
+        Spectral {
+            ctx: None,
+            illuminant: &self.illuminant,
+            observer: &self.observer,
+            at: WorldTime::GENESIS,
+            season: 0,
+            cache: None,
+        }
+    }
+
+    /// A [`Spectral`] over this light, reading `ctx` at `at`.
+    ///
+    /// `season` MUST be [`crate::driver::season_bucket_for`]`(calendar, at)`
+    /// for whichever calendar governs the world `at` belongs to — see
+    /// [`terrain_at_tile`]'s own contract for what a mislabeled bucket
+    /// silently does to the cache.
+    /// type-audit: bare-ok(count: season)
+    pub fn lit<'a>(
+        &'a self,
+        ctx: &'a hornvale_locale::LocaleContext,
+        at: WorldTime,
+        season: u32,
+        cache: Option<&'a mut ReflectanceCache>,
+    ) -> Spectral<'a> {
+        Spectral {
+            ctx: Some(ctx),
+            illuminant: &self.illuminant,
+            observer: &self.observer,
+            at,
+            season,
+            cache,
+        }
+    }
+}
+
+impl Spectral<'_> {
+    /// Reborrow as a fresh `Spectral` — what a function taking `&mut
+    /// Spectral` hands to a callee that also wants `&mut Spectral`, since
+    /// the `cache` field's own `&mut` makes the struct non-`Copy`.
+    pub fn reborrow(&mut self) -> Spectral<'_> {
+        Spectral {
+            ctx: self.ctx,
+            illuminant: self.illuminant,
+            observer: self.observer,
+            at: self.at,
+            season: self.season,
+            cache: self.cache.as_deref_mut(),
+        }
+    }
+}
+
+/// The plate's layers and what each reads, as the rate spine sees them
+/// (spec §4.3, [`crate::rate`]). Declared here rather than in `rate.rs`
+/// because this is the first point at which all three exist.
+///
+/// **THIS IS A DECLARATION, NOT AN OBSERVATION.** It states what each layer
+/// is believed to read; nothing mechanically derives it from the code. If a
+/// layer's reads change and this list does not,
+/// `the_plates_declared_layers_satisfy_the_rate_spine` stays green and says
+/// nothing. That limit is real and is why the declaration sits next to the
+/// code it describes rather than in the spine's own module.
+///
+/// **`terrain` is declared [`crate::rate::Rate::Diurnal`], not `Seasonal`, and the
+/// difference is the whole point of writing this down.** The brief for this
+/// task proposed `Seasonal` — reflectance is seasonal-rate, which is true —
+/// but the terrain layer's drawn `Grid` does not hold a reflectance. It
+/// holds an INK: the observer's collapse of reflectance under the plate's
+/// illuminant, and the illuminant moves with the sun. A `Seasonal` terrain
+/// layer reading `Diurnal` light is precisely the violation
+/// [`crate::rate::violations`] exists to name, and declaring it away would
+/// have made this assertion a rubber stamp on the bug. What actually holds
+/// the line is [`crate::tiles::TileCache`]'s own key, which carries the
+/// season and the illuminant's own bits for this reason.
+pub const LAYERS: &[crate::rate::LayerDecl] = &[
+    crate::rate::LayerDecl {
+        name: "terrain",
+        rate: crate::rate::Rate::Diurnal,
+        reads: &[
+            crate::rate::Rate::Geological,
+            crate::rate::Rate::Seasonal,
+            crate::rate::Rate::Diurnal,
+        ],
+    },
+    crate::rate::LayerDecl {
+        name: "illuminant",
+        rate: crate::rate::Rate::Diurnal,
+        reads: &[crate::rate::Rate::Geological, crate::rate::Rate::Diurnal],
+    },
+    // The feature layer is redrawn on EVERY composition, hit or miss
+    // (`draw_feature_layer`'s own doc and `Driver::world_plate_for_redraw`),
+    // so it has no cache key to be coarser than anything: `PerTurn` is the
+    // honest rate for a layer that is never reused across a turn, and it
+    // reads the discovery roster, which moves at the same rate.
+    crate::rate::LayerDecl {
+        name: "feature",
+        rate: crate::rate::Rate::PerTurn,
+        reads: &[crate::rate::Rate::Geological, crate::rate::Rate::PerTurn],
+    },
+];
 
 /// ONE chart tile's terrain, by direct mesh addressing (The Quadrat, Task
 /// 3) — SHARED by [`draw_with`] (which paints the class as a glyph) and
@@ -2157,6 +2655,27 @@ pub struct TileTerrain {
 /// tile's own centre is re-addressed at the grid level instead. Nothing on
 /// the shipped ladder reaches there ([`GLOBE_RUNG`] is the floor and is the
 /// grid level itself); `driver.rs`'s rung-5 disclosure test does.
+///
+/// **`season`/`at` contract (The Wash, Task 4 fix round 1, Fix 3): `season`
+/// MUST be `season_bucket(calendar.season_phase(at))` for whichever
+/// calendar governs the world `at` belongs to** (bucket `0` when that
+/// calendar is `None`, or when its own `season_phase` reports `None` —
+/// [`crate::driver::season_bucket_for`] is the one place that fold
+/// is written out, and every caller should route through it rather than
+/// re-deriving it). This function CANNOT check the contract itself and
+/// cannot derive `season` on its own: neither `hornvale_locale::
+/// LocaleContext` nor `hornvale_vessel::WorldContext` carries a calendar
+/// (`windows/vessel/src/session.rs`'s own `WorldContext` has no `calendar`
+/// field, and grepping the workspace for `fn calendar` turns up exactly one
+/// implementation, `Sky::calendar`, reached only via
+/// `hornvale_worldgen::sky_of(world)`, which this function is never handed
+/// a `World` to call). A caller that passes a `season` not actually derived
+/// from `at` files the resulting reflectance under a key that lies about
+/// it, and the cache then serves that mislabeled value for every OTHER
+/// instant the same bucket names — a silent, self-inflicted staleness the
+/// cache's own "never serves a stale season" guarantee cannot see, because
+/// nothing here can tell a correctly-derived bucket from a wrong one; both
+/// are just a `u32`.
 #[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
 pub fn terrain_at_tile(
     terrain: &GeneratedTerrain,
@@ -2169,6 +2688,10 @@ pub fn terrain_at_tile(
     virtual_h: u32,
     row: u32,
     col: u32,
+    ctx: Option<&hornvale_locale::LocaleContext>,
+    at: WorldTime,
+    season: u32,
+    reflectance_cache: Option<&mut ReflectanceCache>,
 ) -> TileTerrain {
     let plate_row = win.origin_row + row;
     let plate_col = win.origin_col + col;
@@ -2251,6 +2774,75 @@ pub fn terrain_at_tile(
     let band = hornvale_scene::relief_band(height_asl);
     let water = terrain.water_kind_at(vertex).index();
 
+    // THE GROUND'S OWN SPECTRAL CURVE, asked of the sim rather than inferred
+    // from `band` (The Wash, Task 3). Addressed at `facet` — the WINDOW's
+    // rung, not the grid-level `addr` above — so a rung finer than the grid
+    // gets the genuine four-corner bilinear position of the tile's own
+    // centre rather than one answer per grid quad.
+    //
+    // `.ok()`, never `unwrap`: the context refuses an address COARSER than
+    // the grid (`LocaleError::AboveGrid`), which `virtual_dims` deliberately
+    // still honours, and a map that cannot colour one tile must still draw
+    // the rest.
+    //
+    // Through the `_cached` reader, sharing the very memo the corner-weight
+    // resolution above just filled: at `GLOBE_RUNG` (== the grid level, the
+    // world map's default) `facet` IS `addr`, so this is a hit and the
+    // nearest-vertex search is not paid twice. At a finer rung it misses and
+    // falls through to a fresh `corner_weights` — the same answer either
+    // way, pinned by `hornvale-locale`'s own
+    // `every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill`.
+    //
+    // THE (FacetId, season) CACHE, CONSULTED FIRST (The Wash, Task 4). This
+    // is a SECOND, coarser cache above the one paragraph up: the memo skips
+    // a repeated nearest-vertex SEARCH, this skips the whole climate-read /
+    // rill-read / lithology-mixture / cover-integration composition behind
+    // `reflectance_at_facet_cached` for a `(facet, season)` this draw has
+    // already answered. A hit returns the SAME value a fresh computation
+    // would — caching a deterministic function changes nothing about its
+    // output, only how often it is paid for — so no test may observe a
+    // difference between the two paths, only a difference in how many times
+    // the expensive one ran.
+    //
+    // `facet.pack()` (fix round 1, Fix 4): builds the key's `FacetId`
+    // without allocating (`ReflectanceKey`'s own doc has the full argument).
+    // It fails only past `Facet::MAX_DEPTH` (29) — unreachable on the
+    // shipped ladder, whose deepest rung is `BAND_B_RUNG` = 13 — but handled
+    // rather than assumed: a facet that cannot be packed still resolves its
+    // reflectance, it simply is not cached.
+    let reflectance = match (reflectance_cache, facet.pack()) {
+        (Some(cache), Ok(facet_id)) => {
+            let key = ReflectanceKey {
+                facet: facet_id,
+                season,
+            };
+            match cache.store.get(&key) {
+                Some(r) => {
+                    // THE HIT PATH, AND THE ONE PLACE IT IS COUNTED (Task
+                    // 6, carried finding (d)). Returning here without
+                    // calling the locale is the cache's entire claim, and
+                    // `store.len()` could never witness it — an insert
+                    // under an existing key does not grow a `BTreeMap`.
+                    cache.hits += 1;
+                    Some(*r)
+                }
+                None => {
+                    cache.misses += 1;
+                    let r = ctx.and_then(|ctx| {
+                        ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()
+                    });
+                    if let Some(r) = r {
+                        cache.store.insert(key, r);
+                    }
+                    r
+                }
+            }
+        }
+        // No cache supplied, or `pack()` refused: exactly the pre-Task-4
+        // behaviour, always fresh.
+        _ => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()),
+    };
+
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
         facet,
@@ -2258,6 +2850,7 @@ pub fn terrain_at_tile(
         height_asl,
         band,
         water,
+        reflectance,
     }
 }
 
@@ -2569,6 +3162,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
         assert_eq!(
             on_placed.get(px, py).and_then(|c| c.glyph),
@@ -2590,6 +3184,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
         assert_ne!(
             on_vertex.get(vx, vy).and_then(|c| c.glyph),
@@ -2754,7 +3349,20 @@ mod tests {
         for row in 0..u32::from(h) {
             for col in 0..u32::from(w) {
                 let t = terrain_at_tile(
-                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
+                    0,
+                    None,
                 );
                 vertices.insert(t.vertex);
                 // Decimetres: finer than any relief band, coarser than the
@@ -2832,7 +3440,20 @@ mod tests {
             for row in (0..60).step_by(3) {
                 for col in (0..60).step_by(3) {
                     let t = terrain_at_tile(
-                        &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                        &terrain,
+                        &geo,
+                        &index,
+                        &mut memo,
+                        &f,
+                        &win,
+                        vw,
+                        vh,
+                        row,
+                        col,
+                        None,
+                        WorldTime::GENESIS,
+                        0,
+                        None,
                     );
                     let facet = Facet::containing(
                         {
@@ -2962,7 +3583,18 @@ mod tests {
         let (w, h) = (60u16, 30u16);
         let (win, _, _) = window_showing(depth, crow, ccol, w, h);
 
-        let grid = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let grid = draw_terrain_layer(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &mut PlateLight::flat(false).unlit(),
+        );
         let is_river = |x: i32, y: i32| -> bool {
             if x < 0 || y < 0 || x >= i32::from(w) || y >= i32::from(h) {
                 return false;
@@ -3059,7 +3691,18 @@ mod tests {
             let (crow, ccol) = mercator::project(&f, lat, lon, vw, vh).expect("in frame");
             let (w, h) = (60u16, 30u16);
             let (win, _, _) = window_showing(depth, crow, ccol, w, h);
-            let grid = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+            let grid = draw_terrain_layer(
+                &terrain,
+                &geo,
+                &index,
+                &mut memo,
+                &f,
+                &win,
+                w,
+                h,
+                false,
+                &mut PlateLight::flat(false).unlit(),
+            );
             let is_river = |x: i32, y: i32| -> bool {
                 if x < 0 || y < 0 || x >= i32::from(w) || y >= i32::from(h) {
                     return false;
@@ -3268,6 +3911,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &Discovered::default(),
+            &mut PlateLight::flat(false).unlit(),
         );
         let narrow = draw_with(
             &terrain,
@@ -3282,6 +3926,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &Discovered::default(),
+            &mut PlateLight::flat(false).unlit(),
         );
         // THE VACUITY GUARD: the compared region must straddle a real
         // coastline. A monochrome patch makes every assertion below
@@ -3367,6 +4012,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
         assert_eq!(
             grid.get(sx, sy).and_then(|c| c.glyph),
@@ -3436,6 +4082,10 @@ mod tests {
                 vh,
                 row,
                 col,
+                None,
+                WorldTime::GENESIS,
+                0,
+                None,
             )
             .vertex;
             (rep != c).then_some((c, row, col))
@@ -3458,6 +4108,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
 
         assert_eq!(
@@ -3493,6 +4144,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &empty_discovered,
+            &mut PlateLight::for_terminal().unlit(),
         );
         assert_eq!(g.width(), 40);
         assert_eq!(g.height(), 20);
@@ -3532,6 +4184,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &empty_discovered,
+            &mut PlateLight::flat(true).unlit(),
         );
         let mono = draw_with(
             &terrain,
@@ -3546,6 +4199,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &empty_discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
 
         assert_eq!(
@@ -3681,7 +4335,20 @@ mod tests {
                 let point_vertex = index.nearest(&geo, lat, lon);
                 let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
                 let tile = terrain_at_tile(
-                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
+                    0,
+                    None,
                 );
                 total += 1;
                 if tile.vertex == point_vertex {
@@ -3809,7 +4476,20 @@ mod tests {
             for row in 0..4u32 {
                 for col in 0..4u32 {
                     let got = terrain_at_tile(
-                        &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                        &terrain,
+                        &geo,
+                        &index,
+                        &mut memo,
+                        &f,
+                        &win,
+                        vw,
+                        vh,
+                        row,
+                        col,
+                        None,
+                        WorldTime::GENESIS,
+                        0,
+                        None,
                     );
                     assert_eq!(
                         got.facet.depth(),
@@ -3867,13 +4547,43 @@ mod tests {
         };
         let (vw, vh) = virtual_dims(win.depth);
         // Warm the memo on the tile's own grid-level ancestor first.
-        let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
+        let _ = terrain_at_tile(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            vw,
+            vh,
+            0,
+            0,
+            None,
+            WorldTime::GENESIS,
+            0,
+            None,
+        );
         let before = memo.corner_weights_misses();
         assert_eq!(
             before, 1,
             "the first tile of a cold memo costs exactly one miss"
         );
-        let _ = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 1);
+        let _ = terrain_at_tile(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            vw,
+            vh,
+            0,
+            1,
+            None,
+            WorldTime::GENESIS,
+            0,
+            None,
+        );
         // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to
         // share a grid-level ancestor, and a cold ancestor costs exactly one
         // miss. An exact-zero assertion would flake on an ancestor boundary
@@ -3914,7 +4624,20 @@ mod tests {
         for row in 0..h {
             for col in 0..w {
                 let _ = terrain_at_tile(
-                    &terrain, &geo, &index, &mut memo, &f, &win, vw, vh, row, col,
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
+                    0,
+                    None,
                 );
             }
         }
@@ -3965,7 +4688,22 @@ mod tests {
             origin_row: 0,
         };
         let (vw, vh) = virtual_dims(win.depth);
-        let got = terrain_at_tile(&terrain, &geo, &index, &mut memo, &f, &win, vw, vh, 0, 0);
+        let got = terrain_at_tile(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            vw,
+            vh,
+            0,
+            0,
+            None,
+            WorldTime::GENESIS,
+            0,
+            None,
+        );
 
         assert_eq!(
             memo.corner_weights_geo_level(),
@@ -4049,6 +4787,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &undiscovered,
+            &mut PlateLight::flat(false).unlit(),
         );
         assert_eq!(
             g_before.get(col, row).unwrap().glyph,
@@ -4071,6 +4810,7 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
         assert_eq!(
             g_after.get(col, row).unwrap().glyph,
@@ -4126,6 +4866,7 @@ mod tests {
             &volcanoes,
             &[],
             &undiscovered,
+            &mut PlateLight::flat(false).unlit(),
         );
         assert_ne!(
             g_before.get(col, row).unwrap().glyph,
@@ -4151,6 +4892,7 @@ mod tests {
             &volcanoes,
             &[],
             &discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
         assert_eq!(
             g_after.get(col, row).unwrap().glyph,
@@ -4223,7 +4965,18 @@ mod tests {
         discovered.record(FeatureId::Cave(site));
 
         let mut memo = RoomMeshMemo::default();
-        let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let bare = draw_terrain_layer(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &mut PlateLight::flat(false).unlit(),
+        );
         let bare_text = bare.to_plain_text();
 
         // GUARD: this window really does hold a site the feature layer
@@ -4260,7 +5013,18 @@ mod tests {
         // THE PROPERTY: the terrain layer, redrawn with that discovery in
         // hand, is byte-identical — it cannot see it, by signature.
         let mut memo = RoomMeshMemo::default();
-        let after = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let after = draw_terrain_layer(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &mut PlateLight::flat(false).unlit(),
+        );
         assert_eq!(
             after.to_plain_text(),
             bare_text,
@@ -4291,7 +5055,18 @@ mod tests {
         let exotic_roster = vec![site_at_vertex(SiteKind::Exotic, site)];
         let settlement_roster = vec![settlement(site, 1)];
         let mut memo = RoomMeshMemo::default();
-        let bare = draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let bare = draw_terrain_layer(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &mut PlateLight::flat(false).unlit(),
+        );
         let bare_text = bare.to_plain_text();
 
         // Every screen position at which TWO grids disagree — restores the
@@ -4426,11 +5201,22 @@ mod tests {
             &BTreeSet::new(),
             &[],
             &discovered,
+            &mut PlateLight::flat(false).unlit(),
         );
 
         let mut memo = RoomMeshMemo::default();
-        let mut by_hand =
-            draw_terrain_layer(&terrain, &geo, &index, &mut memo, &f, &win, w, h, false);
+        let mut by_hand = draw_terrain_layer(
+            &terrain,
+            &geo,
+            &index,
+            &mut memo,
+            &f,
+            &win,
+            w,
+            h,
+            false,
+            &mut PlateLight::flat(false).unlit(),
+        );
         // Sanity: the layers genuinely differ, so the equality below is not
         // a comparison of a plate with itself.
         let terrain_only = by_hand.to_plain_text();

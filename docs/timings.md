@@ -5448,6 +5448,45 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-03T21:41:00Z | sluice:gate | 680.982 | 20269.383 | 590.362 | 30.63 | 0 | d2c57c9ed |  | lefford | 40 |
 | 2026-09-03T21:43:19Z | sluice:clients | 138.910 | 2250.402 | 205.438 | 17.68 | 0 | 7fb725bd0 |  | lefford | 40 |
 | 2026-09-03T21:51:07Z | sluice:heavy | 466.998 | 9855.322 | 162.974 | 21.45 | 0 | e723f3a52 |  | lefford | 40 |
+| 2026-09-03T23:11:20Z | gate-commit | 136.307 | 802.053 | 45.960 | 6.22 | 0 | 5b58eaf2a | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:12:33Z | gate-commit | 49.913 | 73.532 | 15.694 | 1.79 | 0 | 5b58eaf2a | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:18:56Z | gate-commit | 60.361 | 70.318 | 15.391 | 1.42 | 0 | f43aa9f94 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:20:52Z | gate-commit | 35.052 | 67.384 | 14.939 | 2.35 | 0 | d60d55c10 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:22:05Z | gate-commit | 34.689 | 66.801 | 15.125 | 2.36 | 0 | d60d55c10 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:46:20Z | rebaseline | 198.210 | 366.985 | 16.773 | 1.94 | 0 | 12b0d5339 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:47:20Z | gate-commit | 51.943 | 145.643 | 22.458 | 3.24 | 0 | 12b0d5339 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:48:03Z | gate-commit | 39.202 | 59.363 | 12.173 | 1.82 | 0 | 12b0d5339 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:49:17Z | gate-commit | 48.661 | 71.338 | 15.504 | 1.78 | 0 | 12b0d5339 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-03T23:50:40Z | gate-commit | 61.156 | 71.882 | 15.352 | 1.43 | 0 | 12b0d5339 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T00:06:51Z | rebaseline | 147.350 | 355.167 | 13.570 | 2.50 | 0 | 59421ed54 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T00:09:40Z | gate-commit | 56.982 | 151.444 | 24.547 | 3.09 | 0 | 59421ed54 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T00:10:42Z | gate-commit | 36.603 | 67.674 | 15.242 | 2.27 | 0 | 59421ed54 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T00:44:47Z | game-check | 100.233 | 670.542 | 26.667 | 6.96 | 0 | 6ef51e89e | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T00:45:40Z | gate-commit | 41.130 | 80.708 | 22.840 | 2.52 | 0 | 6ef51e89e | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T00:46:47Z | gate-commit | 33.683 | 66.087 | 14.866 | 2.40 | 0 | 6ef51e89e | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T01:07:54Z | game-check | 120.065 | 622.562 | 19.331 | 5.35 | 0 | d803377a4 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T01:08:40Z | gate-commit | 41.706 | 69.159 | 15.404 | 2.03 | 0 | d803377a4 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T01:10:37Z | gate-commit | 34.193 | 65.978 | 14.583 | 2.36 | 0 | d803377a4 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:09:31Z | game-check | 157.970 | 634.360 | 14.729 | 4.11 | 0 | 27cd3382e | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:10:10Z | gate-commit | 36.804 | 67.863 | 14.963 | 2.25 | 0 | 27cd3382e | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:11:09Z | gate-commit | 34.315 | 67.155 | 15.202 | 2.40 | 0 | 27cd3382e | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:39:27Z | game-check | 104.573 | 720.702 | 33.620 | 7.21 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:40:06Z | gate-commit | 33.275 | 58.412 | 12.156 | 2.12 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:40:43Z | gate-commit | 33.072 | 58.627 | 12.138 | 2.14 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:42:56Z | gate-commit | 34.077 | 67.010 | 14.733 | 2.40 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:44:41Z | game-check | 101.933 | 671.707 | 29.056 | 6.87 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T03:48:57Z | gate-commit | 49.286 | 73.852 | 16.173 | 1.83 | 0 | 5f5640560 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T04:13:59Z | game-check | 108.134 | 717.563 | 30.497 | 6.92 | 0 | 386578352 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T04:14:36Z | gate-commit | 34.087 | 66.715 | 14.854 | 2.39 | 0 | 386578352 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T04:17:12Z | gate-commit | 33.365 | 66.071 | 14.967 | 2.43 | 0 | 386578352 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T04:35:52Z | game-check | 131.923 | 690.626 | 26.997 | 5.44 | 0 | ad2ba385a | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T04:36:38Z | gate-commit | 44.117 | 85.526 | 26.211 | 2.53 | 0 | ad2ba385a | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T04:38:21Z | gate-commit | 34.322 | 67.138 | 14.970 | 2.39 | 0 | ad2ba385a | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T09:51:49Z | gate-commit | 2.737 | 2.618 | 0.094 | 0.99 | 0 | 01b4ead96 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T09:52:42Z | gate-commit | 43.252 | 76.268 | 21.958 | 2.27 | 0 | 01b4ead96 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T09:54:02Z | gate-commit | 34.149 | 67.096 | 14.577 | 2.39 | 0 | 01b4ead96 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T09:55:44Z | gate-commit | 33.314 | 66.047 | 14.786 | 2.43 | 0 | 01b4ead96 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:04:01Z | gate-commit | 39.927 | 82.010 | 25.649 | 2.70 | 0 | daebbb7a6 | campaign/the-wash | MacBookPro | 10 |
 | 2026-09-03T22:32:23Z | rebaseline | 187.231 | 468.827 | 18.811 | 2.60 | 0 | 0bcb569fa | campaign/the-plat | MacBookPro | 10 |
 | 2026-09-03T22:35:12Z | gate-commit | 141.617 | 642.688 | 64.837 | 5.00 | 0 | 0bcb569fa | campaign/the-plat | MacBookPro | 10 |
 | 2026-09-03T23:47:40Z | gate-commit | 47.136 | 75.511 | 23.125 | 2.09 | 0 | b24b9695c | campaign/the-plat | MacBookPro | 10 |
@@ -5500,3 +5539,19 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T11:25:40Z | gate-commit | 35.357 | 67.299 | 14.699 | 2.32 | 0 | f20fdbecb | campaign/the-staple | MacBookPro | 10 |
 | 2026-09-04T11:27:23Z | gate-commit | 34.598 | 67.123 | 14.450 | 2.36 | 0 | 4e954a815 | campaign/the-staple | MacBookPro | 10 |
 | 2026-09-04T11:28:27Z | gate-commit | 34.628 | 67.008 | 14.440 | 2.35 | 0 | 4e954a815 | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T10:12:53Z | rebaseline | 207.076 | 460.799 | 18.581 | 2.31 | 0 | 2ce669f38 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:14:54Z | gate-commit | 108.689 | 562.647 | 45.705 | 5.60 | 0 | 07214a2e8 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:17:14Z | game-check | 139.632 | 711.448 | 29.072 | 5.30 | 0 | 07214a2e8 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:40:50Z | game-check | 151.629 | 712.159 | 23.972 | 4.85 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:41:29Z | gate-commit | 36.352 | 60.400 | 12.537 | 2.01 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:43:06Z | gate-commit | 45.586 | 72.257 | 15.651 | 1.93 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:45:19Z | game-check | 130.305 | 682.612 | 25.653 | 5.44 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:47:38Z | gate-commit | 52.486 | 73.114 | 15.812 | 1.69 | 0 | 887ef42c1 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:54:05Z | rebaseline | 225.834 | 447.103 | 16.244 | 2.05 | 0 | 1999b5012 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:57:55Z | game-check | 200.503 | 689.331 | 22.403 | 3.55 | 0 | f22d14bb6 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T10:58:47Z | gate-commit | 51.421 | 73.941 | 16.064 | 1.75 | 0 | f22d14bb6 | campaign/the-wash | MacBookPro | 10 |
+| 2026-09-04T11:11:31Z | sluice:artifacts | 283.814 | 1363.459 | 52.874 | 4.99 | 0 | c0178f945 |  | lefford | 40 |
+| 2026-09-04T11:12:39Z | sluice:outboard | 67.316 | 38.301 | 54.654 | 1.38 | 0 | 452c84e8f |  | lefford | 40 |
+| 2026-09-04T11:25:09Z | sluice:gate | 749.440 | 19820.651 | 542.949 | 27.17 | 0 | 2d36de0cb |  | lefford | 40 |
+| 2026-09-04T11:27:45Z | sluice:clients | 156.420 | 2376.705 | 190.409 | 16.41 | 0 | a460a9ce2 |  | lefford | 40 |
+| 2026-09-04T11:35:29Z | sluice:heavy | 463.904 | 9816.132 | 167.656 | 21.52 | 0 | 6d6a6858a |  | lefford | 40 |

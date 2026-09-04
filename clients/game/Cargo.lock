@@ -214,6 +214,7 @@ dependencies = [
  "hornvale-game-core",
  "hornvale-kernel",
  "hornvale-language",
+ "hornvale-locale",
  "hornvale-scene",
  "hornvale-settlement",
  "hornvale-species",
