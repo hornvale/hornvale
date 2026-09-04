@@ -256,6 +256,24 @@ can walk to one yet. Giving the walk a worked place to stand in is the next
 campaign's first job, and this is the program's own ordering rather than an
 oversight: it is flagged on the page, in the design, and here.
 
+*Three claims in the paragraph above were overtaken by
+[The Plat](./the-plat.md) (2026-09-03), and it is corrected in the open here —
+adjacent to the mechanism, rather than only in the successor's own chapter —
+because the middle one reads as a description of how the walk works and would
+otherwise be carried forward as still true.*
+
+- ***"the production walk hardcodes one for every cave a player enters"** is
+  no longer the mechanism.* `delve_at` now derives each rung's origin from the
+  committed ledger before the descent is planned: a column where a people
+  settled is entered as a cut place, and the panel's own re-derivation is no
+  longer a hypothetical.
+- ***"Nobody can walk to one yet"** is false.* A session walks to a door at a
+  cut rung of seed 42 and is refused by the locked-door refusal, which is what
+  makes this campaign's verbs reachable in production.
+- ***"the next campaign's first job"** is done*, and by that campaign. Doors on
+  cut rungs are 16 of 26, 2 of 3 and 3 of 5 on the three panel seeds — against
+  **zero** for the same rungs under the plan the walk built yesterday.
+
 The previous campaign's four numbers moved once, by a digit or two, and the
 attribution is a revert. A repair it had deferred — a growth move that tested
 its own invariant against the passage set as it stood *before* the move rather
@@ -344,6 +362,14 @@ And no player reaches a door. The plan hangs them in 872 of the panel's 874
 worked descents; the walk enters every cave as a wild one. That gap closes when the
 walk learns to read what a place was made by, which is a campaign and not a
 paragraph.
+
+*It was a campaign, and it closed the gap by exactly the route this sentence
+predicted. [The Plat](./the-plat.md) taught the walk to read what a place was
+made by — off the ledger's own occupation records, at the moment a possession
+enters — so a rung a people cut is worked, a door row is admissible on it, and
+a player reaches a door. The correction is stated here rather than only in the
+successor because this is a chapter's closing claim, and a closing claim is the
+one a reader carries away.*
 
 What is here is the difference between two walks, made structural: a loop that
 is still a loop, with one side of it closed to a body without the key.

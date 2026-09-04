@@ -100,12 +100,42 @@ pub(crate) const NO_WAY_UP_REFUSAL: &str = "The chute's lip is out of reach abov
 /// `measure_flooded_cell_reachability_across_the_descent` applies. The
 /// index into this list *is* [`Underground::rung`]: `descent[i]` is always
 /// the level [`Underground::enter`] generated for `habitation_rungs()[i]`.
-fn habitation_rungs() -> Vec<Band> {
+///
+/// **`pub(crate)` since The Plat**: `Session::delve_at`
+/// (`hornvale_worldgen::delve_seating::column_origins`) and
+/// `crate::plat_prose`'s own tests need the same rung list `enter` builds
+/// `descent` against, rather than a second, independently-chosen one.
+pub(crate) fn habitation_rungs() -> Vec<Band> {
     hornvale_terrain::rungs()
         .iter()
         .copied()
         .filter(|&rung| rung != Band::Surface)
         .collect()
+}
+
+/// Every rung `(Found, Wild)` — what every column read before The Plat, and
+/// the default a test hands [`Underground::enter`] when the column's own
+/// ledger is not the thing under test.
+///
+/// **A TEST seam only** (`#[cfg(test)]`), the same discipline
+/// `crate::roster::Roster::driven_body_mut` already applies: nothing in
+/// production builds an `Underground` without a real, ledger-derived
+/// `origins` list, and the absence of a non-test constructor here is
+/// deliberate.
+#[cfg(test)]
+pub(crate) fn wild_origins(
+    n: usize,
+) -> Vec<(
+    hornvale_worldgen::chamber::ChamberOrigin,
+    hornvale_worldgen::delve_seating::Tenancy,
+)> {
+    vec![
+        (
+            hornvale_worldgen::chamber::ChamberOrigin::Found,
+            hornvale_worldgen::delve_seating::Tenancy::Wild
+        );
+        n
+    ]
 }
 
 /// One bit per cell of a rung's extent, remembering which cells the
@@ -267,6 +297,20 @@ pub(crate) struct Underground {
     /// it or not. `peek_stairs` still pairs stairs by coordinate alone and
     /// asks the plan nothing.
     pub(crate) plan: hornvale_worldgen::circuit::DescentPlan,
+    /// One [`hornvale_worldgen::chamber::ChamberOrigin`] per element of
+    /// `descent`, same indexing — read off the committed ledger by
+    /// `Session::delve_at`
+    /// (`hornvale_worldgen::delve_seating::column_origins`), never
+    /// hardcoded (The Plat). `Made` where a people seated this rung.
+    pub(crate) origins: Vec<hornvale_worldgen::chamber::ChamberOrigin>,
+    /// One [`hornvale_worldgen::delve_seating::Tenancy`] per element of
+    /// `descent`, same indexing: whether the people who cut a `Made` rung
+    /// are still there. `Wild` wherever `origins` is `Found`.
+    pub(crate) tenancy: Vec<hornvale_worldgen::delve_seating::Tenancy>,
+    /// The inhabited reading of `plan` (`hornvale_worldgen::plat::read`),
+    /// computed once at entry: the hoarder's seat on every rung, the place
+    /// sentence's role in a Made one.
+    pub(crate) reading: hornvale_worldgen::plat::Reading,
 }
 
 /// Who is trying to move (The Brattice, spec §3.6): the body's own
@@ -310,10 +354,11 @@ impl Underground {
     /// `hornvale_terrain::water_table_depth_m`, and a per-rung evaluation
     /// depth from `hornvale_terrain::rung_evaluation_depth_m`. `cave.kind`
     /// names the natural-leaf algorithm (never a hardcoded `CaveKind`).
-    /// Every rung's origin is
-    /// [`hornvale_worldgen::chamber::ChamberOrigin::Found`] — the shipped
-    /// path constructs no `ChamberOverrides`, so `Made` is unreachable
-    /// here — and the character is
+    /// Every rung's origin and tenancy comes from `origins` — read off the
+    /// committed ledger by the caller (`Session::delve_at`, through
+    /// [`hornvale_worldgen::delve_seating::column_origins`]), never
+    /// hardcoded (The Plat): `Made` is reachable wherever a people seated a
+    /// rung. The character is
     /// [`hornvale_worldgen::character::Character::WildCave`], matching
     /// [`crate::underworld_level::generate_descent`]'s own hardcoded
     /// value. **That last input is the only one a caller can vary**, through
@@ -337,6 +382,10 @@ impl Underground {
         vertex: hornvale_kernel::Vertex,
         cave: hornvale_terrain::Cave,
         seed: Seed,
+        origins: &[(
+            hornvale_worldgen::chamber::ChamberOrigin,
+            hornvale_worldgen::delve_seating::Tenancy,
+        )],
     ) -> Underground {
         Underground::enter_with_character(
             terrain,
@@ -344,6 +393,7 @@ impl Underground {
             cave,
             seed,
             hornvale_worldgen::character::Character::WildCave,
+            origins,
         )
     }
 
@@ -352,18 +402,23 @@ impl Underground {
     /// Brattice, Task 5).
     ///
     /// **A test seam, and the seam is named rather than left implicit.** The
-    /// shipped path constructs no `ChamberOverrides` and always builds a
-    /// [`hornvale_worldgen::character::Character::WildCave`] descent, so no
-    /// walked descent anywhere in production carries a worked place's extra
-    /// cycle (`circuit::cycle_budget`'s `worked` term) and therefore, in
-    /// practice, no door: the patterns that stamp a `Needs(Key(_))` gate need
-    /// a realm to stamp it on. That is a property of what the composition root
-    /// asks for today, not of the walk, and §3.7's verbs must be exercised
-    /// against a descent that actually hangs one. So this twin exists, `enter`
-    /// calls it with `WildCave`, and there is exactly ONE body — the
-    /// alternative (a second constructor that agrees) is the duplicated-pair
-    /// shape [`crate::thing::promote_role`]'s own doc records as having been a
+    /// character is still the only input production hardcodes — always
+    /// [`hornvale_worldgen::character::Character::WildCave`] — so no walked
+    /// descent anywhere in production carries a worked place's extra cycle
+    /// (`circuit::cycle_budget`'s `worked` term) from the CHARACTER's own
+    /// contribution and therefore, in practice, no door from that source: the
+    /// patterns that stamp a `Needs(Key(_))` gate need a realm to stamp it
+    /// on. That is a property of what the composition root asks for today,
+    /// not of the walk, and §3.7's verbs must be exercised against a descent
+    /// that actually hangs one. So this twin exists, `enter` calls it with
+    /// `WildCave`, and there is exactly ONE body — the alternative (a second
+    /// constructor that agrees) is the duplicated-pair shape
+    /// [`crate::thing::promote_role`]'s own doc records as having been a
     /// live seam once already.
+    ///
+    /// A walked wild descent carries no door for a narrower reason now (The
+    /// Plat): its `origins` are all `Found`, read off the ledger the same as
+    /// any other column — not because nothing writes them.
     ///
     /// Everything else — the recipe, the entrance-region placement rule, the
     /// panic, the empty fog — is [`Underground::enter`]'s, whose doc is the
@@ -374,8 +429,13 @@ impl Underground {
         cave: hornvale_terrain::Cave,
         seed: Seed,
         character: hornvale_worldgen::character::Character,
+        origins: &[(
+            hornvale_worldgen::chamber::ChamberOrigin,
+            hornvale_worldgen::delve_seating::Tenancy,
+        )],
     ) -> Underground {
         let rungs = habitation_rungs();
+        assert_eq!(rungs.len(), origins.len(), "one origin per rung");
         let gradient = terrain.geothermal_gradient_at(vertex);
         let porosity = terrain.material_at(vertex).porosity;
         let height_asl_m = terrain
@@ -394,19 +454,29 @@ impl Underground {
                     .expect("every non-Surface rung has an evaluation depth")
             })
             .collect();
-        let origins = vec![hornvale_worldgen::chamber::ChamberOrigin::Found; rungs.len()];
-        let plan =
-            hornvale_worldgen::circuit::plan_descent(seed, vertex, &rungs, cave.kind, character);
+        let (origin_list, tenancy): (
+            Vec<hornvale_worldgen::chamber::ChamberOrigin>,
+            Vec<hornvale_worldgen::delve_seating::Tenancy>,
+        ) = origins.iter().copied().unzip();
+        let plan = hornvale_worldgen::circuit::plan_descent_with_origins(
+            seed,
+            vertex,
+            &rungs,
+            cave.kind,
+            character,
+            &origin_list,
+        );
         let descent = generate_descent_for_character(
             &rungs,
             cave.kind,
-            &origins,
+            &origin_list,
             &depths_m,
             water_table_m,
             character,
             &plan,
             seed,
         );
+        let reading = hornvale_worldgen::plat::read(&plan);
         let entrance_rect = {
             let r = plan.region_of(plan.entrance);
             Rect {
@@ -448,6 +518,9 @@ impl Underground {
             seen,
             depths_m,
             plan,
+            origins: origin_list,
+            tenancy,
+            reading,
         }
     }
 
@@ -1010,42 +1083,89 @@ pub(crate) fn chamber_resident(
     dominant_inhabitant(&substrate, energy).map(|kind| (kind, source))
 }
 
-/// Where a chamber's derived resident stands, if the rung has any standable
-/// cell at all: the LAST `Floor`/`Flooded` cell in the level's own ascending
-/// `(x, y)` order — the mirror image of [`Underground::enter`]'s own
-/// entrance-placement rule (the FIRST such cell), chosen so the resident
-/// does not, in general, greet the possession at the stairs it just climbed
-/// down. A fixed function of the level's own geometry, not of anything the
-/// possession does: the resident does not chase the player around the rung
-/// from one snapshot to the next.
-pub(crate) fn resident_cell(level: &Level) -> Option<Cell> {
-    level
+/// Where a rung's derived resident stands (spec §3.5): the FIRST standable
+/// cell, in the level's own ascending `(x, y)` order, inside the region of
+/// the plan's Sanctum node on this rung — the mirror of
+/// [`Underground::enter`]'s own Entry rule, on a node the plan named rather
+/// than a corner the grid produced. A fixed function of the plan and the
+/// level, never of anything the possession does: the resident does not
+/// chase the player around the rung from one snapshot to the next. `None`
+/// if the Sanctum's region has no standable cell — the total arm;
+/// `ensure_standable` makes it unreachable for every level the generator
+/// produces.
+pub(crate) fn resident_cell(ug: &Underground) -> Option<Cell> {
+    let sanctum = *hornvale_worldgen::plat::role_nodes(
+        &ug.plan,
+        &ug.reading,
+        ug.rung,
+        hornvale_worldgen::plat::Role::Sanctum,
+    )
+    .first()?;
+    let r = ug.plan.region_of(sanctum);
+    ug.level()
         .cells
         .iter()
-        .filter(|(_, k)| matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded))
+        .filter(|(c, k)| {
+            matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded)
+                && c.0 >= r.x
+                && c.0 < r.x + r.w
+                && c.1 >= r.y
+                && c.1 < r.y + r.h
+        })
         .map(|(c, _)| c)
-        .last()
+        .next()
 }
 
-/// The flavour text a chamber's derived resident's mark carries — naming the
-/// SPECIES rather than a personal label, because this creature has no
-/// entity identity to be consistent with (spec §3.6's own stop condition:
-/// this task ships a query, not a placement engine with tracked
-/// individuals). `source` is [`hornvale_worldgen::energy::dominant_source`]'s
-/// own reading, hand-mapped to a short phrase rather than its `Debug`
-/// text — the same discipline [`crate::level_doc::band_wire_name`] and
+/// The first node on `rung` the plan seats a key at, in ascending node order
+/// — the node a walk must reach before any door on that rung will open.
+///
+/// **A TEST seam** (`#[cfg(test)]`), for [`wild_origins`]'s own reason:
+/// production reaches a key through the region underfoot
+/// ([`crate::descent_thing::key_here`]), never by asking the plan where one
+/// is. A walk that wants to fetch a key on purpose — spec §7.3's hoard —
+/// needs the question the verbs deliberately do not ask.
+#[cfg(test)]
+pub(crate) fn key_node_on(
+    ug: &Underground,
+    rung: usize,
+) -> Option<hornvale_worldgen::circuit::NodeId> {
+    (0..ug.plan.nodes.len())
+        .find(|&n| ug.plan.nodes[n].level as usize == rung && ug.plan.nodes[n].key.is_some())
+}
+
+/// The flavour text a rung's resident mark carries: the SPECIES rather than
+/// a personal label, because this creature has no entity identity to be
+/// consistent with (spec §3.6's own stop condition: this task ships a
+/// query, not a placement engine with tracked individuals) — plus, since
+/// The Plat, whether it is `kept` (a `Made` rung whose people are still
+/// there, spec §3.5) and what lies in its region: the hoard, listed the way
+/// `look` lists a floor. `source` is
+/// [`hornvale_worldgen::energy::dominant_source`]'s own reading,
+/// hand-mapped to a short phrase rather than its `Debug` text — the same
+/// discipline [`crate::level_doc::band_wire_name`] and
 /// `crate::plan::entry_for` already apply to their own enums, for the same
 /// reason: prose a player reads is not obliged to track an internal
 /// variant's name.
 pub(crate) fn inhabitant_datum(
     kind: KindId,
     source: hornvale_worldgen::energy::EnergySource,
+    tenancy: hornvale_worldgen::delve_seating::Tenancy,
+    hoard: &[&str],
 ) -> String {
-    format!(
-        "A {} moves in the dark here, drawn to {}.",
-        kind.0,
-        source_phrase(source)
-    )
+    let mut out = if tenancy == hornvale_worldgen::delve_seating::Tenancy::Inhabited {
+        format!("A {} is kept here, in {}", kind.0, source_phrase(source))
+    } else {
+        format!(
+            "A {} moves in the dark here, drawn to {}",
+            kind.0,
+            source_phrase(source)
+        )
+    };
+    if let Some(listed) = crate::chamber_prose::listed(hoard) {
+        out.push_str(&format!(", sitting on: {listed}"));
+    }
+    out.push('.');
+    out
 }
 
 /// [`inhabitant_datum`]'s own hand-map from [`hornvale_worldgen::energy::
@@ -1355,71 +1475,91 @@ mod tests {
         );
     }
 
-    /// [`resident_cell`] picks the level's own LAST standable cell, the
-    /// mirror of [`Underground::enter`]'s FIRST-cell entrance rule — and a
-    /// fixed function of the level alone, not of any external state.
+    /// The hoarder sits where the plan is innermost (spec §3.5): the first
+    /// standable cell, in the level's ascending `(x, y)` order, inside the
+    /// Sanctum node's region — the mirror of `enter`'s Entry rule, on a node
+    /// the plan named rather than a corner the grid produced.
     #[test]
-    fn resident_cell_is_the_levels_own_last_standable_cell() {
-        let extent = Rect {
-            x: 0,
-            y: 0,
-            w: 4,
-            h: 3,
-        };
-        let mut cells = crate::underworld_level::CellGrid::new(extent, LevelCellKind::Wall);
-        cells.set(Cell(1, 1), LevelCellKind::Floor);
-        cells.set(Cell(2, 1), LevelCellKind::Flooded);
-        let level = Level {
-            extent,
-            cells,
-            dof: 0,
-            leaf_styles: Vec::new(),
-            thresholds: Vec::new(),
-        };
-        assert_eq!(resident_cell(&level), Some(Cell(2, 1)));
+    #[allow(clippy::disallowed_methods)] // decision 0092: named construction site
+    fn resident_cell_is_the_first_standable_cell_of_the_sanctums_region() {
+        let world = hornvale_worldgen::fixture::seed_42_world();
+        let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+        let (vertex, cave) = first_cave_vertex(&terrain);
+        let ug = Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &wild_origins(habitation_rungs().len()),
+        );
+        let cell = resident_cell(&ug).expect("rung 0 has a standable cell");
+        let sanctum = hornvale_worldgen::plat::role_nodes(
+            &ug.plan,
+            &ug.reading,
+            ug.rung,
+            hornvale_worldgen::plat::Role::Sanctum,
+        )[0];
+        let r = ug.plan.region_of(sanctum);
+        assert!(
+            cell.0 >= r.x && cell.0 < r.x + r.w && cell.1 >= r.y && cell.1 < r.y + r.h,
+            "{cell:?} lies outside the Sanctum's region {r:?}"
+        );
+        let level = ug.level();
+        let first_in_region = level
+            .cells
+            .iter()
+            .filter(|(c, k)| {
+                matches!(k, LevelCellKind::Floor | LevelCellKind::Flooded)
+                    && c.0 >= r.x
+                    && c.0 < r.x + r.w
+                    && c.1 >= r.y
+                    && c.1 < r.y + r.h
+            })
+            .map(|(c, _)| c)
+            .next();
+        assert_eq!(Some(cell), first_in_region);
+        // And it is not where the possession stands: the Entry is another node.
+        assert_ne!(cell, ug.cell);
     }
 
-    /// A level with no standable cell at all (degenerate, never produced by
-    /// the real generator — Task 9's own connectivity invariant forbids it)
-    /// has no resident cell either, rather than panicking.
-    #[test]
-    fn resident_cell_is_none_when_the_level_has_no_floor() {
-        let extent = Rect {
-            x: 0,
-            y: 0,
-            w: 3,
-            h: 3,
-        };
-        let cells = crate::underworld_level::CellGrid::new(extent, LevelCellKind::Wall);
-        let level = Level {
-            extent,
-            cells,
-            dof: 0,
-            leaf_styles: Vec::new(),
-            thresholds: Vec::new(),
-        };
-        assert_eq!(resident_cell(&level), None);
+    fn first_cave_vertex(
+        terrain: &hornvale_terrain::GeneratedTerrain,
+    ) -> (hornvale_kernel::Vertex, hornvale_terrain::Cave) {
+        terrain
+            .geosphere()
+            .vertices()
+            .filter(|&v| !terrain.is_ocean(v))
+            .find_map(|v| terrain.cave_at(v).map(|c| (v, c)))
+            .expect("seed 42 has a cave")
     }
 
-    /// [`inhabitant_datum`] names the species, not a personal label (this
-    /// creature has no entity identity — see the function's own doc), and
-    /// its flavour text changes with the dominant source even for the same
-    /// species — a chamber whose dominant source differs reads as a
-    /// genuinely different sentence, not a copy-pasted one.
+    /// The datum names the species and the source (The Gallery), and — The
+    /// Plat — what lies in its region and whether it is kept.
     #[test]
-    fn inhabitant_datum_names_the_species_and_the_source() {
-        let a = inhabitant_datum(
-            KindId("xorn"),
-            hornvale_worldgen::energy::EnergySource::Geothermal,
+    fn inhabitant_datum_names_the_species_the_source_the_hoard_and_the_keeping() {
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::energy::EnergySource;
+        let k = KindId("xorn");
+        assert_eq!(
+            inhabitant_datum(k, EnergySource::IronReduction, Tenancy::Wild, &[]),
+            "A xorn moves in the dark here, drawn to iron-bearing stone."
         );
-        let b = inhabitant_datum(
-            KindId("xorn"),
-            hornvale_worldgen::energy::EnergySource::DetritalImport,
+        assert_eq!(
+            inhabitant_datum(k, EnergySource::IronReduction, Tenancy::Wild, &["a key"]),
+            "A xorn moves in the dark here, drawn to iron-bearing stone, sitting on: a key."
         );
-        assert!(a.contains("xorn") && b.contains("xorn"));
-        assert_ne!(
-            a, b,
-            "a different dominant source must read differently: {a:?} vs {b:?}"
+        assert_eq!(
+            inhabitant_datum(k, EnergySource::Geothermal, Tenancy::Inhabited, &[]),
+            "A xorn is kept here, in the warmth rising from below."
+        );
+        assert_eq!(
+            inhabitant_datum(
+                k,
+                EnergySource::Geothermal,
+                Tenancy::Abandoned,
+                &["a key", "a loaf"]
+            ),
+            "A xorn moves in the dark here, drawn to the warmth rising from below, sitting on: a key and a loaf."
         );
     }
 
@@ -1496,6 +1636,11 @@ mod tests {
     ) -> Underground {
         let seen = descent.iter().map(|l| SeenBits::new(l.extent)).collect();
         let depths_m = vec![0.0; descent.len()];
+        let reading = hornvale_worldgen::plat::read(&plan);
+        let (origins, tenancy): (
+            Vec<hornvale_worldgen::chamber::ChamberOrigin>,
+            Vec<hornvale_worldgen::delve_seating::Tenancy>,
+        ) = wild_origins(descent.len()).into_iter().unzip();
         Underground {
             descent,
             rung: 0,
@@ -1505,6 +1650,9 @@ mod tests {
             seen,
             depths_m,
             plan,
+            origins,
+            tenancy,
+            reading,
         }
     }
 

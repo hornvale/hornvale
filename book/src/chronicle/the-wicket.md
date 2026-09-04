@@ -281,6 +281,22 @@ position is never serialized: the ledger carries the room, not the spot in it.
 So making the grade anchor-granular is a decision about *that* ruling, not a
 refinement of this one, and it is left open rather than approximated.
 
+**Refined by [The Pallet](the-pallet.md), 2026-09-03, on the multiplier and not
+on the limit.** How much a furnished room is worth is no longer one number for
+every creature: it is a table over the species roster, seven distinct values
+derived from whether a kind is endothermic (only an endotherm pays the
+conductive-heat bill a surface relieves) and whether it is settled (only a
+settled kind builds bedding sized to itself). The number this section describes
+survives as the table's ceiling, so nothing gains more from a bed than it did
+here, and the peoples it was calibrated for keep it exactly. A body also now
+*chooses* which anchor it lies on, within the room it is already in, and the
+world records the kind it chose. **The limit above is untouched by all of that,
+and for the reason this section already gives.** The fold still re-derives from
+committed facts, and the finest place any fact names is the room. What changed
+is that the durable half of the choice is now in the ledger, so the campaign
+that wants the fold to know a bed from a heap of bracken has a fact to read
+rather than a position it may not keep.
+
 The inversion one might fear cannot occur: the fireside bed requires a room
 that is both built and cold at either band, so there is no world where a
 chamber has a bed and its locale does not.

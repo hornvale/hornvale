@@ -9,9 +9,10 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
-    act_span, affect_of_memo, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_herds, renders_unconscious, slept_fact, species_activity, village_or_fallback,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
+    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, built_rooms, derive_npcs,
+    derive_wild_herds, renders_unconscious, slept_fact, slept_on_fact, species_activity,
+    village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -1573,6 +1574,18 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
             .expect("SLEPT registers identically every session");
+        // The site half (The Pallet, Task 3): which KIND of anchor a sleep
+        // landed on, in the room `SLEPT` above already dates. Registered on
+        // the same terms — by the session, not at genesis — for the same
+        // reason: `slept-on` did not exist before this campaign, so no
+        // committed world can already disagree with this definition.
+        registry
+            .register_predicate(
+                SLEPT_ON,
+                false,
+                "the kind of anchor an agent slept on, within the room it slept in",
+            )
+            .expect("SLEPT_ON registers identically every session");
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
@@ -3851,6 +3864,30 @@ impl<'w> Session<'w> {
         self.ledger
             .commit(fact, &self.registry)
             .expect("SLEPT is registered every session and non-functional");
+        // THE SITE HALF (The Pallet, Task 3). Mirrors `liveness.rs`'s own
+        // `Action::Sleep` arm in `advance_one` exactly, because a player's
+        // `sleep` and a creature's own act commit the same `slept` fact above
+        // and must commit the same `slept-on` one under the same rule — within
+        // this room only, never a search beyond it. Bare ground commits
+        // nothing. `place` is `None` (fix round 1, F2) — see `SLEPT_ON`'s own
+        // doc; `room` is still needed here to derive the interior, even
+        // though `slept_on_fact` no longer takes it.
+        let room = self.position();
+        let terrain = self.terrain_here();
+        let room_interior = crate::interior::interior_of(&room, &terrain);
+        if let Some(anchor) =
+            crate::sleep_site::select_sleep_site(&room_interior, self.driven_body())
+        {
+            let site_fact = slept_on_fact(
+                self.agent_entity(),
+                room_interior.anchor(anchor).kind,
+                self.day,
+                SLEPT_PROVENANCE,
+            );
+            self.ledger
+                .commit(site_fact, &self.registry)
+                .expect("SLEPT_ON is registered every session and non-functional");
+        }
         // UNCONSCIOUSNESS IS READ OFF THE ACT, NOT ASSERTED HERE (The Wicket,
         // Task 8). The `if` is not decoration on an act that always answers
         // `true`: it is the statement that this method has no opinion of its
@@ -5908,11 +5945,23 @@ impl<'w> Session<'w> {
                 // descent and places the possession on the entrance rung's
                 // first standable cell, from the SAME terrain handle and
                 // vertex the sealed-check above already resolved.
+                //
+                // The Plat: the per-rung origins and tenancy come off the
+                // committed ledger (`column_origins`), never hardcoded —
+                // ~156 ms on a JSON-loaded world such as the test fixture,
+                // paid once per delve, and cheap on a Full-built one.
+                let origins = hornvale_worldgen::delve_seating::column_origins(
+                    self.world,
+                    terrain,
+                    vertex,
+                    &crate::underground::habitation_rungs(),
+                );
                 self.underground = Some(crate::underground::Underground::enter(
                     terrain,
                     vertex,
                     cave,
                     self.world.seed,
+                    &origins,
                 ));
                 // Fix round 1: every ARRIVAL marks, not just a lateral step
                 // (spec §3.5, amended in commit f6051a9c3) — the entrance
@@ -6484,6 +6533,31 @@ impl<'w> Session<'w> {
             .collect()
     }
 
+    /// The things lying in the Sanctum's region — the hoarder's hoard (spec
+    /// §3.5) — as `(thing, noun)`, the shape [`Self::underground_floor_nouns`]
+    /// returns.
+    fn hoard_nouns(&self, ug: &crate::underground::Underground) -> Vec<(EntityId, &'static str)> {
+        let Some(&sanctum) = hornvale_worldgen::plat::role_nodes(
+            &ug.plan,
+            &ug.reading,
+            ug.rung,
+            hornvale_worldgen::plat::Role::Sanctum,
+        )
+        .first() else {
+            return Vec::new();
+        };
+        crate::descent_thing::things_lying_at_node(ug, sanctum, &self.ledger, self.day)
+            .into_iter()
+            .filter_map(|thing| {
+                let label = self
+                    .ledger
+                    .kind_of(thing)
+                    .unwrap_or(crate::descent_thing::KEY);
+                Some((thing, crate::chamber_prose::noun(label)?))
+            })
+            .collect()
+    }
+
     fn describe_underground_here(&self) -> String {
         let ug = self
             .underground
@@ -6505,6 +6579,12 @@ impl<'w> Session<'w> {
             // already uses, and it reads the same for one thing or four,
             // which a "{noun} lies here" sentence does not.
             out.push_str(&format!(" Lying here: {listed}."));
+        }
+        // The Plat (spec §3.4): the place, in a rung a people cut. Appended,
+        // so a wild descent reads byte for byte as it did.
+        if let Some(place) = crate::plat_prose::place_sentence(ug) {
+            out.push(' ');
+            out.push_str(&place);
         }
         for (dir, _, door, _) in self.doors_adjacent(ug) {
             out.push_str(&format!(
@@ -6632,13 +6712,13 @@ impl<'w> Session<'w> {
             ),
         ];
         if let Some((kind, source, _cell)) = self.underground_resident(ug) {
+            let hoard_words = self.hoard_nouns(ug);
+            let hoard: Vec<&str> = hoard_words.iter().map(|(_, n)| *n).collect();
+            let datum =
+                crate::underground::inhabitant_datum(kind, source, ug.tenancy[ug.rung], &hoard);
             nouns.push(
-                crate::focalize::Noun::new(
-                    kind.0,
-                    kind.0,
-                    &crate::underground::inhabitant_datum(kind, source),
-                )
-                .with_kind(crate::focalize::NounKind::Creature),
+                crate::focalize::Noun::new(kind.0, kind.0, &datum)
+                    .with_kind(crate::focalize::NounKind::Creature),
             );
         }
         // The Brattice, Task 5 (spec §3.7): every noun `look` names down here
@@ -6659,6 +6739,10 @@ impl<'w> Session<'w> {
             };
             nouns.push(crate::focalize::Noun::new(noun, noun, detail));
         }
+        // The Plat (spec §3.4): the place's own nouns — entry/hall/chamber
+        // and a landing's stair — each answering `examine` with the same
+        // sentence `look` appends.
+        nouns.extend(crate::plat_prose::place_nouns(ug));
         // A door takes the authored line PLUS its state, because the state is
         // the whole question a player examines a door to answer and it is not
         // a property of the kind. Only the first door by bearing order gets a
@@ -7765,7 +7849,7 @@ impl<'w> Session<'w> {
         let climate = self.wctx.climate.as_ref()?;
         let (kind, source) = crate::underground::chamber_resident(ug, terrain, climate)?;
         let level = ug.level();
-        let cell = crate::underground::resident_cell(level)?;
+        let cell = crate::underground::resident_cell(ug)?;
         let lit = crate::lattice::shadowcast_with(
             |c| {
                 level
@@ -7829,12 +7913,19 @@ impl<'w> Session<'w> {
         // catalog (`Self::underground_nouns`) cannot independently drift on
         // which cell counts as lit.
         if let Some((kind, source, cell)) = self.underground_resident(ug) {
+            let hoard_words = self.hoard_nouns(ug);
+            let hoard: Vec<&str> = hoard_words.iter().map(|(_, n)| *n).collect();
             marks.push(crate::plan::PlanMark {
                 x: cell.0,
                 y: cell.1,
                 noun: kind.0.to_string(),
                 kind: crate::purview::AGENT_MARK_KIND.to_string(),
-                datum: crate::underground::inhabitant_datum(kind, source),
+                datum: crate::underground::inhabitant_datum(
+                    kind,
+                    source,
+                    ug.tenancy[ug.rung],
+                    &hoard,
+                ),
                 salience: crate::purview::AGENT_SALIENCE,
             });
         }
@@ -8472,6 +8563,14 @@ impl<'w> Session<'w> {
             .filter(|&(slot, _)| slot != before_driven)
             .map(|(_, position)| position.clone())
             .collect();
+        // The driven body's OWN position before the tick (The Minute, spec
+        // §3.4) — captured beside `before` for the same reason: the tick's
+        // write-back is about to move it. `narrate_motion` compares this
+        // against the driven slot's position after the tick to decide
+        // whether the body changed rooms, which suppresses the
+        // arrival/departure comparison above (that comparison's own
+        // `before` was copied in the room the body has since left).
+        let driven_before = self.roster.positions()[before_driven].clone();
         // ...and WHO the possession could sense as of that same moment (The
         // Sighting, fix round 4). A departure is narrated about a creature that
         // is, by the time it is narrated, no longer here — so the CURRENT sensed
@@ -8603,44 +8702,24 @@ impl<'w> Session<'w> {
         // always was — there is no controller state to carry between ticks
         // for either.
         //
-        // **What actually keeps the LEDGER clean either way is the next
-        // line, not which controller answered (fix round 3, N4, reconfirmed
-        // by this task): `_driven_facts` is discarded UNCONDITIONALLY,
-        // regardless of what `step_one_with_controller` returns.** An
-        // earlier version of this comment claimed this was "the commits on
-        // `Do`, nothing on `Hold` argument spec §5.2 makes" — checked
-        // directly (fix round 2) and that claim is false: forcing the
-        // intent to `Do` here still leaves the ledger untouched, because the
-        // facts never reach the ledger either way. The player's verbs (`go`,
-        // `drink`, …) are what the body DOES; this walk only ever supplies
-        // what the host WANTS (`Session::driven_mode`, which reads the driven
-        // slot's `felt` column) — spec §5.2 is being corrected at Task 8 to
-        // say so.
-        //
-        // **The ledger is inert to this swap; the driven slot's `felt` is NOT
-        // (The Coercion, Task 4 fix round, checked directly rather than
-        // assumed).** Its three parts — mode, affect, suppressed ranks; three
-        // separate `Session` fields until The Rack collapsed them into one
-        // `Felt` at the driven slot — are read back from
-        // `st.mode`/`st.affect`/`st.suppressed` on the LAST
-        // `advance_one` iteration of this call, and while each iteration
-        // sets them from that iteration's OWN `resolution` — before
-        // `controller.intend` is even invoked, so intent cannot change what
-        // a single iteration reports — a multi-iteration `wait` (`from` to
-        // `to` spans more than one decision point) lets an ACTING
-        // controller's intent move `st.pos` between iterations, which
-        // changes what the NEXT iteration's `resolution` is a resolution
-        // OF. `Hold` never moves `st.pos` (`HoldStep` only ever advances
-        // `st.day`), so under `PlayerController` every iteration re-judges
-        // the same frozen position and this was never observable; under
-        // `ImposedController` the body can walk to water and drink mid-wait,
-        // which can leave it in a calmer felt state than a position-frozen
-        // walk would have reported. See
-        // `driven_felt_state_can_move_under_an_imposed_controller_during_wait`
-        // for a direct, seed-42 demonstration — this is a real behavioural
-        // consequence for `!ask`'s narration while possessed, not merely an
-        // internal bookkeeping detail, even though no committed fact ever
-        // differs.
+        // **The walk's facts are committed below, unconditionally on the
+        // controller (The Minute, spec §3.1) — see the commit loop after
+        // the population's own, a few dozen lines down.** Free, the walk is
+        // asked through a fresh `PlayerController`, whose intent is always
+        // `Hold`, and `Hold` emits nothing, so the loop is a no-op for
+        // every free session. Possessed, the `ImposedController` genuinely
+        // acts and what it did now reaches the ledger — the drink it took,
+        // the room it reached — through the same constructors a creature's
+        // walk uses. The felt-state observation The Coercion made (a
+        // multi-iteration `wait` lets an ACTING controller move `st.pos`
+        // between iterations, changing what a later iteration's
+        // `resolution` is a resolution OF, so a possessed body can reach a
+        // calmer felt state than a position-frozen walk would have
+        // reported — see
+        // `driven_felt_state_can_move_under_an_imposed_controller_during_wait`)
+        // still holds; it is now one of two consequences of the swap
+        // rather than the only one, the other being the ledger fact this
+        // task committed.
         //
         // Cloned out of the roster first: `driven_body()` borrows all of
         // `self`, which cannot coexist with the `&mut self.mesh_memo`/`&mut
@@ -8648,12 +8727,30 @@ impl<'w> Session<'w> {
         let driven_npc = self.driven_body().clone();
         let mut player_controller = PlayerController::new();
         let mut imposed_controller = ImposedController::new();
-        let driven_controller: &mut dyn Controller = if self.possessor().is_some() {
+        // OFF THE WALK BAND A HELD BODY HOLDS (The Minute, spec §3.3).
+        // `inside`, `submerged` and `underground` are session-only frames:
+        // the body's ledger position stays at the walk band throughout a
+        // descent, and `out`/`surface`/`climb` return the player to the room
+        // the frame was entered from. The creature walk has no model of a
+        // lattice, a chamber index or a stratum, so a mesh move it committed
+        // while a frame is open would strand the frame — the frame naming a
+        // house the body no longer stands at. So while a frame is open the
+        // held body's walk is asked through the Holding `PlayerController`:
+        // arbitration still runs and the felt state is still written (the
+        // co-present host, decision 0226), but nothing commits. The cost —
+        // a held body indoors does not drink on its own — is a fidelity cut
+        // recorded on `PLAY-held-body-off-the-band-holds`, and it is honest
+        // where the old discard was not: the felt state agrees with the
+        // ledger.
+        let off_the_band =
+            self.inside.is_some() || self.submerged.is_some() || self.underground.is_some();
+        let driven_controller: &mut dyn Controller = if self.possessor().is_some() && !off_the_band
+        {
             &mut imposed_controller
         } else {
             &mut player_controller
         };
-        let (_driven_facts, driven_written) = sys.step_one_with_controller(
+        let (driven_facts, driven_written) = sys.step_one_with_controller(
             &self.ledger,
             &driven_npc,
             &mut self.mesh_memo,
@@ -8708,6 +8805,56 @@ impl<'w> Session<'w> {
                 Err(e) => return Turn::Out(format!("Time falters: {e}")),
             }
         }
+        // THE MINUTE (spec §3.1): the driven body's own walk is committed,
+        // UNCONDITIONALLY on the controller. Free, the walk was asked through
+        // a `PlayerController` with nothing queued, whose intent is `Hold`,
+        // and a Holding walk emits nothing — pinned by
+        // `a_free_walk_emits_nothing_and_ends_in_the_column` — so this loop
+        // is a no-op for every free session and every committed fixture.
+        // Held, the `ImposedController` acts, and what it did now reaches the
+        // ledger through the same constructors a creature's walk uses
+        // (decision 0168): the drink it took, the room it reached.
+        //
+        // AFTER the population's facts and BEFORE the First Mark's
+        // `turned-hostile` loop, every tick — a determinism contract from the
+        // day it landed (spec §3.1), not a preference. Same failure shape as
+        // the loop above: an error leaves the facts before it in place and
+        // ends the turn.
+        //
+        // Before this campaign the binding was `_driven_facts` and this loop
+        // did not exist; the walk's drinks were discarded and a held body's
+        // ledger thirst grew monotonically while its felt state read
+        // `Content` (spec §1, measured).
+        //
+        // Computed BEFORE the loop below, which consumes `driven_facts` by
+        // value (The Minute, spec §3.5): `wake_after` scans the very facts
+        // this walk is about to commit for a `slept` that outlasts this
+        // tick, feeding the merge below so a later wake from an earlier
+        // sleep is kept rather than overwritten. `body_state` reads
+        // `Session::wake_at`, not the ledger, so a walk-committed sleep that
+        // never sets it would leave the body awake at the gate while its
+        // ledger says asleep.
+        let woke = if renders_unconscious(&Action::Sleep) {
+            wake_after(&driven_facts, self.day)
+        } else {
+            None
+        };
+        // The minutes of this walk (The Minute, spec §3.4), computed for the
+        // same reason `woke` is: `driven_facts` is about to be consumed by
+        // value in the loop below.
+        let minutes = minutes_of(&driven_facts);
+        for fact in driven_facts {
+            match self.ledger.commit(fact, &self.registry) {
+                Ok(true) | Ok(false) => {}
+                Err(e) => return Turn::Out(format!("Time falters: {e}")),
+            }
+        }
+        if let Some(wake) = woke {
+            // Keep the LATER wake: a body already due up later from an
+            // earlier sleep (the verb's own, or a prior tick's) must not be
+            // woken early by this walk's own shorter one.
+            self.wake_at = Some(later_wake(self.wake_at, wake));
+        }
         self.occupancy = occupancy;
         // THE TICK WRITES THE RACK (The Rack, Task 3, spec §3.4). Both walks
         // above reported a `Written` per body they advanced; this is the one
@@ -8736,31 +8883,23 @@ impl<'w> Session<'w> {
                 .expect("the tick walked a body this session's roster never appended");
             self.roster.write(slot, w.position, w.felt);
         }
-        // The driven body's own walk — ITS FELT STATE ONLY, never its
-        // position (Task 3 fix round 1). It is not in `written` above:
-        // `step_one_with_controller` is a separate, band-of-one walk and
+        // The driven body's own walk — position AND felt, through `write`,
+        // because its facts were committed a few lines above (The Minute,
+        // spec §3.2). `driven_written.position` is the walk's own `st.pos`,
+        // and every move that advanced it emitted an `agent-at` the loop
+        // just committed, so the column and `agent_position(&ledger)` agree
+        // by construction — `the_rack.rs::a_possessed_sessions_columns_are_
+        // the_ledgers_too` holds them to it. Not in `written` above:
         // `on_roll_others` excludes the driven slot by construction, so this
-        // is the only writer of that slot's `felt`.
+        // is that slot's only writer on a tick.
         //
-        // **`driven_written.position` IS NOT A VIEW OF ANYTHING, and writing
-        // it broke the campaign's headline invariant.** `_driven_facts` is
-        // discarded unconditionally a few dozen lines above — deliberately,
-        // and see that site's own comment — so nothing this walk did reaches
-        // the ledger. Free, that is invisible: the walk is asked through a
-        // `PlayerController` that always Holds and `Hold` never moves
-        // `st.pos`, so the walk's room and the ledger's coincide. Possessed,
-        // an `ImposedController` genuinely acts, and the walk ends in a room
-        // the ledger never recorded — measured at seed 7 under `!wait 5`,
-        // where the column named `path[…, 3, 1, 3, 3]` and the ledger's own
-        // fold named `path[…, 1, 2, 3, 0]`.
-        //
-        // The driven slot's position moves through `Roster::place`, from
-        // `Session::commit_agent_at` — the single writer of this body's
-        // `agent-at` facts — so the column follows the ledger by construction
-        // rather than by a second fold that could drift from it.
-        // `a_possessed_sessions_columns_are_the_ledgers_too` holds this.
+        // Before this campaign this was `resolve` (felt only), because the
+        // position was a view of a walk the ledger never heard about; The
+        // Rack found that writing it broke VIEW ≡ SCAN at seed 7. Now the
+        // ledger has heard, and the felt-only write would be the lie.
         let driven_slot = self.roster.driven();
-        self.roster.resolve(driven_slot, driven_written.felt);
+        self.roster
+            .write(driven_slot, driven_written.position, driven_written.felt);
         // The First Mark, one-hop forward integration: after the NPC
         // drive tick settles, any co-located-or-not NPC whose
         // grievance has crossed the hostility threshold commits its
@@ -8809,7 +8948,14 @@ impl<'w> Session<'w> {
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        Turn::Out(self.narrate_motion(moved, &before, &sensed_before, how))
+        Turn::Out(self.narrate_motion(
+            moved,
+            &before,
+            &sensed_before,
+            how,
+            &driven_before,
+            &minutes,
+        ))
     }
 
     /// Narrate what the tick committed: silence if nothing moved, else name
@@ -8861,9 +9007,42 @@ impl<'w> Session<'w> {
         before: &[Facet],
         sensed_before: &std::collections::BTreeSet<EntityId>,
         how: Perceiving,
+        driven_before: &Facet,
+        minutes: &[Minute],
     ) -> String {
+        // THE MINUTE (spec §3.4). The held body's own acts are named before
+        // the population's comings and goings, and a room change SUPPRESSES
+        // the arrival/departure comparison: `before` was copied in the room
+        // the body has since left, so comparing it against `here` would
+        // narrate everyone in the old room as gone and everyone in the new
+        // one as arrived. `!look` answers for the new room. The act is
+        // attributed to the possessor's will — decision 0168 puts an act's
+        // effect with the BODY, not the driver, and decision 0226 makes the
+        // host co-present, so the walk is the body's own arbitration, not a
+        // choice the player made. A free
+        // body has no minutes (its walk Holds), so its line is byte-identical
+        // to the line before this campaign.
+        let here_now = &self.roster.positions()[self.roster.driven().0];
+        let minute_line = minute_sentence(minutes);
+        if here_now != driven_before {
+            return match minute_line {
+                Some(line) => format!("Time passes. {line}"),
+                // UNREACHABLE BY CONSTRUCTION, kept as a sentence rather
+                // than a panic (final review): a room change means the
+                // walk's ending room differs from the column, the column
+                // equals the ledger's own fold at tick start, so the
+                // difference implies a committed `agent-at` — and
+                // `minutes_of` turns any `agent-at` into `Minute::Moved`, so
+                // `minute_line` is always `Some` here. A benign sentence
+                // beats a panic on a turn path if that ever stops holding.
+                None => {
+                    "Time passes. The will that holds you walks this body elsewhere.".to_string()
+                }
+            };
+        }
+        let minute_prefix = minute_line.map(|l| format!(" {l}")).unwrap_or_default();
         if moved == 0 {
-            return "Time passes; the world keeps its shape.".to_string();
+            return format!("Time passes; the world keeps its shape.{minute_prefix}");
         }
         // The arrival half's gate, and it takes `how` for the same reason
         // `sensed_before` (the departure half's) does: an ARRIVAL is judged
@@ -8921,9 +9100,9 @@ impl<'w> Session<'w> {
             parts.push(format!("You notice {} here now.", arrived.join(", ")));
         }
         if parts.is_empty() {
-            format!("Time passes. You sense movement nearby ({moved} stirred).")
+            format!("Time passes. You sense movement nearby ({moved} stirred).{minute_prefix}")
         } else {
-            format!("Time passes. {}", parts.join(" "))
+            format!("Time passes. {}{minute_prefix}", parts.join(" "))
         }
     }
 
@@ -9882,6 +10061,108 @@ impl<'w> Session<'w> {
             Err(e) => Turn::Out(format!("error: {e}")),
         }
     }
+}
+
+/// When a tick's committed facts leave the body asleep past `now`: the
+/// latest end of any `slept` fact among them that ends after `now`, else
+/// `None` (The Minute, spec §3.5).
+///
+/// `body_state` reads `Session::wake_at`, a field the `sleep` VERB sets
+/// from the span it committed — it does not fold `slept` facts. A held
+/// body's walk commits its own `slept` (decision 0168: the sleep is the
+/// body's whoever chose it), and the walk may sleep past the tick's end
+/// (`advance_one` advances `st.day` by the span and stops when it passes
+/// `to`), so the field must follow the same rule the verb applies or a
+/// released body would be awake at the gate while its ledger says asleep.
+/// Pure over the facts, so the verb and the tick cannot disagree.
+fn wake_after(facts: &[Fact], now: WorldTime) -> Option<WorldTime> {
+    facts
+        .iter()
+        .filter(|f| f.predicate == SLEPT)
+        .filter_map(|f| {
+            let Value::Number(ticks) = f.object else {
+                return None;
+            };
+            let start = f.day?;
+            Some(start + TickSpan::from_ticks(ticks as i64))
+        })
+        .filter(|end| *end > now)
+        .max()
+}
+
+/// The wake a tick leaves behind: the later of the wake already set and the
+/// one this tick's driven walk earned, so a body already due up later — from
+/// the `sleep` verb's own span, or from an earlier tick's walk — is never
+/// woken early by a shorter sleep this tick (The Minute, spec §3.5).
+///
+/// Pure, and split out of [`Session::wait`]'s merge so the rule can be
+/// stated once and tested directly; nothing in a shipped seed sleeps across
+/// a tick boundary on demand, so the merge itself has no end-to-end witness.
+fn later_wake(current: Option<WorldTime>, candidate: WorldTime) -> WorldTime {
+    match current {
+        Some(current) if current > candidate => current,
+        _ => candidate,
+    }
+}
+
+/// One thing the driven body's own walk did this tick, for the wait line
+/// (The Minute, spec §3.4). `Moved` is `agent-at`; `Rested` covers both
+/// `rested` and `slept`, one clause.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Minute {
+    Moved,
+    Drank,
+    Eaten,
+    Rested,
+}
+
+/// The minutes of the driven walk: one entry per kind present among
+/// `facts`, `Moved` first if present, the rest in the order their kind
+/// first appeared. Pure; unit-tested.
+fn minutes_of(facts: &[Fact]) -> Vec<Minute> {
+    let mut out: Vec<Minute> = Vec::new();
+    let mut moved = false;
+    for fact in facts {
+        let kind = match fact.predicate.as_str() {
+            AGENT_AT => {
+                moved = true;
+                continue;
+            }
+            DRANK => Minute::Drank,
+            EATEN => Minute::Eaten,
+            RESTED | SLEPT => Minute::Rested,
+            _ => continue,
+        };
+        if !out.contains(&kind) {
+            out.push(kind);
+        }
+    }
+    if moved {
+        out.insert(0, Minute::Moved);
+    }
+    out
+}
+
+/// The sentence for a tick's minutes, or `None` when there are none.
+/// "The will that holds you walks this body elsewhere, drinks and rests."
+fn minute_sentence(minutes: &[Minute]) -> Option<String> {
+    if minutes.is_empty() {
+        return None;
+    }
+    let clauses: Vec<&str> = minutes
+        .iter()
+        .map(|m| match m {
+            Minute::Moved => "walks this body elsewhere",
+            Minute::Drank => "drinks",
+            Minute::Eaten => "eats",
+            Minute::Rested => "rests",
+        })
+        .collect();
+    let joined = match clauses.len() {
+        1 => clauses[0].to_string(),
+        n => format!("{} and {}", clauses[..n - 1].join(", "), clauses[n - 1]),
+    };
+    Some(format!("The will that holds you {joined}."))
 }
 
 /// The arousal above which a still-Content (sub-act) creature reads as restless
@@ -16287,7 +16568,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let mut ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
         let mut rock_adjacent = None;
         'search: for (cell, kind) in level.cells.iter() {
@@ -16355,7 +16642,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let mut ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let mut ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
         let floor_cell = level
             .cells
@@ -16411,6 +16704,413 @@ mod tests {
                 "{line}: the retired underground lateral refusal must never print: {out}"
             );
         }
+    }
+
+    /// A place to stand and the bearing that steps from it into the thing
+    /// it stands beside — [`standable_beside`]'s answer, named once so the
+    /// two searches below can state it without spelling the type twice.
+    type Approach = (crate::lattice::Cell, Compass); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+
+    /// [`Approach`] with the approached threshold in front of it:
+    /// `(the door's own cell, a cell to stand on, the bearing between)`.
+    type DoorApproach = (crate::lattice::Cell, crate::lattice::Cell, Compass); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+
+    /// A standable cell beside `door`, and the bearing that steps FROM that // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// cell INTO it — one search returning both halves, because the bearing // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// is a by-product of the neighbour and re-deriving it afterwards would
+    /// be a second rule that could disagree with the first.
+    ///
+    /// **The rung is a parameter, and that is the whole difference from the
+    /// inline form this was lifted out of (The Plat, Task 5).**
+    /// [`a_worked_descent_with_a_door`] reads `ug.descent[0]` throughout,
+    /// behind its own comment: `Underground::has_door` and
+    /// `Underground::threshold_edge` both read `self.level()`, so asking
+    /// about another rung's cells there would silently ask about rung 0's. // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// The Plat's acceptance walks stand on a column's **Made** rung, which
+    /// is generally not rung 0 — a helper that inherited the hardcoding
+    /// would answer about the wrong level and fail in a way that reads like
+    /// a real defect rather than a wrong question.
+    ///
+    /// `Floor` only, never `Flooded`: these callers walk bodies that cannot
+    /// swim, so a search that offered a sump would hand a walk a cell the // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// step itself refuses — [`foot_flood`]'s own rule, one function up.
+    fn standable_beside(
+        ug: &crate::underground::Underground,
+        rung: usize,
+        door: crate::lattice::Cell, // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    ) -> Option<Approach> {
+        COMPASS_ROSE.iter().copied().find_map(|dir| {
+            let d = cell_delta(dir); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            let c = crate::lattice::Cell(door.0 - d.0, door.1 - d.1); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            ug.descent[rung]
+                .cells // lexicon: a level's `cells` are lattice squares — areas, not mesh vertices
+                .get(c)
+                .is_some_and(|k| matches!(k, crate::underworld_level::LevelCellKind::Floor)) // lexicon: `LevelCellKind` classifies a lattice square — an area
+                .then_some((c, dir))
+        })
+    }
+
+    /// A REALIZED door on `rung` a body could actually be refused by: the
+    /// threshold cell the plan gated, a standable cell beside it, and the // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// bearing from that cell into the door. // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    ///
+    /// **Asked of the realized level, not of the plan's edges**, and the
+    /// difference is not cosmetic: a `Needs(Key(_))` gate may sit on a
+    /// `Stair` edge, which has no threshold cell on either level at all // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// (`Level::thresholds` holds one entry per `Passage` edge). A column
+    /// selected on the plan alone could therefore hang a door this walk can
+    /// never reach, and the test would read as a defect in the verb.
+    fn doored_threshold_on(
+        ug: &crate::underground::Underground,
+        rung: usize,
+    ) -> Option<DoorApproach> {
+        ug.descent[rung]
+            .thresholds
+            .iter()
+            .map(|t| t.2)
+            .filter(|&c| crate::descent_thing::door_at(ug, c).is_some()) // lexicon: a threshold `Cell` is a lattice square — an area
+            .find_map(|c| standable_beside(ug, rung, c).map(|(stand, bearing)| (c, stand, bearing))) // lexicon: `Cell` values here are lattice squares — areas
+    }
+
+    /// The first open, unbarred, cave-bearing column of seed 42 whose LEDGER
+    /// seats a people at some rung (26 such columns exist —
+    /// `underworld_capacity_probe`), with `want_door` requiring that rung to
+    /// hang a reachable `Needs(Key(_))` door and `want_tenancy` selecting
+    /// the tense. Returns the descent and the index of the seated rung.
+    ///
+    /// **The returned descent is already AT that rung** (`ug.rung == made`),
+    /// which is the one thing a caller must not have to remember: every
+    /// positional read below — `Underground::level`, `has_door`,
+    /// `threshold_edge`, `plat_prose::place_sentence`,
+    /// `underground::resident_cell` — goes through `self.level()`, and a // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// Made rung is generally not rung 0. Its `cell` is still rung 0's // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// entrance, so a caller must [`stand_in`] somewhere on the new rung
+    /// before reading anything positional.
+    ///
+    /// `None`, never a panic, so each caller states its own finding in its
+    /// own words: seed 42 having no such column is a fact about the ledger,
+    /// not a reason to weaken the test that wanted one.
+    ///
+    /// claim: readout(seed: 42) — a scan over one seed's real columns, not a claim about the range
+    fn a_made_column(
+        session: &Session<'_>,
+        world: &World,
+        want_door: bool,
+        want_tenancy: Option<hornvale_worldgen::delve_seating::Tenancy>,
+    ) -> Option<(crate::underground::Underground, usize)> {
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let rungs = crate::underground::habitation_rungs();
+        let pins = hornvale_worldgen::BarrierPins::default();
+        for (vertex, cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+            if !is_open
+                || seeded_entrance_barrier(world.seed, vertex, &pins)
+                    != hornvale_worldgen::BarrierState::Open
+            {
+                continue;
+            }
+            let origins =
+                hornvale_worldgen::delve_seating::column_origins(world, &terrain, vertex, &rungs);
+            // The tenancy is part of WHICH rung is wanted, not a filter
+            // applied after one is chosen: a column whose first Made rung is
+            // Inhabited may still hold an Abandoned one below it.
+            let Some(made) = origins
+                .iter()
+                .position(|o| o.0 == ChamberOrigin::Made && want_tenancy.is_none_or(|t| o.1 == t))
+            else {
+                continue;
+            };
+            let mut ug = crate::underground::Underground::enter(
+                &terrain, vertex, cave, world.seed, &origins,
+            );
+            ug.rung = made;
+            if want_door && doored_threshold_on(&ug, made).is_none() {
+                continue;
+            }
+            return Some((ug, made));
+        }
+        None
+    }
+
+    /// Stand the possession on the first standable cell of `node`'s region — // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// the same rule `Underground::enter` applies at the Entry and
+    /// `underground::resident_cell` applies at the Sanctum, so standing in a // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    /// Sanctum stands the possession exactly where its resident is.
+    ///
+    /// Reads `ug.level()`, hence `ug.rung`: set the rung first.
+    fn stand_in(ug: &mut crate::underground::Underground, node: usize) {
+        let r = ug.plan.region_of(node);
+        let cell = ug // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+            .level()
+            .cells // lexicon: a level's `cells` are lattice squares — areas, not mesh vertices
+            .iter()
+            .filter(|(c, k)| {
+                matches!(
+                    k,
+                    crate::underworld_level::LevelCellKind::Floor // lexicon: `LevelCellKind` classifies a lattice square — an area
+                        | crate::underworld_level::LevelCellKind::Flooded // lexicon: `LevelCellKind` classifies a lattice square — an area
+                ) && c.0 >= r.x
+                    && c.0 < r.x + r.w
+                    && c.1 >= r.y
+                    && c.1 < r.y + r.h
+            })
+            .map(|(c, _)| c)
+            .next()
+            .expect("every region has a standable cell (the realizer's ensure_standable pass)"); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        ug.cell = cell; // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+    }
+
+    /// THE PLAT, spec §7.1: at a real Made column of seed 42, standing on
+    /// the Made rung, `look` reads the Entry sentence in the present tense;
+    /// at the Heart it reads the hall sentence and `examine hall` answers;
+    /// and a gated threshold on that rung refuses `go` with the Brattice's
+    /// locked-door refusal — its verbs reachable from a PRODUCTION descent
+    /// for the first time (`Underground::enter`, not the character seam).
+    #[test]
+    fn a_cut_place_is_walked_and_its_doors_are_real() {
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let Some((mut ug, made)) = a_made_column(&session, &world, true, Some(Tenancy::Inhabited))
+        else {
+            panic!(
+                "seed 42 has no open, unbarred column whose Made rung is Inhabited AND hangs a \
+                 reachable Needs(Key) door — a ledger finding to record, not a reason to weaken \
+                 this test"
+            );
+        };
+        // Standing on the Made rung is `a_made_column`'s own doing; the walk
+        // down the stairs is the Gallery's verb and is tested there. What is
+        // under test here is what the rung SAYS.
+        let entry = role_nodes(&ug.plan, &ug.reading, made, Role::Entry)[0];
+        stand_in(&mut ug, entry);
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        assert!(out.contains("This is the entry of a cut place"), "{out}");
+        let out = match session.handle("examine entry") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(out.contains("entry of a cut place"), "{out}");
+
+        // The Heart, where the plan has one: `Role::Heart` is `None` on a
+        // rung whose median node is already the Sanctum (spec §3.1).
+        let ug = session.underground.as_mut().expect("below");
+        if let Some(&heart) = role_nodes(&ug.plan, &ug.reading, made, Role::Heart).first() {
+            stand_in(ug, heart);
+            session.mark_underground_seen();
+            let out = match session.handle("look") {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("look must not release"),
+            };
+            assert!(out.contains("This hall is the heart of the place"), "{out}");
+            let out = match session.handle("examine hall") {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("examine must not release"),
+            };
+            assert!(out.contains("heart of the place"), "{out}");
+        }
+
+        // And a locked door on this rung refuses `go` in the Brattice's own
+        // words. `a_made_column` was asked for a column that has one.
+        let ug = session.underground.as_ref().expect("below");
+        let (_, stand, bearing) =
+            doored_threshold_on(ug, made).expect("the column was chosen for a reachable door");
+        session.underground.as_mut().expect("below").cell = stand; // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        session.mark_underground_seen();
+        let out = match session.handle(&format!("go {}", bearing_letter(bearing))) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("go must not release"),
+        };
+        assert_eq!(
+            out,
+            crate::underground::UNDERGROUND_LOCKED_DOOR_REFUSAL,
+            "a shut, locked door on a Made rung refuses with the Brattice's refusal"
+        );
+    }
+
+    /// THE PLAT, spec §7.2: the same sentence in the PAST tense at a column
+    /// whose seating has ended. Seed 42's ledger holds 67 occupations over
+    /// 26 columns, so an Abandoned rung may or may not exist among the open,
+    /// unbarred ones; if none does, the walk falls back to the `enter` seam
+    /// with an Abandoned origin and says so on stderr. The ledger derivation
+    /// of `Abandoned` is Task 2's test; the PROSE is this one's, and the
+    /// seam exercises exactly the prose.
+    #[test]
+    fn a_ruin_is_walked_in_the_past_tense() {
+        use hornvale_worldgen::chamber::ChamberOrigin;
+        use hornvale_worldgen::delve_seating::Tenancy;
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let (mut ug, made) = match a_made_column(&session, &world, false, Some(Tenancy::Abandoned))
+        {
+            Some(found) => found,
+            None => {
+                eprintln!(
+                    "seed 42 has no open, unbarred column with an Abandoned Made rung; \
+                     walking the `enter` seam instead"
+                );
+                let terrain = session
+                    .wctx
+                    .terrain
+                    .clone()
+                    .expect("seed 42 builds terrain");
+                let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+                let mut origins =
+                    crate::underground::wild_origins(crate::underground::habitation_rungs().len());
+                origins[0] = (ChamberOrigin::Made, Tenancy::Abandoned);
+                (
+                    crate::underground::Underground::enter(
+                        &terrain, vertex, cave, world.seed, &origins,
+                    ),
+                    0,
+                )
+            }
+        };
+        ug.rung = made;
+        let entry = role_nodes(&ug.plan, &ug.reading, made, Role::Entry)[0];
+        stand_in(&mut ug, entry);
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+        let out = match session.handle("look") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("look must not release"),
+        };
+        assert!(
+            out.contains("This was the entry of a cut place, long empty"),
+            "{out}"
+        );
+    }
+
+    /// THE PLAT, spec §7.3: the rung's derived resident stands in the
+    /// Sanctum's region, and a thing set down there is named in its datum.
+    ///
+    /// **A Made column is preferred over a wild one, and the reason is the
+    /// key.** A wild rung's plan gets no `worked` term in
+    /// `circuit::cycle_budget`, so in practice it seats no `Needs(Key(_))`
+    /// gate and therefore no key — and the descent key is the only thing a
+    /// possession can pick up underground. So the hoard half can only run
+    /// where the ledger seated a people. A wild rung is still walked if no
+    /// Made column feeds a resident, and the hoard half then returns early
+    /// with a printed reason rather than asserting over an absent thing.
+    #[test]
+    fn the_hoarder_sits_in_the_sanctum_on_what_lies_there() {
+        use hornvale_worldgen::plat::{Role, role_nodes};
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = session
+            .wctx
+            .terrain
+            .clone()
+            .expect("seed 42 builds terrain");
+        let climate = session.wctx.climate.clone().expect("seed 42 fits climate");
+        let n = crate::underground::habitation_rungs().len();
+        let feeds_one = |ug: &crate::underground::Underground| {
+            crate::underground::chamber_resident(ug, &terrain, &climate).is_some()
+                && crate::underground::resident_cell(ug).is_some() // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        };
+        let mut found = a_made_column(&session, &world, false, None)
+            .map(|(ug, _)| ug)
+            .filter(&feeds_one);
+        if found.is_none() {
+            eprintln!("no Made column of seed 42 feeds a resident on its seated rung; going wild");
+            'outer: for (vertex, cave, is_open) in cave_entrance_states(&terrain, world.seed) {
+                if !is_open {
+                    continue;
+                }
+                let mut ug = crate::underground::Underground::enter(
+                    &terrain,
+                    vertex,
+                    cave,
+                    world.seed,
+                    &crate::underground::wild_origins(n),
+                );
+                for rung in 0..n {
+                    ug.rung = rung;
+                    if feeds_one(&ug) {
+                        found = Some(ug);
+                        break 'outer;
+                    }
+                }
+            }
+        }
+        let mut ug = found.expect(
+            "seed 42 has a rung that feeds a resident (the Gallery's own claim) — its absence is \
+             a finding about the roster or the energy field, not a reason to weaken this test",
+        );
+        let rung = ug.rung;
+        let sanctum = role_nodes(&ug.plan, &ug.reading, rung, Role::Sanctum)[0];
+        let cell = crate::underground::resident_cell(&ug).expect("the scan required one"); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        let r = ug.plan.region_of(sanctum);
+        assert!(
+            cell.0 >= r.x && cell.0 < r.x + r.w && cell.1 >= r.y && cell.1 < r.y + r.h, // lexicon: a `Cell`'s coordinates are a lattice square's — an area
+            "the resident's mark must stand inside the Sanctum's own region"
+        );
+
+        // Standing in the Sanctum stands the possession on that very cell,  // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+        // so the shadowcast certainly lights it and `examine` answers.
+        stand_in(&mut ug, sanctum);
+        let kind = crate::underground::chamber_resident(&ug, &terrain, &climate)
+            .expect("the scan required one")
+            .0;
+        session.underground = Some(ug);
+        session.mark_underground_seen();
+        let datum = |session: &mut Session<'_>| match session.handle(&format!("examine {}", kind.0))
+        {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        let before = datum(&mut session);
+        assert!(
+            before.contains("moves in the dark here") || before.contains("is kept here"),
+            "{before}"
+        );
+        assert!(
+            !before.contains("sitting on"),
+            "the control: nothing lies in this Sanctum yet, so the datum must not \
+             list a hoard: {before}"
+        );
+
+        // The hoard: the descent key, taken from wherever the plan seated it
+        // and set down here. A rung with no key cannot exercise this half.
+        let Some(key_node) =
+            crate::underground::key_node_on(session.underground.as_ref().expect("below"), rung)
+        else {
+            eprintln!(
+                "rung {rung} seats no key; the hoard half is exercised by \
+                 `descent_thing`'s own unit tests only"
+            );
+            return;
+        };
+        let ug = session.underground.as_mut().expect("below");
+        stand_in(ug, key_node);
+        session.mark_underground_seen();
+        let out = match session.handle("take a key") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("take must not release"),
+        };
+        assert_eq!(out, "You take the key.");
+        let ug = session.underground.as_mut().expect("below");
+        stand_in(ug, sanctum);
+        session.mark_underground_seen();
+        let out = match session.handle("drop a key") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("drop must not release"),
+        };
+        assert_eq!(out, "You set the key down.");
+        let after = datum(&mut session);
+        assert!(after.contains("sitting on: a key"), "{after}");
     }
 
     /// A WORKED descent that hangs a door, and a standable cell beside it
@@ -16482,18 +17182,13 @@ mod tests {
                 cave,
                 seed,
                 hornvale_worldgen::character::Character::DrowTier,
+                &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
             );
             // Rung 0 only: `Underground::has_door` and `threshold_edge` both
             // read `self.level()`, so asking about another rung's cells here
             // would silently ask about this one's.
             let thresholds: Vec<crate::lattice::Cell> =
                 ug.descent[0].thresholds.iter().map(|t| t.2).collect();
-            let standable = |c: crate::lattice::Cell| {
-                ug.descent[0]
-                    .cells
-                    .get(c)
-                    .is_some_and(|k| matches!(k, crate::underworld_level::LevelCellKind::Floor))
-            };
             for door_cell in thresholds {
                 if !ug.has_door(door_cell) {
                     continue;
@@ -16505,11 +17200,11 @@ mod tests {
                     continue;
                 }
                 // A standable cell beside the door, and the bearing FROM it.
-                let Some((stand, bearing)) = COMPASS_ROSE.iter().copied().find_map(|dir| {
-                    let d = cell_delta(dir);
-                    let c = crate::lattice::Cell(door_cell.0 - d.0, door_cell.1 - d.1);
-                    standable(c).then_some((c, dir))
-                }) else {
+                // Rung 0 explicitly, which is the rung this whole search is
+                // about — see [`standable_beside`] for why the parameter
+                // exists at all.
+                let approach = standable_beside(&ug, 0, door_cell); // lexicon: `Cell` is a lattice square — an area, not a mesh vertex
+                let Some((stand, bearing)) = approach else {
                     continue;
                 };
                 // And a standable cell inside the KEY's own region, so `take`
@@ -16964,7 +17659,13 @@ mod tests {
             .clone()
             .expect("seed 42 builds terrain");
         let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
-        let ug = crate::underground::Underground::enter(&terrain, vertex, cave, world.seed);
+        let ug = crate::underground::Underground::enter(
+            &terrain,
+            vertex,
+            cave,
+            world.seed,
+            &crate::underground::wild_origins(crate::underground::habitation_rungs().len()),
+        );
         let level = ug.level().clone();
 
         let mut mixed = None;
@@ -19092,7 +19793,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
         let reach = session.sight_reach();
@@ -19210,7 +19911,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
 
@@ -19282,7 +19983,7 @@ mod tests {
         };
         let resident_cell = {
             let ug = session.underground.as_ref().expect("descended");
-            crate::underground::resident_cell(ug.level())
+            crate::underground::resident_cell(ug)
                 .expect("Task 9's connectivity invariant guarantees a standable cell")
         };
         let reach = session.sight_reach();
@@ -20101,7 +20802,14 @@ mod tests {
                 }
             })
             .collect();
-        let narrated = session.narrate_motion(1, &arriving, &nowhere, Perceiving::Body);
+        let narrated = session.narrate_motion(
+            1,
+            &arriving,
+            &nowhere,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             !narrated.contains(&label),
             "`wait` must not announce the ARRIVAL of a creature sight withheld — \
@@ -20117,7 +20825,14 @@ mod tests {
         // needs both halves pinned, or only one direction of breaking it is
         // visible.
         session.occupancy.place(who, &room, near);
-        let seen_arriving = session.narrate_motion(1, &arriving, &nowhere, Perceiving::Body);
+        let seen_arriving = session.narrate_motion(
+            1,
+            &arriving,
+            &nowhere,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             seen_arriving.contains(&label),
             "an arrival the player CAN see must still be narrated — without this \
@@ -20141,7 +20856,14 @@ mod tests {
             !session.colocated_npcs().iter().any(|n| n.entity == who),
             "precondition: the creature really left the room"
         );
-        let leaving = session.narrate_motion(1, &was_here, &nowhere, Perceiving::Body);
+        let leaving = session.narrate_motion(
+            1,
+            &was_here,
+            &nowhere,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             !leaving.contains(&label),
             "`wait` must not announce the DEPARTURE of a creature the player \
@@ -20153,7 +20875,14 @@ mod tests {
         // the sensed-before set, MUST name it — otherwise the two negatives
         // would pass simply because this branch never narrates anything.
         let seen: std::collections::BTreeSet<EntityId> = [who].into_iter().collect();
-        let announced = session.narrate_motion(1, &was_here, &seen, Perceiving::Body);
+        let announced = session.narrate_motion(
+            1,
+            &was_here,
+            &seen,
+            Perceiving::Body,
+            &session.position(),
+            &[],
+        );
         assert!(
             announced.contains(&label),
             "a departure the player COULD see must still be narrated — without \
@@ -20492,12 +21221,13 @@ mod tests {
     /// was called first, is how this isolates the controller swap from
     /// every other source of variation.
     ///
-    /// **The ledger stays untouched by this test's own construction**: `!wait`
-    /// (`Session::wait`) discards the driven body's own facts unconditionally
-    /// regardless of which controller answered (see that call site's own
-    /// doc), so this test asserts only on the felt-state trio, never on
-    /// `committed_fact_count()` — a ledger assertion here would be asserting
-    /// something this swap was never claimed to change.
+    /// **The ledger moves too, since The Minute:** measured 2026-09-03, the
+    /// held session's ledger carries two facts the free one lacks —
+    /// `possessed-by` (committed by `!possess` itself, before either `!wait`
+    /// runs) and `slept` (the held walk's first tick at seed 42, now
+    /// minuted). Asserted below; the doc originally predicted a one-fact
+    /// difference (the sleep alone), which undercounted `possessed-by` —
+    /// corrected to the measured two.
     #[test]
     fn driven_felt_state_can_move_under_an_imposed_controller_during_wait() {
         let world = seam_world();
@@ -20536,6 +21266,25 @@ mod tests {
             free.driven_affect(),
             held.driven_affect(),
             "the felt-state trio ask() draws from moves with the swap too"
+        );
+        assert_eq!(
+            held.committed_fact_count_for(held.agent_entity()),
+            free.committed_fact_count_for(free.agent_entity()) + 2,
+            "seed 42's held body carries two more facts than the free one: \
+             `possessed-by` (from `!possess` itself) and `slept` (from the \
+             first wait, now minuted); the free body, Holding, commits neither"
+        );
+        // The `+ 2` above is a compound of `possessed-by` and `slept`; this
+        // isolates the walk's own contribution from possession's.
+        assert_eq!(
+            held.ledger.facts_of(held.agent_entity(), SLEPT).count(),
+            1,
+            "the held body's own first-wait walk minutes exactly one `slept`"
+        );
+        assert_eq!(
+            free.ledger.facts_of(free.agent_entity(), SLEPT).count(),
+            0,
+            "the free body, Holding, never reaches a `slept` resolution"
         );
     }
 
@@ -21087,35 +21836,29 @@ mod tests {
              writers could disagree about one slot"
         );
     }
-    /// The mechanism behind Task 3 fix round 1, stated directly: under
-    /// possession the driven body's solo walk ENDS IN A ROOM THE LEDGER NEVER
-    /// RECORDED, and the `position` column follows the ledger rather than the
-    /// walk.
+    /// The Minute, spec §3.2: under possession the driven body's solo walk
+    /// ENDS WHERE THE LEDGER RECORDED, because `wait` now commits that walk's
+    /// facts (spec §3.1) and writes the column from the same walk.
     ///
-    /// **Why this needs saying in a test rather than a comment.** `wait`
-    /// discards `_driven_facts` unconditionally — the player's verbs are what
-    /// the body does; that walk only supplies what the host wants. Free, an
-    /// always-Holding `PlayerController` never moves `st.pos`, so the walk's
-    /// room and the ledger's coincide and writing either into the column
-    /// looks correct. Possessed, an `ImposedController` acts, and the two
-    /// diverge. The first assertion below is the NON-VACUITY guard for the
-    /// second: if a future change stopped the possessed walk from moving, the
-    /// column-follows-the-ledger check would pass for a reason that has
-    /// nothing to do with the writer, and this test says so loudly instead.
+    /// This replaces `a_possessed_walk_ends_where_the_ledger_never_recorded`,
+    /// which pinned the defect: it asserted the walk's end differed from the
+    /// ledger's fold. Every assertion here is the inverse of one there, and
+    /// the first is still the NON-VACUITY guard: if the imposed walk stopped
+    /// acting, the agreement below would hold for a reason that has nothing
+    /// to do with the commit.
     ///
-    /// Seed 7, because seed 42's flagship population never leaves its room at
-    /// all (measured: 0 `agent-at` facts across 500 days).
+    /// Seed 7, because seed 42's flagship never leaves its room (measured: 0
+    /// `agent-at` across 500 days) and the whole point is a walk that moves.
     ///
-    /// MUTATION THIS MUST FAIL AGAINST: in `Session::wait`, restore the
-    /// pre-fix write for the driven slot — `self.roster.write(driven_slot,
-    /// driven_written.position, driven_written.felt);` in place of the
-    /// `resolve`. Run and observed:
-    /// `assertion `left == right` failed: the driven slot's column follows
-    /// the LEDGER, not the discarded walk
-    ///   left: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 3, 1, 3, 3] }
-    ///  right: Facet { face: 1, path: [3, 0, 3, 1, 3, 2, 2, 1, 1, 1, 2, 3, 0] }`
+    /// RED BEFORE TASK 2 (observed while writing it, and recording that RED
+    /// run — this is not a description of the current code): fails earlier
+    /// than the draft predicted — at `every fact the driven walk emitted
+    /// must have been appended` (`left == right` failed: left 0, right 5),
+    /// because `wait`, before Task 2, still discarded `_driven_facts`
+    /// unconditionally and none of the walk's five facts reached the ledger
+    /// at all.
     #[test]
-    fn a_possessed_walk_ends_where_the_ledger_never_recorded() {
+    fn a_possessed_walk_ends_where_the_ledger_recorded() {
         let world = build_world(
             Seed(7),
             &SkyPins::default(),
@@ -21131,15 +21874,13 @@ mod tests {
             "possession must be open, or the walk is asked through \
              PlayerController and cannot move at all"
         );
-        // The same prefix the integration sweep uses: the divergence needs a
-        // body whose thirst has had time to grow, and the driven walk's own
-        // drinks are never recorded, so it grows monotonically with the
-        // session's age.
         let _ = session.handle("!wait 1");
         let frozen = session.ledger.clone();
         let from = session.day;
+        let before = session.committed_fact_count_for(session.agent_entity());
         let _ = session.handle("!wait 5");
         let to = session.day;
+        let after = session.committed_fact_count_for(session.agent_entity());
 
         let terrain = LocaleTerrain::with_fields(
             &session.wctx.ctx,
@@ -21157,8 +21898,6 @@ mod tests {
             params: SUSTENANCE,
             day_ticks: session.day_ticks(),
             terrain: &terrain,
-            // The SESSION's own store, not a throwaway: this test stands in for
-            // `wait`'s own construction (line 7713), which passes exactly this.
             folds: &session.folds,
         };
         let driven_body = session.driven_body().clone();
@@ -21172,27 +21911,33 @@ mod tests {
         let driven = session.roster.driven();
         let scanned = agent_position(&session.ledger, &driven_body, session.day);
 
-        // NON-VACUITY: the imposed walk really did go somewhere, and really
-        // did not tell the ledger about it.
+        // NON-VACUITY: the imposed walk really did act.
         assert!(
             !driven_facts.is_empty(),
-            "the imposed walk must actually act, or there is nothing for the \
-             ledger to have missed"
+            "the imposed walk must actually act, or there is nothing to minute"
         );
         assert_ne!(
-            driven_written.position, scanned,
-            "the imposed walk must END somewhere the ledger does not know \
-             about, or this test's subject does not arise"
+            driven_written.position,
+            agent_position(&frozen, &driven_body, from),
+            "the imposed walk must MOVE, or the position half is untested"
         );
-        // AND THE COLUMN FOLLOWS THE LEDGER.
+        // THE WALK'S FACTS REACHED THE LEDGER — all of them, appended.
+        assert_eq!(
+            after - before,
+            driven_facts.len(),
+            "every fact the driven walk emitted must have been appended"
+        );
+        // THE WALK'S END IS THE LEDGER'S FOLD.
+        assert_eq!(
+            driven_written.position, scanned,
+            "the walk's end must be the ledger's fold"
+        );
+        // AND THE COLUMN IS BOTH.
         assert_eq!(
             session.roster.positions()[driven.0],
             scanned,
-            "the driven slot's column follows the LEDGER, not the discarded \
-             walk"
+            "the driven slot's column follows the ledger, which now knows the walk"
         );
-        // …while its FELT is the walk's own, which is the half that must
-        // still be written.
         assert_eq!(
             session.roster.felts()[driven.0],
             driven_written.felt,
@@ -21202,5 +21947,236 @@ mod tests {
             session.roster.resolved_felt(driven).is_some(),
             "…and the tick flipped the slot's `written` flag doing it"
         );
+    }
+
+    /// The Minute, spec §4 P4's POSITIVE CONTROL, measured before the spec
+    /// was written and pinned here so it cannot silently stop being true: a
+    /// FREE body's solo walk, asked through a `PlayerController` with nothing
+    /// queued, emits NO facts and ends in the column's own room. This is the
+    /// whole reason `wait` may commit the driven walk's facts unconditionally
+    /// (spec §3.1) without moving a byte of any free-session fixture.
+    ///
+    /// Green before and after Task 2. If it ever goes red, the free path is
+    /// no longer inert and every session golden is suspect.
+    ///
+    /// claim: invariant(forall-seed) — checked across seeds 42/7, four
+    /// `!wait 5`s each: a free body's solo walk stays inert on every one.
+    #[test]
+    fn a_free_walk_emits_nothing_and_ends_in_the_column() {
+        for seed in [42u64, 7u64] {
+            let world = if seed == 42 {
+                seam_world()
+            } else {
+                build_world(
+                    Seed(seed),
+                    &SkyPins::default(),
+                    SkyChoice::Generated,
+                    &TerrainPins::default(),
+                    &SettlementPins::default(),
+                )
+                .expect("seed 7 builds")
+            };
+            let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+            assert!(session.possessor().is_none(), "this is the FREE control");
+            for i in 0..4 {
+                let frozen = session.ledger.clone();
+                let from = session.day;
+                let before = session.committed_fact_count_for(session.agent_entity());
+                let _ = session.handle("!wait 5");
+                let to = session.day;
+                let after = session.committed_fact_count_for(session.agent_entity());
+                let terrain = LocaleTerrain::with_fields(
+                    &session.wctx.ctx,
+                    session.calendar.as_ref(),
+                    session.predator.as_ref(),
+                    session.prey.as_ref(),
+                    Some(&session.built),
+                    Some(&session.mesh_memo),
+                )
+                .with_ground(&session.ground);
+                let sys = DriveMovements {
+                    npcs: Vec::new(),
+                    from,
+                    to,
+                    params: SUSTENANCE,
+                    day_ticks: session.day_ticks(),
+                    terrain: &terrain,
+                    folds: &session.folds,
+                };
+                let body = session.driven_body().clone();
+                let (facts, written) = sys.step_one_with_controller(
+                    &frozen,
+                    &body,
+                    &mut hornvale_kernel::RoomMeshMemo::new(),
+                    &mut HomeNavCache::new(),
+                    &mut PlayerController::new(),
+                );
+                assert!(
+                    facts.is_empty(),
+                    "seed {seed} wait#{i}: a Holding walk must emit nothing, got {facts:?}"
+                );
+                assert_eq!(
+                    written.position,
+                    session.position(),
+                    "seed {seed} wait#{i}: a Holding walk ends where the column says"
+                );
+                assert_eq!(
+                    after, before,
+                    "seed {seed} wait#{i}: a free body commits nothing during wait"
+                );
+            }
+        }
+    }
+
+    fn slept_at(day: i64, span_ticks: i64) -> Fact {
+        Fact {
+            subject: EntityId(std::num::NonZeroU64::new(7).unwrap()),
+            predicate: SLEPT.to_string(),
+            object: Value::Number(span_ticks as f64),
+            place: None,
+            day: Some(WorldTime::from_ticks(day)),
+            provenance: "test".to_string(),
+        }
+    }
+
+    /// The Minute, spec §3.5: a walk-committed sleep that ends AFTER the
+    /// tick's end leaves the body asleep, exactly as the `sleep` verb's
+    /// own `wake_at` does — `body_state` reads the field, not the ledger.
+    #[test]
+    fn a_walk_sleep_that_outlasts_the_tick_sets_the_wake() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let ends_later = slept_at(900_000, 250_000); // wakes at 1_150_000
+        assert_eq!(
+            wake_after(&[ends_later], now),
+            Some(WorldTime::from_ticks(1_150_000))
+        );
+    }
+
+    #[test]
+    fn a_walk_sleep_already_over_sets_no_wake() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let over = slept_at(500_000, 100_000); // woke at 600_000
+        assert_eq!(wake_after(&[over], now), None);
+    }
+
+    #[test]
+    fn a_rest_is_not_a_sleep_for_the_wake() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let mut rest = slept_at(900_000, 250_000);
+        rest.predicate = RESTED.to_string();
+        assert_eq!(wake_after(&[rest], now), None);
+    }
+
+    #[test]
+    fn the_latest_outlasting_sleep_wins() {
+        let now = WorldTime::from_ticks(1_000_000);
+        let a = slept_at(900_000, 150_000); // 1_050_000
+        let b = slept_at(950_000, 300_000); // 1_250_000
+        assert_eq!(
+            wake_after(&[a, b], now),
+            Some(WorldTime::from_ticks(1_250_000))
+        );
+    }
+
+    /// The Minute, spec §3.5: with no wake set, the walk's own is taken.
+    #[test]
+    fn a_walks_wake_is_taken_when_none_is_set() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        assert_eq!(later_wake(None, candidate), candidate);
+    }
+
+    /// The Minute, spec §3.5: a wake already set EARLIER than the walk's own
+    /// gives way to the walk's — the body sleeps on.
+    #[test]
+    fn an_earlier_wake_gives_way_to_the_walks_own() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        let current = WorldTime::from_ticks(1_050_000);
+        assert_eq!(later_wake(Some(current), candidate), candidate);
+    }
+
+    /// The Minute, spec §3.5: the load-bearing arm. A wake already set LATER
+    /// than the walk's own is kept, so a body due up later is never woken
+    /// early by this tick's shorter sleep.
+    #[test]
+    fn a_later_wake_already_set_is_kept() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        let current = WorldTime::from_ticks(1_250_000);
+        assert_eq!(later_wake(Some(current), candidate), current);
+    }
+
+    /// The Minute, spec §3.5: equal wakes agree, so the comparison's
+    /// strictness is not observable at the boundary.
+    #[test]
+    fn an_equal_wake_agrees_with_the_walks_own() {
+        let candidate = WorldTime::from_ticks(1_150_000);
+        assert_eq!(later_wake(Some(candidate), candidate), candidate);
+    }
+
+    /// The Minute, spec §3.3 / §4 P5: a held body INDOORS commits nothing
+    /// during `wait` and its frame survives. Its own positive control is the
+    /// recorded mutation (decision 0657): dropping `&& !off_the_band` from
+    /// the condition makes THIS test fail — the same seed-14 body commits
+    /// five facts within one `!wait 5` instead of four — so the assertion is
+    /// not vacuous. `the_minute.rs::p1_…` shows the same mechanism at
+    /// another seed (42), and is not this test's control: it is a different
+    /// body in a different world.
+    ///
+    /// `enter` FIRST — it is in-character and would refuse once held.
+    #[test]
+    fn a_held_body_indoors_holds_and_keeps_its_frame() {
+        let world = world_at(14).expect("seed 14 builds");
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let _ = session.handle("enter");
+        assert!(session.inside.is_some(), "the premise: the body is indoors");
+        let _ = session.handle("!possess");
+        assert!(session.possessor().is_some(), "possession must be open");
+        let before = session.committed_fact_count_for(session.agent_entity());
+        let column = session.position();
+        let _ = session.handle("!wait 5");
+        assert_eq!(
+            session.committed_fact_count_for(session.agent_entity()),
+            before,
+            "off the walk band the held walk Holds and commits nothing"
+        );
+        assert!(session.inside.is_some(), "the frame survives the wait");
+        assert_eq!(session.position(), column, "and the column did not move");
+        assert!(
+            session
+                .roster
+                .resolved_felt(session.roster.driven())
+                .is_some(),
+            "arbitration still ran: the felt state was written (co-present, 0226)"
+        );
+    }
+
+    fn fact_named(predicate: &str) -> Fact {
+        Fact {
+            subject: EntityId(std::num::NonZeroU64::new(7).unwrap()),
+            predicate: predicate.to_string(),
+            object: Value::Number(0.0),
+            place: None,
+            day: Some(WorldTime::from_ticks(0)),
+            provenance: "test".to_string(),
+        }
+    }
+
+    /// The Minute, spec §3.4: one clause per predicate present, in first
+    /// appearance order, `rested` and `slept` folded into one; `agent-at`
+    /// is the move, named first regardless of where it appeared.
+    #[test]
+    fn minutes_are_one_per_kind_in_first_appearance_order_with_the_move_first() {
+        let facts = [
+            fact_named(RESTED),
+            fact_named(DRANK),
+            fact_named(AGENT_AT),
+            fact_named(SLEPT),
+            fact_named(DRANK),
+            fact_named(EATEN),
+        ];
+        assert_eq!(
+            minutes_of(&facts),
+            vec![Minute::Moved, Minute::Rested, Minute::Drank, Minute::Eaten]
+        );
+        assert!(minutes_of(&[]).is_empty());
     }
 }

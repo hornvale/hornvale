@@ -42,7 +42,7 @@
 //! the absence of one.
 
 use hornvale_climate::underworld::underworld_assignment;
-use hornvale_kernel::{Band, Geosphere, Vertex, VertexMap};
+use hornvale_kernel::{Band, Geosphere, Vertex, VertexMap, World};
 use hornvale_species::{EnvironmentNiche, environment_fit};
 use hornvale_terrain::{
     Cave, CaveKind, GeneratedTerrain, GeothermalGradient, delta_t_range_of, rungs,
@@ -560,12 +560,22 @@ pub fn seating_for(
 ///
 /// **What closing it actually needs**, so the next campaign can price it: a
 /// descent verb walking [`crate::chamber::passages_from`]; chamber state that
-/// tracks an *address* rather than one `Chamber`; prose that distinguishes a cut
-/// hall from a found void; and a home for the overrides themselves — either
-/// derived per column off the committed ledger (`occupations_at` + [`seat_at`],
-/// ~30 lines, cheap enough for one verb) or committed as dig facts, which
-/// [`ChamberOverrides`]'s own doc defers. That is a `windows/vessel` campaign,
-/// not a capacity task.
+/// tracks an *address* rather than one `Chamber`; and prose that
+/// distinguishes a cut hall from a found void. The fourth thing this
+/// paragraph used to list as missing — a home for the overrides themselves,
+/// derived per column off the committed ledger — now exists: [`column_origins`]
+/// reads exactly that, per column, and [`ledger_overrides`] folds it into the
+/// [`ChamberOverrides`] shape [`crate::chamber::chamber_at`] reads, pinned to
+/// agree with this function (`underworld_capacity_probe`).
+/// `windows/vessel`'s `Session::delve_at` has been the production caller of
+/// [`column_origins`] since The Plat — but for a DIFFERENT purpose than this
+/// paragraph priced: it derives the walked descent's own per-rung
+/// [`ChamberOrigin`]/[`Tenancy`]
+/// (`hornvale_worldgen::circuit::plan_descent_with_origins`), not this
+/// module's `Chamber`/`ChamberOverrides` lattice — `delve_at`'s own
+/// `chamber_at` call, the one this doc's disclosure is about, still receives
+/// an empty override map. The remaining three needs above are still a
+/// `windows/vessel` campaign, not a capacity task.
 pub fn made_chambers(
     seed: hornvale_kernel::Seed,
     terrain: &GeneratedTerrain,
@@ -613,11 +623,117 @@ pub fn made_chambers(
     overrides
 }
 
+/// Whether the people who cut a chamber are still there (spec §3.2, §3.4).
+/// `Made` is read from the ledger's occupation whether or not it is alive —
+/// a cut hall outlives its people — and this decides only the tense.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Tenancy {
+    /// No people ever seated this rung: a found cave.
+    Wild,
+    /// A seated occupation on this rung is still alive.
+    Inhabited,
+    /// Every occupation that seated this rung has ended.
+    Abandoned,
+}
+
+/// The chamber origins of ONE column, per rung, read off the committed ledger
+/// at the walk (spec §3.2) — the per-column twin of [`made_chambers`], which
+/// reads a baked `History`. For each occupation at `vertex` whose people
+/// carries an environment niche, [`seat_at`] names the rung it settled, with
+/// the same three inputs `made_chambers` and the capacity probe use; that
+/// rung is `Made`, `Inhabited` if any seating occupation `is_alive()`, else
+/// `Abandoned`. Every other rung, and every rung of a column with no cave or
+/// no occupation, is `(Found, Wild)` — the answer every column gave before
+/// The Plat.
+///
+/// Today exactly one people carries a niche (`drow`,
+/// `environment_niche_registry()`), so it is the only people that can seat
+/// underground; a people with no niche is a surface people
+/// (`Seating::all_surface`) and cuts nothing.
+pub fn column_origins(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    vertex: Vertex,
+    rungs: &[Band],
+) -> Vec<(ChamberOrigin, Tenancy)> {
+    let mut out = vec![(ChamberOrigin::Found, Tenancy::Wild); rungs.len()];
+    let Some(cave) = terrain.cave_at(vertex) else {
+        return out;
+    };
+    let niches = hornvale_species::environment_niche_registry();
+    let gradient = terrain.geothermal_gradient_at(vertex);
+    let porosity = terrain.material_at(vertex).porosity;
+    let height_asl_m = terrain
+        .elevation_at(vertex)
+        .above(terrain.sea_level())
+        .get();
+    let water_table_m = water_table_depth_m(terrain.drainage_at(vertex), porosity, height_asl_m);
+    for occupation in crate::history_emit::occupations_at(world, vertex) {
+        let Some(niche) = niches.get(&occupation.core.people) else {
+            continue;
+        };
+        let Some(seat) = seat_at(niche, &cave, gradient, water_table_m) else {
+            continue;
+        };
+        let Some(i) = rungs.iter().position(|r| *r == seat.rung) else {
+            continue;
+        };
+        let tenancy = match (out[i].1, occupation.is_alive()) {
+            (_, true) => Tenancy::Inhabited,
+            (Tenancy::Inhabited, false) => Tenancy::Inhabited,
+            (_, false) => Tenancy::Abandoned,
+        };
+        out[i] = (ChamberOrigin::Made, tenancy);
+    }
+    out
+}
+
+/// Every `Made` chamber the committed ledger implies, as the
+/// [`ChamberOverrides`] map [`crate::chamber::chamber_at`] reads — the same
+/// shape [`made_chambers`] writes (every branch of the seated rung, `level:
+/// 0`), derived from the ledger instead of a baked `History`. The two are
+/// pinned to agree (`underworld_capacity_probe`), which is what keeps this
+/// pair one writer at two grains rather than two writers that can drift.
+pub fn ledger_overrides(world: &World, terrain: &GeneratedTerrain) -> ChamberOverrides {
+    let rungs: Vec<Band> = rungs()
+        .iter()
+        .copied()
+        .filter(|r| *r != Band::Surface)
+        .collect();
+    let mut overrides = ChamberOverrides::new();
+    for vertex in terrain.geosphere().vertices() {
+        let Some(cave) = terrain.cave_at(vertex) else {
+            continue;
+        };
+        let gradient = terrain.geothermal_gradient_at(vertex);
+        for (i, (origin, _)) in column_origins(world, terrain, vertex, &rungs)
+            .iter()
+            .enumerate()
+        {
+            if *origin != ChamberOrigin::Made {
+                continue;
+            }
+            for branch in 0..BRANCHES_PER_SYSTEM {
+                let addr = ChamberAddr {
+                    vertex,
+                    branch,
+                    band: rungs[i],
+                    level: 0,
+                };
+                if chamber_exists(world.seed, &cave, gradient, addr) {
+                    overrides.insert(addr, ChamberOrigin::Made);
+                }
+            }
+        }
+    }
+    overrides
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use hornvale_species::environment_niche_registry;
-    use std::collections::BTreeSet;
+    use std::collections::{BTreeMap, BTreeSet};
 
     fn drow() -> EnvironmentNiche {
         environment_niche_registry()
@@ -772,5 +888,110 @@ mod tests {
     fn an_indifferent_niche_scores_zero() {
         let blank = EnvironmentNiche::new(&[]).expect("the empty niche is legal");
         assert_eq!(chamber_fit(&blank, CaveKind::Karst, Band::Deeps), Some(0.0));
+    }
+
+    /// The fixture world (decision 0607) plus a re-derived terrain: no build
+    /// site, so no roster row (decision 0606). Every rung of a column with no
+    /// cave, or no occupation, is `(Found, Wild)` — today's answer.
+    // Named construction site (decision 0092): re-derives the fixture's
+    // terrain rather than rebuilding the world.
+    #[allow(clippy::disallowed_methods)]
+    #[test]
+    fn a_column_nobody_settled_is_found_and_wild_on_every_rung() {
+        let world = crate::fixture::seed_42_world();
+        let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
+        let rungs: Vec<Band> = rungs()
+            .iter()
+            .copied()
+            .filter(|r| *r != Band::Surface)
+            .collect();
+        // The first cave-bearing vertex with no occupation at all.
+        let vertex = terrain
+            .geosphere()
+            .vertices()
+            .find(|&v| {
+                terrain.cave_at(v).is_some()
+                    && crate::history_emit::occupations_at(&world, v).is_empty()
+            })
+            .expect("seed 42 has an unsettled cave");
+        let origins = column_origins(&world, &terrain, vertex, &rungs);
+        assert_eq!(origins.len(), rungs.len());
+        assert!(
+            origins
+                .iter()
+                .all(|o| *o == (ChamberOrigin::Found, Tenancy::Wild))
+        );
+    }
+
+    /// Seed 42 holds 26 occupied underworld columns, every one seated at the
+    /// top or second rung (`underworld_capacity_probe`, 2026-09-03). At least
+    /// one column therefore reads `Made` at rung 0 or 1, exactly one rung
+    /// per column is Made (a people has one seat), and its tenancy follows
+    /// `is_alive()`.
+    ///
+    /// **Grouped by vertex once, rather than calling [`crate::history_emit::
+    /// occupations_at`] per vertex of the globe.** That function's
+    /// `occupation_records(world)` re-derives every occupation in the ledger
+    /// from scratch on every call — a naive, un-indexed scan
+    /// (`Ledger::ensure_index` only ever runs on a WRITE path, and this
+    /// fixture is loaded read-only) — so calling it once per one of this
+    /// terrain's 40,962 vertices was measured at 155.8 ms/call, ~1.8 h total.
+    /// [`crate::history_emit::occupation_records`] once, grouped by
+    /// `core.site` here, gives the identical per-vertex answer this test
+    /// still gets (nothing about `occupations_at`'s own sort order matters
+    /// to any assertion below) in well under a second. [`column_origins`],
+    /// the function actually under test, is still called exactly as the
+    /// production path calls it — once per settled, cave-bearing column.
+    // Named construction site (decision 0092): re-derives the fixture's
+    // terrain rather than rebuilding the world.
+    #[allow(clippy::disallowed_methods)]
+    #[test]
+    fn a_settled_column_is_made_at_its_seated_rung_and_nowhere_else() {
+        let world = crate::fixture::seed_42_world();
+        let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
+        let rungs: Vec<Band> = rungs()
+            .iter()
+            .copied()
+            .filter(|r| *r != Band::Surface)
+            .collect();
+        let niches = hornvale_species::environment_niche_registry();
+        let mut by_vertex: BTreeMap<Vertex, Vec<hornvale_history::record::OccupationRecord>> =
+            BTreeMap::new();
+        for o in crate::history_emit::occupation_records(&world) {
+            by_vertex.entry(o.core.site).or_default().push(o);
+        }
+        let empty: Vec<hornvale_history::record::OccupationRecord> = Vec::new();
+        let mut made_columns = 0usize;
+        for vertex in terrain.geosphere().vertices() {
+            let occ = by_vertex.get(&vertex).unwrap_or(&empty);
+            let settled = occ.iter().any(|o| niches.get(&o.core.people).is_some());
+            if terrain.cave_at(vertex).is_none() || !settled {
+                continue;
+            }
+            let origins = column_origins(&world, &terrain, vertex, &rungs);
+            let made: Vec<usize> = origins
+                .iter()
+                .enumerate()
+                .filter(|(_, o)| o.0 == ChamberOrigin::Made)
+                .map(|(i, _)| i)
+                .collect();
+            assert_eq!(made.len(), 1, "vertex {vertex:?}: one seat per people");
+            assert!(
+                made[0] <= 1,
+                "vertex {vertex:?}: seated at rung {}",
+                made[0]
+            );
+            let alive = occ
+                .iter()
+                .any(|o| niches.get(&o.core.people).is_some() && o.is_alive());
+            let expected = if alive {
+                Tenancy::Inhabited
+            } else {
+                Tenancy::Abandoned
+            };
+            assert_eq!(origins[made[0]].1, expected, "vertex {vertex:?}");
+            made_columns += 1;
+        }
+        assert_eq!(made_columns, 26, "the probe's count for seed 42");
     }
 }

@@ -102,7 +102,7 @@ windows/vessel/src/knowledge.rs	2	unmigrated:2
 windows/vessel/src/liveness.rs	6	unmigrated:6
 windows/vessel/src/liveness_tests/emitter_scan.rs	1	identity:1
 windows/vessel/src/purview.rs	1	unmigrated:1
-windows/vessel/src/session.rs	3	identity:2 build-path:1
+windows/vessel/src/session.rs	4	identity:3 build-path:1
 windows/vessel/src/snapshot.rs	1	unmigrated:1
 windows/vessel/tests/common/mod.rs	1	unmigrated:1
 windows/vessel/tests/suite/act.rs	1	unmigrated:1
@@ -129,6 +129,7 @@ windows/vessel/tests/suite/submerged_before_arm.rs	1	unmigrated:1
 windows/vessel/tests/suite/the_first_mark.rs	1	unmigrated:1
 windows/vessel/tests/suite/the_handle.rs	1	unmigrated:1
 windows/vessel/tests/suite/the_lintel.rs	1	unmigrated:1
+windows/vessel/tests/suite/the_minute.rs	1	identity:1
 windows/vessel/tests/suite/the_purview.rs	1	unmigrated:1
 windows/vessel/tests/suite/the_rack.rs	1	identity:1
 windows/vessel/tests/suite/underworld_level_generation.rs	1	unmigrated:1

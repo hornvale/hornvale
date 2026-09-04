@@ -450,9 +450,12 @@
 - [The Brattice](./chronicle/the-brattice.md)
 - [The Detent](./chronicle/the-detent.md)
 - [The Nettle](./chronicle/the-nettle.md)
+- [The Minute](./chronicle/the-minute.md)
 - [The Terrier](./chronicle/the-terrier.md)
 - [The Hachure](./chronicle/the-hachure.md)
 - [The Wash](./chronicle/the-wash.md)
+- [The Plat](./chronicle/the-plat.md)
+- [The Pallet](./chronicle/the-pallet.md)
 
 # Appendix: The Frontier
 

@@ -265,13 +265,15 @@ impl Roster {
     /// Write one slot's tick-owned columns — the position the tick left the
     /// body at, and the felt state its resolution expressed.
     ///
-    /// **For a walk whose facts were COMMITTED, and only such a walk.** This
-    /// is [`Self::place`] and [`Self::resolve`] together, and the pairing is
-    /// only honest when the ledger was told about the move: the population
-    /// tick's facts are committed by `Session::wait` a few lines before it
-    /// calls this, so the position it writes is one `agent_position` will
-    /// agree with. The driven body's solo walk is NOT such a walk — its facts
-    /// are discarded — so it calls `resolve` alone. See that method.
+    /// **For a walk whose facts were COMMITTED, which is now every walk the
+    /// tick runs** (The Minute, spec §3.2). This is [`Self::place`] plus the
+    /// felt write, and the pairing is honest because the ledger was told
+    /// about the move: the population's facts and the driven body's own are
+    /// both committed by `Session::wait` before it calls this, so the
+    /// position written here is one `agent_position` will agree with. There
+    /// used to be a felt-only `resolve` beside this for the driven body,
+    /// whose walk facts `wait` discarded; that discard was the defect The
+    /// Minute repaired, and the method went with it.
     ///
     /// Static columns (`bodies`, `keys`) are deliberately not writable: a
     /// body's identity, home and roll key are settled at derivation.
@@ -283,28 +285,6 @@ impl Roster {
     /// caller mixing two rosters, which has no honest recovery.
     pub fn write(&mut self, slot: Slot, position: Facet, felt: Felt) {
         self.place(slot, position);
-        self.resolve(slot, felt);
-    }
-
-    /// Write one slot's `felt` column and NOTHING else — the write for a body
-    /// whose own arbitration resolved something the ledger did not record.
-    ///
-    /// **The driven body is that case, and it is not an edge one** (Task 3
-    /// fix round 1). `Session::wait` runs the possessed body through
-    /// `step_one_with_controller` and DISCARDS the facts it returns: the
-    /// player's verbs are what the body does, and that walk only ever
-    /// supplies what the host wants. Under an `ImposedController` the walk
-    /// really acts — it can cross rooms to reach water mid-wait — so its
-    /// ending room is one the ledger never heard of. Its `felt` is a genuine
-    /// resolution and belongs in the column; its `position` is not a view of
-    /// anything and must never be written here. The driven slot's `position`
-    /// moves only through [`Self::place`], from `Session::commit_agent_at`,
-    /// which is the one thing that commits that body's `agent-at` facts.
-    ///
-    /// # Panics
-    ///
-    /// If `slot` is not a slot of this roster — see [`Self::write`].
-    pub fn resolve(&mut self, slot: Slot, felt: Felt) {
         self.felt[slot.0] = felt;
         self.written[slot.0] = true;
     }

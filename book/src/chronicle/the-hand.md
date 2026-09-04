@@ -163,6 +163,17 @@ touched the ledger at all, then against one whose facts are discarded before
 they reach it. A third run was declined rather than staged until it produced a
 number that looked like agreement, and the spec was corrected instead.
 
+**Corrected 2026-09-03, by [The Minute](./the-minute.md).** Three claims in
+this section rest on the discard, and the discard itself was the defect. It
+was not "correct and deliberate": the walk's facts were dropped at that call
+site for every body, and it went unnoticed because the controller asked there
+had always answered *hold*, so there had never been anything to drop. Once a
+controller that acts was swapped in, the same line began throwing away a held
+body's drinks and journeys. A held body's walk now commits what it does — so
+the measurement above becomes testable rather than vacuous, and a body no
+longer has two competing sources of position because the walk's own committed
+move *is* the source the column follows.
+
 ## Who else is here, still answered the old way
 
 `colocated_npcs` and `sensed_npcs` answer *who is here* by filtering the

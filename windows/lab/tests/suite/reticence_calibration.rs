@@ -349,11 +349,17 @@ fn h3_refusal_is_selective_not_global() {
 /// custody; none of the ten resolves a drive, and there is
 /// still no drink/eat/relief verb — custody moves a THING's `located-in`,
 /// which no drive reads);
-/// the driven body's own
-/// passive `!wait` walk discards every fact it would otherwise commit
-/// (`_driven_facts` is unconditionally dropped, `session.rs:4090` and the
-/// surrounding comment), so a driven body's own `DRANK`/`EATEN` facts are
-/// never written by ANY path. The only verb that resolves a drive at all is
+/// these sessions never call `!possess`, so the driven body's own passive
+/// `!wait` walk is asked through a fresh `PlayerController` with nothing
+/// queued, whose intent is unconditionally `Hold`, and a Holding walk emits
+/// no facts at all (`a_free_walk_emits_nothing_and_ends_in_the_column`, in
+/// `session.rs`, pins exactly that). Since The Minute the commit in
+/// `Session::wait` is UNCONDITIONAL on which controller drove the walk
+/// (decision 0656), so it is the walk's own emptiness — not a discard — that
+/// keeps a driven body's `DRANK`/`EATEN` off this ledger. (The stale form of
+/// this sentence cited `_driven_facts` being dropped regardless of what the
+/// walk returned; that was true until 2026-09-03 and is history now.)
+/// The only verb that resolves a drive at all is
 /// `sleep`, which resolves `Fatigue` alone (`rested_fact`,
 /// `session.rs:2127`) — it cannot unseat `Thirst`/`Hunger` (the two
 /// observed dominant drives; both ceiling-1.0 survival drives, tie broken
