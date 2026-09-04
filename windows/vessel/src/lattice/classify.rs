@@ -365,6 +365,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
@@ -373,7 +374,7 @@ mod tests {
     }
 
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true, None)
+        Brief::from_parts(None, None, None, None, None, 0, false, true, None)
     }
 
     /// Which method produced a lattice. Carried through the corpus because rule 7

@@ -97,6 +97,8 @@ pub enum VesselError {
     NoPosition(String),
     /// The locale window could not describe a room.
     Locale(hornvale_locale::LocaleError),
+    /// A living occupation could not be reduced to a production brief.
+    Brief(crate::brief::BriefError),
     /// Building a coarse-world view failed (worldgen).
     Build(String),
     /// [`PossessTarget::Creature`] named an entity this session's derived
@@ -113,6 +115,7 @@ impl std::fmt::Display for VesselError {
             VesselError::NoSpecies(m) => write!(f, "no species known for {m}"),
             VesselError::NoPosition(m) => write!(f, "no position: {m}"),
             VesselError::Locale(e) => write!(f, "locale: {e}"),
+            VesselError::Brief(e) => write!(f, "brief: {e}"),
             VesselError::Build(m) => write!(f, "building the coarse world: {m}"),
             VesselError::NoSuchCreature(id) => write!(
                 f,
@@ -120,6 +123,12 @@ impl std::fmt::Display for VesselError {
                 id.get()
             ),
         }
+    }
+}
+
+impl From<crate::brief::BriefError> for VesselError {
+    fn from(error: crate::brief::BriefError) -> Self {
+        Self::Brief(error)
     }
 }
 

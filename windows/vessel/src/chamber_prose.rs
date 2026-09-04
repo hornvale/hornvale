@@ -530,6 +530,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
@@ -541,6 +542,7 @@ mod tests {
     /// produces at a real settlement since The Prospect's Task 7.
     fn named_brief(name: &str) -> Brief {
         Brief::from_parts(
+            None,
             None,
             None,
             None,
@@ -907,7 +909,7 @@ mod tests {
         // `brief` must be READ, not merely carried: a built place is a room,
         // an unbuilt one is a hollow.
         let i = interior_with(&[kinds::GROUND, kinds::HEARTH]);
-        let wild = Brief::from_parts(None, None, None, None, 0, false, true, None);
+        let wild = Brief::from_parts(None, None, None, None, None, 0, false, true, None);
         assert_ne!(describe_chamber(&i, &brief()), describe_chamber(&i, &wild));
         assert!(describe_chamber(&i, &wild).contains("hollow"));
     }

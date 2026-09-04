@@ -1227,6 +1227,13 @@ struct SightingKey {
 /// map on the session. `the_carried_lattice_is_the_one_the_place_derives` asserts
 /// the copy has not drifted from the derivation.
 ///
+/// The production brief is carried at the same scope for a different reason:
+/// resolving a living people's society is fallible. `enter` reports that error
+/// before constructing this frame, then every indoor reader consumes the one
+/// successful result instead of either panicking or turning a missing culture
+/// into an empty chamber selection. Like the lattice, the brief dies at `leave`
+/// and is never serialized.
+///
 /// **Untagged for the type audit, deliberately.** The plan's snippet gave `at` a
 /// `bare-ok(index: at)`; the audit extracts only `pub` items
 /// (`tools/type-audit/src/extract.rs::is_bare_pub`), so a tag on a private struct
@@ -1236,6 +1243,11 @@ struct SightingKey {
 struct Inside {
     /// The structure being stood in.
     structure: crate::structure::Structure,
+    /// The production brief resolved before this frame was entered. Carried
+    /// with the frame so every chamber reads one result and a brief failure is
+    /// reported before descent rather than erased by the many infallible indoor
+    /// read surfaces.
+    brief: crate::brief::Brief,
     /// Which chamber, as an index into `structure.chambers`.
     at: usize,
     /// The floor plan of the whole structure — every chamber, not just this one,
@@ -6842,8 +6854,8 @@ impl<'w> Session<'w> {
         // same accepted cost `brief_of`'s own doc names for `enter` and
         // `Self::brief_here`'s cost note — hoist only if a profile shows it
         // mattering.
-        let site_clause = self
-            .brief_here()
+        let brief = self.brief_here()?;
+        let site_clause = brief
             .site
             .as_ref()
             .map(Self::site_clause)
@@ -7052,8 +7064,12 @@ impl<'w> Session<'w> {
     /// identity and carries no bearing.
     fn enter(&mut self, target: &str) -> Turn {
         // Already inside: `enter <named>` steps through an aperture.
-        if let Some((structure, at)) = self.inside.as_ref().map(|i| (i.structure.clone(), i.at)) {
-            let Some(next) = self.named_neighbour(&structure, at, target) else {
+        if let Some((structure, at, brief)) = self
+            .inside
+            .as_ref()
+            .map(|i| (i.structure.clone(), i.at, i.brief.clone()))
+        {
+            let Some(next) = self.named_neighbour(&structure, at, target, &brief) else {
                 // Asked for the deeper way where there is none: say which wall
                 // was reached, not "no way to further in", which reads as a
                 // parse failure rather than the end of the place.
@@ -7095,7 +7111,7 @@ impl<'w> Session<'w> {
             // doorway that realizes this link — not the middle of the room. A
             // player who walks through a door is standing just inside it, and the
             // drawn mark then reads as the step they just took.
-            let lattice = self.lattice_of(&structure);
+            let lattice = self.lattice_of(&structure, &brief);
             let through = crate::lattice::doorway_between(&lattice, at, next);
             let Some(cell) = through
                 .and_then(|t| crate::lattice::cell_beyond(&lattice, t, next))
@@ -7115,6 +7131,7 @@ impl<'w> Session<'w> {
             let seed = self.frame_seed(&structure);
             self.inside = Some(Inside {
                 structure,
+                brief,
                 at: next,
                 lattice,
                 cell,
@@ -7122,7 +7139,10 @@ impl<'w> Session<'w> {
             });
             return self.out(self.describe_chamber_here(Perceiving::Body));
         }
-        let brief = self.brief_here();
+        let brief = match self.brief_here() {
+            Ok(brief) => brief,
+            Err(error) => return Turn::Out(format!("error: {error}")),
+        };
         let Some(structure) = crate::structure::structure_at(
             &crate::depth::truncate_to_walk(&self.position(), self.walk_depth()),
             &brief,
@@ -7150,7 +7170,7 @@ impl<'w> Session<'w> {
         if let Err(e) = self.charge_within_room() {
             return Turn::Out(e);
         }
-        if self.descend(structure, at).is_none() {
+        if self.descend(structure, at, brief).is_none() {
             return Turn::Out("error: that chamber has no floor to stand in".to_string());
         }
         self.out(self.describe_chamber_here(Perceiving::Body))
@@ -7161,16 +7181,23 @@ impl<'w> Session<'w> {
     /// holds no floor — §7 rule 1 reports that as the defect it is, so the caller
     /// refuses rather than standing the player in a wall.
     ///
-    /// The one place an [`Inside`] is built from a structure ALONE: `enter` uses it
-    /// for the descent from out of doors, where no doorway was crossed, and the
-    /// tests use it to put a session inside a hand-built structure without
-    /// replicating the derivation and drifting from it.
-    fn descend(&mut self, structure: crate::structure::Structure, at: usize) -> Option<()> {
-        let lattice = self.lattice_of(&structure);
+    /// The one place an [`Inside`] is built from a structure and its already
+    /// resolved production brief: `enter` uses it for the descent from out of
+    /// doors, where no doorway was crossed, and the tests use it to put a session
+    /// inside a hand-built structure without replicating either derivation and
+    /// drifting from it.
+    fn descend(
+        &mut self,
+        structure: crate::structure::Structure,
+        at: usize,
+        brief: crate::brief::Brief,
+    ) -> Option<()> {
+        let lattice = self.lattice_of(&structure, &brief);
         let cell = crate::lattice::standing_cell(&lattice, at)?;
         let seed = self.frame_seed(&structure);
         self.inside = Some(Inside {
             structure,
+            brief,
             at,
             lattice,
             cell,
@@ -7414,7 +7441,7 @@ impl<'w> Session<'w> {
     /// The brief for wherever the possession currently stands. Reads the
     /// context's occupation register rather than re-surveying the world
     /// (The Terrier).
-    fn brief_here(&self) -> crate::brief::Brief {
+    fn brief_here(&self) -> Result<crate::brief::Brief, VesselError> {
         let terrain = self.terrain_here();
         crate::brief::brief_of(
             &self.wctx.occupations,
@@ -7436,6 +7463,7 @@ impl<'w> Session<'w> {
             // the one `built` already uses.
             &self.cave_sites,
         )
+        .map_err(VesselError::from)
     }
 
     /// The chambers one aperture away from `at`, in `links` order. Undirected:
@@ -7497,6 +7525,7 @@ impl<'w> Session<'w> {
         structure: &crate::structure::Structure,
         at: usize,
         target: &str,
+        brief: &crate::brief::Brief,
     ) -> Option<usize> {
         let neighbours = Self::neighbours(structure, at);
         let target = target.trim().to_lowercase();
@@ -7513,12 +7542,11 @@ impl<'w> Session<'w> {
             return None;
         };
         let terrain = self.terrain_here();
-        let brief = self.brief_here();
         crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
             &structure.chambers[*only],
             &terrain,
             self.walk_depth(),
-            &brief,
+            brief,
             *only,
         ))
         .iter()
@@ -7552,12 +7580,11 @@ impl<'w> Session<'w> {
                 "no chamber to describe: the possession is out of doors".to_string(),
             ));
         };
-        let (structure, at) = (&inside.structure, inside.at);
+        let (structure, brief, at) = (&inside.structure, &inside.brief, inside.at);
         let chamber = &structure.chambers[at];
         let terrain = self.terrain_here();
-        let brief = self.brief_here();
         let interior =
-            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), &brief, at);
+            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), brief, at);
         let id = chamber_id(chamber)?;
         let mut ways = vec!["out"];
         if Self::further_in(structure, at).is_some() {
@@ -7574,7 +7601,7 @@ impl<'w> Session<'w> {
             "[chamber {}, day {}]\n{}\n{presence}Ways on: {}.",
             id,
             self.day.as_std_days(),
-            crate::chamber_prose::describe_chamber(&interior, &brief),
+            crate::chamber_prose::describe_chamber(&interior, brief),
             ways.join(", ")
         ))
     }
@@ -7591,10 +7618,10 @@ impl<'w> Session<'w> {
     /// simply calls it, and cheap enough that a future caller re-deriving it per
     /// turn would still be correct.
     ///
-    /// Takes the structure as an argument rather than reading `self.inside`,
-    /// because `enter` needs a plan for a structure it has not yet descended into
-    /// — and because a derivation that reads no session state is a derivation a
-    /// test can pin against the place alone.
+    /// Takes the structure and its brief as arguments rather than reading
+    /// `self.inside`, because `enter` needs a plan for a structure it has not yet
+    /// descended into — and because a derivation whose inputs are explicit is one
+    /// a test can pin against the place alone.
     ///
     /// **Keyed to the LOCALE's own seed, never the world's.** `structure_at` keys
     /// its draw with `locale.seed(seed)` (`structure.rs`) precisely so no other
@@ -7609,11 +7636,14 @@ impl<'w> Session<'w> {
     /// so the two agree — but reading it off the threshold says out loud that the
     /// plan is a property of the STRUCTURE, and so does not change as the
     /// possession walks deeper into it.
-    fn lattice_of(&self, structure: &crate::structure::Structure) -> crate::lattice::Lattice {
-        let brief = self.brief_here();
+    fn lattice_of(
+        &self,
+        structure: &crate::structure::Structure,
+        brief: &crate::brief::Brief,
+    ) -> crate::lattice::Lattice {
         crate::lattice::embed_with(
             structure,
-            &brief,
+            brief,
             crate::lattice::extent_for(structure),
             self.frame_seed(structure),
         )
@@ -8165,12 +8195,11 @@ impl<'w> Session<'w> {
     fn chamber_interior_here(&self) -> Option<crate::interior::Interior> {
         let inside = self.inside.as_ref()?;
         let terrain = self.terrain_here();
-        let brief = self.brief_here();
         Some(crate::interior::chamber_interior_of(
             &inside.structure.chambers[inside.at],
             &terrain,
             self.walk_depth(),
-            &brief,
+            &inside.brief,
             inside.at,
         ))
     }
@@ -14574,15 +14603,19 @@ mod tests {
         let world = seam_world();
         let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let s = path_structure(&session.position(), 4);
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         for word in FURTHER_IN_WORDS {
             assert_eq!(
-                session.named_neighbour(&s, 1, word),
+                session.named_neighbour(&s, 1, word, &brief),
                 Some(2),
                 "{word:?} must resolve deeper, never back toward the threshold"
             );
         }
         // Case and surrounding space are the player's, not the parser's.
-        assert_eq!(session.named_neighbour(&s, 1, "  Further In  "), Some(2));
+        assert_eq!(
+            session.named_neighbour(&s, 1, "  Further In  ", &brief),
+            Some(2)
+        );
     }
 
     #[test]
@@ -14593,7 +14626,7 @@ mod tests {
         // Precondition: the noun really IS in the neighbouring chamber's prose,
         // so the refusal below is about ambiguity, not about an absent word.
         let terrain = session.terrain_here();
-        let brief = session.brief_here();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let nouns = crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
             &s.chambers[2],
             &terrain,
@@ -14605,12 +14638,12 @@ mod tests {
             .first()
             .expect("a built chamber's prose names something");
         assert_eq!(
-            session.named_neighbour(&s, 1, noun),
+            session.named_neighbour(&s, 1, noun, &brief),
             None,
             "an ambiguous noun must refuse, not silently pick a direction"
         );
         assert_eq!(
-            session.named_neighbour(&s, 0, noun),
+            session.named_neighbour(&s, 0, noun, &brief),
             Some(1),
             "with exactly one aperture the same noun is unambiguous, and accepted"
         );
@@ -14621,8 +14654,9 @@ mod tests {
         let world = seam_world();
         let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let s = path_structure(&session.position(), 2);
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         assert_eq!(
-            session.named_neighbour(&s, 0, "a-noun-no-chamber-holds"),
+            session.named_neighbour(&s, 0, "a-noun-no-chamber-holds", &brief),
             None
         );
     }
@@ -14632,7 +14666,10 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let middle = path_structure(&session.position(), 3);
-        session.descend(middle, 1).expect("a chamber to stand in");
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        session
+            .descend(middle, 1, brief.clone())
+            .expect("a chamber to stand in");
         let text = session
             .describe_chamber_here(Perceiving::Body)
             .expect("a chamber renders");
@@ -14642,7 +14679,7 @@ mod tests {
         );
         let innermost = path_structure(&session.position(), 3);
         session
-            .descend(innermost, 2)
+            .descend(innermost, 2, brief)
             .expect("a chamber to stand in");
         let text = session
             .describe_chamber_here(Perceiving::Body)
@@ -14662,7 +14699,10 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let middle = path_structure(&session.position(), 3);
-        session.descend(middle, 1).expect("a chamber to stand in");
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        session
+            .descend(middle, 1, brief)
+            .expect("a chamber to stand in");
         for line in ["enter", "enter doorway"] {
             let reply = match session.handle(line) {
                 Turn::Out(t) => t,
@@ -14751,7 +14791,7 @@ mod tests {
         );
         // Take a noun the chamber's prose has just named to the player.
         let terrain = session.terrain_here();
-        let brief = session.brief_here();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let interior = crate::interior::chamber_interior_of(
             &session.inside.as_ref().unwrap().structure.chambers
                 [session.inside.as_ref().unwrap().at],
@@ -14845,7 +14885,7 @@ mod tests {
             .as_ref()
             .expect("the flagship's own locale is built");
         let terrain = session.terrain_here();
-        let brief = session.brief_here();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let interior = crate::interior::chamber_interior_of(
             &inside.structure.chambers[inside.at],
             &terrain,
@@ -15026,6 +15066,7 @@ mod tests {
         let world = seam_world();
         let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let here = session.position();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let mut plans = Vec::new();
         let mut locales = std::collections::BTreeSet::new();
         for i in 0..8u8 {
@@ -15041,13 +15082,13 @@ mod tests {
             // what `lattice_of` taking a structure buys: the derivation is pinned
             // without mutating the session at all.
             let structure = path_structure(&locale, 2);
-            let plan = session.lattice_of(&structure);
+            let plan = session.lattice_of(&structure, &brief);
             // Purity, at each locale, before the difference below means anything:
             // a plan that varied between two calls would make "eight differ" true
             // for the wrong reason.
             assert_eq!(
                 plan,
-                session.lattice_of(&structure),
+                session.lattice_of(&structure, &brief),
                 "the plan at locale {i} is not a pure function of the place"
             );
             plans.push(plan);
@@ -15074,13 +15115,14 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let s = path_structure(&session.position(), 3);
-        let from_threshold = session.lattice_of(&s);
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        let from_threshold = session.lattice_of(&s, &brief);
         for at in 0..3 {
             session
-                .descend(s.clone(), at)
+                .descend(s.clone(), at, brief.clone())
                 .expect("a chamber to stand in");
             assert_eq!(
-                session.lattice_of(&s),
+                session.lattice_of(&s, &brief),
                 from_threshold,
                 "the plan redrew itself on stepping into chamber {at}"
             );
@@ -15096,8 +15138,9 @@ mod tests {
     fn map_indoors_draws_the_plan_and_map_out_indoors_refuses() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         session
-            .descend(path_structure(&session.position(), 2), 0)
+            .descend(path_structure(&session.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let plan = match session.handle("map") {
             Turn::Out(t) => t,
@@ -15248,8 +15291,9 @@ mod tests {
         // which is the only place the reader's north lives.
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         session
-            .descend(path_structure(&session.position(), 2), 0)
+            .descend(path_structure(&session.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let before = session.inside.as_ref().unwrap().cell;
         let row_of = |session: &Session| {
@@ -15292,7 +15336,7 @@ mod tests {
             let inside = session.inside.as_ref().expect("still indoors");
             assert_eq!(
                 inside.lattice,
-                session.lattice_of(&inside.structure),
+                session.lattice_of(&inside.structure, &inside.brief),
                 "after {line:?} the carried plan is not the one the place derives"
             );
         }
@@ -15365,7 +15409,9 @@ mod tests {
             let mut saw_none = false;
             let mut steps = 0;
             loop {
-                let hoisted = session.brief_here();
+                let hoisted = session
+                    .brief_here()
+                    .unwrap_or_else(|error| panic!("seed {seed}, step {steps}: {error}"));
                 let terrain = session.terrain_here();
                 let scanned = crate::brief::brief_of(
                     &fresh,
@@ -15381,7 +15427,8 @@ mod tests {
                     // only thing this test re-derives on purpose.
                     &session.wctx.ctx.strange_sites(),
                     &session.cave_sites,
-                );
+                )
+                .unwrap_or_else(|error| panic!("seed {seed}, step {steps}: {error}"));
                 assert_eq!(
                     hoisted, scanned,
                     "seed {seed}, step {steps}: the hoisted brief disagrees with the scan"
@@ -16420,8 +16467,9 @@ mod tests {
     fn delve_refuses_while_inside_a_structure() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         session
-            .descend(path_structure(&session.position(), 2), 0)
+            .descend(path_structure(&session.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let out = match session.handle("delve") {
             Turn::Out(t) => t,
@@ -16452,8 +16500,9 @@ mod tests {
         // Indoors: `descend` into a chamber, the same seam
         // `delve_refuses_while_inside_a_structure` uses.
         let (mut inside, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = inside.brief_here().expect("seed 42 has a valid brief");
         inside
-            .descend(path_structure(&inside.position(), 2), 0)
+            .descend(path_structure(&inside.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let out = match inside.handle("clear") {
             Turn::Out(t) => t,

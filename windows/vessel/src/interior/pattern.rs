@@ -1019,7 +1019,17 @@ mod tests {
 
     /// A brief with no alive occupation — a place whose deep chambers are stores.
     fn plain_brief() -> crate::brief::Brief {
-        crate::brief::Brief::from_parts(None, None, None, None, 0, true, false, settlement_site())
+        crate::brief::Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            false,
+            settlement_site(),
+        )
     }
 
     #[test]
@@ -1330,6 +1340,7 @@ mod tests {
             None,
             Some(Notability::Common),
             None,
+            None,
             0,
             true,
             false,
@@ -1339,6 +1350,7 @@ mod tests {
             Some(Function::Agrarian),
             None,
             Some(Notability::Common),
+            None,
             None,
             0,
             true,
@@ -1356,6 +1368,7 @@ mod tests {
             Some(Function::Agrarian),
             None,
             Some(Notability::Seat),
+            None,
             None,
             0,
             true,
@@ -1378,6 +1391,7 @@ mod tests {
                 Some(f),
                 None,
                 Some(Notability::Common),
+                None,
                 None,
                 0,
                 true,
@@ -1415,6 +1429,7 @@ mod tests {
     fn a_hamlet_composes_a_strongbox_with_a_key_inside_it() {
         let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
         let hamlet = crate::brief::Brief::from_parts(
+            None,
             None,
             None,
             None,
@@ -1594,6 +1609,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             false,
@@ -1700,6 +1716,7 @@ mod tests {
         let ceiling = hornvale_history::flesh::HAMLET_POPULATION_CEILING;
         let at = |n: u32| {
             crate::brief::Brief::from_parts(
+                None,
                 None,
                 None,
                 None,

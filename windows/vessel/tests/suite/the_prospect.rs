@@ -100,7 +100,8 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the placed exotic facet has a valid production brief");
     assert_eq!(
         // `site`, not `s`: `cli/tests/suite/claim_shape.rs` reads a closure
         // parameter named `s` as a seed binding and demands a `claim:` tag on
@@ -123,7 +124,8 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the neighbouring exotic facet has a valid production brief");
     assert_eq!(
         there.site, None,
         "the facet beside a site must hold nothing — a site is an address, \
@@ -173,7 +175,8 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the placed cave facet has a valid production brief");
     assert_eq!(
         here.site.as_ref().map(|site| site.kind),
         Some(SiteKind::Cave),
@@ -200,7 +203,8 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the neighbouring cave facet has a valid production brief");
     assert_eq!(
         there.site, None,
         "the facet beside a cave must hold nothing — a cave mouth is an \
@@ -274,7 +278,8 @@ fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the settlement-cave collision has a valid production brief");
     assert!(
         here.built,
         "fixture check: the forced facet must itself read built"
@@ -361,7 +366,8 @@ fn salience_decides_the_winner_at_an_exotic_cave_collision() {
         world.seed,
         &exotic_sites,
         &caves,
-    );
+    )
+    .expect("the exotic-cave collision has a valid production brief");
     assert!(
         !here.built,
         "fixture check: this collision must not also be a settlement, or \
@@ -481,7 +487,8 @@ fn a_cave_site_carries_no_name() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the named cave facet has a valid production brief");
     assert_eq!(
         here.site.as_ref().map(|site| site.kind),
         Some(SiteKind::Cave),
@@ -537,7 +544,8 @@ fn a_settlement_sites_name_is_keyed_to_the_room() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the named settlement facet has a valid production brief");
     assert_eq!(
         here.site.as_ref().and_then(|site| site.name.as_deref()),
         Some("Nornholm"),

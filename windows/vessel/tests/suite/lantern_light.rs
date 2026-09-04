@@ -45,6 +45,7 @@ fn built() -> Brief {
         None,
         None,
         None,
+        None,
         0,
         true,
         true,
@@ -54,7 +55,7 @@ fn built() -> Brief {
 
 /// A wild place; the brief `grow` is selected by — the hostile geometry.
 fn wild() -> Brief {
-    Brief::from_parts(None, None, None, None, 0, false, true, None)
+    Brief::from_parts(None, None, None, None, None, 0, false, true, None)
 }
 
 fn locale_number(n: u64) -> Facet {

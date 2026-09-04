@@ -851,6 +851,7 @@ fn the_role_table_reads_a_different_room_for_every_role() {
             None,
             None,
             None,
+            None,
             0,
             true,
             cold,

@@ -2,21 +2,24 @@
 //! address and the seed (Rose Window metaplan §1b.4). Macro answers *who holds
 //! this land*; micro answers *what is standing here*; the brief is the seam.
 //!
-//! It is derived, never stored — which is why it does NOT carry the fields no
-//! consumer reads yet. The ruin signature (`cause`, `ended_by`, ages) and the
-//! district vocabulary are absent on purpose: the metaplan argued for carrying
-//! them from the start "so that adding a consumer never changes the seam", but
-//! that argument only bites for types that PERSIST. Nothing here is serialized,
-//! so the campaign that first needs `cause` adds one field, with no save-format
-//! consequence and no epoch. Seven unread `Option`s would be dead weight that
-//! reads as evidence of intent.
+//! It is derived, never persisted — which is why it does NOT carry the fields no
+//! consumer reads yet. The transient indoor frame carries one resolved copy so
+//! every chamber reads the same fallible production result; nothing here is
+//! serialized. The ruin signature (`cause`, `ended_by`, ages) and the district
+//! vocabulary are absent on purpose: the metaplan argued for carrying them from
+//! the start "so that adding a consumer never changes the seam", but that
+//! argument only bites for types that PERSIST. The campaign that first needs
+//! `cause` adds one field, with no save-format consequence and no epoch. Seven
+//! unread `Option`s would be dead weight that reads as evidence of intent.
 //!
 //! THREE fields are read as of decision 0398: `built`, in `structure_at`'s
 //! existence predicate and in `describe_chamber`'s room/hollow word; and
 //! `notability` and `function`, in `pattern::role_for`'s promotion of a deep
 //! chamber. `cold` is carried but read only by a debug assertion
 //! (`chamber_interior_of` cross-checks it against the terrain), and `tech` and
-//! `people` are carried and not read at all.
+//! `people` are carried and not read at all. `housemark` is the chamber-only
+//! cultural axis read by `chamber_interior_of`; it never reaches locale
+//! selection or a fact writer.
 //!
 //! `peak_population` was the FOURTH, added here when the `store` role's
 //! strongbox became its first reader — "exactly the one field, no epoch this
@@ -28,12 +31,48 @@
 //! the day a population-gated pattern is written, and unlike the seven absent
 //! `Option`s this one has a live wire behind it.
 
+use crate::housemark::{Housemark, HousemarkError};
 use crate::site::{Site, SiteKind};
 use hornvale_history::record::{Function, Notability, OccupationRecord, TechHorizon};
 use hornvale_kernel::{Facet, Geosphere, KindId, NearestVertexIndex, Seed, Vertex};
 use hornvale_locale::StrangeSite;
+use hornvale_species::{SocietyVector, society_registry};
 use hornvale_worldgen::{SiteReason, site_facet_for};
 use std::collections::BTreeMap;
+use std::fmt;
+
+/// Why a production brief could not resolve a living occupation's culture.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BriefError {
+    /// A living occupation names a people with no authored society row.
+    UnregisteredPeople(KindId),
+    /// The authored society row cannot be classified as a housemark.
+    InvalidHousemark {
+        /// The people whose authored row could not be classified.
+        people: KindId,
+        /// The classification failure from the vessel-owned derivation.
+        source: HousemarkError,
+    },
+}
+
+impl fmt::Display for BriefError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnregisteredPeople(people) => {
+                write!(f, "living people {} has no society row", people.0)
+            }
+            Self::InvalidHousemark { people, source } => {
+                write!(
+                    f,
+                    "cannot derive a housemark for living people {}: {source}",
+                    people.0
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for BriefError {}
 
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
@@ -49,6 +88,8 @@ pub struct Brief {
     pub notability: Option<Notability>,
     /// The people occupying this place, if any.
     pub people: Option<KindId>,
+    /// The living people's vessel-owned cultural reading, if any.
+    pub housemark: Option<Housemark>,
     /// The highest population the alive occupation ever reached, `0` where none
     /// is alive. Not an `Option`: "nobody lives here" and "nobody ever did" are
     /// the same answer to the one question anything asks of this field, which is
@@ -77,6 +118,7 @@ impl Brief {
         tech: Option<TechHorizon>,
         notability: Option<Notability>,
         people: Option<KindId>,
+        housemark: Option<Housemark>,
         peak_population: u32,
         built: bool,
         cold: bool,
@@ -87,6 +129,7 @@ impl Brief {
             tech,
             notability,
             people,
+            housemark,
             peak_population,
             built,
             cold,
@@ -195,6 +238,13 @@ pub(crate) fn containing_vertex(
 /// attributed to a 0.012 ms shadowcast. The note's prescription is what
 /// shipped, and its prohibition still stands: there is no cache here, only
 /// a parameter.
+///
+/// A living occupation also resolves its `people` through
+/// `hornvale_species::society_registry` exactly once while assembling the
+/// returned [`Brief`]. Missing rows and unclassifiable radii are contextual
+/// [`BriefError`]s; an unoccupied place receives neither people nor housemark.
+/// No fallback uses `SocietyVector::MANIKIN`: the manikin is nobody, and a ruin
+/// does not silently acquire occupants.
 /// type-audit: bare-ok(count: walk_depth)
 #[allow(clippy::too_many_arguments)] // `cave_sites` (Task 4, The Prospect) pushed this to 8, and absorbing The Terrier's `occupations` hoist to 9; every parameter is a value the CALLER already holds and must not re-derive — bundling them into a struct would add a public type whose only content is "the four things `Session` keeps" and whose only reader is this function
 pub fn brief_of(
@@ -207,7 +257,7 @@ pub fn brief_of(
     seed: Seed,
     exotic_sites: &[StrangeSite],
     cave_sites: &[Vertex],
-) -> Brief {
+) -> Result<Brief, BriefError> {
     let locale = crate::depth::truncate_to_walk(place, walk_depth);
     let built = terrain.is_built(&locale);
     let cold = terrain.is_cold(&locale);
@@ -288,25 +338,108 @@ pub fn brief_of(
     let alive = containing_vertex(&locale, geo, index)
         .and_then(|vertex| occupations.get(&vertex))
         .and_then(|occs| occs.iter().find(|o| o.core.ended.is_none()));
-    match alive {
-        Some(o) => Brief::from_parts(
-            Some(o.core.function),
-            Some(o.core.tech),
-            Some(o.core.notability),
-            Some(o.core.people),
-            o.core.peak_population,
-            built,
-            cold,
-            site,
-        ),
-        None => Brief::from_parts(None, None, None, None, 0, built, cold, site),
-    }
+    Ok(match alive {
+        Some(o) => {
+            let societies = society_registry();
+            let housemark = housemark_for(o.core.people, &societies)?;
+            Brief::from_parts(
+                Some(o.core.function),
+                Some(o.core.tech),
+                Some(o.core.notability),
+                Some(o.core.people),
+                Some(housemark),
+                o.core.peak_population,
+                built,
+                cold,
+                site,
+            )
+        }
+        None => Brief::from_parts(None, None, None, None, None, 0, built, cold, site),
+    })
+}
+
+fn housemark_for(
+    people: KindId,
+    societies: &hornvale_kernel::ComponentStore<KindId, SocietyVector>,
+) -> Result<Housemark, BriefError> {
+    let society = societies
+        .get(&people)
+        .copied()
+        .ok_or(BriefError::UnregisteredPeople(people))?;
+    Housemark::try_from_society(society)
+        .map_err(|source| BriefError::InvalidHousemark { people, source })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_history::record::{Function, Notability, TechHorizon};
+    use hornvale_history::record::{
+        Ended, Founding, Function, Notability, Occupation, TechHorizon,
+    };
+    use hornvale_kernel::{ComponentStore, EntityId};
+    use hornvale_species::{Sociality, StatusBasis};
+
+    struct StubTerrain;
+
+    impl crate::liveness::Terrain for StubTerrain {
+        fn elevation(&self, _room: &Facet) -> f64 {
+            0.0
+        }
+
+        fn is_fresh_water(&self, _room: &Facet) -> bool {
+            false
+        }
+
+        fn temperature(&self, _room: &Facet, _day: hornvale_kernel::WorldTime) -> f64 {
+            25.0
+        }
+    }
+
+    fn eid(value: u64) -> EntityId {
+        EntityId(std::num::NonZeroU64::new(value).expect("test entity ids are nonzero"))
+    }
+
+    fn production_brief_for(people: KindId) -> Result<Brief, BriefError> {
+        let geo = Geosphere::new(0);
+        let index = NearestVertexIndex::new(&geo);
+        let place = Facet {
+            face: 0,
+            path: Vec::new(),
+        };
+        let vertex = containing_vertex(&place, &geo, &index)
+            .expect("a depth-zero facet resolves on a depth-zero geosphere");
+        let occupation = OccupationRecord {
+            core: Occupation {
+                people,
+                site: vertex,
+                founded: 0.0,
+                ended: None,
+                peak_population: 42,
+                tech: TechHorizon::Classical,
+                function: Function::Trade,
+                deity: None,
+                tongue: None,
+                cause: None,
+                notability: Notability::Common,
+                delve_depth_m: 0.0,
+            },
+            id: eid(1),
+            founded_from: Founding::Genesis(vertex),
+            ended_by: Ended::Nature,
+        };
+        let occupations = [(vertex, vec![occupation])].into_iter().collect();
+        brief_of(
+            &occupations,
+            &geo,
+            &index,
+            &place,
+            &StubTerrain,
+            0,
+            Seed(42),
+            &[],
+            &[],
+        )
+    }
 
     #[test]
     fn from_parts_assigns_the_occupation_axes_and_flags() {
@@ -314,6 +447,7 @@ mod tests {
             Some(Function::Trade),
             Some(TechHorizon::Classical),
             Some(Notability::Seat),
+            None,
             None,
             900,
             true,
@@ -323,13 +457,14 @@ mod tests {
         assert_eq!(b.function, Some(Function::Trade));
         assert_eq!(b.tech, Some(TechHorizon::Classical));
         assert_eq!(b.notability, Some(Notability::Seat));
+        assert_eq!(b.housemark, None, "synthetic construction stays uncultured");
         assert!(b.built);
         assert!(b.cold);
     }
 
     #[test]
     fn from_parts_with_no_occupation_axes_still_carries_climate() {
-        let b = Brief::from_parts(None, None, None, None, 0, false, true, None);
+        let b = Brief::from_parts(None, None, None, None, None, 0, false, true, None);
         assert!(!b.built);
         assert!(
             b.cold,
@@ -348,6 +483,7 @@ mod tests {
             Some(TechHorizon::Neolithic),
             None,
             None,
+            None,
             0,
             true,
             false,
@@ -356,6 +492,7 @@ mod tests {
         let b = Brief::from_parts(
             Some(Function::Fort),
             Some(TechHorizon::Classical),
+            None,
             None,
             None,
             0,
@@ -377,12 +514,67 @@ mod tests {
     #[test]
     fn a_built_brief_carries_a_settlement_site_and_an_unbuilt_one_carries_none() {
         let built_site = Some(Site::placed(SiteKind::Settlement, None));
-        let built = Brief::from_parts(None, None, None, None, 0, true, false, built_site);
-        let wild = Brief::from_parts(None, None, None, None, 0, false, false, None);
+        let built = Brief::from_parts(None, None, None, None, None, 0, true, false, built_site);
+        let wild = Brief::from_parts(None, None, None, None, None, 0, false, false, None);
         assert_eq!(
             built.site.as_ref().map(|site| site.kind),
             Some(SiteKind::Settlement)
         );
         assert_eq!(wild.site, None);
+    }
+
+    #[test]
+    fn a_living_occupation_carries_the_housemark_of_its_authored_society_row() {
+        // Kobold's communal/inward row deliberately differs from MANIKIN's
+        // command/plain default, so this catches a fallback to nobody as well
+        // as a missing derivation.
+        let people = KindId("kobold");
+        let expected = Housemark::try_from_society(
+            *society_registry()
+                .get(&people)
+                .expect("kobold has an authored society row"),
+        )
+        .expect("the authored kobold row occupies an admitted band");
+
+        let brief = production_brief_for(people).expect("a registered living people has a brief");
+
+        assert_eq!(brief.people, Some(people));
+        assert_eq!(brief.housemark, Some(expected));
+    }
+
+    #[test]
+    fn a_living_occupation_with_no_society_row_refuses_with_its_people_id() {
+        let people = KindId("unregistered-test-people");
+
+        let error = production_brief_for(people)
+            .expect_err("a living people with no society row must not receive a brief");
+
+        assert_eq!(error, BriefError::UnregisteredPeople(people));
+        assert!(error.to_string().contains(people.0), "{error}");
+    }
+
+    #[test]
+    fn an_unclassifiable_society_row_refuses_with_its_people_id() {
+        let people = KindId("invalid-radius-test-people");
+        let societies: ComponentStore<KindId, SocietyVector> = [(
+            people,
+            SocietyVector {
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Knowledge,
+                in_group_radius: 0.4,
+            },
+        )]
+        .into_iter()
+        .collect();
+
+        let error = housemark_for(people, &societies)
+            .expect_err("an unassigned radius band must not receive a housemark");
+
+        assert!(
+            matches!(error, BriefError::InvalidHousemark { people: p, .. } if p == people),
+            "{error:?}"
+        );
+        assert!(error.to_string().contains(people.0), "{error}");
+        assert!(error.to_string().contains("0.4"), "{error}");
     }
 }
