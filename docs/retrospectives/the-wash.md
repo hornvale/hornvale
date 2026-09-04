@@ -3,7 +3,7 @@
 Process lessons only; the product story is
 [the chronicle](../../book/src/chronicle/the-wash.md).
 
-## 1. Eleven defects, all in controller text, none in implementer code
+## 1. Eleven defects in controller text — and what that does NOT mean
 
 This campaign's defects had a single author. Counted from the ledger and the
 SDD log:
@@ -22,10 +22,27 @@ SDD log:
 | 10 | brief | `plate_illuminant(session: &Session)` — no such accessor exists |
 | 11 | brief | **named the wrong live path**: flipping only the site I named would have shipped a broken map to every player |
 
-Not one implementer wrote a defect that survived review. The reviews found
-real problems in implementer code — a `&mut self` widening that bought a
-false appearance of use, an unbounded cache — but the *originating* errors
-were all mine, and they were all the same error.
+**CORRECTED after the whole-branch review, which found this section's
+original heading false against the campaign's own log.** It read "all in
+controller text, none in implementer code". The second clause is wrong, and
+the body two lines below already contradicted it — exactly the shape this
+repo's memory warns about: a self-critical paragraph carrying an unchecked
+claim.
+
+Counted from the eight task reviews: implementer code drew **1 Critical, 9
+Important and 16 Minor** findings, and **two tasks returned "changes
+requested"**. The Critical was real and measured — a tile cache growing
+without bound, 1600 tiles against a bound of 320.
+
+**What is true, and is the narrower claim worth making:** the eleven defects
+*listed above* originated in text I wrote, and none survived to the merge.
+That is a statement about those eleven, not about the campaign's defect
+population.
+
+**The countermeasure claim needed the same correction.** An earlier draft
+said implementer challenge "worked eleven times". It caught **three** — the
+brief-level rows 9-11. Rows 3-8 were caught by my own pre-flight scan before
+any dispatch; rows 1-2 at spec time.
 
 **Every one was a claim about the codebase I did not run a command to check.**
 This is `my-plan-text-is-where-defects-originate` and
@@ -35,11 +52,17 @@ that eight subagents executed.
 
 ## 2. The three that were qualitatively different
 
-Nine of the eleven were wrong about a **name** — a file, a type, a method, a
-path. Code answers back to those: they fail to compile, or a grep finds
-nothing, and the loop closes fast.
+**Six** of the eleven were wrong about a **name** — rows 3, 4, 6, 7, 9, 10.
+Code answers back to those: they fail to compile, or a grep finds nothing.
+(An earlier draft said "nine", which with "three did not" summed to twelve.
+The arithmetic is left visible rather than quietly corrected, because it is
+the same failure as everything else on this list: a number asserted without
+being counted.)
 
-Three did not have that property, and they are the ones worth the ink.
+Two more — rows 5 and 8 — were wrong about **completeness**: a guard shipped
+with no consumer, and a modelled case ignored. Those fail silently.
+
+Three had none of those properties, and they are the ones worth the ink.
 
 **Wrong about the world (#2).** "The illuminant is uniform across the plate"
 is a geometric claim about what a map spans. Nothing in the toolchain
@@ -78,11 +101,19 @@ omission. This is already in memory — a merge-queue peer taught me the same
 lesson the same night, in the same session, ninety minutes before I committed
 instance #9 of it.
 
-**Knowing the lesson did not prevent the error.** What prevented the errors
-from shipping was structural: implementers who checked what they were told
-and reported the discrepancy instead of coding around it. Three separate
-implementers did this. That is the countermeasure that worked, and it worked
-eleven times.
+**Knowing the lesson did not prevent the error.** Three mechanisms caught the
+eleven, and they are worth keeping separate rather than crediting one:
+
+| mechanism | caught | rows |
+|---|---|---|
+| ideonomy / spec-time challenge | 2 | 1, 2 |
+| controller pre-flight scan, before dispatch | 6 | 3-8 |
+| implementers checking what they were told | 3 | 9-11 |
+
+The third is the smallest number and the largest consequence — those three
+were already inside a dispatch, and row 11 would have shipped a broken map
+through a green gate. But the pre-flight scan caught twice as many and is
+cheaper. **Both matter; neither is "the" countermeasure.**
 
 ## 4. What the reviews were actually for
 
@@ -138,6 +169,11 @@ the narrative was not.
 
 ## 7. Deferred minors, and where each landed
 
+**This table is a selection, not the full list.** The SDD ledger holds about
+twenty; these are the ones carried between tasks or still open. The
+whole-branch review triaged the remainder into three must-fix, eleven carry,
+twelve stale.
+
 | finding | outcome |
 |---|---|
 | `Rate`'s middle four variants unpinned | carried to Task 6, which added an ordering ratchet |
@@ -153,8 +189,12 @@ the narrative was not.
 
 Task 3's implementer mutation-tested its own extraction, unprompted, and
 found that a 50% error in `grounded_wetness_for` was caught by **exactly one**
-test — with all 57 unit tests in the crate staying green. The wide instrument
-that did catch it, a zero-byte `make rebaseline`, **is in no gate**.
+test — with all 57 unit tests in the crate staying green. The instrument
+wide enough to have caught it — a `make rebaseline` byte-check — **is in no
+gate**. Precisely: both recorded `rebaseline` runs were on *unmutated* code
+and were green. No `rebaseline` was ever seen red here; this is a claim about
+its reach, not an observed catch. An earlier draft said it "did catch it",
+asserting a red that never happened.
 
 That is a durability fact about `windows/locale`, not about this campaign,
 and this campaign made it matter more: that derivation now feeds every tile
