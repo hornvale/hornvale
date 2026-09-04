@@ -307,9 +307,20 @@ intervention stopped rather than turn several sub-floor operations into an
 unattributable batch.
 
 Every default and meeting-population comparison retained all 249 metric columns
-byte-for-byte. The final total is not extrapolated from those subsets: the close
-authors it by running the complete census on lefford and carries that timing row
-and its exact generated fixtures on the census delivery branch reviewed at G6.
+byte-for-byte. The complete canonical census then measured **29,563.783 user
+CPU-seconds**, down **4,145.354 (-12.3%)** from the pre-intervention run, and
+**1,060.274 seconds wall**, down 10.8%. Both 1,000-row tables retained all 22
+Weft columns exactly. G6 accepted the result and stopped the intervention on
+the measured residual rule, not on whether scheduler-sensitive wall time had
+crossed back below its alarm.
+
+The refresh also forced two neighbouring instruments to tell the truth. The
+Domesday anomaly surface now pins 139 evaluable and 51 excluded columns over
+the 249-metric census. The Gnomon's canonical injection battery was re-authored
+on lefford; its current 69/120 recall witness is not folded into the older
+series, because ablating the Weft family restores 72/120 and proves the new
+ranked surface itself displaced three hits. Its bar did not move and its
+standing verdict remains “cannot tell.”
 
 ## What the next campaign inherits
 

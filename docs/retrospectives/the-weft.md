@@ -1,7 +1,7 @@
 # Campaign The Weft — retrospective
 
-**Merged:** pending G6 approval · **Ledger:**
-`docs/superpowers/ledgers/2026-09-03-the-weft.md` (23 entries) · **Chronicle:**
+**Close:** G6 approved 2026-09-04; merge delegated to the Sluice · **Ledger:**
+`docs/superpowers/ledgers/2026-09-03-the-weft.md` (24 entries) · **Chronicle:**
 [the-weft](../../book/src/chronicle/the-weft.md) · **Decisions:** 0686, 0687
 
 ## The headline: ten defects in the controller's spec and plan text, and approximately zero in implementer code
@@ -176,6 +176,50 @@ Every retained and rejected arm preserved all 249 metric columns exactly across
 the default and both meeting rosters. The intervention stopped where the
 preregistered floor said to stop; it did not turn several sub-floor operations
 into an unattributable batch.
+
+## The canonical run priced the kept tree
+
+The post-optimization census ran on lefford at the exact pushed candidate and
+measured **29,563.783 user CPU-seconds** and **1,060.274 seconds wall**. Against
+the pre-intervention run's 33,709.137 CPU-seconds and 1,188.863 seconds wall,
+that is **4,145.354 CPU-seconds recovered (-12.3%)** and **128.589 seconds wall
+recovered (-10.8%)**. This is the full two-study census result; unlike the
+Task 11 panel and Task 12 projection, it needs no population extrapolation.
+
+The run authored 70 census-owned golden paths. A key-sorted comparison over
+both 1,000-row tables required exactly 22 `weft-*` columns and found every
+decimal string unchanged from the pre-intervention delivery. Its normalized
+hashes are `b977bf38f64e415c4eefdbc79f8df49f0cf6aa9be2760d39fa31126bbcfb4605`
+for the default census and
+`5cd6e3ace13b74551179a817c1a670f8ec2e3e5cfa656269d5da60b921d34df1`
+for the two meeting pin sets.
+
+The first post-delivery commit gate also did its job: the 22 newly committed
+numeric columns made the Domesday anomaly surface's source ratchet stale. A
+direct measurement found **139 evaluable / 51 excluded** over 249 metric
+columns, versus 118 / 50 over 227 before the delivery. Twenty-one Weft
+columns vary and are evaluable; only `weft-legibility-mi-erratic` is frozen
+across all 1,000 worlds. The ratchet and its exact-name subfloor-roster entry
+were advanced together; no generated artifact was hand-edited.
+
+That same surface growth also staled The Gnomon's separately authored
+injection battery. Its dedicated script re-authored all eight arms on lefford
+at the census delivery SHA: 20 rows per arm, zero refusals, every injection's
+positive control live, and the second baseline byte-stable. The current
+recall witness is 69/120, but an in-memory ablation of the Weft family restores
+72/120 and the prior arm totals exactly. The 21 added evaluable columns
+therefore displaced three hits, making this seventh reading incomparable to
+the existing six-epoch series rather than evidence against it. The standing
+“cannot tell” verdict and frozen 0.60 bar remain unchanged; the four guarded
+witness sites were restated together.
+
+Wall time remained 6.0% over the census alarm. That signal is acknowledged by
+the intervention's live profile, isolated A/B and fresh residual profile, not
+by raising the bound: work fell materially, no super-linear path appeared, and
+the strongest remaining safe candidate directly measured below the 1% stop
+floor while increasing memory. G6 therefore accepted the canonical proof and
+the stop; it did not reopen optimization merely because noisy wall time stayed
+yellow.
 
 ## The first close sweep did not foot to the scratch
 

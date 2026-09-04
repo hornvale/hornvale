@@ -461,8 +461,8 @@ intent, not a reservation of specific numbers.
 
 ## 12. Pre-merge performance intervention (2026-09-04)
 
-**Status:** implementation complete; canonical authorship is Task 13's queued
-census, and G6 remains a hard stop before its delivery branch may be merged.
+**Status:** complete. Task 13's canonical census was accepted at G6 on
+2026-09-04; its delivery proceeds only through the merge queue.
 
 The first canonical census measured The Weft at **+19.9% CPU**. A matched
 merge-base control attributed 5,469 of the 5,598 added CPU-seconds (97.7%) to
@@ -588,6 +588,9 @@ hash remained
 `f1f7bd50aba4c57593ded63246858692f9d3de7ff00506dcde29f72a4da14336`;
 the combined meeting-population hash remained
 `991902c2dc49cfa22e2658d99586075c0b83e1e810d2ba403e4f1b85826d4820`.
-The final canonical total is not inferred from these subsets: Task 13 authors
-it on lefford in `docs/timings.md` and the two census fixture trees, on a
-`census/<ref>-<stamp>` branch whose exact Weft columns are compared before G6.
+The final canonical total is not inferred from these subsets. Task 13 measured
+**29,563.783 user CPU-s and 1,060.274 s wall** on lefford, recovering
+**4,145.354 CPU-s (-12.3%)** and **128.589 wall-s (-10.8%)** from the
+pre-intervention run. Its 70 census-owned golden paths live on
+`census/fbe2f5a9003f-20260904T195924Z`; both 1,000-row tables retained all 22
+Weft columns exactly. G6 accepted that proof and the §12.3 stop.
