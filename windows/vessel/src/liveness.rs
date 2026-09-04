@@ -3715,9 +3715,9 @@ pub struct RestSites<'a> {
 /// history is the precedent — it compared `anchor.kind == kinds::HEARTH`
 /// directly until that was fixed, because a future `RadiatesHeat` carrier
 /// would then have needed an edit at the dispatcher as well as a row in
-/// `object_registry`. The same is true here: `bed` is the only `SupportsRest`
-/// carrier today, and a future one (a fur, bracken) must need only its
-/// registry row.
+/// `object_registry`. The same is true here: the four current `SupportsRest`
+/// carriers — `bed`, `rushes`, `ledge`, and `bracken` — reach this read
+/// through their registry rows, with no kind comparison here.
 ///
 /// **Through [`crate::affordance::offered_to`], NOT `offered_to_observer` —
 /// the observer's knowledge is deliberately not consulted** (campaign ledger
@@ -3733,50 +3733,36 @@ pub struct RestSites<'a> {
 /// (`MoveWithin`/`Occupancy`) the committed ledger does not record at all
 /// (decision 0069).
 ///
-/// **THE GRADE IS THEREFORE LOCALE-GRANULAR, AND A READER MUST NOT MISTAKE
-/// THAT FOR "on the bed"** (fix round 1, Minor 3; campaign ledger #46). In a
-/// built, cold locale this answers `true` for the WHOLE room, so a body that
-/// passes out in the street of such a place is repaid exactly as one that
-/// found the bed. That is a real distance from Nathan's ruling (*prefer a bed
-/// … when they can get one*), and it is **a constitutional limit rather than
-/// an oversight to be tightened here**: grading per ANCHOR would require this
-/// fold to know which anchor the body occupied, and decision 0069 says fine
-/// position is never serialized — the ledger carries the room, never the spot
-/// in it. Making it anchor-granular is a decision about 0069 and belongs to
-/// Nathan, so do not "fix" it by reaching for `Occupancy` here: an occupancy
-/// is a per-tick, in-memory structure and a fold over committed history cannot
-/// see one at a past instant.
+/// **THIS BOOLEAN IS ONLY THE ROOM-LEVEL FALLBACK, NOT THE FINAL GRADE** (The
+/// Tenon, Task 5). [`rest_timeline`] first uses it to distinguish
+/// [`SiteGrade::Bare`] from [`SiteGrade::Afforded`], then overwrites a
+/// same-day [`SLEPT`] bout with [`SiteGrade::On`] when a matching
+/// [`SLEPT_ON`] fact records the kind actually chosen. Conscious
+/// [`Action::Rest`] bouts and ledgers predating that predicate have no such
+/// fact and retain this room-level result. A reader must therefore describe
+/// this function as "room-supported/non-Bare", never as proof that the final
+/// production grade was exactly `Afforded`.
+///
+/// The fallback is locale-granular: if any carrier is present, it answers
+/// `true` for the whole room. Tightening it to an anchor would require the
+/// historical fold to know which anchor the body occupied, and decision 0069
+/// says fine position is never serialized — the ledger carries the room,
+/// never the spot in it. Do not reach for per-tick, in-memory [`Occupancy`]
+/// here; a fold over committed history cannot see one at a past instant.
 ///
 /// The inversion a reader might fear — a chamber with a bed inside a locale
 /// without one — cannot occur: `the-fireside-bed` requires `built && cold` at
 /// BOTH bands, so no world has a chamber bed whose locale lacks one.
 ///
-/// **How often this answers `true` is a committed census column, not a
-/// guess** (fix round 1, Minor 2): `cold-built-room-share`
-/// (`windows/lab/src/metrics.rs`) measures "the fraction of the settled world
-/// where `interior_of` would compose a hearth", which is one grammar link
-/// short of a fireside bed, at n=1000 — median **0.183**, mean 0.257, 0 absent
-/// (`book/src/domesday/settlement.md`). So decision 0398's bar is met by a
-/// standing measurement rather than by a probe written and deleted inside the
-/// task that needed it. It varies enormously by world: seed 42's flagship is
-/// built and WARM (26.16 °C, no bed), seed 13's is built and cold (−61.21 °C,
-/// a bed), which is why the seed-42 book galleries do not move on a grade
-/// change and a seed-13 walk does.
+/// **How often this answers `true` is measured, not guessed.** The Tenon's
+/// 24-world readout found support in all three composed quadrants now carrying
+/// one of the four rows: built+cold (`bed`, `rushes`, `ledge`), built+warm
+/// (`ledge`), and wild+cold (`bracken`). Wild+warm remains unsupported. This
+/// is a measurement of the room boolean only; a committed `SLEPT_ON` kind
+/// still determines the final grade of a matching sleep as described above.
 ///
-/// **Delegates to [`crate::sleep_site::select_sleep_site`] rather than
-/// re-scanning anchors itself (The Pallet, Task 2).** That function is the
-/// single definition of "which anchor in this room offers Sleep to this
-/// body" — the same single-definition discipline
-/// [`crate::interior::Interior::walkable_neighbors`] documents for "one
-/// walkable hop." `room_affords_rest` only ever needed the boolean half of
-/// that question (`.any(..)`), and `select_sleep_site(..).is_some()` is that
-/// same boolean read off the SAME scan, so this delegation changes no
-/// behaviour: both ask "does at least one anchor offer Sleep to this body,"
-/// they just no longer risk drifting into two different answers to it.
-///
-/// **The delegate is now [`crate::sleep_site::room_offers_sleep`], not
-/// `select_sleep_site` (The Tenon, Task 6), and the single-definition
-/// discipline above is intact.** Both entry points still run one
+/// **Delegates to [`crate::sleep_site::room_offers_sleep`] rather than
+/// re-scanning anchors itself (The Tenon, Task 6).** Both entry points run one
 /// `sleep_site::sleep_candidates` scan and differ only in what they do with
 /// it. They had to split because CHOOSING a site now needs the sleeper's
 /// species-resolved [`SleepTraits`], and this function does not have one:

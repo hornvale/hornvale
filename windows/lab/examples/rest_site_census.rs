@@ -5,14 +5,15 @@
 //!
 //! ## The question
 //!
-//! Whether any body in any world has ever taken an `Afforded` rest bout is
-//! unmeasured. Decision 0697 records that the affect-trace byte-golden is
-//! blind to the afforded path (seed 42's traced window is entirely open
-//! ground); the idea-registry row `PSY-rest-site-is-a-tuning-indicator`
-//! records the reachability test as unbuilt. The Tenon's Task 7 adds three
-//! `at_locale: true` sleepable kinds to every world, so if this number is not
-//! taken now, the campaign cannot say what it changed and a null result will
-//! be indistinguishable from a broken instrument (spec §7.2, P3/P4/P6).
+//! Whether real bout rooms support any rest-offering anchor for the body in
+//! them was unmeasured. Decision 0697 records that the affect-trace
+//! byte-golden was blind to that non-`Bare` path (seed 42's traced window was
+//! entirely open ground); the idea-registry row
+//! `PSY-rest-site-is-a-tuning-indicator` recorded the reachability test as
+//! unbuilt. The Tenon's Task 7 adds three `at_locale: true` sleepable kinds to
+//! every world, so if this number is not taken now, the campaign cannot say
+//! what it changed and a null result will be indistinguishable from a broken
+//! instrument (spec §7.2, P3/P4/P6).
 //!
 //! ## Why it lives in `windows/lab` and not `windows/vessel`
 //!
@@ -31,11 +32,14 @@
 //! function does not return. Every count below is read off committed facts,
 //! never off a fold.
 //!
-//! **It carries three private reconstructions and says so at each site**:
-//! `liveness::room_affords_rest`; the `SiteGrade` resolution inside
-//! `liveness::rest_timeline`; and `liveness::grade_of` with the inputs resolved
-//! as `liveness::sleep_traits_of` resolves them. A measurement must not widen
-//! the surface it measures, so none is made `pub` for this probe's benefit.
+//! **It carries two private reconstructions and says so at each site**:
+//! `liveness::room_affords_rest`, and `liveness::grade_of` with the inputs
+//! resolved as `liveness::sleep_traits_of` resolves them. It does NOT
+//! reconstruct `rest_timeline`'s final `SiteGrade`: a same-day `SLEPT_ON`
+//! fact makes production use `SiteGrade::On(kind)`, while this probe measures
+//! only the room-level boolean that production retains as the fallback when
+//! no kind fact exists. A measurement must not widen the surface it measures,
+//! so none is made `pub` for this probe's benefit.
 
 use hornvale_kernel::{
     Facet, FacetId, KindId, Ledger, RoomMeshMemo, Seed, Value, WorldTime,
@@ -95,16 +99,18 @@ struct GradeObservation {
 /// One seed's counts.
 #[derive(Default)]
 struct SeedCounts {
+    /// Bodies the seed actually derived and the probe observed.
+    observed_bodies: usize,
     /// Ticks the simulation actually completed (`TICKS` unless it truncated).
     ticks_done: usize,
     /// `RESTED` bouts committed.
     rested: usize,
     /// `SLEPT` bouts committed.
     slept: usize,
-    /// Bouts (either predicate) whose room afforded rest.
-    afforded: usize,
-    /// Bouts (either predicate) whose room did not.
-    bare: usize,
+    /// Bouts (either predicate) whose room supported at least one sleep offer.
+    room_supported: usize,
+    /// Bouts (either predicate) whose room supported none (the `Bare` path).
+    room_bare: usize,
     /// `SLEPT_ON` facts, by the `KindId` text in `Value::Text`.
     slept_on: BTreeMap<String, usize>,
     /// Distinct walked rooms per `(is_built, is_cold)` QUADRANT of the 2x2
@@ -117,8 +123,8 @@ struct SeedCounts {
     /// sweep accumulator: packed addresses repeat across worlds, so these are
     /// scalar sums rather than one cross-world set.
     quadrant_counts: [usize; 4],
-    /// Of those four quadrants, how many afford rest to at least one body here.
-    quadrants_affording: [bool; 4],
+    /// Of those four quadrants, how many support rest for at least one body here.
+    quadrants_supported: [bool; 4],
     /// Distinct walked rooms in this seed containing each added surface.
     surface_rooms: BTreeMap<KindId, BTreeSet<FacetId>>,
     /// Cross-seed scalar sums of `surface_rooms`, by kind.
@@ -131,7 +137,7 @@ struct SeedCounts {
 
 fn main() {
     println!(
-        "rest-site census (The Tenon, Tasks 1 and 8) -- sweep: {} seeds x {} ticks x {} bodies \
+        "rest-site census (The Tenon, Tasks 1 and 8) -- sweep: {} seeds x {} ticks; request: {} bodies \
          ({} settled + {} wild) per seed",
         SEEDS.len(),
         TICKS,
@@ -144,10 +150,11 @@ fn main() {
     let mut totals = SeedCounts::default();
     let mut truncated: Vec<u64> = Vec::new();
     let mut empty: Vec<u64> = Vec::new();
+    let mut incomplete_bodies: Vec<(u64, usize)> = Vec::new();
 
     println!(
-        "{:>6}  {:>5}  {:>6}  {:>6}  {:>8}  {:>6}  {:>9}",
-        "seed", "ticks", "rested", "slept", "afforded", "bare", "slept-on"
+        "{:>6}  {:>6}  {:>5}  {:>6}  {:>6}  {:>10}  {:>6}  {:>9}",
+        "seed", "bodies", "ticks", "rested", "slept", "supported", "bare", "slept-on"
     );
     for seed in SEEDS {
         let Some(c) = census_of_seed(seed) else {
@@ -158,13 +165,17 @@ fn main() {
         if c.ticks_done != TICKS {
             truncated.push(seed);
         }
+        if c.observed_bodies != NPCS + WILD {
+            incomplete_bodies.push((seed, c.observed_bodies));
+        }
         println!(
-            "{seed:>6}  {:>5}  {:>6}  {:>6}  {:>8}  {:>6}  {:>9}",
+            "{seed:>6}  {:>6}  {:>5}  {:>6}  {:>6}  {:>10}  {:>6}  {:>9}",
+            c.observed_bodies,
             c.ticks_done,
             c.rested,
             c.slept,
-            c.afforded,
-            c.bare,
+            c.room_supported,
+            c.room_bare,
             c.slept_on.values().sum::<usize>()
         );
         accumulate_seed(&mut totals, c);
@@ -178,29 +189,31 @@ fn main() {
         SEEDS.len() - empty.len()
     );
     println!("  seeds with no world         : {empty:?}");
+    println!("  bodies actually observed    : {}", totals.observed_bodies);
+    println!("  INCOMPLETE body derivations : {incomplete_bodies:?}  (must be empty)");
     println!("  TRUNCATED runs              : {truncated:?}  (must be empty)");
     println!("  RESTED bouts                : {}", totals.rested);
     println!("  SLEPT bouts                 : {}", totals.slept);
     println!("  bouts, total                : {bouts}");
     println!(
-        "  graded Afforded             : {}  ({:.4} of bouts)",
-        totals.afforded,
-        ratio(totals.afforded, bouts)
+        "  room-supported / non-Bare   : {}  ({:.4} of bouts)",
+        totals.room_supported,
+        ratio(totals.room_supported, bouts)
     );
     println!(
-        "  graded Bare                 : {}  ({:.4} of bouts)",
-        totals.bare,
-        ratio(totals.bare, bouts)
+        "  room unsupported / Bare     : {}  ({:.4} of bouts)",
+        totals.room_bare,
+        ratio(totals.room_bare, bouts)
     );
     println!("  SLEPT_ON facts by kind      : {:?}", totals.slept_on);
     println!("  walked rooms by quadrant (distinct FacetIds within each seed, summed):");
     for i in 0..4 {
         println!(
-            "    built={} cold={} : {:>6} rooms   affords-rest-somewhere={}",
+            "    built={} cold={} : {:>6} rooms   room-supports-rest-somewhere={}",
             i / 2 == 1,
             i % 2 == 1,
             totals.quadrant_counts[i],
-            totals.quadrants_affording[i]
+            totals.quadrants_supported[i]
         );
     }
     println!("  added surfaces in distinct walked rooms (worlds reached / worlds built):");
@@ -236,11 +249,12 @@ fn main() {
 
 /// Fold one world's measurement into the sweep totals.
 fn accumulate_seed(totals: &mut SeedCounts, c: SeedCounts) {
+    totals.observed_bodies += c.observed_bodies;
     totals.ticks_done += c.ticks_done;
     totals.rested += c.rested;
     totals.slept += c.slept;
-    totals.afforded += c.afforded;
-    totals.bare += c.bare;
+    totals.room_supported += c.room_supported;
+    totals.room_bare += c.room_bare;
     for (k, n) in c.slept_on {
         *totals.slept_on.entry(k).or_default() += n;
     }
@@ -249,7 +263,7 @@ fn accumulate_seed(totals: &mut SeedCounts, c: SeedCounts) {
         // a NUMBER only; unioning across seeds conflates rooms of different
         // worlds. Sum each world's already-deduplicated count instead.
         totals.quadrant_counts[i] += c.quadrants[i].len();
-        totals.quadrants_affording[i] |= c.quadrants_affording[i];
+        totals.quadrants_supported[i] |= c.quadrants_supported[i];
     }
     for (kind, rooms) in c.surface_rooms {
         *totals.surface_room_counts.entry(kind).or_default() += rooms.len();
@@ -369,9 +383,6 @@ fn census_of_seed(seed: u64) -> Option<SeedCounts> {
         &mut ledger,
         concentrations,
     ));
-    if npcs.is_empty() {
-        return None;
-    }
     let calendar = hornvale_worldgen::sky_of(&world)
         .ok()
         .and_then(|sky| sky.calendar().cloned());
@@ -497,7 +508,8 @@ fn walk(
     done
 }
 
-/// Read the five counts off the finished ledger.
+/// Read the body-integrity check and the requested counts off the finished
+/// ledger.
 ///
 /// **The terrain is rebuilt once here rather than captured per tick, and that
 /// is exact, not an approximation.** The only terrain reads below are
@@ -529,6 +541,7 @@ fn count(
     let sleep_grades = hornvale_species::sleep_grade_registry();
     let realms = hornvale_species::habitat_realm_registry();
     let mut c = SeedCounts {
+        observed_bodies: npcs.len(),
         ticks_done,
         ..Default::default()
     };
@@ -547,8 +560,8 @@ fn count(
             let Ok(id) = room.pack() else { continue };
             let slot = quadrant_of(&room, &terrain);
             c.quadrants[slot].insert(id);
-            if !c.quadrants_affording[slot] && affords_rest(&room, npc, &terrain) {
-                c.quadrants_affording[slot] = true;
+            if !c.quadrants_supported[slot] && room_supports_rest(&room, npc, &terrain) {
+                c.quadrants_supported[slot] = true;
             }
             if body_rooms.insert(id) {
                 observe_room(
@@ -565,7 +578,7 @@ fn count(
             }
         }
 
-        // (1)+(2) THE BOUTS AND THEIR GRADE.
+        // (1)+(2) THE BOUTS AND THEIR ROOM-LEVEL SUPPORT BOOLEAN.
         for (predicate, is_sleep) in [(RESTED, false), (SLEPT, true)] {
             for f in ledger.facts_of(npc.entity, predicate) {
                 let Some(day) = f.day else { continue };
@@ -574,16 +587,18 @@ fn count(
                 } else {
                     c.rested += 1;
                 }
-                // Mirrors `rest_timeline`'s private grade resolution: the
-                // room is the last committed
-                // `agent-at` at or before the bout's day, defaulting to the
-                // body's home, and the grade is `room_affords_rest` of that
-                // room. RECONSTRUCTION, not the same function — it can drift.
+                // Mirrors only `rest_timeline`'s private ROOM FALLBACK: the
+                // room is the last committed `agent-at` at or before the
+                // bout's day, defaulting to the body's home, and the boolean
+                // is `room_affords_rest` of that room. This is NOT the final
+                // `SiteGrade`: a same-day `SLEPT_ON` makes production use
+                // `SiteGrade::On(kind)`. RECONSTRUCTION, not the same
+                // function — it can drift.
                 let room = agent_position(ledger, npc, day);
-                if affords_rest(&room, npc, &terrain) {
-                    c.afforded += 1;
+                if room_supports_rest(&room, npc, &terrain) {
+                    c.room_supported += 1;
                 } else {
-                    c.bare += 1;
+                    c.room_bare += 1;
                 }
             }
         }
@@ -708,12 +723,15 @@ fn quadrant_of(room: &Facet, terrain: &dyn Terrain) -> usize {
 /// probe may not call and must not widen to `pub` — a measurement that changes
 /// the surface it measures is not a measurement.
 ///
-/// It is exact TODAY and is not the same function. `room_affords_rest` derives
-/// the interior and delegates to `sleep_site::room_offers_sleep(&interior,
-/// body, objects)`, borrowing the object roster the fold built once. That
-/// delegate asks `.next().is_some()` of private `sleep_candidates`, whose
-/// predicate reads each kind's traits from the borrowed roster and applies
-/// private `offered_to_traits`.
+/// Its room-level BOOLEAN is exact TODAY and is not the same function.
+/// `room_affords_rest` derives the interior and delegates to
+/// `sleep_site::room_offers_sleep(&interior, body, objects)`, borrowing the
+/// object roster the fold built once. That delegate asks `.next().is_some()`
+/// of private `sleep_candidates`, whose predicate reads each kind's traits
+/// from the borrowed roster and applies private `offered_to_traits`. This
+/// says only that the room supports a non-`Bare` fallback; it does not
+/// reproduce `rest_timeline`'s final `SiteGrade::On(kind)` where a same-day
+/// `SLEPT_ON` fact exists.
 ///
 /// This reconstruction must instead use public [`offered_to`], which rebuilds
 /// the same object registry per anchor; its cost is deliberately different but
@@ -725,7 +743,7 @@ fn quadrant_of(room: &Facet, terrain: &dyn Terrain) -> usize {
 /// Through `offered_to`, NOT `offered_to_observer`: physical restoration is
 /// not gated on knowledge, and `room_affords_rest`'s own delegate uses the
 /// unknowing form.
-fn affords_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
+fn room_supports_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
     let interior = interior_of(room, terrain);
     interior
         .ids()
@@ -755,6 +773,29 @@ mod tests {
         assert_eq!(
             totals.quadrant_counts[0], 2,
             "the same packed address in two worlds must count as two rooms"
+        );
+    }
+
+    /// MUTATION THIS MUST FAIL AGAINST: omit the actual body count from the
+    /// cross-seed accumulator and keep reporting the configured request.
+    #[test]
+    fn aggregation_sums_observed_bodies_across_seeds() {
+        let first = SeedCounts {
+            observed_bodies: 3,
+            ..Default::default()
+        };
+        let second = SeedCounts {
+            observed_bodies: 4,
+            ..Default::default()
+        };
+
+        let mut totals = SeedCounts::default();
+        accumulate_seed(&mut totals, first);
+        accumulate_seed(&mut totals, second);
+
+        assert_eq!(
+            totals.observed_bodies, 7,
+            "the sweep must sum bodies actually returned by each seed's derivations"
         );
     }
 }

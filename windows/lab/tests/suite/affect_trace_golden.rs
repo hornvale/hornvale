@@ -163,11 +163,11 @@
 //! the trace is fully sensitive to the site multiplier the fold applies — it
 //! reddens hard on the `Bare` arm — and the first three prove no body in the
 //! traced window ever takes an `Afforded` bout at all, at any gain. The
-//! mechanism is `room_affords_rest`: `SupportsRest` is carried today only by
-//! `the-fireside-bed`, which the locale vocabulary composes only in a BUILT,
-//! COLD room, and every bout in this trace is taken on open ground. The
-//! `SiteGrade::Afforded` arm is dead code as far as seed 42's first 410
-//! creature-ticks are concerned.
+//! mechanism at that checkpoint was `room_affords_rest`: `SupportsRest` was
+//! carried only by `the-fireside-bed`, which the locale vocabulary composed
+//! only in a BUILT, COLD room, and every bout in this trace was taken on open
+//! ground. The `SiteGrade::Afforded` arm was dead code as far as seed 42's
+//! first 410 creature-ticks were concerned.
 //!
 //! **What that means for the next campaign that touches the grade:** a green
 //! run of this golden is NOT evidence that a change to
@@ -191,14 +191,19 @@
 //!   SiteGrade::Bare   1.0  -> 2.0    (the bare-ground arm)   RED,   27985 -> 27885 bytes; first divergence line 297
 //! ```
 //!
-//! The peoples-row red proves that at least one settled person in the traced
-//! window now takes a `SiteGrade::Afforded` bout; the
-//! whole-table result agrees rather than hiding a second rung's effect. The
-//! insulation-only green is narrower: this window still does not witness an
-//! afforded recovery whose multiplier comes from that rung. The `Bare` red
-//! remains the adjacent positive control. Therefore this golden is now real
-//! evidence for changes on the afforded path exercised by its peoples, but
-//! it is not total coverage of the seven-rung registry.
+//! The peoples-row red proves that at least one settled person's traced
+//! recovery takes a room-supported/non-`Bare` path; it does NOT prove the
+//! final production tag is exactly `SiteGrade::Afforded`. `rest_timeline`
+//! overwrites a same-day sleep with `SiteGrade::On(kind)` when `SLEPT_ON`
+//! records the chosen surface, and this byte control does not distinguish
+//! that tag from the room-level fallback. The whole-table result agrees
+//! rather than hiding a second rung's effect. The insulation-only green is
+//! narrower: this window still does not witness a supported recovery whose
+//! multiplier comes from that rung. The `Bare` red remains the adjacent
+//! positive control. Therefore this golden is real evidence for changes on
+//! the supported/non-Bare path exercised by its peoples, but it is not proof
+//! of an exact `Afforded` tag and not total coverage of the seven-rung
+//! registry.
 //!
 //! ## Why a change to ONE species' niche drifts EVERY creature's trace
 //!

@@ -228,31 +228,30 @@ mod tests {
     }
 
     /// The roster the preference case ranks against, built here rather than
-    /// read from [`crate::affordance::object_registry`] **because the
-    /// production roster cannot state the case at all**: `bed` is the only
-    /// kind carrying `SupportsRest` today, so no pair of PRODUCTION kinds
-    /// both offers `Sleep`, and a preference between two different kinds is
-    /// unwriteable against it until Task 7's epoch lands three more surfaces.
-    /// Constructing the roster is also what `affordance::offered`'s own doc
-    /// prescribes for exactly this situation — "so a test can construct a
-    /// property set independent of whatever the registry happens to hold
-    /// today."
+    /// read from [`crate::affordance::object_registry`] to isolate the one
+    /// variable under test. Production now carries four rest-supporting kinds
+    /// (`bed`, `rushes`, `ledge`, and `bracken`), so it can state a
+    /// different-kind preference directly; this synthetic pair instead holds
+    /// `offer` equal and varies substrate alone. Constructing the roster is
+    /// also what `affordance::offered`'s own doc prescribes for exactly this
+    /// situation — "so a test can construct a property set independent of
+    /// whatever the registry happens to hold today."
     ///
     /// The two keys are INVENTED rather than borrowed from
     /// `hornvale_thing::kinds`, so nothing here can read as a claim about
-    /// what a production hearth or threshold offers. `bracken` is soft
-    /// (`Natural(0.1)`, near this sleeper's optimum); `slab` is rock
-    /// (`Natural(1.0)`). They carry the SAME `offer`, so the two differ in
-    /// FIT alone and the case is about the sleeper's substrate curve rather
-    /// than about the surfaces' generosity.
+    /// what any production kind offers. The soft test surface is
+    /// `Natural(0.1)`, near this sleeper's optimum; the hard one is
+    /// `Natural(1.0)`. They carry the SAME `offer`, so the two differ in FIT
+    /// alone and the case is about the sleeper's substrate curve rather than
+    /// about the surfaces' generosity.
     fn test_roster() -> ComponentStore<KindId, ObjectTraits> {
         let surface = |offer: f64, substrate: Substrate| ObjectTraits {
             properties: [ObjectProperty::SupportsRest].into_iter().collect(),
             rest: Some(RestSurface { offer, substrate }),
         };
         [
-            (BRACKEN, surface(0.5, Substrate::Natural(0.1))),
-            (SLAB, surface(0.5, Substrate::Natural(1.0))),
+            (SOFT_SURFACE, surface(0.5, Substrate::Natural(0.1))),
+            (HARD_SURFACE, surface(0.5, Substrate::Natural(1.0))),
         ]
         .into_iter()
         .collect()
@@ -260,10 +259,10 @@ mod tests {
 
     /// A soft found surface, invented for [`test_roster`] — see its doc for
     /// why these two keys are not production kinds.
-    const BRACKEN: KindId = KindId("bracken");
+    const SOFT_SURFACE: KindId = KindId("test-soft-surface");
 
     /// A rock found surface, invented for [`test_roster`].
-    const SLAB: KindId = KindId("slab");
+    const HARD_SURFACE: KindId = KindId("test-hard-surface");
 
     /// The shipped roster, for the three cases that assert about PRODUCTION
     /// kinds and must keep doing so.
@@ -344,15 +343,15 @@ mod tests {
         let mut interior = Interior::new();
         // The ROCK slab first, so it holds the lower id and would win on the
         // tie-break alone.
-        let slab = interior.push(SLAB, None);
-        let bracken = interior.push(BRACKEN, None);
+        let slab = interior.push(HARD_SURFACE, None);
+        let bracken = interior.push(SOFT_SURFACE, None);
         assert!(
             slab < bracken,
             "the fixture must plant the WORSE site at the lower AnchorId, or \
              this test cannot tell a preference from the tie-break"
         );
         assert!(
-            grade_of(&sleeper, BRACKEN, &objects) > grade_of(&sleeper, SLAB, &objects),
+            grade_of(&sleeper, SOFT_SURFACE, &objects) > grade_of(&sleeper, HARD_SURFACE, &objects),
             "the fixture roster must actually grade the soft surface higher \
              for this sleeper, or the assertion below is vacuous"
         );

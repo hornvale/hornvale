@@ -146,10 +146,19 @@ scene goldens did not.
 
 ## What the worlds said
 
-The same 24 seeds, 40 ticks, and 10 bodies per world were measured before and
-after the surfaces arrived. The historical probe found 601 afforded bouts of
-5,096, a share of **0.1179**. The live probe found 2,926 of 4,859, a share of
-**0.6022**. Bare ground remains: 1,933 bouts, **0.3978** of the live total.
+The same 24 seeds and 40 ticks were measured before and after the surfaces
+arrived, with a request for ten bodies per world. The final integrity pass
+counted the derivations rather than the request: every produced seed supplied
+all ten bodies, **240 observed bodies** in total, and every one of the
+**24 × 40 ticks** completed. The historical probe found 601 room-supported
+bouts of 5,096, a share of **0.1179**. The live probe found 2,926 of 4,859, a
+share of **0.6022**. Unsupported rooms remain: 1,933 bouts, **0.3978** of the
+live total.
+
+Those are room-supported/non-`Bare` counts, not exact `Afforded` tags. The
+probe reconstructs the room boolean that remains production's fallback.
+Where a same-day `SLEPT_ON` fact exists, the live fold refines the sleep to
+`On(kind)` and grades that committed surface instead.
 
 All three surfaces reached bodies' walked rooms:
 
@@ -160,8 +169,7 @@ All three surfaces reached bodies' walked rooms:
 ```
 
 A live drow in a room containing a bed and a ledge grades the bed
-`1.500000000` above the ledge's `1.294000000`. Every run reached its requested
-tick count.
+`1.500000000` above the ledge's `1.294000000`.
 
 The selection counts are the result that must not be rounded into a success
 story:
