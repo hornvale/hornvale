@@ -604,6 +604,7 @@ fn store_discard_schedule(every: usize) {
     // And after the whole script (plus its two ignorable trailing facts), both
     // agree with a from-scratch fold of the full ledger.
     let scan = fold_one_by_one(&full);
+    let visits_scan = fold_latest_visit_one_by_one(&full);
     let _ = resident.trail(&full);
     let _ = chaotic.trail(&full);
     for e in [a, b] {
@@ -611,7 +612,11 @@ fn store_discard_schedule(every: usize) {
         assert_eq!(chaotic.trail(&full).of(e), scan.state().of(e));
         assert_eq!(
             first_visits(resident.latest_visit(&full), e),
-            first_visits(chaotic.latest_visit(&full), e)
+            first_visits(visits_scan.state(), e)
+        );
+        assert_eq!(
+            first_visits(chaotic.latest_visit(&full), e),
+            first_visits(visits_scan.state(), e)
         );
     }
 }
