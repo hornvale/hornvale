@@ -10788,7 +10788,18 @@ mod tests {
                 hornvale_worldgen::prevalence_with_weights(kind, facet, weights, pack, seed)
             });
 
-        let expected = pool.readings.len() * hornvale_worldgen::WeftKind::ALL.len();
+        let facet_count = pool.readings.len();
+        assert!(
+            facet_count > 0,
+            "the real seed-42 grid fixture produced no facets, so the call-count witness is vacuous"
+        );
+        let eligible_facets = pool.readings.iter().filter(|reading| reading.land).count();
+        assert!(
+            eligible_facets > 0,
+            "the real seed-42 grid fixture produced no eligible facets, so it does not witness the measured population"
+        );
+
+        let expected = facet_count * hornvale_worldgen::WeftKind::ALL.len();
         assert_eq!(
             prepared_evaluations, expected,
             "the grid path must evaluate four kinds through the prepared-weight seam for every facet"
