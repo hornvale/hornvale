@@ -332,6 +332,11 @@ pub struct ClimateView {
     /// macro-vertex one — see `weft_morans_i`'s own doc) and H2's four
     /// occurs-count companions.
     weft_walks: std::cell::OnceCell<WeftWalkPool>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// The Weft's (Task 9, fix round 1, I-3) shared build inputs — see
+    /// [`WeftContext`]'s own doc. Both [`ClimateView::weft_grid`] and
+    /// [`ClimateView::weft_walks`] read this rather than each building
+    /// their own `NearestVertexIndex`/`FieldPack`.
+    weft_ctx: std::cell::OnceCell<WeftContext>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
 }
 
 impl ClimateView {
@@ -345,6 +350,20 @@ impl ClimateView {
     /// per view and shared by every `weft-encounter-rate-*` metric.
     fn weft_walks(&self) -> &WeftWalkPool {
         self.weft_walks.get_or_init(|| weft_walk_pool(self))
+    }
+
+    /// The Weft's (Task 9, fix round 1, I-3) shared `NearestVertexIndex` +
+    /// `FieldPack`, computed at most once per view and read by both
+    /// [`weft_grid_pool`] and [`weft_walk_pool`] — see [`WeftContext`]'s own
+    /// doc for why this stopped being built twice.
+    fn weft_ctx(&self) -> &WeftContext {
+        self.weft_ctx.get_or_init(|| {
+            let terrain = self.terrain();
+            WeftContext {
+                index: hornvale_kernel::NearestVertexIndex::new(terrain.geosphere()),
+                pack: hornvale_worldgen::field_pack_from(terrain, &self.climate),
+            }
+        })
     }
 
     /// Build a climate-rung view with the shipped species roster.
@@ -387,6 +406,7 @@ impl ClimateView {
             climate,
             weft_grid: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
             weft_walks: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+            weft_ctx: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
         })
     }
 
@@ -5316,8 +5336,12 @@ pub fn registry() -> Vec<Metric> {
             name: "weft-existence-density-spring",
             doc: "H1's god's-eye density number for spring/seep (spec §7): the fraction \
                   of LAND-ELIGIBLE facets (spec §7's amendment population) carrying a \
-                  spring/seep occurrence, over the whole seed-42-resolution grid (one \
-                  representative facet per geosphere vertex). Distinct from \
+                  spring/seep occurrence, over a vertex-centred subsample — one \
+                  representative facet per geosphere vertex (`n = 40,962` at \
+                  `hornvale_terrain::GLOBE_LEVEL = 6`), a 1-in-9,830 sample of the ~4e8 \
+                  walk-depth facets on the grid, not every one of them; the same \
+                  resolution spec §7's own gate-component diagnostic reads at. Distinct \
+                  from \
                   `weft-encounter-rate-spring`, which reads the SAME kind's occurrence \
                   along a walked path — H1 is two numbers because discovery is \
                   observation-scoped and existence density alone (what The Prospect's H3 \
@@ -5452,23 +5476,29 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "weft-coherence-morans-i-spring",
-            doc: "H2's coherence readout for spring/seep (spec §7): Moran's I over the \
-                  binary occurrence indicator, sampled along land-eligible walked paths \
-                  (the same 78-walk, 4,680-step pool `weft-encounter-rate-spring` reads), \
-                  weighted by within-walk chain adjacency (step `s` and `s+1` of the same \
-                  walk). NOT geosphere vertex adjacency — that mesh's own spacing is many \
-                  hundreds of facets wide, far beyond any kind's correlation length \
-                  (5-40 facets), so it would measure at the wrong spatial scale and read \
-                  low regardless of whether facet-scale clustering is real; walked-path \
-                  adjacency is the fine resolution the correlation lengths are defined at. \
-                  Preregistered floor: positive and well above zero — H2's claim is that \
-                  derived features are spatially autocorrelated (clustered), not speckle \
-                  (i.i.d.); falsification means occurrence reads as noise despite \
-                  prevalence being position-continuous by construction. Read beside \
+            doc: "H2's readout for spring/seep (spec §7): Moran's I over the binary \
+                  occurrence indicator, sampled along land-eligible walked paths (the same \
+                  78-walk, 4,680-step pool `weft-encounter-rate-spring` reads), weighted by \
+                  within-walk chain adjacency (step `s` and `s+1` of the same walk). \
+                  **This is a construction-validation (a regression guard against \
+                  address-hashed speckle), not independent evidence the surface is \
+                  \"coherent\" in a stronger sense** — `occurs` thresholds a \
+                  position-continuous field, so a positive reading is near-guaranteed by \
+                  construction; the discriminating power lives in \
+                  `weft_prevalence.rs`'s real-vs-mutant table (real 0.998, mutant 0.209 for \
+                  this kind). No numeric floor is preregistered for this statistic (spec \
+                  §7 froze none); a positive reading well clear of zero over a \
+                  non-degenerate occurs-count is the qualitative claim, checked against \
                   `weft-coherence-occurs-count-spring`, the anti-vacuity companion (The \
                   Ford's shape) — see that metric's own doc for why a small count makes a \
-                  high reading here suspect. `Absent` if the walk pool is empty or the \
-                  indicator has zero variance across every walked step.",
+                  high reading here suspect. NOT geosphere vertex adjacency — measured on \
+                  this tree, that mesh's own spacing is ~106-127 facets per step, 1.9-23x \
+                  every kind's own correlation length (5-60 facets), so both a sound \
+                  construction and an address-hashed defect predict `I ~= 0` at that scale \
+                  — see `weft_morans_i`'s own doc for the full power argument and the \
+                  discarded vertex-adjacency readings, published in full rather than \
+                  discarded silently. `Absent` if the walk pool is empty or the indicator \
+                  has zero variance across every walked step.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-1.0, 0.0, 0.3, 0.6, 0.9, 1.0],
             },
@@ -8896,6 +8926,21 @@ const WEFT_WALK_DEPTH_BELOW_GRID: u32 = 7;
 /// plumb: universal(a majority-land threshold on the blended [0,1] ground-eligibility flag, fixed across every world and shared by every kind — the same value `LAND_ELIGIBILITY_THRESHOLD` names in `windows/worldgen/src/weft/kinds.rs`)
 const WEFT_LAND_ELIGIBILITY_THRESHOLD: f64 = 0.5;
 
+/// The shared build inputs [`weft_grid_pool`] and [`weft_walk_pool`] both
+/// need (Task 9, fix round 1, I-3): a [`hornvale_kernel::NearestVertexIndex`]
+/// over the view's geosphere, and the materialized
+/// [`hornvale_worldgen::FieldPack`]. Cached once via [`ClimateView::
+/// weft_ctx`] rather than built twice — measured on this tree, release,
+/// `NearestVertexIndex::new` ~1.9-2.0 ms and `field_pack_from` ~0.4-0.8 ms,
+/// so the duplication this closes is ~2.3-2.8 ms per world, not the whole
+/// grid sweep's own 524 ms. Small in isolation; still duplicated work with
+/// no reason to duplicate it, and free to remove once both pool builders
+/// read from the same view.
+struct WeftContext {
+    index: hornvale_kernel::NearestVertexIndex,
+    pack: hornvale_worldgen::FieldPack,
+}
+
 /// One geosphere vertex's Weft reading: whether its own representative
 /// facet is land-eligible, and — in [`WeftKind::ALL`] order — each kind's
 /// `(macro_state, prevalence, occurs)` triple. `macro_state` is read
@@ -8919,31 +8964,40 @@ struct WeftGridPool {
 }
 
 /// Build [`ClimateView::weft_grid`]'s pool: one pass over every geosphere
-/// vertex, reading `hornvale_worldgen::{prevalence, occurs}` and
+/// vertex — one representative facet PER VERTEX (`n = 40,962` at
+/// `hornvale_terrain::GLOBE_LEVEL = 6`), not every walk-depth facet on the
+/// grid (there are ~4e8 of those; this is the same 1-in-9,830 vertex-
+/// centred subsample spec §7's own gate-component diagnostic uses) —
+/// reading `hornvale_worldgen::{prevalence, occurs}` and
 /// [`hornvale_worldgen::WeftKind::macro_state`] for all four kinds.
 ///
-/// **Cost, measured on this tree (seed 42, release):** the world build
-/// (`seed_42_world` + `terrain_of` + `climate_from` + `field_pack_from`,
-/// paid once per view regardless of the Weft) took 280 ms; THIS sweep alone
-/// — all 40,962 vertices, all four kinds — took 524 ms, landing exactly on
+/// **Cost, measured on this tree (seed 42, release):** this sweep alone —
+/// all 40,962 vertices, all four kinds — took 524 ms, landing exactly on
 /// the known cross-check figures (11,218 land-eligible vertices, 3,191
-/// summed per-kind occurrences: 403 + 843 + 1,517 + 428). [`ClimateView::
-/// weft_grid`]'s caching is why this file registers 9 metrics against
-/// this sweep (H1's five existence-density readings and H3's four
-/// `weft-legibility-mi-*` readings, the latter needing this pool's
-/// `macro_state` field the cheaper walk pool below does not carry) rather
-/// than paying for it nine times. The other 13 of the Weft's 22
-/// registrations — H1's five `weft-encounter-rate-*` readings, H2's four
-/// Moran's-I readings and four occurs-count companions — read
-/// [`ClimateView::weft_walks`] instead: H2's own coherence statistic needs
-/// facet-scale adjacency (a walked path's consecutive steps), not this
-/// pool's macro-vertex-scale one — see [`weft_morans_i`]'s own doc for why
-/// that switch was made before any reading was interpreted.
+/// summed per-kind occurrences: 403 + 843 + 1,517 + 428). This is on top
+/// of the ordinary `ClimateView` build (`seed_42_world` + `terrain_of` +
+/// `climate_from`, ~280 ms, paid by every Climate-rung metric regardless
+/// of the Weft) — `NearestVertexIndex::new` and `field_pack_from`
+/// themselves are Weft-specific additions, not part of that baseline (see
+/// [`WeftContext`]'s own doc for their measured cost, now paid once per
+/// view rather than once per pool). [`ClimateView::weft_grid`]'s caching
+/// is why this file registers 9 metrics against this sweep (H1's five
+/// existence-density readings and H3's four `weft-legibility-mi-*`
+/// readings, the latter needing this pool's `macro_state` field the
+/// cheaper walk pool below does not carry) rather than paying for it nine
+/// times. The other 13 of the Weft's 22 registrations — H1's five
+/// `weft-encounter-rate-*` readings, H2's four Moran's-I readings and four
+/// occurs-count companions — read [`ClimateView::weft_walks`] instead:
+/// H2's own coherence statistic needs facet-scale adjacency (a walked
+/// path's consecutive steps), not this pool's geosphere-vertex-scale one
+/// — see [`weft_morans_i`]'s own doc for why that switch was made before
+/// any reading was interpreted.
 fn weft_grid_pool(view: &ClimateView) -> WeftGridPool {
     let terrain = view.terrain();
     let geo = terrain.geosphere();
-    let index = hornvale_kernel::NearestVertexIndex::new(geo);
-    let pack = hornvale_worldgen::field_pack_from(terrain, &view.climate);
+    let ctx = view.weft_ctx();
+    let index = &ctx.index;
+    let pack = &ctx.pack;
     let seed = view.terrain.astronomy.world.seed;
     let depth = geo.depth() + WEFT_WALK_DEPTH_BELOW_GRID;
     let n = geo.vertex_count() as u32;
@@ -8951,7 +9005,7 @@ fn weft_grid_pool(view: &ClimateView) -> WeftGridPool {
     let mut readings = Vec::with_capacity(n as usize);
     for i in 0..n {
         let facet = hornvale_kernel::Facet::containing(geo.position(Vertex(i)), depth);
-        let Some(weights) = facet.corner_weights(geo, &index) else {
+        let Some(weights) = facet.corner_weights(geo, index) else {
             readings.push(WeftVertexReading {
                 land: false,
                 per_kind: [(0.0, 0.0, false); 4],
@@ -8962,8 +9016,8 @@ fn weft_grid_pool(view: &ClimateView) -> WeftGridPool {
             >= WEFT_LAND_ELIGIBILITY_THRESHOLD;
         let mut per_kind = [(0.0, 0.0, false); 4];
         for (slot, kind) in hornvale_worldgen::WeftKind::ALL.into_iter().enumerate() {
-            let macro_state = kind.macro_state(weights, &pack);
-            let p = hornvale_worldgen::prevalence(kind, &facet, geo, &index, &pack, seed)
+            let macro_state = kind.macro_state(weights, pack);
+            let p = hornvale_worldgen::prevalence(kind, &facet, geo, index, pack, seed)
                 .expect("corner_weights just returned Some above");
             let occ = hornvale_worldgen::occurs(kind, &facet, seed, p);
             per_kind[slot] = (macro_state, p, occ);
@@ -9034,8 +9088,9 @@ struct WeftWalkPool {
 fn weft_walk_pool(view: &ClimateView) -> WeftWalkPool {
     let terrain = view.terrain();
     let geo = terrain.geosphere();
-    let index = hornvale_kernel::NearestVertexIndex::new(geo);
-    let pack = hornvale_worldgen::field_pack_from(terrain, &view.climate);
+    let ctx = view.weft_ctx();
+    let index = &ctx.index;
+    let pack = &ctx.pack;
     let seed = view.terrain.astronomy.world.seed;
     let depth = geo.depth() + WEFT_WALK_DEPTH_BELOW_GRID;
     let n = geo.vertex_count() as u32;
@@ -9047,7 +9102,7 @@ fn weft_walk_pool(view: &ClimateView) -> WeftWalkPool {
         let mut walk: Vec<[bool; 4]> = Vec::with_capacity(WEFT_ENCOUNTER_WALK_LEN);
         let mut eligible_throughout = true;
         for _ in 0..WEFT_ENCOUNTER_WALK_LEN {
-            let Some(weights) = facet.corner_weights(geo, &index) else {
+            let Some(weights) = facet.corner_weights(geo, index) else {
                 eligible_throughout = false;
                 break;
             };
@@ -9059,7 +9114,7 @@ fn weft_walk_pool(view: &ClimateView) -> WeftWalkPool {
             }
             let mut step = [false; 4];
             for (slot, kind) in hornvale_worldgen::WeftKind::ALL.into_iter().enumerate() {
-                let p = hornvale_worldgen::prevalence(kind, &facet, geo, &index, &pack, seed)
+                let p = hornvale_worldgen::prevalence(kind, &facet, geo, index, pack, seed)
                     .expect("corner_weights just returned Some above");
                 step[slot] = hornvale_worldgen::occurs(kind, &facet, seed, p);
             }
@@ -9117,29 +9172,66 @@ fn weft_encounter_rate_any(view: &ClimateView) -> MetricValue {
     MetricValue::Number(hits as f64 / total_steps as f64)
 }
 
-/// H2's coherence readout for one kind slot: Moran's I (binary indicator =
-/// occurrence) computed over [`WeftWalkPool`]'s own within-walk chain
-/// adjacency (step `s` and step `s+1` of the same walk are neighbours, both
-/// directions), pooled across every walk.
+/// H2's readout for one kind slot: Moran's I (binary indicator = occurrence)
+/// computed over [`WeftWalkPool`]'s own within-walk chain adjacency (step
+/// `s` and step `s+1` of the same walk are neighbours, both directions),
+/// pooled across every walk.
+///
+/// **What this statistic actually establishes, stated precisely (fix round
+/// 1, I-1) — a construction-validation, not a discovery that the surface is
+/// "coherent".** [`hornvale_worldgen::occurs`] thresholds a POSITION-
+/// CONTINUOUS field (`prevalence`) at the kind's own correlation length, so
+/// a positive lag-1-style autocorrelation in the resulting draws is
+/// near-guaranteed by construction whenever the sampling scale is fine
+/// enough to sit inside that correlation length — this metric is a
+/// REGRESSION GUARD against address-hashed speckle (a construction defect
+/// that would silently decorrelate neighbouring facets), not independent
+/// evidence that "the derived surface is coherent" in some stronger sense.
+/// The actual discriminating power — the reading that would catch a real
+/// defect — lives in `windows/worldgen/tests/suite/weft_prevalence.rs`'s
+/// real-vs-address-hashed-mutant table (lag-1 Pearson autocorrelation on
+/// `prevalence` itself, the same four kinds: real 0.998/0.982/0.99994/0.868
+/// against mutant 0.209/0.089/0.890/-0.025) — THAT comparison is what shows
+/// the construction is not silently broken; this metric alone, reading only
+/// the real world, cannot distinguish "coherent by design" from "coherent
+/// because occurrence thresholds a continuous field, which it always will
+/// be regardless of whether the design is otherwise sound".
 ///
 /// **Why chain adjacency, not [`hornvale_kernel::Geosphere::neighbors`]'s
 /// vertex mesh — a correction made DURING this task, before any reading was
 /// interpreted (decision 0016's ordering: the fix landed because the
-/// mismatch was measured, not because a later reading was uncomfortable).**
+/// mismatch was measured, not because a later reading was uncomfortable),
+/// and adjudicated on review as principled rather than metric-shopping, on
+/// a POWER argument rather than the value produced.**
 /// [`WeftKind::correlation_length_facets`](hornvale_worldgen::WeftKind::correlation_length_facets)
-/// is expressed in FACETS (5-40), and every kind's noise frequency is set
-/// against [`hornvale_kernel::Facet::edge_rad`] — a walk-depth facet edge,
-/// not a geosphere vertex spacing. Two geometrically ADJACENT geosphere
-/// vertices (`level 5`, 40,962 of them spread over the whole sphere) are
-/// separated by a great-circle distance many hundreds of facets wide — far
-/// beyond any kind's correlation length — so a Moran's I computed over that
-/// adjacency is measuring correlation at the wrong spatial scale entirely:
-/// it would read low regardless of whether facet-scale clustering is real,
-/// which is a confound about the INSTRUMENT, not a finding about the world.
+/// is expressed in FACETS — 5 (erratic) to 60 (thicket, the largest; an
+/// earlier version of this doc said "5-40", omitting it) — and every kind's
+/// noise frequency is set against [`hornvale_kernel::Facet::edge_rad`], a
+/// walk-depth facet edge, not a geosphere vertex spacing.
+/// `hornvale_terrain::GLOBE_LEVEL` is 6 (an earlier version of this doc said
+/// "level 5"), giving `n = 40,962` vertices; measured directly on this tree,
+/// one geosphere-vertex-adjacency step spans ~106-127 facets (mean ~115,
+/// `n=251` sampled edges) — **1.9λ for thicket (the closest of the four, and
+/// the weakest case for this argument) up to 23λ for erratic**. At that lag,
+/// BOTH hypotheses this statistic exists to discriminate between — a sound
+/// position-continuous construction, and an address-hashed defect — predict
+/// `I ≈ 0`: a genuinely coherent field has long since decorrelated by 1.9-23
+/// correlation lengths out, so the two are statistically indistinguishable
+/// at vertex-adjacency resolution, which is derivable from the published
+/// correlation-length constants before any world is built. A statistic
+/// whose competing hypotheses make the same prediction is not a test.
 /// [`WeftWalkPool`]'s consecutive steps ARE geometrically adjacent facets
-/// (`Facet::neighbors().next()`), the same fine resolution the correlation
-/// lengths are defined at and the same population
-/// `weft-encounter-rate-<kind>` reads — reusing it costs no extra sweep.
+/// (`Facet::neighbors().next()`), the resolution the correlation lengths are
+/// actually defined at and the same population `weft-encounter-rate-<kind>`
+/// reads — reusing it costs no extra sweep. The discarded vertex-adjacency
+/// readings (spring 0.030, overhang 0.013, thicket 0.096, erratic 0.001)
+/// are recorded in full in this task's ledger and report, not deleted —
+/// which is what made the correction checkable rather than merely asserted:
+/// both the discarded and the corrected statistics are monotone in λ in the
+/// SAME order (thicket < spring < overhang < erratic, ascending lag
+/// relative to λ), so the switch changed magnitude, not ranking — the
+/// signature of a wrong-scale correction, not a rescue (a rescue would be
+/// expected to reorder something).
 ///
 /// `Absent` when the walk pool is empty (no walk stayed land-eligible
 /// throughout) or the occurrence indicator has zero variance across every
@@ -9196,9 +9288,21 @@ fn weft_morans_i(view: &ClimateView, kind_idx: usize) -> MetricValue {
 /// population [`weft_morans_i`] computes its indicator over (see that
 /// function's own doc for why chain adjacency, not the geosphere vertex
 /// mesh). Distinct from `weft-existence-density-<kind>`'s numerator, which
-/// counts over the whole-grid population, not the walked sample.
+/// counts over the vertex-centred grid population, not the walked sample.
+///
+/// `Absent` when the walk pool itself is empty (fix round 1, M-6: this
+/// used to return `Number(0.0)` unconditionally, the one Weft metric NOT
+/// checking for an empty pool, asymmetric with its own sibling
+/// [`weft_morans_i`] and its twin `weft-encounter-rate-<kind>`, which both
+/// read the identical population and both go `Absent` on it). `Number(0.0)`
+/// is still the answer when the pool is non-empty and simply contains no
+/// occurrence of this kind — a real, meaningful zero, distinct from "no
+/// data".
 fn weft_coherence_occurs_count(view: &ClimateView, kind_idx: usize) -> MetricValue {
     let pool = view.weft_walks();
+    if pool.walks.is_empty() {
+        return MetricValue::Absent;
+    }
     let n = pool
         .walks
         .iter()
@@ -10569,6 +10673,77 @@ mod tests {
 
         let coerced: &TerrainView = full.as_ref();
         assert_eq!(coerced.globe.plate_count, terrain.globe.plate_count);
+    }
+
+    /// The Weft (Task 9, fix round 1, I-2): `windows/lab` reproduces three
+    /// constants worldgen owns — `WEFT_LAND_ELIGIBILITY_THRESHOLD` (mirrors
+    /// `windows/worldgen/src/weft/kinds.rs::LAND_ELIGIBILITY_THRESHOLD`,
+    /// `pub(crate)` there), `WEFT_WALK_DEPTH_BELOW_GRID` (mirrors
+    /// `weft_prevalence.rs`'s `WALK_DEPTH_BELOW_GRID`), and the eligibility
+    /// RULE itself (today: land alone, uniformly across kinds) — with
+    /// NOTHING checking they still agree. If worldgen's definition ever
+    /// drifts, the lab would silently redefine the population underneath 22
+    /// census columns and nothing would object — the two-sources-of-truth
+    /// shape this campaign has closed five times elsewhere (see entry #13's
+    /// own `no_weft_kind_label_appears_in_thing_kinds` for the same
+    /// discipline applied to a different pair of constants).
+    ///
+    /// The check is BEHAVIOURAL, not a constant comparison (constants can
+    /// agree by coincidence, or diverge in a way a bare `assert_eq!` on two
+    /// `f64`s would not catch if both files independently rounded the same
+    /// way) — it reads `hornvale_worldgen::prevalence`'s own OUTPUT, which
+    /// is only ever `Some(0.0)` (an exact, hard-coded early return, never a
+    /// computed near-zero) when worldgen's REAL eligibility gate refuses a
+    /// facet:
+    ///
+    /// - land-ineligible per the LAB's own reproduced threshold => every
+    ///   kind's prevalence must be an EXACT `0.0` (if the lab's threshold
+    ///   were higher than worldgen's real one, some of these facets would
+    ///   actually be eligible per worldgen and read nonzero).
+    /// - land-eligible per the LAB's own reproduced threshold => NOT every
+    ///   kind's prevalence is `0.0` (if the lab's threshold were lower than
+    ///   worldgen's real one, worldgen would refuse these facets too and
+    ///   every kind would read the same hard-coded `0.0`).
+    ///
+    /// The second direction relies on a continuous noise draw almost never
+    /// landing on the exact literal `0.0` for all four kinds at once at a
+    /// genuinely eligible facet — astronomically unlikely, unlike the first
+    /// direction's exact equality, which is unconditional by construction.
+    #[test]
+    fn weft_land_flag_agrees_with_worldgen_eligibility() {
+        let view = ClimateView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let pool = view.weft_grid();
+
+        let mut ineligible_checked = 0usize;
+        let mut eligible_checked = 0usize;
+        for r in &pool.readings {
+            let all_zero = r.per_kind.iter().all(|&(_, p, _)| p == 0.0);
+            if r.land {
+                assert!(
+                    !all_zero,
+                    "lab says this facet is land-eligible, but every kind's prevalence read \
+                     the exact hard-coded zero worldgen's own eligibility gate returns — \
+                     WEFT_LAND_ELIGIBILITY_THRESHOLD has drifted lower than worldgen's own"
+                );
+                eligible_checked += 1;
+            } else {
+                for (kind_idx, &(_, p, _)) in r.per_kind.iter().enumerate() {
+                    assert_eq!(
+                        p, 0.0,
+                        "lab says this facet is land-ineligible, but kind index {kind_idx}'s \
+                         prevalence read nonzero — WEFT_LAND_ELIGIBILITY_THRESHOLD has \
+                         drifted higher than worldgen's own, or worldgen's eligibility rule \
+                         has stopped being uniform across kinds"
+                    );
+                }
+                ineligible_checked += 1;
+            }
+        }
+        assert!(
+            ineligible_checked > 0 && eligible_checked > 0,
+            "the sample carried no facets of one class or the other — this test exercised \
+             nothing: ineligible={ineligible_checked} eligible={eligible_checked}"
+        );
     }
 
     /// Extract `name`'s metric from an already-built `BuiltView`, panicking

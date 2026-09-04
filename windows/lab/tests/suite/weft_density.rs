@@ -9,8 +9,12 @@
 //! # The readout (seed 42, this tree, `--release`)
 //!
 //! **H1 — density, two numbers, per kind and combined.** Existence density
-//! is god's-eye, over the whole grid (`n_land = 11,218` of `n = 40,962`);
-//! encounter rate is walked, over 78 land-eligible 60-step walks (4,680
+//! is god's-eye, over a vertex-centred subsample — one representative facet
+//! per geosphere vertex (`n_land = 11,218` of `n = 40,962`, at
+//! `hornvale_terrain::GLOBE_LEVEL = 6`), a 1-in-9,830 sample of the ~4e8
+//! walk-depth facets on the grid, not literally "the whole grid" (fix round
+//! 1, M-5) — the same resolution spec §7's own gate-component diagnostic
+//! reads at; encounter rate is walked, over 78 land-eligible 60-step walks (4,680
 //! steps total, `STRIDE = 137` — the identical sample
 //! `weft_prevalence.rs::land_eligible_walks` draws, and the walk count (78)
 //! reproduces that file's own measured figure independently).
@@ -26,16 +30,25 @@
 //! The four existence-density numerators (403 / 843 / 1,517 / 428) and the
 //! union (2,875, 25.63%) match this task's own cross-check figures exactly.
 //!
-//! **H2 — coherence, paired with an anti-vacuity companion.** Moran's I is
-//! computed over the SAME walk pool's within-walk chain adjacency (see
-//! `weft_morans_i`'s own doc in `metrics.rs` for why geosphere-vertex
-//! adjacency — tried first — measures at the wrong spatial scale entirely
-//! and was replaced before this reading was taken). The anti-vacuity
-//! companion (occurs-count) is the SAME walked population's raw hit count —
-//! which is therefore numerically identical to H1's own encounter-rate
-//! numerator above; that is not a bug, it is the same "how much substance
-//! underlies this" question H1 already answers, reused rather than
-//! recomputed.
+//! **H2 — a construction-validation, paired with an anti-vacuity companion,
+//! not a discovery that the surface is "coherent" (fix round 1, I-1 —
+//! corrected here because an earlier draft of this doc oversold it).**
+//! `occurs` thresholds a position-continuous `prevalence` field, so a
+//! positive lag-1-style reading is near-guaranteed by construction; this
+//! statistic is a regression guard against address-hashed speckle, and the
+//! discriminating power actually lives in `weft_prevalence.rs`'s
+//! real-vs-address-hashed-mutant table (real 0.998/0.982/0.99994/0.868
+//! against mutant 0.209/0.089/0.890/-0.025), which this test's own module
+//! doc already pointed at. Moran's I here is computed over the SAME walk
+//! pool's within-walk chain adjacency (see `weft_morans_i`'s own doc in
+//! `metrics.rs` for the full power argument for why geosphere-vertex
+//! adjacency — tried first — cannot discriminate a sound construction from
+//! an address-hashed one at that lag, and the discarded readings, published
+//! in full rather than deleted). The anti-vacuity companion (occurs-count)
+//! is the SAME walked population's raw hit count — which is therefore
+//! numerically identical to H1's own encounter-rate numerator above; that
+//! is not a bug, it is the same "how much substance underlies this"
+//! question H1 already answers, reused rather than recomputed.
 //!
 //! | kind | Moran's I | occurs-count (companion) |
 //! | --- | ---: | ---: |
@@ -68,19 +81,22 @@
 //! genuinely different samples of the same underlying process — not
 //! evidence either number is redundant.
 //!
-//! **H2 holds for all four kinds.** Every kind reads clearly positive
-//! Moran's I (0.59-0.96) over a substantial occurs-count (125-924) — real
-//! spatial clustering along a walked path, not speckle and not a numerical
-//! artifact of a handful of adjacent hits. Erratic is the WEAKEST of the
-//! four (0.587, against 0.81-0.96 for the other three) but is not near
-//! zero — its own design brief (Task 7) requires it stay at the free-noise
-//! end for H3's legibility test specifically, and a short (5-facet)
-//! correlation length still produces real facet-to-facet texture over a
-//! single walked step, just less of it than the longer-correlation-length
-//! kinds. This matches `weft_prevalence.rs`'s own independent measurement of
-//! erratic's real (not address-hashed) lag-1 prevalence autocorrelation,
-//! 0.868 — high in absolute terms, and still the lowest of that file's own
-//! four real readings too.
+//! **H2's construction-validation passes for all four kinds — no
+//! address-hashed defect detected, which is what this statistic can
+//! actually show (see the H2 paragraph above).** Every kind reads clearly
+//! positive Moran's I (0.59-0.96) over a substantial occurs-count
+//! (125-924) — not the near-zero reading an address-hashed regression
+//! would produce, and not a numerical artifact of a handful of adjacent
+//! hits. Erratic is the WEAKEST of the four (0.587, against 0.81-0.96 for
+//! the other three) but is not near zero — its own design brief (Task 7)
+//! requires it stay at the free-noise end for H3's legibility test
+//! specifically, and a short (5-facet) correlation length still produces
+//! real facet-to-facet texture over a single walked step, just less of it
+//! than the longer-correlation-length kinds. This matches
+//! `weft_prevalence.rs`'s own independent measurement of erratic's real
+//! (not address-hashed) lag-1 prevalence autocorrelation, 0.868 — high in
+//! absolute terms, and still the lowest of that file's own four real
+//! readings too.
 //!
 //! **H3's preregistered ORDERING IS FALSIFIED, and is reported as the
 //! result per decision 0016 — no constant here was retuned after seeing
@@ -213,20 +229,24 @@ fn the_preregistered_readout_is_measured_and_recorded() {
              not a genuine spatial process"
         );
     }
-    // H2's positive claim, all four kinds: every kind reads as spatially
-    // clustered, not speckle. Erratic is NOT H2's negative control — that is
-    // H3's job (macro-state legibility), and erratic's short (5-facet)
-    // correlation length still produces real facet-to-facet texture, just
-    // less of it than the other three (`weft_prevalence.rs`'s own real-vs-
-    // mutant table already shows this: erratic's real lag-1 prevalence
-    // autocorrelation is 0.868, far above its address-hashed mutant's
-    // -0.025, even though it is the weakest of the four kinds there too).
-    // So erratic is asserted to be the WEAKEST reading, not a near-zero one.
+    // H2's construction-validation, all four kinds: every kind reads clear
+    // of the near-zero band an address-hashed defect would produce — this
+    // is a regression guard, not independent evidence of "coherence" (see
+    // this file's own module doc, H2 section, fix round 1 I-1). Erratic is
+    // NOT H2's negative control — that is H3's job (macro-state
+    // legibility) — and erratic's short (5-facet) correlation length still
+    // produces real facet-to-facet texture, just less of it than the other
+    // three (`weft_prevalence.rs`'s own real-vs-mutant table already shows
+    // this: erratic's real lag-1 prevalence autocorrelation is 0.868, far
+    // above its address-hashed mutant's -0.025, even though it is the
+    // weakest of the four kinds there too). So erratic is asserted to be
+    // the WEAKEST reading, not a near-zero one.
     for (kind, &i_stat) in KINDS.iter().zip(morans.iter()) {
         assert!(
             i_stat > 0.2,
-            "H2: {kind}'s Moran's I ({i_stat}) does not read as clustered — H2's claim is \
-             spatial autocorrelation, not speckle"
+            "H2: {kind}'s Moran's I ({i_stat}) reads inside the near-zero band an \
+             address-hashed defect would produce — the construction-validation this \
+             statistic performs has failed"
         );
     }
     let erratic_is_weakest = morans[3] == morans.iter().cloned().fold(f64::INFINITY, f64::min);
