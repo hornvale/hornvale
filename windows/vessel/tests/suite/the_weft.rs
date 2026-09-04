@@ -110,11 +110,16 @@ const WALK_BUDGET: usize = 2_000;
 /// weft_window.rs`'s `Fixture` uses, built once per test and reused across
 /// every step so a 2,000-step walk pays one `terrain_of`/`climate_from`
 /// pair, not one per step.
+///
+/// **Carries a `LocaleContext` as of fix round 1 (F5).** Not for the weft
+/// derivation itself (`pack`/`world.seed` are still what
+/// `all_features_at_cached` reads) — for [`Self::is_afloat`], which needs
+/// [`hornvale_locale::LocaleContext::water_column_at`] to reproduce
+/// `Session::column_here`'s own predicate independently.
 struct Oracle {
     world: hornvale_kernel::World,
-    terrain: hornvale_terrain::GeneratedTerrain,
+    ctx: LocaleContext,
     pack: hornvale_worldgen::FieldPack,
-    index: hornvale_kernel::NearestVertexIndex,
 }
 
 impl Oracle {
@@ -129,13 +134,13 @@ impl Oracle {
         let climate =
             hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
         let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
-        let index = hornvale_kernel::NearestVertexIndex::new(terrain.geosphere());
-        Self {
-            world,
-            terrain,
-            pack,
-            index,
-        }
+        // `build_from`, not `build`: reuses the `terrain`/`climate` pair
+        // already derived above rather than re-sculpting a second copy
+        // underneath it (its own doc: "byte-identical to `build` whenever
+        // `terrain` equals `terrain_of(world)`", which is exactly the case
+        // here).
+        let ctx = LocaleContext::build_from(&world, &terrain, &climate);
+        Self { world, ctx, pack }
     }
 
     /// The features [`hornvale_worldgen::all_features_at_cached`] derives at
@@ -146,12 +151,36 @@ impl Oracle {
     fn features_at(&self, session: &Session<'_>) -> Vec<hornvale_worldgen::WeftFeature> {
         hornvale_worldgen::all_features_at_cached(
             &session.position(),
-            self.terrain.geosphere(),
-            &self.index,
+            self.ctx.climate().geosphere(),
+            self.ctx.nearest_index(),
             &self.pack,
             self.world.seed,
             None,
         )
+    }
+
+    /// Whether `facet` renders AFLOAT — an independent reproduction of
+    /// `Session::column_here`'s own predicate (fix round 1, F5): the SAME
+    /// `corner_weights` array `weft::prevalence` reads, reduced to its
+    /// single max-weight corner (`max_by_key`, matching
+    /// `v.locale.corners.iter().max_by_key(|c| c.weight)`'s tie-break
+    /// exactly, since `Locale::corners` is built from this identical array
+    /// in this identical order — `windows/locale/src/lib.rs`'s own
+    /// `corners: weights.iter().map(...)` construction site), then a
+    /// `water_column_at` check on that one vertex. `false` (never afloat)
+    /// for a facet shallower than the grid, matching `column_here`'s own
+    /// `Ok(v) ... else return Vec::new()` fallback.
+    fn is_afloat(&self, facet: &hornvale_kernel::Facet) -> bool {
+        let geo = self.ctx.climate().geosphere();
+        let Some(weights) = facet.corner_weights(geo, self.ctx.nearest_index()) else {
+            return false;
+        };
+        let dominant = weights
+            .iter()
+            .max_by_key(|(_, w)| *w)
+            .expect("corner_weights always returns four entries")
+            .0;
+        !self.ctx.water_column_at(dominant).is_empty()
     }
 }
 
@@ -168,9 +197,18 @@ fn the_walk_reports_a_derived_feature_when_it_finds_one() {
     let (mut s, _) =
         Session::start(&oracle.world, &PossessOpts::default()).expect("seed 42 possesses");
 
+    // **Also requires `!is_afloat` (fix round 1, F5).** Without this, the
+    // walk could stop on one of the 35 measured coastal facets where
+    // eligibility and vantage disagree (see `Session::describe_here`'s own
+    // `weft_clause` doc) — a facet the independent oracle calls occupied but
+    // the FIXED render correctly renders silent. This test's own claim is
+    // about the ordinary case (a clean, on-land occurrence), so it walks
+    // past a conflict facet rather than tripping on one; the conflict case
+    // itself is `afloat_facets_never_render_a_weft_clause` below.
     let mut found = oracle.features_at(&s);
+    let mut afloat = oracle.is_afloat(&s.position());
     let mut steps = 0usize;
-    while found.is_empty() && steps < WALK_BUDGET {
+    while (found.is_empty() || afloat) && steps < WALK_BUDGET {
         let before = s.position();
         for word in COMPASS_WORDS {
             match s.handle(&format!("go {word}")) {
@@ -183,14 +221,15 @@ fn the_walk_reports_a_derived_feature_when_it_finds_one() {
         }
         steps += 1;
         found = oracle.features_at(&s);
+        afloat = oracle.is_afloat(&s.position());
     }
     assert!(
-        !found.is_empty(),
-        "the walk never reached a facet the independent oracle says carries a \
-         derived feature, in {WALK_BUDGET} steps — either the walk is stuck \
-         (every bearing refused at every step) or Task 7's measured density \
-         (spring 0.984%, overhang 2.058%, thicket 3.703%, erratic 1.045% of \
-         40,962 facets) has regressed"
+        !found.is_empty() && !afloat,
+        "the walk never reached a genuinely on-land facet the independent \
+         oracle says carries a derived feature, in {WALK_BUDGET} steps — \
+         either the walk is stuck (every bearing refused at every step) or \
+         Task 7's measured density (spring 0.984%, overhang 2.058%, thicket \
+         3.703%, erratic 1.045% of 40,962 facets) has regressed"
     );
 
     let expected = hornvale_vessel::weft_prose::weft_clause(&found);
@@ -248,6 +287,80 @@ fn a_facet_with_nothing_derived_stays_silent() {
     }
 }
 
+/// Fix round 1 (reviewer IMPORTANT, F5). `Session::describe_here`'s vantage
+/// predicate (`Self::column_here`'s single max-weight-corner pick) and weft
+/// eligibility (`land_eligible`'s four-corner bilinear blend, `>= 0.5`) are
+/// two DIFFERENT tests over the same four corner weights, and they can
+/// disagree at a coastal facet: the corner-pick sees ocean, the blend still
+/// reads majority-land. Measured directly on seed 42, every walk-depth
+/// facet over all 40,962 vertices: 29,713 facets are afloat by the
+/// corner-pick test, and of those, exactly 35 (0.118% of afloat facets,
+/// 0.085% of all facets) also carry >= 1 weft feature by the blend test —
+/// real, not merely constructible, though rare.
+///
+/// This is the population `Session::describe_here`'s `if vantage.is_none()`
+/// gate exists to protect: at every one of these 35 facets, the render must
+/// suppress the weft clause. Reproduced against the free functions directly
+/// (`Oracle::is_afloat` mirrors `Session::column_here`'s own predicate
+/// exactly — see its own doc) rather than through a live `Session`, because
+/// steering a live walk onto 35 specific facets scattered across 40,962
+/// would need real geodesic pathfinding this file does not otherwise build;
+/// `the_walk_reports_a_derived_feature_when_it_finds_one` above is the live
+/// end-to-end witness for the (overwhelmingly more common) clean case.
+///
+/// The count is asserted EXACTLY, not as a floor: a population this test
+/// measures shrinking to zero would make it vacuous, and growing would be
+/// worth knowing about (a different eligibility/vantage relationship than
+/// the one this doc describes).
+#[test]
+fn afloat_facets_never_render_a_weft_clause() {
+    let oracle = Oracle::build();
+    let geo = oracle.ctx.climate().geosphere();
+    let walk = hornvale_locale::walk_depth(&oracle.ctx);
+
+    let mut conflicts: Vec<hornvale_kernel::Facet> = Vec::new();
+    for i in 0..geo.vertex_count() {
+        let v = hornvale_kernel::Vertex(i as u32);
+        let facet = hornvale_kernel::Facet::containing(geo.position(v), walk);
+        if !oracle.is_afloat(&facet) {
+            continue;
+        }
+        let features = hornvale_worldgen::all_features_at_cached(
+            &facet,
+            geo,
+            oracle.ctx.nearest_index(),
+            &oracle.pack,
+            oracle.world.seed,
+            None,
+        );
+        if !features.is_empty() {
+            conflicts.push(facet);
+        }
+    }
+
+    assert_eq!(
+        conflicts.len(),
+        35,
+        "the vantage/eligibility disagreement moved from 35 facets to {} -- \
+         update this count (and Session::describe_here's weft_clause gate \
+         doc, which cites it) in the same commit as whatever changed the \
+         underlying predicates",
+        conflicts.len()
+    );
+
+    // What this test does NOT independently prove, said plainly: that
+    // `Session::describe_here`'s `if vantage.is_none() { .. } else {
+    // String::new() }` conditional actually fires at these 35 facets when a
+    // live session stands on one. `describe_here` is a private method
+    // reachable only through `Session::handle`, and reaching one specific
+    // facet out of 35 scattered across 40,962 needs real pathfinding this
+    // file does not build (see the doc above). What IS pinned: the
+    // population the gate exists to protect is real and its size (35), so a
+    // silent change to either predicate (`column_here`'s corner pick,
+    // `land_eligible`'s blend) that grows or shrinks it reddens here rather
+    // than going unnoticed.
+}
+
 /// Carried from Task 7: the overhang's affordance proves the query path end
 /// to end. `weft_offers` routes a `WeftKind` through the SAME `offered()`
 /// subset query real placed things use through `offered_by`, so this is
@@ -256,10 +369,53 @@ fn a_facet_with_nothing_derived_stays_silent() {
 /// table.
 #[test]
 fn the_overhang_affords_shelter_and_warmth() {
-    use hornvale_vessel::affordance::{OfferedVerb, weft_offers};
+    use hornvale_vessel::affordance::{OfferedVerb, weft_offers, weft_offers_for};
     use hornvale_worldgen::WeftKind;
 
-    let overhang = weft_offers(WeftKind::Overhang);
+    // **Driven from a REALIZED occurrence (fix round 1, F6).** Spec §5.6
+    // assigns the overhang the job of proving "the affordance path end to
+    // end"; running the query from a bare `WeftKind` (as this test did
+    // before) proves the query machinery answers correctly for a kind, but
+    // never actually reaches a `WeftFeature` a derivation produced. Found by
+    // direct scan (the same "every walk-depth facet over the geosphere's own
+    // vertices" construction site Task 7's own full-grid table used) rather
+    // than a live session walk — the claim here is about the query's answer
+    // for a real occurrence, not that a possession can physically stand on
+    // one, which `the_walk_reports_a_derived_feature_when_it_finds_one`
+    // above already covers for the general (kind-agnostic) case.
+    let oracle = Oracle::build();
+    let geo = oracle.ctx.climate().geosphere();
+    let walk = hornvale_locale::walk_depth(&oracle.ctx);
+    let realized = (0..geo.vertex_count())
+        .find_map(|i| {
+            let facet = hornvale_kernel::Facet::containing(
+                geo.position(hornvale_kernel::Vertex(i as u32)),
+                walk,
+            );
+            hornvale_worldgen::features_at_cached(
+                WeftKind::Overhang,
+                &facet,
+                geo,
+                oracle.ctx.nearest_index(),
+                &oracle.pack,
+                oracle.world.seed,
+                None,
+            )
+            .into_iter()
+            .next()
+        })
+        .expect(
+            "seed 42 must realize at least one Overhang occurrence -- Task 7's own \
+             full-grid table measured 843 of 40,962, so this scan finding none would \
+             mean that density has regressed to zero",
+        );
+    assert_eq!(
+        realized.kind,
+        WeftKind::Overhang,
+        "the found feature must be the kind actually searched for"
+    );
+
+    let overhang = weft_offers_for(&realized);
     assert!(
         overhang.contains(&OfferedVerb::Sleep),
         "the overhang must offer shelter (Sleep, gated on SupportsRest): {overhang:?}"
@@ -289,4 +445,96 @@ fn the_overhang_affords_shelter_and_warmth() {
              the overhang carries a component bundle: {offers:?}"
         );
     }
+}
+
+/// Fix round 1 (reviewer IMPORTANT, F4): `weft_object_registry`'s own doc
+/// claims its key space (`WeftKind`) is disjoint from `object_registry`'s
+/// (`hornvale_thing::THING_KINDS`) "by construction" — a comment, not a
+/// guarantee, until this test. Every `WeftKind`'s bare label (the primary
+/// noun before the "/" in each variant's own doc, and the root segment of
+/// its `derived/<name>/v1` stream label — `windows/worldgen/src/
+/// streams.rs`'s `WEFT_SPRING`/`WEFT_OVERHANG`/`WEFT_THICKET`/
+/// `WEFT_ERRATIC`) must not appear as a `THING_KINDS` row. If it ever did,
+/// the two registries would represent two DIFFERENT concepts under one
+/// string, which is exactly the confusion keeping the tables separate (spec
+/// §5.6's `object_registry` route was closed by G-e, `windows/vessel/tests/
+/// suite/kind_totality.rs`) was meant to avoid.
+#[test]
+fn no_weft_kind_label_appears_in_thing_kinds() {
+    const WEFT_KIND_LABELS: [&str; 4] = ["spring", "overhang", "thicket", "erratic"];
+    for label in WEFT_KIND_LABELS {
+        assert!(
+            !hornvale_thing::THING_KINDS.contains(&label),
+            "{label:?} is both a WeftKind label and a THING_KINDS row -- the \
+             two registries are no longer disjoint by construction, and \
+             weft_object_registry must not be merged into object_registry \
+             regardless (spec §5.6's amendment; see the ledger entry on the \
+             registry split)"
+        );
+    }
+}
+
+/// Fix round 1 (reviewer IMPORTANT, F2): `windows/worldgen/tests/suite/
+/// weft_ledger_guard.rs`'s `the_derived_surface_commits_no_facts` reads
+/// `seed_42_world()` OFF DISK — no weft code runs in that test at all, so it
+/// can only fail if someone rebaselines the golden, never because a derived
+/// feature actually reached the ledger. It is a valid byte-golden backstop
+/// wearing the wrong name (see its own doc, corrected in this fix round).
+///
+/// **This is the guard that CAN fail.** It runs the weft surface for real —
+/// a live session walking a real, dense stretch of seed 42 (every step
+/// prefills `Session::go`'s `weft_window` and every `look` reads
+/// `describe_here`'s weft clause through it, at facets Task 7 measured
+/// carry a feature roughly 7-8% of the time combined) — and asserts the
+/// session's own committed ledger grew by EXACTLY one fact per successful
+/// step (`Session::commit_agent_at`, decision 0069's `agent-at` trail) and
+/// nothing else. A future change that wired any weft derivation into
+/// `Ledger::commit` would move this count and this test would catch it,
+/// which is exactly what the static fixture guard structurally cannot do —
+/// `prevalence`/`occurs`/`WeftWindow`/`all_features_at_cached` take no
+/// `Ledger`/`World` parameter anywhere in their signatures, so nothing here
+/// proves that by inspection either; it proves it by RUNNING the surface and
+/// counting.
+#[test]
+fn walking_through_dense_weft_facets_commits_only_agent_at_facts() {
+    const STEPS: usize = 300;
+
+    let world = hornvale_worldgen::seed_42_world();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+
+    let before = s.committed_fact_count();
+    let mut successful_steps = 0usize;
+    for word in COMPASS_WORDS.iter().cycle().take(STEPS) {
+        let pos_before = s.position();
+        match s.handle(&format!("go {word}")) {
+            Turn::Out(_) => {}
+            Turn::Released(t) => panic!("go must not release the session: {t}"),
+        }
+        if s.position() != pos_before {
+            successful_steps += 1;
+        }
+        // `go` already renders through `describe_here` once; a second,
+        // explicit `look` here reads the weft clause AGAIN at the same
+        // facet, exercising the window's cache-HIT path (the facet `go`
+        // just prefilled) on top of the miss `go` itself paid.
+        match s.handle("look") {
+            Turn::Out(_) => {}
+            Turn::Released(t) => panic!("look must not release the session: {t}"),
+        }
+    }
+    let after = s.committed_fact_count();
+
+    assert!(
+        successful_steps > 0,
+        "fixture check: at least one step must succeed, or this test exercises no weft \
+         reads at all"
+    );
+    assert_eq!(
+        after - before,
+        successful_steps,
+        "walking {successful_steps} successful steps (reading the weft window and the weft \
+         clause twice per facet) must commit exactly one agent-at fact per step and nothing \
+         else -- {} facts committed instead ({before} before, {after} after)",
+        after - before
+    );
 }

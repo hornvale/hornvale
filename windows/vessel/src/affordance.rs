@@ -397,6 +397,18 @@ pub fn weft_offers(kind: hornvale_worldgen::WeftKind) -> BTreeSet<OfferedVerb> {
     offered(&traits)
 }
 
+/// [`weft_offers`], from a REALIZED [`hornvale_worldgen::WeftFeature`]
+/// rather than a bare kind (fix round 1, F6). Spec §5.6 assigns the overhang
+/// the job of proving "the affordance path end to end" — before this
+/// function, `weft_offers` ran from a hardcoded `WeftKind`, never from an
+/// occurrence a derivation actually produced (`prevalence`/`occurs`, or the
+/// residency window that caches them), so the path stopped one step short
+/// of the claim. This is that step: the query answer for a facet the world
+/// actually generated a feature at, not a kind named in isolation.
+pub fn weft_offers_for(feature: &hornvale_worldgen::WeftFeature) -> BTreeSet<OfferedVerb> {
+    weft_offers(feature.kind)
+}
+
 /// Whether `kind` carries [`ObjectProperty::Encloses`] — the gate `examine`
 /// reads before revealing what an anchor holds `within` it (spec §3.6,
 /// amended). A kind absent from [`object_registry`] carries no property, so

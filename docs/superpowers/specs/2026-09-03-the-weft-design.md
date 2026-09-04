@@ -243,11 +243,31 @@ nothing — and that is better learned from a designed control than inferred fro
 a uniformly good-looking number.
 
 Overhangs use the existing affordance vocabulary: `ObjectProperty`
-(`SupportsRest`, `HoldsLiquid`, `AffordsPassage`, `Encloses`, warmth) with
-`object_registry` as a `ComponentStore<KindId, ObjectTraits>` held
-**vessel-locally — build-state, not world-state, nothing serialized**. "A place
-to get out of the rain and start a fire" is a component bundle in a vocabulary
-that already exists.
+(`SupportsRest`, `HoldsLiquid`, `AffordsPassage`, `Encloses`, warmth), and the
+STORAGE SHAPE `object_registry` already is — a `ComponentStore<K,
+ObjectTraits>` — held **vessel-locally — build-state, not world-state,
+nothing serialized**. "A place to get out of the rain and start a fire" is a
+component bundle in a vocabulary that already exists.
+
+**This paragraph used to say the bundle lives IN `object_registry` itself,
+keyed on `KindId`. It shipped as a SEPARATE table instead
+(`weft_object_registry() -> ComponentStore<WeftKind, ObjectTraits>`,
+Task 8, fix round 1 / decision ledger #13), and the reason is not stylistic:
+`object_registry`'s own keys are gated closed against
+`hornvale_thing::THING_KINDS` by `windows/vessel/tests/suite/
+kind_totality.rs`'s `every_propertied_kind_is_a_roster_row` (G-e, spec
+§5.1), and `THING_KINDS` is registered into the world's `ConceptRegistry`
+(`domains/thing/src/lib.rs`'s `register_concepts`), which serializes into
+`world.json`. Adding `"overhang"` to `THING_KINDS` to admit it into
+`object_registry` would therefore move `cli/tests/fixtures/
+world-seed-42.json`'s committed bytes directly — this task's own §6
+constraint forbids exactly that ("derived features are never committed
+facts"). The single-registry route was never available to take, not merely
+inconvenient. `weft_object_registry` reuses the SAME `offered()` query
+`object_registry` is read through — one implementation, two disjoint key
+populations (`KindId` vs `WeftKind`, pinned by a test:
+`the_weft.rs::no_weft_kind_label_appears_in_thing_kinds`) — so this is not a
+second, competing affordance mechanism.**
 
 **5.7 A kind is three things and nothing else** — a component bundle, a
 prevalence recipe, and the three scalars. Adding kind N+1 is an append that

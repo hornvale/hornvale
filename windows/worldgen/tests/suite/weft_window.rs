@@ -12,7 +12,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex, VertexMap};
-use hornvale_worldgen::{FieldPack, WeftFeature, WeftKind, WeftWindow};
+use hornvale_worldgen::{FieldPack, WeftFeature, WeftKind, WeftWindow, features_at_cached};
 
 /// Same relationship `weft_prevalence.rs` reproduces for the same reason:
 /// this file cannot import `windows/locale` (it depends on
@@ -523,5 +523,107 @@ fn two_globe_levels_do_not_contaminate_the_same_window() {
     assert_eq!(
         reread_a, features_a,
         "re-reading level_a after level_b must still return level_a's own answer"
+    );
+}
+
+/// **Fix round 1 (reviewer IMPORTANT, F7).** `features_at_cached`/
+/// `all_features_at_cached` (The Weft, Task 8) are the whole justification
+/// for `WeftWindow::features_lookup`'s read-only shape: "`cache: None` is
+/// byte-identical to deriving directly," the SAME contract
+/// `LocaleContext::blend_at_cached` states for itself. Nothing pinned it
+/// directly before this test — the two tests above exercise
+/// `WeftWindow::features_at` (the `&mut self` path a session's `go`
+/// prefills through), never the `_cached` FREE FUNCTIONS a `&self`-only
+/// reader (`windows/vessel`'s `describe_here`) actually calls.
+///
+/// Exercises all three answers at every facet on the walk, across every
+/// kind: DIRECT derivation (the oracle), `cache: None`, and `cache:
+/// Some(&window)` — where `window` is prefilled over only the FIRST HALF of
+/// the walk before the loop runs, so the second half's `cache: Some` reads
+/// are genuine MISSES (falling through to a direct derivation, same as the
+/// `None` arm) rather than only ever hits. All three must agree at every
+/// facet, for every kind.
+///
+/// **Non-vacuity cannot use `WeftWindow::hits()` here, and an earlier draft
+/// of this test wrongly assumed it could.** `features_lookup` reads through
+/// [`hornvale_kernel::derived::Derived::peek`], which "counts neither a hit
+/// nor a miss" by its own doc — the whole reason `peek` exists is to let a
+/// `&self`-only caller consult the store without the counted semantics
+/// `Derived::get` carries. So `features_at_cached`'s cache-present arm never
+/// moves `window.hits()` at all, in either direction, and asserting it does
+/// is asserting something the store's own contract denies. (The prefill
+/// loop's OWN calls to `WeftWindow::features_at` do move `hits()` — every
+/// first-time fill counts one hit from `features_at`'s own internal
+/// re-fetch after insert, `self.store.get(&key).expect("just inserted
+/// above")` — but that is `features_at`'s counted path, not
+/// `features_lookup`'s uncounted one, and proves nothing about the
+/// `_cached` functions under test here.) The real non-vacuity check is
+/// below: call `features_lookup` directly and observe `Some`/`None` on the
+/// two halves of the walk.
+#[test]
+fn cached_reads_are_byte_identical_to_direct_derivation() {
+    const STEPS: usize = 200;
+    let fx = Fixture::build();
+    let walk = fx.walk(STEPS);
+
+    let mut window = WeftWindow::new();
+    for facet in &walk[..STEPS / 2] {
+        for kind in WeftKind::ALL {
+            window.features_at(kind, facet, fx.geo(), &fx.index, &fx.pack, fx.seed());
+        }
+    }
+
+    // Non-vacuity, directly against `features_lookup` (not the `hits()`
+    // counter — see the doc above for why that counter is the wrong
+    // instrument here): a prefilled facet must read back `Some`, and an
+    // untouched one must read back `None`, or the cache-present arm below
+    // could be silently taking the miss-and-derive path on every call.
+    assert!(
+        window
+            .features_lookup(WeftKind::Spring, &walk[0], fx.geo(), fx.seed())
+            .is_some(),
+        "a prefilled facet must be a `features_lookup` HIT"
+    );
+    assert!(
+        window
+            .features_lookup(WeftKind::Spring, &walk[STEPS - 1], fx.geo(), fx.seed())
+            .is_none(),
+        "an un-prefilled facet must be a `features_lookup` MISS"
+    );
+
+    let mut any_occurrence = false;
+    for kind in WeftKind::ALL {
+        for facet in &walk {
+            let direct =
+                direct_features_over(kind, facet, fx.geo(), &fx.index, &fx.pack, fx.seed());
+            let cache_absent =
+                features_at_cached(kind, facet, fx.geo(), &fx.index, &fx.pack, fx.seed(), None);
+            let cache_present = features_at_cached(
+                kind,
+                facet,
+                fx.geo(),
+                &fx.index,
+                &fx.pack,
+                fx.seed(),
+                Some(&window),
+            );
+            assert_eq!(
+                direct, cache_absent,
+                "cache: None must be byte-identical to a direct derivation, kind {kind:?}"
+            );
+            assert_eq!(
+                direct, cache_present,
+                "cache: Some must be byte-identical to a direct derivation whether it hits \
+                 or misses, kind {kind:?}"
+            );
+            if !direct.is_empty() {
+                any_occurrence = true;
+            }
+        }
+    }
+    assert!(
+        any_occurrence,
+        "the walk must include at least one real occurrence across some kind, or every \
+         equality above compares empty vectors"
     );
 }

@@ -6824,7 +6824,29 @@ impl<'w> Session<'w> {
         // `all_features_at_cached`'s own "cache: None is byte-identical to
         // deriving directly" contract (R3), which is what lets this stay
         // `&self`-only exactly like `site_clause`/`ruin_clause` above.
-        let weft_clause = {
+        //
+        // **Gated on `vantage.is_none()` (fix round 1, F5).** A derived
+        // feature is land-flavored prose (a thicket, an overhang, a spring
+        // seeping "up out of the ground") and `vantage` is exactly this
+        // render's own "am I on dry ground" answer — `Some` means AFLOAT (or
+        // submerged), the same distinction the paragraph above draws for
+        // "the room's own expression." Without this gate the two vantage
+        // predicates can disagree at the coastline: `vantage` picks the
+        // walk-band facet's single MAX-WEIGHT corner (`Self::column_here`'s
+        // `max_by_key`, a discrete pick), while a weft kind's own eligibility
+        // (`land_eligible`, `windows/worldgen/src/weft/kinds.rs`) is a
+        // BILINEAR BLEND of all four corners at a `>= 0.5` threshold — a
+        // continuous test that can pass even when the single heaviest corner
+        // is ocean. Measured directly on seed 42 (every walk-depth facet over
+        // all 40,962 vertices, comparing the two predicates independently):
+        // 29,713 facets are afloat by the corner-pick test, and of those, 35
+        // (0.118% of afloat facets, 0.085% of all facets) ALSO carry >= 1
+        // weft feature by the blend test — real, not merely constructible,
+        // though rare. This gate closes it at the render, the cheaper of the
+        // two fixes named in review (aligning the eligibility rule with the
+        // corner-pick rule would touch every kind's own derivation instead of
+        // one render site).
+        let weft_clause = if vantage.is_none() {
             let geo = self.wctx.ctx.climate().geosphere();
             let index = self.wctx.ctx.nearest_index();
             let features = hornvale_worldgen::all_features_at_cached(
@@ -6836,6 +6858,8 @@ impl<'w> Session<'w> {
                 Some(&self.weft_window),
             );
             crate::weft_prose::weft_clause(&features)
+        } else {
+            String::new()
         };
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
