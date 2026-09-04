@@ -97,8 +97,9 @@ artifact classification to close (would let an epoch misclassification survive
 the implementation). · ideonomy passes / overturns: **1 pass during G4
 self-review, no overturns, one material sharpening** — tree-finding across the
 plan's intentional and inherited branches exposed the old locale-visible screen
-as a separate-age constraint: chamber cultural admission may split or append a
-diagnostic screen row, but may not narrow the inherited locale row. · Capture:
+as a separate-age constraint: its one row may narrow at the chamber band only
+because locale selection explicitly ignores `HousemarkGate`; the inherited
+locale output itself may not narrow. · Capture:
 this entry; the committed
 plan; the temporary repository-required `IMPLEMENTATION_PLAN.md` stage tracker.
 
