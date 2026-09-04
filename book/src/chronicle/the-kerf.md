@@ -9,7 +9,7 @@ room. `LatestVisit` already held every visit for that room in ascending order,
 so its first element supplied the identical admission rule. The read remained
 `O(rooms)`, its order remained `Facet` order, and `Trail` plus `LatestVisit`
 remained distinct because each changes a read's asymptotic class. That rule is
-[decision 0726](../../decisions/0726-a-resident-index-earns-its-keep-only-by-changing-a-read-class.md): a resident index earns its state only when a
+[decision 0756](../../decisions/0756-a-resident-index-earns-its-keep-only-by-changing-a-read-class.md): a resident index earns its state only when a
 read is asymptotically cheaper than on its parent.
 
 At the deterministic band-10 reading (seed 42, 50 agents, 200 ticks), the
@@ -21,12 +21,29 @@ varied with the Mac's load, as the instrument documents; they are retained as
 a measured readout, not a claim about the whole roster.
 
 The campaign-time hash pins did their job before the cut and retired at close
-under decision 0541. Their dated constants and controls remain in the test
-module and ledger. What remains live is stronger in the durable direction:
-each Kerf seed takes two fresh runs that must agree, each run holds its reach
-floors, and the independent fold-equals-scan witnesses cover the real and
-descending-order shapes. Fresh-run agreement proves determinism and reach; it
-does not freeze future behaviour to a campaign-era number.
+under decision 0541. They were minted on 2026-09-04 at merge base
+`f20fdbecb`: seed 17 was `0x7394_8823_9689_ce2a` and seed 11 was
+`0xd4e4_a793_ed70_6478`. Control A made `KnownWater::absorb` a no-op: it moved
+seed 17 to `0xb214_b641_3e99_986e` and seed 11 to
+`0xa05a_0e2d_c0bc_7748`, while leaving the seed-42 fixed script at
+`0xc566_d07e_4d76_ffbd` and the seed-6 emitter's ledger and hazard digests at
+`0x5d3d_7682_36e1_16c9` and `0x92dd_c47a_37de_3d9e`.
+
+Control B flipped first-visit keeping to latest-visit keeping. It moved none
+of those four script hashes, but it reddened all four real-shape
+FOLD-equals-SCAN sweeps: a hash is therefore a weaker instrument than the
+direct set comparison. Control C emptied the min-keeping arm; it reddened the
+descending-order fixture alone while the real-shape sweeps and hash witnesses
+stayed green. Together, B and C distinguish the comparison's sense from the
+branch's firing rather than treating either null as proof of behaviour.
+
+What remains live is the durable witness: each of seeds 17 and 11 takes two
+fresh runs and requires their hashes to agree. Both runs must derive at least
+two bodies, commit `agent-at` sightings, and make belief reads; seed 17 also
+requires a belief read at a past instant, while seed 11 deliberately does not
+pretend to have one. The independent fold-equals-scan witnesses still cover
+the real and descending-order shapes. Fresh-run agreement proves determinism
+with reach; it does not freeze future behaviour to a campaign-era number.
 
 The helper shared by `rooms_at` and `water_at` is deliberately not elevated
 to a repository rule. It is private, has one caller family, and no second

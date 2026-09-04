@@ -1,7 +1,7 @@
 # The Kerf: One Index Fewer — A Campaign Design
 
 **Status:** draft (G3) · **Date:** 2026-09-04 · **Branch:** `campaign/the-kerf`
-· **Decision block:** 0726–0735
+· **Decision block:** 0756–0765
 
 A kerf is the slot a saw takes out. This campaign's whole deliverable is
 subtraction: one of the resident fold store's five tenants is a strict
@@ -371,13 +371,13 @@ exist while the old code still does.
 
 ---
 
-## 8. Decisions this campaign will need (block 0726–0735)
+## 8. Decisions this campaign will need (block 0756–0765)
 
-- **0726.** A resident index earns its keep only if a read it serves is
+- **0756.** A resident index earns its keep only if a read it serves is
   asymptotically cheaper on it than on its parent (§1.2). The durable half of
   this campaign: it is the rule that both deletes `KnownWater` and refuses the
   `Trail` merge, and it binds future tenants.
-- **0727.** (provisional) The place-predicate reads of one index state their
+- **0757.** (provisional) The place-predicate reads of one index state their
   membership rule once (§2.1) — i.e. `rooms_at`/`water_at` share
   `rooms_at_where`. Minted only if the implementation finds a reason the rule
   is worth binding beyond this type.
@@ -425,19 +425,28 @@ first-visit membership rule; `rooms_at` supplies an always-true predicate and
 cover both real shapes and the descending-order writer shape, so the equality
 is not merely an argument from sorted insertion.
 
-The three AFTER release runs were on this Mac and worktree, seed 42, 50 agents,
-200 ticks, bands of 20. K1 was deterministic: Trail = 6,219 entries / 329,607
-bytes and LatestVisit = 6,219 / 259,677 in every run. The absent BEFORE
-KnownWater row — 4,665 / 247,245 — is the exact saving; neither surviving row
-moved. K2 was 60.98, 61.14, and 62.63 ns/fact. Band-10 K3
-`believed_water` / `shared_believed_water` was 10,340.62 / 10,413.11,
-16,513.75 / 8,731.01, and 8,489.31 / 8,848.43 µs/call; the endpoint loads and
-wall times are in the ledger. The K3 probe is deliberately a single
-empty-belief agent, as Task 2 established, so it isolates `water_at` rather
-than representing the whole roster.
+The three BEFORE and three AFTER release readings were on this Mac and
+worktree, seed 42, 50 agents, 200 ticks, bands of 20. These are ordinal rows,
+not paired trials: row 1 is the first BEFORE and the first AFTER reading, not
+a controlled matched pair. Every raw endpoint load and value is retained; the
+BEFORE third run's mid-run-load contamination remains a caveat, not a dropped
+observation.
 
-Decision 0726 binds the criterion exposed by this cut: a resident index earns
-its state only where it changes a served read's asymptotic class. 0727 is
+| ordinal run | BEFORE load before -> after | BEFORE K1 Trail / KnownWater / LatestVisit (entries / bytes) | BEFORE K2 ns/fact | BEFORE K3 believed / shared us/call | AFTER load before -> after | AFTER wall | AFTER K1 Trail / KnownWater / LatestVisit (entries / bytes) | AFTER K2 ns/fact | AFTER K3 believed / shared us/call |
+|---|---|---|---:|---:|---|---:|---|---:|---:|
+| 1 | `5.41 65.93 125.39` -> `4.00 44.04 108.17` | `6,219 / 329,607`; `4,665 / 247,245`; `6,219 / 259,677` | 74.35 | 8,818.42 / 9,074.14 | `5.54 4.95 14.06` -> `8.83 7.08 13.61` | 132.90 s | `6,219 / 329,607`; **absent**; `6,219 / 259,677` | 60.98 | 10,340.62 / 10,413.11 |
+| 2 | `4.00 44.04 108.17` -> `3.81 29.78 93.35` | `6,219 / 329,607`; `4,665 / 247,245`; `6,219 / 259,677` | 84.49 | 8,465.47 / 8,773.30 | `8.53 7.04 13.55` -> `10.50 7.65 12.97` | 112.55 s | `6,219 / 329,607`; **absent**; `6,219 / 259,677` | 61.14 | 16,513.75 / 8,731.01 |
+| 3 | `3.81 29.78 93.35` -> `9.70 21.56 80.32` | `6,219 / 329,607`; `4,665 / 247,245`; `6,219 / 259,677` | 259.59 | 1,469.27 / 2,903.39 | `9.74 7.54 12.90` -> `7.33 7.42 12.20` | 112.09 s | `6,219 / 329,607`; **absent**; `6,219 / 259,677` | 62.63 | 8,489.31 / 8,848.43 |
+
+K1 confirms the subtraction exactly: Trail and LatestVisit are unchanged and
+KnownWater changes from `4,665 / 247,245` to absent. The BEFORE third run's
+one-minute load rose from 3.81 to 9.70 during the reading; its raw K2 and K3
+values stay above, but it is not a timing result to average. The K3 probe is
+deliberately a single empty-belief agent, as Task 2 established, so it
+isolates `water_at` rather than representing the whole roster.
+
+Decision 0756 binds the criterion exposed by this cut: a resident index earns
+its state only where it changes a served read's asymptotic class. 0757 is
 unminted: the private shared predicate has no independent repository site and
 does not yet deserve a repository-wide interface rule. The temporary hash
 constants retired under 0541; fresh-run agreement, floors, and independent

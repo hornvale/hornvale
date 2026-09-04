@@ -1,4 +1,4 @@
-# 0726. A resident index earns its keep only by changing a read class
+# 0756. A resident index earns its keep only by changing a read class
 
 **Status:** Accepted (2026-09-04) · **Decider:** Nathan (autopilot) ·
 **Campaign:** The Kerf · **Relates:**

@@ -25,6 +25,6 @@ comparison they represented no longer exists.
 
 `rooms_at_where` states one first-visit rule for `rooms_at` and `water_at`.
 That is a local repair to duplicated logic, not evidence for a repository-wide
-shared-predicate law. The campaign minted decision 0726 for the proven
-resident-index criterion and explicitly left 0727 unminted. A future second
+shared-predicate law. The campaign minted decision 0756 for the proven
+resident-index criterion and explicitly left 0757 unminted. A future second
 site can establish whether a common abstraction has a real boundary.
