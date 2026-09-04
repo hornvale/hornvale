@@ -64,6 +64,35 @@ recombinable fields and surfaced the band thresholds as newly authored policy
 whose gaps must fail rather than round. · Capture: this entry; the design's
 type/API section and six-cell acceptance probe.
 
+#3 [G2] — **Does the design remain observable across the structure-size
+distribution?** · **Decision: both housemark axes must appear in the threshold
+chamber, the only chamber every structure owns.** · Why: the design draft put
+the communal bench in `Role::Hearthroom`, assuming the first two rooms existed.
+Reading `Structure` during self-review showed `chambers.len()` is
+`1..=MAX_CHAMBERS`; only `chambers[0]`, the threshold, is guaranteed. A
+one-chamber communal dwelling would therefore lose its authority mark, and a
+fixture fixed at two rooms could hide the defect. The bench moves beside ground
+in `Role::Threshold`; the command seat already belongs there. · Alternatives
+discarded: require two chambers (changes the causal structure draw and is R2,
+not R1); repeat the mark in every chamber (turns a signature into wallpaper and
+can duplicate kinds); accept partial observability in small houses (fails the
+headline on a legal production structure). · ideonomy passes / overturns:
+**1 pass, 1 correction** (tree-finding; chart; distribution and size). The size
+substitution exposed the missing one-chamber leaf. · Capture: corrected spec
+§3 and H2/H3; corrected visual matrix.
+
+## Capture manifest
+
+- `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` now points from
+  R1 to The Housemark spec; its status remains `elaborated` until implementation.
+- This ledger's Follow-ups retain the temporal-style and cultural-evolution
+  branches. Neither is smuggled into R1.
+- Rejected design branches — per-people inventories, a six-case culture enum,
+  exact-float styles, forced `status_basis` consumption, and an R2 chamber-count
+  change — are recorded in entries #1–#3 with reasons.
+- `.superpowers/visualizations/housemark-design.html` is the ignored visual
+  companion; it is explanatory scratch, not a product artifact.
+
 ## Follow-ups
 
 - A future reading of inherited or hybrid architecture needs a durable builder
