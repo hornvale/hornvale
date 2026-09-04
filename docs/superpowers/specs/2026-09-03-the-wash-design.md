@@ -294,9 +294,32 @@ map. H2 asserts the map's ink responds to the reader's time of day. It does
 not assert, and this campaign does not deliver, per-place lighting.
 
 *Failure mode named in advance:* inequality is trivially satisfied by any
-change. So H2 asserts **direction** — snow-endmember weight strictly greater
-at midwinter; illuminant strictly warmer (lower colour temperature) at low
-sun. A null on direction is a finding and ships as one.
+change. So H2 asserts **direction** — snow strictly greater at
+midwinter; illuminant strictly warmer (lower colour temperature) at low sun.
+A null on direction is a finding and ships as one.
+
+**AMENDED 2026-09-04 — the measured quantity was substituted, and the
+substitution is recorded rather than made silently.** This clause originally
+named the **snow-endmember weight**. That quantity is **not reachable from
+the client**: only `reflectance_at_facet` is facet-level, and a mixture
+weight needs a `MicroField` the client cannot correctly construct (§4.1's own
+finding). What is measured instead is **composed albedo** — the band-sum of
+`reflectance_at_facet` — which is strictly better for this hypothesis,
+because it is *what actually reaches the map* rather than an intermediate the
+renderer never sees.
+
+**Why the amendment exists at all.** A preregistration whose measured
+quantity is swapped after the fact, unrecorded, is indistinguishable from
+metric-chasing — decision 0016's own concern. This swap was forced by
+reachability and settled before any result was seen. A reader cannot know
+that unless it is written down, so it is written down.
+
+**Both arms upheld.** *Seasonal*: seed 42, 77 of 40,962 grid facets
+snow-covered at midwinter and not at midsummer; winter albedo exceeds summer
+at **77/77**, ratio min 1.4661, median 2.2777, max 3.9718; headline pair
+`Vertex(152)` (lat 36.00) winter 7.351812 vs summer 3.358797. *Diurnal*: a
+low sun is measurably warmer by the `long/short` band ratio, which follows
+from `at_elevation`'s own attenuation rather than from the test's arithmetic.
 
 **H3 (the control) — appearance changes no world.** A world generated with
 the plate's spectral consumption present is **byte-identical** to one
