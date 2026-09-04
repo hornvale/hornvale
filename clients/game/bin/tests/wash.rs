@@ -41,8 +41,9 @@ mod wash_support {
     }
 
     /// A live seed-42 possession, plus the terrain/geosphere/index triple a
-    /// direct [`plate::terrain_at_tile`] call needs — everything Task 4's
-    /// cache test asks for, in the shape it asks for it.
+    /// direct [`plate::terrain_at_tile`] call needs, plus the world's own
+    /// calendar — everything Task 4's cache test asks for, in the shape it
+    /// asks for it.
     ///
     /// **Why a real [`Session`], not the lighter [`seed_42_context`] above.**
     /// The cache test needs `session.context()` (a [`LocaleContext`]) AND
@@ -59,6 +60,14 @@ mod wash_support {
     /// own copy, the same "cheap enough to reconstruct, never a second
     /// drifting genesis" idiom `Driver::start_from_world` follows for its own
     /// `terrain`/`geo`/`nearest` fields.
+    ///
+    /// **The `Option<Calendar>` (fix round 1, Fix 3) is what lets a caller
+    /// derive a `season` that actually corresponds to `at`**, via
+    /// [`hornvale_game::driver::season_bucket_for`] — see
+    /// [`plate::terrain_at_tile`]'s own doc for the contract this exists to
+    /// satisfy. Derived the same way `Driver::start_from_world` derives
+    /// `Driver::calendar`: `hornvale_worldgen::sky_of(world)`, never a
+    /// second, drifting genesis.
     // Named construction site (decision 0092): `terrain_of` re-derives the
     // tectonic globe once here, the same reason `Driver::start_from_world`
     // carries this same allow at its own `terrain_of` call.
@@ -69,6 +78,7 @@ mod wash_support {
         GeneratedTerrain,
         NearestVertexIndex,
         RoomMeshMemo,
+        Option<hornvale_astronomy::Calendar>,
     ) {
         let world = hornvale_worldgen::build_world(
             Seed(42),
@@ -93,8 +103,18 @@ mod wash_support {
         let terrain = hornvale_worldgen::terrain_of(world).expect("seed 42 sculpts");
         let geo = terrain.geosphere().clone();
         let index = NearestVertexIndex::new(&geo);
+        let calendar = hornvale_worldgen::sky_of(world)
+            .ok()
+            .and_then(|sky| sky.calendar().cloned());
 
-        (session, geo, terrain, index, RoomMeshMemo::default())
+        (
+            session,
+            geo,
+            terrain,
+            index,
+            RoomMeshMemo::default(),
+            calendar,
+        )
     }
 
     /// The projection and window this file samples through:
@@ -123,10 +143,11 @@ mod wash_support {
     }
 
     /// One `terrain_at_tile` draw through a real context, at a single
-    /// representative tile — enough to exercise the `(Facet, season)` cache's
-    /// own consult-then-fill behaviour without sweeping a whole window (Task
-    /// 4's test only cares whether a repeated draw grows `store`, not about
-    /// coverage over many tiles — that is Task 3's own test's job).
+    /// representative tile — enough to exercise the `(FacetId, season)`
+    /// cache's own consult-then-fill behaviour without sweeping a whole
+    /// window (Task 4's test only cares whether a repeated draw grows
+    /// `store`, not about coverage over many tiles — that is Task 3's own
+    /// test's job).
     ///
     /// `(row, col) = (0, 0)` at [`plate::GLOBE_RUNG`] is deliberate, not
     /// arbitrary: that rung IS the grid level (this module's own
@@ -138,12 +159,16 @@ mod wash_support {
     /// after the FIRST draw, which is exactly the failure this helper must
     /// not risk producing.
     ///
-    /// `season` is fixed at `0` — the constant bucket a starless world
-    /// resolves to, and this helper's job is to prove the cache is
-    /// CONSULTED, not to prove `season_bucket` varies with the calendar
-    /// (`the_reflectance_key_changes_between_midwinter_and_midsummer` and
-    /// `two_instants_in_one_season_share_a_bucket`, above the tests this
-    /// feeds, already cover that directly on the pure function).
+    /// **`season` is DERIVED from `calendar` and `at` (fix round 1, Fix 3),
+    /// never hardcoded.** The first draft passed a literal `0` here while
+    /// `at` was seed 42's real `session.day()` — a `season` uncoupled from
+    /// the `at` the value was actually computed at, exactly the mislabeling
+    /// [`plate::terrain_at_tile`]'s own doc warns a caller against. Both
+    /// draws in the covering test use the SAME `at`, so they derive the
+    /// SAME season either way (which is why the bug did not fail the test);
+    /// this fixes the derivation because it is wrong to file a value under
+    /// a key that misrepresents it, not because the test could tell.
+    #[allow(clippy::too_many_arguments)] // mirrors `plate::terrain_at_tile`'s own allow, one level up
     pub fn draw_once(
         terrain: &GeneratedTerrain,
         geo: &Geosphere,
@@ -151,9 +176,11 @@ mod wash_support {
         memo: &mut RoomMeshMemo,
         ctx: &LocaleContext,
         at: hornvale_kernel::WorldTime,
+        calendar: Option<&hornvale_astronomy::Calendar>,
         store: &mut ComponentStore<ReflectanceKey, hornvale_kernel::color::Reflectance>,
     ) {
         let (f, win, vw, vh) = frame_and_window();
+        let season = hornvale_game::driver::season_bucket_for(calendar, at);
         let _ = plate::terrain_at_tile(
             terrain,
             geo,
@@ -167,7 +194,7 @@ mod wash_support {
             0,
             Some(ctx),
             at,
-            0,
+            season,
             Some(store),
         );
     }
@@ -314,16 +341,21 @@ fn two_instants_in_one_season_share_a_bucket() {
 /// season must not grow the store.
 #[test]
 fn a_redraw_in_the_same_season_adds_no_cache_entries() {
-    let (session, geo, terrain, index, mut memo) = wash_support::seed_42_world();
+    let (session, geo, terrain, index, mut memo, calendar) = wash_support::seed_42_world();
     let mut store = hornvale_kernel::component::ComponentStore::new();
     let ctx = session.context();
     let at = session.day();
+    let calendar = calendar.as_ref();
 
-    wash_support::draw_once(&terrain, &geo, &index, &mut memo, ctx, at, &mut store);
+    wash_support::draw_once(
+        &terrain, &geo, &index, &mut memo, ctx, at, calendar, &mut store,
+    );
     let after_first = store.len();
     assert!(after_first > 0, "the first draw must populate the cache");
 
-    wash_support::draw_once(&terrain, &geo, &index, &mut memo, ctx, at, &mut store);
+    wash_support::draw_once(
+        &terrain, &geo, &index, &mut memo, ctx, at, calendar, &mut store,
+    );
     assert_eq!(
         store.len(),
         after_first,

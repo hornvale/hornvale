@@ -494,30 +494,25 @@ pub struct Driver {
     /// idiom `terrain_of` uses for `Self::terrain`), so paying it once at
     /// `start` and reading a plain field from then on is strictly cheaper
     /// than re-deriving it wherever a season is needed.
+    // Task 6 is the reader (fix round 1, Fix 1): no shipped call site
+    // resolves a season through this field yet.
+    #[allow(dead_code)]
     calendar: Option<hornvale_astronomy::Calendar>,
-    /// The plate's `(Facet, season)` reflectance cache (The Wash, Task 4):
-    /// the store [`plate::terrain_at_tile`] consults and fills wherever a
+    /// The plate's `(FacetId, season)` reflectance cache (The Wash, Task 4):
+    /// the store [`plate::terrain_at_tile`] will consult and fill once a
     /// real [`hornvale_locale::LocaleContext`] is threaded through it.
     /// Reflectance is seasonal-rate (the rate spine's own invariant, Task
-    /// 1), so the key already carries the season a tile was drawn in — a
-    /// season change mints a new entry rather than serving a stale one,
-    /// which is what makes it safe to sit above the plate's own
-    /// never-invalidated TERRAIN layer cache ([`Self::tiles`]'s own doc).
-    ///
-    /// **Genuinely consulted today, but never yet populated.** [`Self::
-    /// world_view_vertex`] threads this field through
-    /// [`plate::terrain_at_tile`] on every keypress, so `cache.get` really
-    /// runs — but it still passes `ctx: None` (see that call site's own
-    /// comment; Task 6 flips it), and a cache miss with no context to ask
-    /// resolves to `None` without inserting (`terrain_at_tile`'s own match
-    /// arm), so this stays empty for the whole session regardless. [`plate::
-    /// draw_terrain_layer`] does not reach it at all — that caller stays on
-    /// a fresh throwaway store, the same "cheap enough to pay per call, not
-    /// worth cross-call state" argument its own comment gives, because
-    /// nothing there needs a value remembered ACROSS calls the way a
-    /// revisited cursor position does. See
-    /// `driver::portolan_tests::the_reflectance_cache_starts_and_stays_
-    /// empty_while_ctx_is_none` for what is covered meanwhile.
+    /// 1), so the key carries the season a tile was drawn in — a season
+    /// change mints a new entry rather than serving a stale one, which is
+    /// what makes it safe to sit above the plate's own never-invalidated
+    /// TERRAIN layer cache ([`Self::tiles`]'s own doc).
+    // Task 6 is the reader (fix round 1, Fix 1: reverted from an earlier
+    // `&mut self` thread through `world_view_vertex` — that call site can
+    // never populate or read a hit here, see its own doc). Both shipped
+    // callers of `plate::terrain_at_tile` still pass `ctx: None`, so this
+    // field is left visible and unread rather than threaded somewhere that
+    // only pretends to use it.
+    #[allow(dead_code)]
     reflectance_cache: hornvale_kernel::component::ComponentStore<
         plate::ReflectanceKey,
         hornvale_kernel::color::Reflectance,
@@ -686,9 +681,14 @@ fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> S
     }
 }
 
-/// The `(Facet, season)` cache's season component for `at`, resolved
+/// The `(FacetId, season)` cache's season component for `at`, resolved
 /// against `calendar` (The Wash, Task 4) — the glue between
-/// [`Driver::calendar`] and [`plate::season_bucket`].
+/// [`Driver::calendar`] and [`plate::season_bucket`], and the ONE place
+/// that glue is written: [`plate::terrain_at_tile`]'s own doc names this
+/// function as the contract every caller of `season` must route through
+/// rather than re-deriving. `pub` (fix round 1) so `wash.rs`'s test fixture
+/// can call the real derivation instead of hardcoding a bucket that may not
+/// correspond to its own `at`.
 ///
 /// **Two `None`s fold to the same bucket 0, and both are legitimate
 /// worlds, not errors.** `calendar` itself is `None` for a tier-0
@@ -700,7 +700,7 @@ fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> S
 /// only record of: both branches are named here because "no calendar" and
 /// "a calendar with nothing to report" are the two ways a world can
 /// honestly have no seasons.
-fn season_bucket_for(
+pub fn season_bucket_for(
     calendar: Option<&hornvale_astronomy::Calendar>,
     at: hornvale_kernel::WorldTime,
 ) -> u32 {
@@ -2168,7 +2168,7 @@ impl Driver {
     /// a screen position to a `Vertex`) is resolved against the
     /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
     /// empty at any step.
-    fn resolve(&mut self) -> String {
+    fn resolve(&self) -> String {
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
         };
@@ -2386,15 +2386,20 @@ impl Driver {
     /// most the three `nearest_to_position` scans of a repeated cursor
     /// position, against holding cross-call state for a pure function.
     ///
-    /// **`&mut self` since The Wash, Task 4**, purely to reach
-    /// [`Self::reflectance_cache`] by `&mut` — this still reads only
-    /// `.vertex` off the result (the comment inside names why `ctx` stays
-    /// `None`), so the cache the mutable borrow reaches stays empty; the
-    /// borrow itself is what keeps the field genuinely exercised rather
-    /// than merely typed. `resolve_world_view`/`resolve`, its only callers,
-    /// took the same signature change; their own only caller
-    /// ([`Self::refresh_strip`]) already held `&mut self`.
-    fn world_view_vertex(&mut self) -> hornvale_kernel::Vertex {
+    /// **Stays `&self` (fix round 1, Fix 1: reverted from an earlier `&mut
+    /// self`).** This method's own next line reads only `.vertex` off the
+    /// result and discards the rest — a context here "would buy a discarded
+    /// reflectance per keypress", and that argument is STRUCTURAL, not
+    /// until-Task-6: this call site can never populate the `(FacetId,
+    /// season)` cache and can never read a hit from it, so threading
+    /// [`Self::reflectance_cache`] through by `&mut` here bought a false
+    /// appearance of use at the cost of making three read-only queries
+    /// (`resolve`/`resolve_world_view`/this one) advertise mutation to
+    /// every future caller. `season`/`reflectance_cache` below are `0`/
+    /// `None`, exactly like [`plate::draw_terrain_layer`]'s own call — see
+    /// [`Self::reflectance_cache`]'s own doc for where the field's real
+    /// reader lives.
+    fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         plate::terrain_at_tile(
             &self.terrain,
@@ -2411,24 +2416,8 @@ impl Driver {
             // buy a discarded reflectance per keypress.
             None,
             hornvale_kernel::WorldTime::GENESIS,
-            // Real season resolution (The Wash, Task 4) against the real,
-            // session-lived cache — `self.reflectance_cache`, not a
-            // throwaway, since a season a cursor has already visited is
-            // worth remembering the same way `self.nearest`/`self.geo`
-            // already are. Both are genuinely CONSULTED here even though
-            // `ctx` stays `None` (a cache miss with no context to ask
-            // resolves to `None` and inserts nothing — see
-            // `terrain_at_tile`'s own match arm), which is what lets this
-            // call site exercise the real field instead of a stand-in for
-            // it. `RoomMeshMemo` above stays local/throwaway on its own
-            // documented argument (a session-lived one would save at most
-            // three scans of a repeated cursor position); that argument
-            // does not carry over here, because a repeated CURSOR position
-            // recomputes the memo for free but a repeated (facet, season)
-            // this cache has already seen is a real save once Task 6 makes
-            // `ctx` real.
-            season_bucket_for(self.calendar.as_ref(), hornvale_kernel::WorldTime::GENESIS),
-            Some(&mut self.reflectance_cache),
+            0,
+            None,
         )
         .vertex
     }
@@ -2437,7 +2426,7 @@ impl Driver {
     /// the FULL containment chain there (Task 4, Step 1) — every feature at
     /// the resolved vertex, most specific first, each with its class named in
     /// prose (design spec §5).
-    fn resolve_world_view(&mut self) -> Option<String> {
+    fn resolve_world_view(&self) -> Option<String> {
         let vertex_id = self.world_view_vertex();
         let (species, ph, morph) = &self.namer;
         resolve_chain_at(
@@ -3084,34 +3073,6 @@ mod portolan_tests {
     /// acceptance test in `tests/driver.rs` uses.
     fn test_driver() -> Driver {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
-    }
-
-    /// The Wash, Task 4: `Driver::reflectance_cache` exists, is correctly
-    /// typed (`ComponentStore<plate::ReflectanceKey, Reflectance>` — see the
-    /// field's own doc), starts empty, and STAYS empty across a real
-    /// `world_view_vertex` resolution — the one shipped call site that
-    /// genuinely borrows and consults it (`resolve_world_view` reaches it by
-    /// resolving the cursor's current position). It stays empty because that
-    /// call site still passes `ctx: None` (Task 6 flips that), so a cache
-    /// miss there resolves to `None` and inserts nothing — this is the
-    /// behavioural half of that claim, not just the field's shape. Whether
-    /// the field can be POPULATED (a real `ctx`, a real hit-then-skip) is
-    /// covered directly against `plate::terrain_at_tile` by `wash.rs`'s own
-    /// `a_redraw_in_the_same_season_adds_no_cache_entries`, not here.
-    #[test]
-    fn the_reflectance_cache_starts_and_stays_empty_while_ctx_is_none() {
-        let mut d = test_driver();
-        assert_eq!(
-            d.reflectance_cache.len(),
-            0,
-            "a fresh driver must start with no cached reflectance"
-        );
-        let _ = d.resolve_world_view();
-        assert_eq!(
-            d.reflectance_cache.len(),
-            0,
-            "a resolution with ctx: None must consult the cache without ever filling it"
-        );
     }
 
     /// The Wash, Task 4: the two `None` cases `season_bucket_for` folds to

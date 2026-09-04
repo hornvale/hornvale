@@ -2144,6 +2144,18 @@ pub fn season_bucket(phase: f64) -> u32 {
 /// The key a cached reflectance hangs on: the facet it belongs to and the
 /// season bucket it was computed for (The Wash, Task 4).
 ///
+/// **`FacetId`, not `Facet`** — fix round 1 caught this. `Facet` is
+/// `{ face: u8, path: Vec<u8> }`: building a key from one costs a heap
+/// allocation (`Vec::clone`) on every cache CONSULT, hits included, and the
+/// `BTreeMap` this keys then walks compares `Vec<u8>` lexicographically
+/// rather than a single integer. At Task 6's ~1,920 calls a frame that is
+/// ~1,920 allocations a frame purely to ask a question, in the task whose
+/// whole purpose is cost. [`Facet::pack`] gives a `FacetId` — a `Copy`
+/// `u64` — for the identical address: allocation-free to build, O(1) to
+/// compare, and it is what makes this struct `Copy` too, dissolving the
+/// "`Facet` is not `Copy`, so this derives `Clone` and not `Copy`"
+/// awkwardness the first draft carried.
+///
 /// **Reflectance is seasonal-rate** (the rate spine's own invariant, Task
 /// 1; spec §4.3) — the cover mixture [`hornvale_locale::LocaleContext::
 /// reflectance_at_facet`] integrates varies with the season (snow,
@@ -2151,12 +2163,12 @@ pub fn season_bucket(phase: f64) -> u32 {
 /// ([`crate::tiles::TileCache`]) is never invalidated across a session, so a
 /// key that ignored season would bake in whichever season first drew a
 /// facet and never update — correct on the first frame, silently frozen
-/// after. Keying on `(Facet, season)` instead means a season change mints a
-/// new entry rather than serving a stale one.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+/// after. Keying on `(FacetId, season)` instead means a season change mints
+/// a new entry rather than serving a stale one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ReflectanceKey {
-    /// The facet this reflectance describes.
-    pub facet: Facet,
+    /// The facet this reflectance describes, packed ([`Facet::pack`]).
+    pub facet: FacetId,
     /// The season bucket ([`season_bucket`]) it was computed in.
     pub season: u32,
 }
@@ -2224,6 +2236,27 @@ pub struct ReflectanceKey {
 /// tile's own centre is re-addressed at the grid level instead. Nothing on
 /// the shipped ladder reaches there ([`GLOBE_RUNG`] is the floor and is the
 /// grid level itself); `driver.rs`'s rung-5 disclosure test does.
+///
+/// **`season`/`at` contract (The Wash, Task 4 fix round 1, Fix 3): `season`
+/// MUST be `season_bucket(calendar.season_phase(at))` for whichever
+/// calendar governs the world `at` belongs to** (bucket `0` when that
+/// calendar is `None`, or when its own `season_phase` reports `None` —
+/// [`hornvale_game::driver::season_bucket_for`] is the one place that fold
+/// is written out, and every caller should route through it rather than
+/// re-deriving it). This function CANNOT check the contract itself and
+/// cannot derive `season` on its own: neither `hornvale_locale::
+/// LocaleContext` nor `hornvale_vessel::WorldContext` carries a calendar
+/// (`windows/vessel/src/session.rs`'s own `WorldContext` has no `calendar`
+/// field, and grepping the workspace for `fn calendar` turns up exactly one
+/// implementation, `Sky::calendar`, reached only via
+/// `hornvale_worldgen::sky_of(world)`, which this function is never handed
+/// a `World` to call). A caller that passes a `season` not actually derived
+/// from `at` files the resulting reflectance under a key that lies about
+/// it, and the cache then serves that mislabeled value for every OTHER
+/// instant the same bucket names — a silent, self-inflicted staleness the
+/// cache's own "never serves a stale season" guarantee cannot see, because
+/// nothing here can tell a correctly-derived bucket from a wrong one; both
+/// are just a `u32`.
 #[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
 pub fn terrain_at_tile(
     terrain: &GeneratedTerrain,
@@ -2343,9 +2376,9 @@ pub fn terrain_at_tile(
     // way, pinned by `hornvale-locale`'s own
     // `every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill`.
     //
-    // THE (Facet, season) CACHE, CONSULTED FIRST (The Wash, Task 4). This is
-    // a SECOND, coarser cache above the one paragraph up: the memo skips a
-    // repeated nearest-vertex SEARCH, this skips the whole climate-read /
+    // THE (FacetId, season) CACHE, CONSULTED FIRST (The Wash, Task 4). This
+    // is a SECOND, coarser cache above the one paragraph up: the memo skips
+    // a repeated nearest-vertex SEARCH, this skips the whole climate-read /
     // rill-read / lithology-mixture / cover-integration composition behind
     // `reflectance_at_facet_cached` for a `(facet, season)` this draw has
     // already answered. A hit returns the SAME value a fresh computation
@@ -2353,10 +2386,17 @@ pub fn terrain_at_tile(
     // output, only how often it is paid for — so no test may observe a
     // difference between the two paths, only a difference in how many times
     // the expensive one ran.
-    let reflectance = match reflectance_cache {
-        Some(cache) => {
+    //
+    // `facet.pack()` (fix round 1, Fix 4): builds the key's `FacetId`
+    // without allocating (`ReflectanceKey`'s own doc has the full argument).
+    // It fails only past `Facet::MAX_DEPTH` (29) — unreachable on the
+    // shipped ladder, whose deepest rung is `BAND_B_RUNG` = 13 — but handled
+    // rather than assumed: a facet that cannot be packed still resolves its
+    // reflectance, it simply is not cached.
+    let reflectance = match (reflectance_cache, facet.pack()) {
+        (Some(cache), Ok(facet_id)) => {
             let key = ReflectanceKey {
-                facet: facet.clone(),
+                facet: facet_id,
                 season,
             };
             match cache.get(&key) {
@@ -2372,8 +2412,9 @@ pub fn terrain_at_tile(
                 }
             }
         }
-        // No cache supplied: exactly the pre-Task-4 behaviour, always fresh.
-        None => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()),
+        // No cache supplied, or `pack()` refused: exactly the pre-Task-4
+        // behaviour, always fresh.
+        _ => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()),
     };
 
     TileTerrain {
