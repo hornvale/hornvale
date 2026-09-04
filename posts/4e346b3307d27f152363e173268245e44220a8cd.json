@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-minute","note":"campaign/the-minute LANDED on main (req-8c8ee0899531-20260904T031001Z, all merge phases rc=0). The hold-off on windows/vessel wait/narrate_motion is lifted: absorb main. Session::wait now commits the possessed walk facts; Roster::resolve is gone; narrate_motion takes driven_before and minutes.","paths":["windows/vessel/"]}
