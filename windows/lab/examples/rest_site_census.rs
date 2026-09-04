@@ -1,5 +1,5 @@
-//! The Tenon, Task 1: the rest-site baseline, taken BEFORE any sleepable
-//! surface is added to the world.
+//! The Tenon rest-site census: Task 1's baseline instrument, reused by Task 8
+//! after the three natural sleepable surfaces enter the world.
 //!
 //! Run: `cargo run --release -p hornvale-lab --example rest_site_census`
 //!
@@ -37,9 +37,15 @@
 //! `liveness.rs:3802`). A measurement must not widen the surface it measures,
 //! so neither is made `pub` for this probe's benefit.
 
-use hornvale_kernel::{Facet, FacetId, Ledger, RoomMeshMemo, Seed, Value, WorldTime, tick};
+use hornvale_kernel::{
+    Facet, FacetId, KindId, Ledger, RoomMeshMemo, Seed, Value, WorldTime,
+    component::ComponentStore, tick,
+};
 use hornvale_locale::LocaleContext;
-use hornvale_vessel::affordance::{OfferedVerb, offered_to};
+use hornvale_species::HabitatRealm;
+use hornvale_vessel::affordance::{
+    ObjectTraits, OfferedVerb, Substrate, object_registry, offered_to,
+};
 use hornvale_vessel::body::Body;
 use hornvale_vessel::interior::interior_of;
 use hornvale_vessel::liveness::{
@@ -65,6 +71,27 @@ const SEEDS: [u64; 24] = [
     42, 7, 1234, 13, 1, 2, 3, 5, 8, 11, 17, 23, 29, 31, 37, 41, 53, 59, 61, 67, 71, 73, 79, 83,
 ];
 
+/// The three Task 7 additions whose real-world reach P3 measures.
+const ADDED_SURFACES: [KindId; 3] = [KindId("rushes"), KindId("ledge"), KindId("bracken")];
+
+/// The production grade's suitability floor. This is an explicit
+/// reconstruction of private `liveness::FIT_FLOOR`, not a second authority.
+const RECONSTRUCTED_FIT_FLOOR: f64 = 0.2;
+
+/// One actual body standing in one world-composed room with two usable rest
+/// surfaces, and the production grade arithmetic reconstructed for both.
+#[derive(Clone, Debug)]
+struct GradeObservation {
+    seed: u64,
+    room: FacetId,
+    body: hornvale_kernel::EntityId,
+    species: String,
+    first: KindId,
+    first_grade: f64,
+    second: KindId,
+    second_grade: f64,
+}
+
 /// One seed's counts.
 #[derive(Default)]
 struct SeedCounts {
@@ -86,13 +113,25 @@ struct SeedCounts {
     /// memo uses, and the same four quadrants `interior_of`'s entire input set
     /// produces.
     quadrants: [BTreeSet<FacetId>; 4],
+    /// Cross-seed totals of the distinct-per-seed sets above. Used only by the
+    /// sweep accumulator: packed addresses repeat across worlds, so these are
+    /// scalar sums rather than one cross-world set.
+    quadrant_counts: [usize; 4],
     /// Of those four quadrants, how many afford rest to at least one body here.
     quadrants_affording: [bool; 4],
+    /// Distinct walked rooms in this seed containing each added surface.
+    surface_rooms: BTreeMap<KindId, BTreeSet<FacetId>>,
+    /// Cross-seed scalar sums of `surface_rooms`, by kind.
+    surface_room_counts: BTreeMap<KindId, usize>,
+    /// How many measured worlds had at least one walked room containing a kind.
+    surface_world_counts: BTreeMap<KindId, usize>,
+    /// Actual body-in-room comparisons, used for P2 and P4 witnesses.
+    grade_observations: Vec<GradeObservation>,
 }
 
 fn main() {
     println!(
-        "rest-site baseline (The Tenon, Task 1) -- sweep: {} seeds x {} ticks x {} bodies \
+        "rest-site census (The Tenon, Tasks 1 and 8) -- sweep: {} seeds x {} ticks x {} bodies \
          ({} settled + {} wild) per seed",
         SEEDS.len(),
         TICKS,
@@ -128,22 +167,7 @@ fn main() {
             c.bare,
             c.slept_on.values().sum::<usize>()
         );
-        totals.ticks_done += c.ticks_done;
-        totals.rested += c.rested;
-        totals.slept += c.slept;
-        totals.afforded += c.afforded;
-        totals.bare += c.bare;
-        for (k, n) in c.slept_on {
-            *totals.slept_on.entry(k).or_default() += n;
-        }
-        for i in 0..4 {
-            // A `FacetId` is a packed room address and is world-independent as
-            // a NUMBER only; unioning across seeds would conflate rooms of
-            // different worlds. So the cross-seed total is a COUNT sum, kept
-            // in a parallel accumulator below rather than in this set.
-            totals.quadrants[i].extend(c.quadrants[i].iter().copied());
-            totals.quadrants_affording[i] |= c.quadrants_affording[i];
-        }
+        accumulate_seed(&mut totals, c);
     }
 
     println!();
@@ -175,10 +199,110 @@ fn main() {
             "    built={} cold={} : {:>6} rooms   affords-rest-somewhere={}",
             i / 2 == 1,
             i % 2 == 1,
-            totals.quadrants[i].len(),
+            totals.quadrant_counts[i],
             totals.quadrants_affording[i]
         );
     }
+    println!("  added surfaces in distinct walked rooms (worlds reached / worlds built):");
+    for kind in ADDED_SURFACES {
+        println!(
+            "    {:>8} : {:>6} rooms   worlds={}/{}",
+            kind.0,
+            totals.surface_room_counts.get(&kind).copied().unwrap_or(0),
+            totals.surface_world_counts.get(&kind).copied().unwrap_or(0),
+            SEEDS.len() - empty.len()
+        );
+    }
+    match reversal_witness(&totals.grade_observations) {
+        Some((one, other)) => {
+            println!("  P2 live reversal witness:");
+            print_grade_observation(one);
+            print_grade_observation(other);
+        }
+        None => println!("  P2 live reversal witness     : NONE"),
+    }
+    match totals
+        .grade_observations
+        .iter()
+        .find(|o| o.first_grade.to_bits() != o.second_grade.to_bits())
+    {
+        Some(witness) => {
+            println!("  P4 consequential-room witness:");
+            print_grade_observation(witness);
+        }
+        None => println!("  P4 consequential-room witness: NONE"),
+    }
+}
+
+/// Fold one world's measurement into the sweep totals.
+fn accumulate_seed(totals: &mut SeedCounts, c: SeedCounts) {
+    totals.ticks_done += c.ticks_done;
+    totals.rested += c.rested;
+    totals.slept += c.slept;
+    totals.afforded += c.afforded;
+    totals.bare += c.bare;
+    for (k, n) in c.slept_on {
+        *totals.slept_on.entry(k).or_default() += n;
+    }
+    for i in 0..4 {
+        // A `FacetId` is a packed room address and is world-independent as
+        // a NUMBER only; unioning across seeds conflates rooms of different
+        // worlds. Sum each world's already-deduplicated count instead.
+        totals.quadrant_counts[i] += c.quadrants[i].len();
+        totals.quadrants_affording[i] |= c.quadrants_affording[i];
+    }
+    for (kind, rooms) in c.surface_rooms {
+        *totals.surface_room_counts.entry(kind).or_default() += rooms.len();
+        if !rooms.is_empty() {
+            *totals.surface_world_counts.entry(kind).or_default() += 1;
+        }
+    }
+    totals.grade_observations.extend(c.grade_observations);
+}
+
+/// Print one body-in-room comparison without hiding which live world supplied
+/// it. Grades use enough precision to make close non-equalities inspectable.
+fn print_grade_observation(o: &GradeObservation) {
+    let ordering = match o.first_grade.total_cmp(&o.second_grade) {
+        std::cmp::Ordering::Less => "<",
+        std::cmp::Ordering::Equal => "=",
+        std::cmp::Ordering::Greater => ">",
+    };
+    println!(
+        "    seed={} room={:?} body={:?} species={} : {}={:.9} {} {}={:.9}",
+        o.seed,
+        o.room,
+        o.body,
+        o.species,
+        o.first.0,
+        o.first_grade,
+        ordering,
+        o.second.0,
+        o.second_grade
+    );
+}
+
+/// Find two actual bodies that order the same pair of co-composed surfaces in
+/// opposite directions. Each observation already proves that body stood in a
+/// real room containing both surfaces; this joins opposite orders only.
+fn reversal_witness(
+    observations: &[GradeObservation],
+) -> Option<(&GradeObservation, &GradeObservation)> {
+    type OppositeOrders<'a> = (Option<&'a GradeObservation>, Option<&'a GradeObservation>);
+    let mut orders: BTreeMap<(KindId, KindId), OppositeOrders<'_>> = BTreeMap::new();
+    for observation in observations {
+        let entry = orders
+            .entry((observation.first, observation.second))
+            .or_default();
+        match observation.first_grade.total_cmp(&observation.second_grade) {
+            std::cmp::Ordering::Less if entry.0.is_none() => entry.0 = Some(observation),
+            std::cmp::Ordering::Greater if entry.1.is_none() => entry.1 = Some(observation),
+            _ => {}
+        }
+    }
+    orders
+        .into_values()
+        .find_map(|(less, greater)| Some((less?, greater?)))
 }
 
 /// `n / d`, `0.0` on an empty denominator — a rate with no denominator is not
@@ -273,6 +397,7 @@ fn census_of_seed(seed: u64) -> Option<SeedCounts> {
     );
 
     Some(count(
+        seed,
         &ledger,
         &npcs,
         &ctx,
@@ -383,6 +508,7 @@ fn walk(
 /// the walk answers both exactly as each tick's own did.
 #[allow(clippy::too_many_arguments)]
 fn count(
+    seed: u64,
     ledger: &Ledger,
     npcs: &[Body],
     ctx: &LocaleContext,
@@ -399,12 +525,16 @@ fn count(
     let mesh_memo = RoomMeshMemo::new();
     let terrain =
         LocaleTerrain::with_fields(ctx, calendar, predator, prey, Some(built), Some(&mesh_memo));
+    let objects = object_registry();
+    let sleep_grades = hornvale_species::sleep_grade_registry();
+    let realms = hornvale_species::habitat_realm_registry();
     let mut c = SeedCounts {
         ticks_done,
         ..Default::default()
     };
 
     for npc in npcs {
+        let mut body_rooms = BTreeSet::new();
         // (4) THE WALKED ROOMS, sampled the way the fold resolves a bout's
         // site: `agent_position` at each simulated day. Reading the `agent-at`
         // facts directly would need `liveness::room_from_text`, which is
@@ -419,6 +549,19 @@ fn count(
             c.quadrants[slot].insert(id);
             if !c.quadrants_affording[slot] && affords_rest(&room, npc, &terrain) {
                 c.quadrants_affording[slot] = true;
+            }
+            if body_rooms.insert(id) {
+                observe_room(
+                    seed,
+                    id,
+                    &room,
+                    npc,
+                    &terrain,
+                    &objects,
+                    &sleep_grades,
+                    &realms,
+                    &mut c,
+                );
             }
         }
 
@@ -455,6 +598,101 @@ fn count(
     c
 }
 
+/// Inspect one room an actual body stood in. Physical surface reach is counted
+/// independently of the body's mass; P2/P4 comparisons use only surfaces
+/// `offered_to` says that body can actually use.
+#[allow(clippy::too_many_arguments)]
+fn observe_room(
+    seed: u64,
+    room_id: FacetId,
+    room: &Facet,
+    body: &Body,
+    terrain: &dyn Terrain,
+    objects: &ComponentStore<KindId, ObjectTraits>,
+    sleep_grades: &ComponentStore<KindId, f64>,
+    realms: &ComponentStore<KindId, HabitatRealm>,
+    counts: &mut SeedCounts,
+) {
+    let interior = interior_of(room, terrain);
+    let physical: BTreeSet<KindId> = interior
+        .ids()
+        .into_iter()
+        .map(|id| interior.anchor(id).kind)
+        .filter(|kind| {
+            objects
+                .get(kind)
+                .is_some_and(|traits| traits.rest.is_some())
+        })
+        .collect();
+    for kind in &physical {
+        if ADDED_SURFACES.contains(kind) {
+            counts
+                .surface_rooms
+                .entry(*kind)
+                .or_default()
+                .insert(room_id);
+        }
+    }
+
+    let usable: Vec<KindId> = physical
+        .into_iter()
+        .filter(|kind| offered_to(*kind, body).contains(&OfferedVerb::Sleep))
+        .collect();
+    for first_index in 0..usable.len() {
+        for &second in &usable[first_index + 1..] {
+            let first = usable[first_index];
+            counts.grade_observations.push(GradeObservation {
+                seed,
+                room: room_id,
+                body: body.entity,
+                species: body.species.clone(),
+                first,
+                first_grade: reconstructed_grade(body, first, objects, sleep_grades, realms),
+                second,
+                second_grade: reconstructed_grade(body, second, objects, sleep_grades, realms),
+            });
+        }
+    }
+}
+
+/// **A RECONSTRUCTION of private `liveness::grade_of` and
+/// `liveness::sleep_traits_of`.** The object row, species sleep-grade row,
+/// realm lookup, substrate curve, formula, and `FIT_FLOOR` match those
+/// functions today. Keeping it here avoids widening the production surface
+/// for a one-time measurement, at the cost that a future private change can
+/// drift silently.
+fn reconstructed_grade(
+    body: &Body,
+    kind: KindId,
+    objects: &ComponentStore<KindId, ObjectTraits>,
+    sleep_grades: &ComponentStore<KindId, f64>,
+    realms: &ComponentStore<KindId, HabitatRealm>,
+) -> f64 {
+    let Some(surface) = objects.get(&kind).and_then(|traits| traits.rest) else {
+        return 1.0;
+    };
+    let afforded_gain = sleep_grades
+        .get_by_label(&body.species)
+        .copied()
+        .unwrap_or_else(|| {
+            sleep_grades
+                .get_by_label("human")
+                .copied()
+                .expect("the sleep-grade registry has its documented human fallback")
+        });
+    let fit = match surface.substrate {
+        Substrate::Made => 1.0,
+        Substrate::Natural(hardness) => hornvale_species::substrate_response(
+            realms
+                .get_by_label(&body.species)
+                .copied()
+                .unwrap_or(HabitatRealm::SURFACE),
+        )
+        .eval(hardness, RECONSTRUCTED_FIT_FLOOR),
+    };
+    1.0 + (afforded_gain - 1.0) * surface.offer * fit
+}
+
 /// `built * 2 + cold` — `rest_timeline`'s own grade-memo indexing, and the
 /// entire input set `interior_of` reads.
 ///
@@ -488,4 +726,30 @@ fn affords_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
         .ids()
         .into_iter()
         .any(|a| offered_to(interior.anchor(a).kind, body).contains(&OfferedVerb::Sleep))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// MUTATION THIS MUST FAIL AGAINST: union the per-seed quadrant sets into
+    /// one cross-seed set. A packed room address identifies a place only
+    /// within its world, so the same number in two worlds is two rooms.
+    #[test]
+    fn aggregation_counts_world_independent_addresses_once_per_seed() {
+        let reused_address = FacetId(32);
+        let mut first = SeedCounts::default();
+        first.quadrants[0].insert(reused_address);
+        let mut second = SeedCounts::default();
+        second.quadrants[0].insert(reused_address);
+
+        let mut totals = SeedCounts::default();
+        accumulate_seed(&mut totals, first);
+        accumulate_seed(&mut totals, second);
+
+        assert_eq!(
+            totals.quadrant_counts[0], 2,
+            "the same packed address in two worlds must count as two rooms"
+        );
+    }
 }

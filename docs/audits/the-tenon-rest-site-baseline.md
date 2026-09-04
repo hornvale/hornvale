@@ -5,6 +5,26 @@ Tenon's mechanism tasks. **Instrument:**
 `windows/lab/examples/rest_site_census.rs`
 (`cargo run --release -p hornvale-lab --example rest_site_census`).
 
+**Instrument correction, 2026-09-04 (Task 8).** The original probe correctly
+deduplicated walked `FacetId`s within each seed, then incorrectly extended
+those sets into one cross-seed set. A packed address is meaningful only inside
+one world, so the promised aggregation is the scalar sum of each seed's set
+length, not a union across worlds. This defect contaminated only the four
+aggregate room counts and their shares: quadrant non-emptiness, every
+bout/fact count, and every truncation count were computed independently and
+remain valid.
+
+The corrected probe was applied to the historical checkpoint `f352e57d6` in
+the detached temporary worktree
+`/tmp/the-tenon-task8-historical.DU3qg3/checkpoint` and rerun with the same 24
+seeds, 40 ticks, and 10 bodies. The corrected scalar totals happen to equal the
+superseded union figures exactly on this sweep. That numerical coincidence
+does not rehabilitate the old method: a focused two-world test reusing one
+packed address observes the union collapse from the required 2 to 1. The table
+below preserves both readings explicitly rather than silently replacing the
+published evidence. The temporary worktree and its Git metadata were removed
+after the output was captured.
+
 **One-time measurement, not a regenerated artifact.** It is deliberately NOT
 listed in `docs/generated-paths.txt`: nothing regenerates it, so a drift check
 over it would compare a dated measurement against a world that has moved, and
@@ -140,13 +160,13 @@ happens.
 Distinct `FacetId`s per seed, summed across the sweep, from each body's
 committed `agent-at` trail sampled at every simulated day.
 
-| quadrant | rooms | share | affords rest to some body |
-|---|---:|---:|---|
-| `built=false cold=false` | 1,627 | 0.7406 | **no** |
-| `built=false cold=true` | 407 | 0.1852 | **no** |
-| `built=true cold=false` | 129 | 0.0587 | **no** |
-| `built=true cold=true` | **34** | **0.0155** | **yes** |
-| total | 2,197 | | |
+| quadrant | superseded cross-seed union | corrected per-seed scalar sum | corrected share | affords rest to some body |
+|---|---:|---:|---:|---|
+| `built=false cold=false` | 1,627 | 1,627 | 0.7406 | **no** |
+| `built=false cold=true` | 407 | 407 | 0.1852 | **no** |
+| `built=true cold=false` | 129 | 129 | 0.0587 | **no** |
+| `built=true cold=true` | **34** | **34** | **0.0155** | **yes** |
+| total | 2,197 | 2,197 | | |
 
 **The whole of today's afforded path is 1.55% of walked rooms.** Exactly one of
 the four quadrants `interior_of`'s entire input set can produce ever offers a
