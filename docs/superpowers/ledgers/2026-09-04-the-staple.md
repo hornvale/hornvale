@@ -249,3 +249,50 @@ costs nothing). ·
 ideonomy passes / overturns: 0 — a factual correction with one right answer,
 not a choice between candidates. ·
 Capture: metaplan §1.3; the `SOC-dense-settlement` row.
+
+## Close (post-G3)
+
+#7 [Q] — **The book freshness sweep found no book lag and one METAPLAN gap.** ·
+**Decision: restate D1 — the catchment already exists and the bake discards
+it.** · Why: sweeping `book/src/domains/settlement.md` for claims the
+measurement might contradict found the opposite — the chapter is accurate, and
+it says settlements *partition* a carrying-capacity budget by **catchment**,
+which the metaplan's D1 had proposed adding. Checked:
+`domains/demography/src/flow.rs` is the terrain drainage algorithm with the
+gradient flipped ("people climb the K-gradient as water descends elevation")
+and `condense.rs` reads settlements off it as attractors whose catchment
+clears a threshold, conserving `Sigma population == Sigma K` exactly. So
+**genesis is already a watershed model.** And `history_bake.rs` contains no
+read of `flow`, `condense`, `Condensation` or any accumulation: the bake gets
+a per-vertex `CapacityMap`, so the catchment deciding where a settlement IS is
+discarded the moment history decides how big it GETS. That explains the
+measurement — a ~22-person genesis catchment yielding an 86-person bake peak —
+and makes D1 a reconciliation of two disagreeing halves rather than a new
+mechanism, which is smaller, better founded, and inherits `flow`'s
+draw-free integer determinism. ·
+Alternatives discarded: leaving D1 as written (it would have had a campaign
+build a second catchment beside an existing one — the two-sources-of-truth
+shape this repo has found repeatedly); treating the chapter as stale (it is
+correct, and it was the metaplan that lagged the code). ·
+ideonomy passes / overturns: 0 — a factual finding from the mandated sweep,
+with one right answer. ·
+Capture: metaplan §1.1 and §4 (D1); chronicle; retrospective.
+
+#8 [G4-equivalent] — **DoD artifacts for a prose-only campaign.** ·
+**Decision: The Staple gets both a chronicle entry and a retrospective.** ·
+Why: `docs/retrospectives/README.md`'s own conventions say "one page per merged
+campaign, written at merge time alongside the chronicle entry (decision 0020)",
+and The Staple is a merged campaign — branch, gate, queue. Checked the nearest
+precedent and it cuts the other way: `the-rose-window`, a pure metaplan
+campaign, has neither, and is not indexed. Treated as an omission rather than a
+sanctioned exception, because the README lists no such exception and the
+campaign has real process lessons. Also noted: the README index is lapsed —
+The Plat and The Wash both merged without a row — so a row was added rather
+than the lapse followed. ·
+Alternatives discarded: following `the-rose-window` (would propagate an
+omission); chronicle without retrospective (the process lessons are the more
+valuable half here). ·
+ideonomy passes / overturns: 0 — precedent-resolved with a stated conflict, per
+the autopilot's clarifying-question rule. ·
+Capture: `book/src/chronicle/the-staple.md` + SUMMARY; `docs/retrospectives/the-staple.md`
++ README row; `book/src/open-questions.md` gradient entry.

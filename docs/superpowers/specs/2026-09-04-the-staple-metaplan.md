@@ -67,7 +67,8 @@ because the index has no values.
   standing world. The ended population spans all four horizons; the living
   population is 100% `Classical` on every seed. A predicate of the form
   "tech >= Bronze" can therefore never distinguish two living settlements.
-- **`peak_population` is bounded by one vertex's carrying capacity.**
+- **`peak_population` is bounded by one vertex's carrying capacity — and a
+  catchment mechanism the world already has is discarded to make it so.**
   `Bake::eff_capacity` (`history_bake.rs:1738`) is
   `caps_now()[pidx].at(vertex) * factor(era, vertex)` — a single-vertex read —
   and population grows logistically toward it. The scale is
@@ -75,6 +76,23 @@ because the index has no values.
   documented as "settlers a maximal-suitability vertex supports" and tuned so
   seed 42's live settlement count lands in a walkable band. **It is a
   save-format constant** — "changing it re-places every world".
+
+  **The half that matters most was found during the close's book sweep, not
+  during the design.** Settlement GENESIS does not read a single vertex: it
+  reads a catchment. `domains/demography/src/flow.rs` is *"the terrain
+  `drainage` algorithm with the gradient flipped — people climb the K-gradient
+  as water descends elevation"*, and `condense.rs` reads settlements off that
+  field as attractors whose **catchment** population clears a threshold, with
+  `Sigma population == Sigma K` holding exactly because settlements *partition*
+  the budget rather than each sampling a local value
+  (`book/src/domains/settlement.md`). So the world already models population as
+  a watershed. **The deep-history bake never sees it**: `history_bake.rs`
+  contains no read of `flow`, `condense`, `Condensation` or any accumulation,
+  and `caps_by_era` hands it a per-vertex `CapacityMap`. The catchment that
+  decides where a settlement *is* is discarded the moment history starts
+  deciding how big it *gets*, and the community regrows logistically against
+  its own vertex's K alone. That is why a genesis catchment averaging ~22
+  people yields a bake peak of 86 and never a city.
 
 ### 1.2 Corroboration nobody had to go looking for
 
@@ -326,13 +344,20 @@ question... a later campaign's to ask."* That widening is D1, not R3.
 
 ### DYNAMICS arc
 
-**D1 — a settlement has worked land.** Capacity stops being one vertex.
-`domains/topology/src/route.rs:166 least_cost_from` already returns a
-`CostSweep` — a single-source travel-cost sweep over every vertex — which is a
-catchment. **Probe first, and it can falsify the rung: if carrying capacity is
+**D1 — a settlement has worked land.** **Restated after §1.1's close-time
+finding: this rung is not "add a catchment", it is "make the two halves of the
+model agree about what feeds a settlement".** The catchment exists
+(`domains/demography/src/flow.rs`, `condense.rs`) and genesis uses it; the bake
+discards it. Reconciling them is a smaller and better-founded change than
+inventing a mechanism, and it inherits `flow`'s determinism properties for free
+— it draws nothing and is "integer-and-comparison only". `domains/topology/src/route.rs:166
+least_cost_from` remains available where a TRAVEL-cost catchment is wanted
+rather than a K-gradient one, and choosing between them is part of the rung.
+**Probe first, and it can falsify the rung: if catchment accumulation is
 spatially flat, every catchment sums alike and this is a uniform rescale in
-disguise, which is not a pathology and not a city either.** Measure the
-*spread* of catchment supply before committing.
+disguise, which is not a pathology and not a city either.** The genesis
+figures are the place to start — a mean catchment of ~22 with 182 settlements
+on seed 42 is a distribution somebody can already read the spread off.
 
 **D2 — more than one thing flows, and some of it by exchange.** Split people
 from subsistence (§3, consequence 1); add a voluntary exchange beside the

@@ -5555,3 +5555,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T11:25:09Z | sluice:gate | 749.440 | 19820.651 | 542.949 | 27.17 | 0 | 2d36de0cb |  | lefford | 40 |
 | 2026-09-04T11:27:45Z | sluice:clients | 156.420 | 2376.705 | 190.409 | 16.41 | 0 | a460a9ce2 |  | lefford | 40 |
 | 2026-09-04T11:35:29Z | sluice:heavy | 463.904 | 9816.132 | 167.656 | 21.52 | 0 | 6d6a6858a |  | lefford | 40 |
+| 2026-09-04T12:15:44Z | rebaseline | 291.431 | 473.094 | 19.811 | 1.69 | 0 | 97a7e42b3 | campaign/the-staple | MacBookPro | 10 |
+| 2026-09-04T12:25:23Z | gate-commit | 262.127 | 189.958 | 63.016 | 0.97 | 0 | 97a7e42b3 | campaign/the-staple | MacBookPro | 10 |
