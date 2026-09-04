@@ -1,7 +1,7 @@
 # The Housemark — a dwelling belongs to its people
 
 **Campaign:** The Housemark, The Staple's R1 reading rung.  
-**Status:** approved; implementation in progress.  
+**Status:** approved; implementation complete.
 **Epoch:** concept accession epoch 20, approved after the §7 probe showed the
 new `BENCH` kind in serialized world registries.
 
@@ -347,9 +347,10 @@ target predicate exists so the mutation cannot pass as a no-op.
 
 ## 12. G3 flags
 
-1. **No epoch is intended, but the classification is conditional on measured
-   artifact output (§7).** Any world, ledger, metric, or census movement stops
-   the campaign and returns as an epoch/fidelity decision.
+1. **Concept accession epoch 20 is approved after measured artifact output
+   (§7).** World JSON gained only the additive registered `BENCH` concept and
+   was re-pinned under that accession; no ledger fact, metric, census, lab
+   golden, or derivation stream moved.
 2. **The radius bands are new authored policy (§2).** They are intentionally
    discontinuous around today's empty intervals and fail closed when a future
    people lands there.

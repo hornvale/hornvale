@@ -127,32 +127,29 @@ pub struct Pattern {
     /// role withholds — including the two the GRAMMAR confines anyway
     /// (`the-fire`, `the-fireside-bed`), which is the point.
     pub roles: &'static [Role],
-    /// Whether the LOCALE band draws this pattern — the epoch gate, and the one
-    /// field in this struct that exists for a determinism reason rather than a
-    /// world reason.
+    /// Whether the LOCALE band draws this pattern — the committed-derivation
+    /// gate, and the one field in this struct that exists for a determinism
+    /// reason rather than a world reason.
     ///
     /// [`selection`] admits only patterns with `at_locale: true`. A creature
     /// stands at a LOCALE, and its thermal drive reads the warmth of the
-    /// interior composed there, which is committed history. So a pattern with
-    /// `at_locale: false` cannot move a **world file**: no read that writes a
-    /// [`hornvale_kernel::Fact`] can reach it, and decision 0069 keeps
-    /// `Interior` unserialized. Setting one to `true` is what turns a latent
-    /// pattern into an epoch, and
+    /// interior composed there, which is committed history. A pattern with
+    /// `at_locale: false` stays outside that derivation: chamber composition
+    /// consumes no stream, writes no [`hornvale_kernel::Fact`], and decision
+    /// 0069 keeps `Interior` unserialized. Setting one to `true` changes the
+    /// locale derivation and requires an epoch classification;
     /// `a_locale_composition_is_untouched_by_the_role_layer` is the check that
     /// makes that deliberate rather than accidental.
     ///
-    /// **IT CAN STILL MOVE A RENDERED ARTIFACT, AND THIS SENTENCE SAID
-    /// OTHERWISE UNTIL THE WICKET'S CLOSE.** It read *"a pattern with
-    /// `at_locale: false` **cannot** move a world: no live read can reach
-    /// it"* — the same over-broad reading of "commits" that [`INVENTORY`]'s
-    /// own rule 3, thirty lines below, exists to correct, and it is falsified
-    /// by this very file: `the-brazier` is `at_locale: false` and renders in
-    /// `book/src/gallery/possession-carry-seed-14.md`. **Read rule 3 for the
-    /// full statement; do not restate it here.** The two must not drift
-    /// apart, and they did: The Wicket corrected the `INVENTORY` doc it had
-    /// grepped for and left this twin one screen away untouched since The
-    /// Blocking (`f2cfb0974`, 2026-07-28) — its own lesson, *grep the claim
-    /// and not the identifier*, unapplied to its own correction (ledger #60).
+    /// This flag does not promise world-file byte identity. If an appended
+    /// pattern names a newly registered kind, that kind may extend the
+    /// serialized [`hornvale_kernel::ConceptRegistry`] independently of room
+    /// composition; the accession and its epoch cost must be classified and
+    /// approved. An `at_locale: false` pattern can also move a rendered
+    /// artifact: `the-brazier` renders in
+    /// `book/src/gallery/possession-carry-seed-14.md`. Rule 3 below states both
+    /// boundaries in full; whoever edits either contract must keep them in
+    /// step.
     pub at_locale: bool,
     /// Whether this pattern is drawn only where the place held more people than
     /// a hamlet ([`crate::brief::Brief::is_populous`]). The `needs_cold` of
@@ -196,17 +193,23 @@ pub struct Pattern {
 /// 2. **Appending a pattern with `at_locale: true` is an epoch.** A locale
 ///    composition feeds [`crate::interior::warmth_at`], which feeds a creature's
 ///    thermal drive, which is committed history.
-/// 3. **Appending a pattern with `at_locale: false` is LATENT — and "commits"
-///    here means one specific thing, stated precisely because the word used
-///    to do double duty.** No live read reaches it through the LEDGER:
+/// 3. **Appending a pattern with `at_locale: false` is LATENT to seeded
+///    derivation — and "commits" here means one specific thing, stated
+///    precisely because the word used to do double duty.** No live read
+///    reaches its chamber composition through the LEDGER:
 ///    [`selection`] filters it out, and the only other consumer is
-///    [`selection_for`], whose output feeds the chamber renderer and nothing
-///    that writes a [`hornvale_kernel::Fact`]. A chamber's composed content
-///    is never serialized into a `World`'s ledger (decision 0069 keeps
-///    `Interior` unserialized — derived per room, bubble-scoped, discarded
-///    with the bubble), so no world FILE moves when a pattern is appended
-///    here: no saved world's determinism and no previously-committed fact
-///    changes. That half is permanent and does not decay.
+///    [`selection_for`], whose output feeds chamber composition without
+///    consuming a stream or writing a [`hornvale_kernel::Fact`]. A chamber's
+///    composed content is never serialized into a `World`'s ledger (decision
+///    0069 keeps `Interior` derived per room, bubble-scoped, and discarded with
+///    the bubble), so no ledger fact or seeded derivation changes. That half is
+///    permanent and does not decay.
+///
+///    It is not a promise that no world file moves. If the pattern references
+///    a newly registered kind, registering that kind may extend the serialized
+///    [`hornvale_kernel::ConceptRegistry`]. That accession is independent of
+///    chamber composition and requires its own epoch classification and
+///    approval, as The Housemark's `BENCH` accession did at epoch 20.
 ///
 ///    **The other half of "commits" already decayed by the time this
 ///    sentence first named a date, and a first correction got the date right
@@ -234,16 +237,13 @@ pub struct Pattern {
 ///    newly deepened) committed transcript/fixture, not for an append here.
 ///
 ///    So: appending an `at_locale: false` pattern is LATENT with respect to
-///    the LEDGER — this remains the guarantee that matters, and is why such
-///    an append is not an epoch — but it is **not** latent with respect to a
-///    RENDERED artifact like a gallery transcript, which may show anything
-///    the world now contains and is expected to move. A census column or
-///    `book/src/domesday/` moving would be the real signal something has
-///    changed — not because decision 0069 promises those readers never touch
-///    a chamber (that a census or `book/src/domesday/` does not walk one is
-///    a property of those readers, not a guarantee 0069 issues), but because
-///    0069 keeps `Interior` unserialized, so no world FILE — census or
-///    otherwise — can move on account of a room gaining furniture.
+///    the LEDGER and seeded derivation — no Fact or stream changes through
+///    chamber composition — but a newly referenced registered kind is a
+///    separate accession question, and a RENDERED artifact like a gallery
+///    transcript may show anything the world now contains and is expected to
+///    move. A census column or `book/src/domesday/` ledger field moving would
+///    still be the signal that chamber composition crossed its promised
+///    boundary; serialized `ConceptRegistry` growth is classified separately.
 ///
 ///    **This clause has a twin, and keeping them in step is the point.**
 ///    [`Pattern::at_locale`]'s own field doc states the same latency, and
@@ -629,8 +629,8 @@ pub const INVENTORY: [Pattern; 20] = [
     // `requires` kind is present, so `the-loom` must precede this row or the
     // brazier is silently dropped from every composition it would otherwise
     // join. `at_locale: false` keeps the append LATENT under `INVENTORY`'s
-    // own three-part epoch rule (the chamber renderer reads it; nothing that
-    // commits does).
+    // own three-part epoch rule (the chamber renderer reads it; no derivation
+    // that writes a Fact or consumes a stream does).
     Pattern {
         name: "the-brazier",
         kind: kinds::BRAZIER,

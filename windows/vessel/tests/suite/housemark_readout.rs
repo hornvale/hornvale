@@ -4,14 +4,42 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_kernel::{Facet, KindId, Seed, Value, World, math};
 use hornvale_settlement::{LATITUDE, LONGITUDE};
-use hornvale_vessel::housemark::Housemark;
-use hornvale_vessel::interior::{Interior, Rcc8, Role, chamber_interior_of, selection_for};
+use hornvale_vessel::housemark::{AuthorityMark, Housemark, ThresholdPosture};
+use hornvale_vessel::interior::{
+    Interior, Pattern, Rcc8, Role, chamber_interior_of, compose, selection_for,
+};
 use hornvale_vessel::liveness::LocaleTerrain;
 use hornvale_vessel::site::SiteKind;
 use hornvale_vessel::{Brief, WorldContext, brief_of, structure_at};
 use hornvale_worldgen::{SkyChoice, occupations_by_vertex};
 
 const H3_SEEDS: [u64; 5] = [42, 13, 7, 1, 100];
+const HOUSEMARKS: [Housemark; 6] = [
+    Housemark {
+        authority: AuthorityMark::Command,
+        threshold: ThresholdPosture::Inward,
+    },
+    Housemark {
+        authority: AuthorityMark::Command,
+        threshold: ThresholdPosture::Plain,
+    },
+    Housemark {
+        authority: AuthorityMark::Command,
+        threshold: ThresholdPosture::Outward,
+    },
+    Housemark {
+        authority: AuthorityMark::Common,
+        threshold: ThresholdPosture::Inward,
+    },
+    Housemark {
+        authority: AuthorityMark::Common,
+        threshold: ThresholdPosture::Plain,
+    },
+    Housemark {
+        authority: AuthorityMark::Common,
+        threshold: ThresholdPosture::Outward,
+    },
+];
 
 type Signature = Vec<(KindId, Rcc8)>;
 
@@ -52,14 +80,7 @@ fn settlement_room(
 /// `Interior` deliberately does not retain. Both the contributed kind and its
 /// relation are read back from the composed interior; neither pattern names
 /// nor rendered prose enter the signature.
-fn signature_of(interior: &Interior, brief: &Brief) -> Signature {
-    let selected = selection_for(
-        Role::Threshold,
-        brief.built,
-        brief.cold,
-        brief.is_populous(),
-        brief.housemark,
-    );
+fn signature_of(interior: &Interior, selected: &[&Pattern]) -> Signature {
     let anchors = interior.ids();
     assert_eq!(
         anchors.len(),
@@ -68,7 +89,7 @@ fn signature_of(interior: &Interior, brief: &Brief) -> Signature {
     );
 
     let mut signature = Vec::new();
-    for (pattern, anchor) in selected.into_iter().zip(anchors.iter().copied()) {
+    for (pattern, anchor) in selected.iter().copied().zip(anchors.iter().copied()) {
         let actual_kind = interior.anchor(anchor).kind;
         assert_eq!(
             actual_kind, pattern.kind,
@@ -90,6 +111,71 @@ fn signature_of(interior: &Interior, brief: &Brief) -> Signature {
         signature.push((actual_kind, interior.relation(anchor, required)));
     }
     signature
+}
+
+/// Recover every Housemark whose independently composed threshold has the
+/// observed ordered kinds and relations. The brief supplies only non-cultural
+/// selection axes; its claimed `housemark` label is deliberately not read.
+fn recover_housemark(interior: &Interior, brief: &Brief) -> Vec<(Housemark, Signature)> {
+    let observed_kinds: Vec<_> = interior
+        .ids()
+        .iter()
+        .map(|&anchor| interior.anchor(anchor).kind)
+        .collect();
+
+    HOUSEMARKS
+        .into_iter()
+        .filter_map(|candidate| {
+            let selected = selection_for(
+                Role::Threshold,
+                brief.built,
+                brief.cold,
+                brief.is_populous(),
+                Some(candidate),
+            );
+            let expected_kinds: Vec<_> = selected.iter().map(|pattern| pattern.kind).collect();
+            if observed_kinds != expected_kinds {
+                return None;
+            }
+
+            let observed = signature_of(interior, &selected);
+            let expected_interior = compose(&selected);
+            let expected = signature_of(&expected_interior, &selected);
+            (observed == expected).then_some((candidate, observed))
+        })
+        .collect()
+}
+
+#[test]
+fn recovery_metadata_does_not_consult_the_claimed_housemark_label() {
+    let actual_mark = Housemark {
+        authority: AuthorityMark::Common,
+        threshold: ThresholdPosture::Plain,
+    };
+    let selected = selection_for(Role::Threshold, true, false, false, Some(actual_mark));
+    let interior = compose(&selected);
+    let brief = Brief::from_parts(
+        None,
+        None,
+        None,
+        None,
+        Some(actual_mark),
+        0,
+        true,
+        false,
+        None,
+    );
+    let expected = recover_housemark(&interior, &brief);
+    assert_eq!(expected.len(), 1);
+    assert_eq!(expected[0].0, actual_mark);
+
+    let mut mislabeled = brief;
+    mislabeled.housemark = Some(Housemark {
+        authority: AuthorityMark::Command,
+        threshold: ThresholdPosture::Outward,
+    });
+
+    assert_eq!(recover_housemark(&interior, &mislabeled), expected);
 }
 
 fn containing_vertex(
@@ -234,7 +320,9 @@ fn h3_housemark_readout_recovers_every_inhabited_brief() {
     let mut recovered: BTreeMap<Signature, Housemark> = BTreeMap::new();
     let mut peoples = BTreeSet::new();
     let mut classes = BTreeSet::new();
+    let mut recovered_classes = BTreeSet::new();
     let mut per_seed = BTreeMap::new();
+    let mut recovery_mismatches = Vec::new();
     let mut built_total = 0usize;
     let mut inhabited_total = 0usize;
     let mut unoccupied_total = 0usize;
@@ -316,21 +404,37 @@ fn h3_housemark_readout_recovers_every_inhabited_brief() {
                 )
             });
             let interior = chamber_interior_of(threshold, &terrain, walk, &brief, 0);
-            let signature = signature_of(&interior, &brief);
+            let matches = recover_housemark(&interior, &brief);
+            assert_eq!(
+                matches.len(),
+                1,
+                "seed {seed_value}: built room {room_id:?} has ambiguous structural Housemark candidates {matches:?}"
+            );
+            let (decoded, signature) = matches
+                .into_iter()
+                .next()
+                .expect("the unique structural Housemark candidate exists");
 
             match recovered.get(&signature) {
                 Some(prior) => assert_eq!(
-                    *prior, mark,
-                    "H3 signature {signature:?} maps to both {prior:?} and {mark:?}"
+                    *prior, decoded,
+                    "H3 signature {signature:?} maps to both {prior:?} and {decoded:?}"
                 ),
                 None => {
-                    recovered.insert(signature, mark);
+                    recovered.insert(signature, decoded);
                 }
+            }
+            if decoded == mark {
+                correct += 1;
+            } else {
+                recovery_mismatches.push(format!(
+                    "seed {seed_value} room {room_id:?}: decoded {decoded:?}, brief claimed {mark:?}"
+                ));
             }
             peoples.insert(occupation.core.people);
             classes.insert(mark);
+            recovered_classes.insert(decoded);
             seed_inhabited += 1;
-            correct += 1;
         }
 
         assert_eq!(
@@ -365,6 +469,19 @@ fn h3_housemark_readout_recovers_every_inhabited_brief() {
     );
     println!("H3 signatures: {recovered:#?}");
 
+    let expected_classes: BTreeSet<_> = HOUSEMARKS.into_iter().collect();
+    assert_eq!(
+        classes, expected_classes,
+        "the five-seed production briefs must exercise all six Housemark classes"
+    );
+    assert_eq!(
+        recovered_classes, expected_classes,
+        "structural recovery must produce all six Housemark classes"
+    );
+    assert!(
+        recovery_mismatches.is_empty(),
+        "structural recovery disagreed with production brief labels: {recovery_mismatches:#?}"
+    );
     assert_eq!(
         correct, inhabited_total,
         "H3 must recover every inhabited brief's Housemark"

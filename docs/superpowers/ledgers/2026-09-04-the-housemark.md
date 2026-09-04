@@ -268,8 +268,9 @@ audit/guard maintenance:
   and kind-adjacent files `311 -> 312` and `133 -> 134`; the `BENCH: KindId`
   declaration raises excluded non-quantities and all constants touched
   `498 -> 499` and `1366 -> 1367` (`KindId` `18 -> 19`); and Task 4's added
-  `BTreeMap` import shifts sixteen existing `liveness.rs` finding locations by
-  one line without changing their findings or classifications.
+  `OccupationRecord` import, together with the adjacent kernel import reflow,
+  shifts sixteen existing `liveness.rs` finding locations by one line without
+  changing their findings or classifications.
 - `cli/tests/fixtures/world-build-sites.tsv` is not an `artifacts`-authored
   projection. It is the world-build guard's deliberately updated byte golden:
   `windows/vessel/tests/suite/housemark_readout.rs` adds one sanctioned
