@@ -475,7 +475,7 @@ mod tests {
             &terrain,
             WALK,
             &brief(),
-            at,
+            structure.roles[at],
         );
         (interior, lattice, at)
     }

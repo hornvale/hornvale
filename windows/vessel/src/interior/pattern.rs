@@ -478,8 +478,8 @@ pub const INVENTORY: [Pattern; 20] = [
     //
     // **IT WAS `roles: &[Role::Threshold]` AND `requires: Some(Screen)`, AND
     // THE COST OF THAT WAS THE LOCK ITSELF.** Every built structure has a
-    // threshold chamber — `role_for` returns `Role::Threshold` at index 0
-    // unconditionally — so a key stood in the entrance of every dwelling in
+    // threshold chamber — chamber index 0 is unconditionally `Role::Threshold`
+    // — so a key stood in the entrance of every dwelling in
     // every world, and finding one was a formality rather than an event. The
     // Chattel chose that placement for a structural guarantee (a strongbox
     // implies a threshold in front of it, so "a reachable lock implies a
@@ -500,7 +500,7 @@ pub const INVENTORY: [Pattern; 20] = [
     // on the 48-seed sweep, through `possess --seed N --script`, the role at
     // chamber index 2 is `Role::Loomroom` in **24 of 24** structures that have
     // an index 2 at all. `Role::Smithy`, `Role::Hall` and `Role::Shrine` occur
-    // **zero** times: `role_for` reaches them only through
+    // **zero** times: chamber index 2's role derivation reaches them only through
     // `Function::Mine | Function::Fort`, `Notability::Seat` and
     // `Function::Cult`, and no flagship a possession starts at carries one. A
     // key in the smithy would therefore be a key in no world — which is
@@ -509,9 +509,9 @@ pub const INVENTORY: [Pattern; 20] = [
     // thematic reading was the better story and the wrong placement.
     //
     // **WHAT THE MOVE COSTS, STATED RATHER THAN GLOSSED.** The Threshold
-    // placement made the reachability implication a property of `role_for`;
-    // the Loomroom placement does not. `role_for(2, …)` returns `Role::Store`
-    // for a brief with no `Function`, so a three-chamber structure of that
+    // placement made the reachability implication a property of chamber index
+    // 0's role derivation; the Loomroom placement does not. Chamber index 2 is
+    // `Role::Store` for a brief with no `Function`, so a three-chamber structure of that
     // shape would compose a strongbox with no key anywhere in the building.
     // No swept seed is that shape — all ten strongbox seeds read
     // `[Threshold, Hearthroom, Loomroom, Store]`, and `opened_with_that_key`
@@ -570,8 +570,8 @@ pub const INVENTORY: [Pattern; 20] = [
     //
     // **Placed in the loomroom, not the shrine.** An earlier draft of this
     // task placed it in a shrine; `Role::Shrine` measures **zero** across the
-    // 48-seed sweep this file's own comments record (`role_for` reaches it
-    // only through `Function::Cult`, which no flagship a possession starts
+    // 48-seed sweep this file's own comments record (chamber index 2's role
+    // derivation reaches it only through `Function::Cult`, which no flagship a possession starts
     // at carries), so that placement would have been a brazier in no world —
     // decision 0398's own finding, repeated on a third field after the two
     // key patterns above it already state it once each. `Role::Loomroom` is
@@ -750,41 +750,6 @@ fn draw_from(
         out.push(p);
     }
     out
-}
-
-/// The role of the chamber at `chamber_index` in a structure whose place is
-/// described by `brief`.
-///
-/// Derived, never authored. Two facts about [`crate::structure::Structure`] make
-/// the index a legitimate input rather than an arbitrary one: `chambers[0]` is
-/// always the chamber `enter` arrives in, and `links` is a path graph in depth
-/// order, so a HIGHER INDEX IS DEEPER. So this reads "the front room, the room
-/// behind it, and then the rooms the place's own business fills".
-///
-/// The brief only reaches the chambers a structure has *room* for: index 2 is the
-/// first that consults it, which is why a two-chamber dwelling differentiates on
-/// nothing but depth. That is deliberate — a hamlet's hut is a front room and a
-/// hearthroom, and claiming a shrine in it would be the catalogue §4.3 forbids.
-/// type-audit: bare-ok(index: chamber_index)
-pub fn role_for(chamber_index: usize, brief: &crate::brief::Brief) -> Role {
-    use hornvale_history::record::{Function, Notability};
-    match chamber_index {
-        0 => Role::Threshold,
-        1 => Role::Hearthroom,
-        2 => match (brief.notability, brief.function) {
-            (Some(Notability::Seat), _) => Role::Hall,
-            (_, Some(Function::Agrarian)) => Role::Loomroom,
-            // A garrison and a mine both work iron, and this inventory has one
-            // anvil. Two functions sharing a role is honest; inventing a fourth
-            // craft to keep them apart would be pattern count masquerading as
-            // substance (spec §4.3).
-            (_, Some(Function::Mine | Function::Fort)) => Role::Smithy,
-            (_, Some(Function::Cult)) => Role::Shrine,
-            // A waypoint's third room is what a waypoint is for: keeping goods.
-            (_, Some(Function::Trade)) | (_, None) => Role::Store,
-        },
-        _ => Role::Store,
-    }
 }
 
 /// Compose the selected patterns into one interior, honouring each pattern's
@@ -977,22 +942,6 @@ mod tests {
             "the intended chain is at least four steps, got {}: {plan:?}",
             plan.len()
         );
-    }
-
-    /// A brief with no alive occupation — a place whose deep chambers are stores.
-    fn plain_brief() -> crate::brief::Brief {
-        crate::brief::Brief::from_parts(
-            None,
-            None,
-            None,
-            None,
-            None,
-            0,
-            true,
-            false,
-            settlement_site(),
-            None,
-        )
     }
 
     #[test]
@@ -1291,87 +1240,24 @@ mod tests {
         }
     }
 
-    #[test]
-    fn the_role_is_derived_from_depth_and_then_from_the_brief() {
-        use hornvale_history::record::{Function, Notability};
-        let plain = plain_brief();
-        assert_eq!(role_for(0, &plain), Role::Threshold);
-        assert_eq!(role_for(1, &plain), Role::Hearthroom);
-        assert_eq!(role_for(2, &plain), Role::Store);
-        let fort = crate::brief::Brief::from_parts(
-            Some(Function::Fort),
-            None,
-            Some(Notability::Common),
-            None,
-            None,
-            0,
-            true,
-            false,
-            settlement_site(),
-            None,
-        );
-        let farm = crate::brief::Brief::from_parts(
-            Some(Function::Agrarian),
-            None,
-            Some(Notability::Common),
-            None,
-            None,
-            0,
-            true,
-            false,
-            settlement_site(),
-            None,
-        );
-        assert_ne!(
-            role_for(2, &fort),
-            role_for(2, &farm),
-            "a fort and a farm must not furnish the same third room (spec §9)"
-        );
-        // Notability outranks function: a seat's own chamber is a hall whatever
-        // the place's trade is.
-        let seat = crate::brief::Brief::from_parts(
-            Some(Function::Agrarian),
-            None,
-            Some(Notability::Seat),
-            None,
-            None,
-            0,
-            true,
-            false,
-            settlement_site(),
-            None,
-        );
-        assert_eq!(role_for(2, &seat), Role::Hall);
-        // The front two rooms are the place's own regardless of its business.
-        for b in [&fort, &farm, &seat] {
-            assert_eq!(role_for(0, b), Role::Threshold);
-            assert_eq!(role_for(1, b), Role::Hearthroom);
-        }
-    }
-
+    /// **The role-derivation half of this test moved to `structure::grammar`,
+    /// over `frame_for`** (The Cruck, Task 5a) — `role_for` deleted, its
+    /// index-and-brief derivation now belongs to `structure_at`
+    /// (production) and the structure grammar (a built site, once Task 3
+    /// wires it in). What stays here is the half that is genuinely about
+    /// PATTERN SELECTION: a fort and a farm must not draw the same
+    /// vocabulary for the roles the two respectively hold, checked directly
+    /// on the roles themselves rather than by re-deriving them from a brief.
     #[test]
     fn a_fort_and_a_farm_draw_different_things_not_more_things() {
-        use hornvale_history::record::{Function, Notability};
-        let of = |f: Function| {
-            let b = crate::brief::Brief::from_parts(
-                Some(f),
-                None,
-                Some(Notability::Common),
-                None,
-                None,
-                0,
-                true,
-                false,
-                settlement_site(),
-                None,
-            );
-            selection_for(role_for(2, &b), true, false, false, None)
+        let names = |role: Role| {
+            selection_for(role, true, false, false, None)
                 .iter()
                 .map(|p| p.name)
                 .collect::<Vec<_>>()
         };
-        let fort = of(Function::Fort);
-        let farm = of(Function::Agrarian);
+        let fort = names(Role::Smithy);
+        let farm = names(Role::Loomroom);
         assert!(
             fort.iter().any(|n| !farm.contains(n)) && farm.iter().any(|n| !fort.contains(n)),
             "one place's third room is a superset of the other's, which is a tier \
@@ -1451,8 +1337,8 @@ mod tests {
     ///    `Key` anchors in one interior would derive one `EntityId` at
     ///    ordinal 0 and silently fuse two things.
     /// 2. In an AGRARIAN place — the only third-room function any measured
-    ///    flagship draws — `role_for` puts `Role::Loomroom` at index 2 and
-    ///    every `Role::Store` at index 3 or deeper, so a structure holding a
+    ///    flagship draws — chamber index 2's role is `Role::Loomroom` and
+    ///    every `Role::Store` is at index 3 or deeper, so a structure holding a
     ///    strongbox holds this key in a shallower room of the same building
     ///    and a possession walks THROUGH it to reach the lock.
     /// 3. The loomroom stands no container at all, which is why the key did
@@ -1466,9 +1352,9 @@ mod tests {
     /// **CLAUSE 2 IS WEAKER THAN THE ONE IT REPLACES, AND THAT IS THE PRICE
     /// THE CUSTODIAN PAID FOR RARITY.** While the key was
     /// `roles: &[Role::Threshold]` the implication held for EVERY brief, since
-    /// `role_for(0, …)` is `Role::Threshold` unconditionally: the grammar
+    /// chamber index 0 is `Role::Threshold` unconditionally: the grammar
     /// carried "a reachable lock implies a reachable key" as a theorem. It no
-    /// longer does. `role_for(2, brief)` is `Role::Store` for a brief with no
+    /// longer does. Chamber index 2 is `Role::Store` for a brief with no
     /// `Function`, so a three-chamber structure of that shape composes a
     /// strongbox and no key at all. The clause below is therefore asserted
     /// against an AGRARIAN brief and states only what is provable; the
@@ -1568,34 +1454,19 @@ mod tests {
              the entrance of every built structure in every world: {door:?}"
         );
 
-        // The depth argument, read off `role_for` rather than restated, and
-        // read against the brief that actually reaches a loomroom: the
-        // shallowest Store is deeper than the loomroom, so a walk that
-        // reaches a strongbox HERE has already passed this key.
-        let agrarian = crate::brief::Brief::from_parts(
-            Some(hornvale_history::record::Function::Agrarian),
-            None,
-            None,
-            None,
-            None,
-            0,
-            true,
-            false,
-            settlement_site(),
-            None,
-        );
-        let first_store = (0..=8)
-            .find(|i| role_for(*i, &agrarian) == Role::Store)
-            .expect("some chamber index is a store");
-        let loom = (0..=8)
-            .find(|i| role_for(*i, &agrarian) == Role::Loomroom)
-            .expect("an agrarian place's third room is a loomroom");
-        assert!(
-            loom < first_store,
-            "the key's room ({loom}) is no longer shallower than the \
-             strongbox's ({first_store}), so a possession can reach a lock it \
-             has not passed a key for"
-        );
+        // THE DEPTH ARGUMENT MOVED, NOT DISAPPEARED (The Cruck, Task 5a).
+        // `role_for` used to let this test SEARCH for "the shallowest chamber
+        // index whose role is Store" against an agrarian brief and compare it
+        // to the loomroom's own index — a real check, once, because the
+        // mapping from index to role lived here. It does not any more:
+        // `chamber_interior_of` now takes a role directly, and pattern.rs has
+        // no notion of "index" left to search over at all, so restating the
+        // search with a hand-picked brief would search nothing but a literal
+        // `2 < 3` — a tautology dressed as a measurement. The real claim (an
+        // agrarian brief's business sits at chamber index 2, one shallower
+        // than the first index that is unconditionally a Store) is pinned
+        // where the index-to-role mapping actually lives now:
+        // `structure::tests::chamber_two_differentiates_on_the_briefs_business_at_the_index_role_for_used`.
     }
 
     /// **The population filter still works, and no authored pattern proves

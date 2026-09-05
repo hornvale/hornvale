@@ -28,8 +28,8 @@
 //!
 //! THREE fields are read as of decision 0398: `built`, in `structure_at`'s
 //! existence predicate and in `describe_chamber`'s room/hollow word; and
-//! `notability` and `function`, in `pattern::role_for`'s promotion of a deep
-//! chamber. `cold` is carried but read only by a debug assertion
+//! `notability` and `function`, in `structure_at`'s own promotion of a deep
+//! chamber (`structure::chamber_role`). `cold` is carried but read only by a debug assertion
 //! (`chamber_interior_of` cross-checks it against the terrain), and `tech` and
 //! `people` are carried and not read at all. `housemark` is the chamber-only
 //! cultural axis read by `chamber_interior_of`; it never reaches locale

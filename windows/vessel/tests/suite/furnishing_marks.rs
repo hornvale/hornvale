@@ -6,8 +6,8 @@
 //! **Both halves of the test, and the negative one matters more.** A single
 //! positive-only test passes on an implementation that emits every anchor
 //! unconditionally, which is precisely the leak this campaign's brief warns
-//! against. `role_for`'s chamber index 1 is always `Role::Hearthroom` —
-//! that part of the geometry is a property of the *pattern*, not of any one
+//! against. Chamber index 1 is always `Role::Hearthroom` — that part of
+//! the geometry is a property of the *structure band*, not of any one
 //! seed, and is not this file's to re-derive. It composes a real hearth —
 //! `examine "a hearth"` answers unconditional of sight, proving the anchor
 //! exists — that sits just OUTSIDE the doorway's own shadowcast somewhere
@@ -100,8 +100,8 @@ fn out(t: Turn) -> String {
     }
 }
 
-/// Enter the structure and cross into its deeper chamber — `role_for`'s
-/// index 1, always `Role::Hearthroom` — landing on the doorway cell,
+/// Enter the structure and cross into its deeper chamber — index 1,
+/// always `Role::Hearthroom` — landing on the doorway cell,
 /// however many steps and whichever heading that doorway happens to sit at
 /// on this seed's own layout. Panics loudly on any disagreement rather than
 /// silently testing nothing.
@@ -123,7 +123,7 @@ fn enter_the_hearthroom(session: &mut Session) {
     assert_eq!(
         plan.at, 1,
         "`enter further in` from the threshold chamber (index 0) landed in \
-         chamber {} instead of 1: role_for's own contract is that the \
+         chamber {} instead of 1: the structure's own contract is that the \
          lowest-numbered neighbour deeper than the threshold is always the \
          Hearthroom, so this would mean that contract broke, not that a \
          seed's geometry drifted",

@@ -411,7 +411,8 @@ fn h3_housemark_readout_recovers_every_inhabited_brief() {
                     occupation.core.people.0
                 )
             });
-            let interior = chamber_interior_of(threshold, &terrain, walk, &brief, 0);
+            let interior =
+                chamber_interior_of(threshold, &terrain, walk, &brief, structure.roles[0]);
             let matches = recover_housemark(&interior, &brief);
             assert_eq!(
                 matches.len(),

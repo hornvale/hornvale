@@ -53,9 +53,12 @@ pub struct Structure {
     /// Undirected apertures as index pairs into `chambers`. Connected, so
     /// every chamber is reachable from `threshold`.
     pub links: Vec<(usize, usize)>,
-    /// What each chamber is FOR, index-aligned with `chambers`. For a built site
-    /// the grammar derives it; for a wild one it is read off the index
-    /// (threshold, hearthroom, then stores), exactly as `role_for` did.
+    /// What each chamber is FOR, index-aligned with `chambers`. Read off the
+    /// index and, at index 2, the brief's own business — exactly what
+    /// `role_for` gave before it moved here (The Cruck, Task 5a). Task 3
+    /// replaces this with the structure grammar's derived tree for a built
+    /// site; until then production is still a chain and this is where a
+    /// built site's business reaches its roles.
     pub roles: Vec<Role>,
 }
 
@@ -150,7 +153,7 @@ pub fn structure_at(
     // A path graph rooted at the threshold: minimal, connected, and honest
     // about being minimal.
     let links = (1..chambers.len()).map(|i| (i - 1, i)).collect();
-    let roles = (0..count).map(index_role).collect();
+    let roles = (0..count).map(|i| chamber_role(i, brief)).collect();
     Some(Structure {
         threshold,
         chambers,
@@ -159,12 +162,41 @@ pub fn structure_at(
     })
 }
 
-/// The wild reading: what `role_for` said for every structure before The Cruck.
+/// The wild reading: threshold, hearthroom, then stores — what `role_for` gave
+/// a brief with no business and no notability, and what every chamber past
+/// index 2 still gets whatever the brief says. Used directly by fixtures that
+/// have no brief to consult (`lattice::render`, `lattice::mod`'s own
+/// `structure_of`, and the `path_structure` test helper), and by
+/// [`chamber_role`] for every index but the one the brief can move.
 pub(crate) fn index_role(i: usize) -> Role {
     match i {
         0 => Role::Threshold,
         1 => Role::Hearthroom,
         _ => Role::Store,
+    }
+}
+
+/// Chamber `i`'s role, consulting `brief` at index 2 the same way `role_for`
+/// did before it moved out of `interior::pattern` (The Cruck, Task 5a): a
+/// two-chamber dwelling differentiates on nothing but depth, and everything
+/// past index 2 is a Store regardless of business. Task 3 replaces this with
+/// the structure grammar's derived tree for a built site — a real fork, not a
+/// deeper chain — so this is deliberately narrower than [`crate::structure::
+/// grammar::frame_for`] and stays that way until Task 3 lands.
+/// type-audit: bare-ok(index: i)
+fn chamber_role(i: usize, brief: &Brief) -> Role {
+    use hornvale_history::record::{Function, Notability};
+    match i {
+        2 => match (brief.notability, brief.function) {
+            (Some(Notability::Seat), _) => Role::Hall,
+            (_, Some(Function::Agrarian)) => Role::Loomroom,
+            // A garrison and a mine both work iron, and this inventory has one
+            // anvil (spec §4.3).
+            (_, Some(Function::Mine | Function::Fort)) => Role::Smithy,
+            (_, Some(Function::Cult)) => Role::Shrine,
+            (_, Some(Function::Trade)) | (_, None) => Role::Store,
+        },
+        _ => index_role(i),
     }
 }
 
@@ -367,6 +399,49 @@ mod tests {
         let ids: std::collections::BTreeSet<u64> =
             s.chambers.iter().map(|c| c.pack().unwrap().0).collect();
         assert_eq!(ids.len(), s.chambers.len(), "no chamber may repeat");
+    }
+
+    /// **The fix this task made necessary, pinned so it cannot regress
+    /// silently.** [`crate::interior::chamber_interior_of`] (The Cruck, Task
+    /// 5a) now composes off `structure.roles[i]` directly rather than
+    /// re-deriving a role from the brief at the call site — so if
+    /// `structure_at` stopped consulting the brief for chamber 2, EVERY
+    /// caller that trusts `roles` would silently furnish an agrarian
+    /// dwelling's third room as a Store instead of a Loomroom.
+    ///
+    /// Confirmed empirically before this fix existed: reverting `chamber_role`
+    /// to `index_role` (dropping the brief) reddened nine `session.rs` tests
+    /// that walk a real possession to a real Loomroom for its key.
+    ///
+    /// claim: reachability(seed: 0..64) — an existence probe: at least one
+    /// seed in the range draws a structure with a chamber index 2 at all,
+    /// which is all this test needs to exercise the property.
+    #[test]
+    fn chamber_two_differentiates_on_the_briefs_business_at_the_index_role_for_used() {
+        let agrarian = Brief::from_parts(
+            Some(hornvale_history::record::Function::Agrarian),
+            None,
+            None,
+            None,
+            None,
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        );
+        let s = (0..64u64)
+            .find_map(|seed| {
+                let structure = structure_at(&locale(), &agrarian, Seed(seed), WALK)?;
+                (structure.chambers.len() >= 3).then_some(structure)
+            })
+            .expect("some seed in 0..64 draws at least 3 chambers");
+        assert_eq!(
+            s.roles[2],
+            Role::Loomroom,
+            "an agrarian brief's own business must reach chamber 2, exactly as \
+             `role_for` gave it before this task moved the read here"
+        );
     }
 
     /// claim: invariant(forall-seed) — determinism over a sweep, own doc: "a

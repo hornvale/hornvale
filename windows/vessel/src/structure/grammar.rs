@@ -330,6 +330,51 @@ mod tests {
         );
     }
 
+    /// **The role-derivation half of `interior::pattern`'s deleted
+    /// `the_role_is_derived_from_depth_and_then_from_the_brief`, restated
+    /// over `frame_for`** (The Cruck, Task 5a) — `role_for` is gone, and this
+    /// module owns deriving a role from the brief now. Each individual fact
+    /// is already pinned elsewhere in this file
+    /// (`the_workroom_is_the_functions_own_and_trade_keeps_a_store_instead`
+    /// for Smithy/Loomroom,
+    /// `a_seat_keeps_its_hall_and_workroom_and_drops_the_store_at_the_bound`
+    /// for Hall); what this test adds is the comparison the old one made
+    /// explicitly — a fort and a farm must not furnish the same rooms — and
+    /// the shared claim that the front two rooms are every brief's own
+    /// regardless of its business.
+    #[test]
+    fn a_fort_a_farm_and_a_seat_differ_from_the_third_room_on_and_share_the_front_two() {
+        let fort = frame_for(&dwelling(
+            false,
+            None,
+            Some(Function::Fort),
+            Notability::Common,
+        ));
+        let farm = frame_for(&dwelling(
+            false,
+            None,
+            Some(Function::Agrarian),
+            Notability::Common,
+        ));
+        let seat = frame_for(&dwelling(
+            false,
+            None,
+            Some(Function::Agrarian),
+            Notability::Seat,
+        ));
+        assert!(fort.roles.contains(&Role::Smithy));
+        assert!(farm.roles.contains(&Role::Loomroom));
+        assert!(seat.roles.contains(&Role::Hall));
+        assert_ne!(
+            fort.roles, farm.roles,
+            "a fort and a farm must not furnish the same third room (spec §9)"
+        );
+        for f in [&fort, &farm, &seat] {
+            assert_eq!(f.roles[0], Role::Threshold);
+            assert_eq!(f.roles[1], Role::Hearthroom);
+        }
+    }
+
     #[test]
     fn every_frame_is_a_rooted_tree_with_no_role_twice_and_parent_before_child() {
         for brief in every_brief() {
