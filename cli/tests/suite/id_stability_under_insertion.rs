@@ -45,8 +45,8 @@ use hornvale_locale::LocaleContext;
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::liveness::derive_npcs;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, emit_history,
-    history_for, occupation_records,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, emit_history, history_for,
+    occupation_records,
 };
 use std::collections::BTreeSet;
 
@@ -175,7 +175,6 @@ fn inserting_a_minting_stage_moves_no_unrelated_id() {
     let base = build_world_to(
         Seed(WITNESS_SEED),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -185,7 +184,6 @@ fn inserting_a_minting_stage_moves_no_unrelated_id() {
     let history = history_for(
         Seed(WITNESS_SEED),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -250,7 +248,6 @@ fn inserting_a_stage_moves_no_id_a_later_session_stage_derives() {
     let world = build_world_to(
         Seed(WITNESS_SEED),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

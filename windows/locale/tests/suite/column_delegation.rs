@@ -23,7 +23,7 @@
 //!   be constructed.
 
 use hornvale_climate::{Realm, Stratum};
-use hornvale_kernel::{Horizon, Seed, Vertex, World};
+use hornvale_kernel::{Horizon, Vertex, World};
 use hornvale_locale::LocaleContext;
 use std::fmt::Write as _;
 
@@ -50,7 +50,7 @@ const ALL_STRATA: [Stratum; 11] = [
 const BEFORE_ARM: &str = include_str!("../fixtures/column_before.txt");
 
 fn world() -> World {
-    World::new(Seed(42))
+    hornvale_worldgen::fixture::seed_42_world()
 }
 
 /// Regenerates the fixture's exact text (same stride rule, same vertex order,

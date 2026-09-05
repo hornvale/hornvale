@@ -85,7 +85,7 @@
 
 use hornvale_terrain::Horizon;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, sky_of, substrate_field, terrain_of,
+    SettlementPins, build_world, climate_of, sky_of, substrate_field, terrain_of,
 };
 
 /// Seeds the campaign states its preregistrations on.
@@ -125,7 +125,6 @@ fn how_deep_is_a_cave() {
         let world = build_world(
             seed,
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -137,10 +136,7 @@ fn how_deep_is_a_cave() {
         // `elevation_at` is the isostatic reading, which The Benchmark moved
         // the suitability layer OFF. Read the substrate, not the terrain.
         let sky = sky_of(&world).expect("sky");
-        let generated = match &sky {
-            hornvale_worldgen::Sky::Generated(g) => g,
-            _ => panic!("probe expects a generated sky"),
-        };
+        let generated = sky.generated();
         let system = generated.system();
         let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
         let obliquity_deg = system.anchor.obliquity.get();

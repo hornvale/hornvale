@@ -582,7 +582,7 @@ mod tests {
         );
     }
 
-    use crate::{SettlementPins, SkyChoice, build_world, occupation_records, terrain_of};
+    use crate::{SettlementPins, build_world, occupation_records, terrain_of};
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
@@ -621,7 +621,6 @@ mod tests {
         let world = build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

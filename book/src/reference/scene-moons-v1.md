@@ -23,10 +23,8 @@ plausibly, but never measured or simulated (§3.3). A consumer that conflates
 the two — treating a hash-noise cratering value as if it came from the same
 evidentiary chain as the drawn mass or density — has misread the document.
 
-Only a world with a **generated** sky has moons to describe. Tier-0
-constant-sun worlds have no orrery and no moons; asking one for
-`scene/moons/v1` fails with a description of why — mirroring
-`scene/system/v1`'s same refusal.
+A valid world always has a generated sky. Its `moons` array may honestly be
+empty when genesis admits no moons.
 
 ## The document
 
@@ -243,6 +241,4 @@ hornvale scene moons [--world <PATH>]
 ```
 
 This prints one `scene/moons/v1` document to standard output. `--world`
-defaults to `world.json`. A world with no generated sky (the tier-0
-constant sun) has no moons to describe, and the command fails with a
-message saying so.
+defaults to `world.json`. A moonless world emits an empty `moons` array.

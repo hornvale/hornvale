@@ -23,7 +23,6 @@
 use hornvale_kernel::Seed;
 use hornvale_vessel::lens::{self, HIGHLIGHT_LIFT, Lens, SEPARATION_CEILING, SHADOW_KNEE};
 use hornvale_vessel::{PossessOpts, Session, SessionPlan, SpatialChannel};
-use hornvale_worldgen::SkyChoice;
 use std::collections::BTreeSet;
 
 /// The chamber colours Task 6 measured on the real seam, quoted so the lens is
@@ -54,7 +53,6 @@ fn chamber_plan_with_lens(seed: u64, lens: Lens) -> SessionPlan {
     let world = hornvale_worldgen::build_world(
         Seed(seed),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )
@@ -240,7 +238,6 @@ fn the_lens_never_touches_the_illuminant_or_the_reflectance() {
     let world = hornvale_worldgen::build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

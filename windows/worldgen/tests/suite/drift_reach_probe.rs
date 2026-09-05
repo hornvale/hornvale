@@ -613,7 +613,7 @@ use hornvale_worldgen::chamber::{
 };
 use hornvale_worldgen::character::branch_count_of;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// The seeds the campaign preregisters on (spec §5), matching every other
@@ -1334,7 +1334,6 @@ fn reach_summary(seed: Seed, wc: &WorldComponents) -> ReachSummary {
     let artifacts = build_world_to_with_artifacts(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

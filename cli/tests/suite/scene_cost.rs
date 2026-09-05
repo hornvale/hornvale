@@ -180,7 +180,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 // The measurement harness times derivation calls for a diagnostic (never sim
 // logic, never a fact, never seeded from wall-clock) -- exempt from the
@@ -339,7 +339,6 @@ fn scene_api_cost_is_bounded_on_seed_42() {
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

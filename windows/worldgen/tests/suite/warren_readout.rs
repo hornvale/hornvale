@@ -59,7 +59,7 @@ use hornvale_kernel::Seed;
 use hornvale_species::{BiosphereTraits, HabitatRealm};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, climate_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, climate_of,
     per_species_suitability, seed_sweep, terrain_of,
 };
 
@@ -138,7 +138,6 @@ fn measure_seed(
     let world_after = hornvale_worldgen::build_world_from_components(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc_after,
@@ -147,7 +146,6 @@ fn measure_seed(
     let world_before = hornvale_worldgen::build_world_from_components(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc_before,
@@ -294,7 +292,6 @@ fn the_blast_radius_readout() {
         let smoke = build_world_to(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc_after,

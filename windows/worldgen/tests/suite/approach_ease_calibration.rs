@@ -43,7 +43,7 @@ use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 use hornvale_worldgen::{
-    BuildDepth, GraphConfig, SETTLERS_PER_CAPACITY, SettlementPins, SkyChoice, WorldComponents,
+    BuildDepth, GraphConfig, SETTLERS_PER_CAPACITY, SettlementPins, WorldComponents,
     build_world_to_with_artifacts, carrying_inputs_of, connection_graph_of,
 };
 
@@ -275,7 +275,6 @@ fn print_approach_ease_quantiles() {
         let artifacts = build_world_to_with_artifacts(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

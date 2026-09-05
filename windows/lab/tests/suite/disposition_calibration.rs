@@ -344,7 +344,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, history_for};
+use hornvale_worldgen::{SettlementPins, WorldComponents, history_for};
 use std::collections::BTreeMap;
 
 /// Seeds `1..=SAMPLE`, the range every reading below is pooled over.
@@ -397,7 +397,6 @@ fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
         let history = history_for(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             wc,

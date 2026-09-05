@@ -21,7 +21,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, RungArtifacts, SettlementPins, SkyChoice, WorldComponents, build_world_observed,
+    BuildDepth, RungArtifacts, SettlementPins, WorldComponents, build_world_observed,
 };
 
 /// Time `f` in milliseconds, returning its value alongside the elapsed time.
@@ -47,7 +47,6 @@ fn main() {
         build_world_observed(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

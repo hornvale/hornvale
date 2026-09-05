@@ -119,7 +119,7 @@ mod tests {
     use super::*;
     use crate::components::WorldComponents;
     use crate::settlement_pins::SettlementPins;
-    use crate::{SkyChoice, build_world, climate_from, demography_report_from, terrain_of};
+    use crate::{build_world, climate_from, demography_report_from, terrain_of};
 
     /// The `(wc, terrain, report)` prelude — copied verbatim from
     /// `lib.rs`'s test-only `wc_terrain_report` (`lib.rs:10834-10847`), so
@@ -144,7 +144,6 @@ mod tests {
         build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )

@@ -326,7 +326,7 @@ use hornvale_worldgen::chamber::{
     entrance_mouth, passages_from, rung_rank,
 };
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
     per_species_capacity,
 };
 
@@ -623,7 +623,6 @@ fn is_the_underworld_still_smaller_than_the_surface() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -648,10 +647,7 @@ fn is_the_underworld_still_smaller_than_the_surface() {
         // live here? See the module header for why the bare
         // `carrying_capacity` base field cannot answer this.
         let sky = hornvale_worldgen::sky_of(&artifacts.world).expect("sky");
-        let generated = match &sky {
-            hornvale_worldgen::Sky::Generated(g) => g,
-            _ => panic!("probe expects a generated sky"),
-        };
+        let generated = sky.generated();
         let system = generated.system();
         let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
         let obliquity_deg = system.anchor.obliquity.get();

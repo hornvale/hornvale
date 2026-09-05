@@ -32,8 +32,8 @@ use hornvale_history::record::{CauseOfEnd, Ended, Function, OccupationRecord};
 use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SealState, SettlementPins, SkyChoice, Valence, VestigeKind, WorldComponents,
-    build_world_to, build_world_to_with_artifacts, occupation_records, present_year, vestige_dread,
+    BuildDepth, SealState, SettlementPins, Valence, VestigeKind, WorldComponents, build_world_to,
+    build_world_to_with_artifacts, occupation_records, present_year, vestige_dread,
     vestige_from_occupation, vestige_lines_from,
 };
 use std::collections::BTreeSet;
@@ -55,7 +55,6 @@ fn panel_world(seed_value: u64) -> World {
     build_world_to(
         Seed(seed_value),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &WorldComponents::assemble().expect("canonical components assemble"),
@@ -524,7 +523,6 @@ fn the_almanac_names_a_breach_only_where_one_happened() {
         let built = build_world_to_with_artifacts(
             Seed(seed_value),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &WorldComponents::assemble().expect("canonical components assemble"),

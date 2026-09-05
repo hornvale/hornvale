@@ -58,8 +58,7 @@ use hornvale_kernel::{Seed, Vertex};
 use hornvale_species::{BiomeAffinity, BiosphereTraits, HabitatRealm};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to_with_artifacts, per_species_suitability,
-    sky_of,
+    BuildDepth, SettlementPins, build_world_to_with_artifacts, per_species_suitability, sky_of,
 };
 
 /// The three kinds `hornvale_species::habitat_realm_registry` places in
@@ -122,7 +121,6 @@ fn world_at(
     let artifacts = build_world_to_with_artifacts(
         Seed(SEED),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
         wc,
@@ -136,9 +134,7 @@ fn world_at(
         .climate
         .expect("climate is Some at BuildDepth::Settlements");
     let sky = sky_of(&artifacts.world).expect("sky reconstructs");
-    let system = sky
-        .system()
-        .unwrap_or_else(|| panic!("seed {SEED} has a generated star system"));
+    let system = sky.system();
     let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {

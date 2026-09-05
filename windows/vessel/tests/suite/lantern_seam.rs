@@ -27,7 +27,7 @@ use hornvale_vessel::{
     Brief, Cell, Lattice, PossessOpts, Session, SessionPlan, SpatialChannel, embed_with, extent_for,
 };
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// The walk depth the vessel's own lattice fixtures use — the same constant
@@ -81,7 +81,6 @@ fn world_at(seed: u64) -> World {
     hornvale_worldgen::build_world(
         Seed(seed),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )
@@ -104,7 +103,6 @@ fn flagship_ground(seed: u64) -> (FabricContext, String) {
     let artifacts = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

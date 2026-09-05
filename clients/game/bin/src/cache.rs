@@ -50,9 +50,9 @@
 //!
 //! [`GenesisPins`] is the bundle that replaces the brief's bare
 //! `default_pins()`/`other_pins()` helpers with a named, `PartialEq` type —
-//! every field of every pin struct genesis takes already derives `PartialEq`
-//! (`SkyPins`, `TerrainPins`, `SettlementPins`, `SkyChoice`), so bundling adds
-//! no new comparison machinery.
+//! every pin struct genesis takes already derives `PartialEq` (`SkyPins`,
+//! `TerrainPins`, `SettlementPins`), so bundling adds no new comparison
+//! machinery.
 //!
 //! # Why the tripwire compares `Fact`s directly, not JSON strings
 //!
@@ -75,7 +75,7 @@ use hornvale::streams;
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to};
+use hornvale_worldgen::{BuildDepth, SettlementPins, WorldComponents, build_world_to};
 use std::path::{Path, PathBuf};
 
 /// The subdirectory this cache's two files live under, inside
@@ -98,8 +98,6 @@ pub const REQUEST_FILE: &str = "overture-cache-request.txt";
 pub struct GenesisPins {
     /// The sky provider's own scenario pins.
     pub sky: SkyPins,
-    /// Which sky provider tier built this world.
-    pub sky_choice: SkyChoice,
     /// The tectonic scenario pins.
     pub terrain: TerrainPins,
     /// The settlement placement pins.
@@ -115,7 +113,6 @@ impl GenesisPins {
     pub fn default_request() -> GenesisPins {
         GenesisPins {
             sky: SkyPins::default(),
-            sky_choice: SkyChoice::Generated,
             terrain: TerrainPins::default(),
             settlement: SettlementPins::default(),
         }
@@ -127,8 +124,8 @@ impl GenesisPins {
     /// compare, which is what makes layer 1 free.
     fn fingerprint(&self, seed: Seed) -> String {
         format!(
-            "{seed:?}\tsky={:?}\tsky_choice={:?}\tterrain={:?}\tsettlement={:?}\n",
-            self.sky, self.sky_choice, self.terrain, self.settlement
+            "{seed:?}\tsky={:?}\tterrain={:?}\tsettlement={:?}\n",
+            self.sky, self.terrain, self.settlement
         )
     }
 }
@@ -193,7 +190,6 @@ impl Cache {
         let fresh = build_world_to(
             seed,
             &pins.sky,
-            pins.sky_choice,
             &pins.terrain,
             &pins.settlement,
             &wc,
@@ -272,7 +268,6 @@ mod tests {
         let world = build_world_to(
             seed(42),
             &pins.sky,
-            pins.sky_choice,
             &pins.terrain,
             &pins.settlement,
             &wc,
@@ -295,7 +290,6 @@ mod tests {
             let world = hornvale_worldgen::build_world_from_components(
                 seed(42),
                 &pins.sky,
-                pins.sky_choice,
                 &pins.terrain,
                 &pins.settlement,
                 &wc,
@@ -451,7 +445,6 @@ mod tests {
         let forged_content = build_world_to(
             seed(43),
             &default_pins().sky,
-            default_pins().sky_choice,
             &default_pins().terrain,
             &default_pins().settlement,
             &wc,
@@ -486,7 +479,6 @@ mod tests {
         let world = build_world_to(
             seed,
             &pins.sky,
-            pins.sky_choice,
             &pins.terrain,
             &pins.settlement,
             &wc,

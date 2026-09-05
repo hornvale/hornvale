@@ -125,7 +125,6 @@ fn a_live_parse_context_has_no_surface_collisions() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )

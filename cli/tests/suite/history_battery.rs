@@ -111,9 +111,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, GOBLINOIDS, SettlementPins, SkyChoice, Stratigraphy, WorldComponents,
-    build_world_to, goblinoid_overlap, goblinoid_region_overlap, migration_events, stratigraphy,
-    territories,
+    BuildDepth, GOBLINOIDS, SettlementPins, Stratigraphy, WorldComponents, build_world_to,
+    goblinoid_overlap, goblinoid_region_overlap, migration_events, stratigraphy, territories,
 };
 use std::fmt::Write as _;
 
@@ -206,7 +205,6 @@ fn build(seed: Seed, depth: BuildDepth) -> World {
     build_world_to(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

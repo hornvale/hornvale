@@ -104,9 +104,7 @@ use hornvale_history::flesh::RoleHandle;
 use hornvale_kernel::{EntityId, Fact, Seed, Value, World, WorldTime, test_lineage};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::person_promote::{Founder, FounderCast, MEMORY_DEPTH, select_founders};
-use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, forebear_of, founder_of, occupation_records,
-};
+use hornvale_worldgen::{SettlementPins, build_world, forebear_of, founder_of, occupation_records};
 
 /// The seed panel this probe measures over. See the module doc's "The seed
 /// panel" section for why 25 and why this spread.
@@ -123,7 +121,6 @@ fn world(seed: u64) -> World {
     build_world(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

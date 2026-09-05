@@ -34,8 +34,7 @@ use hornvale_person::{KIN_OF, PARENT_OF};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::person_promote::select_founders;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, forebear_of,
-    occupation_records,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, forebear_of, occupation_records,
 };
 use std::collections::BTreeMap;
 
@@ -44,7 +43,6 @@ fn seed42() -> World {
     build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

@@ -7,7 +7,7 @@ use hornvale_kernel::Seed;
 use hornvale_species::{BiomeAffinity, HabitatRealm};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_capacity,
+    SettlementPins, WorldComponents, build_world, climate_of, per_species_capacity,
     per_species_suitability, sky_of, terrain_of,
 };
 
@@ -27,7 +27,6 @@ fn fixture() -> (
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -36,10 +35,7 @@ fn fixture() -> (
     let terrain = terrain_of(&world).unwrap();
     let climate = climate_of(&world).unwrap();
     let sky = sky_of(&world).unwrap();
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

@@ -43,7 +43,7 @@ use hornvale_astronomy::pins::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::pins::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
-use hornvale_worldgen::{SettlementPins, SkyChoice, census, history_for};
+use hornvale_worldgen::{SettlementPins, census, history_for};
 use std::collections::BTreeMap;
 
 /// The seed both campaigns' preregistrations are stated on.
@@ -67,7 +67,6 @@ fn deep_history_shape_at_seed_42() {
     let h = history_for(
         Seed(SEED),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -125,7 +124,6 @@ fn eviction_causes_and_timeline() {
         let h = history_for(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -187,7 +185,6 @@ fn deep_history_shape_across_probe_seeds() {
         let h = history_for(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

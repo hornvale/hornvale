@@ -784,25 +784,20 @@ pub fn reckoning_at_from(
 /// `[0, at]`, solar AND lunar, regardless of any culture's witnessing
 /// capability — the world's own physical record, as opposed to
 /// [`hornvale_worldgen::observations_from`]'s per-culture WITNESSED subset.
-/// The margin law compares each culture's held count against this. A
-/// tier-0 constant-sun world ([`hornvale_worldgen::Sky::Constant`]) has no
-/// calendar and so no eclipses ever — honestly zero, never a panic, so
-/// `render_volume` stays total over every world `hornvale_worldgen` can
-/// build (not just the Book's own `SkyChoice::Generated` worlds); the
-/// zero short-circuits [`reckoning_epoch`] straight to the empty arm
-/// before it ever calls `observations_from`/`ladder_from` (both of which
-/// themselves require a Generated sky).
+/// The margin law compares each culture's held count against this. Every
+/// built world has the calendar and star system needed to derive the full
+/// physical record.
 fn true_event_count(world: &World, at: hornvale_astronomy::StdInstant) -> usize {
     let sky = hornvale_worldgen::sky_of(world)
         .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable sky: {e}"));
-    match sky {
-        hornvale_worldgen::Sky::Generated(sky) => {
-            let from =
-                hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
-            hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at).len()
-        }
-        hornvale_worldgen::Sky::Constant(_) => 0,
-    }
+    let from = hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
+    hornvale_astronomy::eclipse_events(
+        sky.generated().system(),
+        sky.generated().calendar(),
+        from,
+        at,
+    )
+    .len()
 }
 
 /// Whether one placed culture's held knowledge falls short of the true
@@ -3158,24 +3153,9 @@ mod tests {
         assert_eq!(a.argument, Argument::Count(2));
     }
 
-    fn constant(seed: u64) -> World {
-        use hornvale_astronomy::SkyPins;
-        use hornvale_terrain::TerrainPins;
-        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
-
-        build_world(
-            hornvale_kernel::Seed(seed),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .expect("constant world builds")
-    }
-
     #[test]
     fn coverage_flags_name_as_uncovered() {
-        let world = constant(1);
+        let world = generated(1);
         let gaps = uncovered_predicates(&world);
         assert!(
             gaps.contains(&"name".to_string()),
@@ -3193,20 +3173,32 @@ mod tests {
     fn volume_states_the_planet_is_a_planet() {
         use hornvale_astronomy::SkyPins;
         use hornvale_terrain::TerrainPins;
-        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+        use hornvale_worldgen::{SettlementPins, build_world};
 
         let world = build_world(
             hornvale_kernel::Seed(1),
             &SkyPins::default(),
-            SkyChoice::Constant,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
         .expect("seed 1 builds");
 
         let vol = render_volume(&world);
+        // `contains(" is a planet ")`, not `ends_with(" is a planet.")`.
+        // Under the constant sun the sentence stopped at the classification;
+        // a generated sky commits moon-count, star-class and day-length facts
+        // that the volume appends as further clauses ("... is a planet with
+        // two moons, orbiting a yellow-white dwarf (F); its day lasts about
+        // 1.5 standard days."), so the end anchor cannot survive.
+        //
+        // The TRAILING SPACE is doing the work the lost period used to: it
+        // keeps " is a planetoid" (and any other suffixed noun) from
+        // matching, which a bare `contains(" is a planet")` would have
+        // allowed. A sibling ~30 lines below asserts the whole sentence by
+        // equality, so this one only has to hold the classification claim —
+        // but holding it loosely would still have been a real weakening.
         assert!(
-            vol.lines.iter().any(|l| l.ends_with(" is a planet.")),
+            vol.lines.iter().any(|l| l.contains(" is a planet ")),
             "the volume classifies the planet: {:?}",
             vol.lines
         );
@@ -3215,12 +3207,11 @@ mod tests {
     fn generated(seed: u64) -> World {
         use hornvale_astronomy::SkyPins;
         use hornvale_terrain::TerrainPins;
-        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+        use hornvale_worldgen::{SettlementPins, build_world};
 
         build_world(
             hornvale_kernel::Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

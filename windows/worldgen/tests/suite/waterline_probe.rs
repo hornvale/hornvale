@@ -68,7 +68,7 @@ use hornvale_demography::home_range;
 use hornvale_kernel::{ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, VertexMap};
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
+    SettlementPins, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
 /// Lindeman trophic transfer efficiency — the Earth-anchored ~10%.
@@ -82,7 +82,6 @@ fn waterline_probe() {
     let world = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -94,10 +93,7 @@ fn waterline_probe() {
     let geo = terrain.geosphere();
     // Replicated from worldgen's private `stellar_inputs` using public
     // astronomy APIs, so the probe touches no source.
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

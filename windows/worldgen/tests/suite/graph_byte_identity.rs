@@ -21,8 +21,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, GraphConfig, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-    connection_graph_of,
+    BuildDepth, GraphConfig, SettlementPins, WorldComponents, build_world_to, connection_graph_of,
 };
 
 /// Build seed 42 to `BuildDepth::Settlements` — deep enough for
@@ -35,7 +34,6 @@ fn build_settlements() -> hornvale_kernel::World {
     build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

@@ -22,7 +22,7 @@
 //! ## Population (frozen, spec §6)
 //!
 //! 200 seeds (`1..=200`), default pins (`SkyPins`/`TerrainPins`/
-//! `SettlementPins::default()`, `SkyChoice::Generated`), the standard
+//! `SettlementPins::default()`), the standard
 //! icosphere mesh (`hornvale_terrain::GLOBE_LEVEL`, unconditionally 6 —
 //! there is no smaller "study mesh" in this codebase), **land vertices only**
 //! (`!Biome::is_marine()`), evaluated at 12 days evenly spaced across one
@@ -135,8 +135,8 @@ use hornvale_terrain::TerrainPins;
 use hornvale_topology::{ConnectionGraph, EdgeKind};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
 use hornvale_worldgen::{
-    BuildDepth, GraphConfig, SettlementPins, SkyChoice, WorldComponents,
-    build_world_to_with_artifacts, connection_graph,
+    BuildDepth, GraphConfig, SettlementPins, WorldComponents, build_world_to_with_artifacts,
+    connection_graph,
 };
 use std::collections::BTreeSet;
 
@@ -265,7 +265,6 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let artifacts = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

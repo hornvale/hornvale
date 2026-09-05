@@ -1138,7 +1138,7 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SettlementPins, SkyChoice, build_world};
+    use crate::{SettlementPins, build_world};
     use hornvale_astronomy::SkyPins;
     use hornvale_terrain::TerrainPins;
 
@@ -1147,7 +1147,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

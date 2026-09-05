@@ -8,8 +8,7 @@
 #![allow(clippy::disallowed_methods)]
 use hornvale_language::{Disposition, LossReason, OrderPolicy, Stance};
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, accounts_from, build_world, chorus_ground, pathological_params,
-    sky_capability,
+    SettlementPins, accounts_from, build_world, chorus_ground, pathological_params, sky_capability,
 };
 
 /// Read through a C5 `Explained` wrapper to what the four-filter account
@@ -32,7 +31,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
