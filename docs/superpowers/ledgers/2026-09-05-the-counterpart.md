@@ -416,3 +416,26 @@ Checker derivation disclosure lives in `checker-derivation.md` with a later
 README link, avoiding simultaneous README authorship. This is a file ownership
 adjustment only. The controller launched its ordinary prewarm separately; its
 preparation cost is not an experiment observation.
+
+### Task 1 implementation receipt — review pending
+
+Commit `5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd` adds the raw observer
+and reusable diagnostic. Actual checks: two raw Rust tests, six new Python
+tests, all eight retained Charter self-tests, selected clippy, fmt and
+shellcheck passed. The ordinary commit gate passed all three subfloor chunks
+(1435, 1383, 1227 tests) in 99.504 seconds. The lock diff adds one local
+`digest-counterpart` record; no external lock record or simulation source moved.
+The original successful-output-retention red was `b'' != b'\x00ok'`; raw API
+expectations also failed against a compiling empty observer before implementation.
+
+The independent task review has the entire dispatch-base range, including
+two controller documentation commits, and both spec/quality verdicts are
+required before Task 1 is considered complete.
+
+### Main refresh before Stage 1
+
+A fresh fetch found `cf95817d3` (The Kerf). Its chronicle and 22-path diff
+were read: it removes a redundant resident water index, retaining the read
+class and deterministic witnesses. No path in Digest, Charter diagnostic,
+Thing or Settlement changed in this new range. Absorption waits until the
+active task commits/reviews are complete; the shared main checkout stays untouched.
