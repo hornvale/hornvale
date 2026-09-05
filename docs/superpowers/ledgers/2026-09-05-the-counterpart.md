@@ -1046,3 +1046,54 @@ pass. Rejected: treating a partial outboard result or source-only replay as
 complete qualification. Capture: plan/stage status, full original evidence,
 review and both canonical receipts. The stale introductory ledger status is
 also corrected to reflect Nathan's earlier G3 approval.
+
+## Task6 — original reserved challenge integrated and observed on Mac
+
+After Stage2 acceptance, the three reviewed challenger artifact commits were
+imported as41f612b5a,909148268,c5e5ce11a. Package
+`ca4872744fe57801384ff9cd7149fe25ad197ef4` combines existing source
+objects, with all11 original arms byte-for-byte unchanged and one reserved
+singleton. The full12 panel SHA256 is
+`4d7588e3f25523358deae71a45c4e8d9529f73c5370511b0dd5b1810d759931c`;
+bundle9,823bytes has SHA256
+`33ea34e8774bd11e1b237eb6f62d40601838e67d56f7b3b79ecc1eb4578102f8`.
+No source was reauthored. Original panel/bundle, checker/rules/owner records
+and implementation remain unchanged. The separate Mac panel declares only
+base and reserved, with no pairs, and names its full12 parent hash.
+
+Mac evidence commit`3d36a06c7032dafffb0f1ed3ef2b1d6dca34893f`
+retains89 records in a915,278-byte archive. The exact README sequence with
+the documented focused-panel substitution completed in19.167s. Separate
+locked fetch0.111s, builds5.815s/0.413s, observations0.164s/0.170s are
+nested or separately scoped records, not an additive campaign total.
+
+Base satisfies all four questions. Reserved registration/components/borrowing
+satisfy; ownership violates: `key` is not borrowed and should be Thing-owned,
+but the raw registry says Settlement. The candidate's three observations are
+all satisfied because its ownership check derives the expectation from that
+same observed registry. This is the preregistered correlated wrong answer,
+not a constant-green record or a joint-only pair. The original independent
+checker catches it, with no correction or supplemental instrument.
+
+For this reserved request alone, agreement proposes no questions and explicitly
+reports unknown scope/variant, missing ownership before fallback; full fallback
+restores all four and catches it. Cargo proposes all four. Path proposes all
+four with an absent-enrollment fallback reason. These are Mac singleton results;
+do not silently append them to the Linux11 denominator. Frozen summarize
+correctly refused to call the2-arm dossier a full12 result (ten arms missing).
+
+The same independent source-only reader has now authored its own second
+canonical full12 invocation from the committed package/README. Exact script
+SHA256`33b9df21d209e381b061de047772555aeba034d65b3128bbb9b87a5f06197d10`
+and provenance are retained under`evidence/independent-replay-invocation/`.
+It allocates a new persistent parent, preparation clone, dossier clone and
+target, records the actual chamber SHA and complete locked preparation, then
+executes the frozen full12 CLI. Static shell/Python checks passed; no full
+behavioral replay has occurred. The two full12 runs may execute sequentially
+in one ordinary diagnostic-stage job. Their shared registry cache is disclosed;
+no first-run scratch or target is reused. This is the approved replay mechanism,
+not a new queue or a new Q.
+
+Scoped package/Mac/invocation review, full12 Linux qualification, the independent
+second actual execution and all diagnostic phases remain pending. No Task6/7
+acceptance or merge authority follows from this intermediate receipt.
