@@ -682,6 +682,125 @@ authority the plan argues from.
 
 ---
 
+### #12 [G5] — the vacuity assertion tested the fold's RESULT, not its vacuity
+
+**Question.** Task 2 turned the belief probes' vacuity `println!` into a panic,
+selected the probe agent by known-water-set size as the spec requires, and the
+panic still fired at every band. Is the selection wrong, or the assertion?
+
+**Decision.** **The assertion, and it is a defect in the campaign's own plan
+text.** It fires on `some_count == 0` — whether the fold FOUND A ROUTE — and
+the plan called that a vacuity check. An agent running 46 budget-exhausting
+searches per read is the opposite of vacuous: it is the most expensive subject
+in the roster and exactly what this campaign exists to make cheap. The
+assertion now tests the probe agent's **set size**, which is the quantity
+"vacuity" was always about; `some_count` becomes a reported column.
+
+**The tell was in the code the plan copied, and the plan walked past it.** The
+original block reads:
+
+```rust
+    if some_count == 0 {
+        println!("believed_water: probe agent has no known water across {FOLD_REPS} calls at this band");
+    }
+```
+
+Its MESSAGE claims something about the SET ("has no known water"). Its
+CONDITION tests the RESULT (`some_count`). The two already disagreed. The plan
+promoted the condition to an assertion while carrying the message's meaning
+forward in prose, so what shipped asserted something no sentence of the spec
+ever claimed.
+
+**Two different defects wore one symptom, which is why this survived two
+campaigns.** The Kerf's probe agent had `set_len == 0` — genuinely nothing to
+search. This campaign's probe agent has `set_len == 46` and nothing
+*reachable*. The identical `println!` fired for both. The repaired probe now
+prints which cause holds, so the two can never again be read as the same thing.
+
+**Member 40 stays the probe.** It is the worst case for COST, and cost is the
+campaign's subject: 46 searches × 1,001 expansions per read, which the memo
+collapses to 46 map lookups. Selecting instead by "largest REACHABLE set" —
+numerically the easy way to make the assertion pass — would have picked the
+cheapest interesting agent instead of the most expensive one.
+
+**The implementer stopped rather than relaxing the assertion**, under spec
+Rule 4's own stop clause, and escalated with the evidence instead of choosing a
+criterion. That is the behaviour the rule was written to produce.
+
+**Cross-validation worth recording separately from the ruling.** The
+implementer's instrumentation was written independently of the counting probe
+and reproduces it to the digit: band 1 `sum(seen_len) = 37` against the probe's
+37 calls, 14 unreachable against the probe's `budget_hit = 14`, and per-band
+non-empty / max-set / total-pairs matching §1.2 at bands 1, 5 and 10. Two
+instruments, separately written, agreeing exactly.
+
+**Alternatives discarded.** (a) Select by largest reachable set — picks the
+cheap agent (above). (b) Relax the assertion to a warning — reinstates the
+`println!` that hid this for two campaigns. (c) Drop the belief probe and rely
+on the roster-wide columns — loses the per-band history axis C2's `k` is fitted
+against.
+
+**ideonomy passes / overturns.** None; this is a defect adjudication against
+measured evidence. No overturn — the spec's requirement (probe the worst
+population) is unchanged; only the assertion that was supposed to enforce it.
+
+**Capture actions.** Spec §1.3 gains this as a finding; the probe now
+distinguishes the two causes in its own output.
+
+---
+
+### #13 [G5] — the creature that knows the most water can reach none of it
+
+**Question.** Roster member 40 holds 12 known water rooms at band 1, rising to
+46 by band 10, and **zero of them are reachable within `PLAN_BUDGET` from its
+own home at any band** — while members holding four rooms have all four
+reachable. Is that a measurement artifact?
+
+**Decision.** **It is real, the mechanism is causal, and this campaign records
+it without fixing it.**
+
+**The mechanism.** A creature accumulates distinct known water rooms by
+WANDERING. Wandering carries it away from home. `believed_water` plans FROM
+HOME. So the more water a creature has learned, the farther that water tends to
+sit from the origin the plan starts at, and the likelier every route is to
+exceed a 1,000-expansion zero-heuristic Dijkstra. The biggest believer is
+systematically the least able to reach any of what it believes.
+
+**What it means for the world, not just the bench.** That creature's
+`believed_water` returns `None`, so it behaves as *ignorant of water* while
+holding 46 remembered water rooms. Its thirst-memory path is effectively dead.
+
+**The repository already knew the design choice and not its cost.**
+`believed_water`'s own doc says "Nearness anchors to home (nearest-to-current
+is a followup)". The choice was recorded; the price was not. The price is that
+home-anchoring makes 100% of the largest belief set unusable, and
+`shared_believed_water` — which anchors at `here`, the current position — is
+the shape that would not have this problem.
+
+**It also reframes this campaign's own headline finding.** §1.3(a) reported
+that 95.1% of node expansions are budget-exhausted failures. That is not a
+quirk of where the budget happens to sit: it is structural, and it concentrates
+on exactly the creatures that know the most.
+
+**Out of scope, and the reason is the campaign's own discipline, not
+squeamishness.** Changing the anchor changes which water room is chosen,
+therefore what a creature does, therefore committed facts — an epoch. This
+campaign is byte-identical by construction. Recorded as an idea-registry row
+at close, carrying the per-band reachability measurement that motivates it.
+
+**Alternatives discarded.** (a) Fixing the anchor here — an epoch, out under
+§5. (b) Raising `PLAN_BUDGET` — also a behaviour change, and it treats a
+symptom whose cause is the anchor. (c) Leaving it unrecorded because it is out
+of scope — the measurement exists now and will not be cheaper to retake later.
+
+**ideonomy passes / overturns.** None; a measured behaviour finding. The design
+question it raises belongs to the campaign that acts on it.
+
+**Capture actions.** Idea-registry row at close, citing the per-band
+reachability table. Spec §9 gains it.
+
+---
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*
