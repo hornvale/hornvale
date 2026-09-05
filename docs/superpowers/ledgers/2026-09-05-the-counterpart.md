@@ -543,3 +543,64 @@ artifacts finish review. It may not invent the missing owner record or compose
 the real panel before reviewed artifacts are integrated. This overlaps independent
 preparation, not semantic integration or a pending review decision. The existing
 Charter ledger's diagnostic/adopter overlap provides the same scheduling precedent.
+
+## #8 [G5] — accept independently authored Settlement specimens
+
+**Decision:** accept author commit `9c47f253db7b968152c6bb6dfa8787845779a340`,
+integrated as `5c2d83c49`. Spec/quality review approved with no findings.
+Three source patches only affect the owned manifest loop as experiment data.
+Actual solo additions register successfully; lender rename produces a completed
+observer rc=0 with expected Thing refusal. Author judgments are explicitly hand
+interpretations pending the independent checker. Source/lock diffs are empty
+after restoration and initial/restored raw base bytes agree. Hook passed75 tests.
+**Cross-task checks:** immutable source commits, all-question outcomes, composed
+arms, selection scoring and replay remain Task5 onward. Context separation and
+serial compilation are recorded above, not inferred from hashes.
+**Alternatives/Ideonomy:** no new Q or approach at this green review.
+**Capture:** originals, raw evidence, review report and this acceptance.
+
+## #9 [Q] — normalize independent declarations without hiding integration work
+
+**Question:** how should the finite comparison consume independently authored
+records that use different subject granularity and list semantics?
+**Ruling:** keep originals intact and use explicit, versioned per-owner adapters
+for this finite experiment. Record normalization mode, original field/quote and
+reason; count the intervention as manual integration. Unknown or ambiguous forms
+keep full fallback. This is no general prose interpreter and no executable
+authority for admission.
+
+**Evidence:** direct JSON inspection found Thing `changed_subjects` names source
+locators (`THING_KINDS`, `thing_registry`, `BORROWED`); per-variant supplies are
+additions, while its qualified top-level union includes prospective names.
+Settlement `changed_subjects` names concepts; its variant supplies are the whole
+post-change roster, while top-level supplies are `["home", "hearth"]`.
+Thing's named negatives use `unclaimed:<name>` prefixes with explanation;
+Settlement names the same kind of assumption in explicit prose. Treating both
+supply lists as additions would invent a change to unchanged lender names.
+
+**Chart: autonomy x reversibility (abstraction-lift, autonomy, reversibility):**
+
+```text
+                         Original retained          Original replaced
+Human interpretation     Explicit reviewed adapter  Untraceable editorial rewrite
+Automatic interpretation Known finite forms +       General prose parser whose
+                         unknown fallback            assumptions become invisible
+```
+
+Lift: translating two declarations to a common observation space is the same
+shape as unit conversion or questionnaire coding. A smaller output does not
+remove the work of choosing the conversion. Retaining the originals makes a
+wrong interpretation reversible and reviewable; imposing one silent meaning
+on both lists does not.
+
+**Why/precedent:** approved spec §6 requires one frozen comparison map, explicit
+unknown fallback and reporting manual integration analysis. The Charter also
+separates typed declarations from their truth; independent authorship does not
+mean identical interpretation conventions.
+**Alternatives discarded:** rewriting the owner records after seeing results,
+a generic prose interpreter, and scoring one owner's full roster as all additions.
+**Ideonomy passes / overturns:** one actual draw, reflected above; it reinforces
+lossless finite normalization and its disclosed cost, with no further material
+design expansion. **Cost if wrong:** biased finite comparator results; all checks
+still execute and no admission authority moves. **Capture:** Task5 rule/evidence
+requirements, this ledger and eventual retrospective.
