@@ -249,3 +249,25 @@ derive from was never the call shape; it was **which code paths run a real
 walk**. `session_length_scaling.rs` is the sharpest case: its own comment says
 it was copied from `agent_scaling.rs`, which this diff DID register. · ideonomy
 passes / overturns: 0.
+
+---
+
+#10 [G5] — **Task 1 complete; two pre-existing defects found by looking, and
+parked with reasons.** · Both findings from #8 and #9 verified ADDRESSED by a
+scoped re-review that traced the pairwise test through the code rather than
+trusting the report, and confirmed each of the three new registrations sits in
+the path that actually runs a walk rather than a decoy constructor. · The
+re-reviewer went one step past `cargo build --examples` and actually RAN
+`windows/vessel/examples/session_length_scaling.rs`. **It panics** —
+`UnknownPredicate { predicate: "slept-on" }`, several ticks into the loop.
+Pre-existing: confirmed present at base `5098fc054`, before this campaign
+touched the file. `windows/vessel/src/liveness_tests/emitter_scan.rs` has the
+same gap and its tests pass only because their scenarios never emit a
+`slept-on` fact. Both parked, not fixed: out of scope for an epoch about
+errands, and fixing an unrelated example mid-campaign widens the diff a
+reviewer has to hold. · **The part worth keeping:** the panic is itself the
+evidence that Task 1's registration there is correctly wired — the run got
+*past* registration and into the tick loop before failing on something else.
+A build check would have proved neither. That is the difference between
+compiling a site and exercising it, and it cost twelve seconds. · Follow-up
+rows owed at close for both. · ideonomy passes / overturns: 0.
