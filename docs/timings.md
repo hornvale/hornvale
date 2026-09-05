@@ -6009,3 +6009,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T20:41:14Z | sluice:gate | 825.258 | 21787.432 | 612.169 | 27.14 | 0 | f89570edd |  | lefford | 40 |
 | 2026-09-05T20:43:58Z | sluice:clients | 163.755 | 2295.989 | 214.149 | 15.33 | 0 | fde6418d6 |  | lefford | 40 |
 | 2026-09-05T20:51:49Z | sluice:heavy | 470.334 | 10251.012 | 171.545 | 22.16 | 0 | 3af4fe0af |  | lefford | 40 |
+| 2026-09-05T21:48:17Z | census-study-the-census | 571.944 | 20916.108 | 82.930 | 36.72 | 0 | 4a419e996 |  | lefford | 40 |
+| 2026-09-05T21:52:24Z | census-study-the-meeting | 246.642 | 8967.590 | 99.463 | 36.76 | 0 | 4a419e996 |  | lefford | 40 |
+| 2026-09-05T21:52:29Z | census | 1142.235 | 32104.539 | 273.635 | 28.35 | 0 | 4a419e996 |  | lefford | 40 |
+| 2026-09-05T21:55:27Z | gate-commit | 171.821 | 2864.202 | 192.126 | 17.79 | 0 | 4a419e996 |  | lefford | 40 |
