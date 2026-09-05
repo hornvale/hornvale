@@ -7,12 +7,19 @@ description = "Hornvale lot window: one life drawn from everyone who ever lived 
 
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
-
-# DEV-only: the H-M3 property battery (tests/suite/shape.rs) reconstructs
-# every seed-42 occupation's shape against its committed integral, so it
-# needs the composition root and the history domain's record types to read
-# the fixture world. The library itself draws nothing and builds nothing —
-# a read-only window must not depend on either at runtime.
-[dev-dependencies]
+# The context (`context.rs`) assembles every occupation's shape and hazard
+# once per world: it reads the composition root's registries and rebuilt
+# terrain (`hornvale-worldgen`), the committed occupation records
+# (`hornvale-history`), and a people's life history (`hornvale-species`).
+# Real runtime dependencies from Task 5 on — the window builds nothing new,
+# it only reads what the composition root already reconstructs.
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-history = { path = "../../domains/history" }
+hornvale-species = { path = "../../domains/species" }
+# `hornvale_worldgen::terrain_of` returns `hornvale_terrain::GeneratedTerrain`
+# (imported privately inside worldgen, not re-exported: the composition
+# root's own comment on the re-exported `GeneratedClimate` says every current
+# consumer of `GeneratedTerrain` already depends on `hornvale-terrain`
+# directly), so this crate needs the same edge to NAME the type
+# `LotContext::terrain` stores.
+hornvale-terrain = { path = "../../domains/terrain" }

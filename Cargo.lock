@@ -200,6 +200,8 @@ version = "0.1.0"
 dependencies = [
  "hornvale-history",
  "hornvale-kernel",
+ "hornvale-species",
+ "hornvale-terrain",
  "hornvale-worldgen",
 ]
 

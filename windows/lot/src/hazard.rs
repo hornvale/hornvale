@@ -41,9 +41,20 @@ impl Hazard {
     fn scale(&self) -> f64 {
         HUMAN_ANCHOR_YEARS / self.lifespan_years
     }
+    /// The three hazard terms at scaled age `u`, per scaled year, kept
+    /// separate so a caller can attribute deaths to a named cause
+    /// ([`hazard_shares`]) instead of only reading their sum.
+    fn terms_at_scaled(&self, u: f64) -> (f64, f64, f64) {
+        (
+            A1 * exp(-B1 * u),
+            A2 * (1.0 + self.strife),
+            A3 * exp(B3 * u),
+        )
+    }
     /// The hazard at scaled age `u`, per scaled year.
     fn at_scaled(&self, u: f64) -> f64 {
-        A1 * exp(-B1 * u) + A2 * (1.0 + self.strife) + A3 * exp(B3 * u)
+        let (infant, background, senescent) = self.terms_at_scaled(u);
+        infant + background + senescent
     }
 }
 
@@ -102,4 +113,63 @@ pub fn death_age(h: &Hazard, u: f64) -> f64 {
         }
     }
     (t.len() - 1) as f64
+}
+
+/// The three named hazard terms' shares of every death `survival_table`
+/// accounts for (up to `2 × lifespan`; shares sum to `1.0` there, or to
+/// `0.0` if the table has no deaths at all, which does not occur for a
+/// positive lifespan).
+/// type-audit: bare-ok(ratio: infant), bare-ok(ratio: background), bare-ok(ratio: senescent)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HazardShares {
+    /// The infant term's share of total deaths.
+    pub infant: f64,
+    /// The background term's share of total deaths.
+    pub background: f64,
+    /// The senescent term's share of total deaths.
+    pub senescent: f64,
+}
+
+/// Attribute the deaths `survival_table` accounts for to the three named
+/// hazard terms, by the terms' own share of the (trapezoidal, one-scaled-
+/// year-step) hazard integral over each real year the deaths occurred in —
+/// the same integration `survival_table`/`e0` already do, run once more per
+/// term instead of on their sum.
+pub fn hazard_shares(h: &Hazard) -> HazardShares {
+    let years = (2.0 * h.lifespan_years).ceil() as usize;
+    let k = h.scale();
+    let mut cumulative = 0.0;
+    let mut s_prev = 1.0;
+    let (mut infant, mut background, mut senescent) = (0.0, 0.0, 0.0);
+    for year in 1..=years {
+        let u0 = (year as f64 - 1.0) * k;
+        let u1 = year as f64 * k;
+        let (i0, b0, se0) = h.terms_at_scaled(u0);
+        let (i1, b1, se1) = h.terms_at_scaled(u1);
+        let (avg_i, avg_b, avg_se) = (0.5 * (i0 + i1), 0.5 * (b0 + b1), 0.5 * (se0 + se1));
+        let avg_total = avg_i + avg_b + avg_se;
+        cumulative += avg_total * (u1 - u0);
+        let s_cur = exp(-cumulative);
+        let deaths_this_year = s_prev - s_cur;
+        if avg_total > 0.0 {
+            infant += deaths_this_year * avg_i / avg_total;
+            background += deaths_this_year * avg_b / avg_total;
+            senescent += deaths_this_year * avg_se / avg_total;
+        }
+        s_prev = s_cur;
+    }
+    let total = infant + background + senescent;
+    if total > 0.0 {
+        HazardShares {
+            infant: infant / total,
+            background: background / total,
+            senescent: senescent / total,
+        }
+    } else {
+        HazardShares {
+            infant: 0.0,
+            background: 0.0,
+            senescent: 0.0,
+        }
+    }
 }

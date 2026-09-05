@@ -214,9 +214,14 @@ const NEED: f64 = 1.0;
 /// plumb: pending(wave-1)
 const GROWTH_RATE: f64 = 0.2;
 /// Fraction of a community's population that survives an orderly migration to
-/// a new vertex (the rest is lost on the journey).
+/// a new vertex (the rest is lost on the journey). `pub` since The Lot: the
+/// lot's discrete community-fate hazard (spec 2026-09-05-the-lot §4.3) reads
+/// this same save-format constant for `Fled`/`Migrated` endings rather than
+/// mirroring it — a copy would drift silently the day the bake's own value
+/// moves.
 /// plumb: pending(wave-1)
-const MIGRATE_SURVIVAL: f64 = 0.9;
+/// type-audit: bare-ok(ratio)
+pub const MIGRATE_SURVIVAL: f64 = 0.9;
 /// How much stronger a raider must be than its target to attack (the dominance
 /// margin). A save-format constant: changing it re-fights every world's
 /// history.
@@ -227,8 +232,13 @@ const RAID_MARGIN: f64 = 1.5;
 /// population: value leaves the system rather than being transferred. This is
 /// the primary dissipation, and it is what makes a serial raider grind itself
 /// down instead of snowballing.
+/// `pub` since The Lot: the lot's discrete community-fate hazard (spec
+/// 2026-09-05-the-lot §4.3) reads this same save-format constant for
+/// `Burned`/`Breached`/`Famine`/`Plague` endings rather than mirroring it —
+/// a copy would drift silently the day the bake's own value moves.
 /// plumb: pending(wave-1)
-const WAR_LOSS: f64 = 0.3;
+/// type-audit: bare-ok(ratio)
+pub const WAR_LOSS: f64 = 0.3;
 /// Population below which a broken, displaced remnant dies out rather than
 /// cascading further — the avalanche cutoff, and the second dissipation.
 /// plumb: pending(wave-1)
