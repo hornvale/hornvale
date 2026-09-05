@@ -142,3 +142,57 @@ if [ "$fails" -ne 0 ]; then
     exit 1
 fi
 echo "outboard: all suites passed"
+
+# Counterpart full-12 diagnostic transport only; never merge this branch.
+python3 tools/digest/experiments/the-counterpart/run.py --self-test || exit 1
+# Separate owned clones/targets; both invocations share the Cargo registry cache.
+counterpart_panel=tools/digest/experiments/the-counterpart/panel-full12.json
+counterpart_evidence_parent="$(python3 - "$counterpart_panel" <<'PY'
+from pathlib import Path
+import os
+import signal
+import sys
+import tempfile
+
+root = Path.cwd()
+path = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(path.parent))
+import run
+
+state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state')))/'hornvale'
+state.mkdir(parents=True, exist_ok=True)
+parent = Path(tempfile.mkdtemp(prefix='counterpart-full12-replay-', dir=state)).resolve()
+print('Counterpart primary retained parent: '+str(parent), file=sys.stderr, flush=True)
+run.git_audit_directory = parent/'preparation-git'
+for sig in (signal.SIGINT, signal.SIGTERM):
+    signal.signal(sig, run.measurement.request_stop)
+(parent/'invocation-source.sha').write_text(run.git(root,'rev-parse','HEAD')+'\n')
+panel = run.load_json(path.read_text())
+base = panel['arms']['base']
+checkout = parent/'preparation-checkout'
+run.reconstruct(root,path.parent/panel['bundle'],checkout,panel['base'],base)
+before = run.input_hashes(checkout)
+run.persist(parent/'preparation-before.json', {'source':base,'inputs':before})
+if before != base['inputs']:
+    raise ValueError('preparation source/locks differ from frozen base')
+sample = run.capture(
+    ['cargo','fetch','--locked','--manifest-path','tools/digest/Cargo.toml'],
+    checkout,parent/'dependency-fetch.json',
+    attribution={'role':'dependency-preparation',
+                 'capture_context':{'arm':'base','source':{k:base[k] for k in ('commit','tree')}}})
+after = run.input_hashes(checkout)
+run.persist(parent/'preparation-after.json', {'source':base,'inputs':after})
+run.verify_source(checkout,base)
+if after != before:
+    raise ValueError('locked dependency preparation changed source/locks')
+run.validate_sample(sample)
+print(parent)
+PY
+)" || exit 1
+printf 'Counterpart retained evidence: %s\n' "$counterpart_evidence_parent"
+python3 tools/digest/experiments/the-counterpart/run.py \
+  --panel "$counterpart_panel" \
+  --output "$counterpart_evidence_parent/dossier" || exit 1
+
+# A second actual full-12 run, owned and authored by the independent replay agent.
+bash tools/digest/experiments/the-counterpart/evidence/independent-replay-invocation/independent-replay-invocation.sh || exit 1
