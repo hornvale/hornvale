@@ -159,7 +159,6 @@ mod tests {
         crate::build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            crate::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &crate::SettlementPins::default(),
         )

@@ -224,9 +224,9 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents,
-    build_world_to_with_artifacts, chamber_moisture_at_reach, climate_of, substrate_field,
-    subterranean_substrate_field, subterranean_substrate_field_per_rung,
+    BuildDepth, SettlementPins, Substrate, WorldComponents, build_world_to_with_artifacts,
+    chamber_moisture_at_reach, climate_of, substrate_field, subterranean_substrate_field,
+    subterranean_substrate_field_per_rung,
 };
 
 /// Seeds this campaign preregisters on (spec §5) — the same three
@@ -296,7 +296,6 @@ fn cave_vertices(seed_value: u64, wc: &WorldComponents) -> CaveVertices {
     let artifacts = build_world_to_with_artifacts(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,
@@ -436,7 +435,6 @@ fn terrain_and_surface(
     let artifacts = build_world_to_with_artifacts(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

@@ -30,18 +30,12 @@ mod wash_support {
     pub const W: u16 = 80;
     /// See [`W`].
     pub const H: u16 = 24;
-    /// A representative mid-northern latitude, degrees — the observer
-    /// latitude Task 5's illuminant tests sample at. Not seed 42's flagship
-    /// latitude (this file has no need of that one specifically): any fixed
-    /// latitude for which the sun clears the horizon at both sample
-    /// elevations below serves the directional claim just as well.
-    pub const SAMPLE_LATITUDE_DEG: f64 = 45.0;
-
-    /// Seed 42's locale context, built from a bare world. Everything else
+    /// Seed 42's locale context, built from the committed world. Everything else
     /// this file needs — the terrain, the geosphere, the nearest-vertex
     /// index — is read back off it, so the world is derived once.
     pub fn seed_42_context() -> LocaleContext {
-        LocaleContext::build(&World::new(Seed(42))).expect("a bare seed-42 world builds a context")
+        LocaleContext::build(&hornvale_worldgen::fixture::seed_42_world())
+            .expect("seed 42 builds a context")
     }
 
     /// A live seed-42 possession, plus the terrain/geosphere/index triple a
@@ -96,7 +90,6 @@ mod wash_support {
         let world = hornvale_worldgen::build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            hornvale_worldgen::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
         )
@@ -118,7 +111,7 @@ mod wash_support {
         let index = NearestVertexIndex::new(&geo);
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
-            .and_then(|sky| sky.calendar().cloned());
+            .map(|sky| sky.calendar().clone());
 
         (
             session,
@@ -438,41 +431,47 @@ fn plate_illuminant_at_is_deterministic_across_repeated_calls() {
     );
 }
 
-/// FIRES WHEN: a starless world (tier-0 `ConstantSun`, no calendar) stops
-/// falling back to a flat, colourless illuminant and instead panics or
-/// silently guesses a sun it cannot honestly place. The two `None` cases
-/// [`hornvale_game::driver::plate_illuminant`] documents are modelled
-/// worlds, not errors — this is the first of them; the repo's own keystone
-/// fixture is generated `--sky constant`, so it is not exotic.
+/// FIRES WHEN: [`hornvale_game::driver::plate_illuminant`] stops folding an
+/// absent sun altitude to [`hornvale_game::driver::flat_illuminant`] and
+/// instead panics or guesses a sun it cannot honestly place.
+///
+/// **This is the WRAPPER, and it is the only test that touches it.** Every
+/// other illuminant test in this file calls the inner
+/// `plate_illuminant_at`, which never sees a calendar; the `None` arm lives
+/// in the wrapper alone. `gate-commit` does not scan `clients/`, `make
+/// game-check` asserts nothing about this path, and no ratchet binds it, so
+/// a regression here is silent.
+///
+/// **It is not a retired-provider test, and the version it replaces only
+/// looked like one.** The Zenith retired `a_starless_world_lights_the_plate_flat`,
+/// which built a stipulated acyclic world purely to obtain a `None` calendar.
+/// `plate_illuminant` documents TWO `None` cases and the second —
+/// a `Some` calendar whose `solar_altitude_at` returns `None` under zero
+/// obliquity AND zero eccentricity — outlives the tier entirely. A literal
+/// `None` reaches the same arm from both, the way
+/// `driver.rs`'s `a_starless_world_resolves_season_bucket_zero` already
+/// does for `season_bucket_for`'s identical fold.
+///
+/// The world is bare (`World::new`) because on this arm the function never
+/// reads it: `plate_illuminant` short-circuits to `flat_illuminant()`
+/// before `plate_illuminant_at` would derive the star from `world.seed`.
+/// That also keeps it clear of `sky_of`, so it is unaffected by the sky
+/// provider's own refusal work.
 #[test]
-fn a_starless_world_lights_the_plate_flat() {
-    let world = hornvale_worldgen::build_world(
-        hornvale_kernel::Seed(42),
-        &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Constant,
-        &hornvale_terrain::TerrainPins::default(),
-        &hornvale_worldgen::SettlementPins::default(),
-    )
-    .expect("seed 42 generates under a constant sun");
-    let calendar = hornvale_worldgen::sky_of(&world)
-        .ok()
-        .and_then(|sky| sky.calendar().cloned());
-    assert!(
-        calendar.is_none(),
-        "a tier-0 constant sun must have no calendar to place a sun by"
-    );
+fn an_unplaceable_sun_lights_the_plate_flat() {
+    let world = hornvale_kernel::World::new(hornvale_kernel::Seed(42));
 
     let lit = hornvale_game::driver::plate_illuminant(
         &world,
-        calendar.as_ref(),
+        None,
         hornvale_kernel::WorldTime::GENESIS,
-        wash_support::SAMPLE_LATITUDE_DEG,
+        45.0,
     );
 
     assert_eq!(
         *lit.get(),
         [1.0; hornvale_kernel::color::BANDS],
-        "a starless world must fall back to a flat unit illuminant"
+        "a sun that cannot be placed must fall back to a flat unit illuminant"
     );
 }
 

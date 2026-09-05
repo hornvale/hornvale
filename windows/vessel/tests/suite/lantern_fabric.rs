@@ -42,7 +42,7 @@ use hornvale_terrain::TerrainPins;
 use hornvale_vessel::fabric::{self, Fabric, FabricContext};
 use hornvale_vessel::lens::{self, Lens};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// The seeds H1 sweeps. Eight worlds, not one: a single world's settlements
@@ -88,7 +88,6 @@ fn settlement_ground(seed: u64) -> Vec<FabricContext> {
     let artifacts = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

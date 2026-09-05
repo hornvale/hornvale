@@ -129,7 +129,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_terrain::{Horizon, TerrainPins};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// Seeds this campaign preregisters on (spec §5).
@@ -159,7 +159,6 @@ fn how_hot_is_a_cave() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -341,7 +340,6 @@ fn how_lumpy_is_the_delta_t_distribution() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

@@ -399,10 +399,10 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         &mut ledger,
         concentrations,
     ));
-    // The world's calendar, so the wake cycle reads the real sun (Tier-1).
+    // The world's calendar, so the wake cycle reads the real sun.
     let calendar = hornvale_worldgen::sky_of(world)
         .ok()
-        .and_then(|sky| sky.calendar().cloned());
+        .map(|sky| sky.calendar().clone());
     // The predator-pressure field (The Quarry), so danger senses carnivore
     // territory — from the shared `report` above (The Weir, Stage 1b)
     // rather than its own fit.

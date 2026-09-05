@@ -35,7 +35,7 @@ incidental):
 | `features` | array of object | Named points on the lattice — settlements, described below. |
 | `t_mean_c` | array of number, one per tile | Annual-mean temperature at the tile, °C (the climate model's canonical unit; sampled through the same nearest-cell path as every other layer). |
 | `t_swing_c` | array of number, one per tile | **Hemisphere-signed** seasonal half-swing, °C: the coefficient of the seasonal sinusoid, `amplitude × sign(source-cell latitude)`. Positive in the north, negative in the south, exactly `0` on tidally locked and zero-obliquity worlds. Signed at the source so clients never apply a hemisphere sign themselves — a tile near the equator may sample a cell on the other side of it, and the sign travels with the data. |
-| `season_period_days` | number | The period, in standard days, of the seasonal sinusoid the temperature layers parameterize. On generated-sky worlds this equals `scene/system/v1`'s `year_days`; on constant-sun worlds (which have no system document) it is the tier-0 default year, and this field is the only honest way a client can know it. The evaluator reads one scalar from `scene/system/v1` besides this — `year_phase_offset` — to phase the season on the true orbit (see *Reading temperature over the year*); everything else it needs is here. |
+| `season_period_days` | number | The period, in standard days, of the seasonal sinusoid the temperature layers parameterize. This equals `scene/system/v1`'s `year_days`. The evaluator reads one further scalar from that document — `year_phase_offset` — to phase the season on the true orbit (see *Reading temperature over the year*); everything else it needs is here. |
 | `circulation_bands` | integer, **absent when tidally locked** | The number of atmospheric circulation cells per hemisphere (Earth-like day → 3). Document-level, not per-tile: the wind model is a pure function of latitude and this count, and the contract does not pretend otherwise. Absence follows the `day_length_days` precedent in [`scene/system/v1`](./scene-system-v1.md). |
 | `moisture` | array of number, one per tile | Dimensionless moisture index in [0, 1] — the climate model's own quantity (band base and ocean-proximity floor, dried by an upwind moisture-budget trace on spinning worlds; the substellar model on locked ones). Deliberately **not** mm/yr, and it stays that way: the physical precipitation total arrived as the *separate* `precip_mm_yr` field below (The Rains), never a re-meaning of this one — biomes still classify on this dimensionless index. |
 | `precip_mm_yr` | array of number, one per tile | Annual precipitation, mm/yr — an Earth-ranged total mapped from `moisture` (desert `<250`, temperate `~500–1500`, rainforest `>2000`). A documented approximation for legibility (the precipitation lens), not a measured climatology. |
@@ -150,8 +150,7 @@ t(tile, day) = t_mean_c[tile] + t_swing_c[tile] · sin(τ · frac(day / season_p
 
 where `day` is absolute standard days (`WorldTime`), `τ = 2π`,
 `frac(x) = x − floor(x)`, and `year_phase_offset` is `scene/system/v1`'s
-field of that name (`0` on constant-sun worlds, which have no system
-document).
+field of that name.
 
 **The seasonal phase is `frac(day / season_period_days + year_phase_offset)`
 — it carries the orbital offset.** The season is *caused* by the sun's
@@ -159,8 +158,7 @@ declination, which is itself phased on `frac(day / year + year_phase_offset)`
 (`Calendar::year_phase`); the two must share a phase or the ice will lead or
 lag the sun by that offset. This is the one place the seasonal evaluator
 reaches outside this document — for the offset only, a single scalar from
-`scene/system/v1` — so a generated-sky client passes it through; a
-constant-sun client uses `0`.
+`scene/system/v1` — so a client passes it through.
 
 Locked worlds are the exception, and read the `locked` flag to take it:
 `t_swing_c` is `0`, but the seasonal temperature is not the mean. A tidally

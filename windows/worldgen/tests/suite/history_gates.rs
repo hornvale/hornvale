@@ -73,7 +73,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, GOBLINOIDS, SettlementPins, SkyChoice, WorldComponents, build_world_to, census,
+    BuildDepth, GOBLINOIDS, SettlementPins, WorldComponents, build_world_to, census,
     goblinoid_region_overlap, history_for, migration_events, stratigraphy, territories,
 };
 
@@ -161,7 +161,6 @@ fn build(seed: Seed, depth: BuildDepth) -> hornvale_kernel::World {
     build_world_to(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -234,7 +233,6 @@ fn migration_events_counts_climate_displacement_only() {
     let h = history_for(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

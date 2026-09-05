@@ -75,7 +75,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::{
-    BuildDepth, GeneratedClimate, RungArtifacts, SettlementPins, SkyChoice, WorldComponents,
+    BuildDepth, GeneratedClimate, RungArtifacts, SettlementPins, WorldComponents,
     build_world_observed,
 };
 use std::sync::mpsc::{Receiver, TryRecvError};
@@ -200,7 +200,6 @@ pub fn spawn(seed: Seed) -> Receiver<Progress> {
         let outcome = build_world_observed(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -421,7 +420,6 @@ mod tests {
             hornvale_worldgen::build_world_to(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
                 &wc,

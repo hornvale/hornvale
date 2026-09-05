@@ -241,7 +241,7 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
     DriveMovements, HomeNavCache, LocaleTerrain, SUSTENANCE, derive_npcs,
 };
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 // The measurement harness times a single tick loop for a diagnostic (never
 // sim logic, never a fact, never seeded from wall-clock) -- exempt from the
 // wall-clock ban (clippy.toml / decision 0001), same pattern as
@@ -465,7 +465,6 @@ fn main() {
     let world = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -486,7 +485,7 @@ fn main() {
     // tidally-locked world. Reads the exact tick count (The Foliot).
     let day_ticks = hornvale_worldgen::sky_of(&world)
         .ok()
-        .and_then(|sky| sky.calendar().cloned())
+        .map(|sky| sky.calendar().clone())
         .and_then(|c| c.day_ticks());
 
     let mut rows: Vec<Row> = Vec::new();

@@ -80,7 +80,7 @@ use hornvale_language::clause::{
 use hornvale_language::{
     CommonVocabulary, Evidential, SchemaId, realize_tongue_deep, tongue_grammar,
 };
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeSet;
 
 /// The book's reference seed — the one every committed gallery artifact and
@@ -98,7 +98,6 @@ fn generated_world() -> World {
     build_world(
         Seed(REFERENCE_SEED),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

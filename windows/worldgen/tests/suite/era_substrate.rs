@@ -14,9 +14,9 @@
 #![allow(clippy::disallowed_methods)]
 
 use hornvale_worldgen::{
-    EraAdjust, EraInvariantSupply, SettlementPins, SkyChoice, build_world, climate_of,
-    insolation_field, per_species_capacity, per_species_capacity_at, sky_of, substrate_field,
-    substrate_field_at, terrain_of,
+    EraAdjust, EraInvariantSupply, SettlementPins, build_world, climate_of, insolation_field,
+    per_species_capacity, per_species_capacity_at, sky_of, substrate_field, substrate_field_at,
+    terrain_of,
 };
 
 /// Rebuild the pieces a substrate needs for one seed.
@@ -32,7 +32,6 @@ fn parts(
     let world = build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -40,10 +39,7 @@ fn parts(
     let terrain = terrain_of(&world).expect("terrain");
     let climate = climate_of(&world).expect("climate");
     let sky = sky_of(&world).expect("sky");
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("test expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

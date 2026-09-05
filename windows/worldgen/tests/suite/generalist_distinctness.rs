@@ -120,7 +120,7 @@ use hornvale_kernel::{ConditionResponse, KindId, Seed};
 use hornvale_species::{BiosphereTraits, ConditionNiche, HabitatRealm, biosphere_registry};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
+    SettlementPins, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
 /// The viability floor below which a vertex's K is ecological noise rather
@@ -233,7 +233,6 @@ fn measure_fits(
     let world = build_world(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -243,9 +242,7 @@ fn measure_fits(
     let climate = climate_of(&world).expect("climate reconstructs");
     let sky = sky_of(&world).expect("sky reconstructs");
     let geo = terrain.geosphere();
-    let system = sky
-        .system()
-        .unwrap_or_else(|| panic!("{seed:?} has a generated star system"));
+    let system = sky.system();
     let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity = system.anchor.obliquity.get();
     let regime = match system.anchor.rotation {

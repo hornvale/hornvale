@@ -281,7 +281,7 @@ mod tests {
     use crate::observable;
     use hornvale_kernel::{EntityId, Seed, World, WorldTime};
     use hornvale_locale::LocaleContext;
-    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+    use hornvale_worldgen::{SettlementPins, build_world};
 
     #[test]
     fn a_noun_defaults_to_unknown_and_with_kind_sets_it() {
@@ -342,7 +342,6 @@ mod tests {
         build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )

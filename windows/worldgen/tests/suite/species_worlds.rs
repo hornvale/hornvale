@@ -22,7 +22,7 @@
 //! unknown species pin fails loudly.
 use hornvale_kernel::WorldTime;
 use hornvale_kernel::test_lineage;
-use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world, flagship_of};
+use hornvale_worldgen::{BuildError, SettlementPins, build_world, flagship_of};
 
 fn pins(species: Option<&str>) -> SettlementPins {
     SettlementPins {
@@ -42,7 +42,6 @@ fn default_world_carries_all_four_peoples_with_their_own_flagships() {
     let world = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &pins(None),
     )
@@ -87,7 +86,6 @@ fn every_registry_people_can_flagship_when_pinned_alone() {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &pins(Some(species)),
         )
@@ -126,7 +124,6 @@ fn species_pin_restricts_and_unknown_species_fail_loudly() {
     let goblin_only = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &pins(Some("goblin")),
     )
@@ -137,7 +134,6 @@ fn species_pin_restricts_and_unknown_species_fail_loudly() {
     let err = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &pins(Some("elf")),
     )
@@ -189,7 +185,6 @@ fn genesis_commits_one_instance_of_fact_per_placed_people() {
     let w = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

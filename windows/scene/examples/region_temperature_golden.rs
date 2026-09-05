@@ -7,7 +7,7 @@
 use hornvale_kernel::Seed;
 use hornvale_kernel::WorldTime;
 use hornvale_scene::{SceneContext, temperature_grid_region_in};
-use hornvale_worldgen::{SkyChoice, build_world};
+use hornvale_worldgen::build_world;
 
 const NODES: &[usize] = &[0, 8, 144, 200, 288];
 const DAYS: &[f64] = &[0.0, 91.3, 200.0, 366.5];
@@ -16,7 +16,6 @@ fn main() {
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

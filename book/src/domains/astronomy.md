@@ -4,21 +4,8 @@
 celestial phenomena would an observer notice, how often do they recur, and
 how much attention do they demand?
 
-**Tier 0 — the constant sun.** A golden sun hangs fixed at zenith; it has
-never been seen to move. That is the entire implementation, and it is not a
-placeholder joke: it is the *Zork* model of a sky, and its phenomena output —
-a single celestial body, maximally salient, with no period — is already
-meaningful input downstream. What religion develops under an eternal noon is
-a legitimate question, and seed 42's goblins have an answer.
-
-**What it emits.** Astronomy contributes no facts and touches no fields at
-tier 0; it exists purely as a phenomena source. This makes it the cleanest
-example of the trace protocol's read side: everything downstream knows the
-sky only as *salience-ranked phenomena with periodicities and character* —
-never as orbital mechanics.
-
-**Tiers 1–2 are live (Campaign 2).** New worlds default to the generated
-sky: an anchor-first star system (main-sequence star with a derived
+**One generated sky.** Every world has an anchor-first star system (a
+main-sequence star with a derived
 habitable zone; a world placed in it by construction; moons admitted past
 stability inequalities; notable neighbor stars), a **calendar** translating
 absolute time into the world's own days, seasons, and moon phases (tidally
@@ -27,7 +14,9 @@ whose phenomena carry real periodicities. Everything is **pinnable** for
 controlled experiments (`--moons 2+1`, `--rotation locked`, `--obliquity
 none`, `--neighbor blue-giant`), pins live as facts in the world's ledger,
 refusals become genesis-note facts, and `scout` searches seeds explicitly —
-the seed itself is never a means. The generator's model card (derived vs
+the seed itself is never a means. Astronomy commits the system's facts and
+offers its observations downstream as salience-ranked phenomena rather than
+exposing orbital mechanics. The generator's model card (derived vs
 approximated vs drawn) lives in the Campaign 2 spec; chronicles:
 [2a](../chronicle/campaign-2a.md), [2b](../chronicle/campaign-2b.md).
 
@@ -451,9 +440,9 @@ predicate's description did not say so, which read to a consumer as an
 undocumented negative "period." The registration now states the sign; the
 physics, and the value, are unchanged.
 
-**The tier ladder ahead:**
+**Deepenings ahead:**
 
-3. Realistic multi-body configurations: binary suns, moons in resonance,
+Realistic multi-body configurations: binary suns, moons in resonance,
    rings, and each neighbor's coordinates plotted as seen from a real place
    rather than an idealized one — plus the observer's own per-body altitude
    and azimuth (so a body is placed at a point in the sky, not merely up or
@@ -465,7 +454,9 @@ physics, and the value, are unchanged.
    wanderer transits, and per-species figure catalogs are the open
    deepenings the [idea registry](../frontier/idea-registry.md) tracks.)
 
-At every tier the query stays the same; only the richness of the answer
-changes. A world configured with the tier-0 provider remains a valid,
-interesting world forever — that is what fidelity-agnostic means, and the
-constant-sun world of seed 42 remains in the gallery as proof.
+The query stays the same as these deepenings arrive; only the richness of the
+answer changes. Astronomy's former stipulated constant-sun provider was
+retired by [The Zenith](../chronicle/the-zenith.md). Its only physical content
+— an aperiodic sun — remains representable by a tidally locked generated
+world, while contradictory future mechanisms are epochs rather than
+coexisting fidelity tiers.

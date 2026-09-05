@@ -1,6 +1,6 @@
 ### The world of seed 42, in its entirety
 
-Under a golden sun fixed at zenith, in an unnamed vale, stands the goblin village of **Bolnar**. Its people revere the most salient phenomenon their sky offers them.
+In an unnamed vale stands the goblin village of **Bolnar**. Its people revere the most salient phenomenon their sky offers them.
 
 The complete fact ledger:
 

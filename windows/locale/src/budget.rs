@@ -264,7 +264,7 @@ mod tests {
     // sanctioned test-fixture posture the weir's spec carves out.
     #![allow(clippy::disallowed_methods)]
     use super::*;
-    use hornvale_kernel::{Seed, World};
+    use hornvale_kernel::Seed;
     use hornvale_worldgen::{climate_of, terrain_of};
 
     fn budget_for(
@@ -274,7 +274,13 @@ mod tests {
         hornvale_climate::GeneratedClimate,
         GeneratedTerrain,
     ) {
-        let w = World::new(Seed(seed));
+        let w = hornvale_worldgen::build_world(
+            Seed(seed),
+            &Default::default(),
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("the budget seed builds");
         let climate = climate_of(&w).unwrap();
         let terrain = terrain_of(&w).unwrap();
         let b = StrangenessBudget::build(Seed(seed), &climate, &terrain);

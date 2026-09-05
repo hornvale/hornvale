@@ -8,7 +8,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{BuildProfile, SettlementPins, SkyChoice, build_world, profiled};
+use hornvale_worldgen::{BuildProfile, SettlementPins, build_world, profiled};
 
 fn main() {
     let sample: u64 = std::env::args()
@@ -22,7 +22,6 @@ fn main() {
             build_world(
                 Seed(seed),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
             )

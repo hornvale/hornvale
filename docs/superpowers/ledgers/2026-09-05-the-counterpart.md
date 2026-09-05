@@ -814,3 +814,14 @@ scratch and execution, not blinded outcome adjudication. Those declarations
 are not result authority. No source build was run: the same reader must still
 perform its own full canonical behavioral replay against the final panel.
 Task 7 is not accepted on source reconstruction alone.
+
+## Main absorption — The Zenith
+
+Absorbed main `20c0cd375719459ff75dc8e4b9615bf60a31fa97` after reading
+The Zenith chronicle and governing changes. The actual no-commit merge was
+conflict-free: 314 incoming files, 5,319 insertions and 3,830 deletions. The
+staged production paths under kernel/domains/windows/cli/clients have no
+difference from origin/main; the campaign adds no simulation or golden
+change of its own. All eight frozen experiment files retain their exact
+lengths and SHA256 hashes. Source arms still use the original frozen base.
+The running Stage2 request independently tests its real merge with this main.

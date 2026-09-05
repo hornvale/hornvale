@@ -451,7 +451,6 @@ fn run_scan_shape(
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )
@@ -486,7 +485,7 @@ fn run_scan_shape(
         .id;
     let day_ticks = hornvale_worldgen::sky_of(&world)
         .ok()
-        .and_then(|sky| sky.calendar().cloned())
+        .map(|sky| sky.calendar().clone())
         .and_then(|c| c.day_ticks());
     let mut ledger = world.ledger.clone();
     let mut registry = world.registry.clone();

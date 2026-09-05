@@ -672,9 +672,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use hornvale_demography::stack_condense::HeadcountRender;
 use hornvale_kernel::{KindId, Seed, Vertex, World, quantize};
 use hornvale_worldgen::{
-    ChannelMask, SettlementPins, SkyChoice, WorldComponents, build_world_from_components,
-    climate_from, demography_report_from, demography_report_from_masked, generation_length_of,
-    knownness, terrain_of,
+    ChannelMask, SettlementPins, WorldComponents, build_world_from_components, climate_from,
+    demography_report_from, demography_report_from_masked, generation_length_of, knownness,
+    terrain_of,
 };
 
 /// How many unrest deciles the readout stratifies into.
@@ -791,7 +791,6 @@ fn world_of(seed: u64, wc: &WorldComponents) -> World {
     build_world_from_components(
         Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
         wc,
