@@ -5,14 +5,17 @@ From the repository root:
 ```sh
 make context-prepare                # explicit dependency/build preparation
 make context SCOPE=domains/thing
+make context SCOPE=windows/lab/src/publish.rs
 make context SCOPE=.               # every enrolled contributor
 ```
 
 Preparation may fetch dependencies and update `tools/digest/Cargo.lock`; review
 that change normally. Subsequent context commands use `--locked --offline` for
 both metadata and builds. Missing dependencies or a stale lockfile fail with a
-preparation instruction. No contributor is enrolled by the bootstrap itself;
-no match is a nonzero result.
+preparation instruction. The Charter enrolls Thing ownership/borrowing and the
+pure census-publication host predicate. A scope with no enrolled contributor
+is a nonzero result. Preparation builds **all** Digest workspace members; it
+is not a selected-scope latency measurement.
 
 Manual invocation after preparation:
 
@@ -137,8 +140,11 @@ then forces termination, waits for its direct child and joins the readers.
 Normally exited parents cannot leave descendants holding output pipes. SIGINT
 and SIGTERM request cancellation. Descendants must remain in their invocation's
 process group: this is trusted repository code, not a hostile-code sandbox or
-portable grandchild reaper. Context is supported on Unix; existing renderers
-remain separate.
+portable grandchild reaper. The supported qualification hosts are macOS and
+canonical Linux (lefford).
+Context uses Unix process facilities; unsupported operating systems receive a
+context-specific error. Existing renderers remain separate. Qualification
+results and any pending host checks are recorded in the evidence document below.
 
 Only after every selected envelope is collected and validated does the host emit
 the assembled report on stdout. Whole-phase elapsed timing and diagnostics go to
@@ -151,3 +157,71 @@ Run the outboard suite with `cargo test --manifest-path tools/digest/Cargo.toml
 `rust-toolchain.toml` so running outside its directory does not select an older
 host default. After their minimal lockfile preparation, fixture context runs are
 offline.
+
+## Reading the two scoped reports
+
+Thing observes roster/registry agreement and ownership through the real Thing
+and Settlement registration APIs. Its finite checks do not establish worldgen
+registration coverage, save compatibility or item behavior. The census adapter
+calls the pure publication guard on a named case panel, including both allowed
+and refused inputs, and compares the compiled canonical-host constant with its
+current source file. Its official-path rule is a suffix predicate, not filesystem
+containment. Neither scope constructs a world or runs a live census.
+
+Queue instructions remain authored policy: the publication predicate does not
+verify that a queue submission occurred. Read each requirement's evidence mode,
+its named observations and limits, and the linked owning sources. A contradicted
+or unknown required observation can produce a useful report with a nonzero exit;
+malformed collection fails before emitting a completed report. Saved stdout is
+an example, never an accepted input to a later context request.
+
+To extend the tool, add a package and the metadata described above, implement
+`collect --repo-root`, and test both a real satisfying case and discriminating
+counterexamples through the owning APIs. Declare expected observations explicitly;
+removing one does not satisfy the old obligation. Run the all-package outboard
+checks and exercise the actual composed CLI. Enrollment must not require a new
+contributor-specific host dispatcher or changes to simulation authority.
+
+## Explicit cost diagnostic
+
+After normal dependency preparation and committing the source to measure:
+
+```sh
+bash scripts/charter-measure.sh --self-test  # owned fixture/lifecycle checks only
+bash scripts/charter-measure.sh            # print every measurement as JSON lines
+```
+
+The diagnostic measures committed `HEAD`, and refuses an uncommitted diagnostic
+script. For each of Thing, census and combined context, it creates its own
+detached worktree at that commit, preserving `rust-toolchain.toml`. It first
+builds only the Digest host into the fresh `tools/digest/target`, then invokes
+that host once to build/collect the selected contributor(s), followed by ten
+requests of the same workload. Host compilation and the cold selected request
+are separate samples. No active target cache is deleted or redirected. Dependency
+and operating-system caches can be warm; “cold” means the tool target starts
+absent. Requests after a failed preparation are explicitly marked unprepared.
+
+Each sample includes the exact command, source/workload context, UTC start, load,
+wall elapsed, exit status, raw `/usr/bin/time` and phase diagnostics, stdout byte
+count/hash and available peak RSS. Failed stdout is retained. macOS reports RSS
+in bytes; GNU Time reports KiB, normalized to bytes alongside the original units.
+Neither is an aggregate simultaneous process-tree memory budget. Whole-phase
+measurements do not separate compilation from lock waiting; missing timing or
+memory data remain missing. The diagnostic's one-hour command safety deadline
+is separate from the context operational caps above. Cleanup finishes owned
+processes before removing their worktrees; a cleanup failure retains the owned
+directory for inspection. Trusted children must obey the host's process-group
+contract.
+
+This is an explicit diagnostic, not a routine gate. Canonical measurements run
+only through the existing serialized queue: the controller creates an isolated
+**stage-only** branch whose sole extra integration edit invokes this script from
+its outboard command. That branch is never merged back. A queue submission is
+not a measurement; retain the completed job log and tested merge-product SHA.
+The script prints evidence and writes no committed artifact. It adds no runtime
+or dependency beyond Bash, existing Python 3, Git, the prepared Rust toolchain
+and the host's `/usr/bin/time`.
+
+The [Charter evidence](../../docs/digest/the-charter-evidence.md) records commands,
+all samples, actual report review, limitations and qualification status. Measured
+baselines do not amend the resource caps or earn gate omission.
