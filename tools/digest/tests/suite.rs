@@ -41,13 +41,9 @@ impl Repo {
         repo.write("tools/digest/packages/mock/Cargo.toml", &manifest());
         repo.source(envelope(marker).to_string());
         repo.prepare();
-        checked(
-            Command::new("git")
-                .current_dir(&repo.0)
-                .args(["init", "-q"]),
-        );
-        checked(Command::new("git").current_dir(&repo.0).args(["add", "."]));
-        checked(Command::new("git").current_dir(&repo.0).args([
+        checked(repo.git().args(["init", "-q"]));
+        checked(repo.git().args(["add", "."]));
+        checked(repo.git().args([
             "-c",
             "user.name=Fixture",
             "-c",
@@ -57,6 +53,23 @@ impl Repo {
             "fixture",
         ]));
         repo
+    }
+    fn git(&self) -> Command {
+        let mut command = Command::new("git");
+        command.current_dir(&self.0);
+        // Fixture setup and inspection own their repository before the host
+        // is invoked. Inherited hook paths must never redirect these writes.
+        for name in [
+            "GIT_DIR",
+            "GIT_WORK_TREE",
+            "GIT_COMMON_DIR",
+            "GIT_INDEX_FILE",
+            "GIT_OBJECT_DIRECTORY",
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        ] {
+            command.env_remove(name);
+        }
+        command
     }
     fn write(&self, path: &str, value: &str) {
         let path = self.0.join(path);
@@ -83,11 +96,7 @@ impl Repo {
         c
     }
     fn snapshot(&self) -> Vec<(PathBuf, Vec<u8>)> {
-        let out = checked(
-            Command::new("git")
-                .current_dir(&self.0)
-                .args(["ls-files", "-z"]),
-        );
+        let out = checked(self.git().args(["ls-files", "-z"]));
         out.stdout
             .split(|b| *b == 0)
             .filter(|p| !p.is_empty())
@@ -372,4 +381,51 @@ fn target_directory_symlink_cannot_redirect_builds() {
     std::os::unix::fs::symlink(&outside.0, repo.0.join("tools/digest/target")).unwrap();
     fails(repo.run("."), "target symlink escape");
     assert!(!outside.0.join("debug").exists());
+}
+
+#[test]
+fn fixture_setup_and_snapshot_ignore_inherited_git_paths() {
+    let outer = Repo::new("outer-fixture-marker");
+    // A distinct staged path makes selecting the outer index observable even
+    // when the fixture snapshots otherwise share the same source-file roster.
+    outer.write(
+        "outer-only-tracked.txt",
+        "belongs only to the outer fixture",
+    );
+    checked(outer.git().args(["add", "outer-only-tracked.txt"]));
+    let head_before = checked(outer.git().args(["rev-parse", "HEAD"])).stdout;
+    let index_before = fs::read(outer.0.join(".git/index")).unwrap();
+    // Run the real fixture setup and snapshots in another process. Every
+    // inherited override belongs to this disposable outer repo; no global
+    // environment is changed and no path points at the developer's checkout.
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "reuses_host_across_current_roots_ignoring_git_and_target_overrides",
+            "--nocapture",
+        ])
+        .env("GIT_DIR", outer.0.join(".git"))
+        .env("GIT_WORK_TREE", &outer.0)
+        .env("GIT_COMMON_DIR", outer.0.join(".git"))
+        .env("GIT_INDEX_FILE", outer.0.join(".git/index"))
+        .env("GIT_OBJECT_DIRECTORY", outer.0.join(".git/objects"))
+        .env(
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+            outer.0.join(".git/objects"),
+        )
+        .output()
+        .unwrap();
+    let head_after = checked(outer.git().args(["rev-parse", "HEAD"])).stdout;
+    assert_eq!(head_before, head_after, "outer fixture HEAD changed");
+    assert_eq!(
+        index_before,
+        fs::read(outer.0.join(".git/index")).unwrap(),
+        "outer fixture index changed"
+    );
+    assert!(
+        output.status.success(),
+        "inherited-path fixture subprocess failed:\n{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
