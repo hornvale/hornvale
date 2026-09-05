@@ -210,6 +210,8 @@ dependencies = [
  "hornvale-species",
  "hornvale-terrain",
  "hornvale-worldgen",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

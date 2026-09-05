@@ -244,11 +244,20 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
 /// show), so this field reports the number the curve ACTUALLY sums to
 /// (never contradicts `births_by_epoch`) rather than a formula the curve
 /// only approximates.
-/// type-audit: bare-ok(count: epoch_years), bare-ok(count: births_by_epoch), bare-ok(count: souls_ever), bare-ok(count: births_by_people_by_epoch)
+/// type-audit: bare-ok(count: epoch_years), bare-ok(count: start_year), bare-ok(count: present_year), bare-ok(count: births_by_epoch), bare-ok(count: souls_ever), bare-ok(count: births_by_people_by_epoch)
 #[derive(Clone, Debug, PartialEq)]
 pub struct Curve {
     /// The epoch length the curve is binned in (`shape::EPOCH_YEARS`).
     pub epoch_years: f64,
+    /// The bake year epoch 0 opens on — the curve's own anchor, copied from
+    /// [`LotContext::start_year`]. Carried on the curve rather than left to
+    /// the caller because `lot/curve/v1` is rendered from a `Curve` alone
+    /// (`json::curve_json`), and a series of per-epoch counts with no origin
+    /// year cannot be placed on an axis at all.
+    pub start_year: f64,
+    /// The bake year the curve runs to — [`LotContext::present_year`],
+    /// carried for the same reason as `start_year`.
+    pub present_year: f64,
     /// Births per epoch, summed over every occupation.
     pub births_by_epoch: Vec<f64>,
     /// Births per epoch, summed per people (keyed by the people's label).
@@ -295,6 +304,8 @@ pub fn curve(ctx: &LotContext) -> Curve {
 
     Curve {
         epoch_years,
+        start_year: ctx.start_year,
+        present_year: ctx.present_year,
         births_by_epoch,
         births_by_people_by_epoch,
         souls_ever,

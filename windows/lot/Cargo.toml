@@ -43,3 +43,8 @@ hornvale-hearsay = { path = "../hearsay" }
 # (`hornvale_almanac::history::flesh_seed_for`). A second copy of a
 # save-format derivation is how two decoders drift apart.
 hornvale-almanac = { path = "../almanac" }
+# The four `lot/*/v1` payloads (`json.rs`) are serde documents quantized at
+# emit — the `windows/scene` precedent, and the workspace's only two allowed
+# external crates (decision 0004).
+serde = { workspace = true }
+serde_json = { workspace = true }

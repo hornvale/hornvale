@@ -107,6 +107,41 @@ impl Story {
     pub fn slot(&self, key: &str) -> Option<&Slot> {
         self.slots.iter().find(|slot| slot.key == key)
     }
+
+    /// The story's sources, deduplicated in first-citation order, together
+    /// with each slot's own 1-based citation numbers into that list — in
+    /// `slots` order, one entry per slot.
+    ///
+    /// **There is exactly one numbering, and it lives here.** The prose's
+    /// `[n]` markers ([`crate::narrate`]) and the payload's `sources` array
+    /// ([`crate::json`]) are the same list because both read it from this
+    /// method; a second traversal in either renderer is how a reference and
+    /// its entry drift apart. It is a first-citation ordering over
+    /// [`Story::slots`], which is the order the prose tells them in —
+    /// `narrate::STAGES` is a partition of that same sequence into
+    /// contiguous runs, pinned by a test, so the two orders cannot diverge.
+    /// type-audit: bare-ok(index: return)
+    pub fn citations(&self) -> (Vec<&Source>, Vec<Vec<usize>>) {
+        let mut flat: Vec<&Source> = Vec::new();
+        let mut per_slot: Vec<Vec<usize>> = Vec::with_capacity(self.slots.len());
+        for slot in &self.slots {
+            let mut numbers: Vec<usize> = Vec::with_capacity(slot.sources.len());
+            for source in &slot.sources {
+                let at = match flat.iter().position(|held| *held == source) {
+                    Some(at) => at,
+                    None => {
+                        flat.push(source);
+                        flat.len() - 1
+                    }
+                };
+                if !numbers.contains(&(at + 1)) {
+                    numbers.push(at + 1);
+                }
+            }
+            per_slot.push(numbers);
+        }
+        (flat, per_slot)
+    }
 }
 
 /// A `(value, sources)` pair, the shape every resolver returns.
