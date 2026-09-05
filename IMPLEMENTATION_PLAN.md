@@ -18,4 +18,4 @@ Detailed plan: [The Charter](docs/superpowers/plans/2026-09-04-the-charter.md).
 **Goal**: Demonstrate useful context, honest costs and the promised quality scenarios.
 **Success Criteria**: Task 5 and whole-branch review complete; all spec properties have evidence or an explicit unearned claim; G6 package prepared.
 **Tests**: Actual commands, worktree isolation, cold/warm workload samples, normal commit/stage validation, supported-host lifecycle suite.
-**Status**: Not Started
+**Status**: In Progress

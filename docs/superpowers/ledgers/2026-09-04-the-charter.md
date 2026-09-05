@@ -396,6 +396,15 @@ scoped re-review of this fix. No task-2 dispatch before approval.
 
 ## Follow-ups
 
+- Report presentation: put the census pure-predicate qualification next to
+  its requirement result; make the distinct Thing observation subjects and
+  contributor registration order easier to scan. Independent usability
+  passed with the current explicit per-observation limits, so these are
+  refinements rather than blockers.
+- Richer dirty-state identifiers/diff attribution belong to later provenance
+  work. The current revision/dirty pair explicitly does not identify every
+  observed input; do not present it as a reproducibility key.
+
 - Reconcile the campaign-reconciliation TSV ledger column with the coverage
   population before using it; Task 5 absorption found parser acceptance and
   coverage rejection of the same optional ledger reference.
@@ -642,3 +651,40 @@ passed scoped independent spec and quality review; both R1 and R2 closed.
 Eight behavioral harness self-tests passed on Mac, including separately grouped
 children and retained failed evidence. Python 3.11 runtime qualification remains
 for canonical execution; syntax compatibility alone is not that evidence.
+
+## Composed stage and measured diagnostics
+
+Integrated commit `e3355f441db045f0960576ead12b0f8acc56ca7d` passed its
+normal commit gate (35.775 s), was pushed normally and submitted as
+`req-e3355f441db0-20260905T041405Z`. Job
+`sluice-e3355f441db0-20260905T041451Z` admitted it with zero commits
+behind main and acquired the claim without waiting. Full result is pending.
+
+A separate diagnostic worktree/branch at that commit adds only five lines
+to `scripts/lane-outboard.sh`: after green ordinary outboard checks it runs
+the reviewed harness self-tests, then measurements only if those pass.
+Syntax and shellcheck passed; its normal hook passed 75 prose-subject tests.
+Commit `9ea2dc9abb38970c03a5b536645d9d8429b3d37a` was pushed normally
+and submitted stage-only as `req-9ea2dc9abb38-20260905T041951Z`. It is
+never a merge candidate. Diagnostic-worktree prewarm cost 202.590 s; retain
+that setup cost separately from the measured fresh Digest targets.
+
+The Mac harness completed on the integrated source with rc=0: 36 command
+samples (three host builds, three cold selected requests, thirty warm
+requests), zero failures, three clean tracked-integrity results, and all
+three owned disposable checkouts removed after completion. Controller
+verified those assertions against the emitted JSON and filesystem. Canonical
+measurements remain pending. The independent reader is evaluating actual
+Thing/census reports and a real failed Thing report without the conversation.
+
+## Independent usability — accepted with captured refinements
+
+An unfamiliar reviewer read only the two real scoped reports and their paired
+stderr plus the actual failed Thing report. They identified every authored
+claim, eight census and three Thing observations, the unchecked queued-authoring
+rule, the loom roster contradiction, and the relevant owner/source symbols
+without opening code or the conversation. Verdict: PASS for usability,
+explicitly not a validation of implementation correctness. Their suggested
+summary-level wording and dirty-state attribution improvements are captured
+in Follow-ups. Current explicit scope limits were sufficient for the reader
+tasks; no new production semantics or provenance promise is introduced.

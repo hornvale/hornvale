@@ -189,7 +189,7 @@ The root path is an ordinary argv value, never interpolated into a shell.
 Produce every shared interface above except `context_from_current_checkout`.
 The protocol package is named `digest-protocol`; no simulation dependency.
 
-- [ ] **Step 1: Establish behavioral examples before scaffolding.** Write
+- [x] **Step 1: Establish behavioral examples before scaffolding.** Write
   fixture construction helpers in module tests, then tests for omitted
   required observation, wrong-kind reference, duplicate identities, invalid
   scopes, unknown versions and deterministic composition. Compile failures
@@ -205,7 +205,7 @@ The protocol package is named `digest-protocol`; no simulation dependency.
   assert!(validate(&c).is_err());
   ```
 
-- [ ] **Step 2: Define the workspace and contract.** Keep the root package
+- [x] **Step 2: Define the workspace and contract.** Keep the root package
   isolated, add `members = ["packages/*"]`, `resolver = "3"`, and a path
   dependency on `digest-protocol`. Implement the named types and validation:
   versions, namespace/name form, nonempty statements/method/subjects,
@@ -215,7 +215,7 @@ The protocol package is named `digest-protocol`; no simulation dependency.
   whichever observations happened to arrive. A contributor must contain at
   least one requirement and one instruction; an empty panel cannot enroll.
 
-- [ ] **Step 3: Compose without contributor knowledge.** Sort outer records,
+- [x] **Step 3: Compose without contributor knowledge.** Sort outer records,
   reject duplicate namespaces/IDs, render authored instructions separately
   from observations and their limits, escape metadata used in headings, and
   render checkout revision/dirty state. Authored Markdown is trusted prose;
@@ -230,7 +230,7 @@ The protocol package is named `digest-protocol`; no simulation dependency.
              compose(&context, &[b, a]).unwrap().markdown);
   ```
 
-- [ ] **Step 4: Verify and commit.** Run the focused tool workspace commands,
+- [x] **Step 4: Verify and commit.** Run the focused tool workspace commands,
   inspect all failures, and commit through the normal hook:
 
   ```bash
@@ -254,7 +254,7 @@ normalize_scope, scope_matches}`, `compose` and `ContextReport` from Task 1.
 Produce `context_from_current_checkout` and the contributor invocation
 contract. No production contributor-specific match arm or package dependency.
 
-- [ ] **Step 1: Verify available APIs, then build lifecycle tests first.**
+- [x] **Step 1: Verify available APIs, then build lifecycle tests first.**
   Resolve development-only Unix dependencies `nix` (signal/process features)
   and `signal-hook`, and read the resolved source before using them. Their
   justification is safe process-group signaling and cancellation delivery;
@@ -283,7 +283,7 @@ contract. No production contributor-specific match arm or package dependency.
   discovered outside the fixture. Terminated zombies count as not running;
   do not demand portable adoption/reaping of unrelated grandchildren.
 
-- [ ] **Step 2: Implement bounded process ownership.** A helper takes a
+- [x] **Step 2: Implement bounded process ownership.** A helper takes a
   structured `Command`, limits and a shared cancellation flag, returning
   bounded stdout/stderr, exit status and elapsed duration or a phase error.
   Concurrently drain both pipes using bounded channels/buffers; never collect
@@ -294,7 +294,7 @@ contract. No production contributor-specific match arm or package dependency.
   Scope clock lint exceptions to development instrumentation. Unsupported
   systems return a clear context-only error.
 
-- [ ] **Step 3: Implement discovery from the current checkout.** Resolve
+- [x] **Step 3: Implement discovery from the current checkout.** Resolve
   caller cwd using Git with inherited path variables removed (`GIT_DIR`,
   `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`,
   `GIT_ALTERNATE_OBJECT_DIRECTORIES`). Do not use compile-time
@@ -314,7 +314,7 @@ contract. No production contributor-specific match arm or package dependency.
   packages; no match is an explicit nonzero result. The protocol package has
   no contributor metadata and is skipped.
 
-- [ ] **Step 4: Build and invoke exact artifacts.** Use Cargo's JSON
+- [x] **Step 4: Build and invoke exact artifacts.** Use Cargo's JSON
   compiler-artifact messages, matching package ID and binary target, to find
   the executable produced for each selected contributor. Reject missing or
   multiple matches and artifact paths outside the explicitly selected
@@ -331,7 +331,7 @@ contract. No production contributor-specific match arm or package dependency.
   Report phase timing on stderr only. A stale lock/dependency error names the
   preparation command without mutating inputs itself.
 
-- [ ] **Step 5: Wire CLI and ordinary tooling.** Add `context <scope>` to
+- [x] **Step 5: Wire CLI and ordinary tooling.** Add `context <scope>` to
   existing CLI dispatch, exit nonzero on failed reports, and retain existing
   render paths. Add `make context SCOPE=...` and `context-prepare` to help and
   `.PHONY`. Preparation runs Cargo dependency/build preparation explicitly;
@@ -340,7 +340,7 @@ contract. No production contributor-specific match arm or package dependency.
   the existing Digest outboard test entry. The usage guide documents exact
   metadata, contributor argv, JSON, source authority, limits and manual use.
 
-- [ ] **Step 6: Exercise hermetic CLI discovery and isolation.** Fixtures
+- [x] **Step 6: Exercise hermetic CLI discovery and isolation.** Fixtures
   create tiny outboard workspaces with self-contained mock contributors, then
   run the real host from their roots. Cases cover root selection, invalid
   metadata/version/target/scopes, missing observation, malformed JSON,
@@ -361,7 +361,7 @@ contract. No production contributor-specific match arm or package dependency.
   assert_eq!(tracked_bytes_before, tracked_bytes_after);
   ```
 
-- [ ] **Step 7: Verify, review and freeze bootstrap.** Run Task 1's scoped
+- [x] **Step 7: Verify, review and freeze bootstrap.** Run Task 1's scoped
   commands plus `shellcheck scripts/lane-outboard.sh`, `bash
   scripts/check-bash32.sh`, real CLI no-match, and existing render smoke tests.
   Inspect generated diffs using the normal rules if any appear. Commit and
@@ -383,7 +383,7 @@ Dependencies point to `../protocol`, `../../../../kernel`,
 `../../../../domains/thing`, `../../../../domains/settlement`; serde_json
 serializes the envelope. Verify path resolution before adding dependencies.
 
-- [ ] **Step 1: Establish independent base and read the real APIs.** Controller
+- [x] **Step 1: Establish independent base and read the real APIs.** Controller
   creates `codex/the-charter-thing` in its own worktree from the recorded
   bootstrap SHA, starts controller-owned prewarm and provides the task brief.
   Read `THING_KINDS`, `BORROWED`, `thing_registry`, both registration functions,
@@ -391,7 +391,7 @@ serializes the envelope. Verify path resolution before adding dependencies.
   for stale borrowing as well as return a registry error; handle/report a
   failed observation without manufacturing success. No production source edits.
 
-- [ ] **Step 2: Implement discriminating local tests first.** Factor the
+- [x] **Step 2: Implement discriminating local tests first.** Factor the
   comparison over supplied rosters/owners so tests can remove a registration,
   change a lender and add an undeclared registry entry without editing the
   production tree. Include a test of actual API composition, not only fixtures.
@@ -405,7 +405,7 @@ serializes the envelope. Verify path resolution before adding dependencies.
   changed authored statement -> observation outcome does not change
   ```
 
-- [ ] **Step 3: Build the local envelope.** Preserve source roster order in
+- [x] **Step 3: Build the local envelope.** Preserve source roster order in
   details, compare roster and registry sets in both directions, observe actual
   composed owners, and name each required observation before producing results.
   Explain owned versus borrowed concepts and point to the actual APIs and
@@ -413,7 +413,7 @@ serializes the envelope. Verify path resolution before adding dependencies.
   JSON via `collect --repo-root <root>`; the binary validates argv and scopes
   but does not shell out, run worldgen or maintain a duplicate kind roster.
 
-- [ ] **Step 4: Validate autonomy and commit.** Run protocol/local tests,
+- [x] **Step 4: Validate autonomy and commit.** Run protocol/local tests,
   local clippy and fmt; invoke the frozen host for `domains/thing`. Record
   dependency/lockfile changes. Stop and report a design counterexample if
   host/protocol meaning needs an edit. Commit through ordinary hooks, with the
@@ -433,14 +433,14 @@ Produce package/binary `digest-census-publication`, namespace
 Dependencies: protocol at `../protocol`, lab at `../../../../windows/lab`,
 serde_json. Verify Cargo paths and lab API signatures before implementation.
 
-- [ ] **Step 1: Establish independent base and verify scope.** Controller
+- [x] **Step 1: Establish independent base and verify scope.** Controller
   creates `codex/the-charter-census` in a separate worktree at the same bootstrap
   SHA as Task 3 and owns its prewarm. Read `census_guard.rs`, `publish.rs`,
   canonical-host file, and current queue request authority. Do not restate
   gate phase rosters. The lab dependency may compile many crates; it must not
   execute their world-build or census tests as part of local observation.
 
-- [ ] **Step 2: Build a finite two-sided guard panel.** Cases use canonical
+- [x] **Step 2: Build a finite two-sided guard panel.** Cases use canonical
   host, a guaranteed different hostname, case-normalized host, the exact
   census study and prefix forms, unrelated study, official suffix and an
   unrelated output directory. Read constants from APIs/current source;
@@ -455,7 +455,7 @@ serde_json. Verify Cargo paths and lab API signatures before implementation.
   source host differs from compiled host -> collection error
   ```
 
-- [ ] **Step 3: Produce honest context.** The finite guard requirement names
+- [x] **Step 3: Produce honest context.** The finite guard requirement names
   all its required observations. The queued-census instruction is a separate
   authored-only requirement with source/authority links. Do not mark queue or
   publication-call execution as observed. Explicitly explain path-suffix
@@ -463,7 +463,7 @@ serde_json. Verify Cargo paths and lab API signatures before implementation.
   Compare the current root's host file with `CANONICAL_CENSUS_HOST` and return
   an actionable error on mismatch. No publish/census/queue side effect.
 
-- [ ] **Step 4: Validate autonomy and commit.** Run only this contributor's
+- [x] **Step 4: Validate autonomy and commit.** Run only this contributor's
   tests, protocol validation, local fmt/clippy and a frozen-host request for
   `windows/lab/src/publish.rs`. Inspect tracked files before/after. Record
   build and run separately, changes and exact branch base. Stop/report any
@@ -489,7 +489,7 @@ autonomy experiment, not an integration fix to conceal.
 CLI and envelopes. Produce composed task context and quality evidence on both
 supported hosts. Do not introduce a third contributor or cached evidence path.
 
-- [ ] **Step 1: Verify branch independence before integrating.** Record the
+- [x] **Step 1: Verify branch independence before integrating.** Record the
   bootstrap SHA, each branch merge-base and full changed-file list. The
   controller integrates only reviewed commits into `codex/the-charter`, using
   ordinary non-force Git operations. Reconcile Cargo.lock through Cargo and

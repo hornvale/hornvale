@@ -5783,3 +5783,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T03:34:41Z | prewarm | 411.766 | 1495.250 | 59.484 | 3.78 | 0 | 6fe554d0e | codex/the-charter-census | MacBookPro | 10 |
 | 2026-09-05T03:45:46Z | gate-commit | 94.898 | 127.824 | 25.202 | 1.61 | 0 | 6fe554d0e | codex/the-charter-census | MacBookPro | 10 |
 | 2026-09-05T03:59:08Z | gate-commit | 54.121 | 70.726 | 19.135 | 1.66 | 0 | b83fb084d | codex/the-charter-census | MacBookPro | 10 |
+| 2026-09-05T04:13:44Z | gate-commit | 35.775 | 63.266 | 16.690 | 2.23 | 0 | 9294b9ca7 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T04:18:38Z | prewarm | 202.590 | 1472.476 | 54.842 | 7.54 | 0 | e3355f441 | codex/the-charter-diagnostic | MacBookPro | 10 |
