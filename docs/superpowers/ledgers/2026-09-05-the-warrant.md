@@ -119,3 +119,36 @@ pass. · Capture: spec §3.2, §4.1, §10; (b) and (c) → idea-registry rows.
 - Nine-plus hand-written `book/src/chronicle/` pages quote the exact
   provenance prose and are *not* declared in `docs/generated-paths.txt`, so
   nothing will tell you they went stale. Enumerated in spec §7.3.
+
+---
+
+#6 [G4] — **The errand fact's object is its ORIGIN, not its target.** ·
+Found while writing the plan, in the spec's own §4, after G3 approval. · The
+first draft specified `object: Value::Text(room_to_text(target))`. The
+arbitration seam exposes `Intent::Do(Action)` and nothing else
+(`liveness.rs:1920`); `Action::MoveTo(n)` is the *next step* and
+`Drive::proposal` is documented as "the next executable step". **No
+destination is materialized at the commit site**, so the field as written had
+no possible caller. · Decision: the object carries `st.pos` at the instant the
+errand's first step is charged; the errand's **endpoint is derived** from the
+`Trail` at the next errand boundary. · Why: surfacing a goal through
+`Drive`/`Resolution` is an arbitration-seam change that spec §9 forbids and
+would make an epoch a behaviour change too; `Flag(true)` discards a free and
+useful fact. The origin is always available and never wrong. · Consequence,
+and it is an improvement: the recount now says where a creature *got to*
+rather than where it *meant* to go, so an **abandoned** errand (§3.3) does not
+make the ledger assert an intention the code never formed. 7c inherits one
+asymmetry, recorded in §8.1. · Alternatives discarded: seam change; bare flag;
+special-casing `errand/water-known`, where `st.believed` does hold a real
+target — rejected to keep one shape for all eight keys. · ideonomy passes /
+overturns: 0 — a correction forced by the code, not a design choice; no pass
+was run for it. · Capture: spec §4.0 (a new subsection, written as a
+correction rather than a silent edit), §5.1, §5.3, §8.1.
+
+**Process note this campaign should carry to its retrospective:** the
+autopilot rule that catches this class ("verify tool-behavior claims with a
+command before writing them") was applied at G3 to the *fidelity* premise and
+not to the *mechanism* claim beside it. The mechanism claim was an imperative
+("the target in the object") with an assertion hiding inside it — the exact
+shape the skill's own "imperative mood hides assertions" table describes. It
+survived a G3 package and was caught only by reading the seam to write Task 1.

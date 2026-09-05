@@ -197,12 +197,40 @@ errand's two components go where the envelope already puts things:
 Fact {
     subject:    the creature,
     predicate:  one of eight registered `errand/*` keys   <- the REASON
-    object:     Value::Text(room_to_text(target)),        <- the TARGET
+    object:     Value::Text(room_to_text(&st.pos)),       <- the ORIGIN
     place:      None,
     day:        Some(the tick the errand's first step is charged to),
     provenance: "vessel/liveness",                        <- the PRODUCER
 }
 ```
+
+### 4.0 The object is the errand's ORIGIN, not its target — a correction
+
+The first draft of this section put the *target* in the object. **There is no
+target to put there.** The arbitration seam exposes `Intent::Do(Action)` and
+nothing else (`liveness.rs:1920`): `Action::MoveTo(n)` names the *next step*,
+and `Drive::proposal` is documented as "the next executable step". The
+destination a creature is walking toward is never materialized at the commit
+site, so the field as first specified had no possible caller.
+
+Three ways out were weighed. **Surfacing the goal through `Drive`/`Resolution`**
+is a change to the arbitration seam, which §9 forbids for this campaign and
+which would make an epoch also a behavioural change — rejected. **`Value::Flag(true)`,
+with everything derived** works but throws away a fact that is free and
+useful. **The origin** is available (`st.pos`, at the instant the errand's
+first step is charged), is never wrong, and is what makes the errand a
+*segment* rather than a point.
+
+The consequence for the rendering is real and improves it. An errand's
+**endpoint is derived** — it is the position at the next errand boundary,
+read from the same `Trail` the store already keeps — so the recount says
+where a creature *got to*, never where it *meant* to go. For an errand that
+completed, those coincide. For an **abandoned** errand (§3.3) they do not, and
+asserting a target would have made the ledger claim an intention the code
+never formed. The one case where a target genuinely exists — `errand/water-known`,
+where `st.believed` holds the source — is deliberately *not* special-cased:
+one shape for all eight keys, and the believed source is already recoverable
+from the belief fold.
 
 ### 4.1 The eight keys are the eight arms, one for one
 
@@ -290,17 +318,17 @@ Kwawkwapzow:
 - canonical name of an entity: Kwawkwapzow (asserted by the-roll)
 - this entity is an individual person: true (asserted by the-roll, day -25621.52191)
 - the day this person was born; ... : -25621.522 (asserted by the-roll, day -25621.52191)
-- wandered, having found no water yet (thirst): toward 3874984961
-  — 65 steps from 3874794977, days 5.83239 to 11.96403
+- wandered, having found no water yet (thirst): from 3874794977
+  — 65 steps, days 5.83239 to 11.96403, ending at 3874984961
 ```
 
 Sixty-eight lines become four. The seed-23 regime, where errands are short and
 alternate, keeps its texture:
 
 ```
-- sought a kinder clime (comfort): toward 812... — 3 steps, days 4.10 to 4.60
-- walking home (sated): toward 811... — 2 steps, days 4.60 to 4.93
-- went down to the river it knew (thirst): toward 229504 — 2 steps, days 5.01 to 5.34
+- sought a kinder clime (comfort): from 812... — 3 steps, days 4.10 to 4.60
+- walking home (sated): from 811... — 2 steps, days 4.60 to 4.93
+- went down to the river it knew (thirst): from 229408 — 2 steps, days 5.01 to 5.34
 ```
 
 ### 5.2 The per-step view, on request
@@ -323,7 +351,7 @@ and one re-derivation**, never baked into one sentence:
 
 ```
 this step (agent-at, day 6.16)
-  └─ its covering errand (errand/water-blind → 3874984961, day 5.83)
+  └─ its covering errand (errand/water-blind, set out from 3874794977, day 5.83)
        └─ the drive it serves (thirst)
             └─ when that drive was last discharged (drank, day —— never)
 ```
@@ -457,7 +485,11 @@ carry prose — and that asymmetry is a G3 flagged item (§10), not an oversight
 ## 8. What 7c may assume afterwards
 
 1. **Every committed step is covered by an errand fact** that names its reason
-   and target — so dropping steps deletes position, never *why*.
+   and its origin — so dropping steps deletes position, never *why*. Note the
+   asymmetry 7c inherits: an errand's ENDPOINT is derived from the steps
+   (§4.0), so a compaction that drops every step of a completed errand must
+   fold that endpoint into the errand fact first, or the segment loses one of
+   its two ends.
 2. **The why survives compaction independently of the steps.** An errand fact
    is ~1/65th the volume of the steps it covers in the walking regime; a
    compaction that keeps errands and folds steps keeps every distinct sentence
