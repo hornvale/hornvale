@@ -458,3 +458,21 @@ fixtures copy the pin to test with the intended prepared compiler. Canonical
 execution is still unearned. The expanded fixture suite also caught Cargo's
 null metadata for an unenrolled package; that case now passes. No stage or
 merge result is claimed by these local tests.
+
+## Task 2 — fix round 1: the harness owns its Git commands
+
+Independent review found one Important defect in `tools/digest/tests/suite.rs`:
+fixture setup and tracked-file snapshots inherited Git path overrides. The
+reviewer reproduced the existing isolation test failing during setup, using
+only a disposable outer repository. Controller source inspection confirmed
+the unchecked init/add/commit/ls-files calls. Runtime collection already
+scrubs these variables; its behavior is not the finding.
+
+Ruling: accept the fixture-ownership defect and correct the fixture helper —
+the hermetic test requirement applies before the host subprocess too — the
+cost if wrong is a narrow test-harness change and a focused validation run.
+Remove all six path overrides from fixture Git commands, retain deliberate
+host overrides, and verify the contaminated-environment test without touching
+any real checkout or index. Preserve the outer fixture's HEAD/index as a
+non-vacuous check. This implements the approved isolation obligation and
+requires no protocol or scope amendment.
