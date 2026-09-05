@@ -5798,3 +5798,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T02:17:53Z | sluice:gate | 745.263 | 19701.936 | 541.606 | 27.16 | 0 | ab1e7c7e6 |  | lefford | 40 |
 | 2026-09-05T02:20:12Z | sluice:clients | 139.179 | 2094.210 | 173.584 | 16.29 | 0 | 458943740 |  | lefford | 40 |
 | 2026-09-05T02:27:58Z | sluice:heavy | 465.431 | 10068.505 | 180.966 | 22.02 | 0 | 7b50bfe7f |  | lefford | 40 |
+| 2026-09-05T02:52:48Z | rebaseline | 259.807 | 440.917 | 20.730 | 1.78 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:02:55Z | gate-commit | 151.180 | 724.510 | 94.188 | 5.42 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:07:27Z | gate-commit | 49.411 | 73.937 | 32.916 | 2.16 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:09:01Z | gate-commit | 49.932 | 88.931 | 34.945 | 2.48 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:16:04Z | gate-commit | 34.139 | 62.639 | 16.810 | 2.33 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
