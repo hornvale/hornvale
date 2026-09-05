@@ -141,13 +141,19 @@ const RECONCILIATION_RECORD_DIRECTORIES: [&str; 5] = [
     "book/src/chronicle",
     "docs/retrospectives",
 ];
+const CAMPAIGN_RECORD_DIRECTORIES: [&str; 4] = [
+    "docs/superpowers/specs",
+    "docs/superpowers/plans",
+    "book/src/chronicle",
+    "docs/retrospectives",
+];
 
-/// Every direct Markdown child of the five campaign-record directories,
+/// Every direct Markdown child of the four campaign-record directories,
 /// relative to the repository root. This deliberately excludes the directory
 /// guide named `README.md`, which is not a campaign record.
 fn campaign_record_paths() -> BTreeSet<String> {
     let root = repo_root();
-    RECONCILIATION_RECORD_DIRECTORIES
+    CAMPAIGN_RECORD_DIRECTORIES
         .iter()
         .flat_map(|directory| {
             fs::read_dir(root.join(directory))
@@ -427,6 +433,12 @@ fn reconciliation_validation_rejects_duplicate_keys_and_wrong_record_columns() {
             .any(|error| error.contains("expected under docs/superpowers/specs")),
         "{errors:#?}"
     );
+    assert!(
+        !errors
+            .iter()
+            .any(|error| error.contains("expected under docs/superpowers/ledgers")),
+        "the five-column evidence validation must retain its ledger column: {errors:#?}"
+    );
 }
 
 #[test]
@@ -438,9 +450,15 @@ fn campaign_record_paths_enumerate_the_actual_audit_directories() {
     assert!(paths.contains("docs/superpowers/specs/2026-09-04-the-coda-design.md"));
     assert!(paths.contains("book/src/chronicle/the-connection-graph.md"));
     assert!(paths.iter().all(|path| !path.ends_with("/README.md")));
+    assert!(
+        paths
+            .iter()
+            .all(|path| !path.starts_with("docs/superpowers/ledgers/")),
+        "ledgers are evidence columns, not campaign-record population: {paths:#?}"
+    );
     for path in paths {
         assert!(
-            RECONCILIATION_RECORD_DIRECTORIES
+            CAMPAIGN_RECORD_DIRECTORIES
                 .iter()
                 .any(|directory| path.starts_with(&format!("{directory}/"))),
             "unexpected campaign record path {path}"
