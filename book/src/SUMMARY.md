@@ -465,6 +465,7 @@
 - [The Coda](./chronicle/the-coda.md)
 - [The Sluicegate](./chronicle/the-sluicegate.md)
 - [The Charter](./chronicle/the-charter.md)
+- [The Cruck](./chronicle/the-cruck.md)
 
 # Appendix: The Frontier
 

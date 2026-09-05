@@ -3,7 +3,7 @@
 **Campaign:** The Cruck · **The Staple's R2** ("a building's shape has a
 reason") · **Decision block:** 0786–0795 · **Ledger:**
 [`2026-09-04-the-cruck.md`](../ledgers/2026-09-04-the-cruck.md) ·
-**Status:** spec, at G3.
+**Status:** implemented 2026-09-05, pending close review and merge.
 
 *A cruck is the pair of curved timbers that gives a timber building its
 section. Nobody chooses the roofline; it is what the frame allows. This
