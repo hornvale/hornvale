@@ -501,28 +501,44 @@ fn claim_by_sha_for_an_absent_ref_is_a_different_answer() {
 }
 
 #[test]
-fn a_thousand_racing_claimants_produce_exactly_one_winner() {
-    let dir = scratch("claimrace");
-    let s = Store::new(dir.clone()).expect("store");
-    s.write_rows(&[Row::parse("w\treq-a\tb\tsha1\tqueued\tmerge\t").unwrap()]).unwrap();
-    let winners = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let mut hs = Vec::new();
-    for _ in 0..1000 {
-        let d = dir.clone();
-        let w = winners.clone();
-        hs.push(std::thread::spawn(move || {
-            let s = Store::new(d).expect("store");
-            if let Ok(Some(_)) = claim(&s, None, None) {
-                w.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            }
-        }));
+fn racing_claimants_produce_exactly_one_winner_per_queued_row() {
+    // 32 rounds x 32 threads = 1024 claim attempts, but never more than 32
+    // file descriptors at once. Concurrency is BOUNDED on purpose: this suite
+    // gates every merge once Task 4 lands, and macOS defaults `ulimit -n` to
+    // 256, so a 1000-thread version would fail on a developer's laptop for a
+    // reason that has nothing to do with the property under test. A flaky test
+    // in the gate blocks everyone; that happened on 2026-09-05 and once is
+    // enough. 32 concurrent is ample: the shell equivalent of this mutation
+    // produced 12 winners out of 12.
+    for round in 0..32 {
+        let s = Store::new(scratch(&format!("claimrace-{round}"))).expect("store");
+        s.write_rows(&[Row::parse("w\treq-a\tb\tsha1\tqueued\tmerge\t").unwrap()]).unwrap();
+        let winners = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let dir = s.queue_path().parent().expect("dir").to_path_buf();
+        let mut hs = Vec::new();
+        for _ in 0..32 {
+            let d = dir.clone();
+            let w = winners.clone();
+            hs.push(std::thread::spawn(move || {
+                let s = Store::new(d).expect("store");
+                if let Ok(Some(_)) = claim(&s, None, None) {
+                    w.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+            }));
+        }
+        for h in hs {
+            h.join().expect("thread");
+        }
+        assert_eq!(
+            winners.load(std::sync::atomic::Ordering::SeqCst),
+            1,
+            "round {round}: more than one claimant won the same row"
+        );
     }
-    for h in hs { h.join().expect("thread"); }
-    assert_eq!(winners.load(std::sync::atomic::Ordering::SeqCst), 1);
 }
 ```
 
-The last test is the campaign's whole point and is why this moved out of shell: the equivalent in `scripts/test-sluice.sh` spawns 12 processes and takes seconds, so it can only afford one round. This one runs 1000 in milliseconds.
+The last test is the campaign's whole point and is why this moved out of shell: the equivalent in `scripts/test-sluice.sh` spawns 12 processes and takes seconds, so it can only afford one round. This runs 1024 attempts in milliseconds, across 32 rounds of 32 — bounded so it cannot exhaust file descriptors on a host with a low `ulimit -n`.
 
 - [ ] **Step 2: Run and confirm they fail**
 
@@ -616,7 +632,7 @@ Expected: PASS, 11 tests.
 
 Delete the `let _guard = store.lock()...;` line, run the tests, and record the winner count the race test reports.
 
-Expected: `a_thousand_racing_claimants_produce_exactly_one_winner` FAILS with a count greater than 1. Restore the line. If it still passes, the test is not exercising the race — raise it rather than proceeding, because the shell equivalent of this mutation produced 12 winners out of 12 and a green here would mean the in-process version is weaker than the one it replaces.
+Expected: `racing_claimants_produce_exactly_one_winner_per_queued_row` FAILS, naming the round and a count greater than 1. Restore the line. If it still passes, the test is not exercising the race — raise it rather than proceeding, because the shell equivalent of this mutation produced 12 winners out of 12 and a green here would mean the in-process version is weaker than the one it replaces.
 
 - [ ] **Step 7: Commit**
 
