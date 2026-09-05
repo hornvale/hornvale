@@ -1274,6 +1274,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_249_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -1282,6 +1283,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1331,6 +1333,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
@@ -2950,6 +2953,8 @@ hornvale-vessel::hornvale_vessel$resident::tests::a_later_advance_over_a_longer_
 hornvale-vessel::hornvale_vessel$resident::tests::advance_judges_each_room_once_and_holds_the_verdict
 hornvale-vessel::hornvale_vessel$resident::tests::discarding_the_index_and_rebuilding_gives_the_same_prefixes
 hornvale-vessel::hornvale_vessel$resident::tests::the_frightening_day_held_is_the_rooms_first_visit_not_a_later_one
+hornvale-vessel::hornvale_vessel$resident::tests::the_trail_and_the_visit_lists_hold_the_same_sighting_count
+hornvale-vessel::hornvale_vessel$resident::tests::the_two_indexes_hold_the_hand_counted_entries_and_bytes
 hornvale-vessel::hornvale_vessel$roster::tests::a_short_mask_is_refused
 hornvale-vessel::hornvale_vessel$roster::tests::a_slot_never_moves
 hornvale-vessel::hornvale_vessel$roster::tests::a_write_moves_one_slot_only
@@ -3174,10 +3179,10 @@ hornvale-vessel::suite$resident_folds::a_same_day_pair_committed_in_descending_r
 hornvale-vessel::suite$resident_folds::an_entity_that_never_moved_has_an_empty_trail
 hornvale-vessel::suite$resident_folds::an_entity_that_never_moved_has_no_visits
 hornvale-vessel::suite$resident_folds::an_entity_that_never_moved_knows_no_water
-hornvale-vessel::suite$resident_folds::discarding_known_water_at_every_position_is_unobservable
-hornvale-vessel::suite$resident_folds::discarding_known_water_at_every_third_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_latest_visit_at_every_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_latest_visit_at_every_third_position_is_unobservable
+hornvale-vessel::suite$resident_folds::discarding_latest_visit_water_at_every_position_is_unobservable
+hornvale-vessel::suite$resident_folds::discarding_latest_visit_water_at_every_third_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_the_store_at_every_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_the_store_at_every_third_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_the_sustenance_tenants_at_every_position_is_unobservable
@@ -3188,14 +3193,16 @@ hornvale-vessel::suite$resident_folds::every_prefix_length_equals_the_oracle_tru
 hornvale-vessel::suite$resident_folds::evicting_a_memoised_reset_partition_is_unobservable
 hornvale-vessel::suite$resident_folds::folding_one_fact_at_a_time_equals_the_scan_oracle
 hornvale-vessel::suite$resident_folds::holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger
-hornvale-vessel::suite$resident_folds::known_water_at_every_past_instant_equals_the_oracle_at_that_instant
-hornvale-vessel::suite$resident_folds::known_water_folded_one_fact_at_a_time_equals_the_scan_oracle
 hornvale-vessel::suite$resident_folds::latest_visit_at_every_past_instant_equals_the_oracle_at_that_instant
 hornvale-vessel::suite$resident_folds::latest_visit_folded_one_fact_at_a_time_equals_the_scan_oracle
+hornvale-vessel::suite$resident_folds::latest_visit_water_at_every_past_instant_equals_the_oracle_at_that_instant
+hornvale-vessel::suite$resident_folds::latest_visit_water_folded_one_fact_at_a_time_equals_the_scan_oracle
 hornvale-vessel::suite$resident_folds::sustenance_at_equals_the_integrate_thirst_oracle_at_every_instant
 hornvale-vessel::suite$resident_folds::the_fixture_visits_at_least_one_room_twice
 hornvale-vessel::suite$resident_folds::the_fixture_visits_both_wet_and_dry_rooms
 hornvale-vessel::suite$resident_folds::the_hand_built_ledger_is_not_already_in_sorted_order
+hornvale-vessel::suite$resident_folds::the_kerf_a_room_committed_backwards_is_known_from_its_earliest_instant
+hornvale-vessel::suite$resident_folds::the_kerf_descending_fixture_commits_each_room_backwards
 hornvale-vessel::suite$resident_folds::the_reset_lookups_equal_a_direct_scan_of_the_ledger
 hornvale-vessel::suite$resident_folds::the_store_advances_on_read_and_a_second_read_absorbs_nothing
 hornvale-vessel::suite$resident_folds::the_sustenance_fixture_actually_contains_its_traps
@@ -3245,6 +3252,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does

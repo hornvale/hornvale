@@ -5591,6 +5591,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T03:56:24Z | sluice:gate | 722.021 | 19571.191 | 484.274 | 27.78 | 0 | 1b64305ba |  | lefford | 40 |
 | 2026-09-04T03:58:21Z | sluice:clients | 116.611 | 2015.365 | 162.070 | 18.67 | 0 | 3312ccda7 |  | lefford | 40 |
 | 2026-09-04T04:06:01Z | sluice:heavy | 459.863 | 9883.831 | 158.903 | 21.84 | 0 | c44165de0 |  | lefford | 40 |
+| 2026-09-04T11:14:25Z | prewarm | 179.653 | 1063.686 | 48.478 | 6.19 | 0 | f20fdbecb | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T10:43:29Z | rebaseline | 248.724 | 461.300 | 19.080 | 1.93 | 0 | bdff978d4 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T10:46:32Z | gate-commit | 131.262 | 565.214 | 82.960 | 4.94 | 0 | bdff978d4 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T11:14:42Z | gate-commit | 57.161 | 70.845 | 15.347 | 1.51 | 0 | c09338531 | campaign/the-weft | MacBookPro | 10 |
@@ -5654,6 +5655,17 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T20:57:54Z | gate-commit | 33.103 | 62.352 | 16.423 | 2.38 | 0 | 46b301f53 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T21:02:53Z | gate-commit | 63.187 | 103.084 | 47.565 | 2.38 | 0 | cc08eb8a3 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T21:07:56Z | gate-commit | 33.724 | 62.664 | 16.776 | 2.36 | 0 | cc08eb8a3 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T11:42:44Z | rebaseline | 227.484 | 474.400 | 21.735 | 2.18 | 0 | d8db48273 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T12:29:46Z | gate-commit | 155.493 | 209.392 | 61.379 | 1.74 | 0 | cf0df01bf | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T12:32:45Z | gate-commit | 162.510 | 77.344 | 16.826 | 0.58 | 0 | cf0df01bf | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T12:37:45Z | gate-commit | 99.242 | 77.662 | 17.027 | 0.95 | 0 | e60de1a11 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:05:36Z | rebaseline | 252.851 | 449.246 | 17.308 | 1.85 | 0 | 87f7f4af2 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:07:27Z | gate-commit | 100.813 | 167.602 | 66.743 | 2.32 | 0 | 87f7f4af2 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:08:22Z | gate-commit | 40.981 | 70.513 | 16.089 | 2.11 | 0 | 87f7f4af2 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:46:28Z | gate-commit | 67.352 | 98.459 | 27.609 | 1.87 | 0 | 6e5e43c7f | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:52:17Z | gate-commit | 58.091 | 119.331 | 33.264 | 2.63 | 0 | 6e5e43c7f | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:53:17Z | gate-commit | 43.906 | 73.018 | 16.031 | 2.03 | 0 | 6e5e43c7f | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T13:57:23Z | gate-commit | 94.723 | 115.298 | 58.094 | 1.83 | 0 | 541799e66 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T12:16:00Z | rebaseline | 279.998 | 466.134 | 20.298 | 1.74 | 0 | b2453e5e8 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T12:17:59Z | gate-commit | 73.580 | 173.900 | 54.304 | 3.10 | 0 | ef0abe02a | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T12:15:44Z | rebaseline | 291.431 | 473.094 | 19.811 | 1.69 | 0 | 97a7e42b3 | campaign/the-staple | MacBookPro | 10 |
@@ -5663,6 +5675,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T13:03:26Z | sluice:gate | 1131.412 | 20483.234 | 518.346 | 18.56 | 0 | be5727ad4 |  | lefford | 40 |
 | 2026-09-04T13:05:43Z | sluice:clients | 137.573 | 2064.855 | 194.313 | 16.42 | 0 | f443193c7 |  | lefford | 40 |
 | 2026-09-04T13:13:17Z | sluice:heavy | 453.283 | 9676.511 | 159.914 | 21.70 | 0 | 49eb197f8 |  | lefford | 40 |
+| 2026-09-04T14:02:44Z | rebaseline | 283.027 | 442.315 | 16.417 | 1.62 | 0 | 40625d921 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T14:03:50Z | gate-commit | 47.199 | 117.207 | 17.332 | 2.85 | 0 | 68677c9ba | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T16:01:41Z | gate-commit | 26.654 | 30.011 | 6.880 | 1.38 | 0 | 68287dddf | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T16:03:51Z | gate-commit | 96.945 | 346.787 | 33.674 | 3.92 | 0 | 68287dddf | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T16:07:47Z | gate-commit | 38.922 | 62.554 | 17.130 | 2.05 | 0 | 68287dddf | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T16:15:22Z | gate-commit | 34.413 | 61.701 | 17.021 | 2.29 | 0 | 68287dddf | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T16:23:31Z | gate-commit | 72.411 | 70.547 | 17.916 | 1.22 | 0 | fc2244dc4 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T16:31:21Z | gate-commit | 113.860 | 69.333 | 17.544 | 0.76 | 0 | fc2244dc4 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T16:32:09Z | gate-commit | 96.434 | 67.138 | 17.216 | 0.87 | 0 | da2229c41 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T18:11:10Z | gate-commit | 31.728 | 32.529 | 7.007 | 1.25 | 0 | 4b4c246b5 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T18:14:38Z | rebaseline | 199.835 | 399.557 | 18.032 | 2.09 | 0 | 4b4c246b5 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T18:20:09Z | gate-commit | 64.245 | 165.166 | 25.002 | 2.96 | 0 | 4b4c246b5 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T20:46:30Z | gate-commit | 37.610 | 61.562 | 16.769 | 2.08 | 0 | 4b4c246b5 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T20:46:36Z | gate-commit | 41.180 | 61.807 | 16.374 | 1.90 | 0 | fd2046a09 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T13:47:31Z | gate-commit | 77.391 | 124.929 | 19.675 | 1.87 | 0 | ccc98e086 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T16:03:59Z | gate-commit | 61.527 | 66.736 | 16.876 | 1.36 | 0 | d7eb905b2 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T16:16:29Z | gate-commit | 35.794 | 62.462 | 16.844 | 2.22 | 0 | 8f004e605 | campaign/the-weft | MacBookPro | 10 |
@@ -5705,6 +5731,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T21:55:03Z | gate-commit | 42.582 | 70.116 | 15.957 | 2.02 | 0 | 352af79f7 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T22:01:05Z | rebaseline | 166.701 | 390.156 | 15.524 | 2.43 | 0 | 352af79f7 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-04T22:06:06Z | gate-commit | 32.493 | 62.208 | 16.470 | 2.42 | 0 | 46fbf7a4d | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-04T21:10:15Z | rebaseline | 139.629 | 383.254 | 16.574 | 2.86 | 0 | e802d40b2 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T21:11:09Z | gate-commit | 34.263 | 63.065 | 17.095 | 2.34 | 0 | e802d40b2 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T22:01:19Z | gate-commit | 45.065 | 67.791 | 17.020 | 1.88 | 0 | 36e5b5b64 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-04T19:38:20Z | rebaseline | 170.229 | 383.909 | 16.069 | 2.35 | 0 | 941fa5511 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T19:39:04Z | gate-commit | 33.104 | 62.717 | 16.513 | 2.39 | 0 | 941fa5511 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T19:59:23Z | census | 1060.274 | 29563.783 | 304.596 | 28.17 | 0 | fbe2f5a90 |  | lefford | 40 |
@@ -5819,6 +5848,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T03:53:48Z | gate-commit | 55.174 | 56.863 | 20.397 | 1.40 | 0 | 3bcb6a64c | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-05T04:07:01Z | gate-commit | 166.522 | 631.540 | 48.933 | 4.09 | 0 | 3bcb6a64c | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-05T04:14:12Z | gate-commit | 39.398 | 70.742 | 16.097 | 2.20 | 0 | 3bcb6a64c | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-05T03:45:05Z | rebaseline | 533.541 | 491.461 | 21.230 | 0.96 | 0 | 1310c9aa9 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-05T03:58:00Z | gate-commit | 370.535 | 969.622 | 110.442 | 2.91 | 0 | 1310c9aa9 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-05T04:06:37Z | gate-commit | 94.490 | 78.752 | 18.450 | 1.03 | 0 | 1310c9aa9 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-05T04:09:35Z | gate-commit | 41.938 | 71.607 | 15.700 | 2.08 | 0 | ae246efd2 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-05T04:06:55Z | rebaseline | 251.625 | 464.512 | 21.090 | 1.93 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T04:07:54Z | gate-commit | 36.640 | 53.543 | 12.652 | 1.81 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T04:09:07Z | gate-commit | 37.139 | 63.144 | 16.620 | 2.15 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
@@ -5869,3 +5902,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T17:14:52Z | gate-commit | 192.965 | 103.594 | 38.845 | 0.74 | 0 | 802e67dd7 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-05T17:47:41Z | gate-commit | 47.257 | 69.583 | 15.668 | 1.80 | 0 | 7bc26a6c5 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-05T18:44:24Z | gate-commit | 41.789 | 69.925 | 16.492 | 2.07 | 0 | ee6b0fb02 | campaign/the-zenith | MacBookPro | 10 |
+| 2026-09-05T17:12:02Z | rebaseline | 185.824 | 445.069 | 20.287 | 2.50 | 0 | ac2d2240f | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-05T17:16:39Z | gate-commit | 268.751 | 109.953 | 48.389 | 0.59 | 0 | ac2d2240f | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-05T17:20:50Z | gate-commit | 247.103 | 78.107 | 18.606 | 0.39 | 0 | 81f49bcdf | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-05T17:45:05Z | sluice:artifacts | 327.384 | 2151.212 | 86.481 | 6.84 | 0 | 1dbdce6e4 |  | lefford | 40 |
+| 2026-09-05T17:46:41Z | sluice:outboard | 94.663 | 95.411 | 75.979 | 1.81 | 0 | 03f4738e8 |  | lefford | 40 |
+| 2026-09-05T18:00:20Z | sluice:gate | 818.742 | 21718.926 | 623.334 | 27.29 | 0 | f9a16b5e9 |  | lefford | 40 |
+| 2026-09-05T18:03:05Z | sluice:clients | 165.447 | 2376.603 | 206.099 | 15.61 | 0 | 07a8439ae |  | lefford | 40 |
+| 2026-09-05T18:10:38Z | sluice:heavy | 453.036 | 10228.273 | 165.019 | 22.94 | 0 | 9f8ecd78d |  | lefford | 40 |
