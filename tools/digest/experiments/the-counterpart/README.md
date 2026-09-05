@@ -12,7 +12,7 @@ incomplete attempt. Satisfied checks do not prove unnecessary work.
 The campaign controller owns coordination, provenance, and the final dossier.
 The foundation author owns this frozen question map, raw observer, and reusable
 Charter measurement module. A separate checker author derives the four checks
-from this contract and actual raw facts. Later owner-record and specimen authors
+from this contract and actual raw facts; its [derivation and disclosures](checker-derivation.md) are retained separately. Later owner-record and specimen authors
 own their declared records and reconstructible specimens; the controller must
 record their identities and freeze commits before revealing the reserved
 compiling challenge. This foundation creates no specimens or checker logic.

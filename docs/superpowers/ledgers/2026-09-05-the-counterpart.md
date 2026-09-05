@@ -458,3 +458,29 @@ The source base for independently authored specimens is the reviewed Task 1
 commit above. Checker code has its separate identity; no source specimen
 needs the checker implementation in its production-source commit. Owner
 worktree preparation may proceed during the separate checker review.
+
+## #6 [G5] — accept and integrate independently derived checker
+
+**Decision:** accept Task 2, authored at
+`26c693ce027bbfb8c937e4f36f024949a6b97589`, integrated as `0bd2b4f8f`.
+Independent review returned spec compliant / quality approved, no findings.
+**Why:** 32 hand-derived cases passed; a compiling removal of the actual owner
+comparison failed the wrong-owner case. Its ordinary hook passed 75 tests.
+Derivation/disclosure is linked from the experiment README. No Charter verdict
+implementation was read by the checker author or reviewer; incidental exposure
+to production Thing test comments is explicitly disclosed.
+
+The controller exercised the real observer with this independent checker:
+`cargo run --quiet --manifest-path tools/digest/Cargo.toml -p digest-counterpart
+--locked --offline`, then `evaluate(raw["facts"], contract)`. All four
+questions were satisfied. The contract hash stayed
+`37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34`;
+checker SHA256 is `ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90`.
+This is base integration evidence, not a completed specimen panel.
+
+**Cross-task checks:** duplicate JSON keys, exact persisted identities, attempt
+completeness and call-boundary isolation belong to Task 5; supported-host and
+replay obligations remain Tasks 6–7. **Alternatives/Ideonomy:** no new Q or
+approach, no weakened obligation. **Capture:** acceptance, hashes, standalone
+derivation and preparation cost. Checker worktree prewarm completed rc=0 in
+312.064 seconds; the exact timings row is retained separately from assay cost.
