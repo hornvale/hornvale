@@ -1,13 +1,16 @@
 // The catalog's golden smoke: wasm scene JSON must be byte-identical to
 // the native CLI's (the two-language golden contract at the wasm seam).
 // Usage: node drive.mjs <wasm> <native-system.json> <native-tiles.json> \
-//                       <tiles-width> <native-pinned-tiles.json> <native-region.json>
+//                       <tiles-width> <native-pinned-tiles.json> <native-region.json> \
+//                       <native-lot0.json>
 import { readFileSync } from "node:fs";
 
-const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath, regionPath] = process.argv.slice(2);
-if (!pinnedTilesPath || !regionPath) {
+const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath, regionPath, lotPath] =
+  process.argv.slice(2);
+if (!pinnedTilesPath || !regionPath || !lotPath) {
   console.error(
-    "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> <region.json>",
+    "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> " +
+      "<region.json> <lot0.json>",
   );
   process.exit(2);
 }
@@ -37,12 +40,30 @@ golden(out(), tilesPath, "scene/tiles/v1 (seed 42)");
 expect(e.hw_scene_tiles_region(0, 3, 4, 4, 16), 0, "hw_scene_tiles_region");
 golden(out(), regionPath, "scene/tiles-region/v1 (seed 42, face 0 L3 4,4 s16)");
 
+// The Lot: byte-identical to `hornvale lot --json --index 0` for the same
+// default-genesis world.
+expect(e.hw_lot(0n), 0, "hw_lot(0)");
+golden(out(), lotPath, "lot/life/v1 (seed 42, index 0)");
+const defaultLot0 = out();
+expect(e.hw_lot_curve(), 0, "hw_lot_curve");
+expect(e.hw_lot_places(1500), 0, "hw_lot_places(1500)");
+expect(e.hw_lot_pinned(3n, 1500, 4294967295), 0, "hw_lot_pinned(3, 1500, no site)");
+expect(e.hw_lot_pinned(3n, 9000, 4294967295), 2, "hw_lot_pinned refuses a year outside the span");
+
 // Pinned genesis (terrain pin: deterministic force, satisfiable on any seed).
 const pins = new TextEncoder().encode(JSON.stringify({ plates: "12" }));
 new Uint8Array(e.memory.buffer, e.hw_in_ptr(), pins.length).set(pins);
 expect(e.hw_new_pinned(42n, pins.length), 0, "hw_new_pinned(42, plates=12)");
 expect(e.hw_scene_tiles(width), 0, "hw_scene_tiles (pinned)");
 golden(out(), pinnedTilesPath, "scene/tiles/v1 (seed 42, plates=12)");
+
+// The lot context is rebuilt for the pinned world rather than surviving
+// from the default one — a stale context would draw the previous planet's
+// lives under the new (differently terraformed) seed.
+expect(e.hw_lot(0n), 0, "hw_lot(0) (pinned)");
+if (out() === defaultLot0) {
+  fail("hw_lot(0) (pinned)", "matches the default world's lot-0 bytes — LOT_CTX looks stale");
+}
 
 // Staleness: the catalog caches ONE SceneContext per world (The Cistern), so
 // every hw_new* must drop it with the world. The live context here is the

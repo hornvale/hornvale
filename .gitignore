@@ -52,6 +52,10 @@ tools/census/.build/
 book/src/gallery/vessel.wasm
 clients/vessel/wasm/target/
 
+# The catalog: same discipline as vessel.wasm above (decision 0052) — built
+# by `make wasm-world` for the gallery's Lot exhibit (Task 11), never committed.
+book/src/gallery/world.wasm
+
 # perf/flamegraph captures (scratch — never commit; they hit GitHub 100MB limit)
 perf.data
 perf.data.old

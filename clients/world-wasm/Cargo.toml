@@ -17,6 +17,7 @@ serde_json = "1"
 hornvale-kernel = { path = "../../kernel" }
 hornvale-worldgen = { path = "../../windows/worldgen" }
 hornvale-scene = { path = "../../windows/scene" }
+hornvale-lot = { path = "../../windows/lot" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-terrain = { path = "../../domains/terrain" }
 
