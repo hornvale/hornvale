@@ -5774,3 +5774,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T04:05:05Z | gate-commit | 70.666 | 163.658 | 52.297 | 3.06 | 0 | 8e6df971e | campaign/the-sluicegate | lefford | 40 |
 | 2026-09-05T04:12:02Z | gate-commit | 70.818 | 169.359 | 56.457 | 3.19 | 0 | 4c20f1d51 | campaign/the-sluicegate | lefford | 40 |
 | 2026-09-05T04:20:45Z | gate-commit | 72.575 | 153.008 | 43.545 | 2.71 | 0 | ac1b1e6fe | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:42:33Z | gate-commit | 72.615 | 154.559 | 45.060 | 2.75 | 0 | fe1498fea | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T05:15:09Z | gate-commit | 72.171 | 158.169 | 48.936 | 2.87 | 0 | a54e06850 | campaign/the-sluicegate | lefford | 40 |
