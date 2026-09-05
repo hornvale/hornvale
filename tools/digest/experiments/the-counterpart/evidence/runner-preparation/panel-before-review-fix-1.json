@@ -478,7 +478,6 @@
     }
   },
   "base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
-  "base_tree": "7350d1b4abc83775de94f35860a47e158c61dedc",
   "bundle": "specimens.bundle",
   "bundle_prerequisites": [
     "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
@@ -521,7 +520,7 @@
   "identities": {
     "checker": "ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90",
     "contract": "37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34",
-    "implementation": "02796fe0ae719a55f431f8aedc2ab6853c9a2776",
+    "implementation": "9536a75d8224dd42b4fbc5fc536a9f38685021e2",
     "measure": "178183964c86f46b14b6ea31c1c647d5b7e8031d245f9e66297acb1447edc37a",
     "owners": "5402a554e6437e2117c7e27172359ede265c6bc0b23f8829de18b41206d0f7f3",
     "roster": "230bcfc8cd38bd8eeb91701894dc5399a7cf9fa4cb6b5b6af19330f6bfd6c3c6",
@@ -1171,7 +1170,6 @@
       "right": "settlement-safe"
     }
   },
-  "prior_panel_sha256": "8c21bea63869fa29d177ad603e6ae37fa4629e46904d7f416d9d479a0fc25086",
   "schema": "counterpart-v1",
   "scope": "full unreserved panel: 11 unique arms across 4 four-arm pairs",
   "source_construction": {
