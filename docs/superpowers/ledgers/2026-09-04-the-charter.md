@@ -53,6 +53,44 @@ The program metaplan will retain the eight evolution rules and deferred
 directions. Registry capture will reuse existing homes and add only distinct
 federation/contribution/adoption ideas after the category scan.
 
+## #2 [Q] — two adopters with different sources of evidence
+
+**Question:** Which adopters exercise a useful boundary without pulling a
+world build or an operator's side effects into the first protocol?
+
+**Decision:** Thing ownership and borrowing, checked by composing the real
+Settlement and Thing registration APIs; and the official census publication
+host predicate, checked through the public pure Rust guard. The second
+contributor also carries the existing queued-census instruction as an
+authored requirement, explicitly separate from observed guard behavior.
+
+**Why:** `domains/thing/src/lib.rs` exposes `THING_KINDS`, `BORROWED`,
+`thing_registry`, and `register_concepts`; Settlement exposes its real
+registration function. A development adapter may depend on both domains
+without creating a sibling-domain dependency. `windows/lab/src/census_guard.rs`
+exposes `require_canonical_host_for`, which accepts study, output path, and
+hostname as inputs. Its scope is a census name and a path suffix, not every
+canonical artifact or the whole queue. `publish.rs` calls this guard before
+writing; observing the predicate alone does not prove that invocation.
+
+**Alternatives discarded:** Alchemy's trait adapter, because a signature or
+source scan would invite a larger purity claim than the check establishes.
+A complete queue-policy proof, because claim ownership, dispatch, staging,
+and publication are distinct behaviors. A hand-transcribed concept roster,
+because the real APIs already supply the observation.
+
+**Ideonomy passes / overturns:** One pass: tree-finding, map, direction,
+naturalness. Mapping dependency direction against the distance from a callable
+boundary left Thing and the pure guard as the smallest distinct adopters;
+no further material improvement or overturn. Each result names the narrow
+scope actually observed.
+
+**Capture actions:** Retain Alchemy and publication/queue boundary checks
+as follow-ups, not hidden acceptance requirements. Existing worldgen and
+publication tests retain their authority. The spec will require meaningful
+behavioral counterexamples, including a missing or wrong lender and a guard
+that admits an off-host official publication.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
@@ -62,6 +100,9 @@ federation/contribution/adoption ideas after the category scan.
   this first campaign.
 - Preserve the distinction between source locality and semantic effects;
   local files alone cannot establish safe independent activation.
+- Later adopters: Alchemy's contract, the actual publication boundary, and
+  the queue lifecycle. The first campaign's predicate check proves none of
+  those by implication.
 
 ## Verification and observations
 
