@@ -395,7 +395,7 @@ const SPRING_RATE: f64 = 0.95;
 /// section was required to state if one had. The honest silence is
 /// load-bearing downstream — it is why the walk-band instruments read spring
 /// at an exact zero (`weft_prevalence.rs`'s `KIND_BOUNDS` doc) and why the
-/// coastal vantage/eligibility conflict population fell from 35 facets to 27
+/// coastal vantage/eligibility conflict population fell from 35 facets to 30
 /// (`windows/vessel/tests/suite/the_weft.rs`).
 /// plumb: universal(an authored design choice confirmed at zero by The Warp's Task 6 calibration: the sign kind's noise floor is zero by intent, fixed across every world)
 const SPRING_FLOOR: f64 = 0.0;
@@ -471,20 +471,33 @@ fn spring_macro_state(carbonate: f64, drainage: f64) -> f64 {
 /// one. Independently dialable (spec §5.2 forbids a simplex across kinds,
 /// so this trades against nothing else).
 ///
-/// **Frozen at Task 6's seed-42 calibration** (ledger, "Task 6 — constants
-/// frozen"), and the gap to [`SPRING_RATE`]'s `0.95` is the design statement
-/// the paragraph above makes, now carrying a number: even on ground that
-/// fully affords one, about one facet in six holds a shelter-sized overhang.
-/// It is also what §7's H2 turned on. Overhang's cause is far more legible
-/// from the rendered words than spring's — its induration and slope ARE the
-/// rock word and the steepness word, while spring's drainage is no word at
-/// all — so at equal frequency overhang out-reads spring on the channel and
-/// H2's "spring ≥ overhang" clause fails. Lowering the reliability of the
-/// rarer landmark is the one move that satisfies the clause without touching
-/// the response's shape: at these constants spring reads 0.02750 bits net of
-/// null against overhang's 0.01388, both on found fractions above 0.77.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against the spec section 7 bands and frozen there; fixed across every world)
-const OVERHANG_RATE: f64 = 0.16;
+/// **Frozen at Task 6's fix round 1** (ledger, "Task 6 — fix round 1:
+/// overhang re-calibrated after the ordering clause was withdrawn"), which
+/// supersedes that task's first freeze. `0.75` is the highest reliability
+/// that holds every one of overhang's OWN §7 bands on seed 42: found
+/// fraction 0.761 (bar 0.60), best-class lift 20.5x the erratic's (bar 2x),
+/// learner gain +0.09436 (bar > 0), and a maximum class rate of 0.641
+/// against H5's 0.75. The next rung tried, `0.90`, trips H5 at 0.761 — the
+/// wallpaper reading H5 exists to catch — so this is a measured ceiling, not
+/// a preference.
+///
+/// **IT WAS `0.16` FOR ONE COMMIT, AND THE REASON IS WORTH KEEPING.** The
+/// first freeze set it there to satisfy H2's between-kind clause "spring's
+/// channel net ≥ overhang's". Overhang's cause is far more legible from the
+/// rendered words than spring's — its induration and slope ARE the rock word
+/// and the steepness word, while spring's drainage is no word at all — so at
+/// equal frequency overhang out-reads spring and the clause fails. But
+/// mutual information is in bits and scales with the event's own entropy, so
+/// that clause could be satisfied by making overhang RARER rather than making
+/// spring more legible, and cutting this constant twelvefold is what
+/// satisfying it cost. The clause was withdrawn from the gate for exactly
+/// that reason (2026-09-05, before any readout seed was built; spec §7,
+/// ledger #11) and the ordering is now reported rather than gated. The gap to
+/// [`SPRING_RATE`]'s `0.95` that remains is the design statement the
+/// paragraph above makes and nothing else: three facets in four against
+/// nineteen in twenty, on ground that fully affords each.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against overhang's own spec section 7 bands and frozen at its fix round 1; fixed across every world)
+const OVERHANG_RATE: f64 = 0.75;
 
 /// **Floor** for overhang/hollow — zero, for the same reason
 /// [`SPRING_FLOOR`] is (The Warp, spec §6.1, §2): an overhang standing on
@@ -500,10 +513,13 @@ const OVERHANG_FLOOR: f64 = 0.0;
 /// for the same two reasons: it is what carries H1's found fraction (0.301
 /// at the provisional `0.20`, 0.771 here), and it stays strictly below the
 /// 0.5 that H1's own found-fraction threshold sits at, so the band measures
-/// something rather than reading `1.000` by construction. A HIGHER edge
-/// would have read better on H1 and worse on H2 — concentrating occurrences
-/// on the strongest cause makes them more legible, and overhang's legibility
-/// is the quantity §7 asks to stay under spring's.
+/// something rather than reading `1.000` by construction. (An earlier draft
+/// of this doc gave a third reason — that a higher edge would read worse on
+/// H2, because concentrating occurrences on the strongest cause makes them
+/// more legible and overhang's legibility had to stay under spring's. That
+/// clause was withdrawn from H2's gate on 2026-09-05; see
+/// [`OVERHANG_RATE`]'s own doc for why. The two reasons above stand on their
+/// own and are why this edge did not move at the fix round.)
 /// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
 const OVERHANG_STEP_LO: f64 = 0.35;
 

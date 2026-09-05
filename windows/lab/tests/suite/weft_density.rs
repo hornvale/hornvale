@@ -75,10 +75,17 @@
 //! | kind | existence density | encounter rate | Moran's I | occurs-count | MI (bits) |
 //! | --- | ---: | ---: | ---: | ---: | ---: |
 //! | spring | 0.013371 | 0.000000 | **Absent** | 0 | 0.086464 |
-//! | overhang | 0.006240 | 0.007692 | 0.874918 | 36 | 0.020901 |
+//! | overhang | 0.031289 | 0.022009 | 0.946788 | 103 | 0.115161 |
 //! | thicket | 0.135229 | 0.197436 | 0.962205 | 924 | 0.038604 |
 //! | erratic | 0.038153 | 0.049786 | 0.587038 | 233 | 0.000000 |
-//! | any (union) | 0.181672 | 0.245513 | — | — | — |
+//! | any (union) | 0.203601 | 0.257479 | — | — | — |
+//!
+//! (Overhang's row is the FIX-ROUND-1 reading, at `OVERHANG_RATE = 0.75`.
+//! For one commit it read 0.006240 / 0.007692 / 0.874918 / 36 / 0.020901, at
+//! a rate of 0.16 chosen to satisfy an H2 clause since withdrawn — see the
+//! amended witness at the foot of this file, and `OVERHANG_RATE`'s own doc.
+//! Spring's row is byte-identical across that change, because no spring
+//! constant moved.)
 //!
 //! **Thicket's and erratic's five columns are byte-identical to the Weft's.**
 //! They are the campaign's controls; their recipe is untouched (spec §6.1)
@@ -151,25 +158,42 @@
 //! this is a hypothesis about THIS estimator and THIS world, not a
 //! re-derivation, and it is recorded as a hypothesis rather than asserted.
 //!
-//! **THE WARP, Task 6 (2026-09-05): the falsified ordering NOW HOLDS on seed
-//! 42, and this paragraph is amended rather than rewritten so the reversal
-//! is legible.** Re-measured at the frozen constants:
-//! **spring (0.086464) > thicket (0.038604) > overhang (0.020901) > erratic
-//! (0.000000)** — exactly the preregistration. Read it as a statement about
-//! THE RECIPE, not about the Weft's measurement: the Warp's spring reads its
-//! cause through a soft step with a zero floor, so a spring stands where its
-//! karst-and-drainage cause actually is, and the macro-state a spring's
-//! presence implies is correspondingly sharp. Under the Weft's recipe most
-//! springs stood on facets with no cause at all (333 of seed 42's 403), which
-//! is precisely what a mutual information between occurrence and macro-state
-//! measures away. Thicket's and erratic's readings are byte-identical to the
-//! numbers above, as their untouched recipes require.
+//! **THE WARP, Task 6 (2026-09-05): the ordering is STILL FALSIFIED, but by
+//! a different pair, and the excursion in between is the instructive part.**
+//! At the frozen constants it reads **overhang (0.115161) then spring
+//! (0.086464) then thicket (0.038604) then erratic (0.000000)**: erratic is
+//! still exactly zero and thicket has fallen from first to third, but
+//! overhang now leads.
+//!
+//! **Spring's own reading rose 11.1x against the Weft's** (0.007812 ->
+//! 0.086464) and that is the campaign's actual claim about spring, measured
+//! against spring's own past. The Warp's spring reads its cause through a
+//! soft step with a zero floor, so a spring stands where its
+//! karst-and-drainage cause actually is; under the Weft's recipe 333 of seed
+//! 42's 403 springs stood on facets with no cause at all, which is precisely
+//! what a mutual information between occurrence and macro-state measures
+//! away. Thicket's and erratic's readings are byte-identical to the Weft's,
+//! as their untouched recipes require.
+//!
+//! **THE EXCURSION, because it is the clearest available demonstration of why
+//! a between-kind MI comparison is not a bar.** For one commit the first
+//! freeze set `OVERHANG_RATE = 0.16` — to satisfy an H2 clause requiring
+//! spring's channel net to beat overhang's — and this table read
+//! `spring 0.086464`, `thicket 0.038604`, `overhang 0.020901`, `erratic
+//! 0.000000` — **exactly the preregistered ordering**. Nothing about spring
+//! differed between that commit and this one; the entire reversal was
+//! overhang's frequency. A prediction that can be confirmed by making a
+//! different kind rarer is not being tested by its confirmation. The clause
+//! was withdrawn from spec §7's gate on the same date (ledger #11) and
+//! `OVERHANG_RATE` was re-set to the highest value holding overhang's OWN
+//! bands, 0.75.
 //!
 //! **This is one seed and it is the CALIBRATION seed, so it gates nothing.**
-//! Whether the ordering holds on a world nobody tuned against is The Warp's
-//! Task 7 readout (seeds 13, 7, 1 and 100, built after the constants were
-//! frozen — decision 0016). The two relations this file ASSERTS are
-//! unchanged and both still hold; the ordering itself is still only printed.
+//! Task 7's four readout seeds, built after the constants were frozen
+//! (decision 0016), are what can say anything general. Of the two relations
+//! this file ASSERTS, erratic-is-smallest is unchanged and holds;
+//! `spring > overhang` reversed and its witness is re-pinned in the measured
+//! direction with the full reasoning at the assertion itself.
 //!
 //! # Cost
 //!
@@ -465,8 +489,41 @@ fn the_preregistered_readout_is_measured_and_recorded() {
          spring={mi_spring:.6} thicket={mi_thicket:.6} overhang={mi_overhang:.6} \
          erratic={mi_erratic:.6}"
     );
+
+    // ── THE WARP, Task 6 fix round 1 (2026-09-05): `spring > overhang`
+    // REVERSED, and the witness is re-pinned to the measured direction
+    // rather than deleted. ──
+    //
+    // THE RELATION THAT MOVED, with both values: spring 0.086464 against
+    // overhang 0.115161. It read the other way one commit earlier
+    // (0.086464 against 0.020901) and the Weft measured it 0.007812 against
+    // 0.002497.
+    //
+    // WHY, AND WHY IT IS NOT A SPRING REGRESSION. Spring's reading is
+    // IDENTICAL either side of the change — 0.086464 both times, because no
+    // spring constant moved. What moved is `OVERHANG_RATE`, 0.16 -> 0.75,
+    // and overhang's legibility MI moved with it 5.5x. That is the same
+    // base-rate effect the controller's ruling names: this statistic is in
+    // BITS, so it scales with the event's own entropy `H(Y)`, and a
+    // between-kind comparison of two MIs can therefore be flipped by making
+    // one kind rarer while nothing about either kind's legibility changes.
+    // H2's own between-kind clause was withdrawn from spec §7's gate on this
+    // date for exactly that reason (ledger #11); this witness is the SAME
+    // shape of statement and inherits the same caveat, which is why it is a
+    // witness and not a bar. Spring against the Weft's own baseline rose
+    // 11.1x (0.007812 -> 0.086464): the campaign's claim about spring is
+    // intact and is measured against spring's own past, not against
+    // overhang.
+    //
+    // ASSERTED IN THE MEASURED DIRECTION, not deleted and not left red. A
+    // permanently-red assertion is the shape decision 0016 forbids, and a
+    // deleted one stops watching. Pinned this way it still fires the moment
+    // the relation moves again — which is exactly what it did here.
     assert!(
-        mi_spring > mi_overhang,
-        "spring no longer outscores overhang — spring={mi_spring:.6} overhang={mi_overhang:.6}"
+        mi_overhang > mi_spring,
+        "the spring/overhang legibility relation moved again — it was re-pinned as \
+         overhang > spring on 2026-09-05 (0.115161 against 0.086464); it now reads \
+         spring={mi_spring:.6} overhang={mi_overhang:.6}. Re-derive it and say which \
+         constant moved, the way the comment above this assertion does."
     );
 }

@@ -6980,10 +6980,10 @@ impl<'w> Session<'w> {
         // continuous test that can pass even when the single heaviest corner
         // is ocean. Measured directly on seed 42 (every walk-depth facet over
         // all 40,962 vertices, comparing the two predicates independently):
-        // 29,713 facets are afloat by the corner-pick test, and of those, 27
-        // (0.091% of afloat facets, 0.066% of all facets) ALSO carry >= 1
+        // 29,713 facets are afloat by the corner-pick test, and of those, 30
+        // (0.101% of afloat facets, 0.073% of all facets) ALSO carry >= 1
         // weft feature by the blend test — real, not merely constructible,
-        // though rare. (The Warp, Task 6, 2026-09-05: 35 -> 27. Neither
+        // though rare. (The Warp, Task 6, 2026-09-05: 35 -> 27 -> 30. Neither
         // predicate moved; spring and overhang stopped occurring on ground
         // with no cause, and afloat coastal ground is exactly that. The
         // number is asserted exactly by `the_weft.rs`'s

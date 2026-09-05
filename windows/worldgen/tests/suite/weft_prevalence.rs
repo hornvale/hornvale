@@ -211,7 +211,7 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// | kind | pooled spread | total occurs | lag-1 r |
 /// | --- | --- | --- | --- |
 /// | spring | **0.00000** (`[0.00000, 0.00000]`) | **0 / 4,680** | **undefined** |
-/// | overhang | 0.14981 (`[0.00000, 0.14981]`) | 36 / 4,680 | 0.99994 |
+/// | overhang | 0.70225 (`[0.00000, 0.70225]`) | 103 / 4,680 | 0.99994 |
 /// | thicket | 0.39418 (`[0.00054, 0.39473]`) | 924 / 4,680 | 0.99994 |
 /// | erratic | 0.07594 (`[0.00203, 0.07796]`) | 233 / 4,680 | 0.86795 |
 ///
@@ -239,13 +239,24 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// silent vacuous pass: it asserts the exact zero, so the moment spring
 /// reappears in the walk band the test goes red and this row is re-derived.
 ///
-/// **Overhang's occurrence floor drops `150` → `25`** against a measured 36
-/// (1.44x under, the same headroom philosophy the rows above use). Its
-/// spread ROSE (0.13333 → 0.14981) while its occurrences fell, which is the
-/// step's own signature: the response is exactly zero below `0.35` and
-/// climbs to `rate` above `0.65`, so the pooled series now spans
-/// `[0, rate]` rather than a lerp's narrow band, while far fewer facets
-/// carry any prevalence at all.
+/// **Overhang's row is re-derived twice over, and the table above is the
+/// SECOND reading — take the numbers from it, not from this paragraph's
+/// history.** Its floors move `0.08` → `0.40` and `150` → `55`, each about
+/// 1.8x under the measured 0.70225 and 103, which is the headroom philosophy
+/// the rows above use. Its pooled spread nearly quintupled (0.13333 →
+/// 0.70225) while its occurrence count fell by more than half (275 → 103),
+/// and both are the soft step's own signature: the response is exactly zero
+/// below `0.35` and climbs to `rate` above `0.65`, so the pooled series now
+/// spans `[0, rate]` rather than a lerp's narrow band, while far fewer
+/// facets carry any prevalence at all.
+///
+/// The intermediate reading, for one commit only, was spread 0.14981 and 36
+/// occurrences at `OVERHANG_RATE = 0.16` — a rate set to satisfy an H2
+/// between-kind clause that was withdrawn from spec §7's gate the same day
+/// (ledger #11, 2026-09-05). It is recorded here rather than overwritten
+/// because the two readings together are the cleanest evidence available
+/// that this row tracks the RATE and nothing else: the step edges, the pool,
+/// the seed and the population were identical across both.
 ///
 /// **One claim in the mutant table above no longer applies to spring or
 /// overhang, and it is worth stating rather than leaving to inference.** A
@@ -260,7 +271,7 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// Weft's expression and keep the original guarantee unchanged.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
     (WeftKind::Spring, 0.010, 0.0, 0),
-    (WeftKind::Overhang, 0.045, 0.08, 25),
+    (WeftKind::Overhang, 0.045, 0.40, 55),
     (WeftKind::Thicket, 0.015, 0.20, 400),
     (WeftKind::Erratic, 0.060, 0.04, 100),
 ];

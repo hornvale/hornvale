@@ -12,7 +12,11 @@
 //!
 //! The verdict block the readout prints beside the table applies §7's bars to
 //! seed 42 anyway, because that is what a calibrator has to read to know
-//! whether to turn a dial. It is printed, never asserted.
+//! whether to turn a dial. It is printed, never asserted. A second block
+//! below it prints the between-kind ordering H2 used to gate — withdrawn
+//! 2026-09-05, before any readout seed was built — raw and normalised by each
+//! kind's own `H(Y)`; see the comment at that block for why an ordering in
+//! bits cannot be a bar.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
@@ -152,12 +156,6 @@ fn print_the_seed_42_calibration_table() {
             lift[i] >= 2.0 * lift[3]
         );
     }
-    println!(
-        "H2 spring net {:.5} >= overhang net {:.5} : {}",
-        net[0],
-        net[1],
-        net[0] >= net[1]
-    );
     for (i, kind) in ["spring", "overhang", "thicket"].iter().enumerate() {
         println!(
             "H3 {kind:<9} learner {:.5} > 0 : {}   learner/(channel net) = {:.4}",
@@ -190,6 +188,45 @@ fn print_the_seed_42_calibration_table() {
             maxrate[i] <= 0.75
         );
     }
+    // THE BETWEEN-KIND ORDERING IS REPORTED, NEVER GATED — withdrawn from
+    // H2's gate on 2026-09-05, before any readout seed was built (controller
+    // ruling on Task 6's fix round 1; spec §7 amended, ledger #11).
+    //
+    // WHY IT CANNOT BE A BAR. Mutual information is in bits and scales with
+    // the event's own entropy `H(Y)`, so a between-kind ordering
+    // "spring's net ≥ overhang's" can always be satisfied by making OVERHANG
+    // RARER — nothing about spring need improve at all. This task's round 3
+    // did exactly that, cutting overhang's reliability to 0.16 and its
+    // frequency twelvefold to clear a clause about a different kind. A bar
+    // that can be met by removing a kind from the world is measuring the wrong
+    // thing. Each kind is gated on its OWN legibility (found fraction, lift
+    // against the erratic, learner gain, max class rate); the comparison
+    // survives here as a reading, in both forms — raw, and divided by each
+    // kind's own `H(Y)` so the base-rate term is taken out of it.
+    println!("\n--- reported, never gated: the between-kind ordering, raw and normalised ---");
+    let h = |p: f64| -> f64 {
+        if p <= 0.0 || p >= 1.0 {
+            f64::NAN
+        } else {
+            // `hornvale_kernel::math::log2`, never `f64::log2` — the platform
+            // libm diverges in the last ULP and the workspace bans it.
+            -(p * hornvale_kernel::math::log2(p) + (1.0 - p) * hornvale_kernel::math::log2(1.0 - p))
+        }
+    };
+    for (i, kind) in KINDS.iter().enumerate() {
+        println!(
+            "  {kind:<9} net {:>9.5}   H(Y) {:>8.5}   net/H(Y) {:>7.4}",
+            net[i],
+            h(density[i]),
+            net[i] / h(density[i])
+        );
+    }
+    println!(
+        "  spring net >= overhang net: {} (raw)   {} (share of own ceiling)",
+        net[0] >= net[1],
+        net[0] / h(density[0]) >= net[1] / h(density[1])
+    );
+
     // Spec §6.3's consequence, reported per seed. THE POPULATIONS DIFFER AND
     // THE FIGURES ARE RESCALED SO THEY CAN BE COMPARED AT ALL: `the_weft.rs`'s
     // committed 0.984% / 2.058% / 3.703% / 1.045% are over the WHOLE grid
