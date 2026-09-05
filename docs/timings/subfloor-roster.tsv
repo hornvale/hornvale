@@ -1283,7 +1283,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1335,7 +1334,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_meas
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
-hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
@@ -1343,7 +1341,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothin
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two
 hornvale-lab::hornvale_lab$domesday::render::tests::a_novel_detector_name_reaches_the_rendered_index
 hornvale-lab::hornvale_lab$domesday::render::tests::a_removed_parenthetical_directly_before_a_period_does_not_leave_a_dangling_space
 hornvale-lab::hornvale_lab$domesday::render::tests::an_ellipsis_survives_the_space_dot_space_cleanup_untouched
@@ -2959,6 +2956,7 @@ hornvale-vessel::hornvale_vessel$roster::tests::a_slot_never_moves
 hornvale-vessel::hornvale_vessel$roster::tests::a_write_moves_one_slot_only
 hornvale-vessel::hornvale_vessel$roster::tests::every_column_shares_one_length
 hornvale-vessel::hornvale_vessel$roster::tests::the_driven_slot_is_the_one_dropped
+hornvale-vessel::hornvale_vessel$ruin_prose::tests::every_cause_renders_nonempty_prose
 hornvale-vessel::hornvale_vessel$session::tests::a_costly_truth_names_its_residue_and_an_empty_one_reads_as_ordinary
 hornvale-vessel::hornvale_vessel$session::tests::a_deliberate_lie_carries_the_claim_and_never_the_truth
 hornvale-vessel::hornvale_vessel$session::tests::a_later_wake_already_set_is_kept
@@ -3067,6 +3065,9 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_pair_by_coordin
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::unlinked_neighbours_keep_their_wall
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
+hornvale-vessel::hornvale_vessel$weft_prose::tests::every_kind_renders_nonempty_prose
+hornvale-vessel::hornvale_vessel$weft_prose::tests::no_features_is_silent
+hornvale-vessel::hornvale_vessel$weft_prose::tests::two_features_both_render
 hornvale-vessel::suite$action_module::every_action_variant_still_carries_a_concept_name
 hornvale-vessel::suite$action_module::resting_leaves_the_body_conscious_and_restores_some_fatigue
 hornvale-vessel::suite$action_module::sleeping_renders_the_body_unconscious_and_restores_strictly_more_than_resting
@@ -3227,6 +3228,8 @@ hornvale-vessel::suite$the_terrier::no_session_path_re_surveys_the_occupation_re
 hornvale-vessel::suite$the_terrier::the_block_extractor_matches_nested_braces
 hornvale-vessel::suite$the_terrier::the_production_span_reaches_the_test_module_not_the_first_attribute
 hornvale-vessel::suite$the_terrier::the_register_scanner_catches_a_per_call_read
+hornvale-vessel::suite$the_weft::no_weft_kind_label_appears_in_thing_kinds
+hornvale-vessel::suite$the_weft::the_ruin_line_names_a_cause_only_when_the_record_has_one
 hornvale-vessel::suite$thing::a_holder_holds_what_was_last_put_in_it_and_nothing_it_has_given_up
 hornvale-vessel::suite$thing::a_room_offers_again_what_was_brought_back
 hornvale-vessel::suite$thing::a_room_stops_offering_what_was_carried_out_of_it
@@ -3714,6 +3717,7 @@ hornvale-worldgen::suite$traversal::an_ocean_vertex_is_impassable
 hornvale-worldgen::suite$traversal::the_field_is_deterministic_across_rebuilds
 hornvale-worldgen::suite$underworld_separation::the_candidate_fit_tables_and_the_elevation_precondition
 hornvale-worldgen::suite$underworld_separation::the_lattice_band_is_the_ladder_position
+hornvale-worldgen::suite$weft_ledger_guard::the_seed_42_byte_golden_fact_count_is_unmoved
 hornvale::hornvale$audio::tests::audio_filenames_are_eight_lowercase_hex_digits_dot_mp3
 hornvale::hornvale$audio::tests::crc32_matches_the_ieee_known_answer
 hornvale::hornvale$concepts::tests::manifest_render_derives_orphan_acts_from_the_action_roster
