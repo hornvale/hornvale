@@ -109,8 +109,44 @@ settles it, stated rather than left blank.
 
 **Capture actions**: registry row corrected; spec §3.4 quotes both runs.
 
+## #4 [G4] — the plan self-review rejected its own last task
+
+**Question**: does the plan cover the spec, and is every task executable from
+its own text?
+
+**Decision**: proceed to execution with **five** tasks, not six. `add`,
+coalescing and the pure shim are deferred to their own plan, written after
+Task 5 lands. `scripts/sluice-mouth.sh` is explicitly out of scope.
+
+**Why**: the first draft carried `add` as Task 6 and the self-review failed it
+on the writing-plans skill's own criteria — it referenced a `Git` type no task
+defined, and its central step read "port the coalescing rules... preserving all
+three", which describes work rather than being it. Rather than inflate it into
+something executable by guessing, I looked at why it resisted planning: `add`
+is four coupled defended behaviours (headline refusal, three-valued ancestry,
+per-branch-and-kind coalescing, durability on unresolvable), each with a
+comment recording the incident that produced it. That needs a plan written when
+the subprocess boundary for git is known, not one written now and revised
+during execution.
+
+**This leaves a stable end state, not a half-migration.** The hybrid shim —
+ported verbs to the binary, `add` in bash — is shippable and is where the
+spec's §5 places the delivered value (step 2), with steps 3-4 already optional.
+
+**Two smaller self-review fixes**: Task 4's file list promised the shim would
+forward `next` while its code forwarded three verbs; and the plan was silent on
+`sluice-mouth.sh` where the spec had scoped it.
+
+**ideonomy passes / overturns**: 0 — a plan-quality gate against the spec, not
+an open design question. Stated rather than left blank.
+
+**Capture actions**: plan §"Not planned here" records why `add` is deferred and
+what makes it risky, so the next planner starts from the four behaviours rather
+than rediscovering them.
+
 ## Follow-ups
 
+- `add`, coalescing and the pure shim need their own plan once Task 5 lands (ledger #4).
 - `sluice-mouth.sh`'s five-valued exit is a contract (`sluice-run.sh` offsets it
   by 20). Second wave, and it needs its own compatibility check.
 - The two stale `held` rows belonging to other campaigns (`the-hallmark`
