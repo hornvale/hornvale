@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-lot","note":"sluice: queued stage req-11231e50f9d1 for campaign/the-lot at 11231e50 (Stage 3 boundary: occ-person-years fact, windows/lot, hornvale lot, six lot-* census columns; first roster entry for hornvale-lot expected from this run)","paths":["scripts/sluice-queue.sh"]}
