@@ -281,6 +281,7 @@ Sluice-Headline: the queue's row and store arrive in Rust, untested by any calle
 **Files:**
 - Create: `tools/sluice/src/verbs.rs`
 - Modify: `tools/sluice/src/lib.rs` (add `pub mod verbs;`)
+- Modify: `tools/sluice/src/store.rs` (add `Store::lock()`, used by `set_state` here and by `claim` in Task 3)
 - Modify: `tools/sluice/tests/suite.rs`
 
 **Interfaces:**
@@ -330,7 +331,28 @@ The third test is the load-bearing one. `scripts/sluice-queue.sh`'s own comment 
 Run: `cargo test --manifest-path tools/sluice/Cargo.toml`
 Expected: FAIL — `verbs` does not exist.
 
-- [ ] **Step 3: Implement**
+- [ ] **Step 3a: Add the lock to the store**
+
+```rust
+// tools/sluice/src/store.rs — append to impl Store
+    /// Take the queue's advisory lock, held until the returned handle drops.
+    /// This is the SAME lock `flock(1)` takes, which is what lets bash and
+    /// Rust callers coexist during the migration.
+    pub fn lock(&self) -> io::Result<fs::File> {
+        let f = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(false)
+            .open(self.lock_path())?;
+        f.lock()?;
+        Ok(f)
+    }
+```
+
+`File::lock` is stable on the repo's pinned 1.96.1 and needs no crate; both
+that and its interoperability with `flock(1)` are measured in the spec's §3.4.
+
+- [ ] **Step 3b: Implement the verbs**
 
 ```rust
 // tools/sluice/src/verbs.rs
@@ -438,7 +460,7 @@ Sluice-Headline: set-state refuses an id that matches no row, in Rust"
 
 **Interfaces:**
 - Consumes: `Store`, `Row`, `sanitize_note` from Tasks 1–2.
-- Produces: `Store::lock() -> io::Result<File>` (held for the returned handle's lifetime); `claim(&Store, sha: Option<&str>, note: Option<&str>) -> Result<Option<Row>, ClaimError>` with `ClaimError::HeldByAnother` and `ClaimError::NoSuchRow` mapping to exit codes 4 and 5.
+- Consumes: `Store::lock()` from Task 2. Produces: `claim(&Store, sha: Option<&str>, note: Option<&str>) -> Result<Option<Row>, ClaimError>` with `ClaimError::HeldByAnother` and `ClaimError::NoSuchRow` mapping to exit codes 4 and 5.
 
 - [ ] **Step 1: Write the failing tests, including the concurrency one**
 
@@ -502,23 +524,14 @@ The last test is the campaign's whole point and is why this moved out of shell: 
 Run: `cargo test --manifest-path tools/sluice/Cargo.toml`
 Expected: FAIL — `claim` does not exist.
 
-- [ ] **Step 3: Add the lock to the store**
+- [ ] **Step 3: Confirm the lock already exists**
 
-```rust
-// tools/sluice/src/store.rs — append to impl Store
-    /// Take the queue's advisory lock, held until the returned handle drops.
-    /// This is the SAME lock `flock(1)` takes, which is what lets bash and
-    /// Rust callers coexist during the migration.
-    pub fn lock(&self) -> io::Result<fs::File> {
-        let f = fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(false)
-            .open(self.lock_path())?;
-        f.lock()?;
-        Ok(f)
-    }
-```
+`Store::lock()` was added in Task 2, which needs it for `set_state`. Do not
+re-add it. Confirm it is present and used:
+
+Run: `grep -n "pub fn lock" tools/sluice/src/store.rs`
+Expected: one match. If there are none, Task 2 is incomplete — stop and say so
+rather than adding a second copy.
 
 - [ ] **Step 4: Implement `claim`**
 
