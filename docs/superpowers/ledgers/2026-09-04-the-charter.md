@@ -305,6 +305,53 @@ Capture: spec §8 and program §6 carry the requirements; ledger #6's pending
 refinement is addressed. No Ideonomy rerun for recording Nathan's approval;
 the quality-contract decision's two passes are recorded in #6.
 
+## #8 [G4] — staged plan self-review and execution ruling
+
+**Question:** Does the implementation plan cover the approved spec with
+consistent interfaces and genuinely independent adopter work?
+
+**Decision:** Execute the [five-task plan](../plans/2026-09-04-the-charter.md)
+in three stages. Protocol then process host are sequential. The two adopters
+fork from the reviewed bootstrap into separate worktrees. Composition,
+measurements and whole-branch review follow. G6 remains the merge/close stop.
+
+**Why:** The spec's independent-adoption acceptance requires real parallel
+branches; it is not satisfied by two agents editing one checkout. This
+user-approved experiment supersedes the generic SDD warning against parallel
+implementers sharing files. Shared lock resolution is recorded and reviewed.
+No agent may change another checkout or dispatch its own reviewer.
+
+**Pre-flight self-review:**
+
+| Tasks / surface | Producer and consumer | Finding / ruling |
+|---|---|---|
+| 1 internal | Types, validators and composition tests | Required evidence is declared separately; malformed structure differs from contradicted/unknown observations. |
+| 2 internal | Discovery metadata, selected build, executable response | Scopes exist before execution; explicit runtime checkout/manifest/target paths avoid compile-time or ambient worktree selection. |
+| 3 internal | Real registries and independently authored comparisons | Registration may panic as well as return an error; report failure honestly. No production edits. |
+| 4 internal | Finite guard panel and source/compiled host check | Expected allowed/refused outcomes are independent of the implementation; queue policy stays authored-only. |
+| 5 internal | Integrated reports and quality evidence | Measurement is explicit and uses disposable owned worktrees; no active cache deletion, no silent absent Linux sample. |
+| 1 → 2 | Shared protocol/composition functions; module and manifests | Exact names in the plan; sequential edits. |
+| 2 → 3/4 | Metadata, JSON, argv and scope contract | Frozen before fork; semantic core edits invalidate the autonomy experiment. |
+| 3 ↔ 4 | Independent packages, shared lockfile ancestry | Separate branches/worktrees; controller staggers gates and reconciles only reviewed dependency artifacts. |
+| 3/4 → 5 | Reviewed commits and actual context | Explicit branch-base/diff evidence; generated freshness checked after integration. |
+
+**Alternatives discarded:** Unspecified canonical diagnostic execution,
+which would invite contention or a missing result; instead use an isolated
+stage-only measurement branch whose outboard command invokes the diagnostic
+under the existing queue, and never merge that extra invocation. A direct
+competing SSH job and unsolicited operator messaging are excluded.
+
+**Ideonomy passes / overturns:** No new nontrivial architectural question was
+opened in this G4 self-review; prior approach and quality-contract passes
+remain the basis. The measurement transport is a concrete use of the existing
+stage queue, not new gate/admission policy. Runtime values such as bootstrap
+SHA and measured costs must be read from execution, never predicted by prose.
+
+**Capture actions:** The plan maps every spec/quality scenario to a task;
+`IMPLEMENTATION_PLAN.md` tracks the three stages. The permanent evidence
+report will retain the branch experiment and measured quality results.
+Task briefs/reviews remain scratch; rulings and follow-ups stay here.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
