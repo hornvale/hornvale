@@ -204,6 +204,16 @@ save about twenty-three seconds of measurement wall time per refresh. The
 budget was written for a cost it did not foresee, and the instrument's
 resolution is what the campaign is for.
 
+The refresh also cost a witness elsewhere. The anomaly report's injection
+battery, re-authored on the canonical box against the new goldens, moved from
+69 of 120 pairs to 66 — the ranked surface grew from 139 columns to 170, and
+one more candidate column can displace the tenth flag of any world. Ablating
+the thirty-two new columns in memory accounts for only one of those three
+hits: the other two are the previous campaign's spring and overhang columns
+changing in value under this campaign's re-parameterisation, and ablating
+both families together restores the older 118-column surface and its
+72-of-120 reading exactly.
+
 ## The inversion
 
 The previous campaign's recipe multiplies an **abundance** by a mixture of a
