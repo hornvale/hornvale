@@ -5779,7 +5779,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lot-median-scaled-death-age",
             doc: "Median age at death over lots 0-199, in scaled years (age x 60 / the \
-                  people's lifespan); Absent as above",
+                  people's lifespan); Absent if the world has no occupations or predates \
+                  occ-person-years",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[5.0, 10.0, 20.0, 30.0, 40.0, 60.0],
             },
@@ -5811,7 +5812,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lot-witness-community-end-share",
             doc: "Share of lots 0-199 whose life ended in, or moved at, its \
-                  community's own committed ending; Absent as above",
+                  community's own committed ending; Absent if the world has no \
+                  occupations or predates occ-person-years",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
             },
@@ -5835,7 +5837,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lot-silent-subsistence-share",
             doc: "Share of lots 0-199 whose subsistence slot is silent — culture \
-                  facts attach to living settlements; Absent as above",
+                  facts attach to living settlements; Absent if the world has no \
+                  occupations or predates occ-person-years",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
             },
@@ -5860,7 +5863,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lot-slots-filled-mean",
             doc: "Mean number of the 22 non-by-design story slots filled per lot \
-                  over lots 0-199; Absent as above",
+                  over lots 0-199; Absent if the world has no occupations or predates \
+                  occ-person-years",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0],
             },
@@ -5893,7 +5897,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lot-born-last-quarter-share",
             doc: "Share of lots 0-199 born in the last quarter of the bake span; \
-                  Absent as above",
+                  Absent if the world has no occupations or predates occ-person-years",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
             },

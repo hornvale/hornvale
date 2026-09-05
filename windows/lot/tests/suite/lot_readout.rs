@@ -8,7 +8,6 @@
 //! them over the nine seeds spec §8 names specifically, which a study JSON
 //! cannot express (ledger #10: "a study JSON cannot name nine specific
 //! seeds").
-#![allow(clippy::disallowed_methods)]
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
