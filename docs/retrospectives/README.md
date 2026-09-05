@@ -150,6 +150,7 @@ under review. This file is.
 - [The Compendium](the-compendium.md) — 0135/0136; a capability corpus scoring the PROGRAM, sibling to the trope family; FOUR false-cleans in one resolver, each found by a different mechanism and none by a passing suite; a rule derived from one real row is still an anecdote; two controller figures corrected by implementers who re-derived them
 - [The Glasshouse](the-glasshouse.md) — 0137/0138; the census warmed −11.99 → −3.65 °C and ice-dominant worlds 651 → 187/1000, meeting 4 of 6 frozen criteria; an inherited "8.6σ" was 1.09σ; "fix this constant from Earth" was provably impossible (the term vanishes at the anchor); a column that moved by ZERO was a scope error, not a null; how to freeze a decision rule you already know the answer to
 - [The Coda](the-coda.md) — a presence check is not a closure check; make the matcher’s blind population a named, exact one, and retain history instead of treating completion as a deletion signal
+- [The Sluicegate](the-sluicegate.md) — a presence check is not a closure check; make the matcher’s blind population a named, exact one, and retain history instead of treating completion as a deletion signal
 
 ### The Walk (game-layer liveness arc — M2)
 
