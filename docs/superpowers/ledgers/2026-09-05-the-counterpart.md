@@ -401,3 +401,18 @@ The task-brief extractor retains only the Task heading/body, omitting the
 shared file map. The controller now supplies that map with the shared schema
 and constraints to every implementer. Experiment paths retain `the-counterpart`,
 while the Rust package path is `packages/counterpart`.
+
+### Stage 1 chronology — question freeze and independent checker dispatch
+
+Before either specimen owner was dispatched, Task 1 wrote `contract.json`
+with SHA256 `37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34`.
+It fixes the four questions and their input/package/contributor map. The
+independent checker task received these bytes and the approved raw schema,
+in worktree `counterpart-checker`, branch `codex/counterpart-checker`. It was
+instructed not to inspect the Charter verdict derivation. The foundation
+author continues separately; these tasks share data types, not checker code.
+
+Checker derivation disclosure lives in `checker-derivation.md` with a later
+README link, avoiding simultaneous README authorship. This is a file ownership
+adjustment only. The controller launched its ordinary prewarm separately; its
+preparation cost is not an experiment observation.
