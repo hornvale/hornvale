@@ -3203,6 +3203,358 @@
       "rung": "full"
     },
     {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's god's-eye density number for spring/seep (spec §7): the fraction of LAND-ELIGIBLE facets (spec §7's amendment population) carrying a spring/seep occurrence, over a vertex-centred subsample — one representative facet per geosphere vertex (`n = 40,962` at `hornvale_terrain::GLOBE_LEVEL = 6`), a 1-in-9,830 sample of the ~4e8 walk-depth facets on the grid, not every one of them; the same resolution spec §7's own gate-component diagnostic reads at. Distinct from `weft-encounter-rate-spring`, which reads the SAME kind's occurrence along a walked path — H1 is two numbers because discovery is observation-scoped and existence density alone (what The Prospect's H3 measured) answers a different question from what a walker actually meets. No threshold is preregistered for this reading alone; H1's claim is the >= 3-orders-of-magnitude density gain over the placed baseline `site-density`-style metrics measure, read across every kind together.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-existence-density-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's god's-eye density number for overhang/hollow (spec §7) — see `weft-existence-density-spring`'s doc for the shared reading and its pairing with `weft-encounter-rate-overhang`.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-existence-density-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's god's-eye density number for thicket/brake (spec §7) — see `weft-existence-density-spring`'s doc for the shared reading and its pairing with `weft-encounter-rate-thicket`.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-existence-density-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's god's-eye density number for erratic/scatter (spec §7) — see `weft-existence-density-spring`'s doc for the shared reading and its pairing with `weft-encounter-rate-erratic`. Erratic is the negative control for H3, not for H1: nothing about density predicts erratic should read low here.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-existence-density-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "H1's god's-eye density number, UNIONED over all four kinds (spec §7): the fraction of land-eligible facets carrying ANY derived feature. A facet holding two kinds counts once, the same union discipline `channel-band-monotonicity`'s sibling readouts and `site-density`-style metrics use elsewhere. This is the single number H1's `>= 3 orders of magnitude over the placed baseline` claim is actually checked against.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-existence-density-any",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's observation-scoped density number for spring/seep (spec §7): features of this kind met per facet of travel, pooled over land-eligible walks sampled the same way `weft_prevalence.rs`'s own `land_eligible_walks` does (60-step walks from 137-spaced starting vertices, kept only if land-eligible throughout). Distinct from `weft-existence-density-spring`'s god's-eye reading — a walker only ever samples the facets on their own path, never the whole grid, so this is the number that actually answers \"how often does a traveller meet one\".",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-encounter-rate-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's observation-scoped density number for overhang/hollow (spec §7) — see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-encounter-rate-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's observation-scoped density number for thicket/brake (spec §7) — see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-encounter-rate-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.03,
+        0.06,
+        0.1,
+        0.2
+      ],
+      "doc": "H1's observation-scoped density number for erratic/scatter (spec §7) — see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-encounter-rate-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "H1's observation-scoped density number, UNIONED over all four kinds (spec §7): a walked step counts once even if it carries more than one kind's feature. Read beside `weft-existence-density-any` — the two are H1's promised \"two numbers, separately reported\", and they need not agree: a short-correlation-length kind can be common god's-eye and rare along any one path, or the reverse for a long one.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-encounter-rate-any",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -1.0,
+        0.0,
+        0.3,
+        0.6,
+        0.9,
+        1.0
+      ],
+      "doc": "H2's readout for spring/seep (spec §7): Moran's I over the binary occurrence indicator, sampled along land-eligible walked paths (the same 78-walk, 4,680-step pool `weft-encounter-rate-spring` reads), weighted by within-walk chain adjacency (step `s` and `s+1` of the same walk). **This is a construction-validation (a regression guard against address-hashed speckle), not independent evidence the surface is \"coherent\" in a stronger sense** — `occurs` thresholds a position-continuous field, so a positive reading is near-guaranteed by construction; the discriminating power lives in `weft_prevalence.rs`'s real-vs-mutant table (real 0.998, mutant 0.209 for this kind). No numeric floor is preregistered for this statistic (spec §7 froze none); a positive reading well clear of zero over a non-degenerate occurs-count is the qualitative claim, checked against `weft-coherence-occurs-count-spring`, the anti-vacuity companion (The Ford's shape) — see that metric's own doc for why a small count makes a high reading here suspect. NOT geosphere vertex adjacency — measured on this tree, that mesh's own spacing is ~106-127 facets per step, 1.9-23x every kind's own correlation length (5-60 facets), so both a sound construction and an address-hashed defect predict `I ~= 0` at that scale — see `weft_morans_i`'s own doc for the full power argument and the discarded vertex-adjacency readings, published in full rather than discarded silently. `Absent` if the walk pool is empty or the indicator has zero variance across every walked step.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-morans-i-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -1.0,
+        0.0,
+        0.3,
+        0.6,
+        0.9,
+        1.0
+      ],
+      "doc": "H2's coherence readout for overhang/hollow (spec §7) — see `weft-coherence-morans-i-spring`'s doc for the shared statistic and its companion.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-morans-i-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -1.0,
+        0.0,
+        0.3,
+        0.6,
+        0.9,
+        1.0
+      ],
+      "doc": "H2's coherence readout for thicket/brake (spec §7) — see `weft-coherence-morans-i-spring`'s doc for the shared statistic and its companion.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-morans-i-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -1.0,
+        0.0,
+        0.3,
+        0.6,
+        0.9,
+        1.0
+      ],
+      "doc": "H2's coherence readout for erratic/scatter (spec §7) — see `weft-coherence-morans-i-spring`'s doc for the shared statistic and its companion. Erratic's short (5-facet) correlation length predicts the LOWEST of the four readings here, not zero: H2 is about spatial texture existing at all, which a short correlation length still gives, unlike H3's macro-state legibility, which erratic is built to score near zero on.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-morans-i-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        150.0,
+        300.0,
+        600.0,
+        1000.0
+      ],
+      "doc": "H2's anti-vacuity companion for spring/seep (The Ford's shape: `channel-band-monotonicity` paired with `channel-transect-dry-reach`): the raw count of WALKED steps (the same pool `weft-coherence-morans-i-spring` computes its chain adjacency over, and `weft-encounter-rate-spring`'s own numerator) where spring/seep occurred. Moran's I's own denominator is `n*p*(1-p)` for a binary indicator at rate `p`, which shrinks toward zero as occurrence becomes very rare (or very common) — so a small reading here is the signal that a neighbouring high Moran's-I reading may be resting on a handful of adjacent hits rather than a genuine spatial process, exactly as `channel-transect-dry-reach` flags a monotonicity score resting on transects truncated before they could fail.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-occurs-count-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        150.0,
+        300.0,
+        600.0,
+        1000.0
+      ],
+      "doc": "H2's anti-vacuity companion for overhang/hollow — see `weft-coherence-occurs-count-spring`'s doc for the shared reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-occurs-count-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        150.0,
+        300.0,
+        600.0,
+        1000.0
+      ],
+      "doc": "H2's anti-vacuity companion for thicket/brake — see `weft-coherence-occurs-count-spring`'s doc for the shared reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-occurs-count-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        150.0,
+        300.0,
+        600.0,
+        1000.0
+      ],
+      "doc": "H2's anti-vacuity companion for erratic/scatter — see `weft-coherence-occurs-count-spring`'s doc for the shared reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-coherence-occurs-count-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.05,
+        0.1,
+        0.3,
+        1.0
+      ],
+      "doc": "H3's legibility readout for spring/seep (spec §7, allowed to fail): discrete mutual information in bits between spring/seep's own blended macro-state signal (binned into 4 equal-width bins over its documented `[0,1]` range) and whether it occurred, over the land-eligible population (spec §7's amendment: restricting to land-eligible facets makes the shared eligibility gate a constant, so it contributes zero MI by construction and cannot flatter any kind — see the spec's own amendment paragraph for the whole-sphere confound this removes). The preregistered claim is the ORDERING `spring > thicket > overhang > erratic`, not a threshold on this reading alone: spring is H3's own sign case (\"diagnostic of what is underfoot\", contextuality 0.85), so it is predicted HIGHEST of the four.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-legibility-mi-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.05,
+        0.1,
+        0.3,
+        1.0
+      ],
+      "doc": "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted THIRD of the four (contextuality 0.6, gentler than spring/thicket).",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-legibility-mi-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.05,
+        0.1,
+        0.3,
+        1.0
+      ],
+      "doc": "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted SECOND of the four.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-legibility-mi-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.05,
+        0.1,
+        0.3,
+        1.0
+      ],
+      "doc": "H3's legibility readout for erratic/scatter (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Erratic is H3's own negative control (contextuality ~0, a CONSTANT `macro_state`) and is predicted LOWEST of the four, near zero: mutual information between any variable and a constant is algebraically zero, so this metric's own construction predicts the near-zero reading before any world is measured. If it does NOT read near zero, the instrument is measuring something other than legibility and that is the finding, per spec §7 and this task's own brief.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "weft-legibility-mi-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -3212,7 +3564,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x49fc3cf508390135"
+    "fnv1a64": "0xcfcf3ef399798ae3"
   },
   "schema_version": 1,
   "study": {

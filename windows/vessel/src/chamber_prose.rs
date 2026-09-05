@@ -535,6 +535,7 @@ mod tests {
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, None)),
+            None,
         )
     }
 
@@ -551,6 +552,7 @@ mod tests {
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, Some(name.to_string()))),
+            None,
         )
     }
 
@@ -909,7 +911,7 @@ mod tests {
         // `brief` must be READ, not merely carried: a built place is a room,
         // an unbuilt one is a hollow.
         let i = interior_with(&[kinds::GROUND, kinds::HEARTH]);
-        let wild = Brief::from_parts(None, None, None, None, None, 0, false, true, None);
+        let wild = Brief::from_parts(None, None, None, None, None, 0, false, true, None, None);
         assert_ne!(describe_chamber(&i, &brief()), describe_chamber(&i, &wild));
         assert!(describe_chamber(&i, &wild).contains("hollow"));
     }

@@ -457,6 +457,7 @@
 - [The Wash](./chronicle/the-wash.md)
 - [The Plat](./chronicle/the-plat.md)
 - [The Pallet](./chronicle/the-pallet.md)
+- [The Weft](./chronicle/the-weft.md)
 - [The Housemark](./chronicle/the-housemark.md)
 - [The Coda](./chronicle/the-coda.md)
 

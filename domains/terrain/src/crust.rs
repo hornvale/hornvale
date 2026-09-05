@@ -88,8 +88,17 @@ const REBALANCE_GAIN: f64 = 15.0;
 /// the per-call `Seed::derive`s out of the per-vertex loop. Build one per
 /// field (the seed/frequency/octaves are loop-invariant) and call
 /// [`SphereFbm::sample`] per vertex.
+///
+/// **Promoted to `pub` (The Weft, Task 5, controller ruling 2).** The plan's
+/// literal instruction was `Fbm::new(seed, octaves)`/`sample(x, y)` — a 2D
+/// sampler — but a facet's position is `[f64; 3]`, so following it would force
+/// a lat/lon projection with a seam at the antimeridian and pole distortion.
+/// This type already samples the unit sphere seam-free; promoting it (rather
+/// than reimplementing the three-slice construction a second time) is what
+/// this type's own doc already recommends for a hot per-vertex/per-facet
+/// loop, and `windows/worldgen` legally depends on `domains/terrain`.
 #[derive(Clone, Debug)]
-pub(crate) struct SphereFbm {
+pub struct SphereFbm {
     /// The three orthogonal coordinate-plane slice samplers, in the
     /// `slice-0`/`slice-1`/`slice-2` order `sphere_fbm01` derives them.
     slices: [noise::Fbm; 3],
@@ -100,7 +109,8 @@ pub(crate) struct SphereFbm {
 impl SphereFbm {
     /// Precompute the slice samplers for `octaves` octaves at `frequency`,
     /// rooted at `seed` exactly as `sphere_fbm01` does.
-    pub(crate) fn new(seed: Seed, frequency: f64, octaves: u32) -> Self {
+    /// type-audit: pending(wave-1: frequency), bare-ok(count: octaves)
+    pub fn new(seed: Seed, frequency: f64, octaves: u32) -> Self {
         Self {
             slices: [
                 noise::Fbm::new(seed.derive(streams::CRUST_SLICE_0), octaves),
@@ -112,7 +122,8 @@ impl SphereFbm {
     }
 
     /// Sample the mean of the three orthogonal slices at position `p`.
-    pub(crate) fn sample(&self, p: [f64; 3]) -> f64 {
+    /// type-audit: pending(wave-1: p), bare-ok(ratio: return)
+    pub fn sample(&self, p: [f64; 3]) -> f64 {
         let f = self.frequency;
         (self.slices[0].sample(f * p[0], f * p[1])
             + self.slices[1].sample(f * p[1], f * p[2])

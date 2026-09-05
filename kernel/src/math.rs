@@ -81,6 +81,15 @@ pub fn log10(x: f64) -> f64 {
     libm::log10(x)
 }
 
+/// Portable base-2 logarithm (The Weft, Task 9: H3's mutual-information
+/// estimator needs a result in bits, `log2(p / (p_x*p_y))`, and no
+/// `math.rs` wrapper existed for it before this).
+/// type-audit: bare-ok(ratio)
+#[inline]
+pub fn log2(x: f64) -> f64 {
+    libm::log2(x)
+}
+
 /// Portable floating-point power `x^y`.
 /// type-audit: bare-ok(ratio)
 #[inline]

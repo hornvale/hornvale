@@ -104,14 +104,12 @@ fn the_placed_facet_is_not_the_vertex() {
     assert!(!sites.is_empty(), "seed 42 must place exotic sites");
 
     // The shortest edge of one walk-band facet, radians — the project-native
-    // unit for "how far away is that", derived from the mesh's own geometry
-    // exactly as `hornvale_locale::room_edge` derives it.
+    // unit for "how far away is that". `Facet::edge_rad` (The Weft Task 5 fix
+    // round 1 promoted this from a third open-coded copy sitting right here)
+    // is exactly `hornvale_locale::room_edge`'s own implementation now, since
+    // that function delegates to it.
     let sample = Facet::containing(geo.position(Vertex(sites[0].vertex)), walk);
-    let [a, b, c, d] = sample.corners();
-    let edge = separation(a, b)
-        .min(separation(b, c))
-        .min(separation(c, d))
-        .min(separation(d, a));
+    let edge = sample.edge_rad();
 
     let mut moved = 0usize;
     let mut total = 0.0f64;

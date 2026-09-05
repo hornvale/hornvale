@@ -497,6 +497,28 @@ mod tests {
                 // perturbs no existing stream.
                 "climate/variant/cell v1",
                 "climate/weather/phase v1",
+                // The Weft, Task 7: the derived erratic/scatter surface's
+                // noise root — the negative control, deliberately LOW
+                // contextuality. A NEW label, additive at v1 —
+                // position-keyed, never vertex-keyed — see
+                // `windows/worldgen/src/streams.rs`'s `WEFT_ERRATIC`.
+                "derived/erratic v1",
+                // The Weft, Task 7: the derived overhang/hollow surface's
+                // noise root — medium contextuality, not enterable but
+                // affording shelter and fire. A NEW label, additive at v1 —
+                // see `windows/worldgen/src/streams.rs`'s `WEFT_OVERHANG`.
+                "derived/overhang v1",
+                // The Weft: the derived spring/seep surface's noise root
+                // (Task 5). A NEW label, additive at v1 — position-keyed,
+                // never vertex-keyed — see
+                // `windows/worldgen/src/streams.rs`'s `WEFT_SPRING`.
+                "derived/spring v1",
+                // The Weft, Task 7: the derived thicket/brake surface's
+                // noise root — high contextuality, texture aimed at the
+                // biome-monotony defect. A NEW label, additive at v1, same
+                // posture as `derived/overhang` above — see
+                // `windows/worldgen/src/streams.rs`'s `WEFT_THICKET`.
+                "derived/thicket v1",
                 // The Signet: the leg every entity id derives through
                 // (`derive(parent, entity/identity/v1)` then the role
                 // label). A NEW label, additive at v1 — it perturbs no

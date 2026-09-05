@@ -36,6 +36,7 @@ pub mod resident;
 pub mod residents;
 pub mod roll;
 pub mod roster;
+pub mod ruin_prose;
 mod session;
 pub mod site;
 mod sleep_site;
@@ -50,6 +51,7 @@ pub mod turn_work;
 mod underground;
 pub mod underworld_level;
 mod vantage;
+pub mod weft_prose;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
 // `brief_of`'s room-keyed occupation-register value is `OccupationRecord`

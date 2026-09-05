@@ -164,6 +164,7 @@ fn recovery_metadata_does_not_consult_the_claimed_housemark_label() {
         true,
         false,
         None,
+        None,
     );
     let expected = recover_housemark(&interior, &brief);
     assert_eq!(expected.len(), 1);
@@ -225,7 +226,9 @@ fn a_neighbour_reversing_settlement_room_keeps_its_own_living_occupation() {
     let terrain = LocaleTerrain::with_fields(context, None, None, None, Some(built), None);
     let brief = brief_of(
         world_context.living_occupations_by_room(),
+        &occupations,
         context.climate().geosphere(),
+        context.nearest_index(),
         &room,
         &terrain,
         walk,
@@ -300,7 +303,9 @@ fn a_shared_settlement_room_uses_the_same_first_settlement_for_name_and_people()
     let terrain = LocaleTerrain::with_fields(context, None, None, None, Some(built), None);
     let brief = brief_of(
         world_context.living_occupations_by_room(),
+        &occupations,
         context.climate().geosphere(),
+        context.nearest_index(),
         &room,
         &terrain,
         walk,
@@ -338,6 +343,7 @@ fn h3_housemark_readout_recovers_every_inhabited_brief() {
         let geo = context.climate().geosphere();
         let built = world_context.built_rooms();
         let occupations = world_context.living_occupations_by_room();
+        let occupation_history = occupations_by_vertex(&world);
         let collisions = world_context.settlement_room_collision_count();
         let terrain = LocaleTerrain::with_fields(context, None, None, None, Some(built), None);
         let strange_sites = context.strange_sites();
@@ -355,7 +361,9 @@ fn h3_housemark_readout_recovers_every_inhabited_brief() {
                 .unwrap_or_else(|error| panic!("seed {seed_value}: {room_id:?}: {error:?}"));
             let brief = brief_of(
                 occupations,
+                &occupation_history,
                 geo,
+                context.nearest_index(),
                 &place,
                 &terrain,
                 walk,

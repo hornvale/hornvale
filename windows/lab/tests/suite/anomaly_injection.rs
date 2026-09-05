@@ -329,7 +329,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.6000 over 120 pairs, exactly ON the 0.60 bar; six census epochs of one unchanged report read 0.5667, 0.6083, 0.6000, 0.6083, 0.6083 and 0.6000, all inside one SE of the bar, so the battery separates nothing. The sixth is the first taken after the evaluable surface grew, 117 -> 118 columns; an ablation dropping the new column re-reads 72/120 arm for arm, so the surface contributed nothing and the reading stays comparable)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5750 over 120 pairs; seventh canonical reading, but NOT comparable to the six-epoch series: The Weft grew the evaluable surface 118 -> 139 columns, and ablating the Weft family (21 evaluable columns; one already excluded) restores 72/120 arm for arm (20, 4, 20, 2, 7, 19 vs full 20, 4, 20, 2, 6, 17), so the instrument itself displaced three hits. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -579,7 +579,39 @@ fn h1_recall_at_10() {
 /// simply never displaced anything out of a top-10 report in a way that
 /// changed whether a pair scored.
 ///
-/// claim: invariant(the committed battery scores exactly 72 hits over 120
+/// **RE-READ A SIXTH TIME AT THE WEFT'S CLOSE (2026-09-04), AND THE
+/// INSTRUMENT ABLATION IS NON-NULL.** The canonical census added 22 numeric
+/// Weft metrics. Twenty-one vary and enter the ranked surface; only
+/// `weft-legibility-mi-erratic` is frozen and excluded. The surface therefore
+/// grew 118 -> 139 while excluded columns grew 50 -> 51. This is not the
+/// Winze's one-column perturbation repeated at a larger count: twenty-one new
+/// candidates can displace the fixed report's tenth flag.
+///
+/// Re-authoring all eight fixture arms on lefford at census delivery
+/// `b162273b4` produced **69/120 = 0.5750**, with zero void pairs. Arm for arm:
+/// geothermal 20/20, unconformity 4/20, aquifer 20/20, karst 2/20, pantheon
+/// 6/20, phonology 17/20. The preregistered bar remains 0.60; nothing about
+/// this re-read changes it.
+///
+/// The same ablation test used by The Winze now gives the opposite kind of
+/// answer. Removing the Weft family from the in-memory census (the 21 ranked
+/// columns plus the one already-excluded column, which is inert here) and
+/// scoring the SAME freshly authored fixture rows restores **72/120**, and
+/// restores the preceding arm totals exactly: 20/20, 4/20, 20/20, 2/20,
+/// 7/20, 19/20. The new ranked surface therefore displaced three hits — one
+/// in the pantheon arm and two in phonology. Its share is measured and is not
+/// null.
+///
+/// Consequently 69/120 is a pinned current witness but **not a seventh point
+/// in the six-epoch comparable series**. Numerically it still sits within one
+/// standard error of the bar, but adding it to that series would erase the
+/// very instrument confound the ablation found. The standing verdict remains
+/// "cannot tell": the six comparable readings still cluster within one SE,
+/// and the remedy remains more pairs rather than a moved bar. The difference
+/// from The Winze is the durable finding: an ablation licenses comparison
+/// only when it reads null; this one does not.
+///
+/// claim: invariant(the committed battery scores exactly 69 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -592,11 +624,13 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (72, 120, 0, 0),
+        (69, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's finding (recall@10 now reads 72/120 = 0.6000, exactly ON the \
+         Gnomon's finding (recall@10 now reads 69/120 = 0.5750 against the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
-         adjudicate, see the doc comment), and it is pinned so that a change to \
+         adjudicate; this seventh reading is incomparable to the prior six \
+         because its measured instrument ablation restores 72/120, see the doc \
+         comment), and it is pinned so that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
          surface, the census, or the fixtures — cannot silently turn the \
          published figure into fiction. \
@@ -623,14 +657,15 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          `heavy tier` literally is exactly what makes a reader conclude the \
          site is gone. It is not. \
          \
-         THE PIN HAS NOW BEEN RE-STATED FIVE TIMES, producing six readings \
+         THE PIN HAS NOW BEEN RE-STATED SIX TIMES, producing seven readings \
          with The Gnomon's original: The Glasshouse (2026-08-15, overturned \
          the verdict); The Underworld (2026-08-17, corroborated the withdrawal \
          at a third census epoch); The Burr (2026-08-18/19, reproduced The \
          Glasshouse's exact reading at a fourth); The Granary (2026-08-24, \
          whose canonical reading repeated it a fifth time after a \
-         host-divergent local pilot first said otherwise); and The Winze \
-         (2026-08-29, this one). (This message previously said FIVE TIMES \
+         host-divergent local pilot first said otherwise); The Winze \
+         (2026-08-29, the sixth); and The Weft (2026-09-04, the seventh and \
+         first genuinely incomparable reading). (This message previously said FIVE TIMES \
          while naming four campaigns — it was counting readings in one clause \
          and re-statements in the other. Both counts are given above so the \
          next reader does not have to guess which is meant.) \
@@ -649,7 +684,11 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          scorer, and for The Winze both read null — the ablated tally is \
          72/120 arm for arm. See the doc comment for the full derivation. If \
          your own ablation does NOT read null, you have a genuinely \
-         incomparable reading, and THAT is when to stop and say so."
+         incomparable reading, and THAT is when to stop and say so. The \
+         Weft is that case: its full surface reads 69/120 (20, 4, 20, 2, 6, \
+         17 by arm), while ablating the Weft family restores 72/120 (20, 4, \
+         20, 2, 7, 19). The instrument itself displaced three hits, so the \
+         current number is pinned but does not extend the comparable series."
     );
 }
 
