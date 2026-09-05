@@ -21,21 +21,27 @@ pub struct Row {
 }
 
 impl Row {
-    /// Parse one TSV line. Returns `None` if it has fewer than six fields.
+    /// Parse one TSV line. TOTAL — never returns `None` for a short line.
+    ///
+    /// The shell it replaces PADS a malformed row out to seven fields and
+    /// keeps it; measured 2026-09-05 by feeding `set-state` a three-field
+    /// line and watching it survive as `TRUNCATED\tonly\tthree\t\t\tmerge\t`.
+    /// Dropping such a line here would make the next `write_rows` delete it
+    /// permanently, silently losing a request — which the plan's own Global
+    /// Constraints forbid (the format does not change) and which is the exact
+    /// opposite of a queue whose first duty is durability.
     pub fn parse(line: &str) -> Option<Row> {
         let f: Vec<&str> = line.split('\t').collect();
-        if f.len() < 6 {
-            return None;
-        }
-        let kind = if f[5].is_empty() { "merge" } else { f[5] };
+        let g = |i: usize| f.get(i).copied().unwrap_or("");
+        let kind = if g(5).is_empty() { "merge" } else { g(5) };
         Some(Row {
-            when: f[0].to_string(),
-            id: f[1].to_string(),
-            branch: f[2].to_string(),
-            sha: f[3].to_string(),
-            state: f[4].to_string(),
+            when: g(0).to_string(),
+            id: g(1).to_string(),
+            branch: g(2).to_string(),
+            sha: g(3).to_string(),
+            state: g(4).to_string(),
             kind: kind.to_string(),
-            note: f.get(6).copied().unwrap_or("").to_string(),
+            note: g(6).to_string(),
         })
     }
 

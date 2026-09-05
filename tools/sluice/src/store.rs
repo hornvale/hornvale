@@ -48,10 +48,7 @@ impl Store {
     /// reader never sees a half-written queue.
     pub fn write_rows(&self, rows: &[Row]) -> io::Result<()> {
         let tmp = self.dir.join(".queue.tmp");
-        let body: String = rows
-            .iter()
-            .map(|r| r.render() + "\n")
-            .collect();
+        let body: String = rows.iter().map(|r| r.render() + "\n").collect();
         fs::write(&tmp, body)?;
         fs::rename(&tmp, self.queue_path())
     }

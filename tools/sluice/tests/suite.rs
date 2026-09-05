@@ -28,7 +28,7 @@ fn scratch(name: &str) -> PathBuf {
 fn rows_survive_a_write_then_read() {
     let s = Store::new(scratch("roundtrip")).expect("store");
     let r = Row::parse("2026-09-05T00:00:00Z\treq-a-1\tb\tsha\tqueued\tmerge\t").expect("row");
-    s.write_rows(&[r.clone()]).expect("write");
+    s.write_rows(std::slice::from_ref(&r)).expect("write");
     assert_eq!(s.read_rows().expect("read"), vec![r]);
 }
 
@@ -36,4 +36,12 @@ fn rows_survive_a_write_then_read() {
 fn a_missing_queue_file_reads_as_empty_not_an_error() {
     let s = Store::new(scratch("missing")).expect("store");
     assert!(s.read_rows().expect("read").is_empty());
+}
+
+#[test]
+fn a_short_line_is_padded_and_kept_never_dropped() {
+    let r = Row::parse("TRUNCATED\tonly\tthree").expect("kept, not dropped");
+    assert_eq!(r.when, "TRUNCATED");
+    assert_eq!(r.state, "");
+    assert_eq!(r.kind, "merge");
 }
