@@ -342,7 +342,7 @@ mod tests {
     use crate::brief::Brief;
     use crate::lattice::{allocate, embed_with, extent_for, grow};
     use crate::site::{Site, SiteKind};
-    use crate::structure::{Role, structure_at};
+    use crate::structure::{Role, Structure, structure_at};
     use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 13;
@@ -470,30 +470,142 @@ mod tests {
         }
     }
 
-    #[test]
-    fn rule_2_two_chambers_floors_are_never_adjacent() {
+    /// §7 rule 2, THE WALL LAW, as one callable statement.
+    ///
+    /// Extracted from `rule_2_two_chambers_floors_are_never_adjacent` so that H4
+    /// and the fork witness can assert it too, and stated exactly once so the
+    /// three callers cannot drift apart. `corpus()` builds its structures with
+    /// `structure_at`, which produces chains only, so before this extraction
+    /// rules 2, 3 and 4 had NEVER SEEN A FORK under either method — and rule 1
+    /// does not subsume rule 2: two LINKED chambers whose floors touch with no
+    /// fabric between them realize exactly the specified pair, so rule 1 stays
+    /// green while the plan is a lie.
+    ///
+    /// `s` is carried for the failure message only. On a fork the shape is what
+    /// a reader needs first, and a bare method name does not carry it.
+    fn check_rule_2(l: &Lattice, s: &Structure, m: &str) {
         // The wall law, in the form walls-as-cells gives it. Task 1 had to phrase
         // it over a separately-derived set of cell pairs — "every wall pair is a
         // non-adjacency" — which made it a claim about the derivation. This is a
         // claim about the world: if you can step from one chamber's floor straight
         // onto another's, there is no fabric between them and the plan is a lie
         // whatever the wall set says.
-        for (_, l, m) in corpus() {
-            for (p, q) in openings(&l) {
-                if let (Some(CellKind::Floor(i)), Some(CellKind::Floor(j))) =
-                    (kind_of(&l, p), kind_of(&l, q))
-                {
-                    assert_eq!(
-                        i, j,
-                        "{m:?}: {p:?} is chamber {i}'s floor and {q:?} is chamber \
-                         {j}'s, and they are adjacent — two rooms with no wall \
-                         between them are one room"
-                    );
-                }
+        for (p, q) in openings(l) {
+            if let (Some(CellKind::Floor(i)), Some(CellKind::Floor(j))) =
+                (kind_of(l, p), kind_of(l, q))
+            {
+                assert_eq!(
+                    i, j,
+                    "{m} links {:?}: {p:?} is chamber {i}'s floor and {q:?} is \
+                     chamber {j}'s, and they are adjacent — two rooms with no \
+                     wall between them are one room",
+                    s.links
+                );
             }
         }
     }
 
+    /// §7 rule 3 — all three clauses, as one callable statement.
+    ///
+    /// (i) `cells` is TOTAL over the extent; (ii) the outer ring is entirely
+    /// `Wall`; (iii) thresholds and doorways name each other, both ways. Same
+    /// extraction reason as [`check_rule_2`].
+    fn check_rule_3(l: &Lattice, s: &Structure, m: &str) {
+        let e = l.extent;
+        assert_eq!(
+            l.cells.len() as i32,
+            e.area(),
+            "{m} links {:?}: the kind map holds {} cells for a {}-cell extent, so \
+             `kind_of` returning None no longer means only 'outside'",
+            s.links,
+            l.cells.len(),
+            e.area()
+        );
+        for cx in e.x..(e.x + e.w) {
+            for cy in e.y..(e.y + e.h) {
+                let c = Cell(cx, cy);
+                let k = kind_of(l, c)
+                    .unwrap_or_else(|| panic!("{m}: no kind for {c:?} inside the extent"));
+                let on_ring = cx == e.x || cy == e.y || cx == e.x + e.w - 1 || cy == e.y + e.h - 1;
+                if on_ring {
+                    assert_eq!(
+                        k,
+                        CellKind::Wall,
+                        "{m} links {:?}: the outer ring is {k:?} at {c:?} — a plan \
+                         open to the outside is not a building",
+                        s.links
+                    );
+                }
+            }
+        }
+        let declared: BTreeSet<Cell> = l.doorways.iter().map(|&(_, _, c)| c).collect();
+        for (c, k) in &l.cells {
+            if matches!(k, CellKind::Threshold(_, _)) {
+                assert!(
+                    declared.contains(c),
+                    "{m} links {:?}: {c:?} is a threshold no doorway declares — an \
+                     undeclared way through is a hole in the plan",
+                    s.links
+                );
+            }
+        }
+        for &(a, b, c) in &l.doorways {
+            assert!(
+                matches!(kind_of(l, c), Some(CellKind::Threshold(_, _))),
+                "{m} links {:?}: the doorway ({a},{b}) is declared at {c:?}, which \
+                 is {:?} rather than a threshold",
+                s.links,
+                kind_of(l, c)
+            );
+        }
+    }
+
+    /// §7 rule 4 — one doorway per link, no more and no fewer. Same extraction
+    /// reason as [`check_rule_2`].
+    fn check_rule_4(l: &Lattice, s: &Structure, m: &str) {
+        // The doorway is ONE CELL now, not a pair of half-boundaries, so reading
+        // it from either side must give one answer. Asserted as uniqueness per
+        // unordered pair: two entries for one pair is exactly how two chambers
+        // come to disagree about which cell is the door.
+        let mut seen: BTreeSet<(usize, usize)> = BTreeSet::new();
+        for &(a, b, _) in &l.doorways {
+            let key = (a.min(b), a.max(b));
+            assert!(
+                seen.insert(key),
+                "{m} links {:?}: chambers {a} and {b} have two doorways between \
+                 them, so the two sides can disagree about which cell is the door",
+                s.links
+            );
+        }
+        assert_eq!(
+            seen.len(),
+            s.links.len(),
+            "{m} links {:?}: one doorway per link, no more and no fewer",
+            s.links
+        );
+    }
+
+    /// claim: invariant(seed: corpus SEEDS 0..192) — a forall-corpus-entry
+    /// invariant, like its rule_1/rule_4/rule_7/rule_8 siblings: `corpus()`
+    /// loops `for s in SEEDS` and builds 384 seed-derived structure/lattice
+    /// pairs (both methods) per call. The tag arrived with the fix-round-1
+    /// extraction, which bound the structure as `s` where the body previously
+    /// discarded it as `_` — the shape was always this; only the binding the
+    /// seed-loop detector reads is new.
+    #[test]
+    fn rule_2_two_chambers_floors_are_never_adjacent() {
+        for (s, l, m) in corpus() {
+            check_rule_2(&l, &s, &format!("{m:?}"));
+        }
+    }
+
+    /// claim: invariant(seed: corpus SEEDS 0..192) — a forall-corpus-entry
+    /// invariant, like its rule_1/rule_4/rule_7/rule_8 siblings: `corpus()`
+    /// loops `for s in SEEDS` and builds 384 seed-derived structure/lattice
+    /// pairs (both methods) per call. The tag arrived with the fix-round-1
+    /// extraction, which bound the structure as `s` where the body previously
+    /// discarded it as `_` — the shape was always this; only the binding the
+    /// seed-loop detector reads is new.
     #[test]
     fn rule_3_the_plan_is_enclosed_and_every_threshold_is_declared() {
         // **No longer tautological**, which is the reification's clearest single
@@ -506,51 +618,8 @@ mod tests {
         //   (i)   `cells` is TOTAL over the extent — the claim the type makes;
         //   (ii)  the outer ring is entirely `Wall` — the plan is ENCLOSED;
         //   (iii) thresholds and doorways name each other, both ways.
-        for (_, l, m) in corpus() {
-            let e = l.extent;
-            assert_eq!(
-                l.cells.len() as i32,
-                e.area(),
-                "{m:?}: the kind map holds {} cells for a {}-cell extent, so \
-                 `kind_of` returning None no longer means only 'outside'",
-                l.cells.len(),
-                e.area()
-            );
-            for cx in e.x..(e.x + e.w) {
-                for cy in e.y..(e.y + e.h) {
-                    let c = Cell(cx, cy);
-                    let k = kind_of(&l, c)
-                        .unwrap_or_else(|| panic!("{m:?}: no kind for {c:?} inside the extent"));
-                    let on_ring =
-                        cx == e.x || cy == e.y || cx == e.x + e.w - 1 || cy == e.y + e.h - 1;
-                    if on_ring {
-                        assert_eq!(
-                            k,
-                            CellKind::Wall,
-                            "{m:?}: the outer ring is {k:?} at {c:?} — a plan open \
-                             to the outside is not a building"
-                        );
-                    }
-                }
-            }
-            let declared: BTreeSet<Cell> = l.doorways.iter().map(|&(_, _, c)| c).collect();
-            for (c, k) in &l.cells {
-                if matches!(k, CellKind::Threshold(_, _)) {
-                    assert!(
-                        declared.contains(c),
-                        "{m:?}: {c:?} is a threshold no doorway declares — an \
-                         undeclared way through is a hole in the plan"
-                    );
-                }
-            }
-            for &(a, b, c) in &l.doorways {
-                assert!(
-                    matches!(kind_of(&l, c), Some(CellKind::Threshold(_, _))),
-                    "{m:?}: the doorway ({a},{b}) is declared at {c:?}, which is \
-                     {:?} rather than a threshold",
-                    kind_of(&l, c)
-                );
-            }
+        for (s, l, m) in corpus() {
+            check_rule_3(&l, &s, &format!("{m:?}"));
         }
     }
 
@@ -615,25 +684,8 @@ mod tests {
     /// forall-corpus-entry invariant, not a false-positive flag.
     #[test]
     fn rule_4_two_chambers_cannot_disagree_about_a_doorway() {
-        // The doorway is ONE CELL now, not a pair of half-boundaries, so reading
-        // it from either side must give one answer. Asserted as uniqueness per
-        // unordered pair: two entries for one pair is exactly how two chambers
-        // come to disagree about which cell is the door.
-        for (s, l, _) in corpus() {
-            let mut seen: BTreeSet<(usize, usize)> = BTreeSet::new();
-            for &(a, b, _) in &l.doorways {
-                let key = (a.min(b), a.max(b));
-                assert!(
-                    seen.insert(key),
-                    "chambers {a} and {b} have two doorways between them, so the \
-                     two sides can disagree about which cell is the door"
-                );
-            }
-            assert_eq!(
-                seen.len(),
-                s.links.len(),
-                "one doorway per link, no more and no fewer"
-            );
+        for (s, l, m) in corpus() {
+            check_rule_4(&l, &s, &format!("{m:?}"));
         }
     }
 
@@ -944,7 +996,7 @@ mod tests {
     /// shapes the current `structure_at` happens to produce. Task 3 has not run
     /// yet, so today it produces chains only — and an embedder that can embed a
     /// chain is exactly what this campaign found insufficient.
-    fn every_tree() -> Vec<crate::structure::Structure> {
+    fn every_tree() -> Vec<Structure> {
         let mut out = Vec::new();
         for n in 1..=crate::structure::MAX_CHAMBERS {
             let combos: usize = (1..n).product::<usize>().max(1);
@@ -966,7 +1018,7 @@ mod tests {
                         }
                     })
                     .collect();
-                out.push(crate::structure::Structure {
+                out.push(Structure {
                     threshold: chambers[0].clone(),
                     chambers,
                     links,
@@ -1023,10 +1075,13 @@ mod tests {
             for seed in 0u64..256 {
                 let e = extent_for(&s);
                 let rect = embed_with(&s, &built(), e, Seed(seed));
-                let grown = embed_with(&s, &wild(), e, Seed(seed));
+                // Built only for a chain. The grown arm does not run on a fork
+                // (see this test's doc), so embedding one there would be 1,536
+                // lattices constructed and dropped unexamined.
+                let grown = chain.then(|| embed_with(&s, &wild(), e, Seed(seed)));
                 let mut arms = vec![(&rect, "rectilinear", freedom_of_a_tree(n))];
-                if chain {
-                    arms.push((&grown, "grown", 2 * n as u32));
+                if let Some(g) = &grown {
+                    arms.push((g, "grown", 2 * n as u32));
                 }
                 for (l, m, budget) in arms {
                     let specified: BTreeSet<(usize, usize)> =
@@ -1037,6 +1092,15 @@ mod tests {
                         "{m} seed {seed} links {:?}: rule 1",
                         s.links
                     );
+                    // Rules 2, 3 and 4 through the shared helpers, so H4 asserts
+                    // all EIGHT rather than the four it named. They are what a
+                    // FORK most needs and what `corpus()` cannot reach: rule 1
+                    // passes on two linked chambers whose floors touch with no
+                    // fabric between them, and only rule 2 catches that.
+                    let where_ = format!("{m} seed {seed}");
+                    check_rule_2(l, &s, &where_);
+                    check_rule_3(l, &s, &where_);
+                    check_rule_4(l, &s, &where_);
                     assert_eq!(
                         l.dof, budget,
                         "{m} seed {seed} links {:?}: rule 7 must be EXACT",
@@ -1153,19 +1217,12 @@ mod tests {
                     sealed.insert(here.clone());
                 }
                 // Unconditional over every fork pair: a dropped link must not
-                // cost the wall law or the freedom budget as well.
-                for (p, q) in openings(&l) {
-                    if let (Some(CellKind::Floor(i)), Some(CellKind::Floor(j))) =
-                        (kind_of(&l, p), kind_of(&l, q))
-                    {
-                        assert_eq!(
-                            i, j,
-                            "grown seed {seed} links {:?}: rule 2 — {p:?} is \
-                             chamber {i}'s floor and {q:?} is chamber {j}'s",
-                            s.links
-                        );
-                    }
-                }
+                // cost the wall law, the doorway count, or the freedom budget as
+                // well. Rule 3 is NOT here — it is one of the three the dropped
+                // link trips, pinned by the equality below. The same helpers H4
+                // calls, so a fork is judged by the same statement a chain is.
+                check_rule_2(&l, &s, &format!("grown seed {seed}"));
+                check_rule_4(&l, &s, &format!("grown seed {seed}"));
                 assert_eq!(
                     l.dof,
                     2 * n as u32,

@@ -17,11 +17,12 @@
 //! # What Task 4b changed here
 //!
 //! A wall is a cell, so a split CONSUMES one. Splitting a span `L` into two
-//! interiors `a` and `b` now means `a + 1 + b == L`, and the chain runs over the
-//! extent's INTERIOR — `extent.inset(1)` — because the exterior shell is fabric
-//! too. Every cell the chain does not hand to a chamber is `Wall`, which is why
-//! there is no second pass deriving walls from the geometry: the walls are the
-//! LEFTOVER, and a leftover cannot disagree with the thing it is left over from.
+//! interiors `a` and `b` now means `a + 1 + b == L`, and the recursion runs over
+//! the extent's INTERIOR — `extent.inset(1)` — because the exterior shell is
+//! fabric too. Every cell the recursion does not hand to a chamber is `Wall`,
+//! which is why there is no second pass deriving walls from the geometry: the
+//! walls are the LEFTOVER, and a leftover cannot disagree with the thing it is
+//! left over from.
 
 use super::{Cell, CellKind, Lattice, Rect};
 use crate::structure::Structure;
@@ -204,6 +205,18 @@ fn longer_axis_is_horizontal(r: Rect) -> bool {
 ///
 /// `dof` is incremented at the draw itself, not once per call: a band too narrow
 /// to jitter consumes nothing, and rule 7 must see that.
+///
+/// **The degenerate band leaves a remainder that CAN be under
+/// `MIN_CHAMBER_SPAN`, and only the reachable input space rules it out.** When
+/// `hi <= lo` the cut collapses to `lo` and the remainder is `span - lo - 1`,
+/// which is short of `MIN_CHAMBER_SPAN` for any `span < 5`; the non-degenerate
+/// branch cannot produce one, since `hi` is defined to leave exactly
+/// `MIN_CHAMBER_SPAN` behind. No such span reaches here today, and that is a fact
+/// about the INPUTS rather than about this function: [`super::extent_for`] is a
+/// pure function of the chamber count, so the reachable space is finite and H4
+/// sweeps all of it (every rooted tree on `1..=MAX_CHAMBERS` x 256 seeds) with a
+/// `MIN_CHAMBER_SPAN` assertion on every chamber. Widen `extent_for`, or raise
+/// `MAX_CHAMBERS`, and this branch needs a real bound rather than an argument.
 /// type-audit: bare-ok(flag: horizontal), bare-ok(count: parts)
 fn split_axis(
     r: Rect,
@@ -273,11 +286,15 @@ fn split_axis(
 /// corner-adjacent threshold can touch a third chamber's floor, which §7 rule 1
 /// reads as an invented relation.
 ///
-/// Refuses to open anything that is not already fabric. Two interiors the chain
-/// did not place one wall apart is unreachable for a path graph, and the honest
-/// failure is a doorway that opens nothing — §7 rule 1 fails loudly on the
-/// unrealized link — rather than a doorway that eats a chamber's floor and makes
-/// the two chambers adjacent for the wrong reason.
+/// Refuses to open anything that is not already fabric. Two LINKED interiors the
+/// recursion did not place one wall apart is unreachable for any rooted tree, not
+/// merely for a path graph: [`place`] gives every child a strip of the remainder
+/// cut ACROSS its parent's own cut, and both branches of [`split_axis`] keep
+/// `r.x` and `r.y`, so a child's slice always retains the strip edge that faces
+/// the parent. The wall between them is the cut's own line. Should that ever stop
+/// holding, the honest failure is a doorway that opens nothing — §7 rule 1 fails
+/// loudly on the unrealized link — rather than a doorway that eats a chamber's
+/// floor and makes the two chambers adjacent for the wrong reason.
 fn carve(cells: &mut BTreeMap<Cell, CellKind>, a: Rect, b: Rect, ia: usize, ib: usize) -> Cell {
     let candidate = if a.x + a.w + 1 == b.x || b.x + b.w + 1 == a.x {
         let x = if a.x + a.w + 1 == b.x {
