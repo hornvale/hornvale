@@ -2034,6 +2034,8 @@ hornvale-lot::suite$slots::every_slot_is_asked_and_by_design_silences_are_declar
 hornvale-lot::suite$slots::every_cited_fact_names_a_registered_predicate
 hornvale-lot::suite$slots::the_by_design_silences_are_exactly_the_specs_four
 hornvale-lot::suite$slots::the_per_slot_fill_counts_are_printed
+hornvale-lot::suite$slots::every_cited_fact_stands_in_the_ledger_and_where_shows_the_facts_own_coordinates
+hornvale-lot::suite$slots::a_slot_that_prints_a_settlements_name_cites_the_name_fact
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::genesis_commits_the_frost_retreat_and_maximum
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::register_is_idempotent
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::zero_ice_world_records_no_frost_retreat

@@ -161,3 +161,180 @@ fn the_per_slot_fill_counts_are_printed() {
     assert_eq!(filled["when"], lots as usize);
     assert_eq!(filled["community-fate"], lots as usize);
 }
+
+/// claim: structural(seed: 42) — one world, twenty lots.
+///
+/// A citation must name a read that PRODUCED the value, and the two halves
+/// of that are checked here. First: every `Source::Fact` a Filled slot
+/// cites must resolve to a fact that actually stands in the ledger — a
+/// citation whose `(entity, predicate)` pair holds nothing is a fabricated
+/// provenance that a registry-membership check alone cannot catch, since
+/// the predicate is registered whether or not this subject carries it.
+/// Second, for `where`: when the birth settlement carries `latitude` and
+/// `longitude` facts, the coordinates the sentence displays must be THOSE
+/// values — the defect this test was written for displayed the derived
+/// Geosphere position while citing the two facts on the strength of their
+/// mere existence.
+#[test]
+fn every_cited_fact_stands_in_the_ledger_and_where_shows_the_facts_own_coordinates() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let mut coordinate_checks = 0;
+    for i in 0..20 {
+        let life = draw(&ctx, LotIndex(i), &Pick::default()).unwrap();
+        let story = tell(&world, &ctx, &life);
+        for slot in &story.slots {
+            for source in &slot.sources {
+                if let Source::Fact {
+                    entity, predicate, ..
+                } = source
+                {
+                    let id = hornvale_kernel::EntityId::new(*entity)
+                        .unwrap_or_else(|| panic!("slot {} cites entity 0", slot.key));
+                    assert!(
+                        world.ledger.value_of(id, predicate).is_some(),
+                        "slot {} cites ({entity}, {predicate}), which stands nowhere in the ledger",
+                        slot.key
+                    );
+                }
+            }
+        }
+
+        // The birth settlement's own coordinates, if it committed any.
+        let people = ctx.occupations[life.occ].record.core.people.0;
+        let Some(settlement) = ctx
+            .settlements_by_vertex
+            .get(&life.site)
+            .and_then(|here| {
+                here.iter()
+                    .find(|id| {
+                        hornvale_species::species_of(&world, **id).as_deref() == Some(people)
+                    })
+                    .or_else(|| here.first())
+            })
+            .copied()
+        else {
+            continue;
+        };
+        let (
+            Some(hornvale_kernel::Value::Number(latitude)),
+            Some(hornvale_kernel::Value::Number(longitude)),
+        ) = (
+            world
+                .ledger
+                .value_of(settlement, hornvale_settlement::LATITUDE),
+            world
+                .ledger
+                .value_of(settlement, hornvale_settlement::LONGITUDE),
+        )
+        else {
+            continue;
+        };
+        let site = story.slot("where").expect("`where` is asked");
+        let SlotValue::Filled(text) = &site.value else {
+            panic!("`where` is Filled for every life");
+        };
+        // The primary site is the one rendered after ", at " — a daughter
+        // site, when there is one, renders its own pair further along.
+        //
+        // MEASURED, AND SAY IT: this half does NOT discriminate against the
+        // defect it was written for. The committed `latitude`/`longitude`
+        // facts ARE the Geosphere position, quantized to 8 significant
+        // digits at the emit boundary, so over these twenty lots the two
+        // disagree by at most 4.83e-6° — three orders of magnitude under the
+        // one decimal place the sentence displays. Reintroducing the defect
+        // (display the derived pair, cite the facts) leaves this assertion
+        // green. It is kept because it pins what a reader actually checks —
+        // the number in the sentence is the number in the fact — and the
+        // assertion below is the one with teeth.
+        let shown = format!(", at {latitude:.1}°, {longitude:.1}°");
+        assert!(
+            text.contains(&shown),
+            "lot {i}: `where` reads {text:?}, which does not show the settlement's own \
+             committed coordinates {shown:?}"
+        );
+        // THE DISCRIMINATING HALF. A citation must name the read that
+        // produced the value, so when the settlement's own coordinate facts
+        // are what the sentence shows, the derivation that was NOT consulted
+        // must not appear beside them. The defect cited all three at once.
+        let cites_facts = site.sources.iter().any(|source| {
+            matches!(source, Source::Fact { predicate, .. } if predicate == hornvale_settlement::LATITUDE)
+        });
+        let cites_derivation = site.sources.iter().any(|source| {
+            matches!(source, Source::Derived { function, .. } if *function == "lot::context::LotContext::lat_lon")
+        });
+        assert!(
+            cites_facts,
+            "lot {i}: the settlement carries coordinate facts, but `where` cites none"
+        );
+        assert!(
+            !cites_derivation,
+            "lot {i}: `where` cites the settlement's coordinate facts AND the Geosphere \
+             derivation — one of the two did not produce the displayed numbers"
+        );
+        coordinate_checks += 1;
+    }
+    // Guards the guard: the coordinate half is vacuous if no lot of the
+    // twenty ever lands on a settlement carrying both facts.
+    assert!(
+        coordinate_checks > 0,
+        "no lot exercised the committed-coordinate path — the check is vacuous"
+    );
+    println!("committed-coordinate checks exercised: {coordinate_checks}/20");
+}
+
+/// claim: structural(seed: 42) — one world, twenty lots.
+///
+/// A settlement's name reaches the rendered sentence at five slots, and
+/// four of them once printed it while citing nothing — the `Filled`-implies-
+/// non-empty-sources check could not see it, because each of those slots
+/// already carried some OTHER citation. So this asserts the specific thing:
+/// a slot that rendered a settlement's name must cite a `name` fact.
+///
+/// Each of these four slots renders at most one settlement name and falls
+/// back to a recognisable unnamed phrasing, so "did this slot name a
+/// settlement" is decidable from the text alone.
+#[test]
+fn a_slot_that_prints_a_settlements_name_cites_the_name_fact() {
+    // (slot key, the markers that mean "no settlement was named here")
+    const NAMED_SLOTS: [(&str, &[&str]); 4] = [
+        ("where", &["nobody names now"]),
+        (
+            "founded-from",
+            &["an unnamed community at site", "raised from nothing"],
+        ),
+        ("held-true", &["the community at site ", "entity "]),
+        ("tribute", &["an unnamed community at site"]),
+    ];
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let mut named_renders = 0;
+    for i in 0..20 {
+        let life = draw(&ctx, LotIndex(i), &Pick::default()).unwrap();
+        let story = tell(&world, &ctx, &life);
+        for (key, unnamed_markers) in NAMED_SLOTS {
+            let slot = story.slot(key).expect("every slot is asked");
+            let SlotValue::Filled(text) = &slot.value else {
+                continue;
+            };
+            if unnamed_markers.iter().any(|marker| text.contains(marker)) {
+                continue;
+            }
+            assert!(
+                slot.sources.iter().any(|source| matches!(
+                    source,
+                    Source::Fact { predicate, .. } if predicate == hornvale_kernel::NAME
+                )),
+                "lot {i}: slot {key} reads {text:?} — it names a settlement but cites no \
+                 `name` fact"
+            );
+            named_renders += 1;
+        }
+    }
+    // Guards the guard: vacuous if no lot ever rendered a name.
+    assert!(
+        named_renders > 0,
+        "no lot rendered a settlement name — the check is vacuous"
+    );
+    println!("slots that rendered a settlement name: {named_renders}");
+}

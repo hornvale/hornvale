@@ -141,7 +141,7 @@ fn by_design(reason: &'static str) -> Answer {
 /// here so [`Story`] never needs the `World` again.
 fn cite(world: &World, entity: EntityId, predicate: &str) -> Source {
     Source::Fact {
-        entity: entity.0.get(),
+        entity: entity.get(),
         predicate: predicate.to_string(),
         caption: world
             .registry
@@ -176,6 +176,68 @@ fn settlement_on(
         .find(|id| hornvale_species::species_of(world, **id).as_deref() == Some(people))
         .or_else(|| here.first())
         .copied()
+}
+
+/// The name of the settlement standing on `vertex`, together with the
+/// citation for the `name` fact that produced it.
+///
+/// Returning the two as a pair is the whole point: a name reaches the
+/// rendered sentence at five separate sites (the birth site, a daughter
+/// site, a mother community, a remembered forebear, a tribute patron), and
+/// four of them once rendered the name while citing nothing. Handing back
+/// the [`Source`] with the string makes forgetting it a compile error
+/// rather than a quiet false provenance.
+fn named_settlement(
+    ctx: &LotContext,
+    world: &World,
+    vertex: Vertex,
+    people: &str,
+) -> Option<(String, Source)> {
+    let id = settlement_on(ctx, world, vertex, people)?;
+    let name = world.ledger.text_of(id, hornvale_kernel::NAME)?.to_string();
+    Some((name, cite(world, id, hornvale_kernel::NAME)))
+}
+
+/// The coordinates of `vertex` in degrees, with the source that produced
+/// them: the settlement's own committed `latitude`/`longitude` facts where
+/// both stand there, otherwise the derivation off the rebuilt Geosphere.
+///
+/// A committed fact beats a derivation when it exists, and the choice is
+/// what fixes the citation: the previous version displayed the DERIVED
+/// numbers while citing the two facts on the strength of their mere
+/// existence, which named a read that never happened. Both facts are
+/// required together — a half-committed pair would otherwise mix a fact
+/// with a derivation inside one coordinate and cite both for both.
+fn coordinates_of(
+    ctx: &LotContext,
+    world: &World,
+    vertex: Vertex,
+    settlement: Option<EntityId>,
+) -> (f64, f64, Vec<Source>) {
+    if let Some(id) = settlement
+        && let Some(Value::Number(latitude)) =
+            world.ledger.value_of(id, hornvale_settlement::LATITUDE)
+        && let Some(Value::Number(longitude)) =
+            world.ledger.value_of(id, hornvale_settlement::LONGITUDE)
+    {
+        return (
+            *latitude,
+            *longitude,
+            vec![
+                cite(world, id, hornvale_settlement::LATITUDE),
+                cite(world, id, hornvale_settlement::LONGITUDE),
+            ],
+        );
+    }
+    let (latitude, longitude) = ctx.lat_lon(vertex);
+    (
+        latitude,
+        longitude,
+        vec![Source::Derived {
+            function: "lot::context::LotContext::lat_lon",
+            inputs: "the rebuilt Geosphere's position for the committed site".to_string(),
+        }],
+    )
 }
 
 /// The birth occupation's people, as the record names it.
@@ -230,36 +292,18 @@ fn when(world: &World, ctx: &LotContext, life: &Life) -> Answer {
 fn site_slot(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     let record = &ctx.occupations[life.occ].record;
     let people = people_of(ctx, life);
-    let (latitude, longitude) = ctx.lat_lon(life.site);
-    let mut sources = vec![
-        cite(world, record.id, hornvale_history::OCC_SITE),
-        Source::Derived {
-            function: "lot::context::LotContext::lat_lon",
-            inputs: "the rebuilt Geosphere's position for the committed site".to_string(),
-        },
-    ];
+    let mut sources = vec![cite(world, record.id, hornvale_history::OCC_SITE)];
     let settlement = settlement_on(ctx, world, life.site, people);
+    let (latitude, longitude, coordinate_sources) =
+        coordinates_of(ctx, world, life.site, settlement);
+    sources.extend(coordinate_sources);
     let mut biome: Option<String> = None;
     let mut named: Option<String> = None;
     if let Some(id) = settlement {
         sources.push(cite(world, id, hornvale_settlement::VERTEX_ID));
-        if let Some(text) = world.ledger.text_of(id, hornvale_kernel::NAME) {
-            named = Some(text.to_string());
-            sources.push(cite(world, id, hornvale_kernel::NAME));
-        }
-        if world
-            .ledger
-            .value_of(id, hornvale_settlement::LATITUDE)
-            .is_some()
-        {
-            sources.push(cite(world, id, hornvale_settlement::LATITUDE));
-        }
-        if world
-            .ledger
-            .value_of(id, hornvale_settlement::LONGITUDE)
-            .is_some()
-        {
-            sources.push(cite(world, id, hornvale_settlement::LONGITUDE));
+        if let Some((name, source)) = named_settlement(ctx, world, life.site, people) {
+            named = Some(name);
+            sources.push(source);
         }
         if let Some(text) = world.ledger.text_of(id, hornvale_settlement::BIOME) {
             biome = Some(text.to_string());
@@ -301,13 +345,16 @@ fn site_slot(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     };
     let text = if let (Some(moved), Some(when_moved)) = (life.moved_to, life.moved_year) {
         let daughter = &ctx.occupations[moved].record;
-        let (daughter_lat, daughter_lon) = ctx.lat_lon(daughter.core.site);
-        let daughter_name = settlement_on(ctx, world, daughter.core.site, people)
-            .and_then(|id| world.ledger.text_of(id, hornvale_kernel::NAME))
-            .map(str::to_string);
+        let daughter_settlement = settlement_on(ctx, world, daughter.core.site, people);
+        let (daughter_lat, daughter_lon, daughter_coordinate_sources) =
+            coordinates_of(ctx, world, daughter.core.site, daughter_settlement);
         sources.push(cite(world, daughter.id, hornvale_history::OCC_SITE));
-        let onward = match daughter_name {
-            Some(name) => format!("{name} ({daughter_lat:.1}°, {daughter_lon:.1}°)"),
+        sources.extend(daughter_coordinate_sources);
+        let onward = match named_settlement(ctx, world, daughter.core.site, people) {
+            Some((name, source)) => {
+                sources.push(source);
+                format!("{name} ({daughter_lat:.1}°, {daughter_lon:.1}°)")
+            }
             None => format!("a site at {daughter_lat:.1}°, {daughter_lon:.1}°"),
         };
         format!(
@@ -406,12 +453,12 @@ fn founded_from(world: &World, ctx: &LotContext, life: &Life) -> Answer {
             };
             let mother = &ctx.occupations[mother_index].record;
             sources.push(cite(world, mother.id, hornvale_history::OCC_FOUNDED));
-            let mother_name = settlement_on(ctx, world, mother.core.site, mother.core.people.0)
-                .and_then(|id| world.ledger.text_of(id, hornvale_kernel::NAME))
-                .map(str::to_string);
             let gap = record.core.founded - mother.core.founded;
-            let named = match mother_name {
-                Some(name) => name,
+            let named = match named_settlement(ctx, world, mother.core.site, mother.core.people.0) {
+                Some((name, source)) => {
+                    sources.push(source);
+                    name
+                }
                 None => format!("an unnamed community at site {}", mother.core.site.0),
             };
             format!(
@@ -660,17 +707,29 @@ fn held_true(world: &World, ctx: &LotContext, life: &Life) -> Answer {
             continue;
         };
         let ended = hornvale_worldgen::bake_year_of_ledger_day(*day);
-        let subject_name = ctx
+        let mut sources = vec![
+            cite(world, subject, hornvale_history::OCC_ENDED),
+            Source::Derived {
+                function: "hearsay::claims_about",
+                inputs: "the founding tree, walked from every witness of the ending".to_string(),
+            },
+        ];
+        let subject_name = match ctx
             .by_entity
             .get(&subject)
             .map(|index| &ctx.occupations[*index].record)
-            .and_then(|other| {
-                settlement_on(ctx, world, other.core.site, other.core.people.0)
-                    .and_then(|id| world.ledger.text_of(id, hornvale_kernel::NAME))
-                    .map(str::to_string)
-                    .or_else(|| Some(format!("the community at site {}", other.core.site.0)))
-            })
-            .unwrap_or_else(|| format!("entity {}", subject.0.get()));
+        {
+            Some(other) => {
+                match named_settlement(ctx, world, other.core.site, other.core.people.0) {
+                    Some((name, source)) => {
+                        sources.push(source);
+                        name
+                    }
+                    None => format!("the community at site {}", other.core.site.0),
+                }
+            }
+            None => format!("entity {}", subject.get()),
+        };
         let telling = if claim.hops == 0 {
             "first-hand".to_string()
         } else {
@@ -684,17 +743,7 @@ fn held_true(world: &World, ctx: &LotContext, life: &Life) -> Answer {
             "the community held that {subject_name} came to its end in year {} — {telling}",
             year(ended)
         );
-        return (
-            SlotValue::Filled(text),
-            vec![
-                cite(world, subject, hornvale_history::OCC_ENDED),
-                Source::Derived {
-                    function: "hearsay::claims_about",
-                    inputs: "the founding tree, walked from every witness of the ending"
-                        .to_string(),
-                },
-            ],
-        );
+        return (SlotValue::Filled(text), sources);
     }
     no_fact(
         "this community remembers no ending — none of its forebears ended within reach of a telling",
@@ -768,16 +817,20 @@ fn tribute(world: &World, ctx: &LotContext, life: &Life) -> Answer {
         return no_fact("the patron named by `pays-tribute-to` is not in this world's records");
     };
     let overlord = &ctx.occupations[index].record;
-    let named = settlement_on(ctx, world, overlord.core.site, overlord.core.people.0)
-        .and_then(|id| world.ledger.text_of(id, hornvale_kernel::NAME))
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("an unnamed community at site {}", overlord.core.site.0));
+    let mut sources = vec![cite(world, record.id, hornvale_history::PAYS_TRIBUTE_TO)];
+    let named = match named_settlement(ctx, world, overlord.core.site, overlord.core.people.0) {
+        Some((name, source)) => {
+            sources.push(source);
+            name
+        }
+        None => format!("an unnamed community at site {}", overlord.core.site.0),
+    };
     (
         SlotValue::Filled(format!(
             "paid tribute to {named}, a {} community",
             overlord.core.people.0
         )),
-        vec![cite(world, record.id, hornvale_history::PAYS_TRIBUTE_TO)],
+        sources,
     )
 }
 
@@ -842,7 +895,10 @@ fn mine(world: &World, ctx: &LotContext, life: &Life) -> Answer {
 /// nothing here reads one: the answer is the committed biome plus a band
 /// derived from the vertex's own latitude.
 fn climate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
-    let (latitude, _longitude) = ctx.lat_lon(life.site);
+    let settlement = settlement_on(ctx, world, life.site, people_of(ctx, life));
+    // The same latitude `where` displays, from the same chooser, so the band
+    // and the number a reader sees beside it can never disagree.
+    let (latitude, _longitude, mut sources) = coordinates_of(ctx, world, life.site, settlement);
     let band = if latitude.abs() < 23.5 {
         "tropical"
     } else if latitude.abs() < 66.5 {
@@ -850,25 +906,23 @@ fn climate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     } else {
         "polar"
     };
-    let settlement = settlement_on(ctx, world, life.site, people_of(ctx, life));
-    let mut sources = vec![Source::Derived {
+    sources.push(Source::Derived {
         function: "lot::slots::climate",
         inputs: "the site's own latitude, banded at 23.5° and 66.5°".to_string(),
-    }];
-    let biome = settlement.and_then(|id| {
+    });
+    // Bound to the settlement id here rather than read through it and
+    // `expect`ed back afterwards: the biome and its citation must come from
+    // one and the same entity, and a second lookup is how they drift.
+    let text = match settlement.and_then(|id| {
         world
             .ledger
             .text_of(id, hornvale_settlement::BIOME)
-            .map(str::to_string)
-    });
-    let text = match biome {
-        Some(kind) => {
-            sources.push(cite(
-                world,
-                settlement.expect("a biome read implies a settlement"),
-                hornvale_settlement::BIOME,
-            ));
-            format!("{band} latitudes, and {kind} country")
+            .map(|kind| (id, kind))
+    }) {
+        Some((id, kind)) => {
+            let phrase = format!("{band} latitudes, and {kind} country");
+            sources.push(cite(world, id, hornvale_settlement::BIOME));
+            phrase
         }
         None => format!("{band} latitudes; nothing in the record names the country"),
     };
