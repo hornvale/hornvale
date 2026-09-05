@@ -56,7 +56,7 @@ pub mod sight;
 pub use allocate::allocate;
 pub use anchor_cells::{anchor_cells, is_faithful};
 pub use classify::{
-    bounds_of, cell_beyond, doorway_between, freedom_of_a_chain, kind_of, openings, reachable_from,
+    bounds_of, cell_beyond, doorway_between, freedom_of_a_tree, kind_of, openings, reachable_from,
     realized_links, standing_cell,
 };
 pub use grow::grow;
@@ -669,8 +669,9 @@ mod tests {
             .collect();
         crate::structure::Structure {
             threshold: chambers[0].clone(),
-            chambers,
             links: (1..n).map(|i| (i - 1, i)).collect(),
+            roles: (0..n).map(crate::structure::index_role).collect(),
+            chambers,
         }
     }
 

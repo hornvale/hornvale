@@ -338,6 +338,7 @@ mod tests {
             threshold: locale(0),
             chambers: vec![locale(0)],
             links: Vec::new(),
+            roles: vec![crate::structure::index_role(0)],
         };
         let l = embed_with(&s, &built(), extent_for(&s), Seed(3));
         let p = render(&l, None);
@@ -382,6 +383,7 @@ mod tests {
             let s = crate::structure::Structure {
                 threshold: chambers[0].clone(),
                 links: (1..n).map(|i| (i - 1, i)).collect(),
+                roles: (0..n).map(crate::structure::index_role).collect(),
                 chambers,
             };
             let p = render(&embed_with(&s, &built(), extent_for(&s), Seed(1)), None);

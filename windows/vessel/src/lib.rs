@@ -77,7 +77,7 @@ pub use snapshot::{
     SelfChannel, SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,
 };
 pub use streams::stream_labels;
-pub use structure::{MAX_CHAMBERS, Structure, structure_at};
+pub use structure::{MAX_CHAMBERS, Role, Structure, structure_at};
 pub use tableau::{StagedBody, Tableau};
 pub use underworld_level::{
     Level, LevelCellKind, generate_descent, generate_descent_for_character, generate_level,

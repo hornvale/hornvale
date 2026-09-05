@@ -6,10 +6,13 @@
 //! address is identity, not shape (law 3), so two chambers being triangle
 //! neighbours means nothing and is not consulted.
 
+pub mod role;
+
 use crate::brief::Brief;
 use crate::depth::chamber_depth;
 use crate::streams::ROOM_CHAMBERS;
 use hornvale_kernel::{Facet, Seed};
+pub use role::{EVERY_ROLE, Role};
 
 /// The most chambers one structure may have in v1. A bound, not a target: the
 /// point of law 1 is that deep addresses are SPARSE, and an unbounded count
@@ -31,16 +34,15 @@ const _: () = assert!(MAX_CHAMBERS <= 4);
 /// type-audit: bare-ok(index: links)
 ///
 /// The fields are public and this type has no validating constructor, so the
-/// two invariants [`structure_at`] establishes are stated here — code in other
+/// invariants [`structure_at`] establishes are stated here — code in other
 /// files depends on them, and a reader of that code cannot see them from there:
 ///
 /// 1. **`threshold == chambers[0]`**, always. `structure_at` takes the first
 ///    drawn chamber as the threshold, so the entry point is index 0.
-/// 2. **`links` is a path graph in DEPTH ORDER** — exactly the pairs
-///    `(i - 1, i)` — so a HIGHER INDEX IS DEEPER. `Session::further_in`
-///    (`session.rs`) relies on precisely this: it picks the lowest-numbered
-///    neighbour above the current index and calls that "deeper". A richer
-///    topology (The Precincts) breaks that reading and must revisit it.
+/// 2. **`links` is a rooted TREE at index 0**, every link `(parent, child)`
+///    with `parent < child`; the path graph is the special case where every
+///    chamber has one child. `Session::further_in` reads `children`.
+/// 3. **`roles[i]` is the role of `chambers[i]`**; no role appears twice.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Structure {
     /// The chamber `enter` arrives in from the locale.
@@ -50,6 +52,50 @@ pub struct Structure {
     /// Undirected apertures as index pairs into `chambers`. Connected, so
     /// every chamber is reachable from `threshold`.
     pub links: Vec<(usize, usize)>,
+    /// What each chamber is FOR, index-aligned with `chambers`. For a built site
+    /// the grammar derives it; for a wild one it is read off the index
+    /// (threshold, hearthroom, then stores), exactly as `role_for` did.
+    pub roles: Vec<Role>,
+}
+
+impl Structure {
+    /// The chamber this one hangs off: its unique lower-indexed neighbour, or
+    /// `None` at the threshold. Invariant 2 makes "lower index" and "toward
+    /// the door" the same direction.
+    /// type-audit: bare-ok(index: i), bare-ok(index: return)
+    pub fn parent(&self, i: usize) -> Option<usize> {
+        self.links
+            .iter()
+            .find_map(|&(a, b)| (b == i).then_some(a).or((a == i && b < i).then_some(b)))
+    }
+    /// The chambers that hang off this one, ascending.
+    /// type-audit: bare-ok(index: i), bare-ok(index: return)
+    pub fn children(&self, i: usize) -> Vec<usize> {
+        let mut out: Vec<usize> = self
+            .links
+            .iter()
+            .filter_map(|&(a, b)| {
+                if a == i && b > i {
+                    Some(b)
+                } else if b == i && a > i {
+                    Some(a)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        out.sort_unstable();
+        out
+    }
+    /// Chambers in `i`'s subtree, `i` included — the share of a plan it needs.
+    /// type-audit: bare-ok(index: i), bare-ok(count: return)
+    pub fn subtree_size(&self, i: usize) -> usize {
+        1 + self
+            .children(i)
+            .iter()
+            .map(|&c| self.subtree_size(c))
+            .sum::<usize>()
+    }
 }
 
 /// The structure at `locale`, or `None` where there is no site to enter.
@@ -101,13 +147,24 @@ pub fn structure_at(
     }
     let threshold = chambers[0].clone();
     // A path graph rooted at the threshold: minimal, connected, and honest
-    // about being minimal. Richer topologies are The Precincts' business.
+    // about being minimal.
     let links = (1..chambers.len()).map(|i| (i - 1, i)).collect();
+    let roles = (0..count).map(index_role).collect();
     Some(Structure {
         threshold,
         chambers,
         links,
+        roles,
     })
+}
+
+/// The wild reading: what `role_for` said for every structure before The Cruck.
+pub(crate) fn index_role(i: usize) -> Role {
+    match i {
+        0 => Role::Threshold,
+        1 => Role::Hearthroom,
+        _ => Role::Store,
+    }
 }
 
 /// Extend `locale`'s path by `extra` child digits taken from `draw`, two bits
@@ -137,6 +194,59 @@ mod tests {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         }
+    }
+
+    /// A structure built BY HAND from a link list and a role list — not a
+    /// draw — so `parent`/`children`/`subtree_size` can be exercised against a
+    /// shape `structure_at` cannot yet produce (it still only draws chains).
+    fn tree(links: &[(usize, usize)], roles: &[Role]) -> Structure {
+        let chambers: Vec<Facet> = (0..roles.len())
+            .map(|i| {
+                let mut f = locale();
+                f.path.extend(std::iter::repeat_n(
+                    0u8,
+                    crate::depth::CHAMBER_DEPTH_OFFSET as usize,
+                ));
+                let last = f.path.len() - 1;
+                f.path[last] = i as u8;
+                f
+            })
+            .collect();
+        Structure {
+            threshold: chambers[0].clone(),
+            chambers,
+            links: links.to_vec(),
+            roles: roles.to_vec(),
+        }
+    }
+
+    #[test]
+    fn parent_children_and_subtree_read_the_link_graph_as_a_rooted_tree() {
+        use Role::*;
+        // T{ H{ W, S } } — the "deep" shape.
+        let s = tree(
+            &[(0, 1), (1, 2), (1, 3)],
+            &[Threshold, Hearthroom, Loomroom, Store],
+        );
+        assert_eq!(s.parent(0), None);
+        assert_eq!(s.parent(1), Some(0));
+        assert_eq!(s.parent(3), Some(1));
+        assert_eq!(s.children(0), vec![1]);
+        assert_eq!(s.children(1), vec![2, 3]);
+        assert_eq!(s.children(2), Vec::<usize>::new());
+        assert_eq!(s.subtree_size(0), 4);
+        assert_eq!(s.subtree_size(1), 3);
+        assert_eq!(s.subtree_size(3), 1);
+    }
+
+    #[test]
+    fn a_chain_is_the_tree_where_every_chamber_has_one_child() {
+        use Role::*;
+        let s = tree(&[(0, 1), (1, 2)], &[Threshold, Hearthroom, Store]);
+        for i in 0..2 {
+            assert_eq!(s.children(i), vec![i + 1]);
+        }
+        assert_eq!(s.children(2), Vec::<usize>::new());
     }
 
     fn built_brief() -> Brief {

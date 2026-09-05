@@ -14808,6 +14808,7 @@ mod tests {
         crate::structure::Structure {
             threshold: chambers[0].clone(),
             links: (1..count).map(|i| (i - 1, i)).collect(),
+            roles: (0..count).map(crate::structure::index_role).collect(),
             chambers,
         }
     }

@@ -323,15 +323,16 @@ pub fn reachable_from(lattice: &Lattice, chamber: usize) -> BTreeSet<Cell> {
     out
 }
 
-/// How many independent choices the anchor graph LEAVES free for a chain
-/// embedding: one cut per interior boundary.
+/// `n - 1` cut positions for `n` chambers, for ANY rooted tree — a tree on `n`
+/// nodes has `n - 1` edges and the allocator spends exactly one cut per edge
+/// (Task 4).
 ///
 /// This is the number rule 7 compares `Lattice::dof` against. It is written as a
 /// function of the chamber count alone because that is all the graph determines —
 /// if a future method needs more freedom than this, the honest move is to widen
 /// this function and say why, never to stop comparing.
 /// type-audit: bare-ok(count: chambers), bare-ok(count: return)
-pub fn freedom_of_a_chain(chambers: usize) -> u32 {
+pub fn freedom_of_a_tree(chambers: usize) -> u32 {
     chambers.saturating_sub(1) as u32
 }
 
@@ -680,7 +681,7 @@ mod tests {
                 // One cut per interior boundary; the seed moves the cut and
                 // nothing else. A cut now consumes a cell for its wall line, but
                 // it is still ONE choice.
-                Method::Rectilinear => freedom_of_a_chain(n),
+                Method::Rectilinear => freedom_of_a_tree(n),
                 // A seed cell is a POINT, so two draws per chamber, not one.
                 Method::Grown => 2 * n as u32,
             };
