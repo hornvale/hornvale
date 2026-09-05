@@ -665,3 +665,25 @@ not an empirical Task5 pass. The original checker author resumed only to
 confirm context availability and explicitly reported no reserved selection
 or revelation. Task6 dispatch still waits for the unreserved assay and
 normal Stage2 boundary. No new approach or Q arose at this green checkpoint.
+
+## Canonical diagnostic submission and scoped Mac qualification
+
+Diagnostic branch `codex/counterpart-diagnostic` adds ten transport-only lines
+to `scripts/lane-outboard.sh` after ordinary checks, following the approved
+Charter precedent. The diff is retained as data in `evidence/controller/`;
+this script change is never a campaign merge candidate. Syntax and shellcheck
+passed. Normal hooks passed75 tests and explicit `make gate-commit` passed
+all three chunks in91.809 s. Candidate `0c6a920898c2e86789d2aa60b93edcdbe50f879c`
+was pushed normally, then queued stage-only as
+`req-0c6a920898c2-20260905T191704Z`. Actual full-panel results remain pending.
+
+The separately committed `panel-mac-base.json` is explicitly one-arm scope,
+carrying the full panel's parent SHA256 and its own roster identity. Actual
+CLI execution returned zero; base satisfied all four questions. The controller
+revalidated the retained dossier. Metadata took0.203/0.157 s, build8.998 s,
+observation0.199 s; arm wall13.507 s includes preparation2.469 s. These are
+observed local costs, not cold-cache or full-panel performance claims.
+43 exact JSON records (5,278,407 bytes before compression) are retained in
+`evidence/mac-base/records.tar.gz`, alongside member hashes, command receipt
+and readable summary. Owned checkout/target remain at the receipt's path.
+This qualifies the Mac command/report path only; no composition result follows.
