@@ -5913,3 +5913,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T19:44:15Z | gate-commit | 144.188 | 1443.007 | 162.509 | 11.13 | 0 | 1027e3a7b | tooling/mouth-cross-candidate | lefford | 40 |
 | 2026-09-05T20:26:25Z | gate-commit | 82.667 | 173.634 | 53.403 | 2.75 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
 | 2026-09-05T20:28:04Z | gate-commit | 74.245 | 154.117 | 44.269 | 2.67 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
+| 2026-09-05T20:30:54Z | gate-commit | 153.006 | 181.351 | 35.741 | 1.42 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
+| 2026-09-05T21:15:47Z | gate-commit | 68.341 | 153.065 | 44.016 | 2.88 | 0 | 0b8b0cfe4 | tooling/claim-refuses-running-sha | lefford | 40 |
