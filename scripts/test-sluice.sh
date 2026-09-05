@@ -864,6 +864,22 @@ else
     bad "$leftover leftover .queue.tmp.* file(s) found after a killed rewrite"
 fi
 
+# The kill above was interrupted BEFORE the `mv`, so $HV_SLUICE_DIR/queue.tsv
+# still holds the 3000 synthetic `queued` rows this section wrote to force a
+# slow coalescing scan — already "destructive to the queue file" per the
+# comment above, so no test before this point could have depended on their
+# survival. It used to be genuinely harmless debris: nothing downstream ever
+# READ the queue file's rows again, only its own tmp-file hygiene. That
+# stopped being true the moment sluice-mouth.sh grew a cross-candidate
+# overlap check (it now runs `sluice-queue.sh list` on every admit, and
+# sluice-run.sh asks the mouth before every chamber phase) — a leftover
+# 3000-row queue turns every later mouth call in this file into 3000
+# `git cat-file`/`merge-tree` subprocesses against a $KSHA these later
+# sections' repos cannot resolve, slow enough to blow the chamber tests'
+# `poll_for_file` timeouts on the claim file. Reset it to empty so later
+# sections see the small, real queue they always assumed.
+: > "$HV_SLUICE_DIR/queue.tsv"
+
 echo "== mouth: a conflicting candidate is refused WITHOUT taking the claim"
 cd "$scratch"
 g checkout -q main; printf 'MAIN\n' > f.txt; g commit -qam main-edit
@@ -3544,6 +3560,201 @@ else
     bad "drain gave rc=$d1_rc out='$d1' — a broken queue reported as a drained one is the fix-round-2 Critical, back"
 fi
 
+# ---------------------------------------------------------------------------
+# CROSS-CANDIDATE OVERLAP ADVISORY. sluice-mouth.sh's own admit/refuse verdict
+# only ever compares a candidate against $base — it has no opinion about the
+# OTHER rows sitting in the queue at the same moment. That blind spot let
+# campaign/the-weft queue behind campaign/the-housemark (both touching
+# windows/vessel), get admitted (the mouth only checked main), take the box,
+# and die rc=10 at <merge> having tested nothing. sluice_report_queue_overlaps
+# closes that gap — as an ADVISORY only, never a refusal (a colliding
+# candidate may never land; campaign/the-zenith went red on its own the same
+# night and never did).
+#
+# A fresh scratch repo AND a fresh HV_SLUICE_DIR, kept off the giant shared
+# queue.tsv this file has been accumulating in $tmp/state since line ~103 —
+# an isolated fixture is easier to reason about than one filtering out a
+# hundred unrelated rows from earlier sections.
+# ---------------------------------------------------------------------------
+echo "== mouth: cross-candidate overlap advisory =="
+cross="$tmp/cross-repo"; mkdir -p "$cross"; cd "$cross"
+g init -q -b main .
+g config user.email x@x; g config user.name x
+mkdir -p docs src docs/audits
+cat > docs/generated-paths.txt <<'DECL'
+# path	author
+docs/audits/report.md	artifacts
+DECL
+printf 'root\n' > root.txt
+g add -A; g commit -qm root
+
+cross_dir="$tmp/cross-state"; mkdir -p "$cross_dir"
+export HV_SLUICE_DIR="$cross_dir"
+export HV_SLUICE_BASE=main
+export HV_SLUICE_ALLOW_UNPUSHED=1
+
+# --- 1. a genuine SOURCE collision between two live queue rows -------------
+# Both branches ADD the same new file from main's tip with different content:
+# an add/add conflict between them, while each merges main CLEANLY on its own
+# (main has neither), so the mouth's own base-only verdict would ADMIT.
+g checkout -q -b campaign/candidate main
+mkdir -p src
+printf 'candidate version\n' > src/shared.rs
+g add -A; g commit -qm candidate-adds-shared
+CAND1="$(g rev-parse campaign/candidate)"
+
+# git prunes a directory left empty by the checkout above (main has no
+# src/shared.rs), so it must be recreated before writing into it again.
+g checkout -q -b campaign/other main
+mkdir -p src
+printf 'other version\n' > src/shared.rs
+g add -A; g commit -qm other-adds-shared
+OTHER1="$(g rev-parse campaign/other)"
+g checkout -q campaign/candidate
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/other "$OTHER1" merge >/dev/null
+
+set +e
+cross1_out="$(bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate "$CAND1" 2>"$tmp/cross1.err")"
+cross1_rc=$?
+set -e
+if [ "$cross1_rc" -eq 0 ]; then
+    ok "cross-candidate: the candidate still ADMITs (exit 0) despite a queue-row collision"
+else
+    bad "cross-candidate: expected exit 0 despite the collision, got $cross1_rc"
+fi
+if printf '%s\n' "$cross1_out" | grep -q "ADMIT campaign/candidate $CAND1"; then
+    ok "cross-candidate: the ADMIT message itself is unaffected by the advisory"
+else
+    bad "cross-candidate: ADMIT message missing/wrong: '$cross1_out'"
+fi
+if grep -q "OVERLAP — campaign/other (queued)" "$tmp/cross1.err" \
+   && grep -q "overlap: *src/shared.rs" "$tmp/cross1.err"; then
+    ok "cross-candidate: the advisory names the colliding branch, its state, and the conflicting path"
+else
+    bad "cross-candidate: no OVERLAP advisory found: $(cat "$tmp/cross1.err")"
+fi
+if grep -qi "this is ADVISORY" "$tmp/cross1.err"; then
+    ok "cross-candidate: the advisory labels itself advisory, not a verdict"
+else
+    bad "cross-candidate: missing the ADVISORY disclaimer: $(cat "$tmp/cross1.err")"
+fi
+
+# --- 2. THE ANTI-NOISE CASE: a collision ONLY in a declared-artifacts path --
+# Same shape as (1), but both branches touch only docs/audits/report.md,
+# declared `artifacts` in docs/generated-paths.txt above. No advisory at all:
+# the chamber resolves this kind of conflict by regeneration on every run,
+# and six real candidates were bounced over exactly this file in one session
+# before sluice_is_regenerated_only existed.
+g checkout -q -b campaign/candidate2 main
+mkdir -p docs/audits
+printf 'candidate report v2\n' > docs/audits/report.md
+g add -A; g commit -qm candidate2-touches-report
+CAND2="$(g rev-parse campaign/candidate2)"
+
+g checkout -q -b campaign/other2 main
+mkdir -p docs/audits
+printf 'other report v2\n' > docs/audits/report.md
+g add -A; g commit -qm other2-touches-report
+OTHER2="$(g rev-parse campaign/other2)"
+g checkout -q campaign/candidate2
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/other2 "$OTHER2" merge >/dev/null
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate2 "$CAND2" >/dev/null 2>"$tmp/cross2.err"
+cross2_rc=$?
+set -e
+if [ "$cross2_rc" -eq 0 ]; then
+    ok "cross-candidate anti-noise: still ADMITs"
+else
+    bad "cross-candidate anti-noise: expected exit 0, got $cross2_rc"
+fi
+if ! grep -q "OVERLAP" "$tmp/cross2.err"; then
+    ok "cross-candidate anti-noise: an artifacts-only collision prints NO advisory"
+else
+    bad "cross-candidate anti-noise: OVERLAP fired on a regenerated-only collision: $(cat "$tmp/cross2.err")"
+fi
+
+# --- 3. no collision at all: total silence ----------------------------------
+g checkout -q -b campaign/candidate3 main
+mkdir -p src
+printf 'candidate three\n' > src/only_candidate.rs
+g add -A; g commit -qm candidate3-file
+CAND3="$(g rev-parse campaign/candidate3)"
+
+g checkout -q -b campaign/other3 main
+mkdir -p src
+printf 'other three\n' > src/only_other.rs
+g add -A; g commit -qm other3-file
+OTHER3="$(g rev-parse campaign/other3)"
+g checkout -q campaign/candidate3
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/other3 "$OTHER3" merge >/dev/null
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate3 "$CAND3" >/dev/null 2>"$tmp/cross3.err"
+cross3_rc=$?
+set -e
+if [ "$cross3_rc" -eq 0 ] && [ ! -s "$tmp/cross3.err" ]; then
+    ok "cross-candidate: a non-colliding queue row produces no advisory output at all — silence is the common case"
+else
+    bad "cross-candidate: expected exit 0 and empty stderr, got rc=$cross3_rc stderr=$(cat "$tmp/cross3.err")"
+fi
+
+# --- 4. an unresolvable sha in a queue row: a printed note, not a false
+#        "no conflict", and the check still completes for the other rows ---
+BOGUS_SHA="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+g checkout -q -b campaign/candidate4 main
+mkdir -p src
+printf 'candidate four\n' > src/shared4.rs
+g add -A; g commit -qm candidate4-file
+CAND4="$(g rev-parse campaign/candidate4)"
+
+g checkout -q -b campaign/other4 main
+mkdir -p src
+printf 'other four\n' > src/shared4.rs
+g add -A; g commit -qm other4-file
+OTHER4="$(g rev-parse campaign/other4)"
+g checkout -q campaign/candidate4
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/ghost "$BOGUS_SHA" merge >/dev/null
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/other4 "$OTHER4" merge >/dev/null
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate4 "$CAND4" >/dev/null 2>"$tmp/cross4.err"
+cross4_rc=$?
+set -e
+if [ "$cross4_rc" -eq 0 ]; then
+    ok "cross-candidate: an unresolvable queue row does not abort the check (still exits 0)"
+else
+    bad "cross-candidate: expected exit 0, got $cross4_rc"
+fi
+if grep -qi "cannot resolve" "$tmp/cross4.err" && grep -q "campaign/ghost" "$tmp/cross4.err"; then
+    ok "cross-candidate: the unresolvable row is named in a printed note, never silently read as 'no conflict'"
+else
+    bad "cross-candidate: no 'cannot resolve' note for the bogus row: $(cat "$tmp/cross4.err")"
+fi
+if grep -q "OVERLAP — campaign/other4" "$tmp/cross4.err"; then
+    ok "cross-candidate: the check still completes for the resolvable row after skipping the bogus one"
+else
+    bad "cross-candidate: the resolvable colliding row was not reported: $(cat "$tmp/cross4.err")"
+fi
+
+# --- 5. THE EXIT-CODE INVARIANT, isolated as its own assertion -------------
+# This is the constraint most likely to be broken by a later edit: the
+# advisory must NEVER change the exit code. Scenario 1 above already collides
+# and already exits 0; restate it as its own named check so a regression
+# here fails on a line that says exactly what broke.
+if [ "$cross1_rc" -eq 0 ]; then
+    ok "cross-candidate: THE INVARIANT — an admissible candidate with a live overlap still exits 0, unconditionally"
+else
+    bad "cross-candidate: THE INVARIANT BROKE — overlap advisory changed the exit code to $cross1_rc"
+fi
+
+unset HV_SLUICE_ALLOW_UNPUSHED
+export HV_SLUICE_DIR="$tmp/state"
+export HV_SLUICE_BASE=main
 
 # ---------------------------------------------------------------------------
 # THE BLAST-RADIUS GUARD. Every other assertion in this file is about what the

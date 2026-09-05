@@ -72,6 +72,81 @@ fi
 # shellcheck source=/dev/null
 HV_PHASES_LIB=1 . "$(dirname "${BASH_SOURCE[0]}")/sluice-phases.sh"
 
+# CROSS-CANDIDATE OVERLAP: an advisory only, never a refusal.
+#
+# The mouth's own admit/refuse verdict compares the candidate against $base
+# alone — it has never had an opinion about the OTHER candidates sitting in
+# the queue at the same moment. That blind spot cost a real queue cycle:
+# campaign/the-weft queued behind campaign/the-housemark, both touching
+# windows/vessel; the mouth admitted (it only ever checked against main), the
+# chamber took the box, and the-weft died rc=10 at the `<merge>` step having
+# tested nothing.
+#
+# THIS MUST NEVER BECOME A REFUSAL. A collision with a queued/running/held
+# candidate is not fatal — the other candidate may never land. Observed the
+# same night: campaign/the-kerf was held for a 9-site collision with
+# campaign/the-zenith, and the-zenith then went red on a formatting check and
+# never landed at all — a hold made on the strength of a row that turned out
+# not to matter twenty minutes later. So this function only ever PRINTS; it
+# never touches the exit code, and callers must not read its output as a
+# verdict.
+#
+# REUSES sluice_is_regenerated_only (sourced above), the same rule
+# sluice-run.sh and absorb.sh use to decide a conflict is bookkeeping rather
+# than real work. Without that filter this fires on nearly every pair in
+# flight: generated artifacts like docs/audits/type-audit-report.md collide
+# constantly and the chamber resolves them by regeneration on every run.
+#
+# THE MERGE-TREE OUTPUT PARSE is the same shape-based read used above (see
+# the long comment on the base-vs-$sha case): `awk` on this box is mawk,
+# which has no POSIX interval expressions, so `{40}` matches nothing and
+# silently yields an empty list. `length($0) == 40 && /^[0-9a-f]+$/` is the
+# form that actually works here.
+sluice_report_queue_overlaps() {
+    local branch="$1" sha="$2"
+    local mouth_dir root rows
+    mouth_dir="$(dirname "${BASH_SOURCE[0]}")"
+    root="$(env -u GIT_DIR -u GIT_INDEX_FILE git rev-parse --show-toplevel 2>/dev/null || echo .)"
+    rows="$(bash "$mouth_dir/sluice-queue.sh" list 2>/dev/null || true)"
+    [ -n "$rows" ] || return 0
+    local rid rbranch rsha rstate
+    while IFS=$'\t' read -r _ rid rbranch rsha rstate _ _; do
+        [ -n "$rid" ] || continue
+        case "$rstate" in
+            running|queued|held) ;;
+            *) continue ;;   # a terminal state (landed/reported/superseded/dropped) is history
+        esac
+        # A campaign superseding itself is not a collision.
+        [ "$rbranch" = "$branch" ] && continue
+        # Ancestry is three-valued in this repo on purpose: "cannot resolve"
+        # must never be reported as "no conflict" (sluice-queue.sh's header
+        # names the exact incident — 128 silently read as 1 for two days).
+        if ! env -u GIT_DIR -u GIT_INDEX_FILE git cat-file -e "$rsha^{commit}" 2>/dev/null; then
+            echo "sluice-mouth: cannot resolve $rid ($rbranch, state=$rstate) — sha $rsha is not in this repository; skipping its overlap check." >&2
+            continue
+        fi
+        local mt_out
+        if mt_out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-only "$sha" "$rsha" 2>&1)"; then
+            continue   # a clean merge against this row: no overlap
+        fi
+        local mconf
+        mconf="$(printf '%s\n' "$mt_out" \
+            | awk 'length($0) == 40 && /^[0-9a-f]+$/ { seen = 1; next } seen && /^$/ { exit } seen { print }')"
+        [ -n "$mconf" ] || continue
+        if sluice_is_regenerated_only "$mconf" "$root"; then
+            continue   # bookkeeping only — the chamber resolves it by regeneration
+        fi
+        local n
+        n="$(printf '%s\n' "$mconf" | grep -c .)"
+        echo "sluice-mouth: OVERLAP — $rbranch ($rstate): $n source path(s)" >&2
+        printf '%s\n' "$mconf" | sed 's/^/  overlap: /' >&2
+        echo "sluice-mouth: this is ADVISORY. That candidate may never land; if it does, absorb main and resubmit." >&2
+    done <<EOF
+$rows
+EOF
+    return 0
+}
+
 base="${HV_SLUICE_BASE:-origin/main}"
 
 # Resolve and verify the base ref BEFORE either git call that depends on it
@@ -172,6 +247,7 @@ if ! out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-
         if sluice_is_regenerated_only "$conflicts" "$(env -u GIT_DIR git rev-parse --show-toplevel 2>/dev/null || echo .)"; then
             n="$(printf '%s\n' "$conflicts" | grep -c .)"
             echo "sluice-mouth: ADMIT $branch $sha — all $n conflict(s) are artifacts-authored; the chamber resolves them by regeneration."
+            sluice_report_queue_overlaps "$branch" "$sha"
             exit 0
         fi
     else
@@ -184,4 +260,5 @@ fi
 merge_base_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-base "$base" "$sha")"
 behind="$(env -u GIT_DIR -u GIT_INDEX_FILE git rev-list --count "$merge_base_sha".."$base")"
 echo "sluice-mouth: ADMIT $branch $sha (merge base is $behind commits behind $base)"
+sluice_report_queue_overlaps "$branch" "$sha"
 exit 0
