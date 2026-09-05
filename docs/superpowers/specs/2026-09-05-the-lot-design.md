@@ -366,8 +366,12 @@ record says what tongue they spoke") in the prose and as `null` with a
                                                                               (The Staple §1)
   function             occ-function                                         NEAR-CONSTANT (98.6%
                                                                               Agrarian)
-  tongue               occ-tongue → the language entity's facts             FILLED
-  belief               occ-deity → deity-name, deity-epithet, cult-form     FILLED
+  tongue               the people's derived language (worldgen::           FILLED (derived, per
+                       language_of_in) — `Occupation.tongue` is never          people)
+                       committed and always None (ledger #8)
+  belief               religion::beliefs_of filtered by `held-by` to this   FILLED where a belief
+                       people or settlement — `Occupation.deity` is never     names them
+                       committed and always None (ledger #8)
   what they held true  windows/hearsay over the community's ended kin       FILLED where any
                                                                               ending is remembered
   subsistence          `subsistence` (domains/culture) on the SETTLEMENT     SILENT for a dead
@@ -378,7 +382,9 @@ record says what tongue they spoke") in the prose and as `null` with a
   tribute              pays-tribute-to                                      FILLED where it holds
   dwelling             history::flesh::structures_of (derived)              FILLED
   the mine             occ-delve-depth (Mine function only)                 FILLED for ~1.4%
-  climate              `ambient` `heat` `cold` `rain` `snow` at the place    FILLED
+  climate              the place's `biome` fact + the vertex's latitude —   FILLED
+                       the five climate kinds are phenomena, not facts
+                       (ledger #8)
   the sky they saw     astronomy eclipse_events over the life span, at the  FILLED (a count and
                        site's longitude                                       the first total one)
   what the ground did  worldgen::hazard::events_in, span CLAMPED to the     FILLED (often "nothing")
@@ -459,8 +465,11 @@ from the same seed.
 bundled to `book/src/gallery/lot.js` (committed, drift-checked) and mounted
 on `book/src/gallery/the-lot.md`, the way the Casement mounts on
 `possession-live.md`. It builds the world in a worker through
-`clients/world-wasm` (deploy-built wasm, never committed — decision 0052)
-and reads four new ABI entry points, all `hw_*`, all returning the window's
+`clients/world-wasm` (deploy-built wasm, never committed — decision 0052;
+since decision 0125 retired the book's deploy there is no builder but
+`make wasm-world`, which copies the catalog to `book/src/gallery/world.wasm`
+exactly as `make wasm-vessel` does for the Casement, and the page says it is
+dark until that has run — ledger #9) and reads four new ABI entry points, all `hw_*`, all returning the window's
 JSON into the existing out buffer:
 
 ```
@@ -532,8 +541,11 @@ vice versa).
   a byte-identical payload across two builds.
 
 **Prediction half — over the nine seeds, 200 lots each (indices 0–199), read
-by a lab study `studies/the-lot.study.json` whose metrics are code in
-`windows/lab`.**
+by a hand-run `probe:` readout (`windows/lot/tests/suite/lot_readout.rs`, the
+Task 0 pattern — a study JSON cannot name nine specific seeds, ledger #10)
+while the same six quantities are registered as `lot-*` metrics in
+`windows/lab` and become census columns over 1,000 seeds at the close
+refresh.**
 
 - **H-P1** The share of lots born in the last quarter of the span is
   **≥ 0.33 on the eight growing seeds and in `[0.20, 0.30]` on seed 100** —
