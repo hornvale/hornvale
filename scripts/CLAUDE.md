@@ -198,6 +198,14 @@ the exact SHA it tested.
   as something else. It now follows `scripts/board-render.sh`'s precedent:
   prefer a prebuilt release binary and deliberately never compile it. `make
   prewarm` builds it for a fresh worktree; nothing else does.
+  **AND NOTHING REBUILDS IT AFTER A FAST-FORWARD EITHER**, which is the case
+  that bites an operator rather than a campaign: `git merge --ff-only
+  origin/main` in the main checkout advances the SCRIPTS and leaves the binary
+  where it was, so the shim keeps `exec`ing a build from before the change.
+  Same shape as the board binary hazard in the root guide, and the same remedy
+  — after any fast-forward that moves `tools/sluice/`, run `cargo build
+  --release --manifest-path tools/sluice/Cargo.toml`. Ask whether it did with
+  `git log <old>..<new> -- tools/sluice`, which is empty on the ordinary day.
   **EXIT 3 is reserved** for "no binary and no way to reach one", distinct
   from every code the script or the binary otherwise uses (1/2/4/5), so a
   caller can tell "the queue refused" from "the queue could not be asked" —
@@ -227,6 +235,21 @@ the exact SHA it tested.
   not queued, somebody else has it, refuse; **5** = no row at all, which is an
   ad hoc run and is allowed. Conflating those two would either forbid the
   operator escape hatch or re-open the duplicate.
+  **A SHA THAT IS ALREADY RUNNING IS NOT CLAIMABLE UNDER ANY ROW**, which is
+  the same duplicate by a third road. The interlock is per-ROW, and two rows
+  can name one sha: coalescing is scoped to branch AND kind, so a resubmission
+  under a second branch name, or a stage request beside a merge request, leaves
+  both live. With one `running` and one `queued`, selection used to find the
+  queued one and a dispatcher would launch a concurrent chamber run against a
+  ref already being merged (observed 2026-09-05, two rows for e8692ba5bb50,
+  cleared by hand before a drain reached the second). `claim` now skips a
+  queued row whose sha is running: the by-sha form then falls through to the
+  existing `4` (held by another), and the dispatcher form keeps looking,
+  because the queue may hold unrelated work and a guard that stalled it would
+  be a different failure rather than a fixed one. There is deliberately NO
+  separate by-sha refusal — one was written and mutation testing showed it
+  unfalsifiable, since the skip plus the existing `seen_sha` arm already
+  produce that answer.
 - **`sluice-mouth.sh`** — the checks that run OUTSIDE the lane claim (the
   canal-lock rule: turn a vessel away at the gate, never inside the
   chamber). Prevents a doomed candidate — already merged, unpushed, or
