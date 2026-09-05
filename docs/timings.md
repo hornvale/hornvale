@@ -5717,6 +5717,24 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T21:53:41Z | sluice:gate | 786.338 | 20775.988 | 595.091 | 27.18 | 0 | 93bb4665b |  | lefford | 40 |
 | 2026-09-04T21:56:29Z | sluice:clients | 168.224 | 2393.992 | 220.755 | 15.54 | 0 | 573cff609 |  | lefford | 40 |
 | 2026-09-04T22:04:08Z | sluice:heavy | 457.896 | 9773.196 | 165.859 | 21.71 | 0 | 77c4c2bac |  | lefford | 40 |
+| 2026-09-04T23:16:44Z | prewarm | 226.525 | 1445.144 | 56.026 | 6.63 | 0 | db498e453 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:26:08Z | gate-commit | 60.995 | 113.086 | 22.082 | 2.22 | 0 | db498e453 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:34:50Z | gate-commit | 35.199 | 62.905 | 17.216 | 2.28 | 0 | bfdd847aa | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:39:48Z | gate-commit | 33.858 | 54.390 | 14.069 | 2.02 | 0 | 116a6e558 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:40:36Z | gate-commit | 33.339 | 54.216 | 14.235 | 2.05 | 0 | 116a6e558 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:41:25Z | gate-commit | 33.999 | 54.597 | 14.066 | 2.02 | 0 | 116a6e558 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:42:33Z | gate-commit | 35.127 | 62.966 | 17.006 | 2.28 | 0 | 116a6e558 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:43:14Z | gate-commit | 34.850 | 62.381 | 17.359 | 2.29 | 0 | 116a6e558 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:46:55Z | gate-commit | 35.204 | 62.714 | 17.043 | 2.27 | 0 | e2196caee | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:47:46Z | gate-commit | 34.637 | 62.059 | 17.305 | 2.29 | 0 | e2196caee | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:58:19Z | gate-commit | 36.126 | 63.605 | 17.566 | 2.25 | 0 | c7fc013ab | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-04T23:59:01Z | gate-commit | 35.206 | 62.441 | 17.503 | 2.27 | 0 | c7fc013ab | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:03:08Z | gate-commit | 36.376 | 63.419 | 17.709 | 2.23 | 0 | fa13ded70 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:09:39Z | gate-commit | 40.488 | 91.395 | 18.073 | 2.70 | 0 | 4ce1bfb3e | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:10:20Z | gate-commit | 35.274 | 62.320 | 17.007 | 2.25 | 0 | 4ce1bfb3e | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:18:04Z | gate-commit | 35.341 | 62.568 | 17.224 | 2.26 | 0 | 654e0b098 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:28:25Z | gate-commit | 34.912 | 62.518 | 17.077 | 2.28 | 0 | 7933941c9 | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:31:01Z | gate-commit | 34.712 | 62.282 | 16.749 | 2.28 | 0 | 7933941c9 | campaign/the-coda | MacBookPro | 10 |
 | 2026-09-04T23:30:07Z | sluice:outboard | 63.698 | 36.980 | 49.672 | 1.36 | 0 | db498e453 |  | lefford | 40 |
 | 2026-09-04T23:42:38Z | sluice:gate | 750.864 | 19824.121 | 573.481 | 27.17 | 0 | 191aeb7b2 |  | lefford | 40 |
 | 2026-09-04T23:45:06Z | sluice:clients | 147.278 | 2278.407 | 206.375 | 16.87 | 0 | fcef3d50e |  | lefford | 40 |
@@ -5742,3 +5760,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T01:50:19Z | sluice:gate | 734.597 | 19729.434 | 499.504 | 27.54 | 0 | 2b20b4074 |  | lefford | 40 |
 | 2026-09-05T01:52:36Z | sluice:clients | 137.130 | 2083.400 | 159.963 | 16.36 | 0 | 43ded9b95 |  | lefford | 40 |
 | 2026-09-05T01:59:56Z | sluice:heavy | 439.748 | 10191.576 | 155.187 | 23.53 | 0 | faefbc58c |  | lefford | 40 |
+| 2026-09-05T00:42:29Z | gate-commit | 172.563 | 730.947 | 55.437 | 4.56 | 0 | 219b95e1d | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:42:48Z | gate-commit | 110.711 | 64.063 | 16.482 | 0.73 | 0 | 219b95e1d | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:44:02Z | rebaseline | 347.047 | 448.149 | 20.769 | 1.35 | 0 | 219b95e1d | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:47:42Z | gate-commit | 36.756 | 63.476 | 17.100 | 2.19 | 0 | acbf428d3 | campaign/the-coda | MacBookPro | 10 |

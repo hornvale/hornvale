@@ -7,7 +7,7 @@
 //! `docs/CLAUDE.md`; this file makes the discipline executable, the same way
 //! `architecture.rs` makes the layering rules executable.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,6 +22,501 @@ fn repo_root() -> PathBuf {
 
 fn read(path: &Path) -> String {
     fs::read_to_string(path).unwrap_or_else(|e| panic!("reading {}: {e}", path.display()))
+}
+
+const RECONCILIATION: &str = "docs/audits/campaign-reconciliation.tsv";
+const RECONCILIATION_HEADER: [&str; 10] = [
+    "key",
+    "disposition",
+    "residue_kind",
+    "residue_target",
+    "evidence",
+    "specs",
+    "plans",
+    "ledgers",
+    "chronicles",
+    "retrospectives",
+];
+const RECONCILIATION_DISPOSITIONS: [&str; 6] = [
+    "active",
+    "shipped",
+    "partial",
+    "superseded",
+    "abandoned",
+    "unresolved",
+];
+const RECONCILIATION_RESIDUE_KINDS: [&str; 5] =
+    ["none", "registry", "successor", "decision", "retro"];
+const TERMINAL_RECONCILIATION_DISPOSITIONS: [&str; 3] = ["shipped", "superseded", "abandoned"];
+
+/// One campaign's reconciliation record. `record_paths` preserves the five
+/// document-kind columns in schema order for later coverage checks.
+struct ReconciliationRow {
+    /// 1-based line number in `campaign-reconciliation.tsv`.
+    line: usize,
+    key: String,
+    disposition: String,
+    residue_kind: String,
+    residue_target: String,
+    evidence: String,
+    record_paths: Vec<Vec<String>>,
+}
+
+/// Parse the committed campaign reconciliation TSV, preserving the five
+/// record columns after its five descriptive columns.
+fn parse_reconciliation_result(text: &str) -> Result<Vec<ReconciliationRow>, String> {
+    let mut rows = Vec::new();
+    let mut saw_header = false;
+
+    for (idx, raw_line) in text.lines().enumerate() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let columns: Vec<&str> = raw_line.split('\t').map(str::trim).collect();
+        if !saw_header {
+            if columns.as_slice() != RECONCILIATION_HEADER {
+                return Err(format!(
+                    "line {}: expected reconciliation header {RECONCILIATION_HEADER:?}",
+                    idx + 1
+                ));
+            }
+            saw_header = true;
+            continue;
+        }
+
+        if columns.len() != RECONCILIATION_HEADER.len() {
+            return Err(format!(
+                "line {}: expected {} reconciliation columns, found {}",
+                idx + 1,
+                RECONCILIATION_HEADER.len(),
+                columns.len()
+            ));
+        }
+
+        let mut record_paths = Vec::new();
+        for column in &columns[5..] {
+            if column.is_empty() {
+                record_paths.push(Vec::new());
+                continue;
+            }
+            let mut paths = Vec::new();
+            for path in column.split(',').map(str::trim) {
+                if path.is_empty() {
+                    return Err(format!(
+                        "line {}: reconciliation record paths must not contain empty elements",
+                        idx + 1
+                    ));
+                }
+                paths.push(path.to_string());
+            }
+            record_paths.push(paths);
+        }
+
+        let row = ReconciliationRow {
+            line: idx + 1,
+            key: columns[0].to_string(),
+            disposition: columns[1].to_string(),
+            residue_kind: columns[2].to_string(),
+            residue_target: columns[3].to_string(),
+            evidence: columns[4].to_string(),
+            record_paths,
+        };
+        validate_reconciliation_row_shape(&row)?;
+        rows.push(row);
+    }
+
+    if saw_header {
+        Ok(rows)
+    } else {
+        Err("line 1: missing reconciliation header".to_string())
+    }
+}
+
+const RECONCILIATION_RECORD_DIRECTORIES: [&str; 5] = [
+    "docs/superpowers/specs",
+    "docs/superpowers/plans",
+    "docs/superpowers/ledgers",
+    "book/src/chronicle",
+    "docs/retrospectives",
+];
+const CAMPAIGN_RECORD_DIRECTORIES: [&str; 4] = [
+    "docs/superpowers/specs",
+    "docs/superpowers/plans",
+    "book/src/chronicle",
+    "docs/retrospectives",
+];
+
+/// Every direct Markdown child of the four campaign-record directories,
+/// relative to the repository root. This deliberately excludes the directory
+/// guide named `README.md`, which is not a campaign record.
+fn campaign_record_paths() -> BTreeSet<String> {
+    let root = repo_root();
+    CAMPAIGN_RECORD_DIRECTORIES
+        .iter()
+        .flat_map(|directory| {
+            fs::read_dir(root.join(directory))
+                .unwrap_or_else(|e| panic!("reading {directory}: {e}"))
+                .map(move |entry| {
+                    entry.unwrap_or_else(|e| panic!("reading entry in {directory}: {e}"))
+                })
+        })
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && path.extension().is_some_and(|ext| ext == "md"))
+        .filter(|path| path.file_name().is_none_or(|name| name != "README.md"))
+        .map(|path| {
+            path.strip_prefix(&root)
+                .expect("campaign record path should be under repository root")
+                .to_string_lossy()
+                .replace('\\', "/")
+        })
+        .collect()
+}
+
+fn reconciliation_validation_errors(
+    rows: &[ReconciliationRow],
+    registry_statuses: &BTreeMap<String, String>,
+    root: &Path,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    let mut keys = BTreeSet::new();
+
+    for row in rows {
+        if !keys.insert(&row.key) {
+            errors.push(format!("line {}: duplicate key {:?}", row.line, row.key));
+        }
+
+        for (paths, directory) in row
+            .record_paths
+            .iter()
+            .zip(RECONCILIATION_RECORD_DIRECTORIES)
+        {
+            for path in paths {
+                let expected_prefix = format!("{directory}/");
+                if !path.starts_with(&expected_prefix) {
+                    errors.push(format!(
+                        "line {}: record path {:?} expected under {directory}",
+                        row.line, path
+                    ));
+                } else if !root.join(path).is_file() {
+                    errors.push(format!(
+                        "line {}: cited record path {:?} does not exist",
+                        row.line, path
+                    ));
+                }
+            }
+        }
+
+        match row.residue_kind.as_str() {
+            "registry" => match registry_statuses.get(&row.residue_target) {
+                None => errors.push(format!(
+                    "line {}: registry target {:?} does not exist",
+                    row.line, row.residue_target
+                )),
+                Some(status) if status == "shipped" => errors.push(format!(
+                    "line {}: registry target {:?} is shipped",
+                    row.line, row.residue_target
+                )),
+                Some(_) => {}
+            },
+            "none" => {}
+            _ if !root.join(&row.residue_target).exists() => errors.push(format!(
+                "line {}: residue target {:?} does not exist locally",
+                row.line, row.residue_target
+            )),
+            _ => {}
+        }
+    }
+
+    errors
+}
+
+fn validate_reconciliation_row_shape(row: &ReconciliationRow) -> Result<(), String> {
+    if row.evidence.is_empty() {
+        return Err(format!(
+            "line {}: reconciliation evidence must not be empty",
+            row.line
+        ));
+    }
+    if !RECONCILIATION_DISPOSITIONS.contains(&row.disposition.as_str()) {
+        return Err(format!(
+            "line {}: unknown disposition {:?}",
+            row.line, row.disposition
+        ));
+    }
+    if !RECONCILIATION_RESIDUE_KINDS.contains(&row.residue_kind.as_str()) {
+        return Err(format!(
+            "line {}: unknown residue kind {:?}",
+            row.line, row.residue_kind
+        ));
+    }
+
+    let has_residue = row.residue_kind != "none" && !row.residue_target.is_empty();
+    if matches!(row.disposition.as_str(), "partial" | "unresolved") && !has_residue {
+        return Err(format!(
+            "line {}: {} rows require a residue kind and target",
+            row.line, row.disposition
+        ));
+    }
+    if TERMINAL_RECONCILIATION_DISPOSITIONS.contains(&row.disposition.as_str())
+        && (row.residue_kind != "none" || !row.residue_target.is_empty())
+    {
+        return Err(format!(
+            "line {}: {} rows must carry no residue",
+            row.line, row.disposition
+        ));
+    }
+    if row.residue_kind == "none" && !row.residue_target.is_empty() {
+        return Err(format!(
+            "line {}: residue kind none must have an empty target",
+            row.line
+        ));
+    }
+    if row.residue_kind != "none" && row.residue_target.is_empty() {
+        return Err(format!(
+            "line {}: residue kind {:?} requires a target",
+            row.line, row.residue_kind
+        ));
+    }
+    Ok(())
+}
+
+fn parse_reconciliation(text: &str) -> Vec<ReconciliationRow> {
+    parse_reconciliation_result(text).unwrap_or_else(|e| panic!("parsing {RECONCILIATION}: {e}"))
+}
+
+/// Every row in the committed campaign reconciliation TSV.
+fn reconciliation_rows() -> Vec<ReconciliationRow> {
+    parse_reconciliation(&read(&repo_root().join(RECONCILIATION)))
+}
+
+#[test]
+fn reconciliation_parser_keeps_all_five_record_columns() {
+    let text = "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n\
+                the-example\tpartial\tregistry\tMAP-example\tledger #1\t\
+                docs/superpowers/specs/example.md\tdocs/superpowers/plans/example.md\t\
+                docs/superpowers/ledgers/example.md\tbook/src/chronicle/example.md\t\
+                docs/retrospectives/example.md\n";
+    let rows = parse_reconciliation(text);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].line, 2);
+    assert_eq!(rows[0].key, "the-example");
+    assert_eq!(rows[0].disposition, "partial");
+    assert_eq!(rows[0].residue_kind, "registry");
+    assert_eq!(rows[0].residue_target, "MAP-example");
+    assert_eq!(rows[0].evidence, "ledger #1");
+    assert_eq!(rows[0].record_paths.len(), 5);
+}
+
+#[test]
+fn reconciliation_parser_rejects_a_short_row() {
+    let text = "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n\
+                the-example\tshipped\tnone\t\tevidence\n";
+    assert!(parse_reconciliation_result(text).is_err());
+}
+
+#[test]
+fn reconciliation_parser_rejects_unknown_disposition() {
+    // Removing the closed disposition vocabulary would make this record look
+    // valid despite leaving its lifecycle meaning undefined.
+    let text = concat!(
+        "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n",
+        "the-example\tunknown\tnone\t\tevidence\tspec.md\tplan.md\tledger.md\tchronicle.md\tretro.md\n",
+    );
+    let error = match parse_reconciliation_result(text) {
+        Err(error) => error,
+        Ok(_) => panic!("unknown disposition must fail"),
+    };
+    assert!(error.contains("unknown disposition"), "{error}");
+}
+
+#[test]
+fn reconciliation_parser_requires_residue_for_partial_rows() {
+    // Removing the partial-row residue check would silently discard open work.
+    let text = concat!(
+        "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n",
+        "the-example\tpartial\tnone\t\tevidence\tspec.md\tplan.md\tledger.md\tchronicle.md\tretro.md\n",
+    );
+    let error = match parse_reconciliation_result(text) {
+        Err(error) => error,
+        Ok(_) => panic!("partial rows need residue"),
+    };
+    assert!(error.contains("partial"), "{error}");
+}
+
+#[test]
+fn reconciliation_parser_rejects_terminal_rows_with_a_destination() {
+    // Removing the terminal-row rule would let a completed campaign advertise
+    // a residue nobody is responsible for carrying.
+    let text = concat!(
+        "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n",
+        "the-example\tshipped\tregistry\tMAP-example\tevidence\tspec.md\tplan.md\tledger.md\tchronicle.md\tretro.md\n",
+    );
+    let error = match parse_reconciliation_result(text) {
+        Err(error) => error,
+        Ok(_) => panic!("terminal rows cannot carry residue"),
+    };
+    assert!(error.contains("shipped"), "{error}");
+}
+
+#[test]
+fn reconciliation_parser_requires_evidence() {
+    // Removing the evidence requirement would turn the ledger into an
+    // untraceable set of verdict labels.
+    let text = concat!(
+        "key\tdisposition\tresidue_kind\tresidue_target\tevidence\tspecs\tplans\tledgers\tchronicles\tretrospectives\n",
+        "the-example\tactive\tnone\t\t\tspec.md\tplan.md\tledger.md\tchronicle.md\tretro.md\n",
+    );
+    let error = match parse_reconciliation_result(text) {
+        Err(error) => error,
+        Ok(_) => panic!("reconciliation rows need evidence"),
+    };
+    assert!(error.contains("evidence"), "{error}");
+}
+
+fn reconciliation_fixture(
+    key: &str,
+    residue_kind: &str,
+    residue_target: &str,
+) -> ReconciliationRow {
+    ReconciliationRow {
+        line: 2,
+        key: key.to_string(),
+        disposition: "partial".to_string(),
+        residue_kind: residue_kind.to_string(),
+        residue_target: residue_target.to_string(),
+        evidence: "test evidence".to_string(),
+        record_paths: vec![
+            vec!["docs/superpowers/specs/2026-09-04-the-coda-design.md".to_string()],
+            vec!["docs/superpowers/plans/2026-09-04-the-coda.md".to_string()],
+            vec!["docs/superpowers/ledgers/2026-09-04-the-coda.md".to_string()],
+            vec!["book/src/chronicle/the-coda.md".to_string()],
+            vec!["docs/retrospectives/2026-09-04-the-coda.md".to_string()],
+        ],
+    }
+}
+
+#[test]
+fn reconciliation_validation_rejects_shipped_registry_targets() {
+    // Removing the status check would reopen completed registry work through
+    // the audit's partial-residue path.
+    let rows = vec![reconciliation_fixture("the-example", "registry", "MAP-68")];
+    let statuses = BTreeMap::from([(String::from("MAP-68"), String::from("shipped"))]);
+    let errors = reconciliation_validation_errors(&rows, &statuses, &repo_root());
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.contains("MAP-68") && error.contains("shipped")),
+        "{errors:#?}"
+    );
+}
+
+#[test]
+fn reconciliation_validation_rejects_duplicate_keys_and_wrong_record_columns() {
+    // Removing either check permits an ambiguous campaign or lets a document
+    // satisfy the wrong audit column.
+    let mut wrong_column = reconciliation_fixture("the-example", "successor", "docs/README.md");
+    wrong_column.record_paths[0] = vec!["docs/retrospectives/2026-09-04-the-coda.md".to_string()];
+    let rows = vec![
+        reconciliation_fixture("the-example", "successor", "docs/README.md"),
+        wrong_column,
+    ];
+    let errors = reconciliation_validation_errors(&rows, &BTreeMap::new(), &repo_root());
+    assert!(
+        errors.iter().any(|error| error.contains("duplicate key")),
+        "{errors:#?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .any(|error| error.contains("expected under docs/superpowers/specs")),
+        "{errors:#?}"
+    );
+    assert!(
+        !errors
+            .iter()
+            .any(|error| error.contains("expected under docs/superpowers/ledgers")),
+        "the five-column evidence validation must retain its ledger column: {errors:#?}"
+    );
+}
+
+#[test]
+fn campaign_record_paths_enumerate_the_actual_audit_directories() {
+    // Removing a directory or admitting README.md would make Task 3's total
+    // coverage check silently omit historical campaign material.
+    let root = repo_root();
+    let paths = campaign_record_paths();
+    assert!(paths.contains("docs/superpowers/specs/2026-09-04-the-coda-design.md"));
+    assert!(paths.contains("book/src/chronicle/the-connection-graph.md"));
+    assert!(paths.iter().all(|path| !path.ends_with("/README.md")));
+    assert!(
+        paths
+            .iter()
+            .all(|path| !path.starts_with("docs/superpowers/ledgers/")),
+        "ledgers are evidence columns, not campaign-record population: {paths:#?}"
+    );
+    for path in paths {
+        assert!(
+            CAMPAIGN_RECORD_DIRECTORIES
+                .iter()
+                .any(|directory| path.starts_with(&format!("{directory}/"))),
+            "unexpected campaign record path {path}"
+        );
+        assert!(
+            root.join(&path).is_file(),
+            "missing campaign record path {path}"
+        );
+    }
+}
+
+#[test]
+fn committed_reconciliation_rows_satisfy_semantic_rules() {
+    let statuses = registry_rows()
+        .into_iter()
+        .map(|row| (row.id, normalize_status(&row.status)))
+        .collect::<BTreeMap<_, _>>();
+    let errors = reconciliation_validation_errors(&reconciliation_rows(), &statuses, &repo_root());
+    assert!(
+        errors.is_empty(),
+        "reconciliation errors:\n  {}",
+        errors.join("\n  ")
+    );
+}
+
+/// The audit is complete only when every direct campaign record appears in
+/// exactly one reconciliation row; missing records and stray TSV citations
+/// are both documentary drift.
+#[test]
+fn campaign_reconciliation_covers_every_campaign_record() {
+    let population = campaign_record_paths();
+    let mut cited = BTreeSet::new();
+    let mut duplicates = BTreeSet::new();
+
+    for row in reconciliation_rows() {
+        for path in row.record_paths.into_iter().flatten() {
+            if !cited.insert(path.clone()) {
+                duplicates.insert(path);
+            }
+        }
+    }
+
+    assert!(
+        duplicates.is_empty(),
+        "duplicate reconciled record paths: {duplicates:?}"
+    );
+    assert_eq!(
+        cited,
+        population,
+        "campaign reconciliation coverage drift:\nmissing from TSV: {:#?}\noutside audit population: {:#?}",
+        population.difference(&cited).collect::<Vec<_>>(),
+        cited.difference(&population).collect::<Vec<_>>(),
+    );
+}
+
+#[test]
+fn committed_reconciliation_schema_is_parseable() {
+    reconciliation_rows();
 }
 
 /// The GitHub-flavored heading anchor (a github-slugger approximation):
