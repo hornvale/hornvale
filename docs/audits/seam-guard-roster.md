@@ -16,13 +16,13 @@ comment.
 
 ## `conquest_victim`
 
-- Defined at `windows/almanac/src/history.rs:737`
+- Defined at `windows/almanac/src/history.rs:736`
 - Operator: `returns(Option::<EntityId>::None)`
 - Test scope: `hornvale`
 - No declaration: a survivor here fails the gate.
 - Call sites:
-  - `windows/almanac/src/history.rs:631`
-  - `windows/almanac/src/history.rs:807`
+  - `windows/almanac/src/history.rs:630`
+  - `windows/almanac/src/history.rs:806`
 
 ## `ledger_day_of_bake_year`
 

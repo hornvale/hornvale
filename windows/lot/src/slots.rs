@@ -878,7 +878,7 @@ fn tribute(world: &World, ctx: &LotContext, life: &Life) -> Answer {
 /// `dwelling` — what the community's residential core was built of.
 fn dwelling(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     let record = &ctx.occupations[life.occ].record;
-    let seed = hornvale_almanac::history::flesh_seed_for(world, &record.core);
+    let seed = hornvale_history::flesh::flesh_seed_for(&world.seed, &record.core);
     let structures = hornvale_history::flesh::structures_of(record, seed);
     let residential = structures
         .iter()

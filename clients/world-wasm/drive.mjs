@@ -2,15 +2,23 @@
 // the native CLI's (the two-language golden contract at the wasm seam).
 // Usage: node drive.mjs <wasm> <native-system.json> <native-tiles.json> \
 //                       <tiles-width> <native-pinned-tiles.json> <native-region.json> \
-//                       <native-lot0.json>
+//                       <native-lot0.json> <native-lot3y1500.json>
 import { readFileSync } from "node:fs";
 
-const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath, regionPath, lotPath] =
-  process.argv.slice(2);
-if (!pinnedTilesPath || !regionPath || !lotPath) {
+const [
+  wasmPath,
+  sysPath,
+  tilesPath,
+  widthStr,
+  pinnedTilesPath,
+  regionPath,
+  lotPath,
+  lotPinnedPath,
+] = process.argv.slice(2);
+if (!pinnedTilesPath || !regionPath || !lotPath || !lotPinnedPath) {
   console.error(
     "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> " +
-      "<region.json> <lot0.json>",
+      "<region.json> <lot0.json> <lot3y1500.json>",
   );
   process.exit(2);
 }
@@ -48,6 +56,7 @@ const defaultLot0 = out();
 expect(e.hw_lot_curve(), 0, "hw_lot_curve");
 expect(e.hw_lot_places(1500), 0, "hw_lot_places(1500)");
 expect(e.hw_lot_pinned(3n, 1500, 4294967295), 0, "hw_lot_pinned(3, 1500, no site)");
+golden(out(), lotPinnedPath, "lot/life/v1 (seed 42, index 3, year 1500)");
 expect(e.hw_lot_pinned(3n, 9000, 4294967295), 2, "hw_lot_pinned refuses a year outside the span");
 
 // Pinned genesis (terrain pin: deterministic force, satisfiable on any seed).

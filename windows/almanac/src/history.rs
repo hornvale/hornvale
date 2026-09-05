@@ -27,7 +27,6 @@ use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
     OccupationRecord, TechHorizon, founding_coords, layer_key,
 };
-use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{EntityId, KindId, Seed, Value, Vertex, World};
 
 /// Render a site's stratigraphy stack plus a derived flesh sample, as prose.
@@ -848,11 +847,18 @@ fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
 /// `pub` because `windows/almanac/tests/flesh_id_invariance.rs` consumes it
 /// directly to assert the id-invariance property The Salt establishes — not
 /// widened for a throwaway probe.
+///
+/// A thin wrapper over `hornvale_history::flesh::flesh_seed_of_key` (campaign
+/// ledger finding #16): the derivation itself moved to the domain that owns
+/// the `FLESH` stream, so `windows/lot` no longer needs this whole window as
+/// a dependency just to reach it. This function's own contract —
+/// reconstruct-then-key, failing soft to the world-seed-only stream — is
+/// unchanged, and every caller and test keeps calling it exactly as before.
 pub fn flesh_seed(world: &World, entity: EntityId) -> Seed {
     let key = record_of(world, entity)
         .map(|r| hornvale_history::record::material_key(&r.core))
         .unwrap_or(0);
-    flesh_seed_of_key(world, key)
+    hornvale_history::flesh::flesh_seed_of_key(&world.seed, key)
 }
 
 /// [`flesh_seed`] for a caller that already holds the occupation's core.
@@ -862,18 +868,11 @@ pub fn flesh_seed(world: &World, entity: EntityId) -> Seed {
 /// re-derive from the ledger something already in hand — the re-derivation
 /// decision 0092 exists to stop. The two agree by construction: `flesh_seed`
 /// is this function applied to `material_key` of the core it reconstructs.
+///
+/// A thin wrapper over `hornvale_history::flesh::flesh_seed_for` — see that
+/// function's doc for where the derivation itself now lives.
 pub fn flesh_seed_for(world: &World, core: &hornvale_history::record::Occupation) -> Seed {
-    flesh_seed_of_key(world, hornvale_history::record::material_key(core))
-}
-
-/// The shared tail of [`flesh_seed`] and [`flesh_seed_for`] — the one place
-/// the `history/flesh/v2` derivation is spelled out, so the two entry points
-/// cannot drift apart.
-fn flesh_seed_of_key(world: &World, key: u64) -> Seed {
-    world
-        .seed
-        .derive(hornvale_history::streams::FLESH)
-        .derive(StreamLabel::dynamic(&key.to_string()))
+    hornvale_history::flesh::flesh_seed_for(&world.seed, core)
 }
 
 /// A prose list of the structures a community raised, folded by kind ("four

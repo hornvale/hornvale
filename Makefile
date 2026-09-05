@@ -862,12 +862,13 @@ world-check-run: wasm-world
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc.json --width 256 > /tmp/hv-wc-tiles.json
 	cargo run -p hornvale -- scene tiles-region --world /tmp/hv-wc.json --face 0 --level 3 --ix 4 --iy 4 --samples 16 > /tmp/hv-wc-region.json
 	cargo run -p hornvale -- lot --world /tmp/hv-wc.json --index 0 --json > /tmp/hv-wc-lot0.json
+	cargo run -p hornvale -- lot --world /tmp/hv-wc.json --index 3 --year 1500 --json > /tmp/hv-wc-lot3y1500.json
 	cargo run -p hornvale -- new --seed 42 --plates 12 --out /tmp/hv-wc-pinned.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc-pinned.json --width 256 > /tmp/hv-wc-pinned-tiles.json
 	node clients/world-wasm/drive.mjs \
 	  clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
 	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json \
-	  /tmp/hv-wc-lot0.json
+	  /tmp/hv-wc-lot0.json /tmp/hv-wc-lot3y1500.json
 	@# The gate is denominated in COMPRESSED bytes, because that is what a
 	@# visitor actually downloads: GitHub Pages serves the catalog gzipped
 	@# (brotli where the client offers it), so the raw figure overstates the

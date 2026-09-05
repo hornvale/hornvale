@@ -38,11 +38,13 @@ hornvale-language = { path = "../../domains/language" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 # `held-true` is a hearsay read: what the community HELD, not what happened.
 hornvale-hearsay = { path = "../hearsay" }
-# `dwelling` needs the occupation-scoped flesh seed, and there is exactly one
-# place the `history/flesh/v2` derivation is spelled out
-# (`hornvale_almanac::history::flesh_seed_for`). A second copy of a
-# save-format derivation is how two decoders drift apart.
-hornvale-almanac = { path = "../almanac" }
+# `dwelling` needs the occupation-scoped flesh seed; `hornvale_history::flesh::
+# flesh_seed_for` is the one place the `history/flesh/v2` derivation is
+# spelled out (moved there from `windows/almanac`, campaign ledger finding
+# #16 — the stream belongs to the domain that owns it, not to a presenting
+# window this crate had no other reason to depend on). A second copy of a
+# save-format derivation is how two decoders drift apart, so this crate calls
+# the domain function rather than deriving its own.
 # The four `lot/*/v1` payloads (`json.rs`) are serde documents quantized at
 # emit — the `windows/scene` precedent, and the workspace's only two allowed
 # external crates (decision 0004).

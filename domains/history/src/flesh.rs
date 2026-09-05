@@ -3,18 +3,52 @@
 //! handle's persona, the physical residue a dead occupation leaves behind,
 //! and the structures an occupation was built from. Every function here is
 //! a *total function of its arguments*: no world, no global state, no
-//! replay. The deep-history bake (Task 3, run at the composition root)
-//! derives the `seed` these functions receive once per occupation, via
-//! `world.seed.derive(streams::FLESH).derive(StreamLabel::dynamic(&material_key))`
+//! replay.
+//!
+//! [`flesh_seed_for`] and [`flesh_seed_of_key`] are the one place the
+//! occupation-scoped seed itself is derived —
+//! `world_seed.derive(streams::FLESH).derive(StreamLabel::dynamic(&material_key))`
 //! — keyed on the occupation's material core (`record::material_key`), never
 //! its entity id, so derived prose does not move when an id moves (The
-//! Salt). These functions never derive that top-level label themselves —
-//! they only derive their own sub-labels from whatever seed they're handed.
+//! Salt). Every other function in this module (`persona_of`, `residue_of`,
+//! `structures_of`, …) never derives that top-level label itself — it only
+//! derives its own sub-labels from whatever seed it's handed, which a
+//! caller gets by calling `flesh_seed_for` first.
 
-use crate::record::{CauseOfEnd, Function, Notability, OccupationRecord, TechHorizon};
+use crate::record::{
+    CauseOfEnd, Function, Notability, Occupation, OccupationRecord, TechHorizon, material_key,
+};
 use crate::streams;
 use hornvale_kernel::Seed;
 use hornvale_kernel::seed::StreamLabel;
+
+/// The occupation-scoped seed the flesh derivations expand from.
+///
+/// **THE one place `history/flesh/v2` is spelled out** (The Salt, moved here
+/// from `windows/almanac` at the campaign ledger's finding #16: the stream
+/// belongs to the domain that owns it, not to a presenting window). Keyed on
+/// the occupation's **material core** (`material_key`), never its entity id,
+/// so derived prose does not move when an id moves.
+///
+/// Takes `world_seed: &Seed` rather than `&World` — this stays a total
+/// function of its own arguments, the same discipline every other function
+/// in this module holds (see the module doc comment). `windows/almanac`'s
+/// `flesh_seed`/`flesh_seed_for` and `windows/lot`'s `dwelling` slot call
+/// this rather than re-deriving the stream themselves.
+pub fn flesh_seed_for(world_seed: &Seed, core: &Occupation) -> Seed {
+    flesh_seed_of_key(world_seed, material_key(core))
+}
+
+/// The shared tail of [`flesh_seed_for`] and any caller keyed by a raw
+/// material key rather than a reconstructed [`Occupation`] — the one place
+/// the `history/flesh/v2` derivation is spelled out, so entry points cannot
+/// drift apart from each other.
+/// type-audit: bare-ok(identifier-text: key)
+pub fn flesh_seed_of_key(world_seed: &Seed, key: u64) -> Seed {
+    world_seed
+        .derive(streams::FLESH)
+        .derive(StreamLabel::dynamic(&key.to_string()))
+}
 
 /// A lazily-expandable handle to the individual a role in an occupation's
 /// history implies (a founder, the chieftain who led a flight, ...). The
