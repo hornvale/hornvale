@@ -525,3 +525,27 @@ Controller retains integration, index/commit scheduling and canonical dispatch;
 no task is marked complete early and all task/final reviews remain required.
 This extends the same approved independent-work principle used for Tasks 3–4,
 without running competing canonical work or editing their shared contract.
+
+## Task 4 — fix round 1: protected forms need refusal probes
+
+Ruling: accept the census review finding — canonical-host successes cannot
+establish that a study/path form is protected, because unrecognized inputs
+also return success — the correction is local panel coverage, with no host
+or protocol change. Controller checked the actual case table and pure guard.
+Add different-host refusal cases for the census-of prefix and exact relative
+suffix, and demonstrate that predicates omitting either protected form are
+contradicted. Keep positive case-normalization and unrelated-input controls.
+All added observations remain required by the checked guard obligation.
+
+## Stage 1 — canonical host suite green; full stage held on documentary drift
+
+Job `sluice-6fe554d0ebc6-20260905T032853Z` acquired the claim after
+942 s queued. Canonical outboard finished rc=0 in 72.545 s, including 52
+Digest unit tests, 13 CLI fixtures and the protocol suite. This supplies Linux
+host-suite evidence. The full stage is **not green**: its gate phase failed
+`campaign_reconciliation_covers_every_campaign_record` after 83.794 s.
+Main's newer documentary guard requires the Charter plan, Charter spec and
+federated-program metaplan in `docs/audits/campaign-reconciliation.tsv`.
+The controller is inspecting that new ledger's schema and neighboring records;
+the next integrated stage must include correct current-work classifications.
+No validation was skipped, and clients were not reached by this stage.
