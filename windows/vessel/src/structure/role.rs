@@ -15,7 +15,7 @@ pub enum Role {
     /// The chamber `enter` lands in, and the only one whose doorway is screened.
     Threshold,
     /// The chamber built around a fire. The ONLY role that admits an alcove,
-    /// which is what confines the fire to it (see [`INVENTORY`]).
+    /// which is what confines the fire to it (see [`crate::interior::INVENTORY`]).
     Hearthroom,
     /// A chamber for keeping things: the water jar's own room.
     Store,

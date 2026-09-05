@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 319 |
+| Files parsed | 320 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -32,8 +32,8 @@ naming them explicitly (`plumb report kernel cli`).
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 28 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 167 |
-| Excluded: declared non-quantity type | 502 |
-| **Every `const` the walk touched** | **1394** |
+| Excluded: declared non-quantity type | 503 |
+| **Every `const` the walk touched** | **1395** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
@@ -138,6 +138,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `[Quality; …]` | 1 |
 | `[Rcc8; …]` | 1 |
 | `[ResourceAxis; …]` | 1 |
+| `[Rule; …]` | 1 |
 | `[RuleKind; …]` | 3 |
 | `[Rung; …]` | 1 |
 | `[Stratum; …]` | 1 |
@@ -215,7 +216,7 @@ counts are already the Coverage table above. 34 finding(s).
 ## The contested middle
 
 343 of the 725 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 134 of the 319 files parsed —
+the kind-adjacency markers above, across 134 of the 320 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 343 of them are declared.
 

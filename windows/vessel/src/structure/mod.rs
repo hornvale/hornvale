@@ -6,6 +6,7 @@
 //! address is identity, not shape (law 3), so two chambers being triangle
 //! neighbours means nothing and is not consulted.
 
+pub mod grammar;
 pub mod role;
 
 use crate::brief::Brief;
