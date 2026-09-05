@@ -177,3 +177,57 @@ fn racing_claimants_produce_exactly_one_winner_per_queued_row() {
         );
     }
 }
+
+#[test]
+fn a_second_row_for_a_running_sha_is_not_claimable_by_sha() {
+    // TWO ROWS, ONE COMMIT. Coalescing is scoped to branch AND kind, so a
+    // resubmission under a second branch name — or a stage request beside a
+    // merge request — leaves two live rows naming one sha. With the first
+    // running, claiming the second by sha would launch a concurrent chamber
+    // run against a ref already being merged.
+    let s = Store::new(scratch("claim_dup_sha")).expect("store");
+    let before = vec![
+        Row::parse("w\treq-a\tcampaign/x\tsha1\trunning\tmerge\t"),
+        Row::parse("w\treq-b\tcampaign/y\tsha1\tqueued\tmerge\t"),
+    ];
+    s.write_rows(&before).unwrap();
+    let e = claim(&s, Some("sha1"), None).expect_err("must refuse");
+    assert!(matches!(e, ClaimError::HeldByAnother));
+    assert_eq!(s.read_rows().unwrap(), before, "refusal must write nothing");
+}
+
+#[test]
+fn the_dispatcher_skips_a_running_shas_twin_and_takes_the_next_real_row() {
+    // The no-sha form must not merely refuse: the queue may hold unrelated
+    // work. It skips the twin and gets on with the next row. Without this the
+    // guard above would convert a duplicate into a stalled queue, which is a
+    // different failure rather than a fixed one.
+    let s = Store::new(scratch("claim_dup_skip")).expect("store");
+    s.write_rows(&[
+        Row::parse("w\treq-a\tcampaign/x\tsha1\trunning\tmerge\t"),
+        Row::parse("w\treq-b\tcampaign/y\tsha1\tqueued\tmerge\t"),
+        Row::parse("w\treq-c\tcampaign/z\tsha2\tqueued\tmerge\t"),
+    ])
+    .unwrap();
+    let got = claim(&s, None, None).expect("ok").expect("a row");
+    assert_eq!(got.id, "req-c", "took the twin instead of the next real row");
+    let rows = s.read_rows().unwrap();
+    assert_eq!(rows[1].state, "queued", "the twin must be left alone");
+    assert_eq!(rows[2].state, "running");
+}
+
+#[test]
+fn a_queued_twin_is_claimable_once_its_sibling_is_no_longer_running() {
+    // ANTI-VACUITY. A guard that refused a duplicated sha forever would pass
+    // both tests above and permanently strand every resubmission. Once the
+    // sibling reaches a terminal state the twin is ordinary queued work.
+    let s = Store::new(scratch("claim_dup_release")).expect("store");
+    s.write_rows(&[
+        Row::parse("w\treq-a\tcampaign/x\tsha1\tlanded\tmerge\t"),
+        Row::parse("w\treq-b\tcampaign/y\tsha1\tqueued\tmerge\t"),
+    ])
+    .unwrap();
+    let got = claim(&s, Some("sha1"), None).expect("ok").expect("a row");
+    assert_eq!(got.id, "req-b");
+    assert_eq!(s.read_rows().unwrap()[1].state, "running");
+}

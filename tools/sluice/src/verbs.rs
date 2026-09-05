@@ -96,6 +96,40 @@ pub fn claim(
 ) -> Result<Option<Row>, ClaimError> {
     let _guard = store.lock().map_err(ClaimError::Io)?;
     let mut rows = store.read_rows().map_err(ClaimError::Io)?;
+
+    // A SHA THAT IS ALREADY RUNNING IS NOT CLAIMABLE UNDER ANY ROW.
+    //
+    // The interlock this verb exists to provide is per-ROW, and that is one
+    // row short of the guarantee callers actually need. Two rows can name the
+    // SAME sha — a resubmission under a second branch name, or a stage request
+    // and a merge request for one ref — and coalescing does not merge them,
+    // because it is scoped to branch AND kind. With one of them `running` and
+    // the other `queued`, the loop below finds the queued one, marks it, and
+    // the dispatcher launches a SECOND chamber run against a ref already being
+    // merged. That is the 2026-09-04 duplicate by a third road: not `next` +
+    // `set-state` across two transactions, and not an unclaimed `req-` run,
+    // but two legitimate rows for one commit.
+    //
+    // Observed 2026-09-05: two rows for e8692ba5bb50, one running and one
+    // queued, cleared by hand before a drain could take the second.
+    //
+    // Refusing here rather than in the dispatcher is deliberate — this is the
+    // only place that both holds the lock and sees every row, so it is the only
+    // place the answer cannot be stale by the time it is used.
+    // THERE IS NO SEPARATE BY-SHA REFUSAL HERE, AND THAT IS LOAD-BEARING
+    // RATHER THAN AN OMISSION. One was written first and mutation testing
+    // showed it unfalsifiable: with the skip below in place, a by-sha claim
+    // whose twin is running finds no selectable row, and `seen_sha` is true,
+    // so the existing `HeldByAnother` arm already answers it. Removing the
+    // early return left all sixteen tests green; removing the skip kills them.
+    // Do not add it back — it would be a second derivation of one answer, with
+    // nothing able to tell you when the two stopped agreeing.
+    let running_shas: Vec<String> = rows
+        .iter()
+        .filter(|r| r.state == "running")
+        .map(|r| r.sha.clone())
+        .collect();
+
     let mut seen_sha = false;
     let mut idx = None;
     for (i, r) in rows.iter().enumerate() {
@@ -104,7 +138,14 @@ pub fn claim(
         {
             seen_sha = true;
         }
-        if idx.is_none() && r.state == "queued" && sha.map(|w| r.sha == w).unwrap_or(true) {
+        // The no-sha (dispatcher) form skips a queued row whose sha is already
+        // running and keeps looking, rather than refusing: the queue may hold
+        // other, unrelated work it should get on with.
+        if idx.is_none()
+            && r.state == "queued"
+            && !running_shas.iter().any(|s| *s == r.sha)
+            && sha.map(|w| r.sha == w).unwrap_or(true)
+        {
             idx = Some(i);
         }
     }
