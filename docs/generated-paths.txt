@@ -121,7 +121,7 @@
 # than an inert mistake: there is no circumstance, including `REBASELINE=1`,
 # under which regenerating it is correct.
 
-# --- book/src/gallery/ — 56 tracked, 45 `artifacts`-written; 11 exceptions ---
+# --- book/src/gallery/ — 57 tracked, 46 `artifacts`-written; 11 exceptions ---
 book/src/gallery/	artifacts
 book/src/gallery/almanac.md	none(hand-written prose, never regenerated)
 book/src/gallery/atlas.md	none(hand-written prose, never regenerated)
@@ -134,6 +134,14 @@ book/src/gallery/the-sky.md	none(hand-written prose, never regenerated)
 book/src/gallery/vessel.js	none(written by the Casement client build -- clients/vessel/deno.json, run via `make vessel-check` -- not a roster author)
 book/src/gallery/vessel-worker.js	none(written by the Casement client build -- clients/vessel/deno.json, run via `make vessel-check` -- not a roster author)
 book/src/gallery/lithology-seed-42.png	none(no current writer -- `hornvale map --field lithology` is a retired invocation; regenerate-artifacts.sh only ever calls --field for sediment/column/features; last touched 2026-07-14)
+# THE ALREADY-DECLARED-DIRECTORY HAZARD, declared by name (The Stope, Task 2b;
+# The Lot, Task 8). `book/src/gallery/` above already covers this file's
+# directory, so nothing would have objected to it staying out of the index --
+# and `git diff --exit-code` against a path with no index entry is silently
+# vacuous, so the drift check on the ten lives would have passed forever while
+# witnessing nothing. Declaring the FILE makes the tracked-ness check refuse
+# until it is `git add`-ed.
+book/src/gallery/generated/the-lot-seed-42.md	artifacts
 
 # --- book/src/reference/ — 21 tracked, 9 `artifacts`-written; 12 exceptions ---
 book/src/reference/	artifacts

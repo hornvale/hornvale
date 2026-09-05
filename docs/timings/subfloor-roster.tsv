@@ -3838,6 +3838,7 @@ hornvale::hornvale$tests::usage_mentions_biome_map
 hornvale::hornvale$tests::usage_mentions_book_at
 hornvale::hornvale$tests::usage_mentions_dictionary
 hornvale::hornvale$tests::usage_mentions_lab
+hornvale::hornvale$tests::usage_mentions_lot
 hornvale::hornvale$tests::usage_mentions_paleo_map
 hornvale::hornvale$tests::usage_mentions_proto
 hornvale::hornvale$tests::usage_mentions_scene

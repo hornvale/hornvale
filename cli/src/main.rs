@@ -34,6 +34,8 @@ usage:
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale gazetteer [--world <PATH>] [--cap N]
                                             render the named landscape (default cap: 10 per class)
+  hornvale lot (--world <PATH> | --seed <N>) [--index <K>] [--count <M>] [--year <Y>] [--site <V>] [--json]
+                                            draw one life from everyone who ever lived here (The Lot)
   hornvale explain --world <PATH> sky|gazetteer
                                             narrate the sky's derivation, or the landscape's naming
   hornvale repl [--world <PATH>]           interrogate a world interactively
@@ -188,6 +190,7 @@ fn main() -> ExitCode {
         Some("scout") => cmd_scout(&args),
         Some("almanac") => cmd_almanac(&args),
         Some("gazetteer") => cmd_gazetteer(&args),
+        Some("lot") => cmd_lot(&args),
         Some("explain") => cmd_explain(&args),
         Some("repl") => cmd_repl(&args),
         Some("possess") => cmd_possess(&args),
@@ -422,6 +425,65 @@ fn cmd_gazetteer(args: &[String]) -> Result<(), String> {
         "{}",
         hornvale_almanac::gazetteer::render(world.seed.0, cap, &entries)
     );
+    Ok(())
+}
+
+/// The Lot: one life drawn from everyone who ever lived in this world, told
+/// from the committed ledger alone (spec
+/// `docs/superpowers/specs/2026-09-05-the-lot-design.md`). `--index K` is
+/// the reader's key (default 0); `--count M` prints lots `K..K+M`; `--year
+/// Y` and `--site V` are the exhibit's pins and refuse an impossible one
+/// with the physical reason; `--json` emits `lot/life/v1` instead of prose.
+///
+/// `--seed N` builds the world here rather than loading one, and takes the
+/// sky/terrain/settlement flags `new` takes — `parse_sky_args`' default is
+/// `SkyChoice::Generated`, which is what the wasm ABI's `hw_new` builds, so
+/// the byte-identity smoke compares two worlds built the same way.
+fn cmd_lot(args: &[String]) -> Result<(), String> {
+    let world = if let Some(seed) = flag_value(args, "--seed") {
+        let seed: u64 = seed
+            .parse()
+            .map_err(|e| format!("--seed must be a u64: {e}"))?;
+        let (pins, sky) = parse_sky_args(args)?;
+        let terrain_pins = parse_terrain_args(args)?;
+        let settlement_pins = parse_settlement_args(args)?;
+        world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
+            .map_err(|e| e.to_string())?
+    } else {
+        load_world(args)?
+    };
+    let ctx = hornvale_lot::context::assemble(&world).map_err(|e| e.to_string())?;
+    let index: u64 = match flag_value(args, "--index") {
+        Some(raw) => raw.parse().map_err(|_| format!("bad --index: {raw}"))?,
+        None => 0,
+    };
+    let count: u64 = match flag_value(args, "--count") {
+        Some(raw) => raw.parse().map_err(|_| format!("bad --count: {raw}"))?,
+        None => 1,
+    };
+    let pick = hornvale_lot::Pick {
+        year: match flag_value(args, "--year") {
+            Some(raw) => Some(raw.parse().map_err(|_| format!("bad --year: {raw}"))?),
+            None => None,
+        },
+        site: match flag_value(args, "--site") {
+            Some(raw) => Some(hornvale_kernel::Vertex(
+                raw.parse().map_err(|_| format!("bad --site: {raw}"))?,
+            )),
+            None => None,
+        },
+    };
+    let json = args.iter().any(|a| a == "--json");
+    for key in index..index + count {
+        let life = hornvale_lot::draw::draw(&ctx, hornvale_lot::LotIndex(key), &pick)
+            .map_err(|e| e.to_string())?;
+        let story = hornvale_lot::slots::tell(&world, &ctx, &life);
+        if json {
+            println!("{}", hornvale_lot::json::life_json(&ctx, &life, &story));
+        } else {
+            print!("{}", hornvale_lot::narrate::narrate(&ctx, &life, &story));
+        }
+    }
     Ok(())
 }
 
@@ -2735,6 +2797,11 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn usage_mentions_lot() {
+        assert!(USAGE.contains("hornvale lot"));
     }
 
     #[test]

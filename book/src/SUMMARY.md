@@ -58,6 +58,7 @@
 - [A Possession of Seed 14 — a thing carried](./gallery/possession-carry-seed-14.md)
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview of Seed 42](./gallery/surrounds-seed-42.md)
+- [Ten Lives of Seed 42](./gallery/generated/the-lot-seed-42.md)
 
 # The Laboratory
 

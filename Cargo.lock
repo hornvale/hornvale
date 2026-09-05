@@ -18,6 +18,7 @@ dependencies = [
  "hornvale-lab",
  "hornvale-language",
  "hornvale-locale",
+ "hornvale-lot",
  "hornvale-paleoclimate",
  "hornvale-religion",
  "hornvale-scene",
