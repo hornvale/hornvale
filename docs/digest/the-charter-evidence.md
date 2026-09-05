@@ -1,7 +1,7 @@
 # The Charter: composition and quality evidence
 
-Status: **integrated Mac functional and cost evidence recorded; independent
-usability PASS; canonical qualification and Linux cost evidence pending**. This is an
+Status: **Mac/Linux cost evidence recorded, both canonical stages green,
+and independent usability PASS; scoped evidence-delta review pending**. This is an
 evidence ledger, not an overall passing verdict. The binding acceptance properties
 are [design §7–8](../superpowers/specs/2026-09-04-the-charter-design.md).
 The [tool guide](../../tools/digest/README.md) explains the actual command and caps.
@@ -20,9 +20,12 @@ Saved reports are examples; production context never reloads them as fresh evide
 | Composed implementation and functional qualification source | `e3355f441db045f0960576ead12b0f8acc56ca7d` |
 | Measured Mac script/host SHA | `e3355f441db045f0960576ead12b0f8acc56ca7d`; 36 samples, 0 failures |
 | Canonical diagnostic candidate SHA | `9ea2dc9abb38970c03a5b536645d9d8429b3d37a`; request `req-9ea2dc9abb38-20260905T041951Z` |
-| Canonical tested merge-product SHA and complete log | Pending completed queue job |
+| Diagnostic initial merge | `61deae955b1248594bf7eaa711bf629c03a14b13` |
+| Measured Linux script/host SHA | `406a09f6f00e08cccdd7c1698922a288f865d369`; 36 samples, 0 failures |
+| Diagnostic final tested tree and complete job verdict | `de581c41b535d1f7817213a664b414a5c75660aa`; completed `diagnostic-full.log`, all phases green |
+| Ordinary integrated Stage 2 final tested tree | `32e985fc719e05cbe77a2a1990efd444903a8494`; completed `stage-2-full.log`, all phases green |
 | Diagnostic-only diff | Exactly five added lines in `scripts/lane-outboard.sh`; reviewed diagnostic script unchanged, exact diff below |
-| Later evidence documentation commit | Pending; distinct from measured source |
+| First committed evidence checkpoint | `3560a9228d8646a11700455b491335362d9effff`; subsequent evidence revisions are later commits, not the measured source |
 
 The controller recorded these full branch comparisons in
 `independent-branches.json` in campaign scratch. Exact Git comparisons:
@@ -100,6 +103,43 @@ passed, 0 failed**: Digest library 52, CLI integration 13, census library/binary
 7/2, protocol 12, Thing library/binary 7/2. Doctest targets contain zero tests.
 The clippy log ends with successful completion; fmt emitted no diagnostics.
 These supplied logs were read, not rerun during functional qualification.
+
+
+### Completed ordinary integrated Stage 2
+
+The existing queue stage request for candidate
+`e3355f441db045f0960576ead12b0f8acc56ca7d` completed as job
+`sluice-e3355f441db0-20260905T041451Z`. Its initial merge product was
+`92a5cb2fac190eeb023662acc30786dd3b37b704`; its **final tested tree** was
+`32e985fc719e05cbe77a2a1990efd444903a8494`. The completed
+`stage-2-full.log` records these successful phases:
+
+| Phase | Wall seconds | Exit |
+|---|---:|---:|
+| artifacts | 234.365 | 0 |
+| outboard | 96.787 | 0 |
+| gate | 732.827 | 0 |
+| clients | 138.332 | 0 |
+
+The workspace gate reported **5355 passed**, 218 skipped under its normal tier
+selection, and green doctests. The canonical outboard phase passed all **95
+Digest tests**, including the same two-root isolation, lifecycle, protocol and
+adapter tests observed on Mac. No local rerun was used to infer these results.
+The final log says every phase is green, nothing was pushed, and main remained
+`3007f164ce6c5d94315b68f8abfd38ee7fca258d`.
+
+Candidate-to-final tree comparison (`stage-2-generated-diff.txt`) contains only:
+
+```text
+docs/generated-path-writes.tsv
+docs/timings.md
+docs/timings/subfloor-roster.tsv
+docs/timings/test-baseline-lefford.tsv
+```
+
+Thus the real joined artifact run had no Book/fixture/audit-content or production
+source drift. This completed ordinary stage is distinct from the later diagnostic
+stage whose completed result is recorded below.
 
 Fresh functional qualification used the actual compiled host and contributors
 at source `e3355f441db045f0960576ead12b0f8acc56ca7d`:
@@ -206,8 +246,8 @@ delta emitted 487 bytes, exactly equal to committed
 `docs/digest/intent-vs-reality.md`. This verifies those current renderer paths
 and two actual artifact identities; it does not certify every generated file.
 The controller separately regenerated after main absorption and observed no
-Book/fixture/audit content drift, only inventory counts. Joined canonical
-artifact validation remains pending.
+Book/fixture/audit content drift, only inventory counts. The completed ordinary Stage 2 above confirms the joined canonical artifact
+run without Book/fixture/audit-content drift.
 
 ## Acceptance properties
 
@@ -219,22 +259,22 @@ artifact validation remains pending.
 | No vacuous success | Protocol/CLI tests including `missing_required_observation_is_rejected`, `unknown_protocol_version_is_rejected`, `malformed_missing_and_disagreeing_envelopes_fail_without_partial_stdout`, `no_match_and_invalid_scope_fail_before_build` | All passed in the 95-test run, alongside duplicate identity/namespace and wrong-kind/cross-owner reference tests. |
 | Compositional determinism | Actual public-compose harness above; `outer_records_are_sorted_without_reordering_semantic_lists` and discovery-order tests | Both actual envelope orders and repeat produced identical 11738-byte output; semantic detail/input order retained. Timings excluded. |
 | Fresh invocation boundary | Same host across real isolated roster mutation; saved-report argv rejection | Mutation applied, build green, observation contradicted; saved-report extra argument exits 2. This is not complete compile provenance. |
-| Existing behavior | Three actual render commands, two byte comparisons, all-package tests/clippy/fmt | Passed on Mac. Canonical artifact/stage result pending. |
-| Process lifecycle | Integrated process timeout/interruption/retained-pipe/overflow tests; reviewed eight-test diagnostic self-suite | Local process tests passed, with direct-child wait and live descendant checks. Linux confirmation pending; no portable grandchild reaping claim. |
-| Useful cost | Dependency expansion/output bytes above; all 36 Mac samples below | Pure observations do not construct worlds/censuses. Linux costs remain pending; no cross-host latency target is earned yet. |
+| Existing behavior | Three actual render commands, two byte comparisons, all-package tests/clippy/fmt | Passed on Mac and in the completed canonical Stage 2; actual joined artifact diff is limited to inventory/timing records above. |
+| Process lifecycle | Integrated process timeout/interruption/retained-pipe/overflow tests; reviewed eight-test diagnostic self-suite | The same lifecycle suite passed on Mac and canonical Linux, with direct-child wait/live descendant checks; diagnostic self-tests also passed on both. No portable grandchild reaping claim. |
+| Useful cost | Dependency expansion/output bytes above; all 72 Mac/Linux samples below | Pure observations do not construct worlds/censuses. Complete host/workload ranges are retained; a steady-state SLO is explicitly not earned by one short series. |
 
 ## Quality scenarios
 
 | Design §8 scenario | Exact evidence | Qualification and limits |
 |---|---|---|
-| `charter.isolation` | Passed CLI `reuses_host_across_current_roots_ignoring_git_and_target_overrides`, symlink-target/member refusal and snapshot tests; real fixture above | Two-root hostile-path tests pass locally; primary tracked diff unchanged. Canonical repetition pending. |
+| `charter.isolation` | Passed CLI `reuses_host_across_current_roots_ignoring_git_and_target_overrides`, symlink-target/member refusal and snapshot tests; real fixture above | Two-root hostile-path tests passed on Mac and in canonical Stage 2; primary tracked diff unchanged in the real fixture experiment. |
 | `charter.determinism` | Actual public-compose experiment and named composition tests above | Order and repeated-render equality observed for actual envelopes; no universal provenance or concurrent-source snapshot claim. |
-| `charter.recovery` | Passed `timeout_terminates_tree_and_joins_readers`, `interruption_terminates_tree_and_joins_readers`, `exited_parent_cannot_leave_inherited_pipes`, overflow/error tests | Mac lifecycle evidence present; canonical suite pending. Harness additionally checks separately grouped children and failed-sample retention. |
-| `charter.resource-bounds` | Passed stdout/stderr overflow and deadline tests; actual combined stderr sequences build/execution for each contributor | Caps remain authored policy: 1 MiB/64 KiB/5 s contributors, 16 MiB/600 s machine phases, 250 ms host grace. No aggregate memory/concurrency guarantee; canonical checks pending. |
-| `charter.cost-attribution` | `bash scripts/charter-measure.sh`; 36 Mac samples, 0 failures, raw JSONL below | Linux series pending; whole-phase lock waiting versus compilation unavailable. Functional invocation costs are not benchmark samples. |
+| `charter.recovery` | Passed `timeout_terminates_tree_and_joins_readers`, `interruption_terminates_tree_and_joins_readers`, `exited_parent_cannot_leave_inherited_pipes`, overflow/error tests | Mac and completed canonical lifecycle suites passed. Eight harness self-tests also passed on Linux, including separately grouped children and failed-sample retention. |
+| `charter.resource-bounds` | Passed stdout/stderr overflow and deadline tests; actual combined stderr sequences build/execution for each contributor | Caps remain authored policy: 1 MiB/64 KiB/5 s contributors, 16 MiB/600 s machine phases, 250 ms host grace. The same tests passed canonically. No aggregate memory/concurrency guarantee is claimed. |
+| `charter.cost-attribution` | `bash scripts/charter-measure.sh`; 36 samples on each host, 0 failures, both complete JSONL files below | Both-host series present; whole-phase lock waiting versus compilation unavailable. Functional invocation costs are not benchmark samples; no SLO is earned. |
 | `charter.extension` | Exact independently reviewed branch rosters, merge bases and actual composed reports | Package/lock extension succeeded without contributor-specific host/protocol changes. External dependencies unchanged; 27 local packages added. |
 | `charter.diagnostics` | Passed CLI metadata/envelope/no-match/execution/build cases; actual roster contradiction and saved-report refusal above | Real failed report identifies the obligation, failed observation, extra kind and owning sources. Independent reader passed the readability exercise below. |
-| `charter.portability` | Mac 95-test suite/clippy/fmt; canonical outboard result pending | Supported qualification hosts are macOS and Linux. Full supported-host qualification is not claimed. |
+| `charter.portability` | Mac 95-test suite/clippy/fmt and completed canonical Stage 2 outboard, including all 95 Digest tests | Same protocol/discovery/path/lifecycle suite passed on macOS and Linux; no additional platform or complete-provenance claim. |
 | `charter.usability` | Two real scoped reports and one real roster-failure report prepared | Independent reader PASS; bounded presentation/provenance suggestions recorded below. This does not verify implementation correctness. |
 
 ## Measurement method and all samples
@@ -314,13 +354,114 @@ Every sample has available RSS; raw `/usr/bin/time -l` output, including its
 other counters and footprint value, is preserved rather than conflated with
 RSS. These figures do not measure simultaneous aggregate process-tree memory.
 
-### Canonical series pending
+### Linux samples (all attempts retained)
 
-| Host | Workload / scope | Cold host build | Cold selected request | Warm 1–10 |
-|---|---|---|---|---|
-| lefford Linux | Thing / `domains/thing` | Pending | Pending | Pending completed log |
-| lefford Linux | census / `windows/lab/src/publish.rs` | Pending | Pending | Pending completed log |
-| lefford Linux | combined / `.` | Pending | Pending | Pending completed log |
+The serialized diagnostic's measurement step completed at source
+`406a09f6f00e08cccdd7c1698922a288f865d369`, with `failures: 0`.
+The [complete Linux records](the-charter-linux-samples.jsonl) preserve all 44
+objects and all 36 samples, including raw GNU Time output and stderr. The file
+is byte-identical to the controller's `linux-measurements.jsonl`; its contents
+were also checked against all `charter-measure ` lines in `diagnostic-full.log`,
+removing only that prefix. Size: 117788 bytes. SHA-256:
+`5ee6f3f1a26ee50efc4c8e1fe8171a65b094c3aa858c887956617221260e6dd6`.
+
+As on Mac, there are three cold host builds, three cold selected requests and
+ten prepared warm requests numbered 1–10 for each workload. All 36 exited 0,
+waited their direct child, and recorded no launch, cleanup, deadline or
+interruption error. All three tracked-integrity records were clean. The eight
+harness self-tests immediately before the measurements passed in 7.451 s on
+Python 3.11.2, as recorded in the diagnostic log. Controller read-only cleanup
+checks additionally confirmed the three measured `/tmp/charter-measure-*`
+checkouts were absent and unregistered; those observations are retained in
+`linux-cleanup-check.txt` and `linux-source-and-worktrees.txt`.
+
+Host: `lefford`, 40 CPUs, Linux `6.8.4-2-pve-x86_64-with-glibc2.36`;
+Python 3.11.2. Rust/Cargo 1.96.1 and LLVM 22.1.2 match the Mac toolchain release
+and compiler commit above; the target is `x86_64-unknown-linux-gnu`. Every owned
+checkout retained the toolchain pin. Sample start times span
+`2026-09-05T04:40:15Z`–`04:42:26Z`. Recorded 1/5/15-minute load ranges were
+**2.878–4.478 / 7.497–9.202 / 12.394–13.603**. This is observed load context,
+not proof that every source of machine noise was controlled.
+
+| Workload | Cold host s | Cold selected s | Cold total s | Warm median s | Warm min s | Warm max s |
+|---|---:|---:|---:|---:|---:|---:|
+| thing | 12.158 | 3.007 | 15.165 | 1.033 | 0.730 | 1.216 |
+| census | 12.253 | 25.712 | 37.965 | 0.805 | 0.737 | 1.124 |
+| combined | 11.029 | 24.218 | 35.247 | 1.145 | 0.899 | 1.463 |
+
+Per-request warm phase medians and cold selected phase totals, with both
+contributors summed within each combined request:
+
+| Workload | Metadata median s | Build median s | Execution median s | Cold selected build s | Cold execution s |
+|---|---:|---:|---:|---:|---:|
+| thing | 0.154 | 0.243 | 0.005 | 1.984 | 0.005 |
+| census | 0.142 | 0.234 | 0.005 | 24.755 | 0.007 |
+| combined | 0.086 | 0.346 | 0.008 | 23.078 | 0.014 |
+
+Available Linux peak RSS, retaining GNU Time's original **KiB** units:
+
+| Workload | Cold host KiB | Cold selected KiB | Warm min KiB | Warm max KiB |
+|---|---:|---:|---:|---:|
+| thing | 330404 | 137868 | 22720 | 23040 |
+| census | 361456 | 807268 | 23360 | 23680 |
+| combined | 370188 | 777028 | 23360 | 23680 |
+
+The corresponding normalized values are retained alongside each raw value:
+
+| Workload | Cold host bytes | Cold selected bytes | Warm min bytes | Warm max bytes |
+|---|---:|---:|---:|---:|
+| thing | 338333696 | 141176832 | 23265280 | 23592960 |
+| census | 370130944 | 826642432 | 23920640 | 24248320 |
+| combined | 379072512 | 795676672 | 23920640 | 24248320 |
+
+Every Linux sample supplied RSS, and every byte value equals its raw KiB value
+times 1024. These available maxima do not measure aggregate simultaneous
+process-tree memory; do not interpret platform RSS/footprint counters as one
+portable memory budget.
+
+### Host comparison and performance-claim boundary
+
+Mac warm medians were 0.396/0.513/0.621 s for Thing/census/combined; Linux's
+were 1.033/0.805/1.145 s. The complete observed warm ranges were
+0.385–0.405 / 0.498–0.521 / 0.604–0.651 s on Mac and
+0.730–1.216 / 0.737–1.124 / 0.899–1.463 s on Linux. All samples contribute:
+no Linux high or low interval was discarded, and these are consecutive samples,
+not independent long-term replications. More available CPUs and lower recorded
+load did not make this sequential workload faster. That is an observation,
+not evidence that CPU count, hardware, storage, OS or load caused the difference.
+
+The three `git checkout` timings have distinct calls. Current
+`tools/digest/src/context/collect.rs` resolves the checkout, reads HEAD, then
+runs **`git status --porcelain --untracked-files=normal`**. The third timing is
+therefore status, not branch resolution or compilation. Both hosts recorded
+exactly three such phases per request. Its warm costs are substantial on Linux:
+
+| Host / workload | Status median s | Status min s | Status max s |
+|---|---:|---:|---:|
+| Mac / thing | 0.069 | 0.067 | 0.071 |
+| Mac / census | 0.184 | 0.181 | 0.186 |
+| Mac / combined | 0.071 | 0.068 | 0.072 |
+| Linux / thing | 0.688 | 0.289 | 0.771 |
+| Linux / census | 0.553 | 0.294 | 0.725 |
+| Linux / combined | 0.756 | 0.363 | 0.885 |
+
+Within the Linux samples, the median per-request status/whole-elapsed ratio is
+approximately 63%/62%/63%. This identifies a measured phase to profile later,
+without attributing its internals to filesystem scanning, scheduling or caches.
+Separate lock-wait versus compilation attribution is still unavailable. Phase
+medians do not add to a whole-request median, so no residual is relabeled as
+an unmeasured subphase.
+
+**No steady-state SLO claim is earned by these data.** Ten consecutive warm
+requests per workload/host in one short run establish an observed baseline,
+including a largest observed request of 1.463 s; they do not establish tail
+latency, behavior across changing checkout sizes, contention, host noise or
+long-term load. A threshold chosen just above the observed maximum would be
+an unsupported service-level promise. The proposed follow-up is targeted
+profiling of the status command under the existing serialized canonical-work
+rules, followed by representative repeated workload/load windows before a
+latency target is adopted. No remote profiling was performed in this evidence
+round, and none of the approved operational caps is changed.
 
 Mac `/usr/bin/time -l` RSS is bytes; Linux GNU Time RSS is KiB. The diagnostic
 retains raw values and normalizes to bytes. These are each utility's available
@@ -341,7 +482,7 @@ The diagnostic does not weaken the host's 5 s contributor / 600 s machine-phase
 caps or its 250 ms termination grace. Its own one-hour command safety deadline
 is separately labeled.
 
-Canonical measurements are pending ordinary serialized stage-only queue work.
+Canonical measurements ran as ordinary serialized stage-only queue work.
 Candidate `9ea2dc9abb38970c03a5b536645d9d8429b3d37a` differs from measured
 implementation `e3355f441db045f0960576ead12b0f8acc56ca7d` in exactly one file,
 with these five added lines in `scripts/lane-outboard.sh`:
@@ -354,15 +495,69 @@ fi
 
 ```
 
-Request: `req-9ea2dc9abb38-20260905T041951Z`. The ordinary integrated Stage 2
-job is `sluice-e3355f441db0-20260905T041451Z`; neither request implies a passing
-result. The canonical tested merge-product SHA and completed log remain pending.
-No side-channel SSH compute job is part of this evidence. The diagnostic-only
-branch is never merged back; unavailable logs remain unavailable results.
+Request `req-9ea2dc9abb38-20260905T041951Z` became diagnostic job
+`sluice-9ea2dc9abb38-20260905T042052Z`, with a recorded 847 s claim wait.
+That wait belongs to queue contention, outside the command samples. The initial
+merge was `61deae955b1248594bf7eaa711bf629c03a14b13`; artifact/timing commits
+then produced the measurement source
+`406a09f6f00e08cccdd7c1698922a288f865d369`. Its full comparison against Mac
+implementation `e3355f441db045f0960576ead12b0f8acc56ca7d` contains only:
 
-No steady-state performance claim is earned yet. Propose a target only after
-both-host series are present, retaining workload/host spread and all failures.
-The approved operational caps remain unchanged.
+```text
+docs/generated-path-writes.tsv
+docs/timings.md
+scripts/lane-outboard.sh
+```
+
+The host, protocol, adopters and reviewed measurement harness are identical
+across those sources. The outboard change is exactly the five-line diagnostic
+invocation above; inventory/timing drift is separately identified. The measured
+SHA is distinct from final tested tree
+`de581c41b535d1f7817213a664b414a5c75660aa`. The completed job log records:
+
+| Diagnostic stage phase | Wall seconds | Result |
+|---|---:|---|
+| artifacts | 227.946 | rc=0 |
+| outboard, including eight harness self-tests and all measurements | 218.040 | rc=0 |
+| gate, including 5,355 workspace tests and doctests | 732.887 | rc=0 |
+| clients | 137.715 | rc=0 |
+
+The terminal verdict at `2026-09-05T00:57:00-04:00` is all phases green,
+rc=0. Nothing was pushed; main remained
+`3007f164ce6c5d94315b68f8abfd38ee7fca258d`. A read-only Git comparison
+from the diagnostic candidate to the final tree contains only
+`docs/generated-path-writes.tsv`, `docs/timings.md`,
+`docs/timings/subfloor-roster.tsv` and
+`docs/timings/test-baseline-lefford.tsv`. From measured source to final tree,
+only the last three of those paths differ. No production, Book, fixture or
+audit-content drift occurred. All 44 parsed sample records match the completed
+job log exactly. These checks are retained in `diagnostic-final-diff.txt` and
+`diagnostic-full.log` in campaign scratch.
+
+No side-channel SSH compute job is part of this evidence. The diagnostic-only
+branch is never merged back. Scoped evidence-delta review remains required;
+measurement or stage completion alone does not stand in for that review.
+
+## Whole-branch review and scoped follow-up
+
+The independent whole-branch review of
+`3007f164ce6c5d94315b68f8abfd38ee7fca258d..3560a9228d8646a11700455b491335362d9effff`
+returned **spec PASS for the implemented/evidenced checkpoint** and **code-quality
+PASS**, with no Critical or Important findings. The reviewer also inspected the
+completed ordinary Stage 2's actual Digest/full-suite/doctest results and final
+tree. This is the one broad review; the Linux measurements and later evidence
+changes require a scoped delta review rather than an inferred extension of its
+fixed-head verdict.
+
+Its sole Minor finding was literal locator escaping in inline code: the renderer
+uses heading-oriented escaping inside backticks, so names such as `THING_KINDS`
+appear with a literal backslash before the underscore in the original reports.
+The controller captured/deferred that presentation correction; the historical
+report bytes are preserved. The review also recorded that its whole-range
+`git diff --check` returned 2 for three reconciliation TSV rows' trailing tabs;
+those encode empty terminal columns and are not silently stripped or called a
+clean whole-branch check. Full findings are in campaign scratch `final-review.md`.
+This review grants neither G6 approval, campaign completion nor gate omission.
 
 ## Independent report usability review
 
@@ -403,7 +598,21 @@ Rust caller retain the exact qualification commands/results under
 `.superpowers/sdd/2026-09-04-the-charter/`. All published snapshots and samples
 are historical evidence, never inputs to a later production context request.
 
-Canonical/Linux cost logs, canonical stage/artifact results and final review
-remain pending. Mac data establishes an observed baseline only: no cross-host
-steady-state target or change to operational caps is earned yet. The controller
-owns final inventory/artifact freshness for these four new evidence files.
+Both host cost series, both completed canonical stages and usability evidence
+are present. Scoped evidence-delta review remains pending.
+The host samples establish observed baselines, with the explicit SLO limitation
+above; approved operational caps are unchanged.
+
+The first evidence checkpoint was committed at
+`3560a9228d8646a11700455b491335362d9effff`. At that checkpoint the controller
+added five explicit `none(...)` exceptions under the otherwise generated
+`docs/digest/` parent. Its actual `make rebaseline` took 137.310 s and recorded
+each evidence row as 0 written / 1 tracked, with parent 2 written / 8 tracked.
+The Linux JSONL adds one corresponding explicit exception. A 137.628 s
+regeneration completed successfully but overlapped a final authored edit to this
+document, so its mtime counter included that edit. With all contributors idle
+and evidence files frozen, a second actual regeneration completed rc=0 in
+140.057 s: all six evidence exceptions recorded 0 written / 1 tracked, and the
+parent recorded 2 written / 9 tracked. No Book, fixture or audit-content artifact
+changed. Both timing rows are retained; counts were generated, not hand-edited.
+The counter observes interval writes, not causal authorship.

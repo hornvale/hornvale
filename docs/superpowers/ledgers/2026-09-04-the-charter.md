@@ -396,6 +396,15 @@ scoped re-review of this fix. No task-2 dispatch before approval.
 
 ## Follow-ups
 
+- Broad review M1: `render_code_list` uses heading escaping inside Markdown
+  code spans, leaving literal backslashes in copyable path/symbol labels.
+  Add a dedicated inline-code renderer with correct backtick handling in
+  presentation follow-up work; the current bounded usability review passed.
+- The review-package capper samples lines, so a JSONL file with fewer very
+  long lines than its sample count can exceed the advertised byte cap. Use
+  parsed field/aggregate inspection for such evidence and fix byte-bounded
+  sampling in a later tooling change.
+
 - Generated-write capture uses mtime across a run, so concurrent controller
   edits can be counted as generator writes. Preserve that attribution limit
   and keep measured authoring runs free of unrelated edits under their stems.
@@ -749,3 +758,56 @@ found only four changed paths: `docs/generated-path-writes.tsv`,
 baseline. There was no generated Book/fixture/audit-content or production-source
 drift. This is the actual composed artifact result, beyond the earlier local
 main-absorption regeneration.
+
+## Broad review — source approved, remaining evidence still open
+
+The single fresh whole-branch reviewer approved spec compliance and code
+quality at `3560a9228d8646a11700455b491335362d9effff`, with no Critical
+or Important findings. They independently checked source, branch/tree
+identity, real mutation/recomposition proofs, raw Mac samples and aggregate
+claims, legacy rendered bytes, ownership exceptions and completed Stage 2.
+One Minor (inline-code locator escaping) is accepted and captured in Follow-ups;
+it affects copied presentation, not observed outcomes or branch autonomy.
+No source change is made for this nonblocking refinement. Their approval
+remains a checkpoint: Linux samples/self-tests, completed diagnostic job and
+the resulting evidence delta still require scoped independent review.
+
+Linux diagnostic samples have now completed on
+`406a09f6f00e08cccdd7c1698922a288f865d369`: all eight harness self-tests
+passed (7.451 s, Python 3.11.2); all 36 samples passed; all three tracked
+integrity records were clean. Read-only canonical inspection confirms all
+three owned measurement checkouts are absent and unregistered. Its source
+diff from the Mac implementation contains only the five-line diagnostic
+invocation, generated-write inventory and timings. The full diagnostic
+stage is still running, so its final tested-tree identity is not yet claimed.
+
+### Final Linux evidence capture — concurrent authored write detected
+
+The 137.628 s `make rebaseline` completed successfully, but a final evidence-document edit overlapped its mtime-based write interval. The capture therefore reported `docs/digest/` as 3 written / 9 tracked and the authored evidence document as 1 / 1. These are observed writes, not proof of generator authorship. Preserve the timing row and repeat the capture with all contributors idle and the evidence files frozen; do not hand-edit the generated counts or reset mtimes. This applies the existing capture decision rule, with no new design ruling or ideonomy pass.
+
+
+## Linux qualification — diagnostic stage and quiet capture complete
+
+Diagnostic job `sluice-9ea2dc9abb38-20260905T042052Z` finished rc=0 at
+`2026-09-05T00:57:00-04:00`. Initial merge:
+`61deae955b1248594bf7eaa711bf629c03a14b13`; measured source:
+`406a09f6f00e08cccdd7c1698922a288f865d369`; final tested tree:
+`de581c41b535d1f7817213a664b414a5c75660aa`. All four phases passed:
+artifacts 227.946 s, outboard 218.040 s, gate 732.887 s, clients 137.715 s.
+The gate includes 5,355 passing workspace tests plus passing doctests. All 44
+Linux JSON records equal the records in the completed log. Read-only candidate
+to final comparison shows only generated-write inventory, timing ledger,
+subfloor roster and canonical duration baseline. Measured source to final
+changes only the latter three. No production, Book, fixture or audit-content
+drift. Main stayed `3007f164ce6c5d94315b68f8abfd38ee7fca258d`; no push
+occurred. The diagnostic-only branch remains excluded from integration.
+
+The repeated local `make rebaseline` completed rc=0 in 140.057 s with all
+contributors idle and no edits under generated stems. Each of the six evidence
+exceptions measured 0 written / 1 tracked, parent Digest 2 / 9; no Book,
+fixture or audit-content artifact changed. Both this and the overlapping
+137.628 s timing row are preserved. The capture is now fit for its bounded
+inventory purpose. Source implementation remains exactly the reviewed/measured
+`e3355f441db045f0960576ead12b0f8acc56ca7d`; later changes are evidence and
+bookkeeping. Submit this fixed-head evidence delta to the same whole-branch
+reviewer. Task 5 final qualification and G6 remain open until that review.
