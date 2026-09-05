@@ -6008,3 +6008,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T20:43:58Z | sluice:clients | 163.755 | 2295.989 | 214.149 | 15.33 | 0 | fde6418d6 |  | lefford | 40 |
 | 2026-09-05T20:51:49Z | sluice:heavy | 470.334 | 10251.012 | 171.545 | 22.16 | 0 | 3af4fe0af |  | lefford | 40 |
 | 2026-09-05T22:20:49Z | rebaseline | 374.753 | 489.652 | 19.914 | 1.36 | 0 | 928db6aa4 | campaign/the-cruck | MacBookPro | 10 |
+| 2026-09-05T22:35:57Z | gate-commit | 239.370 | 560.681 | 162.578 | 3.02 | 0 | 83fcdaa21 | campaign/the-cruck | MacBookPro | 10 |
