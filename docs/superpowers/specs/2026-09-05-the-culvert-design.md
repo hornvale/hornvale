@@ -529,3 +529,26 @@ Rows to correct or add at close:
 ## 11. What shipped, measured
 
 *(filled at close)*
+
+### A standing constraint on this section, set during execution
+
+**No `believed_water` µs/call figure may appear here without naming the
+creature it was measured on.** Three different subjects have now produced three
+figures on this fold, and any two of them placed side by side read as a
+regression that did not happen:
+
+| figure | subject | what it timed |
+|---|---|---|
+| 8,663.95 µs/call | The Detent's probe: the roster's max-`agent-at` member, on The Detent's tree | an EMPTY belief set — `water_at` and nothing else |
+| 79,128.70 µs/call | the same selection, on this campaign's tree before Task 2 | the same empty set, different tree, contended box |
+| 109,510.31 µs/call | member 40, the max-known-water member, after Task 2 | 46 known rooms, **none reachable** — 46 budget-exhausting searches per call |
+
+The third is not a regression against the second. It is the instrument being
+pointed at the subject the campaign is about, which is what §6 Task 1c
+required, and it is the column the memo is expected to collapse. Reporting the
+pair unlabelled would assert a 38% slowdown this campaign did not cause —
+which is exactly the misreading the campaign-record discipline exists to
+prevent, and it would be a plausible number, in the right units, next to a real
+measurement.
+
+(Controller ruling R8, taken at Task 2's review.)

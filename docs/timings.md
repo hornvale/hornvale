@@ -5970,3 +5970,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T22:01:04Z | rebaseline | 389.596 | 443.651 | 18.717 | 1.19 | 0 | 54a9daa60 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-05T23:30:23Z | gate-commit | 39.206 | 72.971 | 16.209 | 2.27 | 0 | 765aa9b8b | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-05T23:47:58Z | gate-commit | 54.096 | 79.768 | 16.842 | 1.79 | 0 | 765aa9b8b | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-05T23:48:53Z | gate-commit | 36.726 | 69.887 | 15.846 | 2.33 | 0 | 765aa9b8b | campaign/the-culvert | MacBookPro | 10 |
