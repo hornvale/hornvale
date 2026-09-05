@@ -170,15 +170,32 @@ fn the_instrument_credits_nothing_to_noise() {
             "{kind}: false signs read {fs} bits net of null"
         );
     }
-    // The null is a permutation: it must preserve H(Y), so MI <= H(Y) for
-    // every shift.
-    for kind in ["spring", "overhang", "thicket"] {
-        let mi = number(&built, &format!("warp-channel-mi-{kind}"));
-        let null = number(&built, &format!("warp-channel-null-{kind}"));
+    // A cyclic shift is a permutation, so it holds P(Y) exactly and both the
+    // real reading and the null are bounded by the entropy of the occurrence
+    // variable: `0 <= MI <= H(Y)`. This used to compare the null against the
+    // real MI plus a slack of 0.05, with a comment claiming it checked
+    // `MI <= H(Y)` — it did not, and a comparison against the reading is the
+    // weaker of the two anyway, since a null that has stopped being a
+    // permutation would sit near the reading rather than above it. H(Y) is
+    // computed from `weft-existence-density-<kind>`, which is P(Y) over this
+    // same land-eligible population.
+    for kind in KINDS {
+        let p = number(&built, &format!("weft-existence-density-{kind}"));
         assert!(
-            null >= 0.0 && null < mi + 0.05,
-            "{kind}: null {null} vs mi {mi}"
+            p > 0.0 && p < 1.0,
+            "{kind}: base rate {p} leaves no entropy"
         );
+        // `hornvale_kernel::math::log2`, never `f64::log2` — the platform
+        // libm diverges in the last ULP and the workspace bans it outright.
+        let h_y = -(p * hornvale_kernel::math::log2(p)
+            + (1.0 - p) * hornvale_kernel::math::log2(1.0 - p));
+        for family in ["channel-mi", "channel-null"] {
+            let bits = number(&built, &format!("warp-{family}-{kind}"));
+            assert!(
+                (0.0..=h_y).contains(&bits),
+                "{kind} {family}: {bits} bits outside [0, H(Y) = {h_y}]"
+            );
+        }
     }
 }
 

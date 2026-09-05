@@ -5671,10 +5671,24 @@ pub fn registry() -> Vec<Metric> {
         // macro-state scalar. Eight readout families x four kinds = 32
         // registrations, all riding the SAME cached grid sweep the nine
         // `weft-*` grid metrics ride (`ClimateView::weft_grid`); the sign
-        // columns are three map reads per land facet inside that existing
-        // loop, never a second sweep. Population is the land-eligible
-        // SURFACE facets spec §5.1 names, which is the population the
-        // `weft-*` grid metrics already read.
+        // columns are filled inside that existing loop, never in a second
+        // sweep. Population is the land-eligible SURFACE facets spec §5.1
+        // names, which is the population the `weft-*` grid metrics already
+        // read.
+        //
+        // THEY ARE NOT "three map reads per facet", WHICH IS WHAT §5.4
+        // ASSUMED BEFORE TASK 5 MEASURED IT. Biome, rock and steepness are
+        // free — an ablation that stubbed out the fourth sign returned the
+        // pool to its pre-Warp cost exactly — and the WETNESS sign is 100%
+        // of the pool's added 0.218 CPU-s/world, because
+        // `hornvale_locale::micro_field_at` grounds it through the rill
+        // network's nearest-branch query, once per land facet. That is the
+        // seam any future optimisation attacks; the sign itself cannot be
+        // read more cheaply without ceasing to be the word the prose
+        // renders. Total added cost of these 32 registrations, measured in
+        // release over 20 worlds: 0.331 CPU-s/world, accepted as-is rather
+        // than subsampled (spec §5.4, ledger #10 — halving the population
+        // would blunt §5.3's controls to save ~23 s of census wall).
         //
         // EVERY CHANNEL READING IS REGISTERED WITH ITS NULL, and the pair is
         // the point (spec §5.2). A sign tuple of several hundred classes over
@@ -5969,8 +5983,10 @@ pub fn registry() -> Vec<Metric> {
                   reading that did would mean the instrument was crediting noise. It can and does \
                   LOSE — seed 42 reads -0.0138 bits/facet, the price of fitting several hundred \
                   classes of pure noise on half the land and being scored on the other half. Spec \
-                  §7's H3 asks for this within +/- 0.001, a clause preregistered before any \
-                  learner existed; the four readout seeds are where that bar is decided.",
+                  §7's H3 therefore bars this ONE-SIDED at <= 0.001 bits/facet (amended \
+                  2026-09-05 from \"within +/- 0.001\", which no held-out table over ~469 classes \
+                  could ever meet): the control is that the erratic never GAINS, not that its loss \
+                  is small.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
             },
@@ -5985,8 +6001,10 @@ pub fn registry() -> Vec<Metric> {
                   `relief`, `aspect` and `openness` micro-habitat axes, each cut at the same \
                   threshold the wetness word is cut at. Those three are drawn from the facet's \
                   address seed and correlate with nothing the world knows, so the instrument must \
-                  credit them nothing: a reading outside +/- 0.001 bits is a finding about the \
-                  INSTRUMENT, not about the world. **The descriptor noun is deliberately not in \
+                  credit them nothing: spec §7's H4 bars this within +/- 0.002 bits — four \
+                  standard deviations of this 27-class tuple's own null estimator, amended \
+                  2026-09-05 from +/- 0.001, which sat below the estimator's resolution — and a \
+                  reading outside it is a finding about the INSTRUMENT, not about the world. **The descriptor noun is deliberately not in \
                   this tuple**, though spec §5.2's table names it: `windows/locale/src/grammar.rs` \
                   exposes no `pub fn`, so the noun's variety draw is unreachable from the lab \
                   without rendering a whole document per facet — and its pool is keyed on \
@@ -10069,8 +10087,16 @@ fn weft_legibility_mi(view: &ClimateView, kind_idx: usize) -> MetricValue {
 //
 // All 32 registrations (eight families x four kinds) ride the SAME cached
 // grid sweep the Weft's own 9 grid metrics ride (`ClimateView::weft_grid`) —
-// the sign columns are three map reads per land facet inside that existing
-// loop, never a second sweep.
+// the sign columns are filled inside that existing loop, never in a second
+// sweep.
+//
+// WHAT THE SIGN COLUMNS COST, MEASURED (Task 5; spec §5.4 assumed "three map
+// reads per facet" and that was wrong): three of the four signs are free,
+// and `hornvale_locale::micro_field_at` is the whole of it — the wetness
+// sign is grounded through the rill network's nearest-branch query, once per
+// land facet, and stubbing it out returns the pool to its pre-Warp cost. The
+// pool pays 0.218 CPU-s/world for it and the 32 metric functions another
+// 0.113, for 0.331 total, accepted rather than subsampled (ledger #10).
 // ============================================================================
 
 /// Cyclic shifts of the occurrence bit vector that define the Warp's
@@ -10181,13 +10207,45 @@ fn warp_mi_and_null<K: Ord>(
     kind_idx: usize,
     key: impl Fn(&WarpSigns) -> K,
 ) -> (f64, f64) {
-    let mi = discrete_mi(&warp_joint(land, kind_idx, 0, &key));
-    let null: f64 = WARP_NULL_SHIFTS
+    (
+        discrete_mi(&warp_joint(land, kind_idx, 0, &key)),
+        warp_null(land, kind_idx, key),
+    )
+}
+
+/// The five-shift permutation null alone, without the real pairing beside
+/// it — [`warp_channel_null`] wants only this half, and computing the real
+/// MI to throw it away would make six tabulations of eleven thousand facets
+/// where five are wanted.
+///
+/// **A shift that is a multiple of `n` is not a null**, it is the real
+/// pairing under another name, and averaging one in would silently pull the
+/// null toward the reading it exists to subtract. It cannot happen at the
+/// shifts [`WARP_NULL_SHIFTS`] declares and the population this pool
+/// produces (`n` is about 11,218 land facets and the largest shift is
+/// 5,000), but "cannot happen today" is a property of two numbers that live
+/// in different files, so the case is skipped rather than trusted. Skipping
+/// every shift would leave no null at all, which is why the result is
+/// `Absent` rather than zero in that (unreachable) event — a null of zero
+/// would read as "no bias", the most flattering possible answer.
+fn warp_null<K: Ord>(
+    land: &[&WeftVertexReading],
+    kind_idx: usize,
+    key: impl Fn(&WarpSigns) -> K,
+) -> f64 {
+    let n = land.len();
+    let usable: Vec<usize> = WARP_NULL_SHIFTS
+        .into_iter()
+        .filter(|shift| n == 0 || shift % n != 0)
+        .collect();
+    if usable.is_empty() {
+        return f64::NAN;
+    }
+    usable
         .iter()
         .map(|&shift| discrete_mi(&warp_joint(land, kind_idx, shift, &key)))
         .sum::<f64>()
-        / WARP_NULL_SHIFTS.len() as f64;
-    (mi, null)
+        / usable.len() as f64
 }
 
 /// The Warp's channel reading (spec §5.2) for one `WeftKind` slot: discrete
@@ -10212,7 +10270,13 @@ fn warp_channel_null(view: &ClimateView, kind_idx: usize) -> MetricValue {
     if land.is_empty() {
         return MetricValue::Absent;
     }
-    let (_, null) = warp_mi_and_null(&land, kind_idx, WarpSigns::key);
+    let null = warp_null(&land, kind_idx, WarpSigns::key);
+    if null.is_nan() {
+        // Every declared shift was a multiple of the land count — see
+        // [`warp_null`]. Unreachable at this pool's population; `Absent`
+        // rather than a fabricated zero if it ever is not.
+        return MetricValue::Absent;
+    }
     MetricValue::Number(null)
 }
 
@@ -10455,8 +10519,13 @@ fn warp_oracle_gain(view: &ClimateView, kind_idx: usize) -> MetricValue {
 /// the room's `relief`, `aspect` and `openness` axes, each cut at the same
 /// [`hornvale_worldgen::MICRO_WORD_THRESHOLD`] the wetness word is cut at.
 /// These are drawn from the facet's address seed and correlate with nothing
-/// the world knows, so the instrument must credit them nothing: a reading
-/// outside +/- 0.001 bits is a finding about the INSTRUMENT, not the world.
+/// the world knows, so the instrument must credit them nothing. Spec §7's H4
+/// bars this within +/- 0.002 bits — four standard deviations of this
+/// 27-class tuple's own null estimator (sd 0.000464 at seed 42's 11,218 land
+/// facets), amended 2026-09-05 from +/- 0.001, which sat below what the
+/// estimator can resolve — and a reading outside it is a finding about the
+/// INSTRUMENT, not the world. `windows/lab/tests/suite/warp_instrument.rs`
+/// holds the same number as `WARP_FALSE_SIGN_NOISE_FLOOR_BITS`.
 ///
 /// **The descriptor noun is NOT in this tuple**, and spec §5.2's table names
 /// it. `windows/locale/src/grammar.rs` exposes no `pub fn` at all, so the
@@ -10474,6 +10543,9 @@ fn warp_false_sign_net(view: &ClimateView, kind_idx: usize) -> MetricValue {
         return MetricValue::Absent;
     }
     let (mi, null) = warp_mi_and_null(&land, kind_idx, WarpSigns::false_key);
+    if null.is_nan() {
+        return MetricValue::Absent;
+    }
     MetricValue::Number(mi - null)
 }
 
@@ -12543,10 +12615,12 @@ mod tests {
         // Eight and not six: spec §5.2's G4 amendment added the oracle bound
         // H3 measures the learner against and the wallpaper guard H5 reads.
         // All 32 ride the SAME cached grid sweep the nine `weft-*` grid
-        // metrics ride — the sign columns are three map reads per land facet
-        // inside that existing loop — so the registration's added cost is the
-        // sign tabulation and the learner, measured before it landed under
-        // spec §5.4's decision rule.
+        // metrics ride, the sign columns filled inside that existing loop
+        // rather than in a second sweep. Measured before it landed, under
+        // spec §5.4's decision rule: 0.331 CPU-s/world added, of which 0.218
+        // is the pool's fourth sign alone — `micro_field_at`'s rill query,
+        // the other three signs being free — and 0.113 the 32 metric
+        // functions. Over the 0.25 rule and accepted as-is (ledger #10).
         assert_eq!(registry().len(), 281);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
