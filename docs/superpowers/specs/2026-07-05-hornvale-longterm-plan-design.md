@@ -162,8 +162,8 @@ DAG, generated and cached layer by layer:
 Back-edges (e.g., observatories increase celestial salience; belief affecting
 reality) are permitted but must be explicit, declared, and rare.
 
-**Provider tiers, illustrated with astronomy** (names are descriptive
-placeholders; real naming is deferred):
+**Provider tiers, illustrated with astronomy** (retired 2026-09-04 by decision
+0736; names were descriptive placeholders):
 
 - Tier 0 `constant-sun`: the sun is always up (Zork).
 - Tier 1: 24-hour day/night cycle with visibility effects.
@@ -175,6 +175,15 @@ All tiers answer the same query vocabulary (e.g., "enumerate celestial phenomena
 salient from this surface, with periodicities and visual character"). A trivial
 provider's sparse answer is itself meaningful input downstream (what religion
 develops under an eternal noon?).
+
+This ladder did not survive implementation as a ladder: tiers 1–3 shipped
+together inside one generated provider, while only the constant-sun provider
+remained separately selectable. Decision 0736 retired that last coexistence;
+every world now has the generated calendar and star system. The eternal-noon
+question remains expressible, but it is a census question rather than a provider
+question: measure `pantheon-cyclic-share` over a `rotation=locked` pin set.
+Locked rotation derives the acyclic sky from the same provider, so retiring the
+tier costs none of the distinction the question was meant to probe.
 
 ### 3.3 Deep Time: Fields + Ledger
 

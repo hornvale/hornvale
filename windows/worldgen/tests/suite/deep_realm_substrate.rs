@@ -67,7 +67,7 @@ use hornvale_terrain::{
 };
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 use std::collections::{BTreeSet, VecDeque};
 
@@ -145,7 +145,6 @@ fn measure_one(seed: Seed) -> SeedReport {
     let artifacts = build_world_to_with_artifacts(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -771,7 +770,6 @@ fn measure_t8(seed: Seed) -> T8SeedReport {
     let artifacts = build_world_to_with_artifacts(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

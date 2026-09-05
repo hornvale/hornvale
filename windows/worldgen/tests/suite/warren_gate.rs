@@ -19,10 +19,9 @@ use hornvale_kernel::Seed;
 use hornvale_species::HabitatRealm;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, axis_supply, build_world, carrying_inputs_of,
-    climate_of, detritus_supply_field, forage_supply_field, marine_forage_supply_field,
-    mineral_supply_field, per_species_suitability, prey_supply_field, sky_of, substrate_field,
-    terrain_of,
+    SettlementPins, WorldComponents, axis_supply, build_world, carrying_inputs_of, climate_of,
+    detritus_supply_field, forage_supply_field, marine_forage_supply_field, mineral_supply_field,
+    per_species_suitability, prey_supply_field, sky_of, substrate_field, terrain_of,
 };
 
 /// Seed 42 at the depth `per_species_suitability` needs (terrain + climate +
@@ -41,7 +40,6 @@ fn fixture() -> (
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -50,10 +48,7 @@ fn fixture() -> (
     let terrain = terrain_of(&world).unwrap();
     let climate = climate_of(&world).unwrap();
     let sky = sky_of(&world).unwrap();
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

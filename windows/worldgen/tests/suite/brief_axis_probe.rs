@@ -13,9 +13,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{Function, Notability, TechHorizon};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, occupations_by_vertex, terrain_of,
-};
+use hornvale_worldgen::{SettlementPins, build_world, occupations_by_vertex, terrain_of};
 
 const SEEDS: [u64; 5] = [42, 7, 13, 100, 1234];
 
@@ -35,7 +33,6 @@ fn brief_axis_probe() {
         let world = build_world(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

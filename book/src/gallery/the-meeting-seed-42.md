@@ -36,7 +36,7 @@ the manikin — no more, no less.
 ## Psychology — where they land, and who stands where
 
 The two flagships, quoted verbatim from the committed
-[`almanac-seed-42-sky.md`](./almanac-seed-42-sky.md):
+[`almanac-seed-42.md`](./almanac-seed-42.md):
 
 ```text
 The chief goblin settlement, Xnebsvob, holds 359 souls amid temperate-rainforest.

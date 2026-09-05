@@ -31,7 +31,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// The refusal `open` gives a locked thing when nothing in the body's hands
 /// would open it. Duplicated from `session.rs`'s private `const` on purpose —
@@ -61,7 +61,6 @@ fn world_at(seed: u64) -> World {
     build_world(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

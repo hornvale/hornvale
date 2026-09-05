@@ -37,9 +37,7 @@ use std::collections::BTreeMap;
 
 use hornvale_climate::{Formation, GeneratedClimate, Realm, Stratum};
 use hornvale_kernel::{Seed, Vertex};
-use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, climate_of,
-};
+use hornvale_worldgen::{BuildDepth, SettlementPins, WorldComponents, build_world_to, climate_of};
 
 /// Build seed 42's climate at the shallowest sufficient `BuildDepth` — see
 /// the module doc. Shared by all three measurements so each pays for exactly
@@ -49,7 +47,6 @@ fn seed_42_climate() -> GeneratedClimate {
     let world = build_world_to(
         Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

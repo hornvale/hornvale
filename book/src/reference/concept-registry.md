@@ -1,10 +1,13 @@
 # The Concept Registry
 
-The registry is the negotiated vocabulary boundary between domains: the set
-of **predicates** facts may use and **phenomenon kinds** observations may
-carry. Registration is idempotent for identical definitions and an error for
-conflicting ones, so two domains can safely require the same concept but
-never quietly redefine it.
+The registry is the negotiated vocabulary boundary between domains: the
+**predicates** facts may use, the **phenomenon kinds** observations may carry,
+and the registered **concepts** — things, species, acts, roles, and the other
+stable names those records may cite. Registration is idempotent for identical
+definitions and an error for conflicting ones, so two domains can safely
+require the same concept but never quietly redefine it. The Tenon's `rushes`,
+`ledge`, and `bracken` are one appended accession cohort: new thing kinds enter
+the generated concept table without displacing any older proto-root.
 
 Reviewing this registry — *do these names still carve the world at its
 joints?* — is a standing end-of-campaign ritual. An ontology grown one

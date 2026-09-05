@@ -1760,6 +1760,24 @@ as discharging it. The general form is worth keeping past this bet — **a
 precondition stated as one sentence can have halves that move independently,
 and the half that moves first makes the other look closer than it is.**
 
+*Re-scored up, but not resolved, by
+[The Tenon](./chronicle/the-tenon.md) (2026-09-04).* The Range's candidate —
+that where a preference enters a pipeline decides whether it can differentiate
+— now has a second live mechanism outside population placement. Rest quality
+multiplies a sleeper's kind-level gain by a substrate response at the consumer,
+and actual seed-1234 rooms reverse the ordering: gully-dwarf grades rushes above
+ledge while drow grades ledge above rushes. This removes the caveat that the
+candidate rested on one mechanism and two authored occupants; the new witness
+crosses another domain boundary and reaches both committed choice and recovery.
+
+It does **not** establish the causal half of the candidate. The Tenon compares
+two species under one placement of the response term; it does not move the same
+term inside and outside an otherwise fixed limiting product. The reversal proves
+that a factorized preference can differentiate, not that pipeline placement is
+what made it differentiate. Confidence rises because an independent mechanism
+reproduces the predicted capability; the claim remains a candidate until one
+mechanism supplies the inside/outside control.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -3363,6 +3381,27 @@ places*, and a place nobody can reach is a weaker candidate than one they can.
   built, alongside The Grain's test (is this field ordinal or nominal?) that
   predicts them for values. What is unchanged is that both tests were bought by
   building the violation first.
+  **Re-scored by [The Zenith](./chronicle/the-zenith.md) (2026-09-04): the
+  exemplar this row opens with no longer exists, and the confidence is
+  unchanged for a reason worth stating.** Decision 0736 retired the
+  provider-tier doctrine outright: `ConstantSun` is deleted, every world has
+  one generated sky, and astronomy — the doctrine's last carve-out after
+  decision 0039 ruled that a *contradicting* generator is an epoch — no longer
+  offers two valid fidelities of one truth to choose between. The opening
+  sentence has been carrying two different claims under one phrase.
+  *Coexistence* — two providers of the same quantity, both valid, the world
+  selecting one — is what was retired. *Refinement* — a fine layer may not
+  contradict the coarse one — is what every re-score above actually measured:
+  agreement across grid levels, residual degrees of freedom, conservation of a
+  nominal field, a composed rather than step-wise reference. Not one of those
+  measurements ran on an astronomy tier, which is why losing astronomy costs
+  the bet nothing. What it does cost is the illustration: the principle now
+  rests on the field/grid contract (decision 0038) and religion's tier-1
+  derivation. And the retirement is an instance of the sharper rule rather than
+  a counterexample to it — tier-0's whole content was acyclicity, which
+  survives as *derived physics* (`rotation=locked`, `day_length()` still
+  `None`) rather than as a coarse stipulation a fine layer had to be kept from
+  contradicting.
 
 
 ## Genuinely open — split by whether the world can grade itself

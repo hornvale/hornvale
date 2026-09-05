@@ -709,13 +709,12 @@ mod tests {
     }
 
     use hornvale_kernel::Seed;
-    use hornvale_worldgen::{SkyChoice, build_world, climate_of};
+    use hornvale_worldgen::{build_world, climate_of};
 
     fn gen_seed(seed: u64) -> hornvale_kernel::World {
         build_world(
             Seed(seed),
             &Default::default(),
-            SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
@@ -834,14 +833,7 @@ mod tests {
             rotation: Some(RotationPin::Locked),
             ..Default::default()
         };
-        let w = build_world(
-            Seed(42),
-            &sky,
-            SkyChoice::Generated,
-            &Default::default(),
-            &Default::default(),
-        )
-        .unwrap();
+        let w = build_world(Seed(42), &sky, &Default::default(), &Default::default()).unwrap();
         let scene = tiles_region_scene(&w, 0, 2, 1, 1, 8).unwrap();
         assert!(scene.t_swing_c.iter().all(|&s| s == 0.0));
         assert_eq!(scene.circulation_bands, None);

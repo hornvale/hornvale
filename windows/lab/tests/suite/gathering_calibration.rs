@@ -669,7 +669,6 @@ fn world_level_population_conserves_against_total_capacity() {
     let world = hornvale_worldgen::build_world(
         Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )

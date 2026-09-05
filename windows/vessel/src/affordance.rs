@@ -127,14 +127,112 @@ impl ObjectProperty {
     }
 }
 
-/// What a thing-kind offers: the properties it carries. Thin and honest
+/// What a rest surface is made of, from the sleeping body's point of view.
+///
+/// **Two variants, not a single hardness scalar, because a made surface has
+/// no hardness of its own that matters.** 0697's own words: "a made bed is
+/// made by, and for, the body that made it." A `Made` surface is fitted to
+/// whoever built it, so the sleeper's substrate preference does not
+/// discriminate against it and `fit` is `1.0` — the species' own
+/// `sleep_grade_registry` row already encodes whether that species can
+/// collect the fit half at all (`INSULATION_ONLY` 1.35 is exactly "endotherm,
+/// cannot collect fit"), so applying a second fit penalty here would charge
+/// it twice.
+///
+/// (The `type-audit:` tag sits on the TYPE, not on the variant: the extractor
+/// reads an item's own doc and names the primitive by position, so a tag on
+/// `Natural`'s doc line is invisible to it.)
+/// type-audit: bare-ok(ratio: Natural.0)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Substrate {
+    /// Built by, and sized to, whoever built it.
+    Made,
+    /// Found rather than made, at this hardness — `0.0` fully yielding,
+    /// `1.0` rock.
+    Natural(f64),
+}
+
+/// What a kind offers a body that lies down on it (The Tenon).
+///
+/// **Held in the same row as [`ObjectProperty::SupportsRest`] rather than in
+/// a sibling table, and that is a correctness choice.** See
+/// [`object_registry`] and `supports_rest_and_a_rest_surface_imply_each_other`.
+/// type-audit: bare-ok(ratio: offer)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RestSurface {
+    /// The fraction of a fully-offering made surface's benefit this kind
+    /// gives, in `[0, 1]`. `1.0` is a bed.
+    pub offer: f64,
+    /// What the surface is, for the sleeper's substrate preference.
+    pub substrate: Substrate,
+}
+
+/// What a thing-kind offers: the properties it carries, and — for a kind that
+/// carries [`ObjectProperty::SupportsRest`] — what lying down on it is worth.
+/// Thin and honest
 /// (the `MaterialTraits` model) — a set, not a bitmask or a table of bools,
 /// because most kinds carry zero or one property and a set says so directly.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+///
+/// **No `Eq` derive, and its absence is load-bearing rather than an
+/// oversight**: [`RestSurface`] carries an `f64`, so `Eq` cannot survive the
+/// field. Nothing in the workspace required it (measured before the field was
+/// added: dropping `Eq` produced no errors under
+/// `cargo check --workspace --all-targets`).
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ObjectTraits {
     /// The properties this kind carries.
     pub properties: BTreeSet<ObjectProperty>,
+    /// What this kind offers a body that lies down on it, or `None` for a
+    /// kind with nowhere to lie down — which is every kind not carrying
+    /// [`ObjectProperty::SupportsRest`], asserted in both directions by
+    /// `supports_rest_and_a_rest_surface_imply_each_other`.
+    pub rest: Option<RestSurface>,
 }
+
+/// A bed is the reference surface: the one this campaign's grade is
+/// calibrated against, and the value that makes `grade(species, bed)`
+/// reproduce `sleep_grade_registry`'s row for every species byte for byte
+/// (spec §5.2). It is `1.0` by definition of the scale, not by measurement —
+/// every other surface is stated as a fraction of it.
+/// plumb: universal(the unit of the offer scale itself, against which every per-kind offer is expressed -- a definition, not a quantity that varies)
+const BED_OFFER: f64 = 1.0;
+
+/// How much a loose bed of rushes offers against the made-bed reference: most
+/// of a bed's support, while withholding the fitted construction it lacks.
+/// plumb: universal(the fixed share of a made bed's benefit offered by the rushes thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const RUSHES_OFFER: f64 = 0.7;
+/// Where rushes lie on the hardness axis: close to fully yielding, with a
+/// little resistance left in bundled stems.
+/// plumb: universal(the fixed hardness of the rushes thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const RUSHES_HARDNESS: f64 = 0.1;
+/// How much a ledge offers against the made-bed reference. It matches the
+/// other found surfaces so the relation's ordering comes from substrate fit,
+/// not a hidden generosity advantage authored into one kind.
+/// plumb: universal(the fixed share of a made bed's benefit offered by the ledge thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const LEDGE_OFFER: f64 = 0.7;
+/// Where a weathered stone ledge lies on the hardness axis: nearly rock, but
+/// short of the scale's bare, unyielding endpoint.
+/// plumb: universal(the fixed hardness of the ledge thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const LEDGE_HARDNESS: f64 = 0.85;
+/// How much wild bracken offers against the made-bed reference: the same
+/// found-surface share as rushes and ledge, before a sleeper's fit is applied.
+/// plumb: universal(the fixed share of a made bed's benefit offered by the bracken thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const BRACKEN_OFFER: f64 = 0.7;
+/// Where a springy stand of bracken lies on the hardness axis: the same
+/// yielding point as loose rushes.
+/// plumb: universal(the fixed hardness of the bracken thing-kind in every world -- species variation belongs to substrate_response and world variation to composition)
+const BRACKEN_HARDNESS: f64 = 0.1;
+
+/// How much a natural overhang offers against the made-bed reference. It is
+/// the hard-natural sibling of a ledge: both use the preregistered natural-
+/// surface offer, while the distinct key keeps the calibration explicit on
+/// the derived-feature row Nathan assigned it to at close reconciliation.
+/// plumb: universal(the fixed share of a made bed's benefit offered by the overhang weft-kind in every world -- species variation belongs to substrate_response and world variation to derived occurrence)
+const OVERHANG_OFFER: f64 = 0.7;
+/// Where a stone overhang lies on the hardness axis. Nathan placed it beside
+/// the ledge as a hard natural surface, short of the unyielding endpoint.
+/// plumb: universal(the fixed hardness of the overhang weft-kind in every world -- species variation belongs to substrate_response and world variation to derived occurrence)
+const OVERHANG_HARDNESS: f64 = 0.85;
 
 /// The canonical object-kind registry: which thing-kind carries which
 /// [`ObjectProperty`]. **Keyed on [`KindId`], not on an anchor-kind enum
@@ -156,6 +254,9 @@ pub struct ObjectTraits {
 /// `cave-mouth`→`AffordsPassage` (spec §3.7); and Task 5 adds
 /// `brazier`→`RadiatesHeat`, the proof kind that arrived as data rows and no
 /// dispatcher edit. A kind absent from this table carries no property.
+/// The Tenon adds `rushes`, `ledge`, and `bracken` as three more
+/// `SupportsRest` carriers, each with the [`RestSurface`] payload the recovery
+/// fold and sleep-site chooser read.
 ///
 /// **This paragraph used to claim "`key` and `cave-mouth` were the first
 /// rows with no anchor-kind variant behind them at all", past-tensed as a
@@ -249,12 +350,12 @@ pub struct ObjectTraits {
 ///   here" while the field says 0.0 °C. Fixing it means reading
 ///   `object_registry` from `warmth_at`; nothing in this campaign's scope
 ///   asked for it, so it is named rather than taken.
-/// - `kinds::BED` is the only kind ever pushed in a rest/fatigue
-///   context anywhere in this crate (`session.rs`'s `SLEPT_PROVENANCE`,
-///   every `Rest`-adjacent test); `high-seat` ("a carved chair... sees the
-///   door first") and `alcove` ("deep enough to sit in") both afford
-///   sitting, not the fatigue-resetting rest `Action::Rest` models, so
-///   neither earns `SupportsRest`.
+/// - `bed`, `rushes`, `ledge`, and `bracken` are the four rest surfaces. The
+///   last three are the natural surfaces The Tenon's locale patterns make
+///   reachable; `high-seat` ("a carved chair... sees the door first") and
+///   `alcove` ("deep enough to sit in") both afford sitting, not the
+///   fatigue-resetting rest `Action::Rest` models, so neither earns
+///   `SupportsRest`.
 /// - `threshold` is the only kind ever described as "ALSO a room-graph
 ///   edge" (`interior/anchor.rs`); every other seam concept
 ///   (`interior/seam.rs`) is a property of the room-graph EDGE, not of an
@@ -270,34 +371,89 @@ pub struct ObjectTraits {
 ///   ever picks one up; inventing a carrier here would be the Cyc bound
 ///   spec §3.8 names.
 pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
-    fn traits(properties: &[ObjectProperty]) -> ObjectTraits {
+    fn traits(properties: &[ObjectProperty], rest: Option<RestSurface>) -> ObjectTraits {
         ObjectTraits {
             properties: properties.iter().copied().collect(),
+            rest,
         }
     }
     [
-        (KindId("bed"), traits(&[ObjectProperty::SupportsRest])),
-        (KindId("pool"), traits(&[ObjectProperty::HoldsLiquid])),
-        (KindId("vessel"), traits(&[ObjectProperty::HoldsLiquid])),
+        (
+            KindId("bed"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: BED_OFFER,
+                    substrate: Substrate::Made,
+                }),
+            ),
+        ),
+        (
+            KindId("rushes"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: RUSHES_OFFER,
+                    substrate: Substrate::Natural(RUSHES_HARDNESS),
+                }),
+            ),
+        ),
+        (
+            KindId("ledge"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: LEDGE_OFFER,
+                    substrate: Substrate::Natural(LEDGE_HARDNESS),
+                }),
+            ),
+        ),
+        (
+            KindId("bracken"),
+            traits(
+                &[ObjectProperty::SupportsRest],
+                Some(RestSurface {
+                    offer: BRACKEN_OFFER,
+                    substrate: Substrate::Natural(BRACKEN_HARDNESS),
+                }),
+            ),
+        ),
+        (KindId("pool"), traits(&[ObjectProperty::HoldsLiquid], None)),
+        (
+            KindId("vessel"),
+            traits(&[ObjectProperty::HoldsLiquid], None),
+        ),
         (
             KindId("threshold"),
-            traits(&[ObjectProperty::AffordsPassage]),
+            traits(&[ObjectProperty::AffordsPassage], None),
         ),
         (
             KindId("strongbox"),
-            traits(&[
-                ObjectProperty::Encloses,
-                ObjectProperty::Openable,
-                ObjectProperty::Lockable,
-            ]),
+            traits(
+                &[
+                    ObjectProperty::Encloses,
+                    ObjectProperty::Openable,
+                    ObjectProperty::Lockable,
+                ],
+                None,
+            ),
         ),
-        (KindId("alcove"), traits(&[ObjectProperty::Encloses])),
-        (KindId("hearth"), traits(&[ObjectProperty::RadiatesHeat])),
-        (KindId("brazier"), traits(&[ObjectProperty::RadiatesHeat])),
-        (KindId("key"), traits(&[ObjectProperty::Portable])),
+        (KindId("alcove"), traits(&[ObjectProperty::Encloses], None)),
+        (
+            KindId("hearth"),
+            traits(&[ObjectProperty::RadiatesHeat], None),
+        ),
+        (
+            KindId("brazier"),
+            traits(&[ObjectProperty::RadiatesHeat], None),
+        ),
+        (KindId("key"), traits(&[ObjectProperty::Portable], None)),
         (
             KindId("cave-mouth"),
-            traits(&[ObjectProperty::AffordsPassage, ObjectProperty::Openable]),
+            traits(
+                &[ObjectProperty::AffordsPassage, ObjectProperty::Openable],
+                None,
+            ),
         ),
         // The Brattice, spec §3.7: the cave mouth's properties plus the
         // strongbox's lock — a passage a body walks through, with a lid and a
@@ -306,11 +462,14 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
         // (`session.rs`) is the test that would redden if it were.
         (
             KindId("door"),
-            traits(&[
-                ObjectProperty::AffordsPassage,
-                ObjectProperty::Openable,
-                ObjectProperty::Lockable,
-            ]),
+            traits(
+                &[
+                    ObjectProperty::AffordsPassage,
+                    ObjectProperty::Openable,
+                    ObjectProperty::Lockable,
+                ],
+                None,
+            ),
         ),
     ]
     .into_iter()
@@ -353,10 +512,14 @@ pub fn object_registry() -> ComponentStore<KindId, ObjectTraits> {
 /// affordance claim at all. `SupportsRest` stands in for "a place to get out
 /// of the rain" and `RadiatesHeat` for "a place to build a fire" — the exact
 /// two properties [`hornvale_worldgen::WeftKind::Overhang`]'s own doc names
-/// ("SupportsRest-adjacent shelter plus a warmth variant"). `RadiatesHeat`
-/// here is a CAPABILITY, not a claim that a fire is already lit — no verb in
-/// this campaign turns it into one (see [`weft_offers`]'s own doc for what
-/// that stops short of).
+/// ("SupportsRest-adjacent shelter plus a warmth variant"). At The Tenon's
+/// close reconciliation Nathan made that adjacency exact: the overhang is
+/// the hard-natural sibling of a ledge, with the preregistered `0.7` offer
+/// and `0.85` hardness. The payload lives in this same row so decision 0728's
+/// two-way `SupportsRest`/`RestSurface` invariant holds across both object-
+/// trait stores. `RadiatesHeat` here is a CAPABILITY, not a claim that a fire
+/// is already lit — no verb in this campaign turns it into one (see
+/// [`weft_offers`]'s own doc for what that stops short of).
 pub fn weft_object_registry() -> ComponentStore<hornvale_worldgen::WeftKind, ObjectTraits> {
     [(
         hornvale_worldgen::WeftKind::Overhang,
@@ -364,6 +527,10 @@ pub fn weft_object_registry() -> ComponentStore<hornvale_worldgen::WeftKind, Obj
             properties: [ObjectProperty::SupportsRest, ObjectProperty::RadiatesHeat]
                 .into_iter()
                 .collect(),
+            rest: Some(RestSurface {
+                offer: OVERHANG_OFFER,
+                substrate: Substrate::Natural(OVERHANG_HARDNESS),
+            }),
         },
     )]
     .into_iter()
@@ -816,7 +983,34 @@ fn body_can_use(property: ObjectProperty, body: &Body) -> bool {
 /// module) — a large body still rests exactly as it could before this
 /// campaign, just not via a bed too small for it.
 pub fn offered_to(kind: KindId, body: &Body) -> BTreeSet<OfferedVerb> {
-    offered_by(kind)
+    let reg = object_registry();
+    offered_to_traits(&reg.get(&kind).cloned().unwrap_or_default(), body)
+}
+
+/// [`offered_to`] reading traits the caller already holds — the body-relative
+/// member of the [`offered`] / [`offered_by`] pair above, standing to
+/// `offered_to` exactly as `offered` stands to `offered_by` (The Tenon, Task
+/// 6).
+///
+/// **It exists for cost, and the cost it removes is real rather than
+/// theoretical.** [`offered_by`] builds a whole [`object_registry`] per call,
+/// so asking `offered_to` of every anchor in a room built one
+/// `ComponentStore` PER ANCHOR — on `liveness::room_affords_rest`'s path,
+/// which runs inside the fatigue fold. A caller that already holds the roster
+/// (`liveness::object_roster`, built once per fold) can now ask the same
+/// question against it and build nothing.
+///
+/// **Same answer, by construction.** `offered_to` is now this function
+/// applied to the registry's own row for `kind`, with the same
+/// `unwrap_or_default()` treatment of an unregistered kind
+/// [`offered_by`]'s doc explains — so the two cannot drift, and the public
+/// entry point's behaviour is byte-for-byte what it was.
+///
+/// `pub(crate)`, not `pub`, for the reason [`body_can_use`]'s own narrowing
+/// records: a caller supplying its own traits is a caller stating what an
+/// object is, and that is a statement this crate should keep inside itself.
+pub(crate) fn offered_to_traits(traits: &ObjectTraits, body: &Body) -> BTreeSet<OfferedVerb> {
+    offered(traits)
         .into_iter()
         .filter(|v| {
             required_properties(*v)

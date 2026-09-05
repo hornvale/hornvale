@@ -22,7 +22,7 @@ use hornvale_kernel::{Band, Seed, Vertex};
 use hornvale_terrain::{Cave, CaveKind, GeothermalGradient, Horizon, TerrainPins, rung_at_depth};
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// The permanent lattice ladder, top to bottom — **the DELVE ladder since
@@ -296,7 +296,6 @@ fn the_pipeline_hands_chamber_exists_the_budget_terrain_actually_authored() {
     let artifacts = build_world_to_with_artifacts(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

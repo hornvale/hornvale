@@ -38,10 +38,11 @@ hardest:
   integration tests (e.g. `genesis_properties.rs`, `tectonic_properties.rs`)
   hold the **pin-isolation** tests that catch a violation — run them after any
   change to a drawn quantity.
-- **Coarse constrains fine, and epochs replace, tiers refine** (decision
-  0039). A higher-fidelity provider may *refine* a coarser one but must never
-  *contradict* it; a generator that contradicts an existing one is a new
-  epoch, not a coexisting tier.
+- **Coarse constrains fine; epochs replace contradictory mechanisms**
+  (decisions 0039 and 0736). Refinement remains valid inside one provider or
+  implementation — a finer component may elaborate a coarser answer but must
+  not contradict it. A mechanism that does contradict its predecessor is a
+  new epoch, not a selectable alternative.
 
 ## Providers live at the composition root, not here
 
@@ -49,13 +50,17 @@ A domain defines its logic and its provider *trait*/implementations, but the
 place where providers are *constructed and wired* is `windows/worldgen` — the
 composition root. Don't reach across to build another domain's provider.
 
-## Provider tiers coexist
+## One selectable provider path
 
-The tier-0 constant provider (e.g. `ConstantSun`) and the generated one are
-both valid; a world chooses. Keep tier-0 paths byte-identical when you touch
-shared code — the `strongest`/`None`-branch comments in `terrain/crust.rs`
-are a live example of code kept "instruction-for-instruction" unperturbed to
-protect a byte-identity contract.
+Coexisting, world-selectable provider tiers are retired (decision 0736);
+astronomy's constant and generated skies were the last such pair. This does
+not retire refinement inside a provider or implementation. Providers are
+still constructed at the composition root, and a materially contradictory
+mechanism remains an epoch rather than an alternative. Keep byte-identical
+paths byte-identical when you touch shared code — the
+`strongest`/`None`-branch comments in `terrain/crust.rs` are a live terrain
+example of code kept "instruction-for-instruction" unperturbed to protect a
+byte-identity contract.
 
 Subdirectories with extra guidance: `terrain/` (the most determinism-sensitive
 domain).

@@ -9,7 +9,7 @@
 
 use hornvale_language::Disposition;
 use hornvale_language::schemas::{Manner, SchemaId};
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from, beta_of, cyclic_beliefs_from};
+use hornvale_worldgen::{SettlementPins, accounts_from, beta_of, cyclic_beliefs_from};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -19,7 +19,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

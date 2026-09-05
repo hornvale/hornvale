@@ -400,7 +400,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, climate_from,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, climate_from,
     demography_report_from, terrain_of,
 };
 
@@ -415,7 +415,6 @@ fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
     let world = build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

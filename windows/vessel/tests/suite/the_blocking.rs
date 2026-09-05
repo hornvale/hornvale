@@ -704,7 +704,9 @@ fn a_locale_composition_is_untouched_by_the_role_layer() {
     // The load-bearing invariant of this task's DESIGN (ledger #10): whatever the
     // roles do to chambers, the band a creature stands in must be unaffected
     // unless we mean it to be. If this fails, the epoch is real -- which is a
-    // finding, not a failure, but it must be a DELIBERATE one.
+    // finding, not a failure, but it must be a DELIBERATE one. The Tenon's
+    // epoch deliberately appended `the-ledge`; this frozen list accepts that
+    // one move while continuing to prove the role layer does not alter it.
     use hornvale_vessel::interior::pattern::selection;
     let before = [
         "the-ground",
@@ -712,6 +714,7 @@ fn a_locale_composition_is_untouched_by_the_role_layer() {
         "the-alcove",
         "the-water-jar",
         "the-screen",
+        "the-ledge",
     ];
     let now: Vec<&str> = selection(true, false).iter().map(|p| p.name).collect();
     assert_eq!(

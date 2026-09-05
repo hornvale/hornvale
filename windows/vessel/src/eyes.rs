@@ -52,9 +52,8 @@ pub fn resolve(eyes: &Eyes, npc: &Body) -> Option<(Observer, String)> {
 }
 
 /// A flat, colourless illuminant — every band at unit weight. The fallback
-/// light for a world with no calendar (a tier-0 constant sun has no solar
-/// geometry to place a real sun by), so [`daylight_at`] never needs a star
-/// it cannot honestly place.
+/// light when no calendar or solar altitude can be resolved, so
+/// [`daylight_at`] never invents a star placement.
 fn flat_illuminant() -> Illuminant {
     Illuminant::new([1.0; BANDS]).expect("a unit illuminant is finite and non-negative")
 }
@@ -67,9 +66,9 @@ fn flat_illuminant() -> Illuminant {
 ///
 /// With a calendar, this is the world's own star's daylight
 /// ([`hornvale_astronomy::daylight`]), reddened for the real sun altitude at
-/// `latitude` and `day` ([`Calendar::solar_altitude_at`]). Without one — a
-/// tier-0 constant-sun world, or a day [`StdDays`] rejects — there is no
-/// solar geometry to read, so this falls back to a flat, altitude-zero light
+/// `latitude` and `day` ([`Calendar::solar_altitude_at`]). Without one, or
+/// when a day [`StdDays`] rejects, there is no solar geometry to read, so
+/// this falls back to a flat, altitude-zero light
 /// rather than attenuating a real star's spectrum by a placement it cannot
 /// justify.
 /// type-audit: bare-ok(diagnostic-value: latitude), bare-ok(diagnostic-value: return)

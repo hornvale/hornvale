@@ -114,8 +114,10 @@ mod tests {
 
     #[test]
     fn a_zero_subject_is_rejected_not_panicked() {
-        let dir = std::env::temp_dir()
-            .join(format!("digest-mcp-test-zero-subject-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "digest-mcp-test-zero-subject-{}",
+            std::process::id()
+        ));
         std::fs::create_dir_all(&dir).expect("tmp");
         let path = dir.join("facts.jsonl");
         let _ = std::fs::remove_file(&path);
@@ -137,8 +139,8 @@ mod tests {
     fn an_unreadable_store_is_never_truncated_by_a_failed_assert() {
         use std::os::unix::fs::PermissionsExt;
 
-        let dir = std::env::temp_dir()
-            .join(format!("digest-mcp-test-unreadable-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("digest-mcp-test-unreadable-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("tmp");
         let path = dir.join("facts.jsonl");
         let original = "{\"subject\":1,\"predicate\":\"decision-status\",\"object\":{\"Text\":\"accepted\"},\

@@ -4,7 +4,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn, run};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// Seed 42's world under default pins, read from the committed fixture rather
 /// than rebuilt (decision 0607) — byte-identical to the build this replaced.
@@ -319,7 +319,6 @@ fn the_stitch_law_end_to_end() {
     let world = build_world(
         Seed(1),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -1067,7 +1066,6 @@ fn custody_survives_a_save_and_a_re_possession() {
     let world = build_world(
         Seed(1),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

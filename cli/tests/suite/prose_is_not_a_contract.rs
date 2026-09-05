@@ -23,14 +23,13 @@
 //! concept registry.
 
 use hornvale_kernel::{Seed, World};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, observed_phenomena};
+use hornvale_worldgen::{SettlementPins, build_world, observed_phenomena};
 
 /// Seed 42 at default pins — the same world the gallery almanacs describe.
 fn world() -> World {
     build_world(
         Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

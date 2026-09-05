@@ -45,7 +45,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, Value};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, census, history_for,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, census, history_for,
 };
 use std::collections::BTreeMap;
 
@@ -115,7 +115,6 @@ fn ledger_visible_tribute_observables_against_the_bakes_own_flow() {
         let h = history_for(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -125,7 +124,6 @@ fn ledger_visible_tribute_observables_against_the_bakes_own_flow() {
         let w = build_world_to(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

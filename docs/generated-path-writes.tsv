@@ -9,7 +9,7 @@
 # docs/generated-path-writes.tsv is declared but excluded from the rows below: this
 # file's own output redirect stamps its mtime before this loop ever runs, so a
 # self-observed count would be guaranteed true by construction, not measured.
-book/src/gallery/	46	57
+book/src/gallery/	45	56
 book/src/gallery/almanac.md	0	1
 book/src/gallery/atlas.md	0	1
 book/src/gallery/first-light.md	0	1
@@ -65,14 +65,23 @@ book/src/laboratory/the-terminator-probe.md	0	1
 book/src/laboratory/census-of-coasts-ii.md	0	1
 book/src/laboratory/census-of-coasts-iii.md	0	1
 book/src/laboratory/census-of-coasts-iv.md	0	1
-docs/audits/	15	22
+docs/audits/	15	24
 docs/audits/heavy-tier-adjudication.md	0	1
 docs/audits/land-elevation-attribution.md	0	1
 docs/audits/the-assay-build-volume-audit.md	0	1
 docs/audits/the-escapement-census-attribution.md	0	1
+docs/audits/the-tenon-rest-site-baseline.md	0	1
+docs/audits/the-tenon-rest-site-readout.md	0	1
+docs/audits/campaign-reconciliation.tsv	0	1
 docs/audits/lexicon-inventory.tsv	0	1
-docs/digest/	2	3
+docs/digest/	2	9
 docs/digest/facts.jsonl	0	1
+docs/digest/the-charter-evidence.md	0	1
+docs/digest/the-charter-thing-example.md	0	1
+docs/digest/the-charter-census-example.md	0	1
+docs/digest/the-charter-failure-example.md	0	1
+docs/digest/the-charter-mac-samples.jsonl	0	1
+docs/digest/the-charter-linux-samples.jsonl	0	1
 book/src/domesday/	14	14
 clients/game/core/tests/fixtures/	4	4
 docs/audits/underworld-lattice-seed-panel.md	1	1

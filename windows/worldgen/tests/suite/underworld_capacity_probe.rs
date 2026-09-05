@@ -26,9 +26,7 @@ use hornvale_terrain::{CaveKind, TerrainPins, is_phreatic, rungs, water_table_de
 use hornvale_worldgen::chamber::ChamberOrigin;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::delve_seating::{Seating, chamber_fit, made_chambers, seat_at, seating_for};
-use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to_with_artifacts, history_for,
-};
+use hornvale_worldgen::{BuildDepth, SettlementPins, build_world_to_with_artifacts, history_for};
 
 /// The seeds this campaign preregisters on (spec §5), so every underworld
 /// readout describes the same three worlds.
@@ -88,7 +86,6 @@ fn what_the_bake_founded_per_people() {
         let h = history_for(
             Seed(seed_value),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -128,7 +125,6 @@ fn a_pinned_surface_people_builds_the_same_world() {
             let h = history_for(
                 Seed(seed_value),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &pins,
                 &wc,
@@ -185,7 +181,6 @@ fn where_underworld_communities_found_and_what_they_cut() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -202,7 +197,6 @@ fn where_underworld_communities_found_and_what_they_cut() {
         let history = history_for(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

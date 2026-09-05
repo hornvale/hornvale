@@ -70,7 +70,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PlanMark, PossessOpts, Session, SessionPlan, SpatialChannel, Turn};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeSet;
 
 /// PINNED PREMISE: seed 13, chosen (2026-08-31, absorbing The Pavement) as
@@ -87,7 +87,6 @@ fn world() -> World {
     build_world(
         Seed(13),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

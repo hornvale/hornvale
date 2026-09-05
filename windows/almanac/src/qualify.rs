@@ -86,7 +86,7 @@
 //! It **does** fire in the two world-wide listings ([`for_lines`]'s
 //! callers), whose roster spans every people at once: 2 of seed 7's 134
 //! qualified Land entries, and 4 of seed 7's 18 qualified `settlements`
-//! lines — plus 4 of 10 in the constant-sky seed-42 world, where two `Nee`s
+//! lines — plus 4 of 10 in the pre-Zenith constant-sky seed-42 world, where two `Nee`s
 //! of the same population and biome are separated as `Nee of the goblins` /
 //! `Nee of the hobgoblins`. So the rung earns its keep; it is the *route
 //! graph*, not the ladder, that never asks for it.

@@ -39,7 +39,6 @@ pub fn build(seed: u64) -> Option<World> {
     hornvale_worldgen::build_world(
         Seed(seed),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

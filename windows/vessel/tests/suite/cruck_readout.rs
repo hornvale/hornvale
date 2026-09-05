@@ -10,7 +10,7 @@ use hornvale_vessel::housemark::{AuthorityMark, ThresholdPosture};
 use hornvale_vessel::liveness::LocaleTerrain;
 use hornvale_vessel::structure::grammar::frame_for;
 use hornvale_vessel::{WorldContext, brief_of, structure_at};
-use hornvale_worldgen::{SkyChoice, occupations_by_vertex};
+use hornvale_worldgen::occupations_by_vertex;
 
 const H1_SEEDS: [u64; 5] = [42, 13, 7, 1, 100];
 
@@ -18,7 +18,6 @@ fn world(seed: u64) -> World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

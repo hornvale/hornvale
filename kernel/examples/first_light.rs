@@ -149,8 +149,8 @@ fn render_world_document() -> String {
     let mut doc = String::new();
     doc.push_str("### The world of seed 42, in its entirety\n\n");
     doc.push_str(&format!(
-        "Under a golden sun fixed at zenith, in an unnamed vale, stands the \
-         goblin village of **{village_name}**. Its people revere the most \
+        "In an unnamed vale stands the goblin village of **{village_name}**. \
+         Its people revere the most \
          salient phenomenon their sky offers them.\n\n"
     ));
     doc.push_str("The complete fact ledger:\n\n");

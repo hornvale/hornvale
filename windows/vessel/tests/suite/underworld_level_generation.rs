@@ -40,7 +40,7 @@ use hornvale_worldgen::chamber::{
 use hornvale_worldgen::character::Character;
 use hornvale_worldgen::circuit::plan_descent;
 use hornvale_worldgen::{
-    BarrierPins, BarrierState, BuildDepth, SettlementPins, SkyChoice, WorldComponents, barrier_of,
+    BarrierPins, BarrierState, BuildDepth, SettlementPins, WorldComponents, barrier_of,
     build_world_to_with_artifacts,
 };
 
@@ -581,7 +581,6 @@ fn measure_flooded_cell_reachability_across_the_descent() {
         let Ok(artifacts) = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

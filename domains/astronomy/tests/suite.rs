@@ -19,5 +19,5 @@ mod genesis_properties;
 mod golden_seed_42;
 #[path = "suite/night_sky_regimes.rs"]
 mod night_sky_regimes;
-#[path = "suite/tier_refinement.rs"]
-mod tier_refinement;
+#[path = "suite/sky_conformance.rs"]
+mod sky_conformance;

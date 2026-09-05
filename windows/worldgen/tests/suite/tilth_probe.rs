@@ -31,7 +31,7 @@
 
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SETTLERS_PER_CAPACITY, SettlementPins, SkyChoice, axis_supply, build_world, carrying_inputs_of,
+    SETTLERS_PER_CAPACITY, SettlementPins, axis_supply, build_world, carrying_inputs_of,
     climate_of, sky_of, terrain_of,
 };
 
@@ -84,7 +84,6 @@ fn tilth_derivation_probe() {
         let world = build_world(
             hornvale_kernel::Seed(seed),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -94,10 +93,7 @@ fn tilth_derivation_probe() {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let generated = match &sky {
-            hornvale_worldgen::Sky::Generated(g) => g,
-            _ => panic!("probe expects a generated sky"),
-        };
+        let generated = sky.generated();
         let system = generated.system();
         let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
         let obliquity_deg = system.anchor.obliquity.get();

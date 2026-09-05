@@ -11,7 +11,7 @@ use hornvale_vessel::interior::{
 use hornvale_vessel::liveness::LocaleTerrain;
 use hornvale_vessel::site::SiteKind;
 use hornvale_vessel::{Brief, WorldContext, brief_of, structure_at};
-use hornvale_worldgen::{SkyChoice, occupations_by_vertex};
+use hornvale_worldgen::occupations_by_vertex;
 
 const H3_SEEDS: [u64; 5] = [42, 13, 7, 1, 100];
 const HOUSEMARKS: [Housemark; 6] = [
@@ -47,7 +47,6 @@ fn world(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         Seed(seed),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

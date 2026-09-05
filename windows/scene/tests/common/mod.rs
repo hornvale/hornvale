@@ -29,7 +29,7 @@ use hornvale_kernel::math::unit_sphere_from_lat_lon;
 use hornvale_kernel::{Facet, Seed, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_scene::{Sight, SurroundsScene, surrounds_scene, surrounds_scene_colored_in};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeSet;
 
 /// The canonical fixture seed this campaign's spec measures against
@@ -49,7 +49,6 @@ pub fn genesis() -> World {
     build_world(
         Seed(SEED),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &SettlementPins::default(),
     )

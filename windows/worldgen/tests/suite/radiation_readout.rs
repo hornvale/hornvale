@@ -236,8 +236,7 @@ use hornvale_kernel::{ComponentStore, KindId, Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to_with_artifacts, per_species_capacity,
-    sky_of,
+    BuildDepth, SettlementPins, build_world_to_with_artifacts, per_species_capacity, sky_of,
 };
 
 /// The seeds every prediction reports, in order — The Delvers' set, so these
@@ -512,7 +511,6 @@ fn read_world(seed: u64, arm: Arm) -> WorldRead {
     let built = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &components(arm),
@@ -613,7 +611,6 @@ fn fields(seed: u64, arm: Arm) -> Fields {
     let built = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -629,10 +626,7 @@ fn fields(seed: u64, arm: Arm) -> Fields {
     let geo = terrain.geosphere();
 
     let sky = sky_of(world).expect("sky");
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

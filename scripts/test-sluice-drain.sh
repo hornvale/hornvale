@@ -103,5 +103,70 @@ case "$(census_note "")" in
     *) bad "an empty log path was reported as a null" ;;
 esac
 
+# --- run_one DISPATCHES, and passes the request ID -------------------------
+# THE GAP (fix round 3, Important 3): this file only ever SOURCED the library
+# and tested its two decision rules. `run_one` — the thing that actually calls
+# a runner — was invoked by nothing, so this campaign's change to the dispatch
+# line (`bash "$runner" "$ID"`, replacing the old branch/sha/kind positionals)
+# had no witness at all. A drain that picks the right runner and then calls it
+# with the wrong argv dispatches nothing, and every assertion above still
+# passes.
+#
+# kind=census, deliberately: it is the one kind `mouth_applies_to` skips, so
+# this reaches the dispatch line without invoking sluice-mouth.sh or any real
+# merge machinery. `repo_root` and `dispatch_for` are both overridden AFTER
+# sourcing, so nothing here can touch the real checkout — and the git
+# environment is scrubbed for the same reason, since `run_one`'s own `git -C`
+# calls do not scrub it themselves and GIT_DIR outranks `-C`.
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_COMMON_DIR
+wt="$tmpl/drain-scratch"
+mkdir -p "$wt/scripts"
+git init -q -b main "$wt" 2>/dev/null
+git -C "$wt" config user.email d@d 2>/dev/null
+git -C "$wt" config user.name d 2>/dev/null
+printf 'x\n' > "$wt/f.txt"
+git -C "$wt" add -A 2>/dev/null
+git -C "$wt" commit -qm root 2>/dev/null
+# `run_one` reads origin/main before and after; a local ref satisfies it
+# without a remote, and the `fetch` it attempts fails quietly by design.
+git -C "$wt" update-ref refs/remotes/origin/main HEAD 2>/dev/null
+
+argv_log="$tmpl/dispatch-argv"; : > "$argv_log"
+cat > "$wt/scripts/dispatch-stub.sh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$#" > "$argv_log"
+printf '%s\n' "\$@" >> "$argv_log"
+STUB
+chmod +x "$wt/scripts/dispatch-stub.sh"
+# A stub queue too, so the terminal `set-state` needs neither the real state
+# directory nor a built binary. What is under test is the DISPATCH argv.
+setstate_log="$tmpl/setstate-argv"; : > "$setstate_log"
+cat > "$wt/scripts/sluice-queue.sh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$@" >> "$setstate_log"
+STUB
+chmod +x "$wt/scripts/sluice-queue.sh"
+
+# shellcheck disable=SC2034  # read by run_one, which was sourced from sluice-drain.sh
+repo_root="$wt"
+dispatch_for() { echo "scripts/dispatch-stub.sh"; }
+run_one "$(printf 'TS\treq-witness\tcampaign/w\tabcdef012345\trunning\tcensus\tnote')" \
+    >/dev/null 2>&1
+
+if [ "$(sed -n 1p "$argv_log")" = "1" ] && [ "$(sed -n 2p "$argv_log")" = "req-witness" ]; then
+    ok "run_one calls the runner with exactly one argument, the request ID"
+else
+    bad "run_one dispatched argv '$(tr '\n' ' ' < "$argv_log")' — the runner is being told WHAT to run instead of WHICH ROW authorised it"
+fi
+# The terminal state is still written, and to the same id. A dispatch witness
+# that ignored this would pass on a drain that ran the job and then left the row
+# reading `running` forever — the ghost row this whole interlock exists to
+# prevent.
+if grep -q '^req-witness$' "$setstate_log" && grep -q '^reported$' "$setstate_log"; then
+    ok "run_one writes the terminal state for the same id it dispatched"
+else
+    bad "run_one's set-state argv was '$(tr '\n' ' ' < "$setstate_log")' — a finished job must not stay 'running'"
+fi
+
 printf '\ntest-sluice-drain: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -10,8 +10,8 @@
 
 use hornvale_astronomy::{EclipseBody, StdInstant};
 use hornvale_worldgen::{
-    LadderRung, SettlementPins, SkyChoice, crisis_from, doctrine_from, ladder_from,
-    observations_from, placed_peoples,
+    LadderRung, SettlementPins, crisis_from, doctrine_from, ladder_from, observations_from,
+    placed_peoples,
 };
 
 /// Build a world with the shipped four-people component set, generated
@@ -22,7 +22,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

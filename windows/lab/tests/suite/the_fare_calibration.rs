@@ -39,8 +39,8 @@ use hornvale_terrain::TerrainPins;
 use hornvale_topology::{CostSweep, least_cost_from};
 use hornvale_worldgen::graph_derive::weather_conductance_factor;
 use hornvale_worldgen::{
-    BASE_COST, BuildDepth, SettlementPins, SkyChoice, WorldComponents,
-    build_world_to_with_artifacts, traversal_cost,
+    BASE_COST, BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
+    traversal_cost,
 };
 use std::collections::BTreeSet;
 
@@ -272,7 +272,6 @@ fn build_sample(seed: u64, wc: &WorldComponents) -> WorldSample {
     let artifacts = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

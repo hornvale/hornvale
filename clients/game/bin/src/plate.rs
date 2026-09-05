@@ -2441,8 +2441,8 @@ impl PlateLight {
     /// ([`crate::observer::terminal_observer`]).
     ///
     /// Flat is the honest light for a caller with no world to place a sun
-    /// by — the same fallback [`crate::driver::plate_illuminant`] itself
-    /// takes for a tier-0 constant-sun world.
+    /// by — the same fallback [`crate::driver::plate_illuminant`] uses when
+    /// no solar altitude can be resolved.
     /// type-audit: bare-ok(flag: colour_allowed)
     pub fn flat(colour_allowed: bool) -> Self {
         Self {

@@ -6,8 +6,8 @@ use hornvale_kernel::Seed;
 use hornvale_kernel::test_lineage;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, clan_root_of,
-    forebear_of, founder_of, generation_length_of, occupation_records,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, clan_root_of, forebear_of,
+    founder_of, generation_length_of, occupation_records,
 };
 
 fn seed42() -> hornvale_kernel::World {
@@ -15,7 +15,6 @@ fn seed42() -> hornvale_kernel::World {
     build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
