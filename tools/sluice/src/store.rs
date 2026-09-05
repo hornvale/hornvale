@@ -52,4 +52,17 @@ impl Store {
         fs::write(&tmp, body)?;
         fs::rename(&tmp, self.queue_path())
     }
+
+    /// Take the queue's advisory lock, held until the returned handle drops.
+    /// This is the SAME lock `flock(1)` takes, which is what lets bash and
+    /// Rust callers coexist during the migration.
+    pub fn lock(&self) -> io::Result<fs::File> {
+        let f = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(false)
+            .open(self.lock_path())?;
+        f.lock()?;
+        Ok(f)
+    }
 }

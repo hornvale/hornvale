@@ -45,3 +45,35 @@ fn a_short_line_is_padded_and_kept_never_dropped() {
     assert_eq!(r.state, "");
     assert_eq!(r.kind, "merge");
 }
+
+use sluice::verbs::{SetStateError, sanitize_note, set_state};
+
+#[test]
+fn a_note_loses_tabs_and_newlines_to_single_spaces() {
+    assert_eq!(sanitize_note("a\tb\nc\rd"), "a b c d");
+}
+
+#[test]
+fn set_state_changes_exactly_the_named_row() {
+    let s = Store::new(scratch("setstate")).expect("store");
+    s.write_rows(&[
+        Row::parse("w\treq-a\tb1\tsha1\tqueued\tmerge\t").unwrap(),
+        Row::parse("w\treq-b\tb2\tsha2\tqueued\tmerge\t").unwrap(),
+    ])
+    .unwrap();
+    set_state(&s, "req-b", "running", Some("mine")).expect("ok");
+    let rows = s.read_rows().unwrap();
+    assert_eq!(rows[0].state, "queued");
+    assert_eq!(rows[1].state, "running");
+    assert_eq!(rows[1].note, "mine");
+}
+
+#[test]
+fn an_unmatched_id_is_a_refusal_and_changes_nothing() {
+    let s = Store::new(scratch("nomatch")).expect("store");
+    let before = vec![Row::parse("w\treq-a\tb\tsha\tqueued\tmerge\t").unwrap()];
+    s.write_rows(&before).unwrap();
+    let e = set_state(&s, "req-typo", "held", None).expect_err("must refuse");
+    assert!(matches!(e, SetStateError::NoSuchRow));
+    assert_eq!(s.read_rows().unwrap(), before);
+}

@@ -3,3 +3,4 @@
 
 pub mod row;
 pub mod store;
+pub mod verbs;
