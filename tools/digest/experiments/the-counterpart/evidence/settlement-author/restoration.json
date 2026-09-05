@@ -1,0 +1,13 @@
+{
+  "settlement_restored": true,
+  "thing_unchanged": true,
+  "lock_sha256_before": {
+    "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+    "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+  },
+  "lock_sha256_after": {
+    "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+    "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+  },
+  "production_diff": ""
+}

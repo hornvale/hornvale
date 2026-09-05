@@ -1,0 +1,5 @@
+PASS: all owner list fields contain strings; all three patches nonempty and apply to frozen base.
+PASS: each exact patch changes only domains/settlement/src/lib.rs.
+PASS: every raw roster matches without duplicates; BORROWED remains hearth -> settlement.
+PASS: restored base stdout equals initial base byte-for-byte.
+PASS: git diff empty for both production files and both Cargo.lock files.

@@ -1,0 +1,248 @@
+{
+  "schema": "counterpart-v1",
+  "owner": "settlement",
+  "base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "owned_paths": [
+    "domains/settlement/src/lib.rs"
+  ],
+  "supplies": [
+    "home",
+    "hearth"
+  ],
+  "consumes": [],
+  "positive_assumptions": [
+    "Settlement registers before Thing in the frozen observer.",
+    "Thing BORROWED consumes hearth with owner settlement.",
+    "The frozen ConceptRegistry rejects differing definitions under one name."
+  ],
+  "negative_assumptions": [
+    "Settlement own names must not overlap unborrowed Thing names; this excludes every prospective new Thing name, not just the current BORROWED import hearth.",
+    "settlement-common-room is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+    "counterpart-marker is not claimed by Thing or any earlier registration in the solo base; a prospective independent claim invalidates this negative assumption.",
+    "settlement-hearth is not claimed by Thing or any earlier registration in the observed two-domain composition."
+  ],
+  "affected_questions": [
+    "registration",
+    "borrowing",
+    "ownership"
+  ],
+  "unknowns": [
+    "World generation, full-domain behavior, save compatibility, production admission and other registrars are outside the four frozen questions.",
+    "Changes outside the owned source and undeclared subject/namespace changes require fallback to all four questions.",
+    "Ownership cannot be established from a partial registry after registration refusal."
+  ],
+  "authority": [
+    "domains/CLAUDE.md: one concept name, one owner; domains depend only on kernel",
+    "domains/settlement/src/lib.rs::register_concepts",
+    "domains/thing/src/lib.rs::BORROWED and register_concepts",
+    "kernel/src/registry.rs::insert_concept and register_manifest",
+    "tools/digest/experiments/the-counterpart/contract.json"
+  ],
+  "variants": [
+    {
+      "id": "settlement-safe",
+      "patch": "patches/settlement-safe.patch",
+      "changed_subjects": [
+        "settlement-common-room"
+      ],
+      "supplies": [
+        "home",
+        "hearth",
+        "settlement-common-room"
+      ],
+      "consumes": [],
+      "candidate_prediction": {
+        "registration": "satisfied",
+        "component-roster": "satisfied",
+        "concept-ownership": "satisfied"
+      },
+      "question_prediction": {
+        "registration": "satisfied",
+        "components": "satisfied",
+        "borrowing": "satisfied",
+        "ownership": "satisfied"
+      },
+      "observations": {
+        "status": "completed",
+        "command_exit_code": 0,
+        "raw_stdout": "evidence/settlement-author/settlement-safe.stdout.json",
+        "raw_stderr": "evidence/settlement-author/settlement-safe.stderr.txt",
+        "settlement_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "thing_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "before_names": [
+          "hearth",
+          "home",
+          "settlement-common-room"
+        ],
+        "source_component_rosters_equal": true,
+        "candidate_outcomes": {
+          "hornvale.thing:registration": "satisfied",
+          "hornvale.thing:component-roster": "satisfied",
+          "hornvale.thing:concept-ownership": "satisfied"
+        },
+        "author_question_interpretation": {
+          "registration": "satisfied",
+          "components": "satisfied",
+          "borrowing": "satisfied",
+          "ownership": "satisfied"
+        },
+        "interpretation_authority": "Hand interpretation of frozen four questions from retained raw facts; not independent checker output."
+      },
+      "properties": [
+        "Compiles and introduces an observable Settlement-owned concept.",
+        "Solo composition remains accepted for the four frozen questions; full-domain admission safety not claimed."
+      ]
+    },
+    {
+      "id": "settlement-collision",
+      "patch": "patches/settlement-collision.patch",
+      "changed_subjects": [
+        "counterpart-marker"
+      ],
+      "supplies": [
+        "home",
+        "hearth",
+        "counterpart-marker"
+      ],
+      "consumes": [],
+      "candidate_prediction": {
+        "registration": "satisfied",
+        "component-roster": "satisfied",
+        "concept-ownership": "satisfied"
+      },
+      "question_prediction": {
+        "registration": "satisfied",
+        "components": "satisfied",
+        "borrowing": "satisfied",
+        "ownership": "satisfied"
+      },
+      "observations": {
+        "status": "completed",
+        "command_exit_code": 0,
+        "raw_stdout": "evidence/settlement-author/settlement-collision.stdout.json",
+        "raw_stderr": "evidence/settlement-author/settlement-collision.stderr.txt",
+        "settlement_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "thing_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "before_names": [
+          "counterpart-marker",
+          "hearth",
+          "home"
+        ],
+        "source_component_rosters_equal": true,
+        "candidate_outcomes": {
+          "hornvale.thing:registration": "satisfied",
+          "hornvale.thing:component-roster": "satisfied",
+          "hornvale.thing:concept-ownership": "satisfied"
+        },
+        "author_question_interpretation": {
+          "registration": "satisfied",
+          "components": "satisfied",
+          "borrowing": "satisfied",
+          "ownership": "satisfied"
+        },
+        "interpretation_authority": "Hand interpretation of frozen four questions from retained raw facts; not independent checker output."
+      },
+      "properties": [
+        "Compiles and introduces an observable Settlement-owned concept.",
+        "Solo composition remains accepted for the four frozen questions; full-domain admission safety not claimed.",
+        "Prospective collision input only; no joint patch or result inspected by this author."
+      ]
+    },
+    {
+      "id": "settlement-lender-rename",
+      "patch": "patches/settlement-lender-rename.patch",
+      "changed_subjects": [
+        "hearth",
+        "settlement-hearth"
+      ],
+      "supplies": [
+        "home",
+        "settlement-hearth"
+      ],
+      "consumes": [],
+      "candidate_prediction": {
+        "registration": "contradicted",
+        "component-roster": "satisfied",
+        "concept-ownership": "unknown"
+      },
+      "question_prediction": {
+        "registration": "violated",
+        "components": "satisfied",
+        "borrowing": "violated",
+        "ownership": "unknown"
+      },
+      "observations": {
+        "status": "completed",
+        "command_exit_code": 0,
+        "raw_stdout": "evidence/settlement-author/settlement-lender-rename.stdout.json",
+        "raw_stderr": "evidence/settlement-author/settlement-lender-rename.stderr.txt",
+        "settlement_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "thing_registration": {
+          "detail": "BORROWED declares \"hearth\" ceded to \"settlement\", but no such concept is registered -- delete the stale declaration",
+          "outcome": "refused"
+        },
+        "before_names": [
+          "home",
+          "settlement-hearth"
+        ],
+        "source_component_rosters_equal": true,
+        "candidate_outcomes": {
+          "hornvale.thing:registration": "contradicted",
+          "hornvale.thing:component-roster": "satisfied",
+          "hornvale.thing:concept-ownership": "unknown"
+        },
+        "author_question_interpretation": {
+          "registration": "violated",
+          "components": "satisfied",
+          "borrowing": "violated",
+          "ownership": "unknown"
+        },
+        "interpretation_authority": "Hand interpretation of frozen four questions from retained raw facts; not independent checker output."
+      },
+      "properties": [
+        "Compiles and produces completed observation with captured expected Thing refusal.",
+        "Base green, solo registration and borrowing violated, ownership unknown; never joint-only.",
+        "Settlement concepts_registered production unit test remains untouched and is not claimed to pass under this specimen."
+      ]
+    }
+  ],
+  "source_sharing": [
+    "Shared frozen base, frozen question map, raw observer and shared name counterpart-marker.",
+    "Read baseline Settlement and Thing production source, kernel registry and existing digest-thing candidate implementation.",
+    "Did not inspect sibling author worktrees, patches, records or observations."
+  ],
+  "limits": [
+    "Safe means agreement on the four frozen assay questions only.",
+    "No production tests or FROZEN rosters are edited; speculative source patches are data only."
+  ],
+  "attempts": {
+    "invalid_or_noop_specimens": [],
+    "corrections": [],
+    "base_observation": "evidence/settlement-author/base.stdout.json",
+    "restored_base_observation": "evidence/settlement-author/restored-base.stdout.json",
+    "runs": "evidence/settlement-author/runs.json",
+    "restoration": "evidence/settlement-author/restoration.json"
+  },
+  "author_effort": {
+    "draft_complete_utc": "2026-09-05T18:29:12Z",
+    "qualification_complete_utc": "2026-09-05T18:37:11.520552+00:00",
+    "tracked_elapsed_seconds": 479.521,
+    "measurement_limit": "Interval starts after initial source study and draft patch creation; includes waiting for controller-owned prewarm and is not active labor time. Initial reading/drafting was not timed.",
+    "work": "Three independently authored tiny source patches, owner declaration, four initial raw runs and one restored-base raw run; no subagents."
+  }
+}
