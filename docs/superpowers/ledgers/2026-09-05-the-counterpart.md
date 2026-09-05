@@ -386,3 +386,18 @@ reconciliation ledger column remains empty under the existing population rule.
 named collision input; Task 5 consumes all records and freezes rules; Task 6
 uses that immutable freeze; Task 7 uses committed artifacts alone. All shared
 function signatures are stated once in the plan and assigned to producing tasks.
+
+### Task 1 preflight correction — verified APIs and brief context
+
+**Ruling:** use `ConceptRegistry::default()` and
+`digest_thing::contribution() -> Result<Contribution, String>`. The plan
+named nonexistent `new`/`collect` entry points; the implementer checked the
+source and corrected them before implementation. This is a factual plan repair,
+not an architectural Q. Cost if wrong: compilation or observation failure,
+covered by focused real-API execution. The G4 claim that all signatures had
+been read was too broad; these two had not been checked precisely enough.
+
+The task-brief extractor retains only the Task heading/body, omitting the
+shared file map. The controller now supplies that map with the shared schema
+and constraints to every implementer. Experiment paths retain `the-counterpart`,
+while the Rust package path is `packages/counterpart`.

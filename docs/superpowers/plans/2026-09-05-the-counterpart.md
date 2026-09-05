@@ -67,7 +67,7 @@ The raw executable prints one JSON object and exits zero when observation comple
 pub fn snapshot() -> serde_json::Value;
 ```
 
-Its object has `schema`, `facts`, and `candidate`. `candidate` is the existing `digest_thing::collect()` contribution, separately captured with error/refusal information if it panics; it is never checker input. `facts` has exactly:
+Its object has `schema`, `facts`, and `candidate`. `candidate` is the existing `digest_thing::contribution()` contribution, separately captured with error/refusal information if it panics; it is never checker input. `facts` has exactly:
 
 ```json
 {
@@ -105,9 +105,9 @@ Here ellipses denote interface signatures only; implementations are specified in
 ### Task 1: Observe real APIs and retain bounded raw process evidence
 
 **Files:** Create the raw package, `contract.json`, `README.md`, `scripts/charter_measure.py`, `scripts/test_charter_measure.py`; modify the Charter wrapper and Digest lock.
-**Interfaces:** Consumes production `ConceptRegistry::new`, `concepts`, `hornvale_settlement::register_concepts`, `hornvale_thing::{THING_KINDS,BORROWED,thing_registry,register_concepts}`, `digest_thing::collect`. Produces `snapshot()` and the exact facts above; importable legacy `controlled_env`, `git`, `OwnedWorktree`, `measure`, `successful`, `request_stop`, `unsafe_cleanup` in the Python module; writes the frozen question contract.
+**Interfaces:** Consumes production `ConceptRegistry::default`, `concepts`, `hornvale_settlement::register_concepts`, `hornvale_thing::{THING_KINDS,BORROWED,thing_registry,register_concepts}`, `digest_thing::contribution`. Produces `snapshot()` and the exact facts above; importable legacy `controlled_env`, `git`, `OwnedWorktree`, `measure`, `successful`, `request_stop`, `unsafe_cleanup` in the Python module; writes the frozen question contract.
 
-- [ ] Read the production signatures and three precedents: Charter Thing collector, Charter harness, Digest package manifests. Read relevant directory guidance. Confirm `collect` return type before use.
+- [ ] Read the production signatures and three precedents: Charter Thing collector, Charter harness, Digest package manifests. Read relevant directory guidance. Confirm `contribution` return type before use.
 - [ ] Add a behavioral retention test against the existing harness operation, initially showing successful stdout cannot be recovered. Refactor import mechanics only as needed to exercise the same implementation, then capture the red before adding retention:
 
 ```python
