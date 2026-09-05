@@ -27,7 +27,6 @@
 //! Test fixture (decision 0092): calls the sculpt derivation entry point
 //! (`terrain_of`) directly to build its own world state, the sanctioned
 //! test-fixture posture.
-#![allow(clippy::disallowed_methods)]
 
 use hornvale_kernel::{Facet, NearestVertexIndex, Vertex, blend_corner_weights};
 use hornvale_worldgen::WeftKind;
@@ -45,6 +44,7 @@ const CONTROLS: [WeftKind; 2] = [WeftKind::Thicket, WeftKind::Erratic];
 /// facet of the seed-42 grid, in vertex order, as
 /// `{vertex}\t{kind:?}\t{bits:016x}` — the raw `f64` bit pattern, so the
 /// comparison is bit-for-bit and not a formatted approximation of one.
+#[allow(clippy::disallowed_methods)]
 fn render_control_prevalences() -> String {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");

@@ -314,8 +314,12 @@ fn prepared_weights_preserve_every_kinds_prevalence_bits() {
 /// over bound) — moving `SPRING_CONTEXTUALITY` bought no additional
 /// separation (42.6× at 0.85 vs 38.7× at 0.7, scale-invariant since lowering
 /// contextuality scales both sides identically); the defect was a bound set
-/// too loose, not the constant. `SPRING_CONTEXTUALITY` is restored to `0.85`
-/// (see `kinds.rs`).
+/// too loose, not the constant. `SPRING_CONTEXTUALITY` was restored to
+/// `0.85` — and The Warp has since deleted the constant outright, spring
+/// being a sign kind whose cause is read through a soft step rather than a
+/// contextuality lerp. The lesson (decision 0016's forbidden shape: a world
+/// parameter retuned to rescue a miscalibrated measurement) is what this
+/// paragraph is kept for; the constant it names no longer exists.
 ///
 /// **Round 1 also fixed F1: every noise sample is now passed through
 /// [`hornvale_terrain::features::uniformize`]** before use, which widens the
@@ -555,17 +559,75 @@ fn spring_never_occurs_off_land() {
     );
 }
 
-/// The Warp, Task 4 — a sign kind with a zero floor NEVER occurs where its
-/// cause is zero: the honest-silence half of spec §6, asserted on the
-/// MECHANISM (floor = 0 ⇒ prevalence = 0 ⇒ occurs = false) rather than on
-/// any authored value. `floor()` is read here rather than assumed, so if
-/// Task 6's calibration ever lifts a sign kind's floor off zero this test
-/// skips that kind instead of failing on a number it never asserted.
+/// Per-kind non-vacuity floors for
+/// [`a_sign_kind_with_a_zero_floor_is_silent_below_its_lower_step_edge`] —
+/// the number of LAND-ELIGIBLE facets whose cause sits at or below the
+/// kind's own lower step edge, so the kind's response there is exactly zero
+/// (fix round 1).
+///
+/// **MEASURED on seed 42's full walk-depth grid, not assumed** (11,218
+/// land-eligible facets of 40,962 vertices, this tree, the provisional
+/// Task 4 step edges): **spring 10,600, overhang 6,044**. The floors below
+/// sit an order of magnitude under each measurement on purpose — this is a
+/// non-vacuity guard, not a ratchet on the number. Every member of the
+/// population is individually asserted, so the count's only job is to prove
+/// the kind HAS a population of its own; Task 6 moves the step edges, which
+/// will move both measurements, and a floor set near today's value would
+/// redden for a reason that has nothing to do with the property.
+const ZERO_RESPONSE_FLOORS: [(WeftKind, usize); 2] =
+    [(WeftKind::Spring, 1_000), (WeftKind::Overhang, 1_000)];
+
+/// The Warp, Task 4 — a sign kind with a zero floor is EXACTLY silent
+/// wherever its response is zero: the honest-silence half of spec §6,
+/// asserted on the MECHANISM (floor = 0 and response = 0 ⇒ prevalence = 0 ⇒
+/// occurs = false) rather than on any authored value. `floor()` and
+/// `step_edges()` are read here rather than assumed, so if Task 6's
+/// calibration lifts a sign kind's floor off zero this test skips that kind
+/// instead of failing on a number it never named.
+///
+/// **The population is LAND-ELIGIBLE facets only, and counted PER KIND**
+/// (fix round 1). Without the filter the guard was a count and not a
+/// membership: [`hornvale_worldgen::prevalence_with_weights`] returns `0.0`
+/// at its eligibility gate *before* any macro-state read, so every ocean
+/// facet satisfies both assertions through a completely different
+/// mechanism — the one [`spring_never_occurs_off_land`] already pins — and
+/// nothing established that a single land facet was in the sample.
+/// Per-kind counting closes the other half: a pooled count can be carried
+/// entirely by one kind while the other's claim goes untested.
+///
+/// **The population is "cause at or below the lower step edge", NOT "cause
+/// exactly zero", and the reason is a measurement.** The first version of
+/// this test asked for `macro_state == 0.0`, and on seed 42's land that set
+/// is **EMPTY for both sign kinds — 0 of 11,218 land-eligible facets, for
+/// spring and for overhang alike** (measured on this tree, fix round 1).
+/// Both causes are products of blended corner values
+/// (`carbonate × tanh(drainage/…)`, `induration × tanh(slope/…)`), and a
+/// bilinear blend of four real corners is essentially never exactly `0.0`
+/// on dry ground; the exact zeros all live in the ocean, which the
+/// eligibility filter above — correctly — removes. So the strict form is
+/// not merely weak, it is vacuous on the real subject, and a vacuous test
+/// that reads green is worse than an absent one. `cause ≤ lo` is the
+/// honest statement of the same mechanism: [`smoothstep`]'s clamp makes the
+/// response EXACTLY `0.0` there (not asymptotically small), which is
+/// precisely what a zero floor turns into literal silence, and `cause == 0`
+/// is a sub-case of it. See [`ZERO_RESPONSE_FLOORS`] for the measured
+/// populations.
+///
+/// The land test is spelled out here rather than calling
+/// `WeftKind::eligible`, which is `pub(crate)` and invisible to this
+/// external test crate — the same one-line replication
+/// [`land_eligible_walks`] and
+/// [`prepared_weights_preserve_every_kinds_prevalence_bits`] already make,
+/// chosen over widening a crate-private accessor for a test's convenience.
+///
+/// Walks every vertex, not every third: once ocean is excluded the sample
+/// is worth having whole, and the full grid costs under half a second here
+/// (the control golden walks the same one).
 ///
 /// Builds its world inline, the same posture every other test in this file
 /// takes (decision 0092's sanctioned test fixture).
 #[test]
-fn a_sign_kind_with_a_zero_floor_is_silent_where_its_cause_is_zero() {
+fn a_sign_kind_with_a_zero_floor_is_silent_below_its_lower_step_edge() {
     let world = hornvale_worldgen::seed_42_world();
     let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
     let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
@@ -574,37 +636,62 @@ fn a_sign_kind_with_a_zero_floor_is_silent_where_its_cause_is_zero() {
     let index = NearestVertexIndex::new(geo);
     let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
 
-    let mut zero_cause = 0usize;
-    for v in (0..geo.vertex_count()).step_by(3) {
+    let mut silent = [0usize; 2];
+    let mut land_facets = 0usize;
+    for v in 0..geo.vertex_count() {
         let facet = Facet::containing(geo.position(Vertex(v as u32)), walk_depth);
         let Some(weights) = facet.corner_weights(geo, &index) else {
             continue;
         };
-        for kind in [WeftKind::Spring, WeftKind::Overhang] {
+        if blend_corner_weights(weights, &pack.land) < 0.5 {
+            continue;
+        }
+        land_facets += 1;
+        for (i, (kind, _)) in ZERO_RESPONSE_FLOORS.into_iter().enumerate() {
             if kind.floor() != 0.0 {
                 continue;
             }
-            if kind.macro_state(weights, &pack) == 0.0 {
-                zero_cause += 1;
-                let p = hornvale_worldgen::prevalence_with_weights(
-                    kind, &facet, weights, &pack, world.seed,
-                );
-                assert_eq!(
-                    p, 0.0,
-                    "{kind:?} at vertex {v}: zero cause, zero floor, nonzero prevalence {p}"
-                );
-                assert!(
-                    !hornvale_worldgen::occurs(kind, &facet, world.seed, p),
-                    "{kind:?} at vertex {v}: occurred against a zero prevalence"
-                );
+            let cause = kind.macro_state(weights, &pack);
+            let (lo, _) = kind.step_edges();
+            if cause > lo {
+                continue;
             }
+            silent[i] += 1;
+            assert_eq!(
+                kind.response(cause),
+                0.0,
+                "{kind:?} at vertex {v}: cause {cause} is at or below the lower edge {lo}, \
+                 so the response must be exactly zero"
+            );
+            let p = hornvale_worldgen::prevalence_with_weights(
+                kind, &facet, weights, &pack, world.seed,
+            );
+            assert_eq!(
+                p, 0.0,
+                "{kind:?} at vertex {v}: zero response, zero floor, nonzero prevalence {p}"
+            );
+            assert!(
+                !hornvale_worldgen::occurs(kind, &facet, world.seed, p),
+                "{kind:?} at vertex {v}: occurred against a zero prevalence"
+            );
         }
     }
 
-    assert!(
-        zero_cause > 100,
-        "fixture check: {zero_cause} zero-cause facets — the claim needs a population"
-    );
+    for (i, (kind, floor)) in ZERO_RESPONSE_FLOORS.into_iter().enumerate() {
+        assert!(
+            silent[i] >= floor,
+            "fixture check: {kind:?} had {} land-eligible facet(s) at or below its lower \
+             step edge, over {land_facets} land facets, wanted >= {floor} — without a \
+             population of its OWN this kind's honest-silence claim is untested (measured \
+             at fix time: spring 10,600, overhang 6,044). Counts this run: {:?}",
+            silent[i],
+            ZERO_RESPONSE_FLOORS
+                .iter()
+                .map(|(k, _)| *k)
+                .zip(silent)
+                .collect::<Vec<_>>(),
+        );
+    }
 }
 
 /// The response is a soft step on the cause: `0` below `lo`, `1` above
