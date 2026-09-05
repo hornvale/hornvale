@@ -235,6 +235,52 @@ These checks validate the design documents and example UI, not an implemented
 contributor system. The earlier Cargo prototypes establish only the narrow
 tool behaviors recorded in #3.
 
+## #6 [Q] — nonfunctional requirements are scoped quality contracts
+
+**Question:** Nathan asks what place nonfunctional requirements have in the
+proposed system, before approving the G3 package.
+
+**Decision:** Recommend first-class quality contracts alongside behavioral
+requirements. A contract names its subject/owner, scenario and workload,
+environment, required response or budget, evaluation method, evidence scope,
+and action on breach. Distinguish categorical guarantees, measured budgets,
+and review-based qualities. This records a design refinement for the pending
+G3 discussion; it does not invent numeric limits, approve new gate policy,
+or claim the protocol already implements quality-specific records.
+
+**Why:** The Charter already specifies deterministic composition, errors,
+process cleanup, and independent enrollment, but its cost requirement mostly
+asks for measurement. Local conformance cannot establish aggregate memory,
+latency, contention, or recovery behavior. Quality belongs at three scopes:
+local contributor, cross-contributor agreement, and whole-system composition.
+The program's existing effect/amendment rules support this distinction.
+Scenario-based quality analysis also has an established precedent in the
+[SEI quality-attribute workshop](https://www.sei.cmu.edu/library/quality-attribute-workshop-collection/).
+
+**Alternatives discarded:** Boolean “fast/reliable/modular” manifest badges;
+a single overall quality score; summing component percentiles as an end-to-end
+latency proof; universal thresholds across dissimilar workloads; automatically
+relaxing a target whenever a baseline regresses; treating compilation of a
+requirement descriptor as proof that its runtime target is achieved.
+
+**Ideonomy passes / overturns:** Two passes. Substitution over size and
+homogeneity, captured as a timeline from two small contributors to many
+heterogeneous adopters, exposed the need to preserve a workload envelope and
+shared composition budgets as enrollment grows. Abstraction-lift over
+distribution and visibility, captured as states proposed → measured →
+adopted → breached/stale → re-evaluated, confirmed that observation, acceptance,
+and breach handling are separate, with no further material mechanism added.
+No approach overturn; these requirements sharpen the federation's obligations.
+
+**Capture actions:** Add `PROC-quality-contracts` as a raw registry proposal.
+Before G3 approval, refine the campaign's quality scenarios: worktree isolation,
+failure/cancellation recovery, compatible extension, plain-text diagnostics,
+supported-host operation, and separately measured build/collection costs.
+Keep complete provenance, global test-selection authority, and a universal
+quality ontology outside this first campaign. Target numbers need justified
+workloads and measurements; desired service levels and observed baselines
+are different records.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
@@ -247,6 +293,11 @@ tool behaviors recorded in #3.
 - Later adopters: Alchemy's contract, the actual publication boundary, and
   the queue lifecycle. The first campaign's predicate check proves none of
   those by implication.
+- G3 refinement from Nathan's nonfunctional-requirements question: turn the
+  quality-contract recommendation in #6 into explicit first-campaign
+  scenarios and acceptance criteria before proceeding to planning. Include
+  local, shared-resource, and composed-system obligations; numeric targets
+  remain unestablished until their workload and rationale are recorded.
 
 ## Verification and observations
 
