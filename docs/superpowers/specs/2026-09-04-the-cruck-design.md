@@ -391,6 +391,19 @@ produces a lattice passing all eight checker rules, no chamber below
 `MIN_CHAMBER_SPAN` on either axis, and `dof == n - 1` exactly. For the
 grower over the same shapes: all eight rules and `dof == 2n` exactly.
 
+> **AMENDED AFTER MEASUREMENT (2026-09-05, ledger #15, a post-G3
+> narrowing of a preregistered claim).** The grower's parent
+> generalisation realizes a fork on 2,536 of 2,560 (tree, seed) pairs and
+> drops one link on 24 — `[(0,1),(0,2),(0,3)]` at seeds 5, 26, 46, 62 and
+> `[(0,1),(1,2),(1,3)]` at seeds 34, 58, 60, 90. Every structural remedy
+> tried also moves GROWN bytes for chains, which §6 marks STOP. Production
+> never hands the grower a fork (§3.5: wild sites are chains; built sites
+> allocate), so the claim is narrowed to what is true: the grown arm holds
+> all eight rules and `dof == 2n` EXACTLY over every chain, and the 24
+> fork failures are pinned by tree and seed as a witness test that reddens
+> if the set moves in either direction. The allocator's half of H4 stands
+> unamended and green.
+
 ### H5 — the wild path is byte-identical
 
 A committed golden of `(chambers, links, roles)` for a fixed set of

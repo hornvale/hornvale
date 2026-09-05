@@ -1,14 +1,15 @@
 //! Region growing: the organic embedding, for places nobody built.
 //!
 //! A cave is not a partition of a rectangle. Each chamber tunnels a short
-//! passage out of the previous one, then all of them claim cells outward until
+//! passage out of its PARENT, then all of them claim cells outward until
 //! the interior is exhausted — so chambers are contiguous blobs rather than
 //! rects, and the fabric between two of them is wherever they stopped.
 //!
-//! Chambers strung along a passage rather than scattered across the extent, and
-//! that is a fidelity requirement before it is an aesthetic one: the anchor graph
-//! asserts a chain, so consecutive chambers must be SEPARATED BY EXACTLY ONE
-//! WALL CELL, and the only way to know they are is to start them that way.
+//! Chambers strung along their passages rather than scattered across the extent,
+//! and that is a fidelity requirement before it is an aesthetic one: the anchor
+//! graph asserts a TREE, so a chamber and its parent must be SEPARATED BY EXACTLY
+//! ONE WALL CELL, and the only way to know they are is to start them that way. A
+//! chain is the case where every chamber's parent is the one before it.
 //!
 //! # Claim with a separation rule, and never take a cell back
 //!
@@ -28,7 +29,7 @@
 //!   concave blob can strand its far half — a sealed pocket of floor, which is
 //!   the failure mode walls-as-cells introduces.
 //! - **A threshold always has somewhere to go.** Chamber `i` starts TWO cells
-//!   from chamber `i - 1`, so exactly one cell sits between them — and that cell
+//!   from its parent, so exactly one cell sits between them — and that cell
 //!   is RESERVED as the threshold there and then, before the flood runs.
 //!
 //! The reservation is the second thing Task 4b had to get right, and §7 rule 1 is
@@ -47,6 +48,34 @@
 //! because a grown blob's bounding box overlaps its neighbours', and a
 //! rect-scanning `region_of` agreed with the truth for exactly one of the two
 //! methods (ledger #17).
+//!
+//! # A KNOWN LIMIT: a fork can starve, and the failing seeds are written down
+//!
+//! **This method embeds a chain faithfully and a FORK on 2,536 of 2,560
+//! (tree, seed) pairs, not all of them** (ledger #15, spec §7's H4 amendment of
+//! 2026-09-05). A doorway is a cell BESIDE one of a chamber's own cells, so a
+//! parent that owns one cell carries at most four and a parent drawn into the
+//! interior's corner carries two — while chamber 0 owns exactly one cell,
+//! because it spends its two draws on a POSITION where every later chamber
+//! spends them on a direction and a run. A three-child root in that corner has
+//! nowhere to put its third doorway. Separately, a sibling's run — up to
+//! [`super::CHAMBER_SIDE`] cells, laid down before the next sibling is even
+//! seeded — can leave every remaining cell of a forking parent's boundary
+//! unreservable, since [`reservable`] refuses a cell with any neighbour owned
+//! by a third chamber.
+//!
+//! **Six structural remedies were measured and every one of them moves GROWN
+//! bytes for CHAINS as well**, which spec §6 marks STOP: wild sites are the one
+//! derivation The Cruck promised to leave byte-identical, and a cave transcript
+//! moving needs its own epoch decision. Production never hands this method a
+//! fork — wild sites draw chains (§3.5) and built sites `allocate`
+//! ([`super::embed_with`] dispatches on `built`) — so the limit is accepted and
+//! PINNED rather than papered over: `classify`'s
+//! `the_grower_drops_a_link_on_exactly_these_fork_seeds` names all 24 pairs and
+//! reddens if the set moves in either direction, so a later fix is observed
+//! rather than inferred. Nothing here is silent about a fork it cannot serve:
+//! the doorway read-back below leaves the link unrealized and §7 rules 1, 3 and
+//! 8 all report it.
 
 use super::{Cell, CellKind, HEADINGS, Lattice, Rect, neighbours};
 use crate::structure::Structure;
@@ -75,9 +104,15 @@ pub fn grow(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
     // the walls were derived. A method that leaves that to chance is deciding the
     // graph's relations for itself, which is the one thing an embedder may not do.
     //
-    // So chamber 0 gets a drawn cell, and every later chamber TUNNELS out of the
-    // previous one: a direction, then a run. Task 4b moved its first cell from one
-    // step out to TWO, so a wall cell sits between the blobs from the start.
+    // So chamber 0 gets a drawn cell, and every later chamber TUNNELS out of its
+    // PARENT: a direction, then a run. Task 4b moved its first cell from one step
+    // out to TWO, so a wall cell sits between the blobs from the start.
+    //
+    // The parent, not `i - 1`: `structure.links` is a rooted tree (`structure.rs`
+    // invariant 2) and a chain is only its one-child case. Tunnelling out of the
+    // previous INDEX would realize `(i - 1, i)` — a link the graph does not name
+    // the moment the tree forks — which is §7 rule 1's invented relation, and is
+    // exactly what it reported before this read the parent.
     //
     // Exactly two draws per chamber either way, so rule 7's budget is unchanged
     // and a blocked direction cannot move the stream position (the rule
@@ -106,29 +141,36 @@ pub fn grow(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
             owner.insert(drawn, 0);
             claimed.push_back(drawn);
         } else {
-            // Tunnel out of chamber `i - 1`, leaving one cell of fabric behind.
-            // The anchor may be any of its cells from which a two-cell step lands
-            // somewhere this chamber may claim — `frontier[i - 1]` holds them in
-            // claim order, so taking the last keeps the passage moving away from
-            // where the previous chamber started rather than doubling back over it.
+            // Tunnel out of this chamber's PARENT, leaving one cell of fabric
+            // behind. Invariant 2 puts every parent at a lower index than its
+            // child, so `frontier[parent]` is always already built.
+            //
+            // The anchor may be any of the parent's cells from which a two-cell
+            // step lands somewhere this chamber may claim — `frontier[parent]`
+            // holds them in claim order, so taking the last keeps the passage
+            // moving away from where the parent started rather than doubling back
+            // over it.
             //
             // `first` picks the direction and the rotation makes the choice total
             // without a second draw.
-            let launch = frontier[i - 1].iter().rev().copied().find_map(|a| {
+            let parent = structure
+                .parent(i)
+                .expect("every chamber but the root has a parent");
+            let launch = frontier[parent].iter().rev().copied().find_map(|a| {
                 rotated(first).into_iter().find_map(|d| {
                     // The SKIPPED cell becomes the threshold, so it must be
                     // reservable; the landing cell must be claimable under the
                     // separation rule.
                     let skip = Cell(a.0 + d.0, a.1 + d.1);
                     let land = Cell(a.0 + 2 * d.0, a.1 + 2 * d.1);
-                    (reservable(skip, &owner, &reserved, interior, i - 1, i)
+                    (reservable(skip, &owner, &reserved, interior, parent, i)
                         && claimable(land, &owner, &reserved, interior, i))
                     .then_some((skip, land, d))
                 })
             });
             match launch {
                 Some((door, start, d)) => {
-                    reserved.insert(door, (i - 1, i));
+                    reserved.insert(door, (parent, i));
                     owner.insert(start, i);
                     claimed.push_back(start);
                     // `second` is the run: a passage as long as a chamber's
@@ -150,8 +192,8 @@ pub fn grow(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
                     }
                 }
                 None => {
-                    // No two-cell step out of chamber `i - 1` lands anywhere this
-                    // chamber may hold with a reservable cell between. Unreachable
+                    // No two-cell step out of this chamber's parent lands anywhere
+                    // this chamber may hold with a reservable cell between. Unreachable
                     // while `n <= MAX_CHAMBERS` and the interior has room — 4
                     // chambers in 17x17 cells cannot box one another in — and
                     // handled by a seed-free scan rather than an `expect`, because
@@ -244,7 +286,7 @@ pub fn grow(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
     // geometry is exactly the two-passes-one-geometry shape Task 3 found defects
     // in twice.
     //
-    // A link the tunnel did not reserve — anything but the chain `structure_at`
+    // A link the tunnel did not reserve — anything but the tree `structure_at`
     // guarantees (`structure.rs` invariant 2), or a chamber the launch search
     // could not place — gets a doorway at the interior's origin, which is floor
     // rather than a threshold. Deliberately not papered over: nothing opens, and

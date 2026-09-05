@@ -342,7 +342,7 @@ mod tests {
     use crate::brief::Brief;
     use crate::lattice::{allocate, embed_with, extent_for, grow};
     use crate::site::{Site, SiteKind};
-    use crate::structure::structure_at;
+    use crate::structure::{Role, structure_at};
     use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 13;
@@ -933,5 +933,271 @@ mod tests {
             }
             assert_eq!(l.doorways.len(), s.links.len());
         }
+    }
+
+    /// Every rooted labelled tree on `1..=MAX_CHAMBERS` nodes with `parent <
+    /// child` — the shape [`Structure`]'s invariant 2 admits, enumerated rather
+    /// than drawn. Parent pointers by mixed radix: `parents[i] ∈ 0..i` for
+    /// `i >= 1`, so the count is `1 + 1 + 2 + 6 = 10` on `1..=4` nodes.
+    ///
+    /// Enumerated because a corpus of DRAWN structures can only exercise the
+    /// shapes the current `structure_at` happens to produce. Task 3 has not run
+    /// yet, so today it produces chains only — and an embedder that can embed a
+    /// chain is exactly what this campaign found insufficient.
+    fn every_tree() -> Vec<crate::structure::Structure> {
+        let mut out = Vec::new();
+        for n in 1..=crate::structure::MAX_CHAMBERS {
+            let combos: usize = (1..n).product::<usize>().max(1);
+            for code in 0..combos {
+                let mut links = Vec::new();
+                let mut rest = code;
+                for i in 1..n {
+                    let p = rest % i;
+                    rest /= i;
+                    links.push((p, i));
+                }
+                let chambers: Vec<Facet> = (0..n).map(|i| locale(i as u64)).collect();
+                let roles = (0..n)
+                    .map(|i| {
+                        if i == 0 {
+                            Role::Threshold
+                        } else {
+                            [Role::Hearthroom, Role::Store, Role::Loomroom][i - 1]
+                        }
+                    })
+                    .collect();
+                out.push(crate::structure::Structure {
+                    threshold: chambers[0].clone(),
+                    chambers,
+                    links,
+                    roles,
+                });
+            }
+        }
+        out
+    }
+
+    /// Is this tree a PATH — no node with two children?
+    ///
+    /// The shape `structure_at` produces today and, after The Cruck, the shape a
+    /// WILD site still produces: built sites run the grammar and allocate, wild
+    /// sites draw a chain and grow (spec §3.5). So this predicate is what divides
+    /// H4's two arms, and it is a property of the tree rather than a list of
+    /// tree indices, which a widened `MAX_CHAMBERS` would silently invalidate.
+    fn is_a_chain(s: &crate::structure::Structure) -> bool {
+        (0..s.chambers.len()).all(|i| s.children(i).len() <= 1)
+    }
+
+    /// claim: invariant(forall-tree, seed: 0..256) — H4: every reachable tree
+    /// embeds faithfully under the RECTILINEAR method, and every chain under the
+    /// grown one.
+    ///
+    /// **The grown arm is narrower than the preregistered H4, deliberately**
+    /// (ledger #15, spec §7's H4 amendment of 2026-09-05). The grower realizes a
+    /// fork on 2,536 of 2,560 (tree, seed) pairs and drops one link on 24; every
+    /// structural remedy measured also moves GROWN bytes for chains, which spec
+    /// §6 marks STOP. The 24 are pinned by tree and seed in
+    /// [`the_grower_drops_a_link_on_exactly_these_fork_seeds`] rather than
+    /// quietly excluded here — this test says what holds, that one says exactly
+    /// what does not.
+    #[test]
+    fn h4_every_tree_embeds_under_all_eight_rules_with_exact_freedom() {
+        let trees = every_tree();
+        assert_eq!(
+            trees.len(),
+            10,
+            "the enumeration must stay exhaustive over 1..=MAX_CHAMBERS — a \
+             generator that silently shrinks turns this invariant into a \
+             narrower one with the same name"
+        );
+        assert_eq!(
+            trees.iter().filter(|s| is_a_chain(s)).count(),
+            4,
+            "the grown arm runs over chains only, so a `is_a_chain` that stopped \
+             recognising them would leave that arm asserting nothing while this \
+             test stayed green"
+        );
+        for s in trees {
+            let n = s.chambers.len();
+            let chain = is_a_chain(&s);
+            for seed in 0u64..256 {
+                let e = extent_for(&s);
+                let rect = embed_with(&s, &built(), e, Seed(seed));
+                let grown = embed_with(&s, &wild(), e, Seed(seed));
+                let mut arms = vec![(&rect, "rectilinear", freedom_of_a_tree(n))];
+                if chain {
+                    arms.push((&grown, "grown", 2 * n as u32));
+                }
+                for (l, m, budget) in arms {
+                    let specified: BTreeSet<(usize, usize)> =
+                        s.links.iter().map(|&(a, b)| (a.min(b), a.max(b))).collect();
+                    assert_eq!(
+                        realized_links(l),
+                        specified,
+                        "{m} seed {seed} links {:?}: rule 1",
+                        s.links
+                    );
+                    assert_eq!(
+                        l.dof, budget,
+                        "{m} seed {seed} links {:?}: rule 7 must be EXACT",
+                        s.links
+                    );
+                    for i in 0..n {
+                        let b = bounds_of(l, i).unwrap_or_else(|| {
+                            panic!("{m} seed {seed}: chamber {i} owns no floor")
+                        });
+                        if m == "rectilinear" {
+                            assert!(
+                                b.w >= crate::lattice::allocate::MIN_CHAMBER_SPAN
+                                    && b.h >= crate::lattice::allocate::MIN_CHAMBER_SPAN,
+                                "{m} seed {seed} links {:?}: chamber {i} is {b:?}",
+                                s.links
+                            );
+                        }
+                    }
+                    let floors = l.cells.iter().filter(|(_, k)| k.passable()).count();
+                    assert_eq!(
+                        reachable_from(l, 0).len(),
+                        floors,
+                        "{m} seed {seed} links {:?}: rule 8",
+                        s.links
+                    );
+                }
+            }
+        }
+    }
+
+    /// claim: invariant(forall-fork-tree, seed: 0..256) — a PINNED KNOWN LIMIT,
+    /// not a passing rule: the exact set of (tree, seed) pairs on which the
+    /// GROWER fails to realize a specified link.
+    ///
+    /// **Why this exists rather than a narrowed H4 and silence.** Ledger #15 and
+    /// spec §7's H4 amendment (2026-09-05) accept that the grower drops one link
+    /// on 24 of 2,560 fork (tree, seed) pairs, because every structural remedy
+    /// measured also moves GROWN bytes for chains — a cave transcript moving is
+    /// a STOP row in spec §6 — and because production never routes a fork to
+    /// `grow` at all: wild sites draw chains (§3.5) and built sites `allocate`
+    /// (`embed_with` dispatches on `built`). Accepting a limit is not the same
+    /// as forgetting it, so the failures are written down to the pair.
+    ///
+    /// **It reddens in EITHER direction**, which is the whole point and the
+    /// reason this is an equality rather than a count or a bound. A count
+    /// ratchet has slack and a violation sits green inside it; an equality does
+    /// not. If someone fixes the grower, this test fails and says so — a fix
+    /// observed rather than inferred. If a change makes the grower drop a link
+    /// somewhere new, it fails too.
+    ///
+    /// **The three rules fail TOGETHER on exactly these pairs**, and that
+    /// coincidence is asserted rather than assumed. One dropped link is read by
+    /// rule 1 (the link is unrealized), by rule 3 (the doorway falls back to the
+    /// interior's origin, which is floor rather than a threshold — `grow`'s own
+    /// doorway read-back comment says it will), and by rule 8 (the chamber
+    /// behind the missing doorway is a sealed pocket). Asserting the three sets
+    /// are EQUAL is what says the fork failures corrupt nothing else: rule 2 and
+    /// the `dof` budget are asserted over ALL 2,560 pairs below, unconditionally.
+    #[test]
+    fn the_grower_drops_a_link_on_exactly_these_fork_seeds() {
+        let pinned: BTreeSet<(Vec<(usize, usize)>, u64)> = [
+            (
+                vec![(0, 1), (0, 2), (0, 3)],
+                vec![
+                    5, 26, 46, 62, 65, 70, 94, 121, 137, 167, 180, 203, 211, 235, 249,
+                ],
+            ),
+            (
+                vec![(0, 1), (1, 2), (1, 3)],
+                vec![34, 58, 60, 90, 110, 125, 184, 202, 218],
+            ),
+        ]
+        .into_iter()
+        .flat_map(|(links, seeds)| seeds.into_iter().map(move |s| (links.clone(), s)))
+        .collect();
+        assert_eq!(
+            pinned.len(),
+            24,
+            "the pinned set is 24 pairs, one per failure"
+        );
+
+        let mut dropped: BTreeSet<(Vec<(usize, usize)>, u64)> = BTreeSet::new();
+        let mut undeclared_doorway: BTreeSet<(Vec<(usize, usize)>, u64)> = BTreeSet::new();
+        let mut sealed: BTreeSet<(Vec<(usize, usize)>, u64)> = BTreeSet::new();
+        let mut forks = 0;
+        for s in every_tree() {
+            if is_a_chain(&s) {
+                continue;
+            }
+            forks += 1;
+            let n = s.chambers.len();
+            let specified: BTreeSet<(usize, usize)> =
+                s.links.iter().map(|&(a, b)| (a.min(b), a.max(b))).collect();
+            for seed in 0u64..256 {
+                let e = extent_for(&s);
+                let l = embed_with(&s, &wild(), e, Seed(seed));
+                let here = (s.links.clone(), seed);
+                if realized_links(&l) != specified {
+                    dropped.insert(here.clone());
+                }
+                // Rule 3's doorway half only: a declared doorway that is not a
+                // `Threshold`. The whole of rule 3 is stated once, in
+                // `rule_3_the_plan_is_enclosed_and_every_threshold_is_declared`;
+                // this is the single clause an unrealized link trips, named
+                // rather than restated.
+                if l.doorways
+                    .iter()
+                    .any(|&(_, _, c)| !matches!(kind_of(&l, c), Some(CellKind::Threshold(_, _))))
+                {
+                    undeclared_doorway.insert(here.clone());
+                }
+                let floors = l.cells.iter().filter(|(_, k)| k.passable()).count();
+                if reachable_from(&l, 0).len() != floors {
+                    sealed.insert(here.clone());
+                }
+                // Unconditional over every fork pair: a dropped link must not
+                // cost the wall law or the freedom budget as well.
+                for (p, q) in openings(&l) {
+                    if let (Some(CellKind::Floor(i)), Some(CellKind::Floor(j))) =
+                        (kind_of(&l, p), kind_of(&l, q))
+                    {
+                        assert_eq!(
+                            i, j,
+                            "grown seed {seed} links {:?}: rule 2 — {p:?} is \
+                             chamber {i}'s floor and {q:?} is chamber {j}'s",
+                            s.links
+                        );
+                    }
+                }
+                assert_eq!(
+                    l.dof,
+                    2 * n as u32,
+                    "grown seed {seed} links {:?}: rule 7 must be EXACT on a \
+                     fork too — the tunnel spends two draws per chamber whether \
+                     or not it finds somewhere to put the doorway",
+                    s.links
+                );
+            }
+        }
+        assert_eq!(
+            forks, 6,
+            "six of the ten trees fork; a sweep that found fewer would pin a \
+             smaller set and still read as green"
+        );
+        assert_eq!(
+            dropped, pinned,
+            "the grower's unrealized-link set MOVED. If it shrank, the limit \
+             ledger #15 records has been narrowed or fixed — say so and repin. \
+             If it grew, something regressed."
+        );
+        assert_eq!(
+            undeclared_doorway, dropped,
+            "rule 3's doorway clause and rule 1 no longer fail on the same \
+             pairs, so a fork is failing rule 3 for some reason OTHER than the \
+             dropped link this test accepts"
+        );
+        assert_eq!(
+            sealed, dropped,
+            "rule 8 and rule 1 no longer fail on the same pairs, so a fork is \
+             sealing a pocket for some reason OTHER than the dropped link this \
+             test accepts"
+        );
     }
 }
