@@ -115,8 +115,11 @@ if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
     census_row_id="$HV_SLUICE_CLAIMED"
 else
     set +e
+    # STDOUT AND STDERR ARE CAPTURED TOGETHER (fix round 2, Critical F1) —
+    # see the matching comment in sluice-run.sh. On success `claim` writes
+    # nothing to stderr, so folding the streams costs that path nothing.
     census_claim="$(bash "$repo_root/scripts/sluice-queue.sh" claim --sha "$ref" \
-        "launched directly by operator; kind=census" 2>/dev/null)"
+        "launched directly by operator; kind=census" 2>&1)"
     census_claim_rc=$?
     set -e
     case "$census_claim_rc" in
@@ -124,7 +127,15 @@ else
         4) echo "sluice-census: REFUSING — the row for ${ref:0:12} is not queued; somebody else has it." >&2
            exit 9 ;;
         5) echo "sluice-census: no queue row for ${ref:0:12} — running AD HOC, unbookkept." >&2 ;;
-        *) echo "sluice-census: could not reach the queue (claim rc=$census_claim_rc) — running unbookkept." >&2 ;;
+        *) # REFUSE rather than proceed unbookkept (fix round 2, Critical
+           # F1) — see the matching case in sluice-run.sh. If we cannot ask
+           # the queue whether somebody else already holds this row, we do
+           # not run a census against it either.
+           echo "sluice-census: REFUSING — could not reach the queue (claim rc=$census_claim_rc):" >&2
+           printf '%s
+' "$census_claim" >&2
+           echo "sluice-census: refusing to run unbookkept rather than risk a duplicate execution." >&2
+           exit 13 ;;
     esac
 fi
 

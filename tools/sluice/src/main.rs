@@ -13,6 +13,15 @@ fn state_dir() -> PathBuf {
     PathBuf::from(home).join(".local/state/hornvale/sluice")
 }
 
+/// Print a usage line and exit 2 — the brief's own documented exit code for
+/// a malformed invocation. A missing argv used to reach `.expect()` and
+/// panic with rc=101 (fix round 2, Important F3): indistinguishable from
+/// every other panic, and one short of what the interface promised.
+fn usage_error(msg: &str) -> ! {
+    eprintln!("sluice: usage: {msg}");
+    std::process::exit(2);
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let store = Store::new(state_dir()).expect("state dir");
@@ -23,8 +32,12 @@ fn main() {
             }
         }
         Some("set-state") => {
-            let id = args.get(1).expect("usage: set-state <id> <state> [note]");
-            let st = args.get(2).expect("usage: set-state <id> <state> [note]");
+            let Some(id) = args.get(1) else {
+                usage_error("set-state <id> <state> [note]");
+            };
+            let Some(st) = args.get(2) else {
+                usage_error("set-state <id> <state> [note]");
+            };
             match set_state(&store, id, st, args.get(3).map(String::as_str)) {
                 Ok(()) => {}
                 Err(SetStateError::NoSuchRow) => {
@@ -42,11 +55,16 @@ fn main() {
             }
         }
         Some("claim") => {
+            // `--sha` REQUIRES its value (fix round 2, Important F2). Reading
+            // a missing value as `None` silently produced the DISPATCHER form
+            // (claim the head of the queue) instead of a usage error — a
+            // malformed argv would have WRITTEN TO THE STATE MACHINE. Bash
+            // refused this with `${2:?usage: …}`; the port must too.
             let (sha, note) = if args.get(1).map(String::as_str) == Some("--sha") {
-                (
-                    args.get(2).map(String::as_str),
-                    args.get(3).map(String::as_str),
-                )
+                let Some(sha) = args.get(2) else {
+                    usage_error("claim --sha <sha> [note]");
+                };
+                (Some(sha.as_str()), args.get(3).map(String::as_str))
             } else {
                 (None, args.get(1).map(String::as_str))
             };

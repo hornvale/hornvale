@@ -30,8 +30,17 @@ impl Row {
     /// permanently, silently losing a request — which the plan's own Global
     /// Constraints forbid (the format does not change) and which is the exact
     /// opposite of a queue whose first duty is durability.
+    ///
+    /// `splitn(7, ...)`, NOT a bare `split` (fix round 2, Important F4). A
+    /// bare split on every tab handed an 8+-field line straight to
+    /// `f.get(6)`, keeping only the SEVENTH piece and silently discarding
+    /// everything past it — a permanent truncation the next `write_rows`
+    /// then persisted. Bash's own `read -r when rid rbranch rsha rstate
+    /// rkind rnote` absorbs the whole remainder (tabs included) into the
+    /// last variable; `splitn(7, ...)` reproduces exactly that: the 7th
+    /// piece is the rest of the line, verbatim.
     pub fn parse(line: &str) -> Option<Row> {
-        let f: Vec<&str> = line.split('\t').collect();
+        let f: Vec<&str> = line.splitn(7, '\t').collect();
         let g = |i: usize| f.get(i).copied().unwrap_or("");
         let kind = if g(5).is_empty() { "merge" } else { g(5) };
         Some(Row {

@@ -46,6 +46,21 @@ fn a_short_line_is_padded_and_kept_never_dropped() {
     assert_eq!(r.kind, "merge");
 }
 
+#[test]
+fn a_long_line_keeps_everything_past_the_seventh_field() {
+    // Fix round 2, Important F4: a bare `split('\t')` handed an 8+-field
+    // line straight to `f.get(6)`, keeping only the 7th piece and silently
+    // dropping everything after it. `splitn(7, ...)` must fold every tab
+    // from the 7th onward into `note`, exactly as bash's own
+    // `read -r ... rnote` absorbs the remainder — so the whole line,
+    // including its embedded tab, round-trips through parse -> render
+    // unchanged.
+    let line = "2026-09-05T00:00:00Z\treq-abc-1\tcampaign/x\tdeadbeef\tqueued\tmerge\ta note\tan eighth field";
+    let r = Row::parse(line).expect("parses");
+    assert_eq!(r.note, "a note\tan eighth field");
+    assert_eq!(r.render(), line);
+}
+
 use sluice::verbs::{SetStateError, sanitize_note, set_state};
 
 #[test]

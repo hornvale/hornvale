@@ -147,39 +147,45 @@ shift || true
 # THE PORTED VERBS GO TO tools/sluice. `add` stays here for now: it sources
 # sluice-headline.sh, resolves three-valued ancestry and coalesces, all of
 # which shell out to git, and moving it is Task 6 rather than a side effect
-# of this one. The binary is built on demand and the path is resolved from
-# this script's own location so a caller's cwd cannot change which one runs.
+# of this one. The binary is resolved as a sibling of this script's own
+# location, so a caller's cwd cannot change which one runs.
+#
+# THIS SHIM NEVER BUILDS THE BINARY (fix round 2, Critical F1). An earlier
+# version built it on demand with `cargo build`, under this script's own
+# `set -euo pipefail` — so a build failure (observed live: rustup silently
+# resolving an older, non-overridden toolchain from a caller's cwd and
+# choking on the edition2024 manifest) aborted the whole script with cargo's
+# exit code, rc=101, before `exec` ever ran. Three real callers consumed
+# that badly: `sluice-drain.sh` swallowed stderr and read the resulting
+# empty stdout as "queue drained"; `sluice-run.sh` and `sluice-census.sh`
+# both read the non-{0,4,5} rc as "could not reach the queue" and PROCEEDED
+# unbookkept — reopening the exact duplicate-execution hole this campaign
+# exists to close, just moved one layer down into a toolchain problem
+# instead of a race. This matches the precedent `scripts/board-render.sh`
+# already sets for a different tool binary: prefer a prebuilt release binary
+# and deliberately never compile it (see CLAUDE.md's board section). `make
+# prewarm` builds it for a fresh worktree; nothing in this script does.
 #
 # HV_SLUICE_BIN IS A TEST SEAM ONLY, and nothing in production sets it.
 # `scripts/test-sluice.sh`'s chamber tests (T7/T8) copy this ONE file into a
 # throwaway scratch repo with no `tools/sluice` sibling beside it, to
 # exercise `sluice-run.sh`'s claim-refusal logic — a pattern that worked
-# when this file was pure bash with no external dependency. Without the
-# seam, that copy's `cargo build` fails (no manifest to build against) and
-# `claim` never runs at all. An EARLIER version of this fix instead cached
-# the built binary under a per-user cache directory and fell back to it
-# silently on a missing sibling — rejected on review: it made this state
-# machine depend on a user-level cache directory, wrote to it on every
-# call's hot path, and its failure mode was a copied script silently
-# running a possibly-stale binary instead of erroring, which is exactly the
-# class of silent-wrong-thing this campaign exists to remove. The seam
-# below fails LOUDLY instead — a copy with no sibling and no
-# `HV_SLUICE_BIN` override simply has no binary to `exec`, and says so —
-# which is the intended behaviour outside the one test that sets the seam.
+# when this file was pure bash with no external dependency. The seam lets
+# that copy point at a binary already built by the real checkout, rather
+# than needing one of its own.
+#
+# EXIT 3 IS RESERVED for "no binary and no way to reach one" — distinct from
+# every other exit this script or `tools/sluice` itself uses (1/2/4/5) — so a
+# caller can tell "the queue itself refused" from "the queue could not even
+# be asked."
 case "$cmd" in
     claim|set-state|list)
         sluice_bin="${HV_SLUICE_BIN:-$(dirname "$0")/../tools/sluice/target/release/sluice}"
-        sluice_root="$(dirname "$0")/.."
-        if [ -z "${HV_SLUICE_BIN:-}" ] && [ ! -x "$sluice_bin" ]; then
-            # `cd` into the repo root for the build itself (subshell, so this
-            # script's own cwd is untouched): rustup resolves its toolchain
-            # override from the process's CWD, not from `--manifest-path`, so
-            # a caller invoking this script from a cwd with no
-            # rust-toolchain.toml ancestor would otherwise silently build with
-            # a different (older, non-overridden) default toolchain and fail
-            # to parse an edition2024 manifest at all. Found live building
-            # this fix from a plain scratch directory.
-            ( cd "$sluice_root" && cargo build --quiet --release --manifest-path tools/sluice/Cargo.toml >&2 )
+        if [ ! -x "$sluice_bin" ]; then
+            echo "sluice-queue: no built binary at $sluice_bin." >&2
+            echo "sluice-queue: build it first: cargo build --release --manifest-path $(dirname "$0")/../tools/sluice/Cargo.toml" >&2
+            echo "sluice-queue: (or run 'make prewarm', which builds it for you)" >&2
+            exit 3
         fi
         exec "$sluice_bin" "$cmd" "$@"
         ;;

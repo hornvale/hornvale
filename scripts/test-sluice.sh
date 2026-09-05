@@ -2929,6 +2929,15 @@ else
 fi
 
 cen="$tmp/cen"; mkdir -p "$cen/scripts"
+# sluice-census.sh resolves sluice-queue.sh under HV_SLUICE_REPO_ROOT (=$cen
+# here), same as sluice-run.sh does for $chamber_repo above — so this scratch
+# repo needs its own copy for the SAME reason. Before fix round 2 this went
+# unnoticed because a missing script there just made `claim` fail, and the
+# `*)` arm proceeded unbookkept regardless; now that arm REFUSES (Critical
+# F1), so the copy is load-bearing for every case below that expects rc=0.
+# HV_SLUICE_BIN (exported once, above, and never unset) lets this copy reach
+# the real checkout's binary without needing its own tools/sluice sibling.
+cp "$repo_root/scripts/sluice-queue.sh" "$cen/scripts/sluice-queue.sh"
 cen_origin="$tmp/cen-origin.git"; git init -q --bare -b main "$cen_origin"
 (
     cd "$cen"

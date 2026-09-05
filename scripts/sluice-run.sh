@@ -196,8 +196,14 @@ if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
     unset HV_SLUICE_CLAIMED
 else
     set +e
+    # STDOUT AND STDERR ARE CAPTURED TOGETHER (fix round 2, Critical F1):
+    # this used to discard stderr (`2>/dev/null`), so the one diagnostic
+    # that would explain an unreachable queue (e.g. `claim`'s new exit 3,
+    # "no built binary") never reached this script's own log. On success
+    # `claim` writes nothing to stderr, so folding the streams costs that
+    # path nothing.
     claim_out="$(bash "$repo_root/scripts/sluice-queue.sh" claim --sha "$sha" \
-        "launched directly by operator; kind=$kind" 2>/dev/null)"
+        "launched directly by operator; kind=$kind" 2>&1)"
     claim_rc=$?
     set -e
     case "$claim_rc" in
@@ -208,7 +214,20 @@ else
             echo "sluice-run: what this check exists to prevent; see 'sluice-queue.sh list'." >&2
             exit 9 ;;
         5)  echo "sluice-run: no queue row for ${sha:0:12} — running AD HOC, unbookkept." >&2 ;;
-        *)  echo "sluice-run: could not reach the queue (claim rc=$claim_rc) — running unbookkept." >&2 ;;
+        *)  # REFUSE, do not proceed (fix round 2, Critical F1). This used to
+            # log "could not reach the queue — running unbookkept" and carry
+            # on into the real merge with NO interlock at all — exactly the
+            # duplicate-execution hole this file exists to close, reachable
+            # again the moment `claim` can fail for a reason other than a
+            # race (a missing binary, in particular). If we cannot ask the
+            # queue whether somebody else already holds this row, we do not
+            # run — unlike rc=5 above (no row at all), which is a legitimate
+            # ad hoc escape hatch and stays open.
+            echo "sluice-run: REFUSING — could not reach the queue (claim rc=$claim_rc):" >&2
+            printf '%s
+' "$claim_out" >&2
+            echo "sluice-run: refusing to run unbookkept rather than risk a duplicate execution." >&2
+            exit 13 ;;
     esac
 fi
 
