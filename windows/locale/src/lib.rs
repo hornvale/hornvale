@@ -542,10 +542,14 @@ pub fn micro_field_at(
 
 /// The grounded wetness axis a room's descriptor reads, in `[-1, 1]` — the
 /// `MicroField.wetness` [`micro_field_at`] builds, which is exactly what
-/// `describe` emits. A one-line wrapper: `windows/lab`'s legibility
-/// instrument reads wetness alone far more often than the whole field, and
-/// the wrapper's own arithmetic can never diverge from `micro_field_at`'s
-/// because it has none.
+/// `describe` emits. A one-line wrapper with no production caller today —
+/// `windows/lab`'s legibility instrument calls [`micro_field_at`] directly
+/// and reads `.wetness` off the whole field, the same as everything else
+/// does — kept anyway because it costs one line and names the axis the
+/// descriptor's wetness word cuts; its own callers are this crate's tests
+/// (`windows/locale/tests/suite/warp_wetness.rs`). The wrapper's own
+/// arithmetic can never diverge from `micro_field_at`'s because it has
+/// none.
 /// type-audit: bare-ok(count: weights), bare-ok(ratio: return)
 pub fn wetness_axis(
     terrain: &GeneratedTerrain,

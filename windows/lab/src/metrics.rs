@@ -5601,10 +5601,15 @@ pub fn registry() -> Vec<Metric> {
                   makes the shared eligibility gate a constant, so it contributes zero MI \
                   by construction and cannot flatter any kind — see the spec's own \
                   amendment paragraph for the whole-sphere confound this removes). The \
-                  preregistered claim is the ORDERING `spring > thicket > overhang > \
+                  preregistered claim WAS the ORDERING `spring > thicket > overhang > \
                   erratic`, not a threshold on this reading alone: spring is H3's own \
-                  sign case (\"diagnostic of what is underfoot\", contextuality 0.85), so \
-                  it is predicted HIGHEST of the four.",
+                  sign case (\"diagnostic of what is underfoot\"), so it was predicted \
+                  HIGHEST of the four. The Weft measured this ordering FALSE (`thicket > \
+                  spring`, 2026-09-04); The Warp's re-parameterisation of the sign kinds \
+                  then moved spring's reading to 0.086464 and overhang's to 0.076536 at \
+                  seed 42, while thicket (0.038604) and erratic (0.000000) are unchanged, \
+                  falsifying the ordering again — now on `thicket > overhang`. This \
+                  metric is a RECORD of that original prediction, not a live claim.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
@@ -5615,9 +5620,10 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "weft-legibility-mi-overhang",
             doc: "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) \
-                  — see `weft-legibility-mi-spring`'s doc for the shared estimator. \
-                  Predicted THIRD of the four (contextuality 0.6, gentler than \
-                  spring/thicket).",
+                  — see `weft-legibility-mi-spring`'s doc for the shared estimator and \
+                  its falsification record. Overhang was predicted THIRD of the four, \
+                  gentler than spring/thicket; it now reads 0.076536 at seed 42, ABOVE \
+                  thicket's 0.038604.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
@@ -5628,8 +5634,9 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "weft-legibility-mi-thicket",
             doc: "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — \
-                  see `weft-legibility-mi-spring`'s doc for the shared estimator. \
-                  Predicted SECOND of the four.",
+                  see `weft-legibility-mi-spring`'s doc for the shared estimator and its \
+                  falsification record. Thicket was predicted SECOND of the four; it now \
+                  reads 0.038604 at seed 42, BELOW overhang's 0.076536.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
@@ -5647,7 +5654,11 @@ pub fn registry() -> Vec<Metric> {
                   so this metric's own construction predicts the near-zero reading before \
                   any world is measured. If it does NOT read near zero, the instrument is \
                   measuring something other than legibility and that is the finding, per \
-                  spec §7 and this task's own brief.",
+                  spec §7 and this task's own brief. This piece of the ordering held: \
+                  erratic's reading (0.000000 at seed 42) stayed lowest through The \
+                  Warp's re-parameterisation of the sign kinds, even as the ordering \
+                  elsewhere falsified again — see `weft-legibility-mi-spring`'s doc for \
+                  the record.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
@@ -10016,14 +10027,20 @@ const WEFT_MI_BINS: usize = 4;
 /// amendment: restricting to land-eligible facets makes the eligibility
 /// gate itself a constant, so it contributes zero MI by construction and
 /// cannot flatter any kind — see the spec's own amendment paragraph for the
-/// whole-sphere confound this removes). The preregistered claim is the
+/// whole-sphere confound this removes). The preregistered claim WAS the
 /// ORDERING `spring > thicket > overhang > erratic`, with erratic near
 /// zero — erratic's own [`hornvale_worldgen::WeftKind::macro_state`] is a
 /// CONSTANT (`erratic_macro_state`), so `X` has no genuine variance for
 /// erratic even before binning, and MI between `Y` and a constant is
 /// algebraically zero: this metric's own construction predicts erratic's
-/// near-zero reading, independent of anything measured. `Absent` only on a
-/// world with no land-eligible facet at all.
+/// near-zero reading, independent of anything measured. The Weft measured
+/// the ordering FALSE (`thicket > spring`, 2026-09-04); The Warp's
+/// re-parameterisation of the sign kinds then moved spring's reading to
+/// 0.086464 and overhang's to 0.076536 at seed 42, while thicket
+/// (0.038604) and erratic (0.000000) are unchanged, falsifying the
+/// ordering again — now on `thicket > overhang`. This function is a
+/// RECORD of that original prediction, not a live claim. `Absent` only on
+/// a world with no land-eligible facet at all.
 fn weft_legibility_mi(view: &ClimateView, kind_idx: usize) -> MetricValue {
     let pool = view.weft_grid();
     let land: Vec<&WeftVertexReading> = pool.readings.iter().filter(|r| r.land).collect();

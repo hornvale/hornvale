@@ -2,7 +2,7 @@
 
 **Close:** 2026-09-05, awaiting G6 · **Ledger:**
 [`2026-09-05-the-warp.md`](../superpowers/ledgers/2026-09-05-the-warp.md)
-(11 entries plus the Task 6 calibration and Task 7 readout sections) ·
+(12 entries plus the Task 6 calibration and Task 7 readout sections) ·
 **Chronicle:** [the-warp](../../book/src/chronicle/the-warp.md) ·
 **Decisions:** 0776, 0777, 0778, 0779
 
@@ -334,6 +334,7 @@ destroyed the argument that the withdrawn clause was defective.
 | the readout's "metric absent" path never fired on five seeds, so it is a guard with no positive control | recorded in the ledger; a successor adding a seed may be the first to exercise it |
 | the lift bar's own denominator varies 1.52× across seeds, and the seed that failed is the seed with the largest one | recorded in the frozen document's outcome paragraph and in the ledger, explicitly **not** acted on; a successor must derive a steadier denominator before measuring |
 | a campaign's uncommitted timing row sweeps into whatever commit follows it | accepted; it is how the ledger stays durable, and this campaign's rows land with the documentation commit |
+| a census refresh that grows the registry cannot deliver through the queue (ledger #12): the gate's own injection-fixture witness is red the moment the census gains columns, and the fixtures' authoring script refuses the delivery's own dirty tree | filed as registry row `TOOL-census-delivery-and-injection-fixtures-deadlock`; broken by hand this time with an ungated intermediate object plus a clean re-authoring worktree, never `--no-verify` |
 
 Four follow-ups were filed as registry rows rather than deferred here: a
 species-gated body that speaks its inference, remote signs (a neighbouring

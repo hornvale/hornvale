@@ -233,7 +233,9 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// facets) reads `weft-existence-density-spring = 0.01337`, one facet in 75.
 /// This pool is 78 *locations* of 60 adjacent facets each, and a
 /// regionally-clustered kind present on ~1.3% of locations is missed by 78
-/// draws about a fifth of the time. The grid band is where spring is
+/// draws about a THIRD of the time (`(1 - 0.01337)^78 = 0.350`, as
+/// `windows/lab/tests/suite/weft_density.rs` already computes for the same
+/// pool). The grid band is where spring is
 /// measured now (`windows/lab`'s `warp-*` family and
 /// `weft-existence-density-spring`); this file's walk band has no power for
 /// it, and the two zero floors in spring's row below say so honestly rather

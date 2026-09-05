@@ -149,7 +149,7 @@ spring 403, overhang 843, thicket 1,517, erratic 428.
 
 **(2026-09-05) The sign kinds are rarer now.** [The Warp](./the-warp.md) traded
 frequency for found-ness on the spring and the overhang, whose existence
-densities at this same seed went 0.0359 → 0.0134 and 0.0752 → 0.0215 — 2.7×
+densities at this same seed went 0.0359 → 0.0134 and 0.0751 → 0.0215 — 2.7×
 and 3.5× rarer. The union fell to **0.195222** of land-eligible facets, about a
 quarter below the figure above; the thicket and the erratic, untouched, are
 unmoved to five places. The density result and the multiple below are not

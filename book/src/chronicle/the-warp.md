@@ -351,7 +351,7 @@ the failing assertion is left failing, because it is the record.
 
 The failure reads as one coherent story rather than two coincidences. Seed 13
 is where the spring is rarest — an existence density of 0.00606, the lowest of
-the five worlds and 2.2× below seed 100's — and it is simultaneously the seed
+the five worlds and 3.3× below seed 100's — and it is simultaneously the seed
 where the *control's* lift is largest, 2.626 against 1.731 to 2.278 elsewhere.
 Both halves of the ratio moved against the spring on the same world, and the
 mechanism is the same one in both: the fewest occupied facets is where a lift

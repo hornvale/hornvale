@@ -3856,7 +3856,7 @@ retuned after the reading.
 
 **What it cost, stated plainly.** Frequency was not set by anything; it fell
 out. At seed 42 the spring's existence density went 0.0359 → 0.0134 and the
-overhang's 0.0752 → 0.0215 — 2.7× and 3.5× rarer — and the union of all four
+overhang's 0.0751 → 0.0215 — 2.7× and 3.5× rarer — and the union of all four
 kinds fell from 0.2563 to 0.1952 of land-eligible facets — a fall of roughly a
 quarter, against a density result that clears its frozen claim by more than an
 order of magnitude, so nothing about that result is disturbed. *Dense* stays
