@@ -9,9 +9,10 @@ from pathlib import Path
 import platform
 import re
 import signal
-import subprocess
 import sys
 import time
+import tempfile
+import uuid
 import unittest
 
 from checker import evaluate
@@ -25,6 +26,7 @@ _spec.loader.exec_module(measurement)
 LIMIT = 16 * 1024 * 1024
 DEADLINE = 3600
 ROLES = {'metadata-base','metadata-arm','build','observe'}
+git_audit_directory = None
 
 
 def sha256(data):
@@ -62,8 +64,20 @@ def capture(command, cwd, destination):
     return result
 
 
+def git_bytes(root, *args):
+    global git_audit_directory
+    if git_audit_directory is None:
+        git_audit_directory = Path(tempfile.mkdtemp(prefix='counterpart-git-evidence-'))
+    git_audit_directory.mkdir(parents=True, exist_ok=True)
+    sample = capture(['git','-C',str(root),*args],root,git_audit_directory/(uuid.uuid4().hex+'.json'))
+    try:
+        return validate_sample(sample)['stdout']
+    except ValueError as error:
+        raise RuntimeError('Git preparation failed: '+sample.get('stderr','')) from error
+
+
 def git(root, *args):
-    return measurement.git(root, *args).strip()
+    return git_bytes(root,*args).decode('utf-8').strip()
 
 
 def prerequisites(bundle):
@@ -224,9 +238,11 @@ def input_hashes(checkout):
 
 
 def run_panel(panel_path, output):
+    global git_audit_directory
     panel_path = panel_path.resolve()
     panel = load_json(panel_path.read_text())
     output.mkdir(parents=True, exist_ok=False)
+    git_audit_directory = output/'git-preparation'
     contract = load_json((panel_path.parent/'contract.json').read_text())
     owners = [load_json((panel_path.parent/p).read_text()) for p in panel['owners']]
     expected = {'checker':sha256((HERE/'checker.py').read_bytes()),
@@ -241,7 +257,7 @@ def run_panel(panel_path, output):
     if expected != panel['identities']:
         raise ValueError('frozen implementation/input identity mismatch')
     for name in ('run.py','compare.py','checker.py'):
-        frozen = subprocess.check_output(['git','-C',str(ROOT),'show',panel['identities']['implementation']+':tools/digest/experiments/the-counterpart/'+name],env=measurement.controlled_env())
+        frozen = git_bytes(ROOT,'show',panel['identities']['implementation']+':tools/digest/experiments/the-counterpart/'+name)
         if frozen != (HERE/name).read_bytes():
             raise ValueError('implementation bytes differ: '+name)
     for name, identity in panel['frozen_inputs'].items():
@@ -255,7 +271,7 @@ def run_panel(panel_path, output):
     first = next(iter(panel['arms'].values()))
     prerequisite = reconstruct(ROOT,bundle,checkout,panel['base'],first)
     dossier = {'schema':'counterpart-v1','arms':{},'bundle_prerequisites':prerequisite,
-               'host':platform.platform(),'environment':{k:v for k,v in measurement.controlled_env().items() if k in {'PATH','LANG','LC_ALL','CARGO_HOME','RUSTUP_HOME'}},
+               'git_preparation_directory':str(git_audit_directory), 'host':platform.platform(),'environment':{k:v for k,v in measurement.controlled_env().items() if k in {'PATH','LANG','LC_ALL','CARGO_HOME','RUSTUP_HOME'}},
                'features':'default','profile':'dev','target':str(output/'target'),
                'queue_seconds':None,'author_seconds':None,
                'cost_note':'Queue/author costs unavailable to runner; not inferred from execution wall.'}

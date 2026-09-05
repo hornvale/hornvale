@@ -7,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+import run as runner
 from run import load_json, summarize, reconstruct, capture, sha256, construct_sources
 from checker import evaluate
 from compare import suggest, score
@@ -112,6 +114,26 @@ class DossierTests(unittest.TestCase):
             empty=root/'empty.patch';empty.write_text('')
             with self.assertRaises((ValueError,RuntimeError)):
                 construct_sources(repo,base,{'noop':{'patch':empty,'owned_paths':['left']}},{},root/'bad')
+
+    def test_git_preparation_is_bounded_and_persisted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            previous=runner.git_audit_directory if hasattr(runner,'git_audit_directory') else None
+            try:
+                runner.git_audit_directory=root/'git-evidence'
+                actual=runner.measurement.measure
+                calls=[]
+                def measured(command,cwd,**kwargs):
+                    calls.append(kwargs)
+                    return actual(command,cwd,**kwargs)
+                with patch.object(runner.measurement,'measure',side_effect=measured):
+                    self.assertIn('git version',runner.git(root,'--version'))
+                self.assertTrue(calls)
+                self.assertEqual(calls[0]['deadline_seconds'],3600)
+                self.assertEqual(calls[0]['output_limit_bytes'],16*1024*1024)
+                self.assertEqual(len(list((root/'git-evidence').glob('*.json'))),1)
+            finally:
+                runner.git_audit_directory=previous
 
     def test_real_git_bundle_reconstruction_and_environment(self):
         with tempfile.TemporaryDirectory() as directory:
