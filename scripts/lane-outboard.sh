@@ -40,7 +40,7 @@ run() {
 }
 
 run "tools/board"      env -u GIT_DIR -u GIT_INDEX_FILE cargo test --manifest-path tools/board/Cargo.toml
-run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml
+run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml --workspace
 run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
 run "tools/placement-audit" cargo test --manifest-path tools/placement-audit/Cargo.toml
 run "tools/sluice"     cargo test --manifest-path tools/sluice/Cargo.toml
