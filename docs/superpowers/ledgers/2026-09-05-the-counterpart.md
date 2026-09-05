@@ -484,3 +484,12 @@ replay obligations remain Tasks 6–7. **Alternatives/Ideonomy:** no new Q or
 approach, no weakened obligation. **Capture:** acceptance, hashes, standalone
 derivation and preparation cost. Checker worktree prewarm completed rc=0 in
 312.064 seconds; the exact timings row is retained separately from assay cost.
+
+### Stage 1 absorption receipt
+
+`git merge --no-commit origin/main` against `cf95817d3` completed rc=0 with
+no unmerged paths. Git reported automatic merges of idea registry,
+reconciliation TSV and timings. No manual semantic resolution was needed.
+This is an actual merge receipt, not a prediction about future integration.
+The upcoming commit runs the ordinary commit gate before branch push/stage
+submission. Frozen specimen source remains the separately identified Task 1 base.
