@@ -1,10 +1,10 @@
 # The Charter — decision ledger
 
 Campaign: `codex/the-charter` · Base:
-`fd3cd159be98e6c07dbb849b780c2712c6a7826f` · Phase: architectural brainstorm.
+`fd3cd159be98e6c07dbb849b780c2712c6a7826f` · Phase: implementation, Stage 1.
 Nathan authorized the brainstorm on 2026-09-04 after discussing the
 self-describing program, federation, and local evolutionary ratchets.
-Implementation planning awaits the G3 spec review.
+Nathan approved G3 with the quality refinement; G4 and its rulings are recorded below.
 
 ## #1 [G1] — prove independent adoption before granting narrower admission
 
@@ -416,3 +416,21 @@ scoped re-review of this fix. No task-2 dispatch before approval.
   base above. No implementation files have been changed during this phase.
 - `make prewarm` completed with rc=0; its ordinary timing row is retained in
   `docs/timings.md`. This is build preparation, not a claim that tests passed.
+
+## Task 1 — complete after scoped re-review
+
+Reviewed implementation: `8f610af758214d5234fd9e36f21f748251d6fcff`.
+Independent reviewer `/root/charter_protocol_review` reports spec compliance
+and code quality PASS after the optional-contradiction correction. The fix
+retains informational optional unknowns. Behavioral red/green, ten focused
+composer tests, fmt, clippy, and the ordinary commit gate (rc=0, 61.778 s)
+are recorded in the task report; re-review checked the exact fix range and
+`git diff --check` without repeating the suite. The hook's timing row is
+retained with this entry. Task 2 now consumes the reviewed protocol.
+
+Task 2 preflight verified actual context/protocol exports, the existing CLI
+and outboard command, and cached `nix`/`signal-hook` APIs. A disposable Cargo
+fixture emitted exactly one matching executable artifact on both cold and
+cached builds, with metadata's opaque package ID preserved. This supports
+artifact selection, not complete provenance. Timing decomposition unavailable
+from Cargo is to remain explicitly unavailable.
