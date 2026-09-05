@@ -79,3 +79,82 @@ Only immutable owned checkouts with no concurrent writers are valid experiment
 inputs. Before/after hashes establish integrity, not atomic capture. Canonical
 minutes-scale runs use the ordinary serial claim; this package is not a census
 entry point. The existing gates and Digest protocol v1 remain in force.
+
+## Shadow rules and bounded replay
+
+`compare.py` proposes path, Cargo-reachability and owner-agreement question
+sets using recorded inputs only. The path rule preserves absent enrollment.
+Cargo uses the full `cargo metadata --locked --offline --format-version 1`
+graph of the outboard Digest workspace, including its production dependencies,
+for both the base and changed source. Package membership uses the deepest
+manifest directory containing a changed Rust source or Cargo manifest; the
+repository root is recorded separately because the outboard workspace root
+is not the source repository root. Deleted packages can be mapped in the base.
+Unresolved membership and non-Cargo inputs fall back to all four questions.
+
+Agreement normalization is finite, manually integrated experiment work:
+Thing variants declare source locators and addition deltas; Settlement variants
+declare concept names and a complete post-variant supplied roster, compared
+with its baseline supplied roster. The rules recognize Thing's `unclaimed:`
+and `lender:` prefixes and Settlement's explicit `<name> is not claimed by
+Thing or any earlier registration` sentences. Selection evidence retains
+normalization modes and original negative-assumption quotes. Missing named
+assumptions or unknown subjects remain unknown, with full fallback. Predictions
+and author observations are never selector inputs. The supplemental imports-only
+view deliberately omits negative assumptions, retains its raw omissions, and
+still falls back to all four obligations; it is not a fourth primary selector.
+
+Run focused checks without source compilation:
+
+```sh
+python3 tools/digest/experiments/the-counterpart/run.py --self-test
+python3 tools/digest/experiments/the-counterpart/run.py --help
+```
+
+A full replay takes an immutable panel and creates a new owned directory:
+
+```sh
+python3 tools/digest/experiments/the-counterpart/run.py \
+  --panel tools/digest/experiments/the-counterpart/panel.json \
+  --output /absolute/new/owned-counterpart-run
+```
+
+Relative panel inputs resolve beside the panel. Existing output directories
+are refused. The panel records exact source commits/trees, patch hashes, lock,
+pin and source-input hashes, owner/patch file hashes, bundle identity and the
+implementation commit. The implementation commit precedes the panel and
+observations, avoiding a self-referential source identity. Source objects are
+frozen-base-plus-patches; the checker and comparison implementation have
+separate identities. `construct_sources` authors only owned experimental
+`commit-tree` objects with the frozen base as parent, checks each patch's
+scope/non-noop effect, and rejects textual conflicts without repair. Its
+bundle excludes the explicit frozen-base prerequisite, which must already be
+reachable in the replay repository. No experimental source object is admitted
+to production.
+
+The runner imports the bundle into an owned clone with scrubbed Git path
+variables. It reuses that clone and one owned target sequentially, switching
+source only between finished commands. It records preparation and observation
+separately; queue wait and author labor are unavailable to this runner and
+remain null instead of fabricated timings. Toolchain and allowlisted material
+environment are recorded. Each measured command uses the reviewed Charter
+session supervisor with a 3600-second deadline and independent 16-MiB stream
+thresholds. The threshold can overshoot; full failed bytes remain in the owned
+attempt directory. Do not commit unbounded failure output: retain that directory
+and commit a bounded receipt naming it and its hashes.
+
+Suggestions are written before builds or observations. Every completed arm
+executes all four checker questions from raw facts, with candidate outcomes
+separately labeled. Attempts and intermediate manifests are persisted before
+reacting to cleanup uncertainty; interruption, failure, invalid JSON, output
+bounds or stale inputs prevent aggregate completion. The runner retains its
+owned directories for inspection. `summarize` requires the entire declared arm
+roster, exact question results, raw stream hashes and failure flags, and
+re-evaluates the raw facts. A captured production registration refusal is a
+complete negative observation, not a harness crash or a safe-source verdict.
+
+Full minutes-scale panels run under the canonical serial claim. A deliberately
+smaller qualification must use a separately retained derived panel with explicit
+scope and parent-panel SHA256, never delete results from the full dossier and
+claim it completed. Neither the finite panel nor a passing selection proves
+that satisfied checks are unnecessary, or that production tests can be skipped.
