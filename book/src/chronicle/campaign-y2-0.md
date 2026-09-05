@@ -131,7 +131,7 @@ Peoples](../laboratory/study-003.md) — re-baselined, with all four
 subsistence modes present for the first time. [The Gods of Seed
 42](../gallery/the-gods-seed-42.md) — the Year-1 capstone, reframed around
 the relocation. The re-baselined seed-42 almanac pair
-([spinning](../gallery/almanac-seed-42-sky.md),
+([spinning](../gallery/almanac-seed-42.md),
 [locked](../gallery/almanac-seed-42-locked.md)) and settlement maps; the
 `mean-land-temperature-c` metric in the Lab registry; the 498/2
 coastal-inland calibration pin in `windows/lab/tests/calibration.rs`.

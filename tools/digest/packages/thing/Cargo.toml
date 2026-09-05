@@ -1,0 +1,24 @@
+[package]
+name = "digest-thing"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "digest-thing"
+path = "src/main.rs"
+
+[dependencies]
+digest-protocol = { path = "../protocol" }
+hornvale-kernel = { path = "../../../../kernel" }
+hornvale-settlement = { path = "../../../../domains/settlement" }
+hornvale-thing = { path = "../../../../domains/thing" }
+serde_json = "1"
+
+[package.metadata.digest]
+role = "contributor"
+namespace = "hornvale.thing"
+protocol = 1
+binary = "digest-thing"
+scopes = ["domains/thing"]

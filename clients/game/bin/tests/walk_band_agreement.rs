@@ -58,14 +58,13 @@
 //! `make game-check` already measured in minutes.
 
 use hornvale_game::plate::{BAND_B_RUNG, GLOBE_RUNG};
-use hornvale_kernel::{Seed, World};
 use hornvale_vessel::{WorldContext, walk_depth};
 
 /// The client's band-B rung equals the sim's own walk depth.
 #[test]
 fn band_b_is_drawn_at_the_sims_own_walk_depth() {
-    let world = World::new(Seed(42));
-    let wctx = WorldContext::build(&world).expect("a bare world derives a world context");
+    let world = hornvale_worldgen::fixture::seed_42_world();
+    let wctx = WorldContext::build(&world).expect("seed 42 derives a world context");
     let ctx = wctx.context();
 
     // THE PREMISE, checked and not assumed: the equality below is only about

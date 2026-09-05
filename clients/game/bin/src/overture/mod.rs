@@ -447,7 +447,7 @@ mod tests {
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
-    use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, build_world_to};
+    use hornvale_worldgen::{SettlementPins, WorldComponents, build_world_to};
     use std::sync::OnceLock;
 
     /// A view that speaks at every rung and renders its own name, so a test can
@@ -587,7 +587,6 @@ mod tests {
             build_world_to(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
                 &wc,

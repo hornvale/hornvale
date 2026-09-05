@@ -4340,6 +4340,16 @@ pub fn fatigue_rise_registry() -> ComponentStore<KindId, f64> {
 /// reaches the same path a genuinely unauthored kind does. The caller-side
 /// miss default (`windows/vessel::liveness::DEFAULT_SLEEP_GRADE`) is
 /// reserved for a species this table has never heard of at all.
+///
+/// # What this table means since The Tenon, which is what it always meant
+///
+/// A row here is the grade on a **fully-offering made surface** — a bed. It
+/// is not re-authored: [`substrate_response`] and
+/// `windows/vessel::affordance::RestSurface` combine with it so that
+/// `grade(species, bed)` reproduces this row byte for byte, and every other
+/// surface is stated as a fraction of it. Decision 0697's ceiling ruling is
+/// untouched; what is new is that a *found* surface can now be graded at all,
+/// and that two kinds can order two of them oppositely.
 /// type-audit: bare-ok(identifier-text), bare-ok(ratio: return)
 pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
     /// Both halves: an endothermic body sleeping on bedding its own settled
@@ -4428,6 +4438,88 @@ pub fn sleep_grade_registry() -> ComponentStore<KindId, f64> {
     ]
     .into_iter()
     .collect()
+}
+
+/// How much a kind gets out of lying on a found surface of a given
+/// **hardness** — `0.0` fully yielding, `1.0` bare rock — as a
+/// [`ConditionResponse`] the caller evaluates with
+/// [`ConditionResponse::eval`], passing its own floor.
+///
+/// The Tenon. This is the species half of the `(species, thing)` rest
+/// relation whose thing half is `windows/vessel::affordance::RestSurface`;
+/// [`sleep_grade_registry`] is the third term, and the three combine in
+/// `windows/vessel::liveness`. It is what lets two kinds order two surfaces
+/// **oppositely** — a drow prefers the stone ledge a human sleeps badly on —
+/// which is the one thing a single per-species scalar cannot say at any
+/// precision.
+///
+/// # Derived from a trait the roster already carries, not a new table
+///
+/// The discriminating trait is [`HabitatRealm`], and it is the only one this
+/// function reads. Authoring a 39-row substrate table instead would invent a
+/// species axis whose only consumer is this relation, which is the shape
+/// [`sleep_grade_registry`]'s own discipline cuts: *"Both halves are read off
+/// traits [`biosphere_registry`] already carries."* The realm store is sparse
+/// and absence means [`HabitatRealm::SURFACE`], so every kind resolves.
+///
+/// # Total by construction
+///
+/// It takes a **resolved realm**, not a species name — the caller does the
+/// lookup, exactly as `windows/worldgen` already does for
+/// `per_species_suitability`. So the `match` is exhaustive with no wildcard
+/// arm and there is no miss case at all: a third realm variant stops the
+/// compiler here rather than falling into a default that would silently score
+/// it as surface.
+///
+/// # The two curves, in one sentence each
+///
+/// A **surface** kind is a generalist about hardness — it meets every
+/// substrate its world has and must be able to lie on most of them — and its
+/// preference runs monotonically toward the yielding end. A **subterranean**
+/// kind is a specialist — its world offers one substrate — and its preference
+/// peaks just short of bare rock. The reversal is between those two optima;
+/// the widths say how sharply each kind feels it, and the devotions how much
+/// of the kind's rest the substrate can account for at all.
+pub fn substrate_response(realm: HabitatRealm) -> ConditionResponse {
+    /// The hardness a kind that lives above ground rests best on: the
+    /// yielding end of the scale, on the endpoint rather than inside the
+    /// interval.
+    /// plumb: per-species(a kind's own habitat realm sets which substrate it rests best on -- for a kind that lives above ground the preference is monotone across the whole scale, because nothing that grows on the ground is ever too yielding to lie on, so the peak sits on the yielding endpoint and every increase in hardness is a loss)
+    const SURFACE_OPTIMUM: f64 = 0.0;
+    /// How wide a band of substrates a surface kind can still rest on: half
+    /// the hardness scale is one tolerance breadth, so packed earth at
+    /// mid-scale still returns about three fifths of the peak and bare rock
+    /// about a seventh of it.
+    /// plumb: per-species(a kind's own habitat realm sets how wide a band of substrates it can rest on -- a surface kind meets every substrate its world has, from mire to shield rock, and has to be able to lie on most of them, so it is the generalist of the two and its band is the wider one)
+    const SURFACE_WIDTH: f64 = 0.5;
+    /// How much of a surface kind's rest the substrate accounts for: all of
+    /// it.
+    /// plumb: per-species(a kind's own habitat realm sets how much of its rest the substrate accounts for -- a body lying in the open has nothing between it and the ground but what it found there, so what it lies on accounts for the whole of the fit and nothing is withheld from it)
+    const SURFACE_DEVOTION: f64 = 1.0;
+    /// The hardness a kind that lives in rock rests best on: just short of
+    /// the hard endpoint, so the peak is inside the interval.
+    /// plumb: per-species(a kind's own habitat realm sets which substrate it rests best on -- a kind that lives in rock is habituated to lying on it, and the floor it is habituated to is stone under a skin of dust and damp clay rather than bare quarried rock, so its peak sits just short of the hard endpoint)
+    const SUBTERRANEAN_OPTIMUM: f64 = 0.85;
+    /// How wide a band of substrates a subterranean kind can still rest on:
+    /// narrower than a surface kind's, and deliberately so.
+    /// plumb: per-species(a kind's own habitat realm sets how wide a band of substrates it can rest on -- a kind whose whole world is one substrate has no reason to tolerate the others and does not, so it is the specialist of the two and its band is the narrower one)
+    const SUBTERRANEAN_WIDTH: f64 = 0.3;
+    /// How much of a subterranean kind's rest the substrate accounts for:
+    /// most, but never all.
+    /// plumb: per-species(a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc says the habitat is the void and not the floor, so the surface underneath can never account for the whole of a cave kind's rest the way open ground accounts for a surface kind's)
+    const SUBTERRANEAN_DEVOTION: f64 = 0.8;
+    match realm {
+        HabitatRealm::Surface => ConditionResponse {
+            optimum: SURFACE_OPTIMUM,
+            width: SURFACE_WIDTH,
+            devotion: SURFACE_DEVOTION,
+        },
+        HabitatRealm::Subterranean => ConditionResponse {
+            optimum: SUBTERRANEAN_OPTIMUM,
+            width: SUBTERRANEAN_WIDTH,
+            devotion: SUBTERRANEAN_DEVOTION,
+        },
+    }
 }
 
 /// The individual-mind component — authored directly, present for every

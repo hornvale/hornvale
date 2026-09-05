@@ -165,7 +165,7 @@ use hornvale_worldgen::chamber::{
     BRANCHES_PER_SYSTEM, ChamberAddr, RunAddr, chamber_exists, levels_in_branch,
 };
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// Seeds this campaign preregisters on (spec §5).
@@ -209,7 +209,6 @@ fn how_far_down_the_lattice_does_a_cave_reach() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -406,7 +405,6 @@ fn how_many_floors_does_a_run_realize() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

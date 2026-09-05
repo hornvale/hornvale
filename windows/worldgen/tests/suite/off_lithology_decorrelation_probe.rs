@@ -102,7 +102,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::{TerrainPins, water_table_depth_m};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, paleoclimate_from, terrain_of};
+use hornvale_worldgen::{SettlementPins, build_world, paleoclimate_from, terrain_of};
 
 /// Seeds the campaign states its preregistrations on (same panel as
 /// `winze_energy_probe.rs`).
@@ -236,7 +236,6 @@ fn measure(seed_value: u64) -> SeedMeasurement {
     let world = build_world(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

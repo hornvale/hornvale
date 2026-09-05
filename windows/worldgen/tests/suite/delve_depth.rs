@@ -31,7 +31,7 @@ use hornvale_history::record::{Function, OccupationRecord};
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, occupation_records,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, occupation_records,
 };
 
 /// The panel the campaign preregisters on (spec §5.1).
@@ -42,7 +42,6 @@ fn panel_world(seed_value: u64) -> World {
     build_world_to(
         Seed(seed_value),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &WorldComponents::assemble().expect("canonical components assemble"),

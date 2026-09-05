@@ -57,8 +57,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Mass, ResourceVector, Seed, VertexMap};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, carrying_inputs_of,
-    climate_of, species_carrying_input, terrain_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, carrying_inputs_of, climate_of,
+    species_carrying_input, terrain_of,
 };
 use std::collections::BTreeMap;
 
@@ -113,7 +113,6 @@ fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
     let world = build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

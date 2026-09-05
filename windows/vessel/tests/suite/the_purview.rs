@@ -5,13 +5,12 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 fn world() -> World {
     build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

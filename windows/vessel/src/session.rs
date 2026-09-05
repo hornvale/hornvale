@@ -1957,7 +1957,7 @@ impl<'w> Session<'w> {
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
-            .and_then(|sky| sky.calendar().cloned());
+            .map(|sky| sky.calendar().clone());
         // The predator-pressure field (The Quarry), so the danger drive
         // senses carnivore territory — from the shared `report` above (The
         // Weir, Stage 1b) rather than its own fit. `None` on a missing
@@ -3348,7 +3348,7 @@ impl<'w> Session<'w> {
     /// How many of this session's belief reads ran at an instant strictly
     /// before a committed sighting of the same entity — spec §3 rule 6's
     /// witness, taken on the real path. Non-zero means
-    /// [`crate::resident::KnownWater`]'s first-visit filter is what keeps the
+    /// [`crate::resident::LatestVisit`]'s first-visit filter is what keeps the
     /// answer identical to the scan it replaced.
     /// type-audit: bare-ok(count: return)
     pub fn resident_beliefs_in_the_past(&self) -> u64 {
@@ -3962,9 +3962,20 @@ impl<'w> Session<'w> {
         let room = self.position();
         let terrain = self.terrain_here();
         let room_interior = crate::interior::interior_of(&room, &terrain);
-        if let Some(anchor) =
-            crate::sleep_site::select_sleep_site(&room_interior, self.driven_body())
-        {
+        // The sleeper's traits and the object roster are resolved HERE, once,
+        // for this one act (The Tenon, Task 6) — `select_sleep_site` now ranks
+        // the room's candidates rather than taking the first, and both are what
+        // a grade is read against. `sleep_traits_of` is the same resolution the
+        // fatigue fold uses, so a player's sleep and a creature's cannot be
+        // graded against different registries.
+        let sleeper = crate::liveness::sleep_traits_of(self.driven_body());
+        let objects = crate::affordance::object_registry();
+        if let Some(anchor) = crate::sleep_site::select_sleep_site(
+            &room_interior,
+            self.driven_body(),
+            &sleeper,
+            &objects,
+        ) {
             let site_fact = slept_on_fact(
                 self.agent_entity(),
                 room_interior.anchor(anchor).kind,
@@ -11253,7 +11264,7 @@ mod tests {
 
     use hornvale_astronomy::SkyPins;
     use hornvale_terrain::TerrainPins;
-    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+    use hornvale_worldgen::{SettlementPins, build_world};
 
     /// Seed 42's world under default pins, read from the committed fixture
     /// rather than rebuilt (decision 0607). This helper's 85 callers each run
@@ -11294,7 +11305,6 @@ mod tests {
         build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11344,12 +11354,11 @@ mod tests {
         }
     }
 
-    /// The walk band, from the one definition — a bare `World::new` needs no
-    /// genesis, so this costs nothing and restates no arithmetic.
+    /// The walk band, from the one definition, using the committed built-world
+    /// fixture so this costs no genesis and restates no arithmetic.
     fn bare_walk_depth() -> u32 {
-        let world = World::new(Seed(42));
-        let ctx =
-            hornvale_locale::LocaleContext::build(&world).expect("a bare world builds a context");
+        let world = hornvale_worldgen::fixture::seed_42_world();
+        let ctx = hornvale_locale::LocaleContext::build(&world).expect("seed 42 builds a context");
         crate::agent::walk_depth(&ctx)
     }
 
@@ -16371,7 +16380,6 @@ mod tests {
             build_world(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
             )
@@ -21548,12 +21556,12 @@ mod tests {
     /// every other source of variation.
     ///
     /// **The ledger moves too, since The Minute:** measured 2026-09-03, the
-    /// held session's ledger carries two facts the free one lacks —
+    /// held session's ledger carries three facts the free one lacks —
     /// `possessed-by` (committed by `!possess` itself, before either `!wait`
-    /// runs) and `slept` (the held walk's first tick at seed 42, now
-    /// minuted). Asserted below; the doc originally predicted a one-fact
-    /// difference (the sleep alone), which undercounted `possessed-by` —
-    /// corrected to the measured two.
+    /// runs), `slept` (the held walk's first tick at seed 42, now minuted),
+    /// and `slept-on` (The Tenon's epoch makes a real surface reachable in
+    /// that room). Asserted below; the count was two before the epoch because
+    /// the sleep had no surface kind to record.
     #[test]
     fn driven_felt_state_can_move_under_an_imposed_controller_during_wait() {
         let world = seam_world();
@@ -21595,13 +21603,15 @@ mod tests {
         );
         assert_eq!(
             held.committed_fact_count_for(held.agent_entity()),
-            free.committed_fact_count_for(free.agent_entity()) + 2,
-            "seed 42's held body carries two more facts than the free one: \
-             `possessed-by` (from `!possess` itself) and `slept` (from the \
-             first wait, now minuted); the free body, Holding, commits neither"
+            free.committed_fact_count_for(free.agent_entity()) + 3,
+            "seed 42's held body carries three more facts than the free one: \
+             `possessed-by` (from `!possess` itself), `slept` (from the first \
+             wait, now minuted), and `slept-on` (the epoch's selected surface); \
+             the free body, Holding, commits none of them"
         );
-        // The `+ 2` above is a compound of `possessed-by` and `slept`; this
-        // isolates the walk's own contribution from possession's.
+        // The `+ 3` above compounds `possessed-by`, `slept`, and `slept-on`;
+        // these assertions isolate the walk's own two contributions from
+        // possession's.
         assert_eq!(
             held.ledger.facts_of(held.agent_entity(), SLEPT).count(),
             1,
@@ -21611,6 +21621,16 @@ mod tests {
             free.ledger.facts_of(free.agent_entity(), SLEPT).count(),
             0,
             "the free body, Holding, never reaches a `slept` resolution"
+        );
+        assert_eq!(
+            held.ledger.facts_of(held.agent_entity(), SLEPT_ON).count(),
+            1,
+            "the held body's first-wait sleep records exactly one selected surface"
+        );
+        assert_eq!(
+            free.ledger.facts_of(free.agent_entity(), SLEPT_ON).count(),
+            0,
+            "the free body, Holding, never selects a sleep surface"
         );
     }
 
@@ -22188,7 +22208,6 @@ mod tests {
         let world = build_world(
             Seed(7),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -22296,7 +22315,6 @@ mod tests {
                 build_world(
                     Seed(seed),
                     &SkyPins::default(),
-                    SkyChoice::Generated,
                     &TerrainPins::default(),
                     &SettlementPins::default(),
                 )

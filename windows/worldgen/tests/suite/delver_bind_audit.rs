@@ -62,8 +62,7 @@ use hornvale_kernel::{ConditionResponse, Mass, sovereignty_floor};
 use hornvale_species::ConditionNiche;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, Substrate, build_world, climate_of, sky_of, substrate_field,
-    terrain_of,
+    SettlementPins, Substrate, build_world, climate_of, sky_of, substrate_field, terrain_of,
 };
 
 /// The Liebig-binding axis, mirroring `tolerance_liebig`
@@ -144,7 +143,6 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
     let world = build_world(
         seed,
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -155,10 +153,7 @@ fn bind_shares(seed_value: u64) -> Vec<(&'static str, f64, usize)> {
     let sky = sky_of(&world).expect("sky");
     // The stellar-input triple, resolved exactly as `niche_breadth_probe.rs`
     // does (`stellar_inputs` itself is private to worldgen).
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

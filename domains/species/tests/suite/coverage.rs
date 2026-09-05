@@ -26,7 +26,7 @@
 use hornvale_species::{
     ActivityCycle, HabitatRealm, LifeSchedule, SocialForm, StatusBasis, ThermalStrategy,
     biosphere_registry, habitat_realm_registry, perception_registry, psyche_registry,
-    society_registry,
+    society_registry, substrate_response,
 };
 
 /// How well a declared state is exercised by the shipped roster.
@@ -817,4 +817,52 @@ fn every_kind_in_the_realm_store_has_a_biosphere_row() {
     for (kind, _) in habitat_realm_registry().iter() {
         assert!(bio.get(kind).is_some(), "{} has no biosphere row", kind.0);
     }
+}
+
+/// The Tenon: the substrate response must actually DISCRIMINATE, and in the
+/// direction the habitat realm states. A curve that answered the same for
+/// both realms would make the whole `(species, thing)` relation rank-1 --
+/// separable, and therefore not an edge at all.
+#[test]
+fn the_two_realms_order_hardness_oppositely() {
+    const SOFT: f64 = 0.1;
+    const HARD: f64 = 0.95;
+    const FLOOR: f64 = 0.0;
+
+    let surface = substrate_response(HabitatRealm::Surface);
+    let under = substrate_response(HabitatRealm::Subterranean);
+
+    assert!(
+        surface.eval(SOFT, FLOOR) > surface.eval(HARD, FLOOR),
+        "a surface-dwelling kind must prefer the yielding surface"
+    );
+    assert!(
+        under.eval(HARD, FLOOR) > under.eval(SOFT, FLOOR),
+        "a subterranean kind must prefer the hard one -- this is the \
+         reversal the campaign exists to make expressible"
+    );
+}
+
+/// The reversal must survive the LOOKUP, not just the two curves: `drow` and
+/// `human` must actually land in different realms. The curves are useless if
+/// every species resolves to the same one, and nothing in the test above
+/// would notice.
+#[test]
+fn drow_and_human_resolve_to_different_realms() {
+    use hornvale_species::KindId;
+
+    let realms = habitat_realm_registry();
+    let realm_of = |k: &'static str| {
+        realms
+            .get(&KindId(k))
+            .copied()
+            .unwrap_or(HabitatRealm::SURFACE)
+    };
+    assert_eq!(realm_of("drow"), HabitatRealm::Subterranean);
+    assert_eq!(realm_of("human"), HabitatRealm::Surface);
+    assert_ne!(
+        substrate_response(realm_of("drow")),
+        substrate_response(realm_of("human")),
+        "the campaign's motivating reversal needs these two to differ"
+    );
 }

@@ -42,7 +42,6 @@ fn no_unnameable_concept_is_ever_lexicalized() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )
@@ -127,7 +126,6 @@ fn the_unnameable_classification_survives_a_save_load_round_trip() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )

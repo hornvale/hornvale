@@ -20,7 +20,7 @@
 //! sanctioned test-fixture posture the weir's spec carves out.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from, doctrine_from, doctrines_from};
+use hornvale_worldgen::{SettlementPins, accounts_from, doctrine_from, doctrines_from};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -30,7 +30,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

@@ -9,8 +9,7 @@
 
 use hornvale_kernel::{EntityId, Seed, Value, Vertex};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world, build_world_to,
-    occupation_records,
+    BuildDepth, SettlementPins, WorldComponents, build_world, build_world_to, occupation_records,
 };
 
 /// The same helper `windows/worldgen/tests/person_promotion.rs` uses — the
@@ -19,7 +18,6 @@ fn world() -> hornvale_kernel::World {
     build_world(
         Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -190,7 +188,6 @@ fn the_two_disposition_paths_agree_on_a_real_world() {
     let world = build_world_to(
         Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

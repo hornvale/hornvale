@@ -85,7 +85,7 @@
 
 use hornvale_climate::BiomeExpr;
 use hornvale_climate::variants::{GroundKind, Variant, variant_pool};
-use hornvale_kernel::{Facet, Seed, World, WorldTime};
+use hornvale_kernel::{Facet, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext, grounded_wetness, wetness_is_grounded};
 use hornvale_terrain::branch::{CatchmentCut, RillReading, rill_reading};
 
@@ -124,7 +124,7 @@ const R7_FLOOR: f64 = 0.80;
 
 /// The world every claim here is made on.
 fn world() -> World {
-    World::new(Seed(42))
+    hornvale_worldgen::fixture::seed_42_world()
 }
 
 /// The rooms the R-7 walks start from: rill polyline heads, **read live off
@@ -1175,7 +1175,7 @@ fn damp_below_the_median_is_always_inside_a_valley() {
 ///    when its threshold turned out to sit inside its own sampling noise.
 ///
 /// Tracked as `LOC-riparian-dry-overlap`.
-#[ignore = "PREREGISTERED, not met: awaits LOC-riparian-dry-overlap (3 of 138 riparian rooms on seed 42 read dry; the riparian noun and the dry clause are two different functions of moisture, which R-8's by-construction wording assumed away, and a tolerance at this count is indistinguishable from switching the test off. RE-MEASURED over a REBUILT POPULATION at The Pavement: the committed pre-cube fixture's addresses stopped naming rooms at the mesh epoch, so the sample is a live 1,048-room land spread now and the reading moved 1-of-35 to 3-of-138 - 2.86% to 2.17%, so the overlap persists at the same rate and it is the population that changed, not the defect)"]
+#[ignore = "PREREGISTERED, not met: awaits LOC-riparian-dry-overlap (4 of 152 riparian rooms on seed 42 read dry; the riparian noun and the dry clause are two different functions of moisture, which R-8's by-construction wording assumed away, and zero tolerance remains unchanged because any positive tolerance at this count is indistinguishable from switching the test off. RE-MEASURED at The Zenith after ruling 0737 made generated sky mandatory: the valid generated-sky world changes the sampled land population, moving the witness from 3-of-138 to 4-of-152 - 2.17% to 2.63%; the population shifted, not the defect)"]
 #[test]
 fn no_room_reads_riparian_and_dry() {
     let world = world();
@@ -1236,14 +1236,15 @@ fn no_room_reads_riparian_and_dry() {
 /// change that merely shrinks the riparian pool would move both, and that is
 /// not the repair.
 ///
-/// # RE-STATED AT THE PAVEMENT: `(35, 1)` -> `(138, 3)`, AND THE POPULATION IS
-/// A RULE NOW
+/// # RE-STATED AT THE ZENITH: `(138, 3)` -> `(152, 4)` AS THE VALID-SKY
+/// POPULATION BECAME MANDATORY
 ///
-/// This witness sampled the committed `pre-rill-wetness.jsonl`, whose 200
-/// addresses name nothing on the cube-sphere mesh. The sample is
-/// [`sampled_rooms`] now — a live 1,048-room land spread, regenerated from the
-/// world every run — so **what became epoch-invariant is the population RULE,
-/// not the integers**. Both necessarily moved, and moving them triggered this
+/// The Pavement replaced the dead pre-cube address fixture with
+/// [`sampled_rooms`], a live 1,048-room land-spread rule. The Zenith then made
+/// a valid generated sky mandatory under ruling 0737, so seed 42 is now the
+/// fully generated world rather than the retired skyless fallback. That
+/// changes which rooms enter the land sample: **the population rule is stable,
+/// but its generated-world input changed**. Both integers moved, triggering this
 /// pin's own four-site re-statement, performed in this commit: the pin below,
 /// the `#[ignore]` reason on [`no_room_reads_riparian_and_dry`], that reason's
 /// verbatim copy in `cli/tests/suite/heavy_tier.rs`, and the
@@ -1254,13 +1255,13 @@ fn no_room_reads_riparian_and_dry() {
 /// unchanged:
 ///
 /// ```text
-///   before   1 of  35 riparian rooms read dry   2.86%
-///   after    3 of 138 riparian rooms read dry   2.17%
+///   before   3 of 138 riparian rooms read dry   2.17%
+///   after    4 of 152 riparian rooms read dry   2.63%
 /// ```
 ///
-/// A reader who takes `1 -> 3` as the defect tripling has compared two
-/// different populations. A reader who takes `35 -> 138` as the riparian pool
-/// quadrupling has done the same. Both integers scale with `LAND_SAMPLE`.
+/// A reader who takes `3 -> 4` as a worsened defect has compared two different
+/// generated-world populations. The zero-tolerance verdict remains unmet and
+/// ignored; neither the assertion nor its scope was widened.
 #[test]
 fn the_riparian_dry_overlap_is_pinned_as_a_witness() {
     let world = world();
@@ -1284,9 +1285,9 @@ fn the_riparian_dry_overlap_is_pinned_as_a_witness() {
     }
     assert_eq!(
         (riparian, offenders),
-        (138, 3),
+        (152, 4),
         "the R-8 overlap moved: {offenders} of {riparian} riparian rooms read dry, against the \
-         pinned (138, 3). This is NOT a number to update — re-read the overlap, then re-state \
+         pinned (152, 4). This is NOT a number to update — re-read the overlap, then re-state \
          this witness, the #[ignore] reason on no_room_reads_riparian_and_dry, its roster entry \
          in cli/tests/suite/heavy_tier.rs and the LOC-riparian-dry-overlap registry row in the \
          SAME commit. Read the RATE before deciding what moved: the population is a rule now \

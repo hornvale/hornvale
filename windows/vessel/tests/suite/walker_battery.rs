@@ -8,7 +8,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn, knowledge_is_subset, streams::VESSEL_WALK};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 const WALK_STEPS: usize = 48;
 
@@ -16,7 +16,6 @@ fn seam_world() -> World {
     build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

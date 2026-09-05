@@ -11,8 +11,7 @@ use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
 const SKY_FLAGS: &str =
-    "  [--sky constant|generated]               sky provider (default: generated)
-  [--moons N|MIN+K]                        pin the moon count, exact or graded
+    "  [--moons N|MIN+K]                        pin the moon count, exact or graded
   [--wanderers N]                          pin the wandering-planet count (0-4)
   [--rotation normal|locked]               pin the rotation regime
   [--day-hours F]                          pin the solar day length, in standard hours
@@ -230,17 +229,11 @@ fn main() -> ExitCode {
     }
 }
 
-/// Parse the sky-related flags shared by `new` and `scout` into pins plus a
-/// sky choice. One parser: every flag becomes a `key=value` pin string and
+/// Parse the sky-related flags shared by `new` and `scout` into pins. One
+/// parser: every flag becomes a `key=value` pin string and
 /// folds through `astronomy::parse_pin`, so pin-string syntax never drifts
-/// from flag syntax. Default sky is `Generated` (spec §8).
-fn parse_sky_args(args: &[String]) -> Result<(SkyPins, world_builder::SkyChoice), String> {
-    let sky = match flag_value(args, "--sky") {
-        None | Some("generated") => world_builder::SkyChoice::Generated,
-        Some("constant") => world_builder::SkyChoice::Constant,
-        Some(other) => return Err(format!("--sky: unknown value '{other}'")),
-    };
-
+/// from flag syntax.
+fn parse_sky_args(args: &[String]) -> Result<SkyPins, String> {
     let mut pins = SkyPins::default();
     for (flag, key) in [
         ("--moons", "moons"),
@@ -256,7 +249,7 @@ fn parse_sky_args(args: &[String]) -> Result<(SkyPins, world_builder::SkyChoice)
             parse_pin(&format!("{key}={value}"), &mut pins)?;
         }
     }
-    Ok((pins, sky))
+    Ok(pins)
 }
 
 /// Parse the terrain flags into pins. One parser: every flag becomes a
@@ -298,10 +291,10 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
         .parse()
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let out = flag_value(args, "--out").unwrap_or("world.json");
-    let (pins, sky) = parse_sky_args(args)?;
+    let pins = parse_sky_args(args)?;
     let terrain_pins = parse_terrain_args(args)?;
     let settlement_pins = parse_settlement_args(args)?;
-    let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
+    let world = world_builder::build_world(Seed(seed), &pins, &terrain_pins, &settlement_pins)
         .map_err(|e| e.to_string())?;
     // Stamped at save time, by the composition root: `build_world` lives in
     // hornvale-worldgen, upstream of the vessel, so it cannot see
@@ -326,7 +319,7 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
 /// (default 5) matches and scanning at most `--max-scan` (default 10000)
 /// seeds. Read-only: never writes a world.
 fn cmd_scout(args: &[String]) -> Result<(), String> {
-    let (pins, _sky) = parse_sky_args(args)?;
+    let pins = parse_sky_args(args)?;
     let from: u64 = flag_value(args, "--from-seed")
         .unwrap_or("0")
         .parse()
@@ -510,7 +503,7 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
     }
     let vocab = hornvale_worldgen::common_vocabulary(&world.registry);
     let out = hornvale_explain::explain_sky(&world, &vocab)
-        .ok_or("this world has no generated sky to explain")?;
+        .ok_or("this world is missing the sky facts needed to explain it")?;
     print!("{out}");
     Ok(())
 }
@@ -560,10 +553,10 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         let seed: u64 = seed
             .parse()
             .map_err(|e| format!("--seed must be a u64: {e}"))?;
-        let (pins, sky) = parse_sky_args(args)?;
+        let pins = parse_sky_args(args)?;
         let terrain_pins = parse_terrain_args(args)?;
         let settlement_pins = parse_settlement_args(args)?;
-        world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
+        world_builder::build_world(Seed(seed), &pins, &terrain_pins, &settlement_pins)
             .map_err(|e| e.to_string())?
     } else {
         load_world(args)?
@@ -1009,16 +1002,12 @@ fn cmd_vestige_map(args: &[String]) -> Result<(), String> {
 /// Render the world's star chart: a markdown page (title, sun line, ASCII
 /// chart, star legend, moon phase strips) to stdout and, with `--out`, the
 /// planisphere PNG to disk. Both are deterministic; CI drift-checks the
-/// committed copies. Errors on a world with no generated sky.
+/// committed copies.
 fn cmd_star_chart(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let sky = world_builder::sky_of(&world).map_err(|e| e.to_string())?;
-    let Some(system) = sky.system() else {
-        return Err("this world has no generated sky; no chart to draw".to_string());
-    };
-    let calendar = sky
-        .calendar()
-        .expect("a generated sky always has a calendar");
+    let system = sky.system();
+    let calendar = sky.calendar();
     let mut doc = format!("# The Night Sky of Seed {}\n\n", world.seed.0);
     doc.push_str(&format!("The sun is a {}.\n\n", system.star.class_name));
     doc.push_str("```text\n");
@@ -1070,7 +1059,6 @@ fn cmd_concepts(args: &[String]) -> Result<(), String> {
     let world = world_builder::build_world(
         Seed(0),
         &SkyPins::default(),
-        world_builder::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &world_builder::SettlementPins::default(),
     )
@@ -1125,7 +1113,6 @@ fn cmd_tropes(args: &[String]) -> Result<(), String> {
     let world = world_builder::build_world(
         Seed(0),
         &SkyPins::default(),
-        world_builder::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &world_builder::SettlementPins::default(),
     )
@@ -1173,7 +1160,6 @@ fn cmd_tropes_matrix() -> Result<(), String> {
     let world = world_builder::build_world(
         Seed(0),
         &SkyPins::default(),
-        world_builder::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &world_builder::SettlementPins::default(),
     )
@@ -1348,7 +1334,6 @@ fn cmd_underworld(args: &[String]) -> Result<(), String> {
     let artifacts = world_builder::build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        world_builder::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &world_builder::SettlementPins::default(),
         &wc,
@@ -1390,7 +1375,6 @@ fn cmd_circuit(args: &[String]) -> Result<(), String> {
     let artifacts = world_builder::build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        world_builder::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &world_builder::SettlementPins::default(),
         &wc,
@@ -1476,7 +1460,6 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
         } = world_builder::build_world_to_with_artifacts(
             Seed(seed),
             &SkyPins::default(),
-            world_builder::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
             &wc,
@@ -2233,7 +2216,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                 // and a picture end up disagreeing (The Beholding, F1).
                 let calendar = world_builder::sky_of(&world)
                     .ok()
-                    .and_then(|sky| sky.calendar().cloned());
+                    .map(|sky| sky.calendar().clone());
                 let latitude = room.coord().latitude;
                 let (light, sun_altitude_deg) = hornvale_vessel::eyes::daylight_at(
                     &world,
@@ -2505,8 +2488,7 @@ mod tests {
 
     #[test]
     fn default_sky_is_generated_with_no_pins() {
-        let (pins, sky) = parse_sky_args(&args(&[])).unwrap();
-        assert_eq!(sky, world_builder::SkyChoice::Generated);
+        let pins = parse_sky_args(&args(&[])).unwrap();
         assert_eq!(pins, SkyPins::default());
     }
 
@@ -2549,80 +2531,62 @@ mod tests {
     }
 
     #[test]
-    fn sky_flag_selects_constant() {
-        let (_, sky) = parse_sky_args(&args(&["--sky", "constant"])).unwrap();
-        assert_eq!(sky, world_builder::SkyChoice::Constant);
-    }
-
-    #[test]
-    fn sky_flag_selects_generated_explicitly() {
-        let (_, sky) = parse_sky_args(&args(&["--sky", "generated"])).unwrap();
-        assert_eq!(sky, world_builder::SkyChoice::Generated);
-    }
-
-    #[test]
-    fn sky_flag_rejects_unknown_value() {
-        let err = parse_sky_args(&args(&["--sky", "bogus"])).unwrap_err();
-        assert!(err.contains("--sky"), "unexpected error text: {err}");
-    }
-
-    #[test]
     fn moons_flag_parses_exact_count() {
-        let (pins, _) = parse_sky_args(&args(&["--moons", "2"])).unwrap();
+        let pins = parse_sky_args(&args(&["--moons", "2"])).unwrap();
         assert_eq!(pins.moons, Some(MoonsPin::exact(2).unwrap()));
     }
 
     #[test]
     fn moons_flag_parses_graded_pin() {
-        let (pins, _) = parse_sky_args(&args(&["--moons", "2+1"])).unwrap();
+        let pins = parse_sky_args(&args(&["--moons", "2+1"])).unwrap();
         assert_eq!(pins.moons, Some(MoonsPin::graded(2, 1).unwrap()));
     }
 
     #[test]
     fn rotation_flag_parses() {
-        let (pins, _) = parse_sky_args(&args(&["--rotation", "locked"])).unwrap();
+        let pins = parse_sky_args(&args(&["--rotation", "locked"])).unwrap();
         assert_eq!(pins.rotation, Some(RotationPin::Locked));
     }
 
     #[test]
     fn spin_flag_parses() {
-        let (pins, _) = parse_sky_args(&args(&["--spin", "retrograde"])).unwrap();
+        let pins = parse_sky_args(&args(&["--spin", "retrograde"])).unwrap();
         assert_eq!(pins.spin, Some(hornvale_astronomy::SpinPin::Retrograde));
     }
 
     #[test]
     fn day_hours_flag_sets_a_period_hours_rotation() {
-        let (pins, _) = parse_sky_args(&args(&["--day-hours", "30"])).unwrap();
+        let pins = parse_sky_args(&args(&["--day-hours", "30"])).unwrap();
         assert_eq!(pins.rotation, Some(RotationPin::PeriodHours(30.0)));
     }
 
     #[test]
     fn obliquity_flag_parses_a_number() {
-        let (pins, _) = parse_sky_args(&args(&["--obliquity", "7.5"])).unwrap();
+        let pins = parse_sky_args(&args(&["--obliquity", "7.5"])).unwrap();
         assert_eq!(pins.obliquity.unwrap().get(), 7.5);
     }
 
     #[test]
     fn obliquity_flag_parses_none() {
-        let (pins, _) = parse_sky_args(&args(&["--obliquity", "none"])).unwrap();
+        let pins = parse_sky_args(&args(&["--obliquity", "none"])).unwrap();
         assert_eq!(pins.obliquity.unwrap().get(), 0.0);
     }
 
     #[test]
     fn year_days_flag_parses() {
-        let (pins, _) = parse_sky_args(&args(&["--year-days", "300"])).unwrap();
+        let pins = parse_sky_args(&args(&["--year-days", "300"])).unwrap();
         assert_eq!(pins.year_local_days.unwrap().get(), 300.0);
     }
 
     #[test]
     fn neighbor_flag_parses() {
-        let (pins, _) = parse_sky_args(&args(&["--neighbor", "blue-giant"])).unwrap();
+        let pins = parse_sky_args(&args(&["--neighbor", "blue-giant"])).unwrap();
         assert_eq!(pins.neighbor, Some(NeighborClass::BlueGiant));
     }
 
     #[test]
     fn wanderers_flag_parses() {
-        let (pins, _) = parse_sky_args(&args(&["--wanderers", "3"])).unwrap();
+        let pins = parse_sky_args(&args(&["--wanderers", "3"])).unwrap();
         assert_eq!(pins.wanderers, Some(3));
     }
 
@@ -2637,9 +2601,7 @@ mod tests {
 
     #[test]
     fn all_flags_combine_into_one_pin_set() {
-        let (pins, sky) = parse_sky_args(&args(&[
-            "--sky",
-            "generated",
+        let pins = parse_sky_args(&args(&[
             "--moons",
             "1+2",
             "--obliquity",
@@ -2648,7 +2610,6 @@ mod tests {
             "red-giant",
         ]))
         .unwrap();
-        assert_eq!(sky, world_builder::SkyChoice::Generated);
         assert_eq!(pins.moons, Some(MoonsPin::graded(1, 2).unwrap()));
         assert_eq!(pins.obliquity.unwrap().get(), 12.5);
         assert_eq!(pins.neighbor, Some(NeighborClass::RedGiant));
@@ -2775,32 +2736,6 @@ mod tests {
     }
 
     #[test]
-    fn star_chart_on_a_constant_sun_world_is_a_loud_error() {
-        use hornvale_kernel::Seed;
-        use world_builder::{SettlementPins, SkyChoice, build_world};
-        let world = build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .unwrap();
-        let path = std::env::temp_dir().join(format!(
-            "hornvale-star-chart-test-{}.json",
-            std::process::id()
-        ));
-        world.save(&path).unwrap();
-        let err =
-            cmd_star_chart(&args(&["star-chart", "--world", path.to_str().unwrap()])).unwrap_err();
-        std::fs::remove_file(&path).ok();
-        assert!(
-            err.contains("no generated sky"),
-            "unexpected error text: {err}"
-        );
-    }
-
-    #[test]
     fn lab_run_unknown_path_is_an_error() {
         let err = cmd_lab(&args(&["lab", "run", "studies/does-not-exist.study.json"])).unwrap_err();
         assert!(!err.is_empty());
@@ -2828,9 +2763,9 @@ mod tests {
     }
 
     #[test]
-    fn usage_mentions_sky_flags() {
+    fn usage_mentions_astronomy_pin_flags_but_not_a_provider_choice() {
         let full = usage();
-        assert!(full.contains("--sky"));
+        assert!(!full.contains("--sky"));
         assert!(full.contains("--moons"));
         assert!(full.contains("--wanderers"));
         assert!(full.contains("--neighbor"));
@@ -2877,7 +2812,6 @@ mod tests {
         world_builder::build_world(
             Seed(42),
             &Default::default(),
-            world_builder::SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )

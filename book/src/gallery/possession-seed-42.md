@@ -36,12 +36,12 @@ Night. The vast moon is a smear of light. The small, distant moon is a smear of 
 A bugbear of Doaba (agent 3286669968037249024), day 0, room 3733133217.
 > enter
 [chamber 978618474718145, day 0.01172]
-A small room in Doaba, holding a doorway, a screen and a bench.
+A small room in Doaba, holding a doorway, a screen, a bench and a stone ledge.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
 > enter further in
 [chamber 978618475907617, day 0.02344]
-A small room in Doaba, holding a doorway and an alcove.
+A small room in Doaba, holding a doorway, an alcove and a stone ledge.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
 > map
@@ -135,7 +135,7 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > wait 90
-Time passes. You sense movement nearby (3953 stirred).
+Time passes. You sense movement nearby (4623 stirred).
 > examine sky
 Twilight. The horizon glows gold. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 > knows

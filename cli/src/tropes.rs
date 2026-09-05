@@ -1224,7 +1224,6 @@ mod tests {
             hornvale_worldgen::build_world(
                 hornvale_kernel::Seed(0),
                 &hornvale_astronomy::SkyPins::default(),
-                hornvale_worldgen::SkyChoice::Generated,
                 &hornvale_terrain::TerrainPins::default(),
                 &hornvale_worldgen::SettlementPins::default(),
             )

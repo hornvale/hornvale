@@ -6,7 +6,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// Seed 42 — the canonical world, and it has a settlement (its village is
 /// `Vngoashshngaoshshngoogootao`), so possession succeeds. Setup copied from
@@ -15,7 +15,6 @@ fn world() -> World {
     build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

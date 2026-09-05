@@ -8,7 +8,7 @@ phenomenon it mythologizes, so the REPL's `why` command can trace faith back
 to observation. Ask Gruugish's people why they revere the Unblinking Eye and
 the answer is genuine provenance, not flavor text.
 
-**Tier 0 — one belief from the top phenomenon.** Genesis looks at the
+**One belief from the top phenomenon.** Genesis looks at the
 salience-ranked phenomena visible from the village and mythologizes the
 first. The templating is deliberately minimal — two shapes:
 
@@ -17,7 +17,7 @@ first. The templating is deliberately minimal — two shapes:
   will never blink."*
 - A **periodic** phenomenon becomes a cyclic deity whose absences are mourned
   and returns feasted — the life-death-rebirth structure from the vision
-  book's *Golden Bough* chapter, waiting for a sky that actually cycles.
+  book's *Golden Bough* chapter, now expressed by the generated sky's cycles.
 
 The epithet is drawn from a seeded pool, so different worlds venerate
 differently-named gods of the same sun.
@@ -25,15 +25,14 @@ differently-named gods of the same sun.
 **The constitutional point.** Religion consumes *only* phenomena — it imports
 nothing from astronomy, climate, or anything else. Its test suite proves this
 interface-blindness directly: the tests hand-construct a fictional phenomenon
-(a pale wanderer with a thirty-day period), which exists in no world and
-which no tier-0 provider can emit, and feed it straight to genesis. Religion
-produces a correct cyclic tenet from it anyway. To be clear, the *world*
-contains no moon and assumes none — the point is about the code: religion is
-written against phenomena in general, so it is already correct for kinds of
-sky that do not yet exist. When Campaign 2 gives the sky periods and Campaign
-5 deepens the templating, the *legibly different religions from different
-skies* demo — year one's exit criterion — is a composition of parts that
-already work, not a new invention.
+(a pale wanderer with a thirty-day period) and feed it straight to genesis.
+Religion produces a correct cyclic tenet from it anyway. The point is about
+the code: religion is written against phenomena in general, independently of
+which generated sky produced them. Campaign 2 supplied those skies with
+periods, and Campaign 5 deepened the templating; the *legibly different
+religions from different skies* demo — year one's exit criterion — emerged by
+composing parts that already worked, not by adding a privileged astronomy
+dependency.
 
 **Honest limitations of tier 0:** one belief, two templates, no relationship
 to social structure, no myth *narrative* — a tenet, not a story. The tier

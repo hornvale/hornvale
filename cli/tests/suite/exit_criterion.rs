@@ -15,11 +15,10 @@ fn temp_dir(tag: &str) -> PathBuf {
     dir
 }
 
+/// A world at `seed` under default pins. The `extra_args` seam this used to
+/// carry had exactly one user — the repl criterion's `--sky constant` — and
+/// went with it (The Zenith).
 fn make_world(dir: &std::path::Path, seed: u64) -> PathBuf {
-    make_world_with(dir, seed, &[])
-}
-
-fn make_world_with(dir: &std::path::Path, seed: u64, extra_args: &[&str]) -> PathBuf {
     let path = dir.join(format!("world-{seed}.json"));
     let out = bin()
         .args([
@@ -29,7 +28,6 @@ fn make_world_with(dir: &std::path::Path, seed: u64, extra_args: &[&str]) -> Pat
             "--out",
             path.to_str().unwrap(),
         ])
-        .args(extra_args)
         .output()
         .unwrap();
     assert!(out.status.success(), "new failed: {:?}", out);
@@ -77,12 +75,19 @@ fn almanac_is_byte_deterministic_and_seed_sensitive() {
 
 #[test]
 fn repl_answers_sky_village_and_belief() {
-    // This is the campaign-1b (tier-0) exit criterion: it asserts the
-    // constant sun's "zenith" wording specifically, so it pins --sky
-    // constant explicitly now that `new`'s default has flipped to
-    // generated (spec §8, Task 7).
+    // THE ZENITH (2026-09-04). This was campaign 1b's exit criterion and it
+    // pinned `--sky constant` explicitly, because its sky assertion was the
+    // constant sun's own word, "zenith". That half retires with the tier.
+    //
+    // The other four assertions do not, and this is the ONLY test in the
+    // workspace that drives the `repl` BINARY end to end — `sky_exit_
+    // criterion.rs` never spawns it — so retiring the whole test to retire
+    // one assertion would take the repl's only subprocess coverage with it.
+    // The world is the default (generated) one now, and the sky assertion
+    // asks what is tier-independent: that the sky command answered with a
+    // sky-condition word from the shared `sky_phrase` vocabulary.
     let dir = temp_dir("repl");
-    let world = make_world_with(&dir, 42, &["--sky", "constant"]);
+    let world = make_world(&dir, 42);
     let mut child = bin()
         .args(["repl", "--world", world.to_str().unwrap()])
         .stdin(Stdio::piped())
@@ -99,7 +104,12 @@ fn repl_answers_sky_village_and_belief() {
     let out = child.wait_with_output().unwrap();
     assert!(out.status.success());
     let stdout = String::from_utf8(out.stdout).unwrap();
-    assert!(stdout.contains("zenith"), "sky answered");
+    assert!(
+        ["clear", "fair", "overcast", "rain", "storm"]
+            .iter()
+            .any(|w| stdout.contains(w)),
+        "sky answered: {stdout}"
+    );
     assert!(stdout.contains("population"), "village answered");
     assert!(stdout.contains("1."), "belief listed");
     // Extract the first belief's entity id from "1. [id]" format.

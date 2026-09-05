@@ -101,7 +101,6 @@ fn capture_before_arm() {
     let world = hornvale_worldgen::build_world(
         Seed(42),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

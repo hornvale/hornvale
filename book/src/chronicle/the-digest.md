@@ -224,3 +224,11 @@ exists to report, and it arrived within minutes of the index first rendering.
 Two governing documents citing a wholly-superseded record is not a typo; it is
 the reports outliving the code, which is the condition this campaign was built
 to make visible.
+
+## Checked local context
+
+[The Charter](./the-charter.md) adds on-demand context from independently
+enrolled contributor packages. It keeps authored requirements distinct from
+finite observations and leaves this time-free project ledger and its existing
+renderers in place. The contributor envelope is a separate development
+protocol, with no kernel or save-format change.

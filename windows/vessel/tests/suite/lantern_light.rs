@@ -267,7 +267,6 @@ fn a_floor_cell_four_cells_out_renders_brighter_under_the_wick_torch() {
     let world = hornvale_worldgen::build_world(
         Seed(42),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

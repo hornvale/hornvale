@@ -17,14 +17,13 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 #[test]
 fn from_variants_are_pure_over_the_same_world() {
     let world = build_world(
         Seed(1),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

@@ -457,7 +457,6 @@ mod tests {
         let world = crate::build_world_to(
             hornvale_kernel::Seed(seed),
             &crate::SkyPins::default(),
-            crate::SkyChoice::Generated,
             terrain_pins,
             &crate::SettlementPins::default(),
             &wc,
