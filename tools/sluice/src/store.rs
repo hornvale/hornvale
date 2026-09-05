@@ -30,18 +30,18 @@ impl Store {
         self.dir.join("queue.lock")
     }
 
-    /// Every parseable row, in file order. A missing file is an empty queue,
-    /// not an error: the first `add` on a fresh box must not have to
-    /// special-case its own creation.
+    /// EVERY row, in file order — `Row::parse` is total, so this drops
+    /// nothing. It used to `filter_map` over an `Option` that was always
+    /// `Some`; a read that can silently skip a line is a write that silently
+    /// deletes it, since `write_rows` rewrites the whole file from what this
+    /// returned. A missing file is an empty queue, not an error: the first
+    /// `add` on a fresh box must not have to special-case its own creation.
     pub fn read_rows(&self) -> io::Result<Vec<Row>> {
         let p = self.queue_path();
         if !Path::new(&p).exists() {
             return Ok(Vec::new());
         }
-        Ok(fs::read_to_string(&p)?
-            .lines()
-            .filter_map(Row::parse)
-            .collect())
+        Ok(fs::read_to_string(&p)?.lines().map(Row::parse).collect())
     }
 
     /// Replace the file with these rows, via a temp file and a rename so a

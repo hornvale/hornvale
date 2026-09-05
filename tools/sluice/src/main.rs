@@ -68,21 +68,30 @@ fn main() {
             } else {
                 (None, args.get(1).map(String::as_str))
             };
+            // THE REFUSAL NAMES THE REF (fix round 3, minor). The bash
+            // version printed the 12-char sha and this port dropped it for
+            // "that ref" — but the drain pipes this stderr into a run log
+            // where the sha is the operator's only handle on WHICH row
+            // refused, and a queue with several rows in flight makes "that
+            // ref" unresolvable after the fact.
+            let sha12: String = sha
+                .map(|s| s.chars().take(12).collect())
+                .unwrap_or_else(|| "<head of queue>".to_string());
             match claim(&store, sha, note) {
                 Ok(Some(r)) => println!("{}", r.render()),
                 Ok(None) => {}
                 Err(ClaimError::HeldByAnother) => {
                     eprintln!(
-                        "sluice: claim: a row for that ref exists but is NOT queued — somebody else has it. NOTHING WAS CHANGED."
+                        "sluice: claim: a row for {sha12} exists but is NOT queued — somebody else has it. NOTHING WAS CHANGED."
                     );
                     std::process::exit(4);
                 }
                 Err(ClaimError::NoSuchRow) => {
-                    eprintln!("sluice: claim: no row at all for that ref.");
+                    eprintln!("sluice: claim: no row at all for {sha12}.");
                     std::process::exit(5);
                 }
                 Err(ClaimError::Io(e)) => {
-                    eprintln!("sluice: claim: {e}");
+                    eprintln!("sluice: claim: {sha12}: {e}");
                     std::process::exit(1);
                 }
             }

@@ -21,7 +21,15 @@ pub struct Row {
 }
 
 impl Row {
-    /// Parse one TSV line. TOTAL — never returns `None` for a short line.
+    /// Parse one TSV line. TOTAL — it cannot fail, and its RETURN TYPE now
+    /// says so.
+    ///
+    /// It returned `Option<Row>` while being infallible, and `read_rows`
+    /// consumed it with `filter_map`. Harmless while `parse` was total; the
+    /// day someone makes it fallible again, every unparseable line silently
+    /// vanishes from the read and the next `write_rows` deletes it from the
+    /// file — which is the exact data loss the paragraph below was written to
+    /// prevent, reintroduced through a type that invited it.
     ///
     /// The shell it replaces PADS a malformed row out to seven fields and
     /// keeps it; measured 2026-09-05 by feeding `set-state` a three-field
@@ -39,11 +47,11 @@ impl Row {
     /// rkind rnote` absorbs the whole remainder (tabs included) into the
     /// last variable; `splitn(7, ...)` reproduces exactly that: the 7th
     /// piece is the rest of the line, verbatim.
-    pub fn parse(line: &str) -> Option<Row> {
+    pub fn parse(line: &str) -> Row {
         let f: Vec<&str> = line.splitn(7, '\t').collect();
         let g = |i: usize| f.get(i).copied().unwrap_or("");
         let kind = if g(5).is_empty() { "merge" } else { g(5) };
-        Some(Row {
+        Row {
             when: g(0).to_string(),
             id: g(1).to_string(),
             branch: g(2).to_string(),
@@ -51,7 +59,7 @@ impl Row {
             state: g(4).to_string(),
             kind: kind.to_string(),
             note: g(6).to_string(),
-        })
+        }
     }
 
     /// Render back to one TSV line, no trailing newline.

@@ -913,8 +913,10 @@ Remove the `export HV_SLUICE_CLAIMED="$ID"` line from `scripts/sluice-drain.sh`,
 
 - [ ] **Step 5: Verify the variable is gone**
 
-Run: `grep -rn HV_SLUICE_CLAIMED scripts/ tools/ | grep -v '^scripts/CLAUDE.md'`
+Run: `grep -rn HV_SLUICE_CLAIMED scripts/ tools/`
 Expected: no output. A surviving reference means one caller still coordinates through ambient state, which is the defect this task exists to delete.
+
+**THE `| grep -v '^scripts/CLAUDE.md'` EXCLUSION THAT USED TO BE ON THIS LINE WAS WRONG, AND IT IS WHY THIS STEP PASSED WHILE THE CRITERION WAS UNMET.** `scripts/CLAUDE.md:272` still described the drain as exporting the variable — the ONE surviving occurrence in the tree, and the exclusion hid exactly it. A verification that filters out the file most likely to carry the stale claim verifies nothing; documentation is part of the tree the success criterion names.
 
 - [ ] **Step 6: Run both suites under the chamber's own condition**
 
