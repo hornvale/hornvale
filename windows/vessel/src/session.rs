@@ -11360,6 +11360,41 @@ mod tests {
         .ok()
     }
 
+    /// The seed whose flagship dwelling forks at the threshold, for the Task
+    /// 5b tests that need a REAL fork rather than the hand-built
+    /// [`fork_structure`] the mechanics tests use.
+    ///
+    /// **Measured, not assumed.** A throwaway test walked
+    /// `[42, 14, 1, 13, 7]` through `Session::start` and printed each seed's
+    /// `structure_at(…).children(0).len()`: seed 42 forks with **two**
+    /// children (`links=[(0,1),(1,2),(0,3)]`, roles
+    /// `[Threshold, Hearthroom, Loomroom, Store]` — the backroom shape
+    /// `T{ H{ W }, S }` Task 3's ledger record already measured), seed 14
+    /// forks with **three** (the bush `T{ H, W, S }`), seed 1 with two (the
+    /// same backroom shape as 42), seed 13 does not fork at all (one child —
+    /// a chain), and seed 7 forks with two. 42 is the first seed tried that
+    /// forks at the threshold, so it is pinned here. It is also seed 42's own
+    /// virtue that its backroom shape carries BOTH a fork (the threshold) and
+    /// a chain segment (the hearth's one child, the loomroom) in one
+    /// structure, which is what lets one flagship walk exercise every ways-on
+    /// shape Step 2's second test needs.
+    const FORKING_FLAGSHIP_SEED: u64 = 42;
+
+    /// The world whose flagship forks at the threshold — [`seam_world`]
+    /// itself, since [`FORKING_FLAGSHIP_SEED`] and `seam_world`'s own seed
+    /// (42) are the same seed. Named separately so a future re-measurement
+    /// that pins a different seed only has to change one `const`, never every
+    /// call site; the assertion below is what keeps the two from silently
+    /// drifting apart if `seam_world`'s own seed ever moves.
+    fn forking_world() -> World {
+        let world = seam_world();
+        assert_eq!(
+            world.seed.0, FORKING_FLAGSHIP_SEED,
+            "seam_world's seed has moved off the measured forking seed"
+        );
+        world
+    }
+
     /// The walk depth the default globe level puts a room at, as a `Facet`
     /// path length. Read from `crate::agent::walk_depth`'s own source of truth
     /// rather than restated: `cli/tests/suite/walk_depth_agreement.rs` fails
@@ -15089,6 +15124,143 @@ mod tests {
         assert_eq!(
             session.named_neighbour(&fork, 3, "threshold", &brief),
             Some(0)
+        );
+    }
+
+    /// The structure of the possession's OWN starting dwelling — a session
+    /// starts at a seed's flagship settlement and there is no test-only mover —
+    /// after `enter`ing it. Asserts it forks at the threshold.
+    fn walk_to_a_forking_structure(session: &mut Session<'_>) -> crate::structure::Structure {
+        let brief = session.brief_here().expect("a flagship room has a brief");
+        let locale = crate::depth::truncate_to_walk(&session.position(), session.walk_depth());
+        let s = crate::structure::structure_at(
+            &locale,
+            &brief,
+            session.world.seed,
+            session.walk_depth(),
+        )
+        .expect("the flagship dwelling is a structure");
+        assert!(
+            s.children(0).len() >= 2,
+            "seed {}'s flagship does not fork at the threshold: {:?}",
+            session.world.seed.0,
+            s.links
+        );
+        assert!(say(session, "enter").starts_with("[chamber "));
+        s
+    }
+
+    /// **Every mechanic Task 5a unit-tested against [`fork_structure`] (a
+    /// hand-built fixture) also holds against a REAL fork — the flagship
+    /// [`FORKING_FLAGSHIP_SEED`] draws, reached the only way a real session
+    /// ever reaches one: `Session::start` then `enter`.** The hand-built
+    /// tests prove the mechanism is capable of the shape; these prove
+    /// production actually PRODUCES it and the session actually WALKS it.
+    #[test]
+    fn a_fork_is_named_by_role_noun_and_refuses_the_bare_direction() {
+        let w = forking_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let structure = walk_to_a_forking_structure(&mut session);
+        let children = structure.children(0);
+        let refusal = say(&mut session, "enter further in");
+        let ways = children
+            .iter()
+            .map(|&c| format!("the {}", structure.roles[c].noun()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        assert_eq!(
+            refusal,
+            format!(
+                "There are {} ways in from here: {ways}; name one, or 'out' to leave.",
+                children.len()
+            ),
+            "the refusal must be the spec's exact wording"
+        );
+        // Naming the SECOND way takes it (the first would be what a lazy min-index pick gives).
+        let target = structure.roles[children[1]].noun();
+        let stepped = say(&mut session, &format!("enter {target}"));
+        assert!(
+            stepped.starts_with("[chamber "),
+            "naming a way must take it: {stepped}"
+        );
+        // And the chamber entered is the one named: its role noun is in the footer's way back.
+        let here = say(&mut session, "look");
+        assert!(here.contains("Ways on: out"), "{here}");
+    }
+
+    #[test]
+    fn the_footer_lists_the_ways_by_role_at_a_fork_and_further_in_on_a_chain() {
+        let w = forking_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let structure = walk_to_a_forking_structure(&mut session);
+        let here = say(&mut session, "look");
+        let ways_line = here
+            .lines()
+            .find(|l| l.starts_with("Ways on:"))
+            .expect("a chamber names its ways");
+        let want = std::iter::once("out".to_string())
+            .chain(
+                structure
+                    .children(0)
+                    .iter()
+                    .map(|&c| format!("the {}", structure.roles[c].noun())),
+            )
+            .collect::<Vec<_>>()
+            .join(", ");
+        assert_eq!(ways_line, format!("Ways on: {want}."), "{here}");
+        // A child with exactly one child of its own is a chain segment: `further in`.
+        // A leaf: only `out`. Walk to whichever exists in this structure and assert accordingly.
+        for &c in &structure.children(0) {
+            assert!(
+                say(
+                    &mut session,
+                    &format!("enter {}", structure.roles[c].noun())
+                )
+                .starts_with("[chamber ")
+            );
+            let there = say(&mut session, "look");
+            let line = there
+                .lines()
+                .find(|l| l.starts_with("Ways on:"))
+                .expect("ways");
+            match structure.children(c).as_slice() {
+                [] => assert_eq!(line, "Ways on: out.", "{there}"),
+                [_only] => assert_eq!(line, "Ways on: out, further in.", "{there}"),
+                many => {
+                    let w = many
+                        .iter()
+                        .map(|&g| format!("the {}", structure.roles[g].noun()))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    assert_eq!(line, format!("Ways on: out, {w}."), "{there}");
+                }
+            }
+            // Back to the threshold by its role noun.
+            assert!(
+                say(&mut session, "enter threshold").starts_with("[chamber "),
+                "the parent's role noun walks back"
+            );
+        }
+    }
+
+    #[test]
+    fn a_prose_noun_shared_by_two_ways_names_them_rather_than_guessing() {
+        let w = forking_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let structure = walk_to_a_forking_structure(&mut session);
+        // Every role's prose names a doorway, so `doorway` matches every child.
+        let refusal = say(&mut session, "enter doorway");
+        assert!(refusal.starts_with("There are "), "{refusal}");
+        for &c in &structure.children(0) {
+            assert!(
+                refusal.contains(structure.roles[c].noun()),
+                "the refusal must name the {} way: {refusal}",
+                structure.roles[c].noun()
+            );
+        }
+        assert!(
+            !refusal.contains("further in"),
+            "at a fork the refusal must not tell the player to say 'further in': {refusal}"
         );
     }
 

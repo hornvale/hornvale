@@ -31,9 +31,9 @@ naming them explicitly (`plumb report kernel cli`).
 | … file-level | 688 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 28 |
-| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 167 |
+| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 168 |
 | Excluded: declared non-quantity type | 503 |
-| **Every `const` the walk touched** | **1395** |
+| **Every `const` the walk touched** | **1396** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
