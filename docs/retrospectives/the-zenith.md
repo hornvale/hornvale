@@ -169,6 +169,20 @@ them**, because rustfmt's line-fitting decisions are downstream of an argument
 count. Running the full clients phase locally before resubmitting cost 7
 minutes against the chamber's 21.
 
+**And the resubmission reddened again, on the same phase, for a reason that
+was entirely mine.** `clients/game/bin/tests/walk_band_agreement.rs` had been
+switched from `World::new(Seed(42))` to the seed-42 fixture — necessary, since
+0737 makes a bare world unloadable — and its `hornvale_kernel::{Seed, World}`
+import was left behind, which `-D warnings` rejects. It had been failing on the
+branch the whole time. The verification that should have caught it *was run*,
+and reported green: `make clients-check-run` was invoked from the **main
+checkout** rather than the campaign worktree, so it checked main's tree and
+said nothing about the branch. A verification run in the wrong tree is worse
+than no verification, because it produces evidence. The habit that prevents it
+is `pwd` before believing any command run at a campaign boundary — the same
+re-anchoring rule that already applies before committing, extended to the
+checks. Cost: a second chamber slot, 1344 s.
+
 ## Book freshness and the Confidence Gradient
 
 The sweep covered the domain overview, astronomy chapter, sky-facing scene

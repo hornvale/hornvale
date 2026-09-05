@@ -58,7 +58,6 @@
 //! `make game-check` already measured in minutes.
 
 use hornvale_game::plate::{BAND_B_RUNG, GLOBE_RUNG};
-use hornvale_kernel::{Seed, World};
 use hornvale_vessel::{WorldContext, walk_depth};
 
 /// The client's band-B rung equals the sim's own walk depth.

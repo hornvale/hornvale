@@ -581,6 +581,25 @@ log reports the first failure per manifest, not all of them.
 · ideonomy passes: 0 — a mechanical formatter fix with one correct answer.
 · Capture: this entry; the retrospective's absorption section.
 
+#20 [G5] — **The second merge red was a verification run in the wrong tree.**
+· **What happened:** `req-ee6b0fb0218b` reddened rc=11 in `clients` after
+1344 s, on an unused `hornvale_kernel::{Seed, World}` import in
+`clients/game/bin/tests/walk_band_agreement.rs` — left behind when this
+campaign switched that test off `World::new(Seed(42))` (0737 makes a bare world
+unloadable) onto the seed-42 fixture. `-D warnings` rejects it, and it had been
+red on the branch since that edit.
+· **Why the previous fix round missed it:** `make clients-check-run` was run
+from `/Users/nathan/Projects/hornvale/hornvale` — the main checkout — not from
+the campaign worktree. It checked main's tree, passed, and was reported as
+evidence that the branch's clients phase was green.
+· **Decision:** drop the imports; re-run the phase from the worktree with `pwd`
+confirmed first. Green in 414 s.
+· **The transferable half:** a verification run in the wrong tree is worse than
+none, because it manufactures evidence. Re-anchor cwd before every check at a
+campaign boundary, not only before committing.
+· ideonomy passes: 0 — a mechanical fix; the lesson is procedural.
+· Capture: this entry; the retrospective's absorption section.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding
