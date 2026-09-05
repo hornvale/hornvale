@@ -242,13 +242,46 @@ pub fn errand_predicates() -> [(&'static str, &'static str); 8] {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Write the two-way agreement test**
+
+Until Task 3 deletes it, the prose `match st.mode` at `liveness.rs:8137` and
+`errand_predicates()` hold **the same eight strings in two places**. A rule
+duplicated on purpose needs a test that fails when either copy moves, not one
+that only checks the new copy. In `liveness.rs`'s own `mod tests`, where both
+are visible:
+
+```rust
+/// TRANSITIONAL (delete with the prose match in Task 3). The eight glosses
+/// live in two places until the flip: this match, and `errand_predicates()`.
+/// A one-directional check would let either copy drift. Assert BOTH
+/// directions — every gloss is emitted by some mode, and every mode's prose
+/// is some gloss.
+#[test]
+fn the_registry_glosses_and_the_live_prose_match_agree_both_ways() {
+    let modes: [(Mode, bool); 8] = /* the same eight rows as the mapping test */;
+    let emitted: BTreeSet<&str> = modes.iter()
+        .map(|&(m, b)| prose_for(m, b))   // the match, lifted to a fn if it is not one
+        .collect();
+    let glossed: BTreeSet<&str> = errand_predicates().iter().map(|(_, d)| *d).collect();
+    assert_eq!(emitted, glossed);
+}
+```
+
+If lifting the match into a `prose_for` helper is the cheapest way to make it
+testable, do that — it is deleted wholesale in Task 3 either way.
+
+- [ ] **Step 5: Run tests to verify they pass**
 
 Run: `cargo nextest run -p hornvale-vessel --test suite -E 'test(the_warrant)'`
 and `cargo nextest run -p hornvale-vessel -E 'test(errand)'`
 Expected: PASS, all cases.
 
-- [ ] **Step 5: Register the eight keys everywhere `agent-at` is registered**
+**Prove the agreement test can fail** before moving on: change one character
+of one gloss in `errand_predicates()`, confirm RED, restore it, confirm GREEN.
+Assert the target text exists before substituting — a no-op mutation produces
+evidence and is worse than none.
+
+- [ ] **Step 6: Register the eight keys everywhere `agent-at` is registered**
 
 Five sites register `AGENT_AT` on a registry clone. Add the errand keys at
 each, from the one table:
@@ -259,17 +292,24 @@ for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
 }
 ```
 
-Sites (verify each still matches before editing — line numbers drift):
-`windows/vessel/src/session.rs` (`Session::start`'s registration block),
-`windows/lab/src/health.rs:336`, `windows/lab/src/synthetic.rs:152`,
-`windows/lab/examples/rest_site_census.rs:361`,
-`windows/lab/tests/suite/hearth_population_calibration.rs:443`.
+**Derive the set from the observable, do not trust a list.** An earlier draft
+of this step enumerated five sites; grep finds six, one of which the list
+missed and two of whose line numbers had already drifted. Run:
+
+```bash
+grep -rn 'register_predicate(\s*$\|register_predicate(AGENT_AT' --include='*.rs' . -A1 | grep -B1 AGENT_AT
+```
+
+Register the errand keys at **every production and example site**. Register
+them at a **test** site only where that test reads an errand back — several
+test sites register `AGENT_AT` with placeholder docs (`"pos"`, `""`) and adding
+eight more registrations there is noise.
 
 **`functional` is `false`**, like `agent-at`: a creature has many errands over
 its life, and a functional predicate would make the second one a
 contradiction.
 
-- [ ] **Step 6: Verify no committed artifact moved**
+- [ ] **Step 7: Verify no committed artifact moved**
 
 Run: `make rebaseline && git diff --exit-code -- $(grep -v '^#' docs/generated-paths.txt | grep -v '^$' | cut -f1)`
 
@@ -282,7 +322,7 @@ Run: `make rebaseline && git diff --exit-code -- $(grep -v '^#' docs/generated-p
 - `book/src/gallery/` moved → **STOP and report.** Task 1 commits no fact;
   nothing in a gallery transcript may move yet.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 cargo fmt
@@ -626,75 +666,24 @@ git add -u && git commit   # feat(the-warrant)!: retire authored prose from agen
 
 ---
 
-### Task 4: The `Errands` resident tenant
+### Task 4: The `Errands` resident tenant — STRUCK (pre-flight ruling R2)
 
-**Files:**
-- Modify: `windows/vessel/src/resident.rs` (`Trail` is the model, `:95-125`;
-  `ResidentFolds` at `:1424`; `advance` at `:1459`)
-- Test: `windows/vessel/tests/suite/resident_folds.rs`
+**Not implemented in this campaign.** Spec §6 justified the tenant as the
+index `why?` needs to find a step's covering errand. It is not: §5.4's own
+design has `recount` group by a single pass over the fact list it has already
+collected, and `recount` takes `&World` — it holds no `ResidentFolds` and
+cannot acquire one without a `windows/historiography` -> `windows/vessel`
+dependency that `cli/tests/suite/architecture.rs` forbids. The index would
+ship with no production consumer, which YAGNI forbids and which is the same
+"no possible caller" defect as the origin/target correction (ledger #6).
 
-**Interfaces:**
-- Produces: `pub struct Errands` implementing `hornvale_kernel::fold::LedgerFold`,
-  holding `by_entity: BTreeMap<EntityId, Vec<(WorldTime, String, Facet)>>`
-  (day, errand key, origin), day-sorted, insert-at-`partition_point`.
-- Produces: `pub fn covering(&self, entity: EntityId, day: WorldTime) -> Option<&(WorldTime, String, Facet)>`
-  — the latest errand at or before `day`, by binary search.
-- Produces: `ResidentFolds::errands(&mut self, ledger: &Ledger) -> &Errands`.
+The tenant is **owed by whichever campaign first has a consumer** — 7c's
+compaction, or the metaplan §5.7 preemption counters. Both are declared
+non-goals of this campaign (spec §9). Recorded in ledger entry #7, ruling R2,
+and surfaced to Nathan at G6 as a deliberate scope reduction.
 
-- [ ] **Step 1: Write the failing test**
-
-Model it on the existing `Trail` tenant tests in `resident_folds.rs`. Three
-assertions:
-
-```rust
-/// FOLD equals SCAN: absorbing every errand fact in commit order gives the
-/// same index as scanning the ledger for them.
-#[test]
-fn errands_fold_equals_scan() { /* the shape the Trail test already uses */ }
-
-/// `covering` is the latest errand at or before the day — including the
-/// boundary case where an errand fact and a step share a day, which is the
-/// COMMON case (an errand commits on the same tick as its first step).
-#[test]
-fn covering_includes_an_errand_committed_on_the_steps_own_day() { /* ... */ }
-
-/// Discarding the store between reads is unobservable. Rebuild at EVERY
-/// position, and then at every third — the more aggressive schedule is the
-/// LESS diagnostic one, which The Tailrace learned the hard way.
-#[test]
-fn discarding_the_errand_tenant_between_reads_is_unobservable() { /* ... */ }
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `cargo nextest run -p hornvale-vessel --test suite -E 'test(errands)'`
-Expected: FAIL to compile — `Errands` does not exist.
-
-- [ ] **Step 3: Implement the tenant**
-
-Copy `Trail`'s `LedgerFold` impl shape (`resident.rs:100-125`): guard on the
-predicate (here, `key.starts_with("errand/")`), require `Value::Text` and
-`Some(day)`, insert at `partition_point` with a **strictly-less** comparison
-so equal keys stay in commit order — matching the stable sort the scan half
-uses. Add the field to `ResidentFolds`, add `self.errands.advance_to(ledger)`
-to `advance`, and add the accessor.
-
-Document, in the type's own doc, **the direction the tenant enforces**: it
-answers "which errand covers this instant", and is structurally blind to
-whether an errand was ever *completed* — that is derived from the trail, not
-from this index.
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `cargo nextest run -p hornvale-vessel --test suite -E 'test(resident_folds)'`
-Expected: PASS, including the pre-existing tenant tests.
-
-- [ ] **Step 5: Commit**
-
-```bash
-cargo fmt && make gate-commit
-git add -u && git commit   # feat(the-warrant): index errands as a sixth resident tenant
-```
+Task numbering below is unchanged so that ledger lines and briefs already
+written keep pointing at the same work.
 
 ---
 

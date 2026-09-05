@@ -374,6 +374,17 @@ it does now. `windows/historiography` gains no dependency on
 
 ## 6. Where an errand is anchored: a sixth resident tenant
 
+> **AMENDED 2026-09-05, before implementation: this section's stated consumer
+> does not exist, and the tenant is deferred.** `recount` takes `&World`; it
+> holds no `ResidentFolds` and cannot acquire one without a
+> `windows/historiography` → `windows/vessel` dependency the layering test
+> forbids — and §5.4's own grouping pass needs no index, because it walks a
+> fact list `recount` has already collected. The tenant would ship unused.
+> It is owed by the first campaign with a real consumer (7c's compaction, or
+> §5.7's counters). The argument below stands as the design for that campaign;
+> only its placement in *this* one was wrong. See ledger #7, ruling R2.
+
+
 `why?` must find, for a step at day *d*, the latest errand fact for that
 entity at or before *d*. That is a binary search over an append-only,
 absorbed-once, day-ordered index — **the exact construction decision 0538

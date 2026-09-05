@@ -152,3 +152,53 @@ not to the *mechanism* claim beside it. The mechanism claim was an imperative
 ("the target in the object") with an assertion hiding inside it — the exact
 shape the skill's own "imperative mood hides assertions" table describes. It
 survived a G3 package and was caught only by reading the seam to write Task 1.
+
+---
+
+#7 [G4] — **Pre-flight scan rulings (3 plan defects, ruled before Task 1).**
+The scan table is in the plan's SDD workspace ledger; the rulings are here
+because rulings are durable and task state is not.
+
+**R1 — the eight glosses exist twice between Task 1 and Task 3, with nothing
+pinning them equal.** Task 1 puts them in `errand_predicates()`; the live
+prose match at `liveness.rs:8137` still emits them until Task 3 deletes it. A
+rule duplicated on purpose needs a **two-way agreement test**, so Task 1 gains
+one — the registry docs are exactly the strings the prose match emits, asserted
+from inside `liveness.rs` where both are visible — and Task 3 deletes it in the
+same commit that deletes the match. Cost if wrong: the two copies drift inside
+a two-task window and the flip silently changes a rendered string.
+
+**R2 — Task 4's `Errands` tenant has no production consumer in this campaign,
+and spec §6 is wrong about why it would.** §6 says `why?` needs a
+binary-searchable index; §5.4's own design has `recount` group by a single
+pass over the fact list it has *already* collected, and `recount` takes
+`&World` — it has no `ResidentFolds` and cannot get one without a
+`windows/historiography` → `windows/vessel` dependency the layering test
+forbids. So the index would ship unused. **Ruling: Task 4 is dropped from The
+Warrant** and the tenant is recorded as owed by whichever campaign first has a
+consumer — 7c's compaction, or the metaplan §5.7 counters, both of which are
+this campaign's declared non-goals. This is the second "no possible caller"
+defect in my own text this campaign (see #6); both were caught by reading the
+code rather than re-reading the prose. Cost if wrong: 7c pays for the tenant
+instead, which is where its consumer actually lives. **Nathan sees this at G6
+as a deliberate scope reduction, not a silent one.**
+
+**R3 — the registration-site list is incomplete and its line numbers have
+drifted.** The plan named five sites from memory of a subagent's report. Grep
+finds `windows/vessel/src/session.rs:1595` (which the plan described but
+mislocated), `windows/lab/src/synthetic.rs:152`,
+`windows/lab/src/health.rs:336`, `windows/lab/examples/rest_site_census.rs:360`
+(not 361), `windows/lab/tests/suite/hearth_population_calibration.rs:442` (not
+443), and one the plan missed entirely,
+`windows/vessel/examples/fold_depth_sweep.rs:712`. Ruling: the brief stops
+enumerating and instructs the implementer to **derive the set from the
+observable** — `grep -rn 'register_predicate(AGENT_AT'` — registering the
+errand keys at every production and example site, and at a test site only
+where that test reads an errand back. A brief that enumerates call sites is
+asserting completeness, and completeness is what enumeration gets wrong. Cost
+if wrong: a session registry lacking the keys renders errands as bare
+predicate strings instead of glosses.
+
+· ideonomy passes / overturns: 0 — three defect corrections forced by grep,
+not design choices. · Capture: plan text amended for R1 and R3; Task 4 struck;
+spec §6 amended to record that its stated consumer does not exist.
