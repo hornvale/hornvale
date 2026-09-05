@@ -554,3 +554,96 @@ fn spring_never_occurs_off_land() {
         causeless_share * 100.0
     );
 }
+
+/// The Warp, Task 4 — a sign kind with a zero floor NEVER occurs where its
+/// cause is zero: the honest-silence half of spec §6, asserted on the
+/// MECHANISM (floor = 0 ⇒ prevalence = 0 ⇒ occurs = false) rather than on
+/// any authored value. `floor()` is read here rather than assumed, so if
+/// Task 6's calibration ever lifts a sign kind's floor off zero this test
+/// skips that kind instead of failing on a number it never asserted.
+///
+/// Builds its world inline, the same posture every other test in this file
+/// takes (decision 0092's sanctioned test fixture).
+#[test]
+fn a_sign_kind_with_a_zero_floor_is_silent_where_its_cause_is_zero() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let geo = terrain.geosphere();
+    let index = NearestVertexIndex::new(geo);
+    let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
+
+    let mut zero_cause = 0usize;
+    for v in (0..geo.vertex_count()).step_by(3) {
+        let facet = Facet::containing(geo.position(Vertex(v as u32)), walk_depth);
+        let Some(weights) = facet.corner_weights(geo, &index) else {
+            continue;
+        };
+        for kind in [WeftKind::Spring, WeftKind::Overhang] {
+            if kind.floor() != 0.0 {
+                continue;
+            }
+            if kind.macro_state(weights, &pack) == 0.0 {
+                zero_cause += 1;
+                let p = hornvale_worldgen::prevalence_with_weights(
+                    kind, &facet, weights, &pack, world.seed,
+                );
+                assert_eq!(
+                    p, 0.0,
+                    "{kind:?} at vertex {v}: zero cause, zero floor, nonzero prevalence {p}"
+                );
+                assert!(
+                    !hornvale_worldgen::occurs(kind, &facet, world.seed, p),
+                    "{kind:?} at vertex {v}: occurred against a zero prevalence"
+                );
+            }
+        }
+    }
+
+    assert!(
+        zero_cause > 100,
+        "fixture check: {zero_cause} zero-cause facets — the claim needs a population"
+    );
+}
+
+/// The response is a soft step on the cause: `0` below `lo`, `1` above
+/// `hi`, monotone between, and IDENTITY for the two control kinds — the
+/// shape of the step, never a calibrated edge value (Task 6 sets those).
+#[test]
+fn the_response_is_a_step_for_sign_kinds_and_identity_for_controls() {
+    for kind in [WeftKind::Spring, WeftKind::Overhang] {
+        let (lo, hi) = kind.step_edges();
+        assert!(
+            (0.0..1.0).contains(&lo) && lo < hi && hi <= 1.0,
+            "{kind:?} edges {lo} {hi} must satisfy 0 <= lo < hi <= 1"
+        );
+        assert_eq!(
+            kind.response(lo - 0.01),
+            0.0,
+            "{kind:?}: the response must be exactly zero below its lower edge"
+        );
+        assert_eq!(
+            kind.response(hi + 0.01),
+            1.0,
+            "{kind:?}: the response must saturate at one above its upper edge"
+        );
+        let mut last = 0.0;
+        for i in 0..=100 {
+            let r = kind.response(f64::from(i) / 100.0);
+            assert!(r >= last, "{kind:?}: response fell at {i}, {r} < {last}");
+            last = r;
+        }
+    }
+
+    for kind in [WeftKind::Thicket, WeftKind::Erratic] {
+        for i in 0..=100 {
+            let x = f64::from(i) / 100.0;
+            assert_eq!(
+                kind.response(x),
+                x,
+                "{kind:?} must be identity — it is a control"
+            );
+        }
+    }
+}

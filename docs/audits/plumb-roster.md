@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 728 |
-| … file-level | 691 |
+| Quantity consts judged (the denominator) | 732 |
+| … file-level | 695 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 28 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 167 |
 | Excluded: declared non-quantity type | 502 |
-| **Every `const` the walk touched** | **1397** |
+| **Every `const` the walk touched** | **1401** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **658**: file-level
+nor the whole `file-level` row — it is **662**: file-level
 constants of those five types. The `file-level` row itself is
-**691**, and the denominator is **728**; the difference is
+**695**, and the denominator is **732**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -68,7 +68,7 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 530 |
+| `f64` | 534 |
 | `i32` | 7 |
 | `i64` | 2 |
 | `u32` | 79 |
@@ -158,12 +158,12 @@ bare count would hide a quantity someone had wrongly denied.
 | per-people | 1 |
 | per-species | 26 |
 | per-world | 5 |
-| universal | 113 |
+| universal | 117 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 728 |
+| _total_ | 732 |
 
-Declared: **728 of 728**. Undeclared is backlog; a malformed
+Declared: **732 of 732**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -214,7 +214,7 @@ counts are already the Coverage table above. 34 finding(s).
 
 ## The contested middle
 
-343 of the 728 constants sit in a file mentioning one of
+343 of the 732 constants sit in a file mentioning one of
 the kind-adjacency markers above, across 134 of the 320 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 343 of them are declared.
@@ -245,4 +245,4 @@ in the inclusive direction on purpose.
 | species | 33 | 0 | 0 | 33 |
 | terrain | 152 | 0 | 0 | 152 |
 | vessel | 100 | 0 | 0 | 100 |
-| worldgen | 155 | 0 | 0 | 155 |
+| worldgen | 159 | 0 | 0 | 159 |
