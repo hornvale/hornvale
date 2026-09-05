@@ -148,10 +148,6 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 }
             }
             "calendar" => match world_builder::calendar_lines(world) {
-                Ok(lines) if lines.is_empty() => writeln!(
-                    output,
-                    "this world has no generated sky; time is measured in standard days"
-                )?,
                 Ok(lines) => {
                     for line in lines {
                         writeln!(output, "{line}")?;
@@ -507,21 +503,18 @@ mod tests {
     use super::*;
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
-    use world_builder::{SkyChoice, build_world};
+    use world_builder::build_world;
 
-    fn constant_world() -> World {
-        build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &hornvale_terrain::TerrainPins::default(),
-            &world_builder::SettlementPins::default(),
-        )
-        .unwrap()
+    /// Seed 42 at default pins, read from the committed fixture rather than
+    /// built (decision 0607) — a file read against a full genesis. This was
+    /// a constant-sky build until The Zenith; the tier was never this
+    /// helper's subject, only how it got a world cheaply.
+    fn seed_42() -> World {
+        world_builder::fixture::seed_42_world()
     }
 
     fn drive(commands: &str) -> String {
-        let world = constant_world();
+        let world = seed_42();
         let mut out = Vec::new();
         run(&world, commands.as_bytes(), &mut out).unwrap();
         String::from_utf8(out).unwrap()
@@ -535,9 +528,9 @@ mod tests {
     /// Both halves are load-bearing. Without the first this test would pass
     /// on any world whose names happen not to collide, so it asserts against
     /// an independently computed count of what the *bare* listing would
-    /// duplicate (18 lines in 9 groups at seed 0). Without the second it
+    /// duplicate (12 lines in 6 groups at seed 0). Without the second it
     /// would pass on a name-scoped qualifier that spends a coordinate on all
-    /// 101 name-colliding settlements.
+    /// 110 name-colliding settlements.
     #[test]
     fn the_settlements_listing_qualifies_exactly_the_lines_that_would_repeat() {
         // SEED 0, not the module's usual 42, and that is the whole repair.
@@ -546,17 +539,38 @@ mod tests {
         // first half asserts nothing. The Tense left seed 42 with 122
         // settlements, every one of them a distinct (name, population, biome)
         // triple — so the anti-vacuity guard reddened, which is exactly its
-        // job. Swept 0..30 for a constant-sky world that still collides; all
-        // thirty do, and seed 0 is the earliest, which keeps the choice
-        // reproducible rather than hand-picked.
+        // job. Seed 0 is the earliest seed that still collides, which keeps
+        // the choice reproducible rather than hand-picked.
         //
-        // Measured at seed 0: 180 settlements, 18 lines across 9 colliding
-        // groups, and 101 name-colliding settlements — so both halves bite,
-        // the second harder than at seed 42 ever did.
+        // RE-MEASURED 2026-09-04 (The Zenith), on the GENERATED sky this test
+        // now builds. Every figure below moved, and the sweep's own conclusion
+        // moved with them, so none of it is a renumbering of the old note:
+        //
+        //   at seed 0   inherited pre-Zenith note   measured 2026-09-04
+        //   settlements               180                        222
+        //   repeated lines             18                         12
+        //   colliding groups            9                          6
+        //   name-colliding            101*                       110
+        //
+        // * The old note did not define its population, so 101 is provenance,
+        //   not a like-for-like baseline. Only today's 110 has the definition
+        //   below and carries this test's argument.
+        //
+        // "name-colliding" counts SETTLEMENTS whose name is shared with at
+        // least one other, which is the population a name-scoped qualifier
+        // would spend a coordinate on — the quantity the second half of this
+        // test's own doc argues about.
+        //
+        // THE OLD NOTE ALSO SAID "swept 0..30 ... all thirty do", AND THAT IS
+        // NO LONGER TRUE: re-swept 0..=30 on the generated sky, 29 of the 31
+        // collide and **seeds 8 and 20 do not** (0 distinct-triple repeats
+        // each). Anyone re-picking a seed off the old sentence would have had
+        // a one-in-fifteen chance of landing on a vacuous one — which the
+        // `would_repeat > 0` precondition below would have caught, loudly,
+        // but only after the fact.
         let world = build_world(
             Seed(0),
             &SkyPins::default(),
-            SkyChoice::Constant,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -632,7 +646,7 @@ mod tests {
 
     #[test]
     fn possess_hands_off_and_release_returns_to_the_scholar_loop() {
-        let world = constant_world();
+        let world = seed_42();
         let input = b"possess\nlook\nrelease\nvillage\nquit\n" as &[u8];
         let mut output = Vec::new();
         run(&world, input, &mut output).unwrap();
@@ -654,7 +668,7 @@ mod tests {
         // registered, so the gloss "sea-ice" is readable as either the one
         // biome concept or a sea+ice join. Ambiguity must fall back to the
         // raw gloss — never a guess between the two readings.
-        let world = constant_world();
+        let world = seed_42();
         let names: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
         for concept in ["sea", "ice", "sea-ice"] {
             assert!(
@@ -676,7 +690,7 @@ mod tests {
 
     #[test]
     fn site_facts_of_a_unique_join_gloss_names_its_two_concepts() {
-        let world = constant_world();
+        let world = seed_42();
         let names: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
         assert!(
             !names.contains(&"ice-home"),
@@ -693,7 +707,7 @@ mod tests {
         // (rendered as itself) or it collides with a join (ambiguous →
         // fallback, also itself). Sweeping every registered concept keeps
         // this true as the inventory grows.
-        let world = constant_world();
+        let world = seed_42();
         for c in world.registry.concepts() {
             assert_eq!(
                 site_facts_of(&world, &c.name),
@@ -702,11 +716,6 @@ mod tests {
                 c.name
             );
         }
-    }
-
-    #[test]
-    fn sky_reports_the_constant_sun() {
-        assert!(drive("sky\nquit\n").contains("zenith"));
     }
 
     /// `f64::from_str` accepts `inf`/`-inf`/`nan`/`infinity`, which are not
@@ -739,16 +748,10 @@ mod tests {
     }
 
     #[test]
-    fn calendar_on_constant_world_says_no_generated_sky() {
-        assert!(drive("calendar\nquit\n").contains("no generated sky"));
-    }
-
-    #[test]
     fn calendar_on_generated_world_reports_the_year() {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -768,7 +771,7 @@ mod tests {
         // higher roles appear depends on its actual environment. Re-pinned
         // under The Living Community epoch (history is the sole settlement
         // placer, this merge): the deep-history bake re-placed every world, so
-        // the constant-sky flagship (entity 2, village Shngooshshngoash...) is
+        // the flagship (entity 2, village Shngooshshngoash...) is
         // now peopled by bugbear, and the roles reported here are bugbear's own
         // words — "forager, omen-reader, headman", the top rung "headman".
         assert!(out.contains("headman"));
@@ -777,14 +780,7 @@ mod tests {
 
     #[test]
     fn why_explains_belief_one() {
-        let world = build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &hornvale_terrain::TerrainPins::default(),
-            &world_builder::SettlementPins::default(),
-        )
-        .unwrap();
+        let world = seed_42();
         let beliefs = hornvale_religion::beliefs_of(&world);
         assert!(!beliefs.is_empty(), "test world has beliefs");
         let belief_id = beliefs[0].id.0;
@@ -825,13 +821,13 @@ mod tests {
         // order, so there is no "entity 2" to ask about — this used to read
         // `facts 2` and lean on a comment about numbering shifts. Asking the
         // world which entity is a settlement is what the line always meant.
-        let world = constant_world();
+        let world = seed_42();
         let subject = world
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
             .map(|f| f.subject)
             .next()
-            .expect("the constant world places at least one settlement");
+            .expect("seed 42 places at least one settlement");
         let out = drive(&format!("facts {}\nquit\n", subject.get()));
         // Each fact line is tagged with the domain that asserted it. Under The
         // Living Community epoch the flagship settlement's
@@ -858,14 +854,7 @@ mod tests {
         let out = drive("settlements\nquit\n");
         assert!(out.contains("population"), "no settlements listing");
 
-        let world = build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &hornvale_terrain::TerrainPins::default(),
-            &world_builder::SettlementPins::default(),
-        )
-        .unwrap();
+        let world = seed_42();
         let village = hornvale_settlement::village_info(&world).expect("a village exists");
         let lat = match world
             .ledger
@@ -900,16 +889,27 @@ mod tests {
         assert!(drive("settlement\nquit\n").contains("usage: settlement"));
     }
 
+    /// A sky-condition word from the shared `sky_phrase` vocabulary — what
+    /// "the sky command answered" means on any world. These two read
+    /// `contains("zenith")` until The Zenith, which was the constant sun's
+    /// own wording and only ever stood in for "something came back".
+    fn sky_answered(out: &str) -> bool {
+        ["clear", "fair", "overcast", "rain", "storm"]
+            .iter()
+            .any(|w| out.contains(w))
+    }
+
     #[test]
     fn unknown_commands_are_reported_not_fatal() {
         let out = drive("dance\nsky\nquit\n");
         assert!(out.contains("unknown command"));
-        assert!(out.contains("zenith"));
+        assert!(sky_answered(&out), "{out}");
     }
 
     #[test]
     fn eof_ends_the_loop_without_quit() {
-        assert!(drive("sky\n").contains("zenith"));
+        let out = drive("sky\n");
+        assert!(sky_answered(&out), "{out}");
     }
 
     #[test]
@@ -917,7 +917,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -933,7 +932,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -994,7 +992,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
@@ -1059,7 +1056,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )

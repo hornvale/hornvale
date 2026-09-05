@@ -72,7 +72,7 @@ use hornvale_kernel::Seed;
 use hornvale_religion::{Sentiment, beliefs_of, sentiment_tag};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world, build_world_to, sky_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world, build_world_to, sky_of,
 };
 
 /// Ascending-seed scan ceiling — mirrors the Task-2 probe's first window
@@ -93,7 +93,6 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(world) = build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,
@@ -104,9 +103,7 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(sky) = sky_of(&world) else {
         return false;
     };
-    let Some(system) = sky.system() else {
-        return false;
-    };
+    let system = sky.system();
     matches!(system.anchor.rotation, Rotation::Locked)
 }
 
@@ -149,7 +146,6 @@ fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
         let world = build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

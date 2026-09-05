@@ -49,7 +49,7 @@
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session};
-use hornvale_worldgen::{SkyChoice, build_world};
+use hornvale_worldgen::build_world;
 
 /// The emitter seed — the same one `ledger_hash_witness.rs` searched to and
 /// `the_detent.rs`'s rule-2 witness counts on, so the two instruments read
@@ -89,7 +89,6 @@ fn main() {
     let world = build_world(
         Seed(EMITTER_SEED),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

@@ -32,14 +32,13 @@
 
 use hornvale_kernel::{EntityId, Seed, Value, World};
 use hornvale_language::{GapReason, LexEntry};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeMap;
 
 fn seed_42_with(settlement_pins: &SettlementPins) -> World {
     build_world(
         Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         settlement_pins,
     )

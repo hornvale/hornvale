@@ -594,15 +594,12 @@ fn an_entity_that_is_not_an_occupation_has_no_disposition() {
 fn the_draw_key_is_reachable_and_its_uniqueness_has_the_measured_shape() {
     use hornvale_astronomy::SkyPins;
     use hornvale_terrain::TerrainPins;
-    use hornvale_worldgen::{
-        BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-    };
+    use hornvale_worldgen::{BuildDepth, SettlementPins, WorldComponents, build_world_to};
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     for seed in [1u64, 42, 777] {
         let world = build_world_to(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

@@ -479,13 +479,12 @@ mod tests {
     use super::*;
     use hornvale_kernel::{Seed, WorldTime};
     use hornvale_locale::LocaleContext;
-    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+    use hornvale_worldgen::{SettlementPins, build_world};
 
     fn locale() -> Locale {
         let world = build_world(
             Seed(42),
             &Default::default(),
-            SkyChoice::Generated,
             &Default::default(),
             &SettlementPins::default(),
         )

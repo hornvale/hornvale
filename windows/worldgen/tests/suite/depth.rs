@@ -8,7 +8,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, RungArtifacts, SettlementPins, SkyChoice, WorldComponents, build_world,
+    BuildDepth, RungArtifacts, SettlementPins, WorldComponents, build_world,
     build_world_from_components, build_world_observed, build_world_to,
 };
 
@@ -17,7 +17,6 @@ fn shallow(depth: BuildDepth) -> hornvale_kernel::World {
     build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -30,7 +29,6 @@ fn full() -> hornvale_kernel::World {
     build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -98,7 +96,6 @@ fn full_depth_is_byte_identical_to_the_ordinary_full_build() {
     let via_components = build_world_from_components(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -148,7 +145,6 @@ fn observed_run_recording(
     let world = build_world_observed(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -340,7 +336,6 @@ fn an_observed_build_is_byte_identical_to_an_unobserved_one() {
     let plain = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -349,7 +344,6 @@ fn an_observed_build_is_byte_identical_to_an_unobserved_one() {
     let observed = build_world_observed(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

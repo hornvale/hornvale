@@ -12,7 +12,7 @@ use hornvale_astronomy::resonance::detect_moon_period_ratio;
 use hornvale_language::numeracy::{NumeracyRung, expressible_at_rung};
 use hornvale_language::schemas::SchemaId;
 use hornvale_language::{Disposition, LossReason};
-use hornvale_worldgen::{SettlementPins, SkyChoice, accounts_from};
+use hornvale_worldgen::{SettlementPins, accounts_from};
 
 fn days(x: f64) -> StdDays {
     StdDays::new(x).expect("test fixture uses a finite positive value")
@@ -22,7 +22,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

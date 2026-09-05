@@ -881,7 +881,6 @@ mod tests {
         crate::build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            crate::SkyChoice::Generated,
             &TerrainPins::default(),
             &crate::SettlementPins::default(),
             &wc,

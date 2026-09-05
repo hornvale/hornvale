@@ -101,7 +101,7 @@
 | `sea-level-m` | yes | sea level in meters |
 | `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |
 | `settlement-pin` | no | a settlement scenario pin, round-trippable |
-| `sky-provider` | yes | which astronomy provider this world uses (constant or generated) |
+| `sky-provider` | yes | the generated astronomy provider this world uses |
 | `species-activity-cycle` | yes | when a species is awake: diurnal, nocturnal, crepuscular |
 | `species-deliberation-latency` | yes | decision slowness, 0-1 |
 | `species-exotic-manner` | yes | exotic manner: none, trill, click, ejective |

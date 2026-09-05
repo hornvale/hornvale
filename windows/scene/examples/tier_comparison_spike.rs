@@ -19,7 +19,7 @@ use hornvale_climate::{Biome, GeneratedClimate};
 use hornvale_kernel::{NearestVertexIndex, Value, Vertex, World};
 use hornvale_terrain::{GeneratedTerrain, WaterKind};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -84,7 +84,6 @@ fn main() {
     let artifacts = build_world_to_with_artifacts(
         hornvale_kernel::Seed(SEED),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

@@ -11,7 +11,7 @@ The cascade, in dependency order, with its current state:
 
 | Domain | Tier 0 | Consumes | Contributes |
 |---|---|---|---|
-| [Astronomy](./astronomy.md) | a sun that never sets → a generated star system with a two-clock calendar (tier 1) | — | phenomena (the sky) (tier 0); phenomena (day/night, seasons, moon phases, notable neighbors) plus the sky's insolation, obliquity, and rotation fields (tier 1) |
+| [Astronomy](./astronomy.md) | the former constant sun → one generated star system with a two-clock calendar (the stipulated provider retired by The Zenith) | — | phenomena (day/night, seasons, moon phases, notable neighbors) plus the sky's insolation, obliquity, and rotation fields |
 | [Climate](./climate.md) | uniform mildness → banded climate + biomes (tier 1) | — (tier 0); elevation, sea level, seafloor, and the sky's insolation/obliquity/rotation (tier 1) | phenomena (the air); the biome + habitability field (tier 1) |
 | [Terrain](./terrain.md) | one hand-placed vale → tectonic globe (tier 1) | — | place facts; the tectonic globe's elevation, boundary, unrest, and drainage fields (tier 1) |
 | [Settlement](./settlement.md) | one goblin village → settlements condensed from a carrying-capacity field → **grown as the last frame of a derived deep history** (*The Living Community*: the field is now substrate, not placer; history places living settlements + standing ruins + separated territories) | the globe's habitability, freshwater, coast, temperature, and hostility, cell by cell, folded through the sibling `demography` domain's field and flow (now ticked per-era by paleoclimate); each species' psychology-derived field weights | settlement + ruin facts grown by history, one flagship (highest population) across every species that placed; a committed, queryable occupation skeleton |
@@ -28,10 +28,10 @@ culture consumes "the flagship's environment," not "settlement." Wiring
 specific fields to a specific settlement, and a specific settlement to a
 specific society, happens in one file, the composition root, which is the
 only place in the codebase where all domains meet. Second, religion's row is
-the whole thesis in miniature: at tier 0 it consumed phenomena and nothing
-else, so the same religion code that mythologized the changeless sun
-mythologizes Campaign 2's moons and Campaign 5's seasons without being
-edited — tier 1 adds one bare society summary, never a dependency on
+the whole thesis in miniature: its first implementation consumed phenomena
+and nothing else, so the same religion code that mythologized the former
+changeless sun mythologizes Campaign 2's moons and Campaign 5's seasons
+without being edited — the later implementation adds one bare society summary, never a dependency on
 culture itself, and Campaign 15 adds a second call site, not a second code
 path: the composition root now runs the same religion genesis once per
 species-flagship, each time handing it that species' own lensed phenomena,

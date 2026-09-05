@@ -57,8 +57,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_terrain::{SoilOrder, TerrainPins};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, climate_of, soil_of,
-    terrain_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, climate_of, soil_of, terrain_of,
 };
 
 /// Seeds swept. Twenty is an attribution sample, not a distribution one —
@@ -123,7 +122,6 @@ fn attribute(seed: u64, wc: &WorldComponents) -> Option<WorldAttribution> {
     let world = build_world_to(
         hornvale_kernel::Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

@@ -24,7 +24,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, WorldContext};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// Runs per measured quantity — matches `turn_cost.rs`'s five.
 const RUNS: usize = 5;
@@ -48,7 +48,6 @@ fn main() {
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

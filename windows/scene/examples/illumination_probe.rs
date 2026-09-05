@@ -14,7 +14,7 @@ use hornvale_kernel::{Facet, FacetId, Seed, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_scene::{Sight, SurroundsScene, surrounds_scene, surrounds_scene_colored_in};
 use hornvale_terrain::water::WaterKind;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeSet;
 
 /// The canonical fixture seed this campaign's spec measures against
@@ -36,7 +36,6 @@ fn genesis() -> World {
     build_world(
         Seed(SEED),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &SettlementPins::default(),
     )
@@ -287,7 +286,6 @@ fn genesis_for(seed: u64) -> World {
     build_world(
         Seed(seed),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &SettlementPins::default(),
     )
@@ -576,7 +574,6 @@ fn main() {
     let seed1_world = build_world(
         Seed(1),
         &Default::default(),
-        SkyChoice::Constant,
         &Default::default(),
         &Default::default(),
     )

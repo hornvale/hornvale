@@ -64,8 +64,8 @@ use hornvale_kernel::{Geosphere, Seed, VertexMap};
 use hornvale_species::BiosphereTraits;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents, build_world_to,
-    carrying_inputs_of, climate_of, sky_of, substrate_field, terrain_of,
+    BuildDepth, SettlementPins, Substrate, WorldComponents, build_world_to, carrying_inputs_of,
+    climate_of, sky_of, substrate_field, terrain_of,
 };
 
 /// First scan window: seeds `1..=200` (brief step 1). Widened by
@@ -93,7 +93,6 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(world) = build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,
@@ -104,9 +103,7 @@ fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(sky) = sky_of(&world) else {
         return false;
     };
-    let Some(system) = sky.system() else {
-        return false;
-    };
+    let system = sky.system();
     matches!(system.anchor.rotation, Rotation::Locked)
 }
 
@@ -269,7 +266,6 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
     let world = build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,
@@ -280,9 +276,7 @@ fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
     let climate = climate_of(&world).expect("climate reconstructs");
     let geo = terrain.geosphere();
     let sky = sky_of(&world).expect("sky reconstructs");
-    let system = sky
-        .system()
-        .expect("a locked seed always has a generated star system");
+    let system = sky.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();
     assert!(

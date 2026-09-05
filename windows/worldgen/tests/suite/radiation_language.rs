@@ -209,8 +209,8 @@ use hornvale_language::{LexEntry, Lexicon, Segment, concept_domain};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to_with_artifacts, exposure_from_in,
-    family_daughters, lexicon_from_in, proto_phonology_of,
+    BuildDepth, SettlementPins, build_world_to_with_artifacts, exposure_from_in, family_daughters,
+    lexicon_from_in, proto_phonology_of,
 };
 
 /// The seeds every clause reports, in order — the same panel
@@ -261,7 +261,6 @@ impl LanguageWorld {
         let built = build_world_to_with_artifacts(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

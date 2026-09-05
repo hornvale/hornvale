@@ -35,7 +35,7 @@ use std::time::Instant;
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// The canonical fixture seed.
 const SEED: u64 = 42;
@@ -114,7 +114,6 @@ fn genesis() -> (World, f64) {
     let world = build_world(
         Seed(SEED),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

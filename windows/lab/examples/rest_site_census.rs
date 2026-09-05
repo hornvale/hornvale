@@ -341,7 +341,6 @@ fn census_of_seed(seed: u64) -> Option<SeedCounts> {
     let world = hornvale_worldgen::build_world_from_components(
         Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
         &wc,
@@ -389,7 +388,7 @@ fn census_of_seed(seed: u64) -> Option<SeedCounts> {
     ));
     let calendar = hornvale_worldgen::sky_of(&world)
         .ok()
-        .and_then(|sky| sky.calendar().cloned());
+        .map(|sky| sky.calendar().clone());
     let predator = report
         .as_ref()
         .map(|r| hornvale_worldgen::predator_pressure_from(&wc, &terrain, r));

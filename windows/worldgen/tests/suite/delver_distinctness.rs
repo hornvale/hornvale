@@ -54,7 +54,7 @@
 use hornvale_kernel::Vertex;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
+    SettlementPins, build_world, climate_of, per_species_suitability, sky_of, terrain_of,
 };
 
 /// Pearson's `r` between two equal-length samples.
@@ -130,7 +130,6 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
     let world = build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -141,10 +140,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
     let sky = sky_of(&world).expect("sky");
     // The stellar-input triple, resolved exactly as `delver_bind_audit.rs` and
     // `niche_breadth_probe.rs` do (`stellar_inputs` is private to worldgen).
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

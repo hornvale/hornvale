@@ -662,7 +662,7 @@ cargo run --manifest-path tools/digest/Cargo.toml -- render decisions > docs/dig
 cargo run --manifest-path tools/digest/Cargo.toml -- render delta      > docs/digest/intent-vs-reality.md
 
 # Generated-artifact freshness. Two sources of truth, each authoritative for a
-# different half. WHAT IS GENERATED: scripts/regenerate-artifacts.sh (three
+# different half. WHAT IS GENERATED: scripts/regenerate-artifacts.sh (two
 # seed-42 almanacs, the elevation map, registry/manifest dumps, lab studies,
 # the type-audit report, the digest's decision index and delta report, the
 # Domesday survey, the committed vessel/session/v2 client fixtures) — `make
@@ -805,9 +805,18 @@ Cross-domain communication uses only the kernel's trace protocol:
   let an observer **achieve** an identification and be wrong about it.
 - **Fields** — typed functions over (space × time), the statistical prior.
 
-**Provider tiers coexist:** the tier-0 `ConstantSun` and the generated star
-system are both valid; worlds choose. Higher fidelity refines, never
-contradicts, lower ("coarse constrains fine").
+**Provider tiers are retired** (decision 0736, The Zenith). The doctrine —
+multiple tiers of one truth coexisting, "coarse constrains fine" — held that
+`ConstantSun` and the generated star system were both valid and worlds chose.
+Decision 0039 half-retired it, ruling that a generator which *contradicts* its
+predecessor is an epoch rather than a tier, and named astronomy as the one
+surviving licence for coexistence. The Zenith closed that licence: every world
+has a generated sky with a calendar and a star system.
+
+Nothing expressible was lost. Tier-0's whole content was *acyclicity*, and a
+tidally locked world (`--rotation locked`) is acyclic as derived physics rather
+than stipulation — `Calendar::day_length()` still returns `None` for one, and
+`book/src/gallery/almanac-seed-42-locked.md` is the committed proof.
 
 ## Determinism (constitutional — most bugs here are catastrophic)
 

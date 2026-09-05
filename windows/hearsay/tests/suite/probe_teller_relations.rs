@@ -119,7 +119,6 @@ fn how_many_generations_does_one_retelling_span_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )
@@ -283,7 +282,6 @@ fn does_generation_length_vary_by_people_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )
@@ -451,7 +449,6 @@ fn what_scale_is_the_teller_remove_amplitude_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )
@@ -560,7 +557,6 @@ fn which_teller_event_relations_flip_more_than_once_on_seed_42() {
     let world = hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )
