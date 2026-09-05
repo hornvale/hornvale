@@ -313,3 +313,12 @@ its automatically authored timing row is retained, not an experiment sample.
 A final fetch still reports the same origin/main research base. All writing
 is in this worktree; no implementation source or implementation plan was added.
 The final spec commit still receives the ordinary prose-subject hook.
+
+## G3 — Nathan approved proceeding, 2026-09-05
+
+After the plain-language explanation of benefits, direction, and the
+possibility that the experiment earns knowledge without immediate throughput
+gains, Nathan said: “Great! Let's move forward.” This approves the presented
+spec and releases implementation planning. The four G3 qualifications remain
+in force. G4 is self-reviewed under campaign-autopilot; G6 remains the next
+human stop before merge/close.

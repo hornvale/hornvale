@@ -1,6 +1,6 @@
 # The Counterpart — testing concurrent changes against an independent obligation
 
-Status: **G3 draft for Nathan's review; not approved for implementation planning.**
+Status: **G3 approved by Nathan on 2026-09-05; implementation planning authorized.**
 Date: 2026-09-05. Branch: `codex/federation-next`.
 Research base: `4f303d3b06d8403f79324755c6adfac9d0394a3d`.
 Program: [federated development](2026-09-04-federated-development-program-metaplan-design.md).
@@ -384,5 +384,6 @@ G3 flags:
    contracts. Digest protocol v1 and existing gates remain in force.
 4. A comparative null may recommend no additional federation machinery.
 
-Nathan's approval of this spec is required before implementation planning.
-No campaign implementation plan accompanies this G3 package.
+Nathan approved proceeding after the plain-language explanation on 2026-09-05
+("Great! Let's move forward."). Implementation planning proceeds under
+campaign-autopilot; the next human review boundary is G6 before merge/close.
