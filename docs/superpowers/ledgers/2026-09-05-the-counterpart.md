@@ -794,3 +794,23 @@ is a separate changed input outside production Thing enrollment; later
 scoring must retain that unknown scope, not silently extend enrollment.
 Actual reserved source-object integration, formal judgments and full Task6
 acceptance remain pending Stage2. No new Q arose at this green subtask review.
+
+## Task 7 preparation — independent source reconstruction
+
+A fresh reader used only the committed package at
+`1a4b4be70d9dc27a6039a142a777c00ba93cfe6b` in a separately owned clone.
+All eleven source commits/trees and declared input, lock and pin hashes
+matched; all 67 supervised Git samples validated. The explicit bundle
+prerequisite was available. No undocumented source input or reconstruction
+failure was encountered. Receipt SHA256:
+`3e12b5271d427dbfe6c93556c30f2a8246850fc8acf96126e90f107791acba8d`.
+Receipts, read inventory and exact compressed command records are retained
+under `evidence/independent-source-only/`; the controller independently checked
+all 67 archived member lengths and hashes after packaging.
+
+The allowed panel embeds owner predictions and author observations, which
+the reader disclosed seeing. This establishes independence from originating
+scratch and execution, not blinded outcome adjudication. Those declarations
+are not result authority. No source build was run: the same reader must still
+perform its own full canonical behavioral replay against the final panel.
+Task 7 is not accepted on source reconstruction alone.
