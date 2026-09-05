@@ -27,6 +27,39 @@ if ! command -v flock >/dev/null 2>&1; then
 fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# BUILD tools/sluice's release binary ONCE, HERE — after the flock skip guard
+# above (so a host with no flock, which exits before this line, never pays
+# for a build it will never use), and before the very first test that
+# forwards to it (the FIFO/ancestry-coalescing block a little below). This
+# script's own claim/set-state/list commands go through
+# scripts/sluice-queue.sh's forwarding block, which deliberately never builds
+# the binary itself (that is the fix for an earlier Critical: a shim that
+# silently rebuilds on every call). In a warm worktree this went unnoticed —
+# `tools/sluice/target/release/sluice` was already on disk from earlier work
+# — but a fresh chamber worktree has no such binary, and every forwarded-verb
+# test between here and the chamber setup below failed with a
+# build-instruction error disguised as three ancestry-coalescing assertion
+# failures (rc=11 at the sluice chamber's `outboard` phase, 2026-09-05).
+# Building unconditionally here means every test in this file, not just the
+# chamber section, exercises the binary the production path actually uses.
+#
+# `cd` into $repo_root for the build itself (in a subshell, so this file's
+# own cwd is untouched): rustup's toolchain override is resolved from the
+# process's CWD, not from `--manifest-path`, so a build invoked from
+# elsewhere can silently pick a different (older, non-overridden) default
+# toolchain and fail to parse an edition2024 manifest. Bit this campaign
+# twice already; see the matching comment at the chamber's HV_SLUICE_BIN
+# export below, which does NOT rebuild — it only re-points the binary path
+# for scratch repos holding a copy of sluice-queue.sh with no tools/sluice
+# sibling beside them.
+#
+# A build failure must fail loudly HERE, not 1100 lines later as confusing
+# assertion failures about ancestry — `set -euo pipefail` (above) already
+# makes that so: this line is not itself guarded, so a nonzero cargo exit
+# aborts the whole script.
+( cd "$repo_root" && cargo build --quiet --release --manifest-path tools/sluice/Cargo.toml >&2 )
+
 pass=0; fail=0
 ok()   { printf '  ok: %s\n' "$1"; pass=$((pass+1)); }
 bad()  { printf '  FAIL: %s\n' "$1"; fail=$((fail+1)); }
@@ -1197,6 +1230,18 @@ export HV_SLUICE_DIR="$tmp/state"; mkdir -p "$HV_SLUICE_DIR"
 export HV_SLUICE_REPO_ROOT="$chamber_repo"
 export HV_CANONICAL_HOST_FILE="$chamber_host_file"
 export HV_CENSUS_LOCK="$tmp/chamber.lock"
+# HV_SLUICE_BIN is the test seam scripts/sluice-queue.sh's forwarding block
+# reads (test seam ONLY — nothing in production sets it). The binary itself
+# was already built once, near the top of this file (right after the flock
+# skip guard) — that early build serves every test before this point,
+# exercising the DEFAULT sibling-path resolution the production path
+# actually uses. This second export does NOT rebuild anything; it only
+# re-points the resolved path for $chamber_repo below, which gets a COPY of
+# sluice-queue.sh with no tools/sluice sibling beside it (see the two
+# `cp .../sluice-queue.sh` sites in this file) and so has no manifest of its
+# own to build claim/set-state/list against. Both cp sites are covered
+# because both are invoked (via HV_SLUICE_REPO_ROOT) only after this point.
+export HV_SLUICE_BIN="$repo_root/tools/sluice/target/release/sluice"
 
 echo "== chamber: phases run in the declared order, the tree is cleaned between phases, and the claim is the eight-field shape while held =="
 lane_sets_1="$tmp/lane-sets-1.tsv"
@@ -2912,6 +2957,15 @@ else
 fi
 
 cen="$tmp/cen"; mkdir -p "$cen/scripts"
+# sluice-census.sh resolves sluice-queue.sh under HV_SLUICE_REPO_ROOT (=$cen
+# here), same as sluice-run.sh does for $chamber_repo above — so this scratch
+# repo needs its own copy for the SAME reason. Before fix round 2 this went
+# unnoticed because a missing script there just made `claim` fail, and the
+# `*)` arm proceeded unbookkept regardless; now that arm REFUSES (Critical
+# F1), so the copy is load-bearing for every case below that expects rc=0.
+# HV_SLUICE_BIN (exported once, above, and never unset) lets this copy reach
+# the real checkout's binary without needing its own tools/sluice sibling.
+cp "$repo_root/scripts/sluice-queue.sh" "$cen/scripts/sluice-queue.sh"
 cen_origin="$tmp/cen-origin.git"; git init -q --bare -b main "$cen_origin"
 (
     cd "$cen"
@@ -3065,6 +3119,61 @@ if [ "$rc_fail" != "0" ] && [ "$after_fail" = "$before_fail" ]; then
 else
     bad "failed census: rc=$rc_fail, branches $before_fail -> $after_fail (expected non-zero and no branch)"
 fi
+
+echo "== census: a request id must name a CLAIMED row, and a row of kind=census =="
+# THE SAME CRITICAL AS sluice-run.sh's, on the more expensive path, plus the
+# kind check sluice-run.sh had and this script did not (fix round 3, Important
+# 2): `sluice-census.sh req-<a stage request>` spent ~15 minutes of the box
+# answering a question nobody asked, and then wrote `reported` on the row as
+# though the stage gate had run.
+cenq="$tmp/cen-state/queue.tsv"; mkdir -p "$tmp/cen-state"
+cen_row() { printf '2026-09-05T00:00:00Z\treq-%s\tc/x\t%s\t%s\t%s\t\n' "$1" "$2" "$3" "$4"; }
+cen_state_of() { awk -F'\t' -v i="req-$1" '$2==i{print $5}' "$cenq"; }
+write_stub still
+
+: > "$cenq"
+cen_row cq "$cen_ref" queued census >> "$cenq"
+set +e
+cq_out="$(HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" \
+          timeout 30 bash "$repo_root/scripts/sluice-census.sh" req-cq 2>&1)"
+cq_rc=$?
+set -e
+if [ "$cq_rc" = "16" ] && printf '%s' "$cq_out" | grep -q "NOT claimed" \
+   && [ "$(cen_state_of cq)" = "queued" ]; then
+    ok "a census request id whose row is still queued is REFUSED rc=16"
+else
+    bad "req-cq gave rc=$cq_rc state=$(cen_state_of cq) out='$cq_out' — an unclaimed census can still be started twice"
+fi
+
+: > "$cenq"
+cen_row ck "$cen_ref" running stage >> "$cenq"
+set +e
+ck_out="$(HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" \
+          timeout 30 bash "$repo_root/scripts/sluice-census.sh" req-ck 2>&1)"
+ck_rc=$?
+set -e
+if [ "$ck_rc" = "2" ] && printf '%s' "$ck_out" | grep -q "kind='stage'"; then
+    ok "a census entry point refuses a row of kind=stage, naming the kind it found"
+else
+    bad "req-ck (kind=stage) gave rc=$ck_rc out='$ck_out' — a stage request can still start a ~15-minute census"
+fi
+
+# THE POSITIVE DIRECTION, or the two refusals above are satisfied by a script
+# that refuses everything. A claimed row of the right kind must go through and
+# reach the stubbed census.
+: > "$cenq"
+cen_row cg "$cen_ref" running census >> "$cenq"
+set +e
+cg_out="$(HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" \
+          timeout 60 bash "$repo_root/scripts/sluice-census.sh" req-cg 2>&1)"
+cg_rc=$?
+set -e
+if [ "$cg_rc" = "0" ] && printf '%s' "$cg_out" | grep -q "kind=census"; then
+    ok "a CLAIMED row of kind=census resolves and runs (the guards refuse, they do not block)"
+else
+    bad "req-cg gave rc=$cg_rc out='$cg_out' — a legitimate queued census can no longer be dispatched by id"
+fi
+rm -f "$cenq"
 
 echo "== request path: every kind the usage string offers is a kind it ACCEPTS =="
 # THE DEFECT THIS PINS, and it is the reason this test is shaped as a LOOP over
@@ -3241,7 +3350,7 @@ set +e
 # reported rc=0 and LANDED while main received only the pre-merge tree's
 # artifact regens. The blast-radius guard at the end of this file exists to
 # catch a recurrence.
-runout="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED bash "$repo_root/scripts/sluice-run.sh" \
+runout="$(HV_SLUICE_DIR="$cdir" bash "$repo_root/scripts/sluice-run.sh" \
     campaign/h hhhhhhhhhhhh merge 2>&1)"
 runrc=$?
 set -e
@@ -3258,13 +3367,181 @@ fi
 : > "$CQ"
 row iii campaign/i iiiiiiiiiiii queued merge >> "$CQ"
 set +e
-adhoc="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
+adhoc="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
     campaign/zzz 999999999999 merge 2>&1)"
 set -e
 if printf '%s' "$adhoc" | grep -q "AD HOC"; then
     ok "a ref with no queue row runs ad hoc and says so (the escape hatch stayed open)"
 else
     bad "an unqueued ref did not report AD HOC — the operator escape hatch may have closed"
+fi
+
+echo "== sluice-run: a request id supplies branch, sha and kind from the row"
+# THE ROW IS `running`, AND THAT IS NOW LOAD-BEARING RATHER THAN INCIDENTAL.
+# This test used to seed the row `queued` and pass, which is precisely the
+# Critical of fix round 3: resolving an id skipped the interlock on the
+# ASSUMPTION that the caller held the row, and this test asserted the
+# resolution while asserting nothing about the claim. `running` is what a
+# dispatcher's `claim` writes, so it is the only state a legitimate id-form
+# caller can present. The negative direction is the very next test.
+: > "$CQ"
+row jjj campaign/j jjjjjjjjjjjj running stage >> "$CQ"
+set +e
+idout="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" req-jjj 2>&1)"
+set -e
+if printf '%s' "$idout" | grep -q "kind=stage"; then
+    ok "a request id on a CLAIMED row is resolved to its branch, sha and kind"
+else
+    bad "sluice-run did not resolve req-jjj to kind=stage — an operator-typed kind can still disagree with the row"
+fi
+
+# THE CRITICAL OF FIX ROUND 3. A `req-*` id whose row still reads `queued` was
+# run anyway, with the interlock skipped: `sluice-drain.sh` could then legally
+# `claim` that row (it IS queued) and dispatch the same job a second time —
+# the 2026-09-04 duplicate by a different road — coalescing could supersede it
+# mid-write, and `release_row` (gated on `claimed_here`) wrote no terminal
+# state, leaving a permanent ghost. Reproduced by the reviewer: the row read
+# `queued` before AND after a run that had already gone into real work.
+# BOTH DIRECTIONS ARE ASSERTED, here and immediately above, because a guard
+# with only its refusal witnessed is satisfied by a script that refuses
+# everything.
+: > "$CQ"
+row kkk campaign/k kkkkkkkkkkkk queued stage >> "$CQ"
+set +e
+qidout="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" req-kkk 2>&1)"
+qidrc=$?
+set -e
+if [ "$qidrc" = "16" ] \
+   && printf '%s' "$qidout" | grep -q "NOT claimed" \
+   && printf '%s' "$qidout" | grep -q "req-kkk" \
+   && printf '%s' "$qidout" | grep -q "state='queued'" \
+   && [ "$(cstate_of kkk)" = "queued" ]; then
+    ok "a request id whose row is still queued is REFUSED rc=16, naming the id and its state"
+else
+    bad "req-kkk on a queued row gave rc=$qidrc state=$(cstate_of kkk) out='$qidout' — an unclaimed row still runs, so a dispatcher can launch it a second time"
+fi
+
+# THIS IS PROC-stage-request-should-read-its-own-queue-row's negative
+# control: an id with no matching row must be refused, not treated as an
+# ad hoc branch name (which is what the positional form does for an unknown
+# ref — see the AD HOC test above). Reading `req-` as "go find a row" only
+# for a KNOWN id would be a silent bug in the other direction.
+set +e
+noidout="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" req-nosuchrow 2>&1)"
+noidrc=$?
+set -e
+if [ "$noidrc" = "2" ] && printf '%s' "$noidout" | grep -q "no queue row with id"; then
+    ok "a request id with no matching row is refused, not run as an ad hoc branch name"
+else
+    bad "req-nosuchrow gave rc=$noidrc, out=$noidout — an unresolvable id should refuse, not run ad hoc"
+fi
+
+# ---------------------------------------------------------------------------
+# THE REFUSAL PATHS THAT HAD NO WITNESS AT ALL (fix round 3, Important 3).
+#
+# `grep` across every scripts/test-*.sh for `exit 3`, `rc=13`, `claim failed`
+# and `REFUSING — could not reach` returned ZERO hits. Those four paths ARE the
+# remedy for fix round 2's Critical: the shim stopped building its binary on
+# demand, so a missing binary now REFUSES (exit 3) instead of aborting mid-
+# script, and each of its three callers had to learn to tell "the queue refused"
+# from "the queue could not be asked". A build failure read as "queue drained"
+# or as "running unbookkept" is the whole failure mode, and none of the code
+# that prevents it was exercised by anything.
+#
+# ONE INDUCED CONDITION drives all four: point HV_SLUICE_BIN (the shim's own
+# documented test seam) at a path that does not exist. That is exactly the
+# production shape — a fresh worktree where nobody ran `make prewarm`.
+echo "== the missing-binary refusals: every caller must fail CLOSED"
+nobin="$tmp/no-such-sluice-binary"
+rm -f "$nobin"
+
+set +e
+shimout="$(HV_SLUICE_BIN="$nobin" bash "$repo_root/scripts/sluice-queue.sh" list 2>&1)"
+shimrc=$?
+set -e
+if [ "$shimrc" = "3" ] && printf '%s' "$shimout" | grep -q "no built binary"; then
+    ok "the shim refuses exit 3 with no binary, and names what to build"
+else
+    bad "sluice-queue.sh list with a missing binary gave rc=$shimrc out='$shimout' — callers cannot tell 'unreachable' from 'refused'"
+fi
+
+# sluice-run.sh, POSITIONAL form: the claim call's non-{0,4,5} arm.
+: > "$CQ"
+row mmm campaign/m mmmmmmmmmmmm queued merge >> "$CQ"
+set +e
+r13a="$(HV_SLUICE_DIR="$cdir" HV_SLUICE_BIN="$nobin" timeout 20 \
+        bash "$repo_root/scripts/sluice-run.sh" campaign/m mmmmmmmmmmmm merge 2>&1)"
+r13a_rc=$?
+set -e
+if [ "$r13a_rc" = "13" ] && printf '%s' "$r13a" | grep -q "could not reach the queue"; then
+    ok "sluice-run (positional) refuses rc=13 when the queue cannot be asked"
+else
+    bad "sluice-run gave rc=$r13a_rc out='$r13a' — an unreachable queue must not become an unbookkept run"
+fi
+
+# sluice-run.sh, ID form: the `list` pipeline's rc, which used to be swallowed.
+# Under `set -e` this died at rc=3 — outside this script's exit vocabulary, and
+# recorded by the drain as `CHAMBER RED rc=3 — attribution pending`, blaming the
+# candidate for a toolchain fault.
+set +e
+r13b="$(HV_SLUICE_DIR="$cdir" HV_SLUICE_BIN="$nobin" timeout 20 \
+        bash "$repo_root/scripts/sluice-run.sh" req-mmm 2>&1)"
+r13b_rc=$?
+set -e
+if [ "$r13b_rc" = "13" ] && printf '%s' "$r13b" | grep -q "could not reach the queue"; then
+    ok "sluice-run (id form) refuses rc=13, not the shim's own rc=3, when the queue is unreachable"
+else
+    bad "sluice-run req-mmm gave rc=$r13b_rc out='$r13b' — expected 13; rc=3 is not in this script's vocabulary and reads as a red candidate"
+fi
+
+# sluice-census.sh, both forms. A census is the most expensive thing on the
+# box, so an unbookkept one is the most expensive form of this defect.
+set +e
+c13a="$(HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" HV_SLUICE_BIN="$nobin" \
+        timeout 20 bash "$repo_root/scripts/sluice-census.sh" "$cen_ref" 2>&1)"
+c13a_rc=$?
+set -e
+if [ "$c13a_rc" = "13" ] && printf '%s' "$c13a" | grep -q "could not reach the queue"; then
+    ok "sluice-census (positional) refuses rc=13 when the queue cannot be asked"
+else
+    bad "sluice-census gave rc=$c13a_rc out='$c13a' — expected 13"
+fi
+
+# AND THE MIS-ATTRIBUTION THIS FIXES (Important 5). sluice-census.sh runs under
+# `set -uo pipefail` with no `-e`, so the `list | awk` pipeline's rc 3 fell on
+# the floor, `_row` came back empty, and it reported "no queue row with id
+# 'req-…'" — a FALSE claim about a row that exists, at rc=2, which reads as the
+# operator's typo. The assertion is on the ABSENCE of that sentence as much as
+# on the code.
+set +e
+c13b="$(HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" HV_SLUICE_BIN="$nobin" \
+        timeout 20 bash "$repo_root/scripts/sluice-census.sh" req-anything 2>&1)"
+c13b_rc=$?
+set -e
+if [ "$c13b_rc" = "13" ] && printf '%s' "$c13b" | grep -q "could not reach the queue" \
+   && ! printf '%s' "$c13b" | grep -q "no queue row with id"; then
+    ok "sluice-census (id form) says the QUEUE is unreachable, not that the row does not exist"
+else
+    bad "sluice-census req-anything gave rc=$c13b_rc out='$c13b' — an unreachable queue must not be reported as a missing row"
+fi
+
+# sluice-drain.sh: the loop must NOT report "queue drained" off an empty stdout
+# it never earned. This is the arm that turned a build failure into a green-
+# looking "queue drained after 0 run(s)".
+set +e
+d1="$(HV_SLUICE_DIR="$cdir" HV_SLUICE_BIN="$nobin" timeout 60 \
+      bash "$repo_root/scripts/sluice-drain.sh" 1 2>&1)"
+d1_rc=$?
+set -e
+# `grep -q "queue drained"` is NOT the right negative and cost this test one
+# red run: the refusal's own wording is `NOT reporting 'queue drained'`, so the
+# bare phrase appears in the healthy output. The DRAINED REPORT is
+# `queue drained after N run(s)`, and that exact form is what must be absent.
+if [ "$d1_rc" != "0" ] && printf '%s' "$d1" | grep -q "claim failed" \
+   && ! printf '%s' "$d1" | grep -q "queue drained after"; then
+    ok "the drain refuses non-zero and does NOT say 'queue drained' when claim could not run"
+else
+    bad "drain gave rc=$d1_rc out='$d1' — a broken queue reported as a drained one is the fix-round-2 Critical, back"
 fi
 
 

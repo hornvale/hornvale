@@ -5769,3 +5769,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T02:17:53Z | sluice:gate | 745.263 | 19701.936 | 541.606 | 27.16 | 0 | ab1e7c7e6 |  | lefford | 40 |
 | 2026-09-05T02:20:12Z | sluice:clients | 139.179 | 2094.210 | 173.584 | 16.29 | 0 | 458943740 |  | lefford | 40 |
 | 2026-09-05T02:27:58Z | sluice:heavy | 465.431 | 10068.505 | 180.966 | 22.02 | 0 | 7b50bfe7f |  | lefford | 40 |
+| 2026-09-05T03:50:57Z | gate-commit | 99.628 | 207.792 | 46.021 | 2.55 | 0 | bcacc525e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T03:52:25Z | gate-commit | 70.030 | 156.342 | 50.219 | 2.95 | 0 | bcacc525e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:05:05Z | gate-commit | 70.666 | 163.658 | 52.297 | 3.06 | 0 | 8e6df971e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:12:02Z | gate-commit | 70.818 | 169.359 | 56.457 | 3.19 | 0 | 4c20f1d51 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:20:45Z | gate-commit | 72.575 | 153.008 | 43.545 | 2.71 | 0 | ac1b1e6fe | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:42:33Z | gate-commit | 72.615 | 154.559 | 45.060 | 2.75 | 0 | fe1498fea | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T05:15:09Z | gate-commit | 72.171 | 158.169 | 48.936 | 2.87 | 0 | a54e06850 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:17:44Z | gate-commit | 69.292 | 154.888 | 48.634 | 2.94 | 0 | 42d7be262 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:32:02Z | gate-commit | 68.589 | 156.450 | 52.883 | 3.05 | 0 | abf708ea6 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:44:12Z | gate-commit | 74.058 | 163.556 | 53.389 | 2.93 | 0 | b37ce3239 | campaign/the-sluicegate | lefford | 40 |

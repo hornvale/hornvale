@@ -132,8 +132,82 @@ set -m
 # one that was missing, and without it a test cannot avoid touching this
 # repository's own origin/main and worktree registry.
 repo_root="${HV_SLUICE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-branch="${1:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
-sha="${2:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
+branch="${1:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]  |  sluice-run.sh <request-id>}"
+sha="${2:-}"
+kind="${3:-merge}"
+
+# A SINGLE ARGUMENT THAT LOOKS LIKE A REQUEST ID IS ONE. Reading branch, sha
+# and kind out of the row removes the class of failure where an
+# operator-supplied value disagrees with the row that authorised the run — a
+# hand-typed `merge` for a kind=stage request landed on main once already.
+# It also removes the need for the exported claim-id environment variable
+# this file used to read: the runner now knows WHICH ROW authorised it, so
+# nothing has to be exported to tell it. `queue_row_id`
+# is set here, before the interlock section below, so that section can tell
+# "resolved from an id" apart from "positional form, claim it ourselves"
+# without a second signal.
+queue_row_id=""
+case "$branch" in
+    req-*)
+        # THE LIST'S EXIT CODE IS CONSULTED BEFORE ITS OUTPUT IS BELIEVED
+        # (fix round 3, Important 5). `list` now forwards to a binary that
+        # REFUSES with exit 3 when it is missing, and this used to read the
+        # pipeline's empty stdout as "no such row" — `set -e` then killed the
+        # script with rc=3, a code outside this file's vocabulary that the
+        # drain records as `CHAMBER RED rc=3 — attribution pending`, blaming
+        # the candidate for a broken toolchain. An unreachable queue is rc=13,
+        # the same code the claim path uses for the same condition.
+        set +e
+        _list="$(bash "$repo_root/scripts/sluice-queue.sh" list 2>&1)"
+        _list_rc=$?
+        set -e
+        if [ "$_list_rc" -ne 0 ]; then
+            echo "sluice-run: REFUSING — could not reach the queue (list rc=$_list_rc):" >&2
+            printf '%s\n' "$_list" >&2
+            echo "sluice-run: cannot resolve '$branch' without the queue; refusing rather than guessing." >&2
+            exit 13
+        fi
+        _row="$(printf '%s\n' "$_list" | awk -F'\t' -v i="$branch" '$2==i {print; exit}')"
+        if [ -z "$_row" ]; then
+            echo "sluice-run: no queue row with id '$branch'" >&2
+            exit 2
+        fi
+        # THE ID IS NOT ITSELF A CLAIM (fix round 3, Critical). Resolving an id
+        # used to set `queue_row_id` and, through it, tell the interlock block
+        # below to skip claiming — on the ASSUMPTION that whoever supplied the
+        # id already held the row. Nothing checked. A `queued` row handed here
+        # ran with no interlock at all: `sluice-drain.sh` could legally `claim`
+        # it (it IS queued) and dispatch the same job a second time, which is
+        # the 2026-09-04 duplicate reached by a different road; coalescing may
+        # supersede a `queued` row mid-write, which sluice-queue.sh's own header
+        # says must never happen to a running job; and `release_row` is gated on
+        # `claimed_here`, so the run would write no terminal state and leave a
+        # permanent ghost. So the row's OWN STATE is the evidence, and it must
+        # read `running` — which is exactly what `claim` writes, atomically, in
+        # the same locked pass that selects the row.
+        _state="$(printf '%s' "$_row" | cut -f5)"
+        if [ "$_state" != "running" ]; then
+            echo "sluice-run: REFUSING — the row for '$branch' is NOT claimed: state='$_state', want 'running'." >&2
+            echo "sluice-run: an id is not a claim. Take the row first ('sluice-queue.sh claim --sha <sha>')," >&2
+            echo "sluice-run: or let the drain loop claim and dispatch it. Running an unclaimed row lets a" >&2
+            echo "sluice-run: dispatcher launch the same job again, and leaves it with no terminal state." >&2
+            exit 16
+        fi
+        queue_row_id="$branch"
+        branch="$(printf '%s' "$_row" | cut -f3)"
+        sha="$(printf '%s' "$_row" | cut -f4)"
+        kind="$(printf '%s' "$_row" | cut -f6)"
+        [ -n "$kind" ] || kind="merge"
+        # Printed BEFORE the `exec >>"$run_log"` redirect further down, so an
+        # operator (or a test) invoking the id form directly sees what it
+        # resolved to without having to go find the job log.
+        echo "sluice-run: resolved $queue_row_id -> branch=$branch sha=${sha:0:12} kind=$kind" >&2
+        ;;
+    *)
+        : "${sha:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
+        ;;
+esac
+
 # THE STAGE GATE IS THIS SCRIPT WITH THE PUSH TURNED OFF (The Sluice, Task
 # 12). `gate-stage` used to be a separate dispatch path — its own script,
 # its own detached job, its own shared scratch worktree, its own jobs.tsv —
@@ -146,7 +220,6 @@ sha="${2:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
 # `stage`-rung phases rather than all six" — a distinction 0148 removed and
 # 0426 kept removed: the two lists are identical and both run every
 # `stage`-rung set, so the push is the ONLY difference.)
-kind="${3:-merge}"
 case "$kind" in
     merge|stage) ;;
     *) echo "sluice-run: unknown kind '$kind' (merge|stage)" >&2; exit 2 ;;
@@ -178,26 +251,34 @@ waited_s=""
 # own row when nobody has claimed it for us, and releases it at exit. A run
 # whose ref is not in the queue at all is still allowed — that is an ad hoc
 # run, and it is a different thing from a race.
-queue_row_id=""
+#
+# NOTE: `queue_row_id` may already be set here — the request-id resolution
+# above sets it when `branch` was a `req-*` id, AND ONLY AFTER PROVING the row
+# reads `running`. That proof is what licenses skipping the claim here: the row
+# is already taken, atomically, by whoever ran `claim` — the drain loop's own
+# `claim` call in the same locked pass that selected it. Claiming again would
+# refuse against ourselves.
+#
+# THIS COMMENT USED TO NAME "an operator quoting an id from `sluice-queue.sh
+# list`" as a second supported caller. It is not one, and saying so was the
+# whole defect (fix round 3, Critical): quoting an id owns nothing. An operator
+# who wants to run a queued row must claim it first, or go through the drain;
+# the resolution block above now refuses rc=16 otherwise. There is no env var to
+# consume or unset any more — the id argument names the claim, and it dies with
+# this process's argv instead of leaking into every child's environment.
 claimed_here=0
-if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
-    # A dispatcher already claimed this row atomically and owns its terminal
-    # state; claiming again would refuse against ourselves.
-    queue_row_id="$HV_SLUICE_CLAIMED"
-    # AND IT IS CONSUMED HERE, NOT PASSED ON. sluice-drain.sh `export`s it, so
-    # without this unset it is inherited by every phase and by anything a phase
-    # runs — including a nested sluice-run.sh, which would then believe its own
-    # row was already claimed and SKIP THE INTERLOCK ENTIRELY. That is the exact
-    # duplicate-execution hole this file exists to close, reopened one level
-    # down. Observed 2026-09-05: the `outboard` phase runs scripts/test-sluice.sh,
-    # whose T7/T8 invoke this script; they inherited the chamber's own claim id,
-    # skipped the claim, ran on into real git work and died 128 — reddening two
-    # candidates before the cause was found.
-    unset HV_SLUICE_CLAIMED
+if [ -n "$queue_row_id" ]; then
+    :
 else
     set +e
+    # STDOUT AND STDERR ARE CAPTURED TOGETHER (fix round 2, Critical F1):
+    # this used to discard stderr (`2>/dev/null`), so the one diagnostic
+    # that would explain an unreachable queue (e.g. `claim`'s new exit 3,
+    # "no built binary") never reached this script's own log. On success
+    # `claim` writes nothing to stderr, so folding the streams costs that
+    # path nothing.
     claim_out="$(bash "$repo_root/scripts/sluice-queue.sh" claim --sha "$sha" \
-        "launched directly by operator; kind=$kind" 2>/dev/null)"
+        "launched directly by operator; kind=$kind" 2>&1)"
     claim_rc=$?
     set -e
     case "$claim_rc" in
@@ -208,7 +289,20 @@ else
             echo "sluice-run: what this check exists to prevent; see 'sluice-queue.sh list'." >&2
             exit 9 ;;
         5)  echo "sluice-run: no queue row for ${sha:0:12} — running AD HOC, unbookkept." >&2 ;;
-        *)  echo "sluice-run: could not reach the queue (claim rc=$claim_rc) — running unbookkept." >&2 ;;
+        *)  # REFUSE, do not proceed (fix round 2, Critical F1). This used to
+            # log "could not reach the queue — running unbookkept" and carry
+            # on into the real merge with NO interlock at all — exactly the
+            # duplicate-execution hole this file exists to close, reachable
+            # again the moment `claim` can fail for a reason other than a
+            # race (a missing binary, in particular). If we cannot ask the
+            # queue whether somebody else already holds this row, we do not
+            # run — unlike rc=5 above (no row at all), which is a legitimate
+            # ad hoc escape hatch and stays open.
+            echo "sluice-run: REFUSING — could not reach the queue (claim rc=$claim_rc):" >&2
+            printf '%s
+' "$claim_out" >&2
+            echo "sluice-run: refusing to run unbookkept rather than risk a duplicate execution." >&2
+            exit 13 ;;
     esac
 fi
 
