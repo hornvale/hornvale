@@ -5774,3 +5774,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T13:51:21Z | gate-commit | 26.771 | 25.700 | 0.680 | 0.99 | 0 | d28413af2 | campaign/the-warp | MacBookPro | 10 |
 | 2026-09-05T13:53:04Z | gate-commit | 88.415 | 283.754 | 34.009 | 3.59 | 0 | d28413af2 | campaign/the-warp | MacBookPro | 10 |
 | 2026-09-05T13:56:05Z | gate-commit | 59.180 | 102.840 | 37.780 | 2.38 | 0 | d28413af2 | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T13:57:01Z | gate-commit | 39.600 | 69.644 | 16.080 | 2.16 | 0 | d28413af2 | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T14:19:08Z | rebaseline | 318.084 | 456.077 | 18.328 | 1.49 | 0 | 7e8f39fdf | campaign/the-warp | MacBookPro | 10 |
