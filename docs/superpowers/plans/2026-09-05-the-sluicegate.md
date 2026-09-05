@@ -276,7 +276,12 @@ Sluice-Headline: the queue's row and store arrive in Rust, untested by any calle
 
 ---
 
-### Task 2: `list` and `set-state`, including the refusal that matters
+### Task 2: `set-state` and the lock, including the refusal that matters
+
+**There is deliberately no library `list()`.** `list` is a pure read with no
+transaction, so Task 4's `main.rs` implements it directly from
+`Store::read_rows()`. An earlier title named this task for both verbs and
+specified only one, which is a naming defect rather than a missing deliverable.
 
 **Files:**
 - Create: `tools/sluice/src/verbs.rs`
@@ -428,7 +433,7 @@ pub fn set_state(
 - [ ] **Step 4: Run to verify they pass**
 
 Run: `cargo test --manifest-path tools/sluice/Cargo.toml`
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests (5 from Task 1 plus 3 here).
 
 - [ ] **Step 5: Mutate the refusal to prove the test can fail**
 
@@ -460,7 +465,7 @@ Sluice-Headline: set-state refuses an id that matches no row, in Rust"
 
 **Interfaces:**
 - Consumes: `Store`, `Row`, `sanitize_note` from Tasks 1–2.
-- Consumes: `Store::lock()` from Task 2. Produces: `claim(&Store, sha: Option<&str>, note: Option<&str>) -> Result<Option<Row>, ClaimError>` with `ClaimError::HeldByAnother` and `ClaimError::NoSuchRow` mapping to exit codes 4 and 5.
+- Consumes: `Store::lock()` from Task 2. NOTE: `verbs.rs` currently has no `use crate::row::Row;` — Task 2 needed none and an unused import is a clippy error here. `claim`'s signature names `Row`, so add the import in this task. Produces: `claim(&Store, sha: Option<&str>, note: Option<&str>) -> Result<Option<Row>, ClaimError>` with `ClaimError::HeldByAnother` and `ClaimError::NoSuchRow` mapping to exit codes 4 and 5.
 
 - [ ] **Step 1: Write the failing tests, including the concurrency one**
 
