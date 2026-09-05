@@ -439,3 +439,22 @@ were read: it removes a redundant resident water index, retaining the read
 class and deterministic witnesses. No path in Digest, Charter diagnostic,
 Thing or Settlement changed in this new range. Absorption waits until the
 active task commits/reviews are complete; the shared main checkout stays untouched.
+
+## #5 [G5] — accept Task 1 after independent review
+
+**Decision:** Task 1 complete at `5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd`.
+The reviewer returned spec compliant / quality approved, with no findings.
+**Why:** raw observations, refusal separation, retained bytes, legacy lifecycle,
+import/CLI checks and lock isolation are present with focused behavioral
+evidence. Reviewer did not repeat already evidenced tests.
+**Cross-task checks:** independent checker, owner chronology, all-question runs,
+immutable attempts, both hosts, replay and canonical gates are assigned to
+Tasks 2–7; none is counted achieved by this task.
+**Alternatives:** no scope expansion or weakened check adopted. **Ideonomy:**
+not an approach/Q decision; no new draw required at this green G5 checkpoint.
+**Capture:** this acceptance, task-state scratch and the retained source base.
+
+The source base for independently authored specimens is the reviewed Task 1
+commit above. Checker code has its separate identity; no source specimen
+needs the checker implementation in its production-source commit. Owner
+worktree preparation may proceed during the separate checker review.
