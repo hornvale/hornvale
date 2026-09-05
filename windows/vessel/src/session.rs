@@ -10,9 +10,9 @@ use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
     LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
-    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, built_rooms, derive_npcs,
-    derive_wild_herds, renders_unconscious, slept_fact, slept_on_fact, species_activity,
-    village_or_fallback,
+    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
+    derive_wild_herds, renders_unconscious, settlement_room_index, slept_fact, slept_on_fact,
+    species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -715,21 +715,38 @@ pub struct WorldContext<'w> {
     /// pressures and the wild-NPC concentrations. `None` whenever `wc` or the
     /// fit itself fails.
     pub(crate) report: Option<hornvale_worldgen::DemographyReport>,
-    /// The world's occupation register (The Terrier, spec §3.1): every
-    /// committed occupation, grouped by the vertex it stands on, reconstructed
-    /// from `world.ledger` ONCE here and read by every `Brief` this context's
-    /// sessions derive (`brief::brief_of`). A pure function of the immutable
-    /// `World`, which is what makes it world-scoped like everything else on
-    /// this type. Before this field, `brief_of` rebuilt the whole map on every
-    /// call — 8.7-26 ms — and a chamber turn called it two to five times;
-    /// that was the entire cost The Rack's chronicle attributed to "one
-    /// shadowcast" (0.012 ms).
+    /// The world's living settlement occupations, keyed by their exact packed
+    /// production room. The committed vertex register is reconstructed from
+    /// `world.ledger` ONCE in [`Self::build`], then joined to the settlement
+    /// roster by entity id. This address cannot be recovered through
+    /// `brief::containing_vertex`: a placed settlement room may geometrically
+    /// reverse to a neighbouring vertex.
     ///
     /// Built AFTER the five seeded derivations in [`Self::build`] and
     /// consuming no stream draw: a ledger read, not a sixth derivation, so it
     /// cannot move the order the gallery transcripts guard.
     pub(crate) occupations:
+        std::collections::BTreeMap<FacetId, hornvale_history::record::OccupationRecord>,
+    /// The complete occupation history grouped by its geosphere vertex. The
+    /// exact-room map above owns living cultural identity; this source view is
+    /// retained separately because The Weft's ruin extent is read through the
+    /// facet's containing vertex. Both derive from one ledger scan below.
+    pub(crate) occupation_history:
         std::collections::BTreeMap<Vertex, Vec<hornvale_history::record::OccupationRecord>>,
+    /// Every distinct built settlement room and the first settlement's name,
+    /// produced by the same ordered reduction as `occupations` above.
+    pub(crate) built: std::collections::BTreeMap<FacetId, String>,
+    /// Later settlements discarded because an earlier settlement already
+    /// occupied their player-addressed room.
+    pub(crate) settlement_room_collisions: usize,
+    /// The materialized macro-state field pack (The Weft, Task 8) every
+    /// derived-feature kind reads (`hornvale_worldgen::field_pack_from`),
+    /// built ONCE here from the same `(terrain, climate)` pair rather than
+    /// per session or per read — a pure function of both, the same
+    /// world-scoped posture `ctx`/`occupations` already have. Consumes no
+    /// stream draw (a `VertexMap` materialization, not a derivation), so it
+    /// cannot move the order the gallery transcripts guard either.
+    pub(crate) pack: hornvale_worldgen::FieldPack,
 }
 
 impl<'w> WorldContext<'w> {
@@ -810,7 +827,23 @@ impl<'w> WorldContext<'w> {
         // above so that the order those transcripts guard is visibly not in
         // question. ~9-26 ms once per world (contended), against ~3 s for the
         // block above; it used to be paid on every `brief_of` call.
-        let occupations = hornvale_worldgen::occupations_by_vertex(world);
+        let occupation_history = hornvale_worldgen::occupations_by_vertex(world);
+        let settlement_rooms = settlement_room_index(world, &ctx, &occupation_history);
+        // The field pack (The Weft, Task 8): materialized from the SAME
+        // `terrain`/`climate` this function already derived above, never a
+        // second sculpt/fit — the `field_pack_from` construction site every
+        // other caller (`windows/worldgen/tests/suite/weft_window.rs`'s own
+        // fixture) already uses. `terrain`/`climate` are `Some` by
+        // construction here (see their own field docs), so this reads them
+        // straight through rather than re-deriving.
+        let pack = hornvale_worldgen::field_pack_from(
+            terrain
+                .as_ref()
+                .expect("terrain is Some immediately after derivation"),
+            climate
+                .as_ref()
+                .expect("climate is Some immediately after derivation"),
+        );
         Ok(WorldContext {
             world,
             terrain,
@@ -818,13 +851,39 @@ impl<'w> WorldContext<'w> {
             ctx,
             wc,
             report,
-            occupations,
+            occupations: settlement_rooms.living,
+            occupation_history,
+            built: settlement_rooms.built,
+            settlement_room_collisions: settlement_rooms.collisions,
+            pack,
         })
     }
 
     /// The locale context this world is observed through (read-only).
     pub fn context(&self) -> &LocaleContext {
         &self.ctx
+    }
+
+    /// Every distinct room occupied by a production settlement, with the
+    /// first settlement's name when multiple settlements share an address.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn built_rooms(&self) -> &std::collections::BTreeMap<FacetId, String> {
+        &self.built
+    }
+
+    /// The selected living occupation for each exact production settlement
+    /// room. A built room absent from this map is genuinely unoccupied.
+    pub fn living_occupations_by_room(
+        &self,
+    ) -> &std::collections::BTreeMap<FacetId, hornvale_history::record::OccupationRecord> {
+        &self.occupations
+    }
+
+    /// How many later settlements shared a room already claimed by the first
+    /// settlement in the production roster.
+    /// type-audit: bare-ok(count: return)
+    pub fn settlement_room_collision_count(&self) -> usize {
+        self.settlement_room_collisions
     }
 }
 
@@ -935,8 +994,9 @@ pub struct Session<'w> {
     /// fails.
     prey: Option<hornvale_kernel::VertexMap<f64>>,
     /// The world's settlement-territory set (The Threshold, task 5b —
-    /// `built_rooms`), computed once at `start`, so a room a settlement
-    /// actually occupies reads as built and can draw a real hearth.
+    /// `built_rooms`), derived once in `WorldContext` and cloned at `start`, so
+    /// a room a settlement actually occupies reads as built and can draw a
+    /// real hearth.
     /// `Session::start` requires `mint_flagship` to resolve a settlement
     /// first, so in practice this always carries at least the possessed
     /// agent's own home room by the time a session exists.
@@ -1039,6 +1099,21 @@ pub struct Session<'w> {
     /// `step_with_occupancy` (for the neighbours half); `snapshot`/`needs`
     /// (both `&self`) read whatever it already holds without adding to it.
     mesh_memo: hornvale_kernel::RoomMeshMemo,
+    /// The session-lived residency window over the derived weft surface
+    /// (The Weft, Task 8, controller ruling R3): `WeftWindow` is a genuine
+    /// window, not a memo (its own module doc explains the distinction —
+    /// the walk facet space is not naturally small the way a session's own
+    /// rooms are), but it is still session-scoped rather than shared on
+    /// `WorldContext`, because two sessions walking different parts of the
+    /// world would otherwise thrash a single shared window's residency.
+    /// [`Self::go`] prefills it for the destination facet before rendering
+    /// (the one `&mut self` point on the walk-band step path); every other
+    /// reader — [`Self::describe_here`] included — is `&self`-only and
+    /// reads through [`hornvale_worldgen::features_at_cached`]'s own
+    /// "cache: None is byte-identical to deriving directly" contract, so a
+    /// facet this window has not yet resident'd still answers correctly,
+    /// just without the cache's benefit.
+    weft_window: hornvale_worldgen::WeftWindow,
     /// The session-lived, CROSS-tick home-plan cache (the-waymark, Task 4):
     /// unlike `mesh_memo` above (whose per-tick geometry is re-prefilled every
     /// `wait`), this one is never rebuilt — a stationary NPC with an unchanged
@@ -1227,6 +1302,13 @@ struct SightingKey {
 /// map on the session. `the_carried_lattice_is_the_one_the_place_derives` asserts
 /// the copy has not drifted from the derivation.
 ///
+/// The production brief is carried at the same scope for a different reason:
+/// resolving a living people's society is fallible. `enter` reports that error
+/// before constructing this frame, then every indoor reader consumes the one
+/// successful result instead of either panicking or turning a missing culture
+/// into an empty chamber selection. Like the lattice, the brief dies at `leave`
+/// and is never serialized.
+///
 /// **Untagged for the type audit, deliberately.** The plan's snippet gave `at` a
 /// `bare-ok(index: at)`; the audit extracts only `pub` items
 /// (`tools/type-audit/src/extract.rs::is_bare_pub`), so a tag on a private struct
@@ -1236,6 +1318,11 @@ struct SightingKey {
 struct Inside {
     /// The structure being stood in.
     structure: crate::structure::Structure,
+    /// The production brief resolved before this frame was entered. Carried
+    /// with the frame so every chamber reads one result and a brief failure is
+    /// reported before descent rather than erased by the many infallible indoor
+    /// read surfaces.
+    brief: crate::brief::Brief,
     /// Which chamber, as an index into `structure.chambers`.
     at: usize,
     /// The floor plan of the whole structure — every chamber, not just this one,
@@ -1889,12 +1976,11 @@ impl<'w> Session<'w> {
             }
             _ => None,
         };
-        // The settlement-territory set (The Threshold, task 5b), so a room a
-        // settlement actually occupies reads as built and can draw a real
-        // hearth — the real answer Task 5's arming had nothing to read before
-        // this. Built once here, the same one-shot-at-start discipline as
-        // `calendar`/`predator`/`prey`.
-        let built = built_rooms(world, ctx);
+        // The settlement room map was built once with the occupation index in
+        // `WorldContext::build`; a session clones the small derived map so its
+        // existing terrain readers stay session-local without re-surveying the
+        // settlement roster.
+        let built = held.built.clone();
         // The cave roster (The Prospect, Task 4), on the same
         // one-shot-at-start discipline. `GeneratedTerrain::cave_at` decides
         // WHETHER there is a cave at a vertex — the one answer in the tree;
@@ -2011,6 +2097,7 @@ impl<'w> Session<'w> {
             submerged: None,
             underground: None,
             mesh_memo,
+            weft_window: hornvale_worldgen::WeftWindow::new(),
             home_nav_cache: HomeNavCache::new(),
             folds,
             ground,
@@ -6820,6 +6907,24 @@ impl<'w> Session<'w> {
     /// the one place a wider roster than the body can sense is the honest
     /// answer.
     fn describe_here(&self, how: Perceiving) -> Result<String, VesselError> {
+        // NOTE ON COST: this re-derives the whole brief on every `look`, the
+        // same accepted cost `brief_of`'s own doc names for `enter` and
+        // `Self::brief_here`'s cost note — hoist only if a profile shows it
+        // mattering. `go` takes the other path: it must validate the
+        // destination before writing state, so it passes that result through.
+        let brief = self.brief_here()?;
+        self.describe_here_with_brief(how, &brief)
+    }
+
+    /// Render the current room from one already-resolved production brief.
+    /// `go` is the consequential caller: destination culture is fallible, so
+    /// resolving before the move and consuming the same answer here makes a
+    /// brief refusal atomic without a second lookup that could disagree.
+    fn describe_here_with_brief(
+        &self,
+        how: Perceiving,
+        brief: &crate::brief::Brief,
+    ) -> Result<String, VesselError> {
         // Unsubmerged over water, the possession is AFLOAT — on the surface,
         // not down among whatever lives on the floor. Rendering the room's own
         // expression there would put a walker "in" a coral reef while they are
@@ -6843,22 +6948,71 @@ impl<'w> Session<'w> {
         // site gains a clause naming it; a facet with none says NOTHING —
         // silence is honest, and it is what makes the density gap visible
         // rather than papered over (most facets stay silent after this
-        // task, by design). Reads `brief_here().site`, the SAME predicate
+        // task, by design). Reads the resolved brief's site, the SAME predicate
         // `Self::enter` gates on, so the prose and what `enter` will
         // actually do can never disagree — H1's own claim ("surfacing does
         // not change what is enterable") holds by construction rather than
         // by two independently-written predicates staying in sync.
-        //
-        // NOTE ON COST: this re-derives the whole brief on every `look`, the
-        // same accepted cost `brief_of`'s own doc names for `enter` and
-        // `Self::brief_here`'s cost note — hoist only if a profile shows it
-        // mattering.
-        let site_clause = self
-            .brief_here()
+        let site_clause = brief
             .site
             .as_ref()
             .map(Self::site_clause)
             .unwrap_or_default();
+        // The ruin clause (The Weft, Task 2, spec Half A): a SECOND sentence
+        // beside the site clause, not a replacement for it — a facet can
+        // hold both a ruin and an enterable site (a settlement rebuilt on a
+        // dead one, say), so one must never gate out the other.
+        let ruin_clause = brief
+            .ruin
+            .as_ref()
+            .map(crate::ruin_prose::ruin_line)
+            .unwrap_or_default();
+        // The weft clause (The Weft, Task 8, spec §6/Half B): every derived
+        // feature at THIS facet — never through `Brief` (controller ruling
+        // R1: `Brief` is "what macro history says about a place," and a
+        // derived feature is a different kind of fact with a different
+        // lifetime). Read through the session's own residency window where
+        // `Self::go` already prefilled it, or derived directly on a miss —
+        // `all_features_at_cached`'s own "cache: None is byte-identical to
+        // deriving directly" contract (R3), which is what lets this stay
+        // `&self`-only exactly like `site_clause`/`ruin_clause` above.
+        //
+        // **Gated on `vantage.is_none()` (fix round 1, F5).** A derived
+        // feature is land-flavored prose (a thicket, an overhang, a spring
+        // seeping "up out of the ground") and `vantage` is exactly this
+        // render's own "am I on dry ground" answer — `Some` means AFLOAT (or
+        // submerged), the same distinction the paragraph above draws for
+        // "the room's own expression." Without this gate the two vantage
+        // predicates can disagree at the coastline: `vantage` picks the
+        // walk-band facet's single MAX-WEIGHT corner (`Self::column_here`'s
+        // `max_by_key`, a discrete pick), while a weft kind's own eligibility
+        // (`land_eligible`, `windows/worldgen/src/weft/kinds.rs`) is a
+        // BILINEAR BLEND of all four corners at a `>= 0.5` threshold — a
+        // continuous test that can pass even when the single heaviest corner
+        // is ocean. Measured directly on seed 42 (every walk-depth facet over
+        // all 40,962 vertices, comparing the two predicates independently):
+        // 29,713 facets are afloat by the corner-pick test, and of those, 35
+        // (0.118% of afloat facets, 0.085% of all facets) ALSO carry >= 1
+        // weft feature by the blend test — real, not merely constructible,
+        // though rare. This gate closes it at the render, the cheaper of the
+        // two fixes named in review (aligning the eligibility rule with the
+        // corner-pick rule would touch every kind's own derivation instead of
+        // one render site).
+        let weft_clause = if vantage.is_none() {
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
+            let features = hornvale_worldgen::all_features_at_cached(
+                &self.position(),
+                geo,
+                index,
+                &self.wctx.pack,
+                self.wctx.world.seed,
+                Some(&self.weft_window),
+            );
+            crate::weft_prose::weft_clause(&features)
+        } else {
+            String::new()
+        };
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
@@ -6917,7 +7071,7 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,
@@ -7002,6 +7156,13 @@ impl<'w> Session<'w> {
         let Some(dest) = heading_neighbour(&here, wanted) else {
             return Turn::Out(CORNER_BEARING_REFUSAL.to_string());
         };
+        // Resolve every fallible destination property before the first write.
+        // Arrival prose consumes THIS answer below: deriving again after the
+        // commit would restore the partial-move bug this preflight closes.
+        let dest_brief = match self.brief_at(&dest) {
+            Ok(brief) => brief,
+            Err(error) => return Turn::Out(format!("error: {error}")),
+        };
         // The Deed, Task 7: a walk-band step is an in-character act, so it
         // pays the action clock against this body's own mass and posts the
         // `agent-at` a creature's step posts. Charged BEFORE the position
@@ -7019,10 +7180,35 @@ impl<'w> Session<'w> {
         // Committing IS the position update now (spec §3.1) — there is no
         // mutable field left to assign `dest` to.
         self.commit_agent_at(&dest, WALKED_PROVENANCE);
+        // Prefill the session-owned weft window (The Weft, Task 8, controller
+        // ruling R3) for the facet just stepped onto — the one `&mut self`
+        // point on this path, mirroring the mesh-memo prefill `wait`'s own
+        // tick performs (see that call site's own doc). `describe_here`
+        // (below, and every OTHER caller of it) is `&self`-only and reads
+        // through `hornvale_worldgen::features_at_cached`'s "cache: None is
+        // byte-identical to deriving directly" contract, so this prefill is
+        // a genuine cache warm, never a correctness dependency: a `look`
+        // immediately after a `go` hits it, and a bare re-`look` at the same
+        // facet (which never calls this method) still answers correctly by
+        // deriving directly on the resulting miss.
+        {
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
+            for kind in hornvale_worldgen::WeftKind::ALL {
+                self.weft_window.features_at(
+                    kind,
+                    &dest,
+                    geo,
+                    index,
+                    &self.wctx.pack,
+                    self.wctx.world.seed,
+                );
+            }
+        }
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
-        self.out(self.describe_here(Perceiving::Body))
+        self.out(self.describe_here_with_brief(Perceiving::Body, &dest_brief))
     }
 
     /// Retrace one step of the walk-band trail. Like [`Self::go`], reached only
@@ -7063,8 +7249,12 @@ impl<'w> Session<'w> {
     /// identity and carries no bearing.
     fn enter(&mut self, target: &str) -> Turn {
         // Already inside: `enter <named>` steps through an aperture.
-        if let Some((structure, at)) = self.inside.as_ref().map(|i| (i.structure.clone(), i.at)) {
-            let Some(next) = self.named_neighbour(&structure, at, target) else {
+        if let Some((structure, at, brief)) = self
+            .inside
+            .as_ref()
+            .map(|i| (i.structure.clone(), i.at, i.brief.clone()))
+        {
+            let Some(next) = self.named_neighbour(&structure, at, target, &brief) else {
                 // Asked for the deeper way where there is none: say which wall
                 // was reached, not "no way to further in", which reads as a
                 // parse failure rather than the end of the place.
@@ -7106,7 +7296,7 @@ impl<'w> Session<'w> {
             // doorway that realizes this link — not the middle of the room. A
             // player who walks through a door is standing just inside it, and the
             // drawn mark then reads as the step they just took.
-            let lattice = self.lattice_of(&structure);
+            let lattice = self.lattice_of(&structure, &brief);
             let through = crate::lattice::doorway_between(&lattice, at, next);
             let Some(cell) = through
                 .and_then(|t| crate::lattice::cell_beyond(&lattice, t, next))
@@ -7126,6 +7316,7 @@ impl<'w> Session<'w> {
             let seed = self.frame_seed(&structure);
             self.inside = Some(Inside {
                 structure,
+                brief,
                 at: next,
                 lattice,
                 cell,
@@ -7133,7 +7324,10 @@ impl<'w> Session<'w> {
             });
             return self.out(self.describe_chamber_here(Perceiving::Body));
         }
-        let brief = self.brief_here();
+        let brief = match self.brief_here() {
+            Ok(brief) => brief,
+            Err(error) => return Turn::Out(format!("error: {error}")),
+        };
         let Some(structure) = crate::structure::structure_at(
             &crate::depth::truncate_to_walk(&self.position(), self.walk_depth()),
             &brief,
@@ -7161,7 +7355,7 @@ impl<'w> Session<'w> {
         if let Err(e) = self.charge_within_room() {
             return Turn::Out(e);
         }
-        if self.descend(structure, at).is_none() {
+        if self.descend(structure, at, brief).is_none() {
             return Turn::Out("error: that chamber has no floor to stand in".to_string());
         }
         self.out(self.describe_chamber_here(Perceiving::Body))
@@ -7172,16 +7366,23 @@ impl<'w> Session<'w> {
     /// holds no floor — §7 rule 1 reports that as the defect it is, so the caller
     /// refuses rather than standing the player in a wall.
     ///
-    /// The one place an [`Inside`] is built from a structure ALONE: `enter` uses it
-    /// for the descent from out of doors, where no doorway was crossed, and the
-    /// tests use it to put a session inside a hand-built structure without
-    /// replicating the derivation and drifting from it.
-    fn descend(&mut self, structure: crate::structure::Structure, at: usize) -> Option<()> {
-        let lattice = self.lattice_of(&structure);
+    /// The one place an [`Inside`] is built from a structure and its already
+    /// resolved production brief: `enter` uses it for the descent from out of
+    /// doors, where no doorway was crossed, and the tests use it to put a session
+    /// inside a hand-built structure without replicating either derivation and
+    /// drifting from it.
+    fn descend(
+        &mut self,
+        structure: crate::structure::Structure,
+        at: usize,
+        brief: crate::brief::Brief,
+    ) -> Option<()> {
+        let lattice = self.lattice_of(&structure, &brief);
         let cell = crate::lattice::standing_cell(&lattice, at)?;
         let seed = self.frame_seed(&structure);
         self.inside = Some(Inside {
             structure,
+            brief,
             at,
             lattice,
             cell,
@@ -7425,13 +7626,20 @@ impl<'w> Session<'w> {
     /// The brief for wherever the possession currently stands. Reads the
     /// context's occupation register rather than re-surveying the world
     /// (The Terrier).
-    fn brief_here(&self) -> crate::brief::Brief {
+    fn brief_here(&self) -> Result<crate::brief::Brief, VesselError> {
+        self.brief_at(&self.position())
+    }
+
+    /// The production brief for `place`. Unlike [`Self::brief_here`], this can
+    /// validate a prospective destination before a move mutates session state.
+    fn brief_at(&self, place: &Facet) -> Result<crate::brief::Brief, VesselError> {
         let terrain = self.terrain_here();
         crate::brief::brief_of(
             &self.wctx.occupations,
+            &self.wctx.occupation_history,
             self.wctx.ctx.climate().geosphere(),
             self.wctx.ctx.nearest_index(),
-            &self.position(),
+            place,
             &terrain,
             self.walk_depth(),
             self.wctx.world.seed,
@@ -7447,6 +7655,7 @@ impl<'w> Session<'w> {
             // the one `built` already uses.
             &self.cave_sites,
         )
+        .map_err(VesselError::from)
     }
 
     /// The chambers one aperture away from `at`, in `links` order. Undirected:
@@ -7508,6 +7717,7 @@ impl<'w> Session<'w> {
         structure: &crate::structure::Structure,
         at: usize,
         target: &str,
+        brief: &crate::brief::Brief,
     ) -> Option<usize> {
         let neighbours = Self::neighbours(structure, at);
         let target = target.trim().to_lowercase();
@@ -7524,12 +7734,11 @@ impl<'w> Session<'w> {
             return None;
         };
         let terrain = self.terrain_here();
-        let brief = self.brief_here();
         crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
             &structure.chambers[*only],
             &terrain,
             self.walk_depth(),
-            &brief,
+            brief,
             *only,
         ))
         .iter()
@@ -7563,12 +7772,11 @@ impl<'w> Session<'w> {
                 "no chamber to describe: the possession is out of doors".to_string(),
             ));
         };
-        let (structure, at) = (&inside.structure, inside.at);
+        let (structure, brief, at) = (&inside.structure, &inside.brief, inside.at);
         let chamber = &structure.chambers[at];
         let terrain = self.terrain_here();
-        let brief = self.brief_here();
         let interior =
-            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), &brief, at);
+            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), brief, at);
         let id = chamber_id(chamber)?;
         let mut ways = vec!["out"];
         if Self::further_in(structure, at).is_some() {
@@ -7585,7 +7793,7 @@ impl<'w> Session<'w> {
             "[chamber {}, day {}]\n{}\n{presence}Ways on: {}.",
             id,
             self.day.as_std_days(),
-            crate::chamber_prose::describe_chamber(&interior, &brief),
+            crate::chamber_prose::describe_chamber(&interior, brief),
             ways.join(", ")
         ))
     }
@@ -7602,10 +7810,10 @@ impl<'w> Session<'w> {
     /// simply calls it, and cheap enough that a future caller re-deriving it per
     /// turn would still be correct.
     ///
-    /// Takes the structure as an argument rather than reading `self.inside`,
-    /// because `enter` needs a plan for a structure it has not yet descended into
-    /// — and because a derivation that reads no session state is a derivation a
-    /// test can pin against the place alone.
+    /// Takes the structure and its brief as arguments rather than reading
+    /// `self.inside`, because `enter` needs a plan for a structure it has not yet
+    /// descended into — and because a derivation whose inputs are explicit is one
+    /// a test can pin against the place alone.
     ///
     /// **Keyed to the LOCALE's own seed, never the world's.** `structure_at` keys
     /// its draw with `locale.seed(seed)` (`structure.rs`) precisely so no other
@@ -7620,11 +7828,14 @@ impl<'w> Session<'w> {
     /// so the two agree — but reading it off the threshold says out loud that the
     /// plan is a property of the STRUCTURE, and so does not change as the
     /// possession walks deeper into it.
-    fn lattice_of(&self, structure: &crate::structure::Structure) -> crate::lattice::Lattice {
-        let brief = self.brief_here();
+    fn lattice_of(
+        &self,
+        structure: &crate::structure::Structure,
+        brief: &crate::brief::Brief,
+    ) -> crate::lattice::Lattice {
         crate::lattice::embed_with(
             structure,
-            &brief,
+            brief,
             crate::lattice::extent_for(structure),
             self.frame_seed(structure),
         )
@@ -8176,12 +8387,11 @@ impl<'w> Session<'w> {
     fn chamber_interior_here(&self) -> Option<crate::interior::Interior> {
         let inside = self.inside.as_ref()?;
         let terrain = self.terrain_here();
-        let brief = self.brief_here();
         Some(crate::interior::chamber_interior_of(
             &inside.structure.chambers[inside.at],
             &terrain,
             self.walk_depth(),
-            &brief,
+            &inside.brief,
             inside.at,
         ))
     }
@@ -11275,6 +11485,75 @@ mod tests {
             );
         }
         assert_eq!(s.position(), start, "n*4 then s*4 must be the identity");
+    }
+
+    /// A destination whose living people cannot be resolved is a refused
+    /// move, not a move followed by a rendering error. The state tuple spans
+    /// every write `go` performs: clock, roster/ledger position, the specific
+    /// `agent-at` predicate, every fact, and the retrace trail.
+    ///
+    /// FIRES WHEN: destination brief validation occurs after `charge`,
+    /// `commit_agent_at`, or the trail push, or arrival rendering derives a
+    /// second brief instead of consuming the validated destination brief.
+    #[test]
+    fn an_invalid_destination_brief_refuses_before_go_changes_any_state() {
+        let world = seam_world();
+        let (mut session, _) =
+            Session::start(&world, &PossessOpts::default()).expect("seed 42 possesses");
+        let here = session.position();
+        let (wanted, dest) = COMPASS_ROSE
+            .into_iter()
+            .find_map(|wanted| heading_neighbour(&here, wanted).map(|dest| (wanted, dest)))
+            .expect("a walk-band room has at least seven neighbours");
+        let dest_room = dest.pack().expect("a walk-band destination packs");
+        let people = hornvale_kernel::KindId("unregistered-destination-people");
+        let mut invalid = session
+            .wctx
+            .occupations
+            .values()
+            .next()
+            .cloned()
+            .expect("seed 42 has a living occupation to place at the destination");
+        invalid.core.people = people;
+        match &mut session.wctx {
+            HeldContext::Owned(wctx) => {
+                wctx.occupations.insert(dest_room, invalid);
+            }
+            HeldContext::Borrowed(_) => panic!("Session::start owns its world context"),
+        }
+        let before = (
+            session.day,
+            session.position(),
+            session.committed_agent_at_count(),
+            session.committed_fact_count(),
+            session.trail.clone(),
+        );
+        let direction = format!("{wanted:?}").to_lowercase();
+
+        let reply = match session.go(&direction) {
+            Turn::Out(text) => text,
+            Turn::Released(_) => panic!("go must not release the possession"),
+        };
+
+        assert_eq!(
+            reply,
+            format!(
+                "error: brief: living people {} has no society row",
+                people.0
+            ),
+            "the vessel boundary must report the destination brief failure"
+        );
+        assert_eq!(
+            (
+                session.day,
+                session.position(),
+                session.committed_agent_at_count(),
+                session.committed_fact_count(),
+                session.trail.clone(),
+            ),
+            before,
+            "a refused destination brief must leave all go state unchanged"
+        );
     }
 
     /// The cube corner's absent bearing, in BOTH directions — an interior room
@@ -14585,15 +14864,19 @@ mod tests {
         let world = seam_world();
         let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let s = path_structure(&session.position(), 4);
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         for word in FURTHER_IN_WORDS {
             assert_eq!(
-                session.named_neighbour(&s, 1, word),
+                session.named_neighbour(&s, 1, word, &brief),
                 Some(2),
                 "{word:?} must resolve deeper, never back toward the threshold"
             );
         }
         // Case and surrounding space are the player's, not the parser's.
-        assert_eq!(session.named_neighbour(&s, 1, "  Further In  "), Some(2));
+        assert_eq!(
+            session.named_neighbour(&s, 1, "  Further In  ", &brief),
+            Some(2)
+        );
     }
 
     #[test]
@@ -14604,7 +14887,7 @@ mod tests {
         // Precondition: the noun really IS in the neighbouring chamber's prose,
         // so the refusal below is about ambiguity, not about an absent word.
         let terrain = session.terrain_here();
-        let brief = session.brief_here();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let nouns = crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
             &s.chambers[2],
             &terrain,
@@ -14616,12 +14899,12 @@ mod tests {
             .first()
             .expect("a built chamber's prose names something");
         assert_eq!(
-            session.named_neighbour(&s, 1, noun),
+            session.named_neighbour(&s, 1, noun, &brief),
             None,
             "an ambiguous noun must refuse, not silently pick a direction"
         );
         assert_eq!(
-            session.named_neighbour(&s, 0, noun),
+            session.named_neighbour(&s, 0, noun, &brief),
             Some(1),
             "with exactly one aperture the same noun is unambiguous, and accepted"
         );
@@ -14632,8 +14915,9 @@ mod tests {
         let world = seam_world();
         let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let s = path_structure(&session.position(), 2);
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         assert_eq!(
-            session.named_neighbour(&s, 0, "a-noun-no-chamber-holds"),
+            session.named_neighbour(&s, 0, "a-noun-no-chamber-holds", &brief),
             None
         );
     }
@@ -14643,7 +14927,10 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let middle = path_structure(&session.position(), 3);
-        session.descend(middle, 1).expect("a chamber to stand in");
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        session
+            .descend(middle, 1, brief.clone())
+            .expect("a chamber to stand in");
         let text = session
             .describe_chamber_here(Perceiving::Body)
             .expect("a chamber renders");
@@ -14653,7 +14940,7 @@ mod tests {
         );
         let innermost = path_structure(&session.position(), 3);
         session
-            .descend(innermost, 2)
+            .descend(innermost, 2, brief)
             .expect("a chamber to stand in");
         let text = session
             .describe_chamber_here(Perceiving::Body)
@@ -14673,7 +14960,10 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let middle = path_structure(&session.position(), 3);
-        session.descend(middle, 1).expect("a chamber to stand in");
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        session
+            .descend(middle, 1, brief)
+            .expect("a chamber to stand in");
         for line in ["enter", "enter doorway"] {
             let reply = match session.handle(line) {
                 Turn::Out(t) => t,
@@ -14762,7 +15052,7 @@ mod tests {
         );
         // Take a noun the chamber's prose has just named to the player.
         let terrain = session.terrain_here();
-        let brief = session.brief_here();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let interior = crate::interior::chamber_interior_of(
             &session.inside.as_ref().unwrap().structure.chambers
                 [session.inside.as_ref().unwrap().at],
@@ -14856,7 +15146,7 @@ mod tests {
             .as_ref()
             .expect("the flagship's own locale is built");
         let terrain = session.terrain_here();
-        let brief = session.brief_here();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let interior = crate::interior::chamber_interior_of(
             &inside.structure.chambers[inside.at],
             &terrain,
@@ -15037,6 +15327,7 @@ mod tests {
         let world = seam_world();
         let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let here = session.position();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         let mut plans = Vec::new();
         let mut locales = std::collections::BTreeSet::new();
         for i in 0..8u8 {
@@ -15052,13 +15343,13 @@ mod tests {
             // what `lattice_of` taking a structure buys: the derivation is pinned
             // without mutating the session at all.
             let structure = path_structure(&locale, 2);
-            let plan = session.lattice_of(&structure);
+            let plan = session.lattice_of(&structure, &brief);
             // Purity, at each locale, before the difference below means anything:
             // a plan that varied between two calls would make "eight differ" true
             // for the wrong reason.
             assert_eq!(
                 plan,
-                session.lattice_of(&structure),
+                session.lattice_of(&structure, &brief),
                 "the plan at locale {i} is not a pure function of the place"
             );
             plans.push(plan);
@@ -15085,13 +15376,14 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let s = path_structure(&session.position(), 3);
-        let from_threshold = session.lattice_of(&s);
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        let from_threshold = session.lattice_of(&s, &brief);
         for at in 0..3 {
             session
-                .descend(s.clone(), at)
+                .descend(s.clone(), at, brief.clone())
                 .expect("a chamber to stand in");
             assert_eq!(
-                session.lattice_of(&s),
+                session.lattice_of(&s, &brief),
                 from_threshold,
                 "the plan redrew itself on stepping into chamber {at}"
             );
@@ -15107,8 +15399,9 @@ mod tests {
     fn map_indoors_draws_the_plan_and_map_out_indoors_refuses() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         session
-            .descend(path_structure(&session.position(), 2), 0)
+            .descend(path_structure(&session.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let plan = match session.handle("map") {
             Turn::Out(t) => t,
@@ -15259,8 +15552,9 @@ mod tests {
         // which is the only place the reader's north lives.
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         session
-            .descend(path_structure(&session.position(), 2), 0)
+            .descend(path_structure(&session.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let before = session.inside.as_ref().unwrap().cell;
         let row_of = |session: &Session| {
@@ -15303,7 +15597,7 @@ mod tests {
             let inside = session.inside.as_ref().expect("still indoors");
             assert_eq!(
                 inside.lattice,
-                session.lattice_of(&inside.structure),
+                session.lattice_of(&inside.structure, &inside.brief),
                 "after {line:?} the carried plan is not the one the place derives"
             );
         }
@@ -15312,10 +15606,11 @@ mod tests {
     /// claim: invariant(forall-seed) — two pinned seeds (42, 7), not a sweep;
     /// see spec §5's `invariant(forall-seed)` shape.
     ///
-    /// The Terrier, spec §4 P6: the brief read off the hoisted register equals
-    /// the brief read off a FRESH `occupations_by_vertex(world)` at every
-    /// locale a script visits — VIEW ≡ SCAN for the one world-scoped read that
-    /// used to be done per call.
+    /// The Terrier, spec §4 P6: the brief read off the hoisted, room-keyed
+    /// register equals the brief read off a FRESH vertex register reduced
+    /// through the production settlement-room index at every locale a script
+    /// visits — VIEW ≡ SCAN for the world-scoped read that used to be done per
+    /// call.
     ///
     /// Non-vacuity is asserted in both directions: the script must visit at
     /// least one locale with a living occupation and at least one without, so
@@ -15333,23 +15628,16 @@ mod tests {
     /// geometry, not a bug in the walk. Seed 7 is the opposite shape: the
     /// flagship's own starting vertex carries **no occupation record at
     /// all** (250 of the world's 272 occupied vertices are alive, and the
-    /// start vertex is not one of the 272), so `saw_none` is true at step 0
-    /// and the walk needs to find a living one instead — `go w` does, at
-    /// step 7; `go e`, `go n`, `go s`, `go ne`, `go nw`, `go se` did not
-    /// within 80 steps. Bound 20 covers both measured minima (18 and 7) with
-    /// margin, and the loop still fails loudly rather than silently if a
-    /// future fixture regeneration moves either number past it.
+    /// start vertex is not one of the 272), but the production settlement room
+    /// itself is inhabited. `go w` leaves that exact room at step 7. Bound 20
+    /// covers both measured transitions (18 and 7) with margin, and the loop
+    /// still fails loudly rather than silently if a future fixture regeneration
+    /// moves either number past it.
     ///
-    /// MUTATION THIS MUST FAIL AGAINST: in `WorldContext::build`, replace
-    /// `hornvale_worldgen::occupations_by_vertex(world)` with
-    /// `std::collections::BTreeMap::new()` (applied and restored with
-    /// `scripts/mutate.py`). Observed red: the very FIRST assertion —
-    /// `session.wctx.occupations, fresh` — fails at seed 42, before the walk
-    /// loop ever runs: `left: {}` (the mutated, empty map) vs `right:
-    /// {Vertex(14): [OccupationRecord { … }], …}` (the fresh scan, non-empty).
-    /// An empty register makes every brief's `function` field `None`, so no
-    /// mutation could reach the loop's `saw_alive` branch at all — the
-    /// register-identity assertion is what catches it, exactly as predicted.
+    /// MUTATION THIS MUST FAIL AGAINST: replace `settlement_rooms.living` in
+    /// `WorldContext::build` with an empty map. The first identity assertion
+    /// catches the missing room-indexed register before the walk loop; the
+    /// loop's alive branch then guards the same loss through production briefs.
     #[test]
     fn the_hoisted_brief_is_the_fresh_brief_at_every_visited_locale() {
         for seed in [42u64, 7] {
@@ -15361,13 +15649,15 @@ mod tests {
             } else {
                 world_at(seed).expect("seed 7 builds under default pins")
             };
-            // Measured per-seed (see doc above): seed 42's flagship starts
-            // alive and only `go e` leaves the alive vertex within a bounded
-            // walk; seed 7's flagship starts on unoccupied ground and only
-            // `go w` reaches a living one.
+            // Measured per-seed (see doc above): both flagships start in an
+            // inhabited settlement room; these bearings leave it within the
+            // bound.
             let bearing = if seed == 42 { "go e" } else { "go w" };
             let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
-            let fresh = hornvale_worldgen::occupations_by_vertex(&world);
+            let fresh_by_vertex = hornvale_worldgen::occupations_by_vertex(&world);
+            let fresh =
+                crate::liveness::settlement_room_index(&world, &session.wctx.ctx, &fresh_by_vertex)
+                    .living;
             assert_eq!(
                 session.wctx.occupations, fresh,
                 "seed {seed}: the hoisted register is not the fresh one"
@@ -15376,10 +15666,13 @@ mod tests {
             let mut saw_none = false;
             let mut steps = 0;
             loop {
-                let hoisted = session.brief_here();
+                let hoisted = session
+                    .brief_here()
+                    .unwrap_or_else(|error| panic!("seed {seed}, step {steps}: {error}"));
                 let terrain = session.terrain_here();
                 let scanned = crate::brief::brief_of(
                     &fresh,
+                    &fresh_by_vertex,
                     session.wctx.ctx.climate().geosphere(),
                     session.wctx.ctx.nearest_index(),
                     &session.position(),
@@ -15392,7 +15685,8 @@ mod tests {
                     // only thing this test re-derives on purpose.
                     &session.wctx.ctx.strange_sites(),
                     &session.cave_sites,
-                );
+                )
+                .unwrap_or_else(|error| panic!("seed {seed}, step {steps}: {error}"));
                 assert_eq!(
                     hoisted, scanned,
                     "seed {seed}, step {steps}: the hoisted brief disagrees with the scan"
@@ -16431,8 +16725,9 @@ mod tests {
     fn delve_refuses_while_inside_a_structure() {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
         session
-            .descend(path_structure(&session.position(), 2), 0)
+            .descend(path_structure(&session.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let out = match session.handle("delve") {
             Turn::Out(t) => t,
@@ -16463,8 +16758,9 @@ mod tests {
         // Indoors: `descend` into a chamber, the same seam
         // `delve_refuses_while_inside_a_structure` uses.
         let (mut inside, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let brief = inside.brief_here().expect("seed 42 has a valid brief");
         inside
-            .descend(path_structure(&inside.position(), 2), 0)
+            .descend(path_structure(&inside.position(), 2), 0, brief)
             .expect("a chamber to stand in");
         let out = match inside.handle("clear") {
             Turn::Out(t) => t,

@@ -19,6 +19,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): black-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): black-dragon has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): black-dragon has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | Dodgaad | /dodgaad/ | Nomngaan | Nomngaan → no change → Dodgaad |
 | `blood` | the circulating fluid of a body | Dadgod | /dadgod/ | Nánken | Nánken → no change → Dadgod |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
@@ -281,6 +282,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | Dadao | /dadao/ | Nadae | Nadae → no change → Dadao |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): bugbear has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): bugbear has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): bugbear has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Dao | /dao/ | Tae | Tae → lenition → Dao |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
@@ -543,6 +545,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | Dajaj | /dajaj/ | Zajaj | Zajaj → no change → Dajaj |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): desert-dwarf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): desert-dwarf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): desert-dwarf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Napad | /napad/ | Nabad | Nabad → no change → Napad |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.65 |
@@ -805,6 +808,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): desert-elf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): desert-elf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): desert-elf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): desert-elf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Peeṅpuṅ | /peeŋpuŋ/ | Beengtung | Beengtung → no change → Peeṅpuṅ |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
@@ -1067,6 +1071,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): drow has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): drow has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): drow has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): drow has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Boogpo | /boogpo/ | Beengtung | Beengtung → finalloss → Boogpo |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.95 |
@@ -1329,6 +1334,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): gnoll has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): gnoll has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): gnoll has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): gnoll has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Gshaazhnoa | /gʃaaʒnoa/ | Gshaazhnoa | Gshaazhnoa → no change → Gshaazhnoa |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |
@@ -1591,6 +1597,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): goblin has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): goblin has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): goblin has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): goblin has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Tae | /tae/ | Tae | Tae → no change → Tae |
 | `blue` | the color term for blue | Ta | /ta/ | Ta | Ta → no change → Ta |
@@ -1853,6 +1860,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): gully-dwarf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): gully-dwarf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): gully-dwarf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): gully-dwarf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Nabab | /nabab/ | Nabad | Nabad → no change → Nabab |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
@@ -2115,6 +2123,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): high-elf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): high-elf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): high-elf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): high-elf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Beemdom | /beemdom/ | Beengtung | Beengtung → lenition → Beemdom |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |
@@ -2377,6 +2386,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | Sajaj | /sajaj/ | Zajaj | Zajaj → no change → Sajaj |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): hill-dwarf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): hill-dwarf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): hill-dwarf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Mabab | /mabab/ | Nabad | Nabad → no change → Mabab |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6 |
@@ -2639,6 +2649,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | Nabae | /nabae/ | Nadae | Nadae → no change → Nabae |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): hobgoblin has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): hobgoblin has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): hobgoblin has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Tae | /tae/ | Tae | Tae → no change → Tae |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6 |
@@ -2901,6 +2912,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | Vakvee | /vakvee/ | Pvakvee | Pvakvee → clustersimplify → Vakvee |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): human has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): human has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): human has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Ka | /ka/ | Ka | Ka → no change → Ka |
 | `blue` | the color term for blue | Rea | /rea/ | Rea | Rea → no change → Rea |
@@ -3163,6 +3175,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | Xaxaaroo | /xaxaaroo/ | Xaxaaroo | Xaxaaroo → no change → Xaxaaroo |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): kobold has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): kobold has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): kobold has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Roo | /roo/ | Roo | Roo → no change → Roo |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
@@ -3425,6 +3438,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): red-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): red-dragon has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): red-dragon has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): red-dragon has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Dadkod | /dadkod/ | Nánken | Nánken → no change → Dadkod |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
@@ -3687,6 +3701,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): sea-elf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): sea-elf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): sea-elf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): sea-elf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Beentun | /beentun/ | Beengtung | Beengtung → no change → Beentun |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
@@ -3949,6 +3964,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | Srooṅzroṅ | /srooŋzroŋ/ | Sruengzhreng | Sruengzhreng → no change → Srooṅzroṅ |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): snow-elf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): snow-elf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): snow-elf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Booṅtoṅ | /booŋtoŋ/ | Beengtung | Beengtung → no change → Booṅtoṅ |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.8 |
@@ -4211,6 +4227,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): white-dragon has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): white-dragon has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): white-dragon has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Nankon | /nankon/ | Nánken | Nánken → no change → Nankon |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
@@ -4473,6 +4490,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `barley` | a staple crop | — | — | — | gap (experiential): wood-elf has no exposure to 'barley' |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `bed` | a place made for lying down and sleeping | — | — | — | gap (experiential): wood-elf has no exposure to 'bed' |
+| `bench` | a long shared seat | — | — | — | gap (experiential): wood-elf has no exposure to 'bench' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): wood-elf has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Deeṅtu | /deeŋtu/ | Beengtung | Beengtung → finalloss → Deeṅtu |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |

@@ -66,12 +66,14 @@ fn every_kind_the_grammar_names_is_a_roster_row() {
     //
     // Task 5 appended `the-brazier`, which names all three slots (`kind`,
     // `requires: Some(kinds::LOOM)`, `attach: Attach::Beside(kinds::LOOM)`),
-    // moving this from 38 to 41. The Tenon's three natural surfaces each
-    // name two (`kind` and `attach`, with no requirement), moving it to 47.
+    // moving this from 38 to 41. The Housemark appended three threshold
+    // relations, each naming all three slots, moving this to 50. The Tenon's
+    // three natural surfaces each name two (`kind` and `attach`, with no
+    // requirement), moving it to 56.
     assert_eq!(
-        checked, 47,
+        checked, 56,
         "the sweep no longer reads every kind INVENTORY names: {checked} \
-         slots, not 47"
+         slots, not 56"
     );
 }
 

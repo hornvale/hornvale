@@ -27,6 +27,8 @@ mod beta_calibration_sweep;
 mod branch_character;
 #[path = "suite/breach.rs"]
 mod breach;
+#[path = "suite/brief_axis_probe.rs"]
+mod brief_axis_probe;
 #[path = "suite/capacity_cost_probe.rs"]
 mod capacity_cost_probe;
 #[path = "suite/chorus_params.rs"]
@@ -235,6 +237,14 @@ mod warren_readout;
 mod waterline_probe;
 #[path = "suite/watershed_measure.rs"]
 mod watershed_measure;
+#[path = "suite/weft_fieldpack.rs"]
+mod weft_fieldpack;
+#[path = "suite/weft_ledger_guard.rs"]
+mod weft_ledger_guard;
+#[path = "suite/weft_prevalence.rs"]
+mod weft_prevalence;
+#[path = "suite/weft_window.rs"]
+mod weft_window;
 #[path = "suite/winze_energy_probe.rs"]
 mod winze_energy_probe;
 #[path = "suite/winze_scale_probe.rs"]

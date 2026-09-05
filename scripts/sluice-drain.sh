@@ -82,6 +82,9 @@ run_one() {
     fi
 
     if [ "$MRC" -ne 0 ]; then
+        # The row is `running` by now (claim precedes the mouth), so this
+        # `held` is what RELEASES it. It was already the right call when the
+        # row arrived here `queued`; it is load-bearing now.
         printf '%s\n' "$MOUTHOUT"
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" held \
             "REFUSED AT THE MOUTH rc=$MRC, box never taken, main unchanged at ${BEFORE}. $(printf '%s' "$MOUTHOUT" | tr '\n' ' ' | cut -c1-300)")
@@ -90,12 +93,15 @@ run_one() {
     fi
 
     echo "launching $BR kind=$KIND sha=${SHA:0:12} main=$BEFORE"
-    (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" running \
-        "launched by operator; kind=$KIND read from the row") >/dev/null 2>&1
+    # The row is ALREADY `running`: `claim` above marked it in the same locked
+    # pass that selected it. The old separate `set-state running` here is what
+    # left the TOCTOU window open — between `next` and this line the row read
+    # `queued`, and the mouth check below used to run inside that window.
 
     local START RC ELAPSED AFTER LOG runner
     START=$SECONDS
     runner="$(dispatch_for "$KIND")"
+    export HV_SLUICE_CLAIMED="$ID"
     if [ "$KIND" = "census" ]; then
         (cd "$repo_root" && bash "$runner" "$SHA") >/dev/null 2>&1
     else
@@ -162,7 +168,7 @@ census_note() {
 main() {
     local max="${1:-5}" i row
     for ((i = 1; i <= max; i++)); do
-        row="$(cd "$repo_root" && bash scripts/sluice-queue.sh next 2>/dev/null)"
+        row="$(cd "$repo_root" && bash scripts/sluice-queue.sh claim "launched by the drain loop" 2>/dev/null)"
         if [ -z "${row//[[:space:]]/}" ]; then
             echo "queue drained after $((i - 1)) run(s)"
             break

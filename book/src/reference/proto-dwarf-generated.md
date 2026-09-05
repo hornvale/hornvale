@@ -45,6 +45,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `barley` | a staple crop | *Zajaj | /zajaj/ |
 | `bathypelagic` | a biome class | *Vajan | /vajan/ |
 | `bed` | a place made for lying down and sleeping | *Bajax | /bajax/ |
+| `bench` | a long shared seat | *Bangab | /baŋab/ |
 | `black-dragon-kind` | a black dragon | *Ngavas | /ŋavas/ |
 | `blood` | the circulating fluid of a body | *Nabad | /nabad/ |
 | `blue` | the color term for blue | *Qanas | /qanas/ |

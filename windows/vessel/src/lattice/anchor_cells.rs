@@ -385,10 +385,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, None)),
+            None,
         )
     }
 
@@ -411,7 +413,7 @@ mod tests {
     /// method selector rather than a production stand-in is that it withholds
     /// the site as well, which no real facet does.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true, None)
+        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
     }
 
     /// The `n`th walk-band locale, `n` written out as base-4 path digits.
@@ -606,8 +608,19 @@ mod tests {
     /// 20 → 28 (1.95% → 2.73%) and the surplus count 19 → 26. This is a
     /// harder corpus for the same reason decision 0398's 5 → 6 was: the
     /// room vocabulary grew, while this module's algorithm did not change.
+    ///
+    /// # 28 → 29 WHEN THE HOUSEMARK AND TENON INVENTORIES MEET
+    ///
+    /// Current main makes `the-screen` conditional on an inward threshold
+    /// housemark. This corpus's built+cold brief deliberately carries no
+    /// housemark, so its threshold chamber at `(n=4, seed=188, chamber=0)`
+    /// now has four anchors on three floor squares rather than five. The full 1,024-
+    /// case rerun measures 29 unfaithful and the same 26 surplus cases. A
+    /// discriminating rerun with only the screen gate restored to `Universal`
+    /// measures the prior 28/26 exactly, identifying the one-case movement as
+    /// the merged inventory semantics rather than a placement-scan change.
     /// type-audit: bare-ok(count)
-    const GROWN_RELAXATIONS: usize = 28;
+    const GROWN_RELAXATIONS: usize = 29;
 
     /// The same sweep as [`every_placement_is_faithful`], against the GROWN
     /// embedding — and this is the one where the scan's filter does work.
@@ -641,7 +654,7 @@ mod tests {
     /// silently).
     ///
     /// **What it asserts is a CEILING, not universality**, because the honest
-    /// answer is that some blobs cannot be embedded faithfully at all: 28 of
+    /// answer is that some blobs cannot be embedded faithfully at all: 29 of
     /// 1,024 fall back to the stated relaxation. Asserting zero here would be
     /// asserting something false.
     /// claim: rate(forall-seed, unfaithful.len() <= GROWN_RELAXATIONS, measured

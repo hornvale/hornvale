@@ -7,7 +7,18 @@ use serde::{Deserialize, Serialize};
 /// derived from it by labeled paths, so adding a new consumer never
 /// perturbs existing streams.
 /// type-audit: bare-ok(constructor-edge)
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+///
+/// **`Ord`/`PartialOrd` derive from the wrapped `u64`** (The Weft, Task 6):
+/// a `BTreeMap`-keyed derived-value store whose key folds in world identity
+/// (`hornvale_kernel::derived::Derived<(Seed, ...), _>` — `windows/worldgen`'s
+/// weft residency window is the first tenant) needs `Seed: Ord` to be a
+/// legal key component at all — the same requirement every other identity
+/// newtype in a composite key already satisfies ([`crate::room::FacetId`]
+/// derives it too). Ordering two `Seed`s is never used to make a WORLD
+/// decision (a session holds exactly one), only to give a composite key a
+/// deterministic, `HashMap`-free total order, matching the project-wide
+/// `BTreeMap`/`BTreeSet` rule.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Seed(pub u64);
 
 /// A seed-derivation leg — the only way to call [`Seed::derive`].

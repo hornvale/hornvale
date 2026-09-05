@@ -615,7 +615,12 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // from the cohort, plus the committed world bytes that carry the
     // registry. Two campaigns have now paid it.
     &["door"],
-    // Epoch 20 — The Tenon, Task 7: three natural rest surfaces. One NEW
+    // Epoch 20 — The Housemark: `bench`, a third `THING_KINDS` label after
+    // epoch 16's snapshot. It is a new cohort rather than an edit to that
+    // earlier object-kind list, because moving an existing concept's cohort
+    // would re-sort its already assigned proto-root.
+    &["bench"],
+    // Epoch 21 — The Tenon, Task 7: three natural rest surfaces. One NEW
     // cohort, appended rather than seating the labels beside older thing
     // kinds in epoch 16: `domains/thing::register_concepts` registers all
     // three, and editing an earlier cohort would re-sort concepts whose

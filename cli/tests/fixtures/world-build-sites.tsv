@@ -110,6 +110,7 @@ windows/vessel/tests/suite/body_fields.rs	1	unmigrated:1
 windows/vessel/tests/suite/controller_swap.rs	1	unmigrated:1
 windows/vessel/tests/suite/display_handle.rs	1	unmigrated:1
 windows/vessel/tests/suite/furnishing_marks.rs	1	unmigrated:1
+windows/vessel/tests/suite/housemark_readout.rs	1	identity:1
 windows/vessel/tests/suite/lantern_fabric.rs	1	unmigrated:1
 windows/vessel/tests/suite/lantern_lens.rs	2	unmigrated:2
 windows/vessel/tests/suite/lantern_light.rs	1	unmigrated:1
@@ -151,6 +152,7 @@ windows/worldgen/tests/suite/artifacts.rs	3	unmigrated:3
 windows/worldgen/tests/suite/beta_calibration_freeze.rs	1	unmigrated:1
 windows/worldgen/tests/suite/beta_calibration_sweep.rs	1	unmigrated:1
 windows/worldgen/tests/suite/breach.rs	2	unmigrated:2
+windows/worldgen/tests/suite/brief_axis_probe.rs	1	identity:1
 windows/worldgen/tests/suite/capacity_cost_probe.rs	4	unmigrated:4
 windows/worldgen/tests/suite/chorus_params.rs	1	unmigrated:1
 windows/worldgen/tests/suite/confluence.rs	5	unmigrated:5

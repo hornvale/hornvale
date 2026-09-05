@@ -80,16 +80,17 @@ use crate::common;
 /// asserting totality is not that, so it wants the set that cannot go short,
 /// not the set of names someone happened to write code against. The swap
 /// needs no new mechanism, and it is strictly stronger: `EVERY_HANDLE` and
-/// `THING_KINDS` name the same **17** kinds in the same order today (both
+/// `THING_KINDS` name the same **22** kinds in the same order today (both
 /// alphabetical by label), so this table was unchanged by the swap — see the
 /// ledger entry ruling on this at plan time.
 ///
 /// (**That count read 16 until The Wicket's close.** It was correct when Task
-/// 3 wrote it and Task 5 falsified it two tasks later by appending `brazier`
-/// to both lists, which is why the sentence stayed true-looking: the two lists
-/// agree, so the *claim* survived and only its *number* died. Nothing reddens
-/// on a count written into prose — ledger #58, #60, and the reason this file's
-/// own guarantees are asserted in code rather than described here.)
+/// 3 wrote it; `brazier`, `door`, `bench`, and The Tenon's three rest surfaces
+/// subsequently moved both lists together, which is why the sentence stayed
+/// true-looking each time: the two lists agree, so the *claim* survives while
+/// its *number* dies. Nothing reddens on a count written into prose — ledger
+/// #58, #60, and the reason this file's own guarantees are asserted in code
+/// rather than described here.)
 fn every_rostered_kind() -> Vec<KindId> {
     hornvale_thing::THING_KINDS
         .iter()
@@ -960,6 +961,16 @@ fn the_dispatch_scan_reports_the_functions_it_found() {
     assert_eq!(
         found,
         vec![
+            // `weft_offers` (The Weft, Task 8) scans FIRST: it is defined
+            // earlier in `affordance.rs` than `offered_by`, right after
+            // `object_registry` — the scan walks the file in source order,
+            // not alphabetically. It carries the SAME "kind -> verbs"
+            // shape (`weft_object_registry` then `offered`, no verb
+            // variant named in its own body), which is exactly why it is
+            // a legitimate arrival here rather than a defect: a second
+            // key SPACE reusing the one query, never a second dispatch
+            // table.
+            "weft_offers".to_string(),
             "offered_by".to_string(),
             "offered_to".to_string(),
             "offered_to_observer".to_string(),
@@ -1748,7 +1759,7 @@ fn no_hardcoded_anchor_kind_gates_warm() {
 #[test]
 fn the_re_key_preserves_every_anchor_kinds_offer() {
     use OfferedVerb::{Close, Drink, Drop, Enter, Examine, Open, Put, Sleep, Take, Warm};
-    let expected: [(KindId, &[OfferedVerb]); 21] = [
+    let expected: [(KindId, &[OfferedVerb]); 22] = [
         // Encloses gates no OfferedVerb (it is read by `examine`'s prose,
         // not by the offer query), so an enclosing kind offers Examine and
         // nothing more.
@@ -1756,6 +1767,7 @@ fn the_re_key_preserves_every_anchor_kinds_offer() {
         (kinds::ALTAR, &[Examine]),
         (kinds::ANVIL, &[Examine]),
         (kinds::BED, &[Sleep, Examine]),
+        (kinds::BENCH, &[Examine]),
         (kinds::BRACKEN, &[Sleep, Examine]),
         // THE BRAZIER'S ROW IS NEW (The Wicket, Task 5): the campaign's own
         // proof that a kind can arrive with data rows only. `RadiatesHeat`
@@ -1967,8 +1979,7 @@ fn sleeping_needs_no_bed() {
 /// `object_registry`, one in `warmth_at`) and would still read as total.
 #[test]
 fn supports_rest_and_a_rest_surface_imply_each_other() {
-    let reg = hornvale_vessel::affordance::object_registry();
-    for (kind, traits) in reg.iter() {
+    fn assert_agreement<K: std::fmt::Debug>(kind: &K, traits: &ObjectTraits) {
         let marked = traits
             .properties
             .contains(&hornvale_vessel::affordance::ObjectProperty::SupportsRest);
@@ -1979,5 +1990,15 @@ fn supports_rest_and_a_rest_surface_imply_each_other() {
              agree in both directions",
             traits.rest.is_some()
         );
+    }
+
+    let reg = hornvale_vessel::affordance::object_registry();
+    for (kind, traits) in reg.iter() {
+        assert_agreement(kind, traits);
+    }
+
+    let weft = hornvale_vessel::affordance::weft_object_registry();
+    for (kind, traits) in weft.iter() {
+        assert_agreement(kind, traits);
     }
 }

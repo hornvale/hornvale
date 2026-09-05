@@ -137,7 +137,18 @@ impl<K: Ord + Clone, V: Clone> Derived<K, V> {
     /// on a miss, on no entry, or on a resident [`Validity::Ledger`] entry,
     /// which only [`Self::get_at`]'s ledger context can judge — a plain
     /// consult is never the right way to read one of those.
-    pub(crate) fn peek(&self, key: &K) -> Option<&V> {
+    ///
+    /// **`pub`, not `pub(crate)`, as of The Weft, Task 8.** `RoomMeshMemo`
+    /// could stay crate-private because it lives in this same crate; a
+    /// second tenant outside it — `windows/worldgen`'s `WeftWindow`, whose
+    /// own `&self`-only lookup exists for exactly the reason this one
+    /// does (controller ruling R3: "the same shape `RoomMeshMemo::
+    /// corner_weights_lookup` already solves") — cannot reach a
+    /// `pub(crate)` method at all. Widening this one accessor lets a
+    /// second store built ON `Derived` reuse it rather than re-implement
+    /// the same read-only peek a second time; nothing about `get`/`get_at`'s
+    /// counted semantics changes.
+    pub fn peek(&self, key: &K) -> Option<&V> {
         match self.entries.get(key) {
             Some((value, Validity::Pure)) => Some(value),
             _ => None,

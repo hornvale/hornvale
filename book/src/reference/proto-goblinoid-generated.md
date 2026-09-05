@@ -46,6 +46,7 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `barley` | a staple crop | *Nadae | /nadae/ |
 | `bathypelagic` | a biome class | *Neogeo | /neogeo/ |
 | `bed` | a place made for lying down and sleeping | *Koaqo | /koaqo/ |
+| `bench` | a long shared seat | *Gaenae | /gaenae/ |
 | `black-dragon-kind` | a black dragon | *Negoo | /negoo/ |
 | `blood` | the circulating fluid of a body | *Tae | /tae/ |
 | `blue` | the color term for blue | *Ta | /ta/ |

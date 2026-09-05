@@ -453,9 +453,14 @@
 - [The Minute](./chronicle/the-minute.md)
 - [The Terrier](./chronicle/the-terrier.md)
 - [The Hachure](./chronicle/the-hachure.md)
+- [The Staple](./chronicle/the-staple.md)
+- [The Wash](./chronicle/the-wash.md)
 - [The Plat](./chronicle/the-plat.md)
 - [The Pallet](./chronicle/the-pallet.md)
 - [The Tenon](./chronicle/the-tenon.md)
+- [The Weft](./chronicle/the-weft.md)
+- [The Housemark](./chronicle/the-housemark.md)
+- [The Coda](./chronicle/the-coda.md)
 
 # Appendix: The Frontier
 

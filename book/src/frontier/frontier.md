@@ -935,6 +935,13 @@ even if it ships with only one medium lit.
   *Near-term hook:* when Campaign 4's settlement tiers are designed, tier 1
   should be a layout grammar, not a population count at a point.
 
+  *First dwelling-scale slice shipped:* [The Housemark](../chronicle/the-housemark.md)
+  now derives six threshold signatures from sociality and in-group radius
+  through the one shared chamber-pattern inventory. It proves cultural
+  architecture can be a compact relational grammar rather than a per-people
+  catalogue. Materials, sacred placement, inherited work and settlement-scale
+  overlap remain open.
+
 - **Martial traditions** *(medium; couples to MAP-9's oppression layer)*. Not
   choreography — the project needs no fight simulation — but the *tradition and
   its significance*, which arise as a downstream consequence of **disarmament

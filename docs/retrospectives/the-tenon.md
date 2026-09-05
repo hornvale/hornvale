@@ -1,7 +1,7 @@
 # Campaign The Tenon — retrospective
 
 **Implementation complete:** 2026-09-04 · **Ledger:**
-`docs/superpowers/ledgers/2026-09-04-the-tenon.md` (30 pre-close entries) ·
+`docs/superpowers/ledgers/2026-09-04-the-tenon.md` (37 entries through close reconciliation) ·
 **Decisions:** 0726–0730
 
 Process lessons only. The product — a factorized kind-to-kind rest edge, three
@@ -149,3 +149,30 @@ remaining callers and the boundary of the improvement.
 
 The close is therefore not a claim that every adjacent issue was solved. It is
 a claim that none remains known only to the conversation that found it.
+
+## 9. Stage-boundary absorption was missed, so close paid the whole semantic bill
+
+This branch first met current `main` only at close, 243 commits after its merge
+base. That missed the repository's stage-boundary absorption cadence. The cost
+was not merely conflict volume: The Housemark had already claimed accession
+epoch 20, appended three inventory patterns, and added a required pattern field,
+while Tenon's finished prose still described the old 18-kind and 17-pattern
+baselines. Git marked the adjacent rows but could not mark the missing field in
+Tenon's newly added patterns.
+
+The reconciliation therefore re-derived the live inventories rather than
+combining the old numbers: 22 thing kinds, 23 patterns, 56 referenced pattern
+slots, and Tenon's surface cohort at epoch 21 after `bench`. It also exposed a
+semantic conflict Git could only report as a missing struct field: The Weft's
+overhang already carried `SupportsRest`, while Tenon requires every such marker
+to carry a calibrated `RestSurface`. Nathan placed it beside the ledge as a
+hard natural surface (`offer = 0.7`, `hardness = 0.85`), preserving both
+campaigns instead of weakening either one's accepted contract. Absorbing at
+each stage boundary would have put those corrections beside the task that
+introduced the affected rows, instead of concentrating source, generated-
+output, historical-prose, and cross-campaign calibration repair at close.
+The commit gate then found the same lesson in a measured test constant: making
+the screen conditional on an inward housemark moved the merged 1,024-case
+grown-placement corpus from 28 to 29 unfaithful placements. A one-field
+counterfactual restored 28 exactly, so the final ratchet records the merged
+inventory rather than concealing it as test noise.
