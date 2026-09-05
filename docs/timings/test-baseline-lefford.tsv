@@ -1,4 +1,4 @@
-# Hornvale test-duration baseline (The Timekeeper). Recorded at 2b20b4074.
+# Hornvale test-duration baseline (The Timekeeper). Recorded at ab1e7c7e6.
 # One row per test: <test-id>\t<seconds, millisecond precision>.
 # The reserved id <below-floor> carries a THIRD field instead:
 # <below-floor>\t<summed seconds>\t<count of tests folded in>.
@@ -6,7 +6,7 @@
 # into gate-run; `make ci` is now an alias). A red run leaves it
 # untouched. History lives in git, so `git log -p` on this file is
 # the record.
-<below-floor>	150.411	4028
+<below-floor>	150.411	4039
 hornvale-almanac::suite$interlinear::a_real_occupation_reaches_the_common_sentence_with_its_people_site_and_both_years	9.383
 hornvale-almanac::suite$interlinear::a_tongue_that_lacks_a_bound_concept_gaps_and_names_it	10.670
 hornvale-almanac::suite$interlinear::the_tongue_shares_no_word_with_common_but_the_autonym_and_the_numerals	12.532
@@ -58,10 +58,10 @@ hornvale-lab::burr_calibration$the_baseline_assignment_accuracy_is_pinned	7.271
 hornvale-lab::burr_calibration$the_baseline_sits_between_chance_and_certainty	7.434
 hornvale-lab::hornvale_lab$blackbox::tests::record_failure_writes_a_world_that_round_trips_to_the_directly_built_one	27.915
 hornvale-lab::hornvale_lab$census_claim::tests::a_timeout_names_the_holder_and_what_to_do	3.016
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4	1.093
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_is_deterministic	1.256
+hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric	1.005
 hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_the_preregistered_findings	1.232
-hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two	1.129
+hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two	1.412
 hornvale-lab::hornvale_lab$domesday::render::tests::d8_findings_appear_on_the_index_and_not_on_any_domain_page	1.515
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_page_or_the_index_cites_the_registry	1.760
 hornvale-lab::hornvale_lab$metrics::tests::a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor	18.072
@@ -160,7 +160,7 @@ hornvale-lab::suite$fixture_staleness::a_stale_fixture_fails_with_the_regenerati
 hornvale-lab::suite$gathering_calibration::world_level_population_conserves_against_total_capacity	12.782
 hornvale-lab::suite$health_calibration::a_stranded_creature_is_scored_chronic_end_to_end	1.766
 hornvale-lab::suite$health_calibration::a_stranded_creature_learns_helplessness_end_to_end	1.437
-hornvale-lab::suite$health_calibration::by_species_separates_a_stricken_people_end_to_end	1.816
+hornvale-lab::suite$health_calibration::by_species_separates_a_stricken_people_end_to_end	2.193
 hornvale-lab::suite$health_calibration::heat_hastens_thirst_end_to_end	2.807
 hornvale-lab::suite$health_calibration::the_harness_scenarios_are_deterministic	2.977
 hornvale-lab::suite$health_calibration::the_null_control_reads_no_chronic_distress	97.704
@@ -175,8 +175,8 @@ hornvale-lab::suite$reticence_calibration::h2_the_fold_discriminates_per_drive	3
 hornvale-lab::suite$reticence_calibration::h3_refusal_is_selective_not_global	41.632
 hornvale-lab::suite$reticence_calibration::h4_does_the_prior_move_observable_testimony_at_all	456.746
 hornvale-lab::suite$roster_parity::the_lab_considers_every_concept_worldgen_can_steep	10.513
-hornvale-lab::suite$rung_selection::a_climate_rung_metric_runs_when_selected_alone	2.134
-hornvale-lab::suite$rung_selection::a_terrain_rung_metric_still_runs_when_selected_alone	1.310
+hornvale-lab::suite$rung_selection::a_climate_rung_metric_runs_when_selected_alone	1.566
+hornvale-lab::suite$rung_selection::a_terrain_rung_metric_still_runs_when_selected_alone	1.576
 hornvale-lab::suite$rung_selection::mean_land_elevation_is_registered_and_positive	1.453
 hornvale-lab::suite$site_density::every_kind_of_site_is_actually_placed	46.367
 hornvale-lab::suite$site_density::placement_cannot_reach_a_site_every_square_mile	47.074
@@ -202,7 +202,7 @@ hornvale-locale::hornvale_locale$tests::a_locale_reports_height_above_sea_level_
 hornvale-locale::hornvale_locale$tests::blend_and_inheritance_pin_exact_values	1.994
 hornvale-locale::hornvale_locale$tests::cached_readers_assert_against_geo_level_aliasing_on_read	2.225
 hornvale-locale::hornvale_locale$tests::describe_above_the_grid_errors	1.853
-hornvale-locale::hornvale_locale$tests::describe_and_reflectance_agree_on_one_dominant_vertex	2.282
+hornvale-locale::hornvale_locale$tests::describe_and_reflectance_agree_on_one_dominant_vertex	1.619
 hornvale-locale::hornvale_locale$tests::describe_is_deterministic_across_two_contexts	3.679
 hornvale-locale::hornvale_locale$tests::describe_over_deep_address_errors	2.024
 hornvale-locale::hornvale_locale$tests::describe_reports_the_cave_at_its_dominant_corner_on_seed_42	1.725
@@ -488,7 +488,7 @@ hornvale-vessel::hornvale_vessel$session::tests::take_is_refused_while_asleep	4.
 hornvale-vessel::hornvale_vessel$session::tests::taking_stairs_marks_the_landing_without_a_step	4.840
 hornvale-vessel::hornvale_vessel$session::tests::taking_the_stairs_advances_the_clock	4.983
 hornvale-vessel::hornvale_vessel$session::tests::the_brattice_walk_one_a_locked_door_sends_the_walk_the_long_way_round_to_its_key	5.565
-hornvale-vessel::hornvale_vessel$session::tests::the_brattice_walk_three_a_shark_crosses_the_sump_and_a_dragon_climbs_the_chute	4.675
+hornvale-vessel::hornvale_vessel$session::tests::the_brattice_walk_three_a_shark_crosses_the_sump_and_a_dragon_climbs_the_chute	5.860
 hornvale-vessel::hornvale_vessel$session::tests::the_brattice_walk_two_a_chute_is_taken_down_and_the_loop_closed_by_the_far_stairway	5.103
 hornvale-vessel::hornvale_vessel$session::tests::the_carried_lattice_is_the_one_the_place_derives	4.248
 hornvale-vessel::hornvale_vessel$session::tests::the_chute_and_the_sump_read_the_body_that_walks_them	5.163
@@ -800,6 +800,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::a_real_world_reaches_a_none
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::materially_different_geology_reaches_materially_different_productions	5.535
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::same_seed_yields_the_same_substances_and_productions	4.475
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::substances_of_world_is_sorted_and_deduplicated	2.225
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else	1.015
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_worked_karst_descent_eventually_carries_a_door_and_a_wild_one_never_does	4.129
 hornvale-worldgen::hornvale_worldgen$brattice::tests::detour_cost_is_at_least_one_and_none_without_a_realized_requirement	4.673
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_plan_is_solvable_for_a_body_holding_nothing	30.474
@@ -1024,7 +1025,7 @@ hornvale-worldgen::suite$depth::full_depth_is_byte_identical_to_the_ordinary_ful
 hornvale-worldgen::suite$depth::settlements_depth_is_a_prefix_of_full	18.778
 hornvale-worldgen::suite$depth::terrain_depth_is_a_prefix_of_full	10.661
 hornvale-worldgen::suite$depth::the_ladder_is_monotone	19.888
-hornvale-worldgen::suite$depth::the_observer_fires_once_per_rung_in_ladder_order	12.220
+hornvale-worldgen::suite$depth::the_observer_fires_once_per_rung_in_ladder_order	9.720
 hornvale-worldgen::suite$depth::the_observer_hands_each_rung_exactly_the_artifacts_that_rung_built	9.805
 hornvale-worldgen::suite$depth::the_observer_reports_only_the_rungs_a_shallow_request_reaches	12.232
 hornvale-worldgen::suite$descent_graph::a_founders_handle_does_not_depend_on_how_the_community_ended	10.237

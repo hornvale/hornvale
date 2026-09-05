@@ -1276,6 +1276,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::partitioning_columns_are_all_covered_by_d2_or_d4
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -1333,7 +1334,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::d8_fires_on_exactly_alchemy_
 hornvale-lab::hornvale_lab$domesday::detect::tests::defensibility_capacity_rank_corr_still_exists_in_the_registry
 hornvale-lab::hornvale_lab$domesday::detect::tests::direct_references_match_measured_crates
 hornvale-lab::hornvale_lab$domesday::detect::tests::domain_crates_are_still_exactly_this_list
-hornvale-lab::hornvale_lab$domesday::detect::tests::findings_are_sorted_by_detector_then_metric
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_reads_a_nontrivial_correlation_and_its_sign
 hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_constant_column
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
@@ -3248,7 +3248,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3875,9 +3874,13 @@ hornvale::suite$correspondence::trial_balance_foots_on_every_ledger
 hornvale::suite$docs_consistency::a_decision_records_title_matches_its_filename
 hornvale::suite$docs_consistency::all_knowledge_doc_links_resolve
 hornvale::suite$docs_consistency::an_escaped_pipe_is_not_a_column_separator
+hornvale::suite$docs_consistency::campaign_reconciliation_covers_every_campaign_record
+hornvale::suite$docs_consistency::campaign_record_paths_enumerate_the_actual_audit_directories
 hornvale::suite$docs_consistency::cite_error_resolves_the_known_forms
 hornvale::suite$docs_consistency::cite_errors_in_catches_line_wrapped_cites
 hornvale::suite$docs_consistency::cite_errors_in_is_case_insensitive
+hornvale::suite$docs_consistency::committed_reconciliation_rows_satisfy_semantic_rules
+hornvale::suite$docs_consistency::committed_reconciliation_schema_is_parseable
 hornvale::suite$docs_consistency::decision_block_declaration_count_has_not_dropped
 hornvale::suite$docs_consistency::decision_blocks_do_not_overlap_across_campaigns
 hornvale::suite$docs_consistency::decision_cites_in_sources_resolve
@@ -3888,6 +3891,14 @@ hornvale::suite$docs_consistency::every_refuted_row_cites_its_evidence
 hornvale::suite$docs_consistency::every_registry_row_carries_a_pointer
 hornvale::suite$docs_consistency::every_registry_table_row_is_a_parseable_id_row
 hornvale::suite$docs_consistency::no_new_numbered_registry_ids
+hornvale::suite$docs_consistency::reconciliation_parser_keeps_all_five_record_columns
+hornvale::suite$docs_consistency::reconciliation_parser_rejects_a_short_row
+hornvale::suite$docs_consistency::reconciliation_parser_rejects_terminal_rows_with_a_destination
+hornvale::suite$docs_consistency::reconciliation_parser_rejects_unknown_disposition
+hornvale::suite$docs_consistency::reconciliation_parser_requires_evidence
+hornvale::suite$docs_consistency::reconciliation_parser_requires_residue_for_partial_rows
+hornvale::suite$docs_consistency::reconciliation_validation_rejects_duplicate_keys_and_wrong_record_columns
+hornvale::suite$docs_consistency::reconciliation_validation_rejects_shipped_registry_targets
 hornvale::suite$docs_consistency::refuted_is_an_admissible_status
 hornvale::suite$docs_consistency::registry_idea_cells_are_within_budget
 hornvale::suite$docs_consistency::registry_ids_are_unique
