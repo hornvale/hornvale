@@ -56,6 +56,17 @@ hornvale_kernel::stream_labels! {
     /// This is the first furnishing-family stream anything actually DRAWS from —
     /// `selection` takes no seed.
     ROOM_CHAMBERS = "room/chambers/v1" => "which chambers a structure has";
+    /// Stream label for WHICH FACETS a BUILT structure's chambers stand at (The
+    /// Cruck). The chamber COUNT and the links are derived by the structure
+    /// grammar and draw nothing; this label spends exactly one draw per chamber.
+    ///
+    /// A NEW label rather than a bump of `room/chambers/v1`, on The Blocking's
+    /// per-method precedent (decision 0073, spec §3.2 there): the wild
+    /// derivation under `v1` did not change, so bumping it would move every
+    /// cave for no reason, and the built derivation is new rather than
+    /// modified. Additive at v1 — no existing stream is perturbed.
+    ROOM_CHAMBERS_BUILT = "room/chambers/built/v1"
+        => "which facets a built structure's chambers stand at";
     /// Stream label for WHERE the RECTILINEAR method puts things (The Blocking).
     ///
     /// Split from `room/furnishing` on purpose (decision 0073): furnishing

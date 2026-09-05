@@ -199,15 +199,27 @@ pub fn is_faithful(
 /// sites per world of which ~980-2,615 are non-settlement (seed 42: 103
 /// exotic + 874 cave), and every one of those grows.
 ///
-/// So the grown corpus is the LIVE path for all of them, and the relaxation
-/// below fires on ~2% of it (5 of the 256 cases in the table above; 20 of the
-/// 1,024 [`the_grown_corpus_is_where_the_filter_binds`] sweeps). That is a
-/// stated relaxation now firing in production, not in reserve. It is not a
-/// coverage gap — the grown corpus is swept by that test to an exact ratchet,
-/// and `structure_at` reads the brief ONLY as a gate
-/// (`structure::tests::the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it`),
-/// so the structures it sweeps are distributed exactly as production's are.
-/// What it is is a behaviour a reader should know can be observed.
+/// So the grown LATTICE is the live path for all of them, and
+/// [`the_grown_corpus_is_where_the_filter_binds`] sweeps 1,024 of them to an
+/// exact ratchet. Its structures are still distributed exactly as production's
+/// are: a wild draw's chain under the unchanged `room/chambers/v1`, pinned by
+/// `structure::tests::a_cave_and_an_exotic_site_draw_the_same_structure` and by
+/// `the_wild_path_is_pinned_before_the_cruck`.
+///
+/// **The relaxation rate that sweep reports is NOT production's, and this
+/// paragraph used to say it was** (The Cruck, Task 3). It read: *"the
+/// relaxation below fires on ~2% of it … a stated relaxation now firing in
+/// production, not in reserve"*, and cited the retired
+/// `the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it` as the
+/// reason the corpus could not drift from production. Two things were folded
+/// together there. The corpus's LATTICES are production's; its INTERIORS never
+/// were — it composes a BUILT interior into a grown blob, which is what makes
+/// the geometry hostile enough to bind the filter at all. Composing those same
+/// 1,024 lattices with the cave's OWN unbuilt interior was measured while
+/// making this change and gives **0 unfaithful placements**: a cave composes
+/// two anchors and two anchors cannot cut a blob. So ~2% is the STRESS
+/// corpus's rate, and the closest thing to a production figure anyone has
+/// measured is zero. See [`wild_fixture`].
 ///
 /// # When no cell is admissible: a STATED relaxation, and it FIRES
 ///
@@ -346,10 +358,12 @@ fn reaches(lattice: &Lattice, from: Cell, to: Cell, blocked: &BTreeSet<Cell>) ->
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::lattice::{embed_with, extent_for};
     use crate::liveness::Terrain;
     use crate::site::{Site, SiteKind};
     use crate::structure::{Structure, structure_at};
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::{Facet, WorldTime};
 
     const WALK: u32 = 13;
@@ -357,8 +371,18 @@ mod tests {
     /// A `Terrain` whose built-set is keyed at the WALK band, exactly as
     /// `LocaleTerrain` is — the shape `interior::derive`'s own tests use,
     /// because a raw chamber address must read as unbuilt.
+    ///
+    /// **It answers `is_cold` from a field now** (The Cruck, Task 3). It used
+    /// to return a flat -20 °C, so every fixture brief had to carry
+    /// `cold: true` — and `cold` is an axis the structure grammar READS, so a
+    /// terrain that is always cold can only ever produce the deep shape and
+    /// this corpus could never reach a fork at the door. `chamber_interior_of`
+    /// debug-asserts the brief and the terrain agree about both flags, so the
+    /// terrain is built FROM the brief ([`fixture`]) rather than the other way
+    /// round.
     struct WalkKeyedTerrain {
         built_walk_ids: BTreeSet<u64>,
+        cold: bool,
     }
     impl Terrain for WalkKeyedTerrain {
         fn elevation(&self, _r: &Facet) -> f64 {
@@ -368,7 +392,7 @@ mod tests {
             false
         }
         fn temperature(&self, _r: &Facet, _d: WorldTime) -> f64 {
-            -20.0
+            if self.cold { -20.0 } else { 20.0 }
         }
         fn is_built(&self, r: &Facet) -> bool {
             r.pack()
@@ -377,9 +401,197 @@ mod tests {
         }
     }
 
-    fn brief() -> Brief {
-        // built + cold, which is what `WalkKeyedTerrain` reports at a built
-        // locale — `chamber_interior_of` debug-asserts the two agree.
+    /// A living, warm, communal, plain-postured agrarian dwelling: the BUSH
+    /// shape, four chambers, `T{ H, W, S }` — a fork of three at the door.
+    ///
+    /// **The shape is the BRIEF's now, not a locale's draw** (The Cruck, Task
+    /// 3). A built structure's chamber count and links come from
+    /// `structure::grammar`, so the way to get a four-chamber corpus entry is
+    /// to write a four-chamber brief; see [`structure_of`], whose doc used to
+    /// say the opposite.
+    fn bush() -> Brief {
+        Brief::from_parts(
+            Some(Function::Agrarian),
+            None,
+            Some(Notability::Common),
+            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        )
+    }
+
+    /// The same dwelling, cold: the DEEP shape, `T{ H{ W, S } }` — four
+    /// chambers with the fork one step in.
+    fn deep() -> Brief {
+        let mut b = bush();
+        b.cold = true;
+        b
+    }
+
+    /// A waypoint: `Trade`'s business IS keeping goods, so three chambers,
+    /// `T{ H, S }`.
+    fn trade() -> Brief {
+        let mut b = bush();
+        b.function = Some(Function::Trade);
+        b
+    }
+
+    /// A built site whose brief names no business at all: the grammar's floor,
+    /// two chambers, `T{ H }`.
+    fn no_business() -> Brief {
+        let mut b = bush();
+        b.function = None;
+        b
+    }
+
+    /// Every built shape this corpus sweeps, two to four chambers, chain and
+    /// fork. Written out rather than derived so that adding one is a visible
+    /// edit here.
+    fn built_shapes() -> [Brief; 4] {
+        [no_business(), trade(), bush(), deep()]
+    }
+
+    /// A CAVE: a site nobody built. Both the structure source for the grown
+    /// corpus and the method selector `embed_with` reads to send it to `grow`.
+    ///
+    /// **It carries a SITE now, and derives its own structures** (The Cruck,
+    /// Task 3). This doc used to explain at length that the brief was a method
+    /// selector "passed to `embed_with` and to NOTHING else", because it could
+    /// not derive a structure — `structure_at` gates on `brief.site` and this
+    /// one had none. That was sound while a settlement and a cave drew the same
+    /// structure at one locale; they do not any more. So the grown corpus is
+    /// derived from a real cave brief end to end — a wild draw, a chain of
+    /// 1..=MAX_CHAMBERS (spec §3.5), an unbuilt interior — which is exactly
+    /// what production's caves and exotic sites take.
+    fn wild() -> Brief {
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            Some(Site::placed(SiteKind::Cave, None)),
+            None,
+        )
+    }
+
+    /// The `n`th walk-band locale, `n` written out as base-4 path digits.
+    fn locale_number(n: u64) -> Facet {
+        Facet {
+            face: 3,
+            path: (0..WALK).map(|i| ((n >> (2 * i)) & 0b11) as u8).collect(),
+        }
+    }
+
+    /// The structure `shape` derives, at the locale `seed` names.
+    ///
+    /// **The count is the grammar's, so a brief names it** (The Cruck, Task 3).
+    /// This function used to take a `chamber_count` and SCAN up to 4096 locales
+    /// for one that drew it, with a doc saying "`structure_at` draws the count,
+    /// so the honest way to get a four-chamber structure is to go and find a
+    /// locale that has one". That is still true of a WILD site, and
+    /// [`wild_structure_of`] still does exactly that; it is no longer true of a
+    /// built one, whose count and links the brief fixes.
+    fn structure_of(shape: &Brief, seed: Seed) -> (Facet, Structure) {
+        let locale = locale_number(seed.0);
+        let structure = structure_at(&locale, shape, seed, WALK).expect("a built site");
+        (locale, structure)
+    }
+
+    /// A REAL WILD structure of exactly `chamber_count` chambers, found by
+    /// scanning locales — the half of the old `structure_of` that survives,
+    /// because the wild count really is drawn.
+    fn wild_structure_of(chamber_count: usize, seed: Seed) -> (Facet, Structure) {
+        for n in 0u64..4096 {
+            let locale = locale_number(n);
+            let s = structure_at(&locale, &wild(), seed, WALK).expect("a cave is a site");
+            if s.chambers.len() == chamber_count {
+                return (locale, s);
+            }
+        }
+        panic!("no locale in 4096 draws a {chamber_count}-chamber cave at {seed:?}");
+    }
+
+    /// A chamber's real interior, its structure's real lattice, and which
+    /// chamber it is — all through the derivations the session itself calls
+    /// (`structure_at`, `embed_with`, `chamber_interior_of`), never built by
+    /// hand. The chamber index varies with the seed so a sweep covers every
+    /// role rather than one.
+    ///
+    /// **One brief, not two.** The old form took a separate `method` argument
+    /// so the grown corpus could borrow a settlement's structure and embed it
+    /// with `grow`. That substitution was sound only while the site kind did
+    /// not reach the structure, and The Cruck ends that: `brief.built` now
+    /// selects the derivation AND the embedding, exactly as production does.
+    fn fixture(brief: &Brief, seed: Seed) -> (Interior, Lattice, usize) {
+        let (locale, structure) = if brief.built {
+            structure_of(brief, seed)
+        } else {
+            panic!("a wild fixture goes through `wild_fixture`, which chooses its count")
+        };
+        assemble(brief, locale, structure, seed)
+    }
+
+    /// [`fixture`]'s wild twin: a real cave of `chamber_count` chambers, grown
+    /// — with a DELIBERATELY BUILT interior standing in it.
+    ///
+    /// **The mismatch is the instrument, and it is stated rather than left to
+    /// be inferred** (The Cruck, Task 3). The lattice is production's: a wild
+    /// draw's chain, embedded by `grow`, exactly what every cave and exotic
+    /// site gets. The INTERIOR is not — it is composed from
+    /// [`stress_interior`], a built brief, because a cave's own interior
+    /// composes two anchors and two anchors cannot cut a blob. Measured while
+    /// making this change: composing these same 1,024 grown lattices with the
+    /// cave's own unbuilt interior gives **0 unfaithful placements**, which
+    /// would leave [`the_grown_corpus_is_where_the_filter_binds`] asserting a
+    /// ceiling nothing approaches — a check that can never fire.
+    ///
+    /// So this corpus is a STRESS corpus and says so. It answers "does the
+    /// scan's faithfulness filter do work on hostile geometry", which is a
+    /// question about the scan; it is not evidence about how often production
+    /// relaxes, and the 0-of-1024 figure above is the closest thing to that
+    /// answer anyone has measured.
+    fn wild_fixture(chamber_count: usize, seed: Seed) -> (Interior, Lattice, usize) {
+        let (locale, structure) = wild_structure_of(chamber_count, seed);
+        let terrain = WalkKeyedTerrain {
+            built_walk_ids: [locale.pack().expect("a walk-band locale packs").0]
+                .into_iter()
+                .collect(),
+            cold: true,
+        };
+        let lattice = embed_with(
+            &structure,
+            &wild(),
+            extent_for(&structure),
+            locale.seed(seed),
+        );
+        let at = (seed.0 as usize) % structure.chambers.len();
+        let interior = crate::interior::chamber_interior_of(
+            &structure.chambers[at],
+            &terrain,
+            WALK,
+            &stress_interior(),
+            structure.roles[at],
+        );
+        (interior, lattice, at)
+    }
+
+    /// The brief the grown STRESS corpus composes its interiors from: built,
+    /// cold, no business — the shape `brief()` had before The Cruck, kept
+    /// byte-for-byte so that [`GROWN_RELAXATIONS`] measures the scan rather
+    /// than a fixture edit. See [`wild_fixture`] for why the corpus wants a
+    /// built interior in a grown lattice at all.
+    fn stress_interior() -> Brief {
         Brief::from_parts(
             None,
             None,
@@ -394,87 +606,30 @@ mod tests {
         )
     }
 
-    /// The brief that selects the GROWN embedding, passed to `embed_with` and
-    /// to NOTHING else.
-    ///
-    /// This brief cannot derive a structure or an interior — it carries no
-    /// site, and `structure_at` returns `None` without one (decision 0666) —
-    /// and `chamber_interior_of` would debug-assert against it, since the
-    /// terrain here reports built. It selects a METHOD, which is exactly how
-    /// `lattice/mod.rs`, `render.rs` and `classify.rs` already use it.
-    ///
-    /// **The reason is `site: None`, NOT `built: false`, and this doc had it
-    /// the old way.** It read: *"A structure exists only where `brief.built`
-    /// … the grown lattice is the hostile geometry, reachable as a fixture and
-    /// not reachable in production."* Both halves are now wrong. The gate is
-    /// the site, and a production cave brief is exactly `built: false` with
-    /// `site: Some(Cave)` — which derives a structure and grows it. So the
-    /// grown lattice IS reachable in production; what makes THIS brief a
-    /// method selector rather than a production stand-in is that it withholds
-    /// the site as well, which no real facet does.
-    fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
-    }
-
-    /// The `n`th walk-band locale, `n` written out as base-4 path digits.
-    fn locale_number(n: u64) -> Facet {
-        Facet {
-            face: 3,
-            path: (0..WALK).map(|i| ((n >> (2 * i)) & 0b11) as u8).collect(),
-        }
-    }
-
-    /// A REAL structure of exactly `chamber_count` chambers, found by scanning
-    /// locales rather than hand-built: `structure_at` draws the count, so the
-    /// honest way to get a four-chamber structure is to go and find a locale
-    /// that has one.
-    fn structure_of(chamber_count: usize, seed: Seed) -> (Facet, Structure) {
-        for n in 0u64..4096 {
-            let locale = locale_number(n);
-            let s = structure_at(&locale, &brief(), seed, WALK).expect("built");
-            if s.chambers.len() == chamber_count {
-                return (locale, s);
-            }
-        }
-        panic!("no locale in 4096 draws a {chamber_count}-chamber structure at {seed:?}");
-    }
-
-    /// A chamber's real interior, its structure's real lattice, and which
-    /// chamber it is — all through the derivations the session itself calls
-    /// (`structure_at`, `embed_with`, `chamber_interior_of`), never built by
-    /// hand. The chamber index varies with the seed so a sweep covers every
-    /// role rather than one.
-    fn fixture(chamber_count: usize, seed: Seed) -> (Interior, Lattice, usize) {
-        fixture_embedded_with(chamber_count, seed, &brief())
-    }
-
-    /// [`fixture`], with the embedding METHOD chosen by `method` — the built
-    /// brief for the rectilinear allocation production always takes, the wild
-    /// one for the grown blob it never does.
-    fn fixture_embedded_with(
-        chamber_count: usize,
+    /// The half both fixtures share: a terrain that AGREES with the brief, the
+    /// lattice `embed_with` gives it, and one chamber's real interior.
+    fn assemble(
+        brief: &Brief,
+        locale: Facet,
+        structure: Structure,
         seed: Seed,
-        method: &Brief,
     ) -> (Interior, Lattice, usize) {
-        let (locale, structure) = structure_of(chamber_count, seed);
         let terrain = WalkKeyedTerrain {
-            built_walk_ids: [locale.pack().expect("a walk-band locale packs").0]
+            built_walk_ids: brief
+                .built
+                .then(|| locale.pack().expect("a walk-band locale packs").0)
                 .into_iter()
                 .collect(),
+            cold: brief.cold,
         };
         // Keyed to the LOCALE's own seed, exactly as `Session::lattice_of` does.
-        let lattice = embed_with(
-            &structure,
-            method,
-            extent_for(&structure),
-            locale.seed(seed),
-        );
-        let at = (seed.0 as usize) % chamber_count;
+        let lattice = embed_with(&structure, brief, extent_for(&structure), locale.seed(seed));
+        let at = (seed.0 as usize) % structure.chambers.len();
         let interior = crate::interior::chamber_interior_of(
             &structure.chambers[at],
             &terrain,
             WALK,
-            &brief(),
+            brief,
             structure.roles[at],
         );
         (interior, lattice, at)
@@ -503,14 +658,17 @@ mod tests {
     /// claim: invariant(forall-seed) — over 1..=MAX_CHAMBERS x 0..64
     #[test]
     fn every_placement_is_faithful() {
-        for n in 1..=crate::structure::MAX_CHAMBERS {
+        for shape in built_shapes() {
             for seed in 0u64..64 {
-                let (interior, lattice, chamber) = fixture(n, Seed(seed));
+                let (interior, lattice, chamber) = fixture(&shape, Seed(seed));
                 let placed = anchor_cells(&interior, &lattice, chamber, Seed(seed));
                 assert!(
                     is_faithful(&interior, &lattice, &placed),
-                    "n={n} seed={seed}: adjacent anchors were placed without a \
-                     passable path between them"
+                    "{:?}/{:?} cold={} seed={seed}: adjacent anchors were placed \
+                     without a passable path between them",
+                    shape.function,
+                    shape.notability,
+                    shape.cold
                 );
             }
         }
@@ -612,24 +770,26 @@ mod tests {
     /// corpus containing it the campaign's keystone property was a claim about
     /// rectangles.
     ///
-    /// **REACHED IN PRODUCTION SINCE DECISION 0666, and this doc said the
-    /// opposite.** It read: *"Unreachable in production, and that is why it is
-    /// a fixture. `structure_at` returns `None` unless `brief.built` … so
-    /// `Session::lattice_of` always dispatches to `allocate`. This is the
-    /// hostile case held in reserve against the day a wild place gets
-    /// chambers."* That day arrived in this campaign: the gate is the SITE, a
-    /// cave and an exotic site are unbuilt sites, and `embed_with` sends every
-    /// `!built` brief to `grow`. H3 measures ~980-2,615 such facets per world.
+    /// **Its LATTICES are production's; its INTERIORS are a deliberate stress
+    /// case, and this doc used to claim both halves were production** (The
+    /// Cruck, Task 3). It read: *"this is no longer a reserve fixture — it is
+    /// **the** anchor-placement guarantee for every cave and exotic interior
+    /// in the world, and the ceiling it pins is a live rate rather than a
+    /// hypothetical one"*, on the strength of the retired
+    /// `the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it`.
     ///
-    /// So this is no longer a reserve fixture — it is **the** anchor-placement
-    /// guarantee for every cave and exotic interior in the world, and the
-    /// ceiling it pins is a live rate rather than a hypothetical one. Nothing
-    /// about the sweep needed to change for that to be true, because
-    /// `structure_at` reads the brief only as a gate and draws the structure
-    /// from the locale and the seed alone
-    /// (`structure::tests::the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it`
-    /// pins exactly that, so the corpus cannot drift away from production
-    /// silently).
+    /// The lattice half is true and unchanged: since decision 0666 the gate is
+    /// the SITE, a cave and an exotic site are unbuilt sites, `embed_with`
+    /// sends every `!built` brief to `grow`, and H3 measures ~980-2,615 such
+    /// facets per world. The structures here come from a real cave brief, so
+    /// they are drawn exactly as production's are.
+    ///
+    /// The interior half is not. [`wild_fixture`] composes a BUILT interior
+    /// into that grown lattice on purpose — a cave's own interior composes two
+    /// anchors, and 0 of these 1,024 cases is unfaithful with it. The ceiling
+    /// below is therefore a statement about the SCAN under hostile geometry,
+    /// which is the question this test was written to answer, and not a
+    /// production relaxation rate.
     ///
     /// **What it asserts is a CEILING, not universality**, because the honest
     /// answer is that some blobs cannot be embedded faithfully at all: five of
@@ -650,7 +810,7 @@ mod tests {
         let cases = SEEDS as usize * crate::structure::MAX_CHAMBERS;
         for n in 1..=crate::structure::MAX_CHAMBERS {
             for seed in 0u64..SEEDS {
-                let (interior, lattice, chamber) = fixture_embedded_with(n, Seed(seed), &wild());
+                let (interior, lattice, chamber) = wild_fixture(n, Seed(seed));
                 let placed = anchor_cells(&interior, &lattice, chamber, Seed(seed));
                 let floor = floor_of(&lattice, chamber).len();
                 let anchors = interior.ids().len();
@@ -717,7 +877,7 @@ mod tests {
 
     #[test]
     fn every_anchor_is_placed_exactly_once() {
-        let (interior, lattice, chamber) = fixture(2, Seed(7));
+        let (interior, lattice, chamber) = fixture(&no_business(), Seed(7));
         let placed = anchor_cells(&interior, &lattice, chamber, Seed(7));
         assert_eq!(
             placed.len(),
@@ -732,7 +892,7 @@ mod tests {
 
     #[test]
     fn every_placed_cell_serves_this_chamber() {
-        let (interior, lattice, chamber) = fixture(3, Seed(11));
+        let (interior, lattice, chamber) = fixture(&trade(), Seed(11));
         let placed = anchor_cells(&interior, &lattice, chamber, Seed(11));
         for (id, cell) in &placed {
             let kind = lattice.cells.get(cell).expect("placed inside the extent");
@@ -745,7 +905,7 @@ mod tests {
 
     #[test]
     fn the_placement_is_deterministic() {
-        let (interior, lattice, chamber) = fixture(2, Seed(3));
+        let (interior, lattice, chamber) = fixture(&no_business(), Seed(3));
         let a = anchor_cells(&interior, &lattice, chamber, Seed(3));
         let b = anchor_cells(&interior, &lattice, chamber, Seed(3));
         assert_eq!(a, b, "same inputs, same placement");
@@ -756,7 +916,7 @@ mod tests {
     /// that is exactly how a green suite hides a broken embedding.
     #[test]
     fn is_faithful_rejects_a_scattered_placement() {
-        let (interior, lattice, chamber) = fixture(2, Seed(5));
+        let (interior, lattice, chamber) = fixture(&no_business(), Seed(5));
         let mut scattered = anchor_cells(&interior, &lattice, chamber, Seed(5));
         assert!(
             scattered.len() > 1,
@@ -788,7 +948,7 @@ mod tests {
         // seed and asserts what is DRAWN moves while what is KNOWN does not.
         // If the seed were ignored, that control would be vacuous — so the
         // property it depends on is pinned here, where it belongs.
-        let (interior, lattice, chamber) = fixture(4, Seed(1));
+        let (interior, lattice, chamber) = fixture(&bush(), Seed(1));
         let placements: Vec<BTreeMap<AnchorId, Cell>> = (0..16u64)
             .map(|s| anchor_cells(&interior, &lattice, chamber, Seed(s)))
             .collect();
@@ -806,16 +966,24 @@ mod tests {
         // anchor's own position free and nothing else. So the ceiling is one
         // choice per anchor, and a scan that took two would be inventing a
         // freedom the graph never had.
-        for n in 1..=crate::structure::MAX_CHAMBERS {
+        for shape in built_shapes() {
             for seed in 0u64..16 {
-                let (interior, lattice, chamber) = fixture(n, Seed(seed));
+                let (interior, lattice, chamber) = fixture(&shape, Seed(seed));
                 let (placed, dof) = place(&interior, &lattice, chamber, Seed(seed));
                 assert!(
                     dof as usize <= interior.ids().len(),
-                    "n={n} seed={seed}: the scan spent {dof} choices on {} anchors",
+                    "{:?} cold={} seed={seed}: the scan spent {dof} choices on {} anchors",
+                    shape.function,
+                    shape.cold,
                     interior.ids().len()
                 );
-                assert_eq!(placed.len(), interior.ids().len(), "n={n} seed={seed}");
+                assert_eq!(
+                    placed.len(),
+                    interior.ids().len(),
+                    "{:?} cold={} seed={seed}",
+                    shape.function,
+                    shape.cold
+                );
             }
         }
     }

@@ -4,7 +4,7 @@ examine a fern-choked draw shaded dry in a hollow
 examine sky
 !whoami
 enter
-enter further in
+enter the hearth
 map
 go n
 map

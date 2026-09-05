@@ -52,30 +52,30 @@ Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 1098173175083363, day 0.00985]
+[chamber 1098173182543299, day 0.00985]
 A small room in Vapatkapak, holding a doorway, a bench and a water jar.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying nothing.
 > take a key
 You see no a key here.
-> enter further in
-[chamber 1098173178103715, day 0.0197]
-A small room in Vapatkapak, holding a doorway and an alcove.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
-> enter further in
-[chamber 1098173182570403, day 0.02955]
+> enter the loomroom
+[chamber 1098173182260419, day 0.0197]
 A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key and a brazier.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out.
 > take a key
 You take the key.
 > carrying
 You are carrying a key.
-> enter further in
-[chamber 1098173179279043, day 0.04925]
+> enter the threshold
+[chamber 1098173182543299, day 0.0394]
+A small room in Vapatkapak, holding a doorway, a bench and a water jar.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+Ways on: out, the hearth, the loomroom, the store.
+> enter the store
+[chamber 1098173180704195, day 0.04925]
 A small room in Vapatkapak, holding a doorway, a water jar, a strongbox and a key.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out.
@@ -103,10 +103,10 @@ Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 1098173175083363, day 0.1182]
+[chamber 1098173182543299, day 0.1182]
 A small room in Vapatkapak, holding a doorway, a bench and a water jar.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying a key.
 > drop a key

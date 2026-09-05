@@ -111,23 +111,22 @@ pub fn deepen_until_the_plan_draws(session: &mut Session<'_>, who: EntityId) {
         is_inside(session),
         "the possession is not indoors, so nothing below is tested"
     );
-    // `MAX_CHAMBERS` is 4, so four steps is one more than any structure has;
-    // the loop stops on the far-end reply rather than on the count.
-    for _ in 0..4 {
-        session.place_creature_at_me(who);
-        if !marks_of(session).is_empty() {
-            return;
-        }
-        let reply = match session.handle("enter further in") {
-            Turn::Out(t) | Turn::Released(t) => t,
-        };
-        assert!(
-            reply.starts_with("[chamber "),
-            "no chamber of this structure draws a placed creature on its plan, so \
-             nothing below is tested: {reply}"
-        );
-    }
-    panic!("the structure ran past MAX_CHAMBERS without the plan ever drawing");
+    // EVERY chamber, in pre-order, not "further in until it stops" (The Cruck,
+    // Task 3). A structure is a rooted tree now: `enter further in` refuses at
+    // a fork rather than guess a direction, so the old loop asserted its own
+    // far-end message in the threshold of any forking structure and never
+    // looked at a second chamber. The property is unchanged — a chamber whose
+    // plan DRAWS the placed creature — and it still refuses loudly rather than
+    // leaving a caller in one that draws nothing.
+    let found = find_chamber_where(session, &mut |s| {
+        s.place_creature_at_me(who);
+        !marks_of(s).is_empty()
+    });
+    assert!(
+        found,
+        "no chamber of this structure draws a placed creature on its plan, so \
+         nothing below is tested"
+    );
 }
 
 /// The first seed in [`SIGHT_SEEDS`] whose fresh possession satisfies `pred` —
@@ -254,4 +253,189 @@ impl Terrain for CountingTerrain<'_> {
     fn prey_value(&self, room: &Facet) -> f64 {
         self.inner.prey_value(room)
     }
+}
+
+/// Every chamber of the structure the possession is standing in, visited in
+/// pre-order, each one's [`Session::chamber_nouns_here`] in visit order.
+///
+/// **A structure is a TREE now (The Cruck), so "walk in until it stops" is no
+/// longer a traversal.** `enter further in` refuses at a fork and names the
+/// ways instead of guessing one, so a loop of `enter further in` visits the
+/// threshold and then stops — silently, with a plausible-looking one-element
+/// result. Every test that wanted "every chamber" or "the deepest chamber"
+/// goes through here instead.
+///
+/// It drives the SESSION, never the structure: the ways come off the rendered
+/// `Ways on:` footer, each `the <noun>` way is entered by name, and the walk
+/// back up is `enter <parent role noun>` — the aperture-by-name relaxation
+/// spec §5.3 gives. So this is a claim about what a player can type, which is
+/// the claim the tests calling it actually make.
+///
+/// Panics if the possession is not indoors, or if a way the footer advertises
+/// does not lead to a chamber — both are findings rather than fixture noise.
+pub fn visit_every_chamber(session: &mut Session<'_>) -> Vec<Vec<String>> {
+    assert!(
+        is_inside(session),
+        "the possession is not indoors, so there are no chambers to visit"
+    );
+    let mut out = Vec::new();
+    visit_from_here(session, true, &mut out);
+    out
+}
+
+/// The reply to `line`, refusing to accept a release — every caller here is
+/// mid-walk and a release would mean the possession ended under it.
+fn say(session: &mut Session<'_>, line: &str) -> String {
+    match session.handle(line) {
+        Turn::Out(t) => t,
+        Turn::Released(t) => panic!("`{line}` released the possession: {t}"),
+    }
+}
+
+/// The ways a chamber's footer advertises, `out` dropped: either the single
+/// `further in`, or one `the <noun>` per child at a fork.
+fn ways_on(text: &str) -> Vec<String> {
+    let line = text
+        .lines()
+        .find_map(|l| l.strip_prefix("Ways on: "))
+        .unwrap_or_else(|| panic!("a chamber rendering carries a `Ways on:` line: {text:?}"));
+    line.trim_end_matches('.')
+        .split(", ")
+        .filter(|w| *w != "out")
+        .map(str::to_string)
+        .collect()
+}
+
+/// Visit this chamber and everything under it, then walk back to the parent
+/// unless this is the chamber `enter` landed in.
+fn visit_from_here(session: &mut Session<'_>, is_root: bool, out: &mut Vec<Vec<String>>) {
+    out.push(session.chamber_nouns_here());
+    let ways = ways_on(&say(session, "look"));
+    for way in &ways {
+        let reply = say(session, &format!("enter {way}"));
+        assert!(
+            reply.starts_with("[chamber "),
+            "the footer advertised `{way}` and it did not lead to a chamber: {reply}"
+        );
+        visit_from_here(session, false, out);
+    }
+    if !is_root {
+        step_back(session, &ways);
+    }
+}
+
+/// Walk one aperture back toward the door, by the parent's role noun.
+///
+/// The noun is DISCOVERED rather than derived: the footer names a chamber's
+/// children but never itself, so this tries every role noun that is not one of
+/// this chamber's own `the <noun>` ways. A role noun is unique among a built
+/// structure's apertures (spec §5.1 invariant 3), so exactly one of them is the
+/// parent — and a refusal costs nothing, since `enter` charges only after it
+/// has decided to move.
+fn step_back(session: &mut Session<'_>, own_ways: &[String]) {
+    let children: Vec<&str> = own_ways
+        .iter()
+        .filter_map(|w| w.strip_prefix("the "))
+        .collect();
+    for role in hornvale_vessel::structure::EVERY_ROLE {
+        let noun = role.noun();
+        if children.contains(&noun) {
+            continue;
+        }
+        if say(session, &format!("enter {noun}")).starts_with("[chamber ") {
+            return;
+        }
+    }
+    panic!("no role noun walked back toward the door from this chamber");
+}
+
+/// Walk the structure the possession stands in, in pre-order, stopping in the
+/// first chamber where `pred` holds — the search half of
+/// [`visit_every_chamber`].
+///
+/// Returns `true` with the possession LEFT STANDING in the satisfying chamber,
+/// or `false` with it back where it started. `pred` may act on the session (it
+/// is what places a creature before reading the plan); it is called exactly
+/// once per chamber.
+pub fn find_chamber_where(
+    session: &mut Session<'_>,
+    pred: &mut dyn FnMut(&mut Session<'_>) -> bool,
+) -> bool {
+    assert!(
+        is_inside(session),
+        "the possession is not indoors, so there are no chambers to search"
+    );
+    search_from_here(session, true, pred)
+}
+
+fn search_from_here(
+    session: &mut Session<'_>,
+    is_root: bool,
+    pred: &mut dyn FnMut(&mut Session<'_>) -> bool,
+) -> bool {
+    if pred(session) {
+        return true;
+    }
+    let ways = ways_on(&say(session, "look"));
+    for way in &ways {
+        let reply = say(session, &format!("enter {way}"));
+        assert!(
+            reply.starts_with("[chamber "),
+            "the footer advertised `{way}` and it did not lead to a chamber: {reply}"
+        );
+        if search_from_here(session, false, pred) {
+            return true;
+        }
+    }
+    if !is_root {
+        step_back(session, &ways);
+    }
+    false
+}
+
+/// Walk the possession to the chamber whose ROLE noun is `noun` — `hearth`,
+/// `loomroom`, `store`, … — wherever the tree puts it. Returns whether it was
+/// found, leaving the possession standing in it; on a miss the possession is
+/// back where it started.
+///
+/// **A specific room is named now, not counted** (The Cruck, Task 3). Tests
+/// that wanted "the loomroom with the key" or "the store with the strongbox"
+/// walked a fixed number of `enter further in`s, which reached them only while
+/// a structure was a chain. The role a room plays is what those tests were
+/// ever about, and a role noun is unique among a built structure's apertures
+/// (spec §5.1 invariant 3), so it names the room whatever depth the brief puts
+/// it at.
+///
+/// The search is over the SESSION, not the structure: at each chamber it tries
+/// `enter <noun>`, and on a refusal descends into each way the footer
+/// advertises and tries again. That also finds the chamber the possession is
+/// already standing in — the first child it descends into can name it — so a
+/// caller need not know where it starts.
+pub fn walk_to_role_noun(session: &mut Session<'_>, noun: &str) -> bool {
+    assert!(
+        is_inside(session),
+        "the possession is not indoors, so there is no chamber to walk to"
+    );
+    seek_from_here(session, true, noun)
+}
+
+fn seek_from_here(session: &mut Session<'_>, is_root: bool, noun: &str) -> bool {
+    if say(session, &format!("enter {noun}")).starts_with("[chamber ") {
+        return true;
+    }
+    let ways = ways_on(&say(session, "look"));
+    for way in &ways {
+        let reply = say(session, &format!("enter {way}"));
+        assert!(
+            reply.starts_with("[chamber "),
+            "the footer advertised `{way}` and it did not lead to a chamber: {reply}"
+        );
+        if seek_from_here(session, false, noun) {
+            return true;
+        }
+    }
+    if !is_root {
+        step_back(session, &ways);
+    }
+    false
 }

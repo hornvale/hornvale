@@ -414,8 +414,10 @@ pub fn embed_with(structure: &Structure, brief: &Brief, extent: Rect, seed: Seed
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::site::{Site, SiteKind};
     use crate::structure::structure_at;
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 13;
@@ -427,7 +429,40 @@ mod tests {
         }
     }
 
+    /// A living, warm, communal, plain-postured agrarian dwelling: the BUSH
+    /// shape, four chambers, `T{ H, W, S }` — a fork of three at the door.
+    ///
+    /// The chamber count is the GRAMMAR's since The Cruck, Task 3, so a built
+    /// fixture names the shape it wants with a brief instead of scanning
+    /// locales for one. This is the fullest frame the grammar derives without a
+    /// Seat, so it is what a corpus uses to reach `MAX_CHAMBERS`.
     fn built() -> Brief {
+        Brief::from_parts(
+            Some(Function::Agrarian),
+            None,
+            Some(Notability::Common),
+            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        )
+    }
+
+    /// A CAVE: a site nobody built. Both the structure source for a grown
+    /// fixture — a wild draw is still a chain of 1..=MAX_CHAMBERS, spec §3.5 —
+    /// and the method selector `embed_with` reads to send it to `grow`.
+    ///
+    /// It carries a SITE now, and must: `structure_at` gates on `brief.site`
+    /// (decision 0666), so a site-less method selector derives no structure at
+    /// all. Giving it a real cave site is what lets a grown fixture come from
+    /// the derivation production's caves actually take.
+    fn wild() -> Brief {
         Brief::from_parts(
             None,
             None,
@@ -435,15 +470,11 @@ mod tests {
             None,
             None,
             0,
+            false,
             true,
-            true,
-            Some(Site::placed(SiteKind::Settlement, None)),
+            Some(Site::placed(SiteKind::Cave, None)),
             None,
         )
-    }
-
-    fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
     }
 
     fn embed(seed: u64) -> (crate::structure::Structure, Lattice) {
@@ -599,9 +630,16 @@ mod tests {
         );
     }
 
+    /// **Derived from the WILD brief, not the built one** (The Cruck, Task 3).
+    /// The claim is about what `grow` covers, and production only ever grows a
+    /// wild structure — a chain — so growing the grammar's four-chamber fork
+    /// here would assert coverage for a shape `embed_with` never sends to this
+    /// method. (It would also be a coin flip: the grower drops one link on 24
+    /// of 2,560 fork/seed pairs, pinned in
+    /// `classify::tests::the_grower_drops_a_link_on_exactly_these_fork_seeds`.)
     #[test]
     fn a_grown_lattice_still_covers_its_chambers_and_links() {
-        let s = structure_at(&locale(), &built(), Seed(42), WALK).expect("built");
+        let s = structure_at(&locale(), &wild(), Seed(42), WALK).expect("a cave is a site");
         let l = embed_with(&s, &wild(), extent_for(&s), Seed(42));
         for i in 0..s.chambers.len() {
             assert!(
@@ -627,15 +665,21 @@ mod tests {
         // "the seed is ignored" would be a false accusation rather than a finding.
         // Asserted rather than assumed, because the count is `structure_at`'s
         // business and could move under this test.
-        // The seed is SEARCHED, not written down. `structure_at` draws its
+        // The seed is SEARCHED, not written down. The WILD draw still takes its
         // chamber count from the locale's own seed, and the locale is built
         // from `WALK` — so when the walk band moved to `globe_level + 7`, seed
         // 42 started drawing a ONE-chamber structure here and this test's own
         // premise guard fired. The premise is "a structure with residual
         // freedom to fill", never "seed 42", so this asks for it.
+        //
+        // **The WILD brief, since The Cruck, Task 3.** This test embeds with
+        // `grow`, and the wild path is the one whose count is still drawn —
+        // which is what makes the search meaningful. A built brief would derive
+        // the same four-chamber frame at every seed and the search would be a
+        // loop that always stops at 0.
         let (seed, s) = (0u64..64)
             .find_map(|sd| {
-                structure_at(&locale(), &built(), Seed(sd), WALK)
+                structure_at(&locale(), &wild(), Seed(sd), WALK)
                     .filter(|s| s.chambers.len() > 1)
                     .map(|s| (sd, s))
             })

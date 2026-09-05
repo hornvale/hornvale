@@ -204,6 +204,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `vessel/walk` | walker-battery deterministic walk |
 | `room/furnishing/v1` | which patterns a room draws |
 | `room/chambers/v1` | which chambers a structure has |
+| `room/chambers/built/v1` | which facets a built structure's chambers stand at |
 | `room/layout/v1/rectilinear` | where the rectilinear method places chambers |
 | `room/layout/v1/grown` | where the growing method places chambers |
 | `room/layout/v1/anchors` | where a chamber's anchors land in its cells |

@@ -7277,6 +7277,27 @@ impl<'w> Session<'w> {
                 // be as false here as "no way to anywhere" was.
                 let neighbours = Self::neighbours(&structure, at);
                 if neighbours.len() > 1 {
+                    let children = structure.children(at);
+                    if children.len() > 1 {
+                        // AT A FORK, name them (The Cruck, Task 3, closing a
+                        // Task 5a review note). The generic reply below tells
+                        // the player to say 'further in' — and at a fork that
+                        // is the one thing that does NOT work, since
+                        // `further_in` refuses rather than guess a direction.
+                        // Advising a token the very next turn will refuse is
+                        // worse than saying nothing, so this arm answers the
+                        // way the direction refusal above does.
+                        let list = children
+                            .iter()
+                            .map(|&c| format!("the {}", structure.roles[c].noun()))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        return Turn::Out(format!(
+                            "There are {} ways in from here: {list}; name one, or 'out' to \
+                             leave.",
+                            children.len()
+                        ));
+                    }
                     // Count-aware rather than hard-coded: THIS is the richer
                     // topology a fixed "two" used to be a lie told in advance
                     // of (The Cruck) — a fork's own chamber can carry more than
@@ -7670,11 +7691,18 @@ impl<'w> Session<'w> {
     /// The chambers one aperture away from `at`, in `links` order. Undirected:
     /// a link names its pair either way round.
     ///
-    /// `structure_at` builds a PATH GRAPH rooted at `chambers[0]`, the
-    /// threshold, so index order is depth order and a chamber has at most two
-    /// neighbours: one back toward the threshold and one further in. Both
-    /// [`Self::further_in`] and the ways-on footer rely on that ordering, but
-    /// read it out of `links` rather than assuming `at ± 1` exists.
+    /// **`structure_at` builds a rooted TREE now, not a path graph** (The
+    /// Cruck, Task 3), and this doc used to promise the narrower shape: "index
+    /// order is depth order and a chamber has at most two neighbours: one back
+    /// toward the threshold and one further in". Only the WILD path still
+    /// draws a chain. A built chamber has one parent and any number of
+    /// children, so the returned list may hold three or four entries and index
+    /// order is no longer depth order.
+    ///
+    /// What survives is the property [`Self::further_in`] and the ways-on
+    /// footer actually rely on, and the reason they were written this way:
+    /// both read the shape out of `links` rather than assuming `at ± 1`
+    /// exists, so neither needed changing when the shape widened.
     fn neighbours(structure: &crate::structure::Structure, at: usize) -> Vec<usize> {
         structure
             .links
@@ -7743,6 +7771,19 @@ impl<'w> Session<'w> {
         if FURTHER_IN_WORDS.contains(&target.as_str()) {
             return Self::further_in(structure, at);
         }
+        // A LEADING ARTICLE IS DROPPED, because the game asks for one and then
+        // refused it (The Cruck, Task 3). The ways-on footer at a fork reads
+        // `Ways on: out, the hearth, the store.` and the direction refusal
+        // reads `name one`, so `enter the hearth` is the literal reply to a
+        // literal instruction — and it matched nothing, because the role noun
+        // is `hearth` and `"hearth".contains("the hearth")` is false. Nobody
+        // could see it before this task: production drew only chains, so the
+        // footer never printed a `the <noun>` way in a real session.
+        let target = ["the ", "an ", "a "]
+            .iter()
+            .find_map(|a| target.strip_prefix(a))
+            .map(str::to_string)
+            .unwrap_or(target);
         let terrain = self.terrain_here();
         let matches: Vec<usize> = neighbours
             .iter()
@@ -12689,18 +12730,20 @@ mod tests {
             Turn::Released(t) => panic!("`{line}` must not release: {t}"),
         };
 
-        // Walk in and as far in as the place goes — the same route
+        // Walk in and then to the STORE by name — the same route
         // `tests/suite/strongbox_reachability.rs` walks, for the same reason:
-        // `Role::Store` is only ever chamber index >= 2.
+        // the strongbox stands in a `Role::Store` chamber.
+        //
+        // **NAMED, not "as far in as the place goes"** (The Cruck, Task 3).
+        // The old walk was four `enter further in`s and rested on the store
+        // being the deepest link of a chain. Seed 14's flagship is the bush —
+        // the store hangs off the threshold — so `further in` refuses at the
+        // door and the old loop stood still.
         assert!(
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
-            }
-        }
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a strongbox") && nouns.iter().any(|n| n == "a key"),
@@ -12915,13 +12958,12 @@ mod tests {
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        for _ in 0..2 {
-            assert!(
-                say(&mut session, "enter further in").starts_with("[chamber "),
-                "the chambered seed's structure no longer reaches chamber index 2, \
-                 so the loomroom this key stands in is unreachable"
-            );
-        }
+        // NAMED, not counted (The Cruck, Task 3). This was two `enter further
+        // in`s, which reached the loomroom only while the structure was a
+        // chain. Seed 14's flagship is the BUSH — `T{ H, W, S }`, three
+        // children at the door — so `further in` refuses at the threshold and
+        // the loomroom is one named step away, not two anonymous ones.
+        walk_to_role(&mut session, crate::structure::Role::Loomroom);
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a key"),
@@ -12953,15 +12995,17 @@ mod tests {
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
-            }
-        }
+        // NAMED, not "as far in as the place goes" (The Cruck, Task 3): the
+        // room this helper wants is the STORE, and a bush hangs it off the
+        // door rather than at the end of a chain. The claim the old walk made
+        // — "the deepest chamber" — was never the claim the callers needed;
+        // they need the room the strongbox stands in, which is the Store
+        // whatever depth the brief puts it at.
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a key"),
-            "precondition: the chambered seed's deepest chamber must hold a key, \
+            "precondition: the chambered seed's store room must hold a key, \
              or this test drives nothing: {nouns:?}"
         );
         session
@@ -12983,11 +13027,11 @@ mod tests {
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
-        for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
-            }
-        }
+        // Loomroom -> Store. Under the bush both hang off the threshold, so
+        // this walks back out to the door and in again — which is exactly the
+        // route a player takes, and exactly what `walk_to_role` derives from
+        // the tree rather than counting.
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let store = session
             .chamber_facet_here()
             .expect("the walk ended in a chamber");
@@ -13018,6 +13062,67 @@ mod tests {
             Turn::Out(t) => t,
             Turn::Released(t) => panic!("`{line}` must not release: {t}"),
         }
+    }
+
+    /// Walk the possession to the chamber whose role is `role`, naming every
+    /// aperture crossed by its role noun, and return the arrival reply.
+    ///
+    /// **A structure is a TREE now (The Cruck, Task 3), so "walk in until it
+    /// stops" is no longer a route to anywhere.** `enter further in` refuses at
+    /// a fork rather than guess a direction, so a loop of it lands in the
+    /// threshold and stops — and every custody test that wanted a Store or a
+    /// Loomroom would then assert against the wrong room, or against a
+    /// precondition that fires. The route is derived from the structure's own
+    /// `parent` chain instead of counted in steps, so it holds for whatever
+    /// shape the brief derives.
+    ///
+    /// It goes UP to the threshold first and then down. In a four-chamber tree
+    /// that is never longer than the direct route by more than two steps, and
+    /// it removes the only case that needs a lowest-common-ancestor walk.
+    fn walk_to_role(session: &mut Session<'_>, role: crate::structure::Role) -> String {
+        let inside = |s: &Session<'_>| {
+            let i = s
+                .inside
+                .as_ref()
+                .expect("walk_to_role is called with the possession already indoors");
+            (i.structure.clone(), i.at)
+        };
+        let (structure, _) = inside(session);
+        let target = structure
+            .roles
+            .iter()
+            .position(|r| *r == role)
+            .unwrap_or_else(|| panic!("this structure holds no {role:?}: {:?}", structure.roles));
+        loop {
+            let (structure, at) = inside(session);
+            let Some(parent) = structure.parent(at) else {
+                break;
+            };
+            let noun = structure.roles[parent].noun();
+            let reply = say(session, &format!("enter {noun}"));
+            assert!(
+                reply.starts_with("[chamber "),
+                "`enter {noun}` did not walk one aperture back toward the door: {reply}"
+            );
+        }
+        let mut down = vec![target];
+        let mut i = target;
+        while let Some(p) = structure.parent(i) {
+            down.push(p);
+            i = p;
+        }
+        down.reverse();
+        let mut reply = say(session, "look");
+        for &step in &down[1..] {
+            let noun = structure.roles[step].noun();
+            reply = say(session, &format!("enter {noun}"));
+            assert!(
+                reply.starts_with("[chamber "),
+                "`enter {noun}` did not lead to the {:?}: {reply}",
+                structure.roles[step]
+            );
+        }
+        reply
     }
 
     /// **A thing taken in one room is carried into another and is still held
@@ -13084,10 +13189,14 @@ mod tests {
             "the take must reach custody, or the walk below tests nothing"
         );
 
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        // A SECOND ROOM, named rather than "further in" (The Cruck, Task 3).
+        // The claim is that custody crosses a threshold, never that the room
+        // it crosses into is deeper — and under the bush the store is a
+        // sibling of the loomroom, not its child, so `further in` refuses here.
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let deeper = session
             .chamber_facet_here()
-            .expect("`enter further in` lands in a chamber");
+            .expect("the walk lands in a chamber");
         assert_ne!(
             deeper, loom,
             "precondition: the walk must have changed rooms, or 'carried \
@@ -13096,7 +13205,7 @@ mod tests {
         assert_eq!(
             say(&mut session, "carrying"),
             "You are carrying a key.",
-            "the key must still be in hand one room further in"
+            "the key must still be in hand one room on"
         );
 
         assert!(say(&mut session, "out").starts_with("[room "));
@@ -13339,10 +13448,15 @@ mod tests {
 
         assert!(say(&mut session, "out").starts_with("[room "));
         assert!(say(&mut session, "enter").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        // The HEARTHROOM by name (The Cruck, Task 3). The alcove is the only
+        // lidless container the grammar composes and it is gated
+        // `roles: &[Role::Hearthroom]`, so that is the room this test has
+        // always wanted; `enter further in` reached it only because the
+        // hearthroom was chamber index 1 of a chain.
+        walk_to_role(&mut session, crate::structure::Role::Hearthroom);
         let alcove_room = session
             .chamber_facet_here()
-            .expect("`enter further in` lands in a chamber");
+            .expect("the walk lands in a chamber");
         assert_ne!(alcove_room, store, "precondition: a different room");
         let nouns = session.chamber_nouns_here();
         assert!(
@@ -13529,14 +13643,16 @@ mod tests {
             say(&mut session, "put a key in a strongbox"),
             "You put the key in the strongbox."
         );
-        // And bring the STORE room's key back to the loomroom instead. `out`
-        // leaves the structure from any chamber, so the return trip is
-        // `enter` plus two `enter further in` — the loomroom is index 2.
+        // And bring the STORE room's key back to the loomroom instead. The
+        // return trip is `enter` and then the loomroom BY NAME (The Cruck,
+        // Task 3): it was "two `enter further in`s — the loomroom is index 2",
+        // and index 2 is still the loomroom, but a bush hangs it off the
+        // threshold rather than behind the hearthroom, so the count no longer
+        // names the room and the noun does.
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
         assert!(say(&mut session, "out").starts_with("[room "));
         assert!(say(&mut session, "enter").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        walk_to_role(&mut session, crate::structure::Role::Loomroom);
         let loom = session
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
@@ -14822,10 +14938,16 @@ mod tests {
         }
     }
 
-    /// A `Structure` of `count` chambers under `base`, linked as the path graph
-    /// rooted at the threshold that `structure_at` builds. Synthetic because
-    /// `structure_at`'s own count is a seed draw, and the naming layer must hold
-    /// for every count — so these tests choose it rather than hoping for it.
+    /// A `Structure` of `count` chambers under `base`, linked as a path graph
+    /// rooted at the threshold — the shape a WILD site still draws, and the
+    /// special case of the tree where every chamber has one child.
+    ///
+    /// Synthetic because the naming layer must hold for every count and every
+    /// shape, so these tests choose one rather than hoping for it. That was
+    /// true when the count was a seed draw and it is still true now that a
+    /// BUILT count is the grammar's (The Cruck, Task 3): a fixture derived
+    /// from a brief would test whichever shape that brief happens to admit.
+    /// [`fork_structure`] is its counterpart.
     fn path_structure(base: &Facet, count: usize) -> crate::structure::Structure {
         assert!(
             (1..=crate::structure::MAX_CHAMBERS).contains(&count),
@@ -14854,11 +14976,15 @@ mod tests {
         }
     }
 
-    /// T{ H, W, S }: the bush — a threshold with three children, hand-built
-    /// like `path_structure` because `structure_at` still only ever draws a
-    /// chain (The Cruck, Task 5a; Task 3 wires the grammar in). Reuses
-    /// `path_structure`'s own four chambers so the addresses are real, then
-    /// overwrites the shape and roles a chain would never have.
+    /// T{ H, W, S }: the bush — a threshold with three children.
+    ///
+    /// Hand-built rather than derived, and still worth being so now that
+    /// `structure_at` really does produce this shape (The Cruck, Task 3): the
+    /// naming layer must hold for every tree, not only for whichever one a
+    /// flagship's brief happens to derive, and a hand-built fixture chooses
+    /// the shape instead of hoping for it. Reuses `path_structure`'s own four
+    /// chambers so the addresses are real, then overwrites the shape and
+    /// roles.
     fn fork_structure(base: &Facet) -> crate::structure::Structure {
         use crate::structure::Role;
         let mut s = path_structure(base, 4);
@@ -14893,6 +15019,40 @@ mod tests {
             None,
             "a leaf has nothing deeper"
         );
+    }
+
+    /// **The footer's own words must work when typed** (The Cruck, Task 3).
+    ///
+    /// At a fork the ways-on line reads `Ways on: out, the hearth, the
+    /// loomroom, the store.` and the direction refusal says `name one`. A
+    /// player naming one types what is written — `enter the hearth` — and that
+    /// matched nothing until this task, because a role noun is `hearth` and
+    /// `"hearth".contains("the hearth")` is false. It was invisible while
+    /// production drew only chains: no real session had ever seen a
+    /// `the <noun>` way printed.
+    ///
+    /// Both forms are asserted, so a later change that accepts the article by
+    /// dropping the bare noun would redden too.
+    #[test]
+    fn the_ways_on_footers_own_words_are_accepted_as_typed() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let fork = fork_structure(&session.position());
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        for (typed, want) in [
+            ("the hearth", 1),
+            ("hearth", 1),
+            ("the loomroom", 2),
+            ("loomroom", 2),
+            ("the store", 3),
+            ("store", 3),
+        ] {
+            assert_eq!(
+                session.named_neighbour(&fork, 0, typed, &brief),
+                Some(want),
+                "`enter {typed}` must name one aperture"
+            );
+        }
     }
 
     #[test]
@@ -15177,18 +15337,34 @@ mod tests {
             .structure
             .chambers
             .len();
-        // `total` is a seed draw over `1..=MAX_CHAMBERS`. At 1 the loop below
-        // never runs and the visited-set assertion passes trivially — the exact
-        // vacuity shape this round fixed elsewhere — so pin the fixture instead
-        // of trusting today's draw.
+        // At 1 chamber the walk below is trivial and the visited-set assertion
+        // passes for free — the exact vacuity shape this round fixed elsewhere
+        // — so pin the fixture instead of trusting today's shape.
         assert!(
             total > 1,
-            "fixture must draw a multi-chamber structure for this test to mean anything"
+            "fixture must derive a multi-chamber structure for this test to mean anything"
+        );
+        // **The claim is the same and the walk is not** (The Cruck, Task 3).
+        // This was `total - 1` repetitions of `enter further in` — which is a
+        // route only in a CHAIN. Seed 42's flagship is the backroom,
+        // `T{ H{ W }, S }`, so the door forks and `further in` refuses there
+        // rather than guess. What "reachable BY INPUT" means in a tree is that
+        // every chamber has a NAME the player can type, which is what this
+        // walks now: each aperture named by the role behind it.
+        let structure = session
+            .inside
+            .as_ref()
+            .expect("a successful enter is inside something")
+            .structure
+            .clone();
+        assert!(
+            structure.children(0).len() > 1,
+            "the flagship must FORK for this to test the case that broke: {:?}",
+            structure.links
         );
         let mut visited = std::collections::BTreeSet::new();
-        visited.insert(session.inside.as_ref().unwrap().at);
-        for _ in 1..total {
-            session.handle("enter further in");
+        for role in &structure.roles {
+            walk_to_role(&mut session, *role);
             visited.insert(session.inside.as_ref().unwrap().at);
         }
         assert_eq!(
@@ -15196,6 +15372,19 @@ mod tests {
             total,
             "every chamber must be reachable by input; visited {visited:?} of {total}"
         );
+        // And the far end still names itself. Asked from a LEAF, since that is
+        // where "as far in as the place goes" is now the true answer; at a
+        // fork the refusal names the ways instead, which
+        // `a_role_noun_names_one_aperture_at_a_fork_and_the_bare_direction_names_none`
+        // and Task 5b's own tests hold.
+        let leaf = *structure
+            .roles
+            .iter()
+            .enumerate()
+            .find(|(i, _)| structure.children(*i).is_empty())
+            .map(|(_, r)| r)
+            .expect("a finite tree has a leaf");
+        walk_to_role(&mut session, leaf);
         let wall = match session.handle("enter further in") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("enter must not release"),
@@ -20867,24 +21056,30 @@ mod tests {
     /// nothing, because a silent one would make every caller vacuous.
     fn possessed_where_the_plan_draws(world: &World) -> Session<'_> {
         let mut session = possessed_inside(world);
-        // `MAX_CHAMBERS` is 4, so four steps is one more than any structure
-        // has; the loop stops on the far-end reply rather than on the count.
-        for _ in 0..4 {
+        // EVERY chamber, by role noun (The Cruck, Task 3). This was a loop of
+        // `enter further in`, which walked a chain; a structure is a rooted
+        // tree now, so `further in` refuses at a fork and the loop would have
+        // asserted its own precondition in the threshold and stopped. Which
+        // chamber draws both a lit and an unlit anchor is still a search, and
+        // it still refuses loudly rather than returning one that draws
+        // nothing.
+        let structure = session
+            .inside
+            .as_ref()
+            .expect("possessed_inside leaves the possession in a chamber")
+            .structure
+            .clone();
+        for role in structure.roles {
+            walk_to_role(&mut session, role);
             let (near, far) = sight_split(&session);
             if near.is_some() && far.is_some() {
                 return session;
             }
-            let deeper = matches!(
-                session.handle("enter further in"),
-                Turn::Out(ref t) if t.starts_with("[chamber ")
-            );
-            assert!(
-                deeper,
-                "no chamber of this structure draws BOTH a lit and an unlit room \
-                 anchor, so nothing that places a creature here can be tested"
-            );
         }
-        panic!("the structure ran past MAX_CHAMBERS without the plan ever drawing")
+        panic!(
+            "no chamber of this structure draws BOTH a lit and an unlit room \
+             anchor, so nothing that places a creature here can be tested"
+        )
     }
 
     /// Commit an `agent-at` putting `who` in `room` as of the session's current
@@ -21423,11 +21618,33 @@ mod tests {
             "perturbing the embedding must NOT move what is known (spec §2.1): \
              sight has leaked into belief"
         );
-        assert_eq!(
-            before.sensed.present, after.sensed.present,
-            "nor may it move who is REPORTED here — the placed companion must \
-             stay in sight under both placements"
-        );
+        // THE PLACED COMPANION STAYS IN SIGHT UNDER BOTH PLACEMENTS — which is
+        // the claim this line's own comment always made, and which it did not
+        // assert.
+        //
+        // **It compared the whole `sensed.present` list, and that equality is
+        // something the code deliberately does not promise** (The Cruck, Task
+        // 3). `sensed.present` is SIGHT-NARROWED at the roster — see
+        // `snapshot`'s own comment, "SIGHT NARROWS WHAT IS SENT (spec §2.1)" —
+        // so which creatures it reports is a function of the placement by
+        // construction. The old equality held because the chamber this fixture
+        // happened to land in had nobody standing on the edge of the
+        // shadowcast; it is not a property of the sim. Measured while the
+        // structure grammar moved which chamber that is: 66 entries against
+        // 67, one resident entering sight under the perturbed placement, with
+        // `known` byte-identical throughout.
+        //
+        // `known` above is the §2.1 claim and it is unchanged. This line is the
+        // positive control it needs: without it, `before.spatial != after.spatial`
+        // could be satisfied by the companion simply vanishing.
+        let placed = session.bodies()[1].entity.0.get();
+        for (label, snap) in [("before", &before), ("after", &after)] {
+            assert!(
+                snap.sensed.present.iter().any(|p| p.entity == placed),
+                "{label}: the placed companion must stay in sight under both \
+                 placements, or `spatial` moving proves nothing"
+            );
+        }
     }
 
     /// A hand-built [`WordViews`] for [`render_testimony`]'s tests — the
@@ -22066,9 +22283,22 @@ mod tests {
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        // `MAX_CHAMBERS` is 4; five steps is one more than any structure has,
-        // and the loop stops on the far-end reply rather than on the count.
-        for _ in 0..5 {
+        // EVERY chamber, by role noun (The Cruck, Task 3). This was five
+        // `enter further in`s — "one more than any structure has" — which
+        // walked a chain. A structure is a rooted tree now, so `further in`
+        // refuses at a fork and the walk would have covered the threshold
+        // alone while `rooms >= 3` fired as a precondition failure. The roster
+        // is the structure's own `roles`, so the loop covers exactly the rooms
+        // that exist whatever shape the brief derives.
+        let roles = session
+            .inside
+            .as_ref()
+            .expect("a successful enter is inside something")
+            .structure
+            .roles
+            .clone();
+        for role in roles {
+            walk_to_role(&mut session, role);
             let room = session
                 .chamber_facet_here()
                 .expect("the walk is standing in a chamber");
@@ -22117,10 +22347,6 @@ mod tests {
                     let _ = session.handle(&format!("put {noun} in {holder}"));
                     let _ = session.handle(&format!("take {noun}"));
                 }
-            }
-
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
             }
         }
 

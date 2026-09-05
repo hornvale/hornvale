@@ -354,9 +354,17 @@ fn a_band_change_charges_time_and_commits_nothing() {
     // Each step names the band line its reply MUST carry, so a refusal ("There
     // is no way to anywhere from here.", "Nothing here is built") can never be
     // mistaken for a free act that correctly charged nothing.
+    // `enter the hearth` rather than `enter further in` (The Cruck, Task 3):
+    // seed 42's flagship is the backroom, `T{ H{ W }, S }`, so the threshold
+    // forks and `further in` REFUSES there — and a refusal charges nothing, so
+    // the "must actually change band" guard below would have fired with
+    // exactly the message it was written to print. The hearthroom is a chamber
+    // every built structure has, so naming it costs this test nothing; what it
+    // asserts is unchanged, that a band change charges time and commits no
+    // fact.
     for (verb, expected) in [
         ("enter", "[chamber "),
-        ("enter further in", "[chamber "),
+        ("enter the hearth", "[chamber "),
         ("out", "[room "),
     ] {
         let facts_before = s.committed_fact_count();

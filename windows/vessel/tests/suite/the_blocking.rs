@@ -380,31 +380,24 @@ fn every_destination_the_plan_depicts_is_command_reachable() {
     inside(&mut session);
     let plan = out(session.handle("map"));
     let doorways = drawn(&plan, '+');
-    // Walk the structure to its far end, counting the apertures the ways-on
-    // footer actually advertises. One per drawn doorway, and each one walked
-    // through by a command the player could type.
-    let mut walked = 0;
-    loop {
-        let here = out(session.handle("look"));
-        let names_deeper = here
-            .lines()
-            .find(|l| l.starts_with("Ways on:"))
-            .map(|l| l.contains("further in"))
-            .expect("a chamber rendering always names its ways");
-        if !names_deeper {
-            break;
-        }
-        let stepped = out(session.handle("enter further in"));
-        assert!(
-            stepped.starts_with("[chamber "),
-            "the footer advertised a way further in and the command did not take it: {stepped}"
-        );
-        walked += 1;
-        assert!(walked <= 8, "the walk did not terminate");
-    }
+    // **EVERY DOORWAY IS CROSSED BY THE VISIT** — the same claim, over a tree
+    // (The Cruck, Task 3). This walked `enter further in` until the footer
+    // stopped naming it and counted the steps, which visits a CHAIN: seed 42's
+    // flagship is the backroom, `T{ H{ W }, S }`, so the walk crossed one
+    // doorway of three and the comparison would have read "the plan draws 3
+    // doorways and the commands walk 1" — a true report of a walk that had
+    // stopped being a traversal, not of a drawn destination nothing reaches.
+    //
+    // `visit_every_chamber` descends into every way the footer advertises and
+    // comes back by naming the room behind it, so the count below is DOWNWARD
+    // crossings: one per link, which is one per drawn doorway in a rooted
+    // tree. The claim is unchanged — a doorway drawn is a promise, and every
+    // one of them is kept by a command a player could type.
+    let visited = crate::common::visit_every_chamber(&mut session);
+    let walked = visited.len().saturating_sub(1);
     assert_eq!(
         doorways, walked,
-        "the plan draws {doorways} doorways and the commands walk {walked}: a drawn \
+        "the plan draws {doorways} doorways and the visit crosses {walked}: a drawn \
          destination no command reaches is the defect this test exists for"
     );
     assert!(
@@ -597,10 +590,16 @@ fn two_chambers_of_one_structure_do_not_read_alike() {
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     inside(&mut session);
     let first = out(session.handle("look"));
-    let stepped = out(session.handle("enter further in"));
+    // THE HEARTH, by name (The Cruck, Task 3). This was `enter further in`,
+    // which is refused at seed 42's threshold now: the flagship is the
+    // backroom, `T{ H{ W }, S }`, so the door forks and there is no single
+    // "deeper". The claim is untouched — a SECOND chamber of the SAME
+    // structure must not read like the first — and the hearthroom is a
+    // chamber every built structure has, so naming it costs the test nothing.
+    let stepped = out(session.handle("enter the hearth"));
     assert!(
         stepped.starts_with("[chamber "),
-        "this structure has only one chamber, so the headline cannot be observed \
+        "this structure has no second chamber, so the headline cannot be observed \
          here at all: {stepped}"
     );
     let second = out(session.handle("look"));

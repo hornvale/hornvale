@@ -1466,7 +1466,7 @@ mod tests {
         // agrarian brief's business sits at chamber index 2, one shallower
         // than the first index that is unconditionally a Store) is pinned
         // where the index-to-role mapping actually lives now:
-        // `structure::tests::chamber_two_differentiates_on_the_briefs_business_at_the_index_role_for_used`.
+        // `structure::tests::an_agrarian_brief_stands_its_loomroom_at_index_two_and_its_store_at_index_three`.
     }
 
     /// **The population filter still works, and no authored pattern proves

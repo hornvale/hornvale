@@ -340,9 +340,11 @@ pub fn freedom_of_a_tree(chambers: usize) -> u32 {
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::lattice::{allocate, embed_with, extent_for, grow};
     use crate::site::{Site, SiteKind};
     use crate::structure::{Role, Structure, structure_at};
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 13;
@@ -360,6 +362,10 @@ mod tests {
         }
     }
 
+    /// A built site with no business at all: the grammar's floor, two chambers,
+    /// `T{ H }`. Also the METHOD selector for the rectilinear arm of the tests
+    /// that hand-build their own trees ([`h4_every_tree_embeds_under_all_eight_rules_with_exact_freedom`]),
+    /// where only `built` is read.
     fn built() -> Brief {
         Brief::from_parts(
             None,
@@ -375,8 +381,65 @@ mod tests {
         )
     }
 
+    /// A living, warm, communal, plain-postured agrarian dwelling — the BUSH
+    /// shape, four chambers, `T{ H, W, S }`: a fork of three at the door.
+    fn bush() -> Brief {
+        Brief::from_parts(
+            Some(Function::Agrarian),
+            None,
+            Some(Notability::Common),
+            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        )
+    }
+
+    /// The same dwelling, cold: the DEEP shape, `T{ H{ W, S } }` — four
+    /// chambers with the fork one step in rather than at the door.
+    fn deep() -> Brief {
+        let mut b = bush();
+        b.cold = true;
+        b
+    }
+
+    /// A waypoint: `Trade`'s business IS keeping goods, so three chambers,
+    /// `T{ H, S }`.
+    fn trade() -> Brief {
+        let mut b = bush();
+        b.function = Some(Function::Trade);
+        b
+    }
+
+    /// A CAVE: a site nobody built. Both the shape source for the grown arm —
+    /// the wild draw still gives a chain of 1..=MAX_CHAMBERS (spec §3.5) — and
+    /// the method selector `embed_with` reads to send it to `grow`.
+    ///
+    /// It carries a SITE now, and must: `structure_at` gates on `brief.site`
+    /// (decision 0666), so the old site-less method selector derives no
+    /// structure at all and could only ever be passed to `embed_with`. Making
+    /// it a real cave brief is what lets the grown arm's structures come from
+    /// the same derivation production's caves take, rather than being borrowed
+    /// from a settlement.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            Some(Site::placed(SiteKind::Cave, None)),
+            None,
+        )
     }
 
     /// Which method produced a lattice. Carried through the corpus because rule 7
@@ -389,19 +452,30 @@ mod tests {
         Grown,
     }
 
-    /// Every (structure, lattice, method) triple the rules are checked over: both
-    /// methods, many seeds, and therefore every chamber count `structure_at`
-    /// produces.
+    /// Every (structure, lattice, method) triple the rules are checked over.
+    ///
+    /// **Varied by BRIEF on the rectilinear arm, by SEED on the grown one, and
+    /// the asymmetry is the campaign's whole point** (The Cruck, Task 3). A
+    /// built structure's chamber count and shape are the grammar's, so
+    /// scanning seeds for a four-chamber settlement finds nothing a brief did
+    /// not already decide — the four shape briefs below are how this corpus
+    /// reaches four chambers, and how it reaches a FORK at all. A wild
+    /// structure's count is still drawn, so the grown arm varies by seed
+    /// exactly as it always did and its chains are byte-for-byte The Lintel's.
     fn corpus() -> Vec<(crate::structure::Structure, crate::lattice::Lattice, Method)> {
         let mut out = Vec::new();
         for s in SEEDS {
-            let st = structure_at(&locale(s), &built(), Seed(s), WALK).expect("built");
+            for shape in [built(), trade(), bush(), deep()] {
+                let st = structure_at(&locale(s), &shape, Seed(s), WALK).expect("a built site");
+                let e = extent_for(&st);
+                out.push((
+                    st.clone(),
+                    embed_with(&st, &shape, e, Seed(s)),
+                    Method::Rectilinear,
+                ));
+            }
+            let st = structure_at(&locale(s), &wild(), Seed(s), WALK).expect("a cave is a site");
             let e = extent_for(&st);
-            out.push((
-                st.clone(),
-                embed_with(&st, &built(), e, Seed(s)),
-                Method::Rectilinear,
-            ));
             out.push((
                 st.clone(),
                 embed_with(&st, &wild(), e, Seed(s)),
@@ -413,6 +487,11 @@ mod tests {
                 == crate::structure::MAX_CHAMBERS,
             "the corpus never reaches MAX_CHAMBERS, so the rules are unchecked at \
              the count most likely to break them"
+        );
+        assert!(
+            out.iter().any(|(s, _, _)| s.children(0).len() >= 2),
+            "the corpus never reaches a FORK, so every rule below is a claim \
+             about chains — which is exactly what it was before The Cruck"
         );
         out
     }
@@ -693,7 +772,7 @@ mod tests {
     fn rule_6_the_solve_carries_no_state() {
         // Same inputs, solved from scratch, in an order that would expose a
         // carried cache: A, then B, then A again.
-        let st = structure_at(&locale(1), &built(), Seed(1), WALK).expect("built");
+        let st = structure_at(&locale(1), &bush(), Seed(1), WALK).expect("built");
         let e = extent_for(&st);
         let a1 = allocate(&st, e, Seed(1));
         let _b = allocate(&st, e, Seed(2));

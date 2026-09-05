@@ -11,7 +11,7 @@ pub mod role;
 
 use crate::brief::Brief;
 use crate::depth::chamber_depth;
-use crate::streams::ROOM_CHAMBERS;
+use crate::streams::{ROOM_CHAMBERS, ROOM_CHAMBERS_BUILT};
 use hornvale_kernel::{Facet, Seed};
 pub use role::{EVERY_ROLE, Role};
 
@@ -43,7 +43,19 @@ const _: () = assert!(MAX_CHAMBERS <= 4);
 /// 2. **`links` is a rooted TREE at index 0**, every link `(parent, child)`
 ///    with `parent < child`; the path graph is the special case where every
 ///    chamber has one child. `Session::further_in` reads `children`.
-/// 3. **`roles[i]` is the role of `chambers[i]`**; no role appears twice.
+/// 3. **`roles[i]` is the role of `chambers[i]`**; for a BUILT structure no
+///    role appears twice, because the grammar admits each role once
+///    ([`grammar::walk`] skips a role it already holds). A WILD structure is
+///    the documented exception: its roles come from [`index_role`] alone, so a
+///    three- or four-chamber cave reads `[Threshold, Hearthroom, Store]` or
+///    `[Threshold, Hearthroom, Store, Store]` — the duplicate is the wild
+///    reading exactly as it stood before The Cruck (spec §3.5), kept
+///    byte-for-byte rather than "fixed", since no brief axis reaches a cave and
+///    inventing a fourth wild role would move a derivation this campaign
+///    promised not to touch. Consumers that need role uniqueness — `enter`'s
+///    role-noun resolution — get it from the built path; on the wild path a
+///    repeated noun simply matches more than one aperture and refuses, which is
+///    the same answer an ambiguous prose noun gets.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Structure {
     /// The chamber `enter` arrives in from the locale.
@@ -53,12 +65,11 @@ pub struct Structure {
     /// Undirected apertures as index pairs into `chambers`. Connected, so
     /// every chamber is reachable from `threshold`.
     pub links: Vec<(usize, usize)>,
-    /// What each chamber is FOR, index-aligned with `chambers`. Read off the
-    /// index and, at index 2, the brief's own business — exactly what
-    /// `role_for` gave before it moved here (The Cruck, Task 5a). Task 3
-    /// replaces this with the structure grammar's derived tree for a built
-    /// site; until then production is still a chain and this is where a
-    /// built site's business reaches its roles.
+    /// What each chamber is FOR, index-aligned with `chambers`. For a BUILT
+    /// site these are [`grammar::frame_for`]'s roles, in the grammar's own
+    /// admission order; for a WILD one they are [`index_role`]'s reading of the
+    /// index and nothing else. See invariant 3 above for what that difference
+    /// costs.
     pub roles: Vec<Role>,
 }
 
@@ -104,9 +115,25 @@ impl Structure {
 
 /// The structure at `locale`, or `None` where there is no site to enter.
 ///
-/// The draw is keyed to the locale's own seed under `room/chambers/v1`, so the
-/// same locale in the same world always yields the same structure, and no other
-/// locale's draw can perturb it.
+/// The draw is keyed to the locale's own seed — under `room/chambers/v1` for a
+/// WILD site and `room/chambers/built/v1` for a BUILT one — so the same locale
+/// in the same world always yields the same structure, and no other locale's
+/// draw can perturb it.
+///
+/// **The brief is the gate for every site and the GRAMMAR's input for a built
+/// one; it never touches which facets are drawn.** `brief.site` is the gate
+/// (decision 0666) and `brief.built` is the METHOD selector — the same reading
+/// `lattice::embed_with` takes of it. On the built path the brief reaches
+/// [`grammar::frame_for`], which fixes the chamber COUNT, the ROLES and the
+/// LINKS with no draw at all; the stream is spent only on which facets those
+/// chambers stand at. On the wild path the brief is consulted for nothing past
+/// the gate, so a cave and an exotic site at one locale draw identically.
+///
+/// Form follows use for a built site: the grammar says what stands here and the
+/// seed places it. Use follows form for a wild one: the rock made the chain and
+/// a people reads it (spec §1) — that path is byte-for-byte The Lintel's, under
+/// the unchanged `room/chambers/v1`, and
+/// `the_wild_path_is_pinned_before_the_cruck` is what holds it there.
 /// type-audit: bare-ok(count: walk_depth)
 pub fn structure_at(
     locale: &Facet,
@@ -129,15 +156,37 @@ pub fn structure_at(
     // "a structure stands here" and is one property of a settlement; a cave
     // and an exotic site are enterable and were never built.
     brief.site.as_ref()?;
-    let mut stream = locale.seed(seed).derive(ROOM_CHAMBERS).stream();
-    // How many chambers: 1..=MAX_CHAMBERS, one draw.
-    let count = 1 + (stream.next_u64() as usize) % MAX_CHAMBERS;
+    let depth = chamber_depth(walk_depth);
+    let extra = (depth - locale.depth()) as usize;
+    let (count, roles, links, mut stream) = if brief.built {
+        // The grammar fixes the shape and spends nothing: a count draw here
+        // would put the facets of every built structure at the mercy of how
+        // many rooms the brief admitted.
+        let frame = grammar::frame_for(brief);
+        let links = (1..frame.roles.len())
+            .map(|i| {
+                (
+                    frame.parents[i].expect("every non-root chamber has a parent"),
+                    i,
+                )
+            })
+            .collect::<Vec<_>>();
+        let stream = locale.seed(seed).derive(ROOM_CHAMBERS_BUILT).stream();
+        (frame.roles.len(), frame.roles, links, stream)
+    } else {
+        let mut stream = locale.seed(seed).derive(ROOM_CHAMBERS).stream();
+        // How many chambers: 1..=MAX_CHAMBERS, one draw.
+        let count = 1 + (stream.next_u64() as usize) % MAX_CHAMBERS;
+        let roles = (0..count).map(index_role).collect();
+        // A path graph rooted at the threshold: minimal, connected, and honest
+        // about being minimal.
+        let links = (1..count).map(|i| (i - 1, i)).collect();
+        (count, roles, links, stream)
+    };
     // Which descendants: one draw per chamber, rejecting repeats by scanning
     // forward deterministically rather than re-drawing (a re-draw loop would
     // consume a variable number of draws and make the stream position depend
     // on collisions).
-    let depth = chamber_depth(walk_depth);
-    let extra = (depth - locale.depth()) as usize;
     let mut chambers: Vec<Facet> = Vec::with_capacity(count);
     for _ in 0..count {
         let draw = stream.next_u64();
@@ -150,10 +199,6 @@ pub fn structure_at(
         chambers.push(candidate);
     }
     let threshold = chambers[0].clone();
-    // A path graph rooted at the threshold: minimal, connected, and honest
-    // about being minimal.
-    let links = (1..chambers.len()).map(|i| (i - 1, i)).collect();
-    let roles = (0..count).map(|i| chamber_role(i, brief)).collect();
     Some(Structure {
         threshold,
         chambers,
@@ -163,40 +208,17 @@ pub fn structure_at(
 }
 
 /// The wild reading: threshold, hearthroom, then stores — what `role_for` gave
-/// a brief with no business and no notability, and what every chamber past
-/// index 2 still gets whatever the brief says. Used directly by fixtures that
-/// have no brief to consult (`lattice::render`, `lattice::mod`'s own
-/// `structure_of`, and the `path_structure` test helper), and by
-/// [`chamber_role`] for every index but the one the brief can move.
+/// a brief with no business and no notability, and the WHOLE of what a wild
+/// site's roles are since The Cruck, Task 3. No brief axis reaches a cave
+/// (spec §3.5), so a four-chamber cave reads `Store` twice; see [`Structure`]'s
+/// invariant 3 for why that duplicate is kept rather than fixed. Also used
+/// directly by fixtures that have no brief to consult (`lattice::render`,
+/// `lattice::mod`'s own `structure_of`, and the `path_structure` test helper).
 pub(crate) fn index_role(i: usize) -> Role {
     match i {
         0 => Role::Threshold,
         1 => Role::Hearthroom,
         _ => Role::Store,
-    }
-}
-
-/// Chamber `i`'s role, consulting `brief` at index 2 the same way `role_for`
-/// did before it moved out of `interior::pattern` (The Cruck, Task 5a): a
-/// two-chamber dwelling differentiates on nothing but depth, and everything
-/// past index 2 is a Store regardless of business. Task 3 replaces this with
-/// the structure grammar's derived tree for a built site — a real fork, not a
-/// deeper chain — so this is deliberately narrower than [`crate::structure::
-/// grammar::frame_for`] and stays that way until Task 3 lands.
-/// type-audit: bare-ok(index: i)
-fn chamber_role(i: usize, brief: &Brief) -> Role {
-    use hornvale_history::record::{Function, Notability};
-    match i {
-        2 => match (brief.notability, brief.function) {
-            (Some(Notability::Seat), _) => Role::Hall,
-            (_, Some(Function::Agrarian)) => Role::Loomroom,
-            // A garrison and a mine both work iron, and this inventory has one
-            // anvil (spec §4.3).
-            (_, Some(Function::Mine | Function::Fort)) => Role::Smithy,
-            (_, Some(Function::Cult)) => Role::Shrine,
-            (_, Some(Function::Trade)) | (_, None) => Role::Store,
-        },
-        _ => index_role(i),
     }
 }
 
@@ -217,7 +239,9 @@ fn child_path(locale: &Facet, draw: u64, extra: usize) -> Facet {
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::site::{Site, SiteKind};
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::Seed;
 
     const WALK: u32 = 13;
@@ -230,8 +254,8 @@ mod tests {
     }
 
     /// A structure built BY HAND from a link list and a role list — not a
-    /// draw — so `parent`/`children`/`subtree_size` can be exercised against a
-    /// shape `structure_at` cannot yet produce (it still only draws chains).
+    /// draw — so `parent`/`children`/`subtree_size` can be exercised over a
+    /// chosen shape rather than whichever one a brief happens to derive.
     fn tree(links: &[(usize, usize)], roles: &[Role]) -> Structure {
         let chambers: Vec<Facet> = (0..roles.len())
             .map(|i| {
@@ -282,7 +306,51 @@ mod tests {
         assert_eq!(s.children(2), Vec::<usize>::new());
     }
 
-    fn built_brief() -> Brief {
+    /// A living, warm, communal, plain-postured agrarian dwelling: the BUSH
+    /// shape, four chambers, `T{ H, W, S }`. The fullest frame the grammar
+    /// derives without a Seat, so it is what the built path's general
+    /// properties (distinctness, depth, connectivity, the collision scan) are
+    /// asserted over — a thinner brief would derive two chambers and leave the
+    /// scan unexercised.
+    fn bush_brief() -> Brief {
+        Brief::from_parts(
+            Some(Function::Agrarian),
+            None,
+            Some(Notability::Common),
+            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        )
+    }
+
+    /// The same dwelling with `cold: true` — the DEEP shape, `T{ H{ W, S } }`.
+    /// One fire heats what opens off it, so the grammar nests the rooms on the
+    /// hearth (spec §3.1).
+    fn deep_brief() -> Brief {
+        let mut b = bush_brief();
+        b.cold = true;
+        b
+    }
+
+    /// A waypoint: `Trade` keeps a store instead of a workroom, so three
+    /// chambers, `T{ H, S }`.
+    fn trade_brief() -> Brief {
+        let mut b = bush_brief();
+        b.function = Some(Function::Trade);
+        b
+    }
+
+    /// A built site whose brief names no business at all: two chambers,
+    /// `T{ H }`. The grammar's floor, and the built counterpart to the
+    /// single-chamber caves the wild draw produces.
+    fn no_business_brief() -> Brief {
         Brief::from_parts(
             None,
             None,
@@ -340,41 +408,157 @@ mod tests {
         );
     }
 
-    /// **The brief is a GATE and never a parameter of the draw.** `structure_at`
-    /// consumes `brief` with `brief.site.as_ref()?;` and then draws everything
-    /// from `locale.seed(seed).derive(ROOM_CHAMBERS)` alone, so a cave's
-    /// structure is distributed exactly as a settlement's is at the same locale.
+    /// **The wild path is ONE derivation for every wild kind**: a cave and an
+    /// exotic site at one locale draw the same structure, because neither
+    /// consults the brief for anything past `brief.site.as_ref()?`.
     ///
-    /// Pinned because something else rests on it that a reader cannot see from
-    /// here: `lattice::anchor_cells`' grown corpus builds its structures with a  // lexicon: a MODULE NAME, and the cells it names are chamber floor squares (areas), not mesh vertices
-    /// SETTLEMENT brief and then embeds them with the wild one, and its measured
-    /// relaxation ceiling is only a statement about production — the cave and
-    /// exotic interiors that now `grow` — while that substitution is sound. The
-    /// obvious future change breaks it (giving a cave a different chamber count
-    /// from a village is a reasonable thing to want), and without this
-    /// assertion the corpus would go on reporting a plausible ceiling for
-    /// structures production no longer generates, with nothing red.
-    /// claim: invariant(forall-seed) — over 0..64 at one locale; the property is
-    /// that the brief is a gate and never a parameter of the draw, so a single
-    /// disagreeing seed falsifies it.
+    /// This replaces `the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it`,
+    /// whose own doc predicted The Cruck would break it. It asserted
+    /// settlement == cave; a settlement is BUILT now, so it runs the grammar
+    /// under `room/chambers/built/v1` and its structure is deliberately
+    /// different from a cave's at the same locale. What survives — and is
+    /// what `lattice::anchor_cells`' grown corpus actually rests on — is that  // lexicon: a MODULE NAME, and the cells it names are chamber floor squares (areas), not mesh vertices
+    /// the WILD half is uniform: the corpus derives its grown structures from
+    /// a wild brief and embeds them with `grow`, so it represents production's
+    /// caves and exotic sites exactly, whichever kind gated them.
+    ///
+    /// claim: invariant(forall-seed) — over 0..64 at one locale; the property
+    /// is that no wild brief axis reaches the draw, so a single disagreeing
+    /// seed falsifies it.
     #[test]
-    fn the_structure_drawn_is_the_same_whatever_kind_of_site_gates_it() {
+    fn a_cave_and_an_exotic_site_draw_the_same_structure() {
+        let exotic = Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            Some(Site::placed(SiteKind::Exotic, None)),
+            None,
+        );
         for s in 0u64..64 {
-            let settlement = structure_at(&locale(), &built_brief(), Seed(s), WALK)
-                .expect("a settlement is a site");
-            let cave =
-                structure_at(&locale(), &cave_brief(), Seed(s), WALK).expect("a cave is a site");
             assert_eq!(
-                settlement, cave,
-                "seed {s}: the structure moved with the KIND of site gating it, so the \
-                 grown anchor corpus no longer represents production — see this test's doc"
+                structure_at(&locale(), &cave_brief(), Seed(s), WALK),
+                structure_at(&locale(), &exotic, Seed(s), WALK),
+                "seed {s}: the wild draw moved with the KIND of site gating it, so the \
+                 grown anchor corpus no longer represents production"
             );
         }
     }
 
+    /// **A built site takes its SHAPE from the brief and its FACETS from the
+    /// seed** — the split The Cruck exists to make.
+    ///
+    /// Two briefs differing in one axis (`cold`) admit the same four rules, so
+    /// the roles are equal and the TREE is not: warm hangs the workroom and the
+    /// store off the door (the bush), cold nests them on the hearth (the deep).
+    /// Then the converse, over the same brief at two seeds: the tree does not
+    /// move and the facets do. Neither half alone would show the split —
+    /// together they say the brief reaches the shape and nothing else, and the
+    /// seed reaches the placement and nothing else.
+    #[test]
+    fn a_built_site_takes_its_shape_from_the_brief_and_its_facets_from_the_seed() {
+        let warm = bush_brief();
+        let cold = deep_brief();
+        let a = structure_at(&locale(), &warm, Seed(42), WALK).expect("built");
+        let b = structure_at(&locale(), &cold, Seed(42), WALK).expect("built");
+        assert_eq!(a.roles, b.roles, "same rules admitted");
+        assert_ne!(a.links, b.links, "cold nests the rooms on the hearth");
+        assert_eq!(a.links, vec![(0, 1), (0, 2), (0, 3)]);
+        assert_eq!(b.links, vec![(0, 1), (1, 2), (1, 3)]);
+        // Facets: one draw per chamber under the built label — different seeds,
+        // different facets, same tree.
+        let c = structure_at(&locale(), &warm, Seed(7), WALK).expect("built");
+        assert_eq!(a.links, c.links);
+        assert_ne!(a.chambers, c.chambers);
+    }
+
+    /// **The built draw is exactly one per chamber, under the built label, and
+    /// the count draw is gone.** Reproduced by hand rather than described: `n`
+    /// draws under [`ROOM_CHAMBERS_BUILT`], through the same collision scan,
+    /// must equal what `structure_at` returns. A count draw anywhere — or a
+    /// draw taken under the wild label — shifts every facet and this fails.
+    #[test]
+    fn the_built_draw_is_one_per_chamber_under_the_built_label_and_none_under_the_wild_one() {
+        let brief = bush_brief();
+        let s = structure_at(&locale(), &brief, Seed(3), WALK).expect("built");
+        let mut stream = locale()
+            .seed(Seed(3))
+            .derive(crate::streams::ROOM_CHAMBERS_BUILT)
+            .stream();
+        let extra = (chamber_depth(WALK) - WALK) as usize;
+        let mut want: Vec<Facet> = Vec::new();
+        for _ in 0..s.chambers.len() {
+            let mut c = child_path(&locale(), stream.next_u64(), extra);
+            while want.contains(&c) {
+                let last = c.path.len() - 1;
+                c.path[last] = (c.path[last] + 1) % 4;
+            }
+            want.push(c);
+        }
+        assert_eq!(s.chambers, want);
+    }
+
+    /// The threshold is still index 0 on the built path — the grammar's first
+    /// admitted rule IS the threshold — and `roles` is the frame's own list,
+    /// not a second reading of it. Pinned because `chamber_interior_of` and
+    /// `enter`'s role-noun resolution both trust `roles[i]` directly.
+    #[test]
+    fn the_threshold_is_index_zero_and_the_roles_match_the_grammar() {
+        let brief = bush_brief();
+        let s = structure_at(&locale(), &brief, Seed(42), WALK).expect("built");
+        assert_eq!(s.threshold, s.chambers[0]);
+        assert_eq!(s.roles, crate::structure::grammar::frame_for(&brief).roles);
+    }
+
+    /// **Invariant 3, asserted on `structure_at`'s own output for BOTH paths**
+    /// (Task 5a review note). The BUILT path inherits role-uniqueness from the
+    /// grammar, which skips a role it already holds; the WILD path does NOT
+    /// have it, and that is the documented exception rather than a defect —
+    /// `index_role` yields `Store` at every index past 1, so a four-chamber
+    /// cave reads `[Threshold, Hearthroom, Store, Store]`. Asserting the
+    /// duplicate rather than describing it is what stops someone "fixing" the
+    /// cave and moving `the_wild_path_is_pinned_before_the_cruck`'s derivation
+    /// (which pins chambers and links, not roles, so it would NOT catch it).
+    ///
+    /// claim: invariant(forall-brief) over the four built shapes, plus a
+    /// reachability probe for the four-chamber cave.
+    #[test]
+    fn no_role_repeats_on_the_built_path_and_the_wild_path_keeps_its_duplicate_stores() {
+        for brief in [
+            no_business_brief(),
+            trade_brief(),
+            bush_brief(),
+            deep_brief(),
+        ] {
+            let s = structure_at(&locale(), &brief, Seed(42), WALK).expect("built");
+            let distinct: std::collections::BTreeSet<Role> = s.roles.iter().copied().collect();
+            assert_eq!(
+                distinct.len(),
+                s.roles.len(),
+                "a built structure admitted a role twice: {:?}",
+                s.roles
+            );
+        }
+        let four = (0..64u64)
+            .find_map(|seed| {
+                let s = structure_at(&locale(), &cave_brief(), Seed(seed), WALK)?;
+                (s.chambers.len() == MAX_CHAMBERS).then_some(s)
+            })
+            .expect("some seed in 0..64 draws a four-chamber cave");
+        assert_eq!(
+            four.roles,
+            vec![Role::Threshold, Role::Hearthroom, Role::Store, Role::Store],
+            "the wild reading is `index_role` alone and repeats Store — spec §3.5"
+        );
+    }
+
     #[test]
     fn a_built_locale_has_a_bounded_chamber_set() {
-        let s = structure_at(&locale(), &built_brief(), Seed(42), WALK).expect("built");
+        let s = structure_at(&locale(), &bush_brief(), Seed(42), WALK).expect("built");
         assert!(
             (1..=MAX_CHAMBERS).contains(&s.chambers.len()),
             "sparseness: got {} chambers",
@@ -384,7 +568,7 @@ mod tests {
 
     #[test]
     fn every_chamber_sits_at_the_chamber_depth_under_this_locale() {
-        let s = structure_at(&locale(), &built_brief(), Seed(42), WALK).expect("built");
+        let s = structure_at(&locale(), &bush_brief(), Seed(42), WALK).expect("built");
         for c in &s.chambers {
             assert_eq!(c.depth(), chamber_depth(WALK));
             assert_eq!(c.face, locale().face);
@@ -395,66 +579,50 @@ mod tests {
 
     #[test]
     fn chambers_are_distinct() {
-        let s = structure_at(&locale(), &built_brief(), Seed(42), WALK).expect("built");
+        let s = structure_at(&locale(), &bush_brief(), Seed(42), WALK).expect("built");
         let ids: std::collections::BTreeSet<u64> =
             s.chambers.iter().map(|c| c.pack().unwrap().0).collect();
         assert_eq!(ids.len(), s.chambers.len(), "no chamber may repeat");
     }
 
-    /// **The fix this task made necessary, pinned so it cannot regress
-    /// silently.** [`crate::interior::chamber_interior_of`] (The Cruck, Task
-    /// 5a) now composes off `structure.roles[i]` directly rather than
-    /// re-deriving a role from the brief at the call site — so if
-    /// `structure_at` stopped consulting the brief for chamber 2, EVERY
-    /// caller that trusts `roles` would silently furnish an agrarian
-    /// dwelling's third room as a Store instead of a Loomroom.
+    /// **An agrarian brief's own business stands at chamber index 2, and the
+    /// store at index 3** — the fact `interior::pattern`'s
+    /// `a_key_is_drawn_where_no_strongbox_is` points here for, restated over
+    /// the grammar.
     ///
-    /// Confirmed empirically before this fix existed: reverting `chamber_role`
-    /// to `index_role` (dropping the brief) reddened nine `session.rs` tests
-    /// that walk a real possession to a real Loomroom for its key.
+    /// This was `chamber_two_differentiates_on_the_briefs_business_at_the_index_role_for_used`,
+    /// asserted against the interim `chamber_role` shim (The Cruck, Task 5a).
+    /// The shim is gone: `structure_at`'s built path now takes `roles` from
+    /// [`grammar::frame_for`] whole. The CLAIM is unchanged and is still worth
+    /// its own test here rather than only in `grammar.rs`, because what
+    /// `pattern.rs` and `chamber_interior_of` actually read is
+    /// `structure_at`'s output, not a `Frame` — and the two could come apart
+    /// (a `roles` built by a second reading of the index, say) with every
+    /// grammar test still green.
     ///
-    /// Covers BOTH halves `chamber_role` states a rule for — index 2 (the
-    /// brief's own business) and index 3 (unconditionally a Store regardless
-    /// of business) — over a full four-chamber structure, since a shorter one
-    /// would leave index 3 unasserted and this is the test
-    /// `interior::pattern`'s `a_key_is_drawn_where_no_strongbox_is` points at
-    /// for the "every Store is at index >= 3" half of its own claim (fix
-    /// round 1).
-    ///
-    /// claim: reachability(seed: 0..64) — an existence probe: at least one
-    /// seed in the range draws a full four-chamber structure, which is all
-    /// this test needs to exercise the property.
+    /// It no longer needs a seed SEARCH: the built count is the grammar's, so
+    /// an agrarian brief derives four chambers at every seed. That is itself
+    /// the change, stated as an assertion.
     #[test]
-    fn chamber_two_differentiates_on_the_briefs_business_at_the_index_role_for_used() {
-        let agrarian = Brief::from_parts(
-            Some(hornvale_history::record::Function::Agrarian),
-            None,
-            None,
-            None,
-            None,
-            0,
-            true,
-            false,
-            Some(Site::placed(SiteKind::Settlement, None)),
-            None,
+    fn an_agrarian_brief_stands_its_loomroom_at_index_two_and_its_store_at_index_three() {
+        let s = structure_at(&locale(), &bush_brief(), Seed(42), WALK).expect("built");
+        assert_eq!(
+            s.chambers.len(),
+            MAX_CHAMBERS,
+            "the count is the grammar's now, so an agrarian brief derives four \
+             chambers at every seed rather than at some of them"
         );
-        let s = (0..64u64)
-            .find_map(|seed| {
-                let structure = structure_at(&locale(), &agrarian, Seed(seed), WALK)?;
-                (structure.chambers.len() == MAX_CHAMBERS).then_some(structure)
-            })
-            .expect("some seed in 0..64 draws a full four-chamber structure");
         assert_eq!(
             s.roles[2],
             Role::Loomroom,
             "an agrarian brief's own business must reach chamber 2, exactly as \
-             `role_for` gave it before this task moved the read here"
+             `role_for` gave it before The Cruck moved the read to the grammar"
         );
         assert_eq!(
             s.roles[3],
             Role::Store,
-            "every chamber past index 2 is a Store regardless of business, \
-             exactly as `role_for` gave it before this task moved the read here"
+            "the store stands deeper than the business it keeps for, which is \
+             what makes a possession walk THROUGH the key's room to the lock"
         );
     }
 
@@ -465,8 +633,8 @@ mod tests {
         // Spec §8 asks for purity over a SWEEP, not one case: a single seed
         // could be pure by accident of which draws it happens to take.
         for s in 0..8u64 {
-            let a = structure_at(&locale(), &built_brief(), Seed(s), WALK);
-            let b = structure_at(&locale(), &built_brief(), Seed(s), WALK);
+            let a = structure_at(&locale(), &bush_brief(), Seed(s), WALK);
+            let b = structure_at(&locale(), &bush_brief(), Seed(s), WALK);
             assert_eq!(a, b, "seed {s} derived two different structures");
         }
     }
@@ -479,14 +647,14 @@ mod tests {
         // whatever the draw does. Kept because the prefix-inheritance property
         // is itself worth pinning — but it does NOT show the seed is read.
         // `the_draw_is_keyed_to_the_world_seed` below is what covers that.
-        let here = structure_at(&locale(), &built_brief(), Seed(42), WALK).expect("built");
+        let here = structure_at(&locale(), &bush_brief(), Seed(42), WALK).expect("built");
         let mut elsewhere_path = locale().path;
         elsewhere_path[0] = (elsewhere_path[0] + 1) % 4;
         let elsewhere = hornvale_kernel::Facet {
             face: 3,
             path: elsewhere_path,
         };
-        let there = structure_at(&elsewhere, &built_brief(), Seed(42), WALK).expect("built");
+        let there = structure_at(&elsewhere, &bush_brief(), Seed(42), WALK).expect("built");
         assert_ne!(
             here.chambers, there.chambers,
             "a structure is keyed to its own locale"
@@ -501,7 +669,7 @@ mod tests {
         // in 1..=4 plus 18 drawn bits), so assert the weaker non-flaky property
         // that actually matters: the seed is read at all.
         let l = locale();
-        let b = built_brief();
+        let b = bush_brief();
         let structures: Vec<_> = (0..8u64)
             .map(|s| structure_at(&l, &b, Seed(s), WALK).expect("built"))
             .collect();
@@ -513,7 +681,7 @@ mod tests {
 
     #[test]
     fn the_threshold_is_a_chamber_and_the_graph_is_connected() {
-        let s = structure_at(&locale(), &built_brief(), Seed(42), WALK).expect("built");
+        let s = structure_at(&locale(), &bush_brief(), Seed(42), WALK).expect("built");
         assert!(s.chambers.contains(&s.threshold));
         // Every chamber reachable from the threshold by `links`.
         let ti = s.chambers.iter().position(|c| *c == s.threshold).unwrap();

@@ -26,14 +26,19 @@
 //! for the same reason: nothing here is serialized, so nothing forces them
 //! in before a consumer needs them.
 //!
-//! THREE fields are read as of decision 0398: `built`, in `structure_at`'s
-//! existence predicate and in `describe_chamber`'s room/hollow word; and
-//! `notability` and `function`, in `structure_at`'s own promotion of a deep
-//! chamber (`structure::chamber_role`). `cold` is carried but read only by a debug assertion
-//! (`chamber_interior_of` cross-checks it against the terrain), and `tech` and
-//! `people` are carried and not read at all. `housemark` is the chamber-only
-//! cultural axis read by `chamber_interior_of`; it never reaches locale
-//! selection or a fact writer.
+//! **The structure grammar widened this list (The Cruck, Task 3), and the
+//! shape of the widening matters more than its length.** `built` is now the
+//! METHOD selector in `structure_at` — grammar for a built site, the wild
+//! chain for everything else — as well as `describe_chamber`'s room/hollow
+//! word; `site` is the existence gate (decision 0666). And `function`,
+//! `notability`, `housemark` and `cold` are all read by
+//! `structure::grammar::frame_for`, which turns them into a chamber TREE: what
+//! rooms stand here and which room each one opens off. `cold` in particular
+//! was "carried but read only by a debug assertion" until this campaign and is
+//! now load-bearing — it is the axis that nests a dwelling's rooms on its
+//! hearth. `tech` and `people` are still carried and not read at all.
+//! `housemark` remains chamber-only in the sense that matters: it never
+//! reaches locale selection or a fact writer.
 //!
 //! `peak_population` was added here when the `store` role's strongbox became
 //! its first reader. Decision 0398 relaxed that gate, so the field is now

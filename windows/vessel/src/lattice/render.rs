@@ -166,9 +166,11 @@ fn glyph(kind: Option<&CellKind>) -> char {
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::lattice::{embed_with, extent_for};
     use crate::site::{Site, SiteKind};
     use crate::structure::structure_at;
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::{Facet, Seed};
     use hornvale_thing::kinds;
 
@@ -182,7 +184,40 @@ mod tests {
         }
     }
 
+    /// A living, warm, communal, plain-postured agrarian dwelling: the BUSH
+    /// shape, four chambers, `T{ H, W, S }` — a fork of three at the door.
+    ///
+    /// The chamber count is the GRAMMAR's since The Cruck, Task 3, so a built
+    /// fixture names the shape it wants with a brief instead of scanning
+    /// locales for one. This is the fullest frame the grammar derives without a
+    /// Seat, so it is what a corpus uses to reach `MAX_CHAMBERS`.
     fn built() -> Brief {
+        Brief::from_parts(
+            Some(Function::Agrarian),
+            None,
+            Some(Notability::Common),
+            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        )
+    }
+
+    /// A CAVE: a site nobody built. Both the structure source for a grown
+    /// fixture — a wild draw is still a chain of 1..=MAX_CHAMBERS, spec §3.5 —
+    /// and the method selector `embed_with` reads to send it to `grow`.
+    ///
+    /// It carries a SITE now, and must: `structure_at` gates on `brief.site`
+    /// (decision 0666), so a site-less method selector derives no structure at
+    /// all. Giving it a real cave site is what lets a grown fixture come from
+    /// the derivation production's caves actually take.
+    fn wild() -> Brief {
         Brief::from_parts(
             None,
             None,
@@ -190,26 +225,31 @@ mod tests {
             None,
             None,
             0,
+            false,
             true,
-            true,
-            Some(Site::placed(SiteKind::Settlement, None)),
+            Some(Site::placed(SiteKind::Cave, None)),
             None,
         )
     }
 
-    fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
-    }
-
     /// Every (structure, lattice) pair the render is checked over: both methods,
-    /// many seeds, so every chamber count `structure_at` produces.
+    /// many seeds.
+    ///
+    /// **Each method now brings its OWN structure** (The Cruck, Task 3). A
+    /// built structure's shape is the grammar's and a wild one's is drawn, so
+    /// handing the built structure to `grow` would render a shape production
+    /// never produces — wild sites draw chains and built sites `allocate`. The
+    /// built arm therefore reaches four chambers at every seed (the bush) and
+    /// the grown arm varies its count by seed exactly as it always did.
     fn corpus() -> Vec<(crate::structure::Structure, Lattice)> {
         let mut out = Vec::new();
         for s in SEEDS {
-            let st = structure_at(&locale(s), &built(), Seed(s), WALK).expect("built");
+            let st = structure_at(&locale(s), &built(), Seed(s), WALK).expect("a built site");
             let e = extent_for(&st);
             out.push((st.clone(), embed_with(&st, &built(), e, Seed(s))));
-            out.push((st.clone(), embed_with(&st, &wild(), e, Seed(s))));
+            let wst = structure_at(&locale(s), &wild(), Seed(s), WALK).expect("a cave is a site");
+            let we = extent_for(&wst);
+            out.push((wst.clone(), embed_with(&wst, &wild(), we, Seed(s))));
         }
         assert_eq!(
             out.iter().map(|(s, _)| s.chambers.len()).max().unwrap(),

@@ -16,10 +16,12 @@
 //! effect SURVIVES derived stone, and an authored fixture cannot make it.
 
 use hornvale_astronomy::SkyPins;
+use hornvale_history::record::{Function, Notability};
 use hornvale_kernel::color::{Illuminant, Observer, blackbody, standard_observer};
 use hornvale_kernel::{Seed, Value, Vertex, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::fabric::{Fabric, FabricContext, reflectance_of};
+use hornvale_vessel::housemark::{AuthorityMark, Housemark, ThresholdPosture};
 use hornvale_vessel::light::{HEARTH_KELVIN, Source, hearth_cell, light_field};
 use hornvale_vessel::site::{Site, SiteKind};
 use hornvale_vessel::structure::structure_at;
@@ -42,17 +44,22 @@ const WALK: u32 = 13;
 /// bedrock only has to be real for.
 const H2_SEEDS: [u64; 4] = [1, 7, 42, 1024];
 
-/// A built place; the brief `allocate` is selected by.
+/// A living, warm, communal, plain-postured agrarian dwelling — the BUSH
+/// shape, four chambers: the brief `allocate` is selected by, and the brief
+/// the chamber count now comes from (The Cruck, Task 3).
 fn built() -> Brief {
     Brief::from_parts(
+        Some(Function::Agrarian),
         None,
+        Some(Notability::Common),
         None,
-        None,
-        None,
-        None,
+        Some(Housemark {
+            authority: AuthorityMark::Common,
+            threshold: ThresholdPosture::Plain,
+        }),
         0,
         true,
-        true,
+        false,
         Some(Site::placed(SiteKind::Settlement, None)),
         None,
     )
@@ -141,6 +148,13 @@ fn flagship_ground(seed: u64) -> (FabricContext, String) {
 ///
 /// A one-chamber structure has no `Threshold` at all and so no doorway to
 /// light; the search says so out loud rather than silently measuring nothing.
+///
+/// **Since The Cruck (Task 3) the search almost always stops at the first
+/// locale**, because a built structure's chamber count is the brief's and this
+/// brief derives four. It is kept as a GUARD rather than a hunt: the two
+/// premises it checks — at least two chambers, at least one doorway — are the
+/// ones this battery silently measures nothing without, and an embedding that
+/// stopped realizing a doorway would still be caught here.
 fn lattice_with_a_doorway(seed: Seed) -> Lattice {
     for n in 0u64..4096 {
         let locale = hornvale_kernel::Facet {
