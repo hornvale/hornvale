@@ -195,6 +195,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-lot"
+version = "0.1.0"
+dependencies = [
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-worldgen",
+]
+
+[[package]]
 name = "hornvale-paleoclimate"
 version = "0.1.0"
 dependencies = [

@@ -2014,6 +2014,11 @@ hornvale-locale::hornvale_locale$regime::tests::substrate_slot_serializes_by_var
 hornvale-locale::hornvale_locale$surface::tests::legend_index_and_name_agree_for_every_variant
 hornvale-locale::hornvale_locale$tests::the_eight_bearings_are_distinct_and_evenly_spaced
 hornvale-locale::suite$water_reading::the_schema_tag_is_still_v2
+# hornvale-lot: provisional rows authored by hand at the crate's first commit (The Lot, ledger #14); the next green chamber run rewrites this file from measurement.
+hornvale-lot::suite$hazard::calibration_band_holds_at_the_human_anchor
+hornvale-lot::suite$hazard::death_age_is_the_inverse_of_survival
+hornvale-lot::suite$hazard::e0_is_monotone_in_lifespan_and_strife
+hornvale-lot::suite$hazard::survival_starts_at_one_and_is_nonincreasing
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::genesis_commits_the_frost_retreat_and_maximum
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::register_is_idempotent
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::zero_ice_world_records_no_frost_retreat

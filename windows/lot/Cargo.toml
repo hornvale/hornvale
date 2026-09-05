@@ -1,0 +1,18 @@
+[package]
+name = "hornvale-lot"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale lot window: one life drawn from everyone who ever lived in a world."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+
+# DEV-only: the H-M3 property battery (tests/suite/shape.rs) reconstructs
+# every seed-42 occupation's shape against its committed integral, so it
+# needs the composition root and the history domain's record types to read
+# the fixture world. The library itself draws nothing and builds nothing —
+# a read-only window must not depend on either at runtime.
+[dev-dependencies]
+hornvale-worldgen = { path = "../worldgen" }
+hornvale-history = { path = "../../domains/history" }
