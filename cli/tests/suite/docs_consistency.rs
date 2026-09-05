@@ -484,6 +484,36 @@ fn committed_reconciliation_rows_satisfy_semantic_rules() {
     );
 }
 
+/// The audit is complete only when every direct campaign record appears in
+/// exactly one reconciliation row; missing records and stray TSV citations
+/// are both documentary drift.
+#[test]
+fn every_campaign_record_is_reconciled() {
+    let population = campaign_record_paths();
+    let mut cited = BTreeSet::new();
+    let mut duplicates = BTreeSet::new();
+
+    for row in reconciliation_rows() {
+        for path in row.record_paths.into_iter().flatten() {
+            if !cited.insert(path.clone()) {
+                duplicates.insert(path);
+            }
+        }
+    }
+
+    assert!(
+        duplicates.is_empty(),
+        "duplicate reconciled record paths: {duplicates:?}"
+    );
+    assert_eq!(
+        cited,
+        population,
+        "campaign reconciliation coverage drift:\nmissing from TSV: {:#?}\noutside audit population: {:#?}",
+        population.difference(&cited).collect::<Vec<_>>(),
+        cited.difference(&population).collect::<Vec<_>>(),
+    );
+}
+
 #[test]
 fn committed_reconciliation_schema_is_parseable() {
     reconciliation_rows();

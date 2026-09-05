@@ -1,1 +1,1324 @@
 key	disposition	residue_kind	residue_target	evidence	specs	plans	ledgers	chronicles	retrospectives
+chronicle-15-the-eyes	shipped	none		published chronicle				book/src/chronicle/15-the-eyes.md	
+chronicle-16-the-tongues	shipped	none		published chronicle				book/src/chronicle/16-the-tongues.md	
+chronicle-17-audible-phonology	shipped	none		published chronicle				book/src/chronicle/17-audible-phonology.md	
+chronicle-18-the-meeting	shipped	none		published chronicle				book/src/chronicle/18-the-meeting.md	
+chronicle-19-the-star-chart	shipped	none		published chronicle				book/src/chronicle/19-the-star-chart.md	
+chronicle-20-firm-ground-ii	shipped	none		published chronicle				book/src/chronicle/20-firm-ground-ii.md	
+chronicle-21-the-scene-window	shipped	none		published chronicle				book/src/chronicle/21-the-scene-window.md	
+chronicle-22-the-atlas	shipped	none		published chronicle				book/src/chronicle/22-the-atlas.md	
+chronicle-23-the-orrery	shipped	none		published chronicle				book/src/chronicle/23-the-orrery.md	
+chronicle-25-the-measured-coast	shipped	none		published chronicle				book/src/chronicle/25-the-measured-coast.md	
+chronicle-26-the-live-orrery	shipped	none		published chronicle				book/src/chronicle/26-the-live-orrery.md	
+chronicle-27-the-words	shipped	none		published chronicle				book/src/chronicle/27-the-words.md	
+chronicle-bio2-life-history	shipped	none		published chronicle				book/src/chronicle/bio2-life-history.md	
+chronicle-campaign-1a	shipped	none		published chronicle				book/src/chronicle/campaign-1a.md	
+chronicle-campaign-1b	shipped	none		published chronicle				book/src/chronicle/campaign-1b.md	
+chronicle-campaign-2a	shipped	none		published chronicle				book/src/chronicle/campaign-2a.md	
+chronicle-campaign-2b	shipped	none		published chronicle				book/src/chronicle/campaign-2b.md	
+chronicle-campaign-3b	shipped	none		published chronicle				book/src/chronicle/campaign-3b.md	
+chronicle-campaign-3c	shipped	none		published chronicle				book/src/chronicle/campaign-3c.md	
+chronicle-campaign-4a	shipped	none		published chronicle				book/src/chronicle/campaign-4a.md	
+chronicle-campaign-4b	shipped	none		published chronicle				book/src/chronicle/campaign-4b.md	
+chronicle-campaign-5	shipped	none		published chronicle				book/src/chronicle/campaign-5.md	
+chronicle-campaign-l0-lab	shipped	none		published chronicle				book/src/chronicle/campaign-l0-lab.md	
+chronicle-campaign-y2-0	shipped	none		published chronicle				book/src/chronicle/campaign-y2-0.md	
+chronicle-campaign-y2-1	shipped	none		published chronicle				book/src/chronicle/campaign-y2-1.md	
+chronicle-census-as-data	shipped	none		published chronicle				book/src/chronicle/census-as-data.md	
+chronicle-common-ground	shipped	none		published chronicle				book/src/chronicle/common-ground.md	
+chronicle-crust	shipped	none		published chronicle				book/src/chronicle/crust.md	
+chronicle-deep-time	shipped	none		published chronicle				book/src/chronicle/deep-time.md	
+chronicle-eclipse-seasons	shipped	none		published chronicle				book/src/chronicle/eclipse-seasons.md	
+chronicle-few-and-many	shipped	none		published chronicle				book/src/chronicle/few-and-many.md	
+chronicle-goldengrove	shipped	none		published chronicle				book/src/chronicle/goldengrove.md	
+chronicle-lab-performance	shipped	none		published chronicle				book/src/chronicle/lab-performance.md	
+chronicle-rift-and-fit	shipped	none		published chronicle				book/src/chronicle/rift-and-fit.md	
+chronicle-sculpting	shipped	none		published chronicle				book/src/chronicle/sculpting.md	
+chronicle-single-craton-hypsometry	shipped	none		published chronicle				book/src/chronicle/single-craton-hypsometry.md	
+chronicle-temperature	shipped	none		published chronicle				book/src/chronicle/temperature.md	
+chronicle-the-accession	shipped	none		published chronicle				book/src/chronicle/the-accession.md	
+chronicle-the-actants	shipped	none		published chronicle				book/src/chronicle/the-actants.md	
+chronicle-the-action-clock	shipped	none		published chronicle				book/src/chronicle/the-action-clock.md	
+chronicle-the-adit	shipped	none		published chronicle				book/src/chronicle/the-adit.md	
+chronicle-the-alarm	shipped	none		published chronicle				book/src/chronicle/the-alarm.md	
+chronicle-the-armature	shipped	none		published chronicle				book/src/chronicle/the-armature.md	
+chronicle-the-assay	shipped	none		published chronicle				book/src/chronicle/the-assay.md	
+chronicle-the-assize	shipped	none		published chronicle				book/src/chronicle/the-assize.md	
+chronicle-the-attestation	shipped	none		published chronicle				book/src/chronicle/the-attestation.md	
+chronicle-the-avowal	shipped	none		published chronicle				book/src/chronicle/the-avowal.md	
+chronicle-the-axes	shipped	none		published chronicle				book/src/chronicle/the-axes.md	
+chronicle-the-ballast	shipped	none		published chronicle				book/src/chronicle/the-ballast.md	
+chronicle-the-bane	shipped	none		published chronicle				book/src/chronicle/the-bane.md	
+chronicle-the-beacon	shipped	none		published chronicle				book/src/chronicle/the-beacon.md	
+chronicle-the-bearing	shipped	none		published chronicle				book/src/chronicle/the-bearing.md	
+chronicle-the-begat	shipped	none		published chronicle				book/src/chronicle/the-begat.md	
+chronicle-the-beholding	shipped	none		published chronicle				book/src/chronicle/the-beholding.md	
+chronicle-the-belonging	shipped	none		published chronicle				book/src/chronicle/the-belonging.md	
+chronicle-the-benchmark	shipped	none		published chronicle				book/src/chronicle/the-benchmark.md	
+chronicle-the-blocking	shipped	none		published chronicle				book/src/chronicle/the-blocking.md	
+chronicle-the-book-polish	shipped	none		published chronicle				book/src/chronicle/the-book-polish.md	
+chronicle-the-branches	shipped	none		published chronicle				book/src/chronicle/the-branches.md	
+chronicle-the-brattice	shipped	none		published chronicle				book/src/chronicle/the-brattice.md	
+chronicle-the-burr	shipped	none		published chronicle				book/src/chronicle/the-burr.md	
+chronicle-the-cairn	shipped	none		published chronicle				book/src/chronicle/the-cairn.md	
+chronicle-the-cant	shipped	none		published chronicle				book/src/chronicle/the-cant.md	
+chronicle-the-cartographer	shipped	none		published chronicle				book/src/chronicle/the-cartographer.md	
+chronicle-the-cartulary	shipped	none		published chronicle				book/src/chronicle/the-cartulary.md	
+chronicle-the-casement	shipped	none		published chronicle				book/src/chronicle/the-casement.md	
+chronicle-the-chattel	shipped	none		published chronicle				book/src/chronicle/the-chattel.md	
+chronicle-the-chorus	shipped	none		published chronicle				book/src/chronicle/the-chorus.md	
+chronicle-the-chroma	shipped	none		published chronicle				book/src/chronicle/the-chroma.md	
+chronicle-the-cistern	shipped	none		published chronicle				book/src/chronicle/the-cistern.md	
+chronicle-the-cloister	shipped	none		published chronicle				book/src/chronicle/the-cloister.md	
+chronicle-the-coercion	shipped	none		published chronicle				book/src/chronicle/the-coercion.md	
+chronicle-the-collation	shipped	none		published chronicle				book/src/chronicle/the-collation.md	
+chronicle-the-column	shipped	none		published chronicle				book/src/chronicle/the-column.md	
+chronicle-the-company	shipped	none		published chronicle				book/src/chronicle/the-company.md	
+chronicle-the-compendium	shipped	none		published chronicle				book/src/chronicle/the-compendium.md	
+chronicle-the-compound-word	shipped	none		published chronicle				book/src/chronicle/the-compound-word.md	
+chronicle-the-concordance	shipped	none		published chronicle				book/src/chronicle/the-concordance.md	
+chronicle-the-confidant	shipped	none		published chronicle				book/src/chronicle/the-confidant.md	
+chronicle-the-confluence	shipped	none		published chronicle				book/src/chronicle/the-confluence.md	
+chronicle-the-confusion	shipped	none		published chronicle				book/src/chronicle/the-confusion.md	
+chronicle-the-connection-graph	shipped	none		published chronicle				book/src/chronicle/the-connection-graph.md	
+chronicle-the-consonance	shipped	none		published chronicle				book/src/chronicle/the-consonance.md	
+chronicle-the-contour	shipped	none		published chronicle				book/src/chronicle/the-contour.md	
+chronicle-the-convalescence	shipped	none		published chronicle				book/src/chronicle/the-convalescence.md	
+chronicle-the-correspondence	shipped	none		published chronicle				book/src/chronicle/the-correspondence.md	
+chronicle-the-corrigendum	shipped	none		published chronicle				book/src/chronicle/the-corrigendum.md	
+chronicle-the-crosscut	shipped	none		published chronicle				book/src/chronicle/the-crosscut.md	
+chronicle-the-cupel	shipped	none		published chronicle				book/src/chronicle/the-cupel.md	
+chronicle-the-datum	shipped	none		published chronicle				book/src/chronicle/the-datum.md	
+chronicle-the-deed	shipped	none		published chronicle				book/src/chronicle/the-deed.md	
+chronicle-the-deep	shipped	none		published chronicle				book/src/chronicle/the-deep.md	
+chronicle-the-deep-grammar	shipped	none		published chronicle				book/src/chronicle/the-deep-grammar.md	
+chronicle-the-deep-realm	shipped	none		published chronicle				book/src/chronicle/the-deep-realm.md	
+chronicle-the-delvers	shipped	none		published chronicle				book/src/chronicle/the-delvers.md	
+chronicle-the-demesne	shipped	none		published chronicle				book/src/chronicle/the-demesne.md	
+chronicle-the-detent	shipped	none		published chronicle				book/src/chronicle/the-detent.md	
+chronicle-the-diachronic-book	shipped	none		published chronicle				book/src/chronicle/the-diachronic-book.md	
+chronicle-the-digest	shipped	none		published chronicle				book/src/chronicle/the-digest.md	
+chronicle-the-diorama	shipped	none		published chronicle				book/src/chronicle/the-diorama.md	
+chronicle-the-disposition	shipped	none		published chronicle				book/src/chronicle/the-disposition.md	
+chronicle-the-dissolution	shipped	none		published chronicle				book/src/chronicle/the-dissolution.md	
+chronicle-the-doctrine	shipped	none		published chronicle				book/src/chronicle/the-doctrine.md	
+chronicle-the-domain-trait	shipped	none		published chronicle				book/src/chronicle/the-domain-trait.md	
+chronicle-the-domesday	shipped	none		published chronicle				book/src/chronicle/the-domesday.md	
+chronicle-the-dread	shipped	none		published chronicle				book/src/chronicle/the-dread.md	
+chronicle-the-drift	shipped	none		published chronicle				book/src/chronicle/the-drift.md	
+chronicle-the-echo	shipped	none		published chronicle				book/src/chronicle/the-echo.md	
+chronicle-the-effacement	shipped	none		published chronicle				book/src/chronicle/the-effacement.md	
+chronicle-the-elements	shipped	none		published chronicle				book/src/chronicle/the-elements.md	
+chronicle-the-ell	shipped	none		published chronicle				book/src/chronicle/the-ell.md	
+chronicle-the-eremite	shipped	none		published chronicle				book/src/chronicle/the-eremite.md	
+chronicle-the-escapement	shipped	none		published chronicle				book/src/chronicle/the-escapement.md	
+chronicle-the-excursion	shipped	none		published chronicle				book/src/chronicle/the-excursion.md	
+chronicle-the-explanations	shipped	none		published chronicle				book/src/chronicle/the-explanations.md	
+chronicle-the-faces	shipped	none		published chronicle				book/src/chronicle/the-faces.md	
+chronicle-the-fare	shipped	none		published chronicle				book/src/chronicle/the-fare.md	
+chronicle-the-fast-gate	shipped	none		published chronicle				book/src/chronicle/the-fast-gate.md	
+chronicle-the-fathom	shipped	none		published chronicle				book/src/chronicle/the-fathom.md	
+chronicle-the-firmament	shipped	none		published chronicle				book/src/chronicle/the-firmament.md	
+chronicle-the-first-mark	shipped	none		published chronicle				book/src/chronicle/the-first-mark.md	
+chronicle-the-first-sentence	shipped	none		published chronicle				book/src/chronicle/the-first-sentence.md	
+chronicle-the-foliot	shipped	none		published chronicle				book/src/chronicle/the-foliot.md	
+chronicle-the-ford	shipped	none		published chronicle				book/src/chronicle/the-ford.md	
+chronicle-the-ford-stage-2	shipped	none		published chronicle				book/src/chronicle/the-ford-stage-2.md	
+chronicle-the-forebay	shipped	none		published chronicle				book/src/chronicle/the-forebay.md	
+chronicle-the-foresight	shipped	none		published chronicle				book/src/chronicle/the-foresight.md	
+chronicle-the-formations	shipped	none		published chronicle				book/src/chronicle/the-formations.md	
+chronicle-the-frame-budget	shipped	none		published chronicle				book/src/chronicle/the-frame-budget.md	
+chronicle-the-freshet	shipped	none		published chronicle				book/src/chronicle/the-freshet.md	
+chronicle-the-freshwater	shipped	none		published chronicle				book/src/chronicle/the-freshwater.md	
+chronicle-the-gallery	shipped	none		published chronicle				book/src/chronicle/the-gallery.md	
+chronicle-the-gathering	shipped	none		published chronicle				book/src/chronicle/the-gathering.md	
+chronicle-the-gazetteer	shipped	none		published chronicle				book/src/chronicle/the-gazetteer.md	
+chronicle-the-generalist	shipped	none		published chronicle				book/src/chronicle/the-generalist.md	
+chronicle-the-given-word	shipped	none		published chronicle				book/src/chronicle/the-given-word.md	
+chronicle-the-glasshouse	shipped	none		published chronicle				book/src/chronicle/the-glasshouse.md	
+chronicle-the-gnomon	shipped	none		published chronicle				book/src/chronicle/the-gnomon.md	
+chronicle-the-gossan	shipped	none		published chronicle				book/src/chronicle/the-gossan.md	
+chronicle-the-governor	shipped	none		published chronicle				book/src/chronicle/the-governor.md	
+chronicle-the-grain	shipped	none		published chronicle				book/src/chronicle/the-grain.md	
+chronicle-the-granary	shipped	none		published chronicle				book/src/chronicle/the-granary.md	
+chronicle-the-ground	shipped	none		published chronicle				book/src/chronicle/the-ground.md	
+chronicle-the-gyre	shipped	none		published chronicle				book/src/chronicle/the-gyre.md	
+chronicle-the-hachure	shipped	none		published chronicle				book/src/chronicle/the-hachure.md	
+chronicle-the-hallmark	shipped	none		published chronicle				book/src/chronicle/the-hallmark.md	
+chronicle-the-hand	shipped	none		published chronicle				book/src/chronicle/the-hand.md	
+chronicle-the-handle	shipped	none		published chronicle				book/src/chronicle/the-handle.md	
+chronicle-the-haunt	shipped	none		published chronicle				book/src/chronicle/the-haunt.md	
+chronicle-the-hearsay	shipped	none		published chronicle				book/src/chronicle/the-hearsay.md	
+chronicle-the-hearth	shipped	none		published chronicle				book/src/chronicle/the-hearth.md	
+chronicle-the-helm	shipped	none		published chronicle				book/src/chronicle/the-helm.md	
+chronicle-the-hoist	shipped	none		published chronicle				book/src/chronicle/the-hoist.md	
+chronicle-the-holdfast	shipped	none		published chronicle				book/src/chronicle/the-holdfast.md	
+chronicle-the-hollow	shipped	none		published chronicle				book/src/chronicle/the-hollow.md	
+chronicle-the-housemark	shipped	none		published chronicle				book/src/chronicle/the-housemark.md	
+chronicle-the-idioms	shipped	none		published chronicle				book/src/chronicle/the-idioms.md	
+chronicle-the-illumination	shipped	none		published chronicle				book/src/chronicle/the-illumination.md	
+chronicle-the-individuation	shipped	none		published chronicle				book/src/chronicle/the-individuation.md	
+chronicle-the-inquest	shipped	none		published chronicle				book/src/chronicle/the-inquest.md	
+chronicle-the-interlinear	shipped	none		published chronicle				book/src/chronicle/the-interlinear.md	
+chronicle-the-isotherm	shipped	none		published chronicle				book/src/chronicle/the-isotherm.md	
+chronicle-the-keeping	shipped	none		published chronicle				book/src/chronicle/the-keeping.md	
+chronicle-the-kindling	shipped	none		published chronicle				book/src/chronicle/the-kindling.md	
+chronicle-the-lantern	shipped	none		published chronicle				book/src/chronicle/the-lantern.md	
+chronicle-the-latch	shipped	none		published chronicle				book/src/chronicle/the-latch.md	
+chronicle-the-legend	shipped	none		published chronicle				book/src/chronicle/the-legend.md	
+chronicle-the-lens	shipped	none		published chronicle				book/src/chronicle/the-lens.md	
+chronicle-the-lexicon	shipped	none		published chronicle				book/src/chronicle/the-lexicon.md	
+chronicle-the-lexicon-of-place	shipped	none		published chronicle				book/src/chronicle/the-lexicon-of-place.md	
+chronicle-the-lintel	shipped	none		published chronicle				book/src/chronicle/the-lintel.md	
+chronicle-the-living-community	shipped	none		published chronicle				book/src/chronicle/the-living-community.md	
+chronicle-the-local-census	shipped	none		published chronicle				book/src/chronicle/the-local-census.md	
+chronicle-the-locale-window	shipped	none		published chronicle				book/src/chronicle/the-locale-window.md	
+chronicle-the-lode	shipped	none		published chronicle				book/src/chronicle/the-lode.md	
+chronicle-the-lodestar	shipped	none		published chronicle				book/src/chronicle/the-lodestar.md	
+chronicle-the-long-age	shipped	none		published chronicle				book/src/chronicle/the-long-age.md	
+chronicle-the-long-count	shipped	none		published chronicle				book/src/chronicle/the-long-count.md	
+chronicle-the-lookup	shipped	none		published chronicle				book/src/chronicle/the-lookup.md	
+chronicle-the-manikin	shipped	none		published chronicle				book/src/chronicle/the-manikin.md	
+chronicle-the-mantle	shipped	none		published chronicle				book/src/chronicle/the-mantle.md	
+chronicle-the-margin	shipped	none		published chronicle				book/src/chronicle/the-margin.md	
+chronicle-the-massing	shipped	none		published chronicle				book/src/chronicle/the-massing.md	
+chronicle-the-menagerie	shipped	none		published chronicle				book/src/chronicle/the-menagerie.md	
+chronicle-the-mettle	shipped	none		published chronicle				book/src/chronicle/the-mettle.md	
+chronicle-the-millrace	shipped	none		published chronicle				book/src/chronicle/the-millrace.md	
+chronicle-the-minute	shipped	none		published chronicle				book/src/chronicle/the-minute.md	
+chronicle-the-mire	shipped	none		published chronicle				book/src/chronicle/the-mire.md	
+chronicle-the-mirror	shipped	none		published chronicle				book/src/chronicle/the-mirror.md	
+chronicle-the-mortise	shipped	none		published chronicle				book/src/chronicle/the-mortise.md	
+chronicle-the-muster	shipped	none		published chronicle				book/src/chronicle/the-muster.md	
+chronicle-the-named	shipped	none		published chronicle				book/src/chronicle/the-named.md	
+chronicle-the-namesake	shipped	none		published chronicle				book/src/chronicle/the-namesake.md	
+chronicle-the-nettle	shipped	none		published chronicle				book/src/chronicle/the-nettle.md	
+chronicle-the-niche	shipped	none		published chronicle				book/src/chronicle/the-niche.md	
+chronicle-the-night-sky-instrument	shipped	none		published chronicle				book/src/chronicle/the-night-sky-instrument.md	
+chronicle-the-occlusion	shipped	none		published chronicle				book/src/chronicle/the-occlusion.md	
+chronicle-the-offer	shipped	none		published chronicle				book/src/chronicle/the-offer.md	
+chronicle-the-ordination	shipped	none		published chronicle				book/src/chronicle/the-ordination.md	
+chronicle-the-overture	shipped	none		published chronicle				book/src/chronicle/the-overture.md	
+chronicle-the-overworld	shipped	none		published chronicle				book/src/chronicle/the-overworld.md	
+chronicle-the-palimpsest	shipped	none		published chronicle				book/src/chronicle/the-palimpsest.md	
+chronicle-the-pallet	shipped	none		published chronicle				book/src/chronicle/the-pallet.md	
+chronicle-the-panes	shipped	none		published chronicle				book/src/chronicle/the-panes.md	
+chronicle-the-parley	shipped	none		published chronicle				book/src/chronicle/the-parley.md	
+chronicle-the-particular	shipped	none		published chronicle				book/src/chronicle/the-particular.md	
+chronicle-the-pavement	shipped	none		published chronicle				book/src/chronicle/the-pavement.md	
+chronicle-the-pawl	shipped	none		published chronicle				book/src/chronicle/the-pawl.md	
+chronicle-the-penstock	shipped	none		published chronicle				book/src/chronicle/the-penstock.md	
+chronicle-the-phantom	shipped	none		published chronicle				book/src/chronicle/the-phantom.md	
+chronicle-the-pigment	shipped	none		published chronicle				book/src/chronicle/the-pigment.md	
+chronicle-the-plat	shipped	none		published chronicle				book/src/chronicle/the-plat.md	
+chronicle-the-plumb	shipped	none		published chronicle				book/src/chronicle/the-plumb.md	
+chronicle-the-portolan	shipped	none		published chronicle				book/src/chronicle/the-portolan.md	
+chronicle-the-portolan-world-map	shipped	none		published chronicle				book/src/chronicle/the-portolan-world-map.md	
+chronicle-the-precedence	shipped	none		published chronicle				book/src/chronicle/the-precedence.md	
+chronicle-the-predicates-and-the-grammar	shipped	none		published chronicle				book/src/chronicle/the-predicates-and-the-grammar.md	
+chronicle-the-presiding	shipped	none		published chronicle				book/src/chronicle/the-presiding.md	
+chronicle-the-prospect	shipped	none		published chronicle				book/src/chronicle/the-prospect.md	
+chronicle-the-provender	shipped	none		published chronicle				book/src/chronicle/the-provender.md	
+chronicle-the-purview	shipped	none		published chronicle				book/src/chronicle/the-purview.md	
+chronicle-the-pyx	shipped	none		published chronicle				book/src/chronicle/the-pyx.md	
+chronicle-the-quadrat	shipped	none		published chronicle				book/src/chronicle/the-quadrat.md	
+chronicle-the-quarry	shipped	none		published chronicle				book/src/chronicle/the-quarry.md	
+chronicle-the-quickening	shipped	none		published chronicle				book/src/chronicle/the-quickening.md	
+chronicle-the-quire	shipped	none		published chronicle				book/src/chronicle/the-quire.md	
+chronicle-the-quoin	shipped	none		published chronicle				book/src/chronicle/the-quoin.md	
+chronicle-the-rack	shipped	none		published chronicle				book/src/chronicle/the-rack.md	
+chronicle-the-radiation	shipped	none		published chronicle				book/src/chronicle/the-radiation.md	
+chronicle-the-rail	shipped	none		published chronicle				book/src/chronicle/the-rail.md	
+chronicle-the-rains	shipped	none		published chronicle				book/src/chronicle/the-rains.md	
+chronicle-the-range	shipped	none		published chronicle				book/src/chronicle/the-range.md	
+chronicle-the-reagent	shipped	none		published chronicle				book/src/chronicle/the-reagent.md	
+chronicle-the-real-sky	shipped	none		published chronicle				book/src/chronicle/the-real-sky.md	
+chronicle-the-reassay	shipped	none		published chronicle				book/src/chronicle/the-reassay.md	
+chronicle-the-reckoning	shipped	none		published chronicle				book/src/chronicle/the-reckoning.md	
+chronicle-the-region	shipped	none		published chronicle				book/src/chronicle/the-region.md	
+chronicle-the-repertoire	shipped	none		published chronicle				book/src/chronicle/the-repertoire.md	
+chronicle-the-repertory	shipped	none		published chronicle				book/src/chronicle/the-repertory.md	
+chronicle-the-repose	shipped	none		published chronicle				book/src/chronicle/the-repose.md	
+chronicle-the-reservoir	shipped	none		published chronicle				book/src/chronicle/the-reservoir.md	
+chronicle-the-residue	shipped	none		published chronicle				book/src/chronicle/the-residue.md	
+chronicle-the-retainer	shipped	none		published chronicle				book/src/chronicle/the-retainer.md	
+chronicle-the-retelling	shipped	none		published chronicle				book/src/chronicle/the-retelling.md	
+chronicle-the-reticence	shipped	none		published chronicle				book/src/chronicle/the-reticence.md	
+chronicle-the-rhumb	shipped	none		published chronicle				book/src/chronicle/the-rhumb.md	
+chronicle-the-rill	shipped	none		published chronicle				book/src/chronicle/the-rill.md	
+chronicle-the-rising-tone	shipped	none		published chronicle				book/src/chronicle/the-rising-tone.md	
+chronicle-the-roll	shipped	none		published chronicle				book/src/chronicle/the-roll.md	
+chronicle-the-room-mesh	shipped	none		published chronicle				book/src/chronicle/the-room-mesh.md	
+chronicle-the-salt	shipped	none		published chronicle				book/src/chronicle/the-salt.md	
+chronicle-the-scaffold	shipped	none		published chronicle				book/src/chronicle/the-scaffold.md	
+chronicle-the-scarf	shipped	none		published chronicle				book/src/chronicle/the-scarf.md	
+chronicle-the-scour	shipped	none		published chronicle				book/src/chronicle/the-scour.md	
+chronicle-the-seam	shipped	none		published chronicle				book/src/chronicle/the-seam.md	
+chronicle-the-self-describing-sky	shipped	none		published chronicle				book/src/chronicle/the-self-describing-sky.md	
+chronicle-the-selvage	shipped	none		published chronicle				book/src/chronicle/the-selvage.md	
+chronicle-the-sextant	shipped	none		published chronicle				book/src/chronicle/the-sextant.md	
+chronicle-the-sexton	shipped	none		published chronicle				book/src/chronicle/the-sexton.md	
+chronicle-the-shadow-track	shipped	none		published chronicle				book/src/chronicle/the-shadow-track.md	
+chronicle-the-shelf-mark	shipped	none		published chronicle				book/src/chronicle/the-shelf-mark.md	
+chronicle-the-shoal	shipped	none		published chronicle				book/src/chronicle/the-shoal.md	
+chronicle-the-shudder	shipped	none		published chronicle				book/src/chronicle/the-shudder.md	
+chronicle-the-shuttle	shipped	none		published chronicle				book/src/chronicle/the-shuttle.md	
+chronicle-the-siding	shipped	none		published chronicle				book/src/chronicle/the-siding.md	
+chronicle-the-sighting	shipped	none		published chronicle				book/src/chronicle/the-sighting.md	
+chronicle-the-signet	shipped	none		published chronicle				book/src/chronicle/the-signet.md	
+chronicle-the-single-saying	shipped	none		published chronicle				book/src/chronicle/the-single-saying.md	
+chronicle-the-single-sculpt	shipped	none		published chronicle				book/src/chronicle/the-single-sculpt.md	
+chronicle-the-sluice	shipped	none		published chronicle				book/src/chronicle/the-sluice.md	
+chronicle-the-slumber	shipped	none		published chronicle				book/src/chronicle/the-slumber.md	
+chronicle-the-snapshot	shipped	none		published chronicle				book/src/chronicle/the-snapshot.md	
+chronicle-the-solitary-tongue	shipped	none		published chronicle				book/src/chronicle/the-solitary-tongue.md	
+chronicle-the-sounding	shipped	none		published chronicle				book/src/chronicle/the-sounding.md	
+chronicle-the-sources	shipped	none		published chronicle				book/src/chronicle/the-sources.md	
+chronicle-the-speakable	shipped	none		published chronicle				book/src/chronicle/the-speakable.md	
+chronicle-the-staff	shipped	none		published chronicle				book/src/chronicle/the-staff.md	
+chronicle-the-standing-offer	shipped	none		published chronicle				book/src/chronicle/the-standing-offer.md	
+chronicle-the-staple	shipped	none		published chronicle				book/src/chronicle/the-staple.md	
+chronicle-the-stile	shipped	none		published chronicle				book/src/chronicle/the-stile.md	
+chronicle-the-stope	shipped	none		published chronicle				book/src/chronicle/the-stope.md	
+chronicle-the-stride	shipped	none		published chronicle				book/src/chronicle/the-stride.md	
+chronicle-the-stylus	shipped	none		published chronicle				book/src/chronicle/the-stylus.md	
+chronicle-the-sundering	shipped	none		published chronicle				book/src/chronicle/the-sundering.md	
+chronicle-the-surmise	shipped	none		published chronicle				book/src/chronicle/the-surmise.md	
+chronicle-the-tableau	shipped	none		published chronicle				book/src/chronicle/the-tableau.md	
+chronicle-the-tackle	shipped	none		published chronicle				book/src/chronicle/the-tackle.md	
+chronicle-the-tailrace	shipped	none		published chronicle				book/src/chronicle/the-tailrace.md	
+chronicle-the-tare	shipped	none		published chronicle				book/src/chronicle/the-tare.md	
+chronicle-the-teeth	shipped	none		published chronicle				book/src/chronicle/the-teeth.md	
+chronicle-the-temperament	shipped	none		published chronicle				book/src/chronicle/the-temperament.md	
+chronicle-the-tense	shipped	none		published chronicle				book/src/chronicle/the-tense.md	
+chronicle-the-terminator	shipped	none		published chronicle				book/src/chronicle/the-terminator.md	
+chronicle-the-terrier	shipped	none		published chronicle				book/src/chronicle/the-terrier.md	
+chronicle-the-threshold	shipped	none		published chronicle				book/src/chronicle/the-threshold.md	
+chronicle-the-tidings	shipped	none		published chronicle				book/src/chronicle/the-tidings.md	
+chronicle-the-tilth	shipped	none		published chronicle				book/src/chronicle/the-tilth.md	
+chronicle-the-timekeeper	shipped	none		published chronicle				book/src/chronicle/the-timekeeper.md	
+chronicle-the-tithe	shipped	none		published chronicle				book/src/chronicle/the-tithe.md	
+chronicle-the-tolerance	shipped	none		published chronicle				book/src/chronicle/the-tolerance.md	
+chronicle-the-tongues	shipped	none		published chronicle				book/src/chronicle/the-tongues.md	
+chronicle-the-toponym	shipped	none		published chronicle				book/src/chronicle/the-toponym.md	
+chronicle-the-touchstone	shipped	none		published chronicle				book/src/chronicle/the-touchstone.md	
+chronicle-the-true-name	shipped	none		published chronicle				book/src/chronicle/the-true-name.md	
+chronicle-the-tumult	shipped	none		published chronicle				book/src/chronicle/the-tumult.md	
+chronicle-the-turning	shipped	none		published chronicle				book/src/chronicle/the-turning.md	
+chronicle-the-turnstile	shipped	none		published chronicle				book/src/chronicle/the-turnstile.md	
+chronicle-the-twin	shipped	none		published chronicle				book/src/chronicle/the-twin.md	
+chronicle-the-type-audit	shipped	none		published chronicle				book/src/chronicle/the-type-audit.md	
+chronicle-the-uncommon-ground	shipped	none		published chronicle				book/src/chronicle/the-uncommon-ground.md	
+chronicle-the-undertow	shipped	none		published chronicle				book/src/chronicle/the-undertow.md	
+chronicle-the-underworld	shipped	none		published chronicle				book/src/chronicle/the-underworld.md	
+chronicle-the-vacancy	shipped	none		published chronicle				book/src/chronicle/the-vacancy.md	
+chronicle-the-vantage	shipped	none		published chronicle				book/src/chronicle/the-vantage.md	
+chronicle-the-vernacular	shipped	none		published chronicle				book/src/chronicle/the-vernacular.md	
+chronicle-the-vessel-stitch	shipped	none		published chronicle				book/src/chronicle/the-vessel-stitch.md	
+chronicle-the-vestige	shipped	none		published chronicle				book/src/chronicle/the-vestige.md	
+chronicle-the-vigil	shipped	none		published chronicle				book/src/chronicle/the-vigil.md	
+chronicle-the-wakeful-sun	shipped	none		published chronicle				book/src/chronicle/the-wakeful-sun.md	
+chronicle-the-wandering-sun	shipped	none		published chronicle				book/src/chronicle/the-wandering-sun.md	
+chronicle-the-wanting	shipped	none		published chronicle				book/src/chronicle/the-wanting.md	
+chronicle-the-warren	shipped	none		published chronicle				book/src/chronicle/the-warren.md	
+chronicle-the-wash	shipped	none		published chronicle				book/src/chronicle/the-wash.md	
+chronicle-the-waterline	shipped	none		published chronicle				book/src/chronicle/the-waterline.md	
+chronicle-the-watershed	shipped	none		published chronicle				book/src/chronicle/the-watershed.md	
+chronicle-the-waymark	shipped	none		published chronicle				book/src/chronicle/the-waymark.md	
+chronicle-the-wearing	shipped	none		published chronicle				book/src/chronicle/the-wearing.md	
+chronicle-the-weir	shipped	none		published chronicle				book/src/chronicle/the-weir.md	
+chronicle-the-whetstone	shipped	none		published chronicle				book/src/chronicle/the-whetstone.md	
+chronicle-the-wick	shipped	none		published chronicle				book/src/chronicle/the-wick.md	
+chronicle-the-wicket	shipped	none		published chronicle				book/src/chronicle/the-wicket.md	
+chronicle-the-wilding	shipped	none		published chronicle				book/src/chronicle/the-wilding.md	
+chronicle-the-winnowing	shipped	none		published chronicle				book/src/chronicle/the-winnowing.md	
+chronicle-the-winze	shipped	none		published chronicle				book/src/chronicle/the-winze.md	
+chronicle-the-witness	shipped	none		published chronicle				book/src/chronicle/the-witness.md	
+chronicle-the-word	shipped	none		published chronicle				book/src/chronicle/the-word.md	
+plan-2026-07-05-campaign-1a-kernel	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-05-campaign-1a-kernel.md			
+plan-2026-07-05-campaign-1b-cascade	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-05-campaign-1b-cascade.md			
+plan-2026-07-05-campaign-2a-genesis	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-05-campaign-2a-genesis.md			
+plan-2026-07-06-campaign-2b-sky-debut	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-2b-sky-debut.md			
+plan-2026-07-06-campaign-3a-geosphere	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-3a-geosphere.md			
+plan-2026-07-06-campaign-3b-tectonic-terrain	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-3b-tectonic-terrain.md			
+plan-2026-07-06-campaign-3c-climate-biomes	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-3c-climate-biomes.md			
+plan-2026-07-06-campaign-4a-placement-drainage	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-4a-placement-drainage.md			
+plan-2026-07-06-campaign-l0-lab	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-l0-lab.md			
+plan-2026-07-07-campaign-4b-emergent-society	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-4b-emergent-society.md			
+plan-2026-07-07-campaign-5a-the-pantheon	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-5a-the-pantheon.md			
+plan-2026-07-07-campaign-5b-provenance-year1-close	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-5b-provenance-year1-close.md			
+plan-2026-07-07-campaign-y2-0-firm-ground	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-y2-0-firm-ground.md			
+plan-2026-07-07-campaign-y2-1-the-peoples	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-y2-1-the-peoples.md			
+plan-2026-07-07-campaign-y2-2-the-eyes	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-y2-2-the-eyes.md			
+plan-2026-07-08-audible-phonology	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-08-audible-phonology.md			
+plan-2026-07-08-campaign-y2-3-the-tongues	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-08-campaign-y2-3-the-tongues.md			
+plan-2026-07-08-campaign-y2-4-the-meeting	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-08-campaign-y2-4-the-meeting.md			
+plan-2026-07-09-atlas-viewer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-atlas-viewer.md			
+plan-2026-07-09-campaign-the-words	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-campaign-the-words.md			
+plan-2026-07-09-deep-time	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-deep-time.md			
+plan-2026-07-09-firm-ground-ii-1-moving-sky	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-firm-ground-ii-1-moving-sky.md			
+plan-2026-07-09-firm-ground-ii-2-placed-observer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-firm-ground-ii-2-placed-observer.md			
+plan-2026-07-09-firm-ground-ii-3-the-close	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-firm-ground-ii-3-the-close.md			
+plan-2026-07-09-live-orrery	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-live-orrery.md			
+plan-2026-07-09-orrery-emoji	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-orrery-emoji.md			
+plan-2026-07-09-png-migration	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-png-migration.md			
+plan-2026-07-09-scene-protocol	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-scene-protocol.md			
+plan-2026-07-09-star-chart	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-star-chart.md			
+plan-2026-07-09-the-measured-coast	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-the-measured-coast.md			
+plan-2026-07-09-the-orrery	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-the-orrery.md			
+plan-2026-07-09-the-type-audit	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-the-type-audit.md			
+plan-2026-07-10-campaign-the-branches	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-10-campaign-the-branches.md			
+plan-2026-07-10-cross-platform-float-quantization	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-10-cross-platform-float-quantization.md			
+plan-2026-07-10-crust	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-10-crust.md			
+plan-2026-07-10-frontier-in-the-book	active	none		status header retains active work		docs/superpowers/plans/2026-07-10-frontier-in-the-book.md			
+plan-2026-07-10-workflow-improvements-stage-2	shipped	none		status header records closure		docs/superpowers/plans/2026-07-10-workflow-improvements-stage-2.md			
+plan-2026-07-10-workflow-improvements-stage-3	shipped	none		status header records closure		docs/superpowers/plans/2026-07-10-workflow-improvements-stage-3.md			
+plan-2026-07-11-test-system-quick-wins	shipped	none		status header records closure		docs/superpowers/plans/2026-07-11-test-system-quick-wins.md			
+plan-2026-07-12-domain-trait-registry	shipped	none		status header records closure		docs/superpowers/plans/2026-07-12-domain-trait-registry.md			
+plan-2026-07-12-lab-performance	shipped	none		status header records closure		docs/superpowers/plans/2026-07-12-lab-performance.md			
+plan-2026-07-12-remote-gate-aws	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-12-remote-gate-aws.md			
+plan-2026-07-12-temperature	shipped	none		status header records closure		docs/superpowers/plans/2026-07-12-temperature.md			
+plan-2026-07-12-the-datum	shipped	none		status header records closure		docs/superpowers/plans/2026-07-12-the-datum.md			
+plan-2026-07-12-the-locale-window	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-12-the-locale-window.md			
+plan-2026-07-12-the-room-mesh	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-12-the-room-mesh.md			
+plan-2026-07-13-census-as-data	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-census-as-data.md			
+plan-2026-07-13-fast-gate-tiers	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-13-fast-gate-tiers.md			
+plan-2026-07-13-night-sky-instrument	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-night-sky-instrument.md			
+plan-2026-07-13-the-casement	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-the-casement.md			
+plan-2026-07-13-the-gathering	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-13-the-gathering.md			
+plan-2026-07-13-the-seam	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-the-seam.md			
+plan-2026-07-13-the-self-describing-sky	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-13-the-self-describing-sky.md			
+plan-2026-07-13-the-uncommon-ground	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-the-uncommon-ground.md			
+plan-2026-07-14-bio2-life-history-allometry	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-bio2-life-history-allometry.md			
+plan-2026-07-14-campaign-autopilot	shipped	none		status header records closure		docs/superpowers/plans/2026-07-14-campaign-autopilot.md			
+plan-2026-07-14-eclipse-seasons	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-eclipse-seasons.md			
+plan-2026-07-14-goldengrove	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-goldengrove.md			
+plan-2026-07-14-sculpting	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-sculpting.md			
+plan-2026-07-14-single-craton-hypsometry	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-single-craton-hypsometry.md			
+plan-2026-07-14-the-coexistence-stack	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-the-coexistence-stack.md			
+plan-2026-07-14-the-ground	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-the-ground.md			
+plan-2026-07-14-the-helm	active	none		status header retains active work		docs/superpowers/plans/2026-07-14-the-helm.md			
+plan-2026-07-14-the-long-count	shipped	none		status header records closure		docs/superpowers/plans/2026-07-14-the-long-count.md			
+plan-2026-07-14-the-niche	shipped	none		status header records closure		docs/superpowers/plans/2026-07-14-the-niche.md			
+plan-2026-07-14-the-seam-ecs-campaign-1	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-the-seam-ecs-campaign-1.md			
+plan-2026-07-14-the-speakable	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-the-speakable.md			
+plan-2026-07-15-kindid-ecs-campaign-2	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-15-kindid-ecs-campaign-2.md			
+plan-2026-07-16-rift-and-fit	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-16-rift-and-fit.md			
+plan-2026-07-16-species-dissolve-ecs-campaign-3	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-16-species-dissolve-ecs-campaign-3.md			
+plan-2026-07-16-the-faces	shipped	none		status header records closure		docs/superpowers/plans/2026-07-16-the-faces.md			
+plan-2026-07-16-the-isotherm	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-16-the-isotherm.md			
+plan-2026-07-16-the-named	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-16-the-named.md			
+plan-2026-07-16-the-reckoning	shipped	none		status header records closure		docs/superpowers/plans/2026-07-16-the-reckoning.md			
+plan-2026-07-16-the-region	shipped	none		status header records closure		docs/superpowers/plans/2026-07-16-the-region.md			
+plan-2026-07-16-the-terminator	shipped	none		status header records closure		docs/superpowers/plans/2026-07-16-the-terminator.md			
+plan-2026-07-17-the-first-sentence	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-17-the-first-sentence.md			
+plan-2026-07-17-the-individuation	shipped	none		status header records closure		docs/superpowers/plans/2026-07-17-the-individuation.md			
+plan-2026-07-17-the-ordination	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-17-the-ordination.md			
+plan-2026-07-17-the-predicates-and-the-grammar	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-17-the-predicates-and-the-grammar.md			
+plan-2026-07-17-the-presiding	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-17-the-presiding.md			
+plan-2026-07-17-the-query-engine-ecs-campaign-4	shipped	none		status header records closure		docs/superpowers/plans/2026-07-17-the-query-engine-ecs-campaign-4.md			
+plan-2026-07-17-the-real-sky	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-17-the-real-sky.md			
+plan-2026-07-17-the-wandering-sun	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-17-the-wandering-sun.md			
+plan-2026-07-18-diurnal-temperature	shipped	none		status header records closure		docs/superpowers/plans/2026-07-18-diurnal-temperature.md			
+plan-2026-07-18-the-chorus	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-chorus.md			
+plan-2026-07-18-the-correspondence-plan	shipped	none		status header records closure		docs/superpowers/plans/2026-07-18-the-correspondence-plan.md			
+plan-2026-07-18-the-echo	active	none		status header retains active work		docs/superpowers/plans/2026-07-18-the-echo.md			
+plan-2026-07-18-the-elements-plan	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-elements-plan.md			
+plan-2026-07-18-the-explanations	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-explanations.md			
+plan-2026-07-18-the-foresight	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-foresight.md			
+plan-2026-07-18-the-freshet	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-freshet.md			
+plan-2026-07-18-the-quickening	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-quickening.md			
+plan-2026-07-18-the-shadow-track	shipped	none		status header records closure		docs/superpowers/plans/2026-07-18-the-shadow-track.md			
+plan-2026-07-18-the-surmise	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-surmise.md			
+plan-2026-07-18-the-tongues	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-tongues.md			
+plan-2026-07-18-the-wanting	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-wanting.md			
+plan-2026-07-19-cloud-shell	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-cloud-shell.md			
+plan-2026-07-19-ocean-currents	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-ocean-currents.md			
+plan-2026-07-19-precipitation	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-precipitation.md			
+plan-2026-07-19-the-confluence	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-confluence.md			
+plan-2026-07-19-the-deep-grammar	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-deep-grammar.md			
+plan-2026-07-19-the-demesne	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-demesne.md			
+plan-2026-07-19-the-diachronic-book	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-diachronic-book.md			
+plan-2026-07-19-the-doctrine	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-doctrine.md			
+plan-2026-07-19-the-local-census-plan	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-local-census-plan.md			
+plan-2026-07-19-the-temperament-plan	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-the-temperament-plan.md			
+plan-2026-07-19-the-vessel-stitch	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-vessel-stitch.md			
+plan-2026-07-19-weather	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-weather.md			
+plan-2026-07-20-few-and-many	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-20-few-and-many.md			
+plan-2026-07-20-orrery-performance	shipped	none		status header records closure		docs/superpowers/plans/2026-07-20-orrery-performance.md			
+plan-2026-07-20-the-cartographer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-20-the-cartographer.md			
+plan-2026-07-20-the-cartographer-transition	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-20-the-cartographer-transition.md			
+plan-2026-07-20-the-consonance	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-20-the-consonance.md			
+plan-2026-07-20-the-corrigendum	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-20-the-corrigendum.md			
+plan-2026-07-20-the-idioms	shipped	none		status header records closure		docs/superpowers/plans/2026-07-20-the-idioms.md			
+plan-2026-07-20-the-living-community	shipped	none		status header records closure		docs/superpowers/plans/2026-07-20-the-living-community.md			
+plan-2026-07-20-the-residue	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-20-the-residue.md			
+plan-2026-07-20-the-sounding	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-20-the-sounding.md			
+plan-2026-07-21-proc-17-stream-labels	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-21-proc-17-stream-labels.md			
+plan-2026-07-21-proc-18-stream-labels-macro	shipped	none		status header records closure		docs/superpowers/plans/2026-07-21-proc-18-stream-labels-macro.md			
+plan-2026-07-21-the-alarm	shipped	none		status header records closure		docs/superpowers/plans/2026-07-21-the-alarm.md			
+plan-2026-07-21-the-assay	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-21-the-assay.md			
+plan-2026-07-21-the-connection-graph	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-21-the-connection-graph.md			
+plan-2026-07-21-the-diorama	shipped	none		status header records closure		docs/superpowers/plans/2026-07-21-the-diorama.md			
+plan-2026-07-21-the-freshwater	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-21-the-freshwater.md			
+plan-2026-07-21-the-massing	shipped	none		status header records closure		docs/superpowers/plans/2026-07-21-the-massing.md			
+plan-2026-07-21-the-overworld	shipped	none		status header records closure		docs/superpowers/plans/2026-07-21-the-overworld.md			
+plan-2026-07-21-the-tidings	shipped	none		status header records closure		docs/superpowers/plans/2026-07-21-the-tidings.md			
+plan-2026-07-21-the-vantage	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-21-the-vantage.md			
+plan-2026-07-22-proc-12-regenerate-on-conflict	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-proc-12-regenerate-on-conflict.md			
+plan-2026-07-22-proc-19-history-stream-labels	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-proc-19-history-stream-labels.md			
+plan-2026-07-22-the-cloister-mind-society-split	active	none		status header retains active work		docs/superpowers/plans/2026-07-22-the-cloister-mind-society-split.md			
+plan-2026-07-22-the-deep	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-deep.md			
+plan-2026-07-22-the-eremite	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-eremite.md			
+plan-2026-07-22-the-first-mark	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-first-mark.md			
+plan-2026-07-22-the-haunt	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-the-haunt.md			
+plan-2026-07-22-the-lode	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-lode.md			
+plan-2026-07-22-the-phantom	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-the-phantom.md			
+plan-2026-07-22-the-solitary-tongue	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-solitary-tongue.md			
+plan-2026-07-22-the-sundering	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-sundering.md			
+plan-2026-07-22-the-tumult	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-tumult.md			
+plan-2026-07-23-the-bearing	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-bearing.md			
+plan-2026-07-23-the-excursion	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-excursion.md			
+plan-2026-07-23-the-lookup	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-lookup.md			
+plan-2026-07-23-the-retainer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-retainer.md			
+plan-2026-07-23-the-vestige	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-vestige.md			
+plan-2026-07-24-the-purview	shipped	none		status header records closure		docs/superpowers/plans/2026-07-24-the-purview.md			
+plan-2026-07-24-the-selvage	shipped	none		status header records closure		docs/superpowers/plans/2026-07-24-the-selvage.md			
+plan-2026-07-24-the-shudder	shipped	none		status header records closure		docs/superpowers/plans/2026-07-24-the-shudder.md			
+plan-2026-07-24-the-vigil	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-24-the-vigil.md			
+plan-2026-07-25-the-hearth	shipped	none		status header records closure		docs/superpowers/plans/2026-07-25-the-hearth.md			
+plan-2026-07-25-the-snapshot	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-25-the-snapshot.md			
+plan-2026-07-25-the-threshold	shipped	none		status header records closure		docs/superpowers/plans/2026-07-25-the-threshold.md			
+plan-2026-07-26-the-action-clock	shipped	none		status header records closure		docs/superpowers/plans/2026-07-26-the-action-clock.md			
+plan-2026-07-26-the-convalescence	shipped	none		status header records closure		docs/superpowers/plans/2026-07-26-the-convalescence.md			
+plan-2026-07-26-the-reagent	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-26-the-reagent.md			
+plan-2026-07-26-the-tithe	shipped	none		status header records closure		docs/superpowers/plans/2026-07-26-the-tithe.md			
+plan-2026-07-26-the-vacancy	active	none		status header retains active work		docs/superpowers/plans/2026-07-26-the-vacancy.md			
+plan-2026-07-26-the-waterline	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-26-the-waterline.md			
+plan-2026-07-27-the-hoist	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-27-the-hoist.md			
+plan-2026-07-27-the-lintel	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-27-the-lintel.md			
+plan-2026-07-27-the-occlusion	shipped	none		status header records closure		docs/superpowers/plans/2026-07-27-the-occlusion.md			
+plan-2026-07-27-the-shelf-mark	shipped	none		status header records closure		docs/superpowers/plans/2026-07-27-the-shelf-mark.md			
+plan-2026-07-27-the-turnstile	active	none		status header retains active work		docs/superpowers/plans/2026-07-27-the-turnstile.md			
+plan-2026-07-27-the-wearing	shipped	none		status header records closure		docs/superpowers/plans/2026-07-27-the-wearing.md			
+plan-2026-07-28-the-blocking	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-28-the-blocking.md			
+plan-2026-07-28-the-cistern	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-28-the-cistern.md			
+plan-2026-07-28-the-formations	shipped	none		status header records closure		docs/superpowers/plans/2026-07-28-the-formations.md			
+plan-2026-07-28-the-sextant	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-28-the-sextant.md			
+plan-2026-07-28-the-shoal	shipped	none		status header records closure		docs/superpowers/plans/2026-07-28-the-shoal.md			
+plan-2026-07-29-the-contour	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-29-the-contour.md			
+plan-2026-07-29-the-siding	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-29-the-siding.md			
+plan-2026-07-29-the-timekeeper	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-29-the-timekeeper.md			
+plan-2026-07-29-the-winnowing	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-29-the-winnowing.md			
+plan-2026-07-30-the-pigment	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-30-the-pigment.md			
+plan-2026-07-30-the-pyx	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-30-the-pyx.md			
+plan-2026-07-30-the-shuttle	active	none		status header retains active work		docs/superpowers/plans/2026-07-30-the-shuttle.md			
+plan-2026-07-30-the-twin	active	none		status header retains active work		docs/superpowers/plans/2026-07-30-the-twin.md			
+plan-2026-07-30-the-witness	shipped	none		status header records closure		docs/superpowers/plans/2026-07-30-the-witness.md			
+plan-2026-07-31-the-repertoire	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-31-the-repertoire.md			
+plan-2026-07-31-the-vernacular-part-1-the-referent-contract	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-31-the-vernacular-part-1-the-referent-contract.md			
+plan-2026-07-31-the-vernacular-part-2-honest-manifests	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-31-the-vernacular-part-2-honest-manifests.md			
+plan-2026-07-31-the-waymark	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-31-the-waymark.md			
+plan-2026-07-31-the-weir	active	none		status header retains active work		docs/superpowers/plans/2026-07-31-the-weir.md			
+plan-2026-08-01-the-particular	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-01-the-particular.md			
+plan-2026-08-01-the-scaffold	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-01-the-scaffold.md			
+plan-2026-08-02-the-namesake	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-02-the-namesake.md			
+plan-2026-08-02-the-vernacular-part-3a-star-class	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-02-the-vernacular-part-3a-star-class.md			
+plan-2026-08-03-the-generalist	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-03-the-generalist.md			
+plan-2026-08-03-the-manikin	shipped	none		status header records closure		docs/superpowers/plans/2026-08-03-the-manikin.md			
+plan-2026-08-03-the-mire	shipped	none		status header records closure		docs/superpowers/plans/2026-08-03-the-mire.md			
+plan-2026-08-03-the-salt	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-03-the-salt.md			
+plan-2026-08-03-the-vernacular-part-3b-render-downstream	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-03-the-vernacular-part-3b-render-downstream.md			
+plan-2026-08-04-the-fare	shipped	none		status header records closure		docs/superpowers/plans/2026-08-04-the-fare.md			
+plan-2026-08-04-the-tolerance	shipped	none		status header records closure		docs/superpowers/plans/2026-08-04-the-tolerance.md			
+plan-2026-08-05-the-deep-realm	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-05-the-deep-realm.md			
+plan-2026-08-05-the-hollow	shipped	none		status header records closure		docs/superpowers/plans/2026-08-05-the-hollow.md			
+plan-2026-08-06-corpus-two-and-the-matrix	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-06-corpus-two-and-the-matrix.md			
+plan-2026-08-06-the-benchmark	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-06-the-benchmark.md			
+plan-2026-08-06-the-handle	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-06-the-handle.md			
+plan-2026-08-06-the-long-age	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-06-the-long-age.md			
+plan-2026-08-06-the-panes	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-06-the-panes.md			
+plan-2026-08-06-the-sighting	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-06-the-sighting.md			
+plan-2026-08-06-the-warren	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-06-the-warren.md			
+plan-2026-08-07-the-assay	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-07-the-assay.md			
+plan-2026-08-07-the-beholding	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-07-the-beholding.md			
+plan-2026-08-07-the-delvers	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-07-the-delvers.md			
+plan-2026-08-07-the-lantern	shipped	none		status header records closure		docs/superpowers/plans/2026-08-07-the-lantern.md			
+plan-2026-08-08-the-assize	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-08-the-assize.md			
+plan-2026-08-08-the-digest	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-08-the-digest.md			
+plan-2026-08-08-the-domesday	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-08-the-domesday.md			
+plan-2026-08-08-the-quire	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-08-the-quire.md			
+plan-2026-08-08-the-range	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-08-the-range.md			
+plan-2026-08-09-the-armature	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-09-the-armature.md			
+plan-2026-08-09-the-cairn	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-09-the-cairn.md			
+plan-2026-08-09-the-radiation	shipped	none		status header records closure		docs/superpowers/plans/2026-08-09-the-radiation.md			
+plan-2026-08-09-the-signet	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-09-the-signet.md			
+plan-2026-08-10-the-ford	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-10-the-ford.md			
+plan-2026-08-10-the-grain	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-10-the-grain.md			
+plan-2026-08-11-the-beacon	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-11-the-beacon.md			
+plan-2026-08-11-the-ell	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-11-the-ell.md			
+plan-2026-08-11-the-ford-stage-2	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-11-the-ford-stage-2.md			
+plan-2026-08-11-the-muster	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-11-the-muster.md			
+plan-2026-08-11-the-rill	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-11-the-rill.md			
+plan-2026-08-12-the-fathom	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-12-the-fathom.md			
+plan-2026-08-12-the-glasshouse-a-instrumentation	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-12-the-glasshouse-a-instrumentation.md			
+plan-2026-08-12-the-repose	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-12-the-repose.md			
+plan-2026-08-13-the-axes	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-13-the-axes.md			
+plan-2026-08-13-the-glasshouse-b-recentring	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-13-the-glasshouse-b-recentring.md			
+plan-2026-08-13-the-gnomon	shipped	none		status header records closure		docs/superpowers/plans/2026-08-13-the-gnomon.md			
+plan-2026-08-13-the-hearsay	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-13-the-hearsay.md			
+plan-2026-08-13-the-millrace	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-13-the-millrace.md			
+plan-2026-08-13-the-sexton-stages-1-3	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-13-the-sexton-stages-1-3.md			
+plan-2026-08-14-the-staff	active	none		status header retains active work		docs/superpowers/plans/2026-08-14-the-staff.md			
+plan-2026-08-15-the-compendium	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-15-the-compendium.md			
+plan-2026-08-15-the-retelling	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-15-the-retelling.md			
+plan-2026-08-15-the-sluice	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-15-the-sluice.md			
+plan-2026-08-16-the-burr	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-16-the-burr.md			
+plan-2026-08-16-the-palimpsest	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-16-the-palimpsest.md			
+plan-2026-08-16-the-rhumb	shipped	none		status header records closure		docs/superpowers/plans/2026-08-16-the-rhumb.md			
+plan-2026-08-16-the-underworld	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-16-the-underworld.md			
+plan-2026-08-17-the-illumination	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-17-the-illumination.md			
+plan-2026-08-17-the-parley	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-17-the-parley.md			
+plan-2026-08-18-the-adit	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-18-the-adit.md			
+plan-2026-08-18-the-gazetteer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-18-the-gazetteer.md			
+plan-2026-08-18-the-undertow	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-18-the-undertow.md			
+plan-2026-08-19-the-portolan	shipped	none		status header records closure		docs/superpowers/plans/2026-08-19-the-portolan.md			
+plan-2026-08-19-the-tackle	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-19-the-tackle.md			
+plan-2026-08-19-the-touchstone	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-19-the-touchstone.md			
+plan-2026-08-19-the-winze	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-19-the-winze.md			
+plan-2026-08-20-the-cant	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-cant.md			
+plan-2026-08-20-the-cupel	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-cupel.md			
+plan-2026-08-20-the-deed	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-deed.md			
+plan-2026-08-20-the-deed-state	shipped	none		status header records closure		docs/superpowers/plans/2026-08-20-the-deed-state.md			
+plan-2026-08-20-the-portolan-world-map	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-portolan-world-map.md			
+plan-2026-08-20-the-stope	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-stope.md			
+plan-2026-08-20-the-stylus	shipped	none		status header records closure		docs/superpowers/plans/2026-08-20-the-stylus.md			
+plan-2026-08-21-the-chroma	shipped	none		status header records closure		docs/superpowers/plans/2026-08-21-the-chroma.md			
+plan-2026-08-21-the-wick	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-21-the-wick.md			
+plan-2026-08-22-the-penstock-stage-1	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-22-the-penstock-stage-1.md			
+plan-2026-08-22-the-stride	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-22-the-stride.md			
+plan-2026-08-23-the-drift	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-23-the-drift.md			
+plan-2026-08-23-the-escapement	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-23-the-escapement.md			
+plan-2026-08-23-the-forebay	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-23-the-forebay.md			
+plan-2026-08-23-the-granary	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-23-the-granary.md			
+plan-2026-08-23-the-hand	shipped	none		status header records closure		docs/superpowers/plans/2026-08-23-the-hand.md			
+plan-2026-08-23-the-portolan-world-map	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-23-the-portolan-world-map.md			
+plan-2026-08-24-the-confidant	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-24-the-confidant.md			
+plan-2026-08-24-the-gossan	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-24-the-gossan.md			
+plan-2026-08-24-the-interlinear	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-24-the-interlinear.md			
+plan-2026-08-24-the-lexicon-of-place	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-24-the-lexicon-of-place.md			
+plan-2026-08-24-the-tailrace	shipped	none		status header records closure		docs/superpowers/plans/2026-08-24-the-tailrace.md			
+plan-2026-08-26-the-coercion	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-26-the-coercion.md			
+plan-2026-08-26-the-foliot	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-26-the-foliot.md			
+plan-2026-08-26-the-inquest	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-26-the-inquest.md			
+plan-2026-08-26-the-quadrat	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-26-the-quadrat.md			
+plan-2026-08-26-the-reticence	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-26-the-reticence.md			
+plan-2026-08-26-the-scarf	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-26-the-scarf.md			
+plan-2026-08-26-the-sources	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-26-the-sources.md			
+plan-2026-08-27-the-mortise	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-27-the-mortise.md			
+plan-2026-08-27-the-offer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-27-the-offer.md			
+plan-2026-08-28-the-chattel	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-28-the-chattel.md			
+plan-2026-08-28-the-gallery	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-28-the-gallery.md			
+plan-2026-08-28-the-governor	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-28-the-governor.md			
+plan-2026-08-28-the-latch	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-28-the-latch.md			
+plan-2026-08-28-the-legend	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-28-the-legend.md			
+plan-2026-08-28-the-overture	shipped	none		status header records closure		docs/superpowers/plans/2026-08-28-the-overture.md			
+plan-2026-08-28-the-precedence	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-28-the-precedence.md			
+plan-2026-08-28-the-rail	shipped	none		status header records closure		docs/superpowers/plans/2026-08-28-the-rail.md			
+plan-2026-08-28-the-stile	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-28-the-stile.md			
+plan-2026-08-29-the-attestation	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-29-the-attestation.md			
+plan-2026-08-29-the-quoin	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-29-the-quoin.md			
+plan-2026-08-30-the-cartulary	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-30-the-cartulary.md			
+plan-2026-08-30-the-company	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-30-the-company.md			
+plan-2026-08-30-the-pavement	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-30-the-pavement.md			
+plan-2026-08-30-the-repertory	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-30-the-repertory.md			
+plan-2026-08-31-the-tableau	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-31-the-tableau.md			
+plan-2026-09-01-the-avowal	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-01-the-avowal.md			
+plan-2026-09-01-the-crosscut	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-01-the-crosscut.md			
+plan-2026-09-01-the-hallmark	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-01-the-hallmark.md			
+plan-2026-09-01-the-pawl	shipped	none		status header records closure		docs/superpowers/plans/2026-09-01-the-pawl.md			
+plan-2026-09-01-the-prospect	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-01-the-prospect.md			
+plan-2026-09-01-the-roll	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-01-the-roll.md			
+plan-2026-09-01-the-wicket	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-01-the-wicket.md			
+plan-2026-09-02-the-brattice	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-02-the-brattice.md			
+plan-2026-09-02-the-detent	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-02-the-detent.md			
+plan-2026-09-02-the-nettle	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-02-the-nettle.md			
+plan-2026-09-02-the-plumb	shipped	none		status header records closure		docs/superpowers/plans/2026-09-02-the-plumb.md			
+plan-2026-09-02-the-rack	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-02-the-rack.md			
+plan-2026-09-02-the-reservoir	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-02-the-reservoir.md			
+plan-2026-09-03-the-minute	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-03-the-minute.md			
+plan-2026-09-03-the-pallet	shipped	none		status header records closure		docs/superpowers/plans/2026-09-03-the-pallet.md			
+plan-2026-09-03-the-plat	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-03-the-plat.md			
+plan-2026-09-03-the-terrier	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-03-the-terrier.md			
+plan-2026-09-03-the-wash	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-03-the-wash.md			
+plan-2026-09-04-the-coda	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-04-the-coda.md			
+plan-2026-09-04-the-housemark	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-housemark.md			
+plan-the-contour-baseline	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline.md			
+plan-the-contour-baseline-v2	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline-v2.md			
+plan-the-contour-readout	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-readout.md			
+retro-2026-07-14-the-speakable	shipped	none		committed retrospective					docs/retrospectives/2026-07-14-the-speakable.md
+retro-bio2-life-history	shipped	none		committed retrospective					docs/retrospectives/bio2-life-history.md
+retro-campaign-17	shipped	none		committed retrospective					docs/retrospectives/campaign-17.md
+retro-campaign-19	shipped	none		committed retrospective					docs/retrospectives/campaign-19.md
+retro-campaign-20	shipped	none		committed retrospective					docs/retrospectives/campaign-20.md
+retro-campaign-21	shipped	none		committed retrospective					docs/retrospectives/campaign-21.md
+retro-campaign-22	shipped	none		committed retrospective					docs/retrospectives/campaign-22.md
+retro-campaign-23	shipped	none		committed retrospective					docs/retrospectives/campaign-23.md
+retro-campaign-25	shipped	none		committed retrospective					docs/retrospectives/campaign-25.md
+retro-campaign-26	shipped	none		committed retrospective					docs/retrospectives/campaign-26.md
+retro-campaign-27	shipped	none		committed retrospective					docs/retrospectives/campaign-27.md
+retro-campaign-y2-1	shipped	none		committed retrospective					docs/retrospectives/campaign-y2-1.md
+retro-campaign-y2-2	shipped	none		committed retrospective					docs/retrospectives/campaign-y2-2.md
+retro-campaign-y2-3	shipped	none		committed retrospective					docs/retrospectives/campaign-y2-3.md
+retro-campaign-y2-4	shipped	none		committed retrospective					docs/retrospectives/campaign-y2-4.md
+retro-census-as-data	shipped	none		committed retrospective					docs/retrospectives/census-as-data.md
+retro-common-ground	shipped	none		committed retrospective					docs/retrospectives/common-ground.md
+retro-crust	shipped	none		committed retrospective					docs/retrospectives/crust.md
+retro-deep-time	shipped	none		committed retrospective					docs/retrospectives/deep-time.md
+retro-eclipse-seasons	shipped	none		committed retrospective					docs/retrospectives/eclipse-seasons.md
+retro-few-and-many	shipped	none		committed retrospective					docs/retrospectives/few-and-many.md
+retro-goldengrove	shipped	none		committed retrospective					docs/retrospectives/goldengrove.md
+retro-lab-performance	shipped	none		committed retrospective					docs/retrospectives/lab-performance.md
+retro-night-sky-instrument	shipped	none		committed retrospective					docs/retrospectives/night-sky-instrument.md
+retro-rift-and-fit	shipped	none		committed retrospective					docs/retrospectives/rift-and-fit.md
+retro-sculpting	shipped	none		committed retrospective					docs/retrospectives/sculpting.md
+retro-single-craton-hypsometry	shipped	none		committed retrospective					docs/retrospectives/single-craton-hypsometry.md
+retro-temperature	shipped	none		committed retrospective					docs/retrospectives/temperature.md
+retro-the-accession	shipped	none		committed retrospective					docs/retrospectives/the-accession.md
+retro-the-actants	shipped	none		committed retrospective					docs/retrospectives/the-actants.md
+retro-the-action-clock	shipped	none		committed retrospective					docs/retrospectives/the-action-clock.md
+retro-the-adit	shipped	none		committed retrospective					docs/retrospectives/the-adit.md
+retro-the-alarm	shipped	none		committed retrospective					docs/retrospectives/the-alarm.md
+retro-the-armature	shipped	none		committed retrospective					docs/retrospectives/the-armature.md
+retro-the-assay	shipped	none		committed retrospective					docs/retrospectives/the-assay.md
+retro-the-assize	shipped	none		committed retrospective					docs/retrospectives/the-assize.md
+retro-the-attestation	shipped	none		committed retrospective					docs/retrospectives/the-attestation.md
+retro-the-avowal	shipped	none		committed retrospective					docs/retrospectives/the-avowal.md
+retro-the-axes	shipped	none		committed retrospective					docs/retrospectives/the-axes.md
+retro-the-ballast	shipped	none		committed retrospective					docs/retrospectives/the-ballast.md
+retro-the-bane	shipped	none		committed retrospective					docs/retrospectives/the-bane.md
+retro-the-beacon	shipped	none		committed retrospective					docs/retrospectives/the-beacon.md
+retro-the-bearing	shipped	none		committed retrospective					docs/retrospectives/the-bearing.md
+retro-the-begat	shipped	none		committed retrospective					docs/retrospectives/the-begat.md
+retro-the-beholding	shipped	none		committed retrospective					docs/retrospectives/the-beholding.md
+retro-the-belonging	shipped	none		committed retrospective					docs/retrospectives/the-belonging.md
+retro-the-benchmark	shipped	none		committed retrospective					docs/retrospectives/the-benchmark.md
+retro-the-blocking	shipped	none		committed retrospective					docs/retrospectives/the-blocking.md
+retro-the-book-polish	shipped	none		committed retrospective					docs/retrospectives/the-book-polish.md
+retro-the-branches	shipped	none		committed retrospective					docs/retrospectives/the-branches.md
+retro-the-brattice	shipped	none		committed retrospective					docs/retrospectives/the-brattice.md
+retro-the-burr	shipped	none		committed retrospective					docs/retrospectives/the-burr.md
+retro-the-cairn	shipped	none		committed retrospective					docs/retrospectives/the-cairn.md
+retro-the-cant	shipped	none		committed retrospective					docs/retrospectives/the-cant.md
+retro-the-cartographer	shipped	none		committed retrospective					docs/retrospectives/the-cartographer.md
+retro-the-cartulary	shipped	none		committed retrospective					docs/retrospectives/the-cartulary.md
+retro-the-casement	shipped	none		committed retrospective					docs/retrospectives/the-casement.md
+retro-the-chattel	shipped	none		committed retrospective					docs/retrospectives/the-chattel.md
+retro-the-chorus	shipped	none		committed retrospective					docs/retrospectives/the-chorus.md
+retro-the-chroma	shipped	none		committed retrospective					docs/retrospectives/the-chroma.md
+retro-the-cistern	shipped	none		committed retrospective					docs/retrospectives/the-cistern.md
+retro-the-cloister	shipped	none		committed retrospective					docs/retrospectives/the-cloister.md
+retro-the-coercion	shipped	none		committed retrospective					docs/retrospectives/the-coercion.md
+retro-the-collation	shipped	none		committed retrospective					docs/retrospectives/the-collation.md
+retro-the-column	shipped	none		committed retrospective					docs/retrospectives/the-column.md
+retro-the-company	shipped	none		committed retrospective					docs/retrospectives/the-company.md
+retro-the-compendium	shipped	none		committed retrospective					docs/retrospectives/the-compendium.md
+retro-the-compound-word	shipped	none		committed retrospective					docs/retrospectives/the-compound-word.md
+retro-the-concordance	shipped	none		committed retrospective					docs/retrospectives/the-concordance.md
+retro-the-confidant	shipped	none		committed retrospective					docs/retrospectives/the-confidant.md
+retro-the-confluence	shipped	none		committed retrospective					docs/retrospectives/the-confluence.md
+retro-the-confusion	shipped	none		committed retrospective					docs/retrospectives/the-confusion.md
+retro-the-connection-graph	shipped	none		committed retrospective					docs/retrospectives/the-connection-graph.md
+retro-the-consonance	shipped	none		committed retrospective					docs/retrospectives/the-consonance.md
+retro-the-contour	shipped	none		committed retrospective					docs/retrospectives/the-contour.md
+retro-the-convalescence	shipped	none		committed retrospective					docs/retrospectives/the-convalescence.md
+retro-the-correspondence	shipped	none		committed retrospective					docs/retrospectives/the-correspondence.md
+retro-the-corrigendum	shipped	none		committed retrospective					docs/retrospectives/the-corrigendum.md
+retro-the-crosscut	shipped	none		committed retrospective					docs/retrospectives/the-crosscut.md
+retro-the-cupel	shipped	none		committed retrospective					docs/retrospectives/the-cupel.md
+retro-the-datum	shipped	none		committed retrospective					docs/retrospectives/the-datum.md
+retro-the-deed	shipped	none		committed retrospective					docs/retrospectives/the-deed.md
+retro-the-deep	shipped	none		committed retrospective					docs/retrospectives/the-deep.md
+retro-the-deep-grammar	shipped	none		committed retrospective					docs/retrospectives/the-deep-grammar.md
+retro-the-deep-realm	shipped	none		committed retrospective					docs/retrospectives/the-deep-realm.md
+retro-the-delvers	shipped	none		committed retrospective					docs/retrospectives/the-delvers.md
+retro-the-demesne	shipped	none		committed retrospective					docs/retrospectives/the-demesne.md
+retro-the-detent	shipped	none		committed retrospective					docs/retrospectives/the-detent.md
+retro-the-diachronic-book	shipped	none		committed retrospective					docs/retrospectives/the-diachronic-book.md
+retro-the-digest	shipped	none		committed retrospective					docs/retrospectives/the-digest.md
+retro-the-diorama	shipped	none		committed retrospective					docs/retrospectives/the-diorama.md
+retro-the-disposition	shipped	none		committed retrospective					docs/retrospectives/the-disposition.md
+retro-the-dissolution	shipped	none		committed retrospective					docs/retrospectives/the-dissolution.md
+retro-the-doctrine	shipped	none		committed retrospective					docs/retrospectives/the-doctrine.md
+retro-the-domain-trait	shipped	none		committed retrospective					docs/retrospectives/the-domain-trait.md
+retro-the-domesday	shipped	none		committed retrospective					docs/retrospectives/the-domesday.md
+retro-the-dread	shipped	none		committed retrospective					docs/retrospectives/the-dread.md
+retro-the-drift	shipped	none		committed retrospective					docs/retrospectives/the-drift.md
+retro-the-echo	shipped	none		committed retrospective					docs/retrospectives/the-echo.md
+retro-the-effacement	shipped	none		committed retrospective					docs/retrospectives/the-effacement.md
+retro-the-elements	shipped	none		committed retrospective					docs/retrospectives/the-elements.md
+retro-the-ell	shipped	none		committed retrospective					docs/retrospectives/the-ell.md
+retro-the-eremite	shipped	none		committed retrospective					docs/retrospectives/the-eremite.md
+retro-the-escapement	shipped	none		committed retrospective					docs/retrospectives/the-escapement.md
+retro-the-excursion	shipped	none		committed retrospective					docs/retrospectives/the-excursion.md
+retro-the-explanations	shipped	none		committed retrospective					docs/retrospectives/the-explanations.md
+retro-the-faces	shipped	none		committed retrospective					docs/retrospectives/the-faces.md
+retro-the-fare	shipped	none		committed retrospective					docs/retrospectives/the-fare.md
+retro-the-fast-gate	shipped	none		committed retrospective					docs/retrospectives/the-fast-gate.md
+retro-the-fathom	shipped	none		committed retrospective					docs/retrospectives/the-fathom.md
+retro-the-firmament	shipped	none		committed retrospective					docs/retrospectives/the-firmament.md
+retro-the-first-mark	shipped	none		committed retrospective					docs/retrospectives/the-first-mark.md
+retro-the-first-sentence	shipped	none		committed retrospective					docs/retrospectives/the-first-sentence.md
+retro-the-foliot	shipped	none		committed retrospective					docs/retrospectives/the-foliot.md
+retro-the-ford	shipped	none		committed retrospective					docs/retrospectives/the-ford.md
+retro-the-ford-stage-2	shipped	none		committed retrospective					docs/retrospectives/the-ford-stage-2.md
+retro-the-forebay	shipped	none		committed retrospective					docs/retrospectives/the-forebay.md
+retro-the-foresight	shipped	none		committed retrospective					docs/retrospectives/the-foresight.md
+retro-the-formations	shipped	none		committed retrospective					docs/retrospectives/the-formations.md
+retro-the-frame-budget	shipped	none		committed retrospective					docs/retrospectives/the-frame-budget.md
+retro-the-freshet	shipped	none		committed retrospective					docs/retrospectives/the-freshet.md
+retro-the-freshwater	shipped	none		committed retrospective					docs/retrospectives/the-freshwater.md
+retro-the-gallery	shipped	none		committed retrospective					docs/retrospectives/the-gallery.md
+retro-the-gathering	shipped	none		committed retrospective					docs/retrospectives/the-gathering.md
+retro-the-gazetteer	shipped	none		committed retrospective					docs/retrospectives/the-gazetteer.md
+retro-the-generalist	shipped	none		committed retrospective					docs/retrospectives/the-generalist.md
+retro-the-given-word	shipped	none		committed retrospective					docs/retrospectives/the-given-word.md
+retro-the-glasshouse	shipped	none		committed retrospective					docs/retrospectives/the-glasshouse.md
+retro-the-gnomon	shipped	none		committed retrospective					docs/retrospectives/the-gnomon.md
+retro-the-gossan	shipped	none		committed retrospective					docs/retrospectives/the-gossan.md
+retro-the-governor	shipped	none		committed retrospective					docs/retrospectives/the-governor.md
+retro-the-grain	shipped	none		committed retrospective					docs/retrospectives/the-grain.md
+retro-the-granary	shipped	none		committed retrospective					docs/retrospectives/the-granary.md
+retro-the-ground	shipped	none		committed retrospective					docs/retrospectives/the-ground.md
+retro-the-gyre	shipped	none		committed retrospective					docs/retrospectives/the-gyre.md
+retro-the-hachure	shipped	none		committed retrospective					docs/retrospectives/the-hachure.md
+retro-the-hallmark	shipped	none		committed retrospective					docs/retrospectives/the-hallmark.md
+retro-the-hand	shipped	none		committed retrospective					docs/retrospectives/the-hand.md
+retro-the-handle	shipped	none		committed retrospective					docs/retrospectives/the-handle.md
+retro-the-haunt	shipped	none		committed retrospective					docs/retrospectives/the-haunt.md
+retro-the-hearsay	shipped	none		committed retrospective					docs/retrospectives/the-hearsay.md
+retro-the-hearth	shipped	none		committed retrospective					docs/retrospectives/the-hearth.md
+retro-the-helm	shipped	none		committed retrospective					docs/retrospectives/the-helm.md
+retro-the-hoist	shipped	none		committed retrospective					docs/retrospectives/the-hoist.md
+retro-the-holdfast	shipped	none		committed retrospective					docs/retrospectives/the-holdfast.md
+retro-the-hollow	shipped	none		committed retrospective					docs/retrospectives/the-hollow.md
+retro-the-housemark	shipped	none		committed retrospective					docs/retrospectives/the-housemark.md
+retro-the-idioms	shipped	none		committed retrospective					docs/retrospectives/the-idioms.md
+retro-the-illumination	shipped	none		committed retrospective					docs/retrospectives/the-illumination.md
+retro-the-individuation	shipped	none		committed retrospective					docs/retrospectives/the-individuation.md
+retro-the-inquest	shipped	none		committed retrospective					docs/retrospectives/the-inquest.md
+retro-the-interlinear	shipped	none		committed retrospective					docs/retrospectives/the-interlinear.md
+retro-the-isotherm	shipped	none		committed retrospective					docs/retrospectives/the-isotherm.md
+retro-the-keeping	shipped	none		committed retrospective					docs/retrospectives/the-keeping.md
+retro-the-kindling	shipped	none		committed retrospective					docs/retrospectives/the-kindling.md
+retro-the-lantern	shipped	none		committed retrospective					docs/retrospectives/the-lantern.md
+retro-the-latch	shipped	none		committed retrospective					docs/retrospectives/the-latch.md
+retro-the-legend	shipped	none		committed retrospective					docs/retrospectives/the-legend.md
+retro-the-lens	shipped	none		committed retrospective					docs/retrospectives/the-lens.md
+retro-the-lexicon	shipped	none		committed retrospective					docs/retrospectives/the-lexicon.md
+retro-the-lexicon-of-place	shipped	none		committed retrospective					docs/retrospectives/the-lexicon-of-place.md
+retro-the-lintel	shipped	none		committed retrospective					docs/retrospectives/the-lintel.md
+retro-the-living-community	shipped	none		committed retrospective					docs/retrospectives/the-living-community.md
+retro-the-local-census	shipped	none		committed retrospective					docs/retrospectives/the-local-census.md
+retro-the-locale-window	shipped	none		committed retrospective					docs/retrospectives/the-locale-window.md
+retro-the-lode	shipped	none		committed retrospective					docs/retrospectives/the-lode.md
+retro-the-lodestar	shipped	none		committed retrospective					docs/retrospectives/the-lodestar.md
+retro-the-long-age	shipped	none		committed retrospective					docs/retrospectives/the-long-age.md
+retro-the-long-count	shipped	none		committed retrospective					docs/retrospectives/the-long-count.md
+retro-the-lookup	shipped	none		committed retrospective					docs/retrospectives/the-lookup.md
+retro-the-manikin	shipped	none		committed retrospective					docs/retrospectives/the-manikin.md
+retro-the-mantle	shipped	none		committed retrospective					docs/retrospectives/the-mantle.md
+retro-the-margin	shipped	none		committed retrospective					docs/retrospectives/the-margin.md
+retro-the-massing	shipped	none		committed retrospective					docs/retrospectives/the-massing.md
+retro-the-menagerie	shipped	none		committed retrospective					docs/retrospectives/the-menagerie.md
+retro-the-mettle	shipped	none		committed retrospective					docs/retrospectives/the-mettle.md
+retro-the-millrace	shipped	none		committed retrospective					docs/retrospectives/the-millrace.md
+retro-the-minute	shipped	none		committed retrospective					docs/retrospectives/the-minute.md
+retro-the-mire	shipped	none		committed retrospective					docs/retrospectives/the-mire.md
+retro-the-mirror	shipped	none		committed retrospective					docs/retrospectives/the-mirror.md
+retro-the-mortise	shipped	none		committed retrospective					docs/retrospectives/the-mortise.md
+retro-the-muster	shipped	none		committed retrospective					docs/retrospectives/the-muster.md
+retro-the-named	shipped	none		committed retrospective					docs/retrospectives/the-named.md
+retro-the-namesake	shipped	none		committed retrospective					docs/retrospectives/the-namesake.md
+retro-the-nettle	shipped	none		committed retrospective					docs/retrospectives/the-nettle.md
+retro-the-niche	shipped	none		committed retrospective					docs/retrospectives/the-niche.md
+retro-the-occlusion	shipped	none		committed retrospective					docs/retrospectives/the-occlusion.md
+retro-the-offer	shipped	none		committed retrospective					docs/retrospectives/the-offer.md
+retro-the-ordination	shipped	none		committed retrospective					docs/retrospectives/the-ordination.md
+retro-the-overture	shipped	none		committed retrospective					docs/retrospectives/the-overture.md
+retro-the-overworld	shipped	none		committed retrospective					docs/retrospectives/the-overworld.md
+retro-the-palimpsest	shipped	none		committed retrospective					docs/retrospectives/the-palimpsest.md
+retro-the-pallet	shipped	none		committed retrospective					docs/retrospectives/the-pallet.md
+retro-the-panes	shipped	none		committed retrospective					docs/retrospectives/the-panes.md
+retro-the-parley	shipped	none		committed retrospective					docs/retrospectives/the-parley.md
+retro-the-particular	shipped	none		committed retrospective					docs/retrospectives/the-particular.md
+retro-the-pavement	shipped	none		committed retrospective					docs/retrospectives/the-pavement.md
+retro-the-pawl	shipped	none		committed retrospective					docs/retrospectives/the-pawl.md
+retro-the-penstock	shipped	none		committed retrospective					docs/retrospectives/the-penstock.md
+retro-the-phantom	shipped	none		committed retrospective					docs/retrospectives/the-phantom.md
+retro-the-pigment	shipped	none		committed retrospective					docs/retrospectives/the-pigment.md
+retro-the-plat	shipped	none		committed retrospective					docs/retrospectives/the-plat.md
+retro-the-plumb	shipped	none		committed retrospective					docs/retrospectives/the-plumb.md
+retro-the-portolan	shipped	none		committed retrospective					docs/retrospectives/the-portolan.md
+retro-the-portolan-world-map	shipped	none		committed retrospective					docs/retrospectives/the-portolan-world-map.md
+retro-the-precedence	shipped	none		committed retrospective					docs/retrospectives/the-precedence.md
+retro-the-predicates-and-the-grammar	shipped	none		committed retrospective					docs/retrospectives/the-predicates-and-the-grammar.md
+retro-the-presiding	shipped	none		committed retrospective					docs/retrospectives/the-presiding.md
+retro-the-prospect	shipped	none		committed retrospective					docs/retrospectives/the-prospect.md
+retro-the-provender	shipped	none		committed retrospective					docs/retrospectives/the-provender.md
+retro-the-purview	shipped	none		committed retrospective					docs/retrospectives/the-purview.md
+retro-the-pyx	shipped	none		committed retrospective					docs/retrospectives/the-pyx.md
+retro-the-quadrat	shipped	none		committed retrospective					docs/retrospectives/the-quadrat.md
+retro-the-quarry	shipped	none		committed retrospective					docs/retrospectives/the-quarry.md
+retro-the-quickening	shipped	none		committed retrospective					docs/retrospectives/the-quickening.md
+retro-the-quire	shipped	none		committed retrospective					docs/retrospectives/the-quire.md
+retro-the-quoin	shipped	none		committed retrospective					docs/retrospectives/the-quoin.md
+retro-the-rack	shipped	none		committed retrospective					docs/retrospectives/the-rack.md
+retro-the-radiation	shipped	none		committed retrospective					docs/retrospectives/the-radiation.md
+retro-the-rail	shipped	none		committed retrospective					docs/retrospectives/the-rail.md
+retro-the-rains	shipped	none		committed retrospective					docs/retrospectives/the-rains.md
+retro-the-range	shipped	none		committed retrospective					docs/retrospectives/the-range.md
+retro-the-reagent	shipped	none		committed retrospective					docs/retrospectives/the-reagent.md
+retro-the-real-sky	shipped	none		committed retrospective					docs/retrospectives/the-real-sky.md
+retro-the-reassay	shipped	none		committed retrospective					docs/retrospectives/the-reassay.md
+retro-the-reckoning	shipped	none		committed retrospective					docs/retrospectives/the-reckoning.md
+retro-the-region	shipped	none		committed retrospective					docs/retrospectives/the-region.md
+retro-the-repertoire	shipped	none		committed retrospective					docs/retrospectives/the-repertoire.md
+retro-the-repertory	shipped	none		committed retrospective					docs/retrospectives/the-repertory.md
+retro-the-repose	shipped	none		committed retrospective					docs/retrospectives/the-repose.md
+retro-the-reservoir	shipped	none		committed retrospective					docs/retrospectives/the-reservoir.md
+retro-the-residue	shipped	none		committed retrospective					docs/retrospectives/the-residue.md
+retro-the-retainer	shipped	none		committed retrospective					docs/retrospectives/the-retainer.md
+retro-the-retelling	shipped	none		committed retrospective					docs/retrospectives/the-retelling.md
+retro-the-reticence	shipped	none		committed retrospective					docs/retrospectives/the-reticence.md
+retro-the-rhumb	shipped	none		committed retrospective					docs/retrospectives/the-rhumb.md
+retro-the-rill	shipped	none		committed retrospective					docs/retrospectives/the-rill.md
+retro-the-rising-tone	shipped	none		committed retrospective					docs/retrospectives/the-rising-tone.md
+retro-the-roll	shipped	none		committed retrospective					docs/retrospectives/the-roll.md
+retro-the-room-mesh	shipped	none		committed retrospective					docs/retrospectives/the-room-mesh.md
+retro-the-salt	shipped	none		committed retrospective					docs/retrospectives/the-salt.md
+retro-the-scaffold	shipped	none		committed retrospective					docs/retrospectives/the-scaffold.md
+retro-the-scarf	shipped	none		committed retrospective					docs/retrospectives/the-scarf.md
+retro-the-scour	shipped	none		committed retrospective					docs/retrospectives/the-scour.md
+retro-the-seam	shipped	none		committed retrospective					docs/retrospectives/the-seam.md
+retro-the-self-describing-sky	shipped	none		committed retrospective					docs/retrospectives/the-self-describing-sky.md
+retro-the-selvage	shipped	none		committed retrospective					docs/retrospectives/the-selvage.md
+retro-the-sextant	shipped	none		committed retrospective					docs/retrospectives/the-sextant.md
+retro-the-sexton	shipped	none		committed retrospective					docs/retrospectives/the-sexton.md
+retro-the-shadow-track	shipped	none		committed retrospective					docs/retrospectives/the-shadow-track.md
+retro-the-shelf-mark	shipped	none		committed retrospective					docs/retrospectives/the-shelf-mark.md
+retro-the-shoal	shipped	none		committed retrospective					docs/retrospectives/the-shoal.md
+retro-the-shudder	shipped	none		committed retrospective					docs/retrospectives/the-shudder.md
+retro-the-shuttle	shipped	none		committed retrospective					docs/retrospectives/the-shuttle.md
+retro-the-siding	shipped	none		committed retrospective					docs/retrospectives/the-siding.md
+retro-the-sighting	shipped	none		committed retrospective					docs/retrospectives/the-sighting.md
+retro-the-signet	shipped	none		committed retrospective					docs/retrospectives/the-signet.md
+retro-the-single-saying	shipped	none		committed retrospective					docs/retrospectives/the-single-saying.md
+retro-the-single-sculpt	shipped	none		committed retrospective					docs/retrospectives/the-single-sculpt.md
+retro-the-sluice	shipped	none		committed retrospective					docs/retrospectives/the-sluice.md
+retro-the-slumber	shipped	none		committed retrospective					docs/retrospectives/the-slumber.md
+retro-the-snapshot	shipped	none		committed retrospective					docs/retrospectives/the-snapshot.md
+retro-the-solitary-tongue	shipped	none		committed retrospective					docs/retrospectives/the-solitary-tongue.md
+retro-the-sounding	shipped	none		committed retrospective					docs/retrospectives/the-sounding.md
+retro-the-sources	shipped	none		committed retrospective					docs/retrospectives/the-sources.md
+retro-the-staff	shipped	none		committed retrospective					docs/retrospectives/the-staff.md
+retro-the-standing-offer	shipped	none		committed retrospective					docs/retrospectives/the-standing-offer.md
+retro-the-staple	shipped	none		committed retrospective					docs/retrospectives/the-staple.md
+retro-the-stile	shipped	none		committed retrospective					docs/retrospectives/the-stile.md
+retro-the-stope	shipped	none		committed retrospective					docs/retrospectives/the-stope.md
+retro-the-stride	shipped	none		committed retrospective					docs/retrospectives/the-stride.md
+retro-the-stylus	shipped	none		committed retrospective					docs/retrospectives/the-stylus.md
+retro-the-sundering	shipped	none		committed retrospective					docs/retrospectives/the-sundering.md
+retro-the-surmise	shipped	none		committed retrospective					docs/retrospectives/the-surmise.md
+retro-the-tableau	shipped	none		committed retrospective					docs/retrospectives/the-tableau.md
+retro-the-tackle	shipped	none		committed retrospective					docs/retrospectives/the-tackle.md
+retro-the-tailrace	shipped	none		committed retrospective					docs/retrospectives/the-tailrace.md
+retro-the-tare	shipped	none		committed retrospective					docs/retrospectives/the-tare.md
+retro-the-teeth	shipped	none		committed retrospective					docs/retrospectives/the-teeth.md
+retro-the-temperament	shipped	none		committed retrospective					docs/retrospectives/the-temperament.md
+retro-the-terminator	shipped	none		committed retrospective					docs/retrospectives/the-terminator.md
+retro-the-terrier	shipped	none		committed retrospective					docs/retrospectives/the-terrier.md
+retro-the-threshold	shipped	none		committed retrospective					docs/retrospectives/the-threshold.md
+retro-the-tidings	shipped	none		committed retrospective					docs/retrospectives/the-tidings.md
+retro-the-tilth	shipped	none		committed retrospective					docs/retrospectives/the-tilth.md
+retro-the-timekeeper	shipped	none		committed retrospective					docs/retrospectives/the-timekeeper.md
+retro-the-tithe	shipped	none		committed retrospective					docs/retrospectives/the-tithe.md
+retro-the-tolerance	shipped	none		committed retrospective					docs/retrospectives/the-tolerance.md
+retro-the-tongues	shipped	none		committed retrospective					docs/retrospectives/the-tongues.md
+retro-the-toponym	shipped	none		committed retrospective					docs/retrospectives/the-toponym.md
+retro-the-touchstone	shipped	none		committed retrospective					docs/retrospectives/the-touchstone.md
+retro-the-true-name	shipped	none		committed retrospective					docs/retrospectives/the-true-name.md
+retro-the-tumult	shipped	none		committed retrospective					docs/retrospectives/the-tumult.md
+retro-the-turning	shipped	none		committed retrospective					docs/retrospectives/the-turning.md
+retro-the-turnstile	shipped	none		committed retrospective					docs/retrospectives/the-turnstile.md
+retro-the-twin	shipped	none		committed retrospective					docs/retrospectives/the-twin.md
+retro-the-type-audit	shipped	none		committed retrospective					docs/retrospectives/the-type-audit.md
+retro-the-uncommon-ground	shipped	none		committed retrospective					docs/retrospectives/the-uncommon-ground.md
+retro-the-undertow	shipped	none		committed retrospective					docs/retrospectives/the-undertow.md
+retro-the-underworld	shipped	none		committed retrospective					docs/retrospectives/the-underworld.md
+retro-the-vacancy	shipped	none		committed retrospective					docs/retrospectives/the-vacancy.md
+retro-the-vantage	shipped	none		committed retrospective					docs/retrospectives/the-vantage.md
+retro-the-vernacular	shipped	none		committed retrospective					docs/retrospectives/the-vernacular.md
+retro-the-vessel-stitch	shipped	none		committed retrospective					docs/retrospectives/the-vessel-stitch.md
+retro-the-vestige	shipped	none		committed retrospective					docs/retrospectives/the-vestige.md
+retro-the-vigil	shipped	none		committed retrospective					docs/retrospectives/the-vigil.md
+retro-the-wakeful-sun	shipped	none		committed retrospective					docs/retrospectives/the-wakeful-sun.md
+retro-the-wandering-sun	shipped	none		committed retrospective					docs/retrospectives/the-wandering-sun.md
+retro-the-wanting	shipped	none		committed retrospective					docs/retrospectives/the-wanting.md
+retro-the-warren	shipped	none		committed retrospective					docs/retrospectives/the-warren.md
+retro-the-wash	shipped	none		committed retrospective					docs/retrospectives/the-wash.md
+retro-the-waterline	shipped	none		committed retrospective					docs/retrospectives/the-waterline.md
+retro-the-watershed	shipped	none		committed retrospective					docs/retrospectives/the-watershed.md
+retro-the-waymark	shipped	none		committed retrospective					docs/retrospectives/the-waymark.md
+retro-the-wearing	shipped	none		committed retrospective					docs/retrospectives/the-wearing.md
+retro-the-weir	shipped	none		committed retrospective					docs/retrospectives/the-weir.md
+retro-the-whetstone	shipped	none		committed retrospective					docs/retrospectives/the-whetstone.md
+retro-the-wick	shipped	none		committed retrospective					docs/retrospectives/the-wick.md
+retro-the-wicket	shipped	none		committed retrospective					docs/retrospectives/the-wicket.md
+retro-the-wilding	shipped	none		committed retrospective					docs/retrospectives/the-wilding.md
+retro-the-winnowing	shipped	none		committed retrospective					docs/retrospectives/the-winnowing.md
+retro-the-winze	shipped	none		committed retrospective					docs/retrospectives/the-winze.md
+retro-the-witness	shipped	none		committed retrospective					docs/retrospectives/the-witness.md
+retro-year-2	shipped	none		committed retrospective					docs/retrospectives/year-2.md
+spec-2026-07-05-campaign-2-the-sky-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-05-campaign-2-the-sky-design.md				
+spec-2026-07-05-hornvale-longterm-plan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-05-hornvale-longterm-plan-design.md				
+spec-2026-07-06-campaign-3-the-land-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-06-campaign-3-the-land-design.md				
+spec-2026-07-06-campaign-4-the-people-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-06-campaign-4-the-people-design.md				
+spec-2026-07-06-campaign-l0-the-lab-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-06-campaign-l0-the-lab-design.md				
+spec-2026-07-07-campaign-5-the-gods-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-07-campaign-5-the-gods-design.md				
+spec-2026-07-07-campaign-y2-1-the-peoples-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-07-campaign-y2-1-the-peoples-design.md				
+spec-2026-07-07-campaign-y2-2-the-eyes-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md				
+spec-2026-07-07-year-2-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-07-year-2-metaplan-design.md				
+spec-2026-07-08-audible-phonology-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-08-audible-phonology-design.md				
+spec-2026-07-08-campaign-y2-3-the-tongues-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-08-campaign-y2-3-the-tongues-design.md				
+spec-2026-07-08-campaign-y2-4-the-meeting-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-08-campaign-y2-4-the-meeting-design.md				
+spec-2026-07-09-atlas-viewer-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-atlas-viewer-design.md				
+spec-2026-07-09-campaign-the-words-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-campaign-the-words-design.md				
+spec-2026-07-09-deep-time-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-deep-time-design.md				
+spec-2026-07-09-firm-ground-ii-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-firm-ground-ii-design.md				
+spec-2026-07-09-live-orrery-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-live-orrery-design.md				
+spec-2026-07-09-orrery-emoji-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-orrery-emoji-design.md				
+spec-2026-07-09-rendering-strategy-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-rendering-strategy-design.md				
+spec-2026-07-09-scene-protocol-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-scene-protocol-design.md				
+spec-2026-07-09-star-chart-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-star-chart-design.md				
+spec-2026-07-09-the-branches-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-the-branches-design.md				
+spec-2026-07-09-the-measured-coast-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-the-measured-coast-design.md				
+spec-2026-07-09-the-orrery-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-the-orrery-design.md				
+spec-2026-07-09-the-type-audit-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-the-type-audit-design.md				
+spec-2026-07-09-year-3-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-year-3-metaplan-design.md				
+spec-2026-07-10-crust-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-10-crust-design.md				
+spec-2026-07-10-frontier-in-the-book-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-10-frontier-in-the-book-design.md				
+spec-2026-07-10-phonology-tone-tonogenesis-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-10-phonology-tone-tonogenesis-design.md				
+spec-2026-07-11-the-walk-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-11-the-walk-metaplan-design.md				
+spec-2026-07-12-domain-trait-registry-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-12-domain-trait-registry-design.md				
+spec-2026-07-12-lab-performance-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-12-lab-performance-design.md				
+spec-2026-07-12-remote-gate-aws-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-12-remote-gate-aws-design.md				
+spec-2026-07-12-temperature-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-12-temperature-design.md				
+spec-2026-07-12-the-datum-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-12-the-datum-design.md				
+spec-2026-07-12-the-locale-window-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-12-the-locale-window-design.md				
+spec-2026-07-12-the-room-mesh-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-12-the-room-mesh-design.md				
+spec-2026-07-13-census-as-data-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-13-census-as-data-design.md				
+spec-2026-07-13-fast-gate-tiers-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-13-fast-gate-tiers-design.md				
+spec-2026-07-13-night-sky-instrument-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-13-night-sky-instrument-design.md				
+spec-2026-07-13-population-field-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-13-population-field-design.md				
+spec-2026-07-13-single-craton-hypsometry-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-13-single-craton-hypsometry-design.md				
+spec-2026-07-13-the-casement-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-13-the-casement-design.md				
+spec-2026-07-13-the-coexistence-stack-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-13-the-coexistence-stack-design.md				
+spec-2026-07-13-the-seam-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-13-the-seam-design.md				
+spec-2026-07-13-the-self-describing-sky-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-13-the-self-describing-sky-design.md				
+spec-2026-07-13-the-uncommon-ground-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-13-the-uncommon-ground-design.md				
+spec-2026-07-14-bio2-life-history-allometry-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-bio2-life-history-allometry-design.md				
+spec-2026-07-14-campaign-autopilot-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-campaign-autopilot-design.md				
+spec-2026-07-14-eclipse-seasons-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-eclipse-seasons-design.md				
+spec-2026-07-14-ecs-program-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-ecs-program-metaplan-design.md				
+spec-2026-07-14-goldengrove-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-goldengrove-design.md				
+spec-2026-07-14-sculpting-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-sculpting-design.md				
+spec-2026-07-14-the-ground-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-the-ground-design.md				
+spec-2026-07-14-the-helm-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-the-helm-design.md				
+spec-2026-07-14-the-long-count-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-the-long-count-design.md				
+spec-2026-07-14-the-niche-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-the-niche-design.md				
+spec-2026-07-14-the-seam-ecs-campaign-1-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-the-seam-ecs-campaign-1-design.md				
+spec-2026-07-14-the-speakable-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-the-speakable-design.md				
+spec-2026-07-15-kindid-ecs-campaign-2-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-15-kindid-ecs-campaign-2-design.md				
+spec-2026-07-16-rift-and-fit-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-16-rift-and-fit-design.md				
+spec-2026-07-16-species-dissolve-ecs-campaign-3-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-species-dissolve-ecs-campaign-3-design.md				
+spec-2026-07-16-the-faces-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-the-faces-design.md				
+spec-2026-07-16-the-isotherm-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-the-isotherm-design.md				
+spec-2026-07-16-the-moons-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-the-moons-design.md				
+spec-2026-07-16-the-named-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-16-the-named-design.md				
+spec-2026-07-16-the-reckoning-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-the-reckoning-design.md				
+spec-2026-07-16-the-region-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-the-region-design.md				
+spec-2026-07-16-the-terminator-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-the-terminator-design.md				
+spec-2026-07-17-instance-join-ecs-campaign-5-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-17-instance-join-ecs-campaign-5-design.md				
+spec-2026-07-17-systems-schedule-ecs-campaign-6-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-17-systems-schedule-ecs-campaign-6-design.md				
+spec-2026-07-17-the-first-sentence-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-17-the-first-sentence-design.md				
+spec-2026-07-17-the-predicates-and-the-grammar-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-17-the-predicates-and-the-grammar-design.md				
+spec-2026-07-17-the-presiding-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-17-the-presiding-design.md				
+spec-2026-07-17-the-query-engine-ecs-campaign-4-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-17-the-query-engine-ecs-campaign-4-design.md				
+spec-2026-07-17-the-real-sky-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-17-the-real-sky-design.md				
+spec-2026-07-17-the-self-writing-book-program-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-17-the-self-writing-book-program-metaplan-design.md				
+spec-2026-07-17-the-wandering-sun-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-17-the-wandering-sun-design.md				
+spec-2026-07-18-diurnal-temperature-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-diurnal-temperature-design.md				
+spec-2026-07-18-the-chorus-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-chorus-design.md				
+spec-2026-07-18-the-correspondence-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-correspondence-design.md				
+spec-2026-07-18-the-echo-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-18-the-echo-design.md				
+spec-2026-07-18-the-elements-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-elements-design.md				
+spec-2026-07-18-the-explanations-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-explanations-design.md				
+spec-2026-07-18-the-foresight-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-foresight-design.md				
+spec-2026-07-18-the-freshet-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-18-the-freshet-design.md				
+spec-2026-07-18-the-quickening-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-quickening-design.md				
+spec-2026-07-18-the-shadow-track-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-shadow-track-design.md				
+spec-2026-07-18-the-surmise-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-18-the-surmise-design.md				
+spec-2026-07-18-the-tongues-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-18-the-tongues-design.md				
+spec-2026-07-18-the-wanting-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-18-the-wanting-design.md				
+spec-2026-07-19-cloud-shell-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-19-cloud-shell-design.md				
+spec-2026-07-19-ocean-currents-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-19-ocean-currents-design.md				
+spec-2026-07-19-precipitation-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-19-precipitation-design.md				
+spec-2026-07-19-the-confluence-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-19-the-confluence-design.md				
+spec-2026-07-19-the-deep-grammar-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-19-the-deep-grammar-design.md				
+spec-2026-07-19-the-demesne-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-19-the-demesne-design.md				
+spec-2026-07-19-the-diachronic-book-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-19-the-diachronic-book-design.md				
+spec-2026-07-19-the-doctrine-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-19-the-doctrine-design.md				
+spec-2026-07-19-the-temperament-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-19-the-temperament-design.md				
+spec-2026-07-19-the-vessel-stitch-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-19-the-vessel-stitch-design.md				
+spec-2026-07-19-weather-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-19-weather-design.md				
+spec-2026-07-20-few-and-many-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-few-and-many-design.md				
+spec-2026-07-20-orrery-performance-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-orrery-performance-design.md				
+spec-2026-07-20-the-book-polish-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-the-book-polish-design.md				
+spec-2026-07-20-the-cartographer-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-20-the-cartographer-design.md				
+spec-2026-07-20-the-cartographer-transition-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-20-the-cartographer-transition-design.md				
+spec-2026-07-20-the-consonance-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-the-consonance-design.md				
+spec-2026-07-20-the-corrigendum-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-the-corrigendum-design.md				
+spec-2026-07-20-the-idioms-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-the-idioms-design.md				
+spec-2026-07-20-the-kindling-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-20-the-kindling-design.md				
+spec-2026-07-20-the-living-community-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-20-the-living-community-design.md				
+spec-2026-07-20-the-provender-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-20-the-provender-design.md				
+spec-2026-07-20-the-residue-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-the-residue-design.md				
+spec-2026-07-20-the-slumber-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-20-the-slumber-design.md				
+spec-2026-07-20-the-sounding-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-20-the-sounding-design.md				
+spec-2026-07-21-proc-17-stream-labels-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-21-proc-17-stream-labels-design.md				
+spec-2026-07-21-proc-18-stream-labels-macro-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-proc-18-stream-labels-macro-design.md				
+spec-2026-07-21-the-alarm-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-alarm-design.md				
+spec-2026-07-21-the-assay-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-assay-design.md				
+spec-2026-07-21-the-bane-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-bane-design.md				
+spec-2026-07-21-the-belonging-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-belonging-design.md				
+spec-2026-07-21-the-connection-graph-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-21-the-connection-graph-design.md				
+spec-2026-07-21-the-diorama-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-21-the-diorama-design.md				
+spec-2026-07-21-the-disposition-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-disposition-design.md				
+spec-2026-07-21-the-dread-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-dread-design.md				
+spec-2026-07-21-the-freshwater-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-21-the-freshwater-design.md				
+spec-2026-07-21-the-massing-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-21-the-massing-design.md				
+spec-2026-07-21-the-mettle-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-mettle-design.md				
+spec-2026-07-21-the-overworld-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-21-the-overworld-design.md				
+spec-2026-07-21-the-quarry-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-quarry-design.md				
+spec-2026-07-21-the-teeth-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-teeth-design.md				
+spec-2026-07-21-the-tidings-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-tidings-design.md				
+spec-2026-07-21-the-vantage-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-21-the-vantage-design.md				
+spec-2026-07-21-the-wilding-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-21-the-wilding-design.md				
+spec-2026-07-22-proc-12-regenerate-on-conflict-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-proc-12-regenerate-on-conflict-design.md				
+spec-2026-07-22-proc-19-history-stream-labels-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-proc-19-history-stream-labels-design.md				
+spec-2026-07-22-the-cloister-mind-society-split-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-cloister-mind-society-split-design.md				
+spec-2026-07-22-the-deep-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-deep-design.md				
+spec-2026-07-22-the-eremite-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-eremite-design.md				
+spec-2026-07-22-the-first-mark-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-22-the-first-mark-design.md				
+spec-2026-07-22-the-haunt-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-haunt-design.md				
+spec-2026-07-22-the-lode-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-22-the-lode-design.md				
+spec-2026-07-22-the-phantom-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-phantom-design.md				
+spec-2026-07-22-the-solitary-tongue-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-solitary-tongue-design.md				
+spec-2026-07-22-the-sundering-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-22-the-sundering-design.md				
+spec-2026-07-22-the-tumult-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-tumult-design.md				
+spec-2026-07-23-the-bearing-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-23-the-bearing-design.md				
+spec-2026-07-23-the-commons-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-23-the-commons-design.md				
+spec-2026-07-23-the-excursion-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-23-the-excursion-design.md				
+spec-2026-07-23-the-lookup-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-23-the-lookup-design.md				
+spec-2026-07-23-the-retainer-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-23-the-retainer-design.md				
+spec-2026-07-23-the-vestige-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-23-the-vestige-design.md				
+spec-2026-07-24-the-purview-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-24-the-purview-design.md				
+spec-2026-07-24-the-selvage-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-24-the-selvage-design.md				
+spec-2026-07-24-the-shudder-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-24-the-shudder-design.md				
+spec-2026-07-24-the-vigil-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-24-the-vigil-design.md				
+spec-2026-07-25-the-hearth-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-25-the-hearth-design.md				
+spec-2026-07-25-the-rose-window-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-25-the-rose-window-metaplan-design.md				
+spec-2026-07-25-the-snapshot-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-25-the-snapshot-design.md				
+spec-2026-07-25-the-threshold-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-25-the-threshold-design.md				
+spec-2026-07-26-the-action-clock-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-26-the-action-clock-design.md				
+spec-2026-07-26-the-convalescence-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-26-the-convalescence-design.md				
+spec-2026-07-26-the-crucible-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-26-the-crucible-metaplan-design.md				
+spec-2026-07-26-the-reagent-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-26-the-reagent-design.md				
+spec-2026-07-26-the-tithe-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-26-the-tithe-design.md				
+spec-2026-07-26-the-vacancy-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-26-the-vacancy-design.md				
+spec-2026-07-26-the-waterline-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-26-the-waterline-design.md				
+spec-2026-07-27-the-accession-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-27-the-accession-design.md				
+spec-2026-07-27-the-actants-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-27-the-actants-design.md				
+spec-2026-07-27-the-hoist-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-27-the-hoist-design.md				
+spec-2026-07-27-the-lintel-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-27-the-lintel-design.md				
+spec-2026-07-27-the-occlusion-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-27-the-occlusion-design.md				
+spec-2026-07-27-the-shelf-mark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-27-the-shelf-mark-design.md				
+spec-2026-07-27-the-turnstile-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-27-the-turnstile-design.md				
+spec-2026-07-27-the-wearing-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-27-the-wearing-design.md				
+spec-2026-07-28-the-blocking-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-28-the-blocking-design.md				
+spec-2026-07-28-the-cistern-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-28-the-cistern-design.md				
+spec-2026-07-28-the-sextant-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-28-the-sextant-design.md				
+spec-2026-07-28-the-stratum-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-28-the-stratum-design.md				
+spec-2026-07-29-the-contour-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-29-the-contour-design.md				
+spec-2026-07-29-the-running-head-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-29-the-running-head-design.md				
+spec-2026-07-29-the-siding-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-29-the-siding-design.md				
+spec-2026-07-29-the-timekeeper-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-29-the-timekeeper-design.md				
+spec-2026-07-29-the-watershed-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-29-the-watershed-design.md				
+spec-2026-07-29-the-winnowing-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-29-the-winnowing-design.md				
+spec-2026-07-30-the-pigment-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-30-the-pigment-design.md				
+spec-2026-07-30-the-pyx-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-30-the-pyx-design.md				
+spec-2026-07-30-the-shuttle-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-30-the-shuttle-design.md				
+spec-2026-07-30-the-twin-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-30-the-twin-design.md				
+spec-2026-07-30-the-witness-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-30-the-witness-design.md				
+spec-2026-07-31-the-repertoire-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-31-the-repertoire-design.md				
+spec-2026-07-31-the-vernacular-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-31-the-vernacular-design.md				
+spec-2026-07-31-the-waymark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-31-the-waymark-design.md				
+spec-2026-07-31-the-weir-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-31-the-weir-design.md				
+spec-2026-08-01-the-particular-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-01-the-particular-design.md				
+spec-2026-08-01-the-scaffold-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-01-the-scaffold-design.md				
+spec-2026-08-02-the-manikin-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-02-the-manikin-design.md				
+spec-2026-08-02-the-namesake-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-02-the-namesake-design.md				
+spec-2026-08-02-the-vernacular-part-3-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-02-the-vernacular-part-3-design.md				
+spec-2026-08-03-the-generalist-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-03-the-generalist-design.md				
+spec-2026-08-03-the-mire-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-03-the-mire-design.md				
+spec-2026-08-03-the-peoples-program-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-03-the-peoples-program-design.md				
+spec-2026-08-03-the-salt-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-03-the-salt-design.md				
+spec-2026-08-03-the-tolerance-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-03-the-tolerance-design.md				
+spec-2026-08-04-the-fare-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-04-the-fare-design.md				
+spec-2026-08-04-the-keeping-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-04-the-keeping-design.md				
+spec-2026-08-04-the-tilth-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-04-the-tilth-design.md				
+spec-2026-08-05-the-deep-realm-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-05-the-deep-realm-design.md				
+spec-2026-08-05-the-fallow-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-05-the-fallow-design.md				
+spec-2026-08-05-the-hollow-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-05-the-hollow-design.md				
+spec-2026-08-05-the-tense-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-05-the-tense-design.md				
+spec-2026-08-05-the-unfloored-axis-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-05-the-unfloored-axis-design.md				
+spec-2026-08-06-corpus-two-and-the-matrix-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-06-corpus-two-and-the-matrix-design.md				
+spec-2026-08-06-the-benchmark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-06-the-benchmark-design.md				
+spec-2026-08-06-the-handle-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-06-the-handle-design.md				
+spec-2026-08-06-the-long-age-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-06-the-long-age-design.md				
+spec-2026-08-06-the-panes-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-06-the-panes-design.md				
+spec-2026-08-06-the-sighting-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-06-the-sighting-design.md				
+spec-2026-08-06-the-warren-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-06-the-warren-design.md				
+spec-2026-08-07-geohazards-c0-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-07-geohazards-c0-design.md				
+spec-2026-08-07-the-assay-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-07-the-assay-design.md				
+spec-2026-08-07-the-beholding-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-07-the-beholding-design.md				
+spec-2026-08-07-the-delvers-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-07-the-delvers-design.md				
+spec-2026-08-07-the-journal-brief	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-07-the-journal-brief.md				
+spec-2026-08-07-the-journal-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-07-the-journal-design.md				
+spec-2026-08-07-the-lantern-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-07-the-lantern-design.md				
+spec-2026-08-07-the-spoor-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-07-the-spoor-design.md				
+spec-2026-08-08-the-assize-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-08-the-assize-design.md				
+spec-2026-08-08-the-digest-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-08-the-digest-design.md				
+spec-2026-08-08-the-domesday-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-08-the-domesday-design.md				
+spec-2026-08-08-the-quire-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-08-the-quire-design.md				
+spec-2026-08-08-the-range-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-08-the-range-design.md				
+spec-2026-08-09-the-armature-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-09-the-armature-design.md				
+spec-2026-08-09-the-cairn-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-09-the-cairn-design.md				
+spec-2026-08-09-the-radiation-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-09-the-radiation-design.md				
+spec-2026-08-09-the-signet-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-09-the-signet-design.md				
+spec-2026-08-10-the-ell-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-10-the-ell-design.md				
+spec-2026-08-10-the-ford-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-10-the-ford-design.md				
+spec-2026-08-10-the-grain-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-10-the-grain-design.md				
+spec-2026-08-11-the-beacon-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-11-the-beacon-design.md				
+spec-2026-08-11-the-ford-stage-2-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-11-the-ford-stage-2-design.md				
+spec-2026-08-11-the-ford-stage-2-question-space	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-11-the-ford-stage-2-question-space.md				
+spec-2026-08-11-the-muster-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-11-the-muster-design.md				
+spec-2026-08-11-the-rill-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-11-the-rill-design.md				
+spec-2026-08-12-the-chorography-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-08-12-the-chorography-metaplan.md				
+spec-2026-08-12-the-fathom-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-12-the-fathom-design.md				
+spec-2026-08-12-the-glasshouse-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-12-the-glasshouse-design.md				
+spec-2026-08-12-the-holdfast-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-12-the-holdfast-design.md				
+spec-2026-08-13-the-axes-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-13-the-axes-design.md				
+spec-2026-08-13-the-gnomon-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-13-the-gnomon-design.md				
+spec-2026-08-13-the-hearsay-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-13-the-hearsay-design.md				
+spec-2026-08-13-the-millrace-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-13-the-millrace-design.md				
+spec-2026-08-13-the-sexton-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-13-the-sexton-design.md				
+spec-2026-08-14-the-retelling-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-14-the-retelling-design.md				
+spec-2026-08-14-the-staff-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-14-the-staff-design.md				
+spec-2026-08-15-the-compendium-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-15-the-compendium-design.md				
+spec-2026-08-15-the-sluice-merge-queue-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-15-the-sluice-merge-queue-design.md				
+spec-2026-08-16-the-burr-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-16-the-burr-design.md				
+spec-2026-08-16-the-palimpsest-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-16-the-palimpsest-design.md				
+spec-2026-08-16-the-rhumb-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-16-the-rhumb-design.md				
+spec-2026-08-16-the-underworld-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-16-the-underworld-design.md				
+spec-2026-08-17-the-illumination-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-17-the-illumination-design.md				
+spec-2026-08-17-the-parley-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-17-the-parley-design.md				
+spec-2026-08-18-the-adit-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-18-the-adit-design.md				
+spec-2026-08-18-the-delving-metaplan	shipped	none		status header records closure	docs/superpowers/specs/2026-08-18-the-delving-metaplan.md				
+spec-2026-08-18-the-gazetteer-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-18-the-gazetteer-design.md				
+spec-2026-08-18-the-undertow-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-18-the-undertow-design.md				
+spec-2026-08-19-the-bridle-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-08-19-the-bridle-metaplan.md				
+spec-2026-08-19-the-portolan-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-19-the-portolan-design.md				
+spec-2026-08-19-the-touchstone-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-19-the-touchstone-design.md				
+spec-2026-08-19-the-winze-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-19-the-winze-design.md				
+spec-2026-08-20-the-cant-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-20-the-cant-design.md				
+spec-2026-08-20-the-cupel-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-20-the-cupel-design.md				
+spec-2026-08-20-the-deed-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-20-the-deed-design.md				
+spec-2026-08-20-the-portolan-world-map-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-20-the-portolan-world-map-design.md				
+spec-2026-08-20-the-stope-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-20-the-stope-design.md				
+spec-2026-08-20-the-stylus-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-20-the-stylus-design.md				
+spec-2026-08-21-the-chroma-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-21-the-chroma-design.md				
+spec-2026-08-21-the-wick-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-21-the-wick-design.md				
+spec-2026-08-22-the-penstock-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-08-22-the-penstock-metaplan.md				
+spec-2026-08-22-the-stride-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-22-the-stride-design.md				
+spec-2026-08-23-the-drift-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-23-the-drift-design.md				
+spec-2026-08-23-the-escapement-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-23-the-escapement-design.md				
+spec-2026-08-23-the-forebay-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-23-the-forebay-design.md				
+spec-2026-08-23-the-granary-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-23-the-granary-design.md				
+spec-2026-08-23-the-hand-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-23-the-hand-design.md				
+spec-2026-08-23-the-lexicon-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-23-the-lexicon-design.md				
+spec-2026-08-24-the-confidant-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-24-the-confidant-design.md				
+spec-2026-08-24-the-gossan-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-24-the-gossan-design.md				
+spec-2026-08-24-the-interlinear-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-24-the-interlinear-design.md				
+spec-2026-08-24-the-lexicon-of-place-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-24-the-lexicon-of-place-design.md				
+spec-2026-08-24-the-tailrace-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-24-the-tailrace-design.md				
+spec-2026-08-24-the-underworld-larder-metaplan	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-24-the-underworld-larder-metaplan.md				
+spec-2026-08-26-the-coercion-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-26-the-coercion-design.md				
+spec-2026-08-26-the-foliot-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-26-the-foliot-design.md				
+spec-2026-08-26-the-inquest-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-26-the-inquest-design.md				
+spec-2026-08-26-the-quadrat-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-26-the-quadrat-design.md				
+spec-2026-08-26-the-reticence-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-26-the-reticence-design.md				
+spec-2026-08-26-the-scarf-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-26-the-scarf-design.md				
+spec-2026-08-26-the-sources-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-26-the-sources-design.md				
+spec-2026-08-27-the-mortise-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-27-the-mortise-design.md				
+spec-2026-08-27-the-offer-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-27-the-offer-design.md				
+spec-2026-08-27-the-precedence-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-27-the-precedence-design.md				
+spec-2026-08-28-the-chattel-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-28-the-chattel-design.md				
+spec-2026-08-28-the-gallery-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-28-the-gallery-design.md				
+spec-2026-08-28-the-governor-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-28-the-governor-design.md				
+spec-2026-08-28-the-latch-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-28-the-latch-design.md				
+spec-2026-08-28-the-legend-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-28-the-legend-design.md				
+spec-2026-08-28-the-overture-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-28-the-overture-design.md				
+spec-2026-08-28-the-rail-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-28-the-rail-design.md				
+spec-2026-08-28-the-stile-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-28-the-stile-design.md				
+spec-2026-08-29-the-attestation-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-29-the-attestation-design.md				
+spec-2026-08-29-the-quoin-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-29-the-quoin-design.md				
+spec-2026-08-30-the-cartulary-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-30-the-cartulary-design.md				
+spec-2026-08-30-the-company-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-30-the-company-design.md				
+spec-2026-08-30-the-pavement-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-30-the-pavement-design.md				
+spec-2026-08-30-the-repertory-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-30-the-repertory-design.md				
+spec-2026-08-31-the-tableau-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-31-the-tableau-design.md				
+spec-2026-09-01-the-avowal-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-01-the-avowal-design.md				
+spec-2026-09-01-the-circuit-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-09-01-the-circuit-metaplan.md				
+spec-2026-09-01-the-crosscut-design	active	none		status header retains active work	docs/superpowers/specs/2026-09-01-the-crosscut-design.md				
+spec-2026-09-01-the-hallmark-design	active	none		status header retains active work	docs/superpowers/specs/2026-09-01-the-hallmark-design.md				
+spec-2026-09-01-the-pawl-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-01-the-pawl-design.md				
+spec-2026-09-01-the-prospect-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-01-the-prospect-design.md				
+spec-2026-09-01-the-roll-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-01-the-roll-design.md				
+spec-2026-09-01-the-wicket-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-01-the-wicket-design.md				
+spec-2026-09-02-the-brattice-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-02-the-brattice-design.md				
+spec-2026-09-02-the-detent-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-02-the-detent-design.md				
+spec-2026-09-02-the-hachure-design	active	none		status header retains active work	docs/superpowers/specs/2026-09-02-the-hachure-design.md				
+spec-2026-09-02-the-nettle-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-02-the-nettle-design.md				
+spec-2026-09-02-the-plumb-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-02-the-plumb-design.md				
+spec-2026-09-02-the-rack-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-02-the-rack-design.md				
+spec-2026-09-02-the-reservoir-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-02-the-reservoir-design.md				
+spec-2026-09-03-the-minute-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-03-the-minute-design.md				
+spec-2026-09-03-the-pallet-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-03-the-pallet-design.md				
+spec-2026-09-03-the-plat-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-03-the-plat-design.md				
+spec-2026-09-03-the-terrier-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-03-the-terrier-design.md				
+spec-2026-09-03-the-wash-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-03-the-wash-design.md				
+spec-2026-09-04-the-coda-design	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-coda-design.md				
+spec-2026-09-04-the-housemark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-04-the-housemark-design.md				
+spec-2026-09-04-the-staple-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-staple-metaplan.md				
