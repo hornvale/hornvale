@@ -5818,3 +5818,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T21:23:39Z | gate-commit | 64.827 | 95.135 | 19.989 | 1.78 | 0 | d2800d358 | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-05T21:25:15Z | gate-commit | 68.553 | 99.473 | 16.966 | 1.70 | 0 | d2800d358 | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-05T21:27:15Z | gate-commit | 96.398 | 99.502 | 17.101 | 1.21 | 0 | d2800d358 | campaign/the-lot | MacBookPro | 10 |
+| 2026-09-05T21:53:56Z | rebaseline | 403.970 | 458.755 | 19.488 | 1.18 | 0 | 44bfe7cb7 | campaign/the-lot | MacBookPro | 10 |
+| 2026-09-05T21:58:47Z | gate-commit | 125.008 | 134.416 | 11.533 | 1.17 | 0 | 44bfe7cb7 | campaign/the-lot | MacBookPro | 10 |
+| 2026-09-05T22:00:52Z | gate-commit | 73.550 | 97.450 | 23.762 | 1.65 | 0 | 44bfe7cb7 | campaign/the-lot | MacBookPro | 10 |
+| 2026-09-05T22:02:33Z | gate-commit | 48.440 | 100.545 | 23.892 | 2.57 | 0 | 44bfe7cb7 | campaign/the-lot | MacBookPro | 10 |
+| 2026-09-05T22:05:46Z | rebaseline | 183.648 | 438.634 | 18.092 | 2.49 | 0 | 44bfe7cb7 | campaign/the-lot | MacBookPro | 10 |

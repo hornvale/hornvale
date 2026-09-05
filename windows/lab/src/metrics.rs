@@ -608,6 +608,37 @@ pub struct FullView {
     /// per world, so ordering has no cost here worth trading away.
     lexicon_cache:
         std::cell::RefCell<std::collections::BTreeMap<String, hornvale_language::Lexicon>>,
+    /// This view's own Lot sample (The Lot, Task 9): the assembled
+    /// `hornvale_lot::context::LotContext` plus 200 drawn lots (indices
+    /// 0-199, `Pick::default()`), computed on first demand by [`lot_sample`]
+    /// and then reused by all six `lot-*` metrics.
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the
+    /// same way [`TerrainView::band_transects`] states it.** The cell is a  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// private field of the view, so its lifetime is exactly one world's
+    /// evaluation: `build_row` constructs a `BuiltView` per (seed, pin set),
+    /// applies every metric to it, and drops it. There is no key to
+    /// collide, no `static` to outlive a world, and no way to hand this
+    /// cache a sample other than the one [`lot_sample`]'s own uncached body
+    /// draws for THIS view's `world()`. `OnceCell` (not `OnceLock`) is  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// deliberate: it is `!Sync`, so a view carrying a filled sample cannot
+    /// be shared across the runner's worker threads even by accident — the
+    /// same reasoning [`TerrainView::band_transects`] documents for its own
+    /// `OnceCell`.  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    ///
+    /// The stored value is an `Option`, so "assembled, and this world has no
+    /// occupations (or predates `occ-person-years`)" (`Some(None)` once
+    /// filled) stays distinct from "not yet sampled" (the cell itself  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// unset). A world `hornvale_lot::context::assemble` refuses is
+    /// therefore sampled once and answered `Absent` by all six metrics,
+    /// never re-attempted. `Box`ed: `LotSample` embeds a whole
+    /// `hornvale_lot::context::LotContext` (a rebuilt terrain, the
+    /// composition root's registries, every occupation prepared), and
+    /// storing it inline would make `FullView` — and therefore every
+    /// `BuiltView` variant, `clippy::large_enum_variant` — as large as this
+    /// view's single biggest field; the indirection costs one allocation
+    /// per world instead.
+    lot: std::cell::OnceCell<Option<Box<LotSample>>>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
 }
 
 impl FullView {
@@ -629,6 +660,7 @@ impl FullView {
                 demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
             },
             lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            lot: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense (`Box<LotSample>` inside — see this field's own doc)
         })
     }
 
@@ -657,6 +689,64 @@ impl FullView {
     pub fn terrain(&self) -> &hornvale_terrain::GeneratedTerrain {
         self.settlement.terrain()
     }
+}
+
+/// One world's Lot sample (The Lot, Task 9): the assembled
+/// `hornvale_lot::context::LotContext` plus the world's souls-ever total
+/// (`hornvale_lot::draw::curve`'s own field) and 200 drawn lots (indices
+/// 0-199, `Pick::default()`) with their told stories, in draw order —
+/// built once per view by [`lot_sample`] and shared by all six `lot-*`
+/// metrics. See [`FullView::lot`]'s own doc for the memo's scoping
+/// argument.
+struct LotSample {
+    /// The assembled context every draw and telling reads.
+    ctx: hornvale_lot::context::LotContext,
+    /// The world's souls-ever total, computed once alongside the sample
+    /// rather than re-derived by `lot-souls-ever` on every call.
+    souls_ever: f64,
+    /// 200 drawn lives and their told stories, in draw order.
+    lots: Vec<(hornvale_lot::draw::Life, hornvale_lot::slots::Story)>,
+}
+
+/// The four story slots spec §4.4 excludes by design — no model in this
+/// world backs them, so a lot never "fills" them and H-P5's denominator
+/// (spec §8: "the by-design silences are excluded so the number measures
+/// the world, not the lens") counts only the other 22.
+const LOT_BY_DESIGN_SLOTS: [&str; 4] = ["sex", "family", "work", "literacy"];
+
+/// Build (once, memoised on `v.lot`) this world's Lot sample: `None` when
+/// `hornvale_lot::context::assemble` refuses this world (no occupations, or
+/// one saved before The Lot with no `occ-person-years` fact) — exactly the
+/// condition each `lot-*` metric's doc names as `Absent`. A drawn `Pick::
+/// default()` index never itself fails once `assemble` has succeeded (every
+/// index in `0..200` draws a birth year and site from the same context
+/// `assemble` just built), so a failure there would be a genuine bug rather
+/// than an expected shape — this still folds it into `None` rather than
+/// panicking, matching [`TerrainView::band_transects`]'s own "answer Absent,
+/// never crash" discipline for `metric_roster_safety`.
+fn lot_sample(v: &FullView) -> Option<&LotSample> {
+    v.lot
+        .get_or_init(|| {
+            let ctx = hornvale_lot::context::assemble(v.world()).ok()?;
+            let souls_ever = hornvale_lot::draw::curve(&ctx).souls_ever;
+            let mut lots = Vec::with_capacity(200);
+            for i in 0..200u64 {
+                let life = hornvale_lot::draw::draw(
+                    &ctx,
+                    hornvale_lot::LotIndex(i),
+                    &hornvale_lot::Pick::default(),
+                )
+                .ok()?;
+                let story = hornvale_lot::slots::tell(v.world(), &ctx, &life);
+                lots.push((life, story));
+            }
+            Some(Box::new(LotSample {
+                ctx,
+                souls_ever,
+                lots,
+            }))
+        })
+        .as_deref()
 }
 
 impl AsRef<SettlementView> for FullView {
@@ -5664,6 +5754,164 @@ pub fn registry() -> Vec<Metric> {
             domain: Domain::Terrain,
             role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| weft_legibility_mi(v, 3)),
+        },
+        // --- The Lot (Task 9): six census columns over 200 drawn lots
+        // (indices 0-199, `Pick::default()`), one representative life per
+        // index from everyone who ever lived in the world. `Absent` when
+        // `hornvale_lot::context::assemble` refuses this world (no
+        // occupations, or one saved before The Lot with no
+        // `occ-person-years` fact) — see `lot_sample`'s own doc. ---
+        Metric {
+            name: "lot-souls-ever",
+            doc: "Souls ever: the integral of the world's births curve, the number of \
+                  lives the world has held; Absent if the world has no occupations or \
+                  predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1e4, 3e4, 1e5, 3e5, 1e6],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(sample.souls_ever),
+            }),
+        },
+        Metric {
+            name: "lot-median-scaled-death-age",
+            doc: "Median age at death over lots 0-199, in scaled years (age x 60 / the \
+                  people's lifespan); Absent as above",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[5.0, 10.0, 20.0, 30.0, 40.0, 60.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let mut scaled: Vec<f64> = sample
+                        .lots
+                        .iter()
+                        .map(|(life, _)| {
+                            let lifespan = sample.ctx.occupations[life.occ].lifespan_years;
+                            life.age_at_death * 60.0 / lifespan
+                        })
+                        .collect();
+                    // `scaled` always holds exactly 200 values here (a
+                    // filled `LotSample` always drew 200 lots), so
+                    // `median`'s `None` (empty input) never fires — matched
+                    // anyway rather than `.unwrap()`, the same discipline
+                    // every other `lot-*` metric uses to stay panic-free.
+                    match median(&mut scaled) {
+                        Some(m) => MetricValue::Number(m),
+                        None => MetricValue::Absent,
+                    }
+                }
+            }),
+        },
+        Metric {
+            name: "lot-witness-community-end-share",
+            doc: "Share of lots 0-199 whose life ended in, or moved at, its \
+                  community's own committed ending; Absent as above",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let witnessing = sample
+                        .lots
+                        .iter()
+                        .filter(|(life, _)| {
+                            matches!(life.ending, hornvale_lot::draw::Ending::CommunityFate(_))
+                                || life.moved_to.is_some()
+                        })
+                        .count();
+                    MetricValue::Number(witnessing as f64 / sample.lots.len() as f64)
+                }
+            }),
+        },
+        Metric {
+            name: "lot-silent-subsistence-share",
+            doc: "Share of lots 0-199 whose subsistence slot is silent — culture \
+                  facts attach to living settlements; Absent as above",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let silent = sample
+                        .lots
+                        .iter()
+                        .filter(|(_, story)| {
+                            story.slot("subsistence").is_some_and(|slot| {
+                                matches!(slot.value, hornvale_lot::slots::SlotValue::Silent(_))
+                            })
+                        })
+                        .count();
+                    MetricValue::Number(silent as f64 / sample.lots.len() as f64)
+                }
+            }),
+        },
+        Metric {
+            name: "lot-slots-filled-mean",
+            doc: "Mean number of the 22 non-by-design story slots filled per lot \
+                  over lots 0-199; Absent as above",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let total: usize = sample
+                        .lots
+                        .iter()
+                        .map(|(_, story)| {
+                            story
+                                .slots
+                                .iter()
+                                .filter(|slot| {
+                                    !LOT_BY_DESIGN_SLOTS.contains(&slot.key)
+                                        && matches!(
+                                            slot.value,
+                                            hornvale_lot::slots::SlotValue::Filled(_)
+                                        )
+                                })
+                                .count()
+                        })
+                        .sum();
+                    MetricValue::Number(total as f64 / sample.lots.len() as f64)
+                }
+            }),
+        },
+        Metric {
+            name: "lot-born-last-quarter-share",
+            doc: "Share of lots 0-199 born in the last quarter of the bake span; \
+                  Absent as above",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let cutoff = sample.ctx.start_year
+                        + 0.75 * (sample.ctx.present_year - sample.ctx.start_year);
+                    let born_late = sample
+                        .lots
+                        .iter()
+                        .filter(|(life, _)| life.birth_year >= cutoff)
+                        .count();
+                    MetricValue::Number(born_late as f64 / sample.lots.len() as f64)
+                }
+            }),
         },
     ]
 }
@@ -11473,7 +11721,14 @@ mod tests {
         // post-Task-11 lefford profile (3.51% of the 150-world all-metrics
         // run, about 0.75 CPU-s/world) this caching exists to avoid
         // multiplying by 22.
-        assert_eq!(registry().len(), 249);
+        //
+        // +6 for THE LOT (Task 9): `lot-souls-ever`,
+        // `lot-median-scaled-death-age`, `lot-witness-community-end-share`,
+        // `lot-silent-subsistence-share`, `lot-slots-filled-mean`,
+        // `lot-born-last-quarter-share` — over 200 lots drawn from
+        // `hornvale_lot::context::assemble`, memoised per world on
+        // `FullView::lot` and shared by all six (`lot_sample`'s own doc).
+        assert_eq!(registry().len(), 255);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -11507,7 +11762,9 @@ mod tests {
         // one of them is, and the pair is what caught this edit.
         // THE WEFT (Task 9): 227 -> 249 (+22, see this test's first assertion
         // for the roster).
-        assert_eq!(registry().len(), 249);
+        // THE LOT (Task 9): 249 -> 255 (+6, see this test's first assertion
+        // for the roster).
+        assert_eq!(registry().len(), 255);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
