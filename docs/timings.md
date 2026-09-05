@@ -5783,6 +5783,12 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T00:57:32Z | sluice:gate | 721.719 | 19680.152 | 488.573 | 27.95 | 0 | cd06b54ae |  | lefford | 40 |
 | 2026-09-05T00:59:48Z | sluice:clients | 135.939 | 2078.718 | 191.788 | 16.70 | 0 | fe65e8e8d |  | lefford | 40 |
 | 2026-09-05T01:07:28Z | sluice:heavy | 459.976 | 10055.953 | 160.830 | 22.21 | 0 | a0008a650 |  | lefford | 40 |
+| 2026-09-05T01:32:07Z | prewarm | 210.384 | 1465.670 | 55.115 | 7.23 | 0 | fd3cd159b | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T02:39:50Z | gate-commit | 62.911 | 115.064 | 23.755 | 2.21 | 0 | 6849ccd31 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T02:49:21Z | gate-commit | 61.778 | 73.940 | 21.271 | 1.54 | 0 | a9108b6ff | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T03:10:53Z | gate-commit | 36.326 | 55.171 | 14.862 | 1.93 | 0 | df881bd20 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T03:12:53Z | gate-commit | 37.102 | 63.105 | 17.758 | 2.18 | 0 | df881bd20 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T03:23:56Z | gate-commit | 34.581 | 61.235 | 16.533 | 2.25 | 0 | d8d60c947 | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T01:22:09Z | gate-commit | 152.921 | 2060.607 | 192.005 | 14.73 | 0 | f68a53cce | tooling/sluice-scratch-durable | lefford | 40 |
 | 2026-09-05T01:37:10Z | sluice:artifacts | 227.033 | 956.695 | 25.492 | 4.33 | 0 | 7dfb73656 |  | lefford | 40 |
 | 2026-09-05T01:38:04Z | sluice:outboard | 53.988 | 32.803 | 45.390 | 1.45 | 0 | d30115bf8 |  | lefford | 40 |
@@ -5803,3 +5809,50 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T03:07:27Z | gate-commit | 49.411 | 73.937 | 32.916 | 2.16 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
 | 2026-09-05T03:09:01Z | gate-commit | 49.932 | 88.931 | 34.945 | 2.48 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
 | 2026-09-05T03:16:04Z | gate-commit | 34.139 | 62.639 | 16.810 | 2.33 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T04:06:55Z | rebaseline | 251.625 | 464.512 | 21.090 | 1.93 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T04:07:54Z | gate-commit | 36.640 | 53.543 | 12.652 | 1.81 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T04:09:07Z | gate-commit | 37.139 | 63.144 | 16.620 | 2.15 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T03:34:19Z | prewarm | 419.445 | 1479.667 | 57.978 | 3.67 | 0 | 6fe554d0e | codex/the-charter-thing | MacBookPro | 10 |
+| 2026-09-05T03:42:39Z | gate-commit | 88.033 | 120.894 | 25.160 | 1.66 | 0 | 6fe554d0e | codex/the-charter-thing | MacBookPro | 10 |
+| 2026-09-05T03:34:41Z | prewarm | 411.766 | 1495.250 | 59.484 | 3.78 | 0 | 6fe554d0e | codex/the-charter-census | MacBookPro | 10 |
+| 2026-09-05T03:45:46Z | gate-commit | 94.898 | 127.824 | 25.202 | 1.61 | 0 | 6fe554d0e | codex/the-charter-census | MacBookPro | 10 |
+| 2026-09-05T03:59:08Z | gate-commit | 54.121 | 70.726 | 19.135 | 1.66 | 0 | b83fb084d | codex/the-charter-census | MacBookPro | 10 |
+| 2026-09-05T04:13:44Z | gate-commit | 35.775 | 63.266 | 16.690 | 2.23 | 0 | 9294b9ca7 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T04:18:38Z | prewarm | 202.590 | 1472.476 | 54.842 | 7.54 | 0 | e3355f441 | codex/the-charter-diagnostic | MacBookPro | 10 |
+| 2026-09-05T04:32:44Z | rebaseline | 137.310 | 380.103 | 16.644 | 2.89 | 0 | 15161b589 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T04:53:19Z | rebaseline | 137.628 | 381.186 | 16.421 | 2.89 | 0 | 795522918 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T05:00:16Z | rebaseline | 140.057 | 379.290 | 16.900 | 2.83 | 0 | 795522918 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T03:50:57Z | gate-commit | 99.628 | 207.792 | 46.021 | 2.55 | 0 | bcacc525e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T03:52:25Z | gate-commit | 70.030 | 156.342 | 50.219 | 2.95 | 0 | bcacc525e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:05:05Z | gate-commit | 70.666 | 163.658 | 52.297 | 3.06 | 0 | 8e6df971e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:12:02Z | gate-commit | 70.818 | 169.359 | 56.457 | 3.19 | 0 | 4c20f1d51 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:20:45Z | gate-commit | 72.575 | 153.008 | 43.545 | 2.71 | 0 | ac1b1e6fe | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:42:33Z | gate-commit | 72.615 | 154.559 | 45.060 | 2.75 | 0 | fe1498fea | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T05:15:09Z | gate-commit | 72.171 | 158.169 | 48.936 | 2.87 | 0 | a54e06850 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:17:44Z | gate-commit | 69.292 | 154.888 | 48.634 | 2.94 | 0 | 42d7be262 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:32:02Z | gate-commit | 68.589 | 156.450 | 52.883 | 3.05 | 0 | abf708ea6 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:44:12Z | gate-commit | 74.058 | 163.556 | 53.389 | 2.93 | 0 | b37ce3239 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:51:27Z | sluice:artifacts | 228.886 | 962.263 | 26.124 | 4.32 | 0 | f43514ce0 |  | lefford | 40 |
+| 2026-09-05T06:52:35Z | sluice:outboard | 67.601 | 41.059 | 52.766 | 1.39 | 0 | c26fa827d |  | lefford | 40 |
+| 2026-09-05T07:05:06Z | sluice:gate | 750.475 | 19843.575 | 525.031 | 27.14 | 0 | 041666f14 |  | lefford | 40 |
+| 2026-09-05T07:07:28Z | sluice:clients | 142.539 | 2074.872 | 195.782 | 15.93 | 0 | 92bee604a |  | lefford | 40 |
+| 2026-09-05T07:15:03Z | sluice:heavy | 454.728 | 10279.097 | 159.435 | 22.96 | 0 | b27329ec8 |  | lefford | 40 |
+| 2026-09-05T15:27:19Z | rebaseline | 273.646 | 2264.120 | 88.223 | 8.60 | 0 | d17645ea5 | tooling/reconciliation-is-hand-authored | lefford | 40 |
+| 2026-09-05T16:14:13Z | sluice:artifacts | 289.926 | 1693.886 | 67.893 | 6.08 | 0 | 99894bbab |  | lefford | 40 |
+| 2026-09-05T16:15:21Z | sluice:outboard | 67.451 | 39.280 | 51.312 | 1.34 | 0 | 09b7b2f2c |  | lefford | 40 |
+| 2026-09-05T16:28:31Z | sluice:gate | 790.265 | 20857.689 | 588.461 | 27.14 | 0 | 2db09a98a |  | lefford | 40 |
+| 2026-09-05T13:37:53Z | rebaseline | 147.623 | 384.000 | 17.823 | 2.72 | 0 | eb1b8c99c | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T13:39:15Z | gate-commit | 43.995 | 82.445 | 21.815 | 2.37 | 0 | eb1b8c99c | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T14:01:53Z | rebaseline | 143.862 | 386.142 | 18.305 | 2.81 | 0 | fe0603cb2 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T14:11:26Z | census | 1070.850 | 29612.125 | 266.011 | 27.90 | 0 | fe0603cb2 |  | lefford | 40 |
+| 2026-09-05T14:48:31Z | rebaseline | 202.515 | 409.972 | 19.443 | 2.12 | 0 | c0c565efe | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T14:49:51Z | gate-commit | 34.499 | 51.541 | 11.698 | 1.83 | 0 | c0c565efe | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T16:09:34Z | rebaseline | 320.676 | 261.496 | 12.300 | 0.85 | 0 | c0c565efe | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T16:13:07Z | rebaseline | 201.862 | 410.007 | 19.862 | 2.13 | 0 | c0c565efe | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T16:14:40Z | gate-commit | 36.660 | 63.358 | 17.150 | 2.20 | 0 | c0c565efe | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T16:33:19Z | sluice:artifacts | 224.228 | 957.625 | 27.643 | 4.39 | 0 | e8bd0be7f |  | lefford | 40 |
+| 2026-09-05T16:34:43Z | sluice:outboard | 82.985 | 70.692 | 74.397 | 1.75 | 0 | 2bbd992ea |  | lefford | 40 |
+| 2026-09-05T16:47:01Z | sluice:gate | 738.160 | 19739.970 | 514.347 | 27.44 | 0 | 44b19b3cc |  | lefford | 40 |
+| 2026-09-05T16:49:26Z | sluice:clients | 144.787 | 2218.191 | 187.069 | 16.61 | 0 | 58ecd340e |  | lefford | 40 |
+| 2026-09-05T16:57:00Z | sluice:heavy | 453.836 | 9972.576 | 164.410 | 22.34 | 0 | 02b19069c |  | lefford | 40 |
+| 2026-09-05T17:27:43Z | rebaseline | 946.825 | 455.099 | 19.029 | 0.50 | 0 | ba99547f5 | campaign/the-tenon | MacBookPro | 10 |
