@@ -1,7 +1,7 @@
 # The Charter — retrospective
 
 **Close state:** implementation and qualification complete; Nathan approved G6
-on 2026-09-05. Census and merge remain pending. Product:
+on 2026-09-05. Canonical census agreed with the source; no goldens moved. Product:
 [the chronicle](../../book/src/chronicle/the-charter.md). Exact measurements,
 reports and source boundaries: [qualification evidence](../digest/the-charter-evidence.md).
 
@@ -52,7 +52,10 @@ and the reader's census/Thing scope wording; dirty-state provenance; Linux Git
 status (62–63% of median per-request warm time); the census selected cold request
 (11.552 s Mac / 25.712 s Linux); the line-based JSONL review capper; mtime write
 attribution; and the reconciliation parser/ledger-coverage mismatch. None was
-silently waived or implemented during close.
+silently waived or implemented during close. The local prose gate also caught
+a forbidden checkout term in the chronicle; branch wording preserved its claim.
+Close-review C1 corrected a misdirected locator for an already-refuted diagnostic
+hypothesis; the explicit refutation now has its own permanent ledger note.
 
 Two concurrent documentation edits contaminated regeneration's mtime write
 intervals. Keep those run costs, freeze writers, and capture again: a write
@@ -60,11 +63,16 @@ observed during a run is not proof that the generator authored it. Likewise,
 the operator held the close census on a zero-simulation-path-change inference;
 that is a held request, neither an observed null nor a failed run. The current
 cadence was not waived: Nathan explicitly authorized the operator to proceed
-on the existing request. Coordination was resolved; its measured result remains
-pending.
+on the existing request. Coordination was resolved; the run completed in
+1070.850 s and moved no goldens. Its timing row is retained.
 
 The scratch and durable-ledger sweeps routed the findings before close. Book
 freshness adds the checked-context continuation to The Digest; **Confidence
 Gradient: N/A**—no existing world bet changed. Broader provenance, activation,
 obligation selection and federation remain open. Brainstorming their next
 bounded step follows the merge, not this documentation pass.
+
+The final commit gate also caught the census's 1000 s profiling alarm. Nathan
+took ownership of the investigation and directed admission to proceed; the
+run-specific yellow log explicitly records an authorized deferral, not a
+completed profile. Performance attribution remains open.

@@ -1,7 +1,7 @@
 # The Charter Implementation Plan
 
 Status: implementation and qualification complete; G6 approved by Nathan on
-2026-09-05. Close documentation prepared; census and merge pending.
+2026-09-05. Close documentation and canonical census complete; approved for sluice admission.
 [Qualified evidence](../../digest/the-charter-evidence.md) and
 [post-G3 decisions](../specs/2026-09-04-the-charter-design.md#11-post-g3-implementation-decisions-and-qualification).
 

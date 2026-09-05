@@ -1,8 +1,8 @@
 # The Charter — independently contributed development knowledge
 
 Status: implementation and qualification complete; Nathan approved G6 on
-2026-09-05. Census and campaign merge remain pending. The broader program stays
-active. [Qualified evidence](../../digest/the-charter-evidence.md).
+2026-09-05. Canonical census qualified; approved for ordinary sluice admission.
+The broader program stays active. [Qualified evidence](../../digest/the-charter-evidence.md).
 Branch: `codex/the-charter`.
 Observed base: `fd3cd159be98e6c07dbb849b780c2712c6a7826f`.
 Scope: completed bounded pilot; close documentation prepared for the approved merge.

@@ -3,7 +3,8 @@
 Status: direction accepted at The Charter's G3, 2026-09-04. This is a direction and amendment
 framework, not an enacted replacement for the Constitution or current gates.
 First campaign: [The Charter](2026-09-04-the-charter-design.md) has completed
-bounded implementation and qualification; G6 approved 2026-09-05, merge pending.
+bounded implementation and qualification; G6 approved 2026-09-05 for ordinary
+sluice admission.
 **Program remains active:** independent enrollment is evidenced, while broader
 semantic independence, provenance, obligation selection, activation and composed
 quality authority remain outstanding. See [pilot evidence](../../digest/the-charter-evidence.md).

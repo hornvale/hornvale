@@ -629,3 +629,32 @@ and evidence files frozen, a second actual regeneration completed rc=0 in
 parent recorded 2 written / 9 tracked. No Book, fixture or audit-content artifact
 changed. Both timing rows are retained; counts were generated, not hand-edited.
 The counter observes interval writes, not causal authorship.
+
+
+## Approved campaign close and canonical census
+
+Nathan approved G6 on 2026-09-05. Close absorbed main
+`d17645ea59cb2c30e53ed2691658b1546bfa7300` at
+`fe0603cb2545f5dd170481b1f5200dd50265ff9f`; the only Git conflict was
+append-only campaign-record rows, both retained. No Charter host, contributor
+or measurement-harness source changed. After actual regeneration, all 72
+tracked fixture blobs equalled that main tip, including the seed-42 world blob
+`27017c3afa47c72b0e174709c35c90818642d8e9`. No keystone value or golden pin
+was changed to obtain that result.
+
+Census request `req-fe0603cb2545-20260905T133959Z` was initially held by the
+operator on an unchanged-simulation-path inference. Nathan explicitly confirmed
+proceeding; no omission rule or unmeasured null was adopted. The actual job
+`census-fe0603cb2545-20260905T135333Z` ran under the canonical claim on exact
+source `fe0603cb2545f5dd170481b1f5200dd50265ff9f`, completed rc=0, and
+reported **NO GOLDENS MOVED**. The timed census cost 1070.850 s; the queue reports
+1084 s including wrapper work. Main remained
+`d17645ea59cb2c30e53ed2691658b1546bfa7300`.
+
+The returned branch `census/fe0603cb2545-20260905T141127Z`, commit
+`6636e56a06773a1cc40d7e561c261557691c484e`, differs from its input in exactly
+one timing-ledger row. The controller joined that branch to retain the cost
+measurement with the approved campaign close. This run is distinct from the
+census contributor's pure guard observations. Final merge admission, including
+its heavy phase, remains the ordinary sluice's responsibility; the actual
+landing is recorded by the queue and Git, not inferred from the earlier stages.

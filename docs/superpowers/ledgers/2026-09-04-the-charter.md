@@ -980,7 +980,7 @@ reproducible/scratch; samples and actual report snapshots are committed.
 | Task2 Git fixture setup/snapshot path leak with outer index proof | `docs/retrospectives/the-charter.md:31` | Resolved with discriminating RED/GREEN; same boundary promoted in spec §11. |
 | Task2 toolchain pin versus outside-repo default; Cargo manifest not cwd | `docs/superpowers/specs/2026-09-04-the-charter-design.md:372` | Pin retained in fixtures and measurements; preflight protocol promoted. |
 | Task2 vocabulary substring overmatch workaround | `book/src/frontier/idea-registry.md:2064` | Existing measured row reused, not minted again. Host-local rename fixed hook refusal without waiver. |
-| Task2 suspected compiler diagnostic loss | `docs/superpowers/ledgers/2026-09-04-the-charter.md:465` | Reviewer explicitly refuted suspicion; not an open finding. Complete stderr survives in recorded fixture evidence. |
+| Task2 suspected compiler diagnostic loss | `docs/superpowers/ledgers/2026-09-04-the-charter.md:1062` | Reviewer explicitly refuted suspicion; not an open finding. Complete stderr survives in recorded fixture evidence. |
 | Task3 actual public ownership APIs, reverse rosters and frozen-host acceptance | `docs/digest/the-charter-evidence.md:11` | Exact branch, package rosters, 22 unchanged external and 27 local dependency records retained. |
 | Task4 non-discriminating canonical-host panel and two omission mutants | `docs/retrospectives/the-charter.md:14` | Resolved; pure predicate scope remains narrower than publication invocation. |
 | Task5 disjoint overlap and no sampling before reviewed integration | `docs/superpowers/specs/2026-09-04-the-charter-design.md:379` | Accepted execution sequencing, promoted without a new global rule. |
@@ -1036,3 +1036,101 @@ in a development-tool chronicle. Root read the actual guard and changed that
 sentence to “on separate branches,” preserving the verified independence
 claim; checkout mechanics remain in the evidence/retrospective. No guard was
 weakened. The failure log is retained and the normal hook must pass on retry.
+
+
+## Canonical census complete — measured null retained
+
+`census-fe0603cb2545-20260905T135333Z` completed rc=0 on exact absorbed
+source `fe0603cb2545f5dd170481b1f5200dd50265ff9f`: **NO GOLDENS MOVED**.
+The timed body cost 1070.850 s (29612.125 user, 266.011 sys, CPU ratio 27.90);
+the wrapper records 1074 s and the queue 1084 s. These measure different boundaries.
+The returned branch `census/fe0603cb2545-20260905T141127Z` at
+`6636e56a06773a1cc40d7e561c261557691c484e` has exactly one added
+`docs/timings.md` row. Root read the completed log, fetched the branch and
+compared the entire commit before joining it with an ordinary non-committing
+merge; it merged cleanly. No moved goldens, new epoch, re-pin, or census-source
+change is being hidden in close bookkeeping. Main is still
+`d17645ea59cb2c30e53ed2691658b1546bfa7300`.
+
+The close-documentation retry passed 75/75 prose tests and committed at
+`c0c565efe13b25823d0cfdefd57247ca48d0a1ca`. Final close/survival review is
+reading that exact checkpoint; the measured census result and resulting
+status updates form its small subsequent completion delta. The local prose
+hook incident is also routed to the retrospective, beyond this ledger.
+
+
+### Task 2 diagnostic hypothesis — permanent refutation record
+
+The original Task 2 independent review exercised a focused disposable real-
+Cargo fixture containing broken Rust, specifically to test diagnostic retention
+through `--message-format=json-render-diagnostics` and the host's stderr path.
+Its recorded result was exit 1, zero stdout bytes, and
+`error[E0308]: mismatched types` with the source location and expected/actual
+types on stderr. This refuted the suspicion that compiler diagnostics were
+lost; it was explicitly not an open finding. This paragraph preserves that
+historical review observation, not a fresh compiler run at close.
+
+Close review Minor C1 found that the routing table pointed to an unrelated
+Task 1 timing paragraph. Corrected the locator to this explicit Task 2 record.
+The ruling already survived in the table's disposition; the correction makes
+its evidence retrievable. No code or behavior change was needed.
+
+
+### Final close review acceptance
+
+The independent close reviewer passed compliance and quality for HEAD
+`c0c565efe13b25823d0cfdefd57247ca48d0a1ca` plus the frozen completion
+patch (SHA-256 `85be1c89879140ae2afceecad56ee5a60900c83609a0ffdd443067f79ce63c88`).
+The census receipt and admission wording were checked against the actual log
+and returned timing-only commit. C1 is corrected and independently verified;
+no substantive finding was lost in routing. Earlier implementation Minor M1
+remains accepted and deferred to `PROC-context-presentation`. This acceptance
+does not claim the later regeneration, commit gate, or canonical merge/heavy
+result; those are observed at admission.
+
+
+### Final admission gate — census profiling obligation discovered
+
+The quiet final regeneration completed rc 0 in 202.515 s, with no generated
+content drift and one retained timing row. The subsequent explicit commit
+gate failed rc 2 in 34.499 s on
+`census_duration::a_census_over_the_alarm_threshold_owes_a_profiling_followup`.
+The canonical census's 1070.850 s exceeds the existing 1000 s alarm and
+requires a run-specific profiling finding. No finding for its timestamp exists
+in `docs/timings/census-yellow-log.tsv`. The null golden result remains valid;
+performance attribution is a separate outstanding close obligation.
+
+The existing census log contains no perf capture. Earlier Weft profiling is
+not a fresh profile of this run, and source changes exist between that profiled
+confirmation and this census source. No placeholder acknowledgement, threshold
+change or test bypass was made. A concrete bounded profiling request at
+`fe0603cb2545f5dd170481b1f5200dd50265ff9f` is prepared for the canonical
+operator under ordinary serialization. Sending this new message awaits Nathan's
+explicit messaging authorization; the prior permission covered the census
+proceed confirmation. The final census merge remains uncommitted and the
+campaign has not been submitted for merge admission.
+
+
+### Nathan's profiling disposition and renewed admission direction
+
+Nathan replied: “Yes, I'm looking into the profiling issue. Go ahead and
+sluice again.” This supersedes the pending operator-message prerequisite:
+Nathan owns the investigation and explicitly directs admission to continue.
+The run-specific yellow-log entry records **NOT PROFILED**, the original
+source, timestamp and measured cost, and the authorized deferral. It does
+not assert attribution or reuse earlier profiles as this run's evidence.
+The normal gate and queue remain unchanged; no profiling message is needed
+while Nathan is handling the issue. The performance investigation remains
+open even if normal admission succeeds.
+
+
+### Admission regeneration retry
+
+The first regeneration after Nathan's disposition stalled before application
+startup: a one-second macOS sample of its `hornvale scene eclipses` process
+showed every sample in `_dyld_start`, with only 96 KiB physical footprint.
+The controller terminated that invocation; the failed run's 320.676 s cost
+remains recorded. One ordinary retry progressed and passed rc 0 in 201.862 s.
+The completed working-tree diff contained only the two timing rows, with no
+generated-content change. This is evidence of a startup stall and a successful
+retry, not a diagnosis of the loader's underlying cause.
