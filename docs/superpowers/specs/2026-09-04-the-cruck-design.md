@@ -394,8 +394,10 @@ grower over the same shapes: all eight rules and `dof == 2n` exactly.
 > **AMENDED AFTER MEASUREMENT (2026-09-05, ledger #15, a post-G3
 > narrowing of a preregistered claim).** The grower's parent
 > generalisation realizes a fork on 2,536 of 2,560 (tree, seed) pairs and
-> drops one link on 24 — `[(0,1),(0,2),(0,3)]` at seeds 5, 26, 46, 62 and
-> `[(0,1),(1,2),(1,3)]` at seeds 34, 58, 60, 90. Every structural remedy
+> drops one link on 24 — `[(0,1),(0,2),(0,3)]` at the 15 seeds 5, 26, 46, 62, 65, 70, 94, 121, 137, 167, 180, 203, 211, 235, 249
+> and `[(0,1),(1,2),(1,3)]` at the 9 seeds 34, 58, 60, 90, 110, 125, 184, 202, 218; on exactly those
+> pairs rules 1, 3 and 8 fail together, while rule 2 and `dof == 2n` hold
+> on every fork pair. Every structural remedy
 > tried also moves GROWN bytes for chains, which §6 marks STOP. Production
 > never hands the grower a fork (§3.5: wild sites are chains; built sites
 > allocate), so the claim is narrowed to what is true: the grown arm holds
