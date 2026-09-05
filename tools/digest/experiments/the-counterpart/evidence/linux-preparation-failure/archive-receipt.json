@@ -1,0 +1,89 @@
+{
+  "archive": {
+    "bytes": 35905,
+    "path": "records.tar.gz",
+    "sha256": "a7a5d0e11d7185f7b8c79902f317aa6310dda201d1d6c5ac05cbcbbf6102f89b"
+  },
+  "chamber_source": "2d67a1f39cd2664f1f436c9e805804b4bce9b3df",
+  "completed": false,
+  "members": {
+    "base/metadata-base.json": {
+      "bytes": 2563,
+      "sha256": "c22ae27b6de57e657b07944da65a8e9f0c7b76096f2eccdc7be090ef53416fb1"
+    },
+    "cargo.json": {
+      "bytes": 1857,
+      "sha256": "49c93e5bde5044309c49c7f5869313dfb7a837c1ac9697805554da1c3d4a12b2"
+    },
+    "git-preparation/064749ee7a8f4baf821dd58726a1e84c.json": {
+      "bytes": 13118,
+      "sha256": "4b28840b8cb79bbf6df18cac3719f45b5657e28bf724e081d7b5646767d0172b"
+    },
+    "git-preparation/1845cfcc125744209eb5c03bb05ae54c.json": {
+      "bytes": 13720,
+      "sha256": "91a38b5c31522115039736b12007f8095eaa77126aa8906f2d16c1f878582319"
+    },
+    "git-preparation/1e59dc14ad484c7fb2a1c4489951249e.json": {
+      "bytes": 2300,
+      "sha256": "7aa992660fda9279c09d043ec1bed3d9c154e975f5d204b6139e9db67ea7cef9"
+    },
+    "git-preparation/26fb6240743744cea1597e5be6a5df4f.json": {
+      "bytes": 2061,
+      "sha256": "9aad430db6e66cf286b5cdd346b03f7598d4e99dbc0ce2fd0cbc8d6590b764e8"
+    },
+    "git-preparation/3ca25ce89a5e4903bd8d7cca17846f0b.json": {
+      "bytes": 2452,
+      "sha256": "a0402f17807637b769d1f2ab4615178d0f8c8beea7315d88e4858f87c9524d87"
+    },
+    "git-preparation/70563c25b80249958a39686eb0545594.json": {
+      "bytes": 3709,
+      "sha256": "4f960065020eb1278b9f1c3b2e40ba9f1e667efbf762b82ea7db86145b884185"
+    },
+    "git-preparation/9a11ae4342554a97b81660e262c9e2a6.json": {
+      "bytes": 4660,
+      "sha256": "f29fde90376029d5baf4a2ab1329059c3349875d81d252985fb9eb4a15cca622"
+    },
+    "git-preparation/a5d089e6aa084ef2998f159ba8aeca8a.json": {
+      "bytes": 2063,
+      "sha256": "fae872f4c70501a1141533a63985ce7fb2e7e4017e6414f0a5d9dd451d66032f"
+    },
+    "git-preparation/ab43817edd82421cb0c30663d91cc6fb.json": {
+      "bytes": 2058,
+      "sha256": "50c29a37fb1ad8bebb16971c87ec72999bb5409d53bbdb4deb9de0497df94d10"
+    },
+    "git-preparation/b59619c90b1448c1921825767e099849.json": {
+      "bytes": 2058,
+      "sha256": "1e248ad6db105f7f80f2718fa40384d048206f5f0bba3468db9a704e1c2473a9"
+    },
+    "git-preparation/c63dde0fc885459696ef38f2d5bc04fc.json": {
+      "bytes": 2072,
+      "sha256": "2b5f9027a6aade5674b42966b08d741bfa31a45700643f3116a12b329ea3e79f"
+    },
+    "git-preparation/d03feb3a96e64c60ba5b82a3b879fff0.json": {
+      "bytes": 3499,
+      "sha256": "e2c663e6c113cc765e0ac8118a9216bda789e20ce9a37aa7e97773f7abcecf02"
+    },
+    "git-preparation/d1f7c2d3fc224c899f3e32af80075b4f.json": {
+      "bytes": 32182,
+      "sha256": "80e2c1ec9b838a0724865582012d4532f9deba22d026eb070e17294506e7b285"
+    },
+    "git-preparation/ee2e45a57b16434ebd02b334ae19dde9.json": {
+      "bytes": 2072,
+      "sha256": "c71192358cdad6a2f90c467fece47cc59010eac823b056bd5d25b9c0d88d4ec9"
+    },
+    "git-preparation/fe1703441af741e7828a39322b9e033b.json": {
+      "bytes": 1976,
+      "sha256": "788d07991b69713dbcdec240a25bf394b28d8b11b4c2d70f43149701d53cbef1"
+    },
+    "manifest.json": {
+      "bytes": 45866,
+      "sha256": "27648766387798093fd683580a38644b1a4b3b246a9a8869a5fa96acaa1581df"
+    },
+    "rustc.json": {
+      "bytes": 2063,
+      "sha256": "fcc9459dad92569ca7effcf38860e868d7ea8818999ed101f15b70306ed4a23a"
+    }
+  },
+  "scope": "Failed preparation; zero built or observed arms",
+  "source_directory": "/home/nathan/.local/state/hornvale/counterpart-unreserved.1ffoIB/dossier"
+}

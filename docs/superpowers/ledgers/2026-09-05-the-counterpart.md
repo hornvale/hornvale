@@ -851,3 +851,56 @@ No push occurred; main remained `20c0cd375719459ff75dc8e4b9615bf60a31fa97`.
 Exact bounded log receipt is `evidence/controller/stage-2.json`. The full
 unreserved diagnostic started under the next queue claim at 21:13:15Z;
 Stage2 acceptance still awaits its actual eleven-arm dossier and green phases.
+
+## Diagnostic attempt 2 — incomplete Linux dependency preparation
+
+The first actual unreserved CLI attempt stopped before any build or observation.
+Its base `cargo metadata --locked --offline` returned 101 at 21:19:17Z
+(0.907 s): `windows-link v0.2.1` was absent from the Linux cache and Cargo
+refused an HTTP request under offline mode. The supervisor collected the child;
+no timeout, interruption, output overflow or cleanup error occurred. The
+complete-graph metadata command needs dependencies outside the host's ordinary
+build path. All 55 focused tests passed beforehand, which did not establish
+cache completeness for the actual frozen source. Stage outboard returned 1
+and the job held with rc11. No complete dossier or summary exists.
+
+Nineteen exact JSON records (142,349 bytes, compressed 35,905 bytes) and
+bounded stage/failed-command receipts are retained in
+`evidence/linux-preparation-failure/`. Original canonical checkout and records
+remain at the receipt's path; the controller verified every archived member.
+This is the first dependency-preparation failure; the earlier attempt was a
+separate merge-transport conflict. Neither enters a behavioral arm denominator.
+
+## #11 [Q] — prepare the complete locked dependency graph explicitly
+
+**Ruling:** add a separately measured dependency-fetch preparation to the
+stage-only diagnostic, using an owned clone at the frozen source base,
+`cargo fetch --locked` for the Digest manifest, and the existing bounded
+supervisor. Verify source/lock identity before and after. Preserve failure
+evidence and use a new output for the subsequent unchanged offline full assay.
+Document this prerequisite for the independent replay. Do not alter the frozen
+runner/checker/rules/owner records, filter Cargo metadata to the current target,
+remove offline mode, or depend on the failed scratch directory.
+
+**Precedent:** Digest already separates explicit dependency preparation from
+locked/offline requests (`tools/digest/README.md`, opening section). The
+Counterpart spec separately accounts for preparation. The actual 126-byte
+Cargo error identifies the missing cache entry; changing a selector or source
+arm would not address it. The new preparation remains locked, so source/lock
+mutation is refusal rather than silent reconciliation. No reserved score has
+been observed and no frozen instrument needs retuning.
+
+**Ideonomy:** one dimension-identification / scale pass with symmetry and
+autonomy prompts. Compared host-only versus complete-graph cache breadth,
+online scoring versus explicit preparation, shared versus separately owned
+cache, and ambient versus frozen source. The useful implication is symmetric
+replay documentation on both hosts and separate preparation costs. Fully
+vendored/hermetic cache closure is broader than this experiment; cache warming
+never becomes such a claim. No recommendation overturn or further material
+improvement.
+
+**Cost if wrong:** another explicitly retained preparation failure and queue
+pass; no behavioral result or admission privilege. Capture the missing-target
+cache lesson in the retrospective under the existing build-boundary/provenance
+homes. Resume the implementation author for the diagnostic-only repair and
+scoped review before resubmission.
