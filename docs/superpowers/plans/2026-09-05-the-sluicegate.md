@@ -817,6 +817,7 @@ Sluice-Headline: the ported queue verbs run in Rust behind the existing script"
 
 **Files:**
 - Modify: `scripts/sluice-run.sh`
+- Modify: `scripts/sluice-census.sh` (it reads `HV_SLUICE_CLAIMED` too, at lines 114-115, and takes only a SHA — so it needs the same request-ID form or the census path loses its bookkeeping)
 - Modify: `scripts/sluice-drain.sh`
 - Modify: `scripts/test-sluice.sh`
 
@@ -876,12 +877,38 @@ case "$branch" in
 esac
 ```
 
+- [ ] **Step 3b: Give `sluice-census.sh` the same request-ID form**
+
+`scripts/sluice-drain.sh` dispatches `census` to `sluice-census.sh "$SHA"` and
+everything else to `sluice-run.sh "$BR" "$SHA" "$KIND"`, exporting
+`HV_SLUICE_CLAIMED` for both. So census needs the ID form too, or removing the
+export leaves a census running unbookkept — the state this campaign exists to
+make impossible.
+
+`sluice-census.sh:93` validates its argument as a full 40-char SHA, so the ID
+branch must come **before** that validation:
+
+```bash
+case "$ref" in
+    req-*)
+        _row="$(bash "$repo_root/scripts/sluice-queue.sh" list \
+                | awk -F'\t' -v i="$ref" '$2==i {print; exit}')"
+        if [ -z "$_row" ]; then
+            echo "sluice-census: no queue row with id '$ref'" >&2
+            exit 2
+        fi
+        census_row_id="$ref"
+        ref="$(printf '%s' "$_row" | cut -f4)"
+        ;;
+esac
+```
+
 - [ ] **Step 4: Delete `HV_SLUICE_CLAIMED` entirely**
 
 Remove the `export HV_SLUICE_CLAIMED="$ID"` line from `scripts/sluice-drain.sh`, and in `scripts/sluice-run.sh` remove the `if [ -n "${HV_SLUICE_CLAIMED:-}" ]` branch, its `unset`, and the `env -u HV_SLUICE_CLAIMED` guards in `scripts/test-sluice.sh`. Have drain pass the id instead:
 
 ```bash
-(cd "$repo_root" && bash "$runner" "$ID")
+(cd "$repo_root" && bash "$runner" "$ID")   # both runners now take the id
 ```
 
 - [ ] **Step 5: Verify the variable is gone**
