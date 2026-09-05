@@ -549,3 +549,55 @@ federated-program metaplan in `docs/audits/campaign-reconciliation.tsv`.
 The controller is inspecting that new ledger's schema and neighboring records;
 the next integrated stage must include correct current-work classifications.
 No validation was skipped, and clients were not reached by this stage.
+
+## Task 5 — preparation fix round 1: cleanup ownership and failed evidence
+
+Ruling: accept both Important findings from the preparation review. The
+controller inspected `finish_process`, `measure` and `successful`: cleanup
+only enumerates the original process group although the host creates nested
+groups, and cleanup exceptions escape before a sample is assembled. An
+interrupted zero-exit sample is unsuccessful yet loses its stdout. Require
+owned-session cleanup before removal and a complete failed sample even when
+cleanup fails; retain the owned directory if safe removal cannot be established.
+Use behavioral fixtures matching separately grouped children and failed cleanup.
+Do not begin real measurements before this fix passes independent review.
+The alternative of assuming cooperative host cleanup is rejected by the
+reviewer's live nested-group fixture. These are corrections within approved
+quality scenarios, with no new policy or design choice; no new ideonomy pass
+was run for this task review ruling.
+
+## Stage 1 recovery — absorb the new documentary guard
+
+The controller merged `origin/main` with `--no-commit`; Git reported a clean
+merge and left the candidate uncommitted. Added three active reconciliation
+records for the plan and two specs named by the canonical failure. No record claims shipment. Regeneration
+and the ordinary commit hook will validate this composition before the next
+stage request. The independent adopter branches retain their frozen bootstrap
+base, so this controller absorption does not erase their independence evidence.
+
+## Tasks 3–4 — independently reviewed adopters ready to compose
+
+Thing at `275bc5d2b31374ec98dfa3bb8fd8936c8b96b5fd` passed both spec
+and quality review without fixes. Census at
+`11edfaabe918b168e74ac669fe9e851a18b9cbc3` passed both after its first
+scoped fix. The latter now supplies eight required satisfied observations;
+the two omission mutants are contradicted. Their frozen-host invocations
+returned rc=0, and each branch changed only its package and Cargo.lock.
+Controller will integrate the reviewed trees and reconcile the lock through
+Cargo. Independent branch gates passed; composed and canonical qualification
+remain separate obligations.
+
+Absorption verification: `make rebaseline` returned rc=0, wall 251.625 s.
+No Book, fixture or audit-content artifact changed. The generated write-set
+inventory changed two directory population counts (`docs/audits` 15→16,
+`docs/digest` 3→4 total files), and its timing row is retained. This is observed
+freshness of this composition, not a prediction from the clean Git merge.
+
+The first absorption commit hook failed the reconciliation coverage test:
+no campaign records were missing, but the optional Charter ledger reference
+was outside its four-directory audit population. The parser accepts a ledger
+column while coverage flattens all five columns against a population excluding
+ledgers. Removed that optional reference; the spec already links the ledger.
+The failed gate (36.640 s) remains in timings. Follow-up: reconcile the Coda
+ledger-column schema with its coverage population before relying on that
+column; this campaign does not change the new guard's scope.
