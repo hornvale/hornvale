@@ -461,6 +461,8 @@
 - [The Weft](./chronicle/the-weft.md)
 - [The Housemark](./chronicle/the-housemark.md)
 - [The Coda](./chronicle/the-coda.md)
+- [The Sluicegate](./chronicle/the-sluicegate.md)
+- [The Charter](./chronicle/the-charter.md)
 
 # Appendix: The Frontier
 

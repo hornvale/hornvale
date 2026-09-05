@@ -101,12 +101,17 @@ run_one() {
     local START RC ELAPSED AFTER LOG runner
     START=$SECONDS
     runner="$(dispatch_for "$KIND")"
-    export HV_SLUICE_CLAIMED="$ID"
-    if [ "$KIND" = "census" ]; then
-        (cd "$repo_root" && bash "$runner" "$SHA") >/dev/null 2>&1
-    else
-        (cd "$repo_root" && bash "$runner" "$BR" "$SHA" "$KIND") >/dev/null 2>&1
-    fi
+    # BOTH RUNNERS NOW TAKE THE REQUEST ID, NOT branch/sha/kind. The drain
+    # already claimed this row above (in the same locked pass that selected
+    # it), so the runner resolves branch/sha/kind straight from the row it
+    # was told about rather than trusting whatever this loop passed
+    # positionally — which is what let a hand-typed `merge` land a
+    # kind=stage request on main once already. This also removes the need to
+    # export a claim-id environment variable: there is nothing ambient for a
+    # nested sluice-run.sh (e.g. one invoked from inside scripts/test-sluice.sh,
+    # itself run as an `outboard` phase) to inherit and mistake for its own
+    # claim.
+    (cd "$repo_root" && bash "$runner" "$ID") >/dev/null 2>&1
     RC=$?
     ELAPSED=$((SECONDS - START))
 
@@ -166,9 +171,27 @@ census_note() {
 }
 
 main() {
-    local max="${1:-5}" i row
+    local max="${1:-5}" i row rc claim_out
     for ((i = 1; i <= max; i++)); do
-        row="$(cd "$repo_root" && bash scripts/sluice-queue.sh claim "launched by the drain loop" 2>/dev/null)"
+        # STDOUT AND STDERR ARE CAPTURED TOGETHER, AND THE RC IS CHECKED
+        # BEFORE the output is trusted as a row (fix round 2, Critical F1).
+        # `claim` now REFUSES (exit 3) rather than building on demand when
+        # its binary is missing, and this loop used to discard stderr
+        # (`2>/dev/null`) and treat any empty stdout — including empty
+        # stdout from a rc=3 refusal — as "drained". That read a build
+        # failure as "queue drained after 0 run(s)": a wrong answer, with
+        # the one line that would have explained it thrown away. On success
+        # `claim` writes nothing to stderr, so folding the streams together
+        # costs the success path nothing.
+        claim_out="$(cd "$repo_root" && bash scripts/sluice-queue.sh claim "launched by the drain loop" 2>&1)"
+        rc=$?
+        if [ "$rc" -ne 0 ]; then
+            echo "sluice-drain: claim failed (rc=$rc) — cannot tell drained from broken, so NOT reporting 'queue drained'." >&2
+            printf '%s
+' "$claim_out" >&2
+            return 1
+        fi
+        row="$claim_out"
         if [ -z "${row//[[:space:]]/}" ]; then
             echo "queue drained after $((i - 1)) run(s)"
             break

@@ -182,7 +182,28 @@ the exact SHA it tested.
 - **`sluice-queue.sh`** — the merge queue's durable state: an
   append-and-rewrite TSV under its OWN flock, deliberately not the shared
   lane claim, so enqueueing never blocks behind a running gate (a caller
-  should not wait tens of minutes just to write one line). Coalesces by
+  should not wait tens of minutes just to write one line).
+  **IT IS NO LONGER A PURE-BASH STATE MACHINE.** `claim`, `set-state` and
+  `list` are a THIN SHIM that `exec`s `tools/sluice`, a Rust binary outside
+  the cargo workspace; only `add` is still bash (it sources
+  `sluice-headline.sh`, resolves three-valued ancestry and coalesces, all of
+  which shell out to git). The binary is resolved as a sibling of the script's
+  own location, so a caller's cwd cannot change which one runs;
+  `HV_SLUICE_BIN` overrides it and is a TEST SEAM ONLY, set by nothing in
+  production. **THE SHIM NEVER BUILDS IT.** An earlier version did, with
+  `cargo build`, under the script's own `set -euo pipefail` — so a build
+  failure (observed: rustup resolving an older, non-overridden toolchain from
+  a caller's cwd and choking on the edition2024 manifest) aborted the whole
+  script with rc=101 before `exec` ever ran, and all three callers read that
+  as something else. It now follows `scripts/board-render.sh`'s precedent:
+  prefer a prebuilt release binary and deliberately never compile it. `make
+  prewarm` builds it for a fresh worktree; nothing else does.
+  **EXIT 3 is reserved** for "no binary and no way to reach one", distinct
+  from every code the script or the binary otherwise uses (1/2/4/5), so a
+  caller can tell "the queue refused" from "the queue could not be asked" —
+  and all three callers now do: `sluice-run.sh` and `sluice-census.sh` refuse
+  with rc=13 rather than running unbookkept, and `sluice-drain.sh` returns
+  non-zero rather than reporting a queue it never reached as drained. Coalesces by
   ANCESTRY (`git merge-base --is-ancestor`), not branch name, so a rebase or
   a detached ref still supersedes correctly — and never supersedes a request
   already RUNNING inside the chamber, which would otherwise orphan it
@@ -239,6 +260,17 @@ the exact SHA it tested.
   a green one. Unsets `GIT_DIR`/`GIT_INDEX_FILE` once near
   the top (the board-incident hermeticity lesson above), so no child process
   spawned mid-run can silently operate on a different repository.
+  **It also takes a bare `req-<id>` in place of branch/sha/kind**, which is how
+  the drain dispatches it — and an id is NOT a claim: it reads the row's state
+  and refuses **rc=16** unless the row already reads `running`. Running an
+  unclaimed row is the 2026-09-04 duplicate by another road (a `queued` row is
+  what the next dispatcher's `claim` hands out, and what coalescing may
+  supersede mid-write), and it writes no terminal state, so the row becomes a
+  permanent ghost. An unreachable queue — `sluice-queue.sh`'s exit 3, above —
+  is **rc=13** on both the id and the positional path, never the shim's own
+  rc=3, which is outside this script's vocabulary (2/9/10/11/12/13/14/15/16/75)
+  and which the drain records as `CHAMBER RED rc=3 — attribution pending`,
+  blaming the candidate for a toolchain fault.
 - **`sluice-request.sh`** — the caller's side; validates and ssh's, then
   RETURNS without waiting, in the shape the deleted `lane-dispatch.sh`
   established including its two
@@ -269,9 +301,22 @@ the exact SHA it tested.
   always: a census that ran long is not a census that failed.
 - **`sluice-drain.sh`** — the operator's harness: CLAIM the next row, gate it,
   dispatch on `kind`, set the terminal state, repeat. It claims (not `next`)
-  and exports `HV_SLUICE_CLAIMED` so the executor it launches does not claim a
-  row the drain already holds and refuse against itself. **It is no longer the
-  only bookkeeper**, and that is the point: `sluice-run.sh` and
+  and then dispatches the runner with **the request ID and nothing else**
+  (`bash "$runner" "$ID"`), so the runner reads branch/sha/kind out of the row
+  that authorised it rather than trusting positional arguments. **There is no
+  exported claim-id environment variable any more** — The Sluicegate deleted
+  it, and the spec's success criterion is that its NAME appears nowhere under
+  `scripts/` or `tools/`, which is why this paragraph describes it rather than
+  spelling it. This bullet asserted the export for the whole life of its
+  replacement. The variable meant "your row is already claimed", and it leaked
+  into the whole phase tree: a nested `sluice-run.sh` — one invoked from inside
+  `scripts/test-sluice.sh`, itself running as an `outboard` phase — inherited
+  it, believed its own row was claimed, and skipped the interlock entirely.
+  The id is an argument now, so it dies with the process's argv. **And the id
+  is not itself a claim**: the runner reads the row's STATE and refuses (rc=16)
+  unless it reads `running`, because an id proves only that the caller can
+  type. **It is no longer the only bookkeeper**, and that is the point:
+  `sluice-run.sh` and
   `sluice-census.sh` each claim their own row when nothing claimed it for
   them, and set their own terminal state when they did. A run launched by hand
   is a documented escape hatch; a run launched by hand that leaves its row

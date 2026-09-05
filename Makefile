@@ -33,12 +33,21 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+# Export the raw Make value as environment data, without shell interpolation.
+export HV_CONTEXT_SCOPE = $(value SCOPE)
+context: ## Collect checked context from this checkout (SCOPE=domains/thing or .)
+	@test -n "$$HV_CONTEXT_SCOPE" || { echo 'usage: make context SCOPE=<scope>' >&2; exit 2; }
+	@env -u CARGO_TARGET_DIR -u CARGO_BUILD_TARGET -u CARGO_BUILD_TARGET_DIR cargo run --quiet --manifest-path tools/digest/Cargo.toml --package digest --bin digest --target-dir "$(CURDIR)/tools/digest/target" --locked --offline -- context "$$HV_CONTEXT_SCOPE"
+
+context-prepare: ## Prepare Digest workspace dependencies/builds (may update Cargo.lock)
+	@env -u CARGO_TARGET_DIR -u CARGO_BUILD_TARGET -u CARGO_BUILD_TARGET_DIR cargo build --manifest-path tools/digest/Cargo.toml --workspace --target-dir "$(CURDIR)/tools/digest/target"
 
 quick: ## Cheap half of the gate (fmt-check + clippy + type-audit + type-audit-report + placement-audit + placement-audit-report + plumb + plumb-report)
 	@bash scripts/timed.sh quick -- make --no-print-directory quick-run
@@ -660,6 +669,14 @@ prewarm-run:
 	# `-` prefixed: prewarm is a convenience, and a board that will not build
 	# must not fail the target that warms the workspace.
 	-cargo build --release --manifest-path tools/board/Cargo.toml
+	# The queue's own binary, same reasoning (fix round 2, Critical F1):
+	# scripts/sluice-queue.sh deliberately NEVER compiles it (a build failure
+	# under that script's own `set -euo pipefail` aborted with cargo's rc
+	# before dispatch ever ran, and callers read that as "queue drained" or
+	# "unbookkept" — see the comment above its forwarding block), so a fresh
+	# worktree with no prewarm has no way to claim, set-state or list a row
+	# until something builds it. `-` prefixed for the same reason as board.
+	-cargo build --release --manifest-path tools/sluice/Cargo.toml
 
 rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh
