@@ -587,7 +587,7 @@
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// The fixed verb sequence every reading uses. Deliberately mixed: verbs
 /// that move the possession (`enter`, `out`), verbs that advance the day
@@ -660,7 +660,6 @@ fn main() {
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &SettlementPins::default(),
     )

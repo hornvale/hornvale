@@ -63,7 +63,7 @@ use hornvale_history::record::{CauseOfEnd, Ended};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::seed_sweep;
-use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, census, history_for};
+use hornvale_worldgen::{SettlementPins, WorldComponents, census, history_for};
 use std::collections::BTreeMap;
 
 /// The same range `tolerance_baseline.rs` pools its readings over, so this
@@ -106,7 +106,6 @@ fn is_the_raid_proxy_ambiguous_or_is_its_population_stale() {
         let history = history_for(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

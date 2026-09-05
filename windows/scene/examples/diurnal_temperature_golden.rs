@@ -21,7 +21,7 @@
 #![allow(clippy::disallowed_methods)]
 use hornvale_climate::{RotationRegime, diurnal_waveform};
 use hornvale_kernel::{NearestVertexIndex, Seed};
-use hornvale_worldgen::{SkyChoice, build_world, climate_of, terrain_of};
+use hornvale_worldgen::{build_world, climate_of, terrain_of};
 use serde::Serialize;
 
 /// Lattice width (tiles across) used only to derive realistic tile-CENTER
@@ -68,7 +68,6 @@ fn main() {
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

@@ -101,8 +101,7 @@ use hornvale_history::record::{CauseOfEnd, Function, OccupationRecord};
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BakeConfig, BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-    occupation_records,
+    BakeConfig, BuildDepth, SettlementPins, WorldComponents, build_world_to, occupation_records,
 };
 
 /// The panel spec amendment E.9 fixes: E.4.2's twelve-seed **cap**, taken in
@@ -138,7 +137,6 @@ fn panel_world(seed_value: u64) -> World {
     build_world_to(
         Seed(seed_value),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &WorldComponents::assemble().expect("canonical components assemble"),

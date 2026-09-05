@@ -33,7 +33,7 @@ use hornvale_language::{
     Account, Disposition, account_of, distinctiveness, identity_params, recoverability,
 };
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, accounts_from, build_world, chorus_ground, pathological_params,
+    SettlementPins, accounts_from, build_world, chorus_ground, pathological_params,
 };
 
 /// Build a world with the shipped four-people component set, generated sky,
@@ -44,7 +44,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

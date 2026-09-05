@@ -313,13 +313,12 @@ fn all_hits() -> Vec<Hit> {
     hits
 }
 
-/// A real `LocaleContext` from a bare world. `World::new` skips genesis, which
-/// is all this needs: `walk_depth` reads only `globe_level()` and has no
-/// settlement dependency — the construction `agent.rs`'s own test uses.
+/// A real `LocaleContext` from the committed seed-42 fixture. `walk_depth`
+/// reads only `globe_level()` and has no settlement dependency; the fixture
+/// supplies the built world's mandatory sky facts without paying for genesis.
 fn context() -> hornvale_locale::LocaleContext {
-    use hornvale_kernel::{Seed, World};
-    let world = World::new(Seed(42));
-    hornvale_locale::LocaleContext::build(&world).expect("a bare world builds a context")
+    let world = hornvale_worldgen::fixture::seed_42_world();
+    hornvale_locale::LocaleContext::build(&world).expect("seed 42 builds a context")
 }
 
 #[test]

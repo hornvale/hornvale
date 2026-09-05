@@ -8,7 +8,6 @@ fn world() -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

@@ -58,7 +58,7 @@
 //!   file's deliberate-exclusion roster with the reason. 0123 warns that a
 //!   stale list is worse than none.
 
-use hornvale_kernel::{Facet, Seed, Vertex, World, WorldTime, math};
+use hornvale_kernel::{Facet, Vertex, World, WorldTime, math};
 use hornvale_locale::{Crossing, LocaleContext, ROOM_SCHEMA, room_edge};
 use hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE;
 use hornvale_terrain::channel::Transverse;
@@ -69,7 +69,7 @@ const FIXTURE: &str = include_str!("../fixtures/pre-stage-2-rooms.jsonl");
 
 /// The world every claim here is made on.
 fn world() -> World {
-    World::new(Seed(42))
+    hornvale_worldgen::fixture::seed_42_world()
 }
 
 /// A live spread of walk-band rooms, one per fixture line.

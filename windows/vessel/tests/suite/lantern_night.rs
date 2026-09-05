@@ -32,7 +32,6 @@ fn world_at(seed: u64) -> World {
     hornvale_worldgen::build_world(
         Seed(seed),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

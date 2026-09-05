@@ -22,7 +22,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -169,7 +169,6 @@ fn watershed_individuation_matches_the_spec_counts() {
     let built = build_world_to_with_artifacts(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -211,7 +210,6 @@ fn sites_for(seed: u64) -> Vec<Site> {
     let built = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

@@ -396,7 +396,7 @@ mod tests {
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::{Fact, Lineage, Seed, WorldTime};
     use hornvale_terrain::TerrainPins;
-    use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, build_world_to};
+    use hornvale_worldgen::{SettlementPins, WorldComponents, build_world_to};
     use std::sync::OnceLock;
 
     /// A real seed-42 world at `depth`, built once per test binary — the same
@@ -411,7 +411,6 @@ mod tests {
             build_world_to(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
                 &wc,

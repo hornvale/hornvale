@@ -12,8 +12,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, VertexMap};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-    build_world_to_with_artifacts, terrain_of,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, build_world_to_with_artifacts,
+    terrain_of,
 };
 
 fn artifacts_at(depth: BuildDepth) -> hornvale_worldgen::BuildArtifacts {
@@ -21,7 +21,6 @@ fn artifacts_at(depth: BuildDepth) -> hornvale_worldgen::BuildArtifacts {
     build_world_to_with_artifacts(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -100,7 +99,6 @@ fn hoisted_terrain_equals_the_re_derived_terrain_under_pins() {
     let a = build_world_to_with_artifacts(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &pins,
         &SettlementPins::default(),
         &wc,
@@ -123,7 +121,6 @@ fn the_wrapper_world_is_unchanged() {
     let via_wrapper = build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

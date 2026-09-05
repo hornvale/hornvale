@@ -1,6 +1,5 @@
-//! The generated sky: a time-varying phenomena provider (tier 1/2) driven
-//! entirely by a genesis outcome. Downstream systems see only `sky_at` and
-//! `phenomena` — never the system or calendar directly.
+//! The generated sky: a time-varying phenomena provider driven entirely by
+//! a genesis outcome.
 
 use crate::anchor::Rotation;
 use crate::calendar::{Calendar, SkyBand, calendar_of};
@@ -1524,7 +1523,7 @@ fn capitalize(s: &str) -> String {
     }
 }
 
-/// Tier-1/2 astronomy: the generated sky, time-varying.
+/// The generated, time-varying sky.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GeneratedSky {
     system: StarSystem,

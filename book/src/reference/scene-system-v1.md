@@ -8,9 +8,7 @@ elements and the sim clock's current day, exactly as [`scene/tiles/v1`'s
 temperature evaluator](./scene-tiles-v1.md#reading-temperature-over-the-year)
 evaluates a temperature from elements rather than storing one per day.
 
-Only a world with a **generated** sky has a system to describe. Tier-0
-constant-sun worlds have no orrery — asking one for `scene/system/v1`
-fails with a description of why.
+Every valid world has a generated sky and therefore a system to describe.
 
 ## The document
 
@@ -179,6 +177,5 @@ hornvale scene system [--world <path>]
 ```
 
 This prints one `scene/system/v1` document to standard output. `--world`
-defaults to `world.json`. A world with no generated sky (the tier-0
-constant sun) has no system to describe, and the command fails with a
-message saying so.
+defaults to `world.json`. A malformed ledger with no `sky-provider` fact is
+not a valid world and fails to load (decision 0737).

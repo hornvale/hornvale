@@ -118,7 +118,7 @@ use hornvale_kernel::{
 use hornvale_locale::LocaleContext;
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::walk_depth;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::time::{Duration, Instant};
 
 /// Subject-count rungs (the campaign's own ladder: 10 through 1,000,000).
@@ -489,7 +489,6 @@ fn main() {
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

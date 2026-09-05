@@ -8,14 +8,13 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to};
+use hornvale_worldgen::{BuildDepth, SettlementPins, WorldComponents, build_world_to};
 
 fn build(seed: Seed, depth: BuildDepth) -> hornvale_kernel::World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

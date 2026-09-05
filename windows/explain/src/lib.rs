@@ -33,7 +33,7 @@ fn text(world: &World, subject: EntityId, predicate: &str) -> Option<String> {
 }
 
 /// Narrate the sky's derivation chain from the world's committed facts.
-/// `None` if the world has no generated sky. Each node is tagged with its
+/// `None` if the required sky facts are absent. Each node is tagged with its
 /// provenance in the derivation DAG (rolled / derived / pinned) and its value
 /// read from the ledger; the join of DAG and values is the explanation.
 ///

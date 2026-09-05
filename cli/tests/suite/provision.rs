@@ -20,7 +20,6 @@ fn a_world() -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         Seed(0),
         &hornvale_astronomy::SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )

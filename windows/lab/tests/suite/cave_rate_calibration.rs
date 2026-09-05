@@ -74,8 +74,7 @@ use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex};
 use hornvale_locale::LocaleContext;
 use hornvale_terrain::GeneratedTerrain;
 use hornvale_worldgen::{
-    BuildDepth, SiteReason, SkyChoice, WorldComponents, build_world_to_with_artifacts,
-    site_facet_for,
+    BuildDepth, SiteReason, WorldComponents, build_world_to_with_artifacts, site_facet_for,
 };
 
 /// The preregistered band's floor. Spec section 9.
@@ -151,7 +150,6 @@ fn read(seed: u64, wc: &WorldComponents) -> Reading {
     let arts = build_world_to_with_artifacts(
         Seed(seed),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
         wc,

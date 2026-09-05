@@ -110,6 +110,7 @@ impl CoverClass {
 /// One weighted cover component, tagged with the class it came from so
 /// [`cover_class_at`] can pick the dominant one without redoing the weight
 /// math [`cover_weights`] already did.
+#[derive(Debug)]
 struct Component {
     class: CoverClass,
     reflectance: [f64; hornvale_kernel::color::BANDS],
@@ -250,10 +251,30 @@ fn cover_components(
     at: WorldTime,
 ) -> Vec<Component> {
     let expr = climate.biome_expr_at(vertex);
+    cover_components_for_regime(
+        expr.formation,
+        expr.realm == Realm::OVERWORLD,
+        climate.is_frozen_at(vertex, at),
+        climate.snow_fraction_at(vertex),
+        climate.moisture_at(vertex),
+        micro,
+    )
+}
 
+/// Pure cover-composition seam once the climate lookup has selected a
+/// regime. Keeping the lookup outside lets unit tests construct a formation
+/// directly when a committed world's population does not happen to contain
+/// that rare formation; it does not add a second production derivation.
+fn cover_components_for_regime(
+    formation: Formation,
+    on_land: bool,
+    frozen: bool,
+    annual_snow: f64,
+    base_wet: f64,
+    micro: &MicroField,
+) -> Vec<Component> {
     // --- Snow: seasonal gate x annual propensity x a bounded aspect swing.
-    let frozen = climate.is_frozen_at(vertex, at);
-    let annual_snow = climate.snow_fraction_at(vertex).clamp(0.0, 1.0);
+    let annual_snow = annual_snow.clamp(0.0, 1.0);
     let aspect_factor = (1.0 - ASPECT_SNOW_SWING * tier3(micro.aspect)).clamp(0.0, 2.0);
     // A frozen vertex always carries a snow floor (SNOW_FLOOR) even at zero
     // recorded snow_fraction — ground frost / rime rather than bare frozen
@@ -287,9 +308,8 @@ fn cover_components(
         });
     }
 
-    let on_land = expr.realm == Realm::OVERWORLD;
     let veg_ceiling = if on_land {
-        vegetation_ceiling(expr.formation)
+        vegetation_ceiling(formation)
     } else {
         0.0
     };
@@ -321,12 +341,12 @@ fn cover_components(
     // --- Sand/silt: land only, the ground vegetation and snow left bare.
     if on_land {
         let ground_remaining = (remaining_after_snow - veg_total).max(0.0);
-        let bare_total = ground_remaining * bare_ground_share(expr.formation);
+        let bare_total = ground_remaining * bare_ground_share(formation);
         if bare_total > 0.0 {
             // wetness tier: -1 (dry) .. +1 (wet). Climate moisture sets the
             // base split; the room's own (partly grounded) wetness axis
             // perturbs it by one of three fixed deltas.
-            let base_wet = climate.moisture_at(vertex).clamp(0.0, 1.0);
+            let base_wet = base_wet.clamp(0.0, 1.0);
             let wet_share = (base_wet + WETNESS_TIER_DELTA * tier3(micro.wetness)).clamp(0.0, 1.0);
             let silt_weight = bare_total * wet_share;
             let sand_weight = bare_total - silt_weight;
@@ -404,23 +424,19 @@ pub(crate) fn cover_class_at(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{Seed, World};
     use hornvale_worldgen::{climate_from, terrain_of};
 
-    /// Seed 42's tier-1 climate, built the same way [`crate::LocaleContext::
+    /// Seed 42's climate, built the same way [`crate::LocaleContext::
     /// build`] does — but standalone, so these tests don't need a full
     /// `LocaleContext` (a `GeneratedClimate` and a `Vertex` are all
-    /// [`cover_weights`]/[`cover_class_at`] take). `World::new` (no sky pin
-    /// committed) defaults to `ConstantSun`, which is fine here: these tests
-    /// probe the cover model's shape, not the seasonal swing H2 measures
-    /// (that needs the generated sky — see `windows/locale/tests/
-    /// surface_mixture.rs`'s `high_ground_is_brighter_in_the_cold_half_of_the_year`).
+    /// [`cover_weights`]/[`cover_class_at`] take). The committed fixture
+    /// supplies the mandatory astronomy facts without paying for genesis.
     // Named construction site (decision 0092): a standalone derive-once
     // wrapper for these tests, mirroring `LocaleContext::build`'s own
     // scoped allow rather than reaching for the disallowed methods inline.
     #[allow(clippy::disallowed_methods)]
     fn climate_seed_42() -> GeneratedClimate {
-        let world = World::new(Seed(42));
+        let world = hornvale_worldgen::fixture::seed_42_world();
         let terrain = terrain_of(&world).expect("seed 42 sculpts");
         climate_from(&world, &terrain).expect("seed 42 fits a climate")
     }
@@ -562,35 +578,27 @@ mod tests {
 
     #[test]
     fn a_desert_vertex_leans_sand_or_silt_not_vegetation() {
-        let climate = climate_seed_42();
-        let vertex = find_vertex(&climate, |c| {
-            climate.biome_expr_at(c).formation == Formation::Desert
-                && !climate.is_frozen_at(c, WorldTime::GENESIS)
-        })
-        // FINDING 5 (Task 2b fix round): this used to `return` silently on
-        // `None`, on the reasoning that "seed 42 may simply have no desert
-        // vertex" is a legitimate finding. Measured: seed 42 has 15 Desert
-        // vertices of 40962 (0.037%) — rare, but real, so a silent skip here
-        // was one climate tune away from this test going permanently green
-        // without ever running its own assertions. `expect` makes that
-        // failure loud instead: a future seed/tune with zero desert vertices
-        // now fails this test explicitly, which is the correct outcome —
-        // it means the test needs a different vertex-finding strategy, not
-        // that it should quietly stop checking anything.
-        .expect("seed 42 must have at least one unfrozen Desert vertex (measured: 15 of 40962)");
         let micro = neutral();
-        let cover = cover_weights(&climate, vertex, &micro, WorldTime::GENESIS);
+        // The Zenith's valid generated-sky population has no seed-42 desert.
+        // Construct the authored Desert regime directly through the same pure
+        // seam production uses after climate lookup. This is not a convenient
+        // seed search: the test fixes every relevant input and exercises the
+        // production composition rules deterministically.
+        let cover = cover_components_for_regime(Formation::Desert, true, false, 0.0, 0.2, &micro);
         let has_chlorophyll = cover
             .iter()
-            .any(|(r, _)| r.get() == &endmembers::CHLOROPHYLL);
+            .any(|component| component.reflectance == endmembers::CHLOROPHYLL);
         assert!(
             !has_chlorophyll,
             "a desert vertex should carry no chlorophyll weight: {cover:?}"
         );
         let mineral_like: f64 = cover
             .iter()
-            .filter(|(r, _)| r.get() == &endmembers::SAND || r.get() == &endmembers::SILT)
-            .map(|(_, w)| *w)
+            .filter(|component| {
+                component.reflectance == endmembers::SAND
+                    || component.reflectance == endmembers::SILT
+            })
+            .map(|component| component.weight)
             .sum();
         assert!(
             mineral_like > 0.0,

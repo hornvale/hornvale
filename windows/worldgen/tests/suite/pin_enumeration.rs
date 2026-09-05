@@ -7,13 +7,12 @@
 //! that spans `build_world`'s two genesis domains (sky and terrain) at
 //! seed 42:
 //!
-//! - sky: `{Constant, Generated}` (2)
 //! - rotation: `{Normal, Locked}` (2)
 //! - neighbor: `{RedDwarf, SunLike, WhiteDwarf, OrangeGiant, RedGiant,
 //!   BlueGiant}` (6)
 //! - supercontinent: `{true, false}` (2)
 //!
-//! 2 x 2 x 6 x 2 = 48 combinations.
+//! 2 x 6 x 2 = 24 combinations, every one of them generated-sky.
 //!
 //! **Continuous pins are excluded on purpose.** `plates` (legal range
 //! 2..=64), `ocean_fraction` (legal range 0.05..=0.95), and moon counts
@@ -23,7 +22,7 @@
 //! exhaustively would mean enumerating a discretization choice as much as
 //! the pin space itself, which is a sampling design question (see the
 //! sibling idea TOOL-stratified-seeds), not a micro-enumeration one. The
-//! four pins enumerated here are the ones whose entire legal domain is a
+//! three pins enumerated here are the ones whose entire legal domain is a
 //! small, closed enum.
 //!
 //! For every combination this test asserts the build is either `Ok(world)`
@@ -32,40 +31,47 @@
 //! and pins yields byte-identical serialized ledgers (`World::to_json`,
 //! which routes through the quantized emit boundary).
 //!
-//! The full 48-combo product's wall time has grown well past the task
-//! brief's ~15 s commit-gate budget as the genesis pipeline deepened (the
+//! The full product's wall time has grown well past the task brief's ~15 s
+//! commit-gate budget as the genesis pipeline deepened (the
 //! fast-gate-tiers census, 2026-07-13, timed the sequential binary in the
 //! minutes), so the test is `#[ignore]`d into the heavy tier: it runs in
-//! `make gate-full`, not the default commit gate. The 48 combos are
+//! `make gate-full`, not the default commit gate. The combos are
 //! independent -- each build depends only on `(Seed(42), combo's pins)` --
 //! so the sweep runs one scoped thread per combo (`std::thread::scope`)
 //! rather than sequentially, cutting the heavy-tier wall time from ~505 s
-//! to ~64 s (M1 Max, 10 logical CPUs, debug profile) without touching the
-//! determinism guarantee (see `full_pin_product_is_enumerated` below).
+//! to ~64 s (M1 Max, 10 logical CPUs, debug profile, when the product was
+//! still 48 points) without touching the determinism guarantee (see
+//! `full_pin_product_is_enumerated` below).
 //! Depth-scoping the builds to `BuildDepth::Terrain` (MAP-25 Task 10, the
 //! enumerated pins never reach past the terrain rung) cut it again, ~64 s
 //! to ~16 s on the same machine.
 //!
-//! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
+//! Re-measured 2026-09-04 (The Zenith) after the sky level came off the
+//! product: **2.135 s** nextest wall for the 24 combos, against the ~16 s
+//! above for 48. Reported, not asserted, and not a like-for-like machine
+//! comparison with the ~505/~64/~16 s figures — read it as the current
+//! cost, not as a speedup factor.
+//!
+//! Measured 2026-09-04 (The Zenith, seed 42): 24 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
-//! changes. Half the product (`SkyChoice::Constant`, 24 combinations) is
-//! refusal-free by construction: rotation and neighbor pins are still
-//! recorded on those worlds, but the generated-sky path that could act on
-//! them never runs, so any future refusal in this product can only arise
-//! on the generated-sky half.
+//! changes. Authoring measured 48 built, 0 refused on 2026-07-11, when the
+//! sky choice was still a factor.
+//!
+//! **Every combination in this product can now refuse.** The old note here
+//! said half of it (the constant-sky half, 24 combinations) was refusal-free
+//! BY CONSTRUCTION -- rotation and neighbor pins were recorded on those
+//! worlds but the generated-sky path that could act on them never ran, so a
+//! future refusal could only arise on the generated-sky half. That
+//! carve-out is gone with the tier: all 24 points build a generated sky, so
+//! every one of them runs the path that can refuse. The refusal surface this
+//! product searches is therefore the whole product, not half of it.
 
 use hornvale_astronomy::{NeighborClass, RotationPin, SkyPins};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{
-    BuildDepth, BuildError, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-};
+use hornvale_worldgen::{BuildDepth, BuildError, SettlementPins, WorldComponents, build_world_to};
 
-/// Every discrete value of the four enumerated pins, in a stable order.
-fn sky_choices() -> [SkyChoice; 2] {
-    [SkyChoice::Constant, SkyChoice::Generated]
-}
-
+/// Every discrete value of the three enumerated pins, in a stable order.
 fn rotation_choices() -> [RotationPin; 2] {
     [RotationPin::Normal, RotationPin::Locked]
 }
@@ -88,28 +94,24 @@ fn supercontinent_choices() -> [bool; 2] {
 /// One point in the enumerated product.
 #[derive(Debug)]
 struct Combo {
-    sky: SkyChoice,
     rotation: RotationPin,
     neighbor: NeighborClass,
     supercontinent: bool,
 }
 
-/// The full 2 x 2 x 6 x 2 = 48-point Cartesian product, in a fixed,
+/// The full 2 x 6 x 2 = 24-point Cartesian product, in a fixed,
 /// deterministic order (no reliance on iteration order of anything but
 /// these fixed arrays).
 fn full_product() -> Vec<Combo> {
     let mut out = Vec::new();
-    for sky in sky_choices() {
-        for rotation in &rotation_choices() {
-            for neighbor in neighbor_choices() {
-                for supercontinent in supercontinent_choices() {
-                    out.push(Combo {
-                        sky,
-                        rotation: rotation.clone(),
-                        neighbor,
-                        supercontinent,
-                    });
-                }
+    for rotation in &rotation_choices() {
+        for neighbor in neighbor_choices() {
+            for supercontinent in supercontinent_choices() {
+                out.push(Combo {
+                    rotation: rotation.clone(),
+                    neighbor,
+                    supercontinent,
+                });
             }
         }
     }
@@ -135,7 +137,6 @@ fn build(combo: &Combo) -> Result<hornvale_kernel::World, BuildError> {
     build_world_to(
         Seed(42),
         &sky_pins,
-        combo.sky,
         &terrain_pins,
         &SettlementPins::default(),
         &wc,
@@ -171,10 +172,10 @@ fn check_combo(combo: &Combo) -> bool {
     }
 }
 
-/// The full 48-combo product, `#[ignore]`d into the heavy tier (fast-gate-tiers
+/// The full 24-combo product, `#[ignore]`d into the heavy tier (fast-gate-tiers
 /// spec): even parallelized its wall time exceeds the ~15 s commit-gate budget
 /// as the genesis pipeline deepened, so it runs in `make gate-full`, not the
-/// default commit gate. The 48 combos are independent -- each `check_combo`
+/// default commit gate. The combos are independent -- each `check_combo`
 /// builds worlds purely from `(Seed(42), combo's pins)` and shares no mutable
 /// state -- so the sweep runs one scoped thread per combo (`std::thread::scope`,
 /// std only, modeled on `windows/lab/src/runner.rs`'s `run_pin_set`) instead of
@@ -221,10 +222,10 @@ fn full_pin_product_is_enumerated() {
 
     assert_eq!(
         built + refused,
-        48,
-        "every one of the 48 combos must be accounted for"
+        24,
+        "every one of the 24 combos must be accounted for"
     );
-    // Measured (not preregistered), 2026-07-11: all 48 combos in the
+    // Measured (not preregistered), 2026-09-04: all 24 combos in the
     // enumerated product build successfully; none refuse. Sky's rotation
     // and neighbor pins and terrain's supercontinent pin are each legal
     // across their whole enumerated domain at seed 42, so this product's
@@ -234,5 +235,5 @@ fn full_pin_product_is_enumerated() {
     // exact count would fail this test for a reason unrelated to what it
     // guards if a future legitimate physics change made some combo
     // correctly refuse with a typed error instead of building.
-    eprintln!("full_pin_product_is_enumerated: {built} built, {refused} refused (of 48)");
+    eprintln!("full_pin_product_is_enumerated: {built} built, {refused} refused (of 24)");
 }

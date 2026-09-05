@@ -109,8 +109,7 @@ use hornvale_kernel::{Seed, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::chamber::{BRANCHES_PER_SYSTEM, ChamberAddr, chamber_exists, rung_rank};
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, carrying_inputs_of, climate_of, forage_supply_field,
-    terrain_of,
+    SettlementPins, build_world, carrying_inputs_of, climate_of, forage_supply_field, terrain_of,
 };
 
 /// Seeds the campaign states its preregistrations on.
@@ -218,7 +217,6 @@ fn measure(seed_value: u64) -> SeedMeasurement {
     let world = build_world(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )

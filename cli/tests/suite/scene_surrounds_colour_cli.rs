@@ -83,8 +83,7 @@ fn colour_lens_declares_the_altitude_the_light_was_actually_built_from() {
     let calendar = hornvale_worldgen::sky_of(&world)
         .expect("seed 42's default sky is generated")
         .calendar()
-        .cloned()
-        .expect("a generated sky always has a calendar");
+        .clone();
     let expected_altitude = calendar
         .solar_altitude_at(
             StdInstant::new(DAY).expect("day 0.32 is a valid StdDays"),

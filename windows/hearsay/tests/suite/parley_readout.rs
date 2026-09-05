@@ -695,7 +695,6 @@ fn the_parley_readout_over_a_seed_panel() {
         let world = hornvale_worldgen::build_world(
             hornvale_kernel::Seed(seed),
             &hornvale_astronomy::SkyPins::default(),
-            hornvale_worldgen::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
         )

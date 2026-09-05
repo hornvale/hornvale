@@ -310,8 +310,7 @@ use hornvale_species::BiomeAffinity;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to_with_artifacts, per_species_suitability,
-    sky_of,
+    BuildDepth, SettlementPins, build_world_to_with_artifacts, per_species_suitability, sky_of,
 };
 
 /// The arid land biomes, fixed before the first measurement — see the module
@@ -409,7 +408,6 @@ fn tally(seed: u64, arm: Arm, species: &str) -> Tally {
     let built = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &components(arm),
@@ -468,7 +466,6 @@ fn placement(seed: u64, arm: Arm) -> Vec<(String, u32)> {
     let built = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &components(arm),
@@ -545,7 +542,6 @@ fn gnoll_mean_correlation(seed: u64, arm: Arm) -> (f64, Vec<(String, f64)>) {
     let built = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,
@@ -561,10 +557,7 @@ fn gnoll_mean_correlation(seed: u64, arm: Arm) -> (f64, Vec<(String, f64)>) {
     let geo = terrain.geosphere();
 
     let sky = sky_of(world).expect("sky");
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

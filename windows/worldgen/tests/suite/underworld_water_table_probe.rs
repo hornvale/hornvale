@@ -175,7 +175,7 @@ use hornvale_terrain::{
 };
 use hornvale_worldgen::chamber::{ChamberOrigin, is_sump};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to_with_artifacts,
 };
 
 /// Seeds this campaign preregisters on (spec §5). Same three the delve
@@ -234,7 +234,6 @@ fn the_water_table_is_not_degenerate() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -502,7 +501,6 @@ fn how_far_does_the_dryness_gain_reach() {
         let artifacts = build_world_to_with_artifacts(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
