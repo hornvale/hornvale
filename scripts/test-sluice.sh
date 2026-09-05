@@ -3241,7 +3241,7 @@ set +e
 # reported rc=0 and LANDED while main received only the pre-merge tree's
 # artifact regens. The blast-radius guard at the end of this file exists to
 # catch a recurrence.
-runout="$(HV_SLUICE_DIR="$cdir" bash "$repo_root/scripts/sluice-run.sh" \
+runout="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED bash "$repo_root/scripts/sluice-run.sh" \
     campaign/h hhhhhhhhhhhh merge 2>&1)"
 runrc=$?
 set -e
@@ -3258,7 +3258,7 @@ fi
 : > "$CQ"
 row iii campaign/i iiiiiiiiiiii queued merge >> "$CQ"
 set +e
-adhoc="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
+adhoc="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
     campaign/zzz 999999999999 merge 2>&1)"
 set -e
 if printf '%s' "$adhoc" | grep -q "AD HOC"; then

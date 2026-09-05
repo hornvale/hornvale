@@ -184,6 +184,16 @@ if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
     # A dispatcher already claimed this row atomically and owns its terminal
     # state; claiming again would refuse against ourselves.
     queue_row_id="$HV_SLUICE_CLAIMED"
+    # AND IT IS CONSUMED HERE, NOT PASSED ON. sluice-drain.sh `export`s it, so
+    # without this unset it is inherited by every phase and by anything a phase
+    # runs — including a nested sluice-run.sh, which would then believe its own
+    # row was already claimed and SKIP THE INTERLOCK ENTIRELY. That is the exact
+    # duplicate-execution hole this file exists to close, reopened one level
+    # down. Observed 2026-09-05: the `outboard` phase runs scripts/test-sluice.sh,
+    # whose T7/T8 invoke this script; they inherited the chamber's own claim id,
+    # skipped the claim, ran on into real git work and died 128 — reddening two
+    # candidates before the cause was found.
+    unset HV_SLUICE_CLAIMED
 else
     set +e
     claim_out="$(bash "$repo_root/scripts/sluice-queue.sh" claim --sha "$sha" \
