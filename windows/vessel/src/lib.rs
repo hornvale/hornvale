@@ -51,6 +51,7 @@ pub mod turn_work;
 mod underground;
 pub mod underworld_level;
 mod vantage;
+pub mod warp_prose;
 pub mod weft_prose;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};

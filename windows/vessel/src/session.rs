@@ -7002,6 +7002,31 @@ impl<'w> Session<'w> {
         } else {
             String::new()
         };
+        // The warp clause (The Warp, Task 3, spec §4): the rock underfoot at
+        // the room's dominant corner — the vertex the biome word and the
+        // colour layer already read (`hornvale_locale::dominant_corner`) —
+        // and the pitch from the blended slope, through
+        // `hornvale_worldgen::warp`'s single implementation of each word.
+        // Gated on `vantage.is_none()` for the reason the weft clause is.
+        let warp_clause = if vantage.is_none() {
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
+            match self.position().corner_weights(geo, index) {
+                Some(weights) => {
+                    let rock = self
+                        .wctx
+                        .ctx
+                        .terrain()
+                        .rock_at(hornvale_locale::dominant_corner(&weights).0);
+                    let slope =
+                        hornvale_kernel::blend_corner_weights(weights, &self.wctx.pack.slope);
+                    crate::warp_prose::warp_clause(rock, hornvale_worldgen::steepness_sign(slope))
+                }
+                None => String::new(),
+            }
+        } else {
+            String::new()
+        };
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
@@ -7060,7 +7085,7 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}\n{presence}{closing}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,

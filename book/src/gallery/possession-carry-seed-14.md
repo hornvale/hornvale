@@ -48,7 +48,7 @@ publishes it now name the same world.)*
 
 ```text
 [room 4189198211, day 0]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A low overhang offers shelter from the weather, and a place to build a fire. A dense thicket presses close around you.
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A low overhang offers shelter from the weather, and a place to build a fire. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
@@ -99,7 +99,7 @@ You close the strongbox.
 You open the strongbox. Within it: a key.
 > out
 [room 4189198211, day 0.10835]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A low overhang offers shelter from the weather, and a place to build a fire. A dense thicket presses close around you.
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A low overhang offers shelter from the weather, and a place to build a fire. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
