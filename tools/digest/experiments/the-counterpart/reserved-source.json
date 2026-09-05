@@ -1,0 +1,105 @@
+{
+  "arm": {
+    "changed_paths": [
+      "domains/thing/src/lib.rs",
+      "tools/digest/packages/thing/src/lib.rs"
+    ],
+    "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+    "inputs": {
+      ".cargo/config.toml": {
+        "bytes": 2036,
+        "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+      },
+      "Cargo.lock": {
+        "bytes": 8000,
+        "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+      },
+      "domains/settlement/src/lib.rs": {
+        "bytes": 13259,
+        "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+      },
+      "domains/thing/src/lib.rs": {
+        "bytes": 42247,
+        "sha256": "840f8603619a4a383b476834e3e85205375631bb610b371a29478b805d52230c"
+      },
+      "rust-toolchain.toml": {
+        "bytes": 66,
+        "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+      },
+      "tools/digest/Cargo.lock": {
+        "bytes": 9981,
+        "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+      }
+    },
+    "patches": [
+      {
+        "sha256": "77fde4719e32393242c057bf3cdbfff9edd34b688ffee18ca8ddc1a280bcedcf",
+        "variant": "reserved-inferred-owner"
+      }
+    ],
+    "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432",
+    "variants": [
+      "reserved-inferred-owner"
+    ]
+  },
+  "arm_id": "reserved-inferred-owner",
+  "base_record": {
+    "changed_paths": [],
+    "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+    "inputs": {
+      ".cargo/config.toml": {
+        "bytes": 2036,
+        "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+      },
+      "Cargo.lock": {
+        "bytes": 8000,
+        "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+      },
+      "domains/settlement/src/lib.rs": {
+        "bytes": 13259,
+        "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+      },
+      "domains/thing/src/lib.rs": {
+        "bytes": 42202,
+        "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+      },
+      "rust-toolchain.toml": {
+        "bytes": 66,
+        "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+      },
+      "tools/digest/Cargo.lock": {
+        "bytes": 9981,
+        "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+      }
+    },
+    "tree": "7350d1b4abc83775de94f35860a47e158c61dedc",
+    "variants": []
+  },
+  "bundle": {
+    "bytes": 5443,
+    "path": "tools/digest/experiments/the-counterpart/specimens-reserved.bundle",
+    "prerequisites": [
+      "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+    ],
+    "ref": "refs/heads/specimen-reserved-inferred-owner",
+    "sha256": "f164f67e4803b522f1a17b70fd7fa61255944d8913be7296576f4483f3d50d9c"
+  },
+  "candidate_collector": {
+    "after": {
+      "bytes": 17647,
+      "sha256": "d47df566e33f5fa5ab920a12c1d8e4e0a4d5631120280f8f1a50afc262b30888"
+    },
+    "before": {
+      "bytes": 17526,
+      "sha256": "58380075bf83ed7e43c00ea219214b1b87e3bfbab4b2d84b8eacc24230377379"
+    },
+    "note": "Extra provenance only. Not added to frozen arm.inputs; source commit/tree cover this changed blob.",
+    "path": "tools/digest/packages/thing/src/lib.rs"
+  },
+  "patch_sha256": "77fde4719e32393242c057bf3cdbfff9edd34b688ffee18ca8ddc1a280bcedcf",
+  "preregistration_commit": "fbb3949a067dbd2b24e93ad4912a069921b6cea3",
+  "preregistration_sha256": "24b568ef2a3649066aa93dd2b4bb36f22ea157379bd1c9136ef6caf92bb6ef44",
+  "schema": "counterpart-reserved-source-v1",
+  "source_base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "status": "authorship packaging only; no formal score or controller acceptance"
+}

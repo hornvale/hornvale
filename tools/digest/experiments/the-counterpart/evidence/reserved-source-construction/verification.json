@@ -1,0 +1,30 @@
+{
+  "all_git_commands_supervised_and_retained": true,
+  "all_owned_processes_cleaned_up": true,
+  "arm_commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+  "arm_tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432",
+  "bundle": {
+    "bytes": 5443,
+    "path": "tools/digest/experiments/the-counterpart/specimens-reserved.bundle",
+    "prerequisites": [
+      "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+    ],
+    "ref": "refs/heads/specimen-reserved-inferred-owner",
+    "sha256": "f164f67e4803b522f1a17b70fd7fa61255944d8913be7296576f4483f3d50d9c"
+  },
+  "bundle_verified_and_reconstructed": true,
+  "candidate_collector_hashes_match_preregistration": true,
+  "changed_paths_exact": [
+    "domains/thing/src/lib.rs",
+    "tools/digest/packages/thing/src/lib.rs"
+  ],
+  "expected_tree_from_independent_patch_application": "17905910c5b081c3c706daa0b6e0709f0f3a4432",
+  "finished_utc": "2026-09-05T21:40:06.983246+00:00",
+  "parent_verified": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "recovered_inputs_match_frozen_runner_record": true,
+  "recovered_tree_matches_exact_preregistered_patch_application": true,
+  "recovery_repository": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "recovery_started_with_only_declared_base_commit": true,
+  "root_production_diff": "",
+  "scoring_or_observation_run": false
+}

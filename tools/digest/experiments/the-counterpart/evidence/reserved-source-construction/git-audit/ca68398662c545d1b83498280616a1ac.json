@@ -1,0 +1,41 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "checkout",
+    "--detach",
+    "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.6773860829416662,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79101,
+  "peak_rss_bytes": 60047360,
+  "peak_rss_raw": 60047360,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:04Z",
+  "stderr": "HEAD is now at 5cc62d8 Add Counterpart raw observer and retained process evidence\n",
+  "stderr_base64": "SEVBRCBpcyBub3cgYXQgNWNjNjJkOCBBZGQgQ291bnRlcnBhcnQgcmF3IG9ic2VydmVyIGFuZCByZXRhaW5lZCBwcm9jZXNzIGV2aWRlbmNlCg==",
+  "stderr_bytes": 82,
+  "stderr_sha256": "d3f780b702429423a2e3de9003ab0fa936ad85e47f483edba321844b53fb36c4",
+  "stdout_base64": "",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "time_output": "        0.66 real         0.14 user         0.47 sys\n            60047360  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                4433  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                  77  voluntary context switches\n                 436  involuntary context switches\n          6026468028  instructions retired\n          1918147166  cycles elapsed\n            14567104  peak memory footprint\n"
+}

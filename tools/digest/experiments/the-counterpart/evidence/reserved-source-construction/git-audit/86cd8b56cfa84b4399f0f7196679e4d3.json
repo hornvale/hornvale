@@ -1,0 +1,40 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+    "rev-parse",
+    "HEAD"
+  ],
+  "context_phases": [],
+  "cwd": "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.025915749836713076,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.6650390625,
+    15.7783203125,
+    24.896484375
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 78911,
+  "peak_rss_bytes": 4308992,
+  "peak_rss_raw": 4308992,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:39:58Z",
+  "stderr": "",
+  "stderr_base64": "",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_base64": "NDFjZWVkN2EyNzA3NzE4MzNlOGI3MzgzNjZlNjE3MjFlNWFiMWFiNwo=",
+  "stdout_bytes": 41,
+  "stdout_sha256": "1b5bf66c119e63b7505ce0ccd55353ee63a8e2765f353e27c949cdaaa34ac967",
+  "time_output": "        0.01 real         0.00 user         0.00 sys\n             4308992  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                1022  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  21  involuntary context switches\n            90962214  instructions retired\n            33818140  cycles elapsed\n             2376512  peak memory footprint\n"
+}

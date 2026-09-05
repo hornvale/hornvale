@@ -1,0 +1,41 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "fetch",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/specimens.bundle",
+    "refs/heads/specimen-reserved-inferred-owner"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.03912229114212096,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79125,
+  "peak_rss_bytes": 7913472,
+  "peak_rss_raw": 7913472,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:05Z",
+  "stderr": "From /var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/specimens.bundle\n * branch            specimen-reserved-inferred-owner -> FETCH_HEAD\n",
+  "stderr_base64": "RnJvbSAvdmFyL2ZvbGRlcnMvXzAvajBfemtxX2Qzam4wa2x6MDMzZ3EzM2NjMDAwMGduL1QvY291bnRlcnBhcnQtcmVzZXJ2ZWQtc291cmNlLTE5aW9nbXlkL2NvbnN0cnVjdGlvbi9zcGVjaW1lbnMuYnVuZGxlCiAqIGJyYW5jaCAgICAgICAgICAgIHNwZWNpbWVuLXJlc2VydmVkLWluZmVycmVkLW93bmVyIC0+IEZFVENIX0hFQUQK",
+  "stderr_bytes": 189,
+  "stderr_sha256": "d6b0e727a3d273eeb4f36250144fe6faf9118e73864d3b54232889224452f071",
+  "stdout_base64": "",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "time_output": "        0.03 real         0.01 user         0.01 sys\n             7913472  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                3018  page reclaims\n                  28  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   8  voluntary context switches\n                  34  involuntary context switches\n           107156072  instructions retired\n            43855963  cycles elapsed\n             3769152  peak memory footprint\n"
+}

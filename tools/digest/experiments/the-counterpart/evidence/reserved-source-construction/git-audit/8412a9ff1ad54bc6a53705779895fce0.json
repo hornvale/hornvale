@@ -1,0 +1,39 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "write-tree"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.02964779199101031,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79169,
+  "peak_rss_bytes": 5996544,
+  "peak_rss_raw": 5996544,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:06Z",
+  "stderr": "",
+  "stderr_base64": "",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_base64": "MTc5MDU5MTBjNWIwODFjM2M3MDZkYWEwYjZlMDcwOWYwZjNhNDQzMgo=",
+  "stdout_bytes": 41,
+  "stdout_sha256": "29bdb9d99fddad4b3a2773a0b038c272da1ef64f1c487f679edd58d33d81c91b",
+  "time_output": "        0.01 real         0.00 user         0.00 sys\n             5996544  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                1172  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  24  involuntary context switches\n           104938764  instructions retired\n            41715051  cycles elapsed\n             3523520  peak memory footprint\n"
+}
