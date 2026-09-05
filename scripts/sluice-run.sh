@@ -163,6 +163,66 @@ run_log="$HV_SLUICE_DIR/$job_id.log"
 jobs_tsv="$HV_SLUICE_DIR/jobs.tsv"
 began=$SECONDS
 waited_s=""
+
+# --- THE QUEUE ROW IS THE INTERLOCK, SO THE EXECUTOR MUST TAKE IT ----------
+# This script used to touch the queue not at all. Every state transition lived
+# in sluice-drain.sh, so a run launched any other way left its row reading
+# `queued` for the whole run — and `sluice-queue.sh next`/`claim` hands out
+# exactly the first `queued` row. On 2026-09-04 that let a hand-run drain
+# dispatch a merge a direct run was already executing: pids 1240741 and
+# 1253175, two ~800 KB logs for 48aa9373b6f2, both rc=0, main pushed twice.
+#
+# THE FIX IS NOT TO FORBID THE DIRECT PATH. An operator running this script by
+# hand is legitimate and is the escape hatch the queue is documented to keep;
+# what was illegitimate was running it UNBOOKKEPT. So the executor claims its
+# own row when nobody has claimed it for us, and releases it at exit. A run
+# whose ref is not in the queue at all is still allowed — that is an ad hoc
+# run, and it is a different thing from a race.
+queue_row_id=""
+claimed_here=0
+if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
+    # A dispatcher already claimed this row atomically and owns its terminal
+    # state; claiming again would refuse against ourselves.
+    queue_row_id="$HV_SLUICE_CLAIMED"
+else
+    set +e
+    claim_out="$(bash "$repo_root/scripts/sluice-queue.sh" claim --sha "$sha" \
+        "launched directly by operator; kind=$kind" 2>/dev/null)"
+    claim_rc=$?
+    set -e
+    case "$claim_rc" in
+        0)  queue_row_id="$(printf '%s' "$claim_out" | cut -f2)"
+            claimed_here=1 ;;
+        4)  echo "sluice-run: REFUSING — the queue row for ${sha:0:12} is not queued." >&2
+            echo "sluice-run: somebody else is already running it. Two runs of one row is" >&2
+            echo "sluice-run: what this check exists to prevent; see 'sluice-queue.sh list'." >&2
+            exit 9 ;;
+        5)  echo "sluice-run: no queue row for ${sha:0:12} — running AD HOC, unbookkept." >&2 ;;
+        *)  echo "sluice-run: could not reach the queue (claim rc=$claim_rc) — running unbookkept." >&2 ;;
+    esac
+fi
+
+# Terminal state, but ONLY for a row this process claimed. When a dispatcher
+# claimed it, the dispatcher writes the terminal state with the richer note it
+# alone can compose (it knows main's before/after); writing here as well would
+# race it and overwrite the better note with a worse one.
+release_row() {
+    [ "$claimed_here" = "1" ] || return 0
+    [ -n "$queue_row_id" ] || return 0
+    local rc="$1" state note
+    if [ "$rc" = "0" ]; then
+        case "$kind" in
+            stage) state="reported" ;;
+            *)     state="landed" ;;
+        esac
+        note="all $kind phases rc=0 (direct run, $job_id)."
+    else
+        state="held"
+        note="CHAMBER RED rc=$rc (direct run). Log: $run_log — attribution pending."
+    fi
+    bash "$repo_root/scripts/sluice-queue.sh" set-state "$queue_row_id" "$state" "$note" \
+        >/dev/null 2>&1 || true
+}
 phase_failed=""
 why="exit"
 current_child_pid=""
@@ -570,7 +630,7 @@ done
     echo "job=$job_id"
 } > "$claim_path"
 # shellcheck disable=SC2154  # code is assigned first thing inside this same trap string
-trap 'code=$?; rm -f "$claim_path"; echo "sluice-run: finished $(date -Is) rc=$code why=$why"; record "$code"' EXIT
+trap 'code=$?; rm -f "$claim_path"; echo "sluice-run: finished $(date -Is) rc=$code why=$why"; record "$code"; release_row "$code"' EXIT
 
 # The chamber's own worktree — NOT the lane's shared scratch tree, which every
 # lane dispatch `checkout --force`s and `reset --hard`s. A dedicated tree
