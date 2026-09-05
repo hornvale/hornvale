@@ -180,6 +180,61 @@ observations separately and show unknown/failed checks without green success.
 Its context command is an explicit user/agent entry point, not automatic
 startup integration and not a sandbox for contributor code.
 
+## #5 [G2] — design reviewed; present the G3 package
+
+**Question:** Does the architectural design preserve the agreed scope and
+provide a falsifiable route to independent adoption?
+
+**Decision:** Present the proposed program metaplan and first-campaign spec
+for Nathan's G3 review. Do not start implementation planning. The spec binds
+an actual two-branch composition exercise, useful scoped context, explicit
+expected observations, and bounded authority. The program's eight rules
+remain proposals for incremental adoption rather than newly enacted policy.
+
+**Why:** Three independent read-only reviews checked Rust/package feasibility,
+Thing and census evidence, current gate authority, historical scope, and
+capture. The controller checked the actual files and applied four concrete
+corrections: expected observation IDs independent of returned results;
+discoverable scopes with envelope agreement; explicit Digest manifest paths
+for Cargo operations; and process-tree cleanup with build/execution phases
+separated. Acceptance cases now cover each correction. The integration/history
+review read the corrected evidence schema and found no material blocker.
+
+**Alternatives discarded:** Treating missing checks as authored-only;
+discovering applicability only after running every contributor; relying on
+the caller's Cargo workspace; killing only a Cargo parent while descendants
+continue. These defeat stated requirements rather than offer useful options.
+
+**Ideonomy passes / overturns:** No additional pass required for this G2
+self-review. The two G1 passes and one pass for each of the three nontrivial
+Q decisions are recorded above. Review sharpened the accepted design rather
+than overturning the approach. Broader possibilities retain their program
+or existing-registry homes.
+
+**Capture actions:**
+
+- [Program metaplan](../specs/2026-09-04-federated-development-program-metaplan-design.md):
+  eight evolution rules, concurrent adoption pattern, later expansions,
+  formal verification and orchestration opportunities, measurements, and
+  reuse of existing idea homes.
+- [The Charter spec](../specs/2026-09-04-the-charter-design.md): package
+  boundary, protocol, adopters, user surface, limits, acceptance, and G3 flags.
+- [Idea registry](../../../book/src/frontier/idea-registry.md): four new
+  `raw` proposals, `PROC-federated-evolution`, `PROC-knowledge-contributions`,
+  `PROC-evidence-selects-obligations`, and `PROC-local-adoption-and-activation`.
+  No shipped/ratified status or waiver was added.
+- The visual companion illustrates bootstrap, parallel adoption, composition,
+  and failure/unchecked/no-match cases. It is a review aid outside the repo;
+  all binding content is captured in the committed spec and metaplan.
+
+**Verification:** `make docs-tests` returned rc=0: 63 passed, 246 skipped,
+3.051 s execution on the draft package. `git diff --check` returned rc=0.
+The companion was opened in the browser, inspected visually, and its missing
+observation interaction was exercised. Ordinary commit hooks remain enabled.
+These checks validate the design documents and example UI, not an implemented
+contributor system. The earlier Cargo prototypes establish only the narrow
+tool behaviors recorded in #3.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
