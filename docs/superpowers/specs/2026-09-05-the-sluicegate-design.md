@@ -30,11 +30,32 @@ between them because each invocation is its own process. Two dispatchers, or a
 dispatcher and a direct run, both saw an unclaimed row. Observed: one merge ran
 twice, pids 1240741/1253175, two ~800 KB logs for `48aa9373b6f2`, both rc=0.
 
-**The through-line is not "bash is bad".** It is that this component's state is
-(a) a read-modify-write transaction that must not straddle a process boundary,
-and (b) coordinated through *exported environment*, which is inherited by every
-descendant and cannot be scoped. Those are the two things a process-per-verb
-shell script cannot express, and they are precisely where every defect landed.
+**The through-line is not "bash is bad", and the honest version of this argument
+is narrower than the one this spec first made.** Lift the domain away and the
+shape is: *a shared mutable resource coordinated by short-lived processes that
+communicate through ambient inherited state, where the invariant spans more than
+one process lifetime.* That shape recurs in database transactions, PID files,
+cron jobs sharing `/tmp`, and CI runners, and its library answer is to **make
+the transaction boundary and the process boundary coincide** — which is
+language-agnostic.
+
+So: **neither defect strictly required Rust to fix.** The TOCTOU fix is one
+`claim` verb doing read-and-write under a single lock, and that shipped in bash
+on 2026-09-05. The leak's real fix is passing a request ID rather than
+exporting one, which is `PROC-stage-request-should-read-its-own-queue-row`, also
+achievable in bash. A spec that claimed the language caused these bugs would be
+overstating, and this one did before an ideonomy pass caught it.
+
+The defensible claim is about **cost, not capability**: this component's
+invariants are (a) a read-modify-write that must not straddle a process
+boundary and (b) coordination state that must not be ambient. Shell makes both
+of those cheap to violate and expensive to test — every verb is a fresh process
+whose lock dies with it, and every variable is inherited by descendants nobody
+enumerated. We have now paid that cost four times inside one campaign. The
+argument for Rust is **prevention and testability**, not repair: a `claim()`
+holding its lock across the read-modify-write, and a parameter that cannot leak
+into a grandchild, make the bad shapes hard to *express* rather than merely
+fixed once.
 
 ## 2. Scope
 
@@ -57,6 +78,17 @@ shell script cannot express, and they are precisely where every defect landed.
   supervision to fix bugs that lived elsewhere trades three known defects for
   an unknown number.
 - `scripts/sluice-drain.sh` (185 lines) — thin; becomes thinner still (§4).
+
+### 2.1 One alternative worth naming, and why it loses
+
+**Extract only `claim` as a small binary, leaving the rest of the state machine
+in shell.** It targets exactly the invariant that needs the transaction and the
+process to coincide, and it is the smallest possible change. It loses because it
+splits one state machine across two languages: `add`'s ancestry coalescing and
+`set-state`'s refusal-on-no-match would keep their shell implementations while
+the row format and locking discipline they share moved, so a future change would
+have to be made correctly in both. Smaller than the proposal, and worse than
+either neighbour on that axis.
 
 ## 3. Design
 
