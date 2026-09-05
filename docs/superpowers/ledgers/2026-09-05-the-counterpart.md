@@ -927,3 +927,13 @@ checker, rules, owner, panel or bundle bytes changed. The ordinary README now
 states the complete-graph preparation prerequisite and distinguishes the
 historical foundation from later package stages. No new Q arose in this
 scoped green review; Q11's recorded pass governs the repair.
+
+Prepared diagnostic candidate `a9bae61544d0322c8853902fb7d5f9940edb19be`
+passed its explicit commit gate145.618 s (all three chunks), retained that
+timing row through the ordinary hook, and was pushed/queued as
+`req-a9bae61544d0-20260905T213333Z`. Its normal candidate base includes
+main20c0cd375 (The Zenith). The diff is the reviewed 57-line diagnostic
+transport plus one timing row; this branch is never a merge candidate. The
+normal Stage2 gate remains green, but the complete unreserved result and
+diagnostic phase qualification are still pending. Old failed requests, source
+checkouts and original records remain retained.
