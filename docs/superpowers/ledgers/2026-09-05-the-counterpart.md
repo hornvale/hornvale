@@ -841,3 +841,13 @@ under docs/digest would inherit the artifact generator; the experiment evidence
 home avoids that claim. The historical foundation wording in README will be
 clarified during the planned final narrative pass. This preparation is not a
 whole-branch review and does not accept any pending assay.
+
+## Stage2 normal gate — green, full assay still pending
+
+Request `req-f04ace294b8f-20260905T203639Z` completed all four phases
+with rc0 on actual merge product `4b53923f491d161f3c8cc95e54ff491570dcad09`,
+final artifact commit `4bb35b4a5acfe0e554ccb88525cbd4ac8cc1267c`.
+No push occurred; main remained `20c0cd375719459ff75dc8e4b9615bf60a31fa97`.
+Exact bounded log receipt is `evidence/controller/stage-2.json`. The full
+unreserved diagnostic started under the next queue claim at 21:13:15Z;
+Stage2 acceptance still awaits its actual eleven-arm dossier and green phases.
