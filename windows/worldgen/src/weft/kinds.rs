@@ -395,7 +395,7 @@ const SPRING_RATE: f64 = 0.95;
 /// section was required to state if one had. The honest silence is
 /// load-bearing downstream — it is why the walk-band instruments read spring
 /// at an exact zero (`weft_prevalence.rs`'s `KIND_BOUNDS` doc) and why the
-/// coastal vantage/eligibility conflict population fell from 35 facets to 30
+/// coastal vantage/eligibility conflict population fell from 35 facets to 28
 /// (`windows/vessel/tests/suite/the_weft.rs`).
 /// plumb: universal(an authored design choice confirmed at zero by The Warp's Task 6 calibration: the sign kind's noise floor is zero by intent, fixed across every world)
 const SPRING_FLOOR: f64 = 0.0;
@@ -471,15 +471,30 @@ fn spring_macro_state(carbonate: f64, drainage: f64) -> f64 {
 /// one. Independently dialable (spec §5.2 forbids a simplex across kinds,
 /// so this trades against nothing else).
 ///
-/// **Frozen at Task 6's fix round 1** (ledger, "Task 6 — fix round 1:
-/// overhang re-calibrated after the ordering clause was withdrawn"), which
-/// supersedes that task's first freeze. `0.75` is the highest reliability
-/// that holds every one of overhang's OWN §7 bands on seed 42: found
-/// fraction 0.761 (bar 0.60), best-class lift 20.5x the erratic's (bar 2x),
-/// learner gain +0.09436 (bar > 0), and a maximum class rate of 0.641
-/// against H5's 0.75. The next rung tried, `0.90`, trips H5 at 0.761 — the
-/// wallpaper reading H5 exists to catch — so this is a measured ceiling, not
-/// a preference.
+/// **Frozen at Task 6's fix round 2** (ledger, "Task 6 — fix round 2:
+/// reliability 0.50, final"), which supersedes both earlier freezes. On seed
+/// 42 it reads: found fraction 0.772 (bar 0.60), best-class lift 21.5x the
+/// erratic's (bar 2x), learner gain +0.06954 (bar > 0), and a maximum class
+/// rate of 0.462 against H5's 0.75.
+///
+/// **IT IS THE MIDDLE OF THE PASSING RANGE, NOT ITS TOP, AND THAT IS THE
+/// CRITERION.** Three rungs were measured: `0.50` and `0.75` hold every band,
+/// `0.90` trips H5 at 0.761 — the wallpaper reading H5 exists to catch. Fix
+/// round 1 took `0.75` on a "highest passing rung" instruction the controller
+/// then withdrew as the wrong criterion. Two reasons, and the second is the
+/// design one:
+///
+/// 1. **Headroom.** H5's margin is 1.62x here against 1.17x at `0.75`, and
+///    the bar is measured per seed. Max class rate tracks the rate closely
+///    (0.923 / 0.855 / 0.845 of it at the three rungs), so H5 binds near a
+///    reliability of 0.888 — close enough that a readout seed running 17%
+///    hotter than seed 42 would trip it at `0.75`. That failure would be a
+///    finding about a knowingly thin margin, not about the world.
+/// 2. **A reliability of three in four is near the "told" boundary by
+///    construction.** Spec §2 calls a sign that merely restates the feature
+///    *told* rather than *found*; a feature that is present on three
+///    saturated facets in four is close to being the cause's restatement. One
+///    in two is the found-not-told band this campaign exists for.
 ///
 /// **IT WAS `0.16` FOR ONE COMMIT, AND THE REASON IS WORTH KEEPING.** The
 /// first freeze set it there to satisfy H2's between-kind clause "spring's
@@ -494,10 +509,10 @@ fn spring_macro_state(carbonate: f64, drainage: f64) -> f64 {
 /// that reason (2026-09-05, before any readout seed was built; spec §7,
 /// ledger #11) and the ordering is now reported rather than gated. The gap to
 /// [`SPRING_RATE`]'s `0.95` that remains is the design statement the
-/// paragraph above makes and nothing else: three facets in four against
-/// nineteen in twenty, on ground that fully affords each.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against overhang's own spec section 7 bands and frozen at its fix round 1; fixed across every world)
-const OVERHANG_RATE: f64 = 0.75;
+/// paragraph above makes and nothing else: one facet in two against nineteen
+/// in twenty, on ground that fully affords each.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against overhang's own spec section 7 bands and frozen at its fix round 2 in the middle of the passing range, not at its top, for H5 headroom and because a reliability near three in four sits at the "told" boundary spec section 2 draws; fixed across every world)
+const OVERHANG_RATE: f64 = 0.50;
 
 /// **Floor** for overhang/hollow — zero, for the same reason
 /// [`SPRING_FLOOR`] is (The Warp, spec §6.1, §2): an overhang standing on
