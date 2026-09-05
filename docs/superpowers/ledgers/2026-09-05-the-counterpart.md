@@ -624,3 +624,31 @@ The author reports 51 focused tests and source-identity reconstruction for
 all 11 arms. Independent review and actual canonical observations remain
 pending. Full-panel execution uses the approved stage-only Charter transport;
 a Mac derived subset is explicitly scoped and cannot certify the full roster.
+
+## Task 5 — fix round 1
+
+Independent review requested two P2 repairs before accepted observations.
+Narrow probes changed stored observation argv/cwd to an unrelated process,
+removed or contradicted the copied candidate, and fabricated the imports-only
+supplement; the original validator still returned `completed=True`. Require
+role-specific invocation and owned source context, exact candidate equality
+with raw output, and recomputed supplemental evidence. These repairs bind
+accidentally mixed records; they do not authenticate a hostile author.
+The implementer is correcting both with behavioral RED/GREEN tests. Frozen
+checker, owner records and selection rules remain unchanged, and no full
+source-panel observation preceded this review. Original report/review and
+implementation identities are retained. This is an existing Task5 requirement,
+not a new Q or approach; no ideonomy ruling is needed at this red checkpoint.
+
+Diagnostic worktree preparation completed locally: normal `make prewarm`
+returned zero, 409.902 s wall. Its timing row is retained separately from
+assay execution; no source observations were collected by this preparation.
+
+Task5 round1 author committed `02796fe0ae719a55f431f8aedc2ab6853c9a2776`
+and updated panel identity at `57f030395cac159dc6b93a7989a3df291e4a9a71`.
+The report records 14 invocation/context, two candidate and six supplement
+behavioral RED cases before repair, then 55 focused tests green in 21.295 s.
+Both ordinary hooks passed75 tests. Original panel retained exactly; checker,
+rules, owners and source bundle are unchanged. Scoped re-review is pending.
+Author/review records for Tasks1–5 are now durable under
+`tools/digest/experiments/the-counterpart/evidence/controller/reviews/`.
