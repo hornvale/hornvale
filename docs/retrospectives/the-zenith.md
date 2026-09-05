@@ -155,6 +155,20 @@ after absorbing, re-run the campaign's own retired-identifier grep over the
 merged tree, not over the tree the sweep was performed on. That grep is cheap,
 and it is what found this.
 
+**And the merge itself found a third, which no local instrument on this
+branch could have.** The first submission went red in the chamber's `clients`
+phase after 1292 s, on two `cargo fmt --check` diffs: `build_world` now fits on
+one line in `clients/world-wasm/src/lib.rs`, and the `hornvale_worldgen` import
+in `clients/game/bin/src/driver.rs` re-wraps without `SkyChoice`. Neither is a
+defect in the change; both are the *formatter's* response to it. `clients/` is
+outside the cargo workspace, so `gate-commit`'s `cargo fmt --check` never sees
+those crates — the only local instrument that does is `make clients-check-run`,
+and nothing prompts you to run it. **A campaign that changes the shape of a
+public signature owes the client crates a `cargo fmt` even when it never edits
+them**, because rustfmt's line-fitting decisions are downstream of an argument
+count. Running the full clients phase locally before resubmitting cost 7
+minutes against the chamber's 21.
+
 ## Book freshness and the Confidence Gradient
 
 The sweep covered the domain overview, astronomy chapter, sky-facing scene

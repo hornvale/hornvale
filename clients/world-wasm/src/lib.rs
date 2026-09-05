@@ -114,12 +114,7 @@ fn genesis(seed: u64, pins: &Pins) -> i32 {
     let ctx_ptr = &raw mut SCENE_CTX;
     unsafe { *world_ptr = None };
     unsafe { *ctx_ptr = None };
-    match build_world(
-        Seed(seed),
-        &pins.sky,
-        &pins.terrain,
-        &pins.settlement,
-    ) {
+    match build_world(Seed(seed), &pins.sky, &pins.terrain, &pins.settlement) {
         Ok(w) => {
             unsafe { *world_ptr = Some(w) };
             set_out(String::new());

@@ -563,6 +563,24 @@ of a real path that does not exist. It predates this campaign, has nothing to
 do with the retirement, and belongs to whoever maintains the mirror. Flagged in
 the G6 digest rather than fixed here.
 
+#19 [G5] — **The first merge submission went red on formatting in crates this
+campaign never edited.**
+· **What happened:** `req-7bc26a6c5c44` reddened rc=11 in the chamber's
+`clients` phase after 1292 s. Two `cargo fmt --check` diffs, both downstream of
+the retired fifth `build_world` argument rather than of any edit:
+`clients/world-wasm/src/lib.rs:114` (the call now fits on one line) and
+`clients/game/bin/src/driver.rs:91` (the `hornvale_worldgen` import re-wraps
+without `SkyChoice`).
+· **Decision:** run `cargo fmt` over the four client manifests, then run the
+whole `clients` phase locally (`make clients-check-run`, 7 min) before
+resubmitting rather than fixing only the two files the log named.
+· **Why:** `clients/` is excluded from the cargo workspace, so `gate-commit`'s
+`cargo fmt --check` cannot reach it and a green local gate says nothing about
+it. Fixing only the named files would have re-tested the same blind spot — the
+log reports the first failure per manifest, not all of them.
+· ideonomy passes: 0 — a mechanical formatter fix with one correct answer.
+· Capture: this entry; the retrospective's absorption section.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding

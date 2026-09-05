@@ -91,8 +91,8 @@ use hornvale_vessel::{
     PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
 use hornvale_worldgen::{
-    BuildError, SettlementPins, WorldComponents, build_world, gazetteer_features,
-    language_of_in, morph_options, resolve_chain_at, terrain_of,
+    BuildError, SettlementPins, WorldComponents, build_world, gazetteer_features, language_of_in,
+    morph_options, resolve_chain_at, terrain_of,
 };
 use std::collections::BTreeSet;
 
