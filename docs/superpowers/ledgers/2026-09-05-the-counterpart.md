@@ -1,9 +1,9 @@
-# The Counterpart — brainstorming decision ledger
+# The Counterpart — decision ledger
 
-Status: exploration captured on 2026-09-05; G3 review is pending.
+Status: G3 approved 2026-09-05; implementation in progress; G6 remains pending.
 Branch: `codex/federation-next`.
 Research base: `4f303d3b06d8403f79324755c6adfac9d0394a3d`.
-No implementation plan or implementation is authorized by this document.
+Nathan authorized proceeding at G3; the approved plan and subsequent execution receipts follow below. This ledger does not authorize merge or campaign close before G6.
 
 ## Current-state evidence
 
@@ -1019,3 +1019,30 @@ remaining gate/client phases; full Stage2 acceptance still awaits those
 phases and the scoped evidence review. Reserved integration/formal scoring
 remains pending. No frozen instrument or source arm was changed to obtain
 these results.
+
+## Task5 / Stage2 — accepted after complete evidence and both gates
+
+The original11-arm dossier passed independent spec and quality review with no
+findings:330 archive members,292 standalone command samples and all44 raw
+answers independently checked. The review and machine totals are durable under
+`evidence/controller/reviews/`. Its ordering-only reread difference in a
+question-ID list was inspected as set equality; original evidence was unchanged.
+
+Prepared diagnostic `a9bae61544d0322c8853902fb7d5f9940edb19be` finished
+2026-09-05T22:20:43Z with all four phases green: artifacts230.945s,
+outboard300.397s, gate742.030s, clients137.747s. The bounded receipt names
+the exact full-log hash, merge product
+`951e8057c73bc48b77cd92b07c0a4cffa084e814` and final artifact commit
+`466d6659b65fd530bcbc3926a99d841d5a3fb40d`. Nothing was pushed to main.
+Together with the already-green normal Stage2 candidate and retained original
+failures, this satisfies the conjunctive Stage2 acceptance rule. Diagnostic
+transport remains isolated and is never a campaign merge input.
+
+**G5 decision:** accept Task5 and Stage2 and proceed to formal reserved
+integration/qualification. No frozen checker, comparator, owner, panel or
+bundle was changed after observing results. There is no new Q; this is the
+existing review-and-gate decision under Q9–Q11, with no additional Ideonomy
+pass. Rejected: treating a partial outboard result or source-only replay as
+complete qualification. Capture: plan/stage status, full original evidence,
+review and both canonical receipts. The stale introductory ledger status is
+also corrected to reflect Nathan's earlier G3 approval.

@@ -226,7 +226,7 @@ if missing:
     raise ValueError("missing arms: " + ", ".join(sorted(missing)))
 ```
 
-- [ ] Run focused Python tests and real unreserved CLI panel; retain invalid attempts and qualify actual class properties. If realistic safe/joint cases cannot be constructed, record the spec's feasibility result and return for design amendment, not a passing score. Review the implementation and lock reconciliation, then commit. Freeze identities for owners, checker, question/map/rules, unreserved panel and challenge-author context before Task 6. Complete Stage 2 stage submission; dependent qualification uses its green result.
+- [x] Run focused Python tests and real unreserved CLI panel; retain invalid attempts and qualify actual class properties. If realistic safe/joint cases cannot be constructed, record the spec's feasibility result and return for design amendment, not a passing score. Review the implementation and lock reconciliation, then commit. Freeze identities for owners, checker, question/map/rules, unreserved panel and challenge-author context before Task 6. Complete Stage 2 stage submission; dependent qualification uses its green result.
 
 ### Task 6: Reveal the reserved challenge and qualify both hosts
 
