@@ -294,7 +294,11 @@ five-shift null. A falsified prediction is a finding and is reported as the
 headline.
 
 **H1 — found rather than extruded.** On each readout seed, found fraction
-spring ≥ 0.60 and overhang ≥ 0.60 (from 0.077 and 0.057 at seed 42 today);
+spring ≥ 0.60 and overhang ≥ 0.60 (from 0.077 and 0.057 at seed 42 today;
+calibrated to 0.787 and 0.772 on seed 42 — at the cost, for spring, of a step
+edge above the walk band's whole cause range there: existence density fell
+0.0359 → 0.0134 and the 78-walk encounter rate reads 0, the magnitude of §12
+flag 1, carried to G6);
 thicket within [0.30, 0.55] (its recipe is unchanged; 0.427 today), which is
 the non-regression band.
 
@@ -302,9 +306,22 @@ the non-regression band.
 spring and for overhang ≥ 2 × the erratic's best-class lift at the same
 support floor on the same seed (the erratic's lift is the null lift — 1.7×
 at seed 42 today, from cardinality alone — so an absolute bar would be a
-number nobody derived); and channel MI net for spring ≥ channel MI net for
-overhang. Reported, not gated: spring's channel net as a share of its
-ceiling.
+number nobody derived). Reported, not gated: spring's channel net as a share
+of its ceiling, and the spring/overhang ordering of channel net, raw and
+normalised by each kind's H(Y).
+**Amended 2026-09-05 (Task 6, calibration seed only, before any readout seed
+was built): the clause "channel MI net for spring ≥ channel MI net for
+overhang" is WITHDRAWN from the gate.** Mutual information in bits scales with
+a kind's entropy, so a between-kind ordering can be met by making the lower
+kind rarer — and calibration round 3 did exactly that, cutting overhang's
+reliability to 0.16 and its frequency twelve-fold to satisfy a clause about
+spring, while spring's own reading did not move (0.086464 in every round). A
+bar that a kind can pass by disappearing is defective. Each kind is gated on
+its own legibility (H1, the lift bar above, H3, H5); overhang was then
+re-calibrated on those alone and its reliability set to 0.50, the middle of
+its passing range (0.50 and 0.75 hold every band; 0.90 trips H5), for H5
+headroom of 1.62× and because a sign that pays one time in two where its cause
+saturates is the found-not-told band this campaign is for.
 
 **H3 — it can be learned.** On each readout seed, learner gain > 0 for
 spring, overhang and thicket. The erratic's learner gain ≤ 0.001 bits/facet
