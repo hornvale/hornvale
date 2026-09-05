@@ -81,6 +81,7 @@
 | `occ-notability` | yes | how notable the occupation was |
 | `occ-peak` | yes | the occupation's peak population |
 | `occ-people` | yes | the people occupying the site |
+| `occ-person-years` | yes | the integral of the occupation's population over its tenure, in person-years |
 | `occ-site` | yes | the Geosphere cell the occupation sits on |
 | `occ-tech` | yes | the occupation's technological horizon |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |

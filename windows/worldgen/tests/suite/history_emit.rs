@@ -47,6 +47,7 @@ fn base_record(community: u64, people: &'static str, site: u32, founded: f64) ->
             cause: None,
             notability: Notability::Common,
             delve_depth_m: 0.0,
+            person_years: 0.0,
         },
         community: bid(community),
         lineage: bid(community),
@@ -1167,4 +1168,43 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
         vec![(42u64, 0usize), (7, 0), (1000, 2)],
         "the per-seed order-change counts moved"
     );
+}
+
+/// claim: structural(seed: 42) — one build, no sweep.
+#[test]
+fn person_years_is_committed_positive_for_every_occupation_and_bounded_by_peak_times_tenure() {
+    let world = hornvale_worldgen::seed_42_world();
+    let now = hornvale_worldgen::present_year(&world);
+    let occs = hornvale_worldgen::occupation_records(&world);
+    assert!(!occs.is_empty());
+    let mut zero = 0usize;
+    for o in &occs {
+        let tenure = o.core.tenure(now);
+        // `peak_population` is `population.round() as u32` (`Bake::touch`) —
+        // a nearest-integer snapshot of a continuous quantity — so the raw
+        // population the tally actually accrued at any epoch can run up to
+        // 0.5 above it. That gap is invisible at ordinary tenures but is not
+        // at a near-zero one: a community that grows for a full epoch and
+        // then relocates by conquest within that SAME epoch (`maybe_raid`
+        // closes the raider's old record at the epoch's own `year`, same as
+        // its `founded`) commits a `tenure` of 0 while having genuinely lived
+        // one epoch at the rounded-down population. Measured directly against
+        // seed 42: omitting this `+ 0.5` leaves 61 of 1621 occupations over
+        // bound (up to 22.6% over, at the smallest peaks, where the constant
+        // 0.5 is proportionally largest) and `+ 0.5` alone clears every one.
+        let bound = (f64::from(o.core.peak_population) + 0.5) * (tenure + 25.0);
+        assert!(
+            o.core.person_years <= bound * 1.0001,
+            "occupation {} person-years {} exceeds (peak + 0.5) x (tenure + one epoch) = {bound}",
+            o.id.0,
+            o.core.person_years
+        );
+        if o.core.person_years == 0.0 {
+            zero += 1;
+        }
+    }
+    // Every occupation was open for at least the epoch it was opened in, and the
+    // opening population is GENESIS_POP / DAUGHTER_POP > 0, so a zero here means
+    // the tally missed a code path.
+    assert_eq!(zero, 0, "{zero} occupations carry zero person-years");
 }

@@ -115,7 +115,7 @@ pub enum Notability {
 /// The handle-bearing fields — which community, which lineage, who founded it,
 /// who ended it — live on the bake-side and ledger-side types instead, because
 /// they mean different things there.
-/// type-audit: bare-ok(count: founded), bare-ok(count: ended), bare-ok(count: peak_population), bare-ok(diagnostic-value: delve_depth_m)
+/// type-audit: bare-ok(count: founded), bare-ok(count: ended), bare-ok(count: peak_population), bare-ok(diagnostic-value: delve_depth_m), bare-ok(count: person_years)
 #[derive(Clone, Debug, PartialEq)]
 pub struct Occupation {
     /// The people occupying the site.
@@ -175,6 +175,15 @@ pub struct Occupation {
     /// absolute depth below the surface is the sum of the two: the seat's own
     /// depth for this occupation's `(people, site)`, plus this.
     pub delve_depth_m: f64,
+    /// The integral of this occupation's live population over its tenure,
+    /// in person-years — `Σ population × epoch_years` over the epochs it was
+    /// open, plus the closing partial epoch. Like [`Occupation::delve_depth_m`]
+    /// it is the integral of a live quantity the ledger otherwise discards,
+    /// so it is committed (`occ-person-years`) and never re-derived. `0.0`
+    /// on a record read back from a world saved before The Lot. NOT folded
+    /// into [`material_key`], matching `delve_depth_m`: identity does not
+    /// depend on how long the people stayed.
+    pub person_years: f64,
 }
 
 impl Occupation {

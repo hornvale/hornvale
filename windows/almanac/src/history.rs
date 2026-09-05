@@ -264,6 +264,11 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
     // (The Winze, spec §4.2), so this is a defaulting read and never a
     // `?`-return the way the load-bearing facts above are.
     let delve_depth_m = number(world, entity, hornvale_history::OCC_DELVE_DEPTH).unwrap_or(0.0);
+    // ABSENT MEANS "saved before The Lot", never "lived nobody": the emitter
+    // commits the fact for every occupation, so a 0.0 here is the signature
+    // of a pre-campaign world, which `hornvale_lot` refuses by checking that
+    // no occupation in the world carries the predicate at all.
+    let person_years = number(world, entity, hornvale_history::OCC_PERSON_YEARS).unwrap_or(0.0);
     let ended_by = match world
         .ledger
         .value_of(entity, hornvale_history::OCC_ENDED_BY)
@@ -294,6 +299,7 @@ fn record_of(world: &World, entity: EntityId) -> Option<OccupationRecord> {
             cause,
             notability,
             delve_depth_m,
+            person_years,
         },
         id: entity,
         founded_from,
@@ -1158,6 +1164,7 @@ mod tests {
                 cause: None,
                 notability: Notability::Common,
                 delve_depth_m: 0.0,
+                person_years: 0.0,
             },
             community: bid(community),
             lineage: bid(community),
@@ -1272,6 +1279,7 @@ mod tests {
             cause: None,
             notability: Notability::Common,
             delve_depth_m: 0.0,
+            person_years: 0.0,
         }
     }
 

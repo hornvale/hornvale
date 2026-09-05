@@ -325,6 +325,7 @@ mod tests {
                 cause,
                 notability,
                 delve_depth_m: 0.0,
+                person_years: 0.0,
             },
             id: eid(1),
             founded_from: Founding::Genesis(Vertex(0)),
