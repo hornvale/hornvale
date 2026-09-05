@@ -140,6 +140,46 @@ forbids contributor-specific host/protocol edits after bootstrap; a failure
 reopens the design. Retain semantic input-closure and richer local schemas
 for later campaigns.
 
+## #4 [Q] — useful context now, bounded observations rather than certificates
+
+**Question:** What should the first campaign deliver to an author, and how
+much evidence authority should that output carry?
+
+**Decision:** Add an on-demand `digest context <repo-relative-path>` command
+and a `make context SCOPE=...` entry point. They assemble scoped instructions,
+live check outcomes, and their explicit limits from contributor packages.
+The Markdown is directly usable as task context for either agent family;
+root prompts and the Book are not replaced in this campaign. Collection
+builds through Cargo and invokes contributors afresh. Historical output is
+never loaded as current evidence, and no result is a reusable admission
+certificate. Report the checkout identity/dirty state and observation method
+without claiming they enumerate every build or runtime input.
+
+**Why:** The Digest design explicitly deferred governing text and language
+realization. A bounded context command closes part of that gap while leaving
+existing authored requirements authoritative. The evidence doctrine and
+`PROC-a-parked-finding-carries-no-use-by-date` distinguish observations from
+broader judgments; `TOOL-verdict-cache` already owns complete-input reuse.
+Existing publication tests and worldgen checks remain separate evidence.
+
+**Alternatives discarded:** Persisted green receipts treated as current on a
+different checkout; source anchors mistaken for executable checks; replacing
+the root prompts before two local contributors work; complete reproducible
+build/input closure as a prerequisite for a read-only context experiment.
+
+**Ideonomy passes / overturns:** One pass: organon-construction, scale,
+modularity, naturalness. A scale from named predicate cases through the
+publication boundary to the queue separates the claims each instrument can
+make. It confirmed the bounded result with no additional mechanism or
+overturn. Full provenance closure is recorded as debt, not silently assumed.
+
+**Capture actions:** The program reserves complete input closure, validated
+reuse, generated persistent prompt sections, and native language realization
+for subsequent adoption. The campaign must label authored instructions and
+observations separately and show unknown/failed checks without green success.
+Its context command is an explicit user/agent entry point, not automatic
+startup integration and not a sandbox for contributor code.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
