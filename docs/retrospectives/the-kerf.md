@@ -60,3 +60,25 @@ two other assertions in the same file exist specifically to keep the column
 alive. That is recorded as `PROC-reconciliation-ledgers-column-is-uncitable`
 rather than fixed here: the instrument is one merge old and belongs to the
 campaign that built it.
+
+## The two conflict classes are told apart by authorship, not by directory
+
+The close absorbed main three times, and the last one conflicted in four
+generated-looking files that needed two opposite resolutions. Three —
+`plumb-roster.md`, `type-audit-report.md`, `decisions-in-force.md` — are
+regenerated wholly by `regenerate-artifacts.sh`, so the correct move is to
+take either side as a placeholder and run `make rebaseline`; the result is the
+true union, and this close verified it in both directions rather than assuming
+it. The fourth, `campaign-reconciliation.tsv`, sits in the same declared
+directory and looks identical from the outside, but nothing regenerates it —
+resolving it that way silently drops one side's rows.
+
+Main had learned this the hard way in the same window: `campaign/the-warp`'s
+stage gate went red on 2026-09-05 because the chamber's absorb classifier
+inherited `docs/audits/`'s `artifacts` author for that file and "resolved by
+regeneration" a file with no regenerator. The fix was a `none(...)` override in
+`docs/generated-paths.txt`. **The transferable part is the question to ask:**
+not "is this path declared generated?" but "what *authors* this path?" — a
+directory-level declaration answers the first and can be wrong about the
+second, which is exactly how a file gets resolved by a mechanism that does not
+exist.

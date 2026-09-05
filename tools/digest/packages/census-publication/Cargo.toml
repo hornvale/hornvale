@@ -1,0 +1,23 @@
+[package]
+name = "digest-census-publication"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[package.metadata.digest]
+role = "contributor"
+namespace = "hornvale.census-publication"
+protocol = 1
+binary = "digest-census-publication"
+scopes = [
+    "windows/lab/src/census_guard.rs",
+    "windows/lab/src/publish.rs",
+    "scripts/census-canonical-host.txt",
+    "scripts/sluice-census.sh",
+]
+
+[dependencies]
+digest-protocol = { path = "../protocol" }
+hornvale-lab = { path = "../../../../windows/lab" }
+serde_json = "1"

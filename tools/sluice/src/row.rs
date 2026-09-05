@@ -1,0 +1,72 @@
+//! One queue row. The TSV is the durable format and this type is its only
+//! parser; see the plan's Global Constraints for the column order.
+
+/// A single request in the queue.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Row {
+    /// RFC3339 stamp written when the row was added.
+    pub when: String,
+    /// `req-<sha12>-<stamp>`, the row's exact identity.
+    pub id: String,
+    /// The branch the request names.
+    pub branch: String,
+    /// The full 40-character ref.
+    pub sha: String,
+    /// One of the closed state vocabulary.
+    pub state: String,
+    /// One of `merge`, `stage`, `census`.
+    pub kind: String,
+    /// Free text, already sanitised.
+    pub note: String,
+}
+
+impl Row {
+    /// Parse one TSV line. TOTAL — it cannot fail, and its RETURN TYPE now
+    /// says so.
+    ///
+    /// It returned `Option<Row>` while being infallible, and `read_rows`
+    /// consumed it with `filter_map`. Harmless while `parse` was total; the
+    /// day someone makes it fallible again, every unparseable line silently
+    /// vanishes from the read and the next `write_rows` deletes it from the
+    /// file — which is the exact data loss the paragraph below was written to
+    /// prevent, reintroduced through a type that invited it.
+    ///
+    /// The shell it replaces PADS a malformed row out to seven fields and
+    /// keeps it; measured 2026-09-05 by feeding `set-state` a three-field
+    /// line and watching it survive as `TRUNCATED\tonly\tthree\t\t\tmerge\t`.
+    /// Dropping such a line here would make the next `write_rows` delete it
+    /// permanently, silently losing a request — which the plan's own Global
+    /// Constraints forbid (the format does not change) and which is the exact
+    /// opposite of a queue whose first duty is durability.
+    ///
+    /// `splitn(7, ...)`, NOT a bare `split` (fix round 2, Important F4). A
+    /// bare split on every tab handed an 8+-field line straight to
+    /// `f.get(6)`, keeping only the SEVENTH piece and silently discarding
+    /// everything past it — a permanent truncation the next `write_rows`
+    /// then persisted. Bash's own `read -r when rid rbranch rsha rstate
+    /// rkind rnote` absorbs the whole remainder (tabs included) into the
+    /// last variable; `splitn(7, ...)` reproduces exactly that: the 7th
+    /// piece is the rest of the line, verbatim.
+    pub fn parse(line: &str) -> Row {
+        let f: Vec<&str> = line.splitn(7, '\t').collect();
+        let g = |i: usize| f.get(i).copied().unwrap_or("");
+        let kind = if g(5).is_empty() { "merge" } else { g(5) };
+        Row {
+            when: g(0).to_string(),
+            id: g(1).to_string(),
+            branch: g(2).to_string(),
+            sha: g(3).to_string(),
+            state: g(4).to_string(),
+            kind: kind.to_string(),
+            note: g(6).to_string(),
+        }
+    }
+
+    /// Render back to one TSV line, no trailing newline.
+    pub fn render(&self) -> String {
+        format!(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            self.when, self.id, self.branch, self.sha, self.state, self.kind, self.note
+        )
+    }
+}

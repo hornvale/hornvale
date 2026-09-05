@@ -40,9 +40,12 @@ run() {
 }
 
 run "tools/board"      env -u GIT_DIR -u GIT_INDEX_FILE cargo test --manifest-path tools/board/Cargo.toml
-run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml
+run "tools/digest"     cargo test --manifest-path tools/digest/Cargo.toml --workspace
 run "tools/type-audit" cargo test --manifest-path tools/type-audit/Cargo.toml
 run "tools/placement-audit" cargo test --manifest-path tools/placement-audit/Cargo.toml
+run "tools/sluice"     cargo test --manifest-path tools/sluice/Cargo.toml
+run "tools/sluice fmt" cargo fmt --manifest-path tools/sluice/Cargo.toml --check
+run "tools/sluice lint" cargo clippy --manifest-path tools/sluice/Cargo.toml --all-targets -- -D warnings
 # tools/seam-guard was the one dev-tool crate whose own suite nothing ran, so a
 # test added to it was a comment — and it turned out to hide 31 pre-existing
 # tests as well as the new ones. GIT_DIR/GIT_INDEX_FILE are scrubbed here as
