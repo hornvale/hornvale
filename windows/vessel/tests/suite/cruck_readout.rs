@@ -83,9 +83,14 @@ fn preimage(shape: Shape) -> BTreeSet<(bool, AuthorityMark, ThresholdPosture)> {
 }
 
 /// H3's own claim: which shape a structural link set belongs to, read from
-/// the links ALONE — no brief, no cold/authority/posture axis. `None` if the
-/// links match none of the four preregistered shapes (e.g. a function whose
-/// workroom rule refuses, which the four-chamber table does not cover).
+/// its LINKS alone — no roles, no brief, no cold/authority/posture axis. The
+/// links alone suffice because `shape_links`'s four sets are pairwise
+/// distinct; roles differ only by function (a Mine's `Smithy` where an
+/// Agrarian room has `Loomroom`), which relabels a chamber without moving
+/// the topology, so roles carry no information this classification needs.
+/// `None` if the links match none of the four preregistered shapes (e.g. a
+/// function whose workroom rule refuses, which the four-chamber table does
+/// not cover).
 fn shape_of_links(links: &[(usize, usize)]) -> Option<Shape> {
     [Shape::Deep, Shape::Bush, Shape::Shopfront, Shape::Backroom]
         .into_iter()
@@ -259,7 +264,7 @@ fn h2_h3_every_living_dwelling_is_its_table_row_and_recoverable() {
                     brief.function
                 ));
             } else {
-                // H3: recover the shape from (roles, links) alone -- no
+                // H3: recover the shape from the links alone -- no roles, no
                 // brief, no axis -- then check the room's own triple is a
                 // member of that shape's preimage class. The brief's triple
                 // is read here only for the membership check, never to do
@@ -325,6 +330,6 @@ fn h2_h3_every_living_dwelling_is_its_table_row_and_recoverable() {
     );
     assert_eq!(
         correct, inhabited_total,
-        "H3 must recover every inhabited room's own predicted shape from (roles, links) alone"
+        "H3 must recover every inhabited room's own predicted shape from its links alone"
     );
 }
