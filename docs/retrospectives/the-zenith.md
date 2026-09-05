@@ -6,7 +6,9 @@
 
 Eight tasks retired astronomy's selectable provider system. The branch was
 absorbed against `main` before these close artifacts were written; The Staple's
-incoming probe supplied one final, narrow API reconciliation.
+incoming probe supplied one final, narrow API reconciliation. It was absorbed
+again at the merge stop, 163 commits later, and that second absorption is where
+three of this retrospective's lessons come from.
 
 ## The campaign's scoping input was wrong by roughly seventy times
 
@@ -126,6 +128,33 @@ second.
 | Task 7's conformance oracle still read one production constant | **Fixed and mutation-proved**, above. |
 | Absorbed The Staple probe still called the retired API; three absorbed comments named retired identifiers | **Fixed at close and recorded in ledger #16.** The probe's measurement intent is unchanged. |
 
+## The close absorption found what no gate on this branch could
+
+Absorbing 163 commits at the merge stop produced two textual conflicts and
+three defects no conflict marker pointed at. The general shape is the one this
+repository already knows — a clean auto-merge is not evidence the premise
+survived — but each defect had a different reason for being invisible, and the
+reasons are the transferable part.
+
+**A retired type reappears in a file that never existed on this branch.** The
+Housemark's `housemark_readout.rs` was written on `main` after this branch
+deleted `SkyChoice`. Nothing conflicted: the file is an addition on one side
+and a deletion of an unrelated symbol on the other. What catches it is
+compiling *tests*, not the library — `cargo check --workspace` was green
+throughout and `--all-targets` was not. A campaign that deletes a public type
+should treat `--all-targets` as the merge check, because the library half of
+the workspace cannot see a test-only call site.
+
+**An unguarded mirror of `CLAUDE.md` now exists, and a doctrine retirement is
+exactly the change it silently misses.** `main` brought a root `AGENTS.md`,
+copied by hand at The Weft's close with no generator, no drift check, and no
+test — so this campaign's sweep of `CLAUDE.md` left a second file in the tree
+asserting the retired doctrine in the present tense to any agent that reads it
+as instructions. There was no way to know from this branch. The durable rule:
+after absorbing, re-run the campaign's own retired-identifier grep over the
+merged tree, not over the tree the sweep was performed on. That grep is cheap,
+and it is what found this.
+
 ## Book freshness and the Confidence Gradient
 
 The sweep covered the domain overview, astronomy chapter, sky-facing scene
@@ -134,10 +163,20 @@ the gallery sources. Historical chronicles retain historical vocabulary where
 it describes what existed then. Current command references no longer promise
 constant-provider refusal paths.
 
-**The Confidence Gradient did not move.** The campaign supplied another
-instance of its existing rule — mutation is what proved the conformance oracle
-independent, while a regenerate-and-diff loop could preserve a false hardcoded
-sentence — but it neither resolved nor re-scored any bet in that chapter.
+**The Confidence Gradient sweep was wrong, and the close's own absorption
+caught it.** The close asserted the chapter held no bet this campaign touched.
+It does: *Coarse constrains fine* opens by naming `ConstantSun` and the
+generated star system as two valid fidelities of one truth — the exact
+sentence decision 0736 retires — and had been read past because the sweep
+looked for chapters *about astronomy* rather than grepping the retired
+identifier across `book/src/open-questions.md`. The lesson is the one decision
+0030 already implies and this close still missed: a gradient sweep is a grep
+for the campaign's vocabulary, not a judgment about which chapters sound
+relevant. The row is now re-scored (2026-09-04), and the re-score is not a
+confidence change — it separates *coexistence*, which was retired, from
+*refinement*, which is what every prior re-score on that row actually
+measured, and records that no measurement on it ever ran on an astronomy
+tier.
 
 No `IMPLEMENTATION_PLAN.md` existed to retire. The campaign plan and spec are
 marked implemented pending merge; merge status remains the queue's fact, not a

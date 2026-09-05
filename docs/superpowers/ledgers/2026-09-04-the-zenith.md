@@ -522,6 +522,47 @@ unexplained world-identity change into one category; the diff demonstrates the
 former only.
 · Capture: this ledger entry and the dated retrospective postscript.
 
+#18 [G5] — **The close-time absorption of 163 commits found three prose sites
+the campaign's own freshness sweep could not have reached, and one it could.**
+· **What was found:** absorbing `main` at G6 (two conflicts, both mechanical)
+left a tree that compiled the library but not its tests: The Housemark's
+`windows/vessel/tests/suite/housemark_readout.rs`, written on `main` after this
+branch deleted `SkyChoice`, still imported the type and passed the retired
+fifth argument. `main` also brought a root `AGENTS.md` — a hand-maintained,
+name-substituted mirror of `CLAUDE.md` with no generator and no drift check
+(The Weft's close, `0efa51c76`) — carrying the pre-retirement tier paragraph
+and a stale almanac count in the present tense.
+· **Decision:** fix all three on this branch. The test drops the import and the
+argument, matching every peer call site in the same directory; `AGENTS.md`
+takes the same two edits `CLAUDE.md` already carried.
+· **Why:** a campaign that retires a doctrine owes the tree no live sentence
+asserting it, and the mirror is a file agents read as instructions. Deferring
+the test fix is not available at all — it is a compile error in the merge
+product.
+· **The fourth site is the one that matters, because the sweep could have
+reached it and did not.** `book/src/open-questions.md`'s *Coarse constrains
+fine* bet opens by naming `ConstantSun` as a live exemplar; the close had
+already asserted in the retrospective that the Confidence Gradient did not
+move. It does not move in *confidence*, which is why the original reading was
+half right, but decision 0030 owes the chapter a re-score whenever a campaign
+moves a bet's substance, and retiring a bet's opening exemplar is that. The row
+is now re-scored and the retrospective's claim is corrected in place rather
+than quietly dropped.
+· **Alternatives discarded:** leaving `AGENTS.md` to its own maintainer (it has
+none — the file is copied by hand, so "someone else will" resolves to nobody);
+rewriting the bet's opening sentence instead of appending a re-score (the
+chapter's convention is append-only re-scores, and the original sentence is
+the historical claim being corrected).
+· ideonomy passes: 0 — three forced reconciliations and one owed re-score, each
+with a single correct answer.
+· Capture: this entry; the corrected retrospective section; the re-scored
+gradient row.
+· **Not fixed, deliberately:** `AGENTS.md` also renders the campaign worktree
+path as `.Codex/worktrees/<campaign>/`, an over-eager Claude→Codex substitution
+of a real path that does not exist. It predates this campaign, has nothing to
+do with the retirement, and belongs to whoever maintains the mirror. Flagged in
+the G6 digest rather than fixed here.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding
