@@ -937,3 +937,29 @@ transport plus one timing row; this branch is never a merge candidate. The
 normal Stage2 gate remains green, but the complete unreserved result and
 diagnostic phase qualification are still pending. Old failed requests, source
 checkouts and original records remain retained.
+
+## Task6 authorship preparation — reserved source object packaged
+
+Continuing source-only authorship under Q10 while the prepared diagnostic waits
+behind another campaign's census, the same challenger packaged its unchanged
+preregistered patch as source object `b0ae89d8a93cda6fe8932ed24e38db8d64865613`,
+tree `17905910c5b081c3c706daa0b6e0709f0f3a4432`, with only the frozen base as
+parent. Artifact commit `fa707895e761b944794207180a1218784f591cdd` stays on the
+challenger branch pending controller integration. Bundle5,443 bytes has SHA256
+`f164f67e4803b522f1a17b70fd7fa61255944d8913be7296576f4483f3d50d9c`.
+
+Author and independent reviewer each recovered the object from a fresh shallow
+base-only repository; the original exact patch separately reproduced its full
+tree. All 43 retained supervised Git commands validated (5.666 s total). Both
+changed paths remain explicit; collector before/after hashes are separate from
+the frozen arm input list. One initial caller TypeError (passing a Path to the
+JSON loader) occurred before any Git or construction; the original driver and
+traceback are retained beside the corrected caller. The frozen helper did not
+change. Reading helper mechanics/imports after preregistration is disclosed;
+no unreserved records, new observation or score was consumed.
+
+Scoped source-packaging spec/quality review passed with no findings. Reports
+are copied under `evidence/controller/reviews/task6-source-*.md`. These are
+authorship/reconstruction results only: combined-panel integration, original
+formal scores, both-host qualification and behavioral replay still await
+Stage2. No additional Q or early acceptance is implied.
