@@ -906,3 +906,133 @@ including seed-42 world blob `27017c3afa47c72b0e174709c35c90818642d8e9`.
 The keystone refreeze therefore needs no byte change; there are no campaign
 physics/golden-pin edits to defer. The canonical census is still owed at close
 and will be queued on the committed absorbed candidate.
+
+
+The absorption commit `fe0603cb2545f5dd170481b1f5200dd50265ff9f` passed
+its ordinary gate in 43.995 s, with all three subfloor chunks green, then was
+pushed normally. Its canonical census is durably queued as
+`req-fe0603cb2545-20260905T133959Z` via `make sluice-census`, on that exact
+immutable source. No golden movement is asserted before the result arrives.
+Documentation close work proceeds locally while the queued run waits/executes.
+
+
+### Census held for an operator scope question, not a test failure
+
+`make sluice-status` reports the census request held and explicitly not run.
+The operator measured zero changed paths under `kernel/`, `domains/`, or
+`windows/` and proposed avoiding a roughly twenty-minute null run, asking for
+confirmation before proceeding. Root repeated the path comparison and obtained
+an empty result. That is evidence about changed paths, not a measured census
+result. Current campaign cadence still requires the run, and this campaign
+explicitly grants no new gate-omission authority. No census failure, zero-golden
+result, or exception is claimed. The operator's request is an unresolved
+coordination step; close artifacts can be prepared while it is resolved.
+This instance also motivates the already-recorded future work on explicit
+input closure and admission evidence; it does not implement that future rule.
+
+
+Nathan explicitly authorized telling the operator to proceed with the held
+census. Posted that confirmation as board notice
+`7ebb9325ac38d82ff96aa4eb6cd4a82f2786b207`, naming the existing request
+and exact SHA. No tool-only census exception is adopted. This is resolution
+of the operator's coordination question, not a second approval of the campaign
+or a change to its quality claims.
+
+
+## Close documentation and survival audit
+
+The close author read both the entire durable ledger and the campaign scratch
+reports/reviews/progress/mutation evidence across the primary and two adopter
+worktrees. The fixed inventory contains 1,474 files, including 1,251 reproducible
+compiler cache/generated metadata entries; these are not 1,474 prose findings.
+Forty-six substantive routes identify durable homes below. No new unledgered
+ruling was found. Seven measured deferred ideas now have registry homes; the
+bounded contribution envelope is prepared as shipped, while the wider program
+and its unimplemented authority remain open. The author inspected links,
+anchors and row structures, froze all tracked writes, and ran no gate or
+regeneration. Root owns final qualification and asks the close reviewer which
+finding did not survive the mapping.
+
+Project memory was inspected, including the prior Tackle instrument-independence
+lesson. All Charter process lessons have repository homes in the retrospective
+and registry; no additional private-memory duplicate is needed and no relevant
+memory rule was superseded by this pilot. The standalone self-writing-Book
+memory describes a different, historical language program, not this developer
+context contribution surface.
+
+The census is now running as
+`census-fe0603cb2545-20260905T135333Z`; results remain pending.
+
+### Durable routing map at close preparation
+
+Line locators refer to this prepared close snapshot; the named files and
+subjects are the enduring homes. Raw compiler caches and redundant logs remain
+reproducible/scratch; samples and actual report snapshots are committed.
+
+| Finding or evidence category | Exact permanent home | Disposition |
+|---|---|---|
+| Ledger #1–8: bounded context pilot versus broader active program | `docs/superpowers/specs/2026-09-04-the-charter-design.md:353` | Material post-G3 rulings promoted; original G3 choices remain §10. |
+| No kernel/ProjectLedger schema, world or save behavior migration | `book/src/chronicle/the-charter.md:88` | Bounded product boundary; historical Digest receives a continuation link. |
+| Task1 optional explicit contradiction bug and fix | `docs/superpowers/specs/2026-09-04-the-charter-design.md:365` | Resolved: every explicit contradiction fails; optional unknown remains informational. |
+| Task1 compiler-stub RED versus behavioral omission/rendering RED | `docs/retrospectives/the-charter.md:10` | Compilation is structural; behavior is independently exercised. Detailed original runs stay in durable ledger. |
+| Task1 permitted preexisting rustfmt-only mcp blocks | `docs/superpowers/ledgers/2026-09-04-the-charter.md:369` | Documented mechanical allowance; no new lesson or unresolved change. |
+| Task2 null Cargo metadata and unenrolled package behavior | `docs/digest/the-charter-evidence.md:253` | Final qualification and production fixture coverage; intermediate report superseded by reviewed bootstrap. |
+| Task2 Git fixture setup/snapshot path leak with outer index proof | `docs/retrospectives/the-charter.md:31` | Resolved with discriminating RED/GREEN; same boundary promoted in spec §11. |
+| Task2 toolchain pin versus outside-repo default; Cargo manifest not cwd | `docs/superpowers/specs/2026-09-04-the-charter-design.md:372` | Pin retained in fixtures and measurements; preflight protocol promoted. |
+| Task2 vocabulary substring overmatch workaround | `book/src/frontier/idea-registry.md:2064` | Existing measured row reused, not minted again. Host-local rename fixed hook refusal without waiver. |
+| Task2 suspected compiler diagnostic loss | `docs/superpowers/ledgers/2026-09-04-the-charter.md:465` | Reviewer explicitly refuted suspicion; not an open finding. Complete stderr survives in recorded fixture evidence. |
+| Task3 actual public ownership APIs, reverse rosters and frozen-host acceptance | `docs/digest/the-charter-evidence.md:11` | Exact branch, package rosters, 22 unchanged external and 27 local dependency records retained. |
+| Task4 non-discriminating canonical-host panel and two omission mutants | `docs/retrospectives/the-charter.md:14` | Resolved; pure predicate scope remains narrower than publication invocation. |
+| Task5 disjoint overlap and no sampling before reviewed integration | `docs/superpowers/specs/2026-09-04-the-charter-design.md:379` | Accepted execution sequencing, promoted without a new global rule. |
+| Task5 nested process groups survived abnormal parent exit | `docs/retrospectives/the-charter.md:31` | Resolved actual-session topology fixture, not detached hostile sessions. |
+| Task5 cleanup sample loss, interrupted-zero stdout and emission-before-abort | `docs/superpowers/specs/2026-09-04-the-charter-design.md:375` | Resolved; preserved failed fixture/intermediate test-scope failure, no selective evidence deletion. |
+| Task5 fixture mock scope restored cleanup flag too early | `docs/retrospectives/the-charter.md:34` | Corrected test itself; retained failed intermediate run in scratch and durable ledger/evidence method. |
+| Real public compose: both envelope orders, repetition, inner ordering | `docs/digest/the-charter-evidence.md:177` | Exact 11738-byte equality and unchanged observation details retained. |
+| Real loom mutation compiles, contradicts and remains red after authored assertion rewrite | `docs/digest/the-charter-evidence.md:177` | Actual commands/results and snapshots durable; not a fictional fixture or compile failure. |
+| Legacy renderer compatibility and tracked primary byte preservation | `docs/digest/the-charter-evidence.md:241` | Only actually exercised doctor/decisions/delta and tracked comparison claimed. |
+| Functional driver and Rust fixture Cargo scaffolding | `docs/digest/the-charter-evidence.md:177` | Reusable explanation/commands/results retained, ephemeral build cache not promoted. |
+| Actual successful Thing/census and failed Thing report bytes | `docs/digest/the-charter-evidence.md:575` | Exact snapshots in docs/digest; original historical revision/dirty headers retained. |
+| Independent usability PASS and reader scope limits | `docs/retrospectives/the-charter.md:43` | Not source review; findings routed separately below. |
+| All 72 samples, RSS/load/units, failure and missing-subphase attribution | `docs/digest/the-charter-evidence.md:281` | All raw JSONL retained, not only aggregate tables; no SLO or cap change. |
+| Ordinary integrated Stage2 green | `docs/digest/the-charter-evidence.md:109` | Exact submitted/initial/final identities and 5355+doctests/95Digest retained. |
+| Diagnostic stage-only transport, measured versus final tree and full result | `docs/digest/the-charter-evidence.md:358` | Separate identity chain and diagnostic exclusion retained; no ordinary outboard change merged. |
+| Full source review and final evidence delta PASS | `docs/digest/the-charter-evidence.md:542` | Earlier pending reports are historical; final reviewed boundary explicitly supersedes pending qualification. |
+| Deferred context-presentation | `book/src/frontier/idea-registry.md:2131` | New raw measured row, exact limits and permanent evidence/retro pointer; not merely ledger-only. |
+| Deferred context-provenance | `book/src/frontier/idea-registry.md:2132` | New raw measured row, exact limits and permanent evidence/retro pointer; not merely ledger-only. |
+| Deferred context-status-cost | `book/src/frontier/idea-registry.md:2133` | New raw measured row, exact limits and permanent evidence/retro pointer; not merely ledger-only. |
+| Deferred contributor-build-boundary | `book/src/frontier/idea-registry.md:2134` | New raw measured row, exact limits and permanent evidence/retro pointer; not merely ledger-only. |
+| Deferred review-byte-cap | `book/src/frontier/idea-registry.md:2135` | New raw measured row, exact limits and permanent evidence/retro pointer; not merely ledger-only. |
+| Deferred generated-write-attribution | `book/src/frontier/idea-registry.md:2136` | New raw measured row, exact limits and permanent evidence/retro pointer; not merely ledger-only. |
+| Deferred reconciliation-ledger-coverage | `book/src/frontier/idea-registry.md:2137` | New raw measured row, exact limits and permanent evidence/retro pointer; not merely ledger-only. |
+| Three independence meanings and lab compilation cost | `docs/retrospectives/the-charter.md:22` | File/build/semantic distinction and source-identity discipline; no restructuring undertaken. |
+| Prior Tackle instrument-independence/control-scope precedent | `docs/retrospectives/the-charter.md:13` | Cross-reference established precedent; no claim the lesson was invented here. |
+| NFRs as scenarios rather than quality adjectives | `docs/retrospectives/the-charter.md:40` | Bounded quality qualification, broad quality system still raw/open in registry. |
+| Two contaminated mtime capture intervals and honest reruns | `docs/retrospectives/the-charter.md:57` | Preserve observed costs; causal-attribution gap remains raw; freeze writers before root regeneration. |
+| Coda ledger parser/coverage mismatch and documentary stage refusal | `book/src/frontier/idea-registry.md:2137` | Captured independently of ledger; prepared close retains ten columns without optional ledger links. |
+| Operator held census on zero changed simulation paths | `docs/retrospectives/the-charter.md:60` | Explicit user authorization resolved coordination; actual result still pending, no cadence exception or null claimed. |
+| G6 approval, absorbed main and close responsibilities | `docs/superpowers/ledgers/2026-09-04-the-charter.md:882` | Root owns final census, keystone and merge notes; no edit to its ledger by this agent. |
+| Broader federation direction | `book/src/frontier/idea-registry.md:2124` | Retains raw status and active metaplan; bounded pilot achievement named separately. |
+| Knowledge contribution envelope | `book/src/frontier/idea-registry.md:2125` | Shipped bounded v1 with qualified evidence pointer; richer semantics remain open. |
+| Obligation selection and adoption/activation | `book/src/frontier/idea-registry.md:2126` | Both existing IDs preserved raw and explicitly unimplemented; no gate omission authority. |
+| Global and composed quality authority | `book/src/frontier/idea-registry.md:2129` | Pilot scenarios qualified; general system and global budgets remain raw/open. |
+| Book freshness | `book/src/chronicle/the-digest.md:228` | Actual search found only historical/context mentions; added bounded continuation, no world chapter edits. |
+| Confidence Gradient existing bets | `docs/retrospectives/the-charter.md:68` | Searched headings and Digest/project/development/self-description references. Existing world bets unchanged; no score or new pseudo-bet authored. |
+
+
+
+Close-documentation regeneration completed rc=0 in 143.862 s with all authored
+writers frozen. The actual unstaged diff after it contains only the run's
+`docs/timings.md` row: no generated Book, fixture, audit-content, Digest or
+write-inventory byte changed. This is an observed result, not a prediction
+from the registry edits. Close documentation now goes through the normal
+commit hook and independent close/survival review; the running canonical census
+and final merge remain separate obligations.
+
+
+Close documentation's first commit attempt was refused by the normal prose
+suite: 71 passed, one failed, three not run after cancellation. The chronicle
+used “worktrees,” which the existing five-term world-prose guard rejects even
+in a development-tool chronicle. Root read the actual guard and changed that
+sentence to “on separate branches,” preserving the verified independence
+claim; checkout mechanics remain in the evidence/retrospective. No guard was
+weakened. The failure log is retained and the normal hook must pass on retry.

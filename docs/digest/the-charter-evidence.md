@@ -1,6 +1,6 @@
 # The Charter: composition and quality evidence
 
-Status: **Implementation and qualification review PASS; G6 approval pending.**
+Status: **Implementation and qualification review PASS; G6 approved 2026-09-05.**
 Mac/Linux measurements, both canonical stages and independent usability are
 complete. This evidence supports the bounded Charter acceptance properties,
 not an overall project-verification claim. The binding acceptance properties
@@ -570,7 +570,7 @@ hook. Together with the broad review, this discharges Task 5's remaining
 qualification obligations. Full scoped findings are retained in campaign
 scratch `final-evidence-review.md`. Later review-status/plan bookkeeping does
 not change the measured implementation and is not claimed as another canonical
-stage run. G6 approval and the normal closing workflow remain outstanding.
+stage run. Nathan approved G6 on 2026-09-05; the normal closing workflow follows that approval.
 
 ## Independent report usability review
 

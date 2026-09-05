@@ -1,5 +1,10 @@
 # The Charter Implementation Plan
 
+Status: implementation and qualification complete; G6 approved by Nathan on
+2026-09-05. Close documentation prepared; census and merge pending.
+[Qualified evidence](../../digest/the-charter-evidence.md) and
+[post-G3 decisions](../specs/2026-09-04-the-charter-design.md#11-post-g3-implementation-decisions-and-qualification).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Assemble useful checked task context from independently enrolled

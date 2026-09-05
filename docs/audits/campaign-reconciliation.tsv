@@ -1328,7 +1328,9 @@ spec-2026-09-05-the-sluicegate-design	shipped	none		merged via the queue 2026-09
 chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
 retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md
 the-weft	shipped	none		plan: COMPLETE/G6 approved; retrospective: Close G6 approved; chronicle: G6 accepted result	docs/superpowers/specs/2026-09-03-the-weft-design.md	docs/superpowers/plans/2026-09-03-the-weft.md		book/src/chronicle/the-weft.md	docs/retrospectives/the-weft.md
-plan-2026-09-04-the-charter	active	none		G3 approved; implementation and qualification remain open		docs/superpowers/plans/2026-09-04-the-charter.md			
-spec-2026-09-04-federated-development-program-metaplan-design	active	none		Program approved; first bounded campaign The Charter is in progress	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
-spec-2026-09-04-the-charter-design	active	none		G3 approved; Charter implementation remains open	docs/superpowers/specs/2026-09-04-the-charter-design.md				
+plan-2026-09-04-the-charter	shipped	none		implementation and qualification complete; G6 approved; prepared close, merge pending		docs/superpowers/plans/2026-09-04-the-charter.md			
+spec-2026-09-04-federated-development-program-metaplan-design	active	none		bounded Charter pilot qualified; broader federation program remains active	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
+spec-2026-09-04-the-charter-design	shipped	none		implementation and qualification complete; G6 approved; prepared close, merge pending	docs/superpowers/specs/2026-09-04-the-charter-design.md				
 retrospective-the-sluicegate	shipped	none		published retrospective					docs/retrospectives/the-sluicegate.md
+chronicle-the-charter	shipped	none		G6 approved; prepared close, merge pending				book/src/chronicle/the-charter.md	
+retrospective-the-charter	shipped	none		G6 approved; prepared close, merge pending					docs/retrospectives/the-charter.md

@@ -120,6 +120,8 @@ under review. This file is.
 
 ### Engine / ECS / infrastructure
 
+- [The Charter](the-charter.md) — independent context contributors; typed claims need scoped oracles, lifecycle fixtures and reader review; all 72 samples retained without an SLO
+
 - [The Hearsay](the-hearsay.md) — myth gets its channel; four things that could not go red, all in controller text and all caught by mutation; violence is intramural twice over
 - [The Retelling](the-retelling.md) — content learns to vary; stance replaces two incommensurable keys; the antichain predicts semantic divergence at rho 0.662; distortion caps at one rung, which is the third measurement of the same scarcity; six repo mechanisms found green while blind
 - [The Palimpsest](the-palimpsest.md) — damage accumulates and memory gets a unit that varies by people; eight defects, all in controller text, none surviving in implementer code; the frozen model adds days to a dimensionless generation count, which made two of three rules untestable rather than falsified and was found only at readout; a control I specified was blind to the failure it named, inside a fix for a finding about a check that could not fail; the contaminated freeze held, at the price of direction-only tests

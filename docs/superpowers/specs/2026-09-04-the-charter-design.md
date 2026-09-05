@@ -1,10 +1,12 @@
 # The Charter — independently contributed development knowledge
 
-Status: G3 approved with the quality-contract refinement; planning authorized
-by Nathan's “Sounds great. Let's continue.” Date: 2026-09-04.
+Status: implementation and qualification complete; Nathan approved G6 on
+2026-09-05. Census and campaign merge remain pending. The broader program stays
+active. [Qualified evidence](../../digest/the-charter-evidence.md).
 Branch: `codex/the-charter`.
 Observed base: `fd3cd159be98e6c07dbb849b780c2712c6a7826f`.
-Scope: first-campaign design; execution follows plan self-review under G4.
+Scope: completed bounded pilot; close documentation prepared for the approved merge.
+Design-time base facts below describe the pre-campaign checkout.
 
 Program: [Federated development](2026-09-04-federated-development-program-metaplan-design.md).
 Rulings and evidence: [decision ledger](../ledgers/2026-09-04-the-charter.md).
@@ -345,5 +347,62 @@ obey the contract and do not detach into independent sessions.
    between operational caps, observed baselines, and earned service levels.
 
 Nathan approved continuing after reviewing the original package and the
-quality-contract refinement. Implementation planning is authorized; the
-campaign's eventual merge/close retains its separate G6 review.
+quality-contract refinement at G3. That authorized implementation planning;
+the later implementation decisions and separate G6 approval are recorded below.
+
+## 11. Post-G3 implementation decisions and qualification
+
+These promote the material execution rulings from the
+[campaign ledger](../ledgers/2026-09-04-the-charter.md), without creating a new
+set of global rules or expanding the approved pilot.
+
+- **Independent adoption:** freeze the reviewed protocol/host bootstrap before
+  two separate adopter branches. Package-local code and shared Cargo.lock
+  reconciliation are permitted; no contributor-specific host semantic change
+  is. Integration retains both reviewed trees and the 22 existing external
+  dependency records; the 27 added local packages are disclosed build cost,
+  not an autonomy counterexample or evidence that a census executed.
+- **Failure semantics:** every explicit contradiction fails, including an
+  optional observation; only unknown observations outside the required set
+  may remain informational. Authored declarations cannot satisfy their own
+  observations. The census panel's prefix and relative-suffix forms require
+  discriminating wrong-host refusal cases, not canonical-host successes that
+  also pass when recognition is missing.
+- **Ownership is part of the instrument:** all fixture and diagnostic Git
+  commands scrub path overrides, and fixture checkouts preserve the toolchain
+  pin. Process tests reproduce actual nested groups and abnormal parent exits.
+  The diagnostic finishes its owned session before removing its checkout;
+  cleanup uncertainty retains the directory and available raw sample, emits
+  the failed attempt, then aborts later work. Interrupted zero-exit attempts
+  retain stdout. Trusted contributors may not detach from the applicable
+  owned group/session; no sandbox or portable grandchild-reaping claim follows.
+- **Preparation and measurement:** disjoint harness preparation may overlap
+  adopter work, but actual samples wait for reviewed integration. Fresh owned
+  targets measure host build, selected cold request and ten warm requests
+  separately; all-member preparation is not a selected-workload cold sample.
+  Keep every attempt, raw RSS units, host/toolchain/load, and unavailable
+  lock-wait/subphase/aggregate-memory attribution. All 72 samples are retained;
+  no steady-state SLO is earned by the short consecutive series. Existing
+  operational caps remain unchanged.
+- **Canonical evidence:** use the existing stage-only transport for diagnostics,
+  not a new benchmark authority or routine outboard invocation. The temporary
+  five-line diagnostic addition is excluded from integration. Distinguish
+  submitted candidate, initial merge, measured source and final tested tree;
+  green measurement steps alone do not establish a completed stage job.
+- **Authored evidence and capture:** report snapshots and sample JSONL are
+  explicitly authored evidence under `none(...)` exceptions. Regeneration
+  supplies write counts; mtime overlap with unrelated writers invalidates a
+  causal authorship reading. Preserve the cost and repeat with frozen writers,
+  without editing capture counts. Reconciliation rows omit optional ledger
+  links until the parser/coverage mismatch is resolved separately.
+- **Review and scope:** independent source, final evidence and three-report
+  usability reviews passed. M1's inline-code escaping and scope-wording
+  refinements are deferred alongside richer provenance and measured cost/tooling
+  gaps in the [retrospective](../../retrospectives/the-charter.md) and registry.
+  Neither typed declarations, finite observations nor generated prose prove
+  truth, coverage sufficiency or semantic independence of arbitrary changes.
+
+G6 authorizes the ordinary close/merge workflow, not omission of its census or
+other gates. Implementation/qualification completion does not close the active
+federation metaplan. The Confidence Gradient was searched at close: **N/A**, no
+existing world bet moved; the Book gains the bounded Digest continuation.
