@@ -50,13 +50,15 @@ def persist(path, value):
         output.write('\n')
 
 
-def capture(command, cwd, destination):
+def capture(command, cwd, destination, *, attribution=None):
     destination = Path(destination)
     # Reserve before executing: an existing attempt never runs again.
     with destination.open('x'):
         pass
     result = measurement.measure(command, cwd, retain_output=True,
                                  output_limit_bytes=LIMIT, deadline_seconds=DEADLINE)
+    if attribution is not None:
+        result.update(attribution)
     destination.write_text(json.dumps(result, indent=2, sort_keys=True) + '\n')
     # Persist exact bytes before reacting to unsafe cleanup or interruption.
     if result['cleanup_error'] or result['interrupted'] or measurement.unsafe_cleanup:
@@ -181,6 +183,20 @@ def validate_sample(sample):
     return streams
 
 
+def invocations(target):
+    metadata = ['cargo','metadata','--locked','--offline','--format-version','1','--manifest-path','tools/digest/Cargo.toml']
+    return {'metadata-base':metadata, 'metadata-arm':metadata,
+            'build':['cargo','build','--locked','--offline','--manifest-path','tools/digest/Cargo.toml','-p','digest-counterpart','--target-dir',str(target)],
+            'observe':[str(Path(target)/'debug/digest-counterpart')]}
+
+
+def capture_arm(command, checkout, destination, role, arm, source):
+    verify_source(checkout, source)
+    context = {'arm':arm, 'source':{key:source[key] for key in ('commit','tree')}}
+    return capture(command, checkout, destination,
+                   attribution={'role':role, 'capture_context':context})
+
+
 def summarize(dossier, panel, contract):
     if dossier.get('schema') != 'counterpart-v1' or panel.get('schema') != 'counterpart-v1':
         raise ValueError('invalid dossier schema')
@@ -191,6 +207,13 @@ def summarize(dossier, panel, contract):
         raise ValueError('unexpected arms')
     if dossier.get('bundle_prerequisites') != [panel['base']] or panel.get('bundle_prerequisites') != [panel['base']]:
         raise ValueError('bundle prerequisite mismatch')
+    output = dossier.get('output_directory')
+    if not isinstance(output,str) or not Path(output).is_absolute():
+        raise ValueError('missing/invalid owned output directory')
+    checkout, target = str(Path(output)/'checkout'), str(Path(output)/'target')
+    if dossier.get('checkout') != checkout or dossier.get('target') != target:
+        raise ValueError('missing/invalid owned checkout or target')
+    expected_commands = invocations(target)
     ids = {q['id'] for q in contract['questions']}
     summaries = {}
     for ident, arm in dossier['arms'].items():
@@ -205,22 +228,34 @@ def summarize(dossier, panel, contract):
         roles = [c.get('role') for c in commands]
         if len(roles) != len(set(roles)) or set(roles) != ROLES:
             raise ValueError('missing/duplicate command result')
+        for command in commands:
+            role = command['role']
+            source = {'commit':panel['base'],'tree':panel['base_tree']} if role=='metadata-base' else arm['source']
+            if command.get('command') != expected_commands[role] or command.get('cwd') != checkout:
+                raise ValueError('command argv/cwd attribution mismatch: '+role)
+            if command.get('capture_context') != {'arm':ident,'source':source}:
+                raise ValueError('command arm/source capture context mismatch: '+role)
         streams = {c['role']:validate_sample(c) for c in commands}
         raw = load_json(streams['observe']['stdout'])
         if raw.get('schema') != 'counterpart-v1' or set(raw) != {'schema','facts','candidate'}:
             raise ValueError('invalid raw observation')
+        if 'candidate' not in arm or arm['candidate'] != raw['candidate']:
+            raise ValueError('missing/contradictory candidate copy')
         observed = evaluate(raw['facts'], contract)
         if set(arm.get('outcomes', {})) != ids or arm['outcomes'] != observed:
             raise ValueError('missing/duplicate/stale question result')
         graphs = [load_json(streams[role]['stdout']) for role in ('metadata-base','metadata-arm')]
         metadata = arm.get('metadata', {})
-        if metadata.get('cargo') != graphs or metadata.get('variants') != expected.get('variants', []):
+        if (metadata.get('cargo') != graphs or metadata.get('variants') != expected.get('variants', [])
+                or metadata.get('repository_roots') != [checkout,checkout]):
             raise ValueError('recorded metadata/variant attribution mismatch')
         selections = {kind:suggest(kind,expected['changed_paths'],metadata,panel['owner_records'],contract) for kind in ('path','cargo','agreement')}
         comparisons = {kind:score(selection,observed) for kind,selection in selections.items()}
         if arm.get('selections') != selections or arm.get('comparisons') != comparisons:
             raise ValueError('missing/stale selector or confusion result')
         summaries[ident] = {'outcomes':observed, 'comparisons':comparisons}
+    if dossier.get('imports_only_supplement') != supplemental_comparisons(dossier,panel,contract):
+        raise ValueError('missing/stale imports-only supplement roster, scope or result')
     return {'completed':True, 'arms':summaries}
 
 
@@ -272,13 +307,15 @@ def run_panel(panel_path, output):
     prerequisite = reconstruct(ROOT,bundle,checkout,panel['base'],first)
     dossier = {'schema':'counterpart-v1','arms':{},'bundle_prerequisites':prerequisite,
                'git_preparation_directory':str(git_audit_directory), 'host':platform.platform(),'environment':{k:v for k,v in measurement.controlled_env().items() if k in {'PATH','LANG','LC_ALL','CARGO_HOME','RUSTUP_HOME'}},
-               'features':'default','profile':'dev','target':str(output/'target'),
+               'features':'default','profile':'dev','output_directory':str(output),'checkout':str(checkout),'target':str(output/'target'),
                'queue_seconds':None,'author_seconds':None,
                'cost_note':'Queue/author costs unavailable to runner; not inferred from execution wall.'}
     persist(output/'manifest.json',panel)
     for tool, command in [('rustc',['rustc','-Vv']),('cargo',['cargo','--version'])]:
         result = capture(command,checkout,output/(tool+'.json'))
         validate_sample(result)
+    expected_commands = invocations(output/'target')
+    base_source = {'commit':panel['base'],'tree':panel['base_tree']}
     for ident, source in panel['arms'].items():
         arm_dir = output/ident
         arm_dir.mkdir()
@@ -286,8 +323,9 @@ def run_panel(panel_path, output):
         commands = []
         for label, revision in [('metadata-base',panel['base']),('metadata-arm',source['commit'])]:
             git(checkout,'checkout','--detach',revision)
-            result = capture(['cargo','metadata','--locked','--offline','--format-version','1','--manifest-path','tools/digest/Cargo.toml'],checkout,arm_dir/(label+'.json'))
-            result['role']=label;commands.append(result)
+            capture_source = base_source if label=='metadata-base' else source
+            result = capture_arm(expected_commands[label],checkout,arm_dir/(label+'.json'),label,ident,capture_source)
+            commands.append(result)
             validate_sample(result)
         verify_source(checkout,source)
         hashes = input_hashes(checkout)
@@ -299,10 +337,11 @@ def run_panel(panel_path, output):
         # Suggestions are persisted before any build/behavioral observation.
         persist(arm_dir/'selections.json',selections)
         prepared = time.monotonic()-before
-        command = ['cargo','build','--locked','--offline','--manifest-path','tools/digest/Cargo.toml','-p','digest-counterpart','--target-dir',str(output/'target')]
-        result = capture(command,checkout,arm_dir/'build.json');result['role']='build';commands.append(result)
+        result = capture_arm(expected_commands['build'],checkout,arm_dir/'build.json','build',ident,source)
+        commands.append(result)
         validate_sample(result)
-        result = capture([str(output/'target/debug/digest-counterpart')],checkout,arm_dir/'observe.json');result['role']='observe';commands.append(result)
+        result = capture_arm(expected_commands['observe'],checkout,arm_dir/'observe.json','observe',ident,source)
+        commands.append(result)
         streams = validate_sample(result)
         raw = load_json(streams['stdout'])
         outcomes = evaluate(raw['facts'],contract)
@@ -318,15 +357,7 @@ def run_panel(panel_path, output):
         persist(arm_dir/'arm.json',row)
         dossier['arms'][ident]=row
         persist(output/('progress-'+ident+'.json'),dossier)
-    supplements = {}
-    for name, pair in panel.get('pairs', {}).items():
-        joint = dossier['arms'][pair['joint']]
-        right = panel['arms'][pair['right']]
-        context = {'variants':right['variants']}
-        declaration = imports_only(right['changed_paths'], context, owners, contract)
-        supplements[name] = {'request_scope':'right owner applied to left source; no behavioral input',
-                             'selection':declaration, 'score':score(declaration,joint['outcomes'])}
-    dossier['imports_only_supplement'] = supplements
+    dossier['imports_only_supplement'] = supplemental_comparisons(dossier,panel,contract)
     summary = summarize(dossier,panel,contract)
     summary['scope'] = panel.get('scope','full unreserved panel')
     summary['parent_panel_sha256'] = panel.get('parent_panel_sha256')
@@ -334,6 +365,23 @@ def run_panel(panel_path, output):
     persist(output/'dossier.json',dossier)
     persist(output/'summary.json',summary)
     return summary
+
+
+def supplemental_comparisons(dossier, panel, contract):
+    supplements = {}
+    for name, pair in panel.get('pairs', {}).items():
+        if any(pair.get(role) not in panel['arms'] for role in ('base','left','right','joint')):
+            raise ValueError('invalid supplement pair roster')
+        joint = dossier['arms'][pair['joint']]
+        right = panel['arms'][pair['right']]
+        context = {'variants':right['variants']}
+        declaration = imports_only(right['changed_paths'],context,panel['owner_records'],contract)
+        supplements[name] = {
+            'request_scope':{'description':'right owner applied to left source; no behavioral input',
+                             'base_arm':pair['left'],'changed_arm':pair['right'],'observed_arm':pair['joint'],
+                             'changed_paths':right['changed_paths'],'variants':right['variants']},
+            'selection':declaration,'score':score(declaration,joint['outcomes'])}
+    return supplements
 
 
 def qualify_pairs(dossier, panel):

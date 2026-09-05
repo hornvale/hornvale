@@ -158,3 +158,13 @@ smaller qualification must use a separately retained derived panel with explicit
 scope and parent-panel SHA256, never delete results from the full dossier and
 claim it completed. Neither the finite panel nor a passing selection proves
 that satisfied checks are unnecessary, or that production tests can be skipped.
+
+Persisted command evidence includes its role, exact argv/cwd and verified
+arm/source capture context. Validation requires the recorded owned checkout
+and target, exact locked/offline metadata and build commands, and the binary
+under that target. Base metadata is attributed to the frozen base tree;
+arm metadata, build and observation are attributed to that arm. The candidate
+copy must equal the raw observation. The required imports-only supplement is
+recomputed for the entire pair roster with explicit left-source, right-change
+and joint-observation IDs. These checks detect accidental evidence mixing;
+they do not authenticate a hostile evidence author.

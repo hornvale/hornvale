@@ -11,7 +11,7 @@ from unittest.mock import patch
 import run as runner
 from run import load_json, summarize, reconstruct, capture, sha256, construct_sources
 from checker import evaluate
-from compare import suggest, score
+from compare import suggest, score, imports_only
 
 CONTRACT = json.loads(Path(__file__).with_name('contract.json').read_text())
 
@@ -30,17 +30,25 @@ def sample(raw=b'{}'):
 class DossierTests(unittest.TestCase):
     def setUp(self):
         self.panel = {'schema':'counterpart-v1','identities':{'checker':'c','rules':'r','contract':'q','roster':'o','implementation':'i'},
-                      'owner_records':[], 'arms':{'base':{'commit':'a','tree':'t','variants':[],'changed_paths':[], 'inputs':{'pin':{'sha256':'pin','bytes':3}}}}, 'base':'a', 'bundle_prerequisites':['a']}
+                      'base_tree':'t','owner_records':[], 'arms':{'base':{'commit':'a','tree':'t','variants':[],'changed_paths':[], 'inputs':{'pin':{'sha256':'pin','bytes':3}}}}, 'base':'a', 'bundle_prerequisites':['a']}
         raw = Path(__file__).with_name('evidence').joinpath('thing-author/thing-safe-addition-raw.stdout').read_bytes()
         self.row = {'inputs':{'pin':{'sha256':'pin','bytes':3}}, 'arm':'base','source':{'commit':'a','tree':'t'}, 'identities':self.panel['identities'].copy(),
-                    'commands':[dict(sample(), role=role) for role in ['metadata-base','metadata-arm','build']] + [dict(sample(raw),role='observe')], 'outcomes':evaluate(json.loads(raw)['facts'],CONTRACT)}
-        graph={'workspace_root':'/fixture','packages':[], 'resolve':{'nodes':[]}}
+                    'candidate':json.loads(raw)['candidate'], 'commands':[dict(sample(), role=role) for role in ['metadata-base','metadata-arm','build']] + [dict(sample(raw),role='observe')], 'outcomes':evaluate(json.loads(raw)['facts'],CONTRACT)}
+        graph={'workspace_root':'/fixture/output/checkout/tools/digest','packages':[], 'resolve':{'nodes':[]}}
         for command in self.row['commands'][:2]:
             command.update(sample(json.dumps(graph).encode()))
-        self.row['metadata']={'cargo':[graph,graph],'repository_roots':['/fixture','/fixture'],'variants':[]}
+        self.row['metadata']={'cargo':[graph,graph],'repository_roots':['/fixture/output/checkout','/fixture/output/checkout'],'variants':[]}
         self.row['selections']={k:suggest(k,[],self.row['metadata'],[],CONTRACT) for k in ['path','cargo','agreement']}
         self.row['comparisons']={k:score(v,self.row['outcomes']) for k,v in self.row['selections'].items()}
-        self.dossier = {'schema':'counterpart-v1','arms':{'base':self.row},'bundle_prerequisites':['a']}
+        metadata_argv=['cargo','metadata','--locked','--offline','--format-version','1','--manifest-path','tools/digest/Cargo.toml']
+        invocations={'metadata-base':metadata_argv, 'metadata-arm':metadata_argv,
+                     'build':['cargo','build','--locked','--offline','--manifest-path','tools/digest/Cargo.toml','-p','digest-counterpart','--target-dir','/fixture/output/target'],
+                     'observe':['/fixture/output/target/debug/digest-counterpart']}
+        for command in self.row['commands']:
+            command.update(command=invocations[command['role']],cwd='/fixture/output/checkout',
+                           capture_context={'arm':'base','source':{'commit':'a','tree':'t'}})
+        self.dossier = {'schema':'counterpart-v1','arms':{'base':self.row},'bundle_prerequisites':['a'],
+                        'imports_only_supplement':{}, 'output_directory':'/fixture/output','checkout':'/fixture/output/checkout','target':'/fixture/output/target'}
 
     def test_complete_requires_entire_roster(self):
         self.assertTrue(summarize(self.dossier,self.panel,CONTRACT)['completed'])
@@ -65,6 +73,66 @@ class DossierTests(unittest.TestCase):
             dossier=copy.deepcopy(self.dossier);change(dossier['arms']['base'])
             with self.subTest(change=change), self.assertRaises(ValueError): summarize(dossier,self.panel,CONTRACT)
 
+    def test_rejects_unrelated_or_missing_invocation_attribution(self):
+        changes = {
+            'unrelated observe argv':lambda c:c.update(command=['python3','unrelated.py']),
+            'unrelated cwd':lambda c:c.update(cwd='/unrelated/source'),
+            'missing argv':lambda c:c.pop('command'),
+            'missing cwd':lambda c:c.pop('cwd'),
+            'missing capture context':lambda c:c.pop('capture_context'),
+            'wrong arm context':lambda c:c['capture_context'].update(arm='other'),
+            'wrong source context':lambda c:c['capture_context']['source'].update(commit='other')}
+        for name,change in changes.items():
+            dossier=copy.deepcopy(self.dossier);change(dossier['arms']['base']['commands'][-1])
+            with self.subTest(name=name),self.assertRaises(ValueError):summarize(dossier,self.panel,CONTRACT)
+        for flag in ['--locked','--offline']:
+            dossier=copy.deepcopy(self.dossier);dossier['arms']['base']['commands'][2]['command'].remove(flag)
+            with self.subTest(flag=flag),self.assertRaises(ValueError):summarize(dossier,self.panel,CONTRACT)
+        for field in ['target','checkout','output_directory']:
+            dossier=copy.deepcopy(self.dossier);dossier.pop(field)
+            with self.subTest(field=field),self.assertRaises(ValueError):summarize(dossier,self.panel,CONTRACT)
+        dossier=copy.deepcopy(self.dossier);dossier['target']='/outside/target'
+        with self.assertRaises(ValueError):summarize(dossier,self.panel,CONTRACT)
+
+    def test_base_metadata_context_is_not_changed_arm_context(self):
+        self.panel['arms']['changed']=copy.deepcopy(self.panel['arms']['base'])
+        self.panel['arms']['changed'].update(commit='changed-commit',tree='changed-tree')
+        row=copy.deepcopy(self.row);row.update(arm='changed',source={'commit':'changed-commit','tree':'changed-tree'})
+        for command in row['commands']:
+            command['capture_context']['arm']='changed'
+            if command['role']!='metadata-base':command['capture_context']['source']=row['source'].copy()
+        self.dossier['arms']['changed']=row
+        self.assertTrue(summarize(self.dossier,self.panel,CONTRACT)['completed'])
+        row['commands'][0]['capture_context']['source']=row['source'].copy()
+        with self.assertRaises(ValueError):summarize(self.dossier,self.panel,CONTRACT)
+
+    def test_candidate_copy_must_match_raw_observation(self):
+        for value in [None,{'outcome':'invented'}]:
+            dossier=copy.deepcopy(self.dossier)
+            if value is None:dossier['arms']['base'].pop('candidate')
+            else:dossier['arms']['base']['candidate']=value
+            with self.subTest(value=value),self.assertRaises(ValueError):summarize(dossier,self.panel,CONTRACT)
+
+    def test_supplement_roster_scope_and_results_are_required(self):
+        selection=imports_only([],{'variants':[]},[],CONTRACT)
+        self.panel['pairs']={'fixture':{'base':'base','left':'base','right':'base','joint':'base'}}
+        self.dossier['imports_only_supplement']={'fixture':{
+            'request_scope':{'description':'right owner applied to left source; no behavioral input',
+                             'base_arm':'base','changed_arm':'base','observed_arm':'base',
+                             'changed_paths':[],'variants':[]},
+            'selection':selection,'score':score(selection,self.row['outcomes'])}}
+        self.assertTrue(summarize(self.dossier,self.panel,CONTRACT)['completed'])
+        mutations={
+            'missing supplement':lambda d:d.pop('imports_only_supplement'),
+            'missing pair':lambda d:d['imports_only_supplement'].pop('fixture'),
+            'extra pair':lambda d:d['imports_only_supplement'].update(extra={}),
+            'wrong request':lambda d:d['imports_only_supplement']['fixture']['request_scope'].update(base_arm='unrelated'),
+            'invented selection':lambda d:d['imports_only_supplement']['fixture']['selection'].update(proposed=['registration']),
+            'invented score':lambda d:d['imports_only_supplement']['fixture']['score']['raw'].update(selected_violating=['registration'])}
+        for name,change in mutations.items():
+            dossier=copy.deepcopy(self.dossier);change(dossier)
+            with self.subTest(name=name),self.assertRaises(ValueError):summarize(dossier,self.panel,CONTRACT)
+
     def test_missing_prerequisite_refuses(self):
         self.dossier['bundle_prerequisites']=[]
         with self.assertRaisesRegex(ValueError,'prerequisite'): summarize(self.dossier,self.panel,CONTRACT)
@@ -72,7 +140,7 @@ class DossierTests(unittest.TestCase):
     def test_refusal_is_complete_observation(self):
         raw=json.loads(base64.b64decode(self.row['commands'][-1]['stdout_base64']))
         raw['facts']['thing_registration']={'outcome':'refused','detail':'fixture refusal'}
-        self.row['commands'][-1]=dict(sample(json.dumps(raw).encode()),role='observe')
+        self.row['commands'][-1].update(sample(json.dumps(raw).encode()))
         self.row['outcomes']=evaluate(raw['facts'],CONTRACT)
         self.row['comparisons']={k:score(v,self.row['outcomes']) for k,v in self.row['selections'].items()}
         self.assertTrue(summarize(self.dossier,self.panel,CONTRACT)['completed'])
@@ -84,8 +152,12 @@ class DossierTests(unittest.TestCase):
     def test_real_capture_persists_nonzero_process(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
-            result=capture([sys.executable,'-c',"import sys; print('kept'); sys.exit(7)"],root,root/'attempt.json')
+            attribution={'role':'fixture','capture_context':{'arm':'fixture','source':{'commit':'fixture','tree':'fixture'}}}
+            result=capture([sys.executable,'-c',"import sys; print('kept'); sys.exit(7)"],root,root/'attempt.json',attribution=attribution)
             self.assertEqual(result['exit_code'],7)
+            retained=load_json((root/'attempt.json').read_text())
+            self.assertEqual(retained['capture_context'],attribution['capture_context'])
+            self.assertEqual(retained['role'],'fixture')
             self.assertEqual(load_json((root/'attempt.json').read_text())['stdout_sha256'],hashlib.sha256(b'kept\n').hexdigest())
             with self.assertRaises(FileExistsError): capture([sys.executable,'-c','pass'],root,root/'attempt.json')
 
