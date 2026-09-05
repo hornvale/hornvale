@@ -324,3 +324,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0696](0696-the-sleep-path-is-denominated-in-the-local-day.md) | The sleep path is denominated in the local day, closing 0587's inversion | Accepted |
 | [0697](0697-what-an-afforded-site-is-worth-is-a-property-of-the-sleeper.md) | What an afforded site is worth is a property of the sleeper's species | Accepted |
 | [0698](0698-a-kind-is-committable-where-an-anchor-identity-is-not.md) | A kind is committable where an anchor identity is not | Accepted |
+| [0726](0726-a-kind-to-kind-edge-is-derived-from-traits-both-kinds-carry.md) | A kind-to-kind edge is derived from traits both kinds carry | Accepted |
+| [0727](0727-relation-rank-is-set-by-whether-a-reversal-is-wanted.md) | Relation rank is set by whether a reversal is wanted | Accepted |
+| [0728](0728-a-scalar-lives-in-the-row-of-the-marker-it-depends-on.md) | A scalar lives in the row of the marker it depends on | Accepted |
+| [0729](0729-recovery-grades-the-committed-kind-not-a-room-boolean.md) | Recovery grades the committed kind, not a room boolean | Accepted |
+| [0730](0730-the-chooser-prefers-and-no-travel-preserves-the-diagnostic.md) | The chooser prefers; no-travel preserves the diagnostic | Accepted |

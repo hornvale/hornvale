@@ -420,9 +420,21 @@ fn probe_fatigue_us(ledger: &Ledger, npc: &Body, t: WorldTime, terrain: &dyn Ter
         .get_by_label("human")
         .copied()
         .unwrap_or(1.5);
+    // And the substrate preference, resolved from a THIRD species table for
+    // the same reason again (The Tenon): `liveness::creature_fatigue` builds
+    // `habitat_realm_registry` beside the other two, so a literal curve here
+    // would understate the fold's real per-call cost exactly as a literal
+    // rate or gain would.
+    let substrate = hornvale_species::substrate_response(
+        hornvale_species::habitat_realm_registry()
+            .get_by_label("human")
+            .copied()
+            .unwrap_or(hornvale_species::HabitatRealm::SURFACE),
+    );
     let traits = SleepTraits {
         rise: rate,
         afforded_gain: gain,
+        substrate,
     };
     for _ in 0..FOLD_REPS {
         sink += fatigue_at(
