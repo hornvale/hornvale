@@ -335,41 +335,41 @@ chronicle-the-winnowing	shipped	none		published chronicle				book/src/chronicle/
 chronicle-the-winze	shipped	none		published chronicle				book/src/chronicle/the-winze.md	
 chronicle-the-witness	shipped	none		published chronicle				book/src/chronicle/the-witness.md	
 chronicle-the-word	shipped	none		published chronicle				book/src/chronicle/the-word.md	
-plan-2026-07-05-campaign-1a-kernel	shipped	none		explicit campaign-number closure: book/src/chronicle/campaign-1a.md		docs/superpowers/plans/2026-07-05-campaign-1a-kernel.md			
-plan-2026-07-05-campaign-1b-cascade	shipped	none		explicit campaign-number closure: book/src/chronicle/campaign-1b.md		docs/superpowers/plans/2026-07-05-campaign-1b-cascade.md			
-plan-2026-07-05-campaign-2a-genesis	shipped	none		explicit campaign-number closure: book/src/chronicle/campaign-2a.md		docs/superpowers/plans/2026-07-05-campaign-2a-genesis.md			
-plan-2026-07-06-campaign-2b-sky-debut	shipped	none		explicit campaign-number closure: book/src/chronicle/campaign-2b.md		docs/superpowers/plans/2026-07-06-campaign-2b-sky-debut.md			
+plan-2026-07-05-campaign-1a-kernel	shipped	none		matching explicit campaign identifier; book/src/chronicle/campaign-1a.md header records complete/merged		docs/superpowers/plans/2026-07-05-campaign-1a-kernel.md			
+plan-2026-07-05-campaign-1b-cascade	shipped	none		matching explicit campaign identifier; book/src/chronicle/campaign-1b.md header records complete/merged		docs/superpowers/plans/2026-07-05-campaign-1b-cascade.md			
+plan-2026-07-05-campaign-2a-genesis	shipped	none		matching explicit campaign identifier; book/src/chronicle/campaign-2a.md header records complete/merged		docs/superpowers/plans/2026-07-05-campaign-2a-genesis.md			
+plan-2026-07-06-campaign-2b-sky-debut	shipped	none		matching explicit campaign identifier; book/src/chronicle/campaign-2b.md header records complete/merged		docs/superpowers/plans/2026-07-06-campaign-2b-sky-debut.md			
 plan-2026-07-06-campaign-3a-geosphere	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-3a-geosphere.md			
-plan-2026-07-06-campaign-3b-tectonic-terrain	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-3b-tectonic-terrain.md			
-plan-2026-07-06-campaign-3c-climate-biomes	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-3c-climate-biomes.md			
-plan-2026-07-06-campaign-4a-placement-drainage	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-4a-placement-drainage.md			
-plan-2026-07-06-campaign-l0-lab	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-06-campaign-l0-lab.md			
-plan-2026-07-07-campaign-4b-emergent-society	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-4b-emergent-society.md			
+plan-2026-07-06-campaign-3b-tectonic-terrain	shipped	none		source declares chronicle close: book/src/chronicle/campaign-3b.md; header records complete/merged		docs/superpowers/plans/2026-07-06-campaign-3b-tectonic-terrain.md			
+plan-2026-07-06-campaign-3c-climate-biomes	shipped	none		source declares chronicle close: book/src/chronicle/campaign-3c.md; header records complete/merged		docs/superpowers/plans/2026-07-06-campaign-3c-climate-biomes.md			
+plan-2026-07-06-campaign-4a-placement-drainage	shipped	none		source declares chronicle close: book/src/chronicle/campaign-4a.md; header records complete/merged		docs/superpowers/plans/2026-07-06-campaign-4a-placement-drainage.md			
+plan-2026-07-06-campaign-l0-lab	shipped	none		matching explicit campaign identifier; book/src/chronicle/campaign-l0-lab.md header records complete/merged		docs/superpowers/plans/2026-07-06-campaign-l0-lab.md			
+plan-2026-07-07-campaign-4b-emergent-society	shipped	none		source declares chronicle close: book/src/chronicle/campaign-4b.md; header records complete/merged		docs/superpowers/plans/2026-07-07-campaign-4b-emergent-society.md			
 plan-2026-07-07-campaign-5a-the-pantheon	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-5a-the-pantheon.md			
-plan-2026-07-07-campaign-5b-provenance-year1-close	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-5b-provenance-year1-close.md			
-plan-2026-07-07-campaign-y2-0-firm-ground	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-y2-0-firm-ground.md			
-plan-2026-07-07-campaign-y2-1-the-peoples	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-y2-1-the-peoples.md			
+plan-2026-07-07-campaign-5b-provenance-year1-close	shipped	none		source declares chronicle close: book/src/chronicle/campaign-5.md; header records complete/merged		docs/superpowers/plans/2026-07-07-campaign-5b-provenance-year1-close.md			
+plan-2026-07-07-campaign-y2-0-firm-ground	shipped	none		source declares chronicle close: book/src/chronicle/campaign-y2-0.md; header records complete/merged		docs/superpowers/plans/2026-07-07-campaign-y2-0-firm-ground.md			
+plan-2026-07-07-campaign-y2-1-the-peoples	shipped	none		source declares chronicle close: book/src/chronicle/campaign-y2-1.md; header records complete/merged		docs/superpowers/plans/2026-07-07-campaign-y2-1-the-peoples.md			
 plan-2026-07-07-campaign-y2-2-the-eyes	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-07-campaign-y2-2-the-eyes.md			
-plan-2026-07-08-audible-phonology	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-08-audible-phonology.md			
+plan-2026-07-08-audible-phonology	shipped	none		source declares chronicle close: book/src/chronicle/17-audible-phonology.md; header records complete/merged		docs/superpowers/plans/2026-07-08-audible-phonology.md			
 plan-2026-07-08-campaign-y2-3-the-tongues	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-08-campaign-y2-3-the-tongues.md			
 plan-2026-07-08-campaign-y2-4-the-meeting	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-08-campaign-y2-4-the-meeting.md			
 plan-2026-07-09-atlas-viewer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-atlas-viewer.md			
-plan-2026-07-09-campaign-the-words	shipped	none		explicit heading closure: book/src/chronicle/27-the-words.md		docs/superpowers/plans/2026-07-09-campaign-the-words.md			
+plan-2026-07-09-campaign-the-words	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-09-campaign-the-words.md			
 plan-2026-07-09-deep-time	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-deep-time.md			
-plan-2026-07-09-firm-ground-ii-1-moving-sky	shipped	none		explicit campaign-number closure: book/src/chronicle/20-firm-ground-ii.md		docs/superpowers/plans/2026-07-09-firm-ground-ii-1-moving-sky.md			
+plan-2026-07-09-firm-ground-ii-1-moving-sky	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-09-firm-ground-ii-1-moving-sky.md			
 plan-2026-07-09-firm-ground-ii-2-placed-observer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-firm-ground-ii-2-placed-observer.md			
-plan-2026-07-09-firm-ground-ii-3-the-close	shipped	none		explicit campaign-number closure: book/src/chronicle/19-the-star-chart.md		docs/superpowers/plans/2026-07-09-firm-ground-ii-3-the-close.md			
-plan-2026-07-09-live-orrery	shipped	none		explicit heading closure: book/src/chronicle/26-the-live-orrery.md		docs/superpowers/plans/2026-07-09-live-orrery.md			
-plan-2026-07-09-orrery-emoji	shipped	none		explicit campaign-number closure: book/src/chronicle/23-the-orrery.md		docs/superpowers/plans/2026-07-09-orrery-emoji.md			
+plan-2026-07-09-firm-ground-ii-3-the-close	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-09-firm-ground-ii-3-the-close.md			
+plan-2026-07-09-live-orrery	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-09-live-orrery.md			
+plan-2026-07-09-orrery-emoji	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-09-orrery-emoji.md			
 plan-2026-07-09-png-migration	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-png-migration.md			
 plan-2026-07-09-scene-protocol	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-scene-protocol.md			
-plan-2026-07-09-star-chart	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-star-chart.md			
-plan-2026-07-09-the-measured-coast	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-09-the-measured-coast.md			
-plan-2026-07-09-the-orrery	shipped	none		explicit heading closure: book/src/chronicle/23-the-orrery.md		docs/superpowers/plans/2026-07-09-the-orrery.md			
-plan-2026-07-09-the-type-audit	shipped	none		explicit heading closure: book/src/chronicle/the-type-audit.md		docs/superpowers/plans/2026-07-09-the-type-audit.md			
+plan-2026-07-09-star-chart	shipped	none		source declares chronicle close: book/src/chronicle/19-the-star-chart.md; header records complete/merged		docs/superpowers/plans/2026-07-09-star-chart.md			
+plan-2026-07-09-the-measured-coast	shipped	none		source declares chronicle close: book/src/chronicle/25-the-measured-coast.md; header records complete/merged		docs/superpowers/plans/2026-07-09-the-measured-coast.md			
+plan-2026-07-09-the-orrery	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-09-the-orrery.md			
+plan-2026-07-09-the-type-audit	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-09-the-type-audit.md			
 plan-2026-07-10-campaign-the-branches	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-10-campaign-the-branches.md			
 plan-2026-07-10-cross-platform-float-quantization	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-10-cross-platform-float-quantization.md			
-plan-2026-07-10-crust	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-10-crust.md			
+plan-2026-07-10-crust	shipped	none		source declares chronicle close: book/src/chronicle/crust.md; header records complete/merged		docs/superpowers/plans/2026-07-10-crust.md			
 plan-2026-07-10-frontier-in-the-book	active	none		status header retains active work		docs/superpowers/plans/2026-07-10-frontier-in-the-book.md			
 plan-2026-07-10-workflow-improvements-stage-2	shipped	none		status header records closure		docs/superpowers/plans/2026-07-10-workflow-improvements-stage-2.md			
 plan-2026-07-10-workflow-improvements-stage-3	shipped	none		status header records closure		docs/superpowers/plans/2026-07-10-workflow-improvements-stage-3.md			
@@ -379,31 +379,31 @@ plan-2026-07-12-lab-performance	shipped	none		status header records closure		doc
 plan-2026-07-12-remote-gate-aws	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-12-remote-gate-aws.md			
 plan-2026-07-12-temperature	shipped	none		status header records closure		docs/superpowers/plans/2026-07-12-temperature.md			
 plan-2026-07-12-the-datum	shipped	none		status header records closure		docs/superpowers/plans/2026-07-12-the-datum.md			
-plan-2026-07-12-the-locale-window	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-12-the-locale-window.md			
-plan-2026-07-12-the-room-mesh	shipped	none		explicit heading closure: book/src/chronicle/the-room-mesh.md		docs/superpowers/plans/2026-07-12-the-room-mesh.md			
+plan-2026-07-12-the-locale-window	shipped	none		source declares chronicle close: book/src/chronicle/the-locale-window.md; header records complete/merged		docs/superpowers/plans/2026-07-12-the-locale-window.md			
+plan-2026-07-12-the-room-mesh	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-12-the-room-mesh.md			
 plan-2026-07-13-census-as-data	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-census-as-data.md			
 plan-2026-07-13-fast-gate-tiers	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-13-fast-gate-tiers.md			
 plan-2026-07-13-night-sky-instrument	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-night-sky-instrument.md			
 plan-2026-07-13-the-casement	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-the-casement.md			
-plan-2026-07-13-the-gathering	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-13-the-gathering.md			
+plan-2026-07-13-the-gathering	shipped	none		source declares chronicle close: book/src/chronicle/the-gathering.md; header records complete/merged		docs/superpowers/plans/2026-07-13-the-gathering.md			
 plan-2026-07-13-the-seam	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-the-seam.md			
-plan-2026-07-13-the-self-describing-sky	shipped	none		explicit heading closure: book/src/chronicle/the-self-describing-sky.md		docs/superpowers/plans/2026-07-13-the-self-describing-sky.md			
+plan-2026-07-13-the-self-describing-sky	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-13-the-self-describing-sky.md			
 plan-2026-07-13-the-uncommon-ground	shipped	none		status header records closure		docs/superpowers/plans/2026-07-13-the-uncommon-ground.md			
 plan-2026-07-14-bio2-life-history-allometry	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-bio2-life-history-allometry.md			
 plan-2026-07-14-campaign-autopilot	shipped	none		status header records closure		docs/superpowers/plans/2026-07-14-campaign-autopilot.md			
-plan-2026-07-14-eclipse-seasons	shipped	none		explicit heading closure: book/src/chronicle/eclipse-seasons.md		docs/superpowers/plans/2026-07-14-eclipse-seasons.md			
+plan-2026-07-14-eclipse-seasons	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-14-eclipse-seasons.md			
 plan-2026-07-14-goldengrove	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-goldengrove.md			
-plan-2026-07-14-sculpting	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-sculpting.md			
-plan-2026-07-14-single-craton-hypsometry	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-single-craton-hypsometry.md			
+plan-2026-07-14-sculpting	shipped	none		source declares chronicle close: book/src/chronicle/sculpting.md; header records complete/merged		docs/superpowers/plans/2026-07-14-sculpting.md			
+plan-2026-07-14-single-craton-hypsometry	shipped	none		source declares chronicle close: book/src/chronicle/single-craton-hypsometry.md; header records complete/merged		docs/superpowers/plans/2026-07-14-single-craton-hypsometry.md			
 plan-2026-07-14-the-coexistence-stack	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-the-coexistence-stack.md			
-plan-2026-07-14-the-ground	shipped	none		explicit heading closure: book/src/chronicle/the-ground.md		docs/superpowers/plans/2026-07-14-the-ground.md			
+plan-2026-07-14-the-ground	active	none		no direct terminal closure citation in record		docs/superpowers/plans/2026-07-14-the-ground.md			
 plan-2026-07-14-the-helm	active	none		status header retains active work		docs/superpowers/plans/2026-07-14-the-helm.md			
 plan-2026-07-14-the-long-count	shipped	none		status header records closure		docs/superpowers/plans/2026-07-14-the-long-count.md			
 plan-2026-07-14-the-niche	shipped	none		status header records closure		docs/superpowers/plans/2026-07-14-the-niche.md			
-plan-2026-07-14-the-seam-ecs-campaign-1	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-the-seam-ecs-campaign-1.md			
-plan-2026-07-14-the-speakable	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-14-the-speakable.md			
+plan-2026-07-14-the-seam-ecs-campaign-1	shipped	none		source declares chronicle close: book/src/chronicle/the-seam.md; header records complete/merged		docs/superpowers/plans/2026-07-14-the-seam-ecs-campaign-1.md			
+plan-2026-07-14-the-speakable	shipped	none		source declares chronicle close: book/src/chronicle/the-speakable.md; header records complete/merged		docs/superpowers/plans/2026-07-14-the-speakable.md			
 plan-2026-07-15-kindid-ecs-campaign-2	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-15-kindid-ecs-campaign-2.md			
-plan-2026-07-16-rift-and-fit	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-16-rift-and-fit.md			
+plan-2026-07-16-rift-and-fit	shipped	none		source declares chronicle close: book/src/chronicle/rift-and-fit.md; header records complete/merged		docs/superpowers/plans/2026-07-16-rift-and-fit.md			
 plan-2026-07-16-species-dissolve-ecs-campaign-3	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-16-species-dissolve-ecs-campaign-3.md			
 plan-2026-07-16-the-faces	shipped	none		status header records closure		docs/superpowers/plans/2026-07-16-the-faces.md			
 plan-2026-07-16-the-isotherm	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-16-the-isotherm.md			
@@ -426,7 +426,7 @@ plan-2026-07-18-the-echo	active	none		status header retains active work		docs/su
 plan-2026-07-18-the-elements-plan	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-elements-plan.md			
 plan-2026-07-18-the-explanations	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-explanations.md			
 plan-2026-07-18-the-foresight	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-foresight.md			
-plan-2026-07-18-the-freshet	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-freshet.md			
+plan-2026-07-18-the-freshet	shipped	none		source declares chronicle close: book/src/chronicle/the-freshet.md; header records complete/merged		docs/superpowers/plans/2026-07-18-the-freshet.md			
 plan-2026-07-18-the-quickening	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-quickening.md			
 plan-2026-07-18-the-shadow-track	shipped	none		status header records closure		docs/superpowers/plans/2026-07-18-the-shadow-track.md			
 plan-2026-07-18-the-surmise	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-18-the-surmise.md			
@@ -435,9 +435,9 @@ plan-2026-07-18-the-wanting	active	none		no terminal closure stated in record		d
 plan-2026-07-19-cloud-shell	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-cloud-shell.md			
 plan-2026-07-19-ocean-currents	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-ocean-currents.md			
 plan-2026-07-19-precipitation	shipped	none		status header records closure		docs/superpowers/plans/2026-07-19-precipitation.md			
-plan-2026-07-19-the-confluence	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-confluence.md			
+plan-2026-07-19-the-confluence	shipped	none		source declares chronicle close: book/src/chronicle/the-confluence.md; header records complete/merged		docs/superpowers/plans/2026-07-19-the-confluence.md			
 plan-2026-07-19-the-deep-grammar	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-deep-grammar.md			
-plan-2026-07-19-the-demesne	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-demesne.md			
+plan-2026-07-19-the-demesne	shipped	none		source declares chronicle close: book/src/chronicle/the-demesne.md; header records complete/merged		docs/superpowers/plans/2026-07-19-the-demesne.md			
 plan-2026-07-19-the-diachronic-book	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-diachronic-book.md			
 plan-2026-07-19-the-doctrine	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-doctrine.md			
 plan-2026-07-19-the-local-census-plan	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-19-the-local-census-plan.md			
@@ -468,20 +468,20 @@ plan-2026-07-21-the-vantage	active	none		no terminal closure stated in record		d
 plan-2026-07-22-proc-12-regenerate-on-conflict	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-proc-12-regenerate-on-conflict.md			
 plan-2026-07-22-proc-19-history-stream-labels	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-proc-19-history-stream-labels.md			
 plan-2026-07-22-the-cloister-mind-society-split	active	none		status header retains active work		docs/superpowers/plans/2026-07-22-the-cloister-mind-society-split.md			
-plan-2026-07-22-the-deep	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-deep.md			
+plan-2026-07-22-the-deep	shipped	none		source declares chronicle close: book/src/chronicle/the-deep.md; header records complete/merged		docs/superpowers/plans/2026-07-22-the-deep.md			
 plan-2026-07-22-the-eremite	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-eremite.md			
 plan-2026-07-22-the-first-mark	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-first-mark.md			
 plan-2026-07-22-the-haunt	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-the-haunt.md			
-plan-2026-07-22-the-lode	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-lode.md			
+plan-2026-07-22-the-lode	shipped	none		source declares chronicle close: book/src/chronicle/the-lode.md; header records complete/merged		docs/superpowers/plans/2026-07-22-the-lode.md			
 plan-2026-07-22-the-phantom	shipped	none		status header records closure		docs/superpowers/plans/2026-07-22-the-phantom.md			
 plan-2026-07-22-the-solitary-tongue	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-solitary-tongue.md			
 plan-2026-07-22-the-sundering	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-sundering.md			
 plan-2026-07-22-the-tumult	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-22-the-tumult.md			
-plan-2026-07-23-the-bearing	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-bearing.md			
+plan-2026-07-23-the-bearing	shipped	none		source declares chronicle close: book/src/chronicle/the-bearing.md; header records complete/merged		docs/superpowers/plans/2026-07-23-the-bearing.md			
 plan-2026-07-23-the-excursion	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-excursion.md			
-plan-2026-07-23-the-lookup	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-lookup.md			
-plan-2026-07-23-the-retainer	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-retainer.md			
-plan-2026-07-23-the-vestige	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-23-the-vestige.md			
+plan-2026-07-23-the-lookup	shipped	none		source declares chronicle close: book/src/chronicle/the-lookup.md; header records complete/merged		docs/superpowers/plans/2026-07-23-the-lookup.md			
+plan-2026-07-23-the-retainer	shipped	none		source declares chronicle close: book/src/chronicle/the-retainer.md; header records complete/merged		docs/superpowers/plans/2026-07-23-the-retainer.md			
+plan-2026-07-23-the-vestige	shipped	none		source declares chronicle close: book/src/chronicle/the-vestige.md; header records complete/merged		docs/superpowers/plans/2026-07-23-the-vestige.md			
 plan-2026-07-24-the-purview	shipped	none		status header records closure		docs/superpowers/plans/2026-07-24-the-purview.md			
 plan-2026-07-24-the-selvage	shipped	none		status header records closure		docs/superpowers/plans/2026-07-24-the-selvage.md			
 plan-2026-07-24-the-shudder	shipped	none		status header records closure		docs/superpowers/plans/2026-07-24-the-shudder.md			
@@ -520,14 +520,14 @@ plan-2026-07-31-the-vernacular-part-1-the-referent-contract	active	none		no term
 plan-2026-07-31-the-vernacular-part-2-honest-manifests	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-31-the-vernacular-part-2-honest-manifests.md			
 plan-2026-07-31-the-waymark	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-07-31-the-waymark.md			
 plan-2026-07-31-the-weir	active	none		status header retains active work		docs/superpowers/plans/2026-07-31-the-weir.md			
-plan-2026-08-01-the-particular	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-01-the-particular.md			
-plan-2026-08-01-the-scaffold	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-01-the-scaffold.md			
+plan-2026-08-01-the-particular	shipped	none		source declares chronicle close: book/src/chronicle/the-particular.md; header records complete/merged		docs/superpowers/plans/2026-08-01-the-particular.md			
+plan-2026-08-01-the-scaffold	shipped	none		source declares chronicle close: book/src/chronicle/the-scaffold.md; header records complete/merged		docs/superpowers/plans/2026-08-01-the-scaffold.md			
 plan-2026-08-02-the-namesake	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-02-the-namesake.md			
 plan-2026-08-02-the-vernacular-part-3a-star-class	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-02-the-vernacular-part-3a-star-class.md			
 plan-2026-08-03-the-generalist	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-03-the-generalist.md			
 plan-2026-08-03-the-manikin	shipped	none		status header records closure		docs/superpowers/plans/2026-08-03-the-manikin.md			
 plan-2026-08-03-the-mire	shipped	none		status header records closure		docs/superpowers/plans/2026-08-03-the-mire.md			
-plan-2026-08-03-the-salt	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-03-the-salt.md			
+plan-2026-08-03-the-salt	shipped	none		source declares chronicle close: book/src/chronicle/the-salt.md; header records complete/merged		docs/superpowers/plans/2026-08-03-the-salt.md			
 plan-2026-08-03-the-vernacular-part-3b-render-downstream	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-03-the-vernacular-part-3b-render-downstream.md			
 plan-2026-08-04-the-fare	shipped	none		status header records closure		docs/superpowers/plans/2026-08-04-the-fare.md			
 plan-2026-08-04-the-tolerance	shipped	none		status header records closure		docs/superpowers/plans/2026-08-04-the-tolerance.md			
@@ -552,7 +552,7 @@ plan-2026-08-08-the-range	active	none		no terminal closure stated in record		doc
 plan-2026-08-09-the-armature	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-09-the-armature.md			
 plan-2026-08-09-the-cairn	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-09-the-cairn.md			
 plan-2026-08-09-the-radiation	shipped	none		status header records closure		docs/superpowers/plans/2026-08-09-the-radiation.md			
-plan-2026-08-09-the-signet	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-09-the-signet.md			
+plan-2026-08-09-the-signet	shipped	none		source declares chronicle close: book/src/chronicle/the-signet.md; header records complete/merged		docs/superpowers/plans/2026-08-09-the-signet.md			
 plan-2026-08-10-the-ford	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-10-the-ford.md			
 plan-2026-08-10-the-grain	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-10-the-grain.md			
 plan-2026-08-11-the-beacon	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-11-the-beacon.md			
@@ -585,7 +585,7 @@ plan-2026-08-18-the-undertow	active	none		no terminal closure stated in record		
 plan-2026-08-19-the-portolan	shipped	none		status header records closure		docs/superpowers/plans/2026-08-19-the-portolan.md			
 plan-2026-08-19-the-tackle	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-19-the-tackle.md			
 plan-2026-08-19-the-touchstone	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-19-the-touchstone.md			
-plan-2026-08-19-the-winze	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-19-the-winze.md			
+plan-2026-08-19-the-winze	shipped	none		source declares chronicle close: book/src/chronicle/the-winze.md; header records complete/merged		docs/superpowers/plans/2026-08-19-the-winze.md			
 plan-2026-08-20-the-cant	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-cant.md			
 plan-2026-08-20-the-cupel	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-cupel.md			
 plan-2026-08-20-the-deed	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-08-20-the-deed.md			
@@ -984,8 +984,8 @@ spec-2026-07-05-campaign-2-the-sky-design	active	none		status header retains act
 spec-2026-07-05-hornvale-longterm-plan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-05-hornvale-longterm-plan-design.md				
 spec-2026-07-06-campaign-3-the-land-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-06-campaign-3-the-land-design.md				
 spec-2026-07-06-campaign-4-the-people-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-06-campaign-4-the-people-design.md				
-spec-2026-07-06-campaign-l0-the-lab-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-06-campaign-l0-the-lab-design.md				
-spec-2026-07-07-campaign-5-the-gods-design	shipped	none		explicit campaign-number closure: book/src/chronicle/campaign-5.md	docs/superpowers/specs/2026-07-07-campaign-5-the-gods-design.md				
+spec-2026-07-06-campaign-l0-the-lab-design	shipped	none		matching explicit campaign identifier; book/src/chronicle/campaign-l0-lab.md header records complete/merged	docs/superpowers/specs/2026-07-06-campaign-l0-the-lab-design.md				
+spec-2026-07-07-campaign-5-the-gods-design	shipped	none		matching explicit campaign identifier; book/src/chronicle/campaign-5.md header records complete/merged	docs/superpowers/specs/2026-07-07-campaign-5-the-gods-design.md				
 spec-2026-07-07-campaign-y2-1-the-peoples-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-07-campaign-y2-1-the-peoples-design.md				
 spec-2026-07-07-campaign-y2-2-the-eyes-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md				
 spec-2026-07-07-year-2-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-07-year-2-metaplan-design.md				
@@ -993,20 +993,20 @@ spec-2026-07-08-audible-phonology-design	active	none		status header retains acti
 spec-2026-07-08-campaign-y2-3-the-tongues-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-08-campaign-y2-3-the-tongues-design.md				
 spec-2026-07-08-campaign-y2-4-the-meeting-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-08-campaign-y2-4-the-meeting-design.md				
 spec-2026-07-09-atlas-viewer-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-atlas-viewer-design.md				
-spec-2026-07-09-campaign-the-words-design	shipped	none		explicit heading closure: book/src/chronicle/27-the-words.md	docs/superpowers/specs/2026-07-09-campaign-the-words-design.md				
+spec-2026-07-09-campaign-the-words-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-campaign-the-words-design.md				
 spec-2026-07-09-deep-time-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-deep-time-design.md				
-spec-2026-07-09-firm-ground-ii-design	shipped	none		explicit campaign-number closure: book/src/chronicle/19-the-star-chart.md	docs/superpowers/specs/2026-07-09-firm-ground-ii-design.md				
-spec-2026-07-09-live-orrery-design	shipped	none		explicit heading closure: book/src/chronicle/26-the-live-orrery.md	docs/superpowers/specs/2026-07-09-live-orrery-design.md				
-spec-2026-07-09-orrery-emoji-design	shipped	none		explicit campaign-number closure: book/src/chronicle/23-the-orrery.md	docs/superpowers/specs/2026-07-09-orrery-emoji-design.md				
+spec-2026-07-09-firm-ground-ii-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-firm-ground-ii-design.md				
+spec-2026-07-09-live-orrery-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-live-orrery-design.md				
+spec-2026-07-09-orrery-emoji-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-orrery-emoji-design.md				
 spec-2026-07-09-rendering-strategy-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-rendering-strategy-design.md				
 spec-2026-07-09-scene-protocol-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-scene-protocol-design.md				
-spec-2026-07-09-star-chart-design	shipped	none		explicit heading closure: book/src/chronicle/19-the-star-chart.md	docs/superpowers/specs/2026-07-09-star-chart-design.md				
-spec-2026-07-09-the-branches-design	shipped	none		explicit heading closure: book/src/chronicle/the-branches.md	docs/superpowers/specs/2026-07-09-the-branches-design.md				
-spec-2026-07-09-the-measured-coast-design	shipped	none		explicit heading closure: book/src/chronicle/25-the-measured-coast.md	docs/superpowers/specs/2026-07-09-the-measured-coast-design.md				
-spec-2026-07-09-the-orrery-design	shipped	none		explicit heading closure: book/src/chronicle/23-the-orrery.md	docs/superpowers/specs/2026-07-09-the-orrery-design.md				
-spec-2026-07-09-the-type-audit-design	shipped	none		explicit heading closure: book/src/chronicle/the-type-audit.md	docs/superpowers/specs/2026-07-09-the-type-audit-design.md				
+spec-2026-07-09-star-chart-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-star-chart-design.md				
+spec-2026-07-09-the-branches-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-the-branches-design.md				
+spec-2026-07-09-the-measured-coast-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-the-measured-coast-design.md				
+spec-2026-07-09-the-orrery-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-the-orrery-design.md				
+spec-2026-07-09-the-type-audit-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-09-the-type-audit-design.md				
 spec-2026-07-09-year-3-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-09-year-3-metaplan-design.md				
-spec-2026-07-10-crust-design	shipped	none		explicit heading closure: book/src/chronicle/crust.md	docs/superpowers/specs/2026-07-10-crust-design.md				
+spec-2026-07-10-crust-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-10-crust-design.md				
 spec-2026-07-10-frontier-in-the-book-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-10-frontier-in-the-book-design.md				
 spec-2026-07-10-phonology-tone-tonogenesis-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-10-phonology-tone-tonogenesis-design.md				
 spec-2026-07-11-the-walk-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-11-the-walk-metaplan-design.md				
@@ -1025,20 +1025,20 @@ spec-2026-07-13-single-craton-hypsometry-design	shipped	none		status header reco
 spec-2026-07-13-the-casement-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-13-the-casement-design.md				
 spec-2026-07-13-the-coexistence-stack-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-13-the-coexistence-stack-design.md				
 spec-2026-07-13-the-seam-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-13-the-seam-design.md				
-spec-2026-07-13-the-self-describing-sky-design	shipped	none		explicit heading closure: book/src/chronicle/the-self-describing-sky.md	docs/superpowers/specs/2026-07-13-the-self-describing-sky-design.md				
+spec-2026-07-13-the-self-describing-sky-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-13-the-self-describing-sky-design.md				
 spec-2026-07-13-the-uncommon-ground-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-13-the-uncommon-ground-design.md				
 spec-2026-07-14-bio2-life-history-allometry-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-bio2-life-history-allometry-design.md				
 spec-2026-07-14-campaign-autopilot-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-campaign-autopilot-design.md				
 spec-2026-07-14-eclipse-seasons-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-eclipse-seasons-design.md				
 spec-2026-07-14-ecs-program-metaplan-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-ecs-program-metaplan-design.md				
 spec-2026-07-14-goldengrove-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-goldengrove-design.md				
-spec-2026-07-14-sculpting-design	shipped	none		explicit heading closure: book/src/chronicle/sculpting.md	docs/superpowers/specs/2026-07-14-sculpting-design.md				
-spec-2026-07-14-the-ground-design	shipped	none		explicit heading closure: book/src/chronicle/the-ground.md	docs/superpowers/specs/2026-07-14-the-ground-design.md				
+spec-2026-07-14-sculpting-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-14-sculpting-design.md				
+spec-2026-07-14-the-ground-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-14-the-ground-design.md				
 spec-2026-07-14-the-helm-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-the-helm-design.md				
 spec-2026-07-14-the-long-count-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-14-the-long-count-design.md				
 spec-2026-07-14-the-niche-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-the-niche-design.md				
 spec-2026-07-14-the-seam-ecs-campaign-1-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-the-seam-ecs-campaign-1-design.md				
-spec-2026-07-14-the-speakable-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-14-the-speakable-design.md				
+spec-2026-07-14-the-speakable-design	shipped	none		source declares chronicle close: book/src/chronicle/the-speakable.md; header records complete/merged	docs/superpowers/specs/2026-07-14-the-speakable-design.md				
 spec-2026-07-15-kindid-ecs-campaign-2-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-15-kindid-ecs-campaign-2-design.md				
 spec-2026-07-16-rift-and-fit-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-16-rift-and-fit-design.md				
 spec-2026-07-16-species-dissolve-ecs-campaign-3-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-16-species-dissolve-ecs-campaign-3-design.md				
@@ -1122,17 +1122,17 @@ spec-2026-07-22-the-deep-design	shipped	none		status header records closure	docs
 spec-2026-07-22-the-eremite-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-eremite-design.md				
 spec-2026-07-22-the-first-mark-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-22-the-first-mark-design.md				
 spec-2026-07-22-the-haunt-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-haunt-design.md				
-spec-2026-07-22-the-lode-design	shipped	none		explicit heading closure: book/src/chronicle/the-lode.md	docs/superpowers/specs/2026-07-22-the-lode-design.md				
+spec-2026-07-22-the-lode-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-22-the-lode-design.md				
 spec-2026-07-22-the-phantom-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-phantom-design.md				
 spec-2026-07-22-the-solitary-tongue-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-solitary-tongue-design.md				
 spec-2026-07-22-the-sundering-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-22-the-sundering-design.md				
 spec-2026-07-22-the-tumult-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-22-the-tumult-design.md				
-spec-2026-07-23-the-bearing-design	shipped	none		explicit heading closure: book/src/chronicle/the-bearing.md	docs/superpowers/specs/2026-07-23-the-bearing-design.md				
+spec-2026-07-23-the-bearing-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-23-the-bearing-design.md				
 spec-2026-07-23-the-commons-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-07-23-the-commons-design.md				
 spec-2026-07-23-the-excursion-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-23-the-excursion-design.md				
-spec-2026-07-23-the-lookup-design	shipped	none		explicit heading closure: book/src/chronicle/the-lookup.md	docs/superpowers/specs/2026-07-23-the-lookup-design.md				
-spec-2026-07-23-the-retainer-design	shipped	none		explicit heading closure: book/src/chronicle/the-retainer.md	docs/superpowers/specs/2026-07-23-the-retainer-design.md				
-spec-2026-07-23-the-vestige-design	shipped	none		explicit heading closure: book/src/chronicle/the-vestige.md	docs/superpowers/specs/2026-07-23-the-vestige-design.md				
+spec-2026-07-23-the-lookup-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-23-the-lookup-design.md				
+spec-2026-07-23-the-retainer-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-23-the-retainer-design.md				
+spec-2026-07-23-the-vestige-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-07-23-the-vestige-design.md				
 spec-2026-07-24-the-purview-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-24-the-purview-design.md				
 spec-2026-07-24-the-selvage-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-24-the-selvage-design.md				
 spec-2026-07-24-the-shudder-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-24-the-shudder-design.md				
@@ -1172,18 +1172,18 @@ spec-2026-07-30-the-shuttle-design	shipped	none		status header records closure	d
 spec-2026-07-30-the-twin-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-30-the-twin-design.md				
 spec-2026-07-30-the-witness-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-30-the-witness-design.md				
 spec-2026-07-31-the-repertoire-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-31-the-repertoire-design.md				
-spec-2026-07-31-the-vernacular-design	active	none		status header retains active work	docs/superpowers/specs/2026-07-31-the-vernacular-design.md				
+spec-2026-07-31-the-vernacular-design	shipped	none		source declares chronicle close: book/src/chronicle/the-vernacular.md; header records complete/merged	docs/superpowers/specs/2026-07-31-the-vernacular-design.md				
 spec-2026-07-31-the-waymark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-31-the-waymark-design.md				
 spec-2026-07-31-the-weir-design	shipped	none		status header records closure	docs/superpowers/specs/2026-07-31-the-weir-design.md				
-spec-2026-08-01-the-particular-design	shipped	none		explicit heading closure: book/src/chronicle/the-particular.md	docs/superpowers/specs/2026-08-01-the-particular-design.md				
-spec-2026-08-01-the-scaffold-design	shipped	none		explicit heading closure: book/src/chronicle/the-scaffold.md	docs/superpowers/specs/2026-08-01-the-scaffold-design.md				
+spec-2026-08-01-the-particular-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-01-the-particular-design.md				
+spec-2026-08-01-the-scaffold-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-01-the-scaffold-design.md				
 spec-2026-08-02-the-manikin-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-02-the-manikin-design.md				
 spec-2026-08-02-the-namesake-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-02-the-namesake-design.md				
 spec-2026-08-02-the-vernacular-part-3-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-02-the-vernacular-part-3-design.md				
 spec-2026-08-03-the-generalist-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-03-the-generalist-design.md				
 spec-2026-08-03-the-mire-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-03-the-mire-design.md				
 spec-2026-08-03-the-peoples-program-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-03-the-peoples-program-design.md				
-spec-2026-08-03-the-salt-design	shipped	none		explicit heading closure: book/src/chronicle/the-salt.md	docs/superpowers/specs/2026-08-03-the-salt-design.md				
+spec-2026-08-03-the-salt-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-03-the-salt-design.md				
 spec-2026-08-03-the-tolerance-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-03-the-tolerance-design.md				
 spec-2026-08-04-the-fare-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-04-the-fare-design.md				
 spec-2026-08-04-the-keeping-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-04-the-keeping-design.md				
@@ -1216,7 +1216,7 @@ spec-2026-08-08-the-range-design	active	none		status header retains active work	
 spec-2026-08-09-the-armature-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-09-the-armature-design.md				
 spec-2026-08-09-the-cairn-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-09-the-cairn-design.md				
 spec-2026-08-09-the-radiation-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-09-the-radiation-design.md				
-spec-2026-08-09-the-signet-design	shipped	none		explicit heading closure: book/src/chronicle/the-signet.md	docs/superpowers/specs/2026-08-09-the-signet-design.md				
+spec-2026-08-09-the-signet-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-09-the-signet-design.md				
 spec-2026-08-10-the-ell-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-10-the-ell-design.md				
 spec-2026-08-10-the-ford-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-10-the-ford-design.md				
 spec-2026-08-10-the-grain-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-10-the-grain-design.md				
@@ -1228,12 +1228,12 @@ spec-2026-08-11-the-rill-design	active	none		status header retains active work	d
 spec-2026-08-12-the-chorography-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-08-12-the-chorography-metaplan.md				
 spec-2026-08-12-the-fathom-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-12-the-fathom-design.md				
 spec-2026-08-12-the-glasshouse-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-12-the-glasshouse-design.md				
-spec-2026-08-12-the-holdfast-design	shipped	none		explicit heading closure: book/src/chronicle/the-holdfast.md	docs/superpowers/specs/2026-08-12-the-holdfast-design.md				
+spec-2026-08-12-the-holdfast-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-12-the-holdfast-design.md				
 spec-2026-08-13-the-axes-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-13-the-axes-design.md				
 spec-2026-08-13-the-gnomon-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-13-the-gnomon-design.md				
 spec-2026-08-13-the-hearsay-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-13-the-hearsay-design.md				
 spec-2026-08-13-the-millrace-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-13-the-millrace-design.md				
-spec-2026-08-13-the-sexton-design	shipped	none		explicit heading closure: book/src/chronicle/the-sexton.md	docs/superpowers/specs/2026-08-13-the-sexton-design.md				
+spec-2026-08-13-the-sexton-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-13-the-sexton-design.md				
 spec-2026-08-14-the-retelling-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-14-the-retelling-design.md				
 spec-2026-08-14-the-staff-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-14-the-staff-design.md				
 spec-2026-08-15-the-compendium-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-15-the-compendium-design.md				
@@ -1247,11 +1247,11 @@ spec-2026-08-17-the-parley-design	active	none		no terminal closure stated in rec
 spec-2026-08-18-the-adit-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-18-the-adit-design.md				
 spec-2026-08-18-the-delving-metaplan	shipped	none		status header records closure	docs/superpowers/specs/2026-08-18-the-delving-metaplan.md				
 spec-2026-08-18-the-gazetteer-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-18-the-gazetteer-design.md				
-spec-2026-08-18-the-undertow-design	shipped	none		explicit campaign-number closure: book/src/chronicle/campaign-5.md	docs/superpowers/specs/2026-08-18-the-undertow-design.md				
+spec-2026-08-18-the-undertow-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-18-the-undertow-design.md				
 spec-2026-08-19-the-bridle-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-08-19-the-bridle-metaplan.md				
 spec-2026-08-19-the-portolan-design	shipped	none		status header records closure	docs/superpowers/specs/2026-08-19-the-portolan-design.md				
 spec-2026-08-19-the-touchstone-design	active	none		status header retains active work	docs/superpowers/specs/2026-08-19-the-touchstone-design.md				
-spec-2026-08-19-the-winze-design	shipped	none		explicit heading closure: book/src/chronicle/the-winze.md	docs/superpowers/specs/2026-08-19-the-winze-design.md				
+spec-2026-08-19-the-winze-design	active	none		no direct terminal closure citation in record	docs/superpowers/specs/2026-08-19-the-winze-design.md				
 spec-2026-08-20-the-cant-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-20-the-cant-design.md				
 spec-2026-08-20-the-cupel-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-20-the-cupel-design.md				
 spec-2026-08-20-the-deed-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-08-20-the-deed-design.md				
