@@ -5770,3 +5770,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T02:20:12Z | sluice:clients | 139.179 | 2094.210 | 173.584 | 16.29 | 0 | 458943740 |  | lefford | 40 |
 | 2026-09-05T02:27:58Z | sluice:heavy | 465.431 | 10068.505 | 180.966 | 22.02 | 0 | 7b50bfe7f |  | lefford | 40 |
 | 2026-09-05T03:59:04Z | prewarm | 401.544 | 1433.993 | 96.442 | 3.81 | 0 | 3007f164c | campaign/the-cruck | MacBookPro | 10 |
+| 2026-09-05T13:52:31Z | gate-commit | 55.647 | 78.963 | 87.719 | 3.00 | 0 | 65e58edf0 | campaign/the-cruck | MacBookPro | 10 |
+| 2026-09-05T13:54:04Z | gate-commit | 53.719 | 83.810 | 41.931 | 2.34 | 0 | 65e58edf0 | campaign/the-cruck | MacBookPro | 10 |
+| 2026-09-05T13:56:14Z | gate-commit | 65.880 | 82.915 | 41.341 | 1.89 | 0 | 65e58edf0 | campaign/the-cruck | MacBookPro | 10 |
+| 2026-09-05T13:57:27Z | gate-commit | 44.420 | 71.908 | 16.780 | 2.00 | 0 | 65e58edf0 | campaign/the-cruck | MacBookPro | 10 |
