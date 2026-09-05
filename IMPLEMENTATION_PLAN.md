@@ -12,7 +12,7 @@ Detailed plan: [The Charter](docs/superpowers/plans/2026-09-04-the-charter.md).
 **Goal**: Thing and census contributors implemented from the same bootstrap on separate branches.
 **Success Criteria**: Tasks 3–4 reviewed; each real observation panel works without a semantic host/protocol edit; integration and stage evidence recorded.
 **Tests**: Per-contributor behavior and counterexample tests, composed Digest tests, canonical stage gate.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 3: Composed context and quality evidence
 **Goal**: Demonstrate useful context, honest costs and the promised quality scenarios.

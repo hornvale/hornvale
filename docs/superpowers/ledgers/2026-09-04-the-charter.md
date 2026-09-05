@@ -476,3 +476,18 @@ host overrides, and verify the contaminated-environment test without touching
 any real checkout or index. Preserve the outer fixture's HEAD/index as a
 non-vacuous check. This implements the approved isolation obligation and
 requires no protocol or scope amendment.
+
+## Task 2 — complete; bootstrap frozen
+
+Frozen bootstrap: `6fe554d0ebc6e2bd847ad224a9eb8b1b2e877b1f`. Scoped re-review reports
+spec compliance and quality PASS, resolving the sole fixture-ownership finding.
+Thirteen CLI tests, fmt, clippy and ordinary gate (rc=0, 34.581 s) passed after
+the correction; the reviewer did not repeat those tests. No production host
+semantics changed in that fix. Both adopter branches start at this exact SHA.
+
+The controller now submits a stage request for the frozen bootstrap and begins
+the two independently reviewed adoption tasks in separate worktrees. The plan
+requires freezing and submitting at this boundary; asynchronous implementation
+can proceed while the queue works. Stage 1 remains incomplete until its actual
+canonical report arrives. A later failure must be resolved before claiming
+integration acceptance. Hook timings are retained with this entry.
