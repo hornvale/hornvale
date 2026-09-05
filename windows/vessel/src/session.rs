@@ -7254,18 +7254,8 @@ impl<'w> Session<'w> {
                 // in", which reads as a parse failure rather than an
                 // unanswered question.
                 if FURTHER_IN_WORDS.contains(&target.trim().to_lowercase().as_str()) {
-                    let children = structure.children(at);
-                    if children.len() > 1 {
-                        let list = children
-                            .iter()
-                            .map(|&c| format!("the {}", structure.roles[c].noun()))
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        return Turn::Out(format!(
-                            "There are {} ways in from here: {list}; name one, or 'out' to \
-                             leave.",
-                            children.len()
-                        ));
+                    if let Some(ways) = Self::ways_in_refusal(&structure, at) {
+                        return Turn::Out(ways);
                     }
                     return Turn::Out("This is as far in as the place goes.".to_string());
                 }
@@ -7277,26 +7267,16 @@ impl<'w> Session<'w> {
                 // be as false here as "no way to anywhere" was.
                 let neighbours = Self::neighbours(&structure, at);
                 if neighbours.len() > 1 {
-                    let children = structure.children(at);
-                    if children.len() > 1 {
-                        // AT A FORK, name them (The Cruck, Task 3, closing a
-                        // Task 5a review note). The generic reply below tells
-                        // the player to say 'further in' — and at a fork that
-                        // is the one thing that does NOT work, since
-                        // `further_in` refuses rather than guess a direction.
-                        // Advising a token the very next turn will refuse is
-                        // worse than saying nothing, so this arm answers the
-                        // way the direction refusal above does.
-                        let list = children
-                            .iter()
-                            .map(|&c| format!("the {}", structure.roles[c].noun()))
-                            .collect::<Vec<_>>()
-                            .join(", ");
-                        return Turn::Out(format!(
-                            "There are {} ways in from here: {list}; name one, or 'out' to \
-                             leave.",
-                            children.len()
-                        ));
+                    // AT A FORK, name them (The Cruck, Task 3, closing a
+                    // Task 5a review note). The generic reply below tells the
+                    // player to say 'further in' — and at a fork that is the
+                    // one thing that does NOT work, since `further_in` refuses
+                    // rather than guess a direction. Advising a token the very
+                    // next turn will refuse is worse than saying nothing, so
+                    // this arm answers the way the direction refusal above
+                    // does, through the same function.
+                    if let Some(ways) = Self::ways_in_refusal(&structure, at) {
+                        return Turn::Out(ways);
                     }
                     // Count-aware rather than hard-coded: THIS is the richer
                     // topology a fixed "two" used to be a lie told in advance
@@ -7717,6 +7697,33 @@ impl<'w> Session<'w> {
                 }
             })
             .collect()
+    }
+
+    /// The refusal a FORK gives, naming each way by the role behind it, or
+    /// `None` where `at` is not a fork.
+    ///
+    /// **One function, two callers, one string** (The Cruck, Task 3, fix round
+    /// 1). Both arms of `enter`'s refusal path reach a fork — the DIRECTION
+    /// arm (`enter further in`, which `further_in` declines to guess at) and
+    /// the NOUN arm (an empty or prose-ambiguous target) — and the reply they
+    /// owe is the same reply. It was written out twice, verbatim; a reworded
+    /// fork refusal that moved only one of them would have left the game
+    /// answering the same question two ways depending on which token the
+    /// player happened to type.
+    fn ways_in_refusal(structure: &crate::structure::Structure, at: usize) -> Option<String> {
+        let children = structure.children(at);
+        if children.len() < 2 {
+            return None;
+        }
+        let list = children
+            .iter()
+            .map(|&c| format!("the {}", structure.roles[c].noun()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Some(format!(
+            "There are {} ways in from here: {list}; name one, or 'out' to leave.",
+            children.len()
+        ))
     }
 
     /// The aperture leading DEEPER from `at`: its only child. `None` at a leaf
@@ -15956,8 +15963,22 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         session.handle("enter");
-        for line in ["go n", "go e", "go s", "go w", "enter further in"] {
-            session.handle(line);
+        // **`enter the hearth`, not `enter further in`** (The Cruck, Task 3,
+        // fix round 1). Seed 42's flagship is the backroom, so the threshold
+        // FORKS and `further in` is refused there — which made that iteration
+        // a no-op that re-compared the state `go w` had already left, while
+        // reading as though it were checking the cache across an aperture. The
+        // hearthroom is a chamber every built structure has, so naming it
+        // costs this test nothing and restores the step it was written for.
+        for line in ["go n", "go e", "go s", "go w", "enter the hearth"] {
+            let reply = match session.handle(line) {
+                Turn::Out(t) | Turn::Released(t) => t,
+            };
+            assert!(
+                reply.starts_with("[chamber ") || reply.starts_with("You step"),
+                "{line:?} must actually act, or the assertion below re-checks \
+                 the state the previous line left: {reply}"
+            );
             let inside = session.inside.as_ref().expect("still indoors");
             assert_eq!(
                 inside.lattice,

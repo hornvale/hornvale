@@ -368,6 +368,70 @@ fn every_noun_the_chamber_speaks_of_is_examinable_too() {
     }
 }
 
+/// **Walking back out of a single-child chamber returns; it never descends** —
+/// the guard `common::step_back_to` owes, exercised against a real structure
+/// that HAS a single-child chamber (The Cruck, Task 3, fix round 1).
+///
+/// The defect this pins was in the shared walker: it discovered the way back
+/// by trying every role noun that was not one of this chamber's own
+/// `the <noun>` ways — and a chamber with exactly ONE child advertises that
+/// child as `further in`, never by name, so the child's noun stayed a
+/// candidate for the step BACK. It happened to work only because `Threshold`
+/// and `Hearthroom` sort first in `EVERY_ROLE`.
+///
+/// Seed 42's flagship is the backroom, `T{ H{ W }, S }`, whose hearthroom has
+/// exactly one child — so this world is a witness rather than an illustration,
+/// asserted here rather than assumed. What the visit then proves is that each
+/// chamber is reported ONCE: a step back that descended would revisit a
+/// subtree and the count would exceed the structure's own.
+#[test]
+fn the_walk_back_out_of_a_single_child_chamber_returns_rather_than_descending() {
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    let plan = out(session.handle("map"));
+    // `[plan: chamber <id>, <i> of <n>]` — `n` is the structure's chamber count.
+    let total: usize = plan
+        .lines()
+        .next()
+        .and_then(|l| l.rsplit(" of ").next())
+        .and_then(|n| n.trim_end_matches(']').parse().ok())
+        .expect("the plan header names how many chambers the structure has");
+    // THE PREMISE, ASSERTED rather than described: this structure must actually
+    // have a chamber with exactly one child, or the walk never takes the branch
+    // being guarded. Such a chamber's footer says `further in` and names no
+    // way, so it is read off the wire — the threshold forks, and the hearthroom
+    // behind it does not.
+    let door = out(session.handle("look"));
+    assert!(
+        door.contains("Ways on: out, the hearth, the store."),
+        "seed 42's flagship must FORK at the door for this test to be about a \
+         single-child chamber at all: {door}"
+    );
+    assert!(
+        out(session.handle("enter the hearth")).starts_with("[chamber "),
+        "`enter the hearth` must reach the hearthroom"
+    );
+    let single = out(session.handle("look"));
+    assert!(
+        single.contains("Ways on: out, further in."),
+        "the hearthroom must have exactly ONE child — the footer names a way \
+         only at a fork — or the branch this test guards is never walked: {single}"
+    );
+
+    // Called from the hearthroom on purpose: the walk normalizes to the
+    // threshold itself, and the step back out of THIS chamber is the one under
+    // test.
+    let visited = crate::common::visit_every_chamber(&mut session);
+    assert_eq!(
+        visited.len(),
+        total,
+        "the visit reported {} chambers of {total}: a step back that descended \
+         would revisit a subtree, and one that overshot would skip one",
+        visited.len()
+    );
+}
+
 #[test]
 fn every_destination_the_plan_depicts_is_command_reachable() {
     // A doorway drawn is a promise. The plan draws '+' once per doorway of the
