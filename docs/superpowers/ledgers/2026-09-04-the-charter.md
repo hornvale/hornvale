@@ -434,3 +434,27 @@ fixture emitted exactly one matching executable artifact on both cold and
 cached builds, with metadata's opaque package ID preserved. This supports
 artifact selection, not complete provenance. Timing decomposition unavailable
 from Cargo is to remain explicitly unavailable.
+
+## Task 2 — implemented; independent review pending
+
+Implementation: `b45f274f9152fec6d9c989f8760bada1701fdb1b`, from
+`df881bd200c0bf2151c42c24aa6fc0a411c2be60`. The generic host discovers
+current-checkout Cargo members, selects exact built artifacts, collects fresh
+bounded JSON and renders only after validation. Local evidence: 52 Digest
+unit tests, 12 real-Cargo CLI fixtures, 12 protocol tests; fmt, clippy,
+shellcheck, Bash 3.2 and legacy render smoke checks passed. Independent
+spec/quality review is running against the exact implementation range.
+
+The ordinary hook first refused because its lexical substring inventory
+counts `cell` inside cancellation-related identifiers. The task renamed
+host-local identifiers to interruption, preserving the signal behavior and
+leaving the guard/inventory unchanged. Both the failed gate (36.326 s) and
+successful retry (37.102 s, rc=0) remain in the timing ledger. This is an
+implementation naming correction, not a weakening of the process contract.
+
+Canonical preflight found Rust's outside-repository default is 1.77.1 while
+the tracked toolchain pin selects 1.96.1, matching the Mac. Real Cargo
+fixtures copy the pin to test with the intended prepared compiler. Canonical
+execution is still unearned. The expanded fixture suite also caught Cargo's
+null metadata for an unenrolled package; that case now passes. No stage or
+merge result is claimed by these local tests.
