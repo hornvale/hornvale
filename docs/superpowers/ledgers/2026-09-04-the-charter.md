@@ -723,3 +723,29 @@ checkpoint while the canonical jobs finish. The reviewer must mark remaining
 Linux/stage evidence pending, not silently waive it; subsequent evidence or
 fix deltas receive scoped review. This schedules independent reading earlier
 without declaring Task 5 or final qualification complete.
+
+## Stages 1–2 — composed canonical validation complete
+
+Stage job `sluice-e3355f441db0-20260905T041451Z` finished rc=0 in
+1209 s. Submitted implementation: `e3355f441db045f0960576ead12b0f8acc56ca7d`.
+Initial merge product: `92a5cb2fac190eeb023662acc30786dd3b37b704`.
+Final tested tree after ordinary generated/timing commits:
+`32e985fc719e05cbe77a2a1990efd444903a8494`. All four phases passed:
+artifacts 234.365 s, outboard 96.787 s, gate 732.827 s, clients 138.332 s.
+The outboard phase includes all 95 composed Digest tests on Linux; the full
+gate includes 5,355 workspace tests and doctests. The new campaign-record
+check passed with the corrected active entries. Main stayed exactly
+`3007f164ce6c5d94315b68f8abfd38ee7fca258d`; nothing was pushed by this
+stage. This composed pass discharges the earlier bootstrap's documentary
+stage failure as well as the joined-adopter stage obligation.
+
+The diagnostic stage is now running in the same queue. Its self-tests, Linux
+samples, final tested identity and completion remain separate pending evidence.
+Task 5 and G6 are not complete.
+
+A read-only canonical Git comparison of submitted source to final tested tree
+found only four changed paths: `docs/generated-path-writes.tsv`,
+`docs/timings.md`, `docs/timings/subfloor-roster.tsv`, and the lefford duration
+baseline. There was no generated Book/fixture/audit-content or production-source
+drift. This is the actual composed artifact result, beyond the earlier local
+main-absorption regeneration.
