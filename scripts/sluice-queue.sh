@@ -150,32 +150,36 @@ shift || true
 # of this one. The binary is built on demand and the path is resolved from
 # this script's own location so a caller's cwd cannot change which one runs.
 #
-# A CACHE FALLBACK EXISTS FOR ONE CASE ONLY: a copy of this ONE file with no
-# `tools/sluice` sibling beside it. Found live by `scripts/test-sluice.sh`'s
-# own T7/T8 (2026-09-05) — its chamber tests copy just this script into a
-# throwaway scratch repo to exercise `sluice-run.sh`'s claim-refusal logic,
-# a pattern that worked when this file was pure bash with no external
-# dependency. Without the fallback, the copy's `cargo build` fails (no
-# manifest to build) and `claim` never runs at all: rc=101, indistinguishable
-# to a caller from the binary itself panicking. The primary (sibling) path
-# is tried FIRST and is what every real checkout uses, so a live checkout's
-# own edits to tools/sluice are never shadowed by a stale cache; the cache
-# is refreshed from the sibling on every call that has one, so by the time a
-# sibling-less copy needs it, it is never staler than this same run's own
-# most recent real invocation.
+# HV_SLUICE_BIN IS A TEST SEAM ONLY, and nothing in production sets it.
+# `scripts/test-sluice.sh`'s chamber tests (T7/T8) copy this ONE file into a
+# throwaway scratch repo with no `tools/sluice` sibling beside it, to
+# exercise `sluice-run.sh`'s claim-refusal logic — a pattern that worked
+# when this file was pure bash with no external dependency. Without the
+# seam, that copy's `cargo build` fails (no manifest to build against) and
+# `claim` never runs at all. An EARLIER version of this fix instead cached
+# the built binary under a per-user cache directory and fell back to it
+# silently on a missing sibling — rejected on review: it made this state
+# machine depend on a user-level cache directory, wrote to it on every
+# call's hot path, and its failure mode was a copied script silently
+# running a possibly-stale binary instead of erroring, which is exactly the
+# class of silent-wrong-thing this campaign exists to remove. The seam
+# below fails LOUDLY instead — a copy with no sibling and no
+# `HV_SLUICE_BIN` override simply has no binary to `exec`, and says so —
+# which is the intended behaviour outside the one test that sets the seam.
 case "$cmd" in
     claim|set-state|list)
-        sluice_bin="$(dirname "$0")/../tools/sluice/target/release/sluice"
-        sluice_manifest="$(dirname "$0")/../tools/sluice/Cargo.toml"
-        cache_bin="$HOME/.cache/hornvale/sluice/sluice"
-        if [ -f "$sluice_manifest" ]; then
-            if [ ! -x "$sluice_bin" ]; then
-                cargo build --quiet --release --manifest-path "$sluice_manifest" >&2
-            fi
-            mkdir -p "$(dirname "$cache_bin")"
-            cp -f "$sluice_bin" "$cache_bin" 2>/dev/null || true
-        elif [ -x "$cache_bin" ]; then
-            sluice_bin="$cache_bin"
+        sluice_bin="${HV_SLUICE_BIN:-$(dirname "$0")/../tools/sluice/target/release/sluice}"
+        sluice_root="$(dirname "$0")/.."
+        if [ -z "${HV_SLUICE_BIN:-}" ] && [ ! -x "$sluice_bin" ]; then
+            # `cd` into the repo root for the build itself (subshell, so this
+            # script's own cwd is untouched): rustup resolves its toolchain
+            # override from the process's CWD, not from `--manifest-path`, so
+            # a caller invoking this script from a cwd with no
+            # rust-toolchain.toml ancestor would otherwise silently build with
+            # a different (older, non-overridden) default toolchain and fail
+            # to parse an edition2024 manifest at all. Found live building
+            # this fix from a plain scratch directory.
+            ( cd "$sluice_root" && cargo build --quiet --release --manifest-path tools/sluice/Cargo.toml >&2 )
         fi
         exec "$sluice_bin" "$cmd" "$@"
         ;;

@@ -1197,6 +1197,23 @@ export HV_SLUICE_DIR="$tmp/state"; mkdir -p "$HV_SLUICE_DIR"
 export HV_SLUICE_REPO_ROOT="$chamber_repo"
 export HV_CANONICAL_HOST_FILE="$chamber_host_file"
 export HV_CENSUS_LOCK="$tmp/chamber.lock"
+# HV_SLUICE_BIN is the test seam scripts/sluice-queue.sh's forwarding block
+# reads (test seam ONLY — nothing in production sets it). $chamber_repo below
+# gets a COPY of sluice-queue.sh with no tools/sluice sibling beside it (see
+# the two `cp .../sluice-queue.sh` sites in this file), so without this the
+# copy has no manifest to build claim/set-state/list against. Built once,
+# here, ahead of every chamber test that follows in this file — both cp sites
+# are covered because both are invoked (via HV_SLUICE_REPO_ROOT) only after
+# this point.
+# `cd` into $repo_root for the build itself (in a subshell, so this file's
+# own cwd is untouched): rustup's toolchain override is resolved from the
+# process's CWD, not from `--manifest-path`, and this line runs with cwd
+# already moved to a scratch directory with no rust-toolchain.toml — without
+# the `cd`, cargo silently picks a DIFFERENT (older, non-overridden) default
+# toolchain and fails to parse an edition2024 manifest at all. Found live
+# writing this fix.
+( cd "$repo_root" && cargo build --quiet --release --manifest-path tools/sluice/Cargo.toml >&2 )
+export HV_SLUICE_BIN="$repo_root/tools/sluice/target/release/sluice"
 
 echo "== chamber: phases run in the declared order, the tree is cleaned between phases, and the claim is the eight-field shape while held =="
 lane_sets_1="$tmp/lane-sets-1.tsv"
