@@ -1331,6 +1331,7 @@ retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda
 the-weft	shipped	none		plan: COMPLETE/G6 approved; retrospective: Close G6 approved; chronicle: G6 accepted result	docs/superpowers/specs/2026-09-03-the-weft-design.md	docs/superpowers/plans/2026-09-03-the-weft.md		book/src/chronicle/the-weft.md	docs/retrospectives/the-weft.md
 the-kerf	shipped	none		spec: status header records closure; plan: COMPLETE through Task 5; G6 approved 2026-09-05	docs/superpowers/specs/2026-09-04-the-kerf-design.md	docs/superpowers/plans/2026-09-04-the-kerf.md		book/src/chronicle/the-kerf.md	docs/retrospectives/the-kerf.md
 plan-2026-09-04-the-charter	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission		docs/superpowers/plans/2026-09-04-the-charter.md			
+plan-2026-09-05-the-warrant	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-05-the-warrant.md			
 spec-2026-09-04-federated-development-program-metaplan-design	active	none		bounded Charter pilot qualified; broader federation program remains active	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
 spec-2026-09-04-the-charter-design	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission	docs/superpowers/specs/2026-09-04-the-charter-design.md				
 retrospective-the-sluicegate	shipped	none		published retrospective					docs/retrospectives/the-sluicegate.md
