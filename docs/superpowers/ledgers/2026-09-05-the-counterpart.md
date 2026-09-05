@@ -652,3 +652,16 @@ Both ordinary hooks passed75 tests. Original panel retained exactly; checker,
 rules, owners and source bundle are unchanged. Scoped re-review is pending.
 Author/review records for Tasks1–5 are now durable under
 `tools/digest/experiments/the-counterpart/evidence/controller/reviews/`.
+
+## Task 5 — code review accepted, observations pending
+
+Scoped re-review closed both P2 findings, with spec and quality PASS for
+canonical diagnostic readiness. The 55-test author evidence was inspected;
+no redundant suite was rerun by the reviewer. Original review and its
+correction receipt are retained. `freeze.json` records the reviewed runner,
+checker, rules, question map, owner records, unreserved source roster and
+bundle before revealing a reserved challenge. This is a code/input freeze,
+not an empirical Task5 pass. The original checker author resumed only to
+confirm context availability and explicitly reported no reserved selection
+or revelation. Task6 dispatch still waits for the unreserved assay and
+normal Stage2 boundary. No new approach or Q arose at this green checkpoint.
