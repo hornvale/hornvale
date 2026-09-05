@@ -1,6 +1,6 @@
 # The Coda — reconcile the campaign record
 
-**Status:** G3 draft · **Date:** 2026-09-04 · **Campaign:** The Coda ·
+**Status:** complete · **Date:** 2026-09-04 · **Campaign:** The Coda ·
 **Ledger:** `docs/superpowers/ledgers/2026-09-04-the-coda.md`
 
 ## 1. Purpose

@@ -35,3 +35,11 @@ looks complete: is the record present, is there direct evidence of closure,
 and is there a durable future-facing residue? Only the last question can add a
 registry row. Only the second can close the audit row. Neither authorizes
 deleting the first.
+
+## Close discipline
+
+This documentation-only campaign first met `main` at close rather than at a
+stage boundary. That did not invalidate its evidence, but it turned a routine
+absorption into a larger integration event. Future campaigns should absorb at
+their stage boundaries even when their own changes are prose: closure artifacts
+and generated reports still share the moving repository surface.
