@@ -687,3 +687,41 @@ observed local costs, not cold-cache or full-panel performance claims.
 `evidence/mac-base/records.tar.gz`, alongside member hashes, command receipt
 and readable summary. Owned checkout/target remain at the receipt's path.
 This qualifies the Mac command/report path only; no composition result follows.
+
+## #10 [Q] — separate challenge authorship from gated qualification
+
+**Ruling:** after the committed complete input freeze, resume the independent
+checker author to preregister and compile its reserved source challenge while
+the canonical unreserved assay is queued. Formal scoring/integration acceptance
+and dependent qualification still wait for the unreserved result and green
+normal Stage2 gate. This revises the stricter dispatch ordering noted above;
+it changes scheduling, not the frozen experiment or any stage requirement.
+
+**Why/precedent:** approved spec §5 requires owner records, comparison rules
+and checker implementation frozen before reserved selection; that prerequisite
+is now committed at `16861a886a7069cf01123d0cde5688364781cff9`. The plan's
+Stage2 result is an acceptance dependency for qualification, not information
+an independent challenger should consume. Tasks3–4 and the Charter's separate
+adopter/diagnostic preparation use the same independent-authoring overlap.
+
+**Organon list — visibility and animacy:**
+- Frozen questions and identities: visible informational inputs; author may read.
+- Original checker derivation: its own informational context; retained.
+- Other owners' patches and unreserved judgments: hidden from task context; do
+  not provide them or ask the challenger to compensate for their results.
+- Compile/probe process: live activity in its separately owned warm checkout;
+  serial locally, bounded, with all attempts retained.
+- Formal scoring and acceptance: later activity, gated by Stage2 evidence.
+
+Separating these items exposes the only useful overlap: an independent author
+can work from already frozen information without depending on another run's
+answer. Treating every activity as the same stage would consume waiting time
+without strengthening that independence. **Alternatives rejected:** reveal
+ahead of the freeze; tune from unreserved outcomes; count a queued gate as
+green; bypass the canonical queue.
+**Ideonomy passes / overturns:** one actual organon-construction/list draw
+with visibility/animacy; it overturns the blanket dispatch wait, retaining
+the acceptance wait. No further material change emerged.
+**Cost if wrong:** discard/requalify a challenge if the frozen instrument needs
+revision; original identities and attempts remain, and no admission moves.
+**Capture:** this ledger, task brief and retrospective scheduling account.

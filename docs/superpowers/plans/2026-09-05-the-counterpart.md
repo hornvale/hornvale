@@ -230,6 +230,8 @@ if missing:
 
 ### Task 6: Reveal the reserved challenge and qualify both hosts
 
+Scheduling clarification (ledger Q10): preregistered independent challenge authorship/compile may overlap the queued unreserved assay after the complete committed freeze. Formal scoring and acceptance retain the green Stage2 dependency.
+
 **Files:** Add `patches/reserved-*.patch`, append panel/bundle/evidence with new identities, `freeze.json`, ledger receipts; stage-only diagnostic branch modifies `scripts/lane-outboard.sh` without merging it.
 **Interfaces:** Consumes the complete reviewed freeze, runner CLI, checker and raw contract. Produces a preregistered challenge and original scored results, plus Mac/canonical Linux raw dossiers and queue receipts.
 
