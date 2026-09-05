@@ -254,7 +254,7 @@ pub struct Pattern {
 ///
 /// Sized near its intended scale deliberately, all the same: growth is cheap
 /// today and will not stay cheap.
-pub const INVENTORY: [Pattern; 20] = [
+pub const INVENTORY: [Pattern; 23] = [
     // --- built, drawn at BOTH bands ---
     Pattern {
         name: "the-ground",
@@ -684,6 +684,54 @@ pub const INVENTORY: [Pattern; 20] = [
         needs_populous: false,
         housemark_gate: HousemarkGate::Threshold(ThresholdPosture::Outward),
     },
+    // --- The Tenon, Task 7: three natural rest surfaces — THE EPOCH ---
+    //
+    // Appended, never inserted: all three have no requirement, so the end is
+    // dependency-correct as well as preserving every earlier pattern's place
+    // in the grammar. Each is `at_locale: true`; under rule 2 above, that
+    // makes every append an epoch because locale interiors feed committed
+    // creature drives.
+    //
+    // Together they fill exactly three place quadrants: built+cold draws
+    // rushes and ledge alongside the made bed; built+warm draws ledge;
+    // wild+cold draws bracken. Wild+warm deliberately draws none of the three,
+    // leaving the road bare and `SiteGrade::Bare` reachable.
+    Pattern {
+        name: "the-rushes",
+        kind: kinds::RUSHES,
+        attach: Attach::Beside(kinds::GROUND),
+        requires: None,
+        needs_cold: true,
+        built: true,
+        roles: EVERY_ROLE,
+        at_locale: true,
+        needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
+    },
+    Pattern {
+        name: "the-ledge",
+        kind: kinds::LEDGE,
+        attach: Attach::Beside(kinds::GROUND),
+        requires: None,
+        needs_cold: false,
+        built: true,
+        roles: EVERY_ROLE,
+        at_locale: true,
+        needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
+    },
+    Pattern {
+        name: "the-bracken",
+        kind: kinds::BRACKEN,
+        attach: Attach::Beside(kinds::GROUND),
+        requires: None,
+        needs_cold: true,
+        built: false,
+        roles: EVERY_ROLE,
+        at_locale: true,
+        needs_populous: false,
+        housemark_gate: HousemarkGate::Universal,
+    },
 ];
 
 /// The patterns a room draws, DERIVED from what it already is — never authored
@@ -1048,7 +1096,8 @@ mod tests {
                 "the-threshold",
                 "the-alcove",
                 "the-water-jar",
-                "the-screen"
+                "the-screen",
+                "the-ledge"
             ],
             "the LOCALE band's warm built composition moved: this is an epoch"
         );
@@ -1062,12 +1111,24 @@ mod tests {
                 "the-fire",
                 "the-fireside-bed",
                 "the-water-jar",
-                "the-screen"
+                "the-screen",
+                "the-rushes",
+                "the-ledge"
             ],
             "the LOCALE band's cold built composition moved: this is an epoch"
         );
-        let wild: Vec<&str> = selection(false, false).iter().map(|p| p.name).collect();
-        assert_eq!(wild, ["the-clearing", "the-pool"]);
+        let wild_warm: Vec<&str> = selection(false, false).iter().map(|p| p.name).collect();
+        assert_eq!(
+            wild_warm,
+            ["the-clearing", "the-pool"],
+            "the wild + warm quadrant must stay bare of rest surfaces"
+        );
+        let wild_cold: Vec<&str> = selection(false, true).iter().map(|p| p.name).collect();
+        assert_eq!(
+            wild_cold,
+            ["the-clearing", "the-pool", "the-bracken"],
+            "the wild + cold quadrant must compose bracken"
+        );
     }
 
     #[test]

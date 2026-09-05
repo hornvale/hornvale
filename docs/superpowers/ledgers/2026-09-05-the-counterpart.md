@@ -665,3 +665,89 @@ not an empirical Task5 pass. The original checker author resumed only to
 confirm context availability and explicitly reported no reserved selection
 or revelation. Task6 dispatch still waits for the unreserved assay and
 normal Stage2 boundary. No new approach or Q arose at this green checkpoint.
+
+## Canonical diagnostic submission and scoped Mac qualification
+
+Diagnostic branch `codex/counterpart-diagnostic` adds ten transport-only lines
+to `scripts/lane-outboard.sh` after ordinary checks, following the approved
+Charter precedent. The diff is retained as data in `evidence/controller/`;
+this script change is never a campaign merge candidate. Syntax and shellcheck
+passed. Normal hooks passed75 tests and explicit `make gate-commit` passed
+all three chunks in91.809 s. Candidate `0c6a920898c2e86789d2aa60b93edcdbe50f879c`
+was pushed normally, then queued stage-only as
+`req-0c6a920898c2-20260905T191704Z`. Actual full-panel results remain pending.
+
+The separately committed `panel-mac-base.json` is explicitly one-arm scope,
+carrying the full panel's parent SHA256 and its own roster identity. Actual
+CLI execution returned zero; base satisfied all four questions. The controller
+revalidated the retained dossier. Metadata took0.203/0.157 s, build8.998 s,
+observation0.199 s; arm wall13.507 s includes preparation2.469 s. These are
+observed local costs, not cold-cache or full-panel performance claims.
+43 exact JSON records (5,278,407 bytes before compression) are retained in
+`evidence/mac-base/records.tar.gz`, alongside member hashes, command receipt
+and readable summary. Owned checkout/target remain at the receipt's path.
+This qualifies the Mac command/report path only; no composition result follows.
+
+## #10 [Q] — separate challenge authorship from gated qualification
+
+**Ruling:** after the committed complete input freeze, resume the independent
+checker author to preregister and compile its reserved source challenge while
+the canonical unreserved assay is queued. Formal scoring/integration acceptance
+and dependent qualification still wait for the unreserved result and green
+normal Stage2 gate. This revises the stricter dispatch ordering noted above;
+it changes scheduling, not the frozen experiment or any stage requirement.
+
+**Why/precedent:** approved spec §5 requires owner records, comparison rules
+and checker implementation frozen before reserved selection; that prerequisite
+is now committed at `16861a886a7069cf01123d0cde5688364781cff9`. The plan's
+Stage2 result is an acceptance dependency for qualification, not information
+an independent challenger should consume. Tasks3–4 and the Charter's separate
+adopter/diagnostic preparation use the same independent-authoring overlap.
+
+**Organon list — visibility and animacy:**
+- Frozen questions and identities: visible informational inputs; author may read.
+- Original checker derivation: its own informational context; retained.
+- Other owners' patches and unreserved judgments: hidden from task context; do
+  not provide them or ask the challenger to compensate for their results.
+- Compile/probe process: live activity in its separately owned warm checkout;
+  serial locally, bounded, with all attempts retained.
+- Formal scoring and acceptance: later activity, gated by Stage2 evidence.
+
+Separating these items exposes the only useful overlap: an independent author
+can work from already frozen information without depending on another run's
+answer. Treating every activity as the same stage would consume waiting time
+without strengthening that independence. **Alternatives rejected:** reveal
+ahead of the freeze; tune from unreserved outcomes; count a queued gate as
+green; bypass the canonical queue.
+**Ideonomy passes / overturns:** one actual organon-construction/list draw
+with visibility/animacy; it overturns the blanket dispatch wait, retaining
+the acceptance wait. No further material change emerged.
+**Cost if wrong:** discard/requalify a challenge if the frozen instrument needs
+revision; original identities and attempts remain, and no admission moves.
+**Capture:** this ledger, task brief and retrospective scheduling account.
+
+## Diagnostic attempt 1 — merge conflict, no assay
+
+Request `req-0c6a920898c2-20260905T191704Z` stopped rc10 after3 s at the
+merge step, before any phase or experiment observation. The sole conflict
+was hand-authored `docs/audits/campaign-reconciliation.tsv`; the mouth
+had called it artifacts-authored from an older declaration, while the
+chamber's merge product correctly refused regeneration. Exact short log
+is retained in `evidence/controller/diagnostic-attempt-1.log`. This is a
+transport failure outside the assay denominator, not a failed source arm.
+
+Refreshed main `a8bde676913dce3b668f9b305d2449c3985ad2eb` includes The Tenon and the queue's own
+subsequent fix for this same stale-input classification. Read the Tenon
+chronicle and the actual source/queue diffs. The Tenon adds bracken, ledge
+and rushes to live Thing rosters; the frozen specimen base remains
+`5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd`. No experiment object is reauthored
+to follow main. Controller absorption at `79696c5bc73f9dc31e45be466dede08251f552b3` retained both
+Counterpart rows and the Tenon row; exact ten-column shape and unique keys
+were verified. The ordinary merge gate passed all three chunks,179.442 s.
+
+The independently landed queue correction demonstrates why a shared function
+does not imply shared inputs: two callers read different authorship records.
+It is live contextual evidence already fixed upstream, outside the frozen
+finite panel and no estimate of natural fault frequency. Preserve it in the
+retrospective under the existing provenance/epistemology follow-up homes.
+No new campaign mechanism or selection authority is introduced by this repair.

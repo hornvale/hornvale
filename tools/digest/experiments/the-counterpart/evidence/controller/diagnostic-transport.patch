@@ -1,0 +1,18 @@
+diff --git a/scripts/lane-outboard.sh b/scripts/lane-outboard.sh
+index 447bf3eb4..f52a24b9c 100755
+--- a/scripts/lane-outboard.sh
++++ b/scripts/lane-outboard.sh
+@@ -142,3 +142,13 @@ if [ "$fails" -ne 0 ]; then
+     exit 1
+ fi
+ echo "outboard: all suites passed"
++
++# Counterpart diagnostic transport only: this branch is never a merge candidate.
++python3 tools/digest/experiments/the-counterpart/run.py --self-test || exit 1
++mkdir -p /home/nathan/.local/state/hornvale || exit 1
++counterpart_evidence_parent="$(mktemp -d /home/nathan/.local/state/hornvale/counterpart-unreserved.XXXXXX)" || exit 1
++git rev-parse HEAD > "$counterpart_evidence_parent/chamber-source.sha" || exit 1
++printf 'counterpart: retained output %s/dossier\n' "$counterpart_evidence_parent"
++python3 tools/digest/experiments/the-counterpart/run.py \
++    --panel tools/digest/experiments/the-counterpart/panel.json \
++    --output "$counterpart_evidence_parent/dossier" || exit 1

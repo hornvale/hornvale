@@ -3962,9 +3962,20 @@ impl<'w> Session<'w> {
         let room = self.position();
         let terrain = self.terrain_here();
         let room_interior = crate::interior::interior_of(&room, &terrain);
-        if let Some(anchor) =
-            crate::sleep_site::select_sleep_site(&room_interior, self.driven_body())
-        {
+        // The sleeper's traits and the object roster are resolved HERE, once,
+        // for this one act (The Tenon, Task 6) — `select_sleep_site` now ranks
+        // the room's candidates rather than taking the first, and both are what
+        // a grade is read against. `sleep_traits_of` is the same resolution the
+        // fatigue fold uses, so a player's sleep and a creature's cannot be
+        // graded against different registries.
+        let sleeper = crate::liveness::sleep_traits_of(self.driven_body());
+        let objects = crate::affordance::object_registry();
+        if let Some(anchor) = crate::sleep_site::select_sleep_site(
+            &room_interior,
+            self.driven_body(),
+            &sleeper,
+            &objects,
+        ) {
             let site_fact = slept_on_fact(
                 self.agent_entity(),
                 room_interior.anchor(anchor).kind,
@@ -21518,12 +21529,12 @@ mod tests {
     /// every other source of variation.
     ///
     /// **The ledger moves too, since The Minute:** measured 2026-09-03, the
-    /// held session's ledger carries two facts the free one lacks —
+    /// held session's ledger carries three facts the free one lacks —
     /// `possessed-by` (committed by `!possess` itself, before either `!wait`
-    /// runs) and `slept` (the held walk's first tick at seed 42, now
-    /// minuted). Asserted below; the doc originally predicted a one-fact
-    /// difference (the sleep alone), which undercounted `possessed-by` —
-    /// corrected to the measured two.
+    /// runs), `slept` (the held walk's first tick at seed 42, now minuted),
+    /// and `slept-on` (The Tenon's epoch makes a real surface reachable in
+    /// that room). Asserted below; the count was two before the epoch because
+    /// the sleep had no surface kind to record.
     #[test]
     fn driven_felt_state_can_move_under_an_imposed_controller_during_wait() {
         let world = seam_world();
@@ -21565,13 +21576,15 @@ mod tests {
         );
         assert_eq!(
             held.committed_fact_count_for(held.agent_entity()),
-            free.committed_fact_count_for(free.agent_entity()) + 2,
-            "seed 42's held body carries two more facts than the free one: \
-             `possessed-by` (from `!possess` itself) and `slept` (from the \
-             first wait, now minuted); the free body, Holding, commits neither"
+            free.committed_fact_count_for(free.agent_entity()) + 3,
+            "seed 42's held body carries three more facts than the free one: \
+             `possessed-by` (from `!possess` itself), `slept` (from the first \
+             wait, now minuted), and `slept-on` (the epoch's selected surface); \
+             the free body, Holding, commits none of them"
         );
-        // The `+ 2` above is a compound of `possessed-by` and `slept`; this
-        // isolates the walk's own contribution from possession's.
+        // The `+ 3` above compounds `possessed-by`, `slept`, and `slept-on`;
+        // these assertions isolate the walk's own two contributions from
+        // possession's.
         assert_eq!(
             held.ledger.facts_of(held.agent_entity(), SLEPT).count(),
             1,
@@ -21581,6 +21594,16 @@ mod tests {
             free.ledger.facts_of(free.agent_entity(), SLEPT).count(),
             0,
             "the free body, Holding, never reaches a `slept` resolution"
+        );
+        assert_eq!(
+            held.ledger.facts_of(held.agent_entity(), SLEPT_ON).count(),
+            1,
+            "the held body's first-wait sleep records exactly one selected surface"
+        );
+        assert_eq!(
+            free.ledger.facts_of(free.agent_entity(), SLEPT_ON).count(),
+            0,
+            "the free body, Holding, never selects a sleep surface"
         );
     }
 

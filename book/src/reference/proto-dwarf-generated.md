@@ -51,6 +51,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `blue` | the color term for blue | *Qanas | /qanas/ |
 | `bone` | the rigid frame of a body | *Jagab | /jagab/ |
 | `boreal-stand` | A stand of northern conifers. | *Vadat | /vadat/ |
+| `bracken` | a dense growth of fern that makes a yielding place to lie | *Jazag | /jazag/ |
 | `brazier` | a metal basin that holds a fire apart from a hearth | *Shasax | /ʃasax/ |
 | `brown` | the color term for brown | *Zanash | /zanaʃ/ |
 | `bugbear-kind` | a bugbear | *Xaqad | /xaqad/ |
@@ -142,6 +143,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `know` | to hold something in memory or understanding — `knows` | *Vavash | /vavaʃ/ |
 | `kobold-kind` | a kobold | *Satag | /satag/ |
 | `lake` | still water held in a hollow that has no outlet to the sea | *Dangas | /daŋas/ |
+| `ledge` | a broad shelf of exposed stone | *Shavas | /ʃavas/ |
 | `liana-forest` | Tropical forest tangled with climbing vines. | *Saxaz | /saxaz/ |
 | `light` | the color term for white/light hues | *Bangas | /baŋas/ |
 | `lightless-water` | Water below all light. | *Xavab | /xavab/ |
@@ -199,6 +201,7 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `rhinoceros-kind` | a rhinoceros | *Zangaq | /zaŋaq/ |
 | `rice` | a staple crop | *Qangaj | /qaŋaj/ |
 | `river` | fresh water running across land | *Tadash | /tadaʃ/ |
+| `rushes` | cut wetland reeds laid down as a loose place to lie | *Nadav | /nadav/ |
 | `rust-monster-kind` | a rust monster | *Basas | /basas/ |
 | `sargassum-drift` | A drifting raft of floating weed. | *Sagang | /sagaŋ/ |
 | `savanna` | a biome class | *Shavav | /ʃavav/ |

@@ -1183,8 +1183,22 @@ run_release -p hornvale -- lab run studies/the-chorus.study.json
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
     # (host already verified at the top of this script)
     echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1; ~7 min, canonical box)" >&2
-    run_release -p hornvale -- lab run studies/the-census.study.json
-    run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
+    # TIMED SEPARATELY, because the pair's combined cost has never been
+    # attributable. `the-census` is 1,000 seeds x 1 pin set; the Meeting is
+    # 500 seeds x 2 solo rosters (the null control -- see The Meeting's
+    # chronicle) and publishes twice the charts from half the worlds. Nobody
+    # could say what either half cost, so nobody could argue about cadence or
+    # seed count with a number. These two rows make the split permanent and
+    # trendable in docs/timings.md, beside the `census` row that already
+    # covers the whole run.
+    #
+    # HV_CENSUS_WAITED_S is zeroed for the inner rows on purpose: the outer
+    # `census` row owns the queue wait, and inheriting it here would report
+    # the same wait three times.
+    HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-study-the-census -- \
+        cargo run -q --release -p hornvale -- lab run studies/the-census.study.json
+    HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-study-the-meeting -- \
+        cargo run -q --release -p hornvale -- lab run studies/census-of-the-meeting.study.json
 else
     echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 on the canonical box to refresh; ~7 min, decision 0063)" >&2
 fi
