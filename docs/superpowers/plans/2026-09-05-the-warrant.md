@@ -253,19 +253,27 @@ are visible:
 ```rust
 /// TRANSITIONAL (delete with the prose match in Task 3). The eight glosses
 /// live in two places until the flip: this match, and `errand_predicates()`.
-/// A one-directional check would let either copy drift. Assert BOTH
-/// directions — every gloss is emitted by some mode, and every mode's prose
-/// is some gloss.
+/// Assert PAIRWISE CORRESPONDENCE, per mode — not set equality. Two sets of
+/// the same eight strings are equal even when two of them have been SWAPPED
+/// between keys, and a swap is the likelier authoring mistake precisely
+/// because it leaves no orphan string for a set comparison to notice.
 #[test]
 fn the_registry_glosses_and_the_live_prose_match_agree_both_ways() {
-    let modes: [(Mode, bool); 8] = /* the same eight rows as the mapping test */;
-    let emitted: BTreeSet<&str> = modes.iter()
-        .map(|&(m, b)| prose_for(m, b))   // the match, lifted to a fn if it is not one
-        .collect();
-    let glossed: BTreeSet<&str> = errand_predicates().iter().map(|(_, d)| *d).collect();
-    assert_eq!(emitted, glossed);
+    let table: BTreeMap<&str, &str> = errand_predicates().into_iter().collect();
+    for (mode, believed) in /* the same eight rows as the mapping test */ {
+        assert_eq!(
+            prose_for(mode, believed),
+            table[errand_key(mode, believed)],
+            "{mode:?} believed={believed}"
+        );
+    }
 }
 ```
+
+**Prove it catches a SWAP, not merely a stray string.** Exchange two glosses
+in `errand_predicates()`, confirm RED, restore, confirm GREEN. A mutation that
+introduces a string appearing nowhere else proves only that the weaker
+property holds.
 
 If lifting the match into a `prose_for` helper is the cheapest way to make it
 testable, do that — it is deleted wholesale in Task 3 either way.

@@ -202,3 +202,50 @@ predicate strings instead of glosses.
 · ideonomy passes / overturns: 0 — three defect corrections forced by grep,
 not design choices. · Capture: plan text amended for R1 and R3; Task 4 struck;
 spec §6 amended to record that its stated consumer does not exist.
+
+---
+
+#8 [G5] — **Task 1 review, Critical finding: my own brief's example code did
+not implement my own brief's stated requirement.** · The requirement was "a
+test that fails if **either** copy drifts". The example code I supplied
+compared two `BTreeSet<&str>`s, which is **membership** in both directions,
+not **correspondence**. Two sets of the same eight strings are equal when two
+have been SWAPPED between keys — and a swap is the likelier authoring mistake
+precisely because it leaves no orphan string for a set comparison to notice.
+The implementer transcribed the snippet faithfully; the defect is the brief's.
+· Decision: the finding is upheld in full. The test becomes a per-mode pairwise
+assertion through `errand_key`, and the mutation proof must exchange two
+glosses rather than corrupt one — a mutation that introduces a string appearing
+nowhere else proves only the weaker property. Plan text corrected in the same
+commit as the ruling, because Task 3 reads that file too. · Why it matters
+beyond the test: Task 3 deletes `prose_for`, leaving `errand_predicates()` as
+the only copy. A swap latent at that moment becomes permanent and undetectable
+— the wrong gloss would render forever, on the right key, with every test
+green. · ideonomy passes / overturns: 0 — a review finding upheld, not a design
+choice.
+
+**This is the fourth defect in my own text this campaign** (#6 origin/target,
+#7 R2 unused tenant, #7 R3 enumerated sites, #8 here), and the first three
+were caught by reading code while this one needed a reviewer. Its shape is
+distinct and worth the retrospective: I wrote the requirement **correctly in
+prose** and then supplied example code that did not implement it. A brief
+carries two claims — what is required, and that the code shown satisfies it —
+and only the first was audited. Prose and its own exemplar must be checked
+against each other, not just against the world.
+
+#9 [G5] — **Task 1 review, Important finding: three registration sites use a
+loop-table idiom the brief's grep cannot match.** ·
+`windows/vessel/examples/session_length_scaling.rs`,
+`windows/vessel/tests/suite/the_detent.rs` (`bench_shape`) and
+`windows/vessel/src/liveness_tests/emitter_scan.rs` register `AGENT_AT` as
+`for (pred, doc) in [(AGENT_AT, "..."), ...]`, so `grep 'register_predicate(AGENT_AT'`
+misses them **by construction**. All three run real 60-tick walks with a
+panicking `.expect` on every committed fact, so each panics the moment Task 2
+emits an `errand/*` fact under an unregistered predicate. · Decision: upheld;
+register all three. · The lesson is the one R3 was already about, one turn
+deeper: R3 replaced an enumerated list with a grep, and the grep was itself an
+enumeration in disguise — it enumerated *one calling idiom*. The observable to
+derive from was never the call shape; it was **which code paths run a real
+walk**. `session_length_scaling.rs` is the sharpest case: its own comment says
+it was copied from `agent_scaling.rs`, which this diff DID register. · ideonomy
+passes / overturns: 0.
