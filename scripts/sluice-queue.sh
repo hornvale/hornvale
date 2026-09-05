@@ -144,6 +144,43 @@ validate_kind() {
 cmd="${1:?usage: sluice-queue.sh add|next|set-state|claim|list ...}"
 shift || true
 
+# THE PORTED VERBS GO TO tools/sluice. `add` stays here for now: it sources
+# sluice-headline.sh, resolves three-valued ancestry and coalesces, all of
+# which shell out to git, and moving it is Task 6 rather than a side effect
+# of this one. The binary is built on demand and the path is resolved from
+# this script's own location so a caller's cwd cannot change which one runs.
+#
+# A CACHE FALLBACK EXISTS FOR ONE CASE ONLY: a copy of this ONE file with no
+# `tools/sluice` sibling beside it. Found live by `scripts/test-sluice.sh`'s
+# own T7/T8 (2026-09-05) — its chamber tests copy just this script into a
+# throwaway scratch repo to exercise `sluice-run.sh`'s claim-refusal logic,
+# a pattern that worked when this file was pure bash with no external
+# dependency. Without the fallback, the copy's `cargo build` fails (no
+# manifest to build) and `claim` never runs at all: rc=101, indistinguishable
+# to a caller from the binary itself panicking. The primary (sibling) path
+# is tried FIRST and is what every real checkout uses, so a live checkout's
+# own edits to tools/sluice are never shadowed by a stale cache; the cache
+# is refreshed from the sibling on every call that has one, so by the time a
+# sibling-less copy needs it, it is never staler than this same run's own
+# most recent real invocation.
+case "$cmd" in
+    claim|set-state|list)
+        sluice_bin="$(dirname "$0")/../tools/sluice/target/release/sluice"
+        sluice_manifest="$(dirname "$0")/../tools/sluice/Cargo.toml"
+        cache_bin="$HOME/.cache/hornvale/sluice/sluice"
+        if [ -f "$sluice_manifest" ]; then
+            if [ ! -x "$sluice_bin" ]; then
+                cargo build --quiet --release --manifest-path "$sluice_manifest" >&2
+            fi
+            mkdir -p "$(dirname "$cache_bin")"
+            cp -f "$sluice_bin" "$cache_bin" 2>/dev/null || true
+        elif [ -x "$cache_bin" ]; then
+            sluice_bin="$cache_bin"
+        fi
+        exec "$sluice_bin" "$cmd" "$@"
+        ;;
+esac
+
 case "$cmd" in
 add)
     branch="${1:?usage: add <branch> <sha> [merge|stage]}"
