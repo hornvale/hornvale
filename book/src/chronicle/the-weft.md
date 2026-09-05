@@ -44,9 +44,14 @@ cause at all** — the ordering was a base-rate effect in the recipe, not an
 artefact of a four-bin estimator, and a nineteen-class biome word ranks the
 thicket above the spring exactly as the four bins did. It then
 re-parameterised the two sign kinds, and on the same statistic and the same
-seed the spring reads **0.086464** where it reads 0.007812 here, an 11.1×
-rise. The table above is this campaign's measurement and stands as its record;
-the current world's readings are in the successor's chapter.
+seed the spring reads **0.086464** where it reads 0.007812 here — an 11.1×
+rise — while the overhang reads **0.076536** against 0.002497. The thicket and
+the erratic are untouched at 0.038604 and 0.000000. So the ordering above is
+falsified again at the shipped constants, but by a different relation:
+`spring > overhang > thicket > erratic`, in which `thicket > overhang` fails
+where the Weft's `thicket > spring` did. The table above is this campaign's
+measurement and stands as its record; the current world's readings are in the
+successor's chapter.
 
 The erratic's zero is not a near-miss that happened to land well. Its macro
 state is a literal constant, so its mutual information with anything is

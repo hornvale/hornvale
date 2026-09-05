@@ -3,11 +3,11 @@
 The **warp** is the set of macro fields already running continuously through
 the world — elevation, temperature, moisture, induration, drainage, carbonate,
 sampled at 40,962 points and blended smoothly between them. The **weft** is
-the fine detail crossing them at the resolution a walker occupies. The
-previous campaign wove the weft and measured whether it tracks the warp; that
-prediction was falsified. This campaign asks the question from the other end:
-not what the world knows, but what a walker is *told*, and whether a
-knowledgeable one could work back from the telling to the feature.
+the fine detail crossing them at the resolution a walker occupies.
+[The Weft](./the-weft.md) wove the weft and measured whether it tracks the
+warp; that prediction was falsified. This campaign asks the question from the
+other end: not what the world knows, but what a walker is *told*, and whether
+a knowledgeable one could work back from the telling to the feature.
 
 Three things follow from asking it that way. The room sentence gained two
 words. The measuring instrument moved to the walker's side of the channel and
@@ -94,10 +94,10 @@ where its occurrences actually stood.
 
 **Three hundred and thirty-three of four hundred and three springs stood on a
 facet with no cause at all.** The spring's cause class is 464 facets of
-11,218 — about four percent of land — and the recipe's floor term ran over the
-other ninety-six. An observer told the whole truth about carbonate and
-drainage would still have been unable to predict ninety-two percent of the
-world's springs.
+11,218 reading 0.25 or better — about four percent of land — and the recipe's
+floor term ran over the other ninety-six. An observer told the whole truth
+about carbonate and drainage would still have been unable to predict
+ninety-two percent of the world's springs.
 
 That closes a question the previous campaign left open. Its falsified ordering
 had two candidate explanations: a real property of the world, or an artefact
@@ -193,14 +193,16 @@ is there can a finite observer actually get — and which the readout answers.
 
 The instrument's cost was measured rather than assumed, and the assumption was
 wrong. The sign columns were supposed to be three cheap map reads per facet;
-an ablation attributed **all** of the added 0.331 CPU-seconds per world to one
-of them, the wetness sign's nearest-channel query, with the biome, rock and
-steepness reads free. That is over the third-of-a-second budget the design set
-itself. It was accepted rather than trimmed: sampling every second facet would
-halve the population, double the null's bias and widen its spread from 0.0020
-to 0.0035 bits — blunting the controls to save about twenty seconds of
-measurement wall time. The budget was written for a cost it did not foresee,
-and the instrument's resolution is what the campaign is for.
+an ablation attributed **100%** of the pool's added 0.218 CPU-seconds per world
+to one of them, the wetness sign's nearest-channel query, with the biome, rock
+and steepness reads free. The honest total across all thirty-two new readouts
+is **0.331 CPU-seconds per world**, against a budget the design had set itself
+at **0.25** — thirty-two percent over. It was accepted rather than trimmed:
+sampling every second facet would halve the population, double the null's bias
+and widen its spread from 0.0020 to 0.0035 bits — blunting the controls to
+save about twenty-three seconds of measurement wall time per refresh. The
+budget was written for a cost it did not foresee, and the instrument's
+resolution is what the campaign is for.
 
 ## The inversion
 

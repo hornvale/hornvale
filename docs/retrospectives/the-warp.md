@@ -299,6 +299,21 @@ destroyed the argument that the withdrawn clause was defective.
    The readings either side of a change are the evidence for the change.
 9. **When a claim's population might be empty, count it.** "Zero cause implies
    zero prevalence" was true, unfalsifiable, and quantified over nothing.
+10. **An A/B whose two arms build the same shared object cannot price that
+    object.** The cost design compared one metric family against another, and
+    both studies constructed the same pool — so neither arm could see the
+    pool's cost at all. To price a registration, measure all-new against none,
+    and ablate inside the winner to attribute.
+11. **Derive a preregistered bar from the null's spread before freezing it.**
+    A permutation null has a standard deviation as well as a mean; a bar
+    tighter than that spread fails by chance at a rate nobody intended. Compute
+    the spread first — here the χ² approximation gave it in closed form — and
+    set the bar as a multiple of it.
+12. **Never shrink a rare event's predictor toward one half.** Laplace's prior
+    is toward 0.5, which on a three-percent event over hundreds of classes
+    predicts nearly every thin class at even odds and reports a negative gain
+    that is an artefact of the prior. Shrink toward the base rate, so an
+    uninformative class scores exactly zero and never below.
 
 ## Deferred minors, and where each landed
 
