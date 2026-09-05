@@ -1,9 +1,10 @@
 # The Charter — independently contributed development knowledge
 
-Status: proposed; G3 review pending. Date: 2026-09-04.
+Status: G3 approved with the quality-contract refinement; planning authorized
+by Nathan's “Sounds great. Let's continue.” Date: 2026-09-04.
 Branch: `codex/the-charter`.
 Observed base: `fd3cd159be98e6c07dbb849b780c2712c6a7826f`.
-Scope: architectural design, not implementation authorization.
+Scope: first-campaign design; execution follows plan self-review under G4.
 
 Program: [Federated development](2026-09-04-federated-development-program-metaplan-design.md).
 Rulings and evidence: [decision ledger](../ledgers/2026-09-04-the-charter.md).
@@ -269,7 +270,47 @@ generic integration wiring already specified at bootstrap; it may not hide
 a new host semantic dependency as “integration.” Existing queued stage and
 merge verification still apply to the actual campaign product.
 
-## 8. Integration, risks, and response rules
+## 8. Quality contracts
+
+Quality requirements have stable IDs and the same distinction between authored
+obligation and observed evidence as behavioral requirements. Version 1 can
+express them using the existing requirement/observation records; it does not
+need a universal quality taxonomy or a new kernel type. A quality scenario
+names subject/owner, workload, environment, required response or budget,
+evaluation method, and breach action. Keep desired targets separate from
+observed baselines. Regenerating measurements must never relax a target.
+
+The first campaign adopts the following scenarios. These are requirements to
+verify, not claims that the current tool meets them.
+
+| ID | Scenario and acceptance | Evidence and breach action |
+|---|---|---|
+| `charter.isolation` | Invoke context from two different worktrees with deliberately different local declarations, including inherited Git path variables and a shared target-dir environment override. Each invocation observes its own source and branch; it does not edit tracked files or select another worktree's contributor executable. | Hermetic fixture repositories and explicit current-checkout manifest/target paths. A mismatch fails collection. Cargo dependency caches may be shared; checkout-specific compiled artifacts may not be selected by an ambient override. |
+| `charter.determinism` | Reorder equivalent contribution envelopes, retaining any semantic order inside observations. Markdown stays identical for identical envelopes and checkout context. | Composition tests; execution timing belongs on stderr, outside deterministic Markdown. A mismatch fails the tool suite. |
+| `charter.recovery` | A contributor hangs, overproduces output, exits with an error, or receives cancellation while holding its pipes open. The host returns a diagnostic/nonzero status and terminates its invocation process group, waits for its direct child, and drains/closes its readers. | Child/grandchild fixtures and live PID checks on macOS and Linux. No successful partial report; no invocation process remains running. The host cannot reap arbitrary grandchildren on every OS, so require termination and direct-child reaping rather than a portable subreaper guarantee. |
+| `charter.resource-bounds` | Run the two enrolled contributors sequentially within an invocation. Bound each contributor's stdout to 1 MiB, stderr capture to 64 KiB, execution to 5 s; bound metadata/build machine-output capture to 16 MiB and each build/metadata phase to 600 s. Cancellation allows 250 ms for orderly termination before forced termination. | These are initial operational caps chosen for small JSON observations, not measured service-level claims. Boundary/overflow/deadline tests use injected smaller limits. Exceeding a cap fails visibly; changing a cap is a reviewed policy change, not an automatic rebaseline. Unbounded contributor fan-out is excluded. |
+| `charter.cost-attribution` | Measure both real scopes and their combined collection on the named Mac and canonical Linux host: one cold tool-target build and ten warm invocations per workload, recording toolchain, source, build, collection, elapsed time, and available peak-memory data. | Publish all samples including failures, and report missing measurements honestly. Cold runs use disposable target directories, never delete an active cache. The evidence report must propose a justified steady-state target or explicitly record why no performance claim is earned; a guessed cross-host latency threshold is not acceptance evidence. Operational caps above still apply. |
+| `charter.extension` | After bootstrap, independently enroll both pilot packages without semantic host/protocol edits; resolve only permitted dependency artifacts. | Record the fork base, changes and composed result. Necessary core semantics reopen the design. Existing render commands remain supported. |
+| `charter.diagnostics` | Empty scope, failed contributor, metadata mismatch, malformed JSON, missing required observation, and contradiction each identify the phase, contributor/requirement where known, and the actionable cause in plain text. | CLI cases capture stdout/stderr/exit status. Do not print a completed success report before validation finishes; no ANSI color or graphical viewer is needed to understand failure. |
+| `charter.portability` | The same protocol, path-selection, discovery, and lifecycle suite passes on macOS and canonical Linux. Host-specific census rules stay explicit. | Local scoped tests plus the normal canonical outboard phase. Unsupported operating systems fail clearly for context collection; existing unrelated Digest commands are not deliberately disabled. |
+| `charter.usability` | An unfamiliar reader can identify which statements are authored, which named checks ran, what failed, and where to inspect the owning source from a bounded scoped report. | Independent review using both real reports and one failure report; record examples and corrections. This is evaluated evidence, not a compiler guarantee or an overall quality score. |
+
+The host owns shared process/resource policy; contributors own their local
+observations. The composed workload owns end-to-end cost evidence. Passing
+local limits does not establish a global concurrency or memory budget across
+independent host invocations. Those remain program-level obligations before
+narrower admission can be earned. The current Sluice serialization rules
+remain authoritative for canonical work.
+
+Context runs with `--locked --offline` after the normal dependency/build
+preparation step. A missing dependency or stale lockfile is a useful failure
+with a preparation instruction, not permission to modify tracked inputs or
+fetch silently. Control Git path variables, Cargo target selection, cwd,
+stdin and child lifetime explicitly. Execution remains trusted repository
+code, not a security sandbox; process-group cleanup assumes contributors
+obey the contract and do not detach into independent sessions.
+
+## 9. Integration, risks, and response rules
 
 - Keep current outboard tool placement. Record any proposed new dependency
   and its reason; defer unrelated crate restructuring.
@@ -289,7 +330,7 @@ merge verification still apply to the actual campaign product.
   moving code or caching results. Do not introduce unsound evidence reuse to
   make the first timing attractive.
 
-## 9. G3 decisions to review
+## 10. Approved G3 decisions
 
 1. Adopt a new **development-only JSON protocol schema**, outside the kernel
    and the time-free ProjectLedger; no save-format or simulation schema change.
@@ -300,5 +341,9 @@ merge verification still apply to the actual campaign product.
 4. Accept explicitly incomplete provenance and narrowly scoped observations
    in this read-only product; they confer no admission or activation authority.
 
-These are proposed campaign choices. G3 approval authorizes implementation
-planning; the campaign's eventual merge/close retains its separate review.
+5. Make quality scenarios explicit as in §8, preserving the distinction
+   between operational caps, observed baselines, and earned service levels.
+
+Nathan approved continuing after reviewing the original package and the
+quality-contract refinement. Implementation planning is authorized; the
+campaign's eventual merge/close retains its separate G6 review.

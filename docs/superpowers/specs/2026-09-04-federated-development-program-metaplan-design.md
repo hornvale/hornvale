@@ -1,6 +1,6 @@
 # Federated development — program metaplan
 
-Status: proposed for G3 review, 2026-09-04. This is a direction and amendment
+Status: direction accepted at The Charter's G3, 2026-09-04. This is a direction and amendment
 framework, not an enacted replacement for the Constitution or current gates.
 First campaign: [The Charter](2026-09-04-the-charter-design.md).
 Decision trail: [campaign ledger](../ledgers/2026-09-04-the-charter.md).
@@ -144,11 +144,37 @@ or reduced test count as a proxy for achieved correctness. The important
 experiment is whether independent owners can safely add useful behavior
 with less coordination while retaining the obligations that matter.
 
-## 6. Capture and existing homes
+## 6. Quality contracts across the federation
+
+Nonfunctional requirements use the same identity, authority and evidence
+discipline as functional requirements. Each names a subject/owner, scenario,
+workload, environment, required response or budget, method of evaluation,
+and breach action. Distinguish categorical guarantees, measured budgets and
+review-based qualities. A compiled declaration is not proof of its target.
+
+Local contributors own their local guarantees. Shared-resource and interface
+agreements own interaction requirements. Whole-system composition owns
+end-to-end performance, recovery and usability. Local conformance cannot
+establish aggregate memory bounds or latency under contention; percentiles
+cannot simply be added as an end-to-end proof.
+
+Adoption follows declare → measure → adopt a justified target → enforce →
+reconsider explicitly when workload or conditions change. Desired targets and
+observed baselines are separate records. A slower new baseline never silently
+relaxes the requirement. Increased scale or heterogeneous adopters reopen
+the applicable workload envelope. Quality tradeoffs require explicit rulings,
+not a single score that hides a failed guarantee behind a faster benchmark.
+
+The Charter's first scenarios cover worktree isolation, deterministic views,
+bounded execution and recovery, cost attribution, independent extension,
+diagnostics, supported-host operation, and usability. Its operational caps
+are not service-level measurements; broader admission awaits stronger evidence.
+
+## 7. Capture and existing homes
 
 The new registry entries are `PROC-federated-evolution`,
 `PROC-knowledge-contributions`, `PROC-evidence-selects-obligations`, and
-`PROC-local-adoption-and-activation`. They record proposals, not shipped
+`PROC-local-adoption-and-activation`, and `PROC-quality-contracts`. They record proposals, not shipped
 capabilities.
 
 Existing homes remain authoritative for overlapping directions:

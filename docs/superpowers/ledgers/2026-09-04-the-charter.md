@@ -281,6 +281,30 @@ quality ontology outside this first campaign. Target numbers need justified
 workloads and measurements; desired service levels and observed baselines
 are different records.
 
+## #7 — G3 approval and quality refinement incorporated
+
+Nathan replied “Sounds great. Let's continue.” after the G3 package and the
+quality-contract refinement. Treat that as approval to incorporate the agreed
+refinement and proceed to planning, not as a reason to repeat the approval
+question. G4 remains a plan self-review; G6 remains the campaign-close stop.
+
+The spec now contains nine named quality scenarios, including controlled
+worktree selection, deterministic output, bounded process lifetime, explicit
+resource caps, measured costs, compatible extension, diagnostics, portability
+and review-based usability. Existing records can carry quality requirements;
+no universal quality schema was added. Targets and baselines remain separate.
+
+Implementation elaborations: conservative byte/time caps bound the two small
+trusted subprocesses; they are policy choices, not observed performance
+claims. Dependency preparation is separate from locked/offline read-only
+context collection. Process-group termination and direct-child reaping are
+required; portable reaping of arbitrary grandchildren is not promised. These
+make the accepted guarantees implementable without claiming a sandbox.
+
+Capture: spec §8 and program §6 carry the requirements; ledger #6's pending
+refinement is addressed. No Ideonomy rerun for recording Nathan's approval;
+the quality-contract decision's two passes are recorded in #6.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
@@ -293,11 +317,9 @@ are different records.
 - Later adopters: Alchemy's contract, the actual publication boundary, and
   the queue lifecycle. The first campaign's predicate check proves none of
   those by implication.
-- G3 refinement from Nathan's nonfunctional-requirements question: turn the
-  quality-contract recommendation in #6 into explicit first-campaign
-  scenarios and acceptance criteria before proceeding to planning. Include
-  local, shared-resource, and composed-system obligations; numeric targets
-  remain unestablished until their workload and rationale are recorded.
+- G3 quality refinement addressed in #7 and spec §8. Measured performance
+  targets remain distinct from the initial resource caps and must be justified
+  by the first composed workload report, not invented from the design.
 
 ## Verification and observations
 
