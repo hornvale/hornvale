@@ -622,6 +622,66 @@ is exactly the situation in which a campaign assumes its premises survived.
 
 ---
 
+### #11 [G4] — the plan's pre-flight scan, four rulings before Task 1
+
+**Question.** Subagent-driven execution requires scanning the plan for
+cross-task conflicts before dispatching anything. What did the scan find?
+
+**Decision.** Four conflicts, four rulings, all applied to the plan text before
+Task 1 was dispatched. The full scan table — nine task-pair rows and ten
+per-task rows — is in the SDD ledger at
+`.superpowers/sdd/2026-09-05-the-culvert/progress.md`; the rulings are here,
+because rulings are committed and task state is not.
+
+**R1 — Task 1's kept bench output is not the C1b before-column.** The plan told
+Task 1 to keep its bench stdout as "the C1b before run of Task 9". C1b counts
+node EXPANSIONS, which needs the campaign-time kernel counter that Task 1 does
+not apply, so that stdout cannot carry an expansion figure at all. The text had
+conflated *the run before the fix* with *the C1b before column*. Task 9 now
+takes both C1b columns itself — the counter applied to a checkout of the Stage 2
+boundary commit for "before" and to the campaign head for "after" — which is a
+same-instrument, same-tree pair and strictly better than comparing against
+`a8bde6769`'s throwaway probe. Bench outputs also move from `/tmp` to the SDD
+workspace. *Cost if wrong:* one extra build in Task 9.
+
+**R2 — Task 4 gains a step that actually builds what Task 6 consumes.** The
+plan's own self-review had added `culvert_real_pairs`, `Shape` and
+`PLAN_BUDGET_MIRROR` to Task 4's Interfaces block and never added a step that
+writes them, so Task 6's test would have consumed three symbols no task creates.
+**This is the self-review's own defect half-fixed** — it caught the
+inconsistency, declared the interface, and did not follow through to the step.
+Worth naming: a fix that updates the contract without updating the work is a
+fix that reads as complete. *Cost if wrong:* none.
+
+**R3 — the belief probe is selected once, at band 1, not per band.** The fold
+columns are fitted against the probe agent's own history across bands, so a
+subject that changes between bands confounds the history axis with a change of
+creature — the one thing the fit cannot survive. The consequence is now stated
+in the plan rather than left implicit: band 1's max-known-water member (12
+rooms) need not be band 10's (46), so the probe column means "a creature that
+believes in water", not "the worst case at every band". The worst case at every
+band is what the four roster-wide columns report, which is what they are for.
+*Cost if wrong:* the probe column understates the worst population while the
+roster columns still carry it.
+
+**R4 — `RouteMemo` is a `pub` boundary, so type-audit and plumb bind it.** Both
+run default-deny inside `make gate-commit`, and `hops(.., budget: usize) ->
+Option<usize>`, `searches() -> u64` and `len() -> usize` are all untagged
+primitives at a pub boundary. Added to the plan's Global Constraints along with
+the note that a new `pub` item legitimately moves
+`docs/audits/type-audit-report.md`, so that movement is not read as a Rule 1
+stop. *Cost if wrong:* a red gate the implementer would have hit one round
+later.
+
+**ideonomy passes / overturns.** None; a conflict scan is an audit, not a
+design choice. Each ruling resolves against the spec, which is the binding
+authority the plan argues from.
+
+**Capture actions.** All four applied to
+`docs/superpowers/plans/2026-09-05-the-culvert.md` before Task 1 dispatched.
+
+---
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*

@@ -35,6 +35,15 @@ wall-clock in production code.
   variant gets a one-line doc comment.
 - **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the
   most common review finding in this repo.
+- **`make gate-commit` runs `type-audit check` and `plumb check`, both
+  DEFAULT-DENY.** Any primitive at a `pub` boundary needs a `type-audit:`
+  verdict tag (`bare-ok(<class>)` / `waiver(<reason>)` / `pending(wave-N)`), and
+  any authored numeric constant needs a `plumb:` tag. `RouteMemo::hops(..,
+  budget: usize) -> Option<usize>`, `searches() -> u64` and `len() -> usize` are
+  all such primitives. Both also have committed REPORTS that are drift-checked
+  in the same gate — `make type-audit-report` and `make plumb-report` regenerate
+  them; a new `pub` item moves `docs/audits/type-audit-report.md` and that
+  movement is expected, not a Rule 1 stop.
 - **`make gate-commit` before every commit** on a Rust-touching change. Pass an
   explicit Bash `timeout: 3600000`.
 - **The lexicon guard counts the token `cell` per file** against
@@ -278,8 +287,16 @@ of predicates the drive stack commits (grep the `commit(` sites in
 `liveness.rs`), add them, and say in your report that the roster was larger
 than six — that finding is the point of the task, not a detour from it.
 
-Keep both output files. They are the pre-fix column that Task 2 reports beside
-the fixed one, and the C1b "before" run of Task 9.
+Write both output files into this plan's SDD workspace
+(`.superpowers/sdd/2026-09-05-the-culvert/`), not `/tmp`. They are the C2
+TIMING before-column and the pre-fix belief column Task 2 reports beside the
+fixed one.
+
+**They are NOT the C1b "before" run.** C1b counts node expansions, which needs
+the campaign-time kernel counter that this task does not apply, so this bench's
+stdout cannot carry an expansion figure at all. Task 9 takes both C1b columns
+itself. (Controller ruling R1 — the plan text originally conflated "the run
+before the fix" with "the C1b before column".)
 
 - [ ] **Step 8: Confirm byte-identity**
 
@@ -376,8 +393,19 @@ wrong today, rather than proving only that an assertion compiles. Paste it.
 The selection at `:1422-1429` picks `max_by_key` over `counts` (the
 `agent-at` fact count). Change the belief probe — and *only* the belief probe —
 to select the roster member with the largest
-`latest_visit.water_at(entity, t, terrain).len()` at the band where selection
-happens, ties broken by ascending `EntityId` so the choice is deterministic.
+`latest_visit.water_at(entity, t, terrain).len()`, ties broken by ascending
+`EntityId` so the choice is deterministic.
+
+**Select ONCE, at band 1, and hold it — do not re-select per band** (controller
+ruling R3). The fold columns are fitted against the probe agent's own history
+across bands, so a subject that changes between bands confounds the history axis
+with a change of creature, which is the one thing the fit cannot survive.
+
+**Say the consequence in the code, do not hide it.** The band-1 max-known-water
+member (12 rooms at band 1) need not be band 10's max (46 rooms), so this column
+means *"a creature that believes in water"*, not *"the worst case at every
+band"*. The worst case at every band is what the four roster-wide columns of
+Step 4 report — that is what they are for.
 
 **Leave the existing probe agent alone for the other four folds.** They are
 The Detent's and The Kerf's subject and their columns must stay comparable
@@ -590,13 +618,51 @@ Expected: FAIL, reporting roughly 529 calls over 83 pairs.
 Paste the failure. **A test that passes here is measuring the wrong thing** —
 check that the sweep really is roster-wide and really is at wait 12.
 
-- [ ] **Step 3: Mark it `#[ignore]` with a reason that names the task**
+- [ ] **Step 3: Build the three helpers Task 6 consumes** (controller ruling R2)
+
+The plan's own self-review added these to this task's Interfaces block without
+adding a step that writes them. Write them now, in `the_culvert.rs`:
+
+```rust
+/// Which measured shape a pair population comes from. The two are NOT
+/// interchangeable and Task 6 needs both: the possession shape had ZERO
+/// budget-exhausted searches, and the lab shape had 55 of 83 at band 10. A
+/// test drawn from the possession shape alone never exercises the `None` arm,
+/// which is 95.1% of the real cost.
+enum Shape {
+    /// Seed 17, `Session::start` + 12 waits — 52 of 67 residents hold a
+    /// non-empty belief, max 23 rooms, no unreachable pair.
+    Possession,
+    /// Seed 42, 50 agents, band 10 of the lab shape — 11 of 50 non-empty,
+    /// max 46 rooms, 55 of 83 pairs unreachable within budget.
+    Lab,
+}
+
+/// `liveness::PLAN_BUDGET` is a private const an integration test cannot
+/// import, so it is mirrored here — the third such mirror, beside
+/// `session_length_scaling`'s `PROBE_BUDGET` and `nav_bench`'s `BUDGET`. All
+/// four are kept in sync BY HAND and nothing enforces it; a test asserting
+/// agreement is impossible without making `PLAN_BUDGET` public.
+const PLAN_BUDGET_MIRROR: usize = 1_000;
+
+/// Every distinct `(home, water room)` pair a roster-wide `believed_water`
+/// sweep implies on `shape`, in ascending `(from, dest)` order so the
+/// population is reproducible.
+fn culvert_real_pairs(shape: Shape) -> Vec<(Facet, Facet)> { /* … */ }
+```
+
+Assert in a test that each shape's population is non-empty and that
+`Shape::Lab` yields at least one pair `plan_to_room` cannot reach within
+`PLAN_BUDGET_MIRROR` — otherwise Task 6's `None` arm is untestable and you
+should find out here, not there.
+
+- [ ] **Step 4: Mark the sweep witness `#[ignore]` with a reason that names the task**
 
 It stays red until Task 7. `windows/lab/tests/preregistration_guard.rs`'s
 discipline requires an `#[ignore]` reason that names a cost or cites a decision;
 name Task 7 and this plan.
 
-- [ ] **Step 4: Gate and commit**
+- [ ] **Step 5: Gate and commit**
 
 ```bash
 cargo fmt
@@ -943,8 +1009,18 @@ Add a counter beside the existing `expansions += 1` in
 reddens `lexicon_guard::no_vertex_sense_cell_comes_back`. This cost the
 counting probe a red gate; it is written down so it costs nobody else one.
 
-Run both shapes, record expansions against spec §4.1's C1b table (Shape A
-425,042 → ≤60,000; Shape B 392,391 → ≤15,000), then **revert the counter** and
+**Take BOTH columns with this counter, on this campaign's own tree**
+(controller ruling R1). "After" is the campaign head. "Before" is a checkout of
+the Stage 2 boundary commit — the last commit before `RouteMemo` was wired —
+with the same counter applied. That is a same-instrument, same-tree pair.
+
+The spec's §4.1 figures (Shape A 425,042, Shape B 392,391) were taken at
+`a8bde6769` with the throwaway probe. Report your own before-column beside
+them; if the two disagree by more than a few percent, that is a finding about
+what landed in between, and it goes in the report rather than being reconciled
+away.
+
+Criteria: Shape A → ≤60,000, Shape B → ≤15,000. Then **revert the counter** and
 confirm `git diff --stat -- kernel/` is empty.
 
 - [ ] **Step 3: C2 — the effect-size floor**
