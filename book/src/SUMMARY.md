@@ -461,6 +461,7 @@
 - [The Kerf](./chronicle/the-kerf.md)
 - [The Tenon](./chronicle/the-tenon.md)
 - [The Weft](./chronicle/the-weft.md)
+- [The Warp](./chronicle/the-warp.md)
 - [The Housemark](./chronicle/the-housemark.md)
 - [The Coda](./chronicle/the-coda.md)
 - [The Sluicegate](./chronicle/the-sluicegate.md)

@@ -1328,7 +1328,7 @@ spec-2026-09-05-the-sluicegate-design	shipped	none		merged via the queue 2026-09
 chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
 retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md
 the-weft	shipped	none		plan: COMPLETE/G6 approved; retrospective: Close G6 approved; chronicle: G6 accepted result	docs/superpowers/specs/2026-09-03-the-weft-design.md	docs/superpowers/plans/2026-09-03-the-weft.md		book/src/chronicle/the-weft.md	docs/retrospectives/the-weft.md
-the-warp	active	none		spec: G3 approved 2026-09-05; plan: executing	docs/superpowers/specs/2026-09-05-the-warp-design.md	docs/superpowers/plans/2026-09-05-the-warp.md			
+the-warp	shipped	none		plan: complete through Task 8; readout recorded; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-05-the-warp-design.md	docs/superpowers/plans/2026-09-05-the-warp.md		book/src/chronicle/the-warp.md	docs/retrospectives/the-warp.md
 the-kerf	shipped	none		spec: status header records closure; plan: COMPLETE through Task 5; G6 approved 2026-09-05	docs/superpowers/specs/2026-09-04-the-kerf-design.md	docs/superpowers/plans/2026-09-04-the-kerf.md		book/src/chronicle/the-kerf.md	docs/retrospectives/the-kerf.md
 plan-2026-09-04-the-charter	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission		docs/superpowers/plans/2026-09-04-the-charter.md			
 spec-2026-09-04-federated-development-program-metaplan-design	active	none		bounded Charter pilot qualified; broader federation program remains active	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
