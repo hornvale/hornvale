@@ -93,7 +93,11 @@ it is not a substitute for the raw utility output.
 
 A failed host build makes that workload's requests unavailable; other workloads
 still run. A failed request remains a numbered sample. SIGINT/SIGTERM terminate
-owned work before worktree removal; a cleanup failure retains the owned directory.
+owned work across the measurement session, including nested process groups,
+before worktree removal. A cleanup failure emits the complete available failed
+sample before aborting later work, and retains its raw files and the owned
+worktree with explicit paths. Output is retained whenever a sample is unsuccessful,
+including zero-exit interruption. Children must not detach into another session.
 The diagnostic does not weaken the host's 5 s contributor / 600 s machine-phase
 caps or its 250 ms termination grace. Its own one-hour command safety deadline
 is separately labeled.

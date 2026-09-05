@@ -209,9 +209,12 @@ Neither is an aggregate simultaneous process-tree memory budget. Whole-phase
 measurements do not separate compilation from lock waiting; missing timing or
 memory data remain missing. The diagnostic's one-hour command safety deadline
 is separate from the context operational caps above. Cleanup finishes owned
-processes before removing their worktrees; a cleanup failure retains the owned
-directory for inspection. Trusted children must obey the host's process-group
-contract.
+processes across the owned session, including Digest's nested process groups,
+before removing their worktrees. A cleanup failure emits the failed attempt with
+its command, diagnostics and retained paths before aborting further samples;
+both the raw sample files and owned worktree remain for inspection. Every
+unsuccessful sample retains stdout, including interruption after a zero exit.
+Trusted children must not detach into separate sessions; this is not a sandbox.
 
 This is an explicit diagnostic, not a routine gate. Canonical measurements run
 only through the existing serialized queue: the controller creates an isolated
