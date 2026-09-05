@@ -5750,3 +5750,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T00:42:29Z | gate-commit | 172.563 | 730.947 | 55.437 | 4.56 | 0 | 219b95e1d | campaign/the-coda | MacBookPro | 10 |
 | 2026-09-05T00:42:48Z | gate-commit | 110.711 | 64.063 | 16.482 | 0.73 | 0 | 219b95e1d | campaign/the-coda | MacBookPro | 10 |
 | 2026-09-05T00:44:02Z | rebaseline | 347.047 | 448.149 | 20.769 | 1.35 | 0 | 219b95e1d | campaign/the-coda | MacBookPro | 10 |
+| 2026-09-05T00:47:42Z | gate-commit | 36.756 | 63.476 | 17.100 | 2.19 | 0 | acbf428d3 | campaign/the-coda | MacBookPro | 10 |
