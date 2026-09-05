@@ -49,6 +49,15 @@ fn a_row_round_trips_through_render_and_parse() {
 }
 
 #[test]
+fn a_short_line_is_padded_and_kept_never_dropped() {
+    // The shell pads and keeps; dropping would delete the row on next write.
+    let r = Row::parse("TRUNCATED\tonly\tthree").expect("kept, not dropped");
+    assert_eq!(r.when, "TRUNCATED");
+    assert_eq!(r.state, "");
+    assert_eq!(r.kind, "merge");
+}
+
+#[test]
 fn an_empty_kind_normalises_to_merge() {
     let line = "2026-09-05T00:00:00Z\treq-abc-1\tcampaign/x\tdeadbeef\tqueued\t\t";
     assert_eq!(Row::parse(line).expect("parses").kind, "merge");
@@ -99,21 +108,27 @@ pub struct Row {
 }
 
 impl Row {
-    /// Parse one TSV line. Returns `None` if it has fewer than six fields.
+    /// Parse one TSV line. TOTAL — never returns `None` for a short line.
+    ///
+    /// The shell it replaces PADS a malformed row out to seven fields and
+    /// keeps it; measured 2026-09-05 by feeding `set-state` a three-field
+    /// line and watching it survive as `TRUNCATED\tonly\tthree\t\t\tmerge\t`.
+    /// Dropping such a line here would make the next `write_rows` delete it
+    /// permanently, silently losing a request — which the plan's own Global
+    /// Constraints forbid (the format does not change) and which is the exact
+    /// opposite of a queue whose first duty is durability.
     pub fn parse(line: &str) -> Option<Row> {
         let f: Vec<&str> = line.split('\t').collect();
-        if f.len() < 6 {
-            return None;
-        }
-        let kind = if f[5].is_empty() { "merge" } else { f[5] };
+        let g = |i: usize| f.get(i).copied().unwrap_or("");
+        let kind = if g(5).is_empty() { "merge" } else { g(5) };
         Some(Row {
-            when: f[0].to_string(),
-            id: f[1].to_string(),
-            branch: f[2].to_string(),
-            sha: f[3].to_string(),
-            state: f[4].to_string(),
+            when: g(0).to_string(),
+            id: g(1).to_string(),
+            branch: g(2).to_string(),
+            sha: g(3).to_string(),
+            state: g(4).to_string(),
             kind: kind.to_string(),
-            note: f.get(6).copied().unwrap_or("").to_string(),
+            note: g(6).to_string(),
         })
     }
 
@@ -269,7 +284,7 @@ Sluice-Headline: the queue's row and store arrive in Rust, untested by any calle
 - Modify: `tools/sluice/tests/suite.rs`
 
 **Interfaces:**
-- Consumes: `Store`, `Row` from Task 1.
+- Consumes: `Store`, `Row` from Task 1, and `Store::lock()` — which Task 3 also uses. Implement `Store::lock()` in THIS task (its code is in Task 3's Step 3); `set_state` must hold it across its read-modify-write.
 - Produces: `sanitize_note(&str) -> String`; `validate_state(&str) -> bool`; `validate_kind(&str) -> bool`; `set_state(&Store, id: &str, state: &str, note: Option<&str>) -> Result<(), SetStateError>` where `SetStateError::NoSuchRow` is distinct from `SetStateError::BadState`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -362,6 +377,11 @@ pub fn set_state(
     if !validate_state(state) {
         return Err(SetStateError::BadState);
     }
+    // THE LOCK IS NOT OPTIONAL HERE. `scripts/sluice-queue.sh`'s `set-state`
+    // takes `with_lock` before its rewrite; an earlier draft of this plan
+    // dropped it, which would have let an unlocked set-state race a locked
+    // claim through the same read-modify-write and the same temp path.
+    let _guard = store.lock().map_err(SetStateError::Io)?;
     let mut rows = store.read_rows().map_err(SetStateError::Io)?;
     let mut matched = false;
     for r in rows.iter_mut() {
@@ -714,12 +734,20 @@ esac
 Run: `bash scripts/test-sluice.sh`
 Expected: 220 passed, 0 failed. This is the integration check that the binary and its callers agree, and it is why the shell suite is kept rather than deleted. If a test fails here, the port changed behaviour — fix the Rust, not the test.
 
-- [ ] **Step 4: Gate the new crate**
+- [ ] **Step 4: Gate the new crate — tests AND lint AND fmt**
+
+`make gate-commit` is workspace-scoped and never visits an excluded crate, and
+the `outboard` tool lines run `cargo test` only. So without the two extra lines
+below, nothing in this repo would ever run clippy or rustfmt against
+`tools/sluice` — measured on 2026-09-05, when Task 1's code was committed with
+a live `-D warnings` failure and a fmt diff that no gate could see.
 
 In `scripts/lane-outboard.sh`, beside the five existing tool lines (`tools/board` at line 42 onward), add:
 
 ```bash
 run "tools/sluice"     cargo test --manifest-path tools/sluice/Cargo.toml
+run "tools/sluice fmt" cargo fmt --manifest-path tools/sluice/Cargo.toml --check
+run "tools/sluice lint" cargo clippy --manifest-path tools/sluice/Cargo.toml --all-targets -- -D warnings
 ```
 
 - [ ] **Step 5: Run the whole outboard set**
