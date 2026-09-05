@@ -29,6 +29,9 @@ pub enum Shape {
         rise: f64,
     },
     /// Linear rise from `p0` to an apex at `end`, never reaching plateau.
+    /// `apex <= peak + 0.5` by construction (see [`shape_of`]): `shape_of`
+    /// never returns a `Triangle` whose apex would overshoot the committed
+    /// peak, falling through to `Rectangle` instead when it would.
     Triangle {
         /// The bake year the occupation began.
         founded: f64,
@@ -52,6 +55,30 @@ pub enum Shape {
 
 /// Choose the shape for one occupation. `person_years` is the committed
 /// integral, `p0` the bake's opening population for its founding kind.
+///
+/// **`p0` is sometimes wrong, and this function must not trust it past the
+/// point the committed data can bear.** The bake's `open` (`history_bake.rs`)
+/// sets `peak_population` to the OPENING population and only ever raises it,
+/// so the true opening population is always `<= peak` — but a
+/// `Founding::From` record's committed facts cannot tell WHICH of five
+/// distinct openings produced it: a true daughter colony opens at
+/// `DAUGHTER_POP`, while a relocation to vacant land, a conquest, a climate-
+/// driven migration, and a raid seat all open at the survivors' own
+/// (generally much larger) population — `pop`, `pop * (1 - WAR_LOSS)`,
+/// `pop * MIGRATE_SURVIVAL`, `raider_pop` respectively. The context that
+/// calls this always passes `DAUGHTER_POP` for every `Founding::From`
+/// (`windows/lot/src/context.rs`), which under-states `p0` for the other
+/// four mechanisms. An under-stated `p0` can force the Triangle branch below
+/// to fit its area with an apex ABOVE the committed peak — a real, measured
+/// defect: 3 of seed 42's 1212 occupations produced a Triangle apex up to
+/// 23.6 over peak before this guard existed. So the Triangle branch is
+/// admitted only when its apex stays within `peak + 0.5` (the same slack the
+/// bake's own accrual invariant allows RisePlateau/Rectangle); an
+/// out-of-range fit reads as "this occupation opened larger than
+/// `DAUGHTER_POP`" and falls through to `Rectangle`, whose `level =
+/// person_years / t` is bounded by that same accrual invariant regardless of
+/// what `p0` was — never in `p0` itself, which the caller has no way to
+/// correct from the committed facts alone.
 /// type-audit: bare-ok(count: founded), bare-ok(count: end), bare-ok(count: peak), bare-ok(count: person_years), bare-ok(count: p0)
 pub fn shape_of(founded: f64, end: f64, peak: u32, person_years: f64, p0: f64) -> Shape {
     let t = (end - founded).max(0.0);
@@ -83,8 +110,13 @@ pub fn shape_of(founded: f64, end: f64, peak: u32, person_years: f64, p0: f64) -
         }
     }
     // Triangle from p0 to an apex at end with the committed area: A = t (p0 + apex) / 2.
+    // Admitted only when apex stays within peak + 0.5 (see shape_of's doc for
+    // why an out-of-range fit here means p0 itself was wrong, not that the
+    // model needs a bigger ceiling): an under-stated p0 (any Founding::From
+    // opening other than a true daughter colony) can otherwise force apex
+    // above the committed peak.
     let apex = 2.0 * person_years / t - p0;
-    if apex >= p0 {
+    if apex >= p0 && apex <= peak + 0.5 {
         return Shape::Triangle {
             founded,
             end,

@@ -83,6 +83,45 @@ fn pins_are_honoured_or_refused_with_the_reason() {
 
 /// claim: structural(seed: 42) — one world.
 ///
+/// `places` and `draw`'s own site selection must agree on "alive and
+/// contributing" — a place `places` lists but `draw` could never choose (or
+/// vice versa) would let an exhibit built on `places` show a site the draw
+/// itself treats as unpickable. Checks both halves: every returned place
+/// carries a positive birth weight (never merely alive with zero
+/// contribution), and the set of sites `places` returns is exactly the set
+/// `draw`'s own `alive_at && births_at > 0.0` predicate would admit,
+/// reconstructed here from the same committed fields `draw` reads.
+#[test]
+fn places_agrees_with_draws_own_site_selection() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let year = 1500.0;
+    let listed = places(&ctx, year);
+    assert!(!listed.is_empty());
+    for place in &listed {
+        assert!(
+            place.births_per_year > 0.0,
+            "site {:?} listed by places() with births_per_year {}",
+            place.site,
+            place.births_per_year
+        );
+    }
+    let listed_sites: std::collections::BTreeSet<u32> = listed.iter().map(|p| p.site.0).collect();
+    let choosable_sites: std::collections::BTreeSet<u32> = ctx
+        .occupations
+        .iter()
+        .filter(|p| {
+            let alive = p.record.core.founded <= year
+                && p.record.core.ended.unwrap_or(ctx.present_year) > year;
+            alive && p.births_per_year * population_at(&p.shape, year) > 0.0
+        })
+        .map(|p| p.record.core.site.0)
+        .collect();
+    assert_eq!(listed_sites, choosable_sites);
+}
+
+/// claim: structural(seed: 42) — one world.
+///
 /// `souls_ever` is defined as the binned sum (`Curve`'s own doc): asserted
 /// here at zero tolerance, since it IS that sum by construction. The
 /// closed-form `Σ births_per_year × person_years` was tried first and
@@ -134,43 +173,67 @@ fn a_world_without_the_fact_is_refused() {
 }
 
 /// claim: structural(seed: 42) — every occupation of the committed world.
-/// The Task 4 review's carried assertion, AS FALSIFIED AND CORRECTED here
-/// (see the campaign ledger and the task-5 report for the measurement): the
-/// review's claim was "the reconstructed curve never exceeds the committed
-/// peak", reasoning that a `Triangle`'s `apex < peak` "by construction". Run
-/// against every seed-42 occupation, that bound is FALSE for 3 of 1212
-/// (0.25%) — all three are `Triangle`s over an exact one-epoch (25-year)
-/// tenure founded at `DAUGHTER_POP`, where the committed `person_years`
-/// integral (itself bounded by the bake's own accrual invariant,
-/// `person_years <= (peak + 0.5) * tenure`) sits close enough to that
-/// ceiling that a RISING triangle from `p0` cannot average that high without
-/// its endpoint overshooting `peak` — e.g. id 10760661430244475199: peak 31,
-/// apex 54.639 (excess 23.639), the campaign's largest. `RisePlateau` peaks
-/// at exactly `peak`, and `Rectangle`'s level is the tenure average, so both
-/// keep the tight `peak + 0.5` bound with zero measured exceptions; only
-/// `Triangle`'s apex can be pushed past it, and never past the analytically
-/// derived `2 * (peak + 0.5) - p0` the same accrual invariant guarantees.
+///
+/// The Task 4 review's carried assertion, restored to its original tight
+/// form after the fix round below. The review's own reasoning ("a
+/// `Triangle`'s `apex < peak` by construction") was falsified on real data
+/// (3 of seed 42's 1212 occupations, up to 23.6 over peak) because
+/// `context::assemble` always passes `DAUGHTER_POP` as `p0` for every
+/// `Founding::From` record, which under-states the true opening population
+/// for four of the five mechanisms that can produce one (relocation to
+/// vacant land, conquest, climate migration, a raid seat — only a true
+/// daughter colony actually opens at `DAUGHTER_POP`; `history_bake.rs`'s
+/// `open` sets `peak_population` to the opening population and only ever
+/// raises it, so the true opening population is always `<= peak`, which an
+/// under-stated `p0` can violate). The fix is in `shape_of` (`shape.rs`),
+/// not here: a `Triangle` fit is only admitted when its apex stays within
+/// `peak + 0.5`; an out-of-range fit falls through to `Rectangle`, whose
+/// `level` is bounded by the same accrual invariant regardless of `p0`. So
+/// the ONE tolerance (`peak + 0.5`) now holds for every shape variant again.
 #[test]
 fn the_reconstructed_curve_never_exceeds_the_committed_peak() {
     let world = hornvale_worldgen::seed_42_world();
     let ctx = assemble(&world).unwrap();
+    // How many occupations the new apex clamp actually redirects to
+    // Rectangle: recompute the pre-clamp Triangle candidacy (same p0 as
+    // context::assemble uses) and count the ones whose apex would have
+    // exceeded peak + 0.5 — as opposed to a Rectangle chosen for one of the
+    // pre-existing reasons (RisePlateau's peak <= p0, or a Triangle apex <
+    // p0), which this fix does not touch.
+    let mut clamp_triggered = 0;
     for p in &ctx.occupations {
         let end = p.record.core.ended.unwrap_or(ctx.present_year);
+        let t = end - p.record.core.founded;
         let peak = f64::from(p.record.core.peak_population);
-        let bound = match p.shape {
-            hornvale_lot::shape::Shape::Triangle { p0, .. } => 2.0 * (peak + 0.5) - p0,
-            _ => peak + 0.5,
-        };
+        if t > 0.0 {
+            let p0 = match p.record.founded_from {
+                hornvale_history::record::Founding::Genesis(_) => hornvale_worldgen::GENESIS_POP,
+                hornvale_history::record::Founding::From(_) => hornvale_worldgen::DAUGHTER_POP,
+            };
+            let rise_plateau_fits = peak > p0 && {
+                let r = 2.0 * (peak * t - p.record.core.person_years) / (peak - p0);
+                (0.0..=t).contains(&r)
+            };
+            if !rise_plateau_fits {
+                let apex = 2.0 * p.record.core.person_years / t - p0;
+                if apex >= p0 && apex > peak + 0.5 {
+                    clamp_triggered += 1;
+                }
+            }
+        }
         let mut year = p.record.core.founded.floor();
         while year <= end {
             let pop = population_at(&p.shape, year);
             assert!(
-                pop <= bound,
-                "occupation {} population_at({year}) = {pop} exceeds bound {bound} (peak {peak}, shape {:?})",
+                pop <= peak + 0.5,
+                "occupation {} population_at({year}) = {pop} exceeds peak {peak} + 0.5 (shape {:?})",
                 p.record.id.0,
                 p.shape,
             );
             year += 1.0;
         }
     }
+    eprintln!(
+        "the_reconstructed_curve_never_exceeds_the_committed_peak: {clamp_triggered} occupation(s) redirected from Triangle to Rectangle by the new apex clamp"
+    );
 }

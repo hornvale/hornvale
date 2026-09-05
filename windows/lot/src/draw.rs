@@ -338,13 +338,17 @@ pub struct Place {
     pub births_per_year: f64,
 }
 
-/// Every occupation alive at `year`, with its coordinates.
+/// Every occupation alive at `year` AND contributing a positive birth
+/// weight there, with its coordinates — the same "alive and contributing"
+/// predicate `draw`'s own site selection uses (`alive_at` plus `births_at >
+/// 0.0`), so the sites this function lists are exactly the sites `draw`
+/// could choose from at `year`.
 /// type-audit: bare-ok(count: year)
 pub fn places(ctx: &LotContext, year: f64) -> Vec<Place> {
     ctx.occupations
         .iter()
         .enumerate()
-        .filter(|(o, _)| alive_at(ctx, *o, year))
+        .filter(|(o, _)| alive_at(ctx, *o, year) && births_at(ctx, *o, year) > 0.0)
         .map(|(occ, p)| {
             let (latitude, longitude) = lat_lon_of(ctx, p.record.core.site);
             Place {

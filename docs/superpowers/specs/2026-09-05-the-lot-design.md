@@ -232,7 +232,12 @@ for that founding kind (`GENESIS_POP = 10` for a genesis community,
 satisfies it (a community that died before plateau, or one whose committed
 area exceeds `peak × tenure` by quantization), the shape degrades to the
 triangle or the rectangle that is nearest in area, and the JSON payload's
-`shape` field says which of the three was used. The shape is a **stated
+`shape` field says which of the three was used. **The opening population is
+an assumption, not a fact** (ledger #15): the bake opens a relocated,
+conquered, evicted or raid-seated community with the survivors' population,
+which the record does not carry, so whenever the fitted apex would exceed
+`peak + ½` the shape is rendered flat at `person-years / tenure` — the
+committed peak is an upper bound the reconstruction always honours. The shape is a **stated
 approximation** — it is the one place the lot interpolates — and the spec
 states it so the story never has to.
 
