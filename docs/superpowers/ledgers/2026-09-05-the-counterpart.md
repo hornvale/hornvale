@@ -825,3 +825,19 @@ difference from origin/main; the campaign adds no simulation or golden
 change of its own. All eight frozen experiment files retain their exact
 lengths and SHA256 hashes. Source arms still use the original frozen base.
 The running Stage2 request independently tests its real merge with this main.
+
+Main absorption committed at `0e465487dd70c40a5c105e3630d3dc4df7564219`.
+The ordinary hook's local census-database/pin check passed, followed by all
+three commit-gate chunks (157.374 s for the timed gate, excluding preceding
+hook checks). Its timing row is captured separately through the normal hook.
+This was a local database harness check, not the campaign's canonical census.
+
+Task7's independent capture inventory is retained under
+`evidence/controller/reviews/task7-capture-inventory.md`. At its committed
+91-path snapshot, no unintended generated author was found. All seven Charter
+follow-ups remain raw. Broader epistemology is already elaborated, so later
+prose must preserve that status while leaving broader work open. New evidence
+under docs/digest would inherit the artifact generator; the experiment evidence
+home avoids that claim. The historical foundation wording in README will be
+clarified during the planned final narrative pass. This preparation is not a
+whole-branch review and does not accept any pending assay.
