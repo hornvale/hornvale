@@ -195,6 +195,7 @@ docs/audits/heavy-tier-adjudication.md	none(hand-written one-off campaign findin
 docs/audits/land-elevation-attribution.md	none(hand-written one-off campaign finding -- The Glasshouse -- never regenerated)
 docs/audits/the-assay-build-volume-audit.md	none(hand-written one-off campaign finding -- The Assay -- never regenerated)
 docs/audits/the-escapement-census-attribution.md	none(hand-written one-off campaign finding -- The Escapement -- never regenerated)
+docs/audits/campaign-reconciliation.tsv	none(hand-authored by each campaign at close -- The Coda -- never regenerated. WITHOUT THIS OVERRIDE it inherits docs/audits/'s `artifacts` author, so the absorb classifier calls a conflict in it artifacts-authored and the chamber 'resolves by regeneration' -- and since no regenerator exists, that silently DROPS one side's rows. Observed live 2026-09-05: campaign/the-warp's stage gate went red on the guard this very file backs, because the merge lost its own two rows.)
 docs/audits/lexicon-inventory.tsv	none(written by cli/tests/suite/lexicon_guard.rs under the opt-in HV_LEXICON_REBASELINE=1 flag, not by `make rebaseline` -- a third authorship mechanism sharing this declared path, distinct from both `artifacts` and the hand-written reports above)
 
 # --- docs/digest/ — 3 tracked, 2 `artifacts`-written; 1 exception ---
