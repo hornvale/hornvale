@@ -488,7 +488,7 @@ fn committed_reconciliation_rows_satisfy_semantic_rules() {
 /// exactly one reconciliation row; missing records and stray TSV citations
 /// are both documentary drift.
 #[test]
-fn every_campaign_record_is_reconciled() {
+fn campaign_reconciliation_covers_every_campaign_record() {
     let population = campaign_record_paths();
     let mut cited = BTreeSet::new();
     let mut duplicates = BTreeSet::new();
