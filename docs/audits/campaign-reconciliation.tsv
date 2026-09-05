@@ -1322,3 +1322,5 @@ spec-2026-09-03-the-wash-design	active	none		no terminal closure stated in recor
 spec-2026-09-04-the-coda-design	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-coda-design.md				
 spec-2026-09-04-the-housemark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-04-the-housemark-design.md				
 spec-2026-09-04-the-staple-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-staple-metaplan.md				
+chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
+retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md

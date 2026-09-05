@@ -458,6 +458,7 @@
 - [The Plat](./chronicle/the-plat.md)
 - [The Pallet](./chronicle/the-pallet.md)
 - [The Housemark](./chronicle/the-housemark.md)
+- [The Coda](./chronicle/the-coda.md)
 
 # Appendix: The Frontier
 
