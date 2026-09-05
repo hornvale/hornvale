@@ -254,3 +254,62 @@ found no material improvement. No claim of exhaustive search follows.
 **Capture actions:** existing federation, evidence-selection and provenance
 rows point here. The spec will carry comparison criteria and response rules;
 the seven Charter follow-ups and Nathan's profiling ownership stay open.
+
+## #2 [G2] — design consistency and independent review
+
+**Question:** Does the bounded design test its own claim fairly and preserve
+the distinction between valid evidence, correct behavior and new authority?
+**Decision:** Adopt the [G3 draft](../specs/2026-09-05-the-counterpart-design.md)
+with the following review corrections before presenting it:
+
+- A satisfied check is not shown unnecessary. Report selected/satisfied,
+  selected/violating, unselected/violating and unknown separately.
+- Compare question IDs through one frozen map to contributors, Cargo packages
+  and input subjects. Unknown and no-enrollment fall back to the whole roster;
+  include fallback cost. The path comparator is not scored as unsafe merely
+  because it honestly declined to answer a Settlement request.
+- Freeze the challenger implementation as well as owner records and comparison
+  rules before revealing the reserved case. A correction gets a new identity
+  and cannot erase the original miss.
+- Existing ownership refusal, independent corroboration and earlier selection
+  are distinct outcomes. A valid negative specimen is not a safe subject, and
+  an uncontrolled harness failure is not behavioral discrimination.
+
+**Why:** two independent spec reviews and the controller's own scoring review
+found these ambiguities. Source already contains the collision guard.
+The actual existing test command
+`cargo test -p hornvale-thing --lib undeclared_collision_panics_instead_of_silently_ceding`
+returned rc=0, `1 passed; 0 failed; 10 filtered out`. That confirms its existing
+fixture, not the new A/B experiment. The reviewer independently confirmed the
+corrected fallback/passing-check language and found no further substantiated
+oracle-independence defect. The additional mapping/freeze/refusal corrections
+were checked directly in the final draft.
+
+**Alternatives discarded:** scoring unknown as an unsafe omission; treating
+every passing selected check as waste; claiming a novel detector from an
+existing production guard; changing the checker after seeing the challenge
+without preserving the original outcome.
+
+**Ideonomy passes / overturns:** one additional G2 draw, organon-construction
+with lattice; hierarchicalness and symmetry. Order selected question sets by
+inclusion: empty is bottom, the frozen roster is top, intersection/union are
+meet/join. Two proper subsets may be incomparable. Unknown is an epistemic
+state outside that lattice, mapped to the top by fallback, not to empty.
+Owner A and B have symmetric scoring obligations even though production
+registration has a fixed Settlement-then-Thing order. This adds no further
+material design change after the corrections; no new capability is inferred
+from a smaller set. Total recorded brainstorming draws: six.
+
+**Capture actions:** final spec carries the response rules and G3 flags;
+the registry points its three existing program rows to the bounded proposal
+without claiming their broader work shipped. The hand-authored reconciliation
+table gains an active spec row, with its optional ledger cell empty under the
+existing population rule. This does not fix the Charter follow-up.
+
+**Verification boundary:** local spec links and cited fragments resolve;
+placeholder scan is clear. The capture and G1 commits each passed all 75
+prose-subject hook tests. `make prewarm` completed rc=0 in 623.679 seconds;
+its automatically authored timing row is retained, not an experiment sample.
+A final fetch still reports the same origin/main research base. All writing
+is in this worktree; no implementation source or implementation plan was added.
+The final spec commit still receives the ordinary prose-subject hook.
