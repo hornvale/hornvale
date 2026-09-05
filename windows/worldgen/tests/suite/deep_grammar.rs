@@ -11,7 +11,7 @@
 
 use hornvale_language::{Disposition, MorphDepth, NounClass, SchemaId};
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, accounts_from, day_schema_from, noun_class_from, placed_peoples,
+    SettlementPins, accounts_from, day_schema_from, noun_class_from, placed_peoples,
     tongue_morphology_of, tongue_paradigm_of,
 };
 
@@ -23,7 +23,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

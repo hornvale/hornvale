@@ -33,7 +33,7 @@
 #![allow(clippy::disallowed_methods)]
 use hornvale_kernel::{Seed, World};
 use hornvale_language::{CascadeRegime, LexEntry, Lexicon, Segment};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, lexicon_from};
+use hornvale_worldgen::{SettlementPins, build_world, lexicon_from};
 
 /// The three chromatic dragons The Solitary Tongue gave a Draconic tongue
 /// (Task 3), sharing one family (`"draconic"`) and one frozen regime.
@@ -60,7 +60,6 @@ fn generated_world(seed: u64) -> World {
     build_world(
         Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

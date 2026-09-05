@@ -91,8 +91,8 @@ use hornvale_vessel::{
     PossessOpts, PossessTarget, Session, Turn, VesselError, WorldContext, snapshot_json,
 };
 use hornvale_worldgen::{
-    BuildError, SettlementPins, SkyChoice, WorldComponents, build_world, gazetteer_features,
-    language_of_in, morph_options, resolve_chain_at, terrain_of,
+    BuildError, SettlementPins, WorldComponents, build_world, gazetteer_features, language_of_in,
+    morph_options, resolve_chain_at, terrain_of,
 };
 use std::collections::BTreeSet;
 
@@ -484,10 +484,9 @@ pub struct Driver {
     /// prompt is a MODE, not a picker — the client still sends text
     /// unconditionally, and the sim answers unknown nouns in its own prose.
     noun_prompt: Option<NounPrompt>,
-    /// The world's derived [`hornvale_astronomy::Calendar`], if it has one —
-    /// `None` for a tier-0 `ConstantSun` world, which has no generated star
-    /// system and therefore no cycles (`Sky::calendar`'s own doc). Read
-    /// once here via [`hornvale_worldgen::sky_of`], the same "derive once,
+    /// The world's derived [`hornvale_astronomy::Calendar`], when its sky can
+    /// be reconstructed. Read once here via [`hornvale_worldgen::sky_of`],
+    /// the same "derive once,
     /// never per-frame" discipline `terrain`/`geo`/`nearest` already
     /// follow above: `sky_of` regenerates the sky deterministically from
     /// the world's own committed seed and pins (the same reconstruction
@@ -695,10 +694,9 @@ fn caption(base: String, sight: Option<&hornvale_game_core::schema::Sight>) -> S
 /// can call the real derivation instead of hardcoding a bucket that may not
 /// correspond to its own `at`.
 ///
-/// **Two `None`s fold to the same bucket 0, and both are legitimate
-/// worlds, not errors.** `calendar` itself is `None` for a tier-0
-/// `ConstantSun` world (no generated star system, no cycles). A `Some`
-/// calendar can still report `Calendar::season_phase(..) == None` — its own
+/// **Two `None`s fold to the same bucket 0.** The optional `calendar` is
+/// absent when sky reconstruction failed. A present calendar can still
+/// report `Calendar::season_phase(..) == None` — its own
 /// documented contract, for zero obliquity AND zero eccentricity — which is
 /// the same "no seasons to render" case reached a different way. Neither is
 /// a silent `unwrap_or(0)` standing in for a default this comment is the
@@ -743,12 +741,8 @@ pub fn flat_illuminant() -> hornvale_kernel::color::Illuminant {
 ///
 /// **The star is `generate_star(world.seed.derive(streams::ROOT))`, never
 /// `Sky::system()`.** The generated star is a pure function of the world's
-/// own seed, defined for every world — tier-0 `ConstantSun` included — so
-/// this never needs the `Option<&StarSystem>` `Sky::system()` would hand
-/// back `None` for there. What a constant-sun world genuinely lacks is a
-/// CALENDAR to place a sun altitude with, which is [`plate_illuminant`]'s
-/// concern, not this one: by the time a caller has a `sun_elevation_deg` to
-/// pass here, that question is already answered.
+/// own seed, defined for every world. By the time a caller has a
+/// `sun_elevation_deg` to pass here, calendar placement is already resolved.
 pub fn plate_illuminant_at(
     world: &World,
     sun_elevation_deg: f64,
@@ -780,10 +774,9 @@ pub fn plate_illuminant_at(
 /// about its inputs (`world`, `calendar`, `day`, `latitude_deg`) varies per
 /// tile, so there is no tile-shaped parameter for a caller to loop over.
 ///
-/// **Two `None` cases, both modelled worlds, never errors — see
+/// **Two `None` cases share the same fallback — see
 /// [`season_bucket_for`]'s own doc for the identical fold.** `calendar`
-/// itself is `None` for a tier-0 `ConstantSun` world (no generated star
-/// system, no solar geometry to place a sun by); a `Some` calendar can
+/// can be absent when sky reconstruction failed; a present calendar can
 /// still report [`hornvale_astronomy::Calendar::solar_altitude_at`] as
 /// `None` (zero obliquity AND zero eccentricity — that method's own
 /// documented contract). Both resolve to [`flat_illuminant`] rather than
@@ -821,7 +814,6 @@ impl Driver {
         let world = build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -911,16 +903,13 @@ impl Driver {
         // built above), and a plate that cannot resolve a season is
         // exactly the "no calendar" case below, not a harder failure.
         //
-        // `Sky::calendar()` is `None` for a tier-0 `ConstantSun` world —
-        // provider tiers coexist, and a world with no generated star
-        // system genuinely has no seasons to render. That is a modelled
-        // case, not an error: `season_bucket_for` below folds it (and the
-        // sibling case where a generated sky's own `season_phase` reports
-        // `None`, for zero obliquity and zero eccentricity) to bucket 0
-        // rather than panicking or guessing.
+        // A calendar whose own `season_phase` reports `None`, for zero
+        // obliquity and zero eccentricity, has no season to render.
+        // `season_bucket_for` below folds it to bucket 0 rather than
+        // panicking or guessing.
         let calendar = hornvale_worldgen::sky_of(world_ref)
             .ok()
-            .and_then(|sky| sky.calendar().cloned());
+            .map(|sky| sky.calendar().clone());
 
         // The Portolan part II, Task 5: the point-site roster — every
         // terrain vertex a live settlement's own committed `(latitude,
@@ -3236,11 +3225,8 @@ mod portolan_tests {
         Driver::start(42, PossessTarget::Flagship).expect("seed 42 generates")
     }
 
-    /// The Wash, Task 4: the two `None` cases `season_bucket_for` folds to
-    /// bucket 0 are BOTH legitimate worlds, not errors — see the function's
-    /// own doc. This exercises the case with no calendar to consult at all
-    /// (a bare `None`, the tier-0 `ConstantSun` shape) directly, without
-    /// needing to construct one.
+    /// The Wash, Task 4: `season_bucket_for` folds a missing calendar to
+    /// bucket 0. This exercises that input contract directly.
     #[test]
     fn a_starless_world_resolves_season_bucket_zero() {
         assert_eq!(
@@ -4604,7 +4590,6 @@ mod portolan_tests {
             let world = build_world(
                 Seed(seed),
                 &pins,
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
             )

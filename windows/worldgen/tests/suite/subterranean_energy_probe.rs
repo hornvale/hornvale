@@ -39,8 +39,8 @@ use hornvale_worldgen::energy::{
     EnergySource, dominant_source, subterranean_energy, subterranean_energy_field_per_rung,
 };
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents,
-    build_world_to_with_artifacts, climate_of, substrate_field, subterranean_substrate_at_rung,
+    BuildDepth, SettlementPins, Substrate, WorldComponents, build_world_to_with_artifacts,
+    climate_of, substrate_field, subterranean_substrate_at_rung,
     subterranean_substrate_field_per_rung,
 };
 
@@ -77,7 +77,6 @@ fn world_at(seed_value: u64, wc: &WorldComponents) -> (GeneratedTerrain, VertexM
     let artifacts = build_world_to_with_artifacts(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,

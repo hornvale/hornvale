@@ -390,7 +390,7 @@ mod tests {
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
     use hornvale_worldgen::{
-        BuildArtifacts, SettlementPins, SkyChoice, WorldComponents, build_world_to_with_artifacts,
+        BuildArtifacts, SettlementPins, WorldComponents, build_world_to_with_artifacts,
     };
     use std::sync::OnceLock;
 
@@ -405,7 +405,6 @@ mod tests {
             build_world_to_with_artifacts(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
                 &wc,

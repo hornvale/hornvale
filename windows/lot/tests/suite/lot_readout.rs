@@ -16,7 +16,7 @@ use hornvale_lot::draw::{Ending, curve, draw};
 use hornvale_lot::slots::{SlotValue, tell};
 use hornvale_lot::{LotIndex, Pick};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// The Living Community's cross-seed sweep (spec §8), the same nine seeds
 /// `lot_probe.rs` uses so the rows line up with
@@ -72,7 +72,6 @@ fn lot_readout() {
         let world = build_world(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

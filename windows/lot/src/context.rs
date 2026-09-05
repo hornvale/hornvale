@@ -72,10 +72,9 @@ pub struct LotContext {
     /// The founding tree, read once out of the ledger — what the
     /// `held-true` slot's hearsay walk needs.
     pub lineage: hornvale_hearsay::lineage::Lineage,
-    /// The world's generated star system and its derived calendar, or
-    /// `None` for a tier-0 constant sun, which has no cycles and therefore
-    /// no eclipses for the `sky` slot to count.
-    pub sky: Option<(hornvale_astronomy::StarSystem, hornvale_astronomy::Calendar)>,
+    /// The world's generated star system and its derived calendar. Since
+    /// The Zenith retired the tier-0 constant sun, every world carries one.
+    pub sky: (hornvale_astronomy::StarSystem, hornvale_astronomy::Calendar),
     /// Births per whole year, summed over every occupation and sampled at
     /// each year's midpoint (`start_year + k + 0.5`). Precomputed once here
     /// so [`crate::draw::draw`]'s unpinned birth-year pick reads a table
@@ -274,14 +273,11 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
 
     let lineage = hornvale_hearsay::lineage::lineage_of(&world.ledger);
 
-    // A tier-0 sky has no system and no calendar, so the `sky` slot has
-    // nothing to ask and says so rather than reporting zero eclipses — a
-    // zero would read as "they saw none", which is a different claim.
+    // Since The Zenith every world carries a generated sky unconditionally
+    // (the tier-0 constant sun this used to guard against is retired), so
+    // the `sky` slot always has a system and calendar to ask.
     let sky = match hornvale_worldgen::sky_of(world) {
-        Ok(built) => match (built.system(), built.calendar()) {
-            (Some(system), Some(calendar)) => Some((system.clone(), calendar.clone())),
-            _ => None,
-        },
+        Ok(built) => (built.system().clone(), built.calendar().clone()),
         Err(e) => return Err(LotError::Build(e.to_string())),
     };
 

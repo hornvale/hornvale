@@ -10,7 +10,7 @@ use hornvale_history::record::{
 };
 use hornvale_kernel::{EntityId, KindId, Seed, Vertex, World, WorldTime};
 use hornvale_worldgen::{
-    BakeId, BakeOccupation, History, SkyChoice, TributeRelation, build_world, emit_history,
+    BakeId, BakeOccupation, History, TributeRelation, build_world, emit_history,
     occupation_records, occupations_at, occupations_by_vertex, ruins_of_people, territories,
 };
 use std::collections::BTreeMap;
@@ -660,7 +660,6 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
         let w = build_world(
             Seed(seed),
             &Default::default(),
-            SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
@@ -1025,7 +1024,6 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
         let w = build_world(
             Seed(seed),
             &Default::default(),
-            SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )

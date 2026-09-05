@@ -234,8 +234,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BakeCensus, History, SettlementPins, SkyChoice, WorldComponents, cascade_sizes, census,
-    emit_history, history_for, register_all,
+    BakeCensus, History, SettlementPins, WorldComponents, cascade_sizes, census, emit_history,
+    history_for, register_all,
 };
 use std::collections::BTreeMap;
 
@@ -414,7 +414,6 @@ fn history(seed: u64) -> History {
     history_for(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

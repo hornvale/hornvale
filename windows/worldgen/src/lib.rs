@@ -7,9 +7,8 @@
 
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
-    CELESTIAL_BODY, ConstantSun, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins,
-    SkyReport, facts, figures, generate, parse_pin, pin_strings,
-    streams::ROOT as ASTRONOMY_STREAM_ROOT,
+    CELESTIAL_BODY, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins, SkyReport,
+    facts, figures, generate, parse_pin, pin_strings, streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, PrecipRegime, RotationRegime, SeafloorFeature,
@@ -232,15 +231,6 @@ impl From<LedgerError> for BuildError {
     }
 }
 
-/// Which astronomy provider a world is built with.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SkyChoice {
-    /// Tier-0: the sun never sets.
-    Constant,
-    /// Tiers 1/2: a fully generated star system.
-    Generated,
-}
-
 /// How deep to build the world's fact-committing pipeline (spec §4 / MAP-25).
 /// Earlier rungs are a byte-identical prefix of later ones — the pipeline is
 /// linear, so each rung reads only earlier rungs' facts and stopping early
@@ -314,55 +304,46 @@ impl RungArtifacts<'_> {
 }
 
 /// The live astronomy provider a world uses, reconstructed from its ledger.
-pub enum Sky {
-    /// Tier-0 constant sun.
-    Constant(ConstantSun),
-    /// Tiers 1/2 generated sky.
-    Generated(Box<GeneratedSky>),
-}
+///
+/// One provider, since The Zenith: every Hornvale world has
+/// a generated sky. The enum this replaced carried a `Constant` variant for
+/// the retired tier-0 stub (decision 0736).
+pub struct Sky(Box<GeneratedSky>);
 
 impl Sky {
-    /// The sky at a moment, rendered, from whichever provider this is.
+    /// The generated provider every world carries.
+    pub fn generated(&self) -> &GeneratedSky {
+        &self.0
+    }
+    /// The generated sky at a moment, rendered.
     pub fn sky_at(&self, time: WorldTime) -> SkyReport {
         self.sky_at_visibility(time, Visibility::CLEAR)
     }
 
-    /// The sky at a moment through a view of the given [`Visibility`], from
-    /// whichever provider this is. Each provider decides for itself what
-    /// survives a dimmed sky; neither learns what dimmed it.
+    /// The generated sky at a moment through a view of the given
+    /// [`Visibility`]. The sky decides what survives a dimmed view; it does
+    /// not learn what dimmed it.
     pub fn sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
-        match self {
-            Sky::Constant(sun) => sun.sky_at_visibility(time, vis),
-            Sky::Generated(sky) => sky.sky_at_visibility(time, vis),
-        }
+        self.0.sky_at_visibility(time, vis)
     }
 
-    /// The derived calendar, if this world has a generated sky. `None` for
-    /// the tier-0 constant sun, which has no cycles. Climate consumes this
-    /// at the composition root (spec §13 opener).
-    pub fn calendar(&self) -> Option<&hornvale_astronomy::Calendar> {
-        match self {
-            Sky::Constant(_) => None,
-            Sky::Generated(sky) => Some(sky.calendar()),
-        }
+    /// The derived calendar. Every world has one, since The Zenith — a
+    /// `Calendar` whose `day_length()` is `None` is a tidally locked world,
+    /// which is a different thing and still expressible.
+    pub fn calendar(&self) -> &hornvale_astronomy::Calendar {
+        self.0.calendar()
     }
 
-    /// The generated star system, if this world has one. `None` for the
-    /// tier-0 constant sun. The star-chart command reads this.
-    pub fn system(&self) -> Option<&hornvale_astronomy::StarSystem> {
-        match self {
-            Sky::Constant(_) => None,
-            Sky::Generated(sky) => Some(sky.system()),
-        }
+    /// The generated star system. Every world has one; the star-chart
+    /// command reads this.
+    pub fn system(&self) -> &hornvale_astronomy::StarSystem {
+        self.0.system()
     }
 }
 
 impl PhenomenaSource for Sky {
     fn phenomena(&self, ctx: &ObserverContext) -> Vec<Phenomenon> {
-        match self {
-            Sky::Constant(sun) => sun.phenomena(ctx),
-            Sky::Generated(sky) => sky.phenomena(ctx),
-        }
+        self.0.phenomena(ctx)
     }
 }
 
@@ -568,18 +549,23 @@ fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
     }
 }
 
-/// Reconstruct the live astronomy provider from whatever this world's
-/// ledger says: absent `sky-provider` fact (1a/1b-era saves) → `Constant`;
-/// `"constant"` → `Constant`; `"generated"` → fold every `scenario-pin`
-/// fact back through `parse_pin` and regenerate deterministically from the
-/// world's own seed.
+/// Reconstruct the live astronomy provider from this world's ledger: fold
+/// every `scenario-pin` fact back through `parse_pin` and regenerate
+/// deterministically from the world's own seed.
+///
+/// A world with no `sky-provider` fact is an error, not a fallback. Every
+/// build commits the fact unconditionally, so its absence means the world was
+/// never built and should be regenerated from its seed and pins (decision
+/// 0737).
 pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
     let Some(provider_fact) = world.ledger.find(facts::SKY_PROVIDER).next() else {
-        return Ok(Sky::Constant(ConstantSun));
+        return Err(BuildError::Pins(
+            "world has no sky-provider fact: it was never built; regenerate it from its seed and pins"
+                .to_string(),
+        ));
     };
     let subject = provider_fact.subject;
     match &provider_fact.object {
-        Value::Text(choice) if choice == "constant" => Ok(Sky::Constant(ConstantSun)),
         Value::Text(choice) if choice == "generated" => {
             let mut pins = SkyPins::default();
             for pin_fact in world
@@ -592,7 +578,7 @@ pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
                 }
             }
             let outcome = generate(world.seed, &pins).map_err(BuildError::Genesis)?;
-            Ok(Sky::Generated(Box::new(GeneratedSky::new(outcome))))
+            Ok(Sky(Box::new(GeneratedSky::new(outcome))))
         }
         other => Err(BuildError::Pins(format!(
             "unrecognized sky-provider value: {other:?}"
@@ -2609,33 +2595,21 @@ pub fn demography_report_from_masked(
 }
 
 /// The scalar stellar inputs climate needs, derived from this world's sky.
-/// Constant-sky worlds get an Earth baseline so the biome map exists for
-/// every world (spec: the coarse globe is generated for all).
 fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
-    match sky {
-        Sky::Constant(_) => (
-            1.0,
-            23.5,
-            RotationRegime::Spinning { day_std: 1.0 },
-            365.25,
-            0.0,
-        ),
-        Sky::Generated(generated) => {
-            let system = generated.system();
-            // Insolation relative to Earth: the single shared definition (SKY-15).
-            let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
-            let obliquity = system.anchor.obliquity.get();
-            let regime = match system.anchor.rotation {
-                hornvale_astronomy::Rotation::Spinning { day, .. } => RotationRegime::Spinning {
-                    day_std: day.as_std_days(),
-                },
-                hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
-            };
-            let year = generated.calendar().year_length().get();
-            let year_phase_offset = system.forcing.year_phase_offset;
-            (insolation, obliquity, regime, year, year_phase_offset)
-        }
-    }
+    let generated = &sky.0;
+    let system = generated.system();
+    // Insolation relative to Earth: the single shared definition (SKY-15).
+    let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
+    let obliquity = system.anchor.obliquity.get();
+    let regime = match system.anchor.rotation {
+        hornvale_astronomy::Rotation::Spinning { day, .. } => RotationRegime::Spinning {
+            day_std: day.as_std_days(),
+        },
+        hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
+    };
+    let year = generated.calendar().year_length().get();
+    let year_phase_offset = system.forcing.year_phase_offset;
+    (insolation, obliquity, regime, year, year_phase_offset)
 }
 
 /// The greenhouse forcing this world's atmosphere carries, in kelvin — the
@@ -2647,16 +2621,8 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
 /// tuple: most of that function's ten call sites need insolation/obliquity/
 /// regime for demography or substrate queries that never touch temperature,
 /// so widening its return would touch every one of them for no reason.
-/// Constant-sky worlds have no `Anchor` at all, so they get `0.0` — the
-/// residual's own mean, i.e. the Earth anchor with no drawn spread, matching
-/// `stellar_inputs`'s own Earth-baseline default for the constant-sky arm.
 fn greenhouse_forcing_k(sky: &Sky) -> f64 {
-    match sky {
-        Sky::Constant(_) => 0.0,
-        Sky::Generated(generated) => {
-            GREENHOUSE_FORCING_WIDTH_K * generated.system().anchor.greenhouse_residual
-        }
-    }
+    GREENHOUSE_FORCING_WIDTH_K * sky.0.system().anchor.greenhouse_residual
 }
 
 /// The width, in kelvin, astronomy's dimensionless greenhouse residual
@@ -3649,15 +3615,7 @@ pub fn paleoclimate_from(
     let elevation = terrain.globe().elevation.clone();
     let present_sea_level = terrain.sea_level();
 
-    // No forcing to read (constant sky) → no deep time; empty record.
-    let Some(system) = sky.system() else {
-        return Ok(hornvale_paleoclimate::extract(
-            geo,
-            &elevation,
-            present_sea_level,
-            &[],
-        ));
-    };
+    let system = sky.system();
     let forcing = &system.forcing;
 
     let seafloor = hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
@@ -3832,14 +3790,6 @@ pub fn paleoclimate_from(
 ///   `EraClimate.day` gets the era's true deep-time day on BOTH paths, from
 ///   the identical expression.
 ///
-/// On the constant sky (no orbital forcing) there is no deep time: a single
-/// present-era mask is returned and the bake sees a stable world — no vertex
-/// ever flips habitability, so climate displacement cannot fire at all. What
-/// displacement remains is **predation**: The Tumult made crowding a growth
-/// term only (it no longer starts fights), and a raid keys off the *value*
-/// gradient between neighbouring vertices, which a frozen mask preserves intact.
-/// A constant-sky world is therefore quiet in migrations and not in conquests.
-///
 /// The `ice` field is left empty on every era: the snowline is already folded
 /// into `habitable` (an iced vertex reads below-freezing, hence not habitable),
 /// so `factor` gates purely on habitability and never double-counts ice.
@@ -3905,34 +3855,7 @@ fn bake_eras(
         hornvale_kernel::VertexMap::from_fn(geo, |c| (*mean.get(c) + offset).get() >= freeze.get())
     };
 
-    // No forcing to replay (constant sky) → one present-era mask, no swing.
-    let Some(system) = sky.system() else {
-        let habitable = livable_mask(
-            present_sea_level,
-            hornvale_kernel::TempAnomaly::from_offset_c(0.0),
-        );
-        return Ok((
-            vec![EraClimate {
-                // The present, in absolute standard days — the same instant
-                // `paleoclimate_from`'s newest era carries (`-WINDOW + 24 *
-                // WINDOW / 24` is exactly `0.0`). This slot used to hold
-                // `cfg.start_year`, a bake YEAR; see the doc above.
-                // `WorldTime::GENESIS` is the same committed value (0.0 days)
-                // by construction.
-                day: WorldTime::GENESIS,
-                ice: hornvale_kernel::VertexMap::from_fn(geo, |_| false),
-                habitable,
-                sea_level: present_sea_level,
-                ice_fraction: 0.0,
-            }],
-            // No forcing to replay: the one era IS the present.
-            vec![EraAdjust::present(terrain)],
-            // ...and it opens the bake window. With one era, `era_index_for`
-            // returns 0 for every year regardless, so this value binds
-            // nothing; it is here because the vectors are parallel.
-            vec![cfg.start_year],
-        ));
-    };
+    let system = sky.system();
     let forcing = &system.forcing;
 
     // Fine ice integration across the deep-time window — the identical
@@ -5184,8 +5107,8 @@ pub fn perception_lens(p: &hornvale_species::PerceptionVector) -> PerceptionLens
 /// byte-identical); Nocturnal at the first non-daylight instant found by a
 /// deterministic scan of 1/24-local-day steps over two local days;
 /// Crepuscular at the first light/dark boundary the same scan finds.
-/// Worlds without a day/night cycle (constant sun, tidal lock) observe at
-/// day 0.0 regardless.
+/// Worlds without a day/night cycle (tidal lock) observe at day 0.0
+/// regardless.
 /// type-audit: pending(wave-3: return)
 pub fn observation_time(
     world: &World,
@@ -5196,9 +5119,7 @@ pub fn observation_time(
         return Ok(0.0);
     }
     let sky = sky_of(world)?;
-    let Some(calendar) = sky.calendar() else {
-        return Ok(0.0);
-    };
+    let calendar = sky.calendar();
     let Some(day_len) = calendar.day_length() else {
         return Ok(0.0); // locked: no day/night cycle
     };
@@ -7564,7 +7485,6 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
 pub fn build_world_from_components(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -7572,7 +7492,6 @@ pub fn build_world_from_components(
     build_to(
         seed,
         pins,
-        sky,
         terrain_pins,
         settlement_pins,
         wc,
@@ -7589,23 +7508,12 @@ pub fn build_world_from_components(
 pub fn build_world_to(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<World, BuildError> {
-    build_to(
-        seed,
-        pins,
-        sky,
-        terrain_pins,
-        settlement_pins,
-        wc,
-        depth,
-        None,
-    )
-    .map(|built| built.world)
+    build_to(seed, pins, terrain_pins, settlement_pins, wc, depth, None).map(|built| built.world)
 }
 
 /// Build a world to `depth` and hand back the artifacts the build already
@@ -7616,22 +7524,12 @@ pub fn build_world_to(
 pub fn build_world_to_with_artifacts(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<BuildArtifacts, BuildError> {
-    build_to(
-        seed,
-        pins,
-        sky,
-        terrain_pins,
-        settlement_pins,
-        wc,
-        depth,
-        None,
-    )
+    build_to(seed, pins, terrain_pins, settlement_pins, wc, depth, None)
 }
 
 /// Build a world to `depth`, calling `observer` once per rung the build
@@ -7663,7 +7561,6 @@ pub fn build_world_to_with_artifacts(
 pub fn build_world_observed(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -7673,7 +7570,6 @@ pub fn build_world_observed(
     build_to(
         seed,
         pins,
-        sky,
         terrain_pins,
         settlement_pins,
         wc,
@@ -8054,7 +7950,6 @@ fn scale_capacity(
 pub fn history_for(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -8062,7 +7957,6 @@ pub fn history_for(
     let built = build_to(
         seed,
         pins,
-        sky,
         terrain_pins,
         settlement_pins,
         wc,
@@ -8111,7 +8005,6 @@ type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World, RungArtifacts<'_>
 fn build_to(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
@@ -8139,15 +8032,11 @@ fn build_to(
         role: "world",
         ordinal: 0,
     });
-    let choice_text = match sky {
-        SkyChoice::Constant => "constant",
-        SkyChoice::Generated => "generated",
-    };
     world.ledger.commit(
         scenario_fact(
             world_entity,
             facts::SKY_PROVIDER,
-            Value::Text(choice_text.to_string()),
+            Value::Text("generated".to_string()),
         ),
         &world.registry,
     )?;
@@ -8159,10 +8048,8 @@ fn build_to(
     }
 
     stage("astronomy", || -> Result<(), BuildError> {
-        if let SkyChoice::Generated = sky {
-            let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
-            facts::genesis(&mut world, world_entity, &outcome)?;
-        }
+        let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
+        facts::genesis(&mut world, world_entity, &outcome)?;
         Ok(())
     })?;
 
@@ -8688,16 +8575,14 @@ fn build_to(
     stage("alignments", || -> Result<(), BuildError> {
         // The Long Count: each settlement's founding sightline. Skipped
         // wholesale on locked worlds / polar latitudes (the azimuth
-        // function returns None) and on the constant sky (no calendar).
+        // function returns None).
         // Placed before the settlement-depth early return (below) so a
         // world built only to `BuildDepth::Settlements` still carries
         // alignments — collecting first to avoid holding the sky borrow
         // across commits.
         let pairs: Vec<(EntityId, f64)> = {
             let sky = sky_of(&world)?;
-            let Some(calendar) = sky.calendar() else {
-                return Ok(());
-            };
+            let calendar = sky.calendar();
             hornvale_terrain::places(&world)
                 .iter()
                 // founding-solstice-azimuth-degrees is documented as a
@@ -9360,12 +9245,11 @@ fn species_genesis(
 pub fn build_world(
     seed: Seed,
     pins: &SkyPins,
-    sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
 ) -> Result<World, BuildError> {
     let wc = WorldComponents::assemble()?;
-    build_world_from_components(seed, pins, sky, terrain_pins, settlement_pins, &wc)
+    build_world_from_components(seed, pins, terrain_pins, settlement_pins, &wc)
 }
 
 /// Mint an instance of a known kind: the composition root's validated entry
@@ -9577,7 +9461,7 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
     ]
 }
 
-/// The sky at `time`, from whichever astronomy provider this world uses.
+/// The generated sky at `time` for this world.
 /// The single construction site for the provider (Constitution §2.4 tiers).
 ///
 /// Appends a weather clause (The Firmament, spec Weather Program C4): the
@@ -9669,14 +9553,11 @@ fn moon_ordinal(index: usize) -> &'static str {
 
 /// The world's cycles as reader-facing lines: year length, the seasonal
 /// swell of daylight (if the world has axial tilt), and one line per moon.
-/// Empty for constant-sky worlds, which have no generated calendar to
-/// describe.
+/// Includes the locked-world case, whose calendar has no local day.
 /// type-audit: bare-ok(prose: return)
 pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
-    let Sky::Generated(sky) = &sky else {
-        return Ok(Vec::new());
-    };
+    let sky = &sky.0;
     let calendar = sky.calendar();
     let system = sky.system();
     let year_std = calendar.year_length().get();
@@ -9748,14 +9629,11 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
 }
 
 /// The night sky as a single sentence naming its notable neighbor stars,
-/// brightest first. `None` for constant-sky worlds, which have no
-/// neighborhood to describe.
+/// brightest first.
 /// type-audit: bare-ok(prose: return)
 pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
     let sky = sky_of(world)?;
-    let Sky::Generated(sky) = &sky else {
-        return Ok(None);
-    };
+    let sky = &sky.0;
     let parts: Vec<String> = sky
         .system()
         .neighbors
@@ -9775,16 +9653,13 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
 /// flagship vantage reaches the almanac, if no place resolves), plus one
 /// sentence per wandering sibling planet, innermost order, plus a single
 /// figure count/ecliptic summary line (night-sky stage 3; omitted for a sky
-/// with no figures at all). `None` for constant-sky worlds, which have no
-/// neighborhood to describe.
+/// with no figures at all).
 /// type-audit: bare-ok(prose: return)
 pub fn night_sky_lines(
     world: &World,
 ) -> Result<Option<hornvale_almanac::NightSkyLines>, BuildError> {
     let sky = sky_of(world)?;
-    let Sky::Generated(sky) = &sky else {
-        return Ok(None);
-    };
+    let sky = &sky.0;
     let calendar = sky.calendar();
     let system = sky.system();
     let t = hornvale_astronomy::StdInstant::new(0.0).unwrap();
@@ -10005,15 +9880,11 @@ pub fn night_sky_lines(
     }))
 }
 
-/// Notes recorded during sky genesis. Empty for constant-sky worlds, which
-/// are never generated.
+/// Notes recorded during sky genesis.
 /// type-audit: bare-ok(prose: return)
 pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
-    Ok(match &sky {
-        Sky::Constant(_) => Vec::new(),
-        Sky::Generated(sky) => sky.notes().to_vec(),
-    })
+    Ok(sky.0.notes().to_vec())
 }
 
 /// Build one belief's `LineContent` (spec §6). Every field but the period
@@ -10232,7 +10103,7 @@ fn land_list_labels(world: &World) -> Vec<String> {
 }
 
 /// Gather everything the almanac renders, reconstructing the stateless
-/// tier-0 providers.
+/// providers.
 // Named construction site (decision 0092): The Single Sculpt — one
 // terrain/climate build threaded into every accessor below.
 #[allow(clippy::disallowed_methods)]
@@ -10273,11 +10144,11 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
     // The deep-time lines, plus the secular-brightening sentence (The Long
-    // Count) for a generated sky only — constant-sky worlds have no star to
-    // brighten.
+    // Count).
     let mut deep_time_lines = deep_time_lines_from(world, &terrain)?;
-    if let Sky::Generated(sky) = sky_of(world)? {
-        let system = sky.system();
+    {
+        let sky = sky_of(world)?;
+        let system = sky.0.system();
         deep_time_lines.push(format!(
             "The sun brightens by {:.0} parts in a hundred over a gigayear — the slow fire under every deeper clock.",
             hornvale_astronomy::brightening_per_gyr(&system.star) * 100.0
@@ -10911,7 +10782,6 @@ mod tests {
         build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11539,7 +11409,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11579,7 +11448,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11934,7 +11802,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -11962,7 +11829,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12038,7 +11904,6 @@ mod tests {
         let world = build_world(
             hornvale_kernel::Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12098,29 +11963,22 @@ mod tests {
         );
     }
 
-    fn constant(seed: u64) -> World {
-        build_world(
-            Seed(seed),
-            &SkyPins::default(),
-            SkyChoice::Constant,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins::default(),
-        )
-        .unwrap()
-    }
-
-    /// A generated-sky world at `seed`. Seed 42 — 39 of this helper's 49
-    /// callers — is read from the committed fixture rather than rebuilt
-    /// (decision 0607); it is byte-identical to the build, pinned by
-    /// `windows/worldgen/tests/suite/fixture.rs`. Every other seed still
-    /// builds, because no fixture exists for it.
+    /// A generated-sky world at `seed`. Seed 42 — 55 of this helper's 73
+    /// callers, re-counted 2026-09-04 when The Zenith's flips repointed the
+    /// retired `constant` helper's callers here — is read from the committed
+    /// fixture rather than rebuilt (decision 0607); it is byte-identical to
+    /// the build, pinned by `windows/worldgen/tests/suite/fixture.rs`. Every
+    /// other seed still builds, because no fixture exists for it.
     ///
-    /// **Two former seed-42 callers deliberately do not use this helper.**
-    /// `generated_worlds_are_deterministic` and
-    /// `glossed_names_are_stable_across_two_builds` compare two independent
-    /// builds, so reading one file twice would make them vacuous; each keeps
-    /// its own local builder. A migrated helper's callers must be swept for
-    /// that shape — see spec §5's residue list.
+    /// **TWO seed-42 sites deliberately do not use this helper.**
+    /// `glossed_names_are_stable_across_two_builds` and
+    /// `build_world_is_deterministic` each compare two independent builds, so
+    /// reading one file twice would make them vacuous; each keeps its own
+    /// local builder. A migrated helper's callers must be swept for
+    /// that shape — see spec §5's residue list. This list is where
+    /// `cli/tests/suite/world_build_sites.rs`'s module doc sends the next
+    /// sweeper, so it is the place a new local builder must be recorded.
+    ///
     fn generated(seed: u64) -> World {
         if seed == 42 {
             return crate::seed_42_world();
@@ -12128,7 +11986,6 @@ mod tests {
         build_world(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12166,7 +12023,7 @@ mod tests {
     /// is that race's capitalized word for "earth" (its endonym).
     #[test]
     fn dominant_people_weights_by_mass_not_headcount() {
-        let world = constant(1);
+        let world = generated(1);
         let d = dominant_people(&world).expect("a peopled world has a dominant race");
         // deterministic across rebuilds
         assert_eq!(dominant_people(&world), Some(d));
@@ -12179,15 +12036,15 @@ mod tests {
     }
 
     /// Mutation check ([[measure-dont-narrate-the-mechanism]]): assert the
-    /// weighing MECHANISM, not a hard-coded winner. Seed 1's constant world
-    /// places goblin (population 1) and hobgoblin (population 18); hobgoblin
+    /// weighing MECHANISM, not a hard-coded winner. Seed 1's world places
+    /// goblin (population 1) and hobgoblin (population 18); hobgoblin
     /// wins on `Σ(population × mass)` (18 × 74.8 kg ≫ 1 × 18.1 kg). Crushing
     /// hobgoblin's mass to near-zero in a rebuilt component set must flip the
     /// winner to goblin — if it didn't, `dominant_people` would be reading
     /// headcount alone and this test would catch it.
     #[test]
     fn dominant_people_changes_when_the_winners_mass_is_crushed() {
-        let world = constant(1);
+        let world = generated(1);
         let wc = WorldComponents::assemble().unwrap();
         let winner = dominant_people_in(&world, &wc).expect("a peopled world has a dominant race");
 
@@ -12235,7 +12092,7 @@ mod tests {
     /// A minimal peopled world: one settlement per `(kind, population)`
     /// pair, each `peopled-by` its kind, with NO other facts. Lets a test
     /// hold every candidate's canonical (`wc`) mass fixed while choosing its
-    /// population freely — `constant(1)`'s real settlements already carry a
+    /// population freely — `generated(1)`'s real settlements already carry a
     /// committed `population` fact, and that predicate is functional (a
     /// second commit to the same subject would be rejected as a
     /// contradiction), so population can only be varied on fresh entities.
@@ -12301,7 +12158,7 @@ mod tests {
     /// ignoring population entirely — would still pass it, because crushing
     /// the winner's mass flips the mass-only ranking too. This test isolates
     /// the OTHER factor: hold both candidates' masses at their canonical
-    /// (`wc`) values (mass ranking unchanged from `constant(1)`) and instead
+    /// (`wc`) values (mass ranking unchanged from `generated(1)`) and instead
     /// invert POPULATION — give the real winner a population of 1 and the
     /// real loser a landslide population. A mass-only mutant, which never
     /// looks at population, would still declare the same winner (mass
@@ -12309,7 +12166,7 @@ mod tests {
     /// `Σ(population × mass)` formula flips.
     #[test]
     fn dominant_people_changes_when_the_winners_population_is_crushed() {
-        let world = constant(1);
+        let world = generated(1);
         let wc = WorldComponents::assemble().unwrap();
         let winner = dominant_people_in(&world, &wc).expect("a peopled world has a dominant race");
         let loser = if winner == KindId("goblin") {
@@ -12335,7 +12192,7 @@ mod tests {
     /// that merely tied at weight zero.
     #[test]
     fn dominant_people_is_always_a_placed_race() {
-        let world = constant(1);
+        let world = generated(1);
         let kind = dominant_people(&world).expect("a peopled world has a dominant race");
         assert!(
             flagship_of(&world, kind.0).is_some(),
@@ -12349,7 +12206,7 @@ mod tests {
     /// alone.
     #[test]
     fn built_world_names_and_classifies_its_planet() {
-        let world = constant(1);
+        let world = generated(1);
         let p = planet_entity(&world).expect("a built world has a planet entity");
         assert_eq!(world.ledger.text_of(p, "is-a"), Some("planet"));
         let n = world
@@ -12366,10 +12223,9 @@ mod tests {
     /// the "is a planet" sentence names.
     #[test]
     fn the_planet_is_the_world_root_fact_holder() {
-        // Generated (not Constant) sky: moon-count is only ever committed
-        // under `SkyChoice::Generated` (`astronomy::facts::genesis` is
-        // gated on it), so this is the sky choice that actually exercises
-        // "the planet carries the astronomical facts."
+        // A generated sky commits moon-count through
+        // `astronomy::facts::genesis`, so this exercises "the planet carries
+        // the astronomical facts."
         let world = generated(1);
         let p = planet_entity(&world).expect("a planet entity");
         assert!(
@@ -12382,7 +12238,7 @@ mod tests {
     /// committed fact — no draw, no wall-clock, no entity-order sensitivity.
     #[test]
     fn planet_facts_are_deterministic() {
-        assert_eq!(constant(1).to_json(), constant(1).to_json());
+        assert_eq!(generated(1).to_json(), generated(1).to_json());
     }
 
     /// C1 T2 review regression: `dominant_people_in`'s candidacy loop must
@@ -12438,7 +12294,6 @@ mod tests {
         let world = build_world_to(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &fauna_only_wc,
@@ -12459,7 +12314,7 @@ mod tests {
     /// the test the ticket never had; it fails on the pre-campaign renderer.
     #[test]
     fn seed_42_names_both_its_peoples_pantheons() {
-        let world = constant(42);
+        let world = generated(42);
         assert!(
             placed_peoples(&world).len() > 1,
             "seed 42 places two peoples"
@@ -12537,7 +12392,6 @@ mod tests {
         build_world_from_components(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Constant,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -12588,7 +12442,6 @@ mod tests {
                 rotation: Some(hornvale_astronomy::RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12730,7 +12583,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12763,7 +12615,7 @@ mod tests {
     /// so they can never disagree about whether to name a world's peoples.
     #[test]
     fn placed_peoples_lists_flagship_holders_in_registry_order() {
-        let world = constant(42);
+        let world = generated(42);
         let placed = placed_peoples(&world);
         assert!(!placed.is_empty(), "seed 42 places at least one people");
         let names: Vec<&str> = placed.iter().map(|(s, _)| *s).collect();
@@ -12780,7 +12632,7 @@ mod tests {
     /// for "person" (the autonym).
     #[test]
     fn each_placed_people_has_a_named_instance_of_collective() {
-        let world = constant(1);
+        let world = generated(1);
         // at least one entity carries instance-of a placed species kind + a name
         let has = world.ledger.find("instance-of").any(|f| {
             matches!(&f.object, Value::Text(_)) && world.ledger.text_of(f.subject, "name").is_some()
@@ -12790,7 +12642,7 @@ mod tests {
 
     #[test]
     fn build_world_produces_the_full_cascade() {
-        let world = constant(42);
+        let world = generated(42);
         let places = hornvale_terrain::places(&world);
         assert!(!places.is_empty());
         let village = hornvale_settlement::village_info(&world).expect("village");
@@ -12815,23 +12667,43 @@ mod tests {
         // again and its vantage observes two salient phenomena. Same
         // "incidental count, the cascade running is what matters" basis.
         //
-        // THE GLASSHOUSE re-pin (Stage B Task 5): 2 -> 1. Constant-sky
-        // worlds still read climate through the latitude profile (only
+        // THE GLASSHOUSE re-pin (Stage B Task 5): 2 -> 1. The then-current
+        // constant-sky worlds read climate through the latitude profile (only
         // insolation is fixed at `S = 1`; the profile's SHAPE still moved),
         // so the area-mean-zero profile reseats even this world's flagship.
         // Same "incidental count, the cascade running is what matters"
         // basis this test's own comment has stated every time. Post-
         // unblinding re-measure, declared per decision 0016.
+        //
+        // THE ZENITH re-pin (2026-09-04): 1 -> 9. Not a reseating this time
+        // but a CHANGE OF SUBJECT — the world under this assertion is now
+        // seed 42's generated sky rather than the constant sun, and a
+        // generated sky affords far more phenomena for a vantage to observe
+        // and a faith to mythologize. Same "incidental count, the cascade
+        // running is what matters" basis.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            1
+            9
         );
     }
 
+    /// Rule-1 site (decision 0606's `build-path` reason): the subject IS the
+    /// build, so this keeps a local builder rather than calling `generated`,
+    /// whose seed-42 arm reads the committed fixture — two reads of one file
+    /// would compare the fixture against itself and go vacuous.
     #[test]
     fn build_world_is_deterministic() {
-        let a = constant(42).to_json();
-        let b = constant(42).to_json();
+        fn built() -> World {
+            build_world(
+                Seed(42),
+                &SkyPins::default(),
+                &hornvale_terrain::TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .expect("seed 42 builds at default pins")
+        }
+        let a = built().to_json();
+        let b = built().to_json();
         assert_eq!(a, b);
     }
 
@@ -12843,19 +12715,11 @@ mod tests {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();
         for seed in [Seed(7), Seed(42), Seed(1000)] {
-            let a = build_world(
-                seed,
-                &SkyPins::default(),
-                SkyChoice::Generated,
-                &TerrainPins::default(),
-                &sp,
-            )
-            .unwrap();
+            let a = build_world(seed, &SkyPins::default(), &TerrainPins::default(), &sp).unwrap();
             let wc = WorldComponents::assemble().unwrap();
             let b = build_world_from_components(
                 seed,
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &sp,
                 &wc,
@@ -12876,7 +12740,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -12953,7 +12816,6 @@ mod tests {
             let world = build_world(
                 Seed(seed),
                 &pins,
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
             )
@@ -13000,16 +12862,16 @@ mod tests {
     }
 
     /// claim: reachability(seed: 1..=4) — non-degeneracy: some adjacent pair of
-    /// constant-sky worlds differs
+    /// generated-sky worlds differs
     #[test]
     fn different_seeds_differ() {
-        let worlds: Vec<String> = (1..=4).map(|s| constant(s).to_json()).collect();
+        let worlds: Vec<String> = (1..=4).map(|s| generated(s).to_json()).collect();
         assert!(worlds.windows(2).any(|w| w[0] != w[1]));
     }
 
     #[test]
     fn almanac_context_gathers_everything() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seed, 42);
         assert!(!ctx.places.is_empty());
@@ -13035,9 +12897,25 @@ mod tests {
 
     #[test]
     fn sky_and_climate_reports_come_from_the_composition_root() {
-        let world = constant(42);
+        let world = generated(42);
         let sky = sky_report(&world, hornvale_kernel::WorldTime::GENESIS).unwrap();
-        assert!(sky.description.contains("zenith"));
+        // THE ZENITH (2026-09-04): this read `contains("zenith")`, which was
+        // the constant sun's own wording and proved only that `sky_of`
+        // returned tier 0 — nothing about the composition root this test is
+        // named for. The replacement asserts the CLIMATE half reached the
+        // report: `sky_report` derives terrain and climate from the world and
+        // folds the weather in through `sky_phrase`, so a sky condition word
+        // in the description is evidence the wiring ran. Same vocabulary
+        // `firmament_lines_report_the_sky_at_both_sample_sites` asserts on.
+        assert!(
+            ["clear", "fair", "overcast", "rain", "storm"]
+                .iter()
+                .any(|w| sky.description.contains(w)),
+            "the sky report must name a sky condition drawn from the climate: {}",
+            sky.description
+        );
+        // `climate_report` is `UniformClimate` and ignores its world, so this
+        // half is tier-independent and did not move with the flip.
         let climate = climate_report(&world);
         assert_eq!(climate.temperature_c, 18.0);
     }
@@ -13072,39 +12950,8 @@ mod tests {
     #[test]
     fn generated_sky_reconstructs_and_beliefs_are_non_empty() {
         let world = generated(42);
-        assert!(matches!(sky_of(&world).unwrap(), Sky::Generated(_)));
+        sky_of(&world).unwrap();
         assert!(!hornvale_religion::beliefs_of(&world).is_empty());
-    }
-
-    /// Two INDEPENDENT builds of seed 42 serialize identically.
-    ///
-    /// The builder is local rather than the shared `generated` helper, and
-    /// deliberately so: that helper reads the committed fixture for seed 42
-    /// (decision 0607), so calling it twice would compare two reads of one
-    /// file and assert only that `World::from_json(x).to_json()` is a pure
-    /// function of `x`. The build's own determinism — this test's entire
-    /// subject and its name — would go untested, and the test would pass in
-    /// milliseconds while looking healthy.
-    /// `windows/vessel/src/session.rs`'s
-    /// `the_same_seed_and_pins_produce_a_byte_identical_descent_and_pane`
-    /// keeps a local builder for exactly this reason; both files carry
-    /// `build-path` rows on the build-site roster (decision 0606).
-    #[test]
-    fn generated_worlds_are_deterministic() {
-        fn built_at_seed_42() -> World {
-            build_world(
-                Seed(42),
-                &SkyPins::default(),
-                SkyChoice::Generated,
-                &hornvale_terrain::TerrainPins::default(),
-                &SettlementPins::default(),
-            )
-            .expect("seed 42 builds at default pins")
-        }
-
-        let a = built_at_seed_42().to_json();
-        let b = built_at_seed_42().to_json();
-        assert_eq!(a, b);
     }
 
     #[test]
@@ -13112,34 +12959,33 @@ mod tests {
         let world = generated(42);
         let before = sky_report(&world, WorldTime::GENESIS).unwrap();
         let reloaded = World::from_json(&world.to_json()).unwrap();
-        assert!(matches!(sky_of(&reloaded).unwrap(), Sky::Generated(_)));
+        sky_of(&reloaded).unwrap();
         let after = sky_report(&reloaded, WorldTime::GENESIS).unwrap();
         assert_eq!(before, after);
     }
 
+    /// The successor to `absent_sky_provider_fact_falls_back_to_constant`,
+    /// written while the fallback is still live so its red is BEHAVIOURAL —
+    /// a runtime panic — rather than a compile error once the arm is gone.
+    ///
+    /// This is the behavioural witness for decision 0737.
     #[test]
-    fn constant_choice_yields_constant_sky_and_unchanged_almanac_context() {
-        let world = constant(42);
-        assert!(matches!(sky_of(&world).unwrap(), Sky::Constant(_)));
-        let ctx = almanac_context(&world).unwrap();
-        assert!(ctx.sky.description.contains("zenith"));
-    }
-
-    #[test]
-    fn absent_sky_provider_fact_falls_back_to_constant() {
-        // A 1a/1b-era world never committed a sky-provider fact at all.
+    fn a_world_with_no_sky_provider_fact_is_an_error_not_a_fallback() {
+        // A bare world, never built — the only way to reach this arm once
+        // every build commits the fact unconditionally.
         let mut world = World::new(Seed(1));
         register_all(&mut world.registry).unwrap();
-        assert!(matches!(sky_of(&world).unwrap(), Sky::Constant(_)));
-    }
-
-    #[test]
-    fn constant_world_has_no_calendar_or_night_sky_or_notes() {
-        let world = constant(42);
-        assert!(calendar_lines(&world).unwrap().is_empty());
-        assert!(night_sky_line(&world).unwrap().is_none());
-        assert!(night_sky_lines(&world).unwrap().is_none());
-        assert!(genesis_notes(&world).unwrap().is_empty());
+        // `Sky` is not `Debug`, so `expect_err` will not compile here; the
+        // match keeps the red BEHAVIOURAL (a runtime panic on the `Ok` arm)
+        // rather than turning it into the compile error ruling R3 forbids.
+        let err = match sky_of(&world) {
+            Ok(_) => panic!("a never-built world has no sky"),
+            Err(e) => e,
+        };
+        assert!(
+            format!("{err:?}").contains("no sky-provider fact"),
+            "the error must name the missing predicate: {err:?}"
+        );
     }
 
     #[test]
@@ -13152,7 +12998,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13171,7 +13016,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13231,7 +13075,6 @@ mod tests {
         let world = build_world(
             Seed(1),
             &pins,
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13362,7 +13205,6 @@ mod tests {
         let result = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins {
                 species: Some("white-dragon".to_string()),
@@ -13427,18 +13269,8 @@ mod tests {
     }
 
     #[test]
-    fn sky_calendar_accessor_present_for_generated_absent_for_constant() {
-        assert!(sky_of(&constant(42)).unwrap().calendar().is_none());
-        let generated_sky = sky_of(&generated(42)).unwrap();
-        let cal = generated_sky
-            .calendar()
-            .expect("generated sky has a calendar");
-        assert!(cal.year_length().get() > 0.0);
-    }
-
-    #[test]
     fn terrain_reconstructs_from_seed_and_pins() {
-        let world = constant(42);
+        let world = generated(42);
         let a = terrain_of(&world).unwrap();
         let b = terrain_of(&world).unwrap();
         assert_eq!(a.globe(), b.globe());
@@ -13454,7 +13286,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &pins,
             &SettlementPins::default(),
         )
@@ -13473,7 +13304,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Constant,
             &pins,
             &SettlementPins::default(),
         )
@@ -13523,7 +13353,7 @@ mod tests {
 
     #[test]
     fn terrain_facts_are_committed_at_build() {
-        let world = constant(42);
+        let world = generated(42);
         assert!(
             world
                 .ledger
@@ -13542,7 +13372,7 @@ mod tests {
 
     #[test]
     fn land_lines_describe_the_globe() {
-        let world = constant(42);
+        let world = generated(42);
         let lines = land_lines(&world).unwrap();
         // Seed 42's default canonical-level globe carries a delta lobe and
         // playa fill but no waterfall (measured directly against the
@@ -13556,7 +13386,7 @@ mod tests {
 
     #[test]
     fn land_lines_name_point_observation_notables_when_present() {
-        let world = constant(42);
+        let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
         // Ground truth the notable line against the provider directly,
         // rather than re-asserting the exact seed-42 bytes twice.
@@ -13573,7 +13403,7 @@ mod tests {
 
     #[test]
     fn ground_lines_name_the_dominant_rock_and_soil() {
-        let world = constant(42);
+        let world = generated(42);
         let lines = ground_lines(&world).unwrap();
         assert!(!lines.is_empty());
         assert!(lines[0].contains("The land is mostly"));
@@ -13582,7 +13412,7 @@ mod tests {
 
     #[test]
     fn ground_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.ground_lines, ground_lines(&world).unwrap());
         let doc = hornvale_almanac::render(&ctx);
@@ -13591,7 +13421,7 @@ mod tests {
 
     #[test]
     fn water_lines_report_a_nonzero_fresh_water_share() {
-        let world = constant(42);
+        let world = generated(42);
         let lines = water_lines(&world).unwrap();
         assert_eq!(lines.len(), 1);
         assert!(lines[0].contains("Fresh water"));
@@ -13600,7 +13430,7 @@ mod tests {
 
     #[test]
     fn water_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.water_lines, water_lines(&world).unwrap());
         let doc = hornvale_almanac::render(&ctx);
@@ -13627,7 +13457,6 @@ mod tests {
         let spinning = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13638,7 +13467,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13669,7 +13497,6 @@ mod tests {
                 rotation: Some(RotationPin::Normal),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13689,7 +13516,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13702,7 +13528,7 @@ mod tests {
 
     #[test]
     fn diurnal_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.diurnal_lines, diurnal_lines(&world).unwrap());
     }
@@ -13720,7 +13546,6 @@ mod tests {
                 rotation: Some(RotationPin::Normal),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13735,7 +13560,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13748,7 +13572,7 @@ mod tests {
 
     #[test]
     fn seas_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seas_lines, seas_lines(&world).unwrap());
     }
@@ -13766,7 +13590,6 @@ mod tests {
                 rotation: Some(RotationPin::Normal),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13811,7 +13634,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -13824,7 +13646,7 @@ mod tests {
 
     #[test]
     fn rains_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.rains_lines, rains_lines(&world).unwrap());
     }
@@ -13853,16 +13675,9 @@ mod tests {
 
     #[test]
     fn firmament_lines_feed_the_almanac_context() {
-        let world = constant(42);
+        let world = generated(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.firmament_lines, firmament_lines(&world).unwrap());
-    }
-
-    #[test]
-    fn constant_sky_world_still_has_a_climate() {
-        let world = constant(42);
-        let climate = climate_of(&world).unwrap();
-        assert!(climate.geosphere().vertex_count() > 0);
     }
 
     #[test]
@@ -14091,7 +13906,6 @@ mod tests {
                         rotation: Some(RotationPin::Locked),
                         ..SkyPins::default()
                     },
-                    SkyChoice::Generated,
                     &hornvale_terrain::TerrainPins::default(),
                     &SettlementPins::default(),
                 )
@@ -14166,7 +13980,6 @@ mod tests {
         let world = build_world_to(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -14237,7 +14050,6 @@ mod tests {
         let world = build_world_to(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
             &wc,
@@ -14282,7 +14094,6 @@ mod tests {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14357,7 +14168,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14373,7 +14183,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14390,16 +14199,29 @@ mod tests {
         );
     }
 
+    /// `observation_time` returns 0.0 down two branches: a sky with no
+    /// calendar, and a calendar with no day length (tidally locked). This
+    /// test was named for both and only ever built the first — the constant
+    /// arm — so the locked arm, the one that outlives the tier, had no
+    /// coverage at all. It does now, and the name says only what is asserted.
     #[test]
-    fn observation_time_is_zero_for_constant_and_locked_skies() {
+    fn observation_time_is_zero_for_a_locked_sky() {
+        use hornvale_astronomy::RotationPin;
         let world = build_world(
             Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Constant,
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
         .unwrap();
+        let sky = sky_of(&world).unwrap();
+        assert!(
+            sky.calendar().day_length().is_none(),
+            "precondition: a locked world has no day length for this branch to take"
+        );
         let t = observation_time(&world, hornvale_species::ActivityCycle::Nocturnal).unwrap();
         assert_eq!(t, 0.0);
     }
@@ -14421,7 +14243,6 @@ mod tests {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )
@@ -14850,7 +14671,7 @@ mod tests {
     /// Settlement names are stable across two INDEPENDENT builds.
     ///
     /// Local builder, not the shared `generated` helper, for the reason
-    /// stated at `generated_worlds_are_deterministic`: the helper reads the
+    /// stated at `build_world_is_deterministic`: the helper reads the
     /// committed fixture at seed 42, so two calls to it would perform zero
     /// builds and the test's name would be a description of something it no
     /// longer did.
@@ -14860,7 +14681,6 @@ mod tests {
             build_world(
                 Seed(42),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &hornvale_terrain::TerrainPins::default(),
                 &SettlementPins::default(),
             )
@@ -15279,7 +15099,6 @@ mod tests {
                 rotation: Some(hornvale_astronomy::RotationPin::Locked),
                 ..SkyPins::default()
             },
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )

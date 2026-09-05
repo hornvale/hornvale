@@ -95,7 +95,6 @@ fn worldgen_can_steep() -> std::collections::BTreeSet<String> {
     let w = hornvale_worldgen::build_world(
         Seed(42),
         &SkyPins::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &hornvale_worldgen::SettlementPins::default(),
     )

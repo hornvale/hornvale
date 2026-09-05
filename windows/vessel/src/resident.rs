@@ -69,6 +69,33 @@ impl Trail {
     pub fn prefix_len(&self, entity: EntityId, t: WorldTime) -> usize {
         self.of(entity).partition_point(|(d, _)| *d <= t)
     }
+
+    /// Every entity's sighting count summed — every dated `agent-at` fact this
+    /// index has absorbed, counted once each (The Kerf, spec §4 K1).
+    ///
+    /// Equal to [`LatestVisit::entries`] over the same ledger: the two hold the
+    /// identical `(instant, room)` population keyed the other way round, so a
+    /// disagreement is a defect in one of them and
+    /// `the_trail_and_the_visit_lists_hold_the_same_sighting_count` asserts it.
+    /// type-audit: bare-ok(count: return)
+    pub fn entries(&self) -> usize {
+        self.by_entity.values().map(Vec::len).sum()
+    }
+
+    /// An estimate of the bytes this index holds, over every entity: one
+    /// `size_of::<(WorldTime, Facet)>()` per sighting plus that sighting's own
+    /// room `path` heap length, summed the same way
+    /// [`crate::ground::GroundHazards::held_bytes`] sums its key set. An
+    /// ESTIMATE of held data, not an allocator measurement: it counts neither
+    /// `BTreeMap`/`Vec` overhead nor any allocator slack.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        self.by_entity
+            .values()
+            .flat_map(|trail| trail.iter())
+            .map(|(_, room)| std::mem::size_of::<(WorldTime, Facet)>() + room.path.len())
+            .sum()
+    }
 }
 
 impl LedgerFold for Trail {
@@ -98,97 +125,6 @@ impl LedgerFold for Trail {
     }
 }
 
-/// Every entity's DISTINCT visited rooms, each keyed to the FIRST instant it
-/// was sighted there — the state `believed_water`'s per-call set build becomes
-/// (spec §2.4). A resident permutation index, like [`Trail`]: its contents are
-/// a strict subset of what the ledger already says, each fact is absorbed
-/// exactly once, and no read rebuilds a set.
-///
-/// **It holds every visited room, not only the wet ones, and the name is about
-/// the job rather than the contents.** Whether a room is water is a fact about
-/// TERRAIN, and terrain is not in the ledger: [`LedgerFold::absorb`] is handed
-/// a [`Fact`] and nothing else, deliberately (a fold that consulted terrain
-/// would stop being a pure function of the ledger prefix, and FOLD-equals-SCAN
-/// would be comparing two readings of a mutable world). So the intersection
-/// with water-truth happens at READ, in [`Self::water_at`], over a set bounded
-/// by the DISTINCT rooms the entity has visited — not by its history's length,
-/// which is the whole point.
-///
-/// **The value is the FIRST sighting instant, and that is what lets a read at
-/// a past `t` be exact rather than approximate.** `believed_water` admits a
-/// room when the entity has SOME dated `agent-at` there with `day <= t`, which
-/// is precisely `first_visit(room) <= t` — the minimum over that room's
-/// sightings. A plain `BTreeSet<Facet>` would have had to be rebuilt to the
-/// position `t` implies to answer the same question (spec §3 rule 6's
-/// fallback, taken: see [`ReadWitness::note_belief`] for the witness that
-/// measured it, and the day filter in [`Self::water_at`] for where it is
-/// spent).
-#[derive(Debug, PartialEq, Default)]
-pub struct KnownWater {
-    /// Each entity's visited rooms, keyed to the first instant it was sighted
-    /// in each.
-    rooms: BTreeMap<EntityId, BTreeMap<Facet, WorldTime>>,
-}
-
-impl KnownWater {
-    /// Every room the entity has stood in, keyed to the FIRST instant it was
-    /// sighted there, ascending by room; empty if it was never seen.
-    pub fn of(&self, entity: EntityId) -> &BTreeMap<Facet, WorldTime> {
-        static EMPTY: BTreeMap<Facet, WorldTime> = BTreeMap::new();
-        self.rooms.get(&entity).unwrap_or(&EMPTY)
-    }
-
-    /// The WATER rooms the entity had stood in at or before `t`, ascending —
-    /// `believed_water`'s candidate set, and the only read this tenant has.
-    ///
-    /// Both filters are here rather than in `absorb` for the reasons the type
-    /// doc gives: `first_visit <= t` because a fold cannot go backwards, and
-    /// `is_water` because terrain is not a ledger fact. The cost is O(distinct
-    /// rooms visited) — never O(history).
-    pub fn water_at(&self, entity: EntityId, t: WorldTime, terrain: &dyn Terrain) -> Vec<Facet> {
-        self.of(entity)
-            .iter()
-            .filter(|(room, first)| **first <= t && is_water(room, terrain))
-            .map(|(room, _)| room.clone())
-            .collect()
-    }
-}
-
-impl LedgerFold for KnownWater {
-    fn empty() -> Self {
-        KnownWater::default()
-    }
-
-    fn absorb(&mut self, fact: &Fact) {
-        if fact.predicate != AGENT_AT {
-            return;
-        }
-        let Value::Text(s) = &fact.object else {
-            return;
-        };
-        // An UNDATED `agent-at` is not a sighting. `believed_water`'s own loop
-        // reads `f.day.map(|d| d <= t).unwrap_or(false)`, so an undated fact
-        // is never admitted at any `t`; dropping it here is the same answer,
-        // and keeping it would need a sentinel instant that no `t` could
-        // exclude.
-        let Some(day) = fact.day else {
-            return;
-        };
-        let rooms = self.rooms.entry(fact.subject).or_default();
-        rooms
-            .entry(room_from_text(s))
-            // FIRST sighting, not latest: the read asks whether ANY sighting
-            // of the room is at or before `t`, which the minimum answers and
-            // the maximum would not.
-            .and_modify(|first| {
-                if day < *first {
-                    *first = day;
-                }
-            })
-            .or_insert(day);
-    }
-}
-
 /// Every entity's visits, INDEXED BY ROOM: for each room the entity has stood
 /// in, the sorted list of instants it was sighted there — the state
 /// `hazard_memory_memo`'s per-call `latest` map becomes (spec §2.4), and the
@@ -214,16 +150,18 @@ impl LedgerFold for KnownWater {
 /// `agent-at` fact the entity had ever committed, on every call, to rebuild a
 /// map whose size is bounded by the rooms it has stood in.
 ///
-/// **Two reads, one state.** [`Self::latest_at`] serves the hazard fold's
+/// **Three reads, one state.** [`Self::latest_at`] serves the hazard fold's
 /// most-recent-visit-per-room rule; [`Self::rooms_at`] serves the ALARM scan,
 /// which needs only the DISTINCT rooms a roster member has stood in at or
-/// before `t` so it can ask terrain whether each frightens that member. The
+/// before `t` so it can ask terrain whether each frightens that member;
+/// [`Self::water_at`] serves the belief read with the same first-visit domain
+/// and its water predicate. The
 /// alarm half is the tenant spec §2.4 lists as `Alarm`, and it holds no state
 /// of its own on purpose: everything `build_emitter_scan` accumulates —
 /// which members can ever emit, the halo of rooms their alarms could reach —
 /// is a function of TERRAIN and the member's own threat niche as well as the
 /// ledger, so none of it can live inside a [`LedgerFold`] (the same argument
-/// [`KnownWater`]'s doc makes for `is_water`). What the ledger determines is
+/// former belief tenant made for `is_water`). What the ledger determines is
 /// the visits, and those are here; the predicate is applied at read, and its
 /// result is memoised per tick in `PrimaryAfraidMemo::scans` exactly as the
 /// scan's output already was.
@@ -259,18 +197,76 @@ impl LatestVisit {
         latest
     }
 
+    /// The DISTINCT rooms the entity had stood in at or before `t`, retaining
+    /// only the rooms `keep` admits, ascending by room.
+    fn rooms_at_where(
+        &self,
+        entity: EntityId,
+        t: WorldTime,
+        keep: impl Fn(&Facet) -> bool,
+    ) -> Vec<Facet> {
+        self.of(entity)
+            .iter()
+            .filter(|(room, days)| days.first().is_some_and(|first| *first <= t) && keep(room))
+            .map(|(room, _)| room.clone())
+            .collect()
+    }
+
     /// The DISTINCT rooms the entity had stood in at or before `t`, ascending
-    /// — the alarm scan's domain (see the type doc's "two reads" paragraph).
+    /// — the alarm scan's domain (see the type doc's "three reads" paragraph).
     ///
     /// The FIRST visit decides membership, so the test is against the list's
     /// first element rather than a `partition_point`: a room is in the set as
     /// soon as any sighting of it is at or before `t`.
     pub fn rooms_at(&self, entity: EntityId, t: WorldTime) -> Vec<Facet> {
-        self.of(entity)
-            .iter()
-            .filter(|(_, days)| days.first().is_some_and(|first| *first <= t))
-            .map(|(room, _)| room.clone())
-            .collect()
+        self.rooms_at_where(entity, t, |_| true)
+    }
+
+    /// The WATER rooms the entity had stood in at or before `t`, ascending —
+    /// `believed_water`'s candidate set.
+    ///
+    /// Correctness depends on each room's visit list being ascending, so its
+    /// first element is the room's first visit. Task 3's descending-order
+    /// fixture in `windows/vessel/tests/suite/resident_folds.rs` pins that
+    /// invariant against a room whose facts arrive in reverse day order.
+    pub fn water_at(&self, entity: EntityId, t: WorldTime, terrain: &dyn Terrain) -> Vec<Facet> {
+        self.rooms_at_where(entity, t, |room| is_water(room, terrain))
+    }
+
+    /// Every VISIT INSTANT this index holds, summed over every entity and every
+    /// one of its rooms — the same population [`Trail::entries`] counts, keyed
+    /// the other way round (The Kerf, spec §4 K1).
+    ///
+    /// It is NOT the room-key count: a room visited three times contributes
+    /// three here and one room key. Both identities are asserted in this
+    /// module's tests.
+    /// type-audit: bare-ok(count: return)
+    pub fn entries(&self) -> usize {
+        self.visits
+            .values()
+            .flat_map(|rooms| rooms.values())
+            .map(Vec::len)
+            .sum()
+    }
+
+    /// An estimate of the bytes this index holds, over every entity: every
+    /// visited room's key size (`size_of::<Facet>()` plus its `path`'s heap
+    /// length) plus one `size_of::<WorldTime>()` per instant in that room's
+    /// visit list, summed the same way
+    /// [`crate::ground::GroundHazards::held_bytes`] sums its key set. An
+    /// ESTIMATE of held data, not an allocator measurement: it counts neither
+    /// `BTreeMap`/`Vec` overhead nor any allocator slack.
+    /// type-audit: bare-ok(count: return)
+    pub fn held_bytes(&self) -> usize {
+        self.visits
+            .values()
+            .flat_map(|rooms| rooms.iter())
+            .map(|(room, days)| {
+                std::mem::size_of::<Facet>()
+                    + room.path.len()
+                    + days.len() * std::mem::size_of::<WorldTime>()
+            })
+            .sum()
     }
 }
 
@@ -675,7 +671,7 @@ impl MemoPartition {
 ///
 /// **It is a pure function of `(ledger prefix, temperature field, home)`, and
 /// NOT a [`LedgerFold`].** The rate at a segment needs a temperature, and
-/// terrain is not a ledger fact — the same argument [`KnownWater`]'s doc makes
+/// terrain is not a ledger fact — the same argument [`LatestVisit`]'s doc makes
 /// for `is_water`. So this cannot live inside a fold whose FOLD-equals-SCAN
 /// property is stated over the ledger alone; it sits beside them, advanced
 /// lazily at read, and [`LedgerFold::absorb`] stays terrain-free. **`home` is
@@ -1166,7 +1162,7 @@ impl ReadWitness {
     /// **This counter survives the branch it decided, and its job changed
     /// when it did.** Before the tenant existed it asked whether a plain
     /// `BTreeSet` fold could serve every reached read; it could not, so
-    /// [`KnownWater`] carries a first-visit instant and filters. What the
+    /// [`LatestVisit`] carries ascending visits and filters. What the
     /// count says NOW is that the filter is LOAD-BEARING — a day filter that
     /// never fired would be indistinguishable from dead code, and the next
     /// reader would have no way to tell.
@@ -1304,7 +1300,7 @@ impl ReadWitness {
 
     /// How many belief reads ran at an instant strictly before a committed
     /// sighting of the same entity (spec §3 rule 6). Non-zero means
-    /// [`KnownWater`]'s first-visit filter is reached in anger.
+    /// [`LatestVisit`]'s first-visit filter is reached in anger.
     /// type-audit: bare-ok(count: return)
     pub fn beliefs_in_the_past(&self) -> u64 {
         self.beliefs_in_the_past
@@ -1409,8 +1405,8 @@ pub type OwnedFolds = std::cell::RefCell<ResidentFolds>; // lexicon: std::cell::
 /// The session-owned resident fold store: one [`Folded`] per tenant,
 /// advance-on-read.
 ///
-/// [`Trail`], [`ThirstResets`], [`HungerResets`], [`KnownWater`] and
-/// [`LatestVisit`] are its tenants — the whole roster spec §2.4 names, with
+/// [`Trail`], [`ThirstResets`], [`HungerResets`] and [`LatestVisit`] are its
+/// tenants — the whole roster spec §2.4 names, with
 /// that spec's sixth entry (`Alarm`) folded into [`LatestVisit`]'s second read
 /// because none of an alarm scan's state is a function of the ledger alone
 /// (see that type's doc). The store knows nothing about what a tenant's state
@@ -1431,10 +1427,8 @@ pub struct ResidentFolds {
     thirst: Folded<ThirstResets>,
     /// Every entity's `eaten` days.
     hunger: Folded<HungerResets>,
-    /// Every entity's distinct visited rooms and when each was first seen.
-    known_water: Folded<KnownWater>,
     /// Every entity's visits, indexed by room — the hazard fold's latest-visit
-    /// map and the alarm scan's room domain.
+    /// map, the alarm scan's room domain, and the belief read's water domain.
     latest_visit: Folded<LatestVisit>,
     /// The sustenance integral's read-side accumulator — not a tenant either,
     /// because it is a function of the temperature field and `home` as well as
@@ -1467,7 +1461,6 @@ impl ResidentFolds {
         self.trail.advance_to(ledger);
         self.thirst.advance_to(ledger);
         self.hunger.advance_to(ledger);
-        self.known_water.advance_to(ledger);
         self.latest_visit.advance_to(ledger);
     }
 
@@ -1535,26 +1528,18 @@ impl ResidentFolds {
         )
     }
 
-    /// The visited-room index, current with `ledger` — the plain accessor,
-    /// for a reader that is not taking the rule-6 witness (the property tests,
-    /// and any future consumer of the same index).
-    pub fn known_water(&mut self, ledger: &Ledger) -> &KnownWater {
-        self.advance(ledger);
-        self.known_water.state()
-    }
-
-    /// The visited-room index and the read witness together, from ONE guard —
+    /// The room-indexed visit lists and the read witness together, from ONE guard —
     /// see the type doc for why one guard rather than two. [`Trail`] rides
     /// along because the witness's own question ("is `t` before this entity's
     /// last committed sighting?") is answered from the trail's last entry at
     /// O(1), and a second `borrow_mut` to ask it would panic.
-    pub fn known_water_and_trail(
+    pub fn latest_visit_trail_and_witness(
         &mut self,
         ledger: &Ledger,
-    ) -> (&KnownWater, &Trail, &mut ReadWitness) {
+    ) -> (&LatestVisit, &Trail, &mut ReadWitness) {
         self.advance(ledger);
         (
-            self.known_water.state(),
+            self.latest_visit.state(),
             self.trail.state(),
             &mut self.witness,
         )
@@ -1647,12 +1632,6 @@ impl ResidentFolds {
         );
         assert_eq!(
             position,
-            self.known_water.position(),
-            "every tenant advances on every read, so the trail and the visited-room \
-             index must stand at the same position"
-        );
-        assert_eq!(
-            position,
             self.latest_visit.position(),
             "every tenant advances on every read, so the trail and the room-indexed \
              visit lists must stand at the same position"
@@ -1672,6 +1651,113 @@ mod tests {
             face,
             path: path.to_vec(),
         }
+    }
+
+    /// A dated `agent-at` fact, spelled the way a committed one is.
+    fn sighting(subject: EntityId, day: i64, r: &Facet) -> Fact {
+        Fact {
+            subject,
+            predicate: AGENT_AT.to_string(),
+            object: Value::Text(
+                crate::thing::room_key(r).expect("the fixture's rooms are within MAX_DEPTH"),
+            ),
+            place: None,
+            day: Some(WorldTime::from_ticks(day * WorldTime::TICKS_PER_STD_DAY)),
+            provenance: "the-kerf: held-bytes fixture".to_string(),
+        }
+    }
+
+    /// The K1 fixture: TWO entities, one of which visits one room THREE times.
+    /// The revisits are what make the two identities below differ from each
+    /// other — with one visit per room, "every sighting" and "every distinct
+    /// room" are the same number and neither assertion would discriminate.
+    ///
+    /// Also carries the two facts no `agent-at` fold may absorb — a fact of
+    /// another predicate, and an UNDATED `agent-at` — so a count that admitted
+    /// either would be off by one and visible.
+    ///
+    /// Returns the facts in commit order alongside the four distinct rooms.
+    fn k1_fixture() -> (Vec<Fact>, [Facet; 4]) {
+        let a = EntityId::new(1).expect("id");
+        let b = EntityId::new(2).expect("id");
+        // Path digits are child indices in 0..4 and the face is in 0..6; the
+        // `path` lengths deliberately differ (1, 2, 3, 1) so the byte sums
+        // below cannot be satisfied by a wrong-but-uniform room size.
+        let a1 = room(0, &[1]);
+        let a2 = room(0, &[2, 3]);
+        let b1 = room(1, &[0, 1, 2]);
+        let b2 = room(1, &[3]);
+        let mut facts = vec![
+            sighting(a, 1, &a1),
+            sighting(a, 2, &a2),
+            sighting(a, 3, &a1),
+            sighting(a, 5, &a1),
+            sighting(b, 2, &b1),
+            sighting(b, 4, &b2),
+        ];
+        let mut other = sighting(a, 6, &a1);
+        other.predicate = "noise".to_string();
+        facts.push(other);
+        let mut undated = sighting(b, 6, &b2);
+        undated.day = None;
+        facts.push(undated);
+        (facts, [a1, a2, b1, b2])
+    }
+
+    /// Hand-derived: entity 1 posts 4 sightings (rooms A1, A2, A1, A1) and
+    /// entity 2 posts 2 (B1, B2) — 6 dated `agent-at` facts over 4 distinct
+    /// rooms, plus two facts neither fold may absorb.
+    #[test]
+    fn the_two_indexes_hold_the_hand_counted_entries_and_bytes() {
+        let (facts, [a1, a2, b1, b2]) = k1_fixture();
+        let mut trail = Trail::empty();
+        let mut visits = LatestVisit::empty();
+        for f in &facts {
+            trail.absorb(f);
+            visits.absorb(f);
+        }
+
+        // 6 sightings over 4 distinct rooms.
+        assert_eq!(trail.entries(), 6, "every dated `agent-at`, counted once");
+        assert_eq!(visits.entries(), 6, "the same population, keyed by room");
+
+        // The `path` heap lengths: 1 + 2 + 1 + 1 over entity 1's four
+        // sightings, 3 + 1 over entity 2's two = 9 across the trail; the
+        // four distinct room paths sum to 7 for the visit lists.
+        let trail_paths: usize = a1.path.len() * 3 + a2.path.len() + b1.path.len() + b2.path.len();
+        let room_paths: usize = a1.path.len() + a2.path.len() + b1.path.len() + b2.path.len();
+        assert_eq!((trail_paths, room_paths), (9, 7));
+        assert_eq!(
+            trail.held_bytes(),
+            6 * std::mem::size_of::<(WorldTime, Facet)>() + trail_paths
+        );
+        assert_eq!(
+            visits.held_bytes(),
+            4 * std::mem::size_of::<Facet>() + room_paths + 6 * std::mem::size_of::<WorldTime>()
+        );
+    }
+
+    /// Identity 1 of the projection chain: [`Trail`] and [`LatestVisit`] hold
+    /// the SAME sighting population, so their entry counts agree on any
+    /// ledger. This is the non-vacuity control on K1 — a `held_bytes` summing
+    /// the wrong collection would still produce plausible growing numbers, and
+    /// a free identity between two independent sums is what catches it.
+    #[test]
+    fn the_trail_and_the_visit_lists_hold_the_same_sighting_count() {
+        let (facts, _) = k1_fixture();
+        let mut trail = Trail::empty();
+        let mut visits = LatestVisit::empty();
+        for (n, f) in facts.iter().enumerate() {
+            trail.absorb(f);
+            visits.absorb(f);
+            assert_eq!(
+                trail.entries(),
+                visits.entries(),
+                "at every prefix, not only at the end (after {} facts)",
+                n + 1
+            );
+        }
+        assert_eq!(trail.entries(), 6, "and the shared count is non-trivial");
     }
 
     #[test]

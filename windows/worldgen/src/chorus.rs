@@ -1743,11 +1743,7 @@ pub fn observations_from(
     climate: &hornvale_climate::GeneratedClimate,
 ) -> Result<Observations, BuildError> {
     let sky = crate::sky_of(world)?;
-    let crate::Sky::Generated(sky) = sky else {
-        return Err(BuildError::Pins(
-            "the diachronic observation ledger requires a Generated sky".to_string(),
-        ));
-    };
+    let sky = sky.0;
     let params = account_params_from(world, species, terrain, climate)?;
     let from = hornvale_astronomy::StdInstant::new(0.0).expect("0.0 is always a valid StdInstant");
 
@@ -2108,7 +2104,12 @@ mod tests {
     #[test]
     fn unbindable_cultures_stay_plain_lost() {
         let world = World::new(Seed(1));
-        let climate = crate::climate_of(&world).unwrap();
+        // The unbuilt world is intentional: it supplies the absent flagship.
+        // Climate is an independent input to `explain`, so take it from the
+        // valid committed world rather than relying on the retired skyless
+        // climate fallback.
+        let fixture = crate::fixture::seed_42_world();
+        let climate = crate::climate_of(&fixture).unwrap();
         assert!(
             cyclic_beliefs_from(&world, "goblin", &climate).is_empty(),
             "a bare world places no settlement, so there is no flagship to hold a pantheon"
@@ -2396,7 +2397,6 @@ mod tests {
         crate::build_world(
             Seed(seed),
             &hornvale_astronomy::SkyPins::default(),
-            crate::SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &crate::SettlementPins::default(),
         )

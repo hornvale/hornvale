@@ -125,8 +125,7 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::built_rooms;
 use hornvale_vessel::site::{Extent, SiteKind};
 use hornvale_worldgen::{
-    BuildDepth, SiteReason, SkyChoice, WorldComponents, build_world_to_with_artifacts,
-    site_facet_for,
+    BuildDepth, SiteReason, WorldComponents, build_world_to_with_artifacts, site_facet_for,
 };
 use std::collections::BTreeSet;
 
@@ -245,7 +244,6 @@ fn read(seed: u64, wc: &WorldComponents) -> Reading {
     let arts = build_world_to_with_artifacts(
         Seed(seed),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
         wc,

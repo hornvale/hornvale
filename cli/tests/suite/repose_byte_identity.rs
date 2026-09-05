@@ -64,7 +64,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, almanac_context, build_world};
+use hornvale_worldgen::{SettlementPins, almanac_context, build_world};
 
 /// The repository root: the parent of this crate's manifest dir (`cli/`).
 /// Filesystem-based, not git-based — the heavy tier runs the suite in an
@@ -76,33 +76,14 @@ fn repo_root() -> std::path::PathBuf {
         .to_path_buf()
 }
 
-/// Seed 42 under the tier-0 constant sun — the world
-/// `hornvale new --seed 42 --sky constant` writes, which is the world
-/// `book/src/gallery/almanac-seed-42.md` is rendered from.
-///
-/// The CLI additionally calls `streams::stamp`, which only sets
-/// `World::derived_under` (a metadata map, never a fact), so it cannot reach
-/// any rendering. Omitted here because `cli` has no library target and the
-/// stamp is not reachable from an integration test.
-fn constant_sun_world() -> World {
-    build_world(
-        Seed(42),
-        &SkyPins::default(),
-        SkyChoice::Constant,
-        &TerrainPins::default(),
-        &SettlementPins::default(),
-    )
-    .expect("seed 42 builds under the constant sun")
-}
-
-/// Seed 42 under the generated sky — the default world, and the one both
-/// `cli/tests/fixtures/world-seed-42.json` and
-/// `book/src/gallery/scene-tiles-seed-42.json` are taken from.
+/// Seed 42 under the generated sky — the default world, and the one
+/// `cli/tests/fixtures/world-seed-42.json`,
+/// `book/src/gallery/scene-tiles-seed-42.json`, and
+/// `book/src/gallery/almanac-seed-42.md` are all taken from.
 fn generated_sky_world() -> World {
     build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -153,7 +134,7 @@ fn assert_committed_bytes(relative: &str, actual: &str) {
 /// stray fact or a reseeded name would move first.
 #[test]
 fn seed_42_almanac_is_unmoved_by_the_repose() {
-    let world = constant_sun_world();
+    let world = generated_sky_world();
     let ctx = almanac_context(&world).expect("seed 42 renders an almanac");
     assert_committed_bytes(
         "book/src/gallery/almanac-seed-42.md",

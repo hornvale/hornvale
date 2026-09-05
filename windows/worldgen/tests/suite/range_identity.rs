@@ -12,8 +12,8 @@ use hornvale_kernel::Seed;
 use hornvale_species::HabitatRealm;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, climate_of, per_species_capacity,
-    sky_of, terrain_of,
+    SettlementPins, WorldComponents, build_world, climate_of, per_species_capacity, sky_of,
+    terrain_of,
 };
 
 /// The realm slice must CHANGE a peopled kind's capacity field. This is the
@@ -25,7 +25,6 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -33,10 +32,7 @@ fn a_declared_realm_changes_a_peopled_kinds_capacity_field() {
     let terrain = terrain_of(&world).unwrap();
     let climate = climate_of(&world).unwrap();
     let sky = sky_of(&world).unwrap();
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();

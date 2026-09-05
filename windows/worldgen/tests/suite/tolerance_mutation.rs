@@ -178,7 +178,7 @@ use hornvale_species::Dispersion;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::disposition::{drawn_threat_response, occupation_draw_key};
 use hornvale_worldgen::seed_sweep;
-use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, history_for};
+use hornvale_worldgen::{SettlementPins, WorldComponents, history_for};
 use std::collections::BTreeMap;
 
 /// Seeds `1..=30` — the range the retired `tolerance_baseline.rs` pooled over,
@@ -402,7 +402,6 @@ fn zero_dispersion_collapses_between_settlement_variance() {
             let history = history_for(
                 Seed(seed),
                 &SkyPins::default(),
-                SkyChoice::Generated,
                 &TerrainPins::default(),
                 &SettlementPins::default(),
                 &wc,
@@ -618,7 +617,6 @@ fn the_shipped_bake_gates_on_a_drawn_value_not_the_authored_constant() {
         let history = history_for(
             Seed(seed),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
             &wc,

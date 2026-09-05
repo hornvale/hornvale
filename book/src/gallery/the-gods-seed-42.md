@@ -36,7 +36,7 @@
 > staleness this page carries.
 >
 > The generated almanacs
-> ([spinning](./almanac-seed-42-sky.md), [locked](./almanac-seed-42-locked.md))
+> ([spinning](./almanac-seed-42.md), [locked](./almanac-seed-42-locked.md))
 > regenerate with every change and are always current; read them for the
 > world as it stands. This page is preserved as written until its comparison is
 > re-founded, because a partial refresh would restore the word "verbatim" to
@@ -107,7 +107,7 @@ this gallery's Year-2 capstone.
 
 ## Spinning: a sun that rises and sets
 
-Quoted verbatim from the committed [`almanac-seed-42-sky.md`](./almanac-seed-42-sky.md):
+Quoted verbatim from the committed [`almanac-seed-42.md`](./almanac-seed-42.md):
 
 ```text
 The land holds 182 settlement(s).

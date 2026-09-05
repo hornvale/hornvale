@@ -291,13 +291,12 @@ mod tests {
     use super::*;
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
-    use world_builder::{SettlementPins, SkyChoice, build_world};
+    use world_builder::{SettlementPins, build_world};
 
     fn reference_world() -> World {
         build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )

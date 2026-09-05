@@ -139,7 +139,7 @@ that is the difference.
 
 ## Supply
 
-354 served tokens no situation in this corpus requires.
+357 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -167,6 +167,7 @@ missing half before this list can serve it.
 - `concept:blue-giant` (astronomy)
 - `concept:bone` (language)
 - `concept:boreal-stand` (climate)
+- `concept:bracken` (thing)
 - `concept:brazier` (thing)
 - `concept:brown` (language)
 - `concept:bugbear-kind` (species)
@@ -257,6 +258,7 @@ missing half before this list can serve it.
 - `concept:know` (language)
 - `concept:kobold-kind` (species)
 - `concept:lake` (terrain)
+- `concept:ledge` (thing)
 - `concept:lens` (language)
 - `concept:liana-forest` (climate)
 - `concept:light` (language)
@@ -318,6 +320,7 @@ missing half before this list can serve it.
 - `concept:rhinoceros-kind` (species)
 - `concept:rice` (climate)
 - `concept:river` (terrain)
+- `concept:rushes` (thing)
 - `concept:rust-monster-kind` (species)
 - `concept:sargassum-drift` (climate)
 - `concept:savanna` (climate)

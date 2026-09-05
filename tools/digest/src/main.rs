@@ -10,6 +10,24 @@ use std::collections::BTreeMap;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     match args.get(1).map(String::as_str) {
+        Some("context") => {
+            if args.len() != 3 {
+                eprintln!("usage: digest context <scope>");
+                std::process::exit(2);
+            }
+            match digest::context::context_from_current_checkout(&args[2]) {
+                Ok(report) => {
+                    print!("{}", report.markdown);
+                    if !report.successful {
+                        std::process::exit(1);
+                    }
+                }
+                Err(error) => {
+                    eprintln!("context: {error}");
+                    std::process::exit(1);
+                }
+            }
+        }
         Some("render") => match args.get(2).map(String::as_str) {
             Some("doctor") => print!(
                 "{}",
@@ -31,12 +49,12 @@ fn main() {
                 render::delta::report(&all_decisions(), &decision_scopes())
             ),
             _ => {
-                eprintln!("usage: digest render <doctor|decisions|delta>");
+                eprintln!("usage: digest render <doctor|decisions|delta> | context <scope>");
                 std::process::exit(2);
             }
         },
         _ => {
-            eprintln!("usage: digest render <doctor|decisions|delta>");
+            eprintln!("usage: digest render <doctor|decisions|delta> | context <scope>");
             std::process::exit(2);
         }
     }

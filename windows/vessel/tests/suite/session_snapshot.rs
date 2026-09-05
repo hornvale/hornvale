@@ -390,7 +390,6 @@ fn a_settlement_free_world_refuses_possession_rather_than_panicking() {
     let w = hornvale_worldgen::build_world_to(
         Seed(42),
         &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
         &wc,

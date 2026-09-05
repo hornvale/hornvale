@@ -100,8 +100,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, Value, Vertex};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    SettlementPins, SkyChoice, WorldComponents, build_world, carrying_inputs_of,
-    species_carrying_input, terrain_of,
+    SettlementPins, WorldComponents, build_world, carrying_inputs_of, species_carrying_input,
+    terrain_of,
 };
 
 /// Pre-repoint baseline fraction of seed-42 settlements within
@@ -130,7 +130,6 @@ fn settlements_near_river_fraction(seed: u64) -> f64 {
     let world = build_world(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -169,7 +168,6 @@ fn k_spikes_near_rivers_on_seed_42() {
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -234,7 +232,6 @@ fn k_biomass_gradient_grounding_holds_after_the_freshwater_repoint() {
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -322,7 +319,6 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     let world = build_world(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -455,7 +451,6 @@ fn seed_42_is_byte_identical_across_two_builds_after_the_confluence() {
         hornvale_worldgen::build_world(
             Seed(42),
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

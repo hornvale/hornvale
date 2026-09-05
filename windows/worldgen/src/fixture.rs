@@ -59,9 +59,8 @@ const FIXTURE: &str = concat!(
 
 /// The seed-42 world under default pins and a generated sky — byte-identical
 /// to what `build_world` returns for `Seed(42), &SkyPins::default(),
-/// SkyChoice::Generated, &TerrainPins::default(),
-/// &SettlementPins::default()`, read from the committed fixture instead of
-/// rebuilt.
+/// &TerrainPins::default(), &SettlementPins::default()`, read from the
+/// committed fixture instead of rebuilt.
 ///
 /// Read at runtime rather than `include_str!`-ed: the file is 5.5 MB, and
 /// baking it into every test binary that wants a world would pay the

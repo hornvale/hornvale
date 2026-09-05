@@ -246,13 +246,12 @@ mod tests {
     use super::*;
     use crate::{PossessOpts, Session};
     use hornvale_kernel::{Seed, World};
-    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+    use hornvale_worldgen::{SettlementPins, build_world};
 
     fn world() -> World {
         build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
-            SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
         )

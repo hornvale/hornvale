@@ -51,7 +51,7 @@
 
 use hornvale_kernel::Seed;
 use hornvale_vessel::{PossessOpts, Session, SpatialChannel};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 // The measurement harness times derivation calls for a diagnostic (never sim
 // logic, never a fact, never seeded from wall-clock) -- exempt from the
@@ -683,7 +683,6 @@ fn a_possessed_turn_stays_within_its_ceilings() {
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &SettlementPins::default(),
     )

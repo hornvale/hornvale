@@ -976,9 +976,7 @@ fn climate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
 /// syzygy scan a question about all of history, and a count over all of
 /// history is not something anybody saw.
 fn sky(ctx: &LotContext, life: &Life) -> Answer {
-    let Some((system, calendar)) = &ctx.sky else {
-        return no_fact("this world's sky has no generated system");
-    };
+    let (system, calendar) = &ctx.sky;
     let from = hornvale_worldgen::ledger_day_of_bake_year(life.birth_year);
     let until = hornvale_worldgen::ledger_day_of_bake_year(life.death_year);
     let (Ok(from), Ok(until)) = (StdInstant::new(from), StdInstant::new(until)) else {

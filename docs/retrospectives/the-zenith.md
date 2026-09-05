@@ -1,0 +1,221 @@
+# The Zenith — retrospective
+
+*Process lessons only. The product story is in
+[the chronicle](../../book/src/chronicle/the-zenith.md); the decisions are
+0736–0738.*
+
+Eight tasks retired astronomy's selectable provider system. The branch was
+absorbed against `main` before these close artifacts were written; The Staple's
+incoming probe supplied one final, narrow API reconciliation. It was absorbed
+again at the merge stop, 163 commits later, and that second absorption is where
+three of this retrospective's lessons come from.
+
+## The campaign's scoping input was wrong by roughly seventy times
+
+The registry row said “six production files.” That correctly counted the
+places that handled the constant variant and completely missed the public
+choice's real surface: a positional argument on the most-called construction
+function in the workspace. Measurement found 405 choice sites across 335
+world-build call sites.
+
+The useful response was not a larger estimate. The plan separated 23 semantic
+changes from 382 mechanical deletions: first change every caller that truly
+asked for the constant world while the choice still existed, then delete the
+choice under compiler guidance. Scope from the interface being removed, not
+from the variant handlers that happen to mention its interesting arm.
+
+The closing absorption confirmed the lesson. The Staple had added an ignored
+world-build probe after The Zenith's initial census; it arrived with the old
+argument and three stale explanatory comments. A docs-only close therefore
+gained one narrow code reconciliation. The compiler found the API site; a
+one-time retired-name grep found the comments.
+
+## Plausible counts were the dangerous errors
+
+The first spec draft classified 23 constant-provider sites, then printed a
+count column whose categories summed to 32. It had mixed two populations.
+Nothing about either subtotal looked absurd. The repair was to list every site
+once and derive the count from the list.
+
+The ledger's first draft also carried two incorrect citations. Both cited a
+claim that sounded right; re-reading the cited *lines* showed that neither line
+said it. This is the same failure at a different scale: internal plausibility
+is not provenance. Check the population behind a total and the passage behind
+a citation.
+
+## Naming the instrument dissolved the fidelity objection
+
+The G3 concern was real: removing the constant provider appeared to remove the
+only observation of religion under eternal noon. We did not decide that the
+loss was small. We named the question's proper instrument.
+
+One stipulated seed-42 world produced 16 beliefs against the generated world's
+145. A census can instead compare ten thousand derived locked worlds through
+the existing `pantheon-cyclic-share` metric. The mechanism for pin-set
+comparisons exists and no committed study uses a non-empty pin set. That turns
+an apparent provider requirement into a specific preregistration follow-up.
+The lesson is to classify a concern by the population it asks about before
+weighing it as product loss.
+
+## A generated artifact can faithfully regenerate a falsehood
+
+`kernel/examples/first_light.rs` hardcoded “Under a golden sun fixed at
+zenith” into the seed-42 gallery page. It imports only the kernel and never
+read the astronomy provider. Regeneration therefore reproduced the stale
+sentence byte for byte, and the drift check compared the regenerated falsehood
+against itself forever.
+
+Generated is provenance, not truth. A freshness sweep must follow the meaning
+of an artifact back to its source and ask whether that source can observe the
+change. The same close sweep found current reference chapters still describing
+commands that could fail on constant-sun worlds, even after those worlds had
+ceased to exist.
+
+## A green product does not repair a breached process
+
+Task 4 explicitly prohibited scripted rewriting because ten sites were not the
+ordinary argument form. Its implementer nevertheless used exact-token Perl
+substitutions after compiler diagnostics had enumerated the migration. The
+result compiled, passed its gates, and survived focused review after three
+stale comments were fixed. It is behaviorally accepted. It is not
+retroactively process-compliant.
+
+Replaying the same edits by hand could only manufacture identical final bytes;
+it could not undo the historical breach. The honest terminal state was
+verified-and-recorded. Safety constraints govern method, while tests validate
+output, and success in one dimension does not erase failure in the other.
+
+## Independent tests must own their expectations
+
+The cross-tier battery was promoted rather than deleted, but the first close
+review found that it still imported the production `CELESTIAL_BODY` constant.
+The test had changed names without becoming independent. After freezing all
+three expectations locally, a mutation of the production value compiled and
+failed three of four conformance tests before restoration.
+
+That mutation result is the evidence. “Independent oracle” is not established
+by placing a constant in the test file; it is established by changing the
+implementation and watching the expected assertions fail.
+
+## Calibration outputs and preregistered verdicts react differently
+
+Making generated-sky population mandatory moved valid fixture outputs. Exact
+goldens were rebaselined with provenance. The riparian dry-overlap criterion
+was not rescued: its witness moved from 3/138 to **4/152**, but it remains
+ignored, unmet, and zero-tolerance. A vanished desert exemplar was replaced by
+direct deterministic construction rather than seed hunting.
+
+The shared population does not make these contracts interchangeable. An exact
+output describes today's valid world; a preregistered threshold judges it.
+Population movement can update the first and must not silently retune the
+second.
+
+## Scratch and review residue, explicitly routed
+
+| item | outcome |
+|---|---|
+| Task 1 ruling R5 said “exactly one file,” but the commit hook forced a second ratchet update | **Resolved in Task 1.** The extra edit was a necessary consequence of keeping the commit green and was disclosed immediately; no product action remained. |
+| `generated()` helper counts became stale | **Fixed in Task 4's review round.** The helper now describes its live caller population rather than preserving the old count. |
+| Scene comments described fixed 23.5° obliquity and an Earth-like day for generated seed 1 | **Fixed at close.** They now name the drawn seed-1 regime and make no universal claim. |
+| `cmd_star_chart` lost its only direct test when the constant-world error test was retired | **Accepted debt.** The command now has no provider-error branch; its renderers and committed star-chart artifact remain covered, but argument/output assembly has no focused CLI test. Add one when that command next changes rather than widening this retirement's close. |
+| Sky-condition vocabulary is repeated in four assertions/helpers | **Accepted debt.** Production already has one `sky_phrase` source; the duplication is test-side acceptance vocabulary across crate boundaries. A future change to those words must introduce a shared public predicate or a parity test rather than a fifth literal list. |
+| The inherited pre-Zenith figure 101 appeared beside today's defined 110 | **Fixed at close.** The table now marks 101 as an undefined inherited note, not a comparable baseline; only 110 carries a population definition. |
+| `windows/scene/examples/illumination_probe.rs` changed but examples run in no gate | **Carried.** It compiles under all-targets but remains an off-gate diagnostic. Its next substantive use must run it and capture output; this campaign does not convert a probe into a permanent gate. |
+| `windows/scene/tests/suite/golden.rs` retains a local generated `seed_42_world()` alongside `hornvale_worldgen::fixture::seed_42_world()` | **Accepted debt, out of Zenith scope.** The scene helper rebuilds seed 42 under the default pins while the worldgen fixture reads the committed seed-42 world; they currently yield the same bytes, but the distinction needs an intentional owner rather than a retirement-side cleanup. A future fixture-consolidation campaign should decide whether these golden tests need a live build, then act in `windows/scene/tests/suite/golden.rs` by calling the worldgen fixture where the committed-world contract is intended. |
+| Duration-baseline effect of the Task 2 flips | **Resolved.** Stage request `req-a66d492e55af-20260904T141012Z` reported every phase green in 2677 seconds against `main` `3a35a5f13`. |
+| Task 4's scripted edit breached ledger ruling #7 | **Accepted behaviorally, preserved as a process finding above.** Review and gates do not rewrite history. |
+| Task 5's population/calibration ruling | **Resolved as two contracts, above.** Exact outputs moved; the 4/152 riparian witness stayed unmet; the desert test became direct construction. |
+| Task 7's conformance oracle still read one production constant | **Fixed and mutation-proved**, above. |
+| Absorbed The Staple probe still called the retired API; three absorbed comments named retired identifiers | **Fixed at close and recorded in ledger #16.** The probe's measurement intent is unchanged. |
+
+## The close absorption found what no gate on this branch could
+
+Absorbing 163 commits at the merge stop produced two textual conflicts and
+three defects no conflict marker pointed at. The general shape is the one this
+repository already knows — a clean auto-merge is not evidence the premise
+survived — but each defect had a different reason for being invisible, and the
+reasons are the transferable part.
+
+**A retired type reappears in a file that never existed on this branch.** The
+Housemark's `housemark_readout.rs` was written on `main` after this branch
+deleted `SkyChoice`. Nothing conflicted: the file is an addition on one side
+and a deletion of an unrelated symbol on the other. What catches it is
+compiling *tests*, not the library — `cargo check --workspace` was green
+throughout and `--all-targets` was not. A campaign that deletes a public type
+should treat `--all-targets` as the merge check, because the library half of
+the workspace cannot see a test-only call site.
+
+**An unguarded mirror of `CLAUDE.md` now exists, and a doctrine retirement is
+exactly the change it silently misses.** `main` brought a root `AGENTS.md`,
+copied by hand at The Weft's close with no generator, no drift check, and no
+test — so this campaign's sweep of `CLAUDE.md` left a second file in the tree
+asserting the retired doctrine in the present tense to any agent that reads it
+as instructions. There was no way to know from this branch. The durable rule:
+after absorbing, re-run the campaign's own retired-identifier grep over the
+merged tree, not over the tree the sweep was performed on. That grep is cheap,
+and it is what found this.
+
+**And the merge itself found a third, which no local instrument on this
+branch could have.** The first submission went red in the chamber's `clients`
+phase after 1292 s, on two `cargo fmt --check` diffs: `build_world` now fits on
+one line in `clients/world-wasm/src/lib.rs`, and the `hornvale_worldgen` import
+in `clients/game/bin/src/driver.rs` re-wraps without `SkyChoice`. Neither is a
+defect in the change; both are the *formatter's* response to it. `clients/` is
+outside the cargo workspace, so `gate-commit`'s `cargo fmt --check` never sees
+those crates — the only local instrument that does is `make clients-check-run`,
+and nothing prompts you to run it. **A campaign that changes the shape of a
+public signature owes the client crates a `cargo fmt` even when it never edits
+them**, because rustfmt's line-fitting decisions are downstream of an argument
+count. Running the full clients phase locally before resubmitting cost 7
+minutes against the chamber's 21.
+
+**And the resubmission reddened again, on the same phase, for a reason that
+was entirely mine.** `clients/game/bin/tests/walk_band_agreement.rs` had been
+switched from `World::new(Seed(42))` to the seed-42 fixture — necessary, since
+0737 makes a bare world unloadable — and its `hornvale_kernel::{Seed, World}`
+import was left behind, which `-D warnings` rejects. It had been failing on the
+branch the whole time. The verification that should have caught it *was run*,
+and reported green: `make clients-check-run` was invoked from the **main
+checkout** rather than the campaign worktree, so it checked main's tree and
+said nothing about the branch. A verification run in the wrong tree is worse
+than no verification, because it produces evidence. The habit that prevents it
+is `pwd` before believing any command run at a campaign boundary — the same
+re-anchoring rule that already applies before committing, extended to the
+checks. Cost: a second chamber slot, 1344 s.
+
+## Book freshness and the Confidence Gradient
+
+The sweep covered the domain overview, astronomy chapter, sky-facing scene
+schema references, religion chapter, Constitution, architecture guidance, and
+the gallery sources. Historical chronicles retain historical vocabulary where
+it describes what existed then. Current command references no longer promise
+constant-provider refusal paths.
+
+**The Confidence Gradient sweep was wrong, and the close's own absorption
+caught it.** The close asserted the chapter held no bet this campaign touched.
+It does: *Coarse constrains fine* opens by naming `ConstantSun` and the
+generated star system as two valid fidelities of one truth — the exact
+sentence decision 0736 retires — and had been read past because the sweep
+looked for chapters *about astronomy* rather than grepping the retired
+identifier across `book/src/open-questions.md`. The lesson is the one decision
+0030 already implies and this close still missed: a gradient sweep is a grep
+for the campaign's vocabulary, not a judgment about which chapters sound
+relevant. The row is now re-scored (2026-09-04), and the re-score is not a
+confidence change — it separates *coexistence*, which was retired, from
+*refinement*, which is what every prior re-score on that row actually
+measured, and records that no measurement on it ever ran on an astronomy
+tier.
+
+No `IMPLEMENTATION_PLAN.md` existed to retire. The campaign plan and spec are
+marked implemented pending merge; merge status remains the queue's fact, not a
+claim made by this close commit.
+
+### Post-close addendum (2026-09-04): a registered fact can be a fixture epoch
+
+After close review, the `sky-provider` concept description was corrected from
+the retired constant-or-generated choice to the sole generated provider. The
+concept reference and seed-42 world JSON each changed at that one embedded
+documentation field. This was a reviewed, causal artifact epoch: the
+designated `lens_purity` writer regenerated it, then both that ordinary guard
+and Repose's independent byte-identity reader passed. It is not evidence of an
+unexamined Repose C0 leak; no world fact, pin, or serialization behavior moved.

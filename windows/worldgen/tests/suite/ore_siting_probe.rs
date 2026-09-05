@@ -76,9 +76,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{
-    SettlementPins, SkyChoice, build_world, occupations_by_vertex, terrain_of,
-};
+use hornvale_worldgen::{SettlementPins, build_world, occupations_by_vertex, terrain_of};
 
 /// Seeds the campaign preregisters on.
 const SEEDS: [u64; 3] = [42, 7, 1234];
@@ -111,7 +109,6 @@ fn ore_siting_probe() {
         let world = build_world(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

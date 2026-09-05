@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 734 |
-| … file-level | 697 |
+| Quantity consts judged (the denominator) | 750 |
+| … file-level | 707 |
 | … associated (impl/trait) | 9 |
-| … inside a fn body | 28 |
-| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 167 |
-| Excluded: declared non-quantity type | 506 |
-| **Every `const` the walk touched** | **1407** |
+| … inside a fn body | 34 |
+| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 172 |
+| Excluded: declared non-quantity type | 510 |
+| **Every `const` the walk touched** | **1432** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **664**: file-level
+nor the whole `file-level` row — it is **674**: file-level
 constants of those five types. The `file-level` row itself is
-**697**, and the denominator is **734**; the difference is
+**707**, and the denominator is **750**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -68,7 +68,7 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 536 |
+| `f64` | 552 |
 | `i32` | 7 |
 | `i64` | 2 |
 | `u32` | 79 |
@@ -99,14 +99,14 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[Role]` | 2 |
 | `&[VerbRow]` | 1 |
 | `&str` | 259 |
-| `()` | 5 |
+| `()` | 6 |
 | `(…)` | 10 |
 | `AffectLabel` | 1 |
 | `ChannelMask` | 1 |
 | `ConceptKind` | 5 |
 | `Eyes` | 1 |
 | `HabitatRealm` | 1 |
-| `KindId` | 19 |
+| `KindId` | 22 |
 | `Realm` | 3 |
 | `Segment` | 3 |
 | `StreamLabel<…>` | 37 |
@@ -156,14 +156,14 @@ bare count would hide a quantity someone had wrongly denied.
 | pending(wave-1) | 581 |
 | per-individual | 2 |
 | per-people | 1 |
-| per-species | 26 |
+| per-species | 32 |
 | per-world | 6 |
-| universal | 118 |
+| universal | 128 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 734 |
+| _total_ | 750 |
 
-Declared: **734 of 734**. Undeclared is backlog; a malformed
+Declared: **750 of 750**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -173,25 +173,31 @@ converted.** Every row below is a constant judged to vary along an axis
 the code does not yet have -- nothing about the world changed to produce
 this table, and nothing here is scheduled for conversion by this
 campaign. `universal` and `pending(wave-N)` constants are excluded; their
-counts are already the Coverage table above. 35 finding(s).
+counts are already the Coverage table above. 41 finding(s).
 
 | File:line | Constant | Rung | Reason |
 |------|------|------|------|
 | `domains/species/src/allometry.rs:24` | `B0_ENDOTHERM` | per-species | a species' own metabolic normalization is a physiological trait -- module doc: universal exponents, per-CLASS coefficients; per-species is finer than the per-class granularity implemented today |
 | `domains/species/src/allometry.rs:26` | `ECTOTHERM_METABOLIC_FRACTION` | per-species | the same physiological-trait axis as B0_ENDOTHERM -- per-class today, finer than the per-species granularity the ladder asks about |
 | `domains/species/src/lib.rs:4184` | `RATE` | per-species | a creature's own physiology sets how fast fatigue accrues -- doc's own words: differentiating any OTHER kind's rate away from human's is a fidelity decision left for whoever authors it next; every kind but xorn shares this identical 0.3 |
-| `domains/species/src/lib.rs:4349` | `MADE_FOR_THE_BODY` | per-species | what a body gains from something to lie on is set by its own thermoregulation and by whether its kind builds bedding that fits it -- the settled endothermic peoples collect both halves and sit at the ceiling |
-| `domains/species/src/lib.rs:4353` | `INSULATION_ONLY` | per-species | a wild endotherm collects the thermal half of an afforded site and not the fit half -- ThermalStrategy::Endothermic is the trait that sets it |
-| `domains/species/src/lib.rs:4358` | `HABITUATION_ONLY` | per-species | a settled ectotherm collects the fit half of an afforded site and not the thermal half -- the ThermalStrategy and SocialForm pair is what sets it |
-| `domains/species/src/lib.rs:4362` | `CONTACT_ONLY` | per-species | a wild ectotherm collects neither the thermal nor the fit half and keeps only the residual worth of lying on a surface at all |
-| `domains/species/src/lib.rs:4367` | `TOO_LARGE_TO_FIT` | per-species | a kind's adult mass sets whether anything a room contains is scaled to it -- at or above a tonne nothing is |
-| `domains/species/src/lib.rs:4371` | `ALREADY_BUOYED` | per-species | a fully marine kind is already supported by the medium it lives in -- MARINE_FORAGE dominance in the kind's own niche is what marks it |
-| `domains/species/src/lib.rs:4375` | `NO_GAIN` | per-species | a kind with no metabolism or no lying posture collects nothing from an afforded site -- ThermalStrategy::Absent and SocialForm::Sessile are the two traits that reach this floor |
-| `domains/species/src/lib.rs:6109` | `DROW_PHYSIOGNOMY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6113` | `DROW_ENERGY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6118` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6123` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `domains/species/src/lib.rs:6127` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:4359` | `MADE_FOR_THE_BODY` | per-species | what a body gains from something to lie on is set by its own thermoregulation and by whether its kind builds bedding that fits it -- the settled endothermic peoples collect both halves and sit at the ceiling |
+| `domains/species/src/lib.rs:4363` | `INSULATION_ONLY` | per-species | a wild endotherm collects the thermal half of an afforded site and not the fit half -- ThermalStrategy::Endothermic is the trait that sets it |
+| `domains/species/src/lib.rs:4368` | `HABITUATION_ONLY` | per-species | a settled ectotherm collects the fit half of an afforded site and not the thermal half -- the ThermalStrategy and SocialForm pair is what sets it |
+| `domains/species/src/lib.rs:4372` | `CONTACT_ONLY` | per-species | a wild ectotherm collects neither the thermal nor the fit half and keeps only the residual worth of lying on a surface at all |
+| `domains/species/src/lib.rs:4377` | `TOO_LARGE_TO_FIT` | per-species | a kind's adult mass sets whether anything a room contains is scaled to it -- at or above a tonne nothing is |
+| `domains/species/src/lib.rs:4381` | `ALREADY_BUOYED` | per-species | a fully marine kind is already supported by the medium it lives in -- MARINE_FORAGE dominance in the kind's own niche is what marks it |
+| `domains/species/src/lib.rs:4385` | `NO_GAIN` | per-species | a kind with no metabolism or no lying posture collects nothing from an afforded site -- ThermalStrategy::Absent and SocialForm::Sessile are the two traits that reach this floor |
+| `domains/species/src/lib.rs:4488` | `SURFACE_OPTIMUM` | per-species | a kind's own habitat realm sets which substrate it rests best on -- for a kind that lives above ground the preference is monotone across the whole scale, because nothing that grows on the ground is ever too yielding to lie on, so the peak sits on the yielding endpoint and every increase in hardness is a loss |
+| `domains/species/src/lib.rs:4494` | `SURFACE_WIDTH` | per-species | a kind's own habitat realm sets how wide a band of substrates it can rest on -- a surface kind meets every substrate its world has, from mire to shield rock, and has to be able to lie on most of them, so it is the generalist of the two and its band is the wider one |
+| `domains/species/src/lib.rs:4498` | `SURFACE_DEVOTION` | per-species | a kind's own habitat realm sets how much of its rest the substrate accounts for -- a body lying in the open has nothing between it and the ground but what it found there, so what it lies on accounts for the whole of the fit and nothing is withheld from it |
+| `domains/species/src/lib.rs:4502` | `SUBTERRANEAN_OPTIMUM` | per-species | a kind's own habitat realm sets which substrate it rests best on -- a kind that lives in rock is habituated to lying on it, and the floor it is habituated to is stone under a skin of dust and damp clay rather than bare quarried rock, so its peak sits just short of the hard endpoint |
+| `domains/species/src/lib.rs:4506` | `SUBTERRANEAN_WIDTH` | per-species | a kind's own habitat realm sets how wide a band of substrates it can rest on -- a kind whose whole world is one substrate has no reason to tolerate the others and does not, so it is the specialist of the two and its band is the narrower one |
+| `domains/species/src/lib.rs:4510` | `SUBTERRANEAN_DEVOTION` | per-species | a kind's own habitat realm sets how much of its rest the substrate accounts for -- HabitatRealm::Subterranean's own doc says the habitat is the void and not the floor, so the surface underneath can never account for the whole of a cave kind's rest the way open ground accounts for a surface kind's |
+| `domains/species/src/lib.rs:6201` | `DROW_PHYSIOGNOMY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:6205` | `DROW_ENERGY` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:6210` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:6215` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `domains/species/src/lib.rs:6219` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `windows/lot/src/shape.rs:12` | `EPOCH_YEARS` | per-world | the bake's epoch length, BakeConfig::epoch_years; 25 is default_millennia's value |
 | `windows/vessel/src/liveness.rs:155` | `SUSTENANCE` | per-species | a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:233` | `FURNISHING_COLD_C` | per-people | whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire |
@@ -199,26 +205,26 @@ counts are already the Coverage table above. 35 finding(s).
 | `windows/vessel/src/liveness.rs:891` | `ENDOTHERM_HEAT_K` | per-species | how strongly heat drives extra dehydration is a property of a species' own thermoregulation -- currently one coefficient shared by the whole endotherm class |
 | `windows/vessel/src/liveness.rs:898` | `ECTOTHERM_K` | per-species | how strongly ambient heat drives dehydration tracks a species' own thermal biology -- currently one coefficient shared by the whole ectotherm class |
 | `windows/vessel/src/liveness.rs:904` | `ECTOTHERM_FLOOR` | per-species | a species' own torpor tolerance sets how far its metabolism can slow in the cold -- currently one floor shared by the whole ectotherm class |
-| `windows/vessel/src/liveness.rs:2797` | `TWILIGHT_DEG` | per-species | how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species |
-| `windows/vessel/src/liveness.rs:2865` | `FATIGUE_FALL` | per-species | a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry |
-| `windows/vessel/src/liveness.rs:2912` | `REST_FALL` | per-species | a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species |
-| `windows/vessel/src/liveness.rs:2998` | `REST_BOUT` | per-world | a rest's length is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3050` | `SLEEP_BOUT` | per-world | a sleep's floor is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3133` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3150` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3161` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
-| `windows/vessel/src/liveness.rs:4365` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
-| `windows/vessel/src/liveness.rs:4952` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
+| `windows/vessel/src/liveness.rs:2807` | `TWILIGHT_DEG` | per-species | how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species |
+| `windows/vessel/src/liveness.rs:2875` | `FATIGUE_FALL` | per-species | a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry |
+| `windows/vessel/src/liveness.rs:2922` | `REST_FALL` | per-species | a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species |
+| `windows/vessel/src/liveness.rs:3008` | `REST_BOUT` | per-world | a rest's length is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3060` | `SLEEP_BOUT` | per-world | a sleep's floor is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3143` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3160` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3171` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
+| `windows/vessel/src/liveness.rs:4723` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
+| `windows/vessel/src/liveness.rs:5310` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
 | `windows/vessel/src/session.rs:513` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
 | `windows/vessel/src/session.rs:523` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
 
 ## The contested middle
 
-349 of the 734 constants sit in a file mentioning one of
+365 of the 750 constants sit in a file mentioning one of
 the kind-adjacency markers above, across 137 of the 326 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 349 of them are declared.
+where `FATIGUE_RISE` lived. 365 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -244,7 +250,7 @@ in the inclusive direction on purpose.
 | scene | 7 | 0 | 0 | 7 |
 | sentiment | 8 | 0 | 0 | 8 |
 | settlement | 4 | 0 | 0 | 4 |
-| species | 33 | 0 | 0 | 33 |
+| species | 39 | 0 | 0 | 39 |
 | terrain | 152 | 0 | 0 | 152 |
-| vessel | 100 | 0 | 0 | 100 |
+| vessel | 110 | 0 | 0 | 110 |
 | worldgen | 152 | 0 | 0 | 152 |

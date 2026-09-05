@@ -910,13 +910,10 @@ pub struct SystemScene {
     pub moons: Vec<MoonElem>,
 }
 
-/// Build the `scene/system/v1` scene for `world`. Errors when the world has no
-/// generated sky (the tier-0 constant sun has no orrery to draw).
+/// Build the `scene/system/v1` scene for `world`.
 pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     let anchor = &system.anchor;
     let day_length_days = match &anchor.rotation {
         hornvale_astronomy::Rotation::Spinning { day, .. } => Some(day.as_std_days()),
@@ -1173,14 +1170,11 @@ pub struct MoonsScene {
     pub moons: Vec<MoonSurface>,
 }
 
-/// Build the `scene/moons/v1` scene for `world`. Errors when the world has
-/// no generated sky (the tier-0 constant sun has no moons) — mirrors
-/// [`system_scene`]. A pure read plus hash: consumes no `Stream` draws.
+/// Build the `scene/moons/v1` scene for `world`. Mirrors [`system_scene`].
+/// A pure read plus hash: consumes no `Stream` draws.
 pub fn moons_scene(world: &World) -> Result<MoonsScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     let moons = system
         .moons
         .iter()
@@ -1283,15 +1277,12 @@ pub struct NeighborsScene {
     pub stars: Vec<FieldStarElem>,
 }
 
-/// Build the `scene/neighbors/v1` scene for `world`. Errors when the world
-/// has no generated sky — mirrors [`moons_scene`]. Pure reads: consumes no
-/// genesis draws (the starfield derives on demand from the astronomy seed,
-/// exactly as the almanac's figures path does).
+/// Build the `scene/neighbors/v1` scene for `world`. Mirrors [`moons_scene`].
+/// Pure reads: consumes no genesis draws (the starfield derives on demand
+/// from the astronomy seed, exactly as the almanac's figures path does).
 pub fn neighbors_scene(world: &World) -> Result<NeighborsScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     let neighbors = system
         .neighbors
         .iter()
@@ -1435,18 +1426,16 @@ pub struct EclipsesScene {
 }
 
 /// Build the `scene/eclipses/v1` scene for `world` over `[from, until]`
-/// standard days. Errors when the world has no generated sky (no moons, no
-/// eclipses) or when the window itself is invalid (`from`/`until` negative
-/// or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no draws.
+/// standard days. Errors when the window itself is invalid (`from`/`until`
+/// negative or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no
+/// draws.
 pub fn eclipses_scene(
     world: &World,
     from: StdInstant,
     until: StdInstant,
 ) -> Result<EclipsesScene, SceneError> {
     let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let system = sky
-        .system()
-        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let system = sky.system();
     // The bounds arrive already typed and already validated -- StdInstant's
     // constructor refuses a non-finite value, so the caller cannot hand in
     // one. This is what closes The Escapement review's Minor 5: the bound
@@ -1516,7 +1505,6 @@ mod tests {
         hornvale_worldgen::build_world(
             hornvale_kernel::Seed(1),
             &Default::default(),
-            hornvale_worldgen::SkyChoice::Constant,
             &Default::default(),
             &Default::default(),
         )
@@ -1531,7 +1519,6 @@ mod tests {
         hornvale_worldgen::build_world(
             hornvale_kernel::Seed(seed),
             &Default::default(),
-            hornvale_worldgen::SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
@@ -1587,11 +1574,11 @@ mod tests {
         assert!(scene.biome.iter().all(|&i| (i as usize) < 22));
     }
 
-    /// claim: structural(seed: 1 — constant sky) — false-positive seed-loop
+    /// claim: structural(seed: 1 — generated sky) — false-positive seed-loop
     /// flag; `s` binds a swing f64
     #[test]
     fn climate_layers_are_sized_and_present() {
-        let scene = tiles_scene(&world(), 32).unwrap(); // seed-1 constant sky: spins, obliquity 23.5
+        let scene = tiles_scene(&world(), 32).unwrap(); // seed-1 generated sky: spins
         let tiles = (scene.width * scene.height) as usize;
         assert_eq!(scene.t_mean_c.len(), tiles);
         assert_eq!(scene.t_swing_c.len(), tiles);
@@ -1604,9 +1591,13 @@ mod tests {
         );
         assert_eq!(scene.moisture.len(), tiles);
         assert!(scene.moisture.iter().all(|&m| (0.0..=1.0).contains(&m)));
-        assert_eq!(scene.season_period_days, 365.25); // constant-sun default year
-        assert_eq!(scene.circulation_bands, Some(3)); // Earth-like day → 3 bands
-        // A spinning, obliquity-23.5 world has a nonzero swing somewhere.
+        // Seed 1's generated-sky year, measured 2026-09-04 (The Zenith). This
+        // read `365.25` with the comment "constant-sun default year" — the
+        // tier's Earth-baseline stand-in, not a world's own orbit.
+        assert_eq!(scene.season_period_days, 538.084165906676);
+        // Seed 1's drawn spinning regime resolves to three circulation bands.
+        assert_eq!(scene.circulation_bands, Some(3));
+        // Its drawn nonzero obliquity produces a nonzero swing somewhere.
         assert!(scene.t_swing_c.iter().any(|&s| s != 0.0));
         // Signed: some tile north-positive, some south-negative.
         assert!(scene.t_swing_c.iter().any(|&s| s > 0.0));
@@ -1743,19 +1734,13 @@ mod tests {
     fn locked_world_omits_circulation_bands_and_zeroes_swing() {
         use hornvale_astronomy::{RotationPin, SkyPins};
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
+        use hornvale_worldgen::build_world;
         let sky = SkyPins {
             rotation: Some(RotationPin::Locked),
             ..Default::default()
         };
-        let world = build_world(
-            Seed(42),
-            &sky,
-            SkyChoice::Generated,
-            &Default::default(),
-            &Default::default(),
-        )
-        .expect("seed 42 builds locked");
+        let world = build_world(Seed(42), &sky, &Default::default(), &Default::default())
+            .expect("seed 42 builds locked");
         let scene = tiles_scene(&world, 32).unwrap();
         assert_eq!(scene.circulation_bands, None, "locked world has no bands");
         assert!(
@@ -1774,12 +1759,11 @@ mod tests {
     #[test]
     fn tiles_scene_marks_locked_worlds() {
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
+        use hornvale_worldgen::build_world;
         let build = |s| {
             build_world(
                 Seed(s),
                 &Default::default(),
-                SkyChoice::Generated,
                 &Default::default(),
                 &Default::default(),
             )
@@ -1848,14 +1832,13 @@ mod tests {
     #[test]
     fn system_scene_has_the_schema_moons_and_is_deterministic() {
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
+        use hornvale_worldgen::build_world;
         // `gen` is a reserved keyword under this workspace's 2024 edition
         // (the brief's original name); `gen_world` sidesteps it.
         let gen_world = || {
             build_world(
                 Seed(42),
                 &Default::default(),
-                SkyChoice::Generated,
                 &Default::default(),
                 &Default::default(),
             )
@@ -1886,11 +1869,10 @@ mod tests {
     #[test]
     fn temperature_grid_matches_direct_sampling_and_zero_phase_mean() {
         use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world, climate_of};
+        use hornvale_worldgen::{build_world, climate_of};
         let world = build_world(
             Seed(42),
             &Default::default(),
-            SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
@@ -2007,21 +1989,6 @@ mod tests {
     }
 
     #[test]
-    fn system_scene_errors_on_a_constant_sun() {
-        use hornvale_kernel::Seed;
-        use hornvale_worldgen::{SkyChoice, build_world};
-        let world = build_world(
-            Seed(42),
-            &Default::default(),
-            SkyChoice::Constant,
-            &Default::default(),
-            &Default::default(),
-        )
-        .unwrap();
-        assert!(system_scene(&world).is_err(), "constant sun has no system");
-    }
-
-    #[test]
     fn moons_scene_has_schema_indices_and_is_deterministic() {
         let a = moons_scene(&mooned_world()).expect("generated world has moons");
         assert_eq!(a.schema, "scene/moons/v1");
@@ -2078,7 +2045,7 @@ mod tests {
         // `radius_follows_from_mass_and_real_density_not_an_assumption` uses.
         let w = mooned_world();
         let sky = hornvale_worldgen::sky_of(&w).unwrap();
-        let base = sky.system().unwrap().moons[0].clone();
+        let base = sky.system().moons[0].clone();
         let luna = hornvale_astronomy::Moon {
             mass: LunarMasses::new(1.0).unwrap(),
             density: GramsPerCm3::new(3.34).unwrap(),
@@ -2261,11 +2228,6 @@ mod tests {
     }
 
     #[test]
-    fn moons_scene_errors_on_a_constant_sun() {
-        assert!(moons_scene(&world()).is_err(), "constant sun has no moons");
-    }
-
-    #[test]
     fn moons_scene_does_not_consume_draws_or_mutate_the_world() {
         // The save-format guard: the document is a pure read + hash, so building
         // it leaves the world byte-identical (no Stream draw, no mutation).
@@ -2334,14 +2296,6 @@ mod tests {
             assert!((0.0..360.0).contains(&s.ra_deg));
             assert!((1..=5).contains(&s.magnitude_class));
         }
-    }
-
-    #[test]
-    fn neighbors_scene_errors_on_a_constant_sun() {
-        assert!(
-            neighbors_scene(&world()).is_err(),
-            "constant sun has no neighbors"
-        );
     }
 
     #[test]
@@ -2486,20 +2440,6 @@ mod tests {
             scene.events[0].day,
             scene.from,
             scene.until
-        );
-    }
-
-    #[test]
-    fn eclipses_scene_rejects_a_world_with_no_generated_sky() {
-        // Mirror the moons/neighbors constant-sun refusal test.
-        let w = world();
-        assert!(
-            eclipses_scene(
-                &w,
-                StdInstant::new(0.0).unwrap(),
-                StdInstant::new(100.0).unwrap()
-            )
-            .is_err()
         );
     }
 

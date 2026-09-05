@@ -15,7 +15,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_history::record::CauseOfEnd;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, occupation_records, present_year};
+use hornvale_worldgen::{SettlementPins, build_world, occupation_records, present_year};
 
 /// The Living Community's cross-seed sweep, so the rows line up with
 /// `book/src/laboratory/generated/the-history/rows.csv`.
@@ -40,7 +40,6 @@ fn lot_probe() {
         let world = build_world(
             seed,
             &SkyPins::default(),
-            SkyChoice::Generated,
             &TerrainPins::default(),
             &SettlementPins::default(),
         )

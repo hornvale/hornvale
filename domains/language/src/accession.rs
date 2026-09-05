@@ -620,6 +620,12 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // earlier object-kind list, because moving an existing concept's cohort
     // would re-sort its already assigned proto-root.
     &["bench"],
+    // Epoch 21 — The Tenon, Task 7: three natural rest surfaces. One NEW
+    // cohort, appended rather than seating the labels beside older thing
+    // kinds in epoch 16: `domains/thing::register_concepts` registers all
+    // three, and editing an earlier cohort would re-sort concepts whose
+    // proto-root assignments are already part of saved worlds.
+    &["bracken", "ledge", "rushes"],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or
