@@ -6,7 +6,16 @@ version = 4
 name = "digest"
 version = "0.1.0"
 dependencies = [
+ "digest-protocol",
  "hornvale-kernel",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "digest-protocol"
+version = "0.1.0"
+dependencies = [
  "serde",
  "serde_json",
 ]
