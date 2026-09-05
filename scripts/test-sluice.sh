@@ -3752,6 +3752,90 @@ else
     bad "cross-candidate: THE INVARIANT BROKE — overlap advisory changed the exit code to $cross1_rc"
 fi
 
+# --- 6. THE STALE-DECLARATION CASE -----------------------------------------
+# The mouth used to classify a conflict against docs/generated-paths.txt as it
+# sits in the WORKING TREE. The chamber classifies against the merge product.
+# Those are the same file only when the checkout happens to be current, and on
+# 2026-09-05 it was not: this box's main checkout sat five commits behind
+# origin/main, its copy lacked the row declaring
+# docs/audits/campaign-reconciliation.tsv hand-authored, the classifier fell
+# back to the docs/audits/ DIRECTORY row and said `artifacts`, and the mouth
+# printed ADMIT. The chamber refused the same sha three seconds later.
+#
+# WHY THE EXISTING AGREEMENT CASE COULD NOT CATCH IT. Cases 1-5 above, and the
+# shared sluice_is_regenerated_only they exercise, vary the CONFLICT and hold
+# the DECLARATION fixed — one file, read by both callers. The divergence was
+# never in the logic; it was in which copy of the declaration each side read.
+# So this case varies exactly that: main and the candidate agree, and the
+# working tree disagrees with both.
+g checkout -q main
+mkdir -p docs/audits
+cat > docs/generated-paths.txt <<'DECL'
+# path	author
+docs/audits/report.md	artifacts
+docs/audits/	artifacts
+docs/audits/handmade.tsv	none(hand-authored by each campaign at close; never regenerated)
+DECL
+printf 'base row\n' > docs/audits/handmade.tsv
+g add -A; g commit -qm main-declares-handmade-hand-authored
+
+g checkout -q -b campaign/candidate6 main
+printf 'candidate row\n' > docs/audits/handmade.tsv
+g add -A; g commit -qm candidate6-appends-its-row
+
+g checkout -q main
+printf 'base row v2\n' > docs/audits/handmade.tsv
+g add -A; g commit -qm main-appends-another-row
+g checkout -q campaign/candidate6
+CAND6="$(g rev-parse campaign/candidate6)"
+
+# Both refs declare the file hand-authored, so the honest verdict is REFUSE.
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate6 "$CAND6" >/dev/null 2>"$tmp/cross6.err"
+cross6_rc=$?
+set -e
+if [ "$cross6_rc" -eq 1 ]; then
+    ok "stale-declaration: a conflict in a file BOTH refs declare hand-authored is refused"
+else
+    bad "stale-declaration: expected exit 1, got $cross6_rc: $(cat "$tmp/cross6.err")"
+fi
+
+# Now stale ONLY the working tree, exactly as a behind-by-N checkout does:
+# drop the file row so the directory row `artifacts` is what a working-tree
+# reader finds. The refs are untouched, so the verdict must not move.
+grep -v '^docs/audits/handmade.tsv	' docs/generated-paths.txt > "$tmp/decl.staled"
+cp "$tmp/decl.staled" docs/generated-paths.txt
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate6 "$CAND6" >/dev/null 2>"$tmp/cross6b.err"
+cross6b_rc=$?
+set -e
+if [ "$cross6b_rc" -eq 1 ]; then
+    ok "stale-declaration: THE REGRESSION — a working tree missing the file row does not flip the verdict to ADMIT"
+else
+    bad "stale-declaration: a staled working tree flipped the verdict to $cross6b_rc — the mouth is reading the checkout again, not the refs: $(cat "$tmp/cross6b.err")"
+fi
+g checkout -q -- docs/generated-paths.txt
+
+# THE ANTI-VACUITY CONTROL. Everything above asserts a refusal; a mouth that
+# refused unconditionally would pass both. A conflict in a genuinely
+# artifacts-authored file must still ADMIT, with the staled tree restored.
+g checkout -q main
+printf 'base report\n' > docs/audits/report.md
+g add -A; g commit -qm main-touches-report
+g checkout -q -b campaign/candidate7 main~1
+printf 'candidate report\n' > docs/audits/report.md
+g add -A; g commit -qm candidate7-touches-report
+CAND7="$(g rev-parse campaign/candidate7)"
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate7 "$CAND7" >/dev/null 2>"$tmp/cross7.err"
+cross7_rc=$?
+set -e
+if [ "$cross7_rc" -eq 0 ]; then
+    ok "stale-declaration anti-vacuity: an artifacts-authored conflict still ADMITs — the refusals above are discriminating"
+else
+    bad "stale-declaration anti-vacuity: expected exit 0, got $cross7_rc: $(cat "$tmp/cross7.err")"
+fi
+
 unset HV_SLUICE_ALLOW_UNPUSHED
 export HV_SLUICE_DIR="$tmp/state"
 export HV_SLUICE_BASE=main

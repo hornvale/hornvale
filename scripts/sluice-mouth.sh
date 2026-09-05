@@ -244,7 +244,11 @@ if ! out="$(env -u GIT_DIR -u GIT_INDEX_FILE git merge-tree --write-tree --name-
         # admit the chamber then refused would kill the candidate at the merge step
         # having already taken the box — the composition failure the shared function
         # and test-sluice.sh's agreement case exist to prevent.
-        if sluice_is_regenerated_only "$conflicts" "$(env -u GIT_DIR git rev-parse --show-toplevel 2>/dev/null || echo .)"; then
+        # Ask the two REFS, never the working tree — see
+        # sluice_is_regenerated_only_at in sluice-phases.sh for the live
+        # incident that distinguishes them.
+        if sluice_is_regenerated_only_at "$conflicts" "$base" \
+                && sluice_is_regenerated_only_at "$conflicts" "$sha"; then
             n="$(printf '%s\n' "$conflicts" | grep -c .)"
             echo "sluice-mouth: ADMIT $branch $sha — all $n conflict(s) are artifacts-authored; the chamber resolves them by regeneration."
             sluice_report_queue_overlaps "$branch" "$sha"
