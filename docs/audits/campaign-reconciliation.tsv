@@ -269,6 +269,7 @@ chronicle-the-signet	shipped	none		published chronicle				book/src/chronicle/the
 chronicle-the-single-saying	shipped	none		published chronicle				book/src/chronicle/the-single-saying.md	
 chronicle-the-single-sculpt	shipped	none		published chronicle				book/src/chronicle/the-single-sculpt.md	
 chronicle-the-sluice	shipped	none		published chronicle				book/src/chronicle/the-sluice.md	
+chronicle-the-sluicegate	shipped	none		published chronicle				book/src/chronicle/the-sluicegate.md	
 chronicle-the-slumber	shipped	none		published chronicle				book/src/chronicle/the-slumber.md	
 chronicle-the-snapshot	shipped	none		published chronicle				book/src/chronicle/the-snapshot.md	
 chronicle-the-solitary-tongue	shipped	none		published chronicle				book/src/chronicle/the-solitary-tongue.md	
@@ -653,6 +654,7 @@ plan-2026-09-03-the-terrier	active	none		no terminal closure stated in record		d
 plan-2026-09-03-the-wash	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-03-the-wash.md			
 plan-2026-09-04-the-coda	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-04-the-coda.md			
 plan-2026-09-04-the-housemark	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-housemark.md			
+plan-2026-09-05-the-sluicegate	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it		docs/superpowers/plans/2026-09-05-the-sluicegate.md			
 plan-the-contour-baseline	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline.md			
 plan-the-contour-baseline-v2	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline-v2.md			
 plan-the-contour-readout	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-readout.md			
@@ -1322,9 +1324,11 @@ spec-2026-09-03-the-wash-design	active	none		no terminal closure stated in recor
 spec-2026-09-04-the-coda-design	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-coda-design.md				
 spec-2026-09-04-the-housemark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-04-the-housemark-design.md				
 spec-2026-09-04-the-staple-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-staple-metaplan.md				
+spec-2026-09-05-the-sluicegate-design	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-05-the-sluicegate-design.md				
 chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
 retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md
 the-weft	shipped	none		plan: COMPLETE/G6 approved; retrospective: Close G6 approved; chronicle: G6 accepted result	docs/superpowers/specs/2026-09-03-the-weft-design.md	docs/superpowers/plans/2026-09-03-the-weft.md		book/src/chronicle/the-weft.md	docs/retrospectives/the-weft.md
 plan-2026-09-04-the-charter	active	none		G3 approved; implementation and qualification remain open		docs/superpowers/plans/2026-09-04-the-charter.md			
 spec-2026-09-04-federated-development-program-metaplan-design	active	none		Program approved; first bounded campaign The Charter is in progress	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
 spec-2026-09-04-the-charter-design	active	none		G3 approved; Charter implementation remains open	docs/superpowers/specs/2026-09-04-the-charter-design.md				
+retrospective-the-sluicegate	shipped	none		published retrospective					docs/retrospectives/the-sluicegate.md

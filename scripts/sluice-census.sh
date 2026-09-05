@@ -90,8 +90,71 @@ EOF
 if [ -n "${HV_CENSUS_LIB:-}" ]; then return 0 2>/dev/null || exit 0; fi
 
 repo_root="${HV_SLUICE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-ref="${1:?usage: sluice-census.sh <full-sha> [study.json ...]}"
+ref="${1:?usage: sluice-census.sh <full-sha>|<request-id> [study.json ...]}"
 shift || true
+
+# A SINGLE ARGUMENT THAT LOOKS LIKE A REQUEST ID IS ONE — see the matching
+# block in sluice-run.sh. Resolved BEFORE the SHA-format validation below,
+# since a request id is not itself a 40-char hex SHA; the row's own sha
+# column is what gets validated. `census_row_id` is set here so the
+# interlock section further down can tell "resolved from an id" apart from
+# "positional form, claim it ourselves" without an exported claim-id
+# environment variable.
+census_row_id=""
+case "$ref" in
+    req-*)
+        # THE PIPELINE'S EXIT CODE IS CAPTURED, NOT DISCARDED (fix round 3,
+        # Important 5). This file runs under `set -uo pipefail` with NO `-e`,
+        # so `list`'s exit 3 (no built binary) fell on the floor, `_row` came
+        # back empty, and the script reported "no queue row with id 'req-…'"
+        # — a false statement about a row that exists, and a rc=2 that reads
+        # as the operator's typo. An unreachable queue is a different fact and
+        # gets rc=13, the same code the claim path below uses for it.
+        _list="$(bash "$repo_root/scripts/sluice-queue.sh" list 2>&1)"
+        _list_rc=$?
+        if [ "$_list_rc" -ne 0 ]; then
+            echo "sluice-census: REFUSING — could not reach the queue (list rc=$_list_rc):" >&2
+            printf '%s\n' "$_list" >&2
+            echo "sluice-census: cannot resolve '$ref' without the queue; refusing rather than guessing." >&2
+            exit 13
+        fi
+        _row="$(printf '%s\n' "$_list" | awk -F'\t' -v i="$ref" '$2==i {print; exit}')"
+        if [ -z "$_row" ]; then
+            echo "sluice-census: no queue row with id '$ref'" >&2
+            exit 2
+        fi
+        # THE ID IS NOT ITSELF A CLAIM — the mirror of sluice-run.sh's guard,
+        # and see that file's comment for the three consequences an unclaimed
+        # run carries (a second dispatch, a supersede mid-write, and no
+        # terminal state, since `release_census_row` is gated on
+        # `census_claimed`). A census costs ~15 minutes of the canonical box;
+        # running one twice is the most expensive form of this defect.
+        _state="$(printf '%s' "$_row" | cut -f5)"
+        if [ "$_state" != "running" ]; then
+            echo "sluice-census: REFUSING — the row for '$ref' is NOT claimed: state='$_state', want 'running'." >&2
+            echo "sluice-census: an id is not a claim. Take the row first ('sluice-queue.sh claim --sha <sha>')," >&2
+            echo "sluice-census: or let the drain loop claim and dispatch it." >&2
+            exit 16
+        fi
+        # AND THE KIND IS VALIDATED, as sluice-run.sh validates its own (fix
+        # round 3, Important 2). Without this, `sluice-census.sh req-<a stage
+        # request>` ran a ~15-minute census against a row that asked for a
+        # merge gate, and wrote `reported` on it afterwards as though the gate
+        # had run. The row's kind is the only thing that says what was asked
+        # for; an entry point that ignores it answers a question nobody put.
+        _kind="$(printf '%s' "$_row" | cut -f6)"
+        [ -n "$_kind" ] || _kind="merge"
+        if [ "$_kind" != "census" ]; then
+            echo "sluice-census: REFUSING — row '$ref' is kind='$_kind', not 'census'." >&2
+            echo "sluice-census: a merge or stage request goes to scripts/sluice-run.sh; running a census" >&2
+            echo "sluice-census: against it would spend ~15 minutes of the box answering a different question." >&2
+            exit 2
+        fi
+        census_row_id="$ref"
+        ref="$(printf '%s' "$_row" | cut -f4)"
+        echo "sluice-census: resolved $census_row_id -> sha=${ref:0:12} kind=$_kind" >&2
+        ;;
+esac
 
 case "$ref" in
     *[!0-9a-f]*|"") echo "sluice-census: REF must be a full 40-char SHA (hex only); got '$ref'" >&2; exit 2 ;;
@@ -109,14 +172,23 @@ esac
 #
 # Census is not run by sluice-run.sh (it takes the shared flock itself), so it
 # cannot inherit that script's bookkeeping and needs its own copy here.
-census_row_id=""
+#
+# `census_row_id` may already be set above (resolved from a `req-*` id) — and
+# ONLY after the block above proved the row reads `running`. That proof is what
+# licenses skipping the claim here: the row is already taken atomically by
+# whoever ran `claim`. The same reasoning sluice-run.sh's interlock uses, down
+# to the correction that an operator merely QUOTING an id owns nothing; and
+# there is likewise no env var to consume or unset any more.
 census_claimed=0
-if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
-    census_row_id="$HV_SLUICE_CLAIMED"
+if [ -n "$census_row_id" ]; then
+    :
 else
     set +e
+    # STDOUT AND STDERR ARE CAPTURED TOGETHER (fix round 2, Critical F1) —
+    # see the matching comment in sluice-run.sh. On success `claim` writes
+    # nothing to stderr, so folding the streams costs that path nothing.
     census_claim="$(bash "$repo_root/scripts/sluice-queue.sh" claim --sha "$ref" \
-        "launched directly by operator; kind=census" 2>/dev/null)"
+        "launched directly by operator; kind=census" 2>&1)"
     census_claim_rc=$?
     set -e
     case "$census_claim_rc" in
@@ -124,7 +196,15 @@ else
         4) echo "sluice-census: REFUSING — the row for ${ref:0:12} is not queued; somebody else has it." >&2
            exit 9 ;;
         5) echo "sluice-census: no queue row for ${ref:0:12} — running AD HOC, unbookkept." >&2 ;;
-        *) echo "sluice-census: could not reach the queue (claim rc=$census_claim_rc) — running unbookkept." >&2 ;;
+        *) # REFUSE rather than proceed unbookkept (fix round 2, Critical
+           # F1) — see the matching case in sluice-run.sh. If we cannot ask
+           # the queue whether somebody else already holds this row, we do
+           # not run a census against it either.
+           echo "sluice-census: REFUSING — could not reach the queue (claim rc=$census_claim_rc):" >&2
+           printf '%s
+' "$census_claim" >&2
+           echo "sluice-census: refusing to run unbookkept rather than risk a duplicate execution." >&2
+           exit 13 ;;
     esac
 fi
 

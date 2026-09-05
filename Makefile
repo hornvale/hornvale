@@ -669,6 +669,14 @@ prewarm-run:
 	# `-` prefixed: prewarm is a convenience, and a board that will not build
 	# must not fail the target that warms the workspace.
 	-cargo build --release --manifest-path tools/board/Cargo.toml
+	# The queue's own binary, same reasoning (fix round 2, Critical F1):
+	# scripts/sluice-queue.sh deliberately NEVER compiles it (a build failure
+	# under that script's own `set -euo pipefail` aborted with cargo's rc
+	# before dispatch ever ran, and callers read that as "queue drained" or
+	# "unbookkept" — see the comment above its forwarding block), so a fresh
+	# worktree with no prewarm has no way to claim, set-state or list a row
+	# until something builds it. `-` prefixed for the same reason as board.
+	-cargo build --release --manifest-path tools/sluice/Cargo.toml
 
 rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh

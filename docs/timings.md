@@ -5788,3 +5788,19 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T04:32:44Z | rebaseline | 137.310 | 380.103 | 16.644 | 2.89 | 0 | 15161b589 | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T04:53:19Z | rebaseline | 137.628 | 381.186 | 16.421 | 2.89 | 0 | 795522918 | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T05:00:16Z | rebaseline | 140.057 | 379.290 | 16.900 | 2.83 | 0 | 795522918 | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T03:50:57Z | gate-commit | 99.628 | 207.792 | 46.021 | 2.55 | 0 | bcacc525e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T03:52:25Z | gate-commit | 70.030 | 156.342 | 50.219 | 2.95 | 0 | bcacc525e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:05:05Z | gate-commit | 70.666 | 163.658 | 52.297 | 3.06 | 0 | 8e6df971e | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:12:02Z | gate-commit | 70.818 | 169.359 | 56.457 | 3.19 | 0 | 4c20f1d51 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:20:45Z | gate-commit | 72.575 | 153.008 | 43.545 | 2.71 | 0 | ac1b1e6fe | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T04:42:33Z | gate-commit | 72.615 | 154.559 | 45.060 | 2.75 | 0 | fe1498fea | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T05:15:09Z | gate-commit | 72.171 | 158.169 | 48.936 | 2.87 | 0 | a54e06850 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:17:44Z | gate-commit | 69.292 | 154.888 | 48.634 | 2.94 | 0 | 42d7be262 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:32:02Z | gate-commit | 68.589 | 156.450 | 52.883 | 3.05 | 0 | abf708ea6 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:44:12Z | gate-commit | 74.058 | 163.556 | 53.389 | 2.93 | 0 | b37ce3239 | campaign/the-sluicegate | lefford | 40 |
+| 2026-09-05T06:51:27Z | sluice:artifacts | 228.886 | 962.263 | 26.124 | 4.32 | 0 | f43514ce0 |  | lefford | 40 |
+| 2026-09-05T06:52:35Z | sluice:outboard | 67.601 | 41.059 | 52.766 | 1.39 | 0 | c26fa827d |  | lefford | 40 |
+| 2026-09-05T07:05:06Z | sluice:gate | 750.475 | 19843.575 | 525.031 | 27.14 | 0 | 041666f14 |  | lefford | 40 |
+| 2026-09-05T07:07:28Z | sluice:clients | 142.539 | 2074.872 | 195.782 | 15.93 | 0 | 92bee604a |  | lefford | 40 |
+| 2026-09-05T07:15:03Z | sluice:heavy | 454.728 | 10279.097 | 159.435 | 22.96 | 0 | b27329ec8 |  | lefford | 40 |
+| 2026-09-05T13:37:53Z | rebaseline | 147.623 | 384.000 | 17.823 | 2.72 | 0 | eb1b8c99c | codex/the-charter | MacBookPro | 10 |

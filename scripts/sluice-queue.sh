@@ -144,6 +144,53 @@ validate_kind() {
 cmd="${1:?usage: sluice-queue.sh add|next|set-state|claim|list ...}"
 shift || true
 
+# THE PORTED VERBS GO TO tools/sluice. `add` stays here for now: it sources
+# sluice-headline.sh, resolves three-valued ancestry and coalesces, all of
+# which shell out to git, and moving it is Task 6 rather than a side effect
+# of this one. The binary is resolved as a sibling of this script's own
+# location, so a caller's cwd cannot change which one runs.
+#
+# THIS SHIM NEVER BUILDS THE BINARY (fix round 2, Critical F1). An earlier
+# version built it on demand with `cargo build`, under this script's own
+# `set -euo pipefail` — so a build failure (observed live: rustup silently
+# resolving an older, non-overridden toolchain from a caller's cwd and
+# choking on the edition2024 manifest) aborted the whole script with cargo's
+# exit code, rc=101, before `exec` ever ran. Three real callers consumed
+# that badly: `sluice-drain.sh` swallowed stderr and read the resulting
+# empty stdout as "queue drained"; `sluice-run.sh` and `sluice-census.sh`
+# both read the non-{0,4,5} rc as "could not reach the queue" and PROCEEDED
+# unbookkept — reopening the exact duplicate-execution hole this campaign
+# exists to close, just moved one layer down into a toolchain problem
+# instead of a race. This matches the precedent `scripts/board-render.sh`
+# already sets for a different tool binary: prefer a prebuilt release binary
+# and deliberately never compile it (see CLAUDE.md's board section). `make
+# prewarm` builds it for a fresh worktree; nothing in this script does.
+#
+# HV_SLUICE_BIN IS A TEST SEAM ONLY, and nothing in production sets it.
+# `scripts/test-sluice.sh`'s chamber tests (T7/T8) copy this ONE file into a
+# throwaway scratch repo with no `tools/sluice` sibling beside it, to
+# exercise `sluice-run.sh`'s claim-refusal logic — a pattern that worked
+# when this file was pure bash with no external dependency. The seam lets
+# that copy point at a binary already built by the real checkout, rather
+# than needing one of its own.
+#
+# EXIT 3 IS RESERVED for "no binary and no way to reach one" — distinct from
+# every other exit this script or `tools/sluice` itself uses (1/2/4/5) — so a
+# caller can tell "the queue itself refused" from "the queue could not even
+# be asked."
+case "$cmd" in
+    claim|set-state|list)
+        sluice_bin="${HV_SLUICE_BIN:-$(dirname "$0")/../tools/sluice/target/release/sluice}"
+        if [ ! -x "$sluice_bin" ]; then
+            echo "sluice-queue: no built binary at $sluice_bin." >&2
+            echo "sluice-queue: build it first: cargo build --release --manifest-path $(dirname "$0")/../tools/sluice/Cargo.toml" >&2
+            echo "sluice-queue: (or run 'make prewarm', which builds it for you)" >&2
+            exit 3
+        fi
+        exec "$sluice_bin" "$cmd" "$@"
+        ;;
+esac
+
 case "$cmd" in
 add)
     branch="${1:?usage: add <branch> <sha> [merge|stage]}"
