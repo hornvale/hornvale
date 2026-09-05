@@ -364,3 +364,25 @@ material improvement beyond the retained-output extension and existing separate
 preparation/observation timing. **Cost if wrong:** rework of a development-only
 runner and replay records. **Capture:** implementation plan tasks and this ledger;
 no new general mechanism or registry row.
+
+## #4 [G4] — implementation plan self-review
+
+**Decision:** execute the three-stage, seven-task plan with independent
+question interpretation, two owner authors and a later independent replay.
+**Why:** each spec requirement maps to a task in the plan's self-review map.
+Independent source authorship follows the approved spec and Charter precedent;
+shared question inputs and Git-object data are explicitly disclosed.
+**Alternatives discarded:** a generalized federation service, a new supervisor,
+unqualified synthetic mutations and production admission of specimen changes.
+**Review corrections:** keep checker input separated from candidate output;
+require the dossier to contain the panel's full arm list rather than merely
+validate emitted rows; retain prerequisite source objects for replay; preserve
+the original frozen checker when the reserved challenge is revealed.
+**Ideonomy:** architecture Q used one actual draw in #3; G4 is a consistency
+review and makes no additional nontrivial Q ruling.
+**Capture:** detailed plan, stage tracker and reconciliation row. The optional
+reconciliation ledger column remains empty under the existing population rule.
+**Preflight:** Tasks 1/2 share facts/question IDs; Tasks 3/4 share only base and
+named collision input; Task 5 consumes all records and freezes rules; Task 6
+uses that immutable freeze; Task 7 uses committed artifacts alone. All shared
+function signatures are stated once in the plan and assigned to producing tasks.
