@@ -604,3 +604,23 @@ lossless finite normalization and its disclosed cost, with no further material
 design expansion. **Cost if wrong:** biased finite comparator results; all checks
 still execute and no admission authority moves. **Capture:** Task5 rule/evidence
 requirements, this ledger and eventual retrospective.
+
+## Stage 1 — canonical gate accepted
+
+Request `req-ab3abc6e011a-20260905T183028Z` completed green on merge
+product `9aa10c2c4957c7b6251c45a5193cd68f3185d476`, final artifact commit
+`4b63c3faa4525e378ca5824f60dcb9daaa6d6899`. All four phases returned
+zero: artifacts 311.916 s, outboard 94.742 s, gate 818.361 s, clients
+153.921 s. The claim wait was zero; the queue request preceded job start
+by 308 seconds, which is a separate cost. Nothing was pushed and main
+remained `cf95817d37e8f9eea742d1ae9d2e09266f62970b`. Bounded log receipt
+with original log location, size and SHA256 is retained under experiment
+`evidence/controller/stage-1.json`. This accepts Stage 1 only; no composed
+behavior or later runner correctness follows from this earlier candidate.
+
+Task5 implementation is now committed at `9536a75d8224dd42b4fbc5fc536a9f38685021e2`
+and its unreserved panel/bundle at `179a706fd0d521f6239fe1b3d3647175c1263f49`.
+The author reports 51 focused tests and source-identity reconstruction for
+all 11 arms. Independent review and actual canonical observations remain
+pending. Full-panel execution uses the approved stage-only Charter transport;
+a Mac derived subset is explicitly scoped and cannot certify the full roster.

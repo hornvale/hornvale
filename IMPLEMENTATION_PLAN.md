@@ -6,7 +6,7 @@ Detailed plan: [implementation plan](docs/superpowers/plans/2026-09-05-the-count
 **Goal**: Reviewed raw probe, reused measurement machinery and independent checker.
 **Success Criteria**: Frozen four-question roster; complete raw output retention; checker independently derives expected ownership; stage gate green.
 **Tests**: Focused Rust probe, existing/new Python process tests, hand-derived checker cases, canonical stage gate.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 2: Compose independent specimens and compare suggestions
 **Goal**: Independent owner records, source bundle, complete runner and honest three-way shadow comparison.
