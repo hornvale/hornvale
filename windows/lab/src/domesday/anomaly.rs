@@ -818,7 +818,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluable_columns_measured_surface_on_the_227_column_census() {
+    fn evaluable_columns_measured_surface_on_the_249_column_census() {
         // Pinned so a future census refresh that moves this materially is
         // visible here, not just in prose. See task-4-report.md for the
         // comparison against the spec's original 204-column figure
@@ -873,27 +873,34 @@ mod tests {
         // Numeric and vary across worlds, so they are real ranker surface.
         // THE WINZE (2026-08-29, canonical census on lefford at bba2be3efc83,
         // goldens cherry-picked as 71202ac19): evaluable 117 -> 118, excluded
-        // unchanged at 50, total 227 -> 228 metric columns — the campaign's
-        // one new census column, `breached-delving-count`, and it lands
-        // EVALUABLE, so the asymmetry the paragraphs above call informative
-        // reads the right way for it: an integer column varying across worlds
-        // is real ranker surface, where a new column moving `excluded`
-        // instead would have meant it was degenerate. The test's NAME carries
-        // the census's metric-column count and moves with it (226 -> 227
-        // structural-excluded columns, i.e. 230 CSV columns less `seed`,
-        // `pin_set` and `refusal`); `docs/timings/subfloor-roster.tsv`
+        // unchanged at 50, metric columns 226 -> 227 — the campaign's one new
+        // census column, `breached-delving-count`, lands EVALUABLE, so the
+        // asymmetry the paragraphs above call informative reads the right way
+        // for it: an integer column varying across worlds is real ranker
+        // surface, where a new column moving `excluded` instead would have
+        // meant it was degenerate.
+        // THE WEFT (2026-09-04, canonical census on lefford at fbe2f5a9003f,
+        // goldens delivered as b162273b4): evaluable 118 -> 139, excluded
+        // 50 -> 51, metric columns 227 -> 249. All 22 new Weft columns are
+        // Numeric; 21 vary across the 1000 worlds and land EVALUABLE, while
+        // `weft-legibility-mi-erratic` is the sole new exclusion, frozen at
+        // one value across all 1000 worlds. The generated anomaly report's
+        // exclusion table independently records that same one-column delta.
+        // The test's NAME carries the census's metric-column count (252 CSV
+        // columns less `seed`, `pin_set` and `refusal`);
+        // `docs/timings/subfloor-roster.tsv`
         // selects sub-floor tests by EXACT name and is updated in the same
         // commit, since a stale id there selects nothing and prints green.
         let c = committed();
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            118,
+            139,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            50,
+            51,
             "excluded count moved — re-measure and update this"
         );
     }

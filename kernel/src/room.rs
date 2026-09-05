@@ -15,6 +15,7 @@
 
 use crate::GeoCoord;
 use crate::Seed;
+use crate::VertexMap;
 use crate::cube;
 use crate::derived::Derived;
 use crate::math;
@@ -520,6 +521,30 @@ impl Facet {
         math::acos(dot)
     }
 
+    /// The angular length (radians) of this room's shortest edge — the
+    /// minimum pairwise great-circle separation of [`Facet::corners`]'s four
+    /// corners, in their own winding order.
+    ///
+    /// **Promoted from `windows/locale`'s `room_edge` (The Weft,
+    /// Task 5 fix round 1)**, on the same argument [`blend_corner_weights`]'s
+    /// own promotion doc states: a pure `&Facet -> f64` function had drifted
+    /// into three character-for-character copies (`windows/locale::room_edge`,
+    /// a private helper in `windows/worldgen::weft`, and an open-coded third
+    /// in `windows/locale`'s own `site_address_agreement.rs` test) with no
+    /// shared implementation, and no dependency edge stood in the way — this
+    /// method reads only [`Facet::corners`], nothing locale- or worldgen-
+    /// specific. `windows/locale::room_edge` now delegates here; the weft's
+    /// duplicate and the test's open-coded copy are deleted.
+    /// type-audit: pending(wave-1: return)
+    pub fn edge_rad(&self) -> f64 {
+        let [a, b, c, d] = self.corners();
+        let sep = |u: [f64; 3], v: [f64; 3]| -> f64 {
+            let dp: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+            math::acos(dp.clamp(-1.0, 1.0))
+        };
+        sep(a, b).min(sep(b, c)).min(sep(c, d)).min(sep(d, a))
+    }
+
     /// The edge- and corner-adjacent rooms, at the same depth: the geometric
     /// base graph of the cube-sphere quad lattice. **Eight entries in the
     /// interior, seven at a cube corner, and four at a base face itself
@@ -773,6 +798,21 @@ impl Facet {
             (vertices[3], w[3] as u64),
         ])
     }
+}
+
+/// Corner-blend a per-vertex `field` using [`Facet::corner_weights`]'s output —
+/// the weighted mean of the four corners, weighted by their bilinear numerators.
+/// Promoted from `windows/locale`'s private `blend_with_weights` (The Weft, Task
+/// 4) so `blend_at`'s bilinear read has exactly one implementation instead of
+/// two; locale's helper now delegates here. The expression is a byte-identity
+/// surface (float summation order decides the result, which flows into every
+/// committed artifact `blend_at` feeds) and must not be reordered or rewritten
+/// with `fold`/`zip` without re-proving neutrality against the seed-42 goldens.
+/// type-audit: bare-ok(count: weights), bare-ok(ratio: field), bare-ok(ratio: return)
+pub fn blend_corner_weights(weights: [(Vertex, u64); 4], field: &VertexMap<f64>) -> f64 {
+    let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+    let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
+    sum / denom as f64
 }
 
 impl Facet {

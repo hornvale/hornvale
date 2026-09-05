@@ -1,0 +1,7 @@
+sandbox_mode = "danger-full-access"
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+BASH_DEFAULT_TIMEOUT_MS = "1200000"
+BASH_MAX_TIMEOUT_MS = "3600000"

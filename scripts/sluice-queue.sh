@@ -141,7 +141,7 @@ validate_kind() {
     esac
 }
 
-cmd="${1:?usage: sluice-queue.sh add|next|set-state|list ...}"
+cmd="${1:?usage: sluice-queue.sh add|next|set-state|claim|list ...}"
 shift || true
 
 case "$cmd" in
@@ -384,6 +384,68 @@ set-state)
         exit 1
     fi
     mv "$tmp" "$QUEUE"
+    ;;
+claim)
+    # ATOMIC SELECT-AND-MARK. `next` reads the first queued row and returns;
+    # marking it `running` was a SEPARATE process, and the lock is released at
+    # process exit, so the row sat `queued` across the caller's whole mouth
+    # check. Two drains, or a drain and a direct `sluice-run.sh`, both saw an
+    # unclaimed row and both launched it. Observed live 2026-09-04: one merge
+    # ran twice, pids 1240741 and 1253175, two ~800 KB logs for
+    # 48aa9373b6f2, both rc=0.
+    #
+    # The row state IS the interlock, so selecting and marking must happen
+    # under ONE lock acquisition. That is the whole of this subcommand, and it
+    # is why `next` is left in place but is no longer what a dispatcher should
+    # call: `next` is a read, `claim` is a transaction.
+    #
+    # WITHOUT --sha it claims the first queued row (a dispatcher draining the
+    # queue). WITH --sha it claims the queued row for that ref (an executor
+    # launched directly, which knows its ref and not its id). The two exit
+    # codes below exist for that second caller: it must be able to tell "this
+    # is mine now" from "somebody else already has it".
+    claim_sha=""
+    if [ "${1:-}" = "--sha" ]; then
+        claim_sha="${2:?usage: claim --sha <sha> [note]}"
+        shift 2
+    fi
+    note="$(sanitize_note "${1:-}")"
+    with_lock
+    tmp="$(mktemp "$HV_SLUICE_DIR/.queue.tmp.XXXXXX")"
+    trap 'rm -f "$tmp"' EXIT
+    claimed=""
+    seen_sha=0
+    while IFS=$'\t' read -r when rid rbranch rsha rstate rkind rnote; do
+        [ -n "$rkind" ] || rkind="merge"
+        if [ -n "$claim_sha" ] && [ "$rsha" = "$claim_sha" ]; then
+            seen_sha=1
+        fi
+        if [ -z "$claimed" ] && [ "$rstate" = "queued" ] \
+           && { [ -z "$claim_sha" ] || [ "$rsha" = "$claim_sha" ]; }; then
+            rstate="running"
+            [ -n "$note" ] && rnote="$note"
+            claimed="$(printf '%s\t%s\t%s\t%s\t%s\t%s\t%s' \
+                "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rkind" "$rnote")"
+        fi
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$when" "$rid" "$rbranch" "$rsha" "$rstate" "$rkind" "$rnote"
+    done < "$QUEUE" > "$tmp"
+    if [ -z "$claimed" ]; then
+        rm -f "$tmp"
+        if [ -n "$claim_sha" ] && [ "$seen_sha" = "1" ]; then
+            echo "sluice-queue: claim: a row for ${claim_sha:0:12} exists but is NOT queued — somebody else has it. NOTHING WAS CHANGED." >&2
+            exit 4
+        fi
+        if [ -n "$claim_sha" ]; then
+            echo "sluice-queue: claim: no row at all for ${claim_sha:0:12}." >&2
+            exit 5
+        fi
+        # No --sha and nothing queued is the ordinary drained queue, not an
+        # error: `next` printed nothing and exited 0, and callers test for
+        # empty output. Keep that contract.
+        exit 0
+    fi
+    mv "$tmp" "$QUEUE"
+    printf '%s\n' "$claimed"
     ;;
 list)
     cat "$QUEUE"

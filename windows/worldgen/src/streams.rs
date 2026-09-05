@@ -394,4 +394,59 @@ hornvale_kernel::stream_labels! {
     /// it: a `Brief` now reports an exotic site at one facet per placed vertex
     /// instead of at none.
     SITE_PLACEMENT = "site/placement/v1" => "where a placed site lands within its vertex's territory, keyed on (vertex, reason)";
+    /// The derived spring/seep surface's noise root (The Weft, Task 5; spec
+    /// §5.1/§5.6). A `WeftKind`'s own prevalence-modulation and occurrence
+    /// draws are decorrelated sub-legs derived dynamically under this label
+    /// at the call site (`crate::weft`), the same discipline
+    /// [`ENTRANCE_MOUTH`]'s `role` word documents — never a second entry
+    /// here, since a dynamic leg names no new save-format contract by itself.
+    ///
+    /// **Position-keyed, not vertex-keyed.** Every other flat label in this
+    /// file keys a draw on a discrete lattice coordinate (a vertex, a facet
+    /// address); this one keys a *noise field* sampled at a facet's
+    /// continuous centre position ([`hornvale_kernel::Facet::centroid`]),
+    /// deliberately never at [`hornvale_kernel::Facet::seed`] — an
+    /// address-hashed draw would decorrelate geometrically adjacent facets,
+    /// which is the exact failure `channel-band-monotonicity` names
+    /// ("address-hashed noise leaked into a band edge").
+    ///
+    /// **A NEW LABEL, so nothing is an epoch under it** — the same posture
+    /// [`SITE_PLACEMENT`] states for the same reason: nothing derived from
+    /// `derived/spring/*` before this campaign.
+    WEFT_SPRING = "derived/spring/v1" => "occurrence of a derived spring at a walk facet, keyed on position";
+    /// The derived overhang/hollow surface's noise root (Task 7; spec
+    /// §5.6): medium contextuality (induration × slope), short–medium
+    /// correlation length. Not enterable, but affords shelter and fire — see
+    /// `crate::weft::kinds::WeftKind::Overhang`'s own doc for the affordance
+    /// wiring this label's kind still needs (a later task's, per the
+    /// layering `windows/vessel` sits on the far side of).
+    ///
+    /// Position-keyed, additive, a NEW label — the same three properties
+    /// [`WEFT_SPRING`] states for itself, for the same reason: a `WeftKind`'s
+    /// own prevalence-modulation and occurrence draws are decorrelated
+    /// sub-legs derived dynamically under this label at the call site
+    /// (`crate::weft`), never a second entry here.
+    WEFT_OVERHANG = "derived/overhang/v1" => "occurrence of a derived overhang at a walk facet, keyed on position";
+    /// The derived thicket/brake surface's noise root (Task 7; spec §5.6):
+    /// high contextuality (productivity — temperature × moisture, Liebig-
+    /// combined AFTER each is blended, never a materialized `productivity`
+    /// field; see `crate::fieldpack`'s own module doc for why), long
+    /// correlation length — texture, aimed directly at the biome-monotony
+    /// defect this campaign addresses.
+    ///
+    /// Position-keyed, additive, a NEW label — see [`WEFT_SPRING`]'s own
+    /// doc for the three properties this restates.
+    WEFT_THICKET = "derived/thicket/v1" => "occurrence of a derived thicket at a walk facet, keyed on position";
+    /// The derived erratic/scatter surface's noise root (Task 7; spec
+    /// §5.6): the **negative control** — deliberately LOW contextuality
+    /// (near-zero, mostly free noise, uncorrelated with any macro cause),
+    /// short correlation length. Exists so Task 9's legibility metric can be
+    /// shown to *discriminate*: if springs and erratics score alike, the
+    /// metric measures nothing. See
+    /// `crate::weft::kinds::WeftKind::contextuality`'s own doc for why this
+    /// kind's contextuality must never be raised to tie it to macro state.
+    ///
+    /// Position-keyed, additive, a NEW label — see [`WEFT_SPRING`]'s own
+    /// doc for the three properties this restates.
+    WEFT_ERRATIC = "derived/erratic/v1" => "occurrence of a derived erratic at a walk facet, keyed on position";
 }

@@ -385,10 +385,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, None)),
+            None,
         )
     }
 
@@ -411,7 +413,7 @@ mod tests {
     /// method selector rather than a production stand-in is that it withholds
     /// the site as well, which no real facet does.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true, None)
+        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
     }
 
     /// The `n`th walk-band locale, `n` written out as base-4 path digits.

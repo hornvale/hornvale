@@ -640,14 +640,15 @@ pub fn step_kind(a: &Facet, b: &Facet) -> Option<StepKind> {
 /// Four edges rather than three since The Pavement: a room is a cube-sphere
 /// quad. The four are the room's own sides, in `Facet::corners`'s winding —
 /// NOT its diagonals, which are longer and are not steps the lattice offers.
+///
+/// Delegates to [`hornvale_kernel::Facet::edge_rad`] (promoted from this
+/// function, The Weft Task 5 fix round 1 — the same argument
+/// `blend_corner_weights`'s own promotion doc states: a pure `&Facet -> f64`
+/// function had drifted into three separate copies with no dependency edge
+/// standing in the way of sharing one).
 /// type-audit: pending(wave-1: return)
 pub fn room_edge(addr: &Facet) -> f64 {
-    let [a, b, c, d] = addr.corners();
-    let sep = |u: [f64; 3], v: [f64; 3]| -> f64 {
-        let dp: f64 = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
-        hornvale_kernel::math::acos(dp.clamp(-1.0, 1.0))
-    };
-    sep(a, b).min(sep(b, c)).min(sep(c, d)).min(sep(d, a))
+    addr.edge_rad()
 }
 
 impl LocaleContext {
@@ -1624,14 +1625,15 @@ impl LocaleContext {
 
     /// The shared tail of [`Self::blend_at`]/[`Self::blend_at_cached`] (the-waymark
     /// fix round, round 2). No `&self` needed — the blend reads only `weights`
-    /// and the injected `field`.
+    /// and the injected `field`. Delegates to
+    /// [`hornvale_kernel::blend_corner_weights`] (The Weft, Task 4), which
+    /// promoted this exact expression into the kernel beside
+    /// `Facet::corner_weights` so there is one implementation, not two.
     fn blend_with_weights(
         weights: [(Vertex, u64); 4],
         field: &hornvale_kernel::VertexMap<f64>,
     ) -> f64 {
-        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
-        let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
-        sum / denom as f64
+        hornvale_kernel::blend_corner_weights(weights, field)
     }
 
     /// The room's THREAT in `[0, 1]` — the hazard field the danger drive flees

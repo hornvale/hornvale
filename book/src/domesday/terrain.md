@@ -234,9 +234,234 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0.00043943167 | 0.013768859 | 0.020335921 | 0.028367755 | 0.061544846 | 0.02148567 |
 
+### `weft-coherence-morans-i-erratic`
+
+H2's coherence readout for erratic/scatter (spec §7) — see `weft-coherence-morans-i-spring`'s doc for the shared statistic and its companion. Erratic's short (5-facet) correlation length predicts the LOWEST of the four readings here, not zero: H2 is about spatial texture existing at all, which a short correlation length still gives, unlike H3's macro-state legibility, which erratic is built to score near zero on.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.47030051 | 0.56195234 | 0.58537623 | 0.6072162 | 0.70282649 | 0.58428246 |
+
+### `weft-coherence-morans-i-overhang`
+
+H2's coherence readout for overhang/hollow (spec §7) — see `weft-coherence-morans-i-spring`'s doc for the shared statistic and its companion.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.77354298 | 0.83170614 | 0.84449584 | 0.85681498 | 0.90200871 | 0.84392416 |
+
+### `weft-coherence-morans-i-spring`
+
+H2's readout for spring/seep (spec §7): Moran's I over the binary occurrence indicator, sampled along land-eligible walked paths (the same 78-walk, 4,680-step pool `weft-encounter-rate-spring` reads), weighted by within-walk chain adjacency (step `s` and `s+1` of the same walk). **This is a construction-validation (a regression guard against address-hashed speckle), not independent evidence the surface is "coherent" in a stronger sense** — `occurs` thresholds a position-continuous field, so a positive reading is near-guaranteed by construction; the discriminating power lives in `weft_prevalence.rs`'s real-vs-mutant table (real 0.998, mutant 0.209 for this kind). No numeric floor is preregistered for this statistic (spec §7 froze none); a positive reading well clear of zero over a non-degenerate occurs-count is the qualitative claim, checked against `weft-coherence-occurs-count-spring`, the anti-vacuity companion (The Ford's shape) — see that metric's own doc for why a small count makes a high reading here suspect. NOT geosphere vertex adjacency — measured on this tree, that mesh's own spacing is ~106-127 facets per step, 1.9-23x every kind's own correlation length (5-60 facets), so both a sound construction and an address-hashed defect predict `I ~= 0` at that scale — see `weft_morans_i`'s own doc for the full power argument and the discarded vertex-adjacency readings, published in full rather than discarded silently. `Absent` if the walk pool is empty or the indicator has zero variance across every walked step.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.79324879 | 0.92252854 | 0.93371809 | 0.94389221 | 0.97408369 | 0.93197547 |
+
+### `weft-coherence-morans-i-thicket`
+
+H2's coherence readout for thicket/brake (spec §7) — see `weft-coherence-morans-i-spring`'s doc for the shared statistic and its companion.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.89596937 | 0.96030822 | 0.96550841 | 0.96963372 | 0.98427386 | 0.96432633 |
+
+### `weft-coherence-occurs-count-erratic`
+
+H2's anti-vacuity companion for erratic/scatter — see `weft-coherence-occurs-count-spring`'s doc for the shared reading.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 113 | 216 | 264 | 316 | 471 | 267.858 |
+
+### `weft-coherence-occurs-count-overhang`
+
+H2's anti-vacuity companion for overhang/hollow — see `weft-coherence-occurs-count-spring`'s doc for the shared reading.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 160 | 368 | 463 | 556 | 860 | 467.112 |
+
+### `weft-coherence-occurs-count-spring`
+
+H2's anti-vacuity companion for spring/seep (The Ford's shape: `channel-band-monotonicity` paired with `channel-transect-dry-reach`): the raw count of WALKED steps (the same pool `weft-coherence-morans-i-spring` computes its chain adjacency over, and `weft-encounter-rate-spring`'s own numerator) where spring/seep occurred. Moran's I's own denominator is `n*p*(1-p)` for a binary indicator at rate `p`, which shrinks toward zero as occurrence becomes very rare (or very common) — so a small reading here is the signal that a neighbouring high Moran's-I reading may be resting on a handful of adjacent hits rather than a genuine spatial process, exactly as `channel-transect-dry-reach` flags a monotonicity score resting on transects truncated before they could fail.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 32 | 179 | 240 | 311 | 597 | 248.946 |
+
+### `weft-coherence-occurs-count-thicket`
+
+H2's anti-vacuity companion for thicket/brake — see `weft-coherence-occurs-count-spring`'s doc for the shared reading.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 109 | 575 | 738.5 | 929 | 1748 | 747.662 |
+
+### `weft-encounter-rate-any`
+
+H1's observation-scoped density number, UNIONED over all four kinds (spec §7): a walked step counts once even if it carries more than one kind's feature. Read beside `weft-existence-density-any` — the two are H1's promised "two numbers, separately reported", and they need not agree: a short-correlation-length kind can be common god's-eye and rare along any one path, or the reverse for a long one.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.125 | 0.21313559 | 0.2373736 | 0.26169591 | 0.34039216 | 0.23783579 |
+
+### `weft-encounter-rate-erratic`
+
+H1's observation-scoped density number for erratic/scatter (spec §7) — see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.02372549 | 0.035912698 | 0.040149133 | 0.044238683 | 0.064 | 0.040259296 |
+
+### `weft-encounter-rate-overhang`
+
+H1's observation-scoped density number for overhang/hollow (spec §7) — see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.031417625 | 0.061578947 | 0.069826295 | 0.077820513 | 0.10710383 | 0.070110843 |
+
+### `weft-encounter-rate-spring`
+
+H1's observation-scoped density number for spring/seep (spec §7): features of this kind met per facet of travel, pooled over land-eligible walks sampled the same way `weft_prevalence.rs`'s own `land_eligible_walks` does (60-step walks from 137-spaced starting vertices, kept only if land-eligible throughout). Distinct from `weft-existence-density-spring`'s god's-eye reading — a walker only ever samples the facets on their own path, never the whole grid, so this is the number that actually answers "how often does a traveller meet one".
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.0070175439 | 0.029342723 | 0.036165463 | 0.044259259 | 0.078133333 | 0.037276141 |
+
+### `weft-encounter-rate-thicket`
+
+H1's observation-scoped density number for thicket/brake (spec §7) — see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.018390805 | 0.088057743 | 0.11363636 | 0.13896882 | 0.21924883 | 0.11362243 |
+
+### `weft-existence-density-any`
+
+H1's god's-eye density number, UNIONED over all four kinds (spec §7): the fraction of land-eligible facets carrying ANY derived feature. A facet holding two kinds counts once, the same union discipline `channel-band-monotonicity`'s sibling readouts and `site-density`-style metrics use elsewhere. This is the single number H1's `>= 3 orders of magnitude over the placed baseline` claim is actually checked against.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.17866149 | 0.2267342 | 0.24619952 | 0.2630679 | 0.3099881 | 0.24388642 |
+
+### `weft-existence-density-erratic`
+
+H1's god's-eye density number for erratic/scatter (spec §7) — see `weft-existence-density-spring`'s doc for the shared reading and its pairing with `weft-encounter-rate-erratic`. Erratic is the negative control for H3, not for H1: nothing about density predicts erratic should read low here.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.034878203 | 0.039250715 | 0.040511933 | 0.041774822 | 0.046481217 | 0.040565577 |
+
+### `weft-existence-density-overhang`
+
+H1's god's-eye density number for overhang/hollow (spec §7) — see `weft-existence-density-spring`'s doc for the shared reading and its pairing with `weft-encounter-rate-overhang`.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.061052452 | 0.069544006 | 0.071499967 | 0.073730369 | 0.083132175 | 0.071589652 |
+
+### `weft-existence-density-spring`
+
+H1's god's-eye density number for spring/seep (spec §7): the fraction of LAND-ELIGIBLE facets (spec §7's amendment population) carrying a spring/seep occurrence, over a vertex-centred subsample — one representative facet per geosphere vertex (`n = 40,962` at `hornvale_terrain::GLOBE_LEVEL = 6`), a 1-in-9,830 sample of the ~4e8 walk-depth facets on the grid, not every one of them; the same resolution spec §7's own gate-component diagnostic reads at. Distinct from `weft-encounter-rate-spring`, which reads the SAME kind's occurrence along a walked path — H1 is two numbers because discovery is observation-scoped and existence density alone (what The Prospect's H3 measured) answers a different question from what a walker actually meets. No threshold is preregistered for this reading alone; H1's claim is the >= 3-orders-of-magnitude density gain over the placed baseline `site-density`-style metrics measure, read across every kind together.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.026663259 | 0.034919894 | 0.037365193 | 0.039519203 | 0.047824791 | 0.037231116 |
+
+### `weft-existence-density-thicket`
+
+H1's god's-eye density number for thicket/brake (spec §7) — see `weft-existence-density-spring`'s doc for the shared reading and its pairing with `weft-encounter-rate-thicket`.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.04236052 | 0.097568316 | 0.12183695 | 0.14176363 | 0.19179713 | 0.11894228 |
+
+### `weft-legibility-mi-erratic`
+
+H3's legibility readout for erratic/scatter (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Erratic is H3's own negative control (contextuality ~0, a CONSTANT `macro_state`) and is predicted LOWEST of the four, near zero: mutual information between any variable and a constant is algebraically zero, so this metric's own construction predicts the near-zero reading before any world is measured. If it does NOT read near zero, the instrument is measuring something other than legibility and that is the finding, per spec §7 and this task's own brief.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0 | 0 | 0 | 0 | 0 | 0 |
+
+### `weft-legibility-mi-overhang`
+
+H3's legibility readout for overhang/hollow (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted THIRD of the four (contextuality 0.6, gentler than spring/thicket).
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.00046350264 | 0.0017119447 | 0.002276622 | 0.0028628035 | 0.0066847431 | 0.0023329713 |
+
+### `weft-legibility-mi-spring`
+
+H3's legibility readout for spring/seep (spec §7, allowed to fail): discrete mutual information in bits between spring/seep's own blended macro-state signal (binned into 4 equal-width bins over its documented `[0,1]` range) and whether it occurred, over the land-eligible population (spec §7's amendment: restricting to land-eligible facets makes the shared eligibility gate a constant, so it contributes zero MI by construction and cannot flatter any kind — see the spec's own amendment paragraph for the whole-sphere confound this removes). The preregistered claim is the ORDERING `spring > thicket > overhang > erratic`, not a threshold on this reading alone: spring is H3's own sign case ("diagnostic of what is underfoot", contextuality 0.85), so it is predicted HIGHEST of the four.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.000014678381 | 0.0041412097 | 0.0060185641 | 0.0077333382 | 0.014382271 | 0.0059722055 |
+
+### `weft-legibility-mi-thicket`
+
+H3's legibility readout for thicket/brake (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted SECOND of the four.
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.0056834778 | 0.033202999 | 0.03986345 | 0.045803703 | 0.07429427 | 0.038831832 |
+
 ## Weaknesses found here
 
 ### `dominant-commodity`
 
 - **D1**: "salt" holds 999/1000 worlds (99.9%), at or above the 80% threshold
+
+### `weft-legibility-mi-erratic`
+
+- **D2**: min == median == max == 0 across 1000 worlds
+- **D4**: median 0 equals the min (0 .. 0)
 

@@ -313,9 +313,60 @@ pub struct ClimateView {
     pub terrain: TerrainView,
     /// The derived climate (biome + habitability).
     pub climate: GeneratedClimate,
+    /// The Weft's (Task 9) whole-grid readout — one entry per geosphere
+    /// vertex, land-eligibility plus every kind's `(macro_state, prevalence,
+    /// occurs)` — computed on first demand and then reused. The same shape
+    /// as [`TerrainView::band_transects`]: H1's five existence-density
+    /// metrics and H3's four mutual-information metrics (nine of the
+    /// Weft's 22 registrations) each read a different summary off the SAME
+    /// per-vertex sweep, and without this cache the registry would pay for
+    /// a fresh 40,962-vertex sweep once PER METRIC rather than once per
+    /// world (Task 11's post-fix lefford profile attributes 3.51% of a
+    /// 3,196.69-CPU-second, 150-world all-metrics run to the grid pool,
+    /// about 0.75 CPU-s/world — see `weft_grid_pool`'s own doc for the full
+    /// cost accounting this cache exists to avoid multiplying).
+    weft_grid: std::cell::OnceCell<WeftGridPool>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// The Weft's (Task 9) encounter-rate walk pool — the SAME shape,
+    /// shared by the remaining 13 of the 22 registrations: H1's five
+    /// `weft-encounter-rate-*` metrics, H2's four Moran's-I readings (which
+    /// need this pool's within-walk chain adjacency, not the whole grid's
+    /// macro-vertex one — see `weft_morans_i`'s own doc) and H2's four
+    /// occurs-count companions.
+    weft_walks: std::cell::OnceCell<WeftWalkPool>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// The Weft's (Task 9, fix round 1, I-3) shared build inputs — see
+    /// [`WeftContext`]'s own doc. Both [`ClimateView::weft_grid`] and
+    /// [`ClimateView::weft_walks`] read this rather than each building
+    /// their own `NearestVertexIndex`/`FieldPack`.
+    weft_ctx: std::cell::OnceCell<WeftContext>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
 }
 
 impl ClimateView {
+    /// The Weft's (Task 9) whole-grid readout, computed at most once per
+    /// view and shared by every H1/H2/H3 metric that reads it.
+    fn weft_grid(&self) -> &WeftGridPool {
+        self.weft_grid.get_or_init(|| weft_grid_pool(self))
+    }
+
+    /// The Weft's (Task 9) encounter-rate walk pool, computed at most once
+    /// per view and shared by every `weft-encounter-rate-*` metric.
+    fn weft_walks(&self) -> &WeftWalkPool {
+        self.weft_walks.get_or_init(|| weft_walk_pool(self))
+    }
+
+    /// The Weft's (Task 9, fix round 1, I-3) shared `NearestVertexIndex` +
+    /// `FieldPack`, computed at most once per view and read by both
+    /// [`weft_grid_pool`] and [`weft_walk_pool`] — see [`WeftContext`]'s own
+    /// doc for why this stopped being built twice.
+    fn weft_ctx(&self) -> &WeftContext {
+        self.weft_ctx.get_or_init(|| {
+            let terrain = self.terrain();
+            WeftContext {
+                index: hornvale_kernel::NearestVertexIndex::new(terrain.geosphere()),
+                pack: hornvale_worldgen::field_pack_from(terrain, &self.climate),
+            }
+        })
+    }
+
     /// Build a climate-rung view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<ClimateView, BuildError> {
         Self::build_with_components(seed, pins, WorldComponents::assemble()?)
@@ -351,7 +402,13 @@ impl ClimateView {
             Some(climate) => climate,
             None => climate_from(&terrain.astronomy.world, &terrain.terrain)?,
         };
-        Ok(ClimateView { terrain, climate })
+        Ok(ClimateView {
+            terrain,
+            climate,
+            weft_grid: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+            weft_walks: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+            weft_ctx: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+        })
     }
 
     /// The full tectonic globe, reached through the terrain rung this view
@@ -5265,6 +5322,349 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Number(cold as f64 / built.len() as f64)
             }),
         },
+        // --- The Weft (Task 9): the preregistered readout over spec §7's
+        // H1 (density, two numbers per kind plus a union), H2 (coherence +
+        // an anti-vacuity companion, The Ford's shape) and H3 (legibility,
+        // allowed to fail; the preregistered claim is the ORDERING spring >
+        // thicket > overhang > erratic, erratic near zero). Population is
+        // land-eligible facets only (spec §7's amendment). All 22
+        // registrations share one cached whole-grid sweep per world
+        // (`ClimateView::weft_grid`) or one cached walk pool
+        // (`ClimateView::weft_walks`) — see `weft_grid_pool`'s own doc for
+        // the measured per-world cost this cache exists to avoid
+        // multiplying by 22. ---
+        Metric {
+            name: "weft-existence-density-spring",
+            doc: "H1's god's-eye density number for spring/seep (spec §7): the fraction \
+                  of LAND-ELIGIBLE facets (spec §7's amendment population) carrying a \
+                  spring/seep occurrence, over a vertex-centred subsample — one \
+                  representative facet per geosphere vertex (`n = 40,962` at \
+                  `hornvale_terrain::GLOBE_LEVEL = 6`), a 1-in-9,830 sample of the ~4e8 \
+                  walk-depth facets on the grid, not every one of them; the same \
+                  resolution spec §7's own gate-component diagnostic reads at. Distinct \
+                  from \
+                  `weft-encounter-rate-spring`, which reads the SAME kind's occurrence \
+                  along a walked path — H1 is two numbers because discovery is \
+                  observation-scoped and existence density alone (what The Prospect's H3 \
+                  measured) answers a different question from what a walker actually \
+                  meets. No threshold is preregistered for this reading alone; H1's claim \
+                  is the >= 3-orders-of-magnitude density gain over the placed baseline \
+                  `site-density`-style metrics measure, read across every kind together.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_existence_density(v, 0)),
+        },
+        Metric {
+            name: "weft-existence-density-overhang",
+            doc: "H1's god's-eye density number for overhang/hollow (spec §7) — see \
+                  `weft-existence-density-spring`'s doc for the shared reading and its \
+                  pairing with `weft-encounter-rate-overhang`.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_existence_density(v, 1)),
+        },
+        Metric {
+            name: "weft-existence-density-thicket",
+            doc: "H1's god's-eye density number for thicket/brake (spec §7) — see \
+                  `weft-existence-density-spring`'s doc for the shared reading and its \
+                  pairing with `weft-encounter-rate-thicket`.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_existence_density(v, 2)),
+        },
+        Metric {
+            name: "weft-existence-density-erratic",
+            doc: "H1's god's-eye density number for erratic/scatter (spec §7) — see \
+                  `weft-existence-density-spring`'s doc for the shared reading and its \
+                  pairing with `weft-encounter-rate-erratic`. Erratic is the negative \
+                  control for H3, not for H1: nothing about density predicts erratic \
+                  should read low here.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_existence_density(v, 3)),
+        },
+        Metric {
+            name: "weft-existence-density-any",
+            doc: "H1's god's-eye density number, UNIONED over all four kinds (spec §7): \
+                  the fraction of land-eligible facets carrying ANY derived feature. A \
+                  facet holding two kinds counts once, the same union discipline \
+                  `channel-band-monotonicity`'s sibling readouts and `site-density`-style \
+                  metrics use elsewhere. This is the single number H1's `>= 3 orders of \
+                  magnitude over the placed baseline` claim is actually checked against.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(weft_existence_density_any),
+        },
+        Metric {
+            name: "weft-encounter-rate-spring",
+            doc: "H1's observation-scoped density number for spring/seep (spec §7): \
+                  features of this kind met per facet of travel, pooled over land-eligible \
+                  walks sampled the same way `weft_prevalence.rs`'s own \
+                  `land_eligible_walks` does (60-step walks from 137-spaced starting \
+                  vertices, kept only if land-eligible throughout). Distinct from \
+                  `weft-existence-density-spring`'s god's-eye reading — a walker only ever \
+                  samples the facets on their own path, never the whole grid, so this is \
+                  the number that actually answers \"how often does a traveller meet one\".",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_encounter_rate(v, 0)),
+        },
+        Metric {
+            name: "weft-encounter-rate-overhang",
+            doc: "H1's observation-scoped density number for overhang/hollow (spec §7) — \
+                  see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_encounter_rate(v, 1)),
+        },
+        Metric {
+            name: "weft-encounter-rate-thicket",
+            doc: "H1's observation-scoped density number for thicket/brake (spec §7) — \
+                  see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_encounter_rate(v, 2)),
+        },
+        Metric {
+            name: "weft-encounter-rate-erratic",
+            doc: "H1's observation-scoped density number for erratic/scatter (spec §7) — \
+                  see `weft-encounter-rate-spring`'s doc for the shared walk-based reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.03, 0.06, 0.1, 0.2],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_encounter_rate(v, 3)),
+        },
+        Metric {
+            name: "weft-encounter-rate-any",
+            doc: "H1's observation-scoped density number, UNIONED over all four kinds \
+                  (spec §7): a walked step counts once even if it carries more than one \
+                  kind's feature. Read beside `weft-existence-density-any` — the two are \
+                  H1's promised \"two numbers, separately reported\", and they need not \
+                  agree: a short-correlation-length kind can be common god's-eye and rare \
+                  along any one path, or the reverse for a long one.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(weft_encounter_rate_any),
+        },
+        Metric {
+            name: "weft-coherence-morans-i-spring",
+            doc: "H2's readout for spring/seep (spec §7): Moran's I over the binary \
+                  occurrence indicator, sampled along land-eligible walked paths (the same \
+                  78-walk, 4,680-step pool `weft-encounter-rate-spring` reads), weighted by \
+                  within-walk chain adjacency (step `s` and `s+1` of the same walk). \
+                  **This is a construction-validation (a regression guard against \
+                  address-hashed speckle), not independent evidence the surface is \
+                  \"coherent\" in a stronger sense** — `occurs` thresholds a \
+                  position-continuous field, so a positive reading is near-guaranteed by \
+                  construction; the discriminating power lives in \
+                  `weft_prevalence.rs`'s real-vs-mutant table (real 0.998, mutant 0.209 for \
+                  this kind). No numeric floor is preregistered for this statistic (spec \
+                  §7 froze none); a positive reading well clear of zero over a \
+                  non-degenerate occurs-count is the qualitative claim, checked against \
+                  `weft-coherence-occurs-count-spring`, the anti-vacuity companion (The \
+                  Ford's shape) — see that metric's own doc for why a small count makes a \
+                  high reading here suspect. NOT geosphere vertex adjacency — measured on \
+                  this tree, that mesh's own spacing is ~106-127 facets per step, 1.9-23x \
+                  every kind's own correlation length (5-60 facets), so both a sound \
+                  construction and an address-hashed defect predict `I ~= 0` at that scale \
+                  — see `weft_morans_i`'s own doc for the full power argument and the \
+                  discarded vertex-adjacency readings, published in full rather than \
+                  discarded silently. `Absent` if the walk pool is empty or the indicator \
+                  has zero variance across every walked step.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-1.0, 0.0, 0.3, 0.6, 0.9, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_morans_i(v, 0)),
+        },
+        Metric {
+            name: "weft-coherence-morans-i-overhang",
+            doc: "H2's coherence readout for overhang/hollow (spec §7) — see \
+                  `weft-coherence-morans-i-spring`'s doc for the shared statistic and its \
+                  companion.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-1.0, 0.0, 0.3, 0.6, 0.9, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_morans_i(v, 1)),
+        },
+        Metric {
+            name: "weft-coherence-morans-i-thicket",
+            doc: "H2's coherence readout for thicket/brake (spec §7) — see \
+                  `weft-coherence-morans-i-spring`'s doc for the shared statistic and its \
+                  companion.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-1.0, 0.0, 0.3, 0.6, 0.9, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_morans_i(v, 2)),
+        },
+        Metric {
+            name: "weft-coherence-morans-i-erratic",
+            doc: "H2's coherence readout for erratic/scatter (spec §7) — see \
+                  `weft-coherence-morans-i-spring`'s doc for the shared statistic and its \
+                  companion. Erratic's short (5-facet) correlation length predicts the \
+                  LOWEST of the four readings here, not zero: H2 is about spatial texture \
+                  existing at all, which a short correlation length still gives, unlike \
+                  H3's macro-state legibility, which erratic is built to score near zero \
+                  on.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-1.0, 0.0, 0.3, 0.6, 0.9, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_morans_i(v, 3)),
+        },
+        Metric {
+            name: "weft-coherence-occurs-count-spring",
+            doc: "H2's anti-vacuity companion for spring/seep (The Ford's shape: \
+                  `channel-band-monotonicity` paired with `channel-transect-dry-reach`): \
+                  the raw count of WALKED steps (the same pool \
+                  `weft-coherence-morans-i-spring` computes its chain adjacency over, and \
+                  `weft-encounter-rate-spring`'s own numerator) where spring/seep occurred. \
+                  Moran's I's own denominator is `n*p*(1-p)` for a binary indicator at \
+                  rate `p`, which shrinks toward zero as occurrence becomes very rare (or \
+                  very common) — so a small reading here is the signal that a \
+                  neighbouring high Moran's-I reading may be resting on a handful of \
+                  adjacent hits rather than a genuine spatial process, exactly as \
+                  `channel-transect-dry-reach` flags a monotonicity score resting on \
+                  transects truncated before they could fail.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50.0, 150.0, 300.0, 600.0, 1000.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_coherence_occurs_count(v, 0)),
+        },
+        Metric {
+            name: "weft-coherence-occurs-count-overhang",
+            doc: "H2's anti-vacuity companion for overhang/hollow — see \
+                  `weft-coherence-occurs-count-spring`'s doc for the shared reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50.0, 150.0, 300.0, 600.0, 1000.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_coherence_occurs_count(v, 1)),
+        },
+        Metric {
+            name: "weft-coherence-occurs-count-thicket",
+            doc: "H2's anti-vacuity companion for thicket/brake — see \
+                  `weft-coherence-occurs-count-spring`'s doc for the shared reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50.0, 150.0, 300.0, 600.0, 1000.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_coherence_occurs_count(v, 2)),
+        },
+        Metric {
+            name: "weft-coherence-occurs-count-erratic",
+            doc: "H2's anti-vacuity companion for erratic/scatter — see \
+                  `weft-coherence-occurs-count-spring`'s doc for the shared reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50.0, 150.0, 300.0, 600.0, 1000.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_coherence_occurs_count(v, 3)),
+        },
+        Metric {
+            name: "weft-legibility-mi-spring",
+            doc: "H3's legibility readout for spring/seep (spec §7, allowed to fail): \
+                  discrete mutual information in bits between spring/seep's own blended \
+                  macro-state signal (binned into 4 equal-width bins over its documented \
+                  `[0,1]` range) and whether it occurred, over the land-eligible \
+                  population (spec §7's amendment: restricting to land-eligible facets \
+                  makes the shared eligibility gate a constant, so it contributes zero MI \
+                  by construction and cannot flatter any kind — see the spec's own \
+                  amendment paragraph for the whole-sphere confound this removes). The \
+                  preregistered claim is the ORDERING `spring > thicket > overhang > \
+                  erratic`, not a threshold on this reading alone: spring is H3's own \
+                  sign case (\"diagnostic of what is underfoot\", contextuality 0.85), so \
+                  it is predicted HIGHEST of the four.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_legibility_mi(v, 0)),
+        },
+        Metric {
+            name: "weft-legibility-mi-overhang",
+            doc: "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) \
+                  — see `weft-legibility-mi-spring`'s doc for the shared estimator. \
+                  Predicted THIRD of the four (contextuality 0.6, gentler than \
+                  spring/thicket).",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_legibility_mi(v, 1)),
+        },
+        Metric {
+            name: "weft-legibility-mi-thicket",
+            doc: "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — \
+                  see `weft-legibility-mi-spring`'s doc for the shared estimator. \
+                  Predicted SECOND of the four.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_legibility_mi(v, 2)),
+        },
+        Metric {
+            name: "weft-legibility-mi-erratic",
+            doc: "H3's legibility readout for erratic/scatter (spec §7, allowed to fail) \
+                  — see `weft-legibility-mi-spring`'s doc for the shared estimator. \
+                  Erratic is H3's own negative control (contextuality ~0, a CONSTANT \
+                  `macro_state`) and is predicted LOWEST of the four, near zero: mutual \
+                  information between any variable and a constant is algebraically zero, \
+                  so this metric's own construction predicts the near-zero reading before \
+                  any world is measured. If it does NOT read near zero, the instrument is \
+                  measuring something other than legibility and that is the finding, per \
+                  spec §7 and this task's own brief.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| weft_legibility_mi(v, 3)),
+        },
     ]
 }
 
@@ -8491,6 +8891,530 @@ fn lab_band_transects(net: &hornvale_terrain::channel::ChannelNetwork) -> Option
     Some(out)
 }
 
+// ============================================================================
+// The Weft (Task 9): the preregistered readout over spec §7's H1 (density,
+// two numbers), H2 (coherence + an anti-vacuity companion, The Ford's
+// shape), and H3 (legibility, allowed to fail). Population is LAND-ELIGIBLE
+// FACETS ONLY — spec §7's amendment closes a confound the eligibility gate
+// introduces on a whole-sphere population (see the spec's own amendment
+// paragraph for the measured gate-component figures this restriction is
+// based on).
+//
+// Every function below samples at the SAME resolution spec §7's own
+// gate-component diagnostic used: one representative facet per geosphere
+// vertex, `Facet::containing(geo.position(v), geo.depth() +
+// WEFT_WALK_DEPTH_BELOW_GRID)` — the identical construction
+// `windows/worldgen/tests/suite/weft_prevalence.rs` uses under its own
+// `WALK_DEPTH_BELOW_GRID` (that file's own doc explains why the constant is
+// reproduced rather than imported: it cannot depend on `windows/locale`,
+// the owner of `walk_depth`, without a circular edge — `windows/locale`
+// depends on `hornvale-worldgen`. `windows/lab` CAN reach `windows/locale`,
+// but reproducing one integer here keeps this readout independent of a
+// third crate).
+// ============================================================================
+
+/// Walk-band depth below the geosphere's own grid level (mirrors
+/// `windows/worldgen/tests/suite/weft_prevalence.rs`'s `WALK_DEPTH_BELOW_GRID`
+/// and `hornvale_locale::walk_depth`'s "the globe level plus 7").
+/// plumb: universal(a fixed relationship between the geosphere grid level and the walk-band facet depth, identical across every world)
+const WEFT_WALK_DEPTH_BELOW_GRID: u32 = 7;
+
+/// The land-eligibility threshold every `WeftKind` shares today
+/// (`windows/worldgen/src/weft/kinds.rs::LAND_ELIGIBILITY_THRESHOLD`,
+/// `pub(crate)` there, so reproduced here rather than exported — the same
+/// accepted duplication `weft_prevalence.rs` already carries across the
+/// crate boundary for the identical constant).
+/// plumb: universal(a majority-land threshold on the blended [0,1] ground-eligibility flag, fixed across every world and shared by every kind — the same value `LAND_ELIGIBILITY_THRESHOLD` names in `windows/worldgen/src/weft/kinds.rs`)
+const WEFT_LAND_ELIGIBILITY_THRESHOLD: f64 = 0.5;
+
+/// The shared build inputs [`weft_grid_pool`] and [`weft_walk_pool`] both
+/// need (Task 9, fix round 1, I-3): a [`hornvale_kernel::NearestVertexIndex`]
+/// over the view's geosphere, and the materialized
+/// [`hornvale_worldgen::FieldPack`]. Cached once via [`ClimateView::
+/// weft_ctx`] rather than built twice — measured on this tree, release,
+/// `NearestVertexIndex::new` ~1.9-2.0 ms and `field_pack_from` ~0.4-0.8 ms,
+/// so the duplication this closes is ~2.3-2.8 ms per world, not the grid
+/// sweep's own cost. Small in isolation; still duplicated work with no
+/// reason to duplicate it, and free to remove once both pool builders read
+/// from the same view. See [`weft_grid_pool`] for the current measured sweep
+/// cost; the earlier 524-ms Mac wall figure is not comparable to its lefford
+/// CPU accounting.
+struct WeftContext {
+    index: hornvale_kernel::NearestVertexIndex,
+    pack: hornvale_worldgen::FieldPack,
+}
+
+/// One geosphere vertex's Weft reading: whether its own representative
+/// facet is land-eligible, and — in [`WeftKind::ALL`] order — each kind's
+/// `(macro_state, prevalence, occurs)` triple. `macro_state` is read
+/// unconditionally (it is a cheap blend, never a noise draw) even off land,
+/// so H3's estimator can see the true land/water split rather than a value
+/// that was skipped.
+#[derive(Clone, Copy)]
+struct WeftVertexReading {
+    land: bool,
+    per_kind: [(f64, f64, bool); 4],
+}
+
+/// The Weft's (Task 9) whole-grid readout: one [`WeftVertexReading`] per
+/// geosphere vertex, indexed by vertex id (`readings[i]` is `Vertex(i)`'s
+/// own reading) — the alignment H2's Moran's I reads directly against
+/// [`hornvale_kernel::Geosphere::neighbors`]'s own vertex ids, and the
+/// population H1's existence-density and H3's mutual-information metrics
+/// both fold over (restricted to `land` entries).
+struct WeftGridPool {
+    readings: Vec<WeftVertexReading>,
+}
+
+/// Build [`ClimateView::weft_grid`]'s pool: one pass over every geosphere
+/// vertex — one representative facet PER VERTEX (`n = 40,962` at
+/// `hornvale_terrain::GLOBE_LEVEL = 6`), not every walk-depth facet on the
+/// grid (there are ~4e8 of those; this is the same 1-in-9,830 vertex-
+/// centred subsample spec §7's own gate-component diagnostic uses) —
+/// reading `hornvale_worldgen::{prevalence_with_weights, occurs}` and
+/// [`hornvale_worldgen::WeftKind::macro_state`] for all four kinds. The
+/// prepared-prevalence seam is what lets all four kinds share the one
+/// corner-weight value this loop already owns.
+///
+/// **Cost, remeasured after Task 11 on lefford (150 worlds, all metrics,
+/// profiling build):** the two same-named `weft_grid_pool` symbols sum to
+/// 3.51% of 3,196.69 user CPU-seconds, about 112.2 CPU-seconds for the panel
+/// or 0.75 CPU-s/world. The matched release A/B over the isolated 22 Weft
+/// metrics reduced their whole 150-world bill from 627.01 to 399.90 user
+/// CPU-seconds (-36.2%); all four before/after rows files were byte-identical.
+/// The old 524-ms figure was a single-world Mac wall measurement, not a
+/// census CPU cost, and is deliberately not carried forward. The sweep
+/// still lands exactly on the known cross-check figures (11,218
+/// land-eligible vertices, 3,191 summed per-kind occurrences: 403 + 843 +
+/// 1,517 + 428). This is on top of the ordinary `ClimateView` build —
+/// `NearestVertexIndex::new` and `field_pack_from` themselves are
+/// Weft-specific additions, not part of that baseline (see [`WeftContext`]'s
+/// own doc for their measured cost, now paid once per view rather than once
+/// per pool). [`ClimateView::weft_grid`]'s caching
+/// is why this file registers 9 metrics against this sweep (H1's five
+/// existence-density readings and H3's four `weft-legibility-mi-*`
+/// readings, the latter needing this pool's `macro_state` field the
+/// cheaper walk pool below does not carry) rather than paying for it nine
+/// times. The other 13 of the Weft's 22 registrations — H1's five
+/// `weft-encounter-rate-*` readings, H2's four Moran's-I readings and four
+/// occurs-count companions — read [`ClimateView::weft_walks`] instead:
+/// H2's own coherence statistic needs facet-scale adjacency (a walked
+/// path's consecutive steps), not this pool's geosphere-vertex-scale one
+/// — see [`weft_morans_i`]'s own doc for why that switch was made before
+/// any reading was interpreted.
+fn weft_grid_pool(view: &ClimateView) -> WeftGridPool {
+    weft_grid_pool_with_prepared_prevalence(view, hornvale_worldgen::prevalence_with_weights)
+}
+
+/// The grid pool's prepared-prevalence seam. Keeping the evaluator injectable
+/// here lets the regression test count the four per-kind evaluations that must
+/// consume each facet's single prepared `weights` value, without instrumenting
+/// [`hornvale_kernel::Facet::corner_weights`] in production.
+fn weft_grid_pool_with_prepared_prevalence(
+    view: &ClimateView,
+    mut prepared_prevalence: impl FnMut(
+        hornvale_worldgen::WeftKind,
+        &hornvale_kernel::Facet,
+        [(Vertex, u64); 4],
+        &hornvale_worldgen::FieldPack,
+        Seed,
+    ) -> f64,
+) -> WeftGridPool {
+    let terrain = view.terrain();
+    let geo = terrain.geosphere();
+    let ctx = view.weft_ctx();
+    let index = &ctx.index;
+    let pack = &ctx.pack;
+    let seed = view.terrain.astronomy.world.seed;
+    let depth = geo.depth() + WEFT_WALK_DEPTH_BELOW_GRID;
+    let n = geo.vertex_count() as u32;
+
+    let mut readings = Vec::with_capacity(n as usize);
+    for i in 0..n {
+        let facet = hornvale_kernel::Facet::containing(geo.position(Vertex(i)), depth);
+        let Some(weights) = facet.corner_weights(geo, index) else {
+            readings.push(WeftVertexReading {
+                land: false,
+                per_kind: [(0.0, 0.0, false); 4],
+            });
+            continue;
+        };
+        let land = hornvale_kernel::blend_corner_weights(weights, &pack.land)
+            >= WEFT_LAND_ELIGIBILITY_THRESHOLD;
+        let mut per_kind = [(0.0, 0.0, false); 4];
+        for (slot, kind) in hornvale_worldgen::WeftKind::ALL.into_iter().enumerate() {
+            let macro_state = kind.macro_state(weights, pack);
+            let p = prepared_prevalence(kind, &facet, weights, pack, seed);
+            let occ = hornvale_worldgen::occurs(kind, &facet, seed, p);
+            per_kind[slot] = (macro_state, p, occ);
+        }
+        readings.push(WeftVertexReading { land, per_kind });
+    }
+    WeftGridPool { readings }
+}
+
+/// H1's existence-density readout for one [`hornvale_worldgen::WeftKind`]
+/// slot (index into [`hornvale_worldgen::WeftKind::ALL`]): the fraction of
+/// land-eligible facets carrying an occurrence of that kind — the god's-eye
+/// half of H1's two numbers (spec §7). `Absent` only if the world has no
+/// land-eligible facet at all (never observed; kept for totality).
+fn weft_existence_density(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let pool = view.weft_grid();
+    let land: Vec<&WeftVertexReading> = pool.readings.iter().filter(|r| r.land).collect();
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    let occurs = land.iter().filter(|r| r.per_kind[kind_idx].2).count();
+    MetricValue::Number(occurs as f64 / land.len() as f64)
+}
+
+/// H1's existence-density readout, UNIONED over all four kinds — a
+/// land-eligible facet counts once even if it carries more than one kind's
+/// feature. The combined companion to [`weft_existence_density`]'s four
+/// per-kind readings.
+fn weft_existence_density_any(view: &ClimateView) -> MetricValue {
+    let pool = view.weft_grid();
+    let land: Vec<&WeftVertexReading> = pool.readings.iter().filter(|r| r.land).collect();
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    let occurs = land
+        .iter()
+        .filter(|r| r.per_kind.iter().any(|(_, _, occ)| *occ))
+        .count();
+    MetricValue::Number(occurs as f64 / land.len() as f64)
+}
+
+/// Steps per sampled Weft encounter-rate walk (Task 9) — matches
+/// `weft_prevalence.rs`'s own `WALK_LEN` (60): long enough for even
+/// spring/seep's 40-facet correlation length to matter, short enough that a
+/// modest island or coastal strip still often stays land-eligible
+/// throughout.
+/// plumb: universal(a sampling-instrument parameter — steps per readout walk — fixed across every world, matching `weft_prevalence.rs`'s own `WALK_LEN`)
+const WEFT_ENCOUNTER_WALK_LEN: usize = 60;
+
+/// Spacing between candidate walk starts, in raw geosphere vertex index —
+/// matches `weft_prevalence.rs`'s own `STRIDE` (137): a broad, globally
+/// spread sample, prime-ish and unrelated to the geosphere's own
+/// subdivision structure.
+/// plumb: universal(a sampling-instrument parameter — spacing between candidate walk starts — fixed across every world, matching `weft_prevalence.rs`'s own `STRIDE`)
+const WEFT_ENCOUNTER_WALK_STRIDE: u32 = 137;
+
+/// The Weft's (Task 9) encounter-rate walk pool: every
+/// [`WEFT_ENCOUNTER_WALK_LEN`]-step walk starting at a
+/// [`WEFT_ENCOUNTER_WALK_STRIDE`]-spaced vertex that stayed land-eligible
+/// throughout — kept only whole, exactly [`land_eligible_walks`] in
+/// `weft_prevalence.rs` (a walk that leaves land eligibility never
+/// contributes a partial reading). Each step records, in
+/// [`hornvale_worldgen::WeftKind::ALL`] order, whether that kind occurred.
+struct WeftWalkPool {
+    walks: Vec<Vec<[bool; 4]>>,
+}
+
+fn weft_walk_pool(view: &ClimateView) -> WeftWalkPool {
+    weft_walk_pool_with_prepared_prevalence(view, hornvale_worldgen::prevalence_with_weights)
+}
+
+/// The walk pool's prepared-prevalence seam. The caller-owned corner weights
+/// live for one eligible facet evaluation and are shared by that facet's four
+/// kind evaluations; no prepared value survives a step or a world view.
+fn weft_walk_pool_with_prepared_prevalence(
+    view: &ClimateView,
+    mut prepared_prevalence: impl FnMut(
+        hornvale_worldgen::WeftKind,
+        &hornvale_kernel::Facet,
+        [(Vertex, u64); 4],
+        &hornvale_worldgen::FieldPack,
+        Seed,
+    ) -> f64,
+) -> WeftWalkPool {
+    let terrain = view.terrain();
+    let geo = terrain.geosphere();
+    let ctx = view.weft_ctx();
+    let index = &ctx.index;
+    let pack = &ctx.pack;
+    let seed = view.terrain.astronomy.world.seed;
+    let depth = geo.depth() + WEFT_WALK_DEPTH_BELOW_GRID;
+    let n = geo.vertex_count() as u32;
+
+    let mut walks = Vec::new();
+    let mut start = 0u32;
+    while start < n {
+        let mut facet = hornvale_kernel::Facet::containing(geo.position(Vertex(start)), depth);
+        let mut walk: Vec<[bool; 4]> = Vec::with_capacity(WEFT_ENCOUNTER_WALK_LEN);
+        let mut eligible_throughout = true;
+        for _ in 0..WEFT_ENCOUNTER_WALK_LEN {
+            let Some(weights) = facet.corner_weights(geo, index) else {
+                eligible_throughout = false;
+                break;
+            };
+            if hornvale_kernel::blend_corner_weights(weights, &pack.land)
+                < WEFT_LAND_ELIGIBILITY_THRESHOLD
+            {
+                eligible_throughout = false;
+                break;
+            }
+            let mut step = [false; 4];
+            for (slot, kind) in hornvale_worldgen::WeftKind::ALL.into_iter().enumerate() {
+                let p = prepared_prevalence(kind, &facet, weights, pack, seed);
+                step[slot] = hornvale_worldgen::occurs(kind, &facet, seed, p);
+            }
+            walk.push(step);
+            facet = facet
+                .neighbors()
+                .into_iter()
+                .next()
+                .expect("a facet always has an edge neighbour");
+        }
+        if eligible_throughout && walk.len() == WEFT_ENCOUNTER_WALK_LEN {
+            walks.push(walk);
+        }
+        start += WEFT_ENCOUNTER_WALK_STRIDE;
+    }
+    WeftWalkPool { walks }
+}
+
+/// H1's encounter-rate readout for one kind slot: features of that kind met
+/// per facet of travel, pooled over [`WeftWalkPool`]'s walks — the
+/// observation-scoped half of H1's two numbers (spec §7), distinct from
+/// [`weft_existence_density`]'s god's-eye reading because discovery is
+/// observation-scoped. `Absent` only if no walk in the pool qualified
+/// (never observed at seed 42; kept for totality on a world with no land at
+/// all).
+fn weft_encounter_rate(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let pool = view.weft_walks();
+    let total_steps: usize = pool.walks.iter().map(Vec::len).sum();
+    if total_steps == 0 {
+        return MetricValue::Absent;
+    }
+    let hits: usize = pool
+        .walks
+        .iter()
+        .flatten()
+        .filter(|step| step[kind_idx])
+        .count();
+    MetricValue::Number(hits as f64 / total_steps as f64)
+}
+
+/// [`weft_encounter_rate`], unioned over all four kinds — a step counts once
+/// even if it carries more than one kind's feature.
+fn weft_encounter_rate_any(view: &ClimateView) -> MetricValue {
+    let pool = view.weft_walks();
+    let total_steps: usize = pool.walks.iter().map(Vec::len).sum();
+    if total_steps == 0 {
+        return MetricValue::Absent;
+    }
+    let hits: usize = pool
+        .walks
+        .iter()
+        .flatten()
+        .filter(|step| step.iter().any(|&occ| occ))
+        .count();
+    MetricValue::Number(hits as f64 / total_steps as f64)
+}
+
+/// H2's readout for one kind slot: Moran's I (binary indicator = occurrence)
+/// computed over [`WeftWalkPool`]'s own within-walk chain adjacency (step
+/// `s` and step `s+1` of the same walk are neighbours, both directions),
+/// pooled across every walk.
+///
+/// **What this statistic actually establishes, stated precisely (fix round
+/// 1, I-1) — a construction-validation, not a discovery that the surface is
+/// "coherent".** [`hornvale_worldgen::occurs`] thresholds a POSITION-
+/// CONTINUOUS field (`prevalence`) at the kind's own correlation length, so
+/// a positive lag-1-style autocorrelation in the resulting draws is
+/// near-guaranteed by construction whenever the sampling scale is fine
+/// enough to sit inside that correlation length — this metric is a
+/// REGRESSION GUARD against address-hashed speckle (a construction defect
+/// that would silently decorrelate neighbouring facets), not independent
+/// evidence that "the derived surface is coherent" in some stronger sense.
+/// The actual discriminating power — the reading that would catch a real
+/// defect — lives in `windows/worldgen/tests/suite/weft_prevalence.rs`'s
+/// real-vs-address-hashed-mutant table (lag-1 Pearson autocorrelation on
+/// `prevalence` itself, the same four kinds: real 0.998/0.982/0.99994/0.868
+/// against mutant 0.209/0.089/0.890/-0.025) — THAT comparison is what shows
+/// the construction is not silently broken; this metric alone, reading only
+/// the real world, cannot distinguish "coherent by design" from "coherent
+/// because occurrence thresholds a continuous field, which it always will
+/// be regardless of whether the design is otherwise sound".
+///
+/// **Why chain adjacency, not [`hornvale_kernel::Geosphere::neighbors`]'s
+/// vertex mesh — a correction made DURING this task, before any reading was
+/// interpreted (decision 0016's ordering: the fix landed because the
+/// mismatch was measured, not because a later reading was uncomfortable),
+/// and adjudicated on review as principled rather than metric-shopping, on
+/// a POWER argument rather than the value produced.**
+/// [`WeftKind::correlation_length_facets`](hornvale_worldgen::WeftKind::correlation_length_facets)
+/// is expressed in FACETS — 5 (erratic) to 60 (thicket, the largest; an
+/// earlier version of this doc said "5-40", omitting it) — and every kind's
+/// noise frequency is set against [`hornvale_kernel::Facet::edge_rad`], a
+/// walk-depth facet edge, not a geosphere vertex spacing.
+/// `hornvale_terrain::GLOBE_LEVEL` is 6 (an earlier version of this doc said
+/// "level 5"), giving `n = 40,962` vertices; measured directly on this tree,
+/// one geosphere-vertex-adjacency step spans ~106-127 facets (mean ~115,
+/// `n=251` sampled edges) — **1.9λ for thicket (the closest of the four, and
+/// the weakest case for this argument) up to 23λ for erratic**. At that lag,
+/// BOTH hypotheses this statistic exists to discriminate between — a sound
+/// position-continuous construction, and an address-hashed defect — predict
+/// `I ≈ 0`: a genuinely coherent field has long since decorrelated by 1.9-23
+/// correlation lengths out, so the two are statistically indistinguishable
+/// at vertex-adjacency resolution, which is derivable from the published
+/// correlation-length constants before any world is built. A statistic
+/// whose competing hypotheses make the same prediction is not a test.
+/// [`WeftWalkPool`]'s consecutive steps ARE geometrically adjacent facets
+/// (`Facet::neighbors().next()`), the resolution the correlation lengths are
+/// actually defined at and the same population `weft-encounter-rate-<kind>`
+/// reads — reusing it costs no extra sweep. The discarded vertex-adjacency
+/// readings (spring 0.030, overhang 0.013, thicket 0.096, erratic 0.001)
+/// are recorded in full in this task's ledger and report, not deleted —
+/// which is what made the correction checkable rather than merely asserted:
+/// both the discarded and the corrected statistics are monotone in λ in the
+/// SAME order (thicket < spring < overhang < erratic, ascending lag
+/// relative to λ), so the switch changed magnitude, not ranking — the
+/// signature of a wrong-scale correction, not a rescue (a rescue would be
+/// expected to reorder something).
+///
+/// `Absent` when the walk pool is empty (no walk stayed land-eligible
+/// throughout) or the occurrence indicator has zero variance across every
+/// walked step (e.g. a kind that never occurred in the sample at all).
+///
+/// **Read beside `weft-coherence-occurs-count-<kind>`, the anti-vacuity
+/// companion (The Ford's shape: `channel-band-monotonicity` paired with
+/// `channel-transect-dry-reach`).** Moran's I's own denominator is
+/// `Σ(x_i - x̄)²`, which for a binary indicator at rate `p` is
+/// `n·p·(1-p)` — it shrinks toward zero exactly as `p` approaches 0 or 1,
+/// so a kind occurring on very few (or very nearly all) walked steps can
+/// read as a numerically unstable "high" I from a handful of adjacent hits,
+/// the same way a channel transect truncated immediately after leaving its
+/// centreline can read a vacuous 1.0 monotonicity. The occurs-count
+/// companion reports exactly the quantity whose smallness would make that
+/// read suspect — over the SAME walked population this metric does.
+fn weft_morans_i(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let pool = view.weft_walks();
+    let x = |step: &[bool; 4]| if step[kind_idx] { 1.0 } else { 0.0 };
+
+    let total: usize = pool.walks.iter().map(Vec::len).sum();
+    if total == 0 {
+        return MetricValue::Absent;
+    }
+    let xbar = pool.walks.iter().flatten().map(x).sum::<f64>() / total as f64;
+
+    let mut num = 0.0;
+    let mut s0 = 0.0;
+    for walk in &pool.walks {
+        for pair in walk.windows(2) {
+            let (a, b) = (x(&pair[0]), x(&pair[1]));
+            // Both directions, matching the standard symmetric weights
+            // matrix convention (an undirected edge contributes twice, once
+            // as (i,j) and once as (j,i)).
+            num += 2.0 * (a - xbar) * (b - xbar);
+            s0 += 2.0;
+        }
+    }
+    let denom: f64 = pool
+        .walks
+        .iter()
+        .flatten()
+        .map(|s| (x(s) - xbar).powi(2))
+        .sum();
+    if s0 <= 0.0 || denom <= 0.0 {
+        return MetricValue::Absent;
+    }
+    let i_stat = (total as f64 / s0) * (num / denom);
+    MetricValue::Number(i_stat)
+}
+
+/// H2's anti-vacuity companion: the raw count of walked steps (pooled over
+/// [`WeftWalkPool`]) carrying an occurrence of this kind — the SAME
+/// population [`weft_morans_i`] computes its indicator over (see that
+/// function's own doc for why chain adjacency, not the geosphere vertex
+/// mesh). Distinct from `weft-existence-density-<kind>`'s numerator, which
+/// counts over the vertex-centred grid population, not the walked sample.
+///
+/// `Absent` when the walk pool itself is empty (fix round 1, M-6: this
+/// used to return `Number(0.0)` unconditionally, the one Weft metric NOT
+/// checking for an empty pool, asymmetric with its own sibling
+/// [`weft_morans_i`] and its twin `weft-encounter-rate-<kind>`, which both
+/// read the identical population and both go `Absent` on it). `Number(0.0)`
+/// is still the answer when the pool is non-empty and simply contains no
+/// occurrence of this kind — a real, meaningful zero, distinct from "no
+/// data".
+fn weft_coherence_occurs_count(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let pool = view.weft_walks();
+    if pool.walks.is_empty() {
+        return MetricValue::Absent;
+    }
+    let n = pool
+        .walks
+        .iter()
+        .flatten()
+        .filter(|step| step[kind_idx])
+        .count();
+    MetricValue::Number(n as f64)
+}
+
+/// Equal-width bins for H3's macro-state estimator (spec §7): `X`'s domain
+/// is [`hornvale_worldgen::WeftKind::macro_state`]'s own documented range,
+/// `[0,1]`. Four bins is coarse enough that every bin stays populated at
+/// `n_land ≈ 11,218` while still separating a genuinely graded macro-state
+/// response from a flat one — the discrimination H3's ordering prediction
+/// needs.
+/// plumb: universal(a mutual-information estimator parameter — bin count over macro_state's own [0,1] range — fixed across every world and every kind)
+const WEFT_MI_BINS: usize = 4;
+
+/// H3's legibility readout for one kind slot: discrete mutual information,
+/// in bits, between `X` = this kind's [`hornvale_worldgen::WeftKind::
+/// macro_state`] (binned into [`WEFT_MI_BINS`] equal-width bins) and `Y` =
+/// whether the kind occurred, over the land-eligible population (spec §7's
+/// amendment: restricting to land-eligible facets makes the eligibility
+/// gate itself a constant, so it contributes zero MI by construction and
+/// cannot flatter any kind — see the spec's own amendment paragraph for the
+/// whole-sphere confound this removes). The preregistered claim is the
+/// ORDERING `spring > thicket > overhang > erratic`, with erratic near
+/// zero — erratic's own [`hornvale_worldgen::WeftKind::macro_state`] is a
+/// CONSTANT (`erratic_macro_state`), so `X` has no genuine variance for
+/// erratic even before binning, and MI between `Y` and a constant is
+/// algebraically zero: this metric's own construction predicts erratic's
+/// near-zero reading, independent of anything measured. `Absent` only on a
+/// world with no land-eligible facet at all.
+fn weft_legibility_mi(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let pool = view.weft_grid();
+    let land: Vec<&WeftVertexReading> = pool.readings.iter().filter(|r| r.land).collect();
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    let total = land.len() as f64;
+
+    let mut joint = [[0u64; 2]; WEFT_MI_BINS];
+    for r in &land {
+        let (macro_state, _, occ) = r.per_kind[kind_idx];
+        let bin =
+            ((macro_state.clamp(0.0, 1.0) * WEFT_MI_BINS as f64) as usize).min(WEFT_MI_BINS - 1);
+        joint[bin][occ as usize] += 1;
+    }
+
+    let mut px = [0.0f64; WEFT_MI_BINS];
+    let mut py = [0.0f64; 2];
+    for (b, row) in joint.iter().enumerate() {
+        for (y, &count) in row.iter().enumerate() {
+            let p = count as f64 / total;
+            px[b] += p;
+            py[y] += p;
+        }
+    }
+
+    let mut mi = 0.0;
+    for (b, row) in joint.iter().enumerate() {
+        for (y, &count) in row.iter().enumerate() {
+            let pxy = count as f64 / total;
+            if pxy > 0.0 && px[b] > 0.0 && py[y] > 0.0 {
+                mi += pxy * hornvale_kernel::math::log2(pxy / (px[b] * py[y]));
+            }
+        }
+    }
+    MetricValue::Number(mi)
+}
+
 /// The seven toponymic terrain gates (Task 4) and the concept each steeps
 /// when satisfied — declared once, here, so [`independently_steeped_concepts`]
 /// and [`steepable_concept_roster`] read the same table instead of each
@@ -9792,6 +10716,153 @@ mod tests {
         assert_eq!(coerced.globe.plate_count, terrain.globe.plate_count);
     }
 
+    /// The Weft (Task 9, fix round 1, I-2): `windows/lab` reproduces three
+    /// constants worldgen owns — `WEFT_LAND_ELIGIBILITY_THRESHOLD` (mirrors
+    /// `windows/worldgen/src/weft/kinds.rs::LAND_ELIGIBILITY_THRESHOLD`,
+    /// `pub(crate)` there), `WEFT_WALK_DEPTH_BELOW_GRID` (mirrors
+    /// `weft_prevalence.rs`'s `WALK_DEPTH_BELOW_GRID`), and the eligibility
+    /// RULE itself (today: land alone, uniformly across kinds) — with
+    /// NOTHING checking they still agree. If worldgen's definition ever
+    /// drifts, the lab would silently redefine the population underneath 22
+    /// census columns and nothing would object — the two-sources-of-truth
+    /// shape this campaign has closed five times elsewhere (see entry #13's
+    /// own `no_weft_kind_label_appears_in_thing_kinds` for the same
+    /// discipline applied to a different pair of constants).
+    ///
+    /// The check is BEHAVIOURAL, not a constant comparison (constants can
+    /// agree by coincidence, or diverge in a way a bare `assert_eq!` on two
+    /// `f64`s would not catch if both files independently rounded the same
+    /// way) — it reads `hornvale_worldgen::prevalence`'s own OUTPUT, which
+    /// is only ever `Some(0.0)` (an exact, hard-coded early return, never a
+    /// computed near-zero) when worldgen's REAL eligibility gate refuses a
+    /// facet:
+    ///
+    /// - land-ineligible per the LAB's own reproduced threshold => every
+    ///   kind's prevalence must be an EXACT `0.0` (if the lab's threshold
+    ///   were higher than worldgen's real one, some of these facets would
+    ///   actually be eligible per worldgen and read nonzero).
+    /// - land-eligible per the LAB's own reproduced threshold => NOT every
+    ///   kind's prevalence is `0.0` (if the lab's threshold were lower than
+    ///   worldgen's real one, worldgen would refuse these facets too and
+    ///   every kind would read the same hard-coded `0.0`).
+    ///
+    /// The second direction relies on a continuous noise draw almost never
+    /// landing on the exact literal `0.0` for all four kinds at once at a
+    /// genuinely eligible facet — astronomically unlikely, unlike the first
+    /// direction's exact equality, which is unconditional by construction.
+    #[test]
+    fn weft_land_flag_agrees_with_worldgen_eligibility() {
+        let view = ClimateView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let pool = view.weft_grid();
+
+        let mut ineligible_checked = 0usize;
+        let mut eligible_checked = 0usize;
+        for r in &pool.readings {
+            let all_zero = r.per_kind.iter().all(|&(_, p, _)| p == 0.0);
+            if r.land {
+                assert!(
+                    !all_zero,
+                    "lab says this facet is land-eligible, but every kind's prevalence read \
+                     the exact hard-coded zero worldgen's own eligibility gate returns — \
+                     WEFT_LAND_ELIGIBILITY_THRESHOLD has drifted lower than worldgen's own"
+                );
+                eligible_checked += 1;
+            } else {
+                for (kind_idx, &(_, p, _)) in r.per_kind.iter().enumerate() {
+                    assert_eq!(
+                        p, 0.0,
+                        "lab says this facet is land-ineligible, but kind index {kind_idx}'s \
+                         prevalence read nonzero — WEFT_LAND_ELIGIBILITY_THRESHOLD has \
+                         drifted higher than worldgen's own, or worldgen's eligibility rule \
+                         has stopped being uniform across kinds"
+                    );
+                }
+                ineligible_checked += 1;
+            }
+        }
+        assert!(
+            ineligible_checked > 0 && eligible_checked > 0,
+            "the sample carried no facets of one class or the other — this test exercised \
+             nothing: ineligible={ineligible_checked} eligible={eligible_checked}"
+        );
+    }
+
+    /// Regression direction: replacing the `prepared_prevalence(...)` call in
+    /// the real grid-pool loop with public `prevalence(...)` leaves every
+    /// metric bit unchanged but makes this count zero. Four calls per facet
+    /// proves all four kinds consume the one `weights` value prepared before
+    /// the loop, rather than silently performing four more geometry lookups.
+    #[test]
+    fn weft_grid_uses_prepared_prevalence_four_times_per_facet() {
+        let view = ClimateView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut prepared_evaluations = 0usize;
+
+        let pool =
+            weft_grid_pool_with_prepared_prevalence(&view, |kind, facet, weights, pack, seed| {
+                prepared_evaluations += 1;
+                hornvale_worldgen::prevalence_with_weights(kind, facet, weights, pack, seed)
+            });
+
+        let facet_count = pool.readings.len();
+        assert!(
+            facet_count > 0,
+            "the real seed-42 grid fixture produced no facets, so the call-count witness is vacuous"
+        );
+        let eligible_facets = pool.readings.iter().filter(|reading| reading.land).count();
+        assert!(
+            eligible_facets > 0,
+            "the real seed-42 grid fixture produced no eligible facets, so it does not witness the measured population"
+        );
+
+        let expected = facet_count * hornvale_worldgen::WeftKind::ALL.len();
+        assert_eq!(
+            prepared_evaluations, expected,
+            "the grid path must evaluate four kinds through the prepared-weight seam for every facet"
+        );
+    }
+
+    /// Regression direction: replacing the `prepared_prevalence(...)` call in
+    /// the real walk-pool loop with public `prevalence(...)` leaves every
+    /// metric bit unchanged but makes every count zero. Positive walk, step,
+    /// and eligible-evaluation counts keep the witness tied to the measured
+    /// seed-42 path rather than an empty fixture.
+    #[test]
+    fn weft_walk_uses_prepared_prevalence_for_every_kind() {
+        let view = ClimateView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+        let mut prepared_by_kind = [0usize; 4];
+
+        let pool =
+            weft_walk_pool_with_prepared_prevalence(&view, |kind, facet, weights, pack, seed| {
+                let slot = hornvale_worldgen::WeftKind::ALL
+                    .into_iter()
+                    .position(|candidate| candidate == kind)
+                    .expect("the evaluator receives a registered Weft kind");
+                prepared_by_kind[slot] += 1;
+                hornvale_worldgen::prevalence_with_weights(kind, facet, weights, pack, seed)
+            });
+
+        assert!(
+            !pool.walks.is_empty(),
+            "the real seed-42 walk fixture produced no retained walks"
+        );
+        let retained_steps: usize = pool.walks.iter().map(Vec::len).sum();
+        assert!(
+            retained_steps > 0,
+            "the real seed-42 walk fixture retained no steps"
+        );
+        let eligible_steps = prepared_by_kind[0];
+        assert!(
+            eligible_steps > 0,
+            "the real seed-42 walk path evaluated no eligible steps through the prepared seam"
+        );
+        assert!(
+            prepared_by_kind
+                .iter()
+                .all(|&evaluations| evaluations == eligible_steps),
+            "every eligible step must evaluate all four kinds through the prepared-weight seam: {prepared_by_kind:?}"
+        );
+    }
+
     /// Extract `name`'s metric from an already-built `BuiltView`, panicking
     /// if the metric isn't registered — a small test convenience so each
     /// test doesn't hand-roll the registry lookup.
@@ -10388,7 +11459,20 @@ mod tests {
         // distribution is measured where it belongs, in Task 5's
         // `survivorship_probe`, which reports both populations and their
         // overlap rather than one number that looks like a threshold.
-        assert_eq!(registry().len(), 227);
+        //
+        // +22 for THE WEFT (Task 9): the preregistered readout over spec §7's
+        // H1/H2/H3 — five `weft-existence-density-*` (spring, overhang,
+        // thicket, erratic, any), five `weft-encounter-rate-*` (the same five
+        // suffixes), four `weft-coherence-morans-i-*`, four
+        // `weft-coherence-occurs-count-*` (the anti-vacuity companion, The
+        // Ford's shape), and four `weft-legibility-mi-*`. All 22 share one
+        // cached whole-grid sweep or walk pool per world
+        // (`ClimateView::weft_grid`/`weft_walks`) rather than paying for
+        // their own sweep each — see `weft_grid_pool`'s own doc for the
+        // post-Task-11 lefford profile (3.51% of the 150-world all-metrics
+        // run, about 0.75 CPU-s/world) this caching exists to avoid
+        // multiplying by 22.
+        assert_eq!(registry().len(), 249);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -10420,7 +11504,9 @@ mod tests {
         // assertions in this test pin the same number and they are edited
         // together — the Granary note above records what happens when only
         // one of them is, and the pair is what caught this edit.
-        assert_eq!(registry().len(), 227);
+        // THE WEFT (Task 9): 227 -> 249 (+22, see this test's first assertion
+        // for the roster).
+        assert_eq!(registry().len(), 249);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel

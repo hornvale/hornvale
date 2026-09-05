@@ -16,11 +16,12 @@ use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
 use crate::resident::{DriveKey, OwnedFolds, ReadWitness, SustenanceMemo, Trail};
+use hornvale_history::record::OccupationRecord;
 use hornvale_kernel::units::TickSpan;
 use hornvale_kernel::{
     ANIMAL_PREY, ComponentStore, ConditionResponse, EntityId, Facet, FacetId, Fact, KindId, Ledger,
-    Lineage, PHOTOSYNTHATE, PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, World,
-    WorldTime,
+    Lineage, PHOTOSYNTHATE, PLANT_FORAGE, ResourceVector, RoomMeshMemo, TickSystem, Value, Vertex,
+    World, WorldTime,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::{ActivityCycle, ThermalStrategy};
@@ -8664,6 +8665,64 @@ pub(crate) fn settlement_room(world: &World, ctx: &LocaleContext, settlement: En
     Facet::containing(pos, walk_depth(ctx))
 }
 
+/// The one production reduction of the settlement roster to player-addressed
+/// rooms.  `built` and `living` are filled by the same first-settlement branch,
+/// so two settlements sharing a room cannot lend the first one's name to the
+/// second one's people.
+pub(crate) struct SettlementRoomIndex {
+    pub(crate) built: std::collections::BTreeMap<FacetId, String>,
+    pub(crate) living: std::collections::BTreeMap<FacetId, OccupationRecord>,
+    pub(crate) collisions: usize,
+}
+
+/// Build the production room index from the exact settlement addresses.
+///
+/// The occupation register is already a committed-ledger read. It is passed
+/// in so [`crate::session::WorldContext::build`] performs that read once, then
+/// joins records to the settlement roster by entity id. The roster's order is
+/// the authority for a shared room: the first settlement supplies both name
+/// and, when living, occupation. Rungs deliberately do not enter the address;
+/// surface and subterranean occupants can share one player room.
+pub(crate) fn settlement_room_index(
+    world: &World,
+    ctx: &LocaleContext,
+    occupations: &std::collections::BTreeMap<Vertex, Vec<OccupationRecord>>,
+) -> SettlementRoomIndex {
+    let living_by_id: std::collections::BTreeMap<EntityId, &OccupationRecord> = occupations
+        .values()
+        .flatten()
+        .filter(|occupation| occupation.is_alive())
+        .map(|occupation| (occupation.id, occupation))
+        .collect();
+    settlement_room_index_from(world, ctx, &living_by_id)
+}
+
+fn settlement_room_index_from(
+    world: &World,
+    ctx: &LocaleContext,
+    living_by_id: &std::collections::BTreeMap<EntityId, &OccupationRecord>,
+) -> SettlementRoomIndex {
+    let mut index = SettlementRoomIndex {
+        built: std::collections::BTreeMap::new(),
+        living: std::collections::BTreeMap::new(),
+        collisions: 0,
+    };
+    for settlement in hornvale_settlement::all_settlements(world) {
+        let Ok(room) = settlement_room(world, ctx, settlement.id).pack() else {
+            continue;
+        };
+        if index.built.contains_key(&room) {
+            index.collisions += 1;
+            continue;
+        }
+        index.built.insert(room, settlement.name);
+        if let Some(occupation) = living_by_id.get(&settlement.id) {
+            index.living.insert(room, (*occupation).clone());
+        }
+    }
+    index
+}
+
 /// The set of packed room ids a settlement's territory occupies — the real
 /// answer [`Terrain::is_built`] needs from a live world (The Threshold, task
 /// 5b: the arming Task 5 wired had nothing to read, since no `Terrain`
@@ -8678,9 +8737,10 @@ pub(crate) fn settlement_room(world: &World, ctx: &LocaleContext, settlement: En
 /// worked fields is a real question, but one nothing in the model yet
 /// derives (there is no committed "territory extent" a wider read could be
 /// honest about) — a later campaign's to ask, not an oversight here. Built
-/// once, at session/sweep start, and injected into `LocaleTerrain` the same
-/// way the predator/prey fields are (`with_fields`) — a domain/window can't
-/// reach up to `hornvale_settlement` on its own. `Facet::pack`'s only
+/// once in `WorldContext` for production sessions, and injected into
+/// `LocaleTerrain` the same way the predator/prey fields are (`with_fields`) —
+/// a domain/window can't reach up to `hornvale_settlement` on its own.
+/// `Facet::pack`'s only
 /// failure mode is a path past `MAX_DEPTH`, never reached at a session's own
 /// walk depth, so a pack failure is silently dropped rather than panicking —
 /// the same "coarse constrains fine, never blocks" posture the rest of this
@@ -8710,10 +8770,11 @@ pub(crate) fn settlement_room(world: &World, ctx: &LocaleContext, settlement: En
 /// id and the population have no reader here.
 ///
 /// **A room two settlements share keeps the FIRST in
-/// `hornvale_settlement::all_settlements` order** (`or_insert`, not
-/// `insert`). Deterministic, because that roster is a deterministic read over
-/// the committed ledger — and a set could not have expressed the question at
-/// all, so this is a new answer rather than a changed one. The KEY SET is
+/// `hornvale_settlement::all_settlements` order** (the shared room reduction
+/// declines every later collision). Deterministic, because that roster is a
+/// deterministic read over the committed ledger — and a set could not have
+/// expressed the question at all, so this is a new answer rather than a
+/// changed one. The KEY SET is
 /// byte-for-byte what the set held, which is why the census metric reading
 /// `built.len()` (`windows/lab/src/metrics.rs`) does not move.
 /// type-audit: bare-ok(identifier-text: return)
@@ -8721,13 +8782,7 @@ pub fn built_rooms(
     world: &World,
     ctx: &LocaleContext,
 ) -> std::collections::BTreeMap<FacetId, String> {
-    let mut rooms = std::collections::BTreeMap::new();
-    for v in hornvale_settlement::all_settlements(world) {
-        if let Ok(id) = settlement_room(world, ctx, v.id).pack() {
-            rooms.entry(id).or_insert(v.name);
-        }
-    }
-    rooms
+    settlement_room_index_from(world, ctx, &std::collections::BTreeMap::new()).built
 }
 
 /// The species' activity-cycle, from its committed `SPECIES_ACTIVITY_CYCLE`

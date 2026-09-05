@@ -170,6 +170,7 @@
 | `barley` | climate | substance | a staple crop |
 | `bathypelagic` | climate | terrain | a biome class |
 | `bed` | thing | object | a place made for lying down and sleeping |
+| `bench` | thing | object | a long shared seat |
 | `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
 | `blue` | language | quality | the color term for blue |

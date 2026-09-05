@@ -51,6 +51,8 @@ mod felt_state_concepts;
 mod furnishing_marks;
 #[path = "suite/gate_table.rs"]
 mod gate_table;
+#[path = "suite/housemark_readout.rs"]
+mod housemark_readout;
 #[path = "suite/kind_totality.rs"]
 mod kind_totality;
 #[path = "suite/lantern_fabric.rs"]
@@ -135,6 +137,8 @@ mod the_rack;
 mod the_roll;
 #[path = "suite/the_terrier.rs"]
 mod the_terrier;
+#[path = "suite/the_weft.rs"]
+mod the_weft;
 #[path = "suite/thing.rs"]
 mod thing;
 #[path = "suite/tick_commit_budget.rs"]
