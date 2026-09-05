@@ -449,6 +449,83 @@ two examples are getting a panic or a truncated table today.
 
 ---
 
+### #7 [G1] — the memo is SHARED, not per-entity; the brief had it backwards
+
+**Question.** The brief specifies "a per-entity memo". Should the memo be
+per-entity, following `HomeNavCache`?
+
+**Decision.** **Shared, keyed on `(from, dest, budget)` with no entity in the
+key.** A per-entity memo would forfeit the entire within-sweep win on the
+possession shape.
+
+**Why, from the counts.** `water_at` returns each entity's DISTINCT visited
+rooms, so an entity can never duplicate its own `(home, room)` pair within one
+sweep. Therefore **every** duplicate is a duplicate across entities. Shape B's
+within-sweep duplicate rate is 6.4x–9.1x — 4,060 calls against 559 distinct
+pairs per sweep — which is 86.2% of that shape's calls, and a per-entity memo
+sees none of it. Shape A's rate is exactly 1.00x, so there per-entity and
+shared are identical and nothing is lost either way. The shared memo is weakly
+better on one shape and dramatically better on the other.
+
+**Why the precedent does not transfer.** `HomeNavCache` is per-entity because
+its key is `(pos, home, budget, avoid_epoch)` and two of those four are
+per-entity by construction — `pos` is where that creature is standing, and the
+avoid-epoch counter is deliberately per-entity so that "a global epoch would
+[not] stampede every entity's cache on any ONE creature's belief change". This
+memo's key has neither component. Copying the shape would have been copying the
+half of the precedent that does not apply.
+
+**Alternatives discarded.** Per-entity (above). A two-level map keyed
+`entity -> (dest -> len)`: same defect, dressed differently.
+
+**ideonomy passes / overturns.** Covered by the pass under #3; the *scope*
+dimension prompt is the one that asks "is this local or global", and the
+counts answered it. No separate pass. No overturn — the brief's per-entity
+wording was never argued for, so this corrects an unexamined default rather
+than overturning a position.
+
+**Capture actions.** Stated in the spec at §1.3(c) and §2.1.
+
+---
+
+### #8 [Q] — a cost comparison I did not have, in my own spec text
+
+**Question.** The spec's §2.4 rejected the one-to-many field partly on a cost
+comparison: "Shape A: 11 homes x 1,001 = 11,011 expansions". Where did the
+number 11 come from?
+
+**Decision.** **From an inference, not a measurement, and it is now removed.**
+The probe counted `(home, dest)` PAIRS; it never counted distinct HOMES. "11"
+was read across from "11 of 50 roster members hold a non-empty belief set",
+which bounds the home count from above but does not establish it — two members
+can share a home. The row now states the bound as a bound, says the quantity is
+unmeasured, and rests the rejection on the field's proof burden and on the
+shape-dependence of its advantage, which are things the campaign does have.
+
+**Why this is worth an entry rather than a silent edit.** It is the exact
+failure this campaign was told to avoid — *the Detent's registry row was wrong
+until counted; do not repeat that* — reproduced in the spec that was written to
+avoid it, one section after the section that reports the counts. The number was
+plausible, adjacent to a real measurement, and carried a multiplication sign
+that made it look derived. Caught by the spec self-review's own instruction to
+check whether each claim about an external quantity has a command and an output
+behind it; nothing else would have caught it, because the arithmetic was
+correct and only the input was invented.
+
+**And it changed the argument, not just the prose.** With the number gone, the
+field is no longer rejected on cost at all — it is rejected on having three
+unestablished properties while the memo has none. That is a better reason and
+it was available the whole time.
+
+**ideonomy passes / overturns.** None; this is a correction, not a design
+choice.
+
+**Capture actions.** The distinct-home count is carried into the field's
+registry row as the quantity that would settle the comparison, so the next
+attempt starts by measuring it.
+
+---
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*
