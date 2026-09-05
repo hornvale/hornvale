@@ -322,3 +322,45 @@ gains, Nathan said: “Great! Let's move forward.” This approves the presented
 spec and releases implementation planning. The four G3 qualifications remain
 in force. G4 is self-reviewed under campaign-autopilot; G6 remains the next
 human stop before merge/close.
+
+## #3 [Q] — reusable execution machinery and experiment identities
+
+**Ruling:** extract Charter's existing Python diagnostic into an importable
+module, preserving its wrapper and behavioral tests. Add opt-in retained raw
+output and a bound for Counterpart. Keep a tiny Rust raw-observation executable
+outboard; the independently authored checker consumes its facts. Preserve
+specimen source as Git objects in a bounded bundle, with an explicit committed
+base prerequisite. These objects are experiment data, never admission candidates.
+
+**Why:** the inspected Charter `measure` already owns process sessions,
+interruption, inherited Git/Cargo scrubbing, timings and unsafe-cleanup retention.
+It currently deletes successful stdout after hashing, so reuse needs an explicit
+output-retention extension. The existing Rust supervisor's failure result loses
+structured stdout. Charter's ledger (Composed stage and measured diagnostics)
+provides a stage-only outboard invocation precedent for canonical experiments.
+
+**Cycle of an observation (tree-finding; discovery versus invention; rate):**
+
+- Question -> source -> preparation -> observation -> judgment -> revised question.
+- Up: an observation belongs to an experiment, then to an admission argument;
+  this experiment has no admission authority.
+- Down: preparation, process ownership, raw facts, independent interpretation
+  and presentation are different children. Their costs run at different rates;
+  compilation must not be charged as interpretation.
+- Across: copy a supervisor / import a reviewed one / invoke a long-lived
+  service. Import is the bounded sibling; a service invents a new lifetime.
+- Between levels: preserve committed source objects rather than invent a
+  general provenance graph. Replay closes this cycle only back to the frozen
+  question, never to a universal safety claim.
+- The fixture is invented; the observed interaction is discovered in that
+  fixture. Increasing trial rate does not turn synthetic faults into measured
+  natural fault frequency.
+
+**Alternatives discarded:** cloning the supervisor; extending live Digest
+protocol v1; a new service; committing intentionally broken simulation changes
+on the campaign branch; asserting before/after hashes prove atomic reads.
+**Ideonomy passes / overturns:** one actual picker draw, recorded above; no
+material improvement beyond the retained-output extension and existing separate
+preparation/observation timing. **Cost if wrong:** rework of a development-only
+runner and replay records. **Capture:** implementation plan tasks and this ledger;
+no new general mechanism or registry row.
