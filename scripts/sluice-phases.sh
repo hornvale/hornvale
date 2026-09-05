@@ -163,3 +163,51 @@ sluice_drop_expensive_phases() {
     # shellcheck disable=SC2086  # $1 is a space-separated list; splitting is the point.
     printf '%s\n' $1 | grep -vxE 'seam-guard|clients|heavy' | tr '\n' ' ' | sed 's/ $//'
 }
+
+# THE SAME QUESTION, ASKED OF A GIT REF INSTEAD OF A WORKING TREE.
+#
+# `sluice_is_regenerated_only` reads the declaration from a ROOT DIRECTORY, and
+# that is right for the chamber — its root IS the merge product, the exact tree
+# it is about to gate. It is wrong for the mouth, which ran with the repo
+# toplevel and therefore answered from whatever `main`'s checkout happened to
+# hold. Those are not the same file.
+#
+# OBSERVED LIVE, 2026-09-05, codex/counterpart-diagnostic 0c6a920898c2. This
+# box's main checkout sat five commits behind origin/main, so its copy lacked
+# the row declaring docs/audits/campaign-reconciliation.tsv hand-authored. The
+# classifier fell through to the docs/audits/ DIRECTORY row, said `artifacts`,
+# and the mouth printed ADMIT — "the chamber resolves them by regeneration".
+# The chamber, three seconds later and reading the merge product, saw the file
+# row, found no regenerator, and refused rc=10. Same candidate, same sha,
+# opposite verdicts. Fast-forwarding the checkout and re-running the identical
+# mouth command produced rc=1.
+#
+# WHAT THIS SAYS ABOUT THE GUARD THAT WAS ALREADY THERE. The call site carries
+# a comment insisting the mouth "MUST AGREE WITH sluice-run.sh", and names the
+# shared function plus test-sluice.sh's agreement case as the things preventing
+# exactly this. Both existed and both held: the FUNCTION never disagreed with
+# itself, and the test fed both callers one file, so it could not have caught
+# this. Sharing the code made the logic identical and left the INPUT
+# unspecified, which is where the divergence lived. A composition test has to
+# vary what each side reads, not just confirm they compute alike.
+#
+# BOTH SIDES MUST AGREE, not just the base. The chamber reads the merge
+# product, so a `none(...)` row added by the CANDIDATE is visible to it and
+# would not be visible to a mouth reading only `main`. Requiring both keeps the
+# mouth at least as strict as the chamber in either direction; being stricter
+# only ever costs a bounce at the gate, while being laxer costs the box.
+#
+# FAILS CLOSED. A ref that cannot produce the file at all returns 1 —
+# "not provably regenerable" — rather than treating an unreadable declaration
+# as permission.
+sluice_is_regenerated_only_at() {
+    local changed="$1" ref="$2" tmp rc=1
+    tmp="$(mktemp -d)" || return 1
+    mkdir -p "$tmp/docs"
+    if env -u GIT_DIR -u GIT_INDEX_FILE git show "$ref:docs/generated-paths.txt" \
+            > "$tmp/docs/generated-paths.txt" 2>/dev/null; then
+        if sluice_is_regenerated_only "$changed" "$tmp"; then rc=0; fi
+    fi
+    rm -rf "$tmp"
+    return "$rc"
+}

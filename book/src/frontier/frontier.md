@@ -5631,10 +5631,28 @@ reading. So the fence came down where this essay was pointing and an equivalent
 one is still standing in two other crates, now named and located instead of
 suspected. That is what a forcing function is supposed to produce.
 
-Edges — addition two — also stopped being hypothetical. *What a people tends to
-sleep on* is a `(species, thing)` pair, which is a kind-to-kind edge with a
-named consumer waiting on it, and it is a better one than the orange tree
-because something in the world is already asking the question.
+### Addition two has shipped, but not as a graph
+
+[The Tenon](../chronicle/the-tenon.md) (2026-09-04) made *what a people tends
+to sleep on* the first live kind-to-kind edge. It did not add an authored
+`(species, thing)` matrix or the general graph this essay originally forecast.
+Each endpoint carries traits — a sleeper's substrate response on one side, a
+surface's offer and hardness on the other — and the consumer derives the pair's
+value. Adding a surface costs one object row, not one row for every species.
+
+That is still an edge because the pair contains information neither endpoint
+has alone. In actual seed-1234 rooms, gully-dwarf grades rushes above ledge and
+drow grades ledge above rushes. A separable species-scalar × surface-scalar
+model cannot reverse that ordering; the shared contrast makes this relation
+rank 2.
+
+The graph forecast was early, not merely larger. Direction is part of an edge's
+meaning: `grows-on` is directed, `family_of` is symmetric-transitive, and rest
+fit is symmetric while only the sleeper receives the payoff. A general
+`EdgeKind` waits until a second live consumer gives that abstraction two real
+instances to preserve. The orange's last missing addition is therefore
+per-instance variation derived from `Lineage`; the kind-to-kind addition is
+shipped in a factorized form.
 
 ## Intellectual lineage
 

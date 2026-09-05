@@ -5592,6 +5592,35 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-04T03:58:21Z | sluice:clients | 116.611 | 2015.365 | 162.070 | 18.67 | 0 | 3312ccda7 |  | lefford | 40 |
 | 2026-09-04T04:06:01Z | sluice:heavy | 459.863 | 9883.831 | 158.903 | 21.84 | 0 | c44165de0 |  | lefford | 40 |
 | 2026-09-04T11:14:25Z | prewarm | 179.653 | 1063.686 | 48.478 | 6.19 | 0 | f20fdbecb | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-04T11:04:01Z | prewarm | 141.179 | 1007.628 | 43.498 | 7.45 | 0 | cbb18ff84 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:03:09Z | gate-commit | 46.823 | 105.047 | 30.833 | 2.90 | 0 | b88fc4147 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:03:56Z | gate-commit | 34.789 | 60.416 | 12.740 | 2.10 | 0 | b88fc4147 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:10:43Z | gate-commit | 39.892 | 72.464 | 16.433 | 2.23 | 0 | b88fc4147 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:36:58Z | rebaseline | 456.922 | 470.901 | 18.722 | 1.07 | 0 | 038f06323 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:42:26Z | gate-commit | 131.406 | 290.122 | 36.686 | 2.49 | 0 | 038f06323 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:55:03Z | quick | 36.141 | 44.670 | 17.629 | 1.72 | 0 | 307f3eafc | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T12:57:02Z | gate-commit | 101.763 | 381.035 | 45.032 | 4.19 | 0 | 307f3eafc | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T13:22:23Z | rebaseline | 241.712 | 446.943 | 17.088 | 1.92 | 0 | d6c835701 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T13:24:09Z | gate-commit | 28.815 | 28.871 | 2.579 | 1.09 | 0 | d6c835701 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T13:26:02Z | gate-commit | 81.683 | 197.701 | 29.152 | 2.78 | 0 | d6c835701 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T13:53:32Z | rebaseline | 188.257 | 434.594 | 16.403 | 2.40 | 0 | c6d8118d2 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T14:04:48Z | gate-commit | 55.828 | 90.265 | 28.896 | 2.13 | 0 | c6d8118d2 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T14:23:52Z | rebaseline | 160.449 | 424.537 | 17.473 | 2.75 | 0 | 57c53d6c2 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T14:27:20Z | gate-commit | 58.587 | 150.404 | 32.613 | 3.12 | 0 | 57c53d6c2 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T15:14:14Z | rebaseline | 202.195 | 420.198 | 17.426 | 2.16 | 0 | 3f5a4c828 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T16:01:45Z | gate-commit | 44.830 | 65.538 | 17.336 | 1.85 | 0 | 3f5a4c828 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T17:04:36Z | gate-commit | 65.364 | 76.464 | 18.369 | 1.45 | 0 | 479e65276 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T17:06:36Z | gate-commit | 51.347 | 69.427 | 16.793 | 1.68 | 0 | 479e65276 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T18:04:39Z | rebaseline | 188.648 | 396.606 | 18.356 | 2.20 | 0 | cb91e0f10 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T18:07:32Z | gate-commit | 51.330 | 92.822 | 32.949 | 2.45 | 0 | cb91e0f10 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T18:11:18Z | gate-commit | 35.210 | 63.565 | 17.095 | 2.29 | 0 | cb91e0f10 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T18:24:32Z | gate-commit | 35.352 | 66.245 | 17.234 | 2.36 | 0 | aa21be5fc | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T20:46:42Z | gate-commit | 45.119 | 63.345 | 16.737 | 1.77 | 0 | aa21be5fc | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T21:57:04Z | gate-commit | 28.845 | 31.646 | 6.217 | 1.31 | 0 | 4fbd64816 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T21:58:17Z | gate-commit | 48.645 | 160.980 | 28.455 | 3.89 | 0 | 4fbd64816 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T22:04:47Z | gate-commit | 32.785 | 62.288 | 16.441 | 2.40 | 0 | 4fbd64816 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T22:14:12Z | gate-commit | 27.902 | 30.882 | 6.151 | 1.33 | 0 | 7613d00c8 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-04T22:16:22Z | gate-commit | 47.286 | 117.204 | 32.335 | 3.16 | 0 | 7613d00c8 | campaign/the-tenon | MacBookPro | 10 |
 | 2026-09-04T10:43:29Z | rebaseline | 248.724 | 461.300 | 19.080 | 1.93 | 0 | bdff978d4 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T10:46:32Z | gate-commit | 131.262 | 565.214 | 82.960 | 4.94 | 0 | bdff978d4 | campaign/the-weft | MacBookPro | 10 |
 | 2026-09-04T11:14:42Z | gate-commit | 57.161 | 70.845 | 15.347 | 1.51 | 0 | c09338531 | campaign/the-weft | MacBookPro | 10 |
@@ -5808,6 +5837,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T03:58:00Z | gate-commit | 370.535 | 969.622 | 110.442 | 2.91 | 0 | 1310c9aa9 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-05T04:06:37Z | gate-commit | 94.490 | 78.752 | 18.450 | 1.03 | 0 | 1310c9aa9 | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-05T04:09:35Z | gate-commit | 41.938 | 71.607 | 15.700 | 2.08 | 0 | ae246efd2 | campaign/the-kerf | MacBookPro | 10 |
+| 2026-09-05T02:52:48Z | rebaseline | 259.807 | 440.917 | 20.730 | 1.78 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:02:55Z | gate-commit | 151.180 | 724.510 | 94.188 | 5.42 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:07:27Z | gate-commit | 49.411 | 73.937 | 32.916 | 2.16 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:09:01Z | gate-commit | 49.932 | 88.931 | 34.945 | 2.48 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T03:16:04Z | gate-commit | 34.139 | 62.639 | 16.810 | 2.33 | 0 | 7f8026339 | campaign/the-tenon | MacBookPro | 10 |
 | 2026-09-05T04:06:55Z | rebaseline | 251.625 | 464.512 | 21.090 | 1.93 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T04:07:54Z | gate-commit | 36.640 | 53.543 | 12.652 | 1.81 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T04:09:07Z | gate-commit | 37.139 | 63.144 | 16.620 | 2.15 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
@@ -5857,6 +5891,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T17:22:43Z | prewarm | 623.679 | 1577.590 | 64.250 | 2.63 | 0 | 4f303d3b0 | codex/federation-next | MacBookPro | 10 |
 | 2026-09-05T18:15:25Z | gate-commit | 99.504 | 127.226 | 24.972 | 1.53 | 0 | 9e4a0c9b3 | codex/federation-next | MacBookPro | 10 |
 | 2026-09-05T18:14:07Z | prewarm | 312.064 | 1480.541 | 55.554 | 4.92 | 0 | 1e248b2c9 | codex/counterpart-checker | MacBookPro | 10 |
+| 2026-09-05T18:17:03Z | gate-commit | 74.528 | 143.080 | 36.374 | 2.41 | 0 | 4f303d3b0 | tooling/mouth-cross-candidate | lefford | 40 |
 | 2026-09-05T17:12:02Z | rebaseline | 185.824 | 445.069 | 20.287 | 2.50 | 0 | ac2d2240f | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-05T17:16:39Z | gate-commit | 268.751 | 109.953 | 48.389 | 0.59 | 0 | ac2d2240f | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-05T17:20:50Z | gate-commit | 247.103 | 78.107 | 18.606 | 0.39 | 0 | 81f49bcdf | campaign/the-kerf | MacBookPro | 10 |
@@ -5870,3 +5905,16 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T18:34:05Z | prewarm | 359.107 | 1473.723 | 54.764 | 4.26 | 0 | 5cc62d8b6 | codex/counterpart-settlement | MacBookPro | 10 |
 | 2026-09-05T19:08:27Z | prewarm | 409.902 | 1502.520 | 56.449 | 3.80 | 0 | 83837ff49 | codex/counterpart-diagnostic | MacBookPro | 10 |
 | 2026-09-05T19:15:23Z | gate-commit | 91.809 | 126.427 | 23.371 | 1.63 | 0 | 2715e5ca2 | codex/counterpart-diagnostic | MacBookPro | 10 |
+| 2026-09-05T17:27:43Z | rebaseline | 946.825 | 455.099 | 19.029 | 0.50 | 0 | ba99547f5 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T17:31:43Z | gate-commit | 204.669 | 108.189 | 61.592 | 0.83 | 0 | ba99547f5 | campaign/the-tenon | MacBookPro | 10 |
+| 2026-09-05T19:04:05Z | sluice:artifacts | 298.420 | 1666.464 | 69.553 | 5.82 | 0 | d72a66677 |  | lefford | 40 |
+| 2026-09-05T19:05:51Z | sluice:outboard | 105.308 | 116.558 | 89.914 | 1.96 | 0 | ec36c85b9 |  | lefford | 40 |
+| 2026-09-05T19:19:26Z | sluice:gate | 815.074 | 21230.788 | 598.024 | 26.78 | 0 | 673531647 |  | lefford | 40 |
+| 2026-09-05T19:22:07Z | sluice:clients | 160.660 | 2254.317 | 217.738 | 15.39 | 0 | d39ac21b7 |  | lefford | 40 |
+| 2026-09-05T19:29:29Z | sluice:heavy | 441.773 | 10136.558 | 164.382 | 23.32 | 0 | 394d17eb1 |  | lefford | 40 |
+| 2026-09-05T14:38:37Z | gate-commit | 76.449 | 159.350 | 48.653 | 2.72 | 0 | d17645ea5 | tooling/census-study-split | lefford | 40 |
+| 2026-09-05T19:48:28Z | sluice:artifacts | 224.633 | 969.851 | 26.215 | 4.43 | 0 | 7c8bf0f2b |  | lefford | 40 |
+| 2026-09-05T19:49:50Z | sluice:outboard | 81.192 | 62.943 | 66.388 | 1.59 | 0 | e24dc7b4f |  | lefford | 40 |
+| 2026-09-05T20:02:21Z | sluice:gate | 750.759 | 20193.252 | 516.603 | 27.59 | 0 | f183bdf06 |  | lefford | 40 |
+| 2026-09-05T20:04:41Z | sluice:clients | 139.584 | 2103.771 | 152.760 | 16.17 | 0 | 8af37a4c4 |  | lefford | 40 |
+| 2026-09-05T20:12:27Z | sluice:heavy | 465.801 | 10174.053 | 154.601 | 22.17 | 0 | b7a9f5399 |  | lefford | 40 |
