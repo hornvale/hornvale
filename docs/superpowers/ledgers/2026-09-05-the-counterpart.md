@@ -725,3 +725,29 @@ the acceptance wait. No further material change emerged.
 **Cost if wrong:** discard/requalify a challenge if the frozen instrument needs
 revision; original identities and attempts remain, and no admission moves.
 **Capture:** this ledger, task brief and retrospective scheduling account.
+
+## Diagnostic attempt 1 — merge conflict, no assay
+
+Request `req-0c6a920898c2-20260905T191704Z` stopped rc10 after3 s at the
+merge step, before any phase or experiment observation. The sole conflict
+was hand-authored `docs/audits/campaign-reconciliation.tsv`; the mouth
+had called it artifacts-authored from an older declaration, while the
+chamber's merge product correctly refused regeneration. Exact short log
+is retained in `evidence/controller/diagnostic-attempt-1.log`. This is a
+transport failure outside the assay denominator, not a failed source arm.
+
+Refreshed main `a8bde676913dce3b668f9b305d2449c3985ad2eb` includes The Tenon and the queue's own
+subsequent fix for this same stale-input classification. Read the Tenon
+chronicle and the actual source/queue diffs. The Tenon adds bracken, ledge
+and rushes to live Thing rosters; the frozen specimen base remains
+`5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd`. No experiment object is reauthored
+to follow main. Controller absorption at `79696c5bc73f9dc31e45be466dede08251f552b3` retained both
+Counterpart rows and the Tenon row; exact ten-column shape and unique keys
+were verified. The ordinary merge gate passed all three chunks,179.442 s.
+
+The independently landed queue correction demonstrates why a shared function
+does not imply shared inputs: two callers read different authorship records.
+It is live contextual evidence already fixed upstream, outside the frozen
+finite panel and no estimate of natural fault frequency. Preserve it in the
+retrospective under the existing provenance/epistemology follow-up homes.
+No new campaign mechanism or selection authority is introduced by this repair.
