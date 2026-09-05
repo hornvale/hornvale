@@ -5959,6 +5959,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T20:02:21Z | sluice:gate | 750.759 | 20193.252 | 516.603 | 27.59 | 0 | f183bdf06 |  | lefford | 40 |
 | 2026-09-05T20:04:41Z | sluice:clients | 139.584 | 2103.771 | 152.760 | 16.17 | 0 | 8af37a4c4 |  | lefford | 40 |
 | 2026-09-05T20:12:27Z | sluice:heavy | 465.801 | 10174.053 | 154.601 | 22.17 | 0 | b7a9f5399 |  | lefford | 40 |
+| 2026-09-05T19:44:15Z | gate-commit | 144.188 | 1443.007 | 162.509 | 11.13 | 0 | 1027e3a7b | tooling/mouth-cross-candidate | lefford | 40 |
+| 2026-09-05T20:26:25Z | gate-commit | 82.667 | 173.634 | 53.403 | 2.75 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
+| 2026-09-05T20:28:04Z | gate-commit | 74.245 | 154.117 | 44.269 | 2.67 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
+| 2026-09-05T20:30:54Z | gate-commit | 153.006 | 181.351 | 35.741 | 1.42 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
+| 2026-09-05T21:15:47Z | gate-commit | 68.341 | 153.065 | 44.016 | 2.88 | 0 | 0b8b0cfe4 | tooling/claim-refuses-running-sha | lefford | 40 |
 | 2026-09-05T19:38:16Z | rebaseline | 391.966 | 455.279 | 18.474 | 1.21 | 0 | 44fb56100 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-05T19:42:06Z | gate-commit | 149.588 | 445.164 | 52.017 | 3.32 | 0 | 44fb56100 | campaign/the-zenith | MacBookPro | 10 |
 | 2026-09-05T20:25:45Z | sluice:artifacts | 312.568 | 1980.759 | 79.646 | 6.59 | 0 | 52c53d78f |  | lefford | 40 |
@@ -5966,3 +5971,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T20:41:14Z | sluice:gate | 825.258 | 21787.432 | 612.169 | 27.14 | 0 | f89570edd |  | lefford | 40 |
 | 2026-09-05T20:43:58Z | sluice:clients | 163.755 | 2295.989 | 214.149 | 15.33 | 0 | fde6418d6 |  | lefford | 40 |
 | 2026-09-05T20:51:49Z | sluice:heavy | 470.334 | 10251.012 | 171.545 | 22.16 | 0 | 3af4fe0af |  | lefford | 40 |
+| 2026-09-05T21:24:50Z | gate-commit | 164.081 | 2081.393 | 184.214 | 13.81 | 0 | 41fa6636d | tooling/claim-refuses-running-sha | lefford | 40 |
+| 2026-09-05T21:37:24Z | gate-commit | 72.582 | 158.012 | 45.545 | 2.80 | 0 | 62440c78d | tooling/claim-refuses-running-sha | lefford | 40 |
