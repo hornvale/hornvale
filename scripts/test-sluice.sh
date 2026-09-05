@@ -3208,6 +3208,26 @@ fi
 # queue would not have stopped it. Runs the real script — the claim check sits
 # above the box lock and the worktree, so the refusal is cheap and touches
 # nothing.
+# RE-ESTABLISH THE SCRATCH REPO'S COPY OF sluice-queue.sh, AND ASSERT IT.
+# The copy made at setup is UNTRACKED in $chamber_repo, and between there and
+# here this suite's own chamber tests run a real chamber against that same
+# scratch repo — and sluice-run.sh does `git clean -fd` between phases
+# (scripts/sluice-run.sh:649), which deletes exactly this file. That made T7/T8
+# ORDER-DEPENDENT: they passed in one merge (219/0) and failed in the very next
+# candidate's (217/2), blocking an innocent campaign at `outboard`. A flaky test
+# in `outboard` blocks every merge, which is worse than the defect T7/T8 guard.
+#
+# The assertion is the load-bearing half. Without it a missing script makes
+# sluice-run.sh take its "could not reach the queue" arm, proceed into real git
+# work and die 128 — which reads like a broken guard instead of a missing file,
+# and cost an hour of misattribution the first time.
+cp "$repo_root/scripts/sluice-queue.sh" "$chamber_repo/scripts/sluice-queue.sh"
+if [ -s "$chamber_repo/scripts/sluice-queue.sh" ]; then
+    ok "the scratch chamber repo carries sluice-queue.sh (T7/T8 below can mean something)"
+else
+    bad "the scratch chamber repo has NO sluice-queue.sh — T7/T8 below would report a fake rc=128"
+fi
+
 echo "== sluice-run: refuses a ref another run already holds"
 : > "$CQ"
 row hhh campaign/h hhhhhhhhhhhh running merge >> "$CQ"
@@ -3221,7 +3241,7 @@ set +e
 # reported rc=0 and LANDED while main received only the pre-merge tree's
 # artifact regens. The blast-radius guard at the end of this file exists to
 # catch a recurrence.
-runout="$(HV_SLUICE_DIR="$cdir" bash "$repo_root/scripts/sluice-run.sh" \
+runout="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED bash "$repo_root/scripts/sluice-run.sh" \
     campaign/h hhhhhhhhhhhh merge 2>&1)"
 runrc=$?
 set -e
@@ -3238,7 +3258,7 @@ fi
 : > "$CQ"
 row iii campaign/i iiiiiiiiiiii queued merge >> "$CQ"
 set +e
-adhoc="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
+adhoc="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
     campaign/zzz 999999999999 merge 2>&1)"
 set -e
 if printf '%s' "$adhoc" | grep -q "AD HOC"; then
