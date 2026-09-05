@@ -5771,3 +5771,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T02:27:58Z | sluice:heavy | 465.431 | 10068.505 | 180.966 | 22.02 | 0 | 7b50bfe7f |  | lefford | 40 |
 | 2026-09-05T03:59:10Z | gate-commit | 77.295 | 65.509 | 13.191 | 1.02 | 0 | 3007f164c | campaign/the-warp | MacBookPro | 10 |
 | 2026-09-05T04:01:10Z | gate-commit | 39.693 | 70.937 | 16.504 | 2.20 | 0 | 3007f164c | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T13:51:21Z | gate-commit | 26.771 | 25.700 | 0.680 | 0.99 | 0 | d28413af2 | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T13:53:04Z | gate-commit | 88.415 | 283.754 | 34.009 | 3.59 | 0 | d28413af2 | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T13:56:05Z | gate-commit | 59.180 | 102.840 | 37.780 | 2.38 | 0 | d28413af2 | campaign/the-warp | MacBookPro | 10 |

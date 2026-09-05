@@ -119,6 +119,7 @@ pub mod traversal;
 pub mod underworld_readout;
 pub mod vestige;
 pub mod volcano;
+pub mod warp;
 pub mod weft;
 pub use ablation::ChannelMask;
 pub use character::{
@@ -176,6 +177,10 @@ pub use vestige::{
     vestige_from_occupation, vestiges_at, vestiges_field,
 };
 pub use volcano::{EruptionStyle, Volcano, volcano_at, volcano_name};
+pub use warp::{
+    MICRO_WORD_THRESHOLD, STEEP_HI, STEEP_LO, Steepness, Wetness, rock_word, steepness_sign,
+    steepness_word, wetness_sign,
+};
 pub use weft::{
     WeftFeature, WeftKey, WeftKind, WeftWindow, all_features_at_cached, features_at_cached, occurs,
     prevalence, prevalence_with_weights,
