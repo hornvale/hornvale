@@ -1292,33 +1292,13 @@ fn run(
     // The world's real settlement-territory set, for the fatigue probe's own
     // terrain only (fix round 1, Important 4) — see `probe_fatigue_us`.
     let built_set = hornvale_vessel::liveness::built_rooms(world, ctx);
-    // The four predicates the NPC drive stack writes -- copied from
-    // `agent_scaling.rs`, which copied them from `Session::start`.
-    for (pred, doc) in [
-        (
-            hornvale_vessel::liveness::AGENT_AT,
-            "an agent's position on a day",
-        ),
-        (
-            hornvale_vessel::liveness::DRANK,
-            "an agent satisfied its sustenance goal",
-        ),
-        (
-            hornvale_vessel::liveness::RESTED,
-            "an agent rested on a day, for this many ticks",
-        ),
-        (
-            hornvale_vessel::liveness::SLEPT,
-            "an agent slept on a day, for this many ticks",
-        ),
-        (
-            hornvale_vessel::liveness::EATEN,
-            "an agent ate (eased its hunger) on a day",
-        ),
-    ] {
+    // The drive predicates the NPC stack writes -- the one published roster
+    // (The Culvert), consumed here rather than hand-copied, which is what let
+    // this bench go stale by one predicate (`slept-on`) for two days.
+    for (pred, doc) in hornvale_vessel::liveness::DRIVE_PREDICATES {
         registry
             .register_predicate(pred, false, doc)
-            .expect("these four predicates register identically every run");
+            .expect("every DRIVE_PREDICATES entry registers identically every run");
     }
 
     let npcs = derive_npcs(world, ctx, &mut ledger, AGENTS, home_settlement);

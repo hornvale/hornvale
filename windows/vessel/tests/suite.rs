@@ -115,6 +115,8 @@ mod tableau;
 mod testimony;
 #[path = "suite/the_blocking.rs"]
 mod the_blocking;
+#[path = "suite/the_culvert.rs"]
+mod the_culvert;
 #[path = "suite/the_detent.rs"]
 mod the_detent;
 #[path = "suite/the_first_mark.rs"]

@@ -2800,6 +2800,40 @@ pub const SLEPT: &str = "slept";
 /// type-audit: bare-ok(identifier-text)
 pub const SLEPT_ON: &str = "slept-on";
 
+/// Every game-layer predicate the drive stack commits, with the doc string it
+/// registers under, in registration order — the ONE list, published so that
+/// `Session::start` and the benches consume it instead of each writing their
+/// own copy.
+///
+/// **Why this exists.** The list used to be written out three times in three
+/// spellings: `Session::start`'s chained `register_predicate` block, and a
+/// hand-copied subset in each of two `examples/` benches. When The Pallet added
+/// [`SLEPT_ON`] on 2026-09-03 it updated the session and neither bench, and both
+/// benches panicked with `UnknownPredicate` for two days across two merged
+/// campaigns — invisible to every gate, because `--all-targets` COMPILES an
+/// example and nothing RUNS one. `session.rs`'s own field doc had already
+/// recorded that this roster "has already gone stale three predicates in a
+/// row"; this is that observation given a mechanism.
+///
+/// **Scope: the DRIVE predicates only.** `Session::start` also registers the
+/// thing-layer predicates (`LOCATED_IN`, `OPENNESS`, `LOCKEDNESS`), which no
+/// bench needs and which are not this roster's business. It registers those
+/// beside this list, not from it.
+///
+/// Every predicate here is registered PER SESSION, never at genesis (spec §3).
+/// type-audit: bare-ok(identifier-text)
+pub const DRIVE_PREDICATES: &[(&str, &str)] = &[
+    (AGENT_AT, "an agent's position on a day"),
+    (DRANK, "an agent satisfied its sustenance goal"),
+    (RESTED, "an agent rested on a day, for this many ticks"),
+    (SLEPT, "an agent slept on a day, for this many ticks"),
+    (
+        SLEPT_ON,
+        "the kind of anchor an agent slept on, within the room it slept in",
+    ),
+    (EATEN, "an agent ate (eased its hunger) on a day"),
+];
+
 /// The solar-altitude band (degrees around the horizon) a CREPUSCULAR creature
 /// is awake in — dawn and dusk, when the sun is near the horizon (civil
 /// twilight). Diurnal wakes above it, nocturnal below (The Slumber Tier-1).

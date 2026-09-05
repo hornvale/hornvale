@@ -334,46 +334,16 @@ fn run_rung(
 ) -> Row {
     let mut ledger = world.ledger.clone();
     let mut registry = world.registry.clone();
-    // The four predicates the NPC drive stack actually writes — copied
-    // verbatim from `Session::start`'s own registration block (`session.rs`
-    // ~652-671). `DISPOSITION_SHIFT`/`TURNED_HOSTILE` are player-possession
-    // predicates with no NPC-drive writer, so this bench (no possessed
-    // player) never needs them.
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::AGENT_AT,
-            false,
-            "an agent's position on a day",
-        )
-        .expect("AGENT_AT registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::DRANK,
-            false,
-            "an agent satisfied its sustenance goal",
-        )
-        .expect("DRANK registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::RESTED,
-            false,
-            "an agent rested on a day, for this many ticks",
-        )
-        .expect("RESTED registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::SLEPT,
-            false,
-            "an agent slept on a day, for this many ticks",
-        )
-        .expect("SLEPT registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::EATEN,
-            false,
-            "an agent ate (eased its hunger) on a day",
-        )
-        .expect("EATEN registers identically every run");
+    // The drive predicates the NPC stack actually writes — the one published
+    // roster (The Culvert), consumed here rather than hand-copied.
+    // `DISPOSITION_SHIFT`/`TURNED_HOSTILE` are player-possession predicates
+    // with no NPC-drive writer, so this bench (no possessed player) never
+    // needs them.
+    for (pred, doc) in hornvale_vessel::liveness::DRIVE_PREDICATES {
+        registry
+            .register_predicate(pred, false, doc)
+            .expect("every DRIVE_PREDICATES entry registers identically every run");
+    }
 
     let npcs = derive_npcs(world, ctx, &mut ledger, agents, home_settlement);
     let n = npcs.len();

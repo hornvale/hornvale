@@ -9,10 +9,10 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
-    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
-    derive_wild_herds, renders_unconscious, settlement_room_index, slept_fact, slept_on_fact,
-    species_activity, village_or_fallback,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
+    act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs, derive_wild_herds,
+    renders_unconscious, settlement_room_index, slept_fact, slept_on_fact, species_activity,
+    village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -957,9 +957,10 @@ pub struct Session<'w> {
     /// which also RETIRED `PASSAGE_CLEARED` from this list), and the
     /// drive/needs predicates beside
     /// them — every one registered per-session, never at genesis (spec §3).
-    /// The roster is `Session::start`'s own `register_predicate` block, which
-    /// is where a reader should look rather than trusting this list to stay
-    /// exhaustive; it has already gone stale three predicates in a row.
+    /// The drive-predicate roster is `liveness::DRIVE_PREDICATES`, which is
+    /// where a reader should look — it is the one published list
+    /// `Session::start` and both `examples/` benches all consume (The
+    /// Culvert), so it cannot go stale in exactly one of its readers again.
     registry: ConceptRegistry,
     /// Whose eyes the possession's chart is coloured through (The Beholding,
     /// Task 4), carried from `PossessOpts::eyes`.
@@ -1589,11 +1590,16 @@ impl<'w> Session<'w> {
         check_species_known(world, &village)?;
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
-        // Idempotent (same def every session): never conflicts, since
-        // AGENT_AT is never registered at genesis (spec §3).
-        registry
-            .register_predicate(AGENT_AT, false, "an agent's position on a day")
-            .expect("AGENT_AT registers identically every session");
+        // Idempotent (same def every session): never conflicts, since the
+        // drive predicates are never registered at genesis (spec §3). The
+        // full roster — AGENT_AT plus the needs predicates registered further
+        // below — is `liveness::DRIVE_PREDICATES` (The Culvert), the one
+        // published list `Session::start` and both `examples/` benches share.
+        for (name, doc) in crate::liveness::DRIVE_PREDICATES {
+            registry
+                .register_predicate(name, false, doc)
+                .expect("every DRIVE_PREDICATES entry registers identically every session");
+        }
         // PASSAGE_CLEARED USED TO BE REGISTERED HERE, and its registration is
         // gone rather than kept as a compatibility stub (The Chattel, Task 8;
         // decision 0396 supersedes 0367). A cave mouth is a thing now, and the
@@ -1646,36 +1652,6 @@ impl<'w> Session<'w> {
                 crate::thing::LOCKEDNESS_DOC,
             )
             .expect("LOCKEDNESS registers identically every session");
-        // Idempotent (same def every session): never conflicts, since DRANK
-        // is never registered at genesis either (spec §3).
-        registry
-            .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
-            .expect("DRANK registers identically every session");
-        registry
-            .register_predicate(
-                RESTED,
-                false,
-                "an agent rested on a day, for this many ticks",
-            )
-            .expect("RESTED registers identically every session");
-        registry
-            .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
-            .expect("SLEPT registers identically every session");
-        // The site half (The Pallet, Task 3): which KIND of anchor a sleep
-        // landed on, in the room `SLEPT` above already dates. Registered on
-        // the same terms — by the session, not at genesis — for the same
-        // reason: `slept-on` did not exist before this campaign, so no
-        // committed world can already disagree with this definition.
-        registry
-            .register_predicate(
-                SLEPT_ON,
-                false,
-                "the kind of anchor an agent slept on, within the room it slept in",
-            )
-            .expect("SLEPT_ON registers identically every session");
-        registry
-            .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
-            .expect("EATEN registers identically every session");
         // The player's disposition mark — the first player-authored predicate.
         // Non-functional (a subject may be provoked and later soothed; each is
         // one dated fact). Additive: registering a new predicate perturbs
@@ -11210,6 +11186,7 @@ fn parse_compass(s: &str) -> Option<Compass> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::liveness::SLEPT_ON;
 
     /// **[`COMPASS_ROSE`] and `Compass::all()` must agree, and nothing asserted
     /// it until the Task 11 fix round.** `describe_here` zips this constant
