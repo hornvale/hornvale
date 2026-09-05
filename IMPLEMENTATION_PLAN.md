@@ -18,4 +18,5 @@ Detailed plan: [implementation plan](docs/superpowers/plans/2026-09-05-the-count
 **Goal**: Frozen reserved challenge, supported-host evidence, independent replay and reviewable findings.
 **Success Criteria**: Original misses retained; primary/comparative results separated; reviewed final stage/census receipts and G6 package ready.
 **Tests**: Reserved real-source challenge, Mac/Linux CLI qualification, independent replay, focused final checks and canonical stage gate.
-**Status**: Not Started
+**Status**: In Progress
+Independent reserved authorship is complete; formal scoring waits for Stage 2.
