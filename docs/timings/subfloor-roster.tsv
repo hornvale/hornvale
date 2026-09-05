@@ -2030,6 +2030,10 @@ hornvale-lot::suite$shape::a_community_that_died_before_plateau_is_a_triangle
 hornvale-lot::suite$shape::epoch_years_matches_the_bakes_own_default
 hornvale-lot::suite$shape::every_seed_42_occupation_reconstructs_to_its_committed_integral
 hornvale-lot::suite$shape::rise_then_plateau_has_the_committed_area_and_peak
+hornvale-lot::suite$slots::every_slot_is_asked_and_by_design_silences_are_declared
+hornvale-lot::suite$slots::every_cited_fact_names_a_registered_predicate
+hornvale-lot::suite$slots::the_by_design_silences_are_exactly_the_specs_four
+hornvale-lot::suite$slots::the_per_slot_fill_counts_are_printed
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::genesis_commits_the_frost_retreat_and_maximum
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::register_is_idempotent
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::zero_ice_world_records_no_frost_retreat

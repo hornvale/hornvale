@@ -11,6 +11,7 @@ pub mod context;
 pub mod draw;
 pub mod hazard;
 pub mod shape;
+pub mod slots;
 
 use hornvale_kernel::Vertex;
 

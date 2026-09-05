@@ -23,3 +23,23 @@ hornvale-species = { path = "../../domains/species" }
 # directly), so this crate needs the same edge to NAME the type
 # `LotContext::terrain` stores.
 hornvale-terrain = { path = "../../domains/terrain" }
+# The story's slots (`slots.rs`) ask the ledger every question spec §5 lists,
+# so this window reads the domains that hold those answers directly rather
+# than through a re-derivation: settlements (the `where` slot's name,
+# coordinates and biome, and the vertex→settlement inversion the context
+# builds), religion (`belief`), culture (`subsistence`/`standing`), and
+# language (the `name` slot's `Namer`). A window depending on a domain is
+# what `cli/tests/suite/architecture.rs` permits; a window depending on
+# another window is permitted too, which is what the next two are.
+hornvale-settlement = { path = "../../domains/settlement" }
+hornvale-religion = { path = "../../domains/religion" }
+hornvale-culture = { path = "../../domains/culture" }
+hornvale-language = { path = "../../domains/language" }
+hornvale-astronomy = { path = "../../domains/astronomy" }
+# `held-true` is a hearsay read: what the community HELD, not what happened.
+hornvale-hearsay = { path = "../hearsay" }
+# `dwelling` needs the occupation-scoped flesh seed, and there is exactly one
+# place the `history/flesh/v2` derivation is spelled out
+# (`hornvale_almanac::history::flesh_seed_for`). A second copy of a
+# save-format derivation is how two decoders drift apart.
+hornvale-almanac = { path = "../almanac" }

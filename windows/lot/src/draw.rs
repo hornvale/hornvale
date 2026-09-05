@@ -92,17 +92,6 @@ fn births_at(ctx: &LotContext, occ: usize, year: f64) -> f64 {
     p.births_per_year * population_at(&p.shape, year)
 }
 
-/// Latitude/longitude of a Geosphere vertex, degrees — the formula
-/// `domains/terrain/src/channel.rs`'s `lat_lon` uses, applied to the
-/// context's own rebuilt terrain (no accessor on `Geosphere` gives this
-/// directly).
-fn lat_lon_of(ctx: &LotContext, v: Vertex) -> (f64, f64) {
-    let p = ctx.terrain.geosphere().position(v);
-    let lat = hornvale_kernel::math::asin(p[2].clamp(-1.0, 1.0)).to_degrees();
-    let lon = hornvale_kernel::math::atan2(p[1], p[0]).to_degrees();
-    (lat, lon)
-}
-
 /// Whether occupation `occ` is alive (founded, not yet ended) at `year`.
 fn alive_at(ctx: &LotContext, occ: usize, year: f64) -> bool {
     let r = &ctx.occupations[occ].record;
@@ -350,7 +339,7 @@ pub fn places(ctx: &LotContext, year: f64) -> Vec<Place> {
         .enumerate()
         .filter(|(o, _)| alive_at(ctx, *o, year) && births_at(ctx, *o, year) > 0.0)
         .map(|(occ, p)| {
-            let (latitude, longitude) = lat_lon_of(ctx, p.record.core.site);
+            let (latitude, longitude) = ctx.lat_lon(p.record.core.site);
             Place {
                 occ,
                 entity: p.record.id,

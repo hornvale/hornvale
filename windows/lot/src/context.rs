@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 
 use hornvale_history::record::Founding;
-use hornvale_kernel::{EntityId, World};
+use hornvale_kernel::{EntityId, Value, Vertex, World};
 
 use crate::LotError;
 use crate::hazard::{Hazard, e0};
@@ -62,6 +62,20 @@ pub struct LotContext {
     pub terrain: hornvale_terrain::GeneratedTerrain,
     /// The composition root's registries (names, minds, societies).
     pub components: hornvale_worldgen::WorldComponents,
+    /// Every settlement standing on each Geosphere vertex, in
+    /// `all_settlements` (commit) order — the inversion of the settlements'
+    /// own [`hornvale_settlement::VERTEX_ID`] facts. A vertex may hold more
+    /// than one settlement (successive peoples at one site), so this is a
+    /// `Vec`, never a single id; [`crate::slots`] picks the one whose people
+    /// matches the lot's.
+    pub settlements_by_vertex: BTreeMap<Vertex, Vec<EntityId>>,
+    /// The founding tree, read once out of the ledger — what the
+    /// `held-true` slot's hearsay walk needs.
+    pub lineage: hornvale_hearsay::lineage::Lineage,
+    /// The world's generated star system and its derived calendar, or
+    /// `None` for a tier-0 constant sun, which has no cycles and therefore
+    /// no eclipses for the `sky` slot to count.
+    pub sky: Option<(hornvale_astronomy::StarSystem, hornvale_astronomy::Calendar)>,
     /// Births per whole year, summed over every occupation and sampled at
     /// each year's midpoint (`start_year + k + 0.5`). Precomputed once here
     /// so [`crate::draw::draw`]'s unpinned birth-year pick reads a table
@@ -84,6 +98,20 @@ impl LotContext {
     /// type-audit: bare-ok(count: return)
     pub fn births_cdf(&self) -> &[f64] {
         &self.births_cdf
+    }
+
+    /// Latitude/longitude of a Geosphere vertex, in degrees — the formula
+    /// `domains/terrain/src/channel.rs`'s `lat_lon` uses, applied to this
+    /// context's own rebuilt terrain (no accessor on `Geosphere` gives it
+    /// directly). Public because both the draw's `places` listing and the
+    /// story's `where`/`sky` slots need it, and a second copy of a
+    /// coordinate convention is how two renderings of one site drift apart.
+    /// type-audit: bare-ok(count: return)
+    pub fn lat_lon(&self, vertex: Vertex) -> (f64, f64) {
+        let position = self.terrain.geosphere().position(vertex);
+        let latitude = hornvale_kernel::math::asin(position[2].clamp(-1.0, 1.0)).to_degrees();
+        let longitude = hornvale_kernel::math::atan2(position[1], position[0]).to_degrees();
+        (latitude, longitude)
     }
 }
 
@@ -227,6 +255,36 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         births_cdf.push(acc);
     }
 
+    // The vertex→settlements inversion, read off the settlements' own
+    // `hornvale_settlement::VERTEX_ID` facts. Commit order is preserved, so
+    // element 0 of a shared vertex is the earliest-committed settlement
+    // there.
+    let mut settlements_by_vertex: BTreeMap<Vertex, Vec<EntityId>> = BTreeMap::new();
+    for village in hornvale_settlement::all_settlements(world) {
+        if let Some(Value::Number(n)) = world
+            .ledger
+            .value_of(village.id, hornvale_settlement::VERTEX_ID)
+        {
+            settlements_by_vertex
+                .entry(Vertex(*n as u32))
+                .or_default()
+                .push(village.id);
+        }
+    }
+
+    let lineage = hornvale_hearsay::lineage::lineage_of(&world.ledger);
+
+    // A tier-0 sky has no system and no calendar, so the `sky` slot has
+    // nothing to ask and says so rather than reporting zero eclipses — a
+    // zero would read as "they saw none", which is a different claim.
+    let sky = match hornvale_worldgen::sky_of(world) {
+        Ok(built) => match (built.system(), built.calendar()) {
+            (Some(system), Some(calendar)) => Some((system.clone(), calendar.clone())),
+            _ => None,
+        },
+        Err(e) => return Err(LotError::Build(e.to_string())),
+    };
+
     Ok(LotContext {
         seed: world.seed.0,
         start_year,
@@ -236,6 +294,9 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         by_entity,
         terrain,
         components: wc,
+        settlements_by_vertex,
+        lineage,
+        sky,
         births_by_year,
         births_cdf,
     })

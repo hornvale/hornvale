@@ -198,8 +198,15 @@ dependencies = [
 name = "hornvale-lot"
 version = "0.1.0"
 dependencies = [
+ "hornvale-almanac",
+ "hornvale-astronomy",
+ "hornvale-culture",
+ "hornvale-hearsay",
  "hornvale-history",
  "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-religion",
+ "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
  "hornvale-worldgen",

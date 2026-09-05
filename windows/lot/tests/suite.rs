@@ -5,3 +5,5 @@ mod draw;
 mod hazard;
 #[path = "suite/shape.rs"]
 mod shape;
+#[path = "suite/slots.rs"]
+mod slots;
