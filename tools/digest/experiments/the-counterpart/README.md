@@ -15,7 +15,8 @@ Charter measurement module. A separate checker author derives the four checks
 from this contract and actual raw facts; its [derivation and disclosures](checker-derivation.md) are retained separately. Later owner-record and specimen authors
 own their declared records and reconstructible specimens; the controller must
 record their identities and freeze commits before revealing the reserved
-compiling challenge. This foundation creates no specimens or checker logic.
+compiling challenge. The initial foundation supplied the observer and contract; later stages added
+the checker, specimens and replay runner described below.
 
 Material shared inputs are the approved Counterpart task brief and shared schema,
 `contract.json`, `domains/CLAUDE.md`, `domains/thing/src/lib.rs`,
@@ -110,6 +111,25 @@ Run focused checks without source compilation:
 python3 tools/digest/experiments/the-counterpart/run.py --self-test
 python3 tools/digest/experiments/the-counterpart/run.py --help
 ```
+
+Before an offline replay, prepare the complete locked dependency graph at the
+frozen source base in a fresh owned clone. The ordinary host build does not
+establish this prerequisite: the first Linux attempt stopped at metadata
+because `windows-link v0.2.1` was missing from its cache. That original
+[failed preparation](evidence/linux-preparation-failure/stage-receipt.json)
+contains zero builds or observations and remains retained.
+
+The reviewed stage-only transport uses the existing supervisor for a separate
+`cargo fetch --locked --manifest-path tools/digest/Cargo.toml`, records exact
+streams and costs, and verifies source/tree/input/lock identities before and
+after. Its [exact transport patch](evidence/dependency-preparation-mac/diagnostic-transport.patch)
+and [Mac preparation receipt](evidence/dependency-preparation-mac/qualification-receipt.json)
+are retained. The Mac qualification fetched successfully, then recorded the
+unchanged offline metadata command succeeding with 53 packages; it ran no
+specimen builds or observations. Linux qualification requires its own run.
+Preparation may access the registry; the subsequent assay remains offline.
+It uses the existing Cargo cache and does not provide a hermetic environment.
+Do not reuse an earlier failed output or remove its records when retrying.
 
 A full replay takes an immutable panel and creates a new owned directory:
 

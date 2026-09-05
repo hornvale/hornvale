@@ -904,3 +904,26 @@ pass; no behavioral result or admission privilege. Capture the missing-target
 cache lesson in the retrospective under the existing build-boundary/provenance
 homes. Resume the implementation author for the diagnostic-only repair and
 scoped review before resubmission.
+
+## Q11 repair — reviewed transport, canonical qualification pending
+
+Author commit `e6d96a5fc0603576ce3e20b25fa67fb3c41a93c5` on
+`codex/counterpart-prepared-diagnostic` adds 57 diagnostic-only lines after
+normal outboard checks, based on controller `226f145e5`. Its exact preparation
+body was exercised on the Mac: locked fetch0.150 s, unchanged offline full
+metadata0.184 s, both rc0, 53 packages including windows-link0.2.1. Source,
+tree and all declared input/lock hashes remained identical. Zero specimen
+builds or observations. Twenty-six exact preparation records, body, patch and
+receipts are archived under `evidence/dependency-preparation-mac/`; controller
+verified every archive member.
+
+Independent scoped spec/quality review passed with no findings, verifying
+exact committed/exercised body equality and original Linux failure retention.
+The review explicitly cannot verify Linux or full Task5/6 behavior yet. The
+normal script hook passed shell checks and 75 prose-subject tests; because that
+hook does not run the full commit gate for shell-only changes, the controller
+is running the explicit gate before submission. No frozen implementation,
+checker, rules, owner, panel or bundle bytes changed. The ordinary README now
+states the complete-graph preparation prerequisite and distinguishes the
+historical foundation from later package stages. No new Q arose in this
+scoped green review; Q11's recorded pass governs the repair.
