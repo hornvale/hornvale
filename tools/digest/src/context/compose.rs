@@ -73,21 +73,25 @@ pub fn compose(
     sorted.sort_by(|left, right| left.namespace.cmp(&right.namespace));
 
     let successful = sorted.iter().all(|contribution| {
-        contribution.requirements.iter().all(|requirement| {
-            let Evidence::Checked {
-                required_observations,
-            } = &requirement.evidence
-            else {
-                return true;
-            };
-            required_observations.iter().all(|required_id| {
-                contribution
-                    .observations
-                    .iter()
-                    .find(|observation| observation.id == *required_id)
-                    .is_some_and(|observation| observation.outcome == Outcome::Satisfied)
+        !contribution
+            .observations
+            .iter()
+            .any(|observation| observation.outcome == Outcome::Contradicted)
+            && contribution.requirements.iter().all(|requirement| {
+                let Evidence::Checked {
+                    required_observations,
+                } = &requirement.evidence
+                else {
+                    return true;
+                };
+                required_observations.iter().all(|required_id| {
+                    contribution
+                        .observations
+                        .iter()
+                        .find(|observation| observation.id == *required_id)
+                        .is_some_and(|observation| observation.outcome == Outcome::Satisfied)
+                })
             })
-        })
     });
 
     let mut markdown = String::from("# Digest context\n\n");
@@ -299,6 +303,19 @@ mod tests {
         }
     }
 
+    fn authored_fixture_with_optional_observation(outcome: Outcome) -> Contribution {
+        let mut contribution = authored_fixture_in("example.authored");
+        contribution.observations.push(Observation {
+            id: "example.authored:optional-check".into(),
+            method: "inspect an informative condition".into(),
+            subject: "docs/example".into(),
+            outcome,
+            details: "This observation is not required by a checked requirement.".into(),
+            requirements: vec![],
+        });
+        contribution
+    }
+
     #[test]
     fn report_separates_authored_content_observations_and_limits() {
         let contribution = checked_fixture_in("example.checked");
@@ -382,6 +399,36 @@ mod tests {
 
         assert!(report.successful);
         assert!(report.markdown.contains("Authored only (unchecked)"));
+    }
+
+    #[test]
+    fn optional_contradiction_makes_report_unsuccessful() {
+        let report = compose(
+            &CheckoutContext {
+                revision: "fixture".into(),
+                dirty: false,
+            },
+            &[authored_fixture_with_optional_observation(
+                Outcome::Contradicted,
+            )],
+        )
+        .unwrap();
+
+        assert!(!report.successful);
+    }
+
+    #[test]
+    fn optional_unknown_remains_informational() {
+        let report = compose(
+            &CheckoutContext {
+                revision: "fixture".into(),
+                dirty: false,
+            },
+            &[authored_fixture_with_optional_observation(Outcome::Unknown)],
+        )
+        .unwrap();
+
+        assert!(report.successful);
     }
 
     #[test]
