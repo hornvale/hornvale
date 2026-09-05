@@ -108,7 +108,8 @@
 //! cause anywhere in it is about 0.244, below the 0.35 its soft step opens
 //! at. Meanwhile the GRID band reads spring on one land facet in 75
 //! (0.013371). A regionally-clustered kind present at ~1.3% of locations is
-//! missed by 78 draws about a fifth of the time; the Weft's own recipe hid
+//! missed by 78 draws about a THIRD of the time (0.987^78 = 0.36); the
+//! Weft's own recipe hid
 //! that by giving every kind an unconditional noise floor. The H2 block in
 //! the test below asserts the absence exactly, so it cannot become a silent
 //! skip. The same measurement, from the other side, is in
@@ -346,11 +347,11 @@ fn the_preregistered_readout_is_measured_and_recorded() {
     //
     // WHAT MOVED AND WHY. The Warp gives spring/seep a zero floor and a soft
     // step opening at a `macro_state` of 0.35 (spec §6.1, §6.2: honest
-    // silence off the sign). This walk pool is 13 land-eligible 60-step
-    // walks — 13 LOCATIONS, since 60 adjacent facets at the walk depth cover
-    // one small patch — and the largest spring cause anywhere in the
-    // Weft's own 78-walk band is about 0.244, so spring's prevalence is an
-    // exact zero across every step of it. Not "a walker never meets a seep":
+    // silence off the sign). This walk pool is 78 land-eligible 60-step
+    // walks, 4,680 steps in all — but 78 LOCATIONS, since 60 adjacent facets
+    // at the walk depth cover one small patch — and the largest spring cause
+    // anywhere in it is about 0.244, so spring's prevalence is an exact zero
+    // across every step of it. Not "a walker never meets a seep":
     // the GRID band (one facet per geosphere vertex, 11,218 land facets)
     // reads `weft-existence-density-spring = 0.01337`, one facet in 75, and
     // H1's table above prints it. The walk band simply has no power for a
@@ -463,13 +464,17 @@ fn the_preregistered_readout_is_measured_and_recorded() {
 
     // THE PREREGISTERED CLAIM (spec §7): the ORDERING spring > thicket >
     // overhang > erratic. Measured on the Weft's own tree: this did NOT hold
-    // — thicket outscored spring. THE WARP, Task 6 (2026-09-05): at the
-    // frozen constants it DOES hold on seed 42 (spring 0.086464 > thicket
-    // 0.038604 > overhang 0.020901 > erratic 0.000000); see this file's
-    // module doc for the reading and for why one seed — the calibration
-    // seed — cannot settle it. Still printed, still not asserted: promoting
-    // it now would gate on the seed the constants were fitted to, which is
-    // Task 7's job to avoid. Per decision 0016 this is reported as the
+    // — thicket outscored spring. THE WARP, Task 6 (2026-09-05): it STILL
+    // does not hold at the final constants, by one relation as before but a
+    // DIFFERENT one. Seed 42 reads spring 0.086464, overhang 0.076536,
+    // thicket 0.038604, erratic 0.000000 — so `spring > thicket` holds now
+    // and `thicket > overhang` is the relation that fails. See this file's
+    // module doc for the reading, for the three values of `OVERHANG_RATE`
+    // this ordering was measured at in one day (it came out different at
+    // each), and for why one seed — the calibration seed — cannot settle it.
+    // Still printed, still not asserted: promoting it now would gate on the
+    // seed the constants were fitted to, which is Task 7's job to avoid.
+    // Per decision 0016 this is reported as the
     // result, not fixed by retuning a world constant, and the test does
     // NOT fail on it (a falsified prediction is a finding, not a bug —
     // `site_density.rs`'s own H3 readout asserts only that its reading is a
@@ -489,21 +494,43 @@ fn the_preregistered_readout_is_measured_and_recorded() {
              as the result, not rescued). See this file's module doc for the reading."
         );
     }
-    // The witness: erratic is the smallest of the four (holds under both
-    // the preregistered and the measured ordering) and spring beats
-    // overhang (also holds under both) — the two ordering relations the
-    // measured result shares with the prediction, asserted so a FUTURE
-    // change that breaks even these is visible. The one relation that does
-    // NOT hold (spring vs. thicket) is deliberately not asserted here: a
-    // hard assertion on a relation already known false would be
-    // permanently red, which is the "disable a red instead of reporting
-    // it" shape decision 0016 forbids in the other direction.
+    // The witness: the ordering relations the measured result SHARES with
+    // the prediction, asserted so a future change that breaks even these is
+    // visible. At the final constants that is three of the four — erratic
+    // smallest, `spring > overhang` (below), and `spring > thicket` — and
+    // the one that does NOT hold is `thicket > overhang` (0.038604 against
+    // 0.076536). It is deliberately not asserted: a hard assertion on a
+    // relation already known false would be permanently red, which is the
+    // "disable a red instead of reporting it" shape decision 0016 forbids in
+    // the other direction.
+    //
+    // THE FAILING RELATION USED TO BE `thicket > spring`, and this comment
+    // said so until 2026-09-05. It is not a wording change: spring's
+    // legibility rose 11.1x under the Warp (0.007812 -> 0.086464), which
+    // moved it above thicket and left thicket above nothing but the erratic.
+    // A justification that names the wrong relation is how an assertion set
+    // drifts out of agreement with the file that explains it, so the two are
+    // stated together here.
     assert!(
         mi_erratic < mi_overhang && mi_erratic < mi_spring && mi_erratic < mi_thicket,
         "erratic is no longer the smallest of the four legibility readings — a change \
          worth investigating even independent of the ordering's own falsification: \
          spring={mi_spring:.6} thicket={mi_thicket:.6} overhang={mi_overhang:.6} \
          erratic={mi_erratic:.6}"
+    );
+    // `spring > thicket` — the preregistered relation the WEFT measured
+    // false and the Warp turned true (0.086464 against 0.038604). Newly
+    // asserted here on 2026-09-05, for the same reason the other two are:
+    // it is a relation the measurement now shares with the prediction, so a
+    // change that breaks it should be visible rather than absorbed. It is
+    // a WITNESS on one seed, not a claim — Task 7's readout seeds are what
+    // could make it one.
+    assert!(
+        mi_spring > mi_thicket,
+        "spring no longer outscores thicket — the Weft measured this relation FALSE \
+         (0.007812 against 0.038604) and the Warp turned it true; it now reads \
+         spring={mi_spring:.6} thicket={mi_thicket:.6}. Re-derive it and say which \
+         constant moved."
     );
 
     // ── THE WARP, Task 6 (2026-09-05): `spring > overhang` left, came back,

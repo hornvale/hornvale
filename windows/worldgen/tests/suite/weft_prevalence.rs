@@ -193,14 +193,17 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// theoretical amplitude ceiling, the exact shape that made the shipped
 /// `0.07` bound decorative.
 ///
-/// `min_pooled_spread`/`min_total_occurs` are set with margin BELOW the
+/// `min_pooled_spread`/`min_total_occurs` were set with margin BELOW the
 /// measured real values above (never above — a floor above the real
-/// measurement would fail on real data by construction): spring `0.05`/`50`,
-/// overhang `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`.
-/// **Overhang's and spring's floors both still hold against their corrected
-/// rows** (overhang: `0.08` is 1.67x under `0.13333`, `150` is 1.83x under
-/// `275`; spring: `0.05` is 2.25x under the corrected `0.11268`) — nothing
-/// broke either time; the committed TABLE was false, not the bounds.
+/// measurement would fail on real data by construction). **The Weft's
+/// values, superseded for spring and overhang by the Warp paragraph below
+/// and current only for thicket and erratic:** spring `0.05`/`50`, overhang
+/// `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`. Overhang's and
+/// spring's floors both still held against their corrected rows at the time
+/// (overhang: `0.08` was 1.67x under `0.13333`, `150` was 1.83x under `275`;
+/// spring: `0.05` was 2.25x under the corrected `0.11268`) — nothing broke
+/// either time; the committed TABLE was false, not the bounds. Read the LIVE
+/// values off the array itself, never off this paragraph.
 ///
 /// ---
 ///
@@ -284,6 +287,11 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// is a real property and a different one. Thicket and erratic keep the
 /// Weft's expression and keep the original guarantee unchanged.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
+    // Spring's two floors are NOT READ while `SILENT_IN_THE_WALK_BAND`'s
+    // exact-zero witness stands (that special case `continue`s before the
+    // generic asserts). They are `0.0, 0` so that deleting the witness
+    // cannot leave a live bound that is vacuously satisfied — re-derive both
+    // from a fresh measurement in the same edit that removes the case.
     (WeftKind::Spring, 0.010, 0.0, 0),
     (WeftKind::Overhang, 0.045, 0.25, 50),
     (WeftKind::Thicket, 0.015, 0.20, 400),
@@ -330,6 +338,11 @@ const SILENT_IN_THE_WALK_BAND: WeftKind = WeftKind::Spring;
 /// takes the address-hashable noise term out of both sign kinds' prevalence
 /// altogether.
 const AUTOCORR_BOUNDS: [(WeftKind, f64); 4] = [
+    // NOT READ while `SILENT_IN_THE_WALK_BAND`'s constant-zero arm stands:
+    // spring's series has no variance, so its correlation is `NaN` and this
+    // threshold is never compared against. Retained at the Weft's value so
+    // removing that arm restores a real bound rather than an invented one —
+    // but re-measure before trusting it.
     (WeftKind::Spring, 0.6),
     (WeftKind::Overhang, 0.5),
     (WeftKind::Thicket, 0.95),

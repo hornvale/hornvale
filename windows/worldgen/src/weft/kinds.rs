@@ -526,7 +526,7 @@ const OVERHANG_FLOOR: f64 = 0.0;
 /// Warp, spec §6.2). **Frozen at Task 6's seed-42 calibration** (ledger,
 /// "Task 6 — constants frozen"), at the same value as [`SPRING_STEP_LO`] and
 /// for the same two reasons: it is what carries H1's found fraction (0.301
-/// at the provisional `0.20`, 0.771 here), and it stays strictly below the
+/// at the provisional `0.20`, 0.772 here), and it stays strictly below the
 /// 0.5 that H1's own found-fraction threshold sits at, so the band measures
 /// something rather than reading `1.000` by construction. (An earlier draft
 /// of this doc gave a third reason — that a higher edge would read worse on
