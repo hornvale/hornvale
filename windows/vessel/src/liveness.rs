@@ -24,7 +24,7 @@ use hornvale_kernel::{
     World, WorldTime,
 };
 use hornvale_locale::LocaleContext;
-use hornvale_species::{ActivityCycle, ThermalStrategy};
+use hornvale_species::{ActivityCycle, HabitatRealm, ThermalStrategy};
 
 /// A game-layer predicate: an agent's room position on a day. Non-functional
 /// (position changes over sim time — c5's kind-change shape); the current
@@ -1184,8 +1184,8 @@ pub fn drive_at(
 /// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
 ///
 /// The candidate set comes off the caller-owned resident store (The Pawl):
-/// [`crate::resident::KnownWater`] holds each entity's DISTINCT visited rooms
-/// with the first instant each was seen, so this read is O(distinct rooms)
+/// [`crate::resident::LatestVisit`] holds each entity's DISTINCT visited rooms
+/// with ascending visit lists, so this read is O(distinct rooms)
 /// where it was O(history). Nothing else moves — the `day <= t` admission, the
 /// `is_water` intersection, the home-anchored `plan_to_room` ranking and the
 /// `(hops, Facet)` tie-break are the same ones this function has always
@@ -1206,17 +1206,18 @@ pub fn believed_water(
 ) -> Option<Facet> {
     let seen: Vec<Facet> = {
         let mut store = folds.borrow_mut();
-        let (known, trail, witness) = store.known_water_and_trail(ledger);
+        let (latest_visit, trail, witness) = store.latest_visit_trail_and_witness(ledger);
         // Spec §3 rule 6's witness, taken where the read actually happens: is
         // this instant behind a sighting the store has already absorbed? See
         // `ReadWitness::note_belief` for what the count means now that the
-        // rule has fired and the tenant carries a first-visit instant.
+        // rule has fired and the visit list's first element supplies the
+        // first-visit instant.
         witness.note_belief(
             npc.entity,
             t,
             trail.of(npc.entity).last().map(|(day, _)| *day),
         );
-        known.water_at(npc.entity, t, terrain)
+        latest_visit.water_at(npc.entity, t, terrain)
     };
     seen.into_iter()
         .filter_map(|r| {
@@ -1329,7 +1330,7 @@ fn note_halo(set: &mut std::collections::BTreeSet<Facet>, p: &Facet) {
 ///   — rare, and the reason the copy is affordable at all.
 ///
 /// **The tenant holds the visits and the READ applies the predicate**, exactly
-/// as [`crate::resident::KnownWater`] does for `is_water`: `frightening` needs
+/// as [`crate::resident::LatestVisit`] does for `is_water`: `frightening` needs
 /// terrain and the member's own threat niche, neither of which is a ledger
 /// fact, so none of what this function accumulates could live inside a
 /// `LedgerFold`. The result is memoised per `t` in [`PrimaryAfraidMemo`],
@@ -2781,12 +2782,21 @@ pub const SLEPT: &str = "slept";
 /// in the object and cannot be inverted back to a room at all — a real
 /// contract, paid for nothing recoverable.
 ///
-/// **Nothing reads this predicate yet, and that is deliberate, not
-/// accidental** (fix round 1, F3). Grading a body's outcome on WHICH kind it
-/// found — rather than merely recording that it found one — is the
-/// `per-people` rung this campaign's spec declares and defers; wiring it
-/// into `SiteGrade` or the recovery fold is later-campaign work. A fact
-/// written and never (yet) read is correct here.
+/// **THE RECOVERY FOLD READS IT NOW** (The Tenon, Task 5), and this
+/// paragraph used to say the opposite. The Pallet wrote *"nothing reads this
+/// predicate yet, and that is deliberate, not accidental"* — true when
+/// written, and the deferral it names (decision 0698's own consequence:
+/// grading a body's outcome on WHICH kind it found is the `per-people` rung
+/// 0697 defers) is exactly what The Tenon built. [`rest_timeline`] merges
+/// these facts against the bout timeline by day and grades a matching
+/// [`SLEPT`] bout [`SiteGrade::On`] that kind; [`grade_of`] prices it.
+///
+/// Two things the read does NOT do, both of which the old deferral would
+/// have made easy to assume: it does not consult
+/// [`crate::sleep_site::select_sleep_site`] (a fold over committed history
+/// cannot re-derive a within-room choice — decision 0069), and it does not
+/// replace the room-level read, which still grades every [`RESTED`] bout and
+/// every ledger written before this predicate existed.
 /// type-audit: bare-ok(identifier-text)
 pub const SLEPT_ON: &str = "slept-on";
 
@@ -3515,39 +3525,49 @@ const _: () = assert!(
      the grade is a no-op wearing a constant's clothes"
 );
 
-/// What the room a bout was taken in offered the body that took it (The
-/// Wicket, Task 10) — the OBJECT half of spec §6a's grade.
+/// What the durable record knows about the site of a rest bout (The Wicket,
+/// Task 10; The Tenon, Task 5).
 ///
-/// Two-valued today because the question the offer answers is two-valued:
-/// either some anchor in the room offered [`crate::affordance::
-/// OfferedVerb::Sleep`] to this body, or none did.
+/// Three-valued today because the room offer and the committed sleep kind
+/// carry different amounts of evidence:
 ///
-/// **THE TWO RUNGS THIS TYPE STILL DOES NOT CARRY, DECLARED HERE BECAUSE
-/// THERE IS NOWHERE ELSE TO DECLARE THEM** (The Pallet, Task 4, spec §4d).
-/// The SPECIES rung shipped — how much an afforded site helps a body is now
-/// `hornvale_species::sleep_grade_registry`, one row per kind. Two remain,
-/// and both are absences of a NUMBER rather than wrong numbers, so neither
-/// has a constant to hang a `plumb:` tag on and neither appears in the
-/// committed roster's Fidelity findings table:
+/// - [`SiteGrade::Bare`] means the room offered no place to lie down.
+/// - [`SiteGrade::Afforded`] is the room-level fallback: the room offered a
+///   place, but no [`SLEPT_ON`] kind is available. Conscious rest records no
+///   sleep kind, and neither does history written before The Pallet.
+/// - [`SiteGrade::On`] carries the thing kind recorded for a sleep, allowing
+///   the fold to distinguish a bed from bracken in the same room.
 ///
-/// - **`per-people`** — *which thing a people tends to sleep on*. This enum
-///   collapses every afforded anchor to one value, so a bed and a heap of
-///   bracken are indistinguishable to the fold. Making them distinct is a
-///   `species x thing` matrix and needs the kind-to-kind edges the object
-///   registry does not have; there is no authored scalar standing in for it
-///   today, only this two-valued type.
-/// - **`per-individual`** — *this one likes a sleeping bag*. An idiosyncratic
-///   preference varying below the species, which
-///   `hornvale_kernel::Lineage` would derive and never store. Nothing here
-///   varies per body at all, so again there is no number to tag.
+/// `Afforded` and `On(kind)` are both supported grades, but they carry
+/// different evidence. The fallback returns the sleeper's species-wide gain;
+/// the recorded kind reaches [`grade_of`], which also reads the surface's
+/// offer and hardness and the sleeper's substrate response. Thus bed and
+/// bracken in one room need not grade alike.
 ///
-/// Both would refine this into a graded scalar, which is why it is a named
-/// type with a `gain()` rather than a bare `bool` threaded through the fold.
-/// A campaign that builds either one starts here.
+/// **THE PER-PEOPLE RUNG SHIPPED WITHOUT AN AUTHORED MATRIX** (The Tenon).
+/// [`grade_of`] combines the sleeper's species traits with the recorded
+/// thing's traits to derive the species×thing grade. There is no authored
+/// entry for each pair.
+///
+/// **ONLY THE PER-INDIVIDUAL RUNG REMAINS UNBUILT.** A particular body's
+/// preference — *this one likes a sleeping bag* — would vary below species,
+/// derived from `hornvale_kernel::Lineage` rather than stored. Nothing in the
+/// grade varies per individual today.
 ///
 /// Carried through the timeline as an `Ord` TAG beside [`BoutKind`], for the
 /// same reason that one is: the sort stays an integer sort with no `total_cmp`
 /// anywhere near it.
+///
+/// **[`SiteGrade::On`] carries a [`KindId`] and the sort survives it (The
+/// Tenon, Task 5).** A `KindId` is `Copy + Ord` — it wraps a `&'static str`
+/// and compares as one — so the derived `Ord` here stays a comparison of
+/// exact values with no `total_cmp` anywhere near it. An `f64` in this
+/// position would have destroyed that, which is why the KIND travels through
+/// the timeline and the NUMBER is resolved at [`SiteGrade::gain`], where the
+/// sleeper's [`SleepTraits`] already are. (The ordering between variants is
+/// never consulted for meaning: [`rest_timeline`] sorts its bouts BEFORE any
+/// of them is graded, so every tag is [`SiteGrade::Bare`] at the moment the
+/// sort runs.)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum SiteGrade {
     /// Nothing in the room offered a place to lie down — the road, the open
@@ -3555,9 +3575,20 @@ enum SiteGrade {
     /// unmodified.
     Bare,
     /// Some anchor in the room offered [`crate::affordance::OfferedVerb::
-    /// Sleep`] to this body. Repays the sleeping body's own species-resolved
-    /// gain (`hornvale_species::sleep_grade_registry`) times the act's rate.
+    /// Sleep`] to this body, and the ledger does not say WHICH. Repays the
+    /// sleeping body's own species-resolved gain
+    /// (`hornvale_species::sleep_grade_registry`) times the act's rate.
+    ///
+    /// **Not vestigial, and it must not be deleted** (spec §6). An
+    /// [`Action::Rest`] bout commits no [`SLEPT_ON`] fact at all, and neither
+    /// does any ledger written before The Pallet; a fold over committed
+    /// history has to grade those, and this is the grade it gives them.
     Afforded,
+    /// The ledger records the KIND of thing the body slept on
+    /// ([`SLEPT_ON`], decision 0698) — the room-level read refined by what
+    /// was actually found. Repays what [`grade_of`] makes of that kind for
+    /// this sleeper.
+    On(KindId),
 }
 
 impl SiteGrade {
@@ -3565,23 +3596,32 @@ impl SiteGrade {
     /// the ONE mapping from site to gain, read only by
     /// [`fatigue_from_rests`].
     ///
-    /// **`afforded` is the SLEEPER's species-resolved gain, passed in, not
-    /// looked up here** (The Pallet, Task 4). This type stays a plain `Ord`
-    /// tag carried through the timeline beside [`BoutKind`] — the sort stays
-    /// an integer sort — and the species number arrives the same way the
-    /// sleep-debt `rate` already does: resolved once at [`creature_fatigue`],
-    /// then passed down as a scalar. Making the tag itself species-aware
-    /// would put a `KindId` in the sort key for no gain.
+    /// **The sleeper's numbers are passed in, not looked up here** (The
+    /// Pallet, Task 4). This type stays a plain `Ord` tag carried through the
+    /// timeline beside [`BoutKind`] — the sort stays an integer sort — and
+    /// the species numbers arrive the same way the sleep-debt `rate` already
+    /// does: resolved once at [`creature_fatigue`], then passed down.
     ///
-    /// [`SiteGrade::Bare`] ignores `afforded` entirely and answers `1.0`,
+    /// `objects` is the object roster the KIND half is read against, and it
+    /// is a borrow rather than a lookup here for the same reason: this
+    /// function holds no registry state of its own. A caller with no world
+    /// behind it passes the EMPTY roster and can produce no
+    /// [`SiteGrade::On`] to consult it with — see [`fatigue_at`].
+    ///
+    /// [`SiteGrade::Bare`] ignores both arguments entirely and answers `1.0`,
     /// which is why an UNGRADED read (`sites: None`, every bout `Bare`) folds
-    /// bit for bit what it folded before this parameter existed, whatever
-    /// gain its caller happens to pass.
-    /// type-audit: bare-ok(ratio: afforded), bare-ok(ratio: return)
-    fn gain(self, afforded: f64) -> f64 {
+    /// bit for bit what it folded before either parameter existed, whatever
+    /// its caller happens to pass.
+    /// type-audit: bare-ok(ratio: return)
+    fn gain(
+        self,
+        sleeper: &SleepTraits,
+        objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+    ) -> f64 {
         match self {
             SiteGrade::Bare => 1.0,
-            SiteGrade::Afforded => afforded,
+            SiteGrade::Afforded => sleeper.afforded_gain,
+            SiteGrade::On(kind) => grade_of(sleeper, kind, objects),
         }
     }
 }
@@ -3611,10 +3651,11 @@ impl SiteGrade {
 /// suppressed often enough here that a further suppression buys nothing a
 /// name would not buy better.
 ///
-/// Both fields are looked up ONCE, at [`creature_fatigue`], which is the
+/// All THREE fields are looked up ONCE, at [`creature_fatigue`], which is the
 /// single door the read and the mover both reach fatigue through; a caller
 /// with no species data of its own (every fixture in
 /// `tests/suite/fatigue_stock.rs`) states whatever it needs the fold to see.
+/// (Two, until The Tenon added `substrate`.)
 /// type-audit: bare-ok(ratio: rise), bare-ok(ratio: afforded_gain)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SleepTraits {
@@ -3625,10 +3666,22 @@ pub struct SleepTraits {
     /// The multiplier a bout repays at when the room it was taken in
     /// afforded somewhere to lie down — `hornvale_species::
     /// sleep_grade_registry`'s row for this body's kind, via
-    /// [`sleep_grade_for`]. Read only by [`SiteGrade::gain`], and only for a
-    /// bout graded [`SiteGrade::Afforded`]; `1.0` means *no bonus*, never
-    /// *no recovery*.
+    /// [`sleep_grade_for`]. Read by [`SiteGrade::gain`] for both supported
+    /// grades: returned directly for [`SiteGrade::Afforded`], and used by
+    /// [`grade_of`] when pricing [`SiteGrade::On`]. `1.0` means *no bonus*,
+    /// never *no recovery*.
     pub afforded_gain: f64,
+    /// The sleeper's substrate preference — how much this body gets out of
+    /// lying on a FOUND surface of a given hardness, resolved from its
+    /// habitat realm by [`substrate_for`] (The Tenon).
+    ///
+    /// Read only by [`grade_of`], and only for a
+    /// [`crate::affordance::Substrate::Natural`] surface: a made surface is
+    /// fitted to whoever built it, so the preference does not discriminate
+    /// against it at all (spec §5.2). It is a curve rather than a scalar
+    /// because a scalar cannot say the one thing this relation exists to
+    /// say — that two kinds order two surfaces OPPOSITELY.
+    pub substrate: ConditionResponse,
 }
 
 /// The world-side inputs the rest-site grade needs: the terrain the bout
@@ -3664,9 +3717,9 @@ pub struct RestSites<'a> {
 /// history is the precedent — it compared `anchor.kind == kinds::HEARTH`
 /// directly until that was fixed, because a future `RadiatesHeat` carrier
 /// would then have needed an edit at the dispatcher as well as a row in
-/// `object_registry`. The same is true here: `bed` is the only `SupportsRest`
-/// carrier today, and a future one (a fur, bracken) must need only its
-/// registry row.
+/// `object_registry`. The same is true here: the four current `SupportsRest`
+/// carriers — `bed`, `rushes`, `ledge`, and `bracken` — reach this read
+/// through their registry rows, with no kind comparison here.
 ///
 /// **Through [`crate::affordance::offered_to`], NOT `offered_to_observer` —
 /// the observer's knowledge is deliberately not consulted** (campaign ledger
@@ -3682,49 +3735,58 @@ pub struct RestSites<'a> {
 /// (`MoveWithin`/`Occupancy`) the committed ledger does not record at all
 /// (decision 0069).
 ///
-/// **THE GRADE IS THEREFORE LOCALE-GRANULAR, AND A READER MUST NOT MISTAKE
-/// THAT FOR "on the bed"** (fix round 1, Minor 3; campaign ledger #46). In a
-/// built, cold locale this answers `true` for the WHOLE room, so a body that
-/// passes out in the street of such a place is repaid exactly as one that
-/// found the bed. That is a real distance from Nathan's ruling (*prefer a bed
-/// … when they can get one*), and it is **a constitutional limit rather than
-/// an oversight to be tightened here**: grading per ANCHOR would require this
-/// fold to know which anchor the body occupied, and decision 0069 says fine
-/// position is never serialized — the ledger carries the room, never the spot
-/// in it. Making it anchor-granular is a decision about 0069 and belongs to
-/// Nathan, so do not "fix" it by reaching for `Occupancy` here: an occupancy
-/// is a per-tick, in-memory structure and a fold over committed history cannot
-/// see one at a past instant.
+/// **THIS BOOLEAN IS ONLY THE ROOM-LEVEL FALLBACK, NOT THE FINAL GRADE** (The
+/// Tenon, Task 5). [`rest_timeline`] first uses it to distinguish
+/// [`SiteGrade::Bare`] from [`SiteGrade::Afforded`], then overwrites a
+/// same-day [`SLEPT`] bout with [`SiteGrade::On`] when a matching
+/// [`SLEPT_ON`] fact records the kind actually chosen. Conscious
+/// [`Action::Rest`] bouts and ledgers predating that predicate have no such
+/// fact and retain this room-level result. A reader must therefore describe
+/// this function as "room-supported/non-Bare", never as proof that the final
+/// production grade was exactly `Afforded`.
+///
+/// The fallback is locale-granular: if any carrier is present, it answers
+/// `true` for the whole room. Tightening it to an anchor would require the
+/// historical fold to know which anchor the body occupied, and decision 0069
+/// says fine position is never serialized — the ledger carries the room,
+/// never the spot in it. Do not reach for per-tick, in-memory [`Occupancy`]
+/// here; a fold over committed history cannot see one at a past instant.
 ///
 /// The inversion a reader might fear — a chamber with a bed inside a locale
 /// without one — cannot occur: `the-fireside-bed` requires `built && cold` at
 /// BOTH bands, so no world has a chamber bed whose locale lacks one.
 ///
-/// **How often this answers `true` is a committed census column, not a
-/// guess** (fix round 1, Minor 2): `cold-built-room-share`
-/// (`windows/lab/src/metrics.rs`) measures "the fraction of the settled world
-/// where `interior_of` would compose a hearth", which is one grammar link
-/// short of a fireside bed, at n=1000 — median **0.183**, mean 0.257, 0 absent
-/// (`book/src/domesday/settlement.md`). So decision 0398's bar is met by a
-/// standing measurement rather than by a probe written and deleted inside the
-/// task that needed it. It varies enormously by world: seed 42's flagship is
-/// built and WARM (26.16 °C, no bed), seed 13's is built and cold (−61.21 °C,
-/// a bed), which is why the seed-42 book galleries do not move on a grade
-/// change and a seed-13 walk does.
+/// **How often this answers `true` is measured, not guessed.** The Tenon's
+/// 24-world readout found support in all three composed quadrants now carrying
+/// one of the four rows: built+cold (`bed`, `rushes`, `ledge`), built+warm
+/// (`ledge`), and wild+cold (`bracken`). Wild+warm remains unsupported. This
+/// is a measurement of the room boolean only; a committed `SLEPT_ON` kind
+/// still determines the final grade of a matching sleep as described above.
 ///
-/// **Delegates to [`crate::sleep_site::select_sleep_site`] rather than
-/// re-scanning anchors itself (The Pallet, Task 2).** That function is the
-/// single definition of "which anchor in this room offers Sleep to this
-/// body" — the same single-definition discipline
-/// [`crate::interior::Interior::walkable_neighbors`] documents for "one
-/// walkable hop." `room_affords_rest` only ever needed the boolean half of
-/// that question (`.any(..)`), and `select_sleep_site(..).is_some()` is that
-/// same boolean read off the SAME scan, so this delegation changes no
-/// behaviour: both ask "does at least one anchor offer Sleep to this body,"
-/// they just no longer risk drifting into two different answers to it.
-fn room_affords_rest(room: &Facet, body: &Body, terrain: &dyn Terrain) -> bool {
+/// **Delegates to [`crate::sleep_site::room_offers_sleep`] rather than
+/// re-scanning anchors itself (The Tenon, Task 6).** Both entry points run one
+/// `sleep_site::sleep_candidates` scan and differ only in what they do with
+/// it. They had to split because CHOOSING a site now needs the sleeper's
+/// species-resolved [`SleepTraits`], and this function does not have one:
+/// [`rest_timeline`], the fold it runs inside, folds bouts for an ENTITY and
+/// resolves no species at all. Threading traits down here to rank candidates
+/// that `.is_some()` would immediately discard would have bought coupling and
+/// cost for no answer.
+///
+/// **`objects` is BORROWED, never built here** — the same [`object_roster`]
+/// the fold already holds, built once per fold, so this path constructs no
+/// `ComponentStore` whatever. It used to construct one per ANCHOR, inside
+/// `crate::affordance::offered_to`, which calls
+/// `crate::affordance::object_registry` on every call;
+/// `crate::affordance::offered_to_traits` is what removed that.
+fn room_affords_rest(
+    room: &Facet,
+    body: &Body,
+    terrain: &dyn Terrain,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+) -> bool {
     let interior = interior_of(room, terrain);
-    crate::sleep_site::select_sleep_site(&interior, body).is_some()
+    crate::sleep_site::room_offers_sleep(&interior, body, objects)
 }
 
 /// Where `entity` stood over time, as `(day, room)` pairs in commit order —
@@ -3793,13 +3855,26 @@ fn position_timeline(
 /// a second convention for "where is a body with no position fact" is exactly
 /// the divergence this function exists to avoid.
 ///
+/// **THE KIND, WHERE THE LEDGER RECORDS ONE (The Tenon, Task 5).** Decision
+/// 0698 committed [`SLEPT_ON`] and left it deliberately unread; this is the
+/// function that reads it. A [`SLEPT`] bout carrying a `slept-on` fact on its
+/// own day is graded [`SiteGrade::On`] that kind, by a SECOND ordered merge
+/// in the same cursor idiom the position merge uses — both sides are already
+/// in day order, so the whole function stays `O(bouts + positions + facts)`.
+/// A bout WITHOUT one keeps the room-level read above, and that fallback is
+/// load-bearing rather than legacy: an [`Action::Rest`] bout never commits a
+/// `slept-on` at all, and neither does any ledger written before The Pallet.
+///
 /// `sites` absent ⇒ every bout is [`SiteGrade::Bare`]; see [`RestSites`].
+/// `objects` is the roster a committed kind LABEL is resolved against — see
+/// [`slept_on_timeline`] for why a resolution step is needed at all.
 fn rest_timeline(
     ledger: &Ledger,
     pending: &[Fact],
     entity: EntityId,
     t: WorldTime,
     sites: Option<&RestSites<'_>>,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
 ) -> Vec<(WorldTime, TickSpan, BoutKind, SiteGrade)> {
     let mut rests: Vec<(WorldTime, TickSpan, BoutKind, SiteGrade)> = Vec::new();
     for (predicate, kind) in [(RESTED, BoutKind::Rest), (SLEPT, BoutKind::Sleep)] {
@@ -3864,12 +3939,92 @@ fn rest_timeline(
         let slot = usize::from(sites.terrain.is_built(&room)) * 2
             + usize::from(sites.terrain.is_cold(&room));
         let affords = *graded[slot]
-            .get_or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain));
+            .get_or_insert_with(|| room_affords_rest(&room, sites.body, sites.terrain, objects));
         if affords {
             bout.3 = SiteGrade::Afforded;
         }
     }
+    // THE KIND, by a SECOND ordered merge — over the entity's own `slept-on`
+    // facts this time (decision 0698; The Tenon, Task 5). It runs AFTER the
+    // room-level pass and overwrites it, which is the whole ruling in one
+    // line: where the ledger records what the body actually found, that
+    // record decides the grade, and the room-level read is what grades every
+    // bout the ledger is silent about.
+    let mut slept_on = slept_on_timeline(ledger, pending, entity, t, objects);
+    slept_on.sort_by_key(|(d, _)| *d);
+    let mut cursor = 0usize;
+    for bout in rests.iter_mut() {
+        // ONLY A SLEEP. `SLEPT_ON` is the site of a `SLEPT` bout by
+        // construction — both producers (`advance_one`'s `Action::Sleep` arm
+        // and `Session::sleep`) push it from that arm and no other — so a
+        // fact sharing a day with a conscious `Action::Rest` is a record
+        // about a different act, and reading it here would grade a rest by
+        // where a sleep happened.
+        if bout.2 != BoutKind::Sleep {
+            continue;
+        }
+        while cursor < slept_on.len() && slept_on[cursor].0 < bout.0 {
+            cursor += 1;
+        }
+        if cursor < slept_on.len() && slept_on[cursor].0 == bout.0 {
+            bout.3 = SiteGrade::On(slept_on[cursor].1);
+            cursor += 1;
+        }
+    }
     rests
+}
+
+/// What `entity` slept ON over time, as `(day, kind)` pairs — the timeline
+/// [`rest_timeline`]'s second merge reads a bout's KIND off (The Tenon, Task
+/// 5), and the first reader [`SLEPT_ON`] has ever had.
+///
+/// **The resolution step is forced by the save format, not chosen.**
+/// [`slept_on_fact`] writes `Value::Text(kind.0.to_string())`, so a committed
+/// fact hands back an owned `String`, while a [`KindId`] wraps a
+/// `&'static str` — its own doc says outright *"Build-state: never
+/// serialized — the label enters the save as `Value::Text`, not as a
+/// `KindId`"*. A `KindId` therefore cannot be CONSTRUCTED from the ledger
+/// without leaking, and the honest conversion is to match the label against a
+/// roster that already owns the static string. That is exactly the shape
+/// `crate::affordance::label_carries` already uses for the same reason, and
+/// [`hornvale_kernel::component::ComponentStore::get_by_label`]'s own doc
+/// states the constraint in the kernel's words.
+///
+/// **An unrecognised label yields nothing, and nothing is the right answer.**
+/// A label no row carries is a kind this build does not have; the bout falls
+/// back to the room-level read, which is what [`SiteGrade::Afforded`] means.
+/// It is deliberately NOT a surface with no offer — that would silently
+/// re-grade a bout to bare ground on the strength of a roster this binary
+/// happens not to carry.
+///
+/// Read from BOTH the committed ledger and the walk's own not-yet-committed
+/// `pending`, exactly as [`rest_timeline`] reads [`RESTED`]/[`SLEPT`] from
+/// both, and filtered to `day <= t` for the same reason: a fact that
+/// chronologically postdates the query instant cannot grade a bout before it.
+fn slept_on_timeline(
+    ledger: &Ledger,
+    pending: &[Fact],
+    entity: EntityId,
+    t: WorldTime,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+) -> Vec<(WorldTime, KindId)> {
+    let read = |f: &Fact| match (&f.object, f.day) {
+        (Value::Text(label), Some(d)) if d <= t => objects
+            .ids()
+            .find(|k| k.0 == label.as_str())
+            .copied()
+            .map(|kind| (d, kind)),
+        _ => None,
+    };
+    let mut seen: Vec<(WorldTime, KindId)> = Vec::new();
+    seen.extend(ledger.facts_of(entity, SLEPT_ON).filter_map(read));
+    seen.extend(
+        pending
+            .iter()
+            .filter(|f| f.subject == entity && f.predicate == SLEPT_ON)
+            .filter_map(read),
+    );
+    seen
 }
 
 /// An elapsed span expressed in LOCAL (planetary) days, rather than
@@ -3906,14 +4061,24 @@ fn to_local_days(span: TickSpan, day: Option<TickSpan>) -> f64 {
 /// the only producer). `traits` is the caller's [`SleepTraits`] — the
 /// sleeping body's species-resolved sleep-debt rate ([`fatigue_rise_for`])
 /// and its species-resolved site-grade multiplier ([`sleep_grade_for`], read
-/// only by [`SiteGrade::gain`] and only for a bout graded
-/// [`SiteGrade::Afforded`]); `day` is the world's local day length
+/// by [`SiteGrade::gain`] directly for [`SiteGrade::Afforded`] and through
+/// [`grade_of`] for [`SiteGrade::On`]); `day` is the world's local day length
 /// (`Terrain::day_ticks`), `None` on a tidally locked world.
 ///
 /// **The site grade reaches this fold the way the rate already did** (The
-/// Pallet, Task 4): looked up at the caller, passed in as a number. No
-/// `Body` and no `KindId` is threaded in here, and [`SiteGrade`] stays the
-/// `Ord` tag it was, so the timeline sort stays an integer sort.
+/// Pallet, Task 4): looked up at the caller, passed in. No `Body` is threaded
+/// in here, and [`SiteGrade`] stays the `Ord` tag it was, so the timeline
+/// sort stays an integer sort.
+///
+/// **A `KindId` DOES travel in the tag now (The Tenon, Task 5), and the sort
+/// is unharmed.** This paragraph used to say no `KindId` was threaded in at
+/// all, which the `SLEPT_ON` read made false: a bout the ledger records a
+/// site for carries [`SiteGrade::On`], whose payload is a `KindId`. That is
+/// `Copy + Ord` over a `&'static str`, so the sort is still a comparison of
+/// exact values — the property the old sentence was protecting — and an
+/// `f64` in that position is what would have broken it. `objects` is the
+/// roster the kind is priced against, borrowed for the same reason `traits`
+/// is passed: this fold holds no registry state of its own.
 ///
 /// **Why the read and the mover must be ONE function, not two agreeing ones.**
 /// They were once two, and they diverged: the mover subtracted two INSTANTS and
@@ -3964,6 +4129,7 @@ fn fatigue_from_rests(
     t: WorldTime,
     traits: SleepTraits,
     day: Option<TickSpan>,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
 ) -> f64 {
     let mut fatigue = 0.0_f64;
     // How far along the creature's timeline the fold has consumed. Starts at
@@ -3996,11 +4162,12 @@ fn fatigue_from_rests(
             // never reaches furniture folds exactly the arithmetic Task 8
             // shipped. `afforded_gain` is the SLEEPER's own species row (The
             // Pallet, Task 4): a xorn's is `1.0`, so an ametabolic body folds
-            // the bare arithmetic even on a bed.
+            // the bare arithmetic even on a bed. Where the ledger records
+            // WHICH kind it lay on, the grade is that kind's (The Tenon, Task
+            // 5) — `bed` reproduces the species row exactly, which is what
+            // makes that task move no artifact.
             fatigue = (fatigue
-                - kind.fall()
-                    * site.gain(traits.afforded_gain)
-                    * to_local_days(woke - cursor, day))
+                - kind.fall() * site.gain(&traits, objects) * to_local_days(woke - cursor, day))
             .max(0.0);
         }
         if end > cursor {
@@ -4048,6 +4215,13 @@ fn fatigue_from_rests(
 /// grade, Nathan's ruling). The grade is per-BOUT and derived from the ledger's
 /// own `agent-at` timeline, so it is permanent: a body that slept on a bed and
 /// then walked into the road keeps what the bed repaid.
+///
+/// **And where the ledger says WHAT it slept on, that is what grades the
+/// bout** (The Tenon, Task 5; decision 0698). `SLEPT_ON` carries a registered
+/// kind, which is 0069-legal where an anchor's identity is not, so the fold
+/// can price the thing the body found rather than only the fact that the room
+/// held one. The room-level read still grades every bout the ledger is silent
+/// about.
 /// type-audit: bare-ok(ratio: return)
 pub fn fatigue_at(
     ledger: &Ledger,
@@ -4057,12 +4231,38 @@ pub fn fatigue_at(
     day: Option<TickSpan>,
     sites: Option<&RestSites<'_>>,
 ) -> f64 {
+    let objects = object_roster(sites);
     fatigue_from_rests(
-        &rest_timeline(ledger, &[], entity, t, sites),
+        &rest_timeline(ledger, &[], entity, t, sites, &objects),
         t,
         traits,
         day,
+        &objects,
     )
+}
+
+/// The object roster a graded fold prices a committed kind against — built
+/// ONCE per fold, at the two entry points, and borrowed from there down (The
+/// Tenon, Task 5).
+///
+/// **`None` gets the EMPTY roster, and that is a statement rather than a
+/// fallback.** A caller with no world behind it ([`RestSites`]'s own
+/// "UNGRADED, not bare by accident") has no rooms to grade and no `SLEPT_ON`
+/// merge run for it at all, so it cannot produce a [`SiteGrade::On`] for a
+/// roster to be consulted with. Building `crate::affordance::object_registry`
+/// for it anyway would spend a dozen allocations, on every fixture call, to
+/// answer a question no bout will ask.
+///
+/// Built here and not inside [`rest_timeline`] because BOTH steps need it —
+/// the merge resolves a label against it, the fold prices a kind against it —
+/// and two builds of the same authored table is the duplicated-read shape
+/// decision 0261 warns about.
+fn object_roster(
+    sites: Option<&RestSites<'_>>,
+) -> ComponentStore<KindId, crate::affordance::ObjectTraits> {
+    sites
+        .map(|_| crate::affordance::object_registry())
+        .unwrap_or_default()
 }
 
 /// [`fatigue_at`], plus rests emitted THIS tick and not yet committed — the
@@ -4087,11 +4287,13 @@ fn fatigue_with_pending(
     day: Option<TickSpan>,
     sites: Option<&RestSites<'_>>,
 ) -> f64 {
+    let objects = object_roster(sites);
     fatigue_from_rests(
-        &rest_timeline(ledger, pending, entity, t, sites),
+        &rest_timeline(ledger, pending, entity, t, sites, &objects),
         t,
         traits,
         day,
+        &objects,
     )
 }
 
@@ -4143,19 +4345,47 @@ fn creature_fatigue(
         pending,
         npc.entity,
         day,
-        SleepTraits {
-            rise: fatigue_rise_for(
-                &npc.species,
-                Some(&hornvale_species::fatigue_rise_registry()),
-            ),
-            afforded_gain: sleep_grade_for(
-                &npc.species,
-                Some(&hornvale_species::sleep_grade_registry()),
-            ),
-        },
+        sleep_traits_of(npc),
         terrain.day_ticks(),
         Some(&RestSites { terrain, body: npc }),
     )
+}
+
+/// A body's three species-resolved sleep numbers, resolved against the
+/// SHIPPED registries — the one place they are looked up from a [`Body`],
+/// lifted out of [`creature_fatigue`] in The Tenon's Task 6.
+///
+/// **It was lifted because a second kind of caller appeared.** Ranking a
+/// room's sleep sites ([`crate::sleep_site::select_sleep_site`]) needs the
+/// same [`SleepTraits`] the fatigue fold does, at the two COMMIT-time sites
+/// that record a `SLEPT_ON` fact (`advance_one`'s `Action::Sleep` arm and
+/// `Session::sleep`). Spelling the three lookups out a third and fourth time
+/// is exactly the divergence [`creature_fatigue`]'s own doc records closing
+/// for the rate table: a hoisted registry at one site and not another is
+/// invisible until the two answers differ.
+///
+/// **Cost, stated rather than implied.** This builds three
+/// `ComponentStore`s per call. That is unchanged for the fatigue path — it
+/// is byte-for-byte the expression `creature_fatigue` inlined before — and
+/// for the two commit-time callers it is paid once per SLEEP ACT, inside the
+/// arm that is about to commit a fact, not per tick and not per anchor. The
+/// path this campaign had to keep clean is the fatigue FOLD's
+/// [`room_affords_rest`], and that one resolves no species at all.
+pub(crate) fn sleep_traits_of(body: &Body) -> SleepTraits {
+    SleepTraits {
+        rise: fatigue_rise_for(
+            &body.species,
+            Some(&hornvale_species::fatigue_rise_registry()),
+        ),
+        afforded_gain: sleep_grade_for(
+            &body.species,
+            Some(&hornvale_species::sleep_grade_registry()),
+        ),
+        substrate: substrate_for(
+            &body.species,
+            Some(&hornvale_species::habitat_realm_registry()),
+        ),
+    }
 }
 
 /// The NEUTRAL fallback rate for a species `fatigue_rise_for` cannot
@@ -4238,6 +4468,134 @@ fn sleep_grade_for(species: &str, registry: Option<&SleepGradeTable>) -> f64 {
         .and_then(|r| r.get_by_label(species))
         .copied()
         .unwrap_or(DEFAULT_SLEEP_GRADE)
+}
+
+/// The authored habitat-realm roster's shape (The Tenon) — the third member
+/// of the [`FatigueRiseTable`] / [`SleepGradeTable`] family above, borrowed
+/// rather than built here for exactly the same reason: [`creature_fatigue`]
+/// builds every roster ONCE so the read and the mover cannot resolve them
+/// differently.
+type HabitatRealmTable =
+    hornvale_kernel::component::ComponentStore<hornvale_kernel::KindId, HabitatRealm>;
+
+/// The species' SUBSTRATE preference — the curve [`grade_of`] evaluates a
+/// found surface's hardness against — derived from a caller-supplied
+/// `hornvale_species::habitat_realm_registry()` (The Tenon).
+///
+/// **The miss case is not a fallback here, and that is the difference from
+/// its two siblings.** [`fatigue_rise_for`] and [`sleep_grade_for`] each read
+/// a TOTAL table and treat absence as a typo, answering a documented neutral
+/// value. `habitat_realm_registry` is SPARSE by construction — its own doc
+/// says "**only** kinds that are not `Surface` appear" — so absence is a
+/// stated fact about the species rather than an unknown, and
+/// [`HabitatRealm::SURFACE`] (whose doc is *"the realm a kind absent from
+/// `habitat_realm_registry` carries"*) is the roster's own answer, not a
+/// guess standing in for one. An absent `registry` argument reads the same
+/// way, because a caller with no species data has no realm to state.
+///
+/// The realm→curve step itself lives in `domains/species`
+/// (`substrate_response`), where the biology is; this function is only the
+/// lookup, and it is here rather than there because a domain crate takes a
+/// resolved realm and never a species name (The Tenon, Task 3).
+/// type-audit: bare-ok(identifier-text: species)
+fn substrate_for(species: &str, registry: Option<&HabitatRealmTable>) -> ConditionResponse {
+    hornvale_species::substrate_response(
+        registry
+            .and_then(|r| r.get_by_label(species))
+            .copied()
+            .unwrap_or(HabitatRealm::SURFACE),
+    )
+}
+
+/// The suitability a species retains on a found surface at ANY hardness —
+/// [`ConditionResponse::eval`]'s `floor` argument, and the only authored
+/// number [`grade_of`] carries (The Tenon, spec §5).
+///
+/// **What the floor IS.** Part of what a found rest surface is worth has
+/// nothing to do with whether its substrate suits the body: there is
+/// something under it that is not the bare road, and that much holds however
+/// wrong the substrate is for the kind lying on it. This is that share — the
+/// residual worth of lying on any surface at all — so a badly matched
+/// surface degrades TOWARD bare ground rather than becoming worthless, which
+/// is what a floor of `0.0` would make it.
+///
+/// **Bounded rather than derived, and the bracket below states both bounds.**
+/// At `0.0` the worst-matched surface is exactly the road and a found surface
+/// a kind dislikes stops being a surface at all; at `1.0` the substrate can
+/// no longer discriminate between two surfaces for anybody, which deletes the
+/// one thing this whole relation exists to express. A fifth is the plainest
+/// reading of "some, and much less than all" between those two refusals.
+/// plumb: universal(the share of a found rest surface's worth that comes from there being anything under the body at all rather than from the substrate suiting its kind -- a residual every body retains on every surface, which is why it does not vary by world, species or people)
+const FIT_FLOOR: f64 = 0.2;
+
+/// Both refusals in [`FIT_FLOOR`]'s doc, at COMPILE time rather than test
+/// time — the same shape [`DEFAULT_SLEEP_GRADE`]'s own bracket above takes.
+const _: () = assert!(
+    FIT_FLOOR > 0.0 && FIT_FLOOR < 1.0,
+    "the fit floor must leave a found surface worth strictly more than the \
+     bare road and strictly less than a perfectly matched one, or the \
+     substrate half of the rest relation says nothing"
+);
+
+/// What a body of this kind gets out of lying down on a thing of this kind:
+/// the multiplier a bout taken on it repays at (The Tenon, spec §5).
+///
+/// ```text
+///   grade(species, kind) = 1.0 + (S - 1.0) * offer(kind) * fit(species, kind)
+///
+///   fit = 1.0                                  if the surface is Made
+///       = substrate.eval(hardness, FIT_FLOOR)  if it is Natural(hardness)
+/// ```
+///
+/// `S` is `sleeper.afforded_gain` — `hornvale_species::
+/// sleep_grade_registry`'s row, already resolved by [`sleep_grade_for`], so a
+/// species that table has never heard of reads [`DEFAULT_SLEEP_GRADE`] here
+/// exactly as it does everywhere else and never a silent `1.0`.
+///
+/// **A kind with no `rest` row reads `1.0`** — no bonus, never no recovery.
+/// That is the same inversion [`DEFAULT_FATIGUE_RISE`]'s doc records
+/// rejecting, and it is the honest answer rather than a fallback: a kind
+/// carrying no [`crate::affordance::RestSurface`] carries no
+/// [`crate::affordance::ObjectProperty::SupportsRest`] either (asserted both
+/// ways by `supports_rest_and_a_rest_surface_imply_each_other`), so there is
+/// nothing to lie on and nothing to grade, not a missing measurement.
+///
+/// **`Made` yields a LITERAL `1.0`, and that literal is load-bearing.**
+/// [`ConditionResponse::eval`] clamps to `[0, 1]` and can answer
+/// `0.9999999999999999` at a hardness that merely happens to sit near a
+/// curve's peak; a literal cannot. It is what makes
+/// `grade(species, bed) == sleep_grade_registry[species]` a bit-for-bit
+/// identity rather than an approximation — see
+/// `the_bed_column_reproduces_the_shipped_sleep_grade_for_every_species`,
+/// which states the arithmetic and the bound it is coupled to.
+///
+/// **The production caller is [`SiteGrade::gain`]** (The Tenon, Task 5), and
+/// until that task this function carried an `#[allow(dead_code)]` saying so
+/// in advance. It is reached for exactly one grade, [`SiteGrade::On`] — a
+/// bout whose [`SLEPT_ON`] fact the fold resolved to a kind this build
+/// carries — and for nothing else.
+///
+/// **`pub(crate)`, widened from a bare `fn` in The Tenon's Task 6** so
+/// [`crate::sleep_site::select_sleep_site`] — a SIBLING module, not a child,
+/// so a bare `fn` here is out of its reach — can rank a room's candidates by
+/// it. Widened no further, for the reason `crate::affordance::body_can_use`'s
+/// own narrowing records: this family of questions stays inside the crate.
+/// type-audit: bare-ok(ratio: return)
+pub(crate) fn grade_of(
+    sleeper: &SleepTraits,
+    kind: KindId,
+    objects: &ComponentStore<KindId, crate::affordance::ObjectTraits>,
+) -> f64 {
+    let Some(surface) = objects.get(&kind).and_then(|t| t.rest) else {
+        return 1.0;
+    };
+    let fit = match surface.substrate {
+        crate::affordance::Substrate::Made => 1.0,
+        crate::affordance::Substrate::Natural(hardness) => {
+            sleeper.substrate.eval(hardness, FIT_FLOOR)
+        }
+    };
+    1.0 + (sleeper.afforded_gain - 1.0) * surface.offer * fit
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
@@ -7856,8 +8214,20 @@ impl<'a> DriveMovements<'a> {
                 // through the affordance choice `select_sleep_site` answers —
                 // so only this arm asks. Bare ground (`None`) commits nothing,
                 // exactly as `slept_on_fact`'s own doc requires.
+                //
+                // THE SLEEPER AND THE ROSTER ARE BUILT INSIDE THIS ARM (The
+                // Tenon, Task 6), not hoisted out of the loop: ranking needs
+                // both, and this arm runs once per sleep ACT while the loop
+                // around it runs once per tick per creature. Hoisting would
+                // move a four-registry build onto the hot path to save it on
+                // the cold one.
                 if matches!(action, Action::Sleep)
-                    && let Some(anchor) = crate::sleep_site::select_sleep_site(&st.interior, npc)
+                    && let Some(anchor) = crate::sleep_site::select_sleep_site(
+                        &st.interior,
+                        npc,
+                        &sleep_traits_of(npc),
+                        &crate::affordance::object_registry(),
+                    )
                 {
                     out.push(slept_on_fact(
                         npc.entity,
@@ -9028,6 +9398,23 @@ mod tests {
     /// reads [`SiteGrade::Bare`] and this value is never consulted; the
     /// fixtures' predictions are bit-for-bit what they were before Task 4.
     const SITE_GAIN: f64 = 1.5;
+
+    /// The substrate companion to [`FATIGUE_RISE`] and [`SITE_GAIN`] above
+    /// (The Tenon), mirroring `hornvale_species::substrate_response`'s
+    /// surface curve — the realm every kind absent from
+    /// `habitat_realm_registry` carries, human's included. Every call it is
+    /// passed to also passes `sites: None`, so every bout reads
+    /// [`SiteGrade::Bare`] and this value is never consulted; the fixtures'
+    /// predictions are bit-for-bit what they were before The Tenon.
+    ///
+    /// Written out rather than calling `substrate_response` because a
+    /// fixture that asks production for its own expected value cannot fail
+    /// when production changes, and these fixtures exist to notice that.
+    const FIXTURE_SUBSTRATE: ConditionResponse = ConditionResponse {
+        optimum: 0.0,
+        width: 0.5,
+        devotion: 1.0,
+    };
 
     /// Test-only helper: fits the coexistence stack once and reads the `k`
     /// densest wild concentrations — the prelude `derive_wild_npcs` used to
@@ -17226,7 +17613,8 @@ mod tests {
                         t,
                         SleepTraits {
                             rise: FATIGUE_RISE,
-                            afforded_gain: SITE_GAIN
+                            afforded_gain: SITE_GAIN,
+                            substrate: FIXTURE_SUBSTRATE,
                         },
                         None,
                         None
@@ -17263,6 +17651,7 @@ mod tests {
                         SleepTraits {
                             rise: FATIGUE_RISE,
                             afforded_gain: SITE_GAIN,
+                            substrate: FIXTURE_SUBSTRATE,
                         },
                         None,
                         None,
@@ -17755,7 +18144,8 @@ mod tests {
                 at(0.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17777,7 +18167,8 @@ mod tests {
                 at(2.0),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17795,7 +18186,8 @@ mod tests {
                 at(2.25),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17814,7 +18206,8 @@ mod tests {
                 at(3.0),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17832,7 +18225,8 @@ mod tests {
                 at(100.0),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17856,7 +18250,8 @@ mod tests {
                 at(2.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17872,7 +18267,8 @@ mod tests {
                 at(2.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17882,7 +18278,8 @@ mod tests {
                 at(2.5),
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17957,7 +18354,8 @@ mod tests {
                 day,
                 SleepTraits {
                     rise: FATIGUE_RISE,
-                    afforded_gain: SITE_GAIN
+                    afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None
@@ -17983,6 +18381,7 @@ mod tests {
                 SleepTraits {
                     rise: FATIGUE_RISE,
                     afforded_gain: SITE_GAIN,
+                    substrate: FIXTURE_SUBSTRATE,
                 },
                 None,
                 None,
@@ -21141,6 +21540,146 @@ mod tests {
             mismatches.len(),
             field.nodes.len(),
             &mismatches[..mismatches.len().min(5)]
+        );
+    }
+
+    /// A [`SleepTraits`] for one species, built the way [`creature_fatigue`]
+    /// builds one — the three registry lookups and nothing else (The Tenon,
+    /// Task 4). It exists because `grade_of` takes an already-resolved
+    /// sleeper rather than a species name, which is the arrangement decision
+    /// 0697 built the struct for; a test that wants a species must therefore
+    /// resolve one, exactly as the single production door does.
+    fn sleep_traits_for(species: &str) -> SleepTraits {
+        SleepTraits {
+            rise: fatigue_rise_for(species, Some(&hornvale_species::fatigue_rise_registry())),
+            afforded_gain: sleep_grade_for(
+                species,
+                Some(&hornvale_species::sleep_grade_registry()),
+            ),
+            substrate: substrate_for(species, Some(&hornvale_species::habitat_realm_registry())),
+        }
+    }
+
+    /// **P1.** The bed column must reproduce `sleep_grade_registry` for every
+    /// species, EXACTLY — a byte comparison, not a tolerance. Decision 0697
+    /// ruled that no kind in any world gains more from a bed than it did
+    /// before that table existed and that the peoples keep their number byte
+    /// for byte; The Tenon reinterprets the table (it now means "the grade on
+    /// a fully offering made surface") rather than re-authoring it, and this
+    /// is what holds that claim.
+    ///
+    /// **Why a bit comparison is a theorem here and not a hope, and what it
+    /// is coupled to.** `bed` is [`crate::affordance::Substrate::Made`] at
+    /// `offer = 1.0`, so [`grade_of`] reduces to `1.0 + (S - 1.0) * 1.0 * 1.0`
+    /// with both factors LITERAL `1.0`s. Multiplying by a literal `1.0` is
+    /// exact, so the expression is `1.0 + (S - 1.0)`; by **Sterbenz's lemma**
+    /// `S - 1.0` is exact for any `S` in `[1, 2]`, and adding `1.0` back
+    /// recovers `S` exactly because `S` is representable. The table's own
+    /// bound is `[1.0, 1.5]`, asserted in `hornvale_species`'s coverage suite
+    /// — well inside `[1, 2]`.
+    ///
+    /// **So this test and that bound are now COUPLED.** A future
+    /// `sleep_grade_registry` row authored above `2.0` leaves Sterbenz's
+    /// interval and could break the identity. Whoever raises that bound
+    /// should meet this sentence rather than a mystery red: the repair is to
+    /// decide what `grade(species, bed)` is supposed to mean above `2.0`, not
+    /// to loosen this assertion to a tolerance.
+    ///
+    /// The count assertion is not decoration: a loop over an empty or
+    /// truncated store passes every assertion inside it.
+    #[test]
+    fn the_bed_column_reproduces_the_shipped_sleep_grade_for_every_species() {
+        let grades = hornvale_species::sleep_grade_registry();
+        let objects = crate::affordance::object_registry();
+        let mut checked = 0usize;
+        for (kind, shipped) in grades.iter() {
+            let got = grade_of(
+                &sleep_traits_for(kind.0),
+                hornvale_thing::kinds::BED,
+                &objects,
+            );
+            assert_eq!(
+                got.to_bits(),
+                shipped.to_bits(),
+                "{kind:?} on a bed reads {got} but its shipped grade is {shipped}"
+            );
+            checked += 1;
+        }
+        assert_eq!(
+            checked, 39,
+            "the roster is 39 rows; a smaller number means the loop is not \
+             seeing the table this assertion is about"
+        );
+    }
+
+    /// **P2's function half.** Two species order two FOUND surfaces
+    /// oppositely, through [`grade_of`] — not through
+    /// `hornvale_species::substrate_response` (The Tenon, Task 4).
+    ///
+    /// **This is a different claim from Task 3's, and the second can fail
+    /// while the first passes.** Task 3's test proves the two CURVES
+    /// discriminate. This one proves the discrimination survives the
+    /// combination: `offer`, `FIT_FLOOR`, the `S - 1.0` scaling and the
+    /// `Made` short-circuit all sit between a curve and a grade, and any of
+    /// them could flatten the ordering without touching the curves at all.
+    ///
+    /// **The pair is human and drow, and the choice is what makes it a
+    /// REVERSAL rather than two different gains.** Both carry
+    /// `MADE_FOR_THE_BODY` (`1.50`) in `sleep_grade_registry`, so `S` is
+    /// identical and cannot be what orders them; they differ in
+    /// `habitat_realm_registry` and in nothing else this function reads.
+    ///
+    /// **It builds its own [`crate::affordance::ObjectTraits`] rather than
+    /// reading `object_registry`, and that is a limitation to state rather
+    /// than hide**: until The Tenon's Task 7 the only rest surface in the
+    /// registry is `bed`, which is `Made` and therefore graded by no
+    /// substrate at all — there is no second surface to order it against.
+    /// Task 8 is what proves a reversal reaches a WORLD; this test proves
+    /// only that the function expresses one.
+    #[test]
+    fn two_species_order_two_found_surfaces_oppositely_through_the_grade() {
+        use crate::affordance::{ObjectProperty, ObjectTraits, RestSurface, Substrate};
+
+        const YIELDING: KindId = KindId("test-yielding-surface");
+        const HARD: KindId = KindId("test-hard-surface");
+
+        let surface = |substrate| ObjectTraits {
+            properties: [ObjectProperty::SupportsRest].into_iter().collect(),
+            rest: Some(RestSurface {
+                offer: 1.0,
+                substrate,
+            }),
+        };
+        let objects: ComponentStore<KindId, ObjectTraits> = [
+            (YIELDING, surface(Substrate::Natural(0.0))),
+            (HARD, surface(Substrate::Natural(1.0))),
+        ]
+        .into_iter()
+        .collect();
+
+        let human = sleep_traits_for("human");
+        let drow = sleep_traits_for("drow");
+        assert_eq!(
+            human.afforded_gain, drow.afforded_gain,
+            "the pair is only a REVERSAL if the two species' sleep-grade rows \
+             are identical — otherwise the ordering could come from `S` and \
+             say nothing about the substrate"
+        );
+
+        let human_yielding = grade_of(&human, YIELDING, &objects);
+        let human_hard = grade_of(&human, HARD, &objects);
+        let drow_yielding = grade_of(&drow, YIELDING, &objects);
+        let drow_hard = grade_of(&drow, HARD, &objects);
+
+        assert!(
+            human_yielding > human_hard,
+            "a surface kind must rest better on the yielding surface: \
+             yielding {human_yielding} vs hard {human_hard}"
+        );
+        assert!(
+            drow_hard > drow_yielding,
+            "a subterranean kind must rest better on the hard surface: \
+             hard {drow_hard} vs yielding {drow_yielding}"
         );
     }
 }

@@ -1274,6 +1274,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_249_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
@@ -1282,6 +1283,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -2190,6 +2192,7 @@ hornvale-species::suite$biome_affinity::the_registry_ships_exactly_the_declared_
 hornvale-species::suite$coverage::activity_cycle_coverage_matches_the_table
 hornvale-species::suite$coverage::autotroph_is_computed_as_an_endotherm_today
 hornvale-species::suite$coverage::dispersion_is_a_ratio_on_every_axis
+hornvale-species::suite$coverage::drow_and_human_resolve_to_different_realms
 hornvale-species::suite$coverage::every_biosphere_kind_carries_a_fatigue_rise_row
 hornvale-species::suite$coverage::every_biosphere_kind_carries_a_sleep_grade_row
 hornvale-species::suite$coverage::every_kind_in_the_realm_store_has_a_biosphere_row
@@ -2203,6 +2206,7 @@ hornvale-species::suite$coverage::status_basis_coverage_matches_the_table
 hornvale-species::suite$coverage::the_dark_trait_combinations_are_named
 hornvale-species::suite$coverage::the_sleep_grade_table_carries_a_real_ladder_not_one_repeated_number
 hornvale-species::suite$coverage::the_subterranean_roster_is_the_two_rehomed_kinds_and_the_drow
+hornvale-species::suite$coverage::the_two_realms_order_hardness_oppositely
 hornvale-species::suite$instance_lens::join_equals_scan_over_random_ledgers
 hornvale-species::suite$instance_lens::lens_demo_world_fact_count_is_pinned
 hornvale-species::suite$instance_lens::lens_is_total_never_panicking
@@ -2672,7 +2676,6 @@ hornvale-vessel::hornvale_vessel$lattice::anchor_cells::tests::every_placed_cell
 hornvale-vessel::hornvale_vessel$lattice::anchor_cells::tests::every_placement_is_faithful
 hornvale-vessel::hornvale_vessel$lattice::anchor_cells::tests::is_faithful_rejects_a_scattered_placement
 hornvale-vessel::hornvale_vessel$lattice::anchor_cells::tests::the_embedder_invents_no_more_than_the_graph_leaves_free
-hornvale-vessel::hornvale_vessel$lattice::anchor_cells::tests::the_grown_corpus_is_where_the_filter_binds
 hornvale-vessel::hornvale_vessel$lattice::anchor_cells::tests::the_placement_is_deterministic
 hornvale-vessel::hornvale_vessel$lattice::anchor_cells::tests::the_seed_is_read_at_all
 hornvale-vessel::hornvale_vessel$lattice::classify::tests::a_chambers_bounds_are_its_floor_and_nothing_else
@@ -2897,6 +2900,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::slept_on_fact_records_the_kind
 hornvale-vessel::hornvale_vessel$liveness::tests::social_proposal_and_serviceability_are_the_home_step
 hornvale-vessel::hornvale_vessel$liveness::tests::soft_maslow_severe_cold_beats_mild_thirst_but_dying_of_thirst_beats_any_cold
 hornvale-vessel::hornvale_vessel$liveness::tests::the_agent_at_predicate_spelling_is_a_permanent_on_disk_key
+hornvale-vessel::hornvale_vessel$liveness::tests::the_bed_column_reproduces_the_shipped_sleep_grade_for_every_species
 hornvale-vessel::hornvale_vessel$liveness::tests::the_fatigue_drive_beds_down_in_place_wherever_the_creature_is
 hornvale-vessel::hornvale_vessel$liveness::tests::the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle
 hornvale-vessel::hornvale_vessel$liveness::tests::the_hoisted_walk_emits_exactly_what_the_loop_emitted
@@ -2922,6 +2926,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::thermal_within_tolerance_is_sa
 hornvale-vessel::hornvale_vessel$liveness::tests::thirst_integrates_faster_over_a_hot_occupancy
 hornvale-vessel::hornvale_vessel$liveness::tests::thirsty_but_unreachable_water_gives_up_quickly_not_at_max_steps
 hornvale-vessel::hornvale_vessel$liveness::tests::two_agents_believe_different_sources_from_their_histories_and_beeline_differently
+hornvale-vessel::hornvale_vessel$liveness::tests::two_species_order_two_found_surfaces_oppositely_through_the_grade
 hornvale-vessel::hornvale_vessel$liveness::tests::two_species_read_the_same_hot_cell_differently
 hornvale-vessel::hornvale_vessel$liveness::tests::walking_before_arriving_is_refused
 hornvale-vessel::hornvale_vessel$liveness::tests::walking_into_a_contained_anchor_succeeds_not_only_across_adjacency
@@ -2950,6 +2955,8 @@ hornvale-vessel::hornvale_vessel$resident::tests::a_later_advance_over_a_longer_
 hornvale-vessel::hornvale_vessel$resident::tests::advance_judges_each_room_once_and_holds_the_verdict
 hornvale-vessel::hornvale_vessel$resident::tests::discarding_the_index_and_rebuilding_gives_the_same_prefixes
 hornvale-vessel::hornvale_vessel$resident::tests::the_frightening_day_held_is_the_rooms_first_visit_not_a_later_one
+hornvale-vessel::hornvale_vessel$resident::tests::the_trail_and_the_visit_lists_hold_the_same_sighting_count
+hornvale-vessel::hornvale_vessel$resident::tests::the_two_indexes_hold_the_hand_counted_entries_and_bytes
 hornvale-vessel::hornvale_vessel$roster::tests::a_short_mask_is_refused
 hornvale-vessel::hornvale_vessel$roster::tests::a_slot_never_moves
 hornvale-vessel::hornvale_vessel$roster::tests::a_write_moves_one_slot_only
@@ -2989,6 +2996,7 @@ hornvale-vessel::hornvale_vessel$site::tests::salience_ignores_tier
 hornvale-vessel::hornvale_vessel$site::tests::salience_ranks_settlement_over_exotic_over_cave
 hornvale-vessel::hornvale_vessel$sleep_site::tests::room_with_no_offering_anchor_returns_none
 hornvale-vessel::hornvale_vessel$sleep_site::tests::single_bed_anchor_is_selected
+hornvale-vessel::hornvale_vessel$sleep_site::tests::the_higher_graded_kind_wins_over_the_lower_anchor_id
 hornvale-vessel::hornvale_vessel$sleep_site::tests::two_offering_anchors_the_ascending_one_wins
 hornvale-vessel::hornvale_vessel$structure::tests::a_built_locale_has_a_bounded_chamber_set
 hornvale-vessel::hornvale_vessel$structure::tests::a_different_locale_gives_a_different_structure
@@ -3093,6 +3101,7 @@ hornvale-vessel::suite$affordance::no_kind_keyed_dispatch_names_a_verb
 hornvale-vessel::suite$affordance::no_thing_kind_keyed_verb_table_exists
 hornvale-vessel::suite$affordance::no_verb_by_object_table_exists
 hornvale-vessel::suite$affordance::subset_and_equality_genuinely_disagree_on_the_constructed_traits
+hornvale-vessel::suite$affordance::supports_rest_and_a_rest_surface_imply_each_other
 hornvale-vessel::suite$affordance::the_dispatch_scan_catches_a_thing_kind_keyed_table
 hornvale-vessel::suite$affordance::the_dispatch_scan_catches_an_inner_str_keyed_table
 hornvale-vessel::suite$affordance::the_dispatch_scan_does_not_fire_on_the_registry_indirection
@@ -3107,6 +3116,7 @@ hornvale-vessel::suite$affordance::the_table_scanner_catches_a_set_builder_arm
 hornvale-vessel::suite$affordance::the_table_scanner_catches_a_thing_kind_keyed_arm
 hornvale-vessel::suite$affordance::the_table_scanner_does_not_false_positive_on_property_indirection
 hornvale-vessel::suite$affordance::the_table_scanner_does_not_false_positive_on_thing_kind_property_rows
+hornvale-vessel::suite$affordance::three_natural_surfaces_offer_sleep_with_their_authored_substrates
 hornvale-vessel::suite$affordance::warm_appears_on_hearth_with_no_object_table_edit
 hornvale-vessel::suite$affordance::warm_is_offered_to_any_object_carrying_radiates_heat_not_only_hearth
 hornvale-vessel::suite$body_mass::an_absent_biosphere_falls_back_to_the_reference_mass
@@ -3137,6 +3147,8 @@ hornvale-vessel::suite$fatigue_stock::p4b_two_rests_restore_more_than_either_alo
 hornvale-vessel::suite$fatigue_stock::p6_fatigue_never_goes_negative
 hornvale-vessel::suite$fatigue_stock::p7_a_bout_in_a_room_that_affords_rest_restores_strictly_more
 hornvale-vessel::suite$fatigue_stock::p8_how_much_the_bed_helps_depends_on_the_species_sleeping_in_it
+hornvale-vessel::suite$fatigue_stock::p9_a_bout_grades_on_the_kind_the_ledger_says_it_slept_on
+hornvale-vessel::suite$fatigue_stock::p9b_a_bout_with_no_slept_on_fact_still_grades_through_the_room
 hornvale-vessel::suite$fatigue_stock::the_debt_scales_with_the_worlds_own_local_day_not_the_standard_one
 hornvale-vessel::suite$felt_state_concepts::every_affect_label_has_exactly_one_registered_felt_state_concept
 hornvale-vessel::suite$gate_table::in_character_is_refused_while_asleep_and_permitted_awake
@@ -3174,10 +3186,10 @@ hornvale-vessel::suite$resident_folds::a_same_day_pair_committed_in_descending_r
 hornvale-vessel::suite$resident_folds::an_entity_that_never_moved_has_an_empty_trail
 hornvale-vessel::suite$resident_folds::an_entity_that_never_moved_has_no_visits
 hornvale-vessel::suite$resident_folds::an_entity_that_never_moved_knows_no_water
-hornvale-vessel::suite$resident_folds::discarding_known_water_at_every_position_is_unobservable
-hornvale-vessel::suite$resident_folds::discarding_known_water_at_every_third_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_latest_visit_at_every_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_latest_visit_at_every_third_position_is_unobservable
+hornvale-vessel::suite$resident_folds::discarding_latest_visit_water_at_every_position_is_unobservable
+hornvale-vessel::suite$resident_folds::discarding_latest_visit_water_at_every_third_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_the_store_at_every_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_the_store_at_every_third_position_is_unobservable
 hornvale-vessel::suite$resident_folds::discarding_the_sustenance_tenants_at_every_position_is_unobservable
@@ -3188,14 +3200,16 @@ hornvale-vessel::suite$resident_folds::every_prefix_length_equals_the_oracle_tru
 hornvale-vessel::suite$resident_folds::evicting_a_memoised_reset_partition_is_unobservable
 hornvale-vessel::suite$resident_folds::folding_one_fact_at_a_time_equals_the_scan_oracle
 hornvale-vessel::suite$resident_folds::holding_facts_back_as_an_overlay_equals_the_scan_over_the_full_ledger
-hornvale-vessel::suite$resident_folds::known_water_at_every_past_instant_equals_the_oracle_at_that_instant
-hornvale-vessel::suite$resident_folds::known_water_folded_one_fact_at_a_time_equals_the_scan_oracle
 hornvale-vessel::suite$resident_folds::latest_visit_at_every_past_instant_equals_the_oracle_at_that_instant
 hornvale-vessel::suite$resident_folds::latest_visit_folded_one_fact_at_a_time_equals_the_scan_oracle
+hornvale-vessel::suite$resident_folds::latest_visit_water_at_every_past_instant_equals_the_oracle_at_that_instant
+hornvale-vessel::suite$resident_folds::latest_visit_water_folded_one_fact_at_a_time_equals_the_scan_oracle
 hornvale-vessel::suite$resident_folds::sustenance_at_equals_the_integrate_thirst_oracle_at_every_instant
 hornvale-vessel::suite$resident_folds::the_fixture_visits_at_least_one_room_twice
 hornvale-vessel::suite$resident_folds::the_fixture_visits_both_wet_and_dry_rooms
 hornvale-vessel::suite$resident_folds::the_hand_built_ledger_is_not_already_in_sorted_order
+hornvale-vessel::suite$resident_folds::the_kerf_a_room_committed_backwards_is_known_from_its_earliest_instant
+hornvale-vessel::suite$resident_folds::the_kerf_descending_fixture_commits_each_room_backwards
 hornvale-vessel::suite$resident_folds::the_reset_lookups_equal_a_direct_scan_of_the_ledger
 hornvale-vessel::suite$resident_folds::the_store_advances_on_read_and_a_second_read_absorbs_nothing
 hornvale-vessel::suite$resident_folds::the_sustenance_fixture_actually_contains_its_traps
@@ -3245,6 +3259,7 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
+hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does

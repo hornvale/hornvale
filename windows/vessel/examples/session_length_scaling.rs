@@ -213,6 +213,18 @@ const CALIB_ITERS: u64 = 1 << 22;
 /// enough to stay free next to the band it follows.
 const FOLD_REPS: u32 = 200;
 
+/// Fresh-store advances averaged into one `advance_ns_per_fact` reading (The
+/// Kerf, spec §4 K2). FIVE, and the size is a judgement about cost against
+/// noise rather than a copy of [`FOLD_REPS`]: one repetition here folds the
+/// band's WHOLE ledger — tens of thousands of facts, milliseconds — where one
+/// `drive_at` call is microseconds, so 200 of these would cost seconds per
+/// band and dominate the run they are reported beside. Five is enough that a
+/// single scheduler hiccup cannot set the number and cheap enough to be free
+/// next to the band it follows. Each repetition gets its OWN store: a second
+/// advance of the same store absorbs nothing, which is the very thing this
+/// probe exists not to measure.
+const ADVANCE_REPS: u32 = 5;
+
 /// The plan-search node-expansion budget passed to `believed_water`,
 /// `shared_believed_water` and (indirectly, via production's own call sites)
 /// the belief folds below. Mirrors `liveness.rs`'s own `PLAN_BUDGET` (1,000),
@@ -408,9 +420,21 @@ fn probe_fatigue_us(ledger: &Ledger, npc: &Body, t: WorldTime, terrain: &dyn Ter
         .get_by_label("human")
         .copied()
         .unwrap_or(1.5);
+    // And the substrate preference, resolved from a THIRD species table for
+    // the same reason again (The Tenon): `liveness::creature_fatigue` builds
+    // `habitat_realm_registry` beside the other two, so a literal curve here
+    // would understate the fold's real per-call cost exactly as a literal
+    // rate or gain would.
+    let substrate = hornvale_species::substrate_response(
+        hornvale_species::habitat_realm_registry()
+            .get_by_label("human")
+            .copied()
+            .unwrap_or(hornvale_species::HabitatRealm::SURFACE),
+    );
     let traits = SleepTraits {
         rise: rate,
         afforded_gain: gain,
+        substrate,
     };
     for _ in 0..FOLD_REPS {
         sink += fatigue_at(
@@ -532,6 +556,61 @@ fn probe_hazard_memory_memo_us(
         );
     }
     us
+}
+
+/// Time a COLD [`hornvale_vessel::resident::ResidentFolds`] advanced over the
+/// band's WHOLE ledger, averaged over [`ADVANCE_REPS`] fresh stores, divided by
+/// `ledger.len()` — nanoseconds of `absorb` work per committed fact (The Kerf,
+/// spec §4 K2).
+///
+/// **COLD IS THE POINT, and it is the exact opposite of [`probe_fold_us`]'s
+/// warm reads.** That probe hands the RUN's own store to `drive_at` precisely
+/// so nothing is absorbed inside the timed span, because the production shape
+/// it measures is a read over a store the tick has already brought current —
+/// a fresh store there would time an O(ledger) advance and report a number
+/// about the harness. This probe measures the advance ITSELF: the per-fact
+/// cost every tenant pays exactly once for every fact ever committed, which is
+/// the quantity a tenant's deletion actually moves. A warm store absorbs
+/// nothing at all, so measuring this one on the run's store would report zero
+/// for every band.
+///
+/// **It never touches the run's own store**, for the same reason
+/// `probe_hazard_memory_memo_us` builds its memo inside the loop: a probe that
+/// advanced, reset or otherwise disturbed the store the sim reads would stop
+/// measuring the sim it is reported beside.
+///
+/// The denominator is `ledger.len()` — every committed fact, not only the
+/// `agent-at` ones. That is deliberate and is what makes the column comparable
+/// across bands: every tenant is OFFERED every fact and most of them return at
+/// the predicate test, so the per-fact cost is over the whole stream the store
+/// is driven with.
+fn probe_advance_ns_per_fact(ledger: &Ledger) -> f64 {
+    let facts = ledger.len();
+    if facts == 0 {
+        println!("advance probe: the ledger is empty -- reported so it is never silent");
+        return 0.0;
+    }
+    let mut total_ns = 0.0_f64;
+    let mut sink = 0_usize;
+    for _ in 0..ADVANCE_REPS {
+        // Constructed OUTSIDE the timed span: an empty store is a handful of
+        // empty maps, and the question is what absorbing costs.
+        let mut fresh = hornvale_vessel::resident::ResidentFolds::new();
+        #[allow(clippy::disallowed_types)] // benchmark harness
+        let t0 = Instant::now();
+        let trail = fresh.trail(ledger);
+        total_ns += t0.elapsed().as_secs_f64() * 1e9;
+        // Consume the advanced state so the calls cannot be optimized away,
+        // and read it AFTER the timer stops so the sum is not in the span.
+        sink += trail.entries();
+    }
+    if sink == 0 {
+        println!(
+            "advance probe: a cold store absorbed no sighting at this band -- \
+             the number below is the predicate test alone, not an advance"
+        );
+    }
+    total_ns / ADVANCE_REPS as f64 / facts as f64
 }
 
 /// Each roster member's own `agent-at` posting count — the per-agent history
@@ -735,6 +814,36 @@ struct Band {
     /// (`FrighteningGround::held_bytes()`) -- same estimate caveat as
     /// `ground_bytes`.
     index_bytes: usize,
+
+    // ---- The Kerf: K1 and K2 (spec §4) -- what the two surviving `agent-at`
+    // fold tenants HOLD at this band's end, and what advancing a cold store
+    // over the band's whole ledger COSTS per fact. No threshold: these are
+    // figures, not criteria. ----
+    /// Every entity's sighting count summed, held by `Trail` at this band's
+    /// end (`Trail::entries()`) -- every dated `agent-at` fact, once each.
+    trail_entries: usize,
+    /// An estimate of `Trail`'s held bytes at this band's end
+    /// (`Trail::held_bytes()`) -- one `size_of::<(WorldTime, Facet)>()` per
+    /// sighting plus that sighting's room `path` heap length. An ESTIMATE of
+    /// held data, not an allocator measurement, the same caveat
+    /// `ground_bytes` states.
+    trail_bytes: usize,
+    /// Every VISIT INSTANT held by `LatestVisit` at this band's end
+    /// (`LatestVisit::entries()`). Identically equal to `trail_entries` --
+    /// the same population keyed by room -- so a divergence between the two
+    /// columns is a defect, not a reading.
+    latest_visit_entries: usize,
+    /// An estimate of `LatestVisit`'s held bytes at this band's end
+    /// (`LatestVisit::held_bytes()`) -- every visited room's key size plus one
+    /// `size_of::<WorldTime>()` per instant in that room's visit list. Same
+    /// estimate caveat.
+    latest_visit_bytes: usize,
+    /// **K2.** Nanoseconds of `absorb` work per committed fact: a COLD
+    /// `ResidentFolds` advanced over this band's whole ledger, averaged over
+    /// `ADVANCE_REPS` fresh stores, divided by `ledger_len`. Deliberately
+    /// cold and deliberately outside the `ms_per_tick` span -- see
+    /// `probe_advance_ns_per_fact`.
+    advance_ns_per_fact: f64,
 }
 
 fn main() {
@@ -820,6 +929,40 @@ fn main() {
             "{:>5} {:>10} {:>12} {:>13} {:>12}",
             b.index, b.ground_len, b.ground_bytes, b.index_entries, b.index_bytes
         );
+    }
+
+    // The Kerf: K1 and K2 (spec §4) -- a THIRD, small table, for the reason
+    // the second one gives: the tables above keep their existing columns
+    // untouched. No threshold; the absent BEFORE row is the campaign's
+    // measured saving.
+    println!();
+    println!(
+        "{:>5} {:>9} {:>9} {:>9} {:>9} {:>11}",
+        "band", "trail_e", "trail_b", "visit_e", "visit_b", "adv_ns/fact"
+    );
+    println!(
+        "  (K1: the two `agent-at` fold tenants' held entries and an ESTIMATE of their held \
+         bytes -- not an allocator measurement. `trail_e` and `visit_e` are the SAME population \
+         keyed two ways and must agree exactly. \
+         K2 `adv_ns/fact`: a COLD store advanced over the whole ledger, per committed fact.)"
+    );
+    for b in &bands {
+        println!(
+            "{:>5} {:>9} {:>9} {:>9} {:>9} {:>11.2}",
+            b.index,
+            b.trail_entries,
+            b.trail_bytes,
+            b.latest_visit_entries,
+            b.latest_visit_bytes,
+            b.advance_ns_per_fact
+        );
+        if b.trail_entries != b.latest_visit_entries {
+            println!(
+                "  band {}: trail_e {} != visit_e {} -- these index the SAME sightings, so this \
+                 is a defect in one of the two counts, not a reading",
+                b.index, b.trail_entries, b.latest_visit_entries
+            );
+        }
     }
 
     // Is the mean representative? Printed once rather than per row, and
@@ -1344,6 +1487,21 @@ fn run(
             );
             let hazard_memory_memo_us =
                 probe_hazard_memory_memo_us(&ledger, &folds, npc, &npcs, day, &probe_terrain);
+            // The Kerf, K1: what the two surviving `agent-at` tenants hold at this
+            // band's end, read off the RUN's own store — which the tick above
+            // has already brought current, so these four statements advance
+            // nothing. Four sequential statements rather than one expression:
+            // each `borrow_mut` temporary dies at its own semicolon, so the
+            // one-guard rule is satisfied without a combined accessor no
+            // production caller wants.
+            let trail_entries = folds.borrow_mut().trail(&ledger).entries();
+            let trail_bytes = folds.borrow_mut().trail(&ledger).held_bytes();
+            let latest_visit_entries = folds.borrow_mut().latest_visit(&ledger).entries();
+            let latest_visit_bytes = folds.borrow_mut().latest_visit(&ledger).held_bytes();
+            // The Kerf, K2. OUTSIDE the `band_ms` span by construction (that
+            // span closed above, before this block) and over a store of its
+            // own, never the run's.
+            let advance_ns_per_fact = probe_advance_ns_per_fact(&ledger);
             let calib_ms = calibrate();
             let searches_after = home_nav_cache.searches();
             let ticks_elapsed = (tick + 1) as f64;
@@ -1385,6 +1543,11 @@ fn run(
                 ground_bytes: ground.borrow().held_bytes(),
                 index_entries: folds.borrow().frightening_ground().entries(),
                 index_bytes: folds.borrow().frightening_ground().held_bytes(),
+                trail_entries,
+                trail_bytes,
+                latest_visit_entries,
+                latest_visit_bytes,
+                advance_ns_per_fact,
             });
             band_facts_before = facts_after;
             band_searches_before = searches_after;

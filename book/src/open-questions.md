@@ -1760,6 +1760,24 @@ as discharging it. The general form is worth keeping past this bet — **a
 precondition stated as one sentence can have halves that move independently,
 and the half that moves first makes the other look closer than it is.**
 
+*Re-scored up, but not resolved, by
+[The Tenon](./chronicle/the-tenon.md) (2026-09-04).* The Range's candidate —
+that where a preference enters a pipeline decides whether it can differentiate
+— now has a second live mechanism outside population placement. Rest quality
+multiplies a sleeper's kind-level gain by a substrate response at the consumer,
+and actual seed-1234 rooms reverse the ordering: gully-dwarf grades rushes above
+ledge while drow grades ledge above rushes. This removes the caveat that the
+candidate rested on one mechanism and two authored occupants; the new witness
+crosses another domain boundary and reaches both committed choice and recovery.
+
+It does **not** establish the causal half of the candidate. The Tenon compares
+two species under one placement of the response term; it does not move the same
+term inside and outside an otherwise fixed limiting product. The reversal proves
+that a factorized preference can differentiate, not that pipeline placement is
+what made it differentiate. Confidence rises because an independent mechanism
+reproduces the predicted capability; the claim remains a candidate until one
+mechanism supplies the inside/outside control.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
