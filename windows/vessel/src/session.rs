@@ -11,8 +11,8 @@ use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
     LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
     Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
-    derive_wild_herds, renders_unconscious, settlement_room_index, slept_fact, slept_on_fact,
-    species_activity, village_or_fallback,
+    derive_wild_herds, errand_predicates, renders_unconscious, settlement_room_index, slept_fact,
+    slept_on_fact, species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -1676,6 +1676,15 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
+        // The Warrant, Task 1: the eight errand predicates, from the one
+        // table — registered beside `AGENT_AT` for the same reason `EATEN`
+        // is, above. Idempotent (same defs every session), same as every
+        // predicate registered on this clone.
+        for (key, doc) in errand_predicates() {
+            registry
+                .register_predicate(key, false, doc)
+                .expect("the errand predicates register identically every session");
+        }
         // The player's disposition mark — the first player-authored predicate.
         // Non-functional (a subject may be provoked and later soothed; each is
         // one dated fact). Additive: registering a new predicate perturbs

@@ -33,6 +33,97 @@ use hornvale_species::{ActivityCycle, HabitatRealm, ThermalStrategy};
 /// type-audit: bare-ok(identifier-text)
 pub const AGENT_AT: &str = "agent-at";
 
+/// The errand predicates — one per arm of the drive tick's commitment
+/// `Mode`, naming WHY a creature set out. **SAVE-FORMAT CONTRACT:** these
+/// eight strings are permanent on-disk keys, exactly as [`AGENT_AT`] is.
+/// Deliberate regeneration takes an epoch suffix (`errand/forage/v2`), never
+/// a rename.
+///
+/// The reason lives in the predicate rather than the object because
+/// `register_predicate`'s doc string is the only prose
+/// `hornvale_historiography::recount` renders for a predicate — so putting it
+/// here moves the reader-facing words out of the ledger and into the concept
+/// registry, which is `hornvale_kernel::phenomena`'s producer rule applied to
+/// facts (The Warrant spec §4.2).
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_WATER_KNOWN: &str = "errand/water-known";
+/// An errand toward water the creature does NOT know: exploring blind.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_WATER_BLIND: &str = "errand/water-blind";
+/// An errand toward richer forage.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_FORAGE: &str = "errand/forage";
+/// An errand toward a kinder temperature.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_COMFORT: &str = "errand/comfort";
+/// An errand home to rest, driven by fatigue.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_REST: &str = "errand/rest";
+/// An errand AWAY from frightening ground — repulsion, not attraction.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_FLIGHT: &str = "errand/flight";
+/// An errand homeward, driven by loneliness.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_COMPANY: &str = "errand/company";
+/// An errand home with nothing pressing: the sated walk back.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_HOME: &str = "errand/home";
+
+/// Which errand a creature is on, from the commitment [`Mode`] it carries and
+/// whether it currently believes in a water source.
+///
+/// **Exhaustive, with no `_` arm, deliberately.** Widening [`Mode`] or
+/// [`DriveKind`] must be a compile error here rather than a silent
+/// fall-through into the wrong errand — for an enum widening the compiler is
+/// the enumeration, and a wildcard would void it.
+///
+/// **The production caller lands in a later Penstock 7b task** (the walk's
+/// own `MoveTo` commit, beside [`prose_for`]) — Task 1 commits no fact and
+/// changes no behaviour, so until that caller exists, only this module's own
+/// `mod tests` reaches this function, and an ordinary (non-test) build sees
+/// it as genuinely unreferenced. Same posture [`grade_of`]'s doc records for
+/// its own staged introduction ahead of its caller (The Tenon, Task 5).
+#[allow(dead_code)]
+pub(crate) fn errand_key(mode: Mode, believed: bool) -> &'static str {
+    match mode {
+        Mode::Pursuing(DriveKind::Thirst) if believed => ERRAND_WATER_KNOWN,
+        Mode::Pursuing(DriveKind::Thirst) => ERRAND_WATER_BLIND,
+        Mode::Pursuing(DriveKind::Hunger) => ERRAND_FORAGE,
+        Mode::Pursuing(DriveKind::Thermal) => ERRAND_COMFORT,
+        Mode::Pursuing(DriveKind::Fatigue) => ERRAND_REST,
+        Mode::Pursuing(DriveKind::Danger) => ERRAND_FLIGHT,
+        Mode::Pursuing(DriveKind::Social) => ERRAND_COMPANY,
+        Mode::Homing | Mode::Idle => ERRAND_HOME,
+    }
+}
+
+/// The eight errand predicates paired with the doc a registry registers them
+/// under — the gloss `recount` renders. Exposed so every site that registers
+/// [`AGENT_AT`] on a session's registry clone registers these beside it from
+/// ONE table, rather than eight copies drifting apart.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn errand_predicates() -> [(&'static str, &'static str); 8] {
+    [
+        (
+            ERRAND_WATER_KNOWN,
+            "went down to the river it knew (thirst)",
+        ),
+        (
+            ERRAND_WATER_BLIND,
+            "wandered, having found no water yet (thirst)",
+        ),
+        (ERRAND_FORAGE, "foraged toward richer ground (hunger)"),
+        (ERRAND_COMFORT, "sought a kinder clime (comfort)"),
+        (ERRAND_REST, "turned home, weary, to rest"),
+        (ERRAND_FLIGHT, "fled the uncanny ground (fear)"),
+        (
+            ERRAND_COMPANY,
+            "drifted homeward, missing its people (belonging)",
+        ),
+        (ERRAND_HOME, "walking home (sated)"),
+    ]
+}
+
 /// The NPC's position AS OF day `t`: the latest committed `agent-at` with day
 /// ≤ `t`, ELSE its home (the drive model's pre-history state — an NPC has not
 /// yet sought its resource until the drive first crosses `act`). Honouring `t`
@@ -7975,6 +8066,29 @@ impl WalkState {
     }
 }
 
+/// The prose gloss for a `MoveTo`'s provenance, from the commitment [`Mode`]
+/// and whether the creature currently believes in a water source.
+///
+/// **TRANSITIONAL (delete with its call site in Task 3).** This duplicates
+/// [`errand_predicates`]'s docs in prose form, string for string — the
+/// duplication [`the_registry_glosses_and_the_live_prose_match_agree_both_ways`](tests::the_registry_glosses_and_the_live_prose_match_agree_both_ways)
+/// exists to catch. Lifted out of `advance_one`'s `match st.mode` so that
+/// test can see it under its own name.
+fn prose_for(mode: Mode, believed: bool) -> &'static str {
+    match mode {
+        Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
+        Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
+        Mode::Pursuing(DriveKind::Hunger) => "foraged toward richer ground (hunger)",
+        Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
+        Mode::Pursuing(DriveKind::Social) => "drifted homeward, missing its people (belonging)",
+        Mode::Pursuing(DriveKind::Thirst) if believed => "went down to the river it knew (thirst)",
+        Mode::Pursuing(DriveKind::Thirst) => {
+            "wandered, having found no water yet (thirst)" // ignorant
+        }
+        Mode::Homing | Mode::Idle => "walking home (sated)",
+    }
+}
+
 impl<'a> DriveMovements<'a> {
     /// Advance ONE creature by ONE decision-and-act: perceive, arbitrate, act,
     /// append any emitted facts to `out`, and update `st`. Returns `false` when
@@ -8134,22 +8248,7 @@ impl<'a> DriveMovements<'a> {
                 // thirst distinguishes BELIEVED (beelining a known
                 // source) from IGNORANT (exploring blind); thermal names
                 // the comfort-seeking; homing names the sated walk back.
-                let provenance = match st.mode {
-                    Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
-                    Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
-                    Mode::Pursuing(DriveKind::Hunger) => "foraged toward richer ground (hunger)",
-                    Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
-                    Mode::Pursuing(DriveKind::Social) => {
-                        "drifted homeward, missing its people (belonging)"
-                    }
-                    Mode::Pursuing(DriveKind::Thirst) if st.believed.is_some() => {
-                        "went down to the river it knew (thirst)"
-                    }
-                    Mode::Pursuing(DriveKind::Thirst) => {
-                        "wandered, having found no water yet (thirst)" // ignorant
-                    }
-                    Mode::Homing | Mode::Idle => "walking home (sated)",
-                };
+                let provenance = prose_for(st.mode, st.believed.is_some());
                 out.push(agent_at_fact(npc.entity, &n, st.day, provenance));
                 st.visited.insert(n.clone());
                 st.pos = n;
@@ -9569,6 +9668,85 @@ mod tests {
              every belief fold sees an empty history. Do not rebaseline this \
              literal — take an epoch."
         );
+    }
+
+    /// The eight keys are the eight arms the prose match already had, one for
+    /// one. Written as an explicit table rather than a loop so a NINTH mode
+    /// cannot be silently absorbed: adding one makes `errand_key`'s own match
+    /// fail to compile, and adding one WITHOUT a key here leaves this table
+    /// short, which the count assertion catches.
+    #[test]
+    fn every_mode_maps_to_exactly_one_errand_key() {
+        let cases: [(Mode, bool, &str); 8] = [
+            (Mode::Pursuing(DriveKind::Thirst), true, ERRAND_WATER_KNOWN),
+            (Mode::Pursuing(DriveKind::Thirst), false, ERRAND_WATER_BLIND),
+            (Mode::Pursuing(DriveKind::Hunger), false, ERRAND_FORAGE),
+            (Mode::Pursuing(DriveKind::Thermal), false, ERRAND_COMFORT),
+            (Mode::Pursuing(DriveKind::Fatigue), false, ERRAND_REST),
+            (Mode::Pursuing(DriveKind::Danger), false, ERRAND_FLIGHT),
+            (Mode::Pursuing(DriveKind::Social), false, ERRAND_COMPANY),
+            (Mode::Homing, false, ERRAND_HOME),
+        ];
+        for (mode, believed, expected) in cases {
+            assert_eq!(
+                errand_key(mode, believed),
+                expected,
+                "{mode:?} believed={believed}"
+            );
+        }
+        assert_eq!(
+            errand_key(Mode::Idle, false),
+            ERRAND_HOME,
+            "Idle shares Homing's key"
+        );
+    }
+
+    /// Every key is registered with a non-empty doc, and the docs are the
+    /// eight glosses the renderer will show.
+    #[test]
+    fn every_errand_predicate_carries_a_distinct_non_empty_doc() {
+        let table = errand_predicates();
+        assert_eq!(table.len(), 8);
+        let mut keys: Vec<&str> = table.iter().map(|(k, _)| *k).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), 8, "keys are distinct");
+        let mut docs: Vec<&str> = table.iter().map(|(_, d)| *d).collect();
+        docs.sort_unstable();
+        docs.dedup();
+        assert_eq!(docs.len(), 8, "docs are distinct");
+        for (key, doc) in table {
+            assert!(!doc.is_empty(), "{key} has an empty doc");
+            assert!(
+                key.starts_with("errand/"),
+                "{key} is not in the errand namespace"
+            );
+        }
+    }
+
+    /// TRANSITIONAL (delete with the prose match in Task 3). The eight
+    /// glosses live in two places until the flip: `prose_for` (lifted from
+    /// `advance_one`'s `match st.mode`), and `errand_predicates()`. A
+    /// one-directional check would let either copy drift. Assert BOTH
+    /// directions — every gloss is emitted by some mode, and every mode's
+    /// prose is some gloss.
+    #[test]
+    fn the_registry_glosses_and_the_live_prose_match_agree_both_ways() {
+        let modes: [(Mode, bool); 8] = [
+            (Mode::Pursuing(DriveKind::Thirst), true),
+            (Mode::Pursuing(DriveKind::Thirst), false),
+            (Mode::Pursuing(DriveKind::Hunger), false),
+            (Mode::Pursuing(DriveKind::Thermal), false),
+            (Mode::Pursuing(DriveKind::Fatigue), false),
+            (Mode::Pursuing(DriveKind::Danger), false),
+            (Mode::Pursuing(DriveKind::Social), false),
+            (Mode::Homing, false),
+        ];
+        let emitted: std::collections::BTreeSet<&str> =
+            modes.iter().map(|&(m, b)| prose_for(m, b)).collect();
+        let glossed: std::collections::BTreeSet<&str> =
+            errand_predicates().iter().map(|(_, d)| *d).collect();
+        assert_eq!(emitted, glossed);
     }
 
     #[test]
