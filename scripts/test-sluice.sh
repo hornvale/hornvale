@@ -3267,7 +3267,7 @@ set +e
 # reported rc=0 and LANDED while main received only the pre-merge tree's
 # artifact regens. The blast-radius guard at the end of this file exists to
 # catch a recurrence.
-runout="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED bash "$repo_root/scripts/sluice-run.sh" \
+runout="$(HV_SLUICE_DIR="$cdir" bash "$repo_root/scripts/sluice-run.sh" \
     campaign/h hhhhhhhhhhhh merge 2>&1)"
 runrc=$?
 set -e
@@ -3284,13 +3284,40 @@ fi
 : > "$CQ"
 row iii campaign/i iiiiiiiiiiii queued merge >> "$CQ"
 set +e
-adhoc="$(HV_SLUICE_DIR="$cdir" env -u HV_SLUICE_CLAIMED timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
+adhoc="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
     campaign/zzz 999999999999 merge 2>&1)"
 set -e
 if printf '%s' "$adhoc" | grep -q "AD HOC"; then
     ok "a ref with no queue row runs ad hoc and says so (the escape hatch stayed open)"
 else
     bad "an unqueued ref did not report AD HOC — the operator escape hatch may have closed"
+fi
+
+echo "== sluice-run: a request id supplies branch, sha and kind from the row"
+: > "$CQ"
+row jjj campaign/j jjjjjjjjjjjj queued stage >> "$CQ"
+set +e
+idout="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" req-jjj 2>&1)"
+set -e
+if printf '%s' "$idout" | grep -q "kind=stage"; then
+    ok "a request id is resolved to its row's branch, sha and kind"
+else
+    bad "sluice-run did not resolve req-jjj to kind=stage — an operator-typed kind can still disagree with the row"
+fi
+
+# THIS IS PROC-stage-request-should-read-its-own-queue-row's negative
+# control: an id with no matching row must be refused, not treated as an
+# ad hoc branch name (which is what the positional form does for an unknown
+# ref — see the AD HOC test above). Reading `req-` as "go find a row" only
+# for a KNOWN id would be a silent bug in the other direction.
+set +e
+noidout="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" req-nosuchrow 2>&1)"
+noidrc=$?
+set -e
+if [ "$noidrc" = "2" ] && printf '%s' "$noidout" | grep -q "no queue row with id"; then
+    ok "a request id with no matching row is refused, not run as an ad hoc branch name"
+else
+    bad "req-nosuchrow gave rc=$noidrc, out=$noidout — an unresolvable id should refuse, not run ad hoc"
 fi
 
 

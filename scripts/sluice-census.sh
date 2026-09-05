@@ -90,8 +90,30 @@ EOF
 if [ -n "${HV_CENSUS_LIB:-}" ]; then return 0 2>/dev/null || exit 0; fi
 
 repo_root="${HV_SLUICE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-ref="${1:?usage: sluice-census.sh <full-sha> [study.json ...]}"
+ref="${1:?usage: sluice-census.sh <full-sha>|<request-id> [study.json ...]}"
 shift || true
+
+# A SINGLE ARGUMENT THAT LOOKS LIKE A REQUEST ID IS ONE — see the matching
+# block in sluice-run.sh. Resolved BEFORE the SHA-format validation below,
+# since a request id is not itself a 40-char hex SHA; the row's own sha
+# column is what gets validated. `census_row_id` is set here so the
+# interlock section further down can tell "resolved from an id" apart from
+# "positional form, claim it ourselves" without an exported claim-id
+# environment variable.
+census_row_id=""
+case "$ref" in
+    req-*)
+        _row="$(bash "$repo_root/scripts/sluice-queue.sh" list \
+                | awk -F'\t' -v i="$ref" '$2==i {print; exit}')"
+        if [ -z "$_row" ]; then
+            echo "sluice-census: no queue row with id '$ref'" >&2
+            exit 2
+        fi
+        census_row_id="$ref"
+        ref="$(printf '%s' "$_row" | cut -f4)"
+        echo "sluice-census: resolved $census_row_id -> sha=${ref:0:12}" >&2
+        ;;
+esac
 
 case "$ref" in
     *[!0-9a-f]*|"") echo "sluice-census: REF must be a full 40-char SHA (hex only); got '$ref'" >&2; exit 2 ;;
@@ -109,10 +131,14 @@ esac
 #
 # Census is not run by sluice-run.sh (it takes the shared flock itself), so it
 # cannot inherit that script's bookkeeping and needs its own copy here.
-census_row_id=""
+#
+# `census_row_id` may already be set above (resolved from a `req-*` id):
+# whoever handed us that id already owns the row's claim, so this script must
+# not claim it again — the same reasoning sluice-run.sh's interlock uses, and
+# there is likewise no env var to consume or unset any more.
 census_claimed=0
-if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
-    census_row_id="$HV_SLUICE_CLAIMED"
+if [ -n "$census_row_id" ]; then
+    :
 else
     set +e
     # STDOUT AND STDERR ARE CAPTURED TOGETHER (fix round 2, Critical F1) —

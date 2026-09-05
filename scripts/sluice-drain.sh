@@ -101,12 +101,17 @@ run_one() {
     local START RC ELAPSED AFTER LOG runner
     START=$SECONDS
     runner="$(dispatch_for "$KIND")"
-    export HV_SLUICE_CLAIMED="$ID"
-    if [ "$KIND" = "census" ]; then
-        (cd "$repo_root" && bash "$runner" "$SHA") >/dev/null 2>&1
-    else
-        (cd "$repo_root" && bash "$runner" "$BR" "$SHA" "$KIND") >/dev/null 2>&1
-    fi
+    # BOTH RUNNERS NOW TAKE THE REQUEST ID, NOT branch/sha/kind. The drain
+    # already claimed this row above (in the same locked pass that selected
+    # it), so the runner resolves branch/sha/kind straight from the row it
+    # was told about rather than trusting whatever this loop passed
+    # positionally — which is what let a hand-typed `merge` land a
+    # kind=stage request on main once already. This also removes the need to
+    # export a claim-id environment variable: there is nothing ambient for a
+    # nested sluice-run.sh (e.g. one invoked from inside scripts/test-sluice.sh,
+    # itself run as an `outboard` phase) to inherit and mistake for its own
+    # claim.
+    (cd "$repo_root" && bash "$runner" "$ID") >/dev/null 2>&1
     RC=$?
     ELAPSED=$((SECONDS - START))
 

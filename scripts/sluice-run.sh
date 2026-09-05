@@ -132,8 +132,44 @@ set -m
 # one that was missing, and without it a test cannot avoid touching this
 # repository's own origin/main and worktree registry.
 repo_root="${HV_SLUICE_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-branch="${1:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
-sha="${2:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
+branch="${1:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]  |  sluice-run.sh <request-id>}"
+sha="${2:-}"
+kind="${3:-merge}"
+
+# A SINGLE ARGUMENT THAT LOOKS LIKE A REQUEST ID IS ONE. Reading branch, sha
+# and kind out of the row removes the class of failure where an
+# operator-supplied value disagrees with the row that authorised the run — a
+# hand-typed `merge` for a kind=stage request landed on main once already.
+# It also removes the need for the exported claim-id environment variable
+# this file used to read: the runner now knows WHICH ROW authorised it, so
+# nothing has to be exported to tell it. `queue_row_id`
+# is set here, before the interlock section below, so that section can tell
+# "resolved from an id" apart from "positional form, claim it ourselves"
+# without a second signal.
+queue_row_id=""
+case "$branch" in
+    req-*)
+        _row="$(bash "$repo_root/scripts/sluice-queue.sh" list \
+                | awk -F'\t' -v i="$branch" '$2==i {print; exit}')"
+        if [ -z "$_row" ]; then
+            echo "sluice-run: no queue row with id '$branch'" >&2
+            exit 2
+        fi
+        queue_row_id="$branch"
+        branch="$(printf '%s' "$_row" | cut -f3)"
+        sha="$(printf '%s' "$_row" | cut -f4)"
+        kind="$(printf '%s' "$_row" | cut -f6)"
+        [ -n "$kind" ] || kind="merge"
+        # Printed BEFORE the `exec >>"$run_log"` redirect further down, so an
+        # operator (or a test) invoking the id form directly sees what it
+        # resolved to without having to go find the job log.
+        echo "sluice-run: resolved $queue_row_id -> branch=$branch sha=${sha:0:12} kind=$kind" >&2
+        ;;
+    *)
+        : "${sha:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
+        ;;
+esac
+
 # THE STAGE GATE IS THIS SCRIPT WITH THE PUSH TURNED OFF (The Sluice, Task
 # 12). `gate-stage` used to be a separate dispatch path — its own script,
 # its own detached job, its own shared scratch worktree, its own jobs.tsv —
@@ -146,7 +182,6 @@ sha="${2:?usage: sluice-run.sh <branch> <full-sha> [merge|stage]}"
 # `stage`-rung phases rather than all six" — a distinction 0148 removed and
 # 0426 kept removed: the two lists are identical and both run every
 # `stage`-rung set, so the push is the ONLY difference.)
-kind="${3:-merge}"
 case "$kind" in
     merge|stage) ;;
     *) echo "sluice-run: unknown kind '$kind' (merge|stage)" >&2; exit 2 ;;
@@ -178,22 +213,20 @@ waited_s=""
 # own row when nobody has claimed it for us, and releases it at exit. A run
 # whose ref is not in the queue at all is still allowed — that is an ad hoc
 # run, and it is a different thing from a race.
-queue_row_id=""
+#
+# NOTE: `queue_row_id` may already be set here — the request-id resolution
+# above sets it when `branch` was a `req-*` id. That is the same case this
+# block used to reach via an exported claim-id environment variable: whoever
+# handed us the id (the drain loop's own `claim` call, or an operator quoting an id
+# from `sluice-queue.sh list`) already owns the row's claim and its terminal
+# state, so this script must not claim it again. There is no env var to
+# consume or unset any more — the id argument IS the claim, and it dies with
+# this process's argv instead of leaking into every child's environment.
 claimed_here=0
-if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
-    # A dispatcher already claimed this row atomically and owns its terminal
-    # state; claiming again would refuse against ourselves.
-    queue_row_id="$HV_SLUICE_CLAIMED"
-    # AND IT IS CONSUMED HERE, NOT PASSED ON. sluice-drain.sh `export`s it, so
-    # without this unset it is inherited by every phase and by anything a phase
-    # runs — including a nested sluice-run.sh, which would then believe its own
-    # row was already claimed and SKIP THE INTERLOCK ENTIRELY. That is the exact
-    # duplicate-execution hole this file exists to close, reopened one level
-    # down. Observed 2026-09-05: the `outboard` phase runs scripts/test-sluice.sh,
-    # whose T7/T8 invoke this script; they inherited the chamber's own claim id,
-    # skipped the claim, ran on into real git work and died 128 — reddening two
-    # candidates before the cause was found.
-    unset HV_SLUICE_CLAIMED
+if [ -n "$queue_row_id" ]; then
+    # A dispatcher (or the id itself) already claimed this row atomically;
+    # claiming again would refuse against ourselves.
+    :
 else
     set +e
     # STDOUT AND STDERR ARE CAPTURED TOGETHER (fix round 2, Critical F1):
