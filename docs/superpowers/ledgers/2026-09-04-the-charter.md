@@ -396,6 +396,10 @@ scoped re-review of this fix. No task-2 dispatch before approval.
 
 ## Follow-ups
 
+- Generated-write capture uses mtime across a run, so concurrent controller
+  edits can be counted as generator writes. Preserve that attribution limit
+  and keep measured authoring runs free of unrelated edits under their stems.
+
 - Report presentation: put the census pure-predicate qualification next to
   its requirement result; make the distinct Thing observation subjects and
   contributor registration order easier to scan. Independent usability
@@ -602,8 +606,9 @@ remain separate obligations.
 
 Absorption verification: `make rebaseline` returned rc=0, wall 251.625 s.
 No Book, fixture or audit-content artifact changed. The generated write-set
-inventory changed two directory population counts (`docs/audits` 15→16,
-`docs/digest` 3→4 total files), and its timing row is retained. This is observed
+inventory changed `docs/audits` written-count 15→16 and `docs/digest`
+tracked-count 3→4, and its timing row is retained. The written-count
+attribution is corrected in the later evidence regeneration note below. This is observed
 freshness of this composition, not a prediction from the clean Git merge.
 
 The first absorption commit hook failed the reconciliation coverage test:
@@ -688,3 +693,33 @@ explicitly not a validation of implementation correctness. Their suggested
 summary-level wording and dirty-state attribution improvements are captured
 in Follow-ups. Current explicit scope limits were sufficient for the reader
 tasks; no new production semantics or provenance promise is introduced.
+
+## Evidence-file ownership correction
+
+Controller inspection of `docs/generated-paths.txt` found that its directory
+author applies to every file without a more-specific exception. Charter's
+evidence ledger, three report snapshots and Mac sample stream are captured
+qualification records, not files the artifact generator recreates. Added
+explicit `none(...)` rows under the existing longest-match policy rather
+than leave inherited authorship false. The existing overriding-declaration
+guard requires a real measured regeneration before accepting those rows.
+This is artifact bookkeeping within the approved evidence scope; no gate
+selection or publication authority changes. The same review also corrected
+the evidence command-list order to match the actual controller invocation.
+
+Evidence regeneration completed rc=0 in 137.310 s. The five explicit
+evidence exceptions each measured `written=0, tracked=1`; the parent Digest
+row measured two generated files out of eight tracked files. No Book,
+fixture or audit-content artifact changed. The audit written-count returned
+from 16 to 15: during the first absorption regeneration the controller edited
+the reconciliation TSV after the run's marker, so that mtime-based counter
+counted a controller write too. The script's counter observes writes during
+the interval, not causal authorship. This later run had no concurrent edits
+under generated stems. Preserve this limitation when interpreting capture
+counts; the first count is not evidence that the generator owns that TSV.
+
+Ruling: start the single broad source review on this code-complete, Mac-evidenced
+checkpoint while the canonical jobs finish. The reviewer must mark remaining
+Linux/stage evidence pending, not silently waive it; subsequent evidence or
+fix deltas receive scoped review. This schedules independent reading earlier
+without declaring Task 5 or final qualification complete.
