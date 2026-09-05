@@ -493,3 +493,53 @@ reconciliation TSV and timings. No manual semantic resolution was needed.
 This is an actual merge receipt, not a prediction about future integration.
 The upcoming commit runs the ordinary commit gate before branch push/stage
 submission. Frozen specimen source remains the separately identified Task 1 base.
+
+### Stage 1 submission and Stage 2 independent preparation
+
+The ordinary gate on the main-absorption commit passed all three subfloor
+chunks in 223.968 seconds, rc=0. Candidate
+`ab3abc6e011a2b97b02a83d38da8de916e4c6ffd` was pushed normally and submitted
+as `req-ab3abc6e011a-20260905T183028Z`, kind stage. Initial readback was queued
+behind The Zenith's running merge. This is not yet a green stage result.
+
+The independent source authors share reviewed base `5cc62d8b6`, frozen questions
+and the named collision input only. They work in `counterpart-thing` and
+`counterpart-settlement`, on matching `codex/` branches, with no shared index.
+Neither received the other's implementation or results. Both received the
+same plain-list owner field contract and plain concept-name subject convention.
+Top-level subject union and per-variant change deltas are explicitly distinguished.
+The generic task extractor omitted Task 3's owner schema from Task 4; the
+controller supplied that schema directly, without sibling specimen information.
+
+Prewarms completed rc=0: Thing433.952s, Settlement359.107s; exact rows retained.
+Source mutation/compilation slots were serial: Thing began after its prewarm
+finished, restored all sources, then Settlement's prewarm and source runs
+followed. Thing feasibility overlapped the controller's ordinary gate, so its
+author timings are explicitly not controlled performance samples.
+
+## #7 [G5] — accept independently authored Thing specimens
+
+**Decision:** accept Task3 author commit
+`846f3fa27760480ed5aac7f1f6a30368bd23faa5`, integrated as `d5f43b410`.
+Both review verdicts approved with no findings. Three real-source variants
+compiled and executed rc=0, produced observable effects, passed patch-application
+checks, and restored source hashes. Lock diff was empty. Ordinary artifact hook
+passed75 tests with246 skipped by its standard filter.
+
+**Why:** safe addition, prospective joint claim and legitimate extra borrowing
+have raw evidence independent of the candidate's declarations. Joint interaction
+is still unmeasured; source objects, full-question evaluation and composition
+belong Task5. The controller's explicit context/slot ownership receipts support
+procedural separation; hashes alone are not atomic-capture proof.
+**Scope clarification:** “safe” means the four frozen obligations. These synthetic
+patches intentionally leave production FROZEN roster tests unchanged and are
+not production admission candidates. No test was disabled to land source code.
+**Alternatives/Ideonomy:** no new approach/Q or weakened obligation; the reserved
+correlated challenge remains Task6. **Capture:** artifacts, exact author evidence,
+this acceptance and the later-task verification obligations.
+
+Task5 begins pure comparator/runner code against frozen interfaces while Task4
+artifacts finish review. It may not invent the missing owner record or compose
+the real panel before reviewed artifacts are integrated. This overlaps independent
+preparation, not semantic integration or a pending review decision. The existing
+Charter ledger's diagnostic/adopter overlap provides the same scheduling precedent.

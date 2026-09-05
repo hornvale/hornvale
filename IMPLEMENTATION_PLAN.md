@@ -12,7 +12,7 @@ Detailed plan: [implementation plan](docs/superpowers/plans/2026-09-05-the-count
 **Goal**: Independent owner records, source bundle, complete runner and honest three-way shadow comparison.
 **Success Criteria**: Real non-no-op safe pair and qualified interaction or explicit feasibility failure; all questions run; replay inputs and failures retained; stage gate green.
 **Tests**: Comparator fallback/scoring, real Git reconstruction, incomplete/tampered attempt rejection, unreserved real-source panel, canonical stage gate.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 3: Challenge, replay and prepare G6
 **Goal**: Frozen reserved challenge, supported-host evidence, independent replay and reviewable findings.
