@@ -7763,11 +7763,14 @@ impl<'w> Session<'w> {
     ///    same catalogue `describe_chamber` renders from), accepted where it
     ///    is UNIQUE among this chamber's apertures — spec §5.3's relaxation of
     ///    the old "exactly one aperture open" rule (ledger #14). A role noun
-    ///    is unique among a structure's apertures by construction (no role
-    ///    repeats — spec §5.1 invariant 3); a prose noun every neighbour's
-    ///    prose carries — every role's prose names a doorway, so `doorway` —
-    ///    still refuses: matching on a noun that names more than one aperture
-    ///    would silently pick a direction the player never named.
+    ///    is unique among a chamber's two apertures by construction, on a
+    ///    built structure (no role repeats — spec §5.1 invariant 3) and on a
+    ///    wild chain alike (a chamber's apertures are `index_role(i - 1)` and
+    ///    `index_role(i + 1)`, never both `Store`); a prose noun every
+    ///    neighbour's prose carries — every role's prose names a doorway, so
+    ///    `doorway` — still refuses: matching on a noun that names more than
+    ///    one aperture would silently pick a direction the player never
+    ///    named.
     ///
     /// An empty `target` takes the sole neighbour, if there is exactly one; with
     /// a choice to make, silence is not an answer.

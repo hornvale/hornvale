@@ -193,9 +193,11 @@ pub fn grow(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
                 }
                 None => {
                     // No two-cell step out of this chamber's parent lands anywhere
-                    // this chamber may hold with a reservable cell between. Unreachable
-                    // while `n <= MAX_CHAMBERS` and the interior has room — 4
-                    // chambers in 17x17 cells cannot box one another in — and
+                    // this chamber may hold with a reservable cell between.
+                    // Unreachable for a CHAIN while `n <= MAX_CHAMBERS`; a fork
+                    // can reach it (24 pinned pairs — see the module doc's
+                    // known-limit section and
+                    // `the_grower_drops_a_link_on_exactly_these_fork_seeds`), and
                     // handled by a seed-free scan rather than an `expect`, because
                     // rule 1 failing loudly on an unrealized link is a better
                     // report than a panic inside a derivation. No threshold is

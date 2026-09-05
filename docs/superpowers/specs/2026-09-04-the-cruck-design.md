@@ -240,6 +240,21 @@ after parents). The two invariants its doc states are replaced by three:
    has one child.
 3. `roles[i]` is the role of `chambers[i]`; no role appears twice.
 
+> **AMENDED AFTER IMPLEMENTATION (2026-09-05, final review).** Invariant 3
+> was never amended for the wild path, and it should have been: a WILD
+> structure keeps the pre-campaign index reading (`index_role`), whose
+> answer is `Store` at every index `>= 2`, so a four-chamber cave carries
+> two `Store` chambers on purpose — kept byte-for-byte by §3.5's wild-path
+> promise and asserted by
+> `no_role_repeats_on_the_built_path_and_the_wild_path_keeps_its_duplicate_stores`
+> (documented on the `Structure` struct,
+> `windows/vessel/src/structure/mod.rs:47-58`). So invariant 3 holds for
+> BUILT structures only: the grammar admits each role once there. §5.3's
+> "role nouns are unique among apertures by construction" is unaffected —
+> it holds at the APERTURE level even on a wild chain, since a chamber's
+> two apertures are `index_role(i - 1)` and `index_role(i + 1)`, never both
+> `Store`, which is the property `named_neighbour` actually needs.
+
 `Role` moves out of `interior::pattern` into the structure module that now
 owns it, with a re-export at the old path so `interior` reads it unchanged.
 `role_for(index, brief)` is deleted; `chamber_interior_of` takes the role.
@@ -426,7 +441,11 @@ and `room/chambers/v1` are untouched.
   the enums, not seven copied fixtures), refusal on absent parent, the cap
   at four, no role twice, `parent < child`.
 - Unit: the allocator over every tree on ≤4 nodes (16 rooted labelled
-  trees, generated), rule 1 read back through `realized_links`.
+  trees, generated), rule 1 read back through `realized_links`. **CORRECTED
+  AFTER IMPLEMENTATION (2026-09-05, final review):** the roster is 10
+  parent-pointer trees under invariant 2 (`parent < child`) — 1 + 1 + 2 + 6
+  across one, two, three and four nodes; Cayley's 16 counts labelled trees
+  without that ordering, which is a different, larger set.
 - Integration (`windows/vessel/tests/suite/`): H1–H3 as one readout over
   the five seeds, H4, H5, H6.
 - Session: `enter further in` at a fork refuses and names the ways; `enter

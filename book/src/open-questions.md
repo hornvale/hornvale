@@ -2555,10 +2555,13 @@ latent, and it became reachable the moment a dwelling could fork. Neither the
 plan-parity contract nor the Handle's widening could have caught it, because
 neither had a case that produced the output.
 
-What is mechanized is exact and small: one test types the footer's own words
-back and requires them accepted, and requires a word the footer does not
-offer still refused — both directions, since the one-directional form is
-blind to over-admission, which is the limit this row already carries. What is
+What is mechanized is exact and small: `the_ways_on_footers_own_words_are_accepted_as_typed`
+types the footer's own words back and requires them accepted; the refusal
+half is covered separately — a shared prose noun by
+`a_prose_noun_shared_by_two_ways_names_them_rather_than_guessing`, a chain's
+own refusal shapes by `a_chain_resolves_exactly_as_before` — so both
+directions are checked, since a one-directional form is blind to
+over-admission, which is the limit this row already carries. What is
 not mechanized is the general rule that any surface naming a thing must accept
 that name; that remains a per-surface regression test each time. The standing
 lesson gains a clause: a check is blind not only where it does not reach, but

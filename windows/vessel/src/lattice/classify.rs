@@ -1216,7 +1216,8 @@ mod tests {
     ///
     /// **Why this exists rather than a narrowed H4 and silence.** Ledger #15 and
     /// spec §7's H4 amendment (2026-09-05) accept that the grower drops one link
-    /// on 24 of 2,560 fork (tree, seed) pairs, because every structural remedy
+    /// on 24 of 1,536 fork (tree, seed) pairs (2,560 pairs over all ten
+    /// trees; the four chains cannot fail), because every structural remedy
     /// measured also moves GROWN bytes for chains — a cave transcript moving is
     /// a STOP row in spec §6 — and because production never routes a fork to
     /// `grow` at all: wild sites draw chains (§3.5) and built sites `allocate`
@@ -1237,7 +1238,8 @@ mod tests {
     /// doorway read-back comment says it will), and by rule 8 (the chamber
     /// behind the missing doorway is a sealed pocket). Asserting the three sets
     /// are EQUAL is what says the fork failures corrupt nothing else: rule 2 and
-    /// the `dof` budget are asserted over ALL 2,560 pairs below, unconditionally.
+    /// the `dof` budget are asserted over all 1,536 fork pairs below (the
+    /// chains are covered by H4's grown arm), unconditionally.
     #[test]
     fn the_grower_drops_a_link_on_exactly_these_fork_seeds() {
         let pinned: BTreeSet<(Vec<(usize, usize)>, u64)> = [

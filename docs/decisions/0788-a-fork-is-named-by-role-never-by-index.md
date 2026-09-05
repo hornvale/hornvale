@@ -21,8 +21,12 @@ that is unambiguous; at a fork it is a silent guess, and the session's own
 footer text had already said that a fixed "two ways" would be "a lie told to
 a real player" under a richer topology. Ordinal ways — "first way", "second
 way" — were rejected: an index is not a reason, and the player cannot see it.
-Siblings never share a role, because the grammar admits one rule per role, so
-role nouns are unique among a chamber's apertures by construction.
+Siblings never share a role on a BUILT structure, because the grammar admits
+one rule per role; a WILD chain may repeat a role (`Store` at every index
+`>= 2`, kept for the cave reading spec §3.5 promised not to touch), but never
+as both apertures of one chamber — a chamber's two apertures are
+`index_role(i - 1)` and `index_role(i + 1)` — so role nouns are unique among
+any chamber's apertures by construction either way.
 
 The footer lists what it will accept: `Ways on: out, the hearth, the store.`
 at a fork, `Ways on: out, further in.` on a chain. That the footer's own

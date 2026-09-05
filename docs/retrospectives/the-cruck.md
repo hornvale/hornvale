@@ -125,9 +125,12 @@ post-unblinding narrowing. **Post-unblinding changes: 1.**
 The ways-on footer advertised `the hearth`; the parser accepted only `hearth`.
 The defect predates the campaign and was unreachable, because production had
 only ever drawn chains and no session had ever printed a named way. The first
-real walk that named one found it. Fixed with a test that pins both
-directions: the footer's own words are accepted, and a word the footer does
-not offer is still refused.
+real walk that named one found it. Fixed and pinned in both directions by
+separate tests: `the_ways_on_footers_own_words_are_accepted_as_typed` checks
+the footer's own words are accepted, and
+`a_prose_noun_shared_by_two_ways_names_them_rather_than_guessing` plus
+`a_chain_resolves_exactly_as_before` check a word the footer does not offer
+is still refused.
 
 A campaign that makes a new surface reachable inherits every latent defect on
 it. Budget for that rather than treating each as a surprise.

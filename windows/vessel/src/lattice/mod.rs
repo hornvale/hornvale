@@ -635,7 +635,7 @@ mod tests {
     /// wild structure — a chain — so growing the grammar's four-chamber fork
     /// here would assert coverage for a shape `embed_with` never sends to this
     /// method. (It would also be a coin flip: the grower drops one link on 24
-    /// of 2,560 fork/seed pairs, pinned in
+    /// of 1,536 fork/seed pairs, pinned in
     /// `classify::tests::the_grower_drops_a_link_on_exactly_these_fork_seeds`.)
     #[test]
     fn a_grown_lattice_still_covers_its_chambers_and_links() {

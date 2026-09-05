@@ -461,7 +461,8 @@ fn every_destination_the_plan_depicts_is_command_reachable() {
     let walked = visited.len().saturating_sub(1);
     assert_eq!(
         doorways, walked,
-        "the plan draws {doorways} doorways and the visit crosses {walked}: a drawn \
+        "the plan draws {doorways} doorways and the walk crosses {walked} links \
+         (chambers visited minus one, the link count of a rooted tree): a drawn \
          destination no command reaches is the defect this test exists for"
     );
     assert!(

@@ -45,7 +45,11 @@ pub const EVERY_ROLE: &[Role] = &[
 impl Role {
     /// The one-word name a player types to walk through the aperture that
     /// leads to a chamber of this role (`enter the store`). Unique among the
-    /// chambers of one structure because the grammar admits each role once.
+    /// chambers of a BUILT structure, because the grammar admits each role
+    /// once. A WILD chain may hold two `Store` chambers, but never as both
+    /// apertures of one chamber — a chamber's two apertures are
+    /// `index_role(i - 1)` and `index_role(i + 1)` — which is the property
+    /// naming actually needs.
     /// type-audit: bare-ok(identifier-text: return)
     pub fn noun(self) -> &'static str {
         match self {
