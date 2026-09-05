@@ -32,6 +32,21 @@ ok()   { printf '  ok: %s\n' "$1"; pass=$((pass+1)); }
 bad()  { printf '  FAIL: %s\n' "$1"; fail=$((fail+1)); }
 g()    { env -u GIT_DIR -u GIT_INDEX_FILE git "$@"; }
 
+# THE REAL REPO'S HEAD, RECORDED BEFORE ANY TEST RUNS. The last assertion in
+# this file proves it did not move. On 2026-09-04 a test in this suite pointed
+# HV_SLUICE_REPO_ROOT at the real repo; sluice-run.sh then detached and reset
+# that checkout, and because it happened inside the chamber it silently threw
+# away a merge product — the merge reported rc=0 and LANDED while main received
+# only the pre-merge tree. Nothing here noticed, because every assertion was
+# about the queue and none was about the blast radius.
+# HV_TEST_FAKE_START_HEAD is a seam for proving this guard is LIVE. Verifying
+# it the direct way — re-introducing the override and watching HEAD move —
+# means running a chamber against this very checkout, which is the incident
+# itself; that is not a thing to do to a live worktree to test a test. The
+# seam proves the COMPARISON fires. That an override actually moves HEAD is
+# established by the 2026-09-04 incident, not by re-staging it.
+real_head_at_start="${HV_TEST_FAKE_START_HEAD:-$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" rev-parse HEAD 2>/dev/null || echo unknown)}"
+
 tmp="$(mktemp -d)"
 # The request-path mutation tests below have to write their mutants INSIDE
 # scripts/ (see their own comments for why $tmp cannot host them), so the
@@ -1119,6 +1134,7 @@ echo "test-sluice: chamber origin is $(g -C "$chamber_repo" remote get-url origi
 mkdir -p "$chamber_repo/scripts"
 cp "$repo_root/scripts/census-canonical-host.sh" "$chamber_repo/scripts/census-canonical-host.sh"
 cp "$repo_root/scripts/timed.sh" "$chamber_repo/scripts/timed.sh"
+cp "$repo_root/scripts/sluice-queue.sh" "$chamber_repo/scripts/sluice-queue.sh"
 # EVERY HELPER sluice-run.sh SOURCES MUST BE ON THIS LIST, and the list has no
 # way to know that. Adding `sluice-headline.sh` without this line failed the
 # whole chamber section at once — `set -e` plus a missing `.` source, so the
@@ -3195,8 +3211,17 @@ echo "== sluice-run: refuses a ref another run already holds"
 : > "$CQ"
 row hhh campaign/h hhhhhhhhhhhh running merge >> "$CQ"
 set +e
-runout="$(HV_SLUICE_DIR="$cdir" HV_SLUICE_REPO_ROOT="$repo_root" \
-    bash "$repo_root/scripts/sluice-run.sh" campaign/h hhhhhhhhhhhh merge 2>&1)"
+# NOTE THE ABSENCE OF AN HV_SLUICE_REPO_ROOT OVERRIDE, AND DO NOT ADD ONE.
+# It is exported to the scratch $chamber_repo above and must stay there.
+# Pointing it at the real repo runs this script against a LIVE checkout, and
+# since the harness also exports HV_CENSUS_LOCK to a temp lock, the nested run
+# takes a FREE lock and proceeds to detach and reset that checkout. Done inside
+# the chamber on 2026-09-04 it discarded a merge product mid-run: the merge
+# reported rc=0 and LANDED while main received only the pre-merge tree's
+# artifact regens. The blast-radius guard at the end of this file exists to
+# catch a recurrence.
+runout="$(HV_SLUICE_DIR="$cdir" bash "$repo_root/scripts/sluice-run.sh" \
+    campaign/h hhhhhhhhhhhh merge 2>&1)"
 runrc=$?
 set -e
 if [ "$runrc" = "9" ] && printf '%s' "$runout" | grep -q "REFUSING"; then
@@ -3212,13 +3237,29 @@ fi
 : > "$CQ"
 row iii campaign/i iiiiiiiiiiii queued merge >> "$CQ"
 set +e
-adhoc="$(HV_SLUICE_DIR="$cdir" HV_SLUICE_REPO_ROOT="$repo_root" \
-    timeout 20 bash "$repo_root/scripts/sluice-run.sh" campaign/zzz 999999999999 merge 2>&1)"
+adhoc="$(HV_SLUICE_DIR="$cdir" timeout 20 bash "$repo_root/scripts/sluice-run.sh" \
+    campaign/zzz 999999999999 merge 2>&1)"
 set -e
 if printf '%s' "$adhoc" | grep -q "AD HOC"; then
     ok "a ref with no queue row runs ad hoc and says so (the escape hatch stayed open)"
 else
     bad "an unqueued ref did not report AD HOC — the operator escape hatch may have closed"
+fi
+
+
+# ---------------------------------------------------------------------------
+# THE BLAST-RADIUS GUARD. Every other assertion in this file is about what the
+# queue DID; this one is about what the suite MUST NOT TOUCH. Last, so it sees
+# the whole run.
+# ---------------------------------------------------------------------------
+echo "== suite: the real repository was never touched"
+real_head_at_end="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" rev-parse HEAD 2>/dev/null || echo unknown)"
+if [ "$real_head_at_start" = "unknown" ] || [ "$real_head_at_end" = "unknown" ]; then
+    bad "could not read the real repo's HEAD — the blast-radius guard did not run, which is not the same as passing"
+elif [ "$real_head_at_start" = "$real_head_at_end" ]; then
+    ok "the real repo's HEAD is unmoved ($real_head_at_start) — no test escaped its scratch"
+else
+    bad "THE SUITE MOVED THE REAL REPO: $real_head_at_start -> $real_head_at_end. A test is pointing HV_SLUICE_REPO_ROOT (or a git -C) at the live checkout; inside the chamber that discards the merge product and the run still reports green."
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
