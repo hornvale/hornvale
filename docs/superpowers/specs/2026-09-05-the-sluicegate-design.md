@@ -1,6 +1,6 @@
 # The Sluicegate — the queue's state machine becomes a Rust tool
 
-**Status:** draft, awaiting G3 · **Branch:** `campaign/the-sluicegate` ·
+**Status:** G3 approved 2026-09-05; implemented and merged · **Branch:** `campaign/the-sluicegate` ·
 **Registry:** `TOOL-sluice-queue-in-rust`, and it subsumes
 `PROC-stage-request-should-read-its-own-queue-row`
 

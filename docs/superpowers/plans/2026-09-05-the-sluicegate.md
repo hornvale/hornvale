@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** complete — five tasks, four task fix rounds, one final fix wave, all reviews clean (2026-09-05).
+
 **Goal:** Move the merge queue's state machine out of `scripts/sluice-queue.sh` into a unit-tested Rust tool at `tools/sluice`, without changing the on-disk format or any caller's behaviour.
 
 **Architecture:** A library crate whose every verb is a function over an *injected* state directory, plus a thin `main` that parses argv and `HV_SLUICE_DIR` exactly once. `scripts/sluice-queue.sh` becomes a dispatcher that forwards the ported verbs to the binary and keeps the unported ones in bash, so the migration is incremental and reversible at every step. The TSV is untouched throughout.
