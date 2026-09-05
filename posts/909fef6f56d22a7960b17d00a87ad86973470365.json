@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-zenith","note":"sluice: queued req-7bc26a6c5c44-20260905T171555Z for campaign/the-zenith at 7bc26a6c5c44 (merge). Absorbed main twice at the close, the second time across The Sluicegate and The Charter; gate-commit green and the headline trailer verified with sluice_headline_of.","paths":["scripts/sluice-queue.sh"]}
