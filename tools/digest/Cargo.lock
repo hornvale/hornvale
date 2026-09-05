@@ -33,10 +33,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "digest-census-publication"
+version = "0.1.0"
+dependencies = [
+ "digest-protocol",
+ "hornvale-lab",
+ "serde_json",
+]
+
+[[package]]
 name = "digest-protocol"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "digest-thing"
+version = "0.1.0"
+dependencies = [
+ "digest-protocol",
+ "hornvale-kernel",
+ "hornvale-settlement",
+ "hornvale-thing",
  "serde_json",
 ]
 
@@ -51,12 +71,273 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-alchemy"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-almanac"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-culture",
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-person",
+ "hornvale-religion",
+ "hornvale-settlement",
+ "hornvale-species",
+ "hornvale-terrain",
+ "hornvale-topology",
+]
+
+[[package]]
+name = "hornvale-astronomy"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-book"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+]
+
+[[package]]
+name = "hornvale-climate"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-culture"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-demography"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-explain"
+version = "0.1.0"
+dependencies = [
+ "hornvale-almanac",
+ "hornvale-astronomy",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-terrain",
+]
+
+[[package]]
+name = "hornvale-hearsay"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-history",
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-historiography"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-history"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-kernel"
 version = "0.1.0"
 dependencies = [
  "libm",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "hornvale-lab"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-culture",
+ "hornvale-demography",
+ "hornvale-hearsay",
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-locale",
+ "hornvale-religion",
+ "hornvale-settlement",
+ "hornvale-species",
+ "hornvale-terrain",
+ "hornvale-topology",
+ "hornvale-vessel",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hornvale-language"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-locale"
+version = "0.1.0"
+dependencies = [
+ "hornvale-climate",
+ "hornvale-kernel",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hornvale-paleoclimate"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-person"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-religion"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-scene"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-kernel",
+ "hornvale-locale",
+ "hornvale-settlement",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hornvale-settlement"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-species"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-terrain"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-thing"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-topology"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-vessel"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-book",
+ "hornvale-climate",
+ "hornvale-historiography",
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-locale",
+ "hornvale-person",
+ "hornvale-religion",
+ "hornvale-scene",
+ "hornvale-settlement",
+ "hornvale-species",
+ "hornvale-terrain",
+ "hornvale-thing",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hornvale-worldgen"
+version = "0.1.0"
+dependencies = [
+ "hornvale-alchemy",
+ "hornvale-almanac",
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-culture",
+ "hornvale-demography",
+ "hornvale-explain",
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-paleoclimate",
+ "hornvale-person",
+ "hornvale-religion",
+ "hornvale-settlement",
+ "hornvale-species",
+ "hornvale-terrain",
+ "hornvale-thing",
+ "hornvale-topology",
 ]
 
 [[package]]

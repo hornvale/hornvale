@@ -396,6 +396,10 @@ scoped re-review of this fix. No task-2 dispatch before approval.
 
 ## Follow-ups
 
+- Reconcile the campaign-reconciliation TSV ledger column with the coverage
+  population before using it; Task 5 absorption found parser acceptance and
+  coverage rejection of the same optional ledger reference.
+
 - Gate selection and receipt reuse require a later campaign with an explicit
   input-closure model, shadow comparisons, and review under accepted rules.
 - Full Book/language realization, broad registry import, and root-prompt
@@ -601,3 +605,40 @@ ledgers. Removed that optional reference; the spec already links the ledger.
 The failed gate (36.640 s) remains in timings. Follow-up: reconcile the Coda
 ledger-column schema with its coverage population before relying on that
 column; this campaign does not change the new guard's scope.
+
+## Reviewed adopter integration
+
+Controller applied Thing `275bc5d2b31374ec98dfa3bb8fd8936c8b96b5fd`,
+census `b83fb084d28abacaf6b6d21692d004e7875ef1f9`, and its fix
+`11edfaabe918b168e74ac669fe9e851a18b9cbc3` with ordinary no-commit
+cherry-picks. Only Cargo.lock conflicted. Cargo resolved the combined manifests;
+its full regeneration initially upgraded cached syn 3.0.3 to 3.0.4. The
+controller detected this by comparing every external package's version, source
+and checksum, and used Cargo's precise update to retain 3.0.3. The final
+external records exactly match bootstrap. A first test pass on 3.0.4 is retained
+as preliminary evidence; final scoped tests run on the retained resolution.
+Both integrated package trees compare byte-identical to their reviewed heads.
+
+Git confirms both branch merge bases and their mutual merge base equal
+`6fe554d0ebc6e2bd847ad224a9eb8b1b2e877b1f`. Each full branch diff is
+Cargo.lock plus its four package files; there are no semantic host/protocol
+edits. Five ordinary setup/gate timing rows from the two adopter worktrees
+are retained here, alongside the controller's own gates. The final combined
+lock adds 27 local packages, largely because the census guard lives in
+`hornvale-lab`. No world construction is invoked by the contributor, but its
+transitive compilation cost belongs in the cold measurement.
+
+Composed verification before integration commit: all Digest packages passed
+95 tests (52 host unit, 13 host CLI, 12 protocol, and 9 per adopter), with
+clippy and fmt green. Explicit dependency preparation completed. Actual Thing,
+census and combined context invocations each returned rc=0; reports were
+4,078 / 7,756 / 11,738 bytes in this dirty integration checkout. The complete
+tracked diff was byte-identical before/after those three invocations. These
+are surface checks, not the planned cold/warm samples. Canonical artifacts
+and client validation remain pending the composed stage.
+
+Task 5's preparation fix at `9294b9ca765f83e82bd8ac1054053b0aff0163e0`
+passed scoped independent spec and quality review; both R1 and R2 closed.
+Eight behavioral harness self-tests passed on Mac, including separately grouped
+children and retained failed evidence. Python 3.11 runtime qualification remains
+for canonical execution; syntax compatibility alone is not that evidence.

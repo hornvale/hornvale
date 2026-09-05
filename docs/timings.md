@@ -5777,3 +5777,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T02:27:58Z | sluice:heavy | 465.431 | 10068.505 | 180.966 | 22.02 | 0 | 7b50bfe7f |  | lefford | 40 |
 | 2026-09-05T04:06:55Z | rebaseline | 251.625 | 464.512 | 21.090 | 1.93 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
 | 2026-09-05T04:07:54Z | gate-commit | 36.640 | 53.543 | 12.652 | 1.81 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T04:09:07Z | gate-commit | 37.139 | 63.144 | 16.620 | 2.15 | 0 | 01107e88e | codex/the-charter | MacBookPro | 10 |
+| 2026-09-05T03:34:19Z | prewarm | 419.445 | 1479.667 | 57.978 | 3.67 | 0 | 6fe554d0e | codex/the-charter-thing | MacBookPro | 10 |
+| 2026-09-05T03:42:39Z | gate-commit | 88.033 | 120.894 | 25.160 | 1.66 | 0 | 6fe554d0e | codex/the-charter-thing | MacBookPro | 10 |
+| 2026-09-05T03:34:41Z | prewarm | 411.766 | 1495.250 | 59.484 | 3.78 | 0 | 6fe554d0e | codex/the-charter-census | MacBookPro | 10 |
+| 2026-09-05T03:45:46Z | gate-commit | 94.898 | 127.824 | 25.202 | 1.61 | 0 | 6fe554d0e | codex/the-charter-census | MacBookPro | 10 |
+| 2026-09-05T03:59:08Z | gate-commit | 54.121 | 70.726 | 19.135 | 1.66 | 0 | b83fb084d | codex/the-charter-census | MacBookPro | 10 |
