@@ -589,10 +589,13 @@ pub fn claim(
     let mut seen_sha = false;
     let mut idx = None;
     for (i, r) in rows.iter().enumerate() {
-        if let Some(want) = sha {
-            if r.sha == want {
-                seen_sha = true;
-            }
+        // A let-chain, not a nested `if let`: clippy's `collapsible_if` rejects
+        // the nested form under `-D warnings`, and this crate is linted even
+        // though it sits outside the cargo workspace.
+        if let Some(want) = sha
+            && r.sha == want
+        {
+            seen_sha = true;
         }
         if idx.is_none()
             && r.state == "queued"
@@ -626,7 +629,7 @@ pub fn claim(
 - [ ] **Step 5: Run to verify they pass**
 
 Run: `cargo test --manifest-path tools/sluice/Cargo.toml`
-Expected: PASS, 11 tests.
+Expected: PASS, 12 tests (8 from Tasks 1-2 plus 4 here).
 
 - [ ] **Step 6: Mutate the lock away and prove the race test fails**
 
