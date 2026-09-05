@@ -1097,3 +1097,24 @@ not a new queue or a new Q.
 Scoped package/Mac/invocation review, full12 Linux qualification, the independent
 second actual execution and all diagnostic phases remain pending. No Task6/7
 acceptance or merge authority follows from this intermediate receipt.
+
+## Task6 scoped review green; full12 diagnostic queued
+
+Independent spec/quality review at15e5fe064 passed with no findings: all8
+frozen files/original11 arms/four pairs unchanged;89 Mac records and74
+standalone commands,80 construction commands validated. The original checker
+judgment and correlated candidate answer were independently confirmed; a
+full12 summary refused the Mac2-arm dossier. Static independent-invocation
+and54-line isolated transport review also passed. These findings qualify
+the retained package and Mac result, not the pending canonical run.
+
+Diagnostic candidate`921beef713c4ef543cbbb5a75610c19b89f99190`
+passed its explicit commit gate61.904s (all3chunks), retained that timing
+row and was pushed and queued as`req-921beef713c4-20260905T223632Z`.
+The first full12 run and same-reader independent second run are sequential,
+with distinct owned parents/clone/targets, using the frozen panel/instrument.
+`evidence/controller/full12-diagnostic/` retains exact transport diff and
+submission identities; original independent script bytes remain unchanged.
+The transport branch is never a merge candidate. Task6/7 full acceptance
+requires the actual dossiers, independent comparison and all canonical phases.
+No new Q or Ideonomy decision is involved in executing the approved plan.
