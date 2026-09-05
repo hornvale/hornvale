@@ -352,6 +352,32 @@ SHA and measured costs must be read from execution, never predicted by prose.
 report will retain the branch experiment and measured quality results.
 Task briefs/reviews remain scratch; rulings and follow-ups stay here.
 
+## Task 1 — implementation verified; independent review pending
+
+Base: `6849ccd31c4065656aa08a197b70c67427013ff9`.
+Implementation: `adf5c78c91916e223147db2ecd72c40886abcede`.
+The new protocol and generic composer are committed; no process host or
+adopter is claimed yet. The implementer demonstrated behavioral red/green
+for omitted required observations and incomplete report rendering.
+
+Verification reported and read: 40 Digest tests and 12 protocol tests passed,
+doctests passed, outboard fmt and clippy passed; normal commit gate returned
+rc=0 in 62.911 s with all three subfloor chunks passing. The hook's ordinary
+timing row is retained with this controller record.
+
+Ruling: permit exactly the two pre-existing rustfmt-only blocks in
+`tools/digest/src/mcp.rs` exposed by the required whole-Digest format check.
+The alternative was to leave the mandated check red or narrow it around a
+known failure. No behavior change or unrelated cleanup was authorized.
+This mechanical compatibility ruling needed no new architectural Ideonomy
+pass. The task report records the original failure and resulting diff.
+
+The command guard required its documented `HV_TEST_OK=1` acknowledgement for
+the outboard `cargo test --manifest-path tools/digest/Cargo.toml --workspace`
+invocation; the command still selected only the Digest workspace and did not
+disable tests or commit hooks. The review has the exact task diff and the
+recorded evidence. No completion verdict is assumed before it returns.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
