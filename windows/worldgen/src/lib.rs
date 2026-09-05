@@ -143,8 +143,8 @@ pub use graph_derive::{
 };
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
-    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, ORE_CUT,
-    TributeRelation, bake, cascade_sizes, census, defensibility_for_test,
+    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP, GENESIS_POP,
+    History, ORE_CUT, TributeRelation, bake, cascade_sizes, census, defensibility_for_test,
     weakest_point_defensibility,
 };
 pub use history_emit::{

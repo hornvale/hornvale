@@ -761,10 +761,12 @@ const GENESIS_SITES_MIN: u32 = 2;
 const GENESIS_SITES_MAX: u32 = 4;
 /// Starting population of a genesis proto-community.
 /// plumb: pending(wave-1)
-const GENESIS_POP: f64 = 10.0;
+/// type-audit: bare-ok(count)
+pub const GENESIS_POP: f64 = 10.0;
 /// Starting population of a daughter community.
 /// plumb: pending(wave-1)
-const DAUGHTER_POP: f64 = 8.0;
+/// type-audit: bare-ok(count)
+pub const DAUGHTER_POP: f64 = 8.0;
 /// How strongly river proximity sharpens site selection (Task 5b). Genesis
 /// candidate ranking and daughter founding — the two paths that OPEN new
 /// occupations — score a vertex by `capacity * (1.0 + RIVER_SITE_WEIGHT *

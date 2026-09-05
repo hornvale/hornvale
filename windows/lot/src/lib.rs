@@ -8,6 +8,7 @@
 #![warn(missing_docs)]
 
 pub mod hazard;
+pub mod shape;
 
 use hornvale_kernel::Vertex;
 
