@@ -1171,40 +1171,79 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
 }
 
 /// claim: structural(seed: 42) — one build, no sweep.
+///
+/// `person_years` samples the integral at EPOCH ENDS (campaign ledger #12),
+/// not continuously, so the invariant is stated on epochs credited, never on
+/// raw `tenure`: a raid cascade's intermediate hop can carry strictly
+/// positive tenure (it opened at one sub-year raid phase and closed at a
+/// later one, still within the same epoch) while surviving to no epoch's end
+/// at all, and such an occupation is exactly as uncredited as a same-phase,
+/// zero-tenure handoff — both are occupations The Lot's draw would place no
+/// birth in, since the draw bins births at year midpoints and an occupation
+/// with no credited epoch contains no whole year.
 #[test]
-fn person_years_is_committed_positive_for_every_occupation_and_bounded_by_peak_times_tenure() {
+fn person_years_matches_epochs_credited_at_their_end() {
     let world = hornvale_worldgen::seed_42_world();
     let now = hornvale_worldgen::present_year(&world);
     let occs = hornvale_worldgen::occupation_records(&world);
     assert!(!occs.is_empty());
-    let mut zero = 0usize;
+    let e = hornvale_worldgen::BakeConfig::default_millennia().epoch_years;
+    let start = 0.0;
+
+    let mut total_zero_tenure = 0usize;
+    let mut total_sub_epoch = 0usize;
+    let mut credited_zero_py = 0usize;
+    let mut uncredited_nonzero_py = 0usize;
     for o in &occs {
         let tenure = o.core.tenure(now);
+        let end = o.core.ended.unwrap_or(now);
+        // The checkpoints are the ends of loop-years Y_k = start + k*e, for
+        // k = 0.. while Y_k < now; a community is credited at checkpoint k
+        // iff it was opened before that epoch closed and had not closed by
+        // then. An alive record's `end` is `now` itself, matching the bake's
+        // own `while year < end_year` loop bound.
+        let credited = (0..)
+            .map(|k| start + k as f64 * e)
+            .take_while(|y| *y < now)
+            .filter(|y| o.core.founded < y + e && end >= y + e)
+            .count();
+        if tenure == 0.0 {
+            total_zero_tenure += 1;
+        } else if credited == 0 {
+            total_sub_epoch += 1;
+        }
+        if credited > 0 && o.core.person_years == 0.0 {
+            credited_zero_py += 1;
+        }
+        if credited == 0 && o.core.person_years != 0.0 {
+            uncredited_nonzero_py += 1;
+        }
         // `peak_population` is `population.round() as u32` (`Bake::touch`) —
         // a nearest-integer snapshot of a continuous quantity — so the raw
-        // population the tally actually accrued at any epoch can run up to
-        // 0.5 above it. That gap is invisible at ordinary tenures but is not
-        // at a near-zero one: a community that grows for a full epoch and
-        // then relocates by conquest within that SAME epoch (`maybe_raid`
-        // closes the raider's old record at the epoch's own `year`, same as
-        // its `founded`) commits a `tenure` of 0 while having genuinely lived
-        // one epoch at the rounded-down population. Measured directly against
-        // seed 42: omitting this `+ 0.5` leaves 61 of 1621 occupations over
-        // bound (up to 22.6% over, at the smallest peaks, where the constant
-        // 0.5 is proportionally largest) and `+ 0.5` alone clears every one.
-        let bound = (f64::from(o.core.peak_population) + 0.5) * (tenure + 25.0);
+        // population any one credited epoch actually accrued can run up to
+        // 0.5 above it. Exact for the mechanism otherwise: the once-per-epoch
+        // accrual credits `population * e` for precisely `credited` epochs,
+        // no more, no less.
+        let bound = (f64::from(o.core.peak_population) + 0.5) * credited as f64 * e;
         assert!(
             o.core.person_years <= bound * 1.0001,
-            "occupation {} person-years {} exceeds (peak + 0.5) x (tenure + one epoch) = {bound}",
+            "occupation {} person-years {} exceeds (peak + 0.5) x credited x epoch_years = {bound}",
             o.id.0,
             o.core.person_years
         );
-        if o.core.person_years == 0.0 {
-            zero += 1;
-        }
     }
-    // Every occupation was open for at least the epoch it was opened in, and the
-    // opening population is GENESIS_POP / DAUGHTER_POP > 0, so a zero here means
-    // the tally missed a code path.
-    assert_eq!(zero, 0, "{zero} occupations carry zero person-years");
+    let uncredited = total_zero_tenure + total_sub_epoch;
+    eprintln!(
+        "{} occupations, {uncredited} uncredited ({total_zero_tenure} zero-tenure, \
+         {total_sub_epoch} sub-epoch)",
+        occs.len()
+    );
+    assert_eq!(
+        credited_zero_py, 0,
+        "{credited_zero_py} occupations credited at some epoch's end carry zero person-years"
+    );
+    assert_eq!(
+        uncredited_nonzero_py, 0,
+        "{uncredited_nonzero_py} occupations credited at no epoch's end carry nonzero person-years"
+    );
 }

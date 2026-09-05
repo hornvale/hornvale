@@ -1566,8 +1566,8 @@ struct Bake<'a> {
     /// The running event tally.
     tally: BakeCensus,
     /// The bake's epoch length in years (`cfg.epoch_years`), borrowed once at
-    /// construction so [`Bake::live_an_epoch`] reads the same number `grow`'s
-    /// epoch loop steps by, rather than a second literal.
+    /// construction so [`Bake::live_an_epoch`] reads the same number [`bake`]'s
+    /// own epoch loop steps by, rather than a second literal.
     epoch_years: f64,
 }
 
@@ -2136,14 +2136,6 @@ impl<'a> Bake<'a> {
             // held come with it (spec §4.3e).
             self.carry_portfolio_to(new_idx, carried, year);
             self.touch(new_idx, year);
-            // THE FOUNDING EPOCH IS LIVED TOO (occ-person-years): this
-            // record is not in any epoch's snapshot the moment it is born —
-            // a relocation runs inside the CURRENT epoch's processing, so
-            // without this call a chain that dies before its own first
-            // regular `grow` (a raid cascade within the same epoch, or a
-            // community founded in the bake's last epoch) would close at
-            // zero person-years despite having existed.
-            self.live_an_epoch(new_idx);
             // The resettle is tallied HERE, where it happens, rather than at
             // the top-level call site: a cascade's terminal roller reaches
             // vacant land exactly like a first-hop one does, and counting only
@@ -2207,11 +2199,6 @@ impl<'a> Bake<'a> {
         let victim_carried = self.lift_portfolio(victim);
         self.close(victim, year, CauseOfEnd::Fled, Ended::By(displacer_id));
         self.touch(new_idx, year);
-        // THE FOUNDING EPOCH IS LIVED TOO (occ-person-years) — see the
-        // matching comment on `relocate`'s vacant-land branch above; the
-        // conquest branch opens the identical way, mid-epoch and outside any
-        // snapshot.
-        self.live_an_epoch(new_idx);
         self.tally.raided += 1;
         self.tally.fled += 1;
         // The evicted occupant cascades onward, founded from its own (the
@@ -3452,10 +3439,53 @@ impl<'a> Bake<'a> {
 
     /// One epoch of living, for The Lot's draw weight: accrue this
     /// community's live population over the epoch onto its record's
-    /// `person_years`. The sibling of [`Bake::deepen`] and placed where it is
-    /// for the same reason — `grow` has one call site and runs at most once
-    /// per community per epoch, so this cannot double-count the way an
-    /// accrual in `touch` (eight call sites) would.
+    /// `person_years`.
+    ///
+    /// **Called from exactly ONE place: the epoch loop in [`bake`], once per
+    /// epoch, after `resolve_flights` and before the year advances — never
+    /// from `grow`, `deepen`'s founding companion, or any `open` call site.**
+    /// It used to be called from six places (once per community per epoch in
+    /// `grow`, plus a founding-epoch credit beside every `open` that could
+    /// close before its own first `grow`), and that per-site design
+    /// double-counted and under-counted at once across a same-epoch handoff:
+    /// the epoch loop runs `step_community` (→ `grow`) for every alive
+    /// community FIRST, then `raid_phases`/`settle_revolts`/
+    /// `collect_tribute`/`resolve_flights`, which can close some of those same
+    /// communities and open their successors — both at the SAME `year`. A
+    /// community closed at year Y had already been credited (via `grow`) for
+    /// the epoch `[Y, Y+25)`, a window OUTSIDE its own tenure `[founded, Y)`;
+    /// its successor (a raid seat, a relocation, a climate-eviction daughter),
+    /// opened at Y with its own founding credit, claimed the SAME window a
+    /// second time. Measured directly on seed 42: occupation 880 (founded 0,
+    /// ended 450) and its raid-seat successor 925 (founded 450) both
+    /// accrued `[450, 475)`.
+    ///
+    /// The fix is to stop crediting per-site and credit once, per epoch, for
+    /// every community that is alive at the moment the epoch loop iteration
+    /// finishes acting on it:
+    /// - A community alive at an epoch's end (it survived `grow` and every
+    ///   later phase this iteration) is credited for that epoch — it was
+    ///   alive throughout, tenure includes it.
+    /// - A community closed DURING this epoch (by `grow`'s pressure branch,
+    ///   a raid, a climate eviction, or a flight) is NOT credited for it: it
+    ///   is not `alive` any more when this loop runs.
+    /// - A community OPENED during this epoch (a daughter, a raid seat, a
+    ///   relocation) and still alive when this loop runs IS credited for its
+    ///   opening epoch.
+    ///
+    /// **The integral is sampled at epoch ends, not continuously — this is
+    /// coarser than raw tenure, and deliberately so.** A raid cascade's
+    /// intermediate hop (opened at one sub-year raid phase, closed at a
+    /// later phase of the SAME epoch, by a different snapshot-original
+    /// raider) carries strictly positive tenure but is never `alive` at any
+    /// epoch's end, so it is credited zero times — same as a same-phase,
+    /// zero-tenure handoff, just the general case rather than the trivial
+    /// one. An occupation that never survives to an epoch's end carries
+    /// `0.0`, and such an occupation contains no whole year, so The Lot's
+    /// draw never places a birth in it either (the draw bins births at year
+    /// midpoints).
+    ///
+    /// Ledgered as campaign ledger #12, superseding the two-call-site design.
     fn live_an_epoch(&mut self, idx: usize) {
         let (rec, population) = {
             let c = &self.communities[idx];
@@ -3622,11 +3652,6 @@ impl<'a> Bake<'a> {
                     );
                     self.carry_portfolio_to(new_idx, carried, year);
                     self.touch(new_idx, year);
-                    // THE FOUNDING EPOCH IS LIVED TOO (occ-person-years) —
-                    // see the matching comment on `relocate`'s vacant-land
-                    // branch; a climate eviction opens the same way, mid-epoch
-                    // and outside any snapshot.
-                    self.live_an_epoch(new_idx);
                     self.tally.migrated += 1;
                 }
                 _ => {
@@ -4058,11 +4083,6 @@ impl<'a> Bake<'a> {
         );
         self.carry_portfolio_to(seat, raider_carried, year);
         self.touch(seat, year);
-        // THE FOUNDING EPOCH IS LIVED TOO (occ-person-years) — see the
-        // matching comment on `relocate`'s vacant-land branch; a raider's
-        // seizure of the prize opens the same way, mid-epoch and outside any
-        // snapshot.
-        self.live_an_epoch(seat);
 
         // The displaced loser rolls downhill, still carrying its (reduced)
         // strength and its standing relations — the cascade. Its own former
@@ -4139,11 +4159,6 @@ impl<'a> Bake<'a> {
         // is asked at the END of this function rather than here — see the
         // `maybe_breach` call below for why that placement is load-bearing.
         let cut = self.deepen(idx);
-        // One epoch of living, for The Lot's draw weight (occ-person-years):
-        // accrue this epoch's population onto the record now, at the same
-        // point `deepen` pays the working's depth, for the same reason — one
-        // call site, at most once per community per epoch.
-        self.live_an_epoch(idx);
         self.tally.grew += 1;
 
         if pressure < DAUGHTER_MAX_PRESSURE && self.stream.next_f64() < DAUGHTER_PROB {
@@ -4266,12 +4281,6 @@ impl<'a> Bake<'a> {
                 // zero years honestly: they sank the shaft and broke through
                 // in the same epoch.
                 let founding_cut = self.deepen(new_idx);
-                // THE FOUNDING EPOCH IS LIVED TOO, for the same reason as the
-                // digging above: a daughter founded and then closed inside a
-                // single epoch (before `grow` ever steps it again) must still
-                // carry one epoch of its opening population, or its record
-                // ends at zero person-years.
-                self.live_an_epoch(new_idx);
                 self.maybe_breach(new_idx, founding_cut, year);
                 self.tally.founded += 1;
             }
@@ -4504,6 +4513,16 @@ pub fn bake(
         bake.settle_revolts();
         let fleeing = bake.collect_tribute(year, &era);
         bake.resolve_flights(fleeing, &era, year);
+        // The Lot's draw weight (occ-person-years), accrued ONCE per epoch,
+        // here, at the end — not inside `grow` or beside any `open` call.
+        // See [`Bake::live_an_epoch`]'s doc for why a per-site accrual
+        // double-counted and under-counted at once across a same-epoch
+        // handoff, and why this single end-of-epoch pass is the fix.
+        for idx in 0..bake.communities.len() {
+            if bake.communities[idx].alive {
+                bake.live_an_epoch(idx);
+            }
+        }
         year += cfg.epoch_years;
     }
 
@@ -4555,9 +4574,9 @@ pub fn bake(
         .collect();
 
     // No final person-years sweep is needed here: the epoch loop above runs
-    // `while year < end_year`, so its last iteration credits every alive
-    // community for the epoch ending at `end_year` already, through
-    // `grow`/`live_an_epoch`. A sweep here would double-credit that epoch.
+    // `while year < end_year`, so its last iteration's own end-of-epoch
+    // accrual pass already credits every community still alive at
+    // `end_year`. A sweep here would double-credit that epoch.
     History {
         records: bake.records,
         now,

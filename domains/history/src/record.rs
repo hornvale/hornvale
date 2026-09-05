@@ -176,13 +176,17 @@ pub struct Occupation {
     /// depth for this occupation's `(people, site)`, plus this.
     pub delve_depth_m: f64,
     /// The integral of this occupation's live population over its tenure,
-    /// in person-years — `Σ population × epoch_years` over the epochs it was
-    /// open, plus the closing partial epoch. Like [`Occupation::delve_depth_m`]
+    /// in person-years — `Σ population × epoch_years`, sampled once per
+    /// epoch at that epoch's END (campaign ledger #12), for every epoch this
+    /// occupation was alive through. The integral is sampled at epoch ends;
+    /// an occupation that never survives to an epoch's end carries `0.0`,
+    /// and such an occupation contains no whole year, so The Lot's draw
+    /// never places a birth in it either. Like [`Occupation::delve_depth_m`]
     /// it is the integral of a live quantity the ledger otherwise discards,
     /// so it is committed (`occ-person-years`) and never re-derived. `0.0`
-    /// on a record read back from a world saved before The Lot. NOT folded
-    /// into [`material_key`], matching `delve_depth_m`: identity does not
-    /// depend on how long the people stayed.
+    /// also on a record read back from a world saved before The Lot. NOT
+    /// folded into [`material_key`], matching `delve_depth_m`: identity does
+    /// not depend on how long the people stayed.
     pub person_years: f64,
 }
 
