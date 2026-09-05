@@ -26,23 +26,49 @@ const FAMILIES: [&str; 8] = [
 /// The four `hornvale_worldgen::WeftKind::ALL` suffixes, in slot order.
 const KINDS: [&str; 4] = ["spring", "overhang", "thicket", "erratic"];
 
+// THE TWO H4 BARS BELOW ARE FOUR NULL STANDARD DEVIATIONS EACH, AND BOTH ARE
+// DERIVED RATHER THAN CHOSEN. The plug-in mutual-information estimator's
+// value under independence is `chi2 / (2 n ln 2)` with `(K - 1)` degrees of
+// freedom, so at seed 42's `n = 11,218` land facets it has
+//
+//   mean = (K - 1) / (2 n ln 2)        sd = sqrt(2 (K - 1)) / (2 n ln 2)
+//
+//   sign tuple `(biome, rock, steep, wet)`, K = 469 occupied classes:
+//       mean 0.030091 bits, sd 0.001967 bits
+//   false-sign tuple `(relief, aspect, openness)`, K = 27:
+//       mean 0.001672 bits, sd 0.000464 bits
+//
+// The predicted mean for the sign tuple is, to six decimal places, exactly
+// what `warp-channel-null-erratic` measures (0.03009126) — which is the
+// positive control on the whole null construction: the five-shift
+// permutation is measuring the estimator's finite-sample bias and nothing
+// else. It also means a NET reading has a noise floor of about +/- 0.002
+// bits at the sign tuple and +/- 0.0005 at the false-sign tuple BY
+// CONSTRUCTION, so the +/- 0.001 H4 was originally preregistered at — a
+// figure taken from the pre-spec probe's PER-AXIS false-sign readings
+// (<= 0.0002 each), never from the joints measured here — sits below what
+// the instrument can resolve. Spec §7's H4 has been amended to the numbers
+// below (controller ruling, ledger #10, dated before any readout seed was
+// built); these constants are the spec, not a deviation from it.
+
 /// Spec §7's H4 bar on the erratic's channel reading net of its null, in
-/// bits, ONE-SIDED as H4 writes it: the instrument may not CREDIT its own
-/// negative control.
-const WARP_CREDIT_CEILING_BITS: f64 = 0.001;
+/// bits: four standard deviations of the sign tuple's own null estimator.
+/// ONE-SIDED, as H4 writes it — the failure guarded is the instrument
+/// CREDITING its negative control, and a reading below its own null credits
+/// nothing.
+const WARP_CREDIT_CEILING_BITS: f64 = 0.008;
 
-/// 2.5 standard deviations of the plug-in MI estimator at the sign tuple's
-/// seed-42 cardinality (469 occupied classes over 11,218 land facets, sd
-/// 0.001967 bits) — the floor below which a net reading means the null has
-/// stopped being a permutation, not that the world is legible. See the
-/// derivation at the assertion.
-const WARP_SIGN_TUPLE_NOISE_FLOOR_BITS: f64 = 0.005;
+/// The other side of the same reading, and NOT a second copy of the bar
+/// above: a net far below the null would mean the shift construction had
+/// stopped being a permutation of the same marginals, which is a defect in
+/// the instrument rather than a legible world. Four standard deviations
+/// again, so the two sides are symmetric in sd even though H4 gates only
+/// one of them.
+const WARP_SIGN_TUPLE_NOISE_FLOOR_BITS: f64 = 0.008;
 
-/// 4 standard deviations of the same estimator at the false-sign tuple's 27
-/// classes (sd 0.000464 bits). Wider than H4's preregistered +/- 0.001,
-/// which was set from the pre-spec probe's per-axis readings rather than
-/// from this three-axis joint; recorded as a post-unblinding widening in
-/// Task 5's report.
+/// Spec §7's H4 bar on every kind's false-sign net, in bits, TWO-SIDED as H4
+/// writes it: four standard deviations of the false-sign tuple's own null
+/// estimator (sd 0.000464).
 const WARP_FALSE_SIGN_NOISE_FLOOR_BITS: f64 = 0.002;
 
 fn read(built: &BuiltView, name: &str) -> MetricValue {
@@ -110,30 +136,19 @@ fn the_instrument_credits_nothing_to_noise() {
 
     let erratic_net =
         number(&built, "warp-channel-mi-erratic") - number(&built, "warp-channel-null-erratic");
-    // ONE-SIDED, AND THE ASYMMETRY IS THE SPEC'S OWN (§7, H4): "erratic
-    // channel MI net <= 0.001 bits, and the false-sign tuple's MI net WITHIN
-    // +/- 0.001 bits". H4 writes the two bars in two different forms in one
-    // sentence, deliberately — the failure mode it guards is the instrument
-    // CREDITING noise, and a reading below its own null credits nothing.
-    // Task 5's brief wrote this one as `.abs() <= 0.001`, which is stricter
-    // than the hypothesis it implements, and seed 42 lands between the two:
-    // the erratic reads -0.00170943, which passes H4 and fails an absolute
-    // bar.
+    // ONE-SIDED, AND THE ASYMMETRY IS THE SPEC'S OWN (§7, H4): the erratic's
+    // channel net is bounded above, the false-sign nets are bounded on both
+    // sides. The failure H4 guards is the instrument CREDITING noise, and a
+    // reading below its own null credits nothing. Seed 42 reads -0.00170943,
+    // which is 0.87 of the null estimator's own standard deviation (see the
+    // derivation at the constants above).
     assert!(
         erratic_net <= WARP_CREDIT_CEILING_BITS,
         "erratic channel net {erratic_net}: the instrument credits its own negative control"
     );
-    // The floor is NOT a second copy of the ceiling, and it is derived, not
-    // chosen. The plug-in MI estimator's value under independence is
-    // `chi2 / (2 n ln 2)` with `(K - 1)` degrees of freedom, so at seed 42's
-    // n = 11,218 land facets and the sign tuple's 469 occupied classes it has
-    // mean 0.030091 bits — which is, to six decimals, exactly what
-    // `warp-channel-null-erratic` reads — and standard deviation 0.001967
-    // bits. The net of two such draws therefore has a noise floor of about
-    // +/- 0.002 bits BY CONSTRUCTION, and seed 42's -0.00171 is 0.87 of one
-    // standard deviation. A floor at 2.5 sd still catches the failure that
-    // matters on this side: a null construction that stops being a
-    // permutation and starts reporting a systematically inflated bias.
+    // The other side catches the failure H4 does not gate but the instrument
+    // must still refuse: a null far above the real pairing, which a
+    // permutation holding both marginals cannot produce by chance.
     assert!(
         erratic_net >= -WARP_SIGN_TUPLE_NOISE_FLOOR_BITS,
         "erratic channel net {erratic_net}: the null is far above the real pairing, which a \
@@ -145,15 +160,11 @@ fn the_instrument_credits_nothing_to_noise() {
     ));
     for kind in KINDS {
         let fs = number(&built, &format!("warp-false-sign-net-{kind}"));
-        // The same derivation at the false-sign tuple's 27 classes: mean
-        // 0.001672 bits, standard deviation 0.000464. Seed 42's erratic reads
-        // -0.00100025 — 2.16 sd, on the conservative side, and 0.25 parts per
-        // thousand outside the +/- 0.001 H4 preregistered from the pre-spec
-        // probe's PER-AXIS readings (<= 0.0002 each) rather than from the
-        // three-axis JOINT this control tabulates. The bar here is 4 sd of
-        // the joint's own estimator. **This is a widening after unblinding
-        // and is recorded as one** (Task 5's report; H4 in the spec is
-        // untouched and Task 7 reads it as written).
+        // Four sd of the false-sign tuple's own estimator (sd 0.000464), per
+        // the derivation at the constants above. Seed 42's erratic reads
+        // -0.00100025, which is 2.16 sd — conservative, and 0.25 parts per
+        // thousand outside the +/- 0.001 the spec carried before this
+        // campaign measured the joint.
         assert!(
             fs.abs() <= WARP_FALSE_SIGN_NOISE_FLOOR_BITS,
             "{kind}: false signs read {fs} bits net of null"

@@ -5913,14 +5913,22 @@ pub fn registry() -> Vec<Metric> {
                   table fitted on the EVEN-indexed land facets and scored on the ODD ones, as mean \
                   log-loss reduction against the base rate, in bits per facet. Positive means the \
                   words a walker is told genuinely help predict this kind on facets the table \
-                  never saw; NEGATIVE means the table overfits, which is the honest reading for a \
-                  rich tuple over a rare occurrence and is reported rather than clamped. The index \
-                  is the facet's position in the land-only vector in vertex order, so the two \
-                  halves interleave across the whole globe rather than splitting it by region. \
-                  Probabilities are Laplace-smoothed as `(k + 1) / (n + 2)`, the base rate \
-                  included, and a class the fit half never saw falls back to that base rate. Read \
-                  against `warp-oracle-gain-spring`, the same table's in-sample bound. `Absent` \
-                  only on a world with no land-eligible facet at all.",
+                  never saw; NEGATIVE means the table overfits, which is reported rather than \
+                  clamped. The index is the facet's position in the land-only vector in vertex \
+                  order, so the two halves interleave across the whole globe rather than splitting \
+                  it by region. Smoothing is an EQUIVALENT-SAMPLE-SIZE PRIOR TOWARD THE BASE RATE: \
+                  a class with `n` fit facets and `k` hits predicts `(k + a * p) / (n + a)`, for \
+                  `a` ten facets and `p` the fit half's own base rate, so a thin or unseen class \
+                  predicts the base rate and scores exactly zero, never below it. It was Laplace \
+                  `(k + 1) / (n + 2)` in this metric's first implementation and that was a defect \
+                  (controller ruling, ledger #10): Laplace is a prior toward 0.5, these kinds \
+                  occur on 3-14% of land, and with 469 sign classes over ~11,000 facets most \
+                  classes are thin enough for that prior to dominate — the table lost to the base \
+                  rate in sample, which was a fact about the prior and not about the world. Read \
+                  against `warp-oracle-gain-spring`, the same table's in-sample reading. `Absent` \
+                  on a world with no land-eligible facet, and on one whose fit half carries no \
+                  occurrence of this kind at all (or nothing but occurrences): there is no base \
+                  rate to beat.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
             },
@@ -5956,10 +5964,13 @@ pub fn registry() -> Vec<Metric> {
             name: "warp-learner-gain-erratic",
             doc: "The Warp's learner gain for erratic/scatter (spec §5.2) — see \
                   `warp-learner-gain-spring`'s doc for the shared split, the smoothing and the \
-                  fallback. The erratic's gain is preregistered within +/- 0.001 bits/facet (spec \
-                  §7, H3): a table over signs that predict nothing can only break even, and a \
-                  table that appears to beat the base rate on a constant-cause kind is measuring \
-                  its own overfit.",
+                  fallback. This is the negative control: nothing about the erratic's occurrence \
+                  depends on any sign, so the table cannot BEAT the base rate out of sample, and a \
+                  reading that did would mean the instrument was crediting noise. It can and does \
+                  LOSE — seed 42 reads -0.0138 bits/facet, the price of fitting several hundred \
+                  classes of pure noise on half the land and being scored on the other half. Spec \
+                  §7's H3 asks for this within +/- 0.001, a clause preregistered before any \
+                  learner existed; the four readout seeds are where that bar is decided.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
             },
@@ -6027,14 +6038,19 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "warp-oracle-gain-spring",
-            doc: "The Warp's oracle gain for spring/seep (spec §5.2, H3): the SAME `P(Y | sign \
-                  class)` table as `warp-learner-gain-spring`, fitted and scored on ALL land \
-                  facets with no split — the in-sample bound the held-out learner is measured \
-                  against (H3 asks for at least half of it out of sample, for spring and \
-                  overhang). It is not a legibility reading on its own: an in-sample table always \
-                  looks better than it is, and by how much is exactly what the held-out half \
-                  reveals. Same Laplace smoothing, `(k + 1) / (n + 2)`. `Absent` only on a world \
-                  with no land-eligible facet at all.",
+            doc: "The Warp's oracle gain for spring/seep (spec §5.2): the SAME `P(Y | sign class)` \
+                  table as `warp-learner-gain-spring`, fitted and scored on ALL land facets with \
+                  no split, under the same equivalent-sample-size prior toward the base rate. It \
+                  is not a legibility reading on its own — an in-sample table always looks better \
+                  than it is — and it is REPORTED, NEVER GATED. Spec §7's H3 originally asked the \
+                  learner to reach at least half of this number, and that clause is WITHDRAWN \
+                  (controller ruling, ledger #10; spec §7's H3 amendment): a ratio needs a \
+                  denominator whose sign is fixed, and this one has none — under the withdrawn \
+                  Laplace prior it read NEGATIVE for spring and erratic at seed 42, which would \
+                  make \"at least half of it\" satisfiable by being worse. What it is good for is \
+                  the difference a reader takes, how much of the in-sample reading survives the \
+                  held-out half. `Absent` under the same conditions as `warp-learner-gain-spring`, \
+                  over the whole land population rather than a half of it.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
             },
@@ -6045,7 +6061,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "warp-oracle-gain-overhang",
             doc: "The Warp's oracle gain for overhang/hollow (spec §5.2) — see \
-                  `warp-oracle-gain-spring`'s doc for the shared bound.",
+                  `warp-oracle-gain-spring`'s doc for the shared reading and for why it is \
+                  reported and never gated.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
             },
@@ -6056,7 +6073,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "warp-oracle-gain-thicket",
             doc: "The Warp's oracle gain for thicket/brake (spec §5.2) — see \
-                  `warp-oracle-gain-spring`'s doc for the shared bound.",
+                  `warp-oracle-gain-spring`'s doc for the shared reading and for why it is \
+                  reported and never gated.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
             },
@@ -6067,9 +6085,10 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "warp-oracle-gain-erratic",
             doc: "The Warp's oracle gain for erratic/scatter (spec §5.2) — see \
-                  `warp-oracle-gain-spring`'s doc for the shared bound. The erratic's in-sample \
-                  bound is the ceiling overfitting alone can reach on this population, which is \
-                  why it is worth registering even though nothing predicts the erratic.",
+                  `warp-oracle-gain-spring`'s doc for the shared reading and for why it is \
+                  reported and never gated. The erratic's in-sample reading is the ceiling \
+                  overfitting alone can reach on this population, which is why it is worth \
+                  registering even though nothing predicts the erratic.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
             },
@@ -10079,6 +10098,18 @@ const WARP_LIFT_SUPPORT: u64 = 100;
 /// plumb: universal(an instrument parameter — the point on a kind's documented [0,1] macro-state range above which an occurrence counts as FOUND rather than extruded — fixed across every world)
 const WARP_FOUND_CAUSE_FLOOR: f64 = 0.5;
 
+/// The equivalent sample size of the learner's prior, in facets (spec §5.2,
+/// as amended by the controller's ruling at ledger #10). A sign class with
+/// `n` fit facets is shrunk toward the fit half's own base rate as if that
+/// base rate had already been observed `WARP_LEARNER_PRIOR` times there, so
+/// a class the fit half saw fewer than about ten times contributes almost
+/// nothing and an unseen class contributes exactly nothing. Ten facets
+/// against a population of ~11,000 and a base rate of 3-14%: large enough
+/// that a class of two or three cannot swing a reading, small enough that
+/// the several hundred classes carrying real support still speak.
+/// plumb: universal(an instrument parameter — the equivalent sample size, in facets, of the learner's prior toward the base rate — fixed across every world)
+const WARP_LEARNER_PRIOR: f64 = 10.0;
+
 /// Discrete mutual information, in bits, between a categorical sign and a
 /// binary occurrence, from their joint count table. Generic over the key so
 /// the sign tuple and the false-sign tuple share one estimator and neither
@@ -10300,11 +10331,23 @@ fn warp_best_class_rate(land: &[&WeftVertexReading], kind_idx: usize) -> Option<
 /// from and `score` the facets it is judged on; both are predicates on the
 /// facet's position in the land vector.
 ///
-/// Every probability is Laplace-smoothed as `(k + 1) / (n + 2)` — including
-/// the base rate — so a class that is all-occurrence or no-occurrence in the
-/// fit set cannot produce an infinite loss on a score facet that disagrees
-/// with it. A class the fit set never saw falls back to the (smoothed) base
-/// rate, which contributes exactly zero to the reduction.
+/// Smoothing is an EQUIVALENT-SAMPLE-SIZE prior toward the base rate: a
+/// class with `n` fit facets and `k` hits predicts `(k + a * p) / (n + a)`
+/// for `a = WARP_LEARNER_PRIOR` and `p` the fit half's own base rate. A
+/// class the fit half never saw, or saw a handful of times, therefore
+/// predicts the base rate and scores exactly zero — never below it — by
+/// construction.
+///
+/// **Laplace `(k + 1) / (n + 2)` was the first implementation and it was a
+/// defect** (controller ruling, ledger #10). Laplace is an
+/// equivalent-sample-size prior toward 0.5, and these kinds occur on 3-14%
+/// of land: a thin class with no hits predicted `1 / (n + 2)`, which for
+/// small `n` is an order of magnitude ABOVE the base rate, so every hit in
+/// a thin class cost about 4.6 bits against a base rate that would have
+/// cost about 4.8 — and with 469 classes over 11,218 facets, most classes
+/// are thin. The result was a table that lost to the base rate IN SAMPLE
+/// (seed 42's spring oracle read -0.014), which is not a fact about the
+/// world's legibility but about a prior pointed at the wrong place.
 fn warp_table_gain(
     land: &[&WeftVertexReading],
     kind_idx: usize,
@@ -10314,10 +10357,14 @@ fn warp_table_gain(
     let table = warp_class_table(land, kind_idx, fit);
     let fit_n: u64 = table.values().map(|(n, _)| *n).sum();
     let fit_k: u64 = table.values().map(|(_, k)| *k).sum();
-    if fit_n == 0 {
+    // A fit half in which the kind never occurs, or always occurs, gives a
+    // base rate of exactly 0 or 1 and an infinite log-loss for the first
+    // score facet that disagrees with it. There is nothing to learn from
+    // such a half, so the reading is undefined rather than infinite.
+    if fit_n == 0 || fit_k == 0 || fit_k == fit_n {
         return None;
     }
-    let base = (fit_k + 1) as f64 / (fit_n + 2) as f64;
+    let base = fit_k as f64 / fit_n as f64;
 
     let mut total = 0.0;
     let mut scored = 0u64;
@@ -10330,7 +10377,12 @@ fn warp_table_gain(
         };
         let y = r.per_kind[kind_idx].2;
         let p = match table.get(&signs.key()) {
-            Some((n, k)) => (*k + 1) as f64 / (*n + 2) as f64,
+            Some((n, k)) => {
+                (*k as f64 + WARP_LEARNER_PRIOR * base) / (*n as f64 + WARP_LEARNER_PRIOR)
+            }
+            // The same formula at `n = k = 0`, written out because a reader
+            // should not have to evaluate it to see that an unseen class
+            // predicts the base rate exactly and therefore scores zero.
             None => base,
         };
         let loss_table = -hornvale_kernel::math::log2(if y { p } else { 1.0 - p });
@@ -10349,10 +10401,16 @@ fn warp_table_gain(
 /// which is the honest reading for a rich tuple over a rare occurrence and
 /// is reported rather than clamped. The index is the facet's position in the
 /// land-only vector in vertex order, so the two halves are interleaved
-/// across the whole globe rather than split by region. Laplace smoothing is
-/// `(k + 1) / (n + 2)`; an unseen class falls back to the base rate. Read it
-/// against `warp-oracle-gain-<kind>`, the same table's in-sample bound.
-/// `Absent` only on a world with no land-eligible facet at all.
+/// across the whole globe rather than split by region. Smoothing is an
+/// equivalent-sample-size prior toward the base rate — a class with `n` fit
+/// facets and `k` hits predicts `(k + a * p) / (n + a)` for
+/// `a = WARP_LEARNER_PRIOR` and `p` the fit half's base rate — so a thin or
+/// unseen class predicts the base rate and scores zero, never below it. See
+/// [`warp_table_gain`] for why the first implementation's Laplace prior was
+/// a defect. Read it against `warp-oracle-gain-<kind>`, the same table's
+/// in-sample reading. `Absent` on a world with no land-eligible facet, and
+/// on one where the fit half carries no occurrence of this kind at all (or
+/// nothing but occurrences): there is no base rate to beat.
 fn warp_learner_gain(view: &ClimateView, kind_idx: usize) -> MetricValue {
     let land = warp_land(view);
     if land.is_empty() {
@@ -10365,12 +10423,22 @@ fn warp_learner_gain(view: &ClimateView, kind_idx: usize) -> MetricValue {
 }
 
 /// The Warp's oracle gain (spec §5.2) for one `WeftKind` slot: the SAME sign
-/// table, fitted and scored on ALL land facets with no split — the in-sample
-/// bound `warp-learner-gain-<kind>` is measured against (spec §7's H3 asks
-/// for at least half of it out of sample). It is not a legibility reading on
-/// its own: an in-sample table always looks better than it is, and by how
-/// much is exactly what the held-out half reveals. Same Laplace smoothing.
-/// `Absent` only on a world with no land-eligible facet at all.
+/// table as `warp-learner-gain-<kind>`, fitted and scored on ALL land facets
+/// with no split, under the same equivalent-sample-size prior toward the
+/// base rate. It is not a legibility reading on its own — an in-sample table
+/// always looks better than it is — and it is **reported, never gated**.
+///
+/// Spec §7's H3 originally asked the learner to reach at least half of this
+/// number, and that clause is WITHDRAWN (controller ruling, ledger #10, spec
+/// §7 H3 amendment). A ratio needs a denominator with a fixed sign, and this
+/// one has none: under the first implementation's Laplace prior it read
+/// NEGATIVE for spring and erratic at seed 42, which makes "at least half of
+/// it" satisfiable by being worse. What it is good for is the comparison it
+/// was always really making — how much of the in-sample reading survives the
+/// held-out half — which is a difference a reader makes, not a bar a gate
+/// enforces. `Absent` under the same conditions as
+/// `warp-learner-gain-<kind>`, over the whole land population rather than a
+/// half of it.
 fn warp_oracle_gain(view: &ClimateView, kind_idx: usize) -> MetricValue {
     let land = warp_land(view);
     if land.is_empty() {
