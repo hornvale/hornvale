@@ -787,6 +787,12 @@
         "kind": "Substance",
         "doc": "A stand of northern conifers."
       },
+      "bracken": {
+        "name": "bracken",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a dense growth of fern that makes a yielding place to lie"
+      },
       "brazier": {
         "name": "brazier",
         "domain": "thing",
@@ -1345,6 +1351,12 @@
         "kind": "Terrain",
         "doc": "still water held in a hollow that has no outlet to the sea"
       },
+      "ledge": {
+        "name": "ledge",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a broad shelf of exposed stone"
+      },
       "lens": {
         "name": "lens",
         "domain": "language",
@@ -1728,6 +1740,12 @@
         "domain": "terrain",
         "kind": "Terrain",
         "doc": "fresh water running across land"
+      },
+      "rushes": {
+        "name": "rushes",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "cut wetland reeds laid down as a loose place to lie"
       },
       "rust-monster-kind": {
         "name": "rust-monster-kind",

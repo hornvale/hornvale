@@ -600,6 +600,24 @@ campaign boundary, not only before committing.
 · ideonomy passes: 0 — a mechanical fix; the lesson is procedural.
 · Capture: this entry; the retrospective's absorption section.
 
+#21 [G5] — **A third absorbed campaign's probe called the retired API, and the
+fix changes an `Option` that can no longer be `None`.**
+· **What arrived:** The Tenon's `windows/lab/examples/rest_site_census.rs` —
+the opt-in instrument that authors `docs/audits/the-tenon-rest-site-*.md` —
+passes `SkyChoice::Generated` to `build_world_from_components` and reads
+`sky.calendar().cloned()` against the pre-Task-5 `Option` accessor.
+· **Decision:** drop the argument, and rewrite the calendar line as
+`.map(|sky| sky.calendar().clone())` — keeping `Option<Calendar>` at the
+consumer boundary, because `LocaleTerrain::with_fields` still takes
+`Option<&Calendar>`.
+· **The behavioural note this needs, since it is another campaign's
+measurement:** the `Option` used to carry two distinct absences — no sky
+provider, and a provider with no calendar. Under 0737 the first cannot occur,
+so the rewritten line is `None` only where `sky_of` errors, which is where the
+old line was `None` too. The probe's counts are unchanged.
+· ideonomy passes: 0 — a forced absorb-time reconciliation.
+· Capture: this entry.
+
 ## Follow-ups
 
 - **Point the census at a pin axis for the first time.** Adding

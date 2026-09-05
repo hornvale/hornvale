@@ -22,6 +22,19 @@ book/src/frontier/idea-registry.md merge=union
 # are never rewritten, so union's caveat above does not bite: there is no edit
 # to resolve, only two sides' appends to keep. Missed when PROC-12 shipped.
 docs/timings.md merge=union
+# docs/retrospectives/README.md is the campaign index: one row per campaign,
+# inserted into the themed section it belongs to. Two campaigns closing into the
+# SAME section append adjacent lines and collide -- observed 2026-09-05 between
+# campaign/the-zenith and campaign/the-tenon, whose only real conflict against
+# each other was this file. The union caveat above was CHECKED against this
+# file's history rather than assumed: of the last 20 commits touching it, 18 are
+# a pure one-line insert and the two that rewrite a row (ad4908e55, 1b677c1c8)
+# are each a campaign amending ITS OWN row on its own branch, which no other
+# side touches. A cross-campaign rewrite -- the shape union gets wrong -- has not
+# occurred here. If one ever does (a compaction pass over existing rows, as The
+# Shelf-Mark did to the idea registry), override it for that merge exactly as
+# the caveat above describes.
+docs/retrospectives/README.md merge=union
 
 # TIER B IS RETIRED (decision 0166). Six fully-re-derived documents used to
 # route through `merge=hv-regenerate` (scripts/merge-regenerate.sh), which

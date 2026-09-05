@@ -54,9 +54,20 @@ use hornvale_vessel::liveness::{
 /// it is spelled out rather than left at some arbitrary literal so a reader
 /// can see the calls are UNGRADED by their `sites` argument, not by a gain
 /// quietly set to `1.0`.
+///
+/// `substrate` mirrors `hornvale_species::substrate_response`'s SURFACE curve
+/// — the realm every kind absent from `habitat_realm_registry` carries — and
+/// is never consulted either, for the same reason `afforded_gain` is not: a
+/// bout with no `sites` argument is graded `Bare` before any surface is
+/// looked at (The Tenon).
 const TRAITS: SleepTraits = SleepTraits {
     rise: 0.3,
     afforded_gain: 1.5,
+    substrate: hornvale_kernel::ConditionResponse {
+        optimum: 0.0,
+        width: 0.5,
+        devotion: 1.0,
+    },
 };
 
 /// A fresh ledger with one body in it, and a registry that knows both bout

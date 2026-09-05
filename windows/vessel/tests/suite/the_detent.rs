@@ -89,7 +89,7 @@ use hornvale_vessel::body::Body;
 use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain, Occupancy,
-    PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain, affect_of_memo_occupied,
+    PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE, Terrain, affect_of_memo_occupied,
     alarm_field_memo, derive_npcs, hazard_memory_memo, waking_offset,
 };
 use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
@@ -161,6 +161,10 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         (DRANK, "an agent satisfied its sustenance goal"),
         (RESTED, "an agent rested on a day, for this many ticks"),
         (SLEPT, "an agent slept on a day, for this many ticks"),
+        (
+            SLEPT_ON,
+            "the kind of anchor an agent slept on, within the room it slept in",
+        ),
         (EATEN, "an agent ate (eased its hunger) on a day"),
     ] {
         registry

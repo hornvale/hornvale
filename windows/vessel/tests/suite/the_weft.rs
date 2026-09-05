@@ -372,7 +372,10 @@ fn afloat_facets_never_render_a_weft_clause() {
 /// table.
 #[test]
 fn the_overhang_affords_shelter_and_warmth() {
-    use hornvale_vessel::affordance::{OfferedVerb, weft_offers, weft_offers_for};
+    use hornvale_vessel::affordance::{
+        ObjectProperty, OfferedVerb, RestSurface, Substrate, weft_object_registry, weft_offers,
+        weft_offers_for,
+    };
     use hornvale_worldgen::WeftKind;
 
     // **Driven from a REALIZED occurrence (fix round 1, F6).** Spec §5.6
@@ -430,6 +433,20 @@ fn the_overhang_affords_shelter_and_warmth() {
     assert!(
         overhang.contains(&OfferedVerb::Examine),
         "Examine is universal (empty required set): {overhang:?}"
+    );
+
+    let traits = weft_object_registry()
+        .get(&WeftKind::Overhang)
+        .cloned()
+        .expect("the realized overhang has an ObjectTraits row");
+    assert!(traits.properties.contains(&ObjectProperty::SupportsRest));
+    assert_eq!(
+        traits.rest,
+        Some(RestSurface {
+            offer: 0.7,
+            substrate: Substrate::Natural(0.85),
+        }),
+        "the overhang must remain the calibrated hard-natural sibling of ledge"
     );
 
     // The negative controls: spec §5.6 assigns the affordance claim to the
