@@ -134,6 +134,11 @@ run "absorb"          bash scripts/test-absorb.sh
 run "post-merge hook" bash scripts/test-post-merge.sh
 run "shellcheck"       make --no-print-directory shellcheck
 
+# Charter qualification transport only: this branch is stage-only and never merged.
+if [ "$fails" -eq 0 ]; then
+    run "Charter qualification" bash -c 'bash scripts/charter-measure.sh --self-test && bash scripts/charter-measure.sh'
+fi
+
 if [ "$fails" -ne 0 ]; then
     echo "outboard: $fails suite(s) failed" >&2
     exit 1
