@@ -284,19 +284,58 @@ prediction is a finding.
 
 ### 4.1 The lead criterion is a COUNT, not a clock
 
-**C1 — node expansions per roster-wide `believed_water` sweep.** Deterministic,
-reproducible on any box at any load, and it is the quantity the mechanism
-actually moves. It is preferred over a timing criterion for exactly the reason
-`HomeNavCache::searches` exists: *a deterministic search count is the witness
-the work asks for, in preference to a wall-clock proxy.*
+**C1 is deterministic, reproducible on any box at any load, and it is the
+quantity the mechanism actually moves.** It is preferred over a timing
+criterion for exactly the reason `HomeNavCache::searches` exists: *a
+deterministic search count is the witness the work asks for, in preference to a
+wall-clock proxy.* **It has two tiers, because the two halves are instrumented
+at different costs and only one of them can be committed.**
+
+**C1a — SEARCHES per roster-wide `believed_water` sweep. Permanent, committed,
+and the criterion of record.** A search is a memo miss. Counting them needs
+nothing but a counter on the memo itself — the exact shape
+`HomeNavCache::searches` already has, `pub(crate)`, written by the memo and read
+by the instrument.
 
 | | before (measured) | criterion |
 |---|---|---|
-| Shape A, whole 200-tick run | 425,042 expansions over 679 calls | **≤ 60,000**, and ≤ 100 expansions on any sweep after band 1 |
-| Shape B, whole 12-wait run | 392,391 expansions over 4,060 calls | **≤ 15,000** |
-| either shape | — | memo entries **≤ 200** at the end of the run |
+| Shape A, whole 200-tick run | 679 searches | **≤ 100** |
+| Shape B, whole 12-wait run | 4,060 searches | **≤ 100** |
+| either shape | — | memo entries **≤ 200** at the end of the run, and `entries == searches` |
 
-Denominators are the call counts above, both non-zero and both reported.
+Both denominators are the call counts (679 and 4,060), non-zero and reported.
+`entries == searches` is the strongest single check available: a miss inserts
+exactly one entry, so any divergence means the memo is either re-searching a
+key it holds or holding a key it never searched.
+
+**C1b — node EXPANSIONS per sweep. Campaign-time, retired at close.** Expansions
+are the honest cost quantity — a budget-exhausted miss costs 1,001 where a
+successful one costs 75, and C1a counts those the same. But counting them needs
+a counter inside `AStarSolver::solve`, and **the kernel is the determinism
+substrate; it does not acquire a permanent instrumentation surface so that one
+campaign can measure itself.**
+
+So C1b is taken the way this repository already takes campaign-time hash
+constants: a temporary counter applied for the measurement runs, the numbers
+recorded with their date and the SHA they were taken at, and the counter
+reverted before merge with the dated record kept in the instrument's own module
+doc. The before figures — Shape A **425,042** expansions over 679 calls, Shape B
+**392,391** over 4,060 — were taken this way at `a8bde6769`; the after figures
+are taken the same way at the campaign's own head.
+
+| | before (measured) | criterion |
+|---|---|---|
+| Shape A, whole 200-tick run | 425,042 expansions | **≤ 60,000** |
+| Shape B, whole 12-wait run | 392,391 expansions | **≤ 15,000** |
+
+**What retiring C1b costs, said plainly.** After close, nothing in the
+repository can reproduce the expansion figures without re-applying the patch —
+the same limitation The Detent accepted for its hash constants, and named:
+a constant-free witness guarantees determinism but *cannot detect a behaviour
+change at all*. C1a is what survives, and C1a cannot tell an expensive miss
+from a cheap one. That is why the criterion of record is `≤ 100` searches
+rather than a ratio: at a hundred searches against 679 and 4,060 calls, the
+distinction between miss kinds stops being able to matter.
 
 ### 4.2 The timing criterion is an EFFECT-SIZE floor, never an r²
 
@@ -475,8 +514,15 @@ Rows to correct or add at close:
 - `PLAN_BUDGET` is a private const mirrored by hand in two examples
   (`PROBE_BUDGET`, `BUDGET`) with nothing enforcing agreement. If Task 1b's
   guard generalises to cover that, say so; if not, leave it.
-- The probe at `windows/vessel/examples/culvert_count_probe.rs` is uncommitted
-  and is throwaway; Task 2a decides what of it survives.
+- The throwaway probe is **not in the worktree**; it is parked outside it,
+  because it does not compile without the campaign-time kernel counter of §4.1
+  (C1b) and an uncompilable example under `examples/` breaks every
+  `--all-targets` build in the tree. Task 2a decides what of it survives.
+- **The Zenith (`52c53d78f`, absorbed at `2538f0be5`) retired `SkyChoice` and
+  changed `sky_of(..).calendar()` from an `Option` to a value.** It edited both
+  broken examples to keep them COMPILING and did not notice that neither RUNS —
+  a second witness for §6 Task 1b's premise, landing during this campaign's own
+  spec review.
 
 ---
 

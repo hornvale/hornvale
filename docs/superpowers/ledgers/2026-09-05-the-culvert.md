@@ -526,6 +526,102 @@ attempt starts by measuring it.
 
 ---
 
+### #9 [G2] — C1 splits in two, because the kernel does not get an instrument
+
+**Question.** The spec preregisters C1 as node expansions per sweep. Counting
+expansions requires a counter inside `AStarSolver::solve`. Does the kernel
+acquire one?
+
+**Decision.** **No.** C1 splits: **C1a**, searches per sweep, permanent and
+committed, counted by the memo itself in the shape `HomeNavCache::searches`
+already has — and it is the criterion of record. **C1b**, expansions per sweep,
+taken with a campaign-time kernel counter and retired at close with a dated
+record, exactly as this repository already handles campaign-time hash
+constants.
+
+**How the question arose, which is the part worth keeping.** It was not
+reasoned to. The throwaway probe stopped compiling after the absorption, and
+the error was `take_budget_hits` not found in `hornvale_kernel::astar` — the
+temporary counter the probe agent had correctly reverted. The instrument that
+produced every number in §1.2 of the spec **cannot be rebuilt from the
+committed tree**, and that fact had not been noticed while the spec was being
+written on the strength of those numbers.
+
+**Why the kernel does not simply keep the counter.** `kernel/` is the
+determinism substrate. A permanent `pub` counter there is a new surface every
+future reader must reason about, acquired so that one campaign could measure
+itself. The repository already has the right idiom for a measurement that
+outweighs its instrument's permanence — mint it for the campaign, record the
+value with its date and SHA, retire the instrument, keep the record — and
+applying it here costs nothing this campaign needs.
+
+**What it costs, and the entry says so rather than leaving it implied.** After
+close nothing reproduces the expansion figures without re-applying the patch.
+C1a survives and **C1a cannot distinguish an expensive miss from a cheap one** —
+a budget-exhausted search costs 1,001 expansions and a successful one 75, and a
+search counter scores them alike. The criterion is therefore set at an absolute
+`<= 100` searches rather than as a ratio: at a hundred searches against 679 and
+4,060 calls, the difference between miss kinds has stopped being able to matter.
+This is the same limitation The Detent named for its retired constants — a
+constant-free witness guarantees determinism and *cannot detect a behaviour
+change at all* — and it is stated here for the same reason.
+
+**One check C1a has that C1b does not.** `entries == searches` at the end of a
+run. A miss inserts exactly one entry, so any divergence means the memo is
+re-searching a key it already holds, or holding a key it never searched. That
+is a stronger structural check than either count alone, and it is free.
+
+**Alternatives discarded.** (a) A permanent kernel counter (above). (b)
+Dropping the expansion criterion entirely and preregistering on searches alone:
+rejected — it would silently discard the finding that 95.1% of the work is
+budget-exhausted failure, which is the single number that shaped the mechanism.
+(c) Having `AStarSolver::solve` return its expansion count: a signature change
+to the kernel's central search for one campaign's benefit, which is the
+permanent surface again wearing a different hat.
+
+**ideonomy passes / overturns.** 1 pass, on the *materiality* axis — where does
+an instrument physically live, and what does it cost the thing it lives in?
+That is what separated "the measurement is permanent" from "the instrument is
+permanent", which the spec had silently conflated. No overturn: the criterion
+did not change, only its instrumentation and what survives close.
+
+**Capture actions.** Spec §4.1 rewritten; §10 gains the operational note that
+the probe is parked outside the worktree because an uncompilable file under
+`examples/` breaks every `--all-targets` build.
+
+---
+
+### #10 [Q] — The Zenith lands mid-review and confirms the finding
+
+**Question.** Main moved 46 commits during spec review, including The Zenith
+(`52c53d78f`, "every world has one generated sky; the provider tiers are
+retired"), which touched 50 files in `windows/vessel`. Does it change the
+campaign?
+
+**Decision.** **No, and it strengthens one finding.** It retired `SkyChoice` and
+changed `sky_of(..).calendar()` from an `Option` to a value, and it edited both
+of the broken examples to match. Verified after absorbing at `2538f0be5`:
+`grep -c SLEPT_ON` still returns **0** for both `session_length_scaling.rs` and
+`agent_scaling.rs`.
+
+**So The Zenith edited both instruments to keep them COMPILING and did not
+notice that neither RUNS.** That is a second, independent witness for ledger #6
+and for spec §6 Task 1b's premise, produced by an unrelated campaign during
+this one's spec review. The mechanism is exactly as #6 described it:
+compilation is gated by `--all-targets`, execution is gated by nothing, and the
+gap is invisible to a campaign that has no reason to run a bench it only had to
+keep building.
+
+**Alternatives discarded.** Treating the absorption as reason to re-open the
+mechanism: rejected — the diff touches no belief fold, no `NavSpace`, no
+`plan_to_room` call site, and no `water_at`.
+
+**ideonomy passes / overturns.** None; this is a re-derivation after an
+absorption, not a design choice. Recorded because a merge that lands mid-review
+is exactly the situation in which a campaign assumes its premises survived.
+
+---
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*
