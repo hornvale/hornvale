@@ -1,6 +1,6 @@
 # The Kerf: One Index Fewer — A Campaign Design
 
-**Status:** draft (G3) · **Date:** 2026-09-04 · **Branch:** `campaign/the-kerf`
+**Status:** approved at G3; implementation complete through Task 5, awaiting G6 · **Date:** 2026-09-04 · **Branch:** `campaign/the-kerf`
 · **Decision block:** 0756–0765
 
 A kerf is the slot a saw takes out. This campaign's whole deliverable is

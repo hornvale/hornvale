@@ -37,3 +37,26 @@ tenants and four statements, and `liveness.rs` says that the visit list's first
 element supplies the first-visit instant. Task 5's two were repaired in the
 final close fix: `the_kerf.rs` now describes its live two-fresh-walk guarantee
 and reports both past-instant counts when that two-run floor fails.
+
+## A ratchet can land between your last absorption and your close
+
+The Kerf absorbed main at `0b009be30`, wrote every close artifact against that
+tree, and then found main 33 commits further on when it reached G6. The Coda
+had landed `docs/audits/campaign-reconciliation.tsv` and a coverage test in
+that window, so the merge product was red on an obligation that did not exist
+when the campaign's own definition of done was assembled: four campaign
+records with no reconciliation row. Nothing was wrong with the close; the
+close was simply complete against a stale main. **The lesson is about the
+order of the close walk, not about diligence.** Absorbing first and writing
+the artifacts second — which is what the walk already says — is what makes a
+newly minted ratchet visible while there is still a commit left to fix it in.
+Doing it the other way round means discovering the obligation from a red gate.
+
+The repair was one row. But writing it surfaced something the row could not
+carry: the reconciliation schema's `ledgers` column cannot be populated by any
+row, because the coverage assertion compares every cited path against a
+population that excludes ledgers. Zero of 1,327 committed rows cite one, while
+two other assertions in the same file exist specifically to keep the column
+alive. That is recorded as `PROC-reconciliation-ledgers-column-is-uncitable`
+rather than fixed here: the instrument is one merge old and belongs to the
+campaign that built it.
