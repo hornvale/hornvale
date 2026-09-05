@@ -9727,9 +9727,21 @@ mod tests {
     /// TRANSITIONAL (delete with the prose match in Task 3). The eight
     /// glosses live in two places until the flip: `prose_for` (lifted from
     /// `advance_one`'s `match st.mode`), and `errand_predicates()`. A
-    /// one-directional check would let either copy drift. Assert BOTH
-    /// directions — every gloss is emitted by some mode, and every mode's
-    /// prose is some gloss.
+    /// one-directional check would let either copy drift.
+    ///
+    /// **Pairwise through `errand_key`, not set equality.** An earlier draft
+    /// of this test compared two `BTreeSet<&str>`s of the eight glosses.
+    /// Set equality is multiplicity- and order-independent over the VALUES,
+    /// so swapping two glosses between keys — `errand/forage` given
+    /// "sought a kinder clime (comfort)" and vice versa — leaves both sets
+    /// the identical eight strings and a set comparison stays green. A swap
+    /// is the likelier authoring mistake precisely because it leaves no
+    /// orphan string for a set comparison to notice, and once Task 3
+    /// deletes `prose_for`, a swap latent at that moment becomes permanent
+    /// and undetectable — the wrong gloss forever on the right key, every
+    /// test green. Routing each mode's prose through `errand_key` to find
+    /// its OWN table entry, rather than pooling all eight into a set,
+    /// catches exactly that swap.
     #[test]
     fn the_registry_glosses_and_the_live_prose_match_agree_both_ways() {
         let modes: [(Mode, bool); 8] = [
@@ -9742,11 +9754,15 @@ mod tests {
             (Mode::Pursuing(DriveKind::Social), false),
             (Mode::Homing, false),
         ];
-        let emitted: std::collections::BTreeSet<&str> =
-            modes.iter().map(|&(m, b)| prose_for(m, b)).collect();
-        let glossed: std::collections::BTreeSet<&str> =
-            errand_predicates().iter().map(|(_, d)| *d).collect();
-        assert_eq!(emitted, glossed);
+        let table: std::collections::BTreeMap<&str, &str> =
+            errand_predicates().into_iter().collect();
+        for (mode, believed) in modes {
+            assert_eq!(
+                prose_for(mode, believed),
+                table[errand_key(mode, believed)],
+                "{mode:?} believed={believed}"
+            );
+        }
     }
 
     #[test]
