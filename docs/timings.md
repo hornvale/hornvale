@@ -5780,3 +5780,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T06:32:02Z | gate-commit | 68.589 | 156.450 | 52.883 | 3.05 | 0 | abf708ea6 | campaign/the-sluicegate | lefford | 40 |
 | 2026-09-05T06:44:12Z | gate-commit | 74.058 | 163.556 | 53.389 | 2.93 | 0 | b37ce3239 | campaign/the-sluicegate | lefford | 40 |
 | 2026-09-05T06:51:27Z | sluice:artifacts | 228.886 | 962.263 | 26.124 | 4.32 | 0 | f43514ce0 |  | lefford | 40 |
+| 2026-09-05T06:52:35Z | sluice:outboard | 67.601 | 41.059 | 52.766 | 1.39 | 0 | c26fa827d |  | lefford | 40 |
