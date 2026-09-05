@@ -5888,6 +5888,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T16:47:01Z | sluice:gate | 738.160 | 19739.970 | 514.347 | 27.44 | 0 | 44b19b3cc |  | lefford | 40 |
 | 2026-09-05T16:49:26Z | sluice:clients | 144.787 | 2218.191 | 187.069 | 16.61 | 0 | 58ecd340e |  | lefford | 40 |
 | 2026-09-05T16:57:00Z | sluice:heavy | 453.836 | 9972.576 | 164.410 | 22.34 | 0 | 02b19069c |  | lefford | 40 |
+| 2026-09-05T18:17:03Z | gate-commit | 74.528 | 143.080 | 36.374 | 2.41 | 0 | 4f303d3b0 | tooling/mouth-cross-candidate | lefford | 40 |
 | 2026-09-05T17:12:02Z | rebaseline | 185.824 | 445.069 | 20.287 | 2.50 | 0 | ac2d2240f | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-05T17:16:39Z | gate-commit | 268.751 | 109.953 | 48.389 | 0.59 | 0 | ac2d2240f | campaign/the-kerf | MacBookPro | 10 |
 | 2026-09-05T17:20:50Z | gate-commit | 247.103 | 78.107 | 18.606 | 0.39 | 0 | 81f49bcdf | campaign/the-kerf | MacBookPro | 10 |
@@ -5903,3 +5904,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T19:19:26Z | sluice:gate | 815.074 | 21230.788 | 598.024 | 26.78 | 0 | 673531647 |  | lefford | 40 |
 | 2026-09-05T19:22:07Z | sluice:clients | 160.660 | 2254.317 | 217.738 | 15.39 | 0 | d39ac21b7 |  | lefford | 40 |
 | 2026-09-05T19:29:29Z | sluice:heavy | 441.773 | 10136.558 | 164.382 | 23.32 | 0 | 394d17eb1 |  | lefford | 40 |
+| 2026-09-05T14:38:37Z | gate-commit | 76.449 | 159.350 | 48.653 | 2.72 | 0 | d17645ea5 | tooling/census-study-split | lefford | 40 |
