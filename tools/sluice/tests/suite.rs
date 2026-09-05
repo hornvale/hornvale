@@ -210,7 +210,10 @@ fn the_dispatcher_skips_a_running_shas_twin_and_takes_the_next_real_row() {
     ])
     .unwrap();
     let got = claim(&s, None, None).expect("ok").expect("a row");
-    assert_eq!(got.id, "req-c", "took the twin instead of the next real row");
+    assert_eq!(
+        got.id, "req-c",
+        "took the twin instead of the next real row"
+    );
     let rows = s.read_rows().unwrap();
     assert_eq!(rows[1].state, "queued", "the twin must be left alone");
     assert_eq!(rows[2].state, "running");

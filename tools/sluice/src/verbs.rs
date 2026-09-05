@@ -143,7 +143,7 @@ pub fn claim(
         // other, unrelated work it should get on with.
         if idx.is_none()
             && r.state == "queued"
-            && !running_shas.iter().any(|s| *s == r.sha)
+            && !running_shas.contains(&r.sha)
             && sha.map(|w| r.sha == w).unwrap_or(true)
         {
             idx = Some(i);
