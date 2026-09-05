@@ -36,7 +36,7 @@ code. None came from an implementer's code.** The count is roughly fifteen:
   excluding the single occurrence that would have failed it;
 - a spec success criterion relaxed by 97% without amending the criterion.
 
-## The three lessons worth carrying
+## The four lessons worth carrying
 
 **1. A test can encode the defect as expected behaviour, and then defend it.**
 This is the campaign's central finding and it is stronger than the lesson it
@@ -58,7 +58,27 @@ and inherited the assumption the variable encoded, without ever asserting it.*
 When you remove a mechanism, name what it was asserting and assert it
 explicitly, or the assumption survives without its enforcement.
 
-**3. Nothing was found by re-reading.** Every defect above died to a command —
+**3. A suite can pass on a warm artifact, and this one did — after this
+retrospective first named the pattern.** The branch was submitted, gated green
+locally at 232/0, and went red in the chamber at `outboard`. `test-sluice.sh`
+built the Rust binary at line 1215 while the first tests needing it ran at line
+115; the shim deliberately never builds on demand, so it refused, and the
+ancestry tests read empty state and failed with three assertions about
+coalescing. Every local run had passed because the checkout carried a warm
+`target/release/sluice` from earlier tasks. A fresh tree had none.
+
+Three things about that are worth keeping. It is the *fourth* instance of the
+same shape as lesson 1 — a suite passing for a reason unrelated to what it
+tests — and it arrived after this document had already named that shape, which
+is the strongest evidence available that naming it is not sufficient. The
+chamber caught what every local run missed, which is the entire argument for
+gating the merge product in a fresh tree rather than a branch tip. And the
+failure was *attributable*: the shim's refusal message stood verbatim above each
+failing assertion, so the cause was in the log rather than needing a bisect —
+which it only was because the final review's Critical forced the shim to refuse
+loudly instead of building silently on the hot path.
+
+**4. Nothing was found by re-reading.** Every defect above died to a command —
 a `grep` of the directory being edited, a reproduction of a race, a differential
 run of old against new, checking out an old test file and running it. The
 controller's own three wrong diagnoses this session followed the same pattern:
