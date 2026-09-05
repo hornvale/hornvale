@@ -368,10 +368,19 @@ fn smoothstep(x: f64, lo: f64, hi: f64) -> f64 {
 /// present, roughly this fraction of facets carries a seep" — a promise to
 /// a walker, not a ceiling on a lerp.
 ///
-/// PROVISIONAL until Task 6's seed-42 calibration against the spec §7
-/// bands; every test shipped with it asserts mechanism, never this value.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in Task 6 against the spec section 7 bands; fixed across every world)
-const SPRING_RATE: f64 = 0.60;
+/// **Frozen at Task 6's seed-42 calibration** (The Warp; the round-by-round
+/// table and every §7 reading are in the ledger's "Task 6 — constants
+/// frozen" section). At `0.95` seed 42's springs stand on 1.34% of land
+/// facets, 79% of them on a facet whose own cause reads at or above 0.5
+/// (§7's H1 asks 0.60), and no sign class of 100 facets or more carries a
+/// spring at a rate above 0.075 (§7's H5 bar is 0.75). It is high, and that
+/// is the design: the cause it multiplies is a smoothstep that only
+/// saturates on the ~1% of land where karst and channelized drainage are
+/// both fully present, so "nineteen facets in twenty" is a promise about
+/// that ground and not about limestone country generally. Every test shipped
+/// with it asserts mechanism, never this value.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against the spec section 7 bands and frozen there; fixed across every world)
+const SPRING_RATE: f64 = 0.95;
 
 /// **Floor** — how often spring/seep appears where no cause is. Zero by
 /// design (The Warp, spec §6.1 and §2): the sign case is honest-silent off
@@ -379,20 +388,43 @@ const SPRING_RATE: f64 = 0.60;
 /// an unconditional floor, which is what let a spring surface on ground
 /// with no karst and no drainage at all; a walker who reads a seep as a
 /// sign of water underfoot is then reading noise. Zero closes that.
-/// plumb: universal(an authored design choice: the sign kind's noise floor is zero by intent, fixed across every world)
+///
+/// **Confirmed at zero by Task 6's calibration**, not merely left there: the
+/// ledger's "Task 6 — constants frozen" section records that no §7 band
+/// needed a floor lifted off zero on seed 42, which is the condition that
+/// section was required to state if one had. The honest silence is
+/// load-bearing downstream — it is why the walk-band instruments read spring
+/// at an exact zero (`weft_prevalence.rs`'s `KIND_BOUNDS` doc) and why the
+/// coastal vantage/eligibility conflict population fell from 35 facets to 27
+/// (`windows/vessel/tests/suite/the_weft.rs`).
+/// plumb: universal(an authored design choice confirmed at zero by The Warp's Task 6 calibration: the sign kind's noise floor is zero by intent, fixed across every world)
 const SPRING_FLOOR: f64 = 0.0;
 
 /// The lower edge of spring/seep's soft step on `macro_state` (The Warp,
 /// spec §6.2): at or below this cause the response is exactly zero.
-/// PROVISIONAL until Task 6.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in Task 6; fixed across every world)
-const SPRING_STEP_LO: f64 = 0.20;
+///
+/// **Frozen at Task 6's seed-42 calibration** (ledger, "Task 6 — constants
+/// frozen"). It is the edge, not the rate, that H1's found fraction turns
+/// on: the provisional `0.20` sat below 82% of spring's cause range and read
+/// 0.567, while `0.35` reads 0.787. Deliberately kept BELOW `0.5` — H1's
+/// found fraction is the share of occurrences standing on a cause of 0.5 or
+/// more, so an edge at or above that number would make the band read `1.000`
+/// by construction and measure nothing.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const SPRING_STEP_LO: f64 = 0.35;
 
 /// The upper edge of spring/seep's soft step on `macro_state` (The Warp,
 /// spec §6.2): at or above this cause the response saturates at one.
-/// PROVISIONAL until Task 6.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in Task 6; fixed across every world)
-const SPRING_STEP_HI: f64 = 0.60;
+///
+/// **Frozen at Task 6's seed-42 calibration** (ledger, "Task 6 — constants
+/// frozen"). Seed 42's spring cause reads 0.515 at its 99th percentile and
+/// 0.700 at its maximum, so a saturation point of `0.55` is reachable on
+/// real ground — roughly the top 1% of land — rather than a ceiling the
+/// world never touches, which is what makes [`SPRING_RATE`] readable as a
+/// promise at all. The 0.20 width against [`SPRING_STEP_LO`] is the soft
+/// step §6.2 asks for and not a disguised threshold.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const SPRING_STEP_HI: f64 = 0.55;
 
 /// Spring/seep's correlation length, in facets (spec §5.2, §5.6: "long").
 /// A walker should cross many facets of one karst zone before the signal
@@ -439,26 +471,51 @@ fn spring_macro_state(carbonate: f64, drainage: f64) -> f64 {
 /// one. Independently dialable (spec §5.2 forbids a simplex across kinds,
 /// so this trades against nothing else).
 ///
-/// PROVISIONAL until Task 6's seed-42 calibration against the spec §7
-/// bands.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in Task 6 against the spec section 7 bands; fixed across every world)
-const OVERHANG_RATE: f64 = 0.50;
+/// **Frozen at Task 6's seed-42 calibration** (ledger, "Task 6 — constants
+/// frozen"), and the gap to [`SPRING_RATE`]'s `0.95` is the design statement
+/// the paragraph above makes, now carrying a number: even on ground that
+/// fully affords one, about one facet in six holds a shelter-sized overhang.
+/// It is also what §7's H2 turned on. Overhang's cause is far more legible
+/// from the rendered words than spring's — its induration and slope ARE the
+/// rock word and the steepness word, while spring's drainage is no word at
+/// all — so at equal frequency overhang out-reads spring on the channel and
+/// H2's "spring ≥ overhang" clause fails. Lowering the reliability of the
+/// rarer landmark is the one move that satisfies the clause without touching
+/// the response's shape: at these constants spring reads 0.02750 bits net of
+/// null against overhang's 0.01388, both on found fractions above 0.77.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against the spec section 7 bands and frozen there; fixed across every world)
+const OVERHANG_RATE: f64 = 0.16;
 
 /// **Floor** for overhang/hollow — zero, for the same reason
 /// [`SPRING_FLOOR`] is (The Warp, spec §6.1, §2): an overhang standing on
-/// flat, unindurated ground is a sign that means nothing.
-/// plumb: universal(an authored design choice: the sign kind's noise floor is zero by intent, fixed across every world)
+/// flat, unindurated ground is a sign that means nothing. **Confirmed at
+/// zero by Task 6's calibration** on the same terms [`SPRING_FLOOR`] was —
+/// see that constant's doc and the ledger's "Task 6 — constants frozen".
+/// plumb: universal(an authored design choice confirmed at zero by The Warp's Task 6 calibration: the sign kind's noise floor is zero by intent, fixed across every world)
 const OVERHANG_FLOOR: f64 = 0.0;
 
 /// The lower edge of overhang/hollow's soft step on `macro_state` (The
-/// Warp, spec §6.2). PROVISIONAL until Task 6.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in Task 6; fixed across every world)
-const OVERHANG_STEP_LO: f64 = 0.20;
+/// Warp, spec §6.2). **Frozen at Task 6's seed-42 calibration** (ledger,
+/// "Task 6 — constants frozen"), at the same value as [`SPRING_STEP_LO`] and
+/// for the same two reasons: it is what carries H1's found fraction (0.301
+/// at the provisional `0.20`, 0.771 here), and it stays strictly below the
+/// 0.5 that H1's own found-fraction threshold sits at, so the band measures
+/// something rather than reading `1.000` by construction. A HIGHER edge
+/// would have read better on H1 and worse on H2 — concentrating occurrences
+/// on the strongest cause makes them more legible, and overhang's legibility
+/// is the quantity §7 asks to stay under spring's.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const OVERHANG_STEP_LO: f64 = 0.35;
 
 /// The upper edge of overhang/hollow's soft step on `macro_state` (The
-/// Warp, spec §6.2). PROVISIONAL until Task 6.
-/// plumb: universal(an authored design choice, calibrated on seed 42 in Task 6; fixed across every world)
-const OVERHANG_STEP_HI: f64 = 0.60;
+/// Warp, spec §6.2). **Frozen at Task 6's seed-42 calibration** (ledger,
+/// "Task 6 — constants frozen"). Wider than spring's step (0.30 against
+/// 0.20) because overhang's cause is the more broadly distributed of the
+/// two — seed 42 reads 0.673 at its 99th percentile against spring's 0.515 —
+/// so the same saturation fraction needs a higher upper edge. `0.65` keeps
+/// [`OVERHANG_RATE`] reachable on real ground rather than asymptotic.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const OVERHANG_STEP_HI: f64 = 0.65;
 
 /// Overhang/hollow's correlation length, in facets (spec §5.2, §5.6:
 /// "short–medium"). Shorter than spring's `40.0`: a rock face's own

@@ -5808,3 +5808,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T16:43:13Z | gate-commit | 39.140 | 69.672 | 16.403 | 2.20 | 0 | 2e2add624 | campaign/the-warp | MacBookPro | 10 |
 | 2026-09-05T16:54:02Z | gate-commit | 6.974 | 7.544 | 1.199 | 1.25 | 0 | 382a6662a | campaign/the-warp | MacBookPro | 10 |
 | 2026-09-05T16:56:16Z | gate-commit | 97.048 | 166.984 | 36.829 | 2.10 | 0 | 382a6662a | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T16:57:28Z | gate-commit | 43.766 | 72.188 | 17.276 | 2.04 | 0 | 382a6662a | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T18:03:55Z | rebaseline | 226.571 | 442.556 | 19.016 | 2.04 | 0 | 14397e39a | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T18:06:49Z | game-check | 137.449 | 681.498 | 23.824 | 5.13 | 0 | 14397e39a | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T18:07:37Z | gate-commit | 41.468 | 67.367 | 21.890 | 2.15 | 0 | 14397e39a | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T18:08:44Z | gate-commit | 38.989 | 62.554 | 13.479 | 1.95 | 0 | 14397e39a | campaign/the-warp | MacBookPro | 10 |
+| 2026-09-05T18:10:35Z | gate-commit | 89.259 | 88.286 | 20.080 | 1.21 | 0 | 14397e39a | campaign/the-warp | MacBookPro | 10 |

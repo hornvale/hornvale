@@ -201,12 +201,78 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// rows** (overhang: `0.08` is 1.67x under `0.13333`, `150` is 1.83x under
 /// `275`; spring: `0.05` is 2.25x under the corrected `0.11268`) — nothing
 /// broke either time; the committed TABLE was false, not the bounds.
+///
+/// ---
+///
+/// **THE WARP, Task 6 (2026-09-05) — re-measured at the frozen constants,
+/// and two of the four rows moved for two different reasons.** Same pool,
+/// same seed 42, same 78 walks / 4,680 facets / 4,602 adjacent pairs:
+///
+/// | kind | pooled spread | total occurs | lag-1 r |
+/// | --- | --- | --- | --- |
+/// | spring | **0.00000** (`[0.00000, 0.00000]`) | **0 / 4,680** | **undefined** |
+/// | overhang | 0.14981 (`[0.00000, 0.14981]`) | 36 / 4,680 | 0.99994 |
+/// | thicket | 0.39418 (`[0.00054, 0.39473]`) | 924 / 4,680 | 0.99994 |
+/// | erratic | 0.07594 (`[0.00203, 0.07796]`) | 233 / 4,680 | 0.86795 |
+///
+/// **Thicket's and erratic's rows are byte-identical to the pre-Warp table
+/// above** — they are the campaign's controls and their recipe is untouched
+/// (spec §6.1), so this is the non-regression evidence, not a coincidence.
+///
+/// **Spring's prevalence is now IDENTICALLY ZERO over the whole sample, and
+/// that is a property of the SAMPLE, not of the world.** Spring's soft step
+/// opens at a cause of `0.35` (`SPRING_STEP_LO`), and the largest spring
+/// cause anywhere in these 78 walks is about `0.244` — the pre-Warp figure
+/// was reachable only because the Weft's recipe gave every kind an
+/// unconditional noise floor, so spring's prevalence was nonzero on ground
+/// with no karst at all. It is not that a walker never meets a seep: the
+/// grid-band instrument (one facet per geosphere vertex, 11,218 land
+/// facets) reads `weft-existence-density-spring = 0.01337`, one facet in 75.
+/// This pool is 78 *locations* of 60 adjacent facets each, and a
+/// regionally-clustered kind present on ~1.3% of locations is missed by 78
+/// draws about a fifth of the time. The grid band is where spring is
+/// measured now (`windows/lab`'s `warp-*` family and
+/// `weft-existence-density-spring`); this file's walk band has no power for
+/// it, and the two zero floors in spring's row below say so honestly rather
+/// than pretending to a coverage this instrument does not have. The WITNESS
+/// in [`the_walk_is_not_degenerate`] is what keeps those zeros from being a
+/// silent vacuous pass: it asserts the exact zero, so the moment spring
+/// reappears in the walk band the test goes red and this row is re-derived.
+///
+/// **Overhang's occurrence floor drops `150` → `25`** against a measured 36
+/// (1.44x under, the same headroom philosophy the rows above use). Its
+/// spread ROSE (0.13333 → 0.14981) while its occurrences fell, which is the
+/// step's own signature: the response is exactly zero below `0.35` and
+/// climbs to `rate` above `0.65`, so the pooled series now spans
+/// `[0, rate]` rather than a lerp's narrow band, while far fewer facets
+/// carry any prevalence at all.
+///
+/// **One claim in the mutant table above no longer applies to spring or
+/// overhang, and it is worth stating rather than leaving to inference.** A
+/// sign kind's prevalence is `rate · smoothstep(cause) + floor · noise` with
+/// `floor = 0.0`, so the position-continuous noise term is multiplied out of
+/// it entirely — the address-hashing mutation the module doc describes
+/// perturbs a term those two kinds no longer read, and cannot move their
+/// numbers at all. What spring's and overhang's rows in [`AUTOCORR_BOUNDS`]
+/// and in this table still discriminate is the continuity of the MACRO
+/// STATE (the blended carbonate/drainage and induration/slope fields), which
+/// is a real property and a different one. Thicket and erratic keep the
+/// Weft's expression and keep the original guarantee unchanged.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
-    (WeftKind::Spring, 0.010, 0.05, 50),
-    (WeftKind::Overhang, 0.045, 0.08, 150),
+    (WeftKind::Spring, 0.010, 0.0, 0),
+    (WeftKind::Overhang, 0.045, 0.08, 25),
     (WeftKind::Thicket, 0.015, 0.20, 400),
     (WeftKind::Erratic, 0.060, 0.04, 100),
 ];
+
+/// The Warp, Task 6 (2026-09-05): the kind whose two floors in
+/// [`KIND_BOUNDS`] are zero, and whose lag-1 autocorrelation is therefore
+/// undefined, because its prevalence is identically zero over this pool.
+/// Named once here so the two tests that special-case it cannot drift apart,
+/// and so that adding a second such kind is a deliberate edit rather than a
+/// second copy of the same `if`. See [`KIND_BOUNDS`]'s own doc for the
+/// measurement and why the walk band has no power for it.
+const SILENT_IN_THE_WALK_BAND: WeftKind = WeftKind::Spring;
 
 /// Per-kind `(kind, min_lag1_autocorrelation)` — the PRIMARY
 /// decorrelated-noise discriminator fix round 1 added (C1). Pearson
@@ -225,6 +291,19 @@ const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
 /// high too; erratic: real `0.868` / mutant `-0.025`, threshold `0.5` — the
 /// widest margin of the four, and not a coincidence: erratic's near-zero
 /// contextuality is exactly what makes this the right primary check for it).
+///
+/// **The Warp, Task 6 (2026-09-05).** Re-measured at the frozen constants:
+/// overhang `0.98238` → `0.99994`, thicket and erratic unchanged
+/// (`0.99994`, `0.86795`), and **spring is now undefined** — its prevalence
+/// is a constant zero over this pool, so the Pearson denominator is zero and
+/// the statistic reads `NaN`. Spring's threshold below is retained at `0.6`
+/// and is NOT read while that holds; the test asserts the constant-zero
+/// series directly instead, which is a stronger statement than a correlation
+/// bound and goes red the moment the series stops being constant. See
+/// [`KIND_BOUNDS`]'s Warp paragraph for the measurement, for why the walk
+/// band has no power for spring, and for the separate fact that a zero floor
+/// takes the address-hashable noise term out of both sign kinds' prevalence
+/// altogether.
 const AUTOCORR_BOUNDS: [(WeftKind, f64); 4] = [
     (WeftKind::Spring, 0.6),
     (WeftKind::Overhang, 0.5),
@@ -398,6 +477,31 @@ fn prevalence_autocorrelation_is_not_address_hashed() {
         let var_y: f64 = ys.iter().map(|y| (y - mean_y).powi(2)).sum::<f64>() / m;
         let r = cov / (var_x.sqrt() * var_y.sqrt());
 
+        // THE WARP, Task 6 (2026-09-05): spring's series is a constant zero
+        // over this pool, so the correlation's denominator is zero and `r`
+        // is `NaN`. Assert the constant directly rather than a bound that
+        // cannot be evaluated — a `NaN >= 0.6` comparison is `false`, so
+        // leaving the generic arm to run would report "autocorrelation too
+        // low" for a series that has no autocorrelation to be low. The
+        // relation that moved is named in `KIND_BOUNDS`'s own Warp
+        // paragraph: spring's step opens at a cause of 0.35 and this pool's
+        // largest spring cause is ~0.244.
+        if kind == SILENT_IN_THE_WALK_BAND {
+            assert_eq!(
+                (var_x, var_y),
+                (0.0, 0.0),
+                "{kind:?}: the walk band's prevalence series is no longer the constant zero \
+                 the Warp measured (r={r}) — re-derive this arm and KIND_BOUNDS' spring row \
+                 together, and delete the special case if the band can see the kind again"
+            );
+            assert!(
+                xs.iter().chain(ys.iter()).all(|v| *v == 0.0),
+                "{kind:?}: a constant, non-zero prevalence series is not what the Warp \
+                 measured — it measured an exact zero everywhere off the kind's own cause"
+            );
+            continue;
+        }
+
         assert!(
             r >= min_r,
             "{kind:?}: lag-1 autocorrelation must stay high — position-continuous noise \
@@ -438,6 +542,25 @@ fn the_walk_is_not_degenerate() {
             }
         }
         let spread = max - min;
+
+        // THE WARP, Task 6 (2026-09-05) — the witness that keeps spring's
+        // two ZERO floors in `KIND_BOUNDS` from being a vacuous pass. A
+        // floor of zero can only ever be satisfied; this asserts the exact
+        // measurement the zeros stand for, so the row goes red (and is
+        // re-derived, with the special case deleted) the moment the walk
+        // band can see the kind again.
+        if kind == SILENT_IN_THE_WALK_BAND {
+            assert_eq!(
+                (min, max, occurs_count),
+                (0.0, 0.0, 0),
+                "{kind:?}: the walk band now sees this kind ({occurs_count} occurrences over \
+                 {total} facets, prevalence in [{min}, {max}]) — the Warp measured an exact \
+                 zero. Re-derive KIND_BOUNDS' row from this measurement and remove the \
+                 special case; see that constant's Warp paragraph."
+            );
+            continue;
+        }
+
         assert!(
             spread >= min_pooled_spread,
             "{kind:?}: prevalence must actually vary over the sample, not sit near a constant \

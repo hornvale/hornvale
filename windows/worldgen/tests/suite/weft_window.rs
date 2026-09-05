@@ -14,6 +14,26 @@
 use hornvale_kernel::{Facet, Geosphere, NearestVertexIndex, Seed, Vertex, VertexMap};
 use hornvale_worldgen::{FieldPack, WeftFeature, WeftKind, WeftWindow, features_at_cached};
 
+/// The kind every test in this file probes the WINDOW with. The window is
+/// kind-agnostic by construction — `WeftWindow` keys on `(kind, facet)` and
+/// derives through the same `features_at` every kind uses — so which kind
+/// sits here is a property of the FIXTURE, not of the mechanism under test.
+///
+/// **The Warp, Task 6 (2026-09-05): moved from `Spring` to `Thicket`.** Three
+/// of this file's tests assert non-vacuity by requiring at least one real
+/// occurrence along a 200- or 600-read walk ("got 0 of 200"), and spring
+/// stopped satisfying that: at the frozen constants its soft step opens at a
+/// cause of 0.35, the largest spring cause anywhere in this walk band is
+/// ~0.244, and its prevalence there is identically zero (the measurement and
+/// the reason are in `weft_prevalence.rs`'s `KIND_BOUNDS` doc). Loosening the
+/// counts to zero would have turned three real non-vacuity guards into
+/// assertions that cannot fail; switching the probe keeps every guard at full
+/// strength, because the thing being witnessed — that a window read is
+/// byte-identical to a direct derivation over a walk that really does find
+/// features — is not about springs at all. Thicket occurs on 924 of the
+/// walk band's 4,680 facets and its recipe is untouched by this campaign.
+const PROBE_KIND: WeftKind = WeftKind::Thicket;
+
 /// Same relationship `weft_prevalence.rs` reproduces for the same reason:
 /// this file cannot import `windows/locale` (it depends on
 /// `hornvale-worldgen`, the crate under test), so `walk_depth`'s own
@@ -58,11 +78,19 @@ impl Fixture {
     /// (`neighbors()[0]` is always the "+a" edge step — present even at a
     /// cube corner, per `Facet::neighbor_steps`'s own doc — so this never
     /// panics), matching `weft_prevalence.rs`'s own walk exactly (same
-    /// starting vertex, same walk depth, same seed): that file measured this
-    /// walk non-degenerate — `occurs` fires 7 of 200 times, prevalence spans
-    /// `[0.00071, 0.04641]` — so reusing it here means this file's own
-    /// non-vacuity checks below rest on an already-measured walk rather than
-    /// a fresh, unverified one.
+    /// starting vertex, same walk depth, same seed).
+    ///
+    /// **The Warp, Task 6 (2026-09-05): the numbers this doc used to quote
+    /// are gone, not updated.** It read "that file measured this walk
+    /// non-degenerate — `occurs` fires 7 of 200 times, prevalence spans
+    /// `[0.00071, 0.04641]`", which was a claim about SPRING on this one
+    /// walk, made before [`PROBE_KIND`] moved and before the sign kinds' own
+    /// recipe changed. Quoting a second file's per-kind figure is what let it
+    /// rot: `weft_prevalence.rs` has measured a 78-walk POOL, not this single
+    /// walk, since its own fix round 1. The non-vacuity this file needs is
+    /// asserted at runtime by the tests below (`occurs` must fire at least
+    /// once on the walk they actually take, and prevalence must actually
+    /// vary), which is a live measurement rather than a transcribed one.
     fn walk(&self, steps: usize) -> Vec<Facet> {
         let geo = self.geo();
         let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
@@ -150,7 +178,7 @@ fn the_window_is_byte_identical_to_no_window() {
     // No window: derive every facet directly.
     let direct: Vec<Vec<WeftFeature>> = walk
         .iter()
-        .map(|f| fx.direct_features(WeftKind::Spring, f))
+        .map(|f| fx.direct_features(PROBE_KIND, f))
         .collect();
 
     // Through a window advanced along the exact same walk, one step at a
@@ -169,14 +197,7 @@ fn the_window_is_byte_identical_to_no_window() {
         );
         windowed.push(
             window
-                .features_at(
-                    WeftKind::Spring,
-                    facet,
-                    fx.geo(),
-                    &fx.index,
-                    &fx.pack,
-                    fx.seed(),
-                )
+                .features_at(PROBE_KIND, facet, fx.geo(), &fx.index, &fx.pack, fx.seed())
                 .to_vec(),
         );
     }
@@ -198,15 +219,8 @@ fn the_window_is_byte_identical_to_no_window() {
     let prevalences: Vec<f64> = walk
         .iter()
         .map(|f| {
-            hornvale_worldgen::prevalence(
-                WeftKind::Spring,
-                f,
-                fx.geo(),
-                &fx.index,
-                &fx.pack,
-                fx.seed(),
-            )
-            .expect("a walk-depth facet is always deeper than the geosphere's own level")
+            hornvale_worldgen::prevalence(PROBE_KIND, f, fx.geo(), &fx.index, &fx.pack, fx.seed())
+                .expect("a walk-depth facet is always deeper than the geosphere's own level")
         })
         .collect();
     let min = prevalences.iter().cloned().fold(f64::INFINITY, f64::min);
@@ -251,26 +265,12 @@ fn window_survives_chaos_eviction() {
         let facet = &walk[idx];
         resident_out.push(
             resident
-                .features_at(
-                    WeftKind::Spring,
-                    facet,
-                    fx.geo(),
-                    &fx.index,
-                    &fx.pack,
-                    fx.seed(),
-                )
+                .features_at(PROBE_KIND, facet, fx.geo(), &fx.index, &fx.pack, fx.seed())
                 .to_vec(),
         );
         chaotic_out.push(
             chaotic
-                .features_at(
-                    WeftKind::Spring,
-                    facet,
-                    fx.geo(),
-                    &fx.index,
-                    &fx.pack,
-                    fx.seed(),
-                )
+                .features_at(PROBE_KIND, facet, fx.geo(), &fx.index, &fx.pack, fx.seed())
                 .to_vec(),
         );
         chaotic.evict_all(); // evict at EVERY legal opportunity
@@ -350,7 +350,7 @@ fn two_seeds_do_not_contaminate_the_same_window() {
     let mut found: Option<(Seed, Vec<WeftFeature>)> = None;
     for base in 1u64..200 {
         let candidate = Seed(base);
-        let f = fx.direct_features_with_seed(WeftKind::Spring, &facet, candidate);
+        let f = fx.direct_features_with_seed(PROBE_KIND, &facet, candidate);
         match seed_a {
             None => {
                 seed_a = Some(candidate);
@@ -376,36 +376,15 @@ fn two_seeds_do_not_contaminate_the_same_window() {
 
     let mut window = WeftWindow::new();
     let read_a = window
-        .features_at(
-            WeftKind::Spring,
-            &facet,
-            fx.geo(),
-            &fx.index,
-            &fx.pack,
-            seed_a,
-        )
+        .features_at(PROBE_KIND, &facet, fx.geo(), &fx.index, &fx.pack, seed_a)
         .to_vec();
     let read_b = window
-        .features_at(
-            WeftKind::Spring,
-            &facet,
-            fx.geo(),
-            &fx.index,
-            &fx.pack,
-            seed_b,
-        )
+        .features_at(PROBE_KIND, &facet, fx.geo(), &fx.index, &fx.pack, seed_b)
         .to_vec();
     // Re-read seed_a AFTER seed_b, through the SAME window: a key that
     // dropped `Seed` would return seed_b's cached entry here instead.
     let reread_a = window
-        .features_at(
-            WeftKind::Spring,
-            &facet,
-            fx.geo(),
-            &fx.index,
-            &fx.pack,
-            seed_a,
-        )
+        .features_at(PROBE_KIND, &facet, fx.geo(), &fx.index, &fx.pack, seed_a)
         .to_vec();
 
     assert_eq!(
@@ -468,8 +447,8 @@ fn two_globe_levels_do_not_contaminate_the_same_window() {
     let seed = fx.seed();
     let mut chosen: Option<(Facet, Vec<WeftFeature>, Vec<WeftFeature>)> = None;
     for facet in &walk {
-        let a = fx.direct_features_with_seed(WeftKind::Spring, facet, seed);
-        let b = direct_features_over(WeftKind::Spring, facet, &geo_b, &index_b, &pack_b, seed);
+        let a = fx.direct_features_with_seed(PROBE_KIND, facet, seed);
+        let b = direct_features_over(PROBE_KIND, facet, &geo_b, &index_b, &pack_b, seed);
         if a != b {
             chosen = Some((facet.clone(), a, b));
             break;
@@ -487,29 +466,15 @@ fn two_globe_levels_do_not_contaminate_the_same_window() {
 
     let mut window = WeftWindow::new();
     let read_a = window
-        .features_at(
-            WeftKind::Spring,
-            &facet,
-            fx.geo(),
-            &fx.index,
-            &fx.pack,
-            seed,
-        )
+        .features_at(PROBE_KIND, &facet, fx.geo(), &fx.index, &fx.pack, seed)
         .to_vec();
     let read_b = window
-        .features_at(WeftKind::Spring, &facet, &geo_b, &index_b, &pack_b, seed)
+        .features_at(PROBE_KIND, &facet, &geo_b, &index_b, &pack_b, seed)
         .to_vec();
     // Re-read level_a AFTER level_b, through the SAME window: a key that
     // dropped the level would return level_b's cached entry here instead.
     let reread_a = window
-        .features_at(
-            WeftKind::Spring,
-            &facet,
-            fx.geo(),
-            &fx.index,
-            &fx.pack,
-            seed,
-        )
+        .features_at(PROBE_KIND, &facet, fx.geo(), &fx.index, &fx.pack, seed)
         .to_vec();
 
     assert_eq!(
@@ -580,13 +545,13 @@ fn cached_reads_are_byte_identical_to_direct_derivation() {
     // could be silently taking the miss-and-derive path on every call.
     assert!(
         window
-            .features_lookup(WeftKind::Spring, &walk[0], fx.geo(), fx.seed())
+            .features_lookup(PROBE_KIND, &walk[0], fx.geo(), fx.seed())
             .is_some(),
         "a prefilled facet must be a `features_lookup` HIT"
     );
     assert!(
         window
-            .features_lookup(WeftKind::Spring, &walk[STEPS - 1], fx.geo(), fx.seed())
+            .features_lookup(PROBE_KIND, &walk[STEPS - 1], fx.geo(), fx.seed())
             .is_none(),
         "an un-prefilled facet must be a `features_lookup` MISS"
     );

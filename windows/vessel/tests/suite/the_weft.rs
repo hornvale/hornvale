@@ -201,7 +201,7 @@ fn the_walk_reports_a_derived_feature_when_it_finds_one() {
         Session::start(&oracle.world, &PossessOpts::default()).expect("seed 42 possesses");
 
     // **Also requires `!is_afloat` (fix round 1, F5).** Without this, the
-    // walk could stop on one of the 35 measured coastal facets where
+    // walk could stop on one of the 27 measured coastal facets where
     // eligibility and vantage disagree (see `Session::describe_here`'s own
     // `weft_clause` doc) — a facet the independent oracle calls occupied but
     // the FIXED render correctly renders silent. This test's own claim is
@@ -297,16 +297,26 @@ fn a_facet_with_nothing_derived_stays_silent() {
 /// disagree at a coastal facet: the corner-pick sees ocean, the blend still
 /// reads majority-land. Measured directly on seed 42, every walk-depth
 /// facet over all 40,962 vertices: 29,713 facets are afloat by the
-/// corner-pick test, and of those, exactly 35 (0.118% of afloat facets,
-/// 0.085% of all facets) also carry >= 1 weft feature by the blend test —
+/// corner-pick test, and of those, exactly 27 (0.091% of afloat facets,
+/// 0.066% of all facets) also carry >= 1 weft feature by the blend test —
 /// real, not merely constructible, though rare.
 ///
+/// **The Warp, Task 6 (2026-09-05): 35 -> 27.** The population is the same
+/// one and the predicates are untouched; what moved is how often a weft
+/// feature occurs at all on the coastal band. Spring and overhang read their
+/// cause through a soft step with a zero floor now (spec §6.1, §6.2), so
+/// neither occurs on ground with no cause — and a facet the corner-pick
+/// calls afloat is, by construction, ground where the two sign kinds' causes
+/// (karst-and-drainage, induration-and-slope) are weak. Thicket and erratic
+/// keep the Weft's own expression bit for bit, so the 27 that remain are
+/// theirs plus whatever sign features survive.
+///
 /// This is the population `Session::describe_here`'s `if vantage.is_none()`
-/// gate exists to protect: at every one of these 35 facets, the render must
+/// gate exists to protect: at every one of these 27 facets, the render must
 /// suppress the weft clause. Reproduced against the free functions directly
 /// (`Oracle::is_afloat` mirrors `Session::column_here`'s own predicate
 /// exactly — see its own doc) rather than through a live `Session`, because
-/// steering a live walk onto 35 specific facets scattered across 40,962
+/// steering a live walk onto 27 specific facets scattered across 40,962
 /// would need real geodesic pathfinding this file does not otherwise build;
 /// `the_walk_reports_a_derived_feature_when_it_finds_one` above is the live
 /// end-to-end witness for the (overwhelmingly more common) clean case.
@@ -343,8 +353,8 @@ fn afloat_facets_never_render_a_weft_clause() {
 
     assert_eq!(
         conflicts.len(),
-        35,
-        "the vantage/eligibility disagreement moved from 35 facets to {} -- \
+        27,
+        "the vantage/eligibility disagreement moved from 27 facets to {} -- \
          update this count (and Session::describe_here's weft_clause gate \
          doc, which cites it) in the same commit as whatever changed the \
          underlying predicates",
@@ -353,12 +363,12 @@ fn afloat_facets_never_render_a_weft_clause() {
 
     // What this test does NOT independently prove, said plainly: that
     // `Session::describe_here`'s `if vantage.is_none() { .. } else {
-    // String::new() }` conditional actually fires at these 35 facets when a
+    // String::new() }` conditional actually fires at these 27 facets when a
     // live session stands on one. `describe_here` is a private method
     // reachable only through `Session::handle`, and reaching one specific
-    // facet out of 35 scattered across 40,962 needs real pathfinding this
+    // facet out of 27 scattered across 40,962 needs real pathfinding this
     // file does not build (see the doc above). What IS pinned: the
-    // population the gate exists to protect is real and its size (35), so a
+    // population the gate exists to protect is real and its size (27), so a
     // silent change to either predicate (`column_here`'s corner pick,
     // `land_eligible`'s blend) that grows or shrinks it reddens here rather
     // than going unnoticed.
