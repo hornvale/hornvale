@@ -79,15 +79,14 @@ sections an implementer cannot work without.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `windows/vessel/tests/suite/the_warrant.rs`:
+`errand_key` is `pub(crate)`, so **the mapping table is asserted from inside
+`liveness.rs`'s own `#[cfg(test)] mod tests`** and only the public surface is
+asserted from the integration test. Do not widen the crate's public API for a
+test.
+
+In `windows/vessel/src/liveness.rs`, inside its existing `mod tests`:
 
 ```rust
-//! The Warrant (Penstock 7b): the typed, compositional intention.
-use hornvale_vessel::liveness::{
-    DriveKind, Mode, errand_key, errand_predicates, ERRAND_WATER_KNOWN, ERRAND_WATER_BLIND,
-    ERRAND_FORAGE, ERRAND_COMFORT, ERRAND_REST, ERRAND_FLIGHT, ERRAND_COMPANY, ERRAND_HOME,
-};
-
 /// The eight keys are the eight arms the prose match already had, one for
 /// one. Written as an explicit table rather than a loop so a NINTH mode
 /// cannot be silently absorbed: adding one makes `errand_key`'s own match
@@ -110,6 +109,17 @@ fn every_mode_maps_to_exactly_one_errand_key() {
     }
     assert_eq!(errand_key(Mode::Idle, false), ERRAND_HOME, "Idle shares Homing's key");
 }
+
+```
+
+Create `windows/vessel/tests/suite/the_warrant.rs` for the public half:
+
+```rust
+//! The Warrant (Penstock 7b): the typed, compositional intention.
+use hornvale_vessel::liveness::{
+    errand_predicates, ERRAND_WATER_KNOWN, ERRAND_WATER_BLIND, ERRAND_FORAGE,
+    ERRAND_COMFORT, ERRAND_REST, ERRAND_FLIGHT, ERRAND_COMPANY, ERRAND_HOME,
+};
 
 /// Every key is registered with a non-empty doc, and the docs are the eight
 /// glosses the renderer will show. A key with an empty doc would render as
@@ -231,14 +241,6 @@ pub fn errand_predicates() -> [(&'static str, &'static str); 8] {
     ]
 }
 ```
-
-Make `errand_key` reachable from the test: the test file is an integration
-test, so either re-export it `pub` or move the mapping assertions into
-`liveness.rs`'s own `#[cfg(test)] mod tests`. **Prefer keeping `errand_key`
-`pub(crate)`** and asserting the mapping from inside `liveness.rs`'s test
-module, with only the consts, `errand_predicates` and the save-format test in
-`the_warrant.rs`. Adjust the test file accordingly rather than widening the
-crate's public surface for a test.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -433,7 +435,26 @@ asserting an exact fact-count delta. Grep the file, do not re-run to find each
 one. Every such assertion must be updated **only** where the added count is an
 errand fact; a moved `agent-at` count is a defect, not a rebaseline.
 
-- [ ] **Step 5: Measure H3 (spec §10)**
+- [ ] **Step 5: Capture the "before" side of H1, while the prose is still live**
+
+Task 3 flips the provenance and then has to prove nothing a reader can see was
+lost. That proof needs data taken **now**, not a re-derivation of itself after
+the flip — an empty diff needs a positive control, and a self-comparison is
+not one.
+
+Write, to a committed fixture under `windows/vessel/tests/fixtures/`
+(`the-warrant-glosses.json` or a `.tsv`, implementer's choice), for each
+entity in the walking harness: the ordered list of `(day, provenance)` pairs
+at each **run start** — that is, each `agent-at` fact whose provenance differs
+from its predecessor's for that subject. Declare the file by name in
+`docs/generated-paths.txt` if it is regenerated, or leave it undeclared and
+hand-written if it is a frozen pin; say which in the commit message, because a
+new file dropped into an already-declared directory inherits that directory's
+author and becomes invisible to the drift check until it is `git add`-ed.
+
+Task 3's `every_gloss_and_its_first_day_survives_the_flip` reads this fixture.
+
+- [ ] **Step 6: Measure H3 (spec §10)**
 
 Run: `cargo nextest run -p hornvale-vessel --test suite -E 'test(tick_commit_budget)'`
 Record the reported facts/agent/tick against `STEADY_STATE_CEILING = 2.5`.
@@ -445,7 +466,7 @@ commits no steps, therefore no errands); a walking seed rises by at most
 or `NON_GROWTH_MARGIN` red → STOP and report, because this task only ADDS
 facts and neither should be able to move against it.
 
-- [ ] **Step 6: Artifact check and commit**
+- [ ] **Step 7: Artifact check and commit**
 
 Same drift check and branch table as Task 1 Step 6, with one change:
 `book/src/gallery/` **may** now move, because the `(N stirred)` count is a
@@ -532,11 +553,10 @@ fn every_gloss_and_its_first_day_survives_the_flip() {
 }
 ```
 
-**Task 2 must capture the "before" side.** Add a step to Task 2 that writes
-each entity's `(day, provenance)` run-starts to a committed fixture under
-`windows/vessel/tests/fixtures/`, so this test compares against data taken
-while the prose was live rather than against a re-derivation of itself. An
-empty diff needs a positive control; a self-comparison is not one.
+`expected_for(entity)` reads the fixture **Task 2 Step 5 wrote while the prose
+was still live**. If that fixture does not exist, stop and go back — this test
+compared against a re-derivation of itself would pass unconditionally and
+prove nothing.
 
 - [ ] **Step 3: Run test to verify it fails**
 
