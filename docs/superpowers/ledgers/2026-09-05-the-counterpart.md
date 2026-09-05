@@ -218,3 +218,39 @@ and an invented production schema break just to exercise migration.
 Each either expands scope before a demonstrated need or assumes the safety
 property the experiment must interrogate.
 
+## #1 [G1] — next campaign
+
+**Question:** Which next step most directly tests safe concurrent work?
+**Decision:** Recommend **The Counterpart**, a bounded interference experiment
+on the real Thing–Settlement concept-registration boundary. Compare path-based
+selection, Cargo dependencies and one explicit consumer agreement in shadow;
+run the same frozen obligations on base, A, B and the composed source. Include
+a safe pair, a single-change dependency failure, a joint-only interaction and
+an independent challenge. Retain a minimal replay dossier. No production
+selection rule, migration, or admission privilege is enacted by the experiment.
+
+**Why:** Charter already proves enrollment. Source and the live Settlement
+scope probe expose the next uncertainty. Decisions 0094 and 0261 authorize
+a shared question roster with independent derivations; 0139 preserves exact
+composed-source admission. The metaplan itself calls its sequence questions,
+not approved plans. Testing an agreement before building more federation
+infrastructure is a justified refinement of its order.
+
+**Alternatives discarded as the next campaign:** build extraction has a
+measured cost but does not establish meaning; a general provenance platform
+is larger than this experiment needs; version migration lacks a presently
+needed incompatible change; prompt/Book automation already has a qualified
+on-demand predecessor and does not resolve interference; a formal migration
+model has no selected live migration to correspond to; a global scheduler
+would answer a different resource question. All remain captured above.
+
+**Ideonomy passes / overturns:** five draws, four by the controller and one
+independent challenger, all recorded as organons above. The direction shifted
+from strengthening general infrastructure to testing one behavioral boundary
+first. The independent pass required distinguishing dependency from joint-only
+interaction and retaining a safe control; the final size/distribution pass
+found no material improvement. No claim of exhaustive search follows.
+
+**Capture actions:** existing federation, evidence-selection and provenance
+rows point here. The spec will carry comparison criteria and response rules;
+the seven Charter follow-ups and Nathan's profiling ownership stay open.
