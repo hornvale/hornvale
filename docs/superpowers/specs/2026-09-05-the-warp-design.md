@@ -211,7 +211,7 @@ sign)` — exactly the walker's sentence after §4, through §4.4's functions.
 | channel MI, net | channel MI − channel null (computed in the readout, not registered) |
 | found fraction | share of the kind's occurrences on a facet whose `macro_state` ≥ 0.5 (undefined for erratic; its cause is constant) |
 | best-class lift | max over sign classes with support ≥ 100 of `P(Y | class) / P(Y)` — the walker-facing number, "three times as likely here" |
-| learner gain | the sign table fitted on even-indexed land facets, scored on odd-indexed ones as log-loss reduction against the base rate, in bits per facet; negative when the table overfits |
+| learner gain | the sign table fitted on even-indexed land facets, scored on odd-indexed ones as log-loss reduction against the base rate, in bits per facet; negative when the table overfits. **Smoothing (amended 2026-09-05, Task 5, before any readout seed was built):** a class with `n` fits and `k` hits predicts `(k + α·p̂) / (n + α)` with `p̂` the fit half's base rate and `α = 10` — an equivalent-sample-size prior toward the base rate. The first implementation used Laplace `(k + 1)/(n + 2)`, a prior toward 0.5, which on a 3.6% event over 469 tuple classes predicted every thin class at up to one half and paid ~4.6 bits per miss: learner gain read −0.049 for spring at seed 42, an instrument artefact, not a world reading. An unseen class predicts `p̂` exactly, so an uninformative table scores 0, never below it by construction. |
 | false-sign MI, net | channel MI net of null for the tuple `(noun, relief, aspect, openness)` — the control |
 | oracle gain | the sign table fitted and scored on all land, bits per facet — the in-sample bound the learner is measured against (H3) |
 | max class rate | max over sign classes with support ≥ 100 of `P(Y \| class)` — H5's wallpaper guard |
@@ -226,8 +226,7 @@ their nulls for every kind. A campaign that could not show both has an
 instrument that credits noise, and the finding would be about the
 instrument. Both are preregistered (§7 H4).
 
-**5.4 Cost (ledger #7).** The sign columns ride the existing grid pool
-(three map reads per facet), and the learner is one pass over the same rows.
+**5.4 Cost (ledger #7). MEASURED 2026-09-05 (Task 5), and the premise below was wrong.** The sign columns ride the existing grid pool, and the learner is one pass over the same rows — but "three map reads per facet" was false: the wetness sign's grounding calls the rill network's nearest-branch query per facet, and an ablation attributed **100% of the pool's added 0.218 CPU-s/world** to it; biome, rock and steepness are free. The honest total, all 32 metrics against the pre-task registry over 20 worlds in release (medians of three), is **0.331 CPU-s/world added** — over the 0.25 rule below. **Ruling (ledger #10): accepted as-is, not subsampled.** Subsampling to every second facet halves `n` to ~5,600, doubles the null's bias and raises its standard deviation from 0.0020 to 0.0035 bits, which would blunt §5.3's controls to save ~23 s of census wall per refresh. The rule was written for a cost it did not foresee; the instrument's resolution is what the campaign is for. (The brief's a/b design — the Weft's metrics alone vs the Warp's alone — could not see the sign columns at all, because both studies build the same shared pool; the pre-task-vs-all-32 difference is the measurement.)
 Decision rule, measured in release on the Mac before registration: added
 cost ≤ 0.25 CPU-s/world registers as-is; more subsamples the pool for the
 sign columns and this section records the subsample. Registration restages
@@ -308,12 +307,34 @@ overhang. Reported, not gated: spring's channel net as a share of its
 ceiling.
 
 **H3 — it can be learned.** On each readout seed, learner gain > 0 for
-spring, overhang and thicket, and ≥ 0.5 × the oracle's in-sample gain for
-spring and overhang. The erratic's learner gain within ±0.001 bits/facet.
+spring, overhang and thicket. The erratic's learner gain ≤ 0.001 bits/facet
+(one-sided; amended 2026-09-05 from "within ±0.001" — a held-out table over
+~469 classes of noise cannot beat the base rate and MUST lose to it by an amount
+set by cardinality and population, −0.0138 at seed 42; the control is that the
+erratic never GAINS, not that its loss is small).
+**Amended 2026-09-05 (Task 5, before any readout seed was built): the clause
+"≥ 0.5 × the oracle's in-sample gain" is withdrawn from the gate and the
+ratio learner / (channel MI net of null) is REPORTED instead.** The oracle as
+defined has no meaning as a denominator: smoothed, it reads negative in-sample
+for a 3.6% event (−0.014 for spring at seed 42); unsmoothed, its in-sample
+log-loss reduction is algebraically the raw channel MI, which the null exists to
+correct. `warp-oracle-gain-*` stays registered and reported; nothing gates on it.
 
 **H4 — the instrument credits nothing to noise.** On every readout seed and
-every kind: erratic channel MI net ≤ 0.001 bits, and the false-sign tuple's
-MI net within ±0.001 bits.
+every kind: erratic channel MI net ≤ 0.008 bits (one-sided), and the false-sign
+tuple's MI net within ±0.002 bits.
+**Amended 2026-09-05 (Task 5, before any readout seed was built) from ±0.001
+and ≤ 0.001, and the reason is the estimator's own resolution.** The
+permutation null of a discrete MI has a spread as well as a mean: the χ²
+approximation gives mean `(K−1)/(2·n·ln 2)` and a standard deviation that at
+seed 42 measures **0.001967 bits** for the 469-class sign tuple and **0.000464**
+for the 27-class false-sign tuple (the predicted mean, 0.030091, is exactly what
+`warp-channel-null-erratic` read — the positive control that the null is the
+null). A bar of 0.001 on a statistic whose null spread is 0.002 fails the
+control roughly a third of the time by noise alone, which makes H4 a coin flip
+rather than a control. Both bars are now **four null standard deviations**,
+fixed from the seed-42 measurement (0.008 and 0.002) rather than recomputed per
+seed, so they cannot move with a reading.
 
 **H5 — nothing is told.** On every readout seed, no sign class with support
 ≥ 100 has `P(Y | class)` > 0.75 for any kind (0.357 is today's maximum). A
