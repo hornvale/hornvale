@@ -571,3 +571,46 @@ two outcomes was one command nobody had to be talked into running.
 The witness assertion that pins this figure now carries both halves: the
 corrected list of the four places the figure lives, and the instruction to
 *measure* an instrument change rather than to stop at it.
+
+## Postscript 6 — when the instrument's share is not null (The Weft, 2026-09-04)
+
+The Weft made the same confound larger and, this time, consequential. Its
+canonical census added 22 numeric metrics. Twenty-one vary across the thousand
+worlds and enter the anomaly report's evaluable surface; only
+`weft-legibility-mi-erratic` is frozen and excluded. The surface grew from 118
+columns to 139, with the excluded roster moving 50 to 51. The report still
+publishes ten flags, so it now cuts ten places from a field with 21 more
+candidates.
+
+The injection battery was re-authored by its dedicated script on lefford at
+the exact census delivery, `b162273b4`. All eight arms covered the same twenty
+seeds with zero refusals. Every injected arm moved at least one distribution,
+the independent second baseline moved none, and the fixture schema exactly
+matched the 249-metric census.
+
+On the full new surface the witness reads **69/120 = 0.5750**, with zero void
+pairs. Arm for arm: geothermal 20/20, unconformity 4/20, aquifer 20/20, karst
+2/20, pantheon 6/20, phonology 17/20. The 0.60 bar remains frozen; a new census
+does not authorize moving it.
+
+The ablation that licensed comparison at The Winze does not license it here.
+Removing the Weft family from the census held in memory — the 21 ranked
+columns, plus the already-excluded erratic legibility column whose removal is
+inert — and scoring the **same newly authored rows** restores **72/120**. It
+also restores every earlier arm total: 20/20, 4/20, 20/20, 2/20, 7/20, 19/20.
+The new surface itself therefore displaced three hits, one from pantheon and
+two from phonology.
+
+That makes this a pinned seventh canonical reading but **not a seventh point
+in the comparable series**. Its numerical distance from the bar is still less
+than one standard error, but folding it into the six earlier points would hide
+a confound now measured directly. Those six comparable readings remain
+0.5667 / 0.6083 / 0.6000 / 0.6083 / 0.6083 / 0.6000, all within one standard
+error. Their verdict remains “cannot tell,” and their remedy remains more
+pairs, not a moved bar.
+
+The contrast with Postscript 5 is the reusable result. “Run an ablation” is
+not a ritual that automatically blesses comparability. The Winze's ablation
+read null, so comparison survived; The Weft's read minus three hits, so the
+honest record is an incomparable current witness and an unchanged historical
+series.

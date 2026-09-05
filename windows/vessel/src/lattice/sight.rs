@@ -404,17 +404,19 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, None)),
+            None,
         )
     }
 
     /// The brief that selects the GROWN embedding, passed to `embed_with` and
     /// nothing else — the same fixture idiom `anchor_cells` settled on.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, 0, false, true, None)
+        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
     }
 
     fn locale_number(n: u64) -> Facet {

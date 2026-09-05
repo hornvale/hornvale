@@ -191,6 +191,21 @@ the exact SHA it tested.
   well as the branch, or a stage request would silently drop a queued merge
   on the same branch. `reported` is the stage kind's terminal state —
   separate from `landed`, which would assert main moved when it did not.
+  **`claim` is the transaction; `next` is only a read.** The row state IS the
+  interlock that decides who runs a job, so selecting a row and marking it
+  `running` must happen under ONE lock acquisition — the flock is released at
+  process exit, so two `sluice-queue.sh` invocations are two transactions with
+  a window between them. `next` + a separate `set-state running` left that
+  window open across the caller's whole mouth check, and on 2026-09-04 it let
+  a hand-run drain dispatch a merge a direct `sluice-run.sh` was already
+  executing (pids 1240741/1253175, two ~800 KB logs for `48aa9373b6f2`, both
+  rc=0). `claim` selects and marks in one locked pass. Without `--sha` it
+  takes the first queued row (a dispatcher); with `--sha` it takes the row for
+  that ref (an executor, which knows its ref and not its id) and answers with
+  two distinct exit codes that callers depend on: **4** = a row exists but is
+  not queued, somebody else has it, refuse; **5** = no row at all, which is an
+  ad hoc run and is allowed. Conflating those two would either forbid the
+  operator escape hatch or re-open the duplicate.
 - **`sluice-mouth.sh`** — the checks that run OUTSIDE the lane claim (the
   canal-lock rule: turn a vessel away at the gate, never inside the
   chamber). Prevents a doomed candidate — already merged, unpushed, or
@@ -252,8 +267,15 @@ the exact SHA it tested.
   **refuses to report a threshold** rather than inventing one — a bound stated
   in a message is a claim, and a made-up one is worse than silence. Exit 0
   always: a census that ran long is not a census that failed.
-- **`sluice-drain.sh`** — the operator's harness: pop the next row, gate it,
-  dispatch on `kind`, set the terminal state, repeat. Every script it calls was
+- **`sluice-drain.sh`** — the operator's harness: CLAIM the next row, gate it,
+  dispatch on `kind`, set the terminal state, repeat. It claims (not `next`)
+  and exports `HV_SLUICE_CLAIMED` so the executor it launches does not claim a
+  row the drain already holds and refuse against itself. **It is no longer the
+  only bookkeeper**, and that is the point: `sluice-run.sh` and
+  `sluice-census.sh` each claim their own row when nothing claimed it for
+  them, and set their own terminal state when they did. A run launched by hand
+  is a documented escape hatch; a run launched by hand that leaves its row
+  reading `queued` is a ghost the next dispatcher will launch a second time. Every script it calls was
   committed and tested; **this one lived in a session scratchpad for weeks**,
   ungated and untested, while doing real gating work — and caused two defects in
   one night (2026-08-27). Promoted with its two decision rules extracted as

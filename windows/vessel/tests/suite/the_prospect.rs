@@ -87,11 +87,13 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         walk,
     );
 
-    // The Terrier hoisted the occupation register out of `brief_of`; a test
-    // builds it the same way `WorldContext::build` does.
-    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
+    // These probes isolate placed-site identity; culture is intentionally
+    // absent from both sides of each comparison.
+    let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &placed,
@@ -100,7 +102,8 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the placed exotic facet has a valid production brief");
     assert_eq!(
         // `site`, not `s`: `cli/tests/suite/claim_shape.rs` reads a closure
         // parameter named `s` as a seed binding and demands a `claim:` tag on
@@ -115,6 +118,7 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
     let next: Facet = placed.neighbors()[0].clone();
     let there = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &next,
@@ -123,7 +127,8 @@ fn an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the neighbouring exotic facet has a valid production brief");
     assert_eq!(
         there.site, None,
         "the facet beside a site must hold nothing — a site is an address, \
@@ -160,11 +165,13 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
     let sites = ctx.strange_sites();
     let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
 
-    // The Terrier hoisted the occupation register out of `brief_of`; a test
-    // builds it the same way `WorldContext::build` does.
-    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
+    // This probe isolates placed-site identity; culture is intentionally
+    // absent from both sides of the comparison.
+    let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &placed,
@@ -173,7 +180,8 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the placed cave facet has a valid production brief");
     assert_eq!(
         here.site.as_ref().map(|site| site.kind),
         Some(SiteKind::Cave),
@@ -192,6 +200,7 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
     let next: Facet = placed.neighbors()[0].clone();
     let there = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &next,
@@ -200,7 +209,8 @@ fn a_placed_cave_is_a_site_and_is_enterable() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the neighbouring cave facet has a valid production brief");
     assert_eq!(
         there.site, None,
         "the facet beside a cave must hold nothing — a cave mouth is an \
@@ -261,11 +271,12 @@ fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
     );
     let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built_set), None);
 
-    // The Terrier hoisted the occupation register out of `brief_of`; a test
-    // builds it the same way `WorldContext::build` does.
-    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
+    // This probe isolates site salience; culture is intentionally absent.
+    let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &placed,
@@ -274,7 +285,8 @@ fn salience_decides_the_winner_when_a_facet_holds_two_sites() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the settlement-cave collision has a valid production brief");
     assert!(
         here.built,
         "fixture check: the forced facet must itself read built"
@@ -348,11 +360,12 @@ fn salience_decides_the_winner_at_an_exotic_cave_collision() {
     let caves = [Vertex(vertex)];
     let terrain = LocaleTerrain::new(&ctx);
 
-    // The Terrier hoisted the occupation register out of `brief_of`; a test
-    // builds it the same way `WorldContext::build` does.
-    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
+    // This probe isolates site salience; culture is intentionally absent.
+    let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &placed,
@@ -361,7 +374,8 @@ fn salience_decides_the_winner_at_an_exotic_cave_collision() {
         world.seed,
         &exotic_sites,
         &caves,
-    );
+    )
+    .expect("the exotic-cave collision has a valid production brief");
     assert!(
         !here.built,
         "fixture check: this collision must not also be a settlement, or \
@@ -468,11 +482,13 @@ fn a_cave_site_carries_no_name() {
     let placed = site_facet_for(caves[0], SiteReason::Cave, world.seed, geo, walk);
     let terrain = LocaleTerrain::new(&ctx);
 
-    // The Terrier hoisted the occupation register out of `brief_of`; a test
-    // builds it the same way `WorldContext::build` does.
-    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
+    // This probe isolates placed-site identity; culture is intentionally
+    // absent.
+    let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &placed,
@@ -481,7 +497,8 @@ fn a_cave_site_carries_no_name() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the named cave facet has a valid production brief");
     assert_eq!(
         here.site.as_ref().map(|site| site.kind),
         Some(SiteKind::Cave),
@@ -524,11 +541,13 @@ fn a_settlement_sites_name_is_keyed_to_the_room() {
     );
     let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&rooms), None);
 
-    // The Terrier hoisted the occupation register out of `brief_of`; a test
-    // builds it the same way `WorldContext::build` does.
-    let occupations = hornvale_worldgen::occupations_by_vertex(&world);
+    // This probe supplies built/name state explicitly; culture is outside its
+    // assertion and remains absent.
+    let occupations = std::collections::BTreeMap::new();
+    let occupation_history = std::collections::BTreeMap::new();
     let here = brief_of(
         &occupations,
+        &occupation_history,
         geo,
         ctx.nearest_index(),
         &plain,
@@ -537,7 +556,8 @@ fn a_settlement_sites_name_is_keyed_to_the_room() {
         world.seed,
         &sites,
         &caves,
-    );
+    )
+    .expect("the named settlement facet has a valid production brief");
     assert_eq!(
         here.site.as_ref().and_then(|site| site.name.as_deref()),
         Some("Nornholm"),

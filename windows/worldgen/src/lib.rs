@@ -92,6 +92,7 @@ pub mod delve_seating;
 mod descent;
 pub mod disposition;
 pub mod energy;
+pub mod fieldpack;
 pub mod fixture;
 pub mod gazetteer;
 pub mod graph_derive;
@@ -117,6 +118,7 @@ pub mod traversal;
 pub mod underworld_readout;
 pub mod vestige;
 pub mod volcano;
+pub mod weft;
 pub use ablation::ChannelMask;
 pub use character::{
     BarrierPins, BarrierState, CHARACTERS, Character, bands_of, barrier_of, branch_count_of,
@@ -131,6 +133,7 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
+pub use fieldpack::{FieldPack, field_pack_from};
 pub use fixture::seed_42_world;
 pub use gazetteer::{feature_name, feature_salt, gazetteer_features};
 pub use graph_derive::{
@@ -172,6 +175,10 @@ pub use vestige::{
     vestige_from_occupation, vestiges_at, vestiges_field,
 };
 pub use volcano::{EruptionStyle, Volcano, volcano_at, volcano_name};
+pub use weft::{
+    WeftFeature, WeftKey, WeftKind, WeftWindow, all_features_at_cached, features_at_cached, occurs,
+    prevalence, prevalence_with_weights,
+};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)

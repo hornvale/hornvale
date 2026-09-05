@@ -114,10 +114,12 @@ mod tests {
             None,
             None,
             None,
+            None,
             0,
             true,
             true,
             Some(Site::placed(SiteKind::Settlement, None)),
+            None,
         );
         (0u64..64)
             .find_map(|sd| {

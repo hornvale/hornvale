@@ -98,6 +98,55 @@ case "$ref" in
 esac
 [ "${#ref}" -eq 40 ] || { echo "sluice-census: REF must be a full 40-char SHA; got '$ref'" >&2; exit 2; }
 
+# --- THE QUEUE ROW, same interlock as every other chamber entry point -------
+# This script never touched the queue, so a census dispatched through it left
+# its row reading `queued` for the whole run and forever after. On 2026-09-04
+# the operator had to set `req-fbe2f5a9003f-...` to `reported` by hand after
+# the fact — the second time in one session a terminal state was written by a
+# person instead of by the thing that knew the answer. A `queued` row that is
+# actually running is also exactly what `sluice-queue.sh claim` hands to the
+# next dispatcher, which is how a merge came to run twice the same day.
+#
+# Census is not run by sluice-run.sh (it takes the shared flock itself), so it
+# cannot inherit that script's bookkeeping and needs its own copy here.
+census_row_id=""
+census_claimed=0
+if [ -n "${HV_SLUICE_CLAIMED:-}" ]; then
+    census_row_id="$HV_SLUICE_CLAIMED"
+else
+    set +e
+    census_claim="$(bash "$repo_root/scripts/sluice-queue.sh" claim --sha "$ref" \
+        "launched directly by operator; kind=census" 2>/dev/null)"
+    census_claim_rc=$?
+    set -e
+    case "$census_claim_rc" in
+        0) census_row_id="$(printf '%s' "$census_claim" | cut -f2)"; census_claimed=1 ;;
+        4) echo "sluice-census: REFUSING — the row for ${ref:0:12} is not queued; somebody else has it." >&2
+           exit 9 ;;
+        5) echo "sluice-census: no queue row for ${ref:0:12} — running AD HOC, unbookkept." >&2 ;;
+        *) echo "sluice-census: could not reach the queue (claim rc=$census_claim_rc) — running unbookkept." >&2 ;;
+    esac
+fi
+
+# Reached only through the EXIT trap below, which the linter cannot follow —
+# same reason as the SC2317 directive further up this file. NOTE: no line of
+# this comment may BEGIN with the linter's own name, which is inline-directive
+# syntax and fails the whole file with SC1073.
+# shellcheck disable=SC2317
+release_census_row() {
+    [ "$census_claimed" = "1" ] || return 0
+    [ -n "$census_row_id" ] || return 0
+    local rc="$1" state note
+    if [ "$rc" = "0" ]; then
+        state="reported"; note="census rc=0 (direct run)."
+    else
+        state="held"; note="CENSUS RED rc=$rc (direct run) — attribution pending."
+    fi
+    bash "$repo_root/scripts/sluice-queue.sh" set-state "$census_row_id" "$state" "$note" \
+        >/dev/null 2>&1 || true
+}
+trap 'release_census_row $?' EXIT
+
 job_id="census-$(printf '%.12s' "$ref")-$(date -u +%Y%m%dT%H%M%SZ)"
 HV_SLUICE_DIR="${HV_SLUICE_DIR:-$HOME/.local/state/hornvale/sluice}"
 mkdir -p "$HV_SLUICE_DIR"

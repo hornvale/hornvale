@@ -745,6 +745,12 @@
         "kind": "Object",
         "doc": "a place made for lying down and sleeping"
       },
+      "bench": {
+        "name": "bench",
+        "domain": "thing",
+        "kind": "Object",
+        "doc": "a long shared seat"
+      },
       "black-dragon-kind": {
         "name": "black-dragon-kind",
         "domain": "species",
