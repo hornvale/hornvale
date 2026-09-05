@@ -2031,6 +2031,7 @@ hornvale-lot::suite$render::the_prose_has_four_stages_and_a_sources_list_numbere
 hornvale-lot::suite$render::the_prose_numbers_every_source_once_in_first_citation_order
 hornvale-lot::suite$render::every_slot_is_told_in_exactly_one_stage
 hornvale-lot::suite$render::the_other_three_payloads_name_their_schemas_and_are_byte_stable
+hornvale-lot::suite$render::the_when_graph_names_its_total_and_bins_the_span_by_century
 hornvale-lot::suite$shape::a_community_that_died_before_plateau_is_a_triangle
 hornvale-lot::suite$shape::epoch_years_matches_the_bakes_own_default
 hornvale-lot::suite$shape::every_seed_42_occupation_reconstructs_to_its_committed_integral

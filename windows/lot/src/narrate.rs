@@ -12,7 +12,7 @@
 //! is nothing in scope to invent from.
 
 use crate::context::LotContext;
-use crate::draw::Life;
+use crate::draw::{Curve, Life};
 use crate::slots::{Silence, SlotValue, Source, Story};
 
 /// The four staged reveals, and which slots each one tells.
@@ -217,4 +217,140 @@ fn sentence_case(text: &str) -> String {
         Some(first) => first.to_uppercase().collect::<String>() + characters.as_str(),
         None => String::new(),
     }
+}
+
+// ---------------------------------------------------------------------
+// The When graph, in text (spec §6.3)
+// ---------------------------------------------------------------------
+
+/// The century a table row bins into. The bake's epochs are 25 years
+/// (`shape::EPOCH_YEARS`), so four of them make one row; the row is derived
+/// from each epoch's own opening year rather than from a fixed 4:1 ratio, so
+/// a bake with a different epoch length still bins correctly.
+/// plumb: universal(a presentation bin width for the table a reader reads, not a property of any world)
+const CENTURY_YEARS: f64 = 100.0;
+
+/// The share of births the closing sentence calls "recently" — the last
+/// quarter of the span. Below this the world's births are called flat
+/// instead.
+/// plumb: universal(the editorial threshold this renderer calls recent, held fixed so two worlds' pages can be compared)
+const RECENT_SHARE: f64 = 0.33;
+
+/// The world's souls-ever line, its births-per-century table, and one
+/// sentence about the curve's own shape — the page that precedes the ten
+/// lives (spec §6.3, "the When graph in text").
+///
+/// **The closing sentence is computed from this world's curve, never copied
+/// from the site the campaign is modelled on.** Its threshold is
+/// [`RECENT_SHARE`] over the span's last quarter, and the share it quotes is
+/// summed from the rows the reader can see above it, so the sentence and the
+/// table cannot disagree.
+///
+/// **"five hundred years" is exact for the 2,000-year bake and only for
+/// it.** The span's last quarter is 500 years when the bake runs
+/// `[0, 2000)`, which is what `BakeConfig::default_millennia` produces and
+/// what every world reaching [`crate::context::assemble`] carries today. A
+/// test asserts that span rather than leaving the phrase to rot: a shorter
+/// bake reddens it, which is the moment to derive the number instead of
+/// spelling it.
+/// type-audit: bare-ok(prose: return)
+pub fn curve_text(ctx: &LotContext, curve: &Curve) -> String {
+    let total: f64 = curve.births_by_epoch.iter().sum();
+    let mut out = String::new();
+    out.push_str(&format!(
+        "About {} lives have been lived in seed {} between year {} and year {}.\n\n",
+        thousands(three_significant_figures(curve.souls_ever)),
+        ctx.seed,
+        curve.start_year.round() as i64,
+        curve.present_year.round() as i64
+    ));
+
+    // One row per century, binned from each epoch's own opening year.
+    let span = (curve.present_year - curve.start_year).max(0.0);
+    let centuries = (span / CENTURY_YEARS).ceil().max(1.0) as usize;
+    let mut births = vec![0.0; centuries];
+    for (at, count) in curve.births_by_epoch.iter().enumerate() {
+        let opened = at as f64 * curve.epoch_years;
+        let row = ((opened / CENTURY_YEARS).floor() as usize).min(centuries - 1);
+        births[row] += count;
+    }
+
+    out.push_str("| years | births | share |\n|---|---:|---:|\n");
+    for (row, count) in births.iter().enumerate() {
+        let from = curve.start_year + row as f64 * CENTURY_YEARS;
+        out.push_str(&format!(
+            "| {}–{} | {} | {:.1}% |\n",
+            from.round() as i64,
+            (from + CENTURY_YEARS).round() as i64,
+            thousands(count.round().max(0.0) as u64),
+            share(*count, total)
+        ));
+    }
+    out.push('\n');
+
+    // The span's last quarter, summed from the rows above so the sentence
+    // and the table quote the same arithmetic.
+    let quarter_opens = curve.present_year - span / 4.0;
+    let recent: f64 = births
+        .iter()
+        .enumerate()
+        .filter(|(row, _)| curve.start_year + *row as f64 * CENTURY_YEARS >= quarter_opens)
+        .map(|(_, count)| count)
+        .sum();
+    if total > 0.0 && recent / total >= RECENT_SHARE {
+        out.push_str(&format!(
+            "Most of these lives were born recently: the last five hundred years hold {:.1}% \
+             of them.\n",
+            share(recent, total)
+        ));
+    } else {
+        out.push_str(
+            "This world's population stopped growing: a birth is about as likely in any \
+             century.\n",
+        );
+    }
+    out
+}
+
+/// `count` as a percentage of `total`, zero when there is nothing to divide.
+fn share(count: f64, total: f64) -> f64 {
+    if total > 0.0 {
+        count / total * 100.0
+    } else {
+        0.0
+    }
+}
+
+/// `value` rounded to three significant figures, as a whole number.
+///
+/// Integer arithmetic throughout: no `log10`, no `powf`, so this needs no
+/// transcendental and cannot differ by a ULP between platforms — the same
+/// reason `hornvale_kernel::quantize` formats and re-parses rather than
+/// scaling by a computed power.
+fn three_significant_figures(value: f64) -> u64 {
+    let whole = value.round().max(0.0) as u64;
+    let mut digits = 0u32;
+    let mut left = whole;
+    while left > 0 {
+        left /= 10;
+        digits += 1;
+    }
+    if digits <= 3 {
+        return whole;
+    }
+    let scale = 10u64.pow(digits - 3);
+    (whole + scale / 2) / scale * scale
+}
+
+/// A whole number with thousands separators.
+fn thousands(value: u64) -> String {
+    let digits = value.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (at, digit) in digits.chars().enumerate() {
+        if at > 0 && (digits.len() - at).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(digit);
+    }
+    out
 }

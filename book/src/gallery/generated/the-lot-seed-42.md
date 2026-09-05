@@ -10,6 +10,39 @@ Every sentence carries the sources its answer rests on, and a slot the
 record cannot fill says so rather than being filled. None of these people
 existed; every number about them did.
 
+## The When Graph
+
+Where the lives are, before any one of them is drawn: the world's whole
+birth curve, binned by century. Every lot below was drawn against this
+distribution, so the same command prints both halves of this page.
+
+About 227,000 lives have been lived in seed 42 between year 0 and year 2000.
+
+| years | births | share |
+|---|---:|---:|
+| 0–100 | 1,397 | 0.6% |
+| 100–200 | 2,191 | 1.0% |
+| 200–300 | 3,013 | 1.3% |
+| 300–400 | 3,728 | 1.6% |
+| 400–500 | 4,374 | 1.9% |
+| 500–600 | 5,314 | 2.3% |
+| 600–700 | 6,380 | 2.8% |
+| 700–800 | 6,818 | 3.0% |
+| 800–900 | 7,988 | 3.5% |
+| 900–1000 | 9,383 | 4.1% |
+| 1000–1100 | 9,915 | 4.4% |
+| 1100–1200 | 11,217 | 4.9% |
+| 1200–1300 | 12,993 | 5.7% |
+| 1300–1400 | 14,705 | 6.5% |
+| 1400–1500 | 16,760 | 7.4% |
+| 1500–1600 | 18,528 | 8.2% |
+| 1600–1700 | 20,522 | 9.0% |
+| 1700–1800 | 21,725 | 9.6% |
+| 1800–1900 | 23,630 | 10.4% |
+| 1900–2000 | 26,391 | 11.6% |
+
+Most of these lives were born recently: the last five hundred years hold 48.8% of them.
+
 # Lot 0 — seed 42
 
 ## When
@@ -114,7 +147,7 @@ They held Xoora Xoora — the pantheon this people held, kept at Raaxora, in fol
 The community held that Xoraro came to its end in year 1500 — 1 telling removed. [27] [28] [29]
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in one hut. [30]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and taiga country. [5] [6] [31] [9]
@@ -189,7 +222,7 @@ They held Dado Vngoodado — the pantheon this people held, kept at Doaba, in or
 The community held that Qadoogaodao came to its end in year 1175 — 1 telling removed. [27] [28] [17]
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and tropical-rainforest country. [5] [6] [30] [9]
@@ -263,7 +296,7 @@ They held Bundendunžreun Bundendunžreun — the pantheon this people held, kep
 Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 2 huts. [24]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and upwelling country. [5] [6] [25] [9]
@@ -332,7 +365,7 @@ They held Naxav Naxav — the pantheon this people held, kept at Shaxasxanapdava
 Nothing in the record says what the community held true about its own kin: this community remembers no ending — none of its forebears ended within reach of a telling.
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 2 huts. [27]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and temperate-forest country. [5] [6] [28] [9]
@@ -404,7 +437,7 @@ They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in f
 The community held that Bobeqa came to its end in year 1750 — first-hand. [27] [28] [17]
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 2 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and temperate-forest country. [5] [6] [30] [9]
@@ -478,7 +511,7 @@ They held Bago Nglonbago — the pantheon this people held, kept at Naabee, in f
 The community held that Bago came to its end in year 1750 — first-hand. [27] [28] [17]
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in temperate latitudes, and temperate-forest country. [5] [6] [30] [9]
@@ -552,7 +585,7 @@ They held Dado Vngoodado — the pantheon this people held, kept at Doaba, in or
 The community held that Boba came to its end in year 1275 — first-hand. [27] [28] [17]
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [6] [30] [9]
@@ -626,7 +659,7 @@ They held Dado Vngoodado — the pantheon this people held, kept at Doaba, in or
 The community held that Neene came to its end in year 750 — first-hand. [27] [28] [17]
 Nothing in the record says how they fed themselves: no `subsistence` fact stands on this settlement.
 Nothing in the record says what standing they were reckoned in: no `has-caste` fact stands on this settlement.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [6] [30] [9]
@@ -700,7 +733,7 @@ They held Pero Pero — the pantheon this people held, kept at Vakveepera, in or
 The community held that Xoxa came to its end in year 750 — first-hand. [3] [27] [9]
 Nothing in the record says how they fed themselves: culture facts attach to living settlements.
 Nothing in the record says what standing they were reckoned in: culture facts attach to living settlements.
-Nothing in the record says who they answered to: paid tribute to no one the record names.
+Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 2 huts. [28]
 Nothing in the record speaks of a working here: not a mining community.
 They lived in tropical latitudes, and temperate-forest country. [6] [7] [29] [10]

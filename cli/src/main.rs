@@ -36,6 +36,8 @@ usage:
                                             render the named landscape (default cap: 10 per class)
   hornvale lot (--world <PATH> | --seed <N>) [--index <K>] [--count <M>] [--year <Y>] [--site <V>] [--json]
                                             draw one life from everyone who ever lived here (The Lot)
+                                            (--curve prints the world's souls-ever line and its
+                                            births-per-century table instead, and draws no lot)
   hornvale explain --world <PATH> sky|gazetteer
                                             narrate the sky's derivation, or the landscape's naming
   hornvale repl [--world <PATH>]           interrogate a world interactively
@@ -439,6 +441,12 @@ fn cmd_gazetteer(args: &[String]) -> Result<(), String> {
 /// sky/terrain/settlement flags `new` takes — `parse_sky_args`' default is
 /// `SkyChoice::Generated`, which is what the wasm ABI's `hw_new` builds, so
 /// the byte-identity smoke compares two worlds built the same way.
+///
+/// `--curve` prints the When graph in text — the world's souls-ever line
+/// and its births-per-century table (spec §6.3) — and draws no lot at all.
+/// It is the header the gallery page carries above its ten lives, so the
+/// page's two halves come out of one command rather than out of a generator
+/// that re-derives the totals its own lives were drawn from.
 fn cmd_lot(args: &[String]) -> Result<(), String> {
     let world = if let Some(seed) = flag_value(args, "--seed") {
         let seed: u64 = seed
@@ -453,6 +461,11 @@ fn cmd_lot(args: &[String]) -> Result<(), String> {
         load_world(args)?
     };
     let ctx = hornvale_lot::context::assemble(&world).map_err(|e| e.to_string())?;
+    if args.iter().any(|a| a == "--curve") {
+        let curve = hornvale_lot::draw::curve(&ctx);
+        print!("{}", hornvale_lot::narrate::curve_text(&ctx, &curve));
+        return Ok(());
+    }
     let index: u64 = match flag_value(args, "--index") {
         Some(raw) => raw.parse().map_err(|_| format!("bad --index: {raw}"))?,
         None => 0,

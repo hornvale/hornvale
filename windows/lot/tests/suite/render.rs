@@ -4,7 +4,7 @@
 use hornvale_lot::context::assemble;
 use hornvale_lot::draw::{curve, draw, odds, places};
 use hornvale_lot::json::{curve_json, life_json, odds_json, places_json};
-use hornvale_lot::narrate::{STAGES, narrate};
+use hornvale_lot::narrate::{STAGES, curve_text, narrate};
 use hornvale_lot::slots::{SlotValue, tell};
 use hornvale_lot::{LotIndex, Pick};
 
@@ -207,11 +207,15 @@ fn the_other_three_payloads_name_their_schemas_and_are_byte_stable() {
     assert!(doc["souls_ever"].as_f64().unwrap() > 0.0);
     assert!(doc["births_by_people"].is_object());
 
-    let standing = places(&ctx, ctx.present_year - 1.0);
-    let first = places_json(&standing);
-    assert_eq!(first, places_json(&standing));
+    let year = ctx.present_year - 1.0;
+    let standing = places(&ctx, year);
+    let first = places_json(year, &standing);
+    assert_eq!(first, places_json(year, &standing));
     let doc: serde_json::Value = serde_json::from_str(&first).unwrap();
     assert_eq!(doc["schema"], "lot/places/v1");
+    // The caller's own argument, echoed: two cached payloads must be
+    // distinguishable from their contents alone.
+    assert_eq!(doc["year"].as_f64().unwrap(), year);
     assert_eq!(doc["places"].as_array().unwrap().len(), standing.len());
     for place in doc["places"].as_array().unwrap() {
         assert!(place["entity"].is_string(), "a place's entity is text");
@@ -229,7 +233,7 @@ fn the_other_three_payloads_name_their_schemas_and_are_byte_stable() {
     // on the way out.
     for payload in [
         curve_json(&drawn),
-        places_json(&standing),
+        places_json(year, &standing),
         odds_json(&chances),
     ] {
         let doc: serde_json::Value = serde_json::from_str(&payload).unwrap();
@@ -255,4 +259,95 @@ fn assert_quantized(doc: &serde_json::Value) {
         serde_json::Value::Object(fields) => fields.values().for_each(assert_quantized),
         _ => {}
     }
+}
+
+/// claim: structural(seed: 42) — one world.
+#[test]
+fn the_when_graph_names_its_total_and_bins_the_span_by_century() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let drawn = curve(&ctx);
+    let text = curve_text(&ctx, &drawn);
+
+    // The span the closing sentence's "five hundred years" is exact for. If
+    // a future bake changes it, this reddens and the phrase gets derived
+    // rather than rotting into a wrong number.
+    assert_eq!(drawn.start_year, 0.0);
+    assert_eq!(drawn.present_year, 2000.0);
+
+    // The souls-ever line, and the number in it read back: three
+    // significant figures is at worst a 0.05% rounding, so 0.5% is a real
+    // check that the quoted total IS the curve's own.
+    let opening = text.lines().next().expect("an opening line");
+    assert!(
+        opening.starts_with("About ")
+            && opening.ends_with("lives have been lived in seed 42 between year 0 and year 2000."),
+        "the souls-ever line reads {opening:?}"
+    );
+    let quoted: f64 = opening
+        .trim_start_matches("About ")
+        .split_whitespace()
+        .next()
+        .expect("a number")
+        .replace(',', "")
+        .parse()
+        .expect("the souls-ever number parses");
+    assert!(
+        (quoted - drawn.souls_ever).abs() < 0.005 * drawn.souls_ever,
+        "the line quotes {quoted}, the curve holds {}",
+        drawn.souls_ever
+    );
+
+    // One row per century over the span, and the shares the reader can see
+    // account for the whole curve.
+    let rows: Vec<&str> = text
+        .lines()
+        .filter(|line| line.starts_with("| ") && !line.starts_with("| years"))
+        .collect();
+    assert_eq!(rows.len(), 20, "2,000 years is 20 centuries");
+    let mut shares = 0.0;
+    let mut births = 0.0;
+    for row in &rows {
+        let mut columns = row.rsplit('|');
+        let share: f64 = columns
+            .nth(1)
+            .expect("a share column")
+            .trim()
+            .trim_end_matches('%')
+            .parse()
+            .unwrap_or_else(|e| panic!("share column of {row:?}: {e}"));
+        let count: f64 = columns
+            .next()
+            .expect("a births column")
+            .trim()
+            .replace(',', "")
+            .parse()
+            .unwrap_or_else(|e| panic!("births column of {row:?}: {e}"));
+        shares += share;
+        births += count;
+    }
+    // TWO bounds, both derived from the table's own precision rather than
+    // guessed. The fix brief said ±0.2 on the share sum; seed 42 renders
+    // 99.8, which sits ON that bound and fails it by a float epsilon — a
+    // tolerance that would have been green by luck. 20 rows each rounded to
+    // one decimal can lose 20 × 0.05 = 1.0, and each births column rounded to
+    // a whole number can lose 20 × 0.5 = 10.
+    assert!(
+        (shares - 100.0).abs() <= 20.0 * 0.05,
+        "the century shares sum to {shares}, not 100"
+    );
+    assert!(
+        (births - drawn.souls_ever).abs() <= 20.0 * 0.5,
+        "the century rows hold {births} births, the curve holds {}",
+        drawn.souls_ever
+    );
+
+    // The closing sentence is computed from THIS curve. Seed 42's last
+    // quarter carries far more than a third of its births, so it takes the
+    // "born recently" arm; the flat arm must not also appear.
+    assert!(
+        text.contains("Most of these lives were born recently: the last five hundred years hold "),
+        "seed 42 takes the flat arm: {text}"
+    );
+    assert!(!text.contains("stopped growing"));
 }

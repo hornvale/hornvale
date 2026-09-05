@@ -383,21 +383,26 @@ struct PlaceDoc<'a> {
 #[derive(Serialize)]
 struct PlacesDoc<'a> {
     schema: &'static str,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    year: f64,
     places: Vec<PlaceDoc<'a>>,
 }
 
-/// The occupations alive at one year as `lot/places/v1`.
+/// The occupations alive at `year` as `lot/places/v1`.
 ///
-/// **The document carries no `year` field, deliberately.** `crate::draw::places`
-/// takes the year as an argument and returns places that carry none, so the
-/// only year this function could emit is the one its caller already asked
-/// for — echoing a caller's own argument back is not provenance, and a
-/// second copy of it is a second thing that can be wrong. The year a place's
-/// `population` was sampled at is the year the caller passed to `places`.
-/// type-audit: bare-ok(artifact: return)
-pub fn places_json(places: &[Place]) -> String {
+/// **`year` is the caller's own argument, echoed back, and that is the
+/// point.** `crate::draw::places` samples every `population` at one year and
+/// returns places that carry none, so a consumer holding two of these
+/// documents cannot tell them apart from their contents. The exhibit (spec
+/// §6.4) caches a payload per year as the reader scrubs the timeline; a
+/// document that can only be identified by the bookkeeping around it is one
+/// mislabelled cache entry away from showing the wrong year's map under the
+/// right year's heading. Pass the same `year` given to `places`.
+/// type-audit: bare-ok(count: year), bare-ok(artifact: return)
+pub fn places_json(year: f64, places: &[Place]) -> String {
     encode(&PlacesDoc {
         schema: "lot/places/v1",
+        year,
         places: places
             .iter()
             .map(|place| PlaceDoc {

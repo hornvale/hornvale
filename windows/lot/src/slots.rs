@@ -846,7 +846,13 @@ fn tribute(world: &World, ctx: &LotContext, life: &Life) -> Answer {
         .ledger
         .value_of(record.id, hornvale_history::PAYS_TRIBUTE_TO)
     else {
-        return no_fact("paid tribute to no one the record names");
+        // Names the question that came back empty, the shape every other
+        // `no_fact` reason here uses ("no `subsistence` fact stands on this
+        // settlement"). The reason it replaced -- "paid tribute to no one
+        // the record names" -- restated the narrator's own question rather
+        // than answering it, so the rendered sentence said the same thing
+        // twice.
+        return no_fact("no `pays-tribute-to` fact stands on this occupation");
     };
     let Some(&index) = ctx.by_entity.get(patron) else {
         return no_fact("the patron named by `pays-tribute-to` is not in this world's records");
