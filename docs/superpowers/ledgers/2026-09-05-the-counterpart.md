@@ -963,3 +963,59 @@ are copied under `evidence/controller/reviews/task6-source-*.md`. These are
 authorship/reconstruction results only: combined-panel integration, original
 formal scores, both-host qualification and behavioral replay still await
 Stage2. No additional Q or early acceptance is implied.
+
+## Full unreserved assay — observed; later diagnostic phases pending
+
+Prepared diagnostic `a9bae61544d0` started at21:57:07Z after the prior
+census, with0s staff-lock wait. Request-to-start was1,414s and is a separate
+queue cost. At chamber source `3f8b21d9a96a274034dbd086ada811caf2ad4939`,
+locked fetch completed in1.141s and downloaded windows-link0.2.1 and
+windows-sys0.61.2. Source/locks were unchanged. The unchanged offline panel
+then completed all eleven arms, and outboard returned0 (300.397s, including
+ordinary outboard checks,55 self-tests, preparation and assay).
+
+`evidence/unreserved-linux/` retains330 exact JSON records (144,688,229
+uncompressed bytes;10,140,392-byte archive), original readable summary and a
+controller-validation receipt. All330 member hashes/lengths,292 standalone
+command samples and exact fetch attribution validated. The controller reran
+the frozen summarize over retained manifest/dossier, recomputing all44
+question judgments, selector results and required supplemental comparisons.
+This is validation of the original run, not the independent behavioral replay.
+
+**Primary result:** base and both collision solos satisfy every question; their
+composition violates registration, with ownership honestly unknown after
+refusal. The safe and unusual-borrowing pairs satisfy all questions in all
+four arms. Lender removal already violates borrowing and registration alone,
+and remains a dependency failure when composed, never a joint-only result.
+Across44 answers:36 satisfied,5 violated,3 unknown. Existing production and
+Charter registration already detect the collision; this is independent
+corroboration/classification rather than a newly invented production detector.
+
+**Comparative result:** owner agreement and Cargo propose exactly the same
+questions on all eleven arms, before and after fallback:37 selections each,
+5 selected violations,29 selected satisfactions,3 selected unknowns,0 missed
+violations and0 fallback requests. This is zero demonstrated selection benefit
+for the additional manually normalized owner mechanism over Cargo on this
+panel. Path proposes28 questions and misses2 violated questions; its7 unknown
+requests fall back to40 questions,5 selected violations,32 selected
+satisfactions,3 selected unknowns and0 misses. The zero-change base proposes
+no questions under any rule, while its four checks still ran. Satisfied
+selections are not demonstrated unnecessary work.
+
+The imports-only collision supplement omits the negative namespace assumption:
+its raw empty proposal misses registration, and its explicit unknown restores
+all four obligations and catches that violation. This is a supplementary
+request comparison using the existing joint observation, not an additional
+source arm or a fourth primary selector.
+
+Recorded per-arm walls sum to123.978s; nested preparation to59.677s; actual
+observation subprocesses to0.132s. The base build was11.786s and other builds
+1.020–1.533s. These nested scopes must not be added together or represented as
+full CLI/campaign wall. They are one sequential Linux series with a reused
+owned target, not a throughput or cold-cache benchmark.
+
+Normal Stage2 is already green. The prepared diagnostic is now running its
+remaining gate/client phases; full Stage2 acceptance still awaits those
+phases and the scoped evidence review. Reserved integration/formal scoring
+remains pending. No frozen instrument or source arm was changed to obtain
+these results.
