@@ -751,3 +751,46 @@ It is live contextual evidence already fixed upstream, outside the frozen
 finite panel and no estimate of natural fault frequency. Preserve it in the
 retrospective under the existing provenance/epistemology follow-up homes.
 No new campaign mechanism or selection authority is introduced by this repair.
+
+## Normal Stage2 submission — acceptance remains conjunctive
+
+The normal campaign candidate `f04ace294b8f3edd54a7292e15b8060432c59f9d`
+passed the ordinary source merge gate179.442 s, retained its timing row
+through the normal prose hook, was pushed and queued as
+`req-f04ace294b8f-20260905T203639Z`. This is the routine candidate with no
+diagnostic script invocation. As in the Charter's composed-stage/diagnostic
+precedent, the normal gate can run independently of the diagnostic job;
+Stage2 acceptance still requires BOTH its green result and the complete
+unreserved assay. No dependent formal challenge score is accepted early.
+The diagnostic branch absorbed this candidate with no conflict, and its
+only diff is still the ten-line stage-only invocation; its repeated local
+gate is now running before resubmission. The91.809 s timing row is present
+exactly once after union merge, checked explicitly.
+
+Reserved author preregistration `fbb3949a067dbd2b24e93ad4912a069921b6cea3`
+precedes its compile/raw evidence `41ceed7a270771833e8b738366e61721e5ab1ab7`.
+The independently chosen patch assigns ordinary `key` to Settlement and
+makes the candidate derive its expected owner from the observed registry.
+One build6.398 s and observation0.177 s returned zero. Author interpretation
+reports real misownership while the candidate's three observations satisfy;
+this is not a formal frozen-checker score. Source/locks restored exactly.
+Its normal preregistration hook rebuilt after branch switch and overlapped
+the controller merge build; both costs remain ambient setup, not a controlled
+performance comparison. The actual challenge compile waited for a serial
+local slot. Independent authorship review is pending.
+
+Diagnostic resubmission `req-ad4c65d41997-20260905T204249Z` uses
+`ad4c65d41997949d7d06d4b3cf40920c6bd4f9a2`, after a green explicit gate
+(196.199 s, all three chunks), normal timing-record hook, and ordinary push.
+Its diff against normal candidate `f04ace294` is exactly the ten-line
+transport plus one timing row. No reserved patch or score enters this
+unreserved diagnostic. Earlier stopped attempt remains retained.
+
+Reserved authorship review passed spec/quality with no findings; exact
+preregistration/patch chronology, source identities, two raw stream receipts
+and restoration were verified without running the checker. Reports are
+retained under `evidence/controller/reviews/`. Its candidate-collector hunk
+is a separate changed input outside production Thing enrollment; later
+scoring must retain that unknown scope, not silently extend enrollment.
+Actual reserved source-object integration, formal judgments and full Task6
+acceptance remain pending Stage2. No new Q arose at this green subtask review.
