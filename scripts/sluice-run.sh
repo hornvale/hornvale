@@ -149,11 +149,49 @@ kind="${3:-merge}"
 queue_row_id=""
 case "$branch" in
     req-*)
-        _row="$(bash "$repo_root/scripts/sluice-queue.sh" list \
-                | awk -F'\t' -v i="$branch" '$2==i {print; exit}')"
+        # THE LIST'S EXIT CODE IS CONSULTED BEFORE ITS OUTPUT IS BELIEVED
+        # (fix round 3, Important 5). `list` now forwards to a binary that
+        # REFUSES with exit 3 when it is missing, and this used to read the
+        # pipeline's empty stdout as "no such row" — `set -e` then killed the
+        # script with rc=3, a code outside this file's vocabulary that the
+        # drain records as `CHAMBER RED rc=3 — attribution pending`, blaming
+        # the candidate for a broken toolchain. An unreachable queue is rc=13,
+        # the same code the claim path uses for the same condition.
+        set +e
+        _list="$(bash "$repo_root/scripts/sluice-queue.sh" list 2>&1)"
+        _list_rc=$?
+        set -e
+        if [ "$_list_rc" -ne 0 ]; then
+            echo "sluice-run: REFUSING — could not reach the queue (list rc=$_list_rc):" >&2
+            printf '%s\n' "$_list" >&2
+            echo "sluice-run: cannot resolve '$branch' without the queue; refusing rather than guessing." >&2
+            exit 13
+        fi
+        _row="$(printf '%s\n' "$_list" | awk -F'\t' -v i="$branch" '$2==i {print; exit}')"
         if [ -z "$_row" ]; then
             echo "sluice-run: no queue row with id '$branch'" >&2
             exit 2
+        fi
+        # THE ID IS NOT ITSELF A CLAIM (fix round 3, Critical). Resolving an id
+        # used to set `queue_row_id` and, through it, tell the interlock block
+        # below to skip claiming — on the ASSUMPTION that whoever supplied the
+        # id already held the row. Nothing checked. A `queued` row handed here
+        # ran with no interlock at all: `sluice-drain.sh` could legally `claim`
+        # it (it IS queued) and dispatch the same job a second time, which is
+        # the 2026-09-04 duplicate reached by a different road; coalescing may
+        # supersede a `queued` row mid-write, which sluice-queue.sh's own header
+        # says must never happen to a running job; and `release_row` is gated on
+        # `claimed_here`, so the run would write no terminal state and leave a
+        # permanent ghost. So the row's OWN STATE is the evidence, and it must
+        # read `running` — which is exactly what `claim` writes, atomically, in
+        # the same locked pass that selects the row.
+        _state="$(printf '%s' "$_row" | cut -f5)"
+        if [ "$_state" != "running" ]; then
+            echo "sluice-run: REFUSING — the row for '$branch' is NOT claimed: state='$_state', want 'running'." >&2
+            echo "sluice-run: an id is not a claim. Take the row first ('sluice-queue.sh claim --sha <sha>')," >&2
+            echo "sluice-run: or let the drain loop claim and dispatch it. Running an unclaimed row lets a" >&2
+            echo "sluice-run: dispatcher launch the same job again, and leaves it with no terminal state." >&2
+            exit 16
         fi
         queue_row_id="$branch"
         branch="$(printf '%s' "$_row" | cut -f3)"
@@ -215,17 +253,21 @@ waited_s=""
 # run, and it is a different thing from a race.
 #
 # NOTE: `queue_row_id` may already be set here — the request-id resolution
-# above sets it when `branch` was a `req-*` id. That is the same case this
-# block used to reach via an exported claim-id environment variable: whoever
-# handed us the id (the drain loop's own `claim` call, or an operator quoting an id
-# from `sluice-queue.sh list`) already owns the row's claim and its terminal
-# state, so this script must not claim it again. There is no env var to
-# consume or unset any more — the id argument IS the claim, and it dies with
+# above sets it when `branch` was a `req-*` id, AND ONLY AFTER PROVING the row
+# reads `running`. That proof is what licenses skipping the claim here: the row
+# is already taken, atomically, by whoever ran `claim` — the drain loop's own
+# `claim` call in the same locked pass that selected it. Claiming again would
+# refuse against ourselves.
+#
+# THIS COMMENT USED TO NAME "an operator quoting an id from `sluice-queue.sh
+# list`" as a second supported caller. It is not one, and saying so was the
+# whole defect (fix round 3, Critical): quoting an id owns nothing. An operator
+# who wants to run a queued row must claim it first, or go through the drain;
+# the resolution block above now refuses rc=16 otherwise. There is no env var to
+# consume or unset any more — the id argument names the claim, and it dies with
 # this process's argv instead of leaking into every child's environment.
 claimed_here=0
 if [ -n "$queue_row_id" ]; then
-    # A dispatcher (or the id itself) already claimed this row atomically;
-    # claiming again would refuse against ourselves.
     :
 else
     set +e
