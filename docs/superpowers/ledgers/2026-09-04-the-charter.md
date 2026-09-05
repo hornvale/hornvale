@@ -491,3 +491,25 @@ requires freezing and submitting at this boundary; asynchronous implementation
 can proceed while the queue works. Stage 1 remains incomplete until its actual
 canonical report arrives. A later failure must be resolved before claiming
 integration acceptance. Hook timings are retained with this entry.
+
+## Stage 1 queued; independent adoption started
+
+Request `req-6fe554d0ebc6-20260905T032743Z` durably queues the frozen
+bootstrap as a **stage** on lefford. Job
+`sluice-6fe554d0ebc6-20260905T032853Z` reported mouth ADMIT, then waited
+for the shared claim; no canonical success is inferred. The branch was pushed
+normally before submission. No operator message or board post was sent.
+
+Both `codex/the-charter-thing` and `codex/the-charter-census` begin at
+`6fe554d0ebc6e2bd847ad224a9eb8b1b2e877b1f`, in distinct worktrees. Their
+agents received only local adopter briefs/shared interfaces and verified
+preflight findings. Controller-owned prewarm completed rc=0 for each:
+419.445 s for Thing, 411.766 s for census, while running concurrently.
+These are setup costs, not context latency samples. Agents held additional
+Cargo builds during preparation and will stagger ordinary commit gates.
+
+For the enrollment exercise both invoke the same copied bootstrap executable,
+SHA256 `53e4f8c26374845db41914c6a3732d5d5fd65c1e69183d859d85dc3bb0337af0`,
+from their own roots. This is executable reuse with fresh collection, not saved
+evidence reuse. Each adapter's branch diff and actual output will determine
+whether enrollment stayed local.
