@@ -5787,3 +5787,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T15:27:19Z | rebaseline | 273.646 | 2264.120 | 88.223 | 8.60 | 0 | d17645ea5 | tooling/reconciliation-is-hand-authored | lefford | 40 |
 | 2026-09-05T16:14:13Z | sluice:artifacts | 289.926 | 1693.886 | 67.893 | 6.08 | 0 | 99894bbab |  | lefford | 40 |
 | 2026-09-05T16:15:21Z | sluice:outboard | 67.451 | 39.280 | 51.312 | 1.34 | 0 | 09b7b2f2c |  | lefford | 40 |
+| 2026-09-05T16:28:31Z | sluice:gate | 790.265 | 20857.689 | 588.461 | 27.14 | 0 | 2db09a98a |  | lefford | 40 |
