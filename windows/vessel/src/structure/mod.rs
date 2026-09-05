@@ -413,9 +413,17 @@ mod tests {
     /// to `index_role` (dropping the brief) reddened nine `session.rs` tests
     /// that walk a real possession to a real Loomroom for its key.
     ///
+    /// Covers BOTH halves `chamber_role` states a rule for — index 2 (the
+    /// brief's own business) and index 3 (unconditionally a Store regardless
+    /// of business) — over a full four-chamber structure, since a shorter one
+    /// would leave index 3 unasserted and this is the test
+    /// `interior::pattern`'s `a_key_is_drawn_where_no_strongbox_is` points at
+    /// for the "every Store is at index >= 3" half of its own claim (fix
+    /// round 1).
+    ///
     /// claim: reachability(seed: 0..64) — an existence probe: at least one
-    /// seed in the range draws a structure with a chamber index 2 at all,
-    /// which is all this test needs to exercise the property.
+    /// seed in the range draws a full four-chamber structure, which is all
+    /// this test needs to exercise the property.
     #[test]
     fn chamber_two_differentiates_on_the_briefs_business_at_the_index_role_for_used() {
         let agrarian = Brief::from_parts(
@@ -433,14 +441,20 @@ mod tests {
         let s = (0..64u64)
             .find_map(|seed| {
                 let structure = structure_at(&locale(), &agrarian, Seed(seed), WALK)?;
-                (structure.chambers.len() >= 3).then_some(structure)
+                (structure.chambers.len() == MAX_CHAMBERS).then_some(structure)
             })
-            .expect("some seed in 0..64 draws at least 3 chambers");
+            .expect("some seed in 0..64 draws a full four-chamber structure");
         assert_eq!(
             s.roles[2],
             Role::Loomroom,
             "an agrarian brief's own business must reach chamber 2, exactly as \
              `role_for` gave it before this task moved the read here"
+        );
+        assert_eq!(
+            s.roles[3],
+            Role::Store,
+            "every chamber past index 2 is a Store regardless of business, \
+             exactly as `role_for` gave it before this task moved the read here"
         );
     }
 

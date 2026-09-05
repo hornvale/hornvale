@@ -210,8 +210,8 @@ counts are already the Coverage table above. 34 finding(s).
 | `windows/vessel/src/liveness.rs:4365` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:4952` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
-| `windows/vessel/src/session.rs:513` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
-| `windows/vessel/src/session.rs:523` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:516` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:526` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
 
 ## The contested middle
 

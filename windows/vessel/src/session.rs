@@ -294,9 +294,12 @@ const OBJECTIVE_EYES: crate::eyes::Eyes = crate::eyes::Eyes::Off;
 // which side of a doorway the player was standing. See `Session::sighting`.
 
 /// The ways-on name for the aperture leading DEEPER into a structure — a
-/// direction, not a thing, because a chamber address carries no bearing and the
-/// chambers of one structure are prose-identical, so only depth distinguishes
-/// them.
+/// direction, not a thing, because a chamber address carries no bearing. On a
+/// CHAIN this is also the only name that makes sense: there is exactly one way
+/// in, so naming it by role would say nothing the direction does not already
+/// say. At a FORK there is no single "deeper" to name this way at all — see
+/// [`Session::further_in`] and [`Session::named_neighbour`], which is why this
+/// constant is never reached for one.
 const FURTHER_IN: &str = "further in";
 
 /// Every token `enter` accepts for [`FURTHER_IN`]. `in` and `on` are here
@@ -15054,26 +15057,27 @@ mod tests {
             .filter(|n| !nouns0.contains(n))
             .copied()
             .collect();
-        match unique_to_2.first() {
-            Some(&noun) => assert_eq!(
-                session.named_neighbour(&s, 1, noun, &brief),
-                Some(2),
-                "a noun unique to chamber 2's prose must resolve there under \
-                 the relaxed rule, even with chamber 0 also in reach"
-            ),
-            None => {
-                // Guards against a future genesis or walk-band change making
-                // chamber 2's prose a subset of chamber 0's at this locale —
-                // measured non-empty as of this writing (chamber 0 is the
-                // Threshold's `["a doorway", "a screen", "a bench"]`, chamber
-                // 2 the Store's `["a doorway", "a water jar", "a strongbox",
-                // "a key"]`, so `unique_to_2` is `["a water jar", "a
-                // strongbox", "a key"]` and the `Some` arm above is the one
-                // that actually runs) — there would be nothing to assert the
-                // TAKEN half against. The refusal half above still holds and
-                // is not weakened by this branch being empty.
-            }
-        }
+        // Precondition, symmetric to `shared`'s guard above: without this,
+        // the relaxation assertion below would silently stop running (rather
+        // than fail) if a future genesis or walk-band change ever made
+        // chamber 2's prose a subset of chamber 0's — the one assertion that
+        // actually exercises spec §5.3's relaxation cannot be allowed to
+        // disappear with a green run. Measured as of this writing: chamber 0
+        // (the Threshold) is `["a doorway", "a screen", "a bench"]`, chamber
+        // 2 (the Store) is `["a doorway", "a water jar", "a strongbox", "a
+        // key"]`, so `unique_to_2` is `["a water jar", "a strongbox", "a
+        // key"]`.
+        assert!(
+            !unique_to_2.is_empty(),
+            "chamber 2's prose is a subset of chamber 0's, so this test's \
+             relaxation precondition does not hold: {nouns0:?} vs {nouns2:?}"
+        );
+        assert_eq!(
+            session.named_neighbour(&s, 1, unique_to_2[0], &brief),
+            Some(2),
+            "a noun unique to chamber 2's prose must resolve there under \
+             the relaxed rule, even with chamber 0 also in reach"
+        );
         assert_eq!(
             session.named_neighbour(&s, 0, shared[0], &brief),
             Some(1),
