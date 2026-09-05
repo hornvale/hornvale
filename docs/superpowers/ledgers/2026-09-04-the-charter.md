@@ -91,6 +91,55 @@ publication tests retain their authority. The spec will require meaningful
 behavioral counterexamples, including a missing or wrong lender and a guard
 that admits an off-host official publication.
 
+## #3 [Q] — independent packages, one small wire envelope
+
+**Question:** How can a second contributor arrive without a new host match
+arm, shared ontology edit, or simulation dependency on development tooling?
+
+**Decision:** Extend the existing outboard Digest tool with a small Cargo
+workspace under `tools/digest/packages/*`. Put the permanent protocol package
+under that glob, and discover contributor packages through Cargo metadata.
+Each contributor is a Rust executable returning the same versioned JSON
+envelope; its local code owns the domain-specific observations and instruction
+text. The host composes records and rejects collisions. No runtime simulation
+plugin loader, arbitrary executable path, or new kernel vocabulary is needed.
+
+**Why:** The current Digest is already isolated by its own `[workspace]`
+table and has serde/JSON dependencies. Its `main.rs` dispatch is currently
+fixed. Development adapters depending on simulation crates preserve the
+existing dependency direction. The existing `ProjectLedger` has local numeric
+identities and functional assertion replacement; concatenating its stores
+would conceal a disagreement instead of composing independent owners.
+
+**Alternatives discarded:** Static host linkage to every contributor, which
+would preserve a central enrollment edit; a general dynamic library ABI,
+which adds lifetime/compatibility machinery this experiment does not need;
+a universal project ontology, which would make local adoption wait on it.
+
+**Ideonomy passes / overturns:** One pass: tree-finding, atlas, longevity,
+direction. The ownership and temporal maps separate the durable envelope
+from local semantic payloads and run observations. This confirmed the boundary
+without another scope addition. One implementation correction came from the
+probe below: the glob must contain the permanent protocol at bootstrap.
+
+**Tool-behavior evidence:** Throwaway Cargo projects, outside the repo:
+`cargo metadata --offline --no-deps --format-version 1 --manifest-path ...`
+returned rc=101 for an empty `contributors/*` glob; adding a member returned
+rc=0. A second prototype used a root package plus `packages/*`, initially
+containing protocol. Metadata returned rc=0 with host/protocol, then rc=0
+with host/protocol/thing/census after only package additions. In both states,
+`cargo run --offline --quiet --manifest-path ...` returned rc=0 and
+`root-ok`. These are discovery/root-selection probes, not a completed plugin
+implementation. Cargo documents the mechanisms in its
+[workspace reference](https://doc.rust-lang.org/cargo/reference/workspaces.html)
+and [metadata command](https://doc.rust-lang.org/cargo/commands/cargo-metadata.html).
+
+**Capture actions:** Record Cargo.lock as a shared integration artifact,
+not a promise of conflict-free branches. The autonomy acceptance exercise
+forbids contributor-specific host/protocol edits after bootstrap; a failure
+reopens the design. Retain semantic input-closure and richer local schemas
+for later campaigns.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
