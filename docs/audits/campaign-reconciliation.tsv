@@ -1325,3 +1325,4 @@ spec-2026-09-04-the-staple-metaplan	active	none		status header retains active wo
 chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
 retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md
 the-weft	shipped	none		plan: COMPLETE/G6 approved; retrospective: Close G6 approved; chronicle: G6 accepted result	docs/superpowers/specs/2026-09-03-the-weft-design.md	docs/superpowers/plans/2026-09-03-the-weft.md		book/src/chronicle/the-weft.md	docs/retrospectives/the-weft.md
+the-warp	active	none		spec: design, awaiting G3 review	docs/superpowers/specs/2026-09-05-the-warp-design.md				
