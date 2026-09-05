@@ -368,6 +368,68 @@ asserted.
 chronicle reports min and median across the four, and the frozen bars above
 are on every seed (a count of four), never on a pooled figure.
 
+**Outcome (2026-09-05, Task 7).** The four readout seeds were built once,
+after the constants were frozen on seed 42, and every bar above was read
+against them. The full table is in the campaign ledger
+(`docs/superpowers/ledgers/2026-09-05-the-warp.md`, "Task 7 — the readout"),
+pasted from the run's own stdout before its pass/fail line was read.
+**Seventy-one of the seventy-two bar-instances held. One did not, and it is
+the campaign's headline finding: on seed 13, H2's spring clause — best-class
+lift 4.759 against a bar of 5.253 (2 × the erratic's 2.626), a ratio of 1.812
+where 2.000 was frozen.** No constant and no bar moved after this reading;
+the failing test stays failing, because it is the record.
+
+- **H1 — MET on all four.** Spring found fraction min 0.68519 (seed 1),
+  median 0.77717; overhang min 0.74348 (seed 1), median 0.84622; thicket
+  0.33436–0.46534, median 0.40796, inside its non-regression band on every
+  seed.
+- **H2 — MET on three of four for spring, on all four for overhang.**
+  Spring's lift ratio against the erratic reads 1.812 / 2.375 / 3.207 / 3.911
+  (seeds 13 / 7 / 1 / 100), median 2.791, failing only at seed 13; overhang's
+  reads 4.350 / 5.485 / 16.006 / 5.278, median 5.382. Seed 13 is where spring
+  is rarest (existence density 0.00606, the lowest of the five seeds) AND
+  where the erratic's lift is largest (2.626 against 1.731–2.278 elsewhere),
+  so both halves of the ratio moved against it on the same seed. **A fact
+  about the bar's own denominator, recorded and deliberately not acted on:**
+  the erratic's lift varies 1.52× across the four seeds, so the bar it
+  multiplies is itself seed-dependent by half again. That is an observation
+  for a successor to derive a steadier denominator from *before* measuring,
+  never a licence to move this one.
+- **The withdrawn ordering clause would have failed 4/4.** Overhang's channel
+  net exceeds spring's on every readout seed, raw and normalised by H(Y)
+  (0.008 vs 0.109 / 0.034 vs 0.114 / 0.029 vs 0.048 / 0.039 vs 0.112). The
+  withdrawal (H2's amendment, made on the calibration seed before any readout
+  seed existed) was therefore not a rescue of one seed's reading: the
+  ordering holds nowhere, in either form.
+- **H3 — MET on all four.** Learner gain positive everywhere: spring min
+  0.00455 (seed 13), median 0.02990; overhang min 0.04797 (seed 1), median
+  0.10869; thicket min 0.02514 (seed 100), median 0.03167. The erratic's
+  learner gain is negative on every seed — worst (least negative) −0.00912 at
+  seed 7, median −0.01102 — clearing the one-sided ≤ 0.001 control with room.
+  Reported in place of the withdrawn oracle ratio: learner / (channel MI net)
+  reads 0.568–0.978 for spring, 0.960–1.025 for overhang, 0.649–0.729 for
+  thicket. The erratic's quotient is printed and is meaningless (its net is
+  within noise of zero).
+- **H4 — MET on all four.** Erratic channel net worst 0.00134 (seed 13)
+  against ≤ 0.008, median 0.00004 and negative on two seeds; false-sign net
+  worst |0.00088| (seed 1, erratic) against ±0.002, median |0.00022| over the
+  sixteen kind-seed readings. Both bars clear by a factor of ≈ 2.3 or better
+  at the worst reading.
+- **H5 — MET on all four.** Max class rate worst 0.51073 (seed 7, overhang)
+  against ≤ 0.75, median 0.23409 over the sixteen kind-seed readings; no kind
+  approaches wallpaper on any seed.
+- **§6.3's consequence, reported.** Existence density over the land-eligible
+  pool: spring 0.00606 / 0.01207 / 0.01457 / 0.01972; overhang 0.04083 /
+  0.04087 / 0.01552 / 0.04640; thicket 0.11057 / 0.11744 / 0.13918 / 0.16629;
+  erratic 0.04027 / 0.03922 / 0.04345 / 0.03880 — the two untouched controls
+  in the narrow bands their unchanged recipes predict. **The 78-walk
+  encounter rate puts a number on §12 flag 1: spring reads 0.00000 on seed 13
+  and on seed 42, and 0.01305 / 0.01577 / 0.00247 on seeds 7, 1 and 100** —
+  so spring is encounterable in the walk band on three of the four readout
+  seeds and absent from it on two of five worlds overall, which is the figure
+  G6 carries rather than the universal absence the calibration seed alone
+  suggested.
+
 ---
 
 ## 8. Non-goals

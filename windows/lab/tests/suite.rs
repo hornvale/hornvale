@@ -88,6 +88,8 @@ mod warp_calibration;
 mod warp_instrument;
 #[path = "suite/warp_probe.rs"]
 mod warp_probe;
+#[path = "suite/warp_readout.rs"]
+mod warp_readout;
 #[path = "suite/wear_funnel.rs"]
 mod wear_funnel;
 #[path = "suite/weft_density.rs"]
