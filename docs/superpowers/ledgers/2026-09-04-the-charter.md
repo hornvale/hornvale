@@ -513,3 +513,15 @@ SHA256 `53e4f8c26374845db41914c6a3732d5d5fd65c1e69183d859d85dc3bb0337af0`,
 from their own roots. This is executable reuse with fresh collection, not saved
 evidence reuse. Each adapter's branch diff and actual output will determine
 whether enrollment stayed local.
+
+## Task 5 preparation may overlap independent adopters
+
+Ruling: begin authoring the diagnostic harness while the two adopter branches
+run — its inputs are the already frozen host CLI, declared workload scopes and
+quality scenarios, and its files are disjoint — the cost if an adopter exposes
+a design defect is a small harness adjustment before measurement. Task 5 still
+waits for reviewed integration before collecting actual reports or costs.
+Controller retains integration, index/commit scheduling and canonical dispatch;
+no task is marked complete early and all task/final reviews remain required.
+This extends the same approved independent-work principle used for Tasks 3–4,
+without running competing canonical work or editing their shared contract.

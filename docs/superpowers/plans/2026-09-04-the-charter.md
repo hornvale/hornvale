@@ -472,6 +472,11 @@ serde_json. Verify Cargo paths and lab API signatures before implementation.
 
 ### Task 5: Compose branches and qualify the actual user surface
 
+The independent diagnostic harness in Step 3 may be authored while Tasks 3–4
+run in their own worktrees. Integration and actual adopter measurements remain
+dependent on their reviewed commits. The controller coordinates index/commit
+operations; this overlap grants no semantic host edits or early evidence claims.
+
 **Files:** Integrate the two reviewed package trees and reconciled
 `tools/digest/Cargo.lock`; modify `tools/digest/README.md`, `docs/README.md`;
 create `docs/digest/the-charter-evidence.md` and `scripts/charter-measure.sh`.
