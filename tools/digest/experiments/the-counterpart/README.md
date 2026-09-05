@@ -188,3 +188,102 @@ copy must equal the raw observation. The required imports-only supplement is
 recomputed for the entire pair roster with explicit left-source, right-change
 and joint-observation IDs. These checks detect accidental evidence mixing;
 they do not authenticate a hostile evidence author.
+
+## Committed full-12 package and independent replay
+
+`panel-full12.json` adds the independently authored `reserved-inferred-owner`
+singleton to the unchanged eleven accepted source records. The original
+`panel.json` and `specimens.bundle` remain intact. `specimens-full12.bundle`
+imports both prior bundles and re-exports their source objects without rewriting
+any source commit. Its only prerequisite is
+`5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd`, already in repository history.
+The reserved source is `b0ae89d8a93cda6fe8932ed24e38db8d64865613`, tree
+`17905910c5b081c3c706daa0b6e0709f0f3a4432`. The frozen observation implementation
+remains `02796fe0ae719a55f431f8aedc2ab6853c9a2776`; owner/checker/rule bytes
+are unchanged. Original four-pair classification is unchanged; the reserved
+candidate/checker disagreement is interpreted separately from raw observations.
+
+Package identities (SHA256):
+
+- Full-12 panel: `4d7588e3f25523358deae71a45c4e8d9529f73c5370511b0dd5b1810d759931c`.
+- Combined bundle, 9,823 bytes: `33ea34e8774bd11e1b237eb6f62d40601838e67d56f7b3b79ecc1eb4578102f8`.
+- Focused Mac panel: `eb6a4f825648ba421c566aeef49b1063329338782d01527eebe875366cdf8cec`.
+
+`evidence/full12-construction/` retains all twelve source/tree/input checks and
+supervised Git records. This is source-only reconstruction evidence, not a
+behavioral run. The separately identified `panel-base-reserved.json` contains
+only base and reserved, no pairs, and the full-panel parent hash. Its completion
+cannot establish full-12 completion.
+
+An independent replay author needs this committed repository, its full base
+history, the committed package and ordinary Rust/Python/Git tools. No originating
+author's scratch or cached binary is required. Execute the following from this
+repository's root. Full-12 runs belong inside a diagnostic-only stage transport
+under the canonical serial claim. Each independent run must execute this entire
+sequence anew, obtaining its own evidence parent, clone and target. The second
+run must not reuse the first run's checkout or target. Keep this invocation off
+the production gate; it is diagnostic transport only.
+
+Dependency preparation is separate and network-enabled only for locked fetch.
+This is required because a prior canonical offline metadata request lacked
+`windows-link 0.2.1`; the frozen metadata/build commands remain offline. To run
+the focused Mac qualification, change only the first line's filename to
+`panel-base-reserved.json`.
+
+```sh
+counterpart_panel=tools/digest/experiments/the-counterpart/panel-full12.json
+counterpart_evidence_parent="$(python3 - "$counterpart_panel" <<'PY'
+from pathlib import Path
+import os
+import signal
+import sys
+import tempfile
+
+root = Path.cwd()
+path = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(path.parent))
+import run
+
+state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state')))/'hornvale'
+state.mkdir(parents=True, exist_ok=True)
+parent = Path(tempfile.mkdtemp(prefix='counterpart-full12-replay-', dir=state)).resolve()
+run.git_audit_directory = parent/'preparation-git'
+for sig in (signal.SIGINT, signal.SIGTERM):
+    signal.signal(sig, run.measurement.request_stop)
+(parent/'invocation-source.sha').write_text(run.git(root,'rev-parse','HEAD')+'\n')
+panel = run.load_json(path.read_text())
+base = panel['arms']['base']
+checkout = parent/'preparation-checkout'
+run.reconstruct(root,path.parent/panel['bundle'],checkout,panel['base'],base)
+before = run.input_hashes(checkout)
+run.persist(parent/'preparation-before.json', {'source':base,'inputs':before})
+if before != base['inputs']:
+    raise ValueError('preparation source/locks differ from frozen base')
+sample = run.capture(
+    ['cargo','fetch','--locked','--manifest-path','tools/digest/Cargo.toml'],
+    checkout,parent/'dependency-fetch.json',
+    attribution={'role':'dependency-preparation',
+                 'capture_context':{'arm':'base','source':{k:base[k] for k in ('commit','tree')}}})
+after = run.input_hashes(checkout)
+run.persist(parent/'preparation-after.json', {'source':base,'inputs':after})
+run.verify_source(checkout,base)
+if after != before:
+    raise ValueError('locked dependency preparation changed source/locks')
+run.validate_sample(sample)
+print(parent)
+PY
+)" || exit 1
+printf 'Counterpart retained evidence: %s\n' "$counterpart_evidence_parent"
+python3 tools/digest/experiments/the-counterpart/run.py \
+  --panel "$counterpart_panel" \
+  --output "$counterpart_evidence_parent/dossier"
+```
+
+Keep the parent directory even after failure. Command records retain exact raw
+bytes and failure flags; no failure licenses an offline-flag change or checker
+retuning. On success, revalidate `dossier.json` using the frozen `summarize`
+function and this exact panel/contract. Compare all twelve source IDs and four
+outcomes per arm between the two canonical runs, preserving candidate objects
+separately; compare timings as host/preparation observations, not reusable
+verdicts. Each run's stage receipt must identify the actual tested merge product
+and complete phase results. A green assay does not replace the campaign gate.
