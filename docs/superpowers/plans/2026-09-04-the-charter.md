@@ -149,7 +149,9 @@ pub fn compose(
 
 Malformed/ambiguous records are `Err`. A structurally valid contradicted or
 unknown required observation renders an honest report with `successful=false`.
-Pure authored-only requirements do not become executable failures, but their
+Every explicit contradiction makes the report unsuccessful, including an
+observation outside a checked requirement's required set. An optional unknown
+observation alone does not fail the report. Pure authored-only requirements do not become executable failures, but their
 unchecked status is explicit. No overall verification badge. Namespace/record
 sorting is deterministic and duplicate IDs fail even with equal text.
 

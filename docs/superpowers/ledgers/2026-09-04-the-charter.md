@@ -378,6 +378,22 @@ invocation; the command still selected only the Digest workspace and did not
 disable tests or commit hooks. The review has the exact task diff and the
 recorded evidence. No completion verdict is assumed before it returns.
 
+## Task 1 — fix round 1: explicit contradictions cannot succeed
+
+Independent review: spec compliance failed; code quality passed. The composer
+calculates success from required observations only, so an additional explicit
+contradiction can be rendered alongside `successful=true`. Spec §6 requires
+every contradiction to fail; only unknown outcomes are qualified by whether
+the observation is required. The controller checked the predicate in
+`context/compose.rs` and accepts the finding.
+
+Ruling: retain required-observation satisfaction and additionally require
+that no observation is contradicted. Add behavioral red/green cases for an
+optional contradiction and optional unknown, preserving their distinction.
+This clarifies the already binding spec; no architectural alternative or
+new Ideonomy pass is needed. Resume the original implementer, then obtain a
+scoped re-review of this fix. No task-2 dispatch before approval.
+
 ## Follow-ups
 
 - Gate selection and receipt reuse require a later campaign with an explicit
