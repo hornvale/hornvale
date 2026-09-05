@@ -1,0 +1,25 @@
+{
+  "restored_utc": "2026-09-05T20:33:24.444336+00:00",
+  "before_sha256": {
+    "domains/thing/src/lib.rs": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+    "tools/digest/packages/thing/src/lib.rs": "58380075bf83ed7e43c00ea219214b1b87e3bfbab4b2d84b8eacc24230377379",
+    "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+    "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+  },
+  "during_sha256": {
+    "domains/thing/src/lib.rs": "840f8603619a4a383b476834e3e85205375631bb610b371a29478b805d52230c",
+    "tools/digest/packages/thing/src/lib.rs": "d47df566e33f5fa5ab920a12c1d8e4e0a4d5631120280f8f1a50afc262b30888",
+    "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+    "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+  },
+  "after_sha256": {
+    "domains/thing/src/lib.rs": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+    "tools/digest/packages/thing/src/lib.rs": "58380075bf83ed7e43c00ea219214b1b87e3bfbab4b2d84b8eacc24230377379",
+    "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+    "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+  },
+  "exact_source_and_lock_restoration": true,
+  "locks_unchanged_during_qualification": true,
+  "all_qualification_processes_reaped": true,
+  "scoring": "not run"
+}
