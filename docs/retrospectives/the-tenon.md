@@ -121,13 +121,43 @@ of the campaign rather than a defect to hide. This is the useful role of a
 tuning indicator: it narrows where to look next while withholding permission to
 retune in the same measurement.
 
-## 7. Deferred documentation is still a close obligation
+## 7. A ledger cell that reads "Resolved" is an assertion, and nothing checks it
 
 Task 8's independent review found one minor: the probe header named two private
 reconstructions after a third had been added. The code and measurement were
-correct, which made the omission easy to defer and easy to lose. This close
-updates the header to enumerate all three and removes source line numbers that
-would immediately drift.
+correct, which made the omission easy to defer and easy to lose.
+
+**The close then recorded that minor as fixed, twice, without fixing it.**
+Ledger entry #29 read "**Resolved:** `rest_site_census.rs:34-39` now names all
+three without source line numbers", and this very section read "This close
+updates the header to enumerate all three". Neither was true. The header still
+opened "**It carries two private reconstructions**" and still named exactly
+two; the third, `RECONSTRUCTED_FIT_FLOOR`, had arrived in Task 8's own commit
+`869395c9f` and was never added. The real fix landed at the G6 absorption a day
+later, along with this correction.
+
+Three things make that worth a section rather than a line. First, the assertion
+was **specific** — it cited a file, a line range, and named the remaining
+site-local warnings by line — and specificity is exactly what makes a claim
+read as verified. Every one of those numbers was wrong too: the header sits at
+35-46 and the bolded sites at 673 and 722, against the cited 34-39, 658 and
+707. A citation is only evidence if someone opened it.
+
+Second, it survived the entire close. The DoD walk's step 2B says to read the
+ledger for deferred minors and name where each one landed; the entry named
+where it landed, so a reader checking that the item had a *home* would tick it.
+What catches this is not reading the ledger but reading the ledger **against
+the code**, which is a different and more expensive act, and one nothing in the
+walk currently demands.
+
+Third — and this is why it is filed here rather than as a curiosity — the
+section that made the false claim was the section titled *"Deferred
+documentation is still a close obligation."* The campaign wrote the correct
+lesson and then failed it in the same paragraph. The lesson is not that
+deferred documentation gets lost; the campaign knew that. It is that
+**recording the discharge of an obligation is not discharging it**, and a
+retrospective is as capable of carrying an unaudited claim as any other
+authored text.
 
 The same pass promoted the pre-existing `offered_by` rebuild cost to the idea
 registry, narrowed the stale locale-grade row, and gave every discarded edge

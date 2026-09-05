@@ -32,14 +32,18 @@
 //! function does not return. Every count below is read off committed facts,
 //! never off a fold.
 //!
-//! **It carries two private reconstructions and says so at each site**:
-//! `liveness::room_affords_rest`, and `liveness::grade_of` with the inputs
-//! resolved as `liveness::sleep_traits_of` resolves them. It does NOT
-//! reconstruct `rest_timeline`'s final `SiteGrade`: a same-day `SLEPT_ON`
-//! fact makes production use `SiteGrade::On(kind)`, while this probe measures
-//! only the room-level boolean that production retains as the fallback when
-//! no kind fact exists. A measurement must not widen the surface it measures,
-//! so none is made `pub` for this probe's benefit.
+//! **It carries three private reconstructions and says so at each site**:
+//! `liveness::room_affords_rest`; `liveness::grade_of`, with its inputs
+//! resolved as `liveness::sleep_traits_of` resolves them; and
+//! `liveness::FIT_FLOOR`, held here as `RECONSTRUCTED_FIT_FLOOR`. No line
+//! numbers are given for those sites on purpose: the close's first attempt at
+//! this very correction cited three of them and every one had already drifted.
+//!
+//! It does NOT reconstruct `rest_timeline`'s final `SiteGrade`: a same-day
+//! `SLEPT_ON` fact makes production use `SiteGrade::On(kind)`, while this
+//! probe measures only the room-level boolean that production retains as the
+//! fallback when no kind fact exists. A measurement must not widen the surface
+//! it measures, so none is made `pub` for this probe's benefit.
 
 use hornvale_kernel::{
     Facet, FacetId, KindId, Ledger, RoomMeshMemo, Seed, Value, WorldTime,
