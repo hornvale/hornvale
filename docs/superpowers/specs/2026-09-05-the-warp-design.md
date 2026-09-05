@@ -202,7 +202,7 @@ reading with the sign tuple `(biome word, rock sign, steepness sign, wetness
 sign)` — exactly the walker's sentence after §4, through §4.4's functions.
 `n ≈ 11,000` land facets against a tuple of at most 19 × 16 × 3 × 3 classes.
 
-**5.2 Readouts, per kind, all registered as metrics (`warp-*`) except where noted.**
+**5.2 Readouts, per kind, all registered as metrics (`warp-*`) except where noted — eight families × four kinds = 32 registrations (G4 amendment, 2026-09-05: the plan's self-review found H3's "≥ 0.5 × oracle" and H5's guard each need a registered number; an earlier draft said six families).**
 
 | readout | definition |
 | --- | --- |
@@ -213,6 +213,8 @@ sign)` — exactly the walker's sentence after §4, through §4.4's functions.
 | best-class lift | max over sign classes with support ≥ 100 of `P(Y | class) / P(Y)` — the walker-facing number, "three times as likely here" |
 | learner gain | the sign table fitted on even-indexed land facets, scored on odd-indexed ones as log-loss reduction against the base rate, in bits per facet; negative when the table overfits |
 | false-sign MI, net | channel MI net of null for the tuple `(noun, relief, aspect, openness)` — the control |
+| oracle gain | the sign table fitted and scored on all land, bits per facet — the in-sample bound the learner is measured against (H3) |
+| max class rate | max over sign classes with support ≥ 100 of `P(Y \| class)` — H5's wallpaper guard |
 
 The learning curve — the same learner on the Weft's walk pool at 60, 240 and
 960 steps — is a readout in the calibration test, descriptive only, not a
@@ -401,6 +403,6 @@ Beyond the standard DoD (chronicle, retrospective, freshness sweep):
    legibility player-reachable with the player's own head; a body that
    speaks its inference is a further campaign (ledger follow-up).
 3. **Cost: one rebaseline, one census refresh**, both at close, plus the
-   Gnomon arms if §5 registers metrics (it does: up to 24, four kinds × six readouts).
+   Gnomon arms if §5 registers metrics (it does: 32, four kinds × eight readouts).
 4. **Determinism: no epoch, no draw, no ledger fact** — a claim §4.5's
    branch table tests rather than asserts.
