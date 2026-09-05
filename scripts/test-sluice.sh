@@ -27,6 +27,39 @@ if ! command -v flock >/dev/null 2>&1; then
 fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# BUILD tools/sluice's release binary ONCE, HERE — after the flock skip guard
+# above (so a host with no flock, which exits before this line, never pays
+# for a build it will never use), and before the very first test that
+# forwards to it (the FIFO/ancestry-coalescing block a little below). This
+# script's own claim/set-state/list commands go through
+# scripts/sluice-queue.sh's forwarding block, which deliberately never builds
+# the binary itself (that is the fix for an earlier Critical: a shim that
+# silently rebuilds on every call). In a warm worktree this went unnoticed —
+# `tools/sluice/target/release/sluice` was already on disk from earlier work
+# — but a fresh chamber worktree has no such binary, and every forwarded-verb
+# test between here and the chamber setup below failed with a
+# build-instruction error disguised as three ancestry-coalescing assertion
+# failures (rc=11 at the sluice chamber's `outboard` phase, 2026-09-05).
+# Building unconditionally here means every test in this file, not just the
+# chamber section, exercises the binary the production path actually uses.
+#
+# `cd` into $repo_root for the build itself (in a subshell, so this file's
+# own cwd is untouched): rustup's toolchain override is resolved from the
+# process's CWD, not from `--manifest-path`, so a build invoked from
+# elsewhere can silently pick a different (older, non-overridden) default
+# toolchain and fail to parse an edition2024 manifest. Bit this campaign
+# twice already; see the matching comment at the chamber's HV_SLUICE_BIN
+# export below, which does NOT rebuild — it only re-points the binary path
+# for scratch repos holding a copy of sluice-queue.sh with no tools/sluice
+# sibling beside them.
+#
+# A build failure must fail loudly HERE, not 1100 lines later as confusing
+# assertion failures about ancestry — `set -euo pipefail` (above) already
+# makes that so: this line is not itself guarded, so a nonzero cargo exit
+# aborts the whole script.
+( cd "$repo_root" && cargo build --quiet --release --manifest-path tools/sluice/Cargo.toml >&2 )
+
 pass=0; fail=0
 ok()   { printf '  ok: %s\n' "$1"; pass=$((pass+1)); }
 bad()  { printf '  FAIL: %s\n' "$1"; fail=$((fail+1)); }
@@ -1198,21 +1231,16 @@ export HV_SLUICE_REPO_ROOT="$chamber_repo"
 export HV_CANONICAL_HOST_FILE="$chamber_host_file"
 export HV_CENSUS_LOCK="$tmp/chamber.lock"
 # HV_SLUICE_BIN is the test seam scripts/sluice-queue.sh's forwarding block
-# reads (test seam ONLY — nothing in production sets it). $chamber_repo below
-# gets a COPY of sluice-queue.sh with no tools/sluice sibling beside it (see
-# the two `cp .../sluice-queue.sh` sites in this file), so without this the
-# copy has no manifest to build claim/set-state/list against. Built once,
-# here, ahead of every chamber test that follows in this file — both cp sites
-# are covered because both are invoked (via HV_SLUICE_REPO_ROOT) only after
-# this point.
-# `cd` into $repo_root for the build itself (in a subshell, so this file's
-# own cwd is untouched): rustup's toolchain override is resolved from the
-# process's CWD, not from `--manifest-path`, and this line runs with cwd
-# already moved to a scratch directory with no rust-toolchain.toml — without
-# the `cd`, cargo silently picks a DIFFERENT (older, non-overridden) default
-# toolchain and fails to parse an edition2024 manifest at all. Found live
-# writing this fix.
-( cd "$repo_root" && cargo build --quiet --release --manifest-path tools/sluice/Cargo.toml >&2 )
+# reads (test seam ONLY — nothing in production sets it). The binary itself
+# was already built once, near the top of this file (right after the flock
+# skip guard) — that early build serves every test before this point,
+# exercising the DEFAULT sibling-path resolution the production path
+# actually uses. This second export does NOT rebuild anything; it only
+# re-points the resolved path for $chamber_repo below, which gets a COPY of
+# sluice-queue.sh with no tools/sluice sibling beside it (see the two
+# `cp .../sluice-queue.sh` sites in this file) and so has no manifest of its
+# own to build claim/set-state/list against. Both cp sites are covered
+# because both are invoked (via HV_SLUICE_REPO_ROOT) only after this point.
 export HV_SLUICE_BIN="$repo_root/tools/sluice/target/release/sluice"
 
 echo "== chamber: phases run in the declared order, the tree is cleaned between phases, and the claim is the eight-field shape while held =="
