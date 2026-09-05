@@ -396,6 +396,16 @@ scoped re-review of this fix. No task-2 dispatch before approval.
 
 ## Follow-ups
 
+- Profile the measured Linux `git status --porcelain --untracked-files=normal`
+  phase under the existing canonical queue before adopting a latency target;
+  the evidence report observes roughly 62–63% of warm request time there,
+  without attributing the cause. Repeat over time/load conditions before an SLO.
+- Revisit contributor dependency size as enrollment grows: the pure census
+  guard currently pulls the lab dependency graph, with measured cold selected
+  requests of 11.552 s on Mac and 25.712 s on Linux. Consider a smaller owning
+  boundary only with evidence that it preserves the real API and contracts;
+  this campaign does not restructure production crates for benchmark gains.
+
 - Broad review M1: `render_code_list` uses heading escaping inside Markdown
   code spans, leaving literal backslashes in copyable path/symbol labels.
   Add a dedicated inline-code renderer with correct backtick handling in
@@ -811,3 +821,59 @@ inventory purpose. Source implementation remains exactly the reviewed/measured
 `e3355f441db045f0960576ead12b0f8acc56ca7d`; later changes are evidence and
 bookkeeping. Submit this fixed-head evidence delta to the same whole-branch
 reviewer. Task 5 final qualification and G6 remain open until that review.
+
+
+## Task 5 — complete after final scoped review; G6 ready
+
+The same broad reviewer inspected the final evidence delta
+`3560a9228d8646a11700455b491335362d9effff..9140e19211f08d0108d814c3b4124cf5ea1e602d`
+and returned spec compliance PASS and quality PASS, with no new findings.
+Their independent parsing matched all 44 Linux records to the completed job,
+recomputed all new aggregates, checked the exact code/measurement/final-tree
+identities, verified recorded lifecycle/cleanup and both canonical results,
+and inspected the quiet ownership capture and 75/75 evidence commit hook.
+The sole broad-review Minor remains captured and deferred. Their final status
+correctly noted the controller's uncommitted follow-up additions; those add
+profiling/dependency research pointers, not implementation or qualification
+claims. No new design question or ideonomy pass was needed for this reviewed
+completion ruling.
+
+Mark Task 5 Steps 2–4 complete and remove the completed three-stage
+`IMPLEMENTATION_PLAN.md` per the repository convention. Source remains
+`e3355f441db045f0960576ead12b0f8acc56ca7d`; later committed evidence and
+status bookkeeping are locally gated, not described as separately canonical-
+tested code. The campaign reconciliation rows remain active and idea-registry
+confidence remains design-approved until authorized close. No merge request,
+main push, campaign close or worktree release is authorized by this verdict.
+
+### Post-G3 digest for Nathan
+
+- Executed the approved sequential bootstrap, then two independent adopter
+  branches, followed by composition and measured qualification. Both package
+  trees joined without a semantic host/protocol edit; Cargo reconciled the
+  shared lock while retaining every existing external dependency version.
+- Closed reviewed defects in contradiction handling, Git fixture isolation,
+  discriminating census refusal probes, and diagnostic process cleanup/failed
+  evidence retention. Each received scoped re-review and behavioral evidence.
+- Absorbed main's new campaign-reconciliation guard, added active records and
+  resolved the initial documentary stage failure with the green integrated
+  stage. The optional ledger-column/coverage mismatch is captured for later.
+- Qualified isolation, deterministic composition, recovery, resource caps,
+  portability, extension and usability through the named checks and actual
+  reports. Compiling authored declarations is never presented as proof of
+  their truth; queue execution remains explicitly unchecked authored policy.
+- Retained all 72 Mac/Linux command samples. They establish initial baselines;
+  a steady-state SLO is not earned. Resource caps are unchanged. Canonical
+  measurement ran through the existing serialized stage queue on a separate
+  diagnostic-only branch, which is excluded from integration.
+- Preserved evidence as authored records with explicit generator exceptions.
+  Kept both overlapping and quiet regeneration costs and corrected capture
+  attribution by rerunning without concurrent writes, never by editing counts.
+- Accepted one nonblocking inline-code locator-escaping finding and captured
+  presentation/provenance, dependency-size, status-phase profiling, review-
+  package byte-capping and write-attribution follow-ups. Broader prompt/Book
+  generation, formal guarantees and admission changes remain later campaigns.
+
+No save-format, epoch, determinism-contract or fidelity tradeoff was introduced.
+Nathan's G6 review is the remaining authorization boundary; approved close
+must still follow the existing campaign-close and sluice workflow.

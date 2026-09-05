@@ -1,8 +1,9 @@
 # The Charter: composition and quality evidence
 
-Status: **Mac/Linux cost evidence recorded, both canonical stages green,
-and independent usability PASS; scoped evidence-delta review pending**. This is an
-evidence ledger, not an overall passing verdict. The binding acceptance properties
+Status: **Implementation and qualification review PASS; G6 approval pending.**
+Mac/Linux measurements, both canonical stages and independent usability are
+complete. This evidence supports the bounded Charter acceptance properties,
+not an overall project-verification claim. The binding acceptance properties
 are [design §7–8](../superpowers/specs/2026-09-04-the-charter-design.md).
 The [tool guide](../../tools/digest/README.md) explains the actual command and caps.
 Saved reports are examples; production context never reloads them as fresh evidence.
@@ -535,8 +536,8 @@ job log exactly. These checks are retained in `diagnostic-final-diff.txt` and
 `diagnostic-full.log` in campaign scratch.
 
 No side-channel SSH compute job is part of this evidence. The diagnostic-only
-branch is never merged back. Scoped evidence-delta review remains required;
-measurement or stage completion alone does not stand in for that review.
+branch is never merged back. The scoped evidence-delta review passed as
+recorded below; measurement or stage completion alone did not stand in for it.
 
 ## Whole-branch review and scoped follow-up
 
@@ -558,6 +559,18 @@ report bytes are preserved. The review also recorded that its whole-range
 those encode empty terminal columns and are not silently stripped or called a
 clean whole-branch check. Full findings are in campaign scratch `final-review.md`.
 This review grants neither G6 approval, campaign completion nor gate omission.
+
+The same reviewer then inspected the exact evidence delta
+`3560a9228d8646a11700455b491335362d9effff..9140e19211f08d0108d814c3b4124cf5ea1e602d`
+and returned **spec compliance PASS** and **quality PASS**, with no new findings.
+They independently recomputed Linux and cross-host tables from the retained
+samples, matched all Linux records against the complete job log, checked source
+identity, cleanup, stage results, quiet capture and the 75-test evidence commit
+hook. Together with the broad review, this discharges Task 5's remaining
+qualification obligations. Full scoped findings are retained in campaign
+scratch `final-evidence-review.md`. Later review-status/plan bookkeeping does
+not change the measured implementation and is not claimed as another canonical
+stage run. G6 approval and the normal closing workflow remain outstanding.
 
 ## Independent report usability review
 
@@ -599,7 +612,7 @@ Rust caller retain the exact qualification commands/results under
 are historical evidence, never inputs to a later production context request.
 
 Both host cost series, both completed canonical stages and usability evidence
-are present. Scoped evidence-delta review remains pending.
+are present and independently reviewed.
 The host samples establish observed baselines, with the explicit SLO limitation
 above; approved operational caps are unchanged.
 

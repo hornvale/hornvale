@@ -507,7 +507,7 @@ supported hosts. Do not introduce a third contributor or cached evidence path.
   The SHA placeholders here are runtime values recorded after Task 2; resolve
   them from Git, never invent or copy a shortened ref into a queue request.
 
-- [ ] **Step 2: Exercise the real composed product.** Prepare dependencies,
+- [x] **Step 2: Exercise the real composed product.** Prepare dependencies,
   run both selected scopes and `.` through the real CLI; capture output and
   stderr phase costs. Confirm identities, required observations, authored
   queue policy, source links, no tracked mutation and stable re-rendering of
@@ -515,7 +515,7 @@ supported hosts. Do not introduce a third contributor or cached evidence path.
   and verify recollection changes the result. Keep saved reports as examples,
   never inputs. Run all Digest packages' tests/clippy/fmt once after the join.
 
-- [ ] **Step 3: Record quality evidence and usability.** Write a table mapping
+- [x] **Step 3: Record quality evidence and usability.** Write a table mapping
   every acceptance property and `charter.*` scenario to exact commands,
   observations and limitations. Measure one cold disposable-target build and
   ten warm invocations for Thing, census and combined workloads per supported
@@ -544,7 +544,7 @@ supported hosts. Do not introduce a third contributor or cached evidence path.
   limits. Link the command from `docs/README.md` and document preparation,
   supported hosts, error behavior, caps, and extension steps in the tool guide.
 
-- [ ] **Step 4: Verify complete scope and prepare G6.** Controller runs the
+- [x] **Step 4: Verify complete scope and prepare G6.** Controller runs the
   current commit gate, scoped tool checks and ordinary queued stage validation
   for the integrated SHA; inspect all results. Use one broad whole-branch
   review, triage its findings in the committed ledger, and close its fixes with
