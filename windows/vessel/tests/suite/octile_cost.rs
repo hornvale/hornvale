@@ -44,13 +44,12 @@ use hornvale_vessel::clock::{
 /// repository (sixteen sites restated it once, two of them production
 /// `--depth` defaults that had fallen a whole band behind), and
 /// `cli/tests/suite/walk_depth_agreement.rs` scans the tree for a second one.
-/// A `LocaleContext` needs no genesis — `World::new` plus
-/// `LocaleContext::build` — so calling the definition costs this file nothing
-/// and it declares no absolute-depth constant for that guard's `absolute_
-/// roster` to have to track.
+/// The committed seed-42 world avoids genesis while supplying the facts a
+/// `LocaleContext` requires, and this declares no absolute-depth constant for
+/// that guard's `absolute_roster` to have to track.
 fn walk_depth() -> u32 {
-    let world = hornvale_kernel::World::new(hornvale_kernel::Seed(42));
-    let ctx = hornvale_locale::LocaleContext::build(&world).expect("a bare world builds a context");
+    let world = hornvale_worldgen::fixture::seed_42_world();
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("seed 42 builds a context");
     hornvale_vessel::walk_depth(&ctx)
 }
 

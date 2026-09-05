@@ -925,7 +925,7 @@ mod tests {
     use super::*;
     use crate::place_latlon;
     use hornvale_kernel::{Seed, WorldTime};
-    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+    use hornvale_worldgen::{SettlementPins, build_world};
 
     /// Seed 42's world under default pins, read from the committed fixture
     /// rather than rebuilt (decision 0607). `observer` below still derives a
@@ -1971,7 +1971,6 @@ mod tests {
             let w = build_world(
                 Seed(seed),
                 &hornvale_astronomy::SkyPins::default(),
-                SkyChoice::Generated,
                 &hornvale_terrain::TerrainPins::default(),
                 &SettlementPins::default(),
             )

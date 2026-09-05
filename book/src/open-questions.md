@@ -3381,6 +3381,27 @@ places*, and a place nobody can reach is a weaker candidate than one they can.
   built, alongside The Grain's test (is this field ordinal or nominal?) that
   predicts them for values. What is unchanged is that both tests were bought by
   building the violation first.
+  **Re-scored by [The Zenith](./chronicle/the-zenith.md) (2026-09-04): the
+  exemplar this row opens with no longer exists, and the confidence is
+  unchanged for a reason worth stating.** Decision 0736 retired the
+  provider-tier doctrine outright: `ConstantSun` is deleted, every world has
+  one generated sky, and astronomy — the doctrine's last carve-out after
+  decision 0039 ruled that a *contradicting* generator is an epoch — no longer
+  offers two valid fidelities of one truth to choose between. The opening
+  sentence has been carrying two different claims under one phrase.
+  *Coexistence* — two providers of the same quantity, both valid, the world
+  selecting one — is what was retired. *Refinement* — a fine layer may not
+  contradict the coarse one — is what every re-score above actually measured:
+  agreement across grid levels, residual degrees of freedom, conservation of a
+  nominal field, a composed rather than step-wise reference. Not one of those
+  measurements ran on an astronomy tier, which is why losing astronomy costs
+  the bet nothing. What it does cost is the illustration: the principle now
+  rests on the field/grid contract (decision 0038) and religion's tier-1
+  derivation. And the retirement is an instance of the sharper rule rather than
+  a counterexample to it — tier-0's whole content was acyclicity, which
+  survives as *derived physics* (`rotation=locked`, `day_length()` still
+  `None`) rather than as a coarse stipulation a fine layer had to be kept from
+  contradicting.
 
 
 ## Genuinely open — split by whether the world can grade itself

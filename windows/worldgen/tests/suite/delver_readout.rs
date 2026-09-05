@@ -159,9 +159,9 @@ use hornvale_kernel::{ConditionResponse, Mass, Seed, Value, Vertex, World, sover
 use hornvale_species::ConditionNiche;
 use hornvale_worldgen::components::WorldComponents;
 use hornvale_worldgen::{
-    EraInvariantSupply, SettlementPins, SkyChoice, Substrate, axis_supply, build_world,
-    carrying_inputs_of, cascade_of, climate_of, forage_supply_field, generation_length_of,
-    per_species_suitability, prey_supply_field, sky_of, substrate_field, terrain_of,
+    EraInvariantSupply, SettlementPins, Substrate, axis_supply, build_world, carrying_inputs_of,
+    cascade_of, climate_of, forage_supply_field, generation_length_of, per_species_suitability,
+    prey_supply_field, sky_of, substrate_field, terrain_of,
 };
 
 // The heavy-tier `#[ignore]` reason is repeated literally at every site below:
@@ -265,7 +265,6 @@ fn bind_shares(seed_value: u64, kinds: &[&'static str]) -> Vec<BindProfile> {
     let world = build_world(
         seed,
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -276,10 +275,7 @@ fn bind_shares(seed_value: u64, kinds: &[&'static str]) -> Vec<BindProfile> {
     let sky = sky_of(&world).expect("sky");
     // The stellar-input triple, resolved exactly as `delver_bind_audit.rs` and
     // `niche_breadth_probe.rs` do (`stellar_inputs` is private to worldgen).
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();
@@ -418,7 +414,6 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
     let world = build_world(
         Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -427,10 +422,7 @@ fn pairwise_correlations(seed: u64, kinds: &[&str]) -> Vec<((String, String), f6
     let climate = climate_of(&world).expect("climate");
     let geo = terrain.geosphere();
     let sky = sky_of(&world).expect("sky");
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();
@@ -584,7 +576,6 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
     let world = build_world(
         Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -593,10 +584,7 @@ fn supply_only_correlations(seed: u64, kinds: &[&str]) -> (PairCorrelations, usi
     let climate = climate_of(&world).expect("climate");
     let geo = terrain.geosphere();
     let sky = sky_of(&world).expect("sky");
-    let generated = match &sky {
-        hornvale_worldgen::Sky::Generated(g) => g,
-        _ => panic!("probe expects a generated sky"),
-    };
+    let generated = sky.generated();
     let system = generated.system();
     let insolation_scalar = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
     let obliquity_deg = system.anchor.obliquity.get();
@@ -1580,7 +1568,6 @@ fn p6_seed_42s_committed_world_moved() {
     let world = build_world(
         Seed(REFERENCE_SEED),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )

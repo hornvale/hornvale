@@ -21,7 +21,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Band, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BarrierPins, BarrierState, BuildDepth, SettlementPins, SkyChoice, WorldComponents, barrier_of,
+    BarrierPins, BarrierState, BuildDepth, SettlementPins, WorldComponents, barrier_of,
     build_world_to_with_artifacts,
 };
 
@@ -40,7 +40,6 @@ fn seed_42_places_at_least_one_barred_cave_mouth() {
     let artifacts = build_world_to_with_artifacts(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

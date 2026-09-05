@@ -37,7 +37,7 @@ use hornvale_kernel::Seed;
 use hornvale_species::{ConditionNiche, HabitatRealm};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents, build_world_to, climate_of,
+    BuildDepth, SettlementPins, Substrate, WorldComponents, build_world_to, climate_of,
     per_species_suitability, substrate_field, subterranean_substrate_field, terrain_of,
 };
 
@@ -82,7 +82,6 @@ fn measure_one(seed: Seed, wc: &WorldComponents, label: &str) -> SeedFit {
     let world = build_world_to(
         seed,
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         wc,
@@ -242,7 +241,6 @@ fn live_vs_surface_forced_on_cave_vertices(label: &str) -> (f64, f64, usize) {
     let world = build_world_to(
         Seed(42),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

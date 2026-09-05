@@ -17,7 +17,7 @@
 use hornvale_climate::locked_temperature_at_position;
 use hornvale_kernel::{Seed, math};
 use hornvale_scene::tiles_scene;
-use hornvale_worldgen::{SkyChoice, build_world, climate_of};
+use hornvale_worldgen::{build_world, climate_of};
 
 /// Lattice width in tiles (height is `width / 2` = 32 latitude rows).
 const WIDTH: u32 = 64;
@@ -32,7 +32,6 @@ fn main() {
     let world = build_world(
         Seed(8),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &Default::default(),
     )

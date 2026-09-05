@@ -19,7 +19,7 @@ use hornvale_kernel::test_lineage;
 use hornvale_kernel::{EntityId, Fact, Value, WorldTime};
 use hornvale_language::schemas::{Manner, SchemaId};
 use hornvale_language::{Disposition, LexemeId, LossReason};
-use hornvale_worldgen::{SettlementPins, SkyChoice, doctrine_from, doctrines_from};
+use hornvale_worldgen::{SettlementPins, doctrine_from, doctrines_from};
 
 /// Build a world with the shipped four-people component set, generated
 /// sky, default terrain/settlement pins — the shared pattern every
@@ -29,7 +29,6 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
-        SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins::default(),
     )
@@ -44,8 +43,9 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 /// Predicates are registered through the world's own registry exactly as
 /// genesis does (each domain's `register_concepts`), and every fact commits
 /// through the normal `Ledger::commit` path, so contradiction-checking is
-/// exercised the same as a generated world's. No sky, no world build of any
-/// kind — zero WORLD builds, deterministic by construction. It also commits
+/// exercised the same as a generated world's. It commits the mandatory
+/// generated `sky-provider` fact but performs no world build of any kind —
+/// zero WORLD builds, deterministic by construction. It also commits
 /// a `terrain-pin` fact pinning `globe-level` to its legal minimum (4, vs
 /// the crate default 6): the caller still runs `terrain_of`/`climate_from`
 /// for call-site parity with production `doctrine_from` callers (see the
@@ -58,8 +58,25 @@ fn synthetic_flagship(species: &str, cult_form: &str) -> (hornvale_kernel::World
     hornvale_species::register_concepts(&mut w.registry).expect("species predicates register");
     hornvale_religion::register_concepts(&mut w.registry).expect("religion predicates register");
     hornvale_terrain::register_concepts(&mut w.registry).expect("terrain predicates register");
+    hornvale_astronomy::register_concepts(&mut w.registry).expect("astronomy predicates register");
 
     let provenance = || "synthetic negative arm (decision 0093)".to_string();
+    let world = w
+        .ledger
+        .mint_entity(test_lineage(w.ledger.entity_count() as u16));
+    w.ledger
+        .commit(
+            Fact {
+                subject: world,
+                predicate: hornvale_astronomy::facts::SKY_PROVIDER.to_string(),
+                object: Value::Text("generated".to_string()),
+                place: None,
+                day: Some(WorldTime::GENESIS),
+                provenance: provenance(),
+            },
+            &w.registry,
+        )
+        .expect("commit sky provider");
     let settlement = w
         .ledger
         .mint_entity(test_lineage(w.ledger.entity_count() as u16));

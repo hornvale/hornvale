@@ -96,8 +96,7 @@ pub const NEIGHBOR_RA_DEG: &str = "neighbor-ra-deg";
 /// Text — one per note).
 /// type-audit: bare-ok(identifier-text)
 pub const GENESIS_NOTE: &str = "genesis-note";
-/// Which astronomy provider a world uses: `"constant"` or `"generated"`
-/// (functional, Text).
+/// The generated astronomy provider a world uses (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const SKY_PROVIDER: &str = "sky-provider";
 /// An experimenter-supplied pin string conditioning genesis, in

@@ -28,9 +28,9 @@
 
 use hornvale_kernel::color::BANDS;
 use hornvale_kernel::math::unit_sphere_from_lat_lon;
-use hornvale_kernel::{Facet, Seed, Vertex, World, WorldTime};
+use hornvale_kernel::{Facet, Seed, Vertex, WorldTime};
 use hornvale_locale::{LocaleContext, MicroField};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 use std::collections::BTreeSet;
 
 /// A fixed, neutral micro-field — every axis at its midpoint. This test
@@ -102,7 +102,7 @@ fn spread() -> Vec<Facet> {
 
 #[test]
 fn integrating_the_kept_mixture_equals_integrating_immediately() {
-    let world = World::new(Seed(42));
+    let world = hornvale_worldgen::fixture::seed_42_world();
     let ctx = LocaleContext::build(&world).unwrap();
     let addrs = spread();
     assert_eq!(
@@ -176,14 +176,12 @@ fn high_ground_is_brighter_in_the_cold_half_of_the_year() {
     // Matches `windows/scene/examples/illumination_probe.rs`'s `genesis()`
     // exactly — the construction Task 1's numbers above were measured
     // against. `World::new(Seed(42))` (used by the other test in this file)
-    // is NOT equivalent: with no sky-provider fact committed, `sky_of`
-    // defaults to `Sky::Constant(ConstantSun)`, which carries no seasonal
-    // swing at all (`temperature_at` would be day-invariant), so it cannot
-    // reproduce Task 1's day-dependent readings.
+    // is NOT equivalent: it has no committed sky-provider fact, so `sky_of`
+    // errors. This test needs an explicitly built generated sky to reproduce
+    // Task 1's day-dependent readings.
     let world = build_world(
         Seed(42),
         &Default::default(),
-        SkyChoice::Generated,
         &Default::default(),
         &SettlementPins::default(),
     )

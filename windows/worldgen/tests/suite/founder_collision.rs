@@ -170,7 +170,7 @@ use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::person_promote::{MEMORY_DEPTH, select_founders};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, occupation_records,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, occupation_records,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -194,7 +194,6 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
     build_world_to(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
         &wc,

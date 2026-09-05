@@ -12,7 +12,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{SettlementPins, build_world};
 
 /// One live possession: the heap world and the session borrowing it.
 struct Possession {
@@ -81,7 +81,6 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
     let world = match build_world(
         Seed(seed),
         &SkyPins::default(),
-        SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
     ) {
