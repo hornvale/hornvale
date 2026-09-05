@@ -128,6 +128,11 @@ else
     esac
 fi
 
+# Reached only through the EXIT trap below, which the linter cannot follow —
+# same reason as the SC2317 directive further up this file. NOTE: no line of
+# this comment may BEGIN with the linter's own name, which is inline-directive
+# syntax and fails the whole file with SC1073.
+# shellcheck disable=SC2317
 release_census_row() {
     [ "$census_claimed" = "1" ] || return 0
     [ -n "$census_row_id" ] || return 0

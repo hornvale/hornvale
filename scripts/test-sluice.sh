@@ -3164,10 +3164,11 @@ fi
 : > "$CQ"
 row eee campaign/e eeeeeeeeeeee running merge >> "$CQ"
 set +e; err="$(qq claim --sha eeeeeeeeeeee 2>&1 >/dev/null)"; rc=$?; set -e
-if [ "$rc" = "4" ] && [ "$(cstate_of eee)" = "running" ]; then
-    ok "claim --sha on an already-held row refuses rc=4 and changes nothing"
+if [ "$rc" = "4" ] && [ "$(cstate_of eee)" = "running" ] \
+   && printf '%s' "$err" | grep -q "NOT queued"; then
+    ok "claim --sha on an already-held row refuses rc=4, says why, and changes nothing"
 else
-    bad "claim --sha on a held row gave rc=$rc state=$(cstate_of eee) — duplicate execution is still reachable"
+    bad "claim --sha on a held row gave rc=$rc state=$(cstate_of eee) err='$err' — duplicate execution is still reachable"
 fi
 
 # T5 — a ref with no row at all is a DIFFERENT answer from a ref somebody
