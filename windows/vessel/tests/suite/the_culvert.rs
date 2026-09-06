@@ -551,18 +551,57 @@ fn culvert_possession_shape() -> (Ledger, Vec<Body>, WorldTime, hornvale_locale:
     (ledger, npcs, t, ctx)
 }
 
-/// Which measured shape a pair population comes from. The two are NOT
-/// interchangeable and Task 6 needs both: the possession shape had ZERO
-/// budget-exhausted searches, and the lab shape had 55 of 83 at band 10. A
-/// test drawn from the possession shape alone never exercises the `None` arm,
-/// which is 95.1% of the real cost.
+/// Which measured shape a pair population comes from. The two seed-42
+/// variants below are NOT the same shape and it cost this task a wasted
+/// round trip to learn that, so it is written down here rather than left to
+/// be rediscovered: `resident_folds.rs`'s `bench_shape(KERF_LAB_SEED,
+/// KERF_LAB_TICKS, KERF_LAB_AGENTS)` = `bench_shape(42, 10, 50)` is The
+/// Kerf's own SHORT lab shape (10 ticks); `session_length_scaling.rs`'s own
+/// construction runs the SAME seed and roster size for 200 ticks and reads
+/// its state at band 10 of 10 (`BAND == 20`) — a much larger, much more
+/// expensive walk that happens to share a seed with the first.
+///
+/// Task 6 needs BOTH ARMS of `plan_to_room` to fire (a reachable pair and an
+/// unreachable one) and nothing more specific than that — the possession
+/// shape alone never exercises the `None` arm (it has zero unreachable
+/// pairs), so at least one lab-shape reading is required. Which lab
+/// reading is a COST decision, not a correctness one: [`Shape::Lab`] (the
+/// cheap 10-tick shape) already has an unreachable pair, so it is the one
+/// every ordinary run (including Task 6's) should use.
+/// [`Shape::LabAt200Ticks`] exists only as a fallback and a cost record —
+/// see its own doc.
 enum Shape {
     /// Seed 17, `Session::start` + 12 waits — 52 of 67 residents hold a
     /// non-empty belief, max 23 rooms, no unreachable pair.
     Possession,
-    /// Seed 42, 50 agents, band 10 of the lab shape — 11 of 50 non-empty,
-    /// max 46 rooms, 55 of 83 pairs unreachable within budget.
+    /// The Kerf's own lab shape — `resident_folds.rs`'s
+    /// `bench_shape(KERF_LAB_SEED, KERF_LAB_TICKS, KERF_LAB_AGENTS)` =
+    /// `bench_shape(42, 10, 50)`, ten ticks, not two hundred. Measured: 9 of
+    /// 50 residents hold a non-empty belief (largest 4 rooms), 27 distinct
+    /// `(home, dest)` pairs, of which 4 are unreachable within
+    /// `PLAN_BUDGET_MIRROR` — enough to exercise both of `plan_to_room`'s
+    /// arms at a small fraction of [`Shape::LabAt200Ticks`]'s cost. This is
+    /// the variant every correctness test (Task 6 included) should use.
     Lab,
+    /// The SAME seed-42, 50-agent construction as [`Shape::Lab`] (both go
+    /// through `the_detent::bench_shape`), run the FULL 200 ticks
+    /// `session_length_scaling.rs` itself runs before reading its own band
+    /// 10 (`BAND == 20`, the 10th and final band) — not `resident_folds.rs`'s
+    /// cheaper 10-tick shape [`Shape::Lab`] reads. Measured: 11 of 50
+    /// non-empty, max 46 rooms, 83 distinct pairs, 55 unreachable — the exact
+    /// figures Task 2's report table cites for band 10.
+    ///
+    /// **Not used by any unignored test.** `bench_shape(42, 200, 50)` costs
+    /// 129.337 s on a quiet box under an optimized test profile — measured
+    /// directly on
+    /// [`the_expensive_200_tick_lab_shape_also_has_an_unreachable_pair`],
+    /// which is `#[ignore]`d for exactly that cost. [`Shape::Lab`]'s cheap
+    /// 10-tick reading already satisfies the correctness property every
+    /// consumer of `culvert_real_pairs` needs (both of `plan_to_room`'s arms
+    /// fire); this variant is kept, not deleted, as the fallback population
+    /// if four unreachable pairs ever proves too thin a population for some
+    /// future test.
+    LabAt200Ticks,
 }
 
 /// `liveness::PLAN_BUDGET` is a private const an integration test cannot
@@ -604,21 +643,26 @@ fn culvert_real_pairs(shape: Shape) -> Vec<(Facet, Facet)> {
             pairs_from(&ledger, &folds, &npcs, t, &terrain)
         }
         Shape::Lab => {
-            // Seed 42, 50 agents, 200 ticks — `session_length_scaling.rs`'s
-            // own shape at its final band (band 10 of 10, `BAND == 20`),
-            // reached through `the_detent::bench_shape`, which is that same
-            // construction counted (its own doc says so). NOT
-            // `resident_folds.rs`'s `KERF_LAB_SEED`/`KERF_LAB_TICKS`/
-            // `KERF_LAB_AGENTS` shape (seed 42 too, but only 10 ticks) — that
-            // shorter walk was measured for this task and found to reach
-            // only 27 distinct pairs with 4 unreachable, not the 83-pairs/
-            // 55-unreachable band-10 shape Task 2's report table measured.
-            // 200 ticks is `bench_shape`'s own most expensive call in this
-            // crate's test suite; both `bench_shape`/`session_length_scaling`
-            // parameters are literals here rather than shared constants
-            // (each test module keeps its own copy of a shape it did not
-            // author, the same convention this module's possession
-            // constants already follow).
+            // The Kerf's own 10-tick lab shape (`resident_folds.rs`'s
+            // KERF_LAB_SEED/KERF_LAB_TICKS/KERF_LAB_AGENTS = 42, 10, 50),
+            // repeated here as literals rather than shared constants (each
+            // test module keeps its own copy of a shape it did not author,
+            // the same convention this module's possession constants already
+            // follow) — see [`Shape::Lab`]'s own doc for why this, and not
+            // [`Shape::LabAt200Ticks`], is the correctness-testing default.
+            let lab = crate::the_detent::bench_shape(42, 10, 50);
+            let mesh = lab.mesh_memo.clone();
+            let terrain =
+                liveness::LocaleTerrain::with_fields(&lab.ctx, None, None, None, None, Some(&mesh));
+            pairs_from(&lab.ledger, &lab.folds, &lab.npcs, lab.day, &terrain)
+        }
+        Shape::LabAt200Ticks => {
+            // The identical construction as `Shape::Lab` above
+            // (`the_detent::bench_shape`, seed 42, 50 agents), run the full
+            // 200 ticks `session_length_scaling.rs` itself runs before
+            // reading its own band 10 (`BAND == 20`) — see [`Shape::
+            // LabAt200Ticks`]'s own doc for the cost this pays (129.337 s
+            // measured) and why nothing unignored uses it.
             let lab = crate::the_detent::bench_shape(42, 200, 50);
             let mesh = lab.mesh_memo.clone();
             let terrain =
@@ -683,14 +727,40 @@ fn culvert_sweep_collapses_calls_onto_distinct_pairs() {
 
 /// **The three Task-6 helpers, exercised directly.** `culvert_real_pairs`
 /// must yield a non-empty population on both shapes, or Task 6's equivalence
-/// test has nothing to compare; and [`Shape::Lab`] specifically must yield at
-/// least one pair `plan_to_room` cannot reach within
-/// [`PLAN_BUDGET_MIRROR`] — the possession shape has ZERO such pairs (this
-/// campaign's own Task 3 measurement), so without this the memo's `None`
-/// arm, 95.1% of the real cost, would be untestable and nobody would find
-/// out until Task 6.
+/// test has nothing to compare; and [`Shape::Lab`] (the cheap 10-tick shape,
+/// NOT [`Shape::LabAt200Ticks`] — see the enum's own doc) specifically must
+/// yield BOTH at least one pair `plan_to_room` reaches and at least one it
+/// cannot reach within [`PLAN_BUDGET_MIRROR`], so Task 6's equivalence test
+/// (which needs both of `plan_to_room`'s arms to fire) has a real population
+/// to draw from.
+///
+/// **This asserts the PROPERTY (both arms fire), never an exact count.**
+/// An earlier round of this task specified the population by its NUMBERS
+/// ("55 of 83 unreachable") rather than by what it needs to be true of —
+/// which is what pointed this test at the 200-tick shape and its 129 s cost
+/// in the first place, for no correctness benefit `Shape::Lab`'s much
+/// cheaper 27-pair/4-unreachable population doesn't already provide. Pinning
+/// either count here would recreate exactly that mistake: a population that
+/// shifts by one member should not redden a correctness test.
 #[test]
 fn culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair() {
+    fn reachable_and_unreachable(pairs: &[(Facet, Facet)]) -> (usize, usize) {
+        let mut reachable = 0usize;
+        let mut unreachable = 0usize;
+        for (home, dest) in pairs {
+            match plan_to_room(
+                home,
+                dest,
+                PLAN_BUDGET_MIRROR,
+                &std::collections::BTreeSet::new(),
+            ) {
+                Some(_) => reachable += 1,
+                None => unreachable += 1,
+            }
+        }
+        (reachable, unreachable)
+    }
+
     let possession = culvert_real_pairs(Shape::Possession);
     assert!(
         !possession.is_empty(),
@@ -703,6 +773,47 @@ fn culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair() {
         "denominator: the lab shape implies no (home, dest) pairs"
     );
 
+    let (lab_reachable, lab_unreachable) = reachable_and_unreachable(&lab);
+    println!(
+        "culvert_real_pairs: possession {} pairs, lab {} pairs ({lab_reachable} reachable, \
+         {lab_unreachable} unreachable within PLAN_BUDGET_MIRROR={PLAN_BUDGET_MIRROR})",
+        possession.len(),
+        lab.len()
+    );
+    assert!(
+        lab_reachable > 0,
+        "Shape::Lab must yield at least one (home, dest) pair plan_to_room CAN reach within \
+         PLAN_BUDGET_MIRROR ({PLAN_BUDGET_MIRROR}), or Task 6's Some arm is untestable; found \
+         0 of {} lab pairs reachable",
+        lab.len()
+    );
+    assert!(
+        lab_unreachable > 0,
+        "Shape::Lab must yield at least one (home, dest) pair plan_to_room CANNOT reach \
+         within PLAN_BUDGET_MIRROR ({PLAN_BUDGET_MIRROR}), or Task 6's None arm is \
+         untestable; found 0 of {} lab pairs unreachable",
+        lab.len()
+    );
+}
+
+/// The SAME correctness property as
+/// [`culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair`],
+/// read over [`Shape::LabAt200Ticks`] instead of the cheap [`Shape::Lab`] —
+/// kept as a fallback population and a standing cost record, not run at
+/// commit or stage-gate cadence. See [`Shape::LabAt200Ticks`]'s own doc for
+/// why it exists rather than being deleted.
+#[test]
+#[ignore = "129.337s measured (a quiet box, 1-min load 4.09, optimized test profile) -- the \
+            cheap Shape::Lab (resident_folds.rs's 10-tick bench_shape) already exercises both \
+            of plan_to_room's arms at a fraction of this cost, so this variant is not run at \
+            commit or stage-gate cadence; kept as the fallback population per docs/superpowers/\
+            plans/2026-09-05-the-culvert.md, Task 4 fix round 1"]
+fn the_expensive_200_tick_lab_shape_also_has_an_unreachable_pair() {
+    let lab = culvert_real_pairs(Shape::LabAt200Ticks);
+    assert!(
+        !lab.is_empty(),
+        "denominator: the 200-tick lab shape implies no (home, dest) pairs"
+    );
     let unreachable = lab
         .iter()
         .filter(|(home, dest)| {
@@ -716,18 +827,14 @@ fn culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair() {
         })
         .count();
     println!(
-        "culvert_real_pairs: possession {} pairs (0 expected unreachable), lab {} pairs \
-         ({unreachable} unreachable within PLAN_BUDGET_MIRROR={PLAN_BUDGET_MIRROR})",
-        possession.len(),
+        "Shape::LabAt200Ticks: {} pairs, {unreachable} unreachable within \
+         PLAN_BUDGET_MIRROR={PLAN_BUDGET_MIRROR}",
         lab.len()
     );
     assert!(
         unreachable > 0,
-        "Shape::Lab must yield at least one (home, dest) pair plan_to_room cannot reach \
-         within PLAN_BUDGET_MIRROR ({PLAN_BUDGET_MIRROR}), or Task 6's None arm — 95.1% of \
-         the real cost — is untestable; found {unreachable} of {} lab pairs unreachable. \
-         (The possession shape is expected to have zero; check band 10 is what's being read \
-         if this fires.)",
+        "Shape::LabAt200Ticks must yield at least one unreachable pair (measured: 55 of 83); \
+         found {unreachable} of {} pairs unreachable",
         lab.len()
     );
 }
