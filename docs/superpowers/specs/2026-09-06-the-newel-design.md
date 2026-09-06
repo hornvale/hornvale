@@ -158,40 +158,80 @@ not). Completing an undiscovered settlement's name would leak exactly what
 discovery predicate the cursor readout already uses.** A task that adds
 the source without the gate is a defect even though nothing would go red.
 
-### 4.3 The client says which way it actually went (B3)
+### 4.3 A held heading must walk true (B3)
 
-Nothing computes a wrong answer. The movement takes the neighbour nearest
-the word; the raster puts the mark at the body's true position; the
-lattice cannot offer eight neighbours at exact 45-degree intervals, and a
-lattice row is not a parallel of latitude. The player's model — *west
-means straight left* — is the thing that cannot hold, and **the client
-never says so.**
+**This section was rewritten after G3.** Its first draft said nothing
+computes a wrong answer and that a held course had been deliberately
+closed. Both halves are withdrawn; see ledger R9-R10 for the measurement.
 
-The bearing is the one input to the observable that has no output: it is
-computed, used to decide where the body goes, and never shown. Everything
-else about a step is public.
+**The Pavement preregistered exactly this and its hypothesis is
+falsified.** Spec section 7, H1: *"From 200 distinct seed-42 start cells,
+walking `n` for 500 steps leaves the walker within 0.5 cell of the
+starting meridian at every step. This is the direct repair of The Rhumb's
+falsified H1 (unbounded drift, ~0.086 step-lengths per step)."*
 
-So the change is disclosure, not computation:
+Re-run over 216 start cells at walk depth 13, cross-track in step-lengths,
+equatorial faces:
 
-- **The endpaper carries the step's true bearing.** It already reads
-  `bugbear of Doaba (pop. 68) · day 0.5 · turn 0` and has room. A bearing
-  there costs no prose, is always visible, and turns an
-  apparently-stochastic surprise into a visibly deterministic fact.
-- **Second, if it earns its place: draw the walked track on the plate.**
-  `Session.trail` already exists (`go` pushes to it, `back` pops it). The
-  report is about *accumulation* — "sometimes" is twenty presses of drift
-  reaching a whole row — and a per-step bearing reports the local cause
-  while a track reports the global effect. They are not substitutes.
+| word | worst mean | fails 0.5 | vs the great circle |
+|---|---|---|---|
+| N | **0.00** | 0/144 | 0.00 |
+| S | **0.00** | 0/144 | 0.00 |
+| E | **69.85** | 144/144 | 69.85 |
+| W | **69.85** | 144/144 | 69.85 |
 
-**Explicitly rejected, and each for a stated reason:**
+North and south are exact — on a cube face the constant-`a` lines cut the
+sphere in meridians, which are great circles, so a held northward heading
+walks one. **East and west fail at every equatorial start cell**, drifting
+**0.1445 step-lengths per step** from both the parallel and the great
+circle — **1.68x The Rhumb's 0.086, the number The Pavement quotes as the
+defect it repairs.** In absolute terms: ~78 km off course over 563 km
+walked.
 
-| candidate | why not |
-|---|---|
-| a held course or rhumb, so a west walk self-corrects | The Pavement deleted `crate::course` deliberately (`session.rs:7338-7360`: *"There is no reckoned point, no held course and no rhumb"*). Reversing it needs a decision record, not a task. **Flagged for G3.** |
-| arrows follow the lattice instead of the compass | a lattice row is not a parallel either; the drift persists. Moves the surprise, does not remove it. |
-| orient the plate to the lattice so a west walk scrolls straight | north stops being up, and the clamp caption stops meaning anything. A bigger lie for a smaller comfort. |
-| tighten `heading_rose` | 267.28 degrees is already the best this lattice offers at this room. There is nothing to tighten. |
-| a threshold that discloses only a large error | `heading_rose`'s own doc refuses to author a constant in exactly this window, and it is right to. |
+H1 chose the one direction that cannot fail: for `n` the meridian and the
+great circle are the same line. And it appears never to have been run —
+the plan's Step 1 names a probe file that does not exist, and neither the
+chronicle nor the retrospective reports an H1 result, though both report
+H2 and H3.
+
+**Why the current design cannot self-correct.** A greedy per-step
+nearest-bearing rule re-resolves the word at every room, which sounds
+self-correcting and is not: the move that would cancel accumulated drift
+is a diagonal 45 degrees off the word, and it always scores worse on the
+per-step metric than the ~8-degree-off cardinal that caused the drift. So
+the residual is systematic, never cancelled, and unbounded.
+
+**And the argument that deleted `course.rs` is about one step, not a
+walk.** The Pavement's section 3.4: *"With eight real edges the mapping is
+the identity and the module's whole subject is gone."* True of a single
+bearing. False of a sequence, which still accumulates cross-track error
+and still needs the ideal line to correct against — which is what `Course`
+held.
+
+**So the change is a correction, not a disclosure**, and it needs a
+decision record superseding The Pavement's section 3.4 rather than a task
+under it. The shape is a cross-track-corrected heading: the walk carries
+the line it is meant to be on, and each step takes the neighbour that best
+serves it rather than the one that best matches the bearing in isolation.
+
+**Two things must be decided before any of that is built, and they are
+Nathan's:**
+
+1. **Which line does `west` name?** A parallel (constant bearing — what a
+   compass-holder walks) or a great circle (straight ahead, initially
+   west — what a body walks)? They differ, and **the project has never
+   decided.** The Rhumb chose the parallel by construction; The Pavement
+   chose neither, by deleting the choice; H1 chose the direction where
+   they coincide. Every number above is reported against both so the
+   choice is not prejudged.
+2. **Is 0.5 step-lengths still the right bar?** It is H1's, and H1 was
+   never run. A correction rule should be preregistered against a bar
+   chosen on purpose.
+
+Disclosure — the bearing in the endpaper, the walked trail on the plate —
+survives as a **complement**, not a substitute. Even a corrected walk
+takes discrete edges and wobbles by a fraction of a cell; saying so is
+still worth doing, and it is what makes the correction checkable by eye.
 
 ### 4.4 The marquee describes the cell, and the map's own facts decay (B4)
 
@@ -232,20 +272,31 @@ read it as pinning anything.
 
 Two independent vertex reads, and they want different fixes.
 
-**(a) The land/water boundary should read a continuous cause.**
-`tile.ocean` is `terrain.is_ocean(vertex)` and `tile.water` is
-`water_kind_at(vertex)` — both categorical, both per-vertex, and
-`color_for` branches on `water` before it ever reaches reflectance. So
-the coastline drawn at rung 13 is a 110 km Voronoi edge between icosphere
-vertices, not a coastline. But `tile.height_asl` is **already blended
-across the facet's four corners** and the scene already carries
-`sea_level_m`. Comparing the blended height to sea level is 0687 exactly:
-a continuous cause, read at facet resolution, staying inside the convex
+**(a) The land/water boundary should read a continuous cause — IN THE
+SIM, NOT THE CLIENT.** `tile.ocean` is `terrain.is_ocean(vertex)` and
+`tile.water` is `water_kind_at(vertex)` — categorical, per-vertex, and
+`color_for` branches on `water` before it ever reaches reflectance. So the
+coastline drawn at rung 13 is a 110 km Voronoi edge between icosphere
+vertices. `tile.height_asl` is **already blended** across the facet's four
+corners and the scene already carries `sea_level_m`, so comparing them is
+0687 exactly: a continuous cause at facet resolution, inside the convex
 hull of its samples (0676).
+
+**The first draft put that comparison in the client, and that is wrong.**
+The walk-band prose decides "open water" from
+`v.locale.biome_kind.is_marine()` (`windows/vessel/src/focalize.rs:228`),
+which is per-vertex. A client-only refinement means that near every
+coastline a player stands on a tile the map draws as ocean and is told
+they are in a forest — decision 0141's one-turn observable contradiction,
+and decision 0117 forbids the client re-deriving a decision the sim makes.
+So the refinement belongs in `windows/locale`, where the prose and the map
+both see it, or nowhere. That is sim-side, with walk-band prose fallout
+and committed-fixture fallout, and it is the strongest argument for
+splitting B5 into its own campaign.
 
 `plate_vocabulary.rs:153-157` asserts
 `terrain.is_ocean(tile.vertex) == tile.ocean` and therefore pins the
-current behaviour. **That assertion moves with the change** — it is the
+current behaviour. That assertion moves with the change — it is the
 statement of the defect, not a guard against a regression.
 
 **(b) The nominal fields need a finer partition, not a blend.** Biome
@@ -258,6 +309,25 @@ seeded draw). A facet chooses among its four corner vertices by a seeded
 draw weighted by `corner_weights`, instead of always taking
 `dominant_corner`. That is deterministic, per-facet, still a partition,
 and every value it can return is one of the samples.
+
+**The seeded draw is honest per value and dishonest per pattern**, and
+this is the fidelity call. It satisfies 0676 (every value it returns is
+one of the samples) and 0121 (still a partition). But it manufactures
+high-frequency spatial structure the field does not have: a
+salt-and-pepper transition reads to a player as real patchiness, in a
+world holding one biome sample per 110 km. A better member of the same
+family: **warp the partition boundary with a smooth field rather than
+dicing it** — keep the hard per-facet partition, but let a low-frequency
+noise term decide which corner wins, so patches stay coherent and only
+the boundary path is invented. `domains/terrain` already warps with
+`Fbm`, and a per-facet `micro` term already exists on this path, so the
+instrument is precedented rather than new.
+
+Stated plainly because it is the crux: **the map already invents boundary
+shape.** Today's hard edge at 1.1 km is derived from 110 km data and is no
+more justified than any other curve. The question is not whether to
+invent but which invention misleads less — a fidelity tradeoff, and
+therefore Nathan's.
 
 **This touches `windows/locale`, which is inside the cargo workspace**,
 and `reflectance_at_facet` also feeds the sim's own chart colouring
@@ -331,28 +401,37 @@ not `make gate-commit`: the workspace gate does not scan `clients/`.
 assertion here is a property assertion and each must be shown to fail
 before it passes.
 
-## 6. Flagged for review (G3)
+## 6. Flagged for review
 
-1. **Scope.** Six reports, and 4.5 is the largest single piece: it reaches
-   into `windows/locale`, changes a nominal-field rule under decision
-   0121, and moves committed client fixtures. It could be its own
-   campaign. **Nathan's call.**
-2. **4.3 rejects a held course**, which is a real design option and is
-   closed only because The Pavement closed it. If the drift should
-   instead be corrected rather than disclosed, that is a decision record
-   superseding The Pavement's, not a task in this campaign.
-3. **4.5(b) proposes a seeded draw for a nominal field.** It is
-   precedented (0667) and it introduces per-facet variation where there
-   was none — the map will look noisier at the fine rungs. That is a
-   fidelity/appearance tradeoff and therefore a carve-out: **unpacked
-   here rather than decided.** The alternative is to accept vertex-level
-   nominal fields and fix only 4.5(a), which already buys the coastline.
-4. **4.6 puts an invented spectrum in the client.** It moves no contract,
-   but it does mean the client authors a physical quantity. 0716 permits
-   it (the view owns the observer); saying so out loud is the point.
-5. **4.4 changes what a surface Nathan personally specified behaves
-   like.** The tick behaviour is untouched and pinned; the CONTENT is what
-   moves. Worth a look before it is built.
+**Revised after the first G3 round.** Nathan's challenge to B3 was correct
+and changed the campaign's centre of gravity.
+
+1. **B3 is now the largest item, and it wants a decision record.** A
+   preregistered hypothesis is falsified; the fix is a correction rule,
+   not a disclosure; and it supersedes The Pavement's section 3.4. Two
+   sub-questions are Nathan's alone: which line `west` names (parallel or
+   great circle), and what the drift bar should be now that H1's 0.5 was
+   never tested.
+2. **B5's half (a) grew.** It cannot live in the client without making
+   the map contradict the prose, so it is a `windows/locale` change with
+   prose and fixture fallout.
+3. **B5's half (b) is a fidelity call** — a seeded draw invents
+   high-frequency structure; a noise-warped boundary invents only the
+   boundary's path; today's hard edge already invents a path. Unpacked
+   here, not decided.
+4. **Scope.** With B3 grown and B5(a) moved sim-side, six reports in one
+   campaign is probably wrong. Three shapes:
+   - **all six**, sequencing B3 first and accepting that it dominates;
+   - **split three ways** — B3 alone (it is a movement-correctness
+     campaign with a decision record), B5 alone (a resolution campaign),
+     and B1/B2/B4/B6 as the command-and-appearance campaign this one
+     started as;
+   - **split two ways** — B3 out, everything else here.
+5. **4.6 puts an invented spectrum in the client.** It moves no contract,
+   but the client would author a physical quantity. 0716 permits it (the
+   view owns the observer); saying so out loud is the point.
+6. **4.4 changes a surface Nathan personally specified.** The tick
+   behaviour is untouched and pinned; only the content moves.
 
 ## 7. Non-goals
 
