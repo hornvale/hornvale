@@ -624,3 +624,28 @@ occur** — a future terrain or drive change moves seed 11's walk and this test
 reds with a message forbidding the one legitimate remedy. Name that cause and
 its corroborating evidence (the `hoist_walk_shape` golden moving in the same
 commit) so the guard does not become a trap. · ideonomy passes / overturns: 0.
+
+---
+
+#22 [G5] — **Task 3 complete; H1 discharged as preregistered, on four seeds.**
+· All four findings verified ADDRESSED by a re-review that reproduced the
+mutation itself rather than reading the report. The evidence worth keeping is
+what stayed GREEN under the swap: distinctness (both copies), the spelling
+test, `every_mode_maps_to_exactly_one_errand_key`, the
+no-authored-prose test, the errand-boundary test — **and H1 itself**, which
+passes under a swapped literal because it resolves glosses through the real
+registry rather than through the test's own table. Six tests satisfied by the
+mutation, one catching it: that is the coverage gap of #19 demonstrated rather
+than argued, and it is also an independence proof for the new table (it is not
+merely a second copy of something already checked). · **H1 as frozen in spec
+§10 now holds.** Merge base `20c0cd375` confirmed a genuine pre-flip commit by
+two independent tests — its `liveness.rs` still carries the `match st.mode`
+prose block, and it is an ancestor of the flip commit — so the before-images
+cannot have been derived after the fact. 252 entities, 1242 run-starts across
+seeds 7/11/14/23, exact equality both directions, zero disagreement. Seed 11's
+fixture is byte-identical across the fix range. A hardcoded `(252, 1242)` shape
+pin guards against a fixture table silently shrinking or a seed going quiet. ·
+Cost disclosed and accepted: H1 is ~150 s over four world builds, correctly
+outside the commit gate. · Correction to my own #19-era record: the seed-23
+fixture is **64,846 bytes (~65 KB)**, not the ~120 KB the fix report and my
+summary of it stated. · ideonomy passes / overturns: 0.
