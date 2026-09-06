@@ -293,6 +293,7 @@ hornvale-astronomy::hornvale_astronomy$pins::tests::wanderers_pin_rejects_values
 hornvale-astronomy::hornvale_astronomy$pins::tests::wanderers_pin_round_trips
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_clear_visibility_is_identical_to_the_legacy_sky
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_covering_moon_promises_total_eclipses_on_the_node_beat
+hornvale-astronomy::hornvale_astronomy$provider::tests::a_daylight_sky_never_names_the_spectral_class
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_dimmed_sky_keeps_the_moons_and_loses_the_stars
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_flat_orbit_eclipses_every_new_moon
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_hidden_sky_names_the_dark_and_nothing_else
@@ -1270,9 +1271,11 @@ hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_281_column_census
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_287_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1348,6 +1351,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
+hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -2010,6 +2014,18 @@ hornvale-locale::hornvale_locale$surface::tests::a_desert_vertex_leans_sand_or_s
 hornvale-locale::hornvale_locale$surface::tests::legend_index_and_name_agree_for_every_variant
 hornvale-locale::hornvale_locale$tests::the_eight_bearings_are_distinct_and_evenly_spaced
 hornvale-locale::suite$water_reading::the_schema_tag_is_still_v2
+hornvale-lot::suite$draw::a_world_without_the_fact_is_refused
+hornvale-lot::suite$draw::uniform_is_pure_and_label_sensitive
+hornvale-lot::suite$hazard::calibration_band_holds_at_the_human_anchor
+hornvale-lot::suite$hazard::death_age_is_the_inverse_of_survival
+hornvale-lot::suite$hazard::e0_is_monotone_in_lifespan_and_strife
+hornvale-lot::suite$hazard::survival_starts_at_one_and_is_nonincreasing
+hornvale-lot::suite$shape::a_community_that_died_before_plateau_is_a_triangle
+hornvale-lot::suite$shape::epoch_years_matches_the_bakes_own_default
+hornvale-lot::suite$shape::every_seed_42_occupation_reconstructs_to_its_committed_integral
+hornvale-lot::suite$shape::rise_then_plateau_has_the_committed_area_and_peak
+hornvale-lot::suite$streamless::the_lot_window_draws_nothing
+hornvale-lot::suite$streamless::word_boundary_self_test::matches_a_bare_word_but_not_a_substring_of_a_longer_identifier
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::genesis_commits_the_frost_retreat_and_maximum
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::register_is_idempotent
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::zero_ice_world_records_no_frost_retreat
@@ -3679,6 +3695,7 @@ hornvale-worldgen::suite$history_emit::emit_is_deterministic
 hornvale-worldgen::suite$history_emit::end_of_life_facts_are_day_stamped_at_ended_not_founded
 hornvale-worldgen::suite$history_emit::founded_from_and_ended_by_resolve_to_the_right_entities
 hornvale-worldgen::suite$history_emit::occupation_records_round_trip_every_committed_field
+hornvale-worldgen::suite$history_emit::person_years_matches_epochs_credited_at_their_end
 hornvale-worldgen::suite$history_emit::present_frame_crosses_the_bake_year_by_days_per_year
 hornvale-worldgen::suite$history_emit::same_day_layers_order_by_material_facts_not_mint_order
 hornvale-worldgen::suite$history_emit::territories_group_alive_occupations_by_people
@@ -3848,6 +3865,7 @@ hornvale::hornvale$tests::usage_mentions_biome_map
 hornvale::hornvale$tests::usage_mentions_book_at
 hornvale::hornvale$tests::usage_mentions_dictionary
 hornvale::hornvale$tests::usage_mentions_lab
+hornvale::hornvale$tests::usage_mentions_lot
 hornvale::hornvale$tests::usage_mentions_paleo_map
 hornvale::hornvale$tests::usage_mentions_proto
 hornvale::hornvale$tests::usage_mentions_scene

@@ -124,17 +124,18 @@ through `agent_at_fact` — the same constructor the drive tick uses for a
 creature's step.
 
 The observable is the day-zero transcript, and it is the cleanest evidence the
-arc produced. Every room and chamber stamp in it used to read `day 0`. A step
-inside a chamber now costs 0.01172 days and a walk-band step ten times that,
-and no two walk-band steps cost quite the same, because the uphill factor
-between the two rooms is real and is read before the position moves. By the
-time the body has gone into a building, crossed it, come out and walked three
-cells, the sky has passed from *Night* to *Twilight. The horizon glows gold.*
-to *The sun, a yellow dwarf (G), climbs the morning sky.* Not one line of the
-sky model changed; the body simply stopped being free, and the fraction of a
-day it now spends carries downstream — the 90-day wait that closes the
-transcript lands somewhere else, on a different evening, with six more
-creatures having stirred.
+arc produced. `!whoami`'s day report — the room and chamber header itself no
+longer carries one, since The Ken moved it there for good — used to read
+`day 0` throughout. A step inside a chamber now costs 0.01172 days and a
+walk-band step ten times that, and no two walk-band steps cost quite the
+same, because the uphill factor between the two rooms is real and is read
+before the position moves. By the time the body has gone into a building,
+crossed it, come out and walked three cells, the sky has passed from *Night*
+to *Twilight. The horizon glows gold.* to *The sun climbs the morning sky.*
+Not one line of the sky model changed; the body simply stopped being free,
+and the fraction of a day it now spends carries downstream — the 90-day wait
+that closes the transcript lands somewhere else, on a different evening,
+with six more creatures having stirred.
 
 That the trail is a creature's trail is asserted on the envelope rather than on
 a count. The player's committed facts and a creature's are compared field set

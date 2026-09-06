@@ -329,7 +329,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5500 over 120 pairs; eighth canonical reading, incomparable like the seventh and for a compound reason: The Warp grew the evaluable surface 139 -> 170 columns (excluded 51 -> 52), and ablating the warp family reproduces The Weft's exact 139-column surface but reads 67/120, not its 69/120 - the 32 new columns displaced ONE hit (phonology 17 -> 16) and this campaign's re-parameterised spring/overhang moved the Weft's own columns in value for the other two. Ablating warp AND weft restores The Winze's 118-column surface and reads 72/120 arm for arm (20, 4, 20, 2, 7, 19), unchanged across two further epochs. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5417 over 120 pairs; ninth canonical reading, incomparable like the seventh and eighth: The Lot grew the evaluable surface 170 -> 176 columns (excluded unchanged at 52) with six lot-* metrics and moved no shared column on any of 1,000 rows; ablating the lot family reproduces The Warp's exact 170-column surface and its 66/120 - the six new columns displaced ONE hit (pantheon 6 -> 5) and nothing else moved, the first re-read since The Winze whose ablation is non-null in exactly one direction. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -675,7 +675,40 @@ fn h1_recall_at_10() {
 /// family that CHANGED since the pinned reading — the one that was added and
 /// the ones whose values moved — and report the ladder, not one rung of it.
 ///
-/// claim: invariant(the committed battery scores exactly 66 hits over 120
+/// **RE-READ A NINTH TIME AT THE LOT'S CLOSE (2026-09-06), AND THIS TIME THE
+/// ABLATION IS NON-NULL IN EXACTLY ONE DIRECTION.** The Lot registered six
+/// numeric `lot-*` metrics over 200 lives drawn per world. All six vary across
+/// the thousand worlds and enter the ranked surface; none is excluded. The
+/// surface grew 170 -> 176 with excluded columns unchanged at 52 (the census's
+/// metric columns, 281 -> 287). Its goldens were authored on lefford at
+/// `6e46132790fb` (delivered as `d2bd513f1`), and the eight fixture arms were
+/// re-authored there against them under the same box claim a census takes
+/// (manifest sha `d2bd513f1`, 8 arms x 20 rows, zero refusals, 7 m 06 s wall).
+///
+/// On the full new surface the witness reads **65/120 = 0.5417**, zero void
+/// pairs. Arm for arm: geothermal 20/20, unconformity 2/20, aquifer 20/20,
+/// karst 2/20, pantheon 5/20, phonology 16/20. The bar is still 0.60 and this
+/// re-read does not move it.
+///
+/// **Two independent measurements say the move is the surface and nothing
+/// else.** First, a shared-column diff of the census before and after this
+/// refresh: 1,000 rows, 284 shared columns, ZERO values moved — the refresh is
+/// purely additive, so the value mechanism The Warp had to separate cannot be
+/// present. Second, the ablation: dropping `lot-*` from the in-memory census
+/// reproduces The Warp's surface exactly (170 evaluable, 52 excluded) and
+/// reads **66/120** — the previous pin, to the integer, so the test at its
+/// old value passes on the ablated census. The six new columns displaced one
+/// hit, in the pantheon arm, and that is the whole move. The Warp's ladder
+/// below it (67/120 without `warp-*`, 72/120 without `warp-*` and `weft-*`)
+/// is untouched by an additive refresh and was not re-measured.
+///
+/// So 65/120 is the ninth canonical reading and the third consecutive
+/// **incomparable** one. The six-epoch series stays 0.5667 / 0.6083 / 0.6000 /
+/// 0.6083 / 0.6083 / 0.6000, and the verdict stays "cannot tell". What this
+/// re-read adds is the control the family-by-family rule wanted: when the
+/// diff says additive, the single-family ablation IS the ladder.
+///
+/// claim: invariant(the committed battery scores exactly 65 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -688,13 +721,13 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (66, 120, 0, 0),
+        (65, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's finding (recall@10 now reads 66/120 = 0.5500 against the \
+         Gnomon's finding (recall@10 now reads 65/120 = 0.5417 against the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
-         adjudicate; this eighth reading is incomparable to the six-epoch \
-         series, as the seventh was, because its measured ablation is non-null \
-         in TWO directions at once, see the doc comment), and it is pinned so \
+         adjudicate; this ninth reading is incomparable to the six-epoch \
+         series, as the seventh and eighth were; its ablation is non-null in \
+         exactly ONE direction, the new surface, see the doc comment), and it is pinned so \
          that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
          surface, the census, or the fixtures — cannot silently turn the \

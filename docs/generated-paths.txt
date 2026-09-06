@@ -121,7 +121,7 @@
 # than an inert mistake: there is no circumstance, including `REBASELINE=1`,
 # under which regenerating it is correct.
 
-# --- book/src/gallery/ — 56 tracked, 45 `artifacts`-written; 11 exceptions ---
+# --- book/src/gallery/ — 60 tracked, 46 `artifacts`-written; 14 exceptions ---
 book/src/gallery/	artifacts
 book/src/gallery/almanac.md	none(hand-written prose, never regenerated)
 book/src/gallery/atlas.md	none(hand-written prose, never regenerated)
@@ -133,13 +133,25 @@ book/src/gallery/the-meeting-seed-42.md	none(hand-written prose, never regenerat
 book/src/gallery/the-sky.md	none(hand-written prose, never regenerated)
 book/src/gallery/vessel.js	none(written by the Casement client build -- clients/vessel/deno.json, run via `make vessel-check` -- not a roster author)
 book/src/gallery/vessel-worker.js	none(written by the Casement client build -- clients/vessel/deno.json, run via `make vessel-check` -- not a roster author)
+book/src/gallery/lot.js	none(written by the Lot client build -- clients/lot/deno.json, run via make lot-check -- not a roster author)
+book/src/gallery/lot-worker.js	none(written by the Lot client build -- clients/lot/deno.json, run via make lot-check -- not a roster author)
+book/src/gallery/the-lot.md	none(hand-written prose, never regenerated)
 book/src/gallery/lithology-seed-42.png	none(no current writer -- `hornvale map --field lithology` is a retired invocation; regenerate-artifacts.sh only ever calls --field for sediment/column/features; last touched 2026-07-14)
+# THE ALREADY-DECLARED-DIRECTORY HAZARD, declared by name (The Stope, Task 2b;
+# The Lot, Task 8). `book/src/gallery/` above already covers this file's
+# directory, so nothing would have objected to it staying out of the index --
+# and `git diff --exit-code` against a path with no index entry is silently
+# vacuous, so the drift check on the ten lives would have passed forever while
+# witnessing nothing. Declaring the FILE makes the tracked-ness check refuse
+# until it is `git add`-ed.
+book/src/gallery/generated/the-lot-seed-42.md	artifacts
 
-# --- book/src/reference/ — 21 tracked, 9 `artifacts`-written; 12 exceptions ---
+# --- book/src/reference/ — 22 tracked, 9 `artifacts`-written; 13 exceptions ---
 book/src/reference/	artifacts
 book/src/reference/concept-registry.md	none(hand-written prose companion to concept-registry-generated.md, never regenerated)
 book/src/reference/layering.md	none(hand-written prose companion to layering-generated.md, never regenerated)
 book/src/reference/lexicon-of-place.md	none(hand-written prose, never regenerated)
+book/src/reference/individuals.md	none(hand-written prose, never regenerated -- the four kinds of individual, The Lot Task 12)
 book/src/reference/stream-manifest.md	none(hand-written prose companion to stream-manifest-generated.md, never regenerated)
 book/src/reference/scene-eclipses-v2.md	none(hand-written schema-reference prose, never regenerated)
 book/src/reference/scene-moons-v1.md	none(hand-written schema-reference prose, never regenerated)

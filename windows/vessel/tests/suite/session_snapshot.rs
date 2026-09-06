@@ -53,11 +53,17 @@ const SCRIPT: &[&str] = &["look", "examine sky", "!whoami"];
 /// the committed transcript is produced by `scripts/regenerate-artifacts.sh`
 /// running `hornvale possess --world … --script …` with **no `--day` flag**,
 /// and the CLI's `parse_possess_day` defaults to `"0"` (cli/src/main.rs:393).
-/// `describe_here` interpolates that day straight into the room header, so the
-/// transcript reads `[room 738918402, day 0]`. `PossessOpts::default()` is
-/// `day: 0.5` (a deliberate choice so a bare `wait 1` lands at noon again), and
-/// using it here would render `day 0.5` and fail the comparison against a
-/// transcript that is not wrong — only taken at a different hour.
+///
+/// **The Ken, Task 3: the header itself stopped carrying this number** — it
+/// now reads plain `[room]`, with no id and no day. The reason GENESIS still
+/// has to match still holds, just one row lower: `sky_at`'s description
+/// (`domains/astronomy`) is baked straight into the prose one line under the
+/// header (`f.prose`, "The sky above: …"), and that phrase — `Night.`,
+/// `Twilight.`, `The sun climbs the morning sky.` — depends on the hour, not
+/// only the day. `PossessOpts::default()` is `day: 0.5` (a deliberate choice
+/// so a bare `wait 1` lands at noon again), and using it here would render a
+/// different sky phrase and fail the comparison against a transcript that is
+/// not wrong — only taken at a different hour.
 fn opts() -> PossessOpts {
     PossessOpts {
         day: hornvale_kernel::WorldTime::GENESIS,

@@ -4067,6 +4067,102 @@
       "rung": "terrain"
     },
     {
+      "buckets": [
+        10000.0,
+        30000.0,
+        100000.0,
+        300000.0,
+        1000000.0
+      ],
+      "doc": "Souls ever: the integral of the world's births curve, the number of lives the world has held; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-souls-ever",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        5.0,
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        60.0
+      ],
+      "doc": "Median age at death over lots 0-199, in scaled years (age x 60 / the people's lifespan); Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-median-scaled-death-age",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.75
+      ],
+      "doc": "Share of lots 0-199 whose life ended in, or moved at, its community's own committed ending; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-witness-community-end-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.75
+      ],
+      "doc": "Share of lots 0-199 whose subsistence slot is silent — culture facts attach to living settlements; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-silent-subsistence-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        8.0,
+        10.0,
+        12.0,
+        14.0,
+        16.0,
+        18.0,
+        20.0
+      ],
+      "doc": "Mean number of the 22 non-by-design story slots filled per lot over lots 0-199; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-slots-filled-mean",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.75
+      ],
+      "doc": "Share of lots 0-199 born in the last quarter of the bake span; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-born-last-quarter-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -4076,7 +4172,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x110595f7822d0a44"
+    "fnv1a64": "0xfef1ab2eda27707a"
   },
   "schema_version": 1,
   "study": {

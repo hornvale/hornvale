@@ -49,5 +49,6 @@ instrument's own bias in its own output; it does not correct for it.
 - `windows/historiography`
 - `windows/lab`
 - `windows/locale`
+- `windows/lot`
 - `windows/scene`
 - `windows/sentiment`

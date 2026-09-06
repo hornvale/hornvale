@@ -2567,6 +2567,32 @@ that name; that remains a per-surface regression test each time. The standing
 lesson gains a clause: a check is blind not only where it does not reach, but
 wherever the code it covers cannot yet produce the output that would fail it.
 
+**Re-scored by [The Ken](./chronicle/the-ken.md) (2026-09-06): a sixth surface,
+found by a player rather than by any check, and a second failure shape the
+row had not yet named.** The presence line built a wild group's displayed
+noun from `species` while `examine` matched on `label` — the same
+denies-a-noun-it-just-printed shape The Handle and The Cruck had already
+found on four surfaces and a fifth, but this one escaped every mechanized
+form of the contract rather than an unreached one: the roster was reachable
+in ordinary play, the check simply never looked at it, because nothing had
+told the check this roster existed. It surfaced from report #12, a player
+saying a white dragon "said" it was a black one, not from the ledger's own
+instrument.
+
+Fixing the display half exposed a second shape this row had not yet
+distinguished from the first: **a noun can be printed, accepted, *and*
+answered wrong.** With three same-suffix labels in one room, `examine
+dragon` no longer denied the noun — it silently picked one, confidently and
+arbitrarily, which is a worse failure than a refusal because it gives the
+player no signal a choice was even made. The fix refuses instead of
+guessing, which converts this instance but establishes no general check for
+it: nothing yet asserts that an ambiguous needle is never silently resolved,
+anywhere else in the parser it could recur. The standing lesson holds
+without amendment — a surface escapes a check either by being unreached or
+by never having been told to look — and gains a worked example of the
+second: the check existed, the surface was live, and nobody had pointed the
+one at the other.
+
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
@@ -5472,3 +5498,57 @@ Unscored as a bet — it resolves nothing that was open. It is filed as an
 instrument correction: the population a measurement is taken over decides
 whether a constant is a finding or a fact, and this chapter now carries one
 example of each.
+
+### The census's dual, and what one life can be told from the ledger (2026-09-05)
+
+[The Lot](./chronicle/the-lot.md) built the census's opposite number. The census
+aggregates the record into two hundred columns over a thousand worlds; the lot
+draws one life out of one world's whole history and tells it from committed
+facts alone, so that the questions the story cannot answer are counted rather
+than filled. Two of its six preregistered predictions were about that count,
+and both were confirmed at a resolution the census cannot reach.
+
+**The record fills 17.5 to 18.2 of 22 questions per life**, across nine seeds
+at two hundred lives each — where a question is a named slot in a fixed roster,
+and four further slots that no domain models at all are declared silent by
+design and excluded so the number measures the world rather than the lens.
+That is a higher figure than the campaign expected, and it is the first
+quantity this project has that answers *at the level of a person* the question
+this chapter has otherwise only asked at the level of a settlement, a people or
+a sky.
+
+**The silences are not distributed noise; they have one cause.** Subsistence
+and social standing are silent for 76 to 95% of lives, and the reason is
+structural: the record's cultural facts attach to *living* settlements, and the
+great majority of person-years were lived in communities that have since ended.
+So the cultural record does not reach backwards. A lens over the deep past sees
+economy and rank on the few communities still standing and nothing at all on
+the rest — which is a fact about where the world writes culture down, not about
+how much culture it has.
+
+**This is a new instrument over an old question in this chapter.** The
+constant-column entries above ask whether a registered vocabulary is ever
+exercised, and answer it by looking for variation across seeds. The lot asks
+the harder half of the same question — whether the record *reaches an
+individual* at all — and answers it by naming every question in advance and
+counting the refusals. The two are complementary and disagree about nothing:
+the first finds a column that cannot move, the second finds a question nothing
+can answer, and a project that only had the first would read a fully-populated
+census as evidence that the world is legible at every scale.
+
+**Two predictions were falsified, and the second is an accounting error worth
+carrying.** A representative life is shorter than the design expected — the
+median scaled age at death is 8.95 to 15.79 and under ten on three seeds,
+against a predicted band of ten to thirty-five — which is what the mortality
+model says once its infant term is calibrated to the pre-modern band it was
+frozen against. And the share of lives that witness their own community's
+ending is 0.015 to 0.075, below the predicted floor on five of eight growing
+seeds. That prediction was derived from a measurement of *person-years* in
+communities that ended, twelve to thirty-four percent; a life of ten to thirty
+years laid against a tenure of fifty to two hundred rarely overlaps the single
+year the ending falls in. **The two quantities have the same units and count
+different things**, and the derivation moved between them without saying so.
+
+Unscored against any standing bet: nothing in this chapter's own text stakes a
+claim the readout moves, and the accounting above is filed as a new axis rather
+than a re-score of an existing one.

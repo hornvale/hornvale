@@ -286,6 +286,15 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
             Value::Number(f64::from(record.core.peak_population)),
             day,
         )?;
+        // Stamped at `end_day`, like `occ-delve-depth`: an integral over the
+        // whole tenure only becomes true as the occupation closes, so an
+        // alive occupation's still-alive value is committed at its founding
+        // day (`end_day` falls back to `day` while alive).
+        commit_on(
+            hornvale_history::OCC_PERSON_YEARS,
+            Value::Number(record.core.person_years),
+            end_day,
+        )?;
         commit_on(
             hornvale_history::OCC_TECH,
             Value::Text(tech_label(record.core.tech).to_string()),
@@ -623,6 +632,11 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
     // (The Winze, spec §4.2), so this is a defaulting read and never a
     // `?`-return the way the load-bearing facts above are.
     let delve_depth_m = occ_number(world, entity, hornvale_history::OCC_DELVE_DEPTH).unwrap_or(0.0);
+    // ABSENT MEANS "saved before The Lot", never "lived nobody": the emitter
+    // commits the fact for every occupation, so a 0.0 here is the signature
+    // of a pre-campaign world, which `hornvale_lot` refuses by checking that
+    // no occupation in the world carries the predicate at all.
+    let person_years = occ_number(world, entity, hornvale_history::OCC_PERSON_YEARS).unwrap_or(0.0);
     let ended_by = match world
         .ledger
         .value_of(entity, hornvale_history::OCC_ENDED_BY)
@@ -653,6 +667,7 @@ fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationR
             cause,
             notability,
             delve_depth_m,
+            person_years,
         },
         id: entity,
         founded_from,

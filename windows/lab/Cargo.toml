@@ -22,5 +22,9 @@ hornvale-species = { path = "../../domains/species" }
 hornvale-history = { path = "../../domains/history" }
 hornvale-language = { path = "../../domains/language" }
 hornvale-hearsay = { path = "../hearsay" }
+# The Lot's six `lot-*` metrics (The Lot, Task 9): a window depending on
+# another window is permitted (`windows/CLAUDE.md`) — `windows/lab` already
+# depends on `windows/worldgen` for the same reason.
+hornvale-lot = { path = "../lot" }
 serde = { workspace = true }
 serde_json = { workspace = true }

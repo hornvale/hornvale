@@ -214,9 +214,14 @@ const NEED: f64 = 1.0;
 /// plumb: pending(wave-1)
 const GROWTH_RATE: f64 = 0.2;
 /// Fraction of a community's population that survives an orderly migration to
-/// a new vertex (the rest is lost on the journey).
+/// a new vertex (the rest is lost on the journey). `pub` since The Lot: the
+/// lot's discrete community-fate hazard (spec 2026-09-05-the-lot §4.3) reads
+/// this same save-format constant for `Fled`/`Migrated` endings rather than
+/// mirroring it — a copy would drift silently the day the bake's own value
+/// moves.
 /// plumb: pending(wave-1)
-const MIGRATE_SURVIVAL: f64 = 0.9;
+/// type-audit: bare-ok(ratio)
+pub const MIGRATE_SURVIVAL: f64 = 0.9;
 /// How much stronger a raider must be than its target to attack (the dominance
 /// margin). A save-format constant: changing it re-fights every world's
 /// history.
@@ -227,8 +232,13 @@ const RAID_MARGIN: f64 = 1.5;
 /// population: value leaves the system rather than being transferred. This is
 /// the primary dissipation, and it is what makes a serial raider grind itself
 /// down instead of snowballing.
+/// `pub` since The Lot: the lot's discrete community-fate hazard (spec
+/// 2026-09-05-the-lot §4.3) reads this same save-format constant for
+/// `Burned`/`Breached`/`Famine`/`Plague` endings rather than mirroring it —
+/// a copy would drift silently the day the bake's own value moves.
 /// plumb: pending(wave-1)
-const WAR_LOSS: f64 = 0.3;
+/// type-audit: bare-ok(ratio)
+pub const WAR_LOSS: f64 = 0.3;
 /// Population below which a broken, displaced remnant dies out rather than
 /// cascading further — the avalanche cutoff, and the second dissipation.
 /// plumb: pending(wave-1)
@@ -761,10 +771,12 @@ const GENESIS_SITES_MIN: u32 = 2;
 const GENESIS_SITES_MAX: u32 = 4;
 /// Starting population of a genesis proto-community.
 /// plumb: pending(wave-1)
-const GENESIS_POP: f64 = 10.0;
+/// type-audit: bare-ok(count)
+pub const GENESIS_POP: f64 = 10.0;
 /// Starting population of a daughter community.
 /// plumb: pending(wave-1)
-const DAUGHTER_POP: f64 = 8.0;
+/// type-audit: bare-ok(count)
+pub const DAUGHTER_POP: f64 = 8.0;
 /// How strongly river proximity sharpens site selection (Task 5b). Genesis
 /// candidate ranking and daughter founding — the two paths that OPEN new
 /// occupations — score a vertex by `capacity * (1.0 + RIVER_SITE_WEIGHT *
@@ -1565,6 +1577,10 @@ struct Bake<'a> {
     epoch_growth: Vec<f64>,
     /// The running event tally.
     tally: BakeCensus,
+    /// The bake's epoch length in years (`cfg.epoch_years`), borrowed once at
+    /// construction so [`Bake::live_an_epoch`] reads the same number [`bake`]'s
+    /// own epoch loop steps by, rather than a second literal.
+    epoch_years: f64,
 }
 
 /// The outcome of [`Bake::relocate`]ing a homeless people.
@@ -2685,6 +2701,7 @@ impl<'a> Bake<'a> {
                 cause: None,
                 notability: Notability::Common,
                 delve_depth_m: 0.0,
+                person_years: 0.0,
             },
             community: id,
             lineage,
@@ -3430,6 +3447,63 @@ impl<'a> Bake<'a> {
         let cut = population * tech_weight(tech) * DELVE_M_PER_PERSON_EPOCH;
         self.records[rec].core.delve_depth_m += cut;
         cut
+    }
+
+    /// One epoch of living, for The Lot's draw weight: accrue this
+    /// community's live population over the epoch onto its record's
+    /// `person_years`.
+    ///
+    /// **Called from exactly ONE place: the epoch loop in [`bake`], once per
+    /// epoch, after `resolve_flights` and before the year advances — never
+    /// from `grow`, `deepen`'s founding companion, or any `open` call site.**
+    /// It used to be called from six places (once per community per epoch in
+    /// `grow`, plus a founding-epoch credit beside every `open` that could
+    /// close before its own first `grow`), and that per-site design
+    /// double-counted and under-counted at once across a same-epoch handoff:
+    /// the epoch loop runs `step_community` (→ `grow`) for every alive
+    /// community FIRST, then `raid_phases`/`settle_revolts`/
+    /// `collect_tribute`/`resolve_flights`, which can close some of those same
+    /// communities and open their successors — both at the SAME `year`. A
+    /// community closed at year Y had already been credited (via `grow`) for
+    /// the epoch `[Y, Y+25)`, a window OUTSIDE its own tenure `[founded, Y)`;
+    /// its successor (a raid seat, a relocation, a climate-eviction daughter),
+    /// opened at Y with its own founding credit, claimed the SAME window a
+    /// second time. Measured directly on seed 42: occupation 880 (founded 0,
+    /// ended 450) and its raid-seat successor 925 (founded 450) both
+    /// accrued `[450, 475)`.
+    ///
+    /// The fix is to stop crediting per-site and credit once, per epoch, for
+    /// every community that is alive at the moment the epoch loop iteration
+    /// finishes acting on it:
+    /// - A community alive at an epoch's end (it survived `grow` and every
+    ///   later phase this iteration) is credited for that epoch — it was
+    ///   alive throughout, tenure includes it.
+    /// - A community closed DURING this epoch (by `grow`'s pressure branch,
+    ///   a raid, a climate eviction, or a flight) is NOT credited for it: it
+    ///   is not `alive` any more when this loop runs.
+    /// - A community OPENED during this epoch (a daughter, a raid seat, a
+    ///   relocation) and still alive when this loop runs IS credited for its
+    ///   opening epoch.
+    ///
+    /// **The integral is sampled at epoch ends, not continuously — this is
+    /// coarser than raw tenure, and deliberately so.** A raid cascade's
+    /// intermediate hop (opened at one sub-year raid phase, closed at a
+    /// later phase of the SAME epoch, by a different snapshot-original
+    /// raider) carries strictly positive tenure but is never `alive` at any
+    /// epoch's end, so it is credited zero times — same as a same-phase,
+    /// zero-tenure handoff, just the general case rather than the trivial
+    /// one. An occupation that never survives to an epoch's end carries
+    /// `0.0`, and such an occupation contains no whole year, so The Lot's
+    /// draw never places a birth in it either (the draw bins births at year
+    /// midpoints).
+    ///
+    /// Ledgered as campaign ledger #12, superseding the two-call-site design.
+    fn live_an_epoch(&mut self, idx: usize) {
+        let (rec, population) = {
+            let c = &self.communities[idx];
+            (c.record, c.population)
+        };
+        self.records[rec].core.person_years += population * self.epoch_years;
     }
 
     /// The campaign's mechanism (The Winze, spec §4.3): `cut` metres of
@@ -4337,6 +4411,7 @@ pub fn bake(
         tribute: BTreeMap::new(),
         epoch_growth: Vec::new(),
         tally: BakeCensus::default(),
+        epoch_years: cfg.epoch_years,
     };
 
     // 1. Seed the ancient world at each people's OWN best ground — one alive
@@ -4450,6 +4525,16 @@ pub fn bake(
         bake.settle_revolts();
         let fleeing = bake.collect_tribute(year, &era);
         bake.resolve_flights(fleeing, &era, year);
+        // The Lot's draw weight (occ-person-years), accrued ONCE per epoch,
+        // here, at the end — not inside `grow` or beside any `open` call.
+        // See [`Bake::live_an_epoch`]'s doc for why a per-site accrual
+        // double-counted and under-counted at once across a same-epoch
+        // handoff, and why this single end-of-epoch pass is the fix.
+        for idx in 0..bake.communities.len() {
+            if bake.communities[idx].alive {
+                bake.live_an_epoch(idx);
+            }
+        }
         year += cfg.epoch_years;
     }
 
@@ -4500,6 +4585,10 @@ pub fn bake(
         })
         .collect();
 
+    // No final person-years sweep is needed here: the epoch loop above runs
+    // `while year < end_year`, so its last iteration's own end-of-epoch
+    // accrual pass already credits every community still alive at
+    // `end_year`. A sweep here would double-credit that epoch.
     History {
         records: bake.records,
         now,
@@ -4606,6 +4695,7 @@ mod tests {
                 tribute: BTreeMap::new(),
                 epoch_growth: Vec::new(),
                 tally: BakeCensus::default(),
+                epoch_years: 25.0,
             };
             bake.working_site(&era, from, 0)
         };
@@ -4805,6 +4895,7 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            epoch_years: 25.0,
         };
 
         // Genesis: R1 opens at vertex 5. A genesis community is its own
@@ -4947,6 +5038,7 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            epoch_years: 25.0,
         };
 
         // Raider on poor vertex 0 (population 30, no stores); target on the
@@ -5289,6 +5381,7 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            epoch_years: 25.0,
         }
     }
 
@@ -5452,6 +5545,7 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            epoch_years: 25.0,
         };
 
         let north_idx = bake.open(
