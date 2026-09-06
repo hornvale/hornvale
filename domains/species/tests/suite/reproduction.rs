@@ -67,6 +67,28 @@ fn operation_capabilities_preserve_authored_order_and_can_offer_multiple_pathway
 }
 
 #[test]
+fn every_populated_accessor_preserves_authored_order() {
+    let development_sites = vec![DevelopmentSite::Workshop, DevelopmentSite::Body];
+    let support_modes = vec![SupportMode::Group, SupportMode::Individual];
+    let roles = vec![ReproductiveRole::Builder, ReproductiveRole::Host];
+
+    let profile = affordances(
+        vec![ReproductiveOperation::Grow, ReproductiveOperation::Support],
+        development_sites.clone(),
+        support_modes.clone(),
+        roles.clone(),
+        vec![
+            TransitionCapability::Seasonal,
+            TransitionCapability::Maturation,
+        ],
+    );
+
+    assert_eq!(profile.development_sites(), development_sites);
+    assert_eq!(profile.support_modes(), support_modes);
+    assert_eq!(profile.roles(), roles);
+}
+
+#[test]
 fn site_and_support_are_explicit_not_inferred_from_a_readable_category() {
     use ReproductiveOperation::{Grow, Release, Support};
 
@@ -270,6 +292,73 @@ fn duplicate_capabilities_are_rejected_instead_of_obscuring_authored_order() {
     assert_eq!(
         profile.validate(),
         Err("reproductive operations must not contain duplicates")
+    );
+}
+
+#[test]
+fn duplicate_development_sites_are_rejected() {
+    let profile = affordances(
+        vec![ReproductiveOperation::Make],
+        vec![DevelopmentSite::Egg, DevelopmentSite::Egg],
+        vec![],
+        vec![],
+        vec![],
+    );
+
+    assert_eq!(
+        profile.validate(),
+        Err("development sites must not contain duplicates")
+    );
+}
+
+#[test]
+fn duplicate_support_modes_are_rejected() {
+    let profile = affordances(
+        vec![ReproductiveOperation::Make],
+        vec![],
+        vec![SupportMode::Group, SupportMode::Group],
+        vec![],
+        vec![],
+    );
+
+    assert_eq!(
+        profile.validate(),
+        Err("support modes must not contain duplicates")
+    );
+}
+
+#[test]
+fn duplicate_reproductive_roles_are_rejected() {
+    let profile = affordances(
+        vec![],
+        vec![],
+        vec![],
+        vec![ReproductiveRole::Builder, ReproductiveRole::Builder],
+        vec![],
+    );
+
+    assert_eq!(
+        profile.validate(),
+        Err("reproductive roles must not contain duplicates")
+    );
+}
+
+#[test]
+fn duplicate_transition_capabilities_are_rejected() {
+    let profile = affordances(
+        vec![ReproductiveOperation::Make],
+        vec![],
+        vec![],
+        vec![],
+        vec![
+            TransitionCapability::Seasonal,
+            TransitionCapability::Seasonal,
+        ],
+    );
+
+    assert_eq!(
+        profile.validate(),
+        Err("transition capabilities must not contain duplicates")
     );
 }
 
