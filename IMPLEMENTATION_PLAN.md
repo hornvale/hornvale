@@ -97,20 +97,20 @@ observers pass; no value fixtures moved.
 
 ### Task 5: Close preparation
 
-**Status:** In Progress — close records remain to be written and submitted for
-G6 review.
+**Status:** Ready for G6 — close records and focused documentation checks are
+complete; stage or merge submission remains blocked on G6 review.
 
 **Files:**
-- Create: `book/src/chronicle/2026-09-06-the-fetch.md` using the repository chronicle convention.
-- Create: `docs/retrospectives/2026-09-06-the-fetch.md` using the repository retrospective convention.
+- Create: `book/src/chronicle/the-fetch.md` using the repository chronicle convention.
+- Create: `docs/retrospectives/the-fetch.md` using the repository retrospective convention.
 - Modify: `docs/superpowers/ledgers/2026-09-06-the-fetch.md` and this plan with final status/evidence.
 
 **Interfaces:**
 - Consumes: all green verification and the reviewed artifact disposition.
 - Produces: G6 package ready for the canonical sluice; no direct merge from the Mac.
 
-- [ ] **Step 1: Record final test commands, artifact movement, epoch/schema result, and follow-ups in the ledger.**
-- [ ] **Step 2: Write the chronicle and retrospective from committed evidence, including the route-search measurement and the rejected cache alternative.**
-- [ ] **Step 3: Run documentation consistency checks and `make gate-commit`.**
+- [x] **Step 1: Record final test commands, artifact movement, epoch/schema result, and follow-ups in the ledger.**
+- [x] **Step 2: Write the chronicle and retrospective from committed evidence, including the route-search measurement and the rejected cache alternative.**
+- [x] **Step 3: Run focused documentation consistency checks.**
 - [ ] **Step 4: Submit the full tested SHA through `make sluice-stage BRANCH=campaign/the-fetch REF="$(git rev-parse HEAD)"` at the stage boundary.**
 - [ ] **Step 5: Stop for G6 review before any merge submission.

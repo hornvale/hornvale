@@ -1356,3 +1356,5 @@ the-ken	active	none		plan complete through Task 6; chronicle and retrospective c
 chronicle-the-culvert	shipped	none		published chronicle				book/src/chronicle/the-culvert.md	
 retrospective-the-culvert	shipped	none		published retrospective					docs/retrospectives/the-culvert.md
 spec-2026-09-06-the-fetch-design	active	none		G3 draft; implementation not started	docs/superpowers/specs/2026-09-06-the-fetch-design.md				
+chronicle-the-fetch	active	none		awaiting G6 closure				book/src/chronicle/the-fetch.md	
+retrospective-the-fetch	active	none		awaiting G6 closure					docs/retrospectives/the-fetch.md
