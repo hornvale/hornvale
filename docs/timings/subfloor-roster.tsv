@@ -293,6 +293,7 @@ hornvale-astronomy::hornvale_astronomy$pins::tests::wanderers_pin_rejects_values
 hornvale-astronomy::hornvale_astronomy$pins::tests::wanderers_pin_round_trips
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_clear_visibility_is_identical_to_the_legacy_sky
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_covering_moon_promises_total_eclipses_on_the_node_beat
+hornvale-astronomy::hornvale_astronomy$provider::tests::a_daylight_sky_never_names_the_spectral_class
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_dimmed_sky_keeps_the_moons_and_loses_the_stars
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_flat_orbit_eclipses_every_new_moon
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_hidden_sky_names_the_dark_and_nothing_else
@@ -302,7 +303,6 @@ hornvale-astronomy::hornvale_astronomy$provider::tests::a_locked_sun_is_aperiodi
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_moon_below_the_phase_threshold_is_a_smear_not_a_face
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_mooned_sky_promises_bloodred_lunar_eclipses_at_night
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_night_sky_reports_each_body_as_its_own_phrase
-hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_heliacal_rising_across_a_year
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_placed_observer_sees_a_wandering_star_across_two_synodic_periods
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_query_has_a_documented_answer
 hornvale-astronomy::hornvale_astronomy$provider::tests::a_pre_genesis_sky_answers_for_the_instant_asked
@@ -534,7 +534,6 @@ hornvale-climate::hornvale_climate$substellar::tests::substellar_cosine_matches_
 hornvale-climate::hornvale_climate$substrate::tests::a_linear_substrate_converges_to_its_analytic_fixed_point
 hornvale-climate::hornvale_climate$substrate::tests::a_sourceless_substrate_stays_at_zero
 hornvale-climate::hornvale_climate$substrate::tests::a_state_dependent_sink_is_honoured
-hornvale-climate::hornvale_climate$substrate::tests::a_substrate_field_is_deterministic_for_a_seed
 hornvale-climate::hornvale_climate$substrate::tests::a_substrate_field_wraps_the_year
 hornvale-climate::hornvale_climate$substrate::tests::a_substrate_that_never_loses_anything_reports_non_convergence
 hornvale-climate::hornvale_climate$substrate::tests::a_vertices_year_of_contexts_reproduces_its_annual_climatology
@@ -797,11 +796,20 @@ hornvale-hearsay::traced_walk$the_route_field_is_load_bearing
 hornvale-hearsay::undertow_readout$h2s_population_is_reached_in_the_control
 hornvale-hearsay::undertow_readout$the_crossing_arm_moves_the_change_counter_in_the_control
 hornvale-hearsay::undertow_readout$the_zero_edge_bucket_is_reachable_by_the_accounting
+hornvale-historiography::hornvale_historiography$tests::a_foreign_fact_mid_errand_does_not_orphan_the_steps_after_it
+hornvale-historiography::hornvale_historiography$tests::a_foreign_step_mid_errand_is_not_counted_as_one_of_the_errands_steps
+hornvale-historiography::hornvale_historiography$tests::a_one_step_errand_names_a_day_not_a_span
+hornvale-historiography::hornvale_historiography$tests::a_recount_names_each_errand_once
+hornvale-historiography::hornvale_historiography$tests::an_errand_with_no_steps_is_still_named
+hornvale-historiography::hornvale_historiography$tests::an_uncovered_step_renders_as_it_always_did
 hornvale-historiography::hornvale_historiography$tests::recount_is_deterministic
 hornvale-historiography::hornvale_historiography$tests::recount_is_none_for_an_unknown_entity
 hornvale-historiography::hornvale_historiography$tests::recount_names_the_day_a_dated_fact_was_asserted
 hornvale-historiography::hornvale_historiography$tests::recount_omits_the_day_when_a_fact_carries_none
 hornvale-historiography::hornvale_historiography$tests::recount_replays_facts_with_docs_and_provenance
+hornvale-historiography::hornvale_historiography$tests::the_step_view_is_deterministic
+hornvale-historiography::hornvale_historiography$tests::the_step_view_resolves_each_steps_covering_errand
+hornvale-historiography::hornvale_historiography$tests::unrelated_predicates_render_unchanged
 hornvale-history::hornvale_history$tests::concepts_register_without_conflict
 hornvale-history::hornvale_history$tests::stream_labels_declare_the_root
 hornvale-history::suite$descent::a_gap_of_one_generation_is_one_remove
@@ -934,7 +942,6 @@ hornvale-kernel::hornvale_kernel$field::tests::whole_days_and_tick_of_day_floor_
 hornvale-kernel::hornvale_kernel$field::tests::world_time_is_ordered_and_equatable_so_it_can_key_a_map
 hornvale-kernel::hornvale_kernel$field::tests::world_time_serializes_as_a_bare_scalar_not_an_object
 hornvale-kernel::hornvale_kernel$genesis::tests::display_spellings_are_preserved
-hornvale-kernel::hornvale_kernel$geosphere::tests::a1_grid_matches_the_full_band_scan_over_a_dense_sweep
 hornvale-kernel::hornvale_kernel$geosphere::tests::adjacency_is_mutual_and_has_the_right_valence
 hornvale-kernel::hornvale_kernel$geosphere::tests::base_icosahedron_has_twelve_unit_vertices
 hornvale-kernel::hornvale_kernel$geosphere::tests::coord_cache_bit_equals_recomputation_at_every_vertex
@@ -1267,14 +1274,11 @@ hornvale-lab::hornvale_lab$diff::tests::a_numeric_shift_shows_the_mean_movement
 hornvale-lab::hornvale_lab$diff::tests::csv_round_trip_diffs_through_render_diff
 hornvale-lab::hornvale_lab$diff::tests::header_reports_row_and_refusal_counts
 hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_287_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1334,7 +1338,6 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::pearson_returns_none_for_a_c
 hornvale-lab::hornvale_lab$domesday::guard::every_emitted_detector_name_is_declared
 hornvale-lab::hornvale_lab$domesday::guard::loading_never_builds_a_world
 hornvale-lab::hornvale_lab$domesday::render::tests::a_bare_citation_outside_any_paren_is_redacted_with_its_possessive
-hornvale-lab::hornvale_lab$domesday::render::tests::a_detector_that_fired_nothing_still_gets_a_zero_row
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_page_carries_the_generated_header_and_only_computed_numbers
 hornvale-lab::hornvale_lab$domesday::render::tests::a_domain_with_no_metrics_renders_the_no_metrics_notice_verbatim
 hornvale-lab::hornvale_lab$domesday::render::tests::a_flag_metric_always_renders_both_true_and_false_rows
@@ -1350,9 +1353,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
 hornvale-lab::hornvale_lab$domesday::render::tests::the_index_carries_the_generated_header_and_every_domain_link
 hornvale-lab::hornvale_lab$domesday::stats::tests::a_metric_with_no_present_values_yields_none
 hornvale-lab::hornvale_lab$domesday::stats::tests::absent_values_are_reported_not_dropped
@@ -1397,7 +1398,6 @@ hornvale-lab::hornvale_lab$metrics::tests::seed_42_moons_admitted_is_text
 hornvale-lab::hornvale_lab$metrics::tests::seed_42_star_class_is_text
 hornvale-lab::hornvale_lab$metrics::tests::spearman_over_ranks_is_invariant_to_a_positive_rescaling
 hornvale-lab::hornvale_lab$metrics::tests::syllable_count_reads_maximal_vowel_runs
-hornvale-lab::hornvale_lab$metrics::tests::the_analytic_channel_area_matches_the_sampled_one
 hornvale-lab::hornvale_lab$metrics::tests::the_contour_metrics_are_registered_and_full_rung
 hornvale-lab::hornvale_lab$metrics::tests::the_deep_metrics_are_registered
 hornvale-lab::hornvale_lab$metrics::tests::the_eclipse_seasons_metrics_extract_on_seed_42
@@ -2855,6 +2855,8 @@ hornvale-vessel::hornvale_vessel$liveness::tests::drive_at_clamps_at_one_and_ign
 hornvale-vessel::hornvale_vessel$liveness::tests::drive_at_is_deterministic_and_reload_stable
 hornvale-vessel::hornvale_vessel$liveness::tests::drive_folds_drank_events_rising_since_the_last_drink
 hornvale-vessel::hornvale_vessel$liveness::tests::every_action_in_a_plan_has_its_precondition_satisfied_in_sequence
+hornvale-vessel::hornvale_vessel$liveness::tests::every_errand_predicate_carries_a_distinct_non_empty_doc
+hornvale-vessel::hornvale_vessel$liveness::tests::every_mode_maps_to_exactly_one_errand_key
 hornvale-vessel::hornvale_vessel$liveness::tests::everything_replayable_is_a_movement
 hornvale-vessel::hornvale_vessel$liveness::tests::exactly_the_non_committing_actions_are_replayable
 hornvale-vessel::hornvale_vessel$liveness::tests::facts_are_chronological_across_consecutive_ticks
@@ -3268,6 +3270,9 @@ hornvale-vessel::suite$the_terrier::no_session_path_re_surveys_the_occupation_re
 hornvale-vessel::suite$the_terrier::the_block_extractor_matches_nested_braces
 hornvale-vessel::suite$the_terrier::the_production_span_reaches_the_test_module_not_the_first_attribute
 hornvale-vessel::suite$the_terrier::the_register_scanner_catches_a_per_call_read
+hornvale-vessel::suite$the_warrant::every_errand_key_carries_exactly_its_own_gloss
+hornvale-vessel::suite$the_warrant::every_errand_predicate_carries_a_distinct_non_empty_doc
+hornvale-vessel::suite$the_warrant::the_errand_predicate_spellings_are_permanent_on_disk_keys
 hornvale-vessel::suite$the_weft::no_weft_kind_label_appears_in_thing_kinds
 hornvale-vessel::suite$the_weft::the_ruin_line_names_a_cause_only_when_the_record_has_one
 hornvale-vessel::suite$thing::a_holder_holds_what_was_last_put_in_it_and_nothing_it_has_given_up
@@ -3965,7 +3970,6 @@ hornvale::suite$docs_consistency::the_ledger_exemption_list_only_shrinks
 hornvale::suite$docs_consistency::the_unmatched_plan_count_has_not_moved
 hornvale::suite$docs_consistency::the_waiver_list_only_shrinks
 hornvale::suite$generated_paths::an_overriding_declaration_must_be_measured
-hornvale::suite$generated_paths::every_declared_generated_path_is_tracked
 hornvale::suite$generated_paths::every_declared_generated_path_is_written_by_its_author
 hornvale::suite$generated_paths::every_declared_path_names_a_known_author
 hornvale::suite$generated_paths::known_authors_agree_with_the_roster

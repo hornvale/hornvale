@@ -90,7 +90,8 @@ use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain, Occupancy,
     PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SLEPT_ON, SUSTENANCE, Terrain,
-    affect_of_memo_occupied, alarm_field_memo, derive_npcs, hazard_memory_memo, waking_offset,
+    affect_of_memo_occupied, alarm_field_memo, derive_npcs, errand_predicates, hazard_memory_memo,
+    waking_offset,
 };
 use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
 
@@ -170,6 +171,13 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         registry
             .register_predicate(pred, false, doc)
             .expect("the drive predicates register identically every run");
+    }
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside the drive predicates above for the same reason: this
+    // bench runs a real walk (`DriveMovements::step_with_occupancy`, below),
+    // and an unregistered predicate a walk tries to commit fails outright.
+    for (key, doc) in errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
     }
     let npcs = derive_npcs(&world, &ctx, &mut ledger, agents, home_settlement);
     assert_eq!(

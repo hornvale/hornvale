@@ -1,0 +1,347 @@
+# The Warrant — retrospective
+
+Process, not product. The product is in
+[the chronicle](../../book/src/chronicle/the-warrant.md); every ruling is in
+[the campaign ledger](../superpowers/ledgers/2026-09-05-the-warrant.md), which
+carries this campaign's substance and is long. **How long is not stated here,
+deliberately** — count it:
+
+```
+grep -cE '^#[0-9]+ \[' docs/superpowers/ledgers/2026-09-05-the-warrant.md
+```
+
+The numbering has a gap at #13-#16. That is the scar left by the repair
+described below under *A shared append-only document with several writers*, not
+a loss: no entry is missing.
+
+**Why a command and not a number.** This sentence has already carried two
+stated totals — 28, then thirty-four — and each was falsified by the next entry
+appended to the very document the sentence lives inside; thirty-four was wrong
+before the commit that wrote it was reviewed. A prose total over an
+append-only file cannot be kept true by correcting it, only by not stating it.
+The precedent is `CLAUDE.md`'s census-cost block, which stopped quoting a figure
+and now says *read it from `docs/timings.md`, never from this block*, for the
+identical reason. (The command anchors on `#N [`, which is the entry-header
+shape; a bare `^#[0-9]+` also matches cross-references inside entry bodies and
+over-counts.)
+
+The falsified hypothesis and its dated results note are in the spec's §10.
+
+## Seven defects originated in my own spec, plan and brief text
+
+That is the campaign's dominant pattern and it should lead. **Four of the seven
+were caught by reading code or running a probe; three needed a reviewer.** The
+split is worth stating exactly, because the four cost minutes each — a grep, a
+read of the seam, one measurement — and every one of them could have been run
+before the text was written rather than after. The other three could not: they
+needed someone who was not the author.
+
+They fall into two families, and the second is the one this campaign adds to
+the record.
+
+**Family one: a claim about the world that was never checked.** Five instances,
+all in text I wrote with confidence.
+
+- **The errand's target.** The spec's §4 specified `object: Text(target)`. The
+  arbitration seam exposes `Intent::Do(Action)` and nothing else, and
+  `Action::MoveTo(n)` is documented as the *next step*. No destination is
+  materialized at the commit site, so the field as written had no possible
+  caller. Caught while reading the seam to write Task 1, after a G3 package had
+  passed over it. The correction — the object carries the **origin** — is a
+  better design than the original, which is exactly why it was not caught by
+  re-reading: nothing about the sentence looked wrong.
+- **The enumerated registration sites.** The plan named five sites "from
+  memory of a subagent's report". Grep found six, one of which the plan had
+  missed entirely and one of which it had described but mislocated. The remedy
+  was to stop enumerating and instruct the implementer to derive the set from
+  the observable.
+- **And the grep that replaced it was an enumeration in disguise.** Three
+  further sites register the predicate as `for (pred, doc) in [(AGENT_AT, …)]`,
+  which `grep 'register_predicate(AGENT_AT'` misses *by construction*. All
+  three run real sixty-tick walks with a panicking `.expect` on every committed
+  fact, so each would have panicked the moment the campaign's second task
+  emitted an errand fact. The observable to derive from was never the call
+  shape; it was **which code paths run a real walk**.
+- **The grouping rule.** My brief said "any other predicate flushes the group".
+  Nothing anywhere sets a creature's errand back to `None`, so the ledger does
+  not implement that rule; an intervening `grazed` fact does not end an errand,
+  and the correct rendering rule is a readback of the producer rather than a
+  choice. The implementer changed it because a rendering regressed; the
+  reviewer's argument from the producer is the better one and is what the
+  ledger records.
+- **The resident tenant's consumer.** The spec's §6 said `why?` needs a
+  binary-searchable index over errand facts. `recount` takes `&World`, holds no
+  `ResidentFolds`, and cannot acquire one without a dependency the layering test
+  forbids — and §5.4's own grouping pass needs no index, because it walks a fact
+  list `recount` has already collected. **The tenant would have shipped
+  unused**, which is the second "no possible caller" defect in this list and the
+  reason Task 4 was struck; the strike itself is described further down, but the
+  defect belongs here, with its four siblings.
+
+**Family two, and it is new: prose and its own formalisation disagreeing, with
+only the prose audited.** Two instances, and they are the same shape at two
+scales.
+
+- **A test that a swap passes.** The brief required "a test that fails if
+  **either** copy drifts" — correct in prose — and supplied example code
+  comparing two `BTreeSet<&str>`s. Set equality is membership in both
+  directions, not correspondence: two sets of the same eight strings are equal
+  when two have been **swapped between keys**, and a swap is the likelier
+  authoring mistake precisely because it leaves no orphan string for a set to
+  notice. The implementer transcribed the snippet faithfully. The defect is the
+  brief's.
+- **A floor over a wider population than its own argument.** The spec's §1
+  argued the entire case about the `agent-at` trail's prose and measured it.
+  The spec's §10 then froze H2's fifty-per-cent floor over **all committed
+  provenance**, a population §1 never discussed. The mechanism can shrink only
+  one term of that sum and it adds a new one, so the prediction failed on two of
+  three seeds while the quantity actually argued about fell by 65.72%, 65.82%
+  and 54.56%.
+
+A brief, a plan and a spec each carry two claims — *what is required*, and
+*that the concrete thing shown alongside satisfies it* — and only the first was
+audited in either case. **The remedy is one habit: check a specification's
+example against its own sentence before checking either against the world.**
+
+## The falsification was reported unamended, and that was the point of writing the rule down first
+
+H2 is falsified. Both the frozen figure and the correctly-scoped one are in the
+chronicle, and the narrower figure is stated as *context for why the frozen
+prediction came out as it did*, never as a substitute result. The spec's §10
+gains an appended, dated note; its threshold is not edited.
+
+The temptation here was real and specific, because the defect was **in my own
+preregistration**, which makes "the hypothesis was mis-scoped" feel like a
+reason to re-score rather than an admission. Spec §10's own rule — *a null on
+H2 is the headline and is not retuned away* — binds when the null is
+inconvenient or it binds never. That rule was written before the code, by the
+same author who then wanted out of it, which is the whole argument for freezing
+it in a document rather than holding it as an intention.
+
+**One asymmetry nearly went unreported and is worth more than the falsification
+itself.** H1 was first discharged on seed 11 — the seed whose before-image
+fixture happened to exist — and recorded as "HOLDS". H1 was frozen over seeds
+7, 14 and 23. So *both* preregistered hypotheses had been evaluated against a
+population other than the frozen one; H2's mismatch was ruled a falsification
+and reported, and H1's was not surfaced at all. Reporting one and not the other
+is not a defensible asymmetry, and the direction of the omission — the one that
+made the campaign look better — is exactly the direction that needs a rule
+rather than a judgement. The remedy was to go and build the missing
+before-images from the merge base, not to narrow the hypothesis. H1 is
+discharged as written.
+
+## A transitional guard's retirement is a coverage event
+
+For two tasks the eight glosses existed in two places, and a test held the two
+copies equal. When the second copy was deleted the test was deleted with it,
+which was **correct** — it could not exist in that form. It was also the only
+thing pinning each key to its own gloss. What survived pinned the mode-to-key
+mapping, pinned the eight key spellings, and asserted the eight docs were
+distinct and non-empty; a swap satisfies all three. Four of the eight glosses
+were pinned by nothing, and the campaign's own H1 fixture covered only the four
+its seed happened to produce.
+
+"Delete it with the thing it pins" is half an instruction. The other half is:
+**name what that guard was the only witness for, and say where that half of the
+job goes.** The proof that the replacement earns its place is a mutation, not
+an argument — swapping two glosses leaves six tests green (including H1, which
+resolves through the real registry) and reddens exactly one.
+
+## Three ways a check stops measuring while staying green
+
+Collected because the campaign produced one of each, and they are distinct
+failures.
+
+1. **A flip that retires a field silences the arms that assert ABSENCE over
+   it.** The positive arm of an existing test went red and announced itself.
+   The **negative control** beside it — a lone creature never flees, counted by
+   matching `"fear"` in the provenance — would have gone on passing for exactly
+   the wrong reason. A vacuous positive check reads as coverage; a vacuous
+   negative control reads as *proof*.
+2. **A ceiling mutation cannot fire against a measured zero.** My brief named
+   "lowering the ceiling to 0" as the obvious RED proof for a re-pointed
+   witness. Seed 42 commits zero fear or belonging errands, so `0 <= 0` still
+   passes. Mutating the **filter** instead proved the stronger property — that
+   the check reads the predicate field and matches on exact key equality.
+3. **A ratchet that says `observed ⊆ sanctioned` is blind to a sanctioned key
+   going quiet.** That direction was judged correct, and the point is that it
+   was *stated*: a check that does not state its direction reads as total.
+
+Item 2 is the sharpest case of a habit the ledger counts **four** times in this
+campaign (#18a): naming the property and letting the implementer find the
+mutation beat prescribing one from outside the code. A mutation prescribed from
+the prose can only test what the prose already imagined.
+
+## I relayed a reviewer's example without measuring it
+
+A review supplied a vivid case: a creature that walks for thirst, drinks,
+sleeps for a month and then walks for thirst again commits no second errand
+fact, so two episodes fold into one line. I put it in the campaign ledger as a
+finding and told Nathan about it in the same breath.
+
+**It does not occur.** A drink flips the mode to sated, so the next step
+computes a different errand key and commits. Two independent sweeps found zero
+errand spans bracketing a drink. The real shape is narrower and better named —
+an errand outlives its own activity — and the corrected version is what the
+chronicle states, on two measurements rather than on a sentence.
+
+It was one probe away from being checked and the implementer ran that probe.
+**A reviewer's sentence can overstate its data, and a relay adds no evidence
+while adding authority.** The correction is a ledger entry rather than a silent
+edit for that reason.
+
+## Two committed prose baselines had been wrong by ~2x for weeks
+
+The campaign's freshness sweep acted on this; the finding is a process lesson in
+its own right and belongs here rather than only in the sweep's diff.
+
+Task 2 reported H3 at **1.785075** facts/agent/tick over the run's last half,
+against **1.855970** over its first — the pair is the instrument's whole output,
+because the gate it feeds tests a ceiling on the one and non-growth across both.
+`tick_commit_budget.rs`'s module doc said the rate holds "roughly flat at
+~0.92-0.96"; `liveness.rs`'s
+hoist-golden comment said "1.06 … (0.96 before Task 7, 1.24 after it, 1.01
+before this fix round)" against "its 1.5 ceiling". Both were stale by roughly a
+factor of two, and the ceiling they referenced had since moved 1.5 to 2.5. **The
+reading that a jump of that size invites is that the campaign had started
+committing errand facts on the flagship seed** — which would have contradicted
+the spec's own §1 measurement and turned a green instrument into a false alarm.
+
+What settled it was measuring both sides rather than reasoning about either:
+two live probes on seed 42 found zero rendered `agent-at` lines and zero errand
+glosses, and then a checkout of the commit *immediately before* the errand
+commit landed reproduced the per-tick series byte-for-byte and **both** rates to
+six decimal places — 1.855970 and 1.785075, unmoved. That both halves matched is
+what made the result decisive rather than suggestive: one matching rate is
+consistent with two offsetting changes, and the per-tick series plus both
+summary statistics is not. The campaign moved nothing.
+
+**The defect is that a reader arriving at those numbers finds two committed
+explanations waiting for them and both are wrong.** Neither was written
+carelessly: each was true of a six-agent roster on the day it was recorded, and
+a sibling campaign then made a session's roster the residents of the settlement
+you stand in. The campaigns that raised the ceiling 1.5 to 2.5 did not restate
+the measured value beside it. That is the same shape as this chapter's opening
+family — a claim whose truth lives in a *population* rather than in a location,
+falsified by an edit somewhere else, by people who did not know they had done
+it. The corrections carry their date and the commit they were measured at, and
+say outright that every other rate in both files is history.
+
+The transferable rule: **a measured rate recorded in prose is a claim with a
+denominator, and the denominator is the roster.** When a campaign changes who is
+in the world, it has invalidated every rate anyone wrote down, silently, and
+nothing in this repository will tell you.
+
+## A shared append-only document with several writers needs its numbers allocated
+
+This campaign's ledger acquired **eight duplicate entry numbers** — two `#11`s,
+two `#12`s, two `#13`s, two `#14`s — plus a reused `#7`. Task 2's implementer
+and Task 3's implementer each wrote their rulings into it, correctly, and each
+numbered from what it could see while the controller numbered from what *it*
+could see. Nothing in any entry body cited a colliding number, so the collision
+was invisible until a reviewer counted the entries and got a different total
+from the one this retrospective's own opening line claimed.
+
+The repair renumbered the implementers' blocks to #30-#33 and #34-#37, leaving
+physical order and every in-body cross-reference intact — which makes the
+numbers non-monotonic in file order, and that is the honest trade: restoring
+monotonicity would have broken the five cites a reader actually follows.
+
+**The defect is the dispatcher's, not the writers'.** Five implementers were
+sent at one append-only document with no ranges allocated. It is the same shape
+as `.superpowers/sdd/followups.md` before decision 0493 — one path, several
+writers, silent collision — at smaller scale, and the remedy is the same one:
+hand each writer a range up front, or key entries by something that cannot
+collide. **The Cartulary moved the campaign ledger out of per-worktree scratch
+precisely so it could be shared; sharing a document is what creates this
+problem, and nothing was added to handle it.**
+
+The smaller lesson rides along and is the one this campaign keeps re-learning:
+**a stated total is a claim, and it is checkable by counting the visible rows.**
+Nobody counted until a reviewer did. But counting only fixes it once — a total
+over a file still being appended to is falsified again by the next append, which
+is why this document's opening now names the command instead of the number.
+
+## A method note that cost 533 seconds
+
+A mutation-restore ran in one bash block as `set -e` plus
+`cargo nextest … | grep …`. The shell has `pipefail`; the failing test — which
+was *supposed* to fail — aborted the block before the `cp` restore, and the
+"RESTORED byte-identical" line that would have said so was never printed. Two
+subsequent edits landed on a mutated file and six tests failed for a reason
+that looked like the campaign's own change. **The tell was the absent
+confirmation line, not the failures.** Restore-and-`diff` belongs in its own
+invocation, never downstream of a command expected to fail.
+
+## Two pre-existing defects, found by running rather than building
+
+`windows/vessel/examples/session_length_scaling.rs` panics at runtime on an
+unregistered `slept-on` predicate, several ticks into its loop;
+`windows/vessel/src/liveness_tests/emitter_scan.rs` has the identical gap and
+passes only because its scenarios never emit that fact. Both pre-date this
+campaign, both were parked rather than fixed — an epoch about errands should not
+grow a diff a reviewer has to hold — and both now have a registry row
+(`TOOL-walk-harness-registries-lag-the-committer`).
+
+**The part worth keeping is why the panic was good news.** The re-reviewer went
+one step past `cargo build --examples` and actually ran the example. The run got
+*past* the campaign's own registration and into the tick loop before failing on
+something else, which is positive evidence that the new registration is
+correctly wired. A build check would have proved neither thing. It cost twelve
+seconds.
+
+## Scope was reduced deliberately, and it was surfaced rather than absorbed
+
+Task 4 — the `Errands` resident tenant — was struck before execution, because
+its stated consumer does not exist: `recount` takes `&World`, holds no
+`ResidentFolds`, and cannot acquire one without a dependency the layering test
+forbids. This was the second "no possible caller" defect in my own text in the
+same campaign. The spec's §6 records the strike in place rather than being
+quietly rewritten, and Nathan sees it at G6 as a scope reduction with a reason
+attached.
+
+## Deferred minors, and where each one landed
+
+Ten minors were deferred at a task boundary. "It is in the ledger" is not a
+location, so each is named here with its outcome, verified at HEAD rather than
+recalled:
+
+| minor | outcome |
+|---|---|
+| `#[allow(dead_code)]` on `errand_key` | **Fixed**, Task 2, when its production caller landed — the attribute is gone (`grep` over the definition returns 0). |
+| `liveness.rs`'s "one of the five this file can ever commit" against a roster of 13 | **Fixed**, Task 3; the string no longer occurs. |
+| `latest_committed_errand` lacking the `day <= t` filter its sibling carries | **Fixed**, Task 3, by adding the filter rather than documenting the invariant — a correctness argument living in another function's doc is one a future caller cannot be expected to preserve. |
+| `session_length_scaling.rs` panics on an unregistered `slept-on` | **Parked**, pre-existing; registry row `TOOL-walk-harness-registries-lag-the-committer`. |
+| `emitter_scan.rs` has the identical gap | **Parked**, same row. |
+| A report said "eleven" registration sites where the diff had fifteen | **Accepted as-is.** Eleven was the count of *failing tests* presented as the count of *edited registries*; every edit was additive and green. Bookkeeping only — but it is the same count-without-counting shape as the rest of this page, in a report rather than a document. |
+| Neither Task 2 test pinned that the errand key matches the run's reason | **Closed** one task later by Task 3's `every_gloss_and_its_first_day_survives_the_flip`, and again by the fix round's eight-row key→gloss table. Plan-mandated: the brief specified both tests verbatim. |
+| Task 3's specified behavioural red was not recorded; a stronger, different one was | **Accepted.** The substitute red (7 errands against 5 runs) is strictly more diagnostic than the one asked for, but it is a *different* assertion, and swapping one for the other without saying so is how a replacement comes to cover a different branch. Said so here. |
+| The seed-23 fixture reported as ~120 KB | **Corrected**; it is 64,846 bytes. |
+| The repl tolerates a typo'd flag (`why 123 --step` renders the default view) where the session refuses | **Accepted as-is**, ruled deliberately. Extra tokens were tolerated before this campaign, so tightening it is a behaviour change to pre-existing latitude and not this epoch's business. The cost is that two surfaces now disagree on malformed input; recorded so the divergence is deliberate rather than unnoticed. |
+
+## The stage gate was never used, and that is a process miss
+
+CLAUDE.md's Process section says a campaign submits `make sluice-stage` at
+every plan-stage boundary, which merges main into the branch *in the chamber*
+and gates that real merge product. This campaign never did. It absorbed main
+locally — twice, at Task 6 and at close — and relied on `make gate-commit` plus
+per-task review in between.
+
+Nothing went wrong, and that is the weaker half of the lesson. The stronger
+half is what the close cost: the final absorption met **54 commits and five
+conflicts**, two of them in hand-authored files where a uniform
+"resolve by regeneration" would have silently dropped one side's rows — the
+exact failure `docs/generated-paths.txt:200` records another campaign hitting
+on 2026-09-05. That resolution had to be done by hand, at the close, under the
+worst conditions for it. A stage gate at each of the five task boundaries would
+have met those commits four or five at a time.
+
+## What went right, briefly
+
+The campaign's headline exists because a premise was measured instead of
+inherited. Decision 0238 had rested an entire stage ordering on a sentence read
+off the code, and G2 ruled that the fidelity premise be rendered before being
+asserted. Rendering it took one scripted `possess` run and produced both the
+correction to 0238's argument and the fourth-row finding — seed 42 commits no
+positional fact at all — that bounded the whole epoch's blast radius before a
+line of it was written.

@@ -1466,6 +1466,13 @@ fn run(
             .register_predicate(pred, false, doc)
             .expect("every DRIVE_PREDICATES entry registers identically every run");
     }
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside the four above for the same reason: this bench runs
+    // a real 60-tick walk, and an unregistered predicate a walk tries to
+    // commit fails the tick's commit outright.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
 
     let npcs = derive_npcs(world, ctx, &mut ledger, AGENTS, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();

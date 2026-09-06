@@ -344,6 +344,14 @@ fn run_rung(
             .register_predicate(pred, false, doc)
             .expect("every DRIVE_PREDICATES entry registers identically every run");
     }
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside the drive roster above for the same reason it is.
+    // A SECOND table, not an extension of `DRIVE_PREDICATES`: see the merge
+    // note in `session.rs`'s matching pair of loops for why the two families
+    // stay apart even though folding them would compile.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
 
     let npcs = derive_npcs(world, ctx, &mut ledger, agents, home_settlement);
     let n = npcs.len();

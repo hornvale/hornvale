@@ -462,6 +462,11 @@ fn planted_registry() -> ConceptRegistry {
         "the kind of anchor an agent slept on, within the room it slept in",
     );
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside `AGENT_AT` for the same reason SLEPT_ON is, above.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
     registry
 }
 

@@ -810,6 +810,31 @@ mod tests {
         assert!(!night.contains("horizon"), "night takes no hue: {night}");
     }
 
+    /// The Ken: the star's spectral class DRIVES the prose and never
+    /// APPEARS in it. `domains/astronomy/src/facts.rs` already states the
+    /// rule — the class is committed as a concept id, "never as
+    /// Morgan-Keenan prose — no creature in this world could have invented
+    /// that taxonomy" — and the daylight sentence was the one surface
+    /// ignoring it.
+    #[test]
+    fn a_daylight_sky_never_names_the_spectral_class() {
+        let s = bare_sky(
+            0.0,
+            Vec::new(),
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let report = s.sky_at(WorldTime::from_std_days(10.5).expect("a day value is finite"));
+        let d = &report.description;
+        assert!(
+            !d.contains("dwarf") && !d.contains("(G)") && !d.contains("(K)") && !d.contains("(F)"),
+            "the spectral class reached creature prose: {d:?}"
+        );
+        assert!(
+            d.contains("The sun"),
+            "the sun still has to be named: {d:?}"
+        );
+    }
+
     /// SKY-5: the tide is felt, not watched — every moon raises an Ambient
     /// tide phenomenon whose period is half the moon's transit interval
     /// (the bulge is axial: two highs per pass).
@@ -1653,8 +1678,7 @@ impl GeneratedSky {
                         "sinks toward evening"
                     };
                     let mut description = format!(
-                        "The sun, a {}, {}. {}",
-                        self.system.star.class_name,
+                        "The sun {}. {}",
                         arc_words,
                         daylight_words(&self.system.star.class_name)
                     );
