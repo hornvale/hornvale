@@ -52,9 +52,39 @@ if [ "$got" = "$expected" ]; then
 else
     bad "default resolved to '$got', expected '$expected'"
 fi
-case "$got" in
-    "$repo_root"/*) bad "the default resolved INSIDE the repo ($got) — the invariant census-run.sh states about its own default" ;;
-    *) ok "the default is outside the repo" ;;
+# COMPARE RESOLVED PATHS, NOT LEXICAL PREFIXES. This was a bare
+# `case "$got" in "$repo_root"/*)`, and `$got` legitimately contains `/../`:
+# the default is anchored to the MAIN worktree as "<main>/../hornvale-census-wt".
+# From a LINKED worktree that string does not start with $repo_root and the
+# check passed, which is every run in the chamber. From the MAIN CHECKOUT it
+# does start with it, so the guard reported a path that escapes the repo as
+# being inside it — while the assertion four lines above accepted the very same
+# value. A verdict that depends on which worktree you run from is not a verdict.
+#
+# Observed 2026-09-05 running `scripts/lane-outboard.sh` by hand from the main
+# checkout: 6 passed, 1 failed, on a tree where nothing was wrong.
+resolve_path() {
+    local raw="$1" d b
+    d="$(dirname "$raw")"; b="$(basename "$raw")"
+    if cd "$d" 2>/dev/null; then printf '%s/%s' "$(pwd -P)" "$b"; cd - >/dev/null || true
+    else printf '%s' "$raw"; fi
+}
+got_real="$(resolve_path "$got")"
+repo_real="$(cd "$repo_root" && pwd -P)"
+case "$got_real" in
+    "$repo_real"/*) bad "the default resolved INSIDE the repo ($got -> $got_real) — the invariant census-run.sh states about its own default" ;;
+    *) ok "the default is outside the repo ($got_real)" ;;
+esac
+
+# POSITIVE CONTROL. The check above now normalises, and a normaliser that
+# silently returned its input would make the guard vacuous while it still
+# printed ok. So drive a path that IS inside the repo through the same
+# comparison and require it to be caught. Without this, the fix to a
+# false-positive could have installed a false-negative and looked identical.
+inside_real="$(resolve_path "$repo_root/some/census/dir")"
+case "$inside_real" in
+    "$repo_real"/*) ok "POSITIVE CONTROL: a path genuinely inside the repo is still caught by this comparison" ;;
+    *) bad "POSITIVE CONTROL FAILED: $inside_real was not recognised as inside $repo_real — the inside-the-repo check can no longer fire at all" ;;
 esac
 
 echo "== census path: an ABSOLUTE override is still honoured (the test seam survives)"

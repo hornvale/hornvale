@@ -101,12 +101,23 @@ impl WeftKind {
 
     /// The abundance ceiling — `prevalence`'s maximum possible answer for
     /// this kind, reached only where macro state and noise both saturate.
+    ///
+    /// **A control-kinds-only dial since The Warp (spec §6.1).** The sign
+    /// kinds no longer mix an abundance against a contextuality lerp: their
+    /// prevalence is [`Self::rate`] × [`Self::response`] + [`Self::floor`] ×
+    /// noise, which has no abundance ceiling in it. Rather than leave
+    /// `SPRING_ABUNDANCE`/`OVERHANG_ABUNDANCE` sitting in the file as dead
+    /// dials a reader would take for live ones, they are deleted and this
+    /// arm is [`unreachable!`] — a caller reaching it has routed a sign kind
+    /// down the control path, which is a bug in the branch, not a value
+    /// question.
     pub(crate) fn abundance(self) -> f64 {
         match self {
-            WeftKind::Spring => SPRING_ABUNDANCE,
-            WeftKind::Overhang => OVERHANG_ABUNDANCE,
             WeftKind::Thicket => THICKET_ABUNDANCE,
             WeftKind::Erratic => ERRATIC_ABUNDANCE,
+            WeftKind::Spring | WeftKind::Overhang => {
+                unreachable!("a sign kind has a rate and a floor, not an abundance")
+            }
         }
     }
 
@@ -158,12 +169,99 @@ impl WeftKind {
     /// it would make Task 9's H3 legibility metric unable to discriminate a
     /// real cause from none — which is precisely what the erratic exists to
     /// let that metric prove it can do.
+    ///
+    /// **A control-kinds-only dial since The Warp**, for the same reason
+    /// [`Self::abundance`] is — see that method's doc. A sign kind's
+    /// macro-state tracking is now the soft step [`Self::response`] applies,
+    /// not a lerp weight.
     pub(crate) fn contextuality(self) -> f64 {
         match self {
-            WeftKind::Spring => SPRING_CONTEXTUALITY,
-            WeftKind::Overhang => OVERHANG_CONTEXTUALITY,
             WeftKind::Thicket => THICKET_CONTEXTUALITY,
             WeftKind::Erratic => ERRATIC_CONTEXTUALITY,
+            WeftKind::Spring | WeftKind::Overhang => {
+                unreachable!("a sign kind reads its cause through a soft step, not a lerp weight")
+            }
+        }
+    }
+
+    /// Whether `self` is a **sign kind** — spring/seep and overhang/hollow,
+    /// the two kinds whose occurrence is authored to stand where a walker's
+    /// sign is (The Warp, spec §3, §6). A sign kind's prevalence is
+    /// [`Self::rate`] × [`Self::response`]`(cause)` + [`Self::floor`] ×
+    /// noise; thicket is texture and erratic the negative control, and both
+    /// keep the Weft's own `abundance · (contextuality · cause + (1 −
+    /// contextuality) · noise)` expression untouched, bit for bit
+    /// (`windows/worldgen/tests/suite/weft_controls.rs`).
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_sign_kind(self) -> bool {
+        matches!(self, WeftKind::Spring | WeftKind::Overhang)
+    }
+
+    /// A sign kind's **reliability**: how often it occurs where its cause
+    /// saturates (The Warp, spec §6.1). Crate-private — nothing outside the
+    /// recipe needs it, and Task 6 recalibrates it.
+    pub(crate) fn rate(self) -> f64 {
+        match self {
+            WeftKind::Spring => SPRING_RATE,
+            WeftKind::Overhang => OVERHANG_RATE,
+            WeftKind::Thicket | WeftKind::Erratic => {
+                unreachable!("controls keep the Weft's expression")
+            }
+        }
+    }
+
+    /// A sign kind's **floor**: how often it appears where no cause is (The
+    /// Warp, spec §6.1). Zero for both kinds today, by design — which is
+    /// exactly why this is readable rather than assumed: the honest-silence
+    /// property tests read `floor()` and hold only while it is zero, so
+    /// lifting it in a later calibration retires the claim visibly instead
+    /// of falsifying an assertion that never named the number.
+    ///
+    /// `pub` for that reason (the precedent [`Self::macro_state`]'s own doc
+    /// sets: widen the one accessor a second tenant needs rather than grow a
+    /// parallel implementation of the same read).
+    /// type-audit: bare-ok(ratio: return)
+    pub fn floor(self) -> f64 {
+        match self {
+            WeftKind::Spring => SPRING_FLOOR,
+            WeftKind::Overhang => OVERHANG_FLOOR,
+            WeftKind::Thicket | WeftKind::Erratic => {
+                unreachable!("controls keep the Weft's expression")
+            }
+        }
+    }
+
+    /// A sign kind's soft-step edges `(lo, hi)` on `macro_state` (The Warp,
+    /// spec §6.2): the response is exactly zero at or below `lo` and exactly
+    /// one at or above `hi`. `pub` so the step's SHAPE can be asserted
+    /// without asserting either calibrated edge value.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn step_edges(self) -> (f64, f64) {
+        match self {
+            WeftKind::Spring => (SPRING_STEP_LO, SPRING_STEP_HI),
+            WeftKind::Overhang => (OVERHANG_STEP_LO, OVERHANG_STEP_HI),
+            WeftKind::Thicket | WeftKind::Erratic => {
+                unreachable!("controls keep the Weft's expression")
+            }
+        }
+    }
+
+    /// This kind's response to its cause: [`smoothstep`] between
+    /// [`Self::step_edges`] for a sign kind, and the IDENTITY for a control
+    /// (The Warp, spec §6.2). Identity rather than [`unreachable!`] on the
+    /// controls because this is the one method of the new family a caller
+    /// may legitimately apply to any kind — the recipe's own branch never
+    /// calls it for a control, but a reader or a metric comparing the four
+    /// kinds' cause-to-prevalence transfer wants a total function, and
+    /// "the control passes its cause straight through" is the true answer,
+    /// not an error.
+    /// type-audit: bare-ok(ratio: cause), bare-ok(ratio: return)
+    pub fn response(self, cause: f64) -> f64 {
+        if self.is_sign_kind() {
+            let (lo, hi) = self.step_edges();
+            smoothstep(cause, lo, hi)
+        } else {
+            cause
         }
     }
 
@@ -241,13 +339,92 @@ pub(crate) fn land_eligible(weights: [(Vertex, u64); 4], pack: &FieldPack) -> bo
     blend_corner_weights(weights, &pack.land) >= LAND_ELIGIBILITY_THRESHOLD
 }
 
-/// Abundance ceiling for spring/seep (spec §5.2). Chosen well under `1.0` —
-/// a spring is a notable feature, not the default ground state — and
-/// independently dialable from every other kind's own ceiling (spec §5.2:
-/// "tunable individually and severally"; §5.2 also forbids a simplex
-/// constraint across kinds, so this value trades against nothing else).
-/// plumb: universal(an authored design ceiling on spring/seep frequency, fixed across every world and not derived from any seed or pin)
-const SPRING_ABUNDANCE: f64 = 0.35;
+/// The classic Hermite soft step: exactly `0.0` at or below `lo`, exactly
+/// `1.0` at or above `hi`, monotone and C¹-continuous between (The Warp,
+/// spec §6.2). Chosen over a bare linear ramp because a walker crossing the
+/// edge of a cause should not meet a crease in the density; chosen over a
+/// hard threshold because a hard threshold puts a visible contour line on
+/// the map where the cause happens to cross a number.
+///
+/// The clamp is what makes the two endpoints EXACT rather than merely
+/// asymptotic, which is what lets a zero floor mean literal silence: below
+/// `lo` the whole prevalence is `rate · 0 + 0 · noise`, an exact zero, and
+/// [`super::occurs`] compares a uniform variate against it and can never
+/// fire. No transcendental is involved, so nothing here needs
+/// `hornvale_kernel::math`.
+///
+/// Callers pass `lo < hi` from [`WeftKind::step_edges`], whose authored
+/// pairs the test suite asserts satisfy `0 <= lo < hi <= 1`.
+fn smoothstep(x: f64, lo: f64, hi: f64) -> f64 {
+    let t = ((x - lo) / (hi - lo)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+/// **Reliability** — how often spring/seep occurs where its cause
+/// saturates (The Warp, spec §6.1). This is the sign kinds' replacement for
+/// the Weft's abundance ceiling: under the regrouped recipe a spring's
+/// prevalence is `rate · smoothstep(cause) + floor · noise`, so this number
+/// is read directly as "on ground whose karst-and-drainage cause is fully
+/// present, roughly this fraction of facets carries a seep" — a promise to
+/// a walker, not a ceiling on a lerp.
+///
+/// **Frozen at Task 6's seed-42 calibration** (The Warp; the round-by-round
+/// table and every §7 reading are in the ledger's "Task 6 — constants
+/// frozen" section). At `0.95` seed 42's springs stand on 1.34% of land
+/// facets, 79% of them on a facet whose own cause reads at or above 0.5
+/// (§7's H1 asks 0.60), and no sign class of 100 facets or more carries a
+/// spring at a rate above 0.075 (§7's H5 bar is 0.75). It is high, and that
+/// is the design: the cause it multiplies is a smoothstep that only
+/// saturates on the ~1% of land where karst and channelized drainage are
+/// both fully present, so "nineteen facets in twenty" is a promise about
+/// that ground and not about limestone country generally. Every test shipped
+/// with it asserts mechanism, never this value.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against the spec section 7 bands and frozen there; fixed across every world)
+const SPRING_RATE: f64 = 0.95;
+
+/// **Floor** — how often spring/seep appears where no cause is. Zero by
+/// design (The Warp, spec §6.1 and §2): the sign case is honest-silent off
+/// its sign. The Weft's `(1 - contextuality) · noise` term gave every kind
+/// an unconditional floor, which is what let a spring surface on ground
+/// with no karst and no drainage at all; a walker who reads a seep as a
+/// sign of water underfoot is then reading noise. Zero closes that.
+///
+/// **Confirmed at zero by Task 6's calibration**, not merely left there: the
+/// ledger's "Task 6 — constants frozen" section records that no §7 band
+/// needed a floor lifted off zero on seed 42, which is the condition that
+/// section was required to state if one had. The honest silence is
+/// load-bearing downstream — it is why the walk-band instruments read spring
+/// at an exact zero (`weft_prevalence.rs`'s `KIND_BOUNDS` doc) and why the
+/// coastal vantage/eligibility conflict population fell from 35 facets to 28
+/// (`windows/vessel/tests/suite/the_weft.rs`).
+/// plumb: universal(an authored design choice confirmed at zero by The Warp's Task 6 calibration: the sign kind's noise floor is zero by intent, fixed across every world)
+const SPRING_FLOOR: f64 = 0.0;
+
+/// The lower edge of spring/seep's soft step on `macro_state` (The Warp,
+/// spec §6.2): at or below this cause the response is exactly zero.
+///
+/// **Frozen at Task 6's seed-42 calibration** (ledger, "Task 6 — constants
+/// frozen"). It is the edge, not the rate, that H1's found fraction turns
+/// on: the provisional `0.20` sat below 82% of spring's cause range and read
+/// 0.567, while `0.35` reads 0.787. Deliberately kept BELOW `0.5` — H1's
+/// found fraction is the share of occurrences standing on a cause of 0.5 or
+/// more, so an edge at or above that number would make the band read `1.000`
+/// by construction and measure nothing.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const SPRING_STEP_LO: f64 = 0.35;
+
+/// The upper edge of spring/seep's soft step on `macro_state` (The Warp,
+/// spec §6.2): at or above this cause the response saturates at one.
+///
+/// **Frozen at Task 6's seed-42 calibration** (ledger, "Task 6 — constants
+/// frozen"). Seed 42's spring cause reads 0.515 at its 99th percentile and
+/// 0.700 at its maximum, so a saturation point of `0.55` is reachable on
+/// real ground — roughly the top 1% of land — rather than a ceiling the
+/// world never touches, which is what makes [`SPRING_RATE`] readable as a
+/// promise at all. The 0.20 width against [`SPRING_STEP_LO`] is the soft
+/// step §6.2 asks for and not a disguised threshold.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const SPRING_STEP_HI: f64 = 0.55;
 
 /// Spring/seep's correlation length, in facets (spec §5.2, §5.6: "long").
 /// A walker should cross many facets of one karst zone before the signal
@@ -255,32 +432,6 @@ const SPRING_ABUNDANCE: f64 = 0.35;
 /// texture at the scale of a *place*, not a per-step coin flip.
 /// plumb: universal(an authored texture-vs-landmark design choice fixed across every world; spec section 5.6 names spring/seep's correlation length "long" and this is the chosen magnitude)
 const SPRING_CORRELATION_LENGTH_FACETS: f64 = 40.0;
-
-/// Spring/seep's contextuality (spec §5.2, §5.6: "high — carbonate ×
-/// drainage × elevation"). A spring is diagnostic of what is underfoot, so
-/// its prevalence must actually track macro state rather than merely being
-/// textured near it — the opposite end from erratic/scatter's negative
-/// control.
-///
-/// **`0.85`, restored here after a wrong-headed detour to `0.7` (fix round
-/// 1, F2).** The first pass of this task lowered this constant to `0.7`
-/// after a mutation-discrimination check (see `weft_prevalence.rs`'s test
-/// doc) appeared to pass more comfortably there — but review measured the
-/// real signal-to-noise ratio (real-mechanism max delta vs. address-hashed
-/// mutant max delta, seed 42, 6 starting vertices) at **42.6× at `0.85`** and
-/// **38.7× at `0.7`**: lowering contextuality scales BOTH sides of that ratio
-/// by the same factor, so the move bought no discrimination at all, and was
-/// marginally worse. The actual defect was a `weft_prevalence.rs` bound set
-/// too loose (`0.02`, which the `c=0.85` mutant's `~0.049` max delta slipped
-/// under) — the fix belongs in the test's bound, not in this world constant.
-/// This is decision 0016's forbidden shape mirrored: a world parameter
-/// retuned to rescue a miscalibrated measurement. `0.85` is also the value
-/// spec §5.6's "high" reads most naturally against, and matches spec §5.2's
-/// own contextuality-endpoint labels once their inverted wording is
-/// corrected (see the spec's own fix in fix round 1, and
-/// [`WeftKind::contextuality`]'s doc).
-/// plumb: universal(an authored design choice fixing how strongly spring/seep tracks macro state versus free noise, identical across every world)
-const SPRING_CONTEXTUALITY: f64 = 0.85;
 
 /// Soft-cap scale for blended drainage before it enters spring/seep's
 /// `[0,1]` macro-state mix. `FieldPack::drainage` is an unbounded upstream-
@@ -313,11 +464,89 @@ fn spring_macro_state(carbonate: f64, drainage: f64) -> f64 {
     (carbonate * wet).clamp(0.0, 1.0)
 }
 
-/// Abundance ceiling for overhang/hollow (spec §5.2). Lower than spring's —
-/// a rock overhang big enough to shelter under and light a fire in is a
-/// rarer landmark than a seep — and independently dialable (spec §5.2).
-/// plumb: universal(an authored design ceiling on overhang/hollow frequency, fixed across every world and not derived from any seed or pin)
-const OVERHANG_ABUNDANCE: f64 = 0.20;
+/// **Reliability** for overhang/hollow — how often it occurs where its
+/// induration-and-slope cause saturates (The Warp, spec §6.1). Lower than
+/// spring's: a rock overhang big enough to shelter under and light a fire
+/// in is a rarer landmark than a seep, even on ground that fully affords
+/// one. Independently dialable (spec §5.2 forbids a simplex across kinds,
+/// so this trades against nothing else).
+///
+/// **Frozen at Task 6's fix round 2** (ledger, "Task 6 — fix round 2:
+/// reliability 0.50, final"), which supersedes both earlier freezes. On seed
+/// 42 it reads: found fraction 0.772 (bar 0.60), best-class lift 21.5x the
+/// erratic's (bar 2x), learner gain +0.06954 (bar > 0), and a maximum class
+/// rate of 0.462 against H5's 0.75.
+///
+/// **IT IS THE MIDDLE OF THE PASSING RANGE, NOT ITS TOP, AND THAT IS THE
+/// CRITERION.** Three rungs were measured: `0.50` and `0.75` hold every band,
+/// `0.90` trips H5 at 0.761 — the wallpaper reading H5 exists to catch. Fix
+/// round 1 took `0.75` on a "highest passing rung" instruction the controller
+/// then withdrew as the wrong criterion. Two reasons, and the second is the
+/// design one:
+///
+/// 1. **Headroom.** H5's margin is 1.62x here against 1.17x at `0.75`, and
+///    the bar is measured per seed. Max class rate tracks the rate closely
+///    (0.923 / 0.855 / 0.845 of it at the three rungs), so H5 binds near a
+///    reliability of 0.888 — close enough that a readout seed running 17%
+///    hotter than seed 42 would trip it at `0.75`. That failure would be a
+///    finding about a knowingly thin margin, not about the world.
+/// 2. **A reliability of three in four is near the "told" boundary by
+///    construction.** Spec §2 calls a sign that merely restates the feature
+///    *told* rather than *found*; a feature that is present on three
+///    saturated facets in four is close to being the cause's restatement. One
+///    in two is the found-not-told band this campaign exists for.
+///
+/// **IT WAS `0.16` FOR ONE COMMIT, AND THE REASON IS WORTH KEEPING.** The
+/// first freeze set it there to satisfy H2's between-kind clause "spring's
+/// channel net ≥ overhang's". Overhang's cause is far more legible from the
+/// rendered words than spring's — its induration and slope ARE the rock word
+/// and the steepness word, while spring's drainage is no word at all — so at
+/// equal frequency overhang out-reads spring and the clause fails. But
+/// mutual information is in bits and scales with the event's own entropy, so
+/// that clause could be satisfied by making overhang RARER rather than making
+/// spring more legible, and cutting this constant twelvefold is what
+/// satisfying it cost. The clause was withdrawn from the gate for exactly
+/// that reason (2026-09-05, before any readout seed was built; spec §7,
+/// ledger #11) and the ordering is now reported rather than gated. The gap to
+/// [`SPRING_RATE`]'s `0.95` that remains is the design statement the
+/// paragraph above makes and nothing else: one facet in two against nineteen
+/// in twenty, on ground that fully affords each.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 against overhang's own spec section 7 bands and frozen at its fix round 2 in the middle of the passing range, not at its top, for H5 headroom and because a reliability near three in four sits at the "told" boundary spec section 2 draws; fixed across every world)
+const OVERHANG_RATE: f64 = 0.50;
+
+/// **Floor** for overhang/hollow — zero, for the same reason
+/// [`SPRING_FLOOR`] is (The Warp, spec §6.1, §2): an overhang standing on
+/// flat, unindurated ground is a sign that means nothing. **Confirmed at
+/// zero by Task 6's calibration** on the same terms [`SPRING_FLOOR`] was —
+/// see that constant's doc and the ledger's "Task 6 — constants frozen".
+/// plumb: universal(an authored design choice confirmed at zero by The Warp's Task 6 calibration: the sign kind's noise floor is zero by intent, fixed across every world)
+const OVERHANG_FLOOR: f64 = 0.0;
+
+/// The lower edge of overhang/hollow's soft step on `macro_state` (The
+/// Warp, spec §6.2). **Frozen at Task 6's seed-42 calibration** (ledger,
+/// "Task 6 — constants frozen"), at the same value as [`SPRING_STEP_LO`] and
+/// for the same two reasons: it is what carries H1's found fraction (0.301
+/// at the provisional `0.20`, 0.772 here), and it stays strictly below the
+/// 0.5 that H1's own found-fraction threshold sits at, so the band measures
+/// something rather than reading `1.000` by construction. (An earlier draft
+/// of this doc gave a third reason — that a higher edge would read worse on
+/// H2, because concentrating occurrences on the strongest cause makes them
+/// more legible and overhang's legibility had to stay under spring's. That
+/// clause was withdrawn from H2's gate on 2026-09-05; see
+/// [`OVERHANG_RATE`]'s own doc for why. The two reasons above stand on their
+/// own and are why this edge did not move at the fix round.)
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const OVERHANG_STEP_LO: f64 = 0.35;
+
+/// The upper edge of overhang/hollow's soft step on `macro_state` (The
+/// Warp, spec §6.2). **Frozen at Task 6's seed-42 calibration** (ledger,
+/// "Task 6 — constants frozen"). Wider than spring's step (0.30 against
+/// 0.20) because overhang's cause is the more broadly distributed of the
+/// two — seed 42 reads 0.673 at its 99th percentile against spring's 0.515 —
+/// so the same saturation fraction needs a higher upper edge. `0.65` keeps
+/// [`OVERHANG_RATE`] reachable on real ground rather than asymptotic.
+/// plumb: universal(an authored design choice, calibrated on seed 42 in The Warp's Task 6 and frozen there; fixed across every world)
+const OVERHANG_STEP_HI: f64 = 0.65;
 
 /// Overhang/hollow's correlation length, in facets (spec §5.2, §5.6:
 /// "short–medium"). Shorter than spring's `40.0`: a rock face's own
@@ -326,14 +555,6 @@ const OVERHANG_ABUNDANCE: f64 = 0.20;
 /// coin flip — hence "medium", not spring's own erratic-adjacent floor.
 /// plumb: universal(an authored texture-vs-landmark design choice fixed across every world; spec section 5.6 names overhang/hollow's correlation length "short-medium" and this is the chosen magnitude)
 const OVERHANG_CORRELATION_LENGTH_FACETS: f64 = 15.0;
-
-/// Overhang/hollow's contextuality (spec §5.2, §5.6: "medium — induration ×
-/// slope"). Between spring's `0.85` (diagnostic of what is underfoot) and
-/// erratic's near-zero (uncorrelated with any cause): an overhang is more
-/// likely on hard, steep rock, but plenty of texture is legitimately free —
-/// not every qualifying cliff face grows one.
-/// plumb: universal(an authored design choice fixing how strongly overhang/hollow tracks macro state versus free noise, identical across every world)
-const OVERHANG_CONTEXTUALITY: f64 = 0.5;
 
 /// Soft-cap scale for blended slope (metres of fall per radian,
 /// [`FieldPack::slope`]) before it enters overhang/hollow's `[0,1]`

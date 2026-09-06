@@ -590,6 +590,10 @@ mod tests {
                 "language/<species>/name/settlement v3",
                 "religion/deity v2",
                 "room/chambers v1",
+                // The Cruck: a built structure's chamber facets, split from
+                // `room/chambers v1` by method. Additive at v1 — a NEW label,
+                // perturbs no existing stream.
+                "room/chambers/built v1",
                 "room/furnishing v1",
                 // The Sighting: where a chamber's ANCHORS land in its cells,
                 // a third sibling in the layout family. Additive at v1 — a
