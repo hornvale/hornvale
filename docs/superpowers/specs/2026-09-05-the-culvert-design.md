@@ -252,6 +252,15 @@ its would-be key population and the criterion is a **shape, not a magnitude**:
   site, and name what bounds it.
 - Distinct pairs **keep rising** with tick count without saturating →
   **exclude** the site, say so in a comment at the call, and record the curve.
+- **The curve cannot decide** — the run is too short, or the two populations do
+  not separate → **exclude**, and say plainly that the verdict rests on the
+  conservative default rather than on a measured separation. This third branch
+  is not a formality: a plateau in this system has been observed to be
+  TEMPORARY (Task 5 found a five-wait flat stretch that later resumed
+  climbing), so "it stopped rising" is weaker evidence than it looks, in both
+  directions. A verdict that overstates its evidence is a defect even when it
+  points the right way. (Controller ruling R12 — the plan's Task 5 brief
+  offered this branch and this section did not; the brief was the intent.)
 
 **The criterion is deliberately not "comparable to 83".** An earlier draft said
 that, and it is an observed value standing in for a predicate — the same defect

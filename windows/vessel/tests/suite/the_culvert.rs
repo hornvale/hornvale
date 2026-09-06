@@ -930,42 +930,51 @@ fn culvert_here_dest_pairs(
 /// which is what a real memo over the creature's whole session would
 /// accumulate.
 ///
-/// This is a measurement, never a guard: no assertion here can fail. Spec
-/// Rule 3's saturates/keeps-rising/cannot-decide verdict is read off the
-/// PRINTED curve by a human (recorded in this campaign's Task 5 report), not
-/// computed by this test.
+/// This is a measurement, never a guard: the one `assert_eq!` in its body
+/// only checks this test's OWN band-to-tick arithmetic against
+/// `bench_shape`'s independently-computed final day, never the populations
+/// themselves. Spec Rule 3's saturates/keeps-rising/cannot-decide verdict is
+/// read off the PRINTED curve by a human (recorded in this campaign's Task 5
+/// report and ledger entry #14), not computed by this test.
 ///
-/// **THE DATED RECORD (2026-09-05, this campaign's own Task 5).** On the lab
-/// shape, `colocated` was `0` and `here_dest_cum` was `0` at all ten bands --
-/// confirming The Kerf's own prior finding on this exact construction (its
-/// ledger `2026-09-04-the-kerf.md`: "false at all ten bands, zero co-located
-/// peers") on a SECOND, independent instrument. The `home_dest_cum` column
-/// reproduced Task 2's own per-band table digit for digit (37, 56, 61, 65,
-/// 67, 71, 77, 79, 83, 83), a cross-validation this diagnostic did not need
-/// but got for free.
+/// **THE DATED RECORD (2026-09-05, this campaign's own Task 5; reframed under
+/// controller ruling R11).** On the lab shape, `colocated` was `0` and
+/// `here_dest_cum` was `0` at all ten bands -- confirming The Kerf's own
+/// prior finding on this exact construction (its ledger
+/// `2026-09-04-the-kerf.md`: "false at all ten bands, zero co-located peers")
+/// on a SECOND, independent instrument. The `home_dest_cum` column reproduced
+/// Task 2's own per-band table digit for digit (37, 56, 61, 65, 67, 71, 77,
+/// 79, 83, 83), a cross-validation this diagnostic did not need but got for
+/// free.
 ///
 /// On the possession shape (the only shape where `colocated` is ever
 /// non-zero -- consistently 52-63 of 67 members every wait), `home_dest_cum`
-/// reaches a genuinely FLAT stretch by the end of the run (187, 189, 190,
-/// 190, 190 across waits 56-60) -- the same saturating shape Task 4's 83
-/// already established, reproduced here on a second, longer-running shape.
-/// `here_dest_cum` shows NO analogous flat stretch anywhere in the 60-wait
-/// window (98, 98, 99, 101 across the same waits) and its running ratio
-/// to `home_dest_cum` climbs for the entire run rather than levelling off
-/// (0.25 at wait 10, 0.33 at wait 20, 0.42 at wait 40, 0.53 at wait 60) --
-/// the population is growing FASTER than the reference that is known to
-/// saturate, at the very point in the run where the reference has stopped
-/// moving. **Verdict: KEEPS RISING, not saturates** -- see the Task 5 report
-/// for the full per-wait/per-band tables and reasoning.
+/// reaches a flat stretch by the end of the run (187, 189, 190, 190, 190
+/// across waits 56-60) -- the same saturating shape Task 4's 83 already
+/// established, reproduced here on a second, longer-running shape. But
+/// `here_dest_cum` ALSO plateaus mid-run -- five consecutive equal reads (41)
+/// across waits 21-25, LONGER than the reference's own three-wait plateau --
+/// and then resumes climbing. So a plateau in this system does not imply a
+/// ceiling for EITHER curve: the here-curve has an observed history of
+/// stalling and resuming, which means the home-curve's final three flat
+/// waits are not proven permanent either. Neither curve ran long enough to
+/// prove it has stopped. The genuine signal is the tail: over waits 58-60,
+/// `home_dest_cum` adds `+0, +0` (190, 190, 190) while `here_dest_cum` adds
+/// `+1, +2` (98, 99, 101) -- a real but thin difference, not a clean
+/// separation. **Verdict: EXCLUDE, resting on Rule 3's conservative default
+/// under genuine uncertainty (ruling R12), not on a clean measured
+/// saturation/non-saturation split** -- see the Task 5 report and ledger
+/// entry #14 for the full per-wait/per-band tables and reasoning.
 #[test]
-#[ignore = "diagnostic, run once by hand: 1077.86s measured end to end (release profile) -- \
-            the lab-shape half reuses Shape::LabAt200Ticks's own 129.337s construction, but the \
-            possession-shape half's 60 independent roster-wide culvert_here_dest_pairs sweeps \
-            (each re-running believed_water's budgeted plan_to_room over a co-located roster of \
-            ~55-63 of 67 members) dominate the wall clock; nothing here gates a commit or a \
-            stage gate -- it exists to feed spec Rule 3's saturates/keeps-rising verdict by \
-            hand, per docs/superpowers/plans/2026-09-05-the-culvert.md Task 5 (controller \
-            ruling R10)"]
+#[ignore = "diagnostic, run once by hand: 1077.86s measured (a quiet box, optimized test \
+            profile) -- the lab-shape half reuses Shape::LabAt200Ticks's own 129.337s \
+            construction, but the possession-shape half's 60 independent roster-wide \
+            culvert_here_dest_pairs sweeps (each re-running believed_water's budgeted \
+            plan_to_room over a co-located roster of ~55-63 of 67 members) dominate the wall \
+            clock; nothing here gates a commit or a stage gate -- it exists to feed spec Rule \
+            3's saturates/keeps-rising/cannot-decide verdict by hand, per \
+            docs/superpowers/plans/2026-09-05-the-culvert.md Task 5 (controller rulings \
+            R10-R12)"]
 fn culvert_here_anchored_key_population_curve() {
     // --- Possession shape: seed 17, extended to 60 waits (cheap). ---
     const EXTENDED_WAITS: usize = 60;

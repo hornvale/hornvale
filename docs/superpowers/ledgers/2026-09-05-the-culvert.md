@@ -801,6 +801,184 @@ reachability table. Spec §9 gains it.
 
 ---
 
+### #14 [G5] — the moving-anchor key population cannot decide, and Rule 3 gets a third branch
+
+**Question.** `shared_believed_water` (`liveness.rs:1880`) anchors its
+ranking at `here` — the current position, which moves every tick — rather
+than at `home` (fixed for a session). Its memo key space is therefore
+`positions × water rooms`, not `homes × water rooms`, which is the one way
+this campaign's home-anchored bound (83 pairs, saturating — Task 4) could
+fail to cover a real session. Does the `(here, dest)` population saturate
+(safe to memoize, include in Task 8) or keep rising (exclude)?
+
+**Decision.** **Cannot decide cleanly within the window measured; resolves
+to EXCLUDE under spec Rule 3's conservative-default branch (ruling R12).**
+
+**Measurement.** Two shapes, both already built by Task 4 — no third
+construction path. Lab shape (seed 42, 50 agents, 200 ticks —
+`Shape::LabAt200Ticks`'s own construction, paid once at 129.337s, read at
+ten 20-tick bands off the one finished ledger): `colocated` and
+`here_dest_cum` were **`0` at all ten bands** — confirming The Kerf's own
+prior finding on this exact construction on a second, independent
+instrument. `home_dest_cum` reproduced Task 2's per-band table digit for
+digit (37, 56, 61, 65, 67, 71, 77, 79, 83, 83). The pooled population never
+fires on this shape at all; it is uninformative for this question.
+
+Possession shape (seed 17, extended from Task 4's 12 waits to 60 — the only
+shape where `colocated` is ever non-zero, consistently 52-63 of 67 members
+every wait) is where the real signal is:
+
+```
+wait    home_dest_cum    here_dest_cum  colocated
+   1                8                4         63
+   2               17                6         62
+   3               29                7         57
+   4               29                8         58
+   5               42               10         57
+   6               48               10         60
+   7               51               12         61
+   8               58               13         60
+   9               60               14         60
+  10               64               16         60
+  11               70               17         59
+  12               83               19         59
+  13               91               22         59
+  14               95               28         62
+  15              104               34         59
+  16              106               35         60
+  17              109               36         59
+  18              117               37         56
+  19              119               40         60
+  20              122               40         59
+  21              126               41         58
+  22              126               41         58
+  23              127               41         57
+  24              127               41         58
+  25              133               41         57
+  26              141               42         56
+  27              144               42         60
+  28              144               44         58
+  29              146               44         58
+  30              146               44         61
+  31              147               45         60
+  32              149               47         60
+  33              149               47         59
+  34              150               47         60
+  35              151               50         59
+  36              151               50         60
+  37              152               55         63
+  38              152               58         58
+  39              153               61         60
+  40              156               65         57
+  41              156               65         58
+  42              159               67         60
+  43              161               69         57
+  44              165               70         59
+  45              170               72         57
+  46              170               74         56
+  47              175               75         56
+  48              177               77         58
+  49              179               78         54
+  50              180               86         58
+  51              180               86         53
+  52              180               89         54
+  53              181               92         57
+  54              182               93         55
+  55              184               94         57
+  56              187               96         57
+  57              189               98         59
+  58              190               98         55
+  59              190               99         55
+  60              190              101         52
+```
+
+Cost: 1077.86s end to end, dominated by the possession shape's 60
+independent roster-wide sweeps (each re-running `believed_water`'s budgeted
+`plan_to_room` over a co-located roster of ~55-63 of 67 members), not the
+lab shape's already-accepted 129.337s.
+
+**The first read of this table was wrong, and the correction is why this
+entry exists at all.** The implementer's first draft claimed `here_dest_cum`
+has "no analogous flat stretch anywhere in the 60-wait window," offered as
+evidence the reference (`home_dest_cum`) uniquely saturates. That claim is
+false against the table above: `here_dest_cum` reads 41, 41, 41, 41, 41
+across waits 21–25 — a **five-wait** plateau, LONGER than the reference's
+own longest plateau (three waits, at waits 50–52 and again at 58–60). A
+subsidiary claim — that the ratio `here_dest_cum / home_dest_cum` climbs
+essentially monotonically — was also softer than stated (it dips at wait 30:
+0.30 against wait 20's 0.33).
+
+**Ruling R11 — the verdict stands, and the reason improves.** The
+implementer's machinery is sound: the reviewer verified `culvert_here_dest_pairs`
+against `shared_believed_water` line for line and traced `band`'s real
+binding up through `step_with_occupancy` → `WalkState::begin` to confirm
+production's `band` argument is the full roster — the curve describes the
+real call site, and extending 12 → 60 waits was the right call. But the
+five-wait plateau, once stated correctly, cuts the OTHER way from how the
+first draft used it: a plateau that later RESUMES CLIMBING (41 → 42 at wait
+26) demonstrates that a plateau in this system does not imply a ceiling —
+for either curve. The here-curve has an *observed history* of stalling and
+resuming; that undermines the reference's own saturation claim symmetrically,
+since the reference's final three flat waits (190, 190, 190) have not been
+shown immune to the same kind of temporary stall. **Neither curve has
+demonstrated a true ceiling in 60 waits — both have only been shown to
+pause.**
+
+**What survives as signal is thin, and is stated as such.** Over the final
+three waits (58, 59, 60): `home_dest_cum` adds `+0, +0` while `here_dest_cum`
+adds `+1, +2`. That is the entire basis for treating the curves differently
+at the point measurement stops — and it is real (the reference has
+genuinely stopped moving on this exact stretch) but it cannot rule out that
+wait 60's growth is itself another temporary pause about to resume, given
+the here-curve's own demonstrated capacity to pause for at least as long as
+the reference's longest pause.
+
+**Ruling R12 — spec Rule 3 gains a third branch, explicitly.** The spec, as
+written, offered only two outcomes (saturates → include; keeps rising →
+exclude) plus an informal allowance in this campaign's brief that
+"cannot decide" also excludes. R12 promotes that allowance into Rule 3
+itself: *the curve cannot decide → exclude, and say plainly that the
+verdict rests on the conservative default rather than a clean measured
+separation.* The brief's own closing paragraph had already fallen back to
+roughly this position; R12 sharpens the spec's framing to match rather than
+overturning anything already decided. This is a genuine spec correction
+(the spec was wrong to omit the branch its own brief needed), not a
+reinterpretation of already-ratified text.
+
+**Disposition.** `shared_believed_water` is **excluded** from Task 8's memo
+scope. Task 8 is not run against this call site. The exclusion rests on
+Rule 3's conservative default under genuine uncertainty, not on a
+demonstrated ceiling for the reference or a demonstrated absence of one for
+the moving-anchor population — a longer possession-shape run (100+ waits)
+would be needed to settle either question, and was not run because the
+conservative default already applies and points the same direction
+regardless of how that longer run would come out.
+
+**Alternatives discarded.** (a) Re-measuring at 100+ waits to force a clean
+separation — disproportionate cost (the 60-wait run already cost 1077.86s,
+dominated by the possession shape) for a question the conservative default
+already answers the same way. (b) Reading the five-wait plateau as
+supporting "saturates" (since the reference matches it) — wrong, because the
+plateau demonstrably did not hold: growth resumed at wait 26, so a plateau
+of this length is evidence a ceiling has NOT been reached, for whichever
+curve shows it. (c) Leaving the report's first-draft "keeps rising, clean
+separation" framing uncorrected because the exclude ACTION happened to
+already be right — rejected under this campaign's own discipline that a
+correction is unaudited until reviewed, and a false supporting claim left
+standing would mislead the next reader who re-derives from this curve rather
+than from the (correct) action.
+
+**ideonomy passes / overturns.** None; a measurement-review correction and a
+spec-completeness fix, not a design choice among alternatives.
+
+**Capture actions.** This entry; the corrected reasoning also lives in
+`windows/vessel/tests/suite/the_culvert.rs`'s own doc comment on
+`culvert_here_anchored_key_population_curve` and in
+`.superpowers/sdd/2026-09-05-the-culvert/task-5-report.md`. Task 8 proceeds
+without this call site.
+
+---
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*
