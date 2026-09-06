@@ -814,3 +814,29 @@ collision — and the remedy is the same: hand each writer a range, or key the
 entries by something that cannot collide. Recorded for the retrospective. ·
 Also corrected in passing: **#22's headline said "on four seeds"**, which #29
 already corrected in substance but not there. · ideonomy passes / overturns: 0.
+
+---
+
+#39 [G5] — **Two corrections and one finding sharper than the one I gave it.**
+· (a) I told the Task 6 implementer this ledger "now has 38". It has **34**;
+38 is the highest *number*, and my own repair left #13-#16 vacant. A bare
+count taken from the maximum is the same species of error as the "28" it was
+replacing, one turn later, in a message correcting that error. The implementer
+counted instead of accepting, and says thirty-four while naming the gap. · (b)
+It found two further unreconciled counts in the retrospective that were in
+nobody's finding list: "five of the seven … only two needed a reviewer" is
+**four and three** when enumerated against this ledger (code or probe: #6, #7
+R2, #7 R3, #17; reviewer: #8, #9, #23), and a "that is now four times" claim
+contradicted itself and could not be enumerated from what it held, so it now
+cites #35 rather than restating a count as its own. · **(c) The finding worth
+keeping is its third concern, and it goes beyond this campaign.** CLAUDE.md
+says the committed ledger's path is "keyed by campaign slug, touched by exactly
+one campaign, ever, **so there is no collision to have**". That is true across
+campaigns and false within one: The Cartulary moved the ledger out of
+per-worktree scratch precisely so it could be *shared*, and sharing among a
+campaign's own agents is exactly what produced #38's eight duplicate numbers.
+The claim is not wrong so much as scoped to the collision it was designed
+against, and silent about the one it introduced. That is a note owed to
+`docs/CLAUDE.md` or a decision record, not just to this campaign's retro — it
+will recur in every campaign that lets implementers write rulings, which the
+autopilot skill instructs them to do. · ideonomy passes / overturns: 0.
