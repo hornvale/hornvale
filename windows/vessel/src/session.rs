@@ -7719,6 +7719,44 @@ impl<'w> Session<'w> {
         ) else {
             return Turn::Out("There is nothing here to enter.".to_string());
         };
+        // B2: the argument used to be discarded entirely, so `enter banana`
+        // entered whatever was here and said so — an ignored argument is how
+        // a player comes to believe they asked for something and got it, the
+        // rule `map` and `sleep` already keep in this file. An empty target
+        // means "enter whatever is here" (`descend_walk_band`'s own call
+        // passes one, and so does a bare `enter`); a non-empty one must name
+        // the site — its own name where it has one, case-insensitively and
+        // article-stripped the way `named_neighbour` already does
+        // ([`Self::strip_article`]), or its kind noun (the same three words
+        // [`Self::site_clause`] prints) where it does not. `structure_at`'s
+        // own gate (decision 0666) guarantees `brief.site` is `Some` here,
+        // since it only ever returns `Some` when the site is.
+        if !target.trim().is_empty() {
+            let site = brief
+                .site
+                .as_ref()
+                .expect("structure_at returns Some only when brief.site is Some");
+            let wanted = Self::strip_article(&target.trim().to_lowercase());
+            let kind_noun = match site.kind {
+                SiteKind::Settlement => "settlement",
+                SiteKind::Exotic => "site",
+                SiteKind::Cave => "cave",
+            };
+            // A cave and an exotic site carry no name (`Site::name` is
+            // `None`), so only the kind noun can ever match there — this is
+            // the asymmetry the data forces, not a fallback that would
+            // accept anything typed at an unnamed site.
+            let name_matches = site
+                .name
+                .as_deref()
+                .is_some_and(|name| name.to_lowercase() == wanted);
+            if wanted != kind_noun && !name_matches {
+                return Turn::Out(format!(
+                    "There is nothing here called '{target}'.{}",
+                    Self::site_clause(site)
+                ));
+            }
+        }
         let at = structure
             .chambers
             .iter()
@@ -8136,6 +8174,23 @@ impl<'w> Session<'w> {
     ///
     /// An empty `target` takes the sole neighbour, if there is exactly one; with
     /// a choice to make, silence is not an answer.
+    ///
+    /// [`Self::strip_article`] is the one leading-article stripper this file
+    /// keeps — the out-of-doors arm of [`Self::enter`] reuses it rather than
+    /// growing a second.
+    /// Drop a leading English article ("the "/"an "/"a ") from an already
+    /// trimmed, lowercased target. The one stripper this file keeps —
+    /// [`Self::named_neighbour`]'s aperture-name matching and [`Self::enter`]'s
+    /// out-of-doors site-name matching both call it rather than each growing
+    /// its own (The Newel, Task 3).
+    fn strip_article(target: &str) -> String {
+        ["the ", "an ", "a "]
+            .iter()
+            .find_map(|a| target.strip_prefix(a))
+            .map(str::to_string)
+            .unwrap_or_else(|| target.to_string())
+    }
+
     fn named_neighbour(
         &self,
         structure: &crate::structure::Structure,
@@ -8162,11 +8217,7 @@ impl<'w> Session<'w> {
         // is `hearth` and `"hearth".contains("the hearth")` is false. Nobody
         // could see it before this task: production drew only chains, so the
         // footer never printed a `the <noun>` way in a real session.
-        let target = ["the ", "an ", "a "]
-            .iter()
-            .find_map(|a| target.strip_prefix(a))
-            .map(str::to_string)
-            .unwrap_or(target);
+        let target = Self::strip_article(&target);
         let terrain = self.terrain_here();
         let matches: Vec<usize> = neighbours
             .iter()

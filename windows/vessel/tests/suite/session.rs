@@ -202,6 +202,35 @@ fn entering_leaves_the_walk_band_position_alone() {
     assert_eq!(s.position(), before);
 }
 
+/// B2: outdoors, `enter` used to discard its argument entirely, so
+/// `enter banana` entered Doaba and said so. An ignored argument is how a
+/// player comes to believe they asked for something and got it -- the rule
+/// `map` and `sleep` already keep in this same file.
+#[test]
+fn entering_a_name_that_is_not_here_is_refused() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let out = say(&mut s, "enter banana");
+    assert!(
+        out.contains("banana"),
+        "the refusal must quote what was typed: {out}"
+    );
+    assert!(
+        !out.contains("[chamber"),
+        "a wrong name entered the structure anyway: {out}"
+    );
+}
+
+/// The other direction, and the one decision 0788 requires: the walk-band
+/// prose prints "You can enter the settlement of Doaba.", so `Doaba` must
+/// be typable.
+#[test]
+fn entering_the_site_by_its_own_name_works() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    assert!(say(&mut s, "enter Doaba").contains("[chamber"));
+}
+
 #[test]
 fn examine_honors_the_contract_and_release_ends() {
     let world = seam_world();
