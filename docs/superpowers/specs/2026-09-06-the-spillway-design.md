@@ -196,15 +196,15 @@ anything is staged:
    "$runner" "$ID")`), so no queued job is dispatched under it.
 
    `flock(1)` exists on lefford (`/usr/bin/flock`) and not on this Mac
-   (`which flock` → nothing; no Homebrew `util-linux`), measured at
-   drafting. In production this step is unreachable without it:
-   `census-run.sh` has already taken the same flock on the same host minutes
-   earlier, and its absence would have failed the census before any golden
-   moved. So a missing `flock` here is the TEST host's case, not a
-   production one, and the step prints one line naming that and proceeds
-   rather than inventing a second locking primitive for a host that never
-   runs a delivery. The test's positive control for the lock (§4.2a) runs
-   where `flock` exists and prints SKIP where it does not.
+   (`which flock` → nothing), measured at drafting. The step FAILS CLOSED
+   without it (exit 4, goldens left staged, nothing pushed): in production
+   it is unreachable without `flock`, because `census-run.sh` took the same
+   flock on the same host minutes earlier, and the only harness that drives
+   this path, `scripts/test-sluice.sh`, already exits SKIP on a host without
+   `flock` (its first guard). So no host that reaches this step lacks the
+   primitive, and refusing costs nothing while degrading would invent a
+   second locking story for a host that never delivers. The test's positive
+   control asserts the lock was HELD while the stub authored (§4.2a).
 
 4. **Author.** `bash "$repo_root/scripts/timed.sh" gnomon-injection -- bash
    "$wt/scripts/gnomon-injection.sh"` run with cwd `$wt`. `timed.sh`

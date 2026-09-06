@@ -174,28 +174,31 @@ production (`census-run.sh`'s host guard fails first anywhere else), but
 `scripts/test-sluice.sh`'s census block drives it on whatever host runs the
 tests, with the census stubbed.
 
-**Decision.** The lock step uses `flock` when present and otherwise prints
-one line saying the host has none and proceeds. The test's positive control
-for the lock runs where `flock` exists and prints SKIP elsewhere.
+**Decision.** The lock step requires `flock` and FAILS CLOSED without it
+(exit 4, goldens left staged, nothing pushed). **Corrected in the same
+sitting, before any code:** the first draft of this entry had the step
+degrade to unlocked with a printed line, on the belief that the test harness
+runs on the Mac. It does not — `scripts/test-sluice.sh`'s first guard is
+`command -v flock || exit 0 (SKIP)`, read after the draft was written. With
+no Mac caller to protect, degrading would have been a second locking story
+for a host that never delivers; refusing costs nothing. The positive control
+for the lock is therefore unconditional.
 
 **Why (precedent cited).** In production the step is unreachable without
 `flock`: `census-run.sh` took the same flock on the same host minutes
 earlier, so its absence would have failed the census before a golden moved.
-A refusal here would fail the outboard test set on every Mac for a condition
-that cannot occur on the one host that delivers. `subfloor-run-chunked.sh`'s
-header is the precedent for "the Mac/Linux split is a stated fact of this
-repo and a script must run on both" (its portability correction), and for
-a control that is honest about where it runs.
+`test-sluice.sh`'s own SKIP guard is the precedent that the census path is
+canonical-box-only end to end.
 
-**Alternatives discarded.** Fail closed on a missing `flock` (breaks the
-test host for a production-impossible case). A second lock primitive for
-macOS (a new mechanism for a host that never delivers). An env-driven
-bypass (a guard a variable can satisfy; and there is no production case
-that needs it).
+**Alternatives discarded.** Degrade to unlocked with a warning (the first
+draft; unnecessary once the harness's guard was read). A second lock
+primitive for macOS (no caller). An env-driven bypass (a guard a variable
+can satisfy).
 
 **Ideonomy passes / overturns:** one (inversion: "what if the lock is
-absent?" → "then the census could not have run") — no overturn; it produced
-the unreachability argument.
+absent?" → "then the census could not have run") — no overturn of the
+unreachability argument; the CONSEQUENCE drawn from it was overturned by
+reading the harness, from "degrade" to "refuse".
 
 **Capture:** this entry; spec §3.2 step 3, §4.2.
 
