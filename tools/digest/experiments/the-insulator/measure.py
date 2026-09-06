@@ -5,7 +5,9 @@ import hashlib
 import importlib.util
 import json
 import os
+import platform
 import selectors
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -16,6 +18,10 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 OUTPUT_LIMIT = 16 * 1024 * 1024
 DEFAULT_TIMEOUT = 3600
+
+
+class EnforcementUnavailable(RuntimeError):
+    """The host cannot provide the required filesystem write boundary."""
 
 _spec = importlib.util.spec_from_file_location(
     "insulator_charter_measure", ROOT / "scripts" / "charter_measure.py"
@@ -95,7 +101,49 @@ def _owned_path(path: Path, root: Path) -> bool:
         return False
 
 
-def _bounded_measure(command: list[str], cwd: Path, timeout_s: int) -> dict:
+def _sandbox_profile(roots: list[Path]) -> str:
+    lines = ["(version 1)", "(deny default)", "(allow process*)", "(allow file-read*)"]
+    lines.extend(f'(allow file-write* (subpath "{root}"))' for root in roots)
+    return "\n".join(lines) + "\n"
+
+
+def _enforced_command(command: list[str], cwd: Path, writable_roots: list[Path]):
+    """Return a command with host-enforced writes restricted to writable_roots."""
+    system = platform.system()
+    if system == "Darwin":
+        executable = shutil.which("sandbox-exec")
+        if executable is None:
+            raise EnforcementUnavailable("macOS capture requires sandbox-exec")
+        profile = tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", prefix="insulator-sandbox-", suffix=".sb",
+            delete=False,
+        )
+        try:
+            profile.write(_sandbox_profile(writable_roots))
+            profile.close()
+        except BaseException:
+            profile.close()
+            Path(profile.name).unlink(missing_ok=True)
+            raise
+        return [executable, "-f", profile.name, "--", *command], Path(profile.name)
+    if system == "Linux":
+        executable = shutil.which("bwrap")
+        if executable is None:
+            raise EnforcementUnavailable("Linux capture requires bubblewrap (bwrap)")
+        wrapped = [executable, "--die-with-parent", "--ro-bind", "/", "/"]
+        wrapped.extend(["--dev", "/dev", "--proc", "/proc"])
+        for root in writable_roots:
+            root.mkdir(parents=True, exist_ok=True)
+            wrapped.extend(["--bind", str(root), str(root)])
+        wrapped.extend(["--chdir", str(cwd), "--", *command])
+        return wrapped, None
+    raise EnforcementUnavailable(
+        f"{system or 'unknown'} capture has no supported filesystem sandbox"
+    )
+
+
+def _bounded_measure(command: list[str], cwd: Path, timeout_s: int,
+                     writable_roots: list[Path]) -> dict:
     """Run a command with a hard per-stream retention cap."""
     started = time.monotonic()
     process = None
@@ -105,7 +153,9 @@ def _bounded_measure(command: list[str], cwd: Path, timeout_s: int) -> dict:
     deadline_exceeded = False
     launch_error = None
     cleanup_error = None
+    profile_path = None
     try:
+        command, profile_path = _enforced_command(command, cwd, writable_roots)
         process = subprocess.Popen(
             command,
             cwd=cwd,
@@ -166,6 +216,8 @@ def _bounded_measure(command: list[str], cwd: Path, timeout_s: int) -> dict:
                         output_limit_exceeded = True
                     retained.extend(remainder[:remaining])
                 stream.close()
+        if profile_path is not None:
+            profile_path.unlink(missing_ok=True)
     return {
         "exit_code": process.returncode if process is not None else None,
         "elapsed_seconds": time.monotonic() - started,
@@ -201,8 +253,12 @@ def capture(command: list[str], cwd: Path, destination: Path, *,
         raise ValueError("evidence destination must be owned")
     if destination.exists():
         raise FileExistsError(destination)
+    owned_target.mkdir(parents=True, exist_ok=True)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    result = _bounded_measure(command, cwd, timeout_s)
+    result = _bounded_measure(
+        command, cwd, timeout_s,
+        [owned_checkout, owned_target, owned_evidence_root],
+    )
     record = {
         "command": command,
         "cwd": str(cwd),

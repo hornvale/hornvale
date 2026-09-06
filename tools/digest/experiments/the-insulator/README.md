@@ -23,9 +23,15 @@ are never converted into a successful product result.
 The recorder uses the existing Counterpart process-session cleanup pattern and
 reads each stream through a hard 16 MiB retention cap. An oversized writer is
 terminated as soon as a read crosses the cap; the retained attempt is marked
-invalid. Workload argv may contain `${CHECKOUT}`, which is replaced with the
-absolute owned checkout at execution time. Unit tests use fixture Python
-commands only and never invoke Cargo or a live build.
+invalid. Capture also runs every workload inside a host filesystem sandbox:
+macOS requires `/usr/bin/sandbox-exec`, while Linux requires `bwrap`. The
+sandbox makes only the owned checkout, target, and evidence roots writable and
+capture refuses before launch when the host mechanism is unavailable. This is
+prevention at the host boundary, not authentication against a hostile kernel
+or proof that a sandbox implementation is bug-free. Workload argv may contain
+`${CHECKOUT}`, which is replaced with the absolute owned checkout at execution
+time. Unit tests use fixture Python commands only and never invoke Cargo or a
+live build.
 
 ## Commands
 

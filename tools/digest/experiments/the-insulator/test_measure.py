@@ -1,12 +1,15 @@
 import base64
 import hashlib
 import json
+import platform
+import shutil
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
-from measure import (load_workloads, capture, command_for_workload,
+from measure import (EnforcementUnavailable, load_workloads, capture, command_for_workload,
                      manifest_for_attempt, validate_attempt)
 
 
@@ -179,6 +182,54 @@ class AttemptTests(unittest.TestCase):
             self.assertTrue(result["output_limit_exceeded"])
             self.assertEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
             self.assertLessEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
+
+    def test_capture_blocks_external_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "owned"
+            root.mkdir()
+            external = Path(directory) / "external.txt"
+            destination = root / "evidence" / "attempt.json"
+            result = capture(
+                [sys.executable, "-c", f"open({str(external)!r}, 'w').write('nope')"],
+                root,
+                destination,
+                owned_checkout=root,
+                owned_target=root / "target",
+                owned_evidence_root=root / "evidence",
+            )
+            self.assertNotEqual(result["exit_code"], 0)
+            self.assertFalse(external.exists())
+
+    def test_capture_refuses_when_enforcement_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch("measure.platform.system", return_value="Plan9"), self.assertRaisesRegex(
+                EnforcementUnavailable, "no supported filesystem sandbox"
+            ):
+                capture(
+                    [sys.executable, "-c", "print('fixture')"],
+                    root,
+                    root / "evidence" / "attempt.json",
+                    owned_checkout=root,
+                    owned_target=root / "target",
+                    owned_evidence_root=root / "evidence",
+                )
+
+    @unittest.skipUnless(platform.system() == "Linux", "Linux-only enforcement prerequisite")
+    def test_linux_capture_refuses_without_bwrap(self):
+        if shutil.which("bwrap") is not None:
+            self.skipTest("bwrap is available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(EnforcementUnavailable, "bubblewrap"):
+                capture(
+                    [sys.executable, "-c", "print('fixture')"],
+                    root,
+                    root / "evidence" / "attempt.json",
+                    owned_checkout=root,
+                    owned_target=root / "target",
+                    owned_evidence_root=root / "evidence",
+                )
 
     def test_capture_rejects_unowned_paths(self):
         with tempfile.TemporaryDirectory() as directory:
