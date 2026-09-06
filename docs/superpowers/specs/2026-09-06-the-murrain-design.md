@@ -354,7 +354,9 @@ kind in catalogue order:
    `a ∈ [0, A_max]`; deaths are `pop · s · a · f`. Population is reduced by
    the deaths. Two facts are committed on the occupation, both dated
    `year`: `struck-by` (Text: the kind) and `outbreak-deaths`
-   (Number).
+   (Number). Both facts have the minted outbreak-event entity as their
+   subject and the struck occupation as their `place`; the place remains the
+   location contract, while the event subject is the explicit pair identity.
 4. **The ending.** If the death share `s · a · f ≥ φ = 0.30`, the
    community closes as `CauseOfEnd::Plague`, `Ended::Nature`; the
    `struck-by` fact at the same day names the pathogen, which is why
@@ -654,9 +656,10 @@ Siler constants or `GROWTH_RATE`.
   number.** The Siler magnitude stays calibrated and byte-identical;
   disease partitions it. A campaign that wants disease to move `e₀` must
   re-derive `GROWTH_RATE` as a gross rate first, and says so here.
-- **0859 — An outbreak is a dated event with its deaths.** Two facts on the
-  occupation at the same day; not an integral, not a trajectory; the pair
-  is the record of the event.
+- **0859 — An outbreak is a dated event with its deaths.** Two facts share a
+  minted outbreak-event subject, both retain the struck occupation as their
+  place, and both carry the same day; not an integral, not a trajectory; the
+  pair is the record of the event.
 
 ## 13. Staging (for the plan)
 

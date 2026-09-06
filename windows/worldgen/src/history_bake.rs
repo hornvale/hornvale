@@ -2411,6 +2411,16 @@ fn capture_d2_epoch_events(run: impl FnOnce()) -> Vec<D2EpochEvent> {
     })
 }
 
+/// The two observable boundaries returned by the production epoch helper.
+/// Keeping these here lets H-M3 compare the epidemic result before raids while
+/// still driving the same helper the real bake uses.
+#[allow(dead_code)]
+struct EpochTrace {
+    growth_population: BTreeMap<usize, f64>,
+    epidemic_population: BTreeMap<usize, f64>,
+    stream_after_growth: Stream,
+}
+
 /// The outcome of [`Bake::relocate`]ing a homeless people.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Relocation {
@@ -3794,6 +3804,7 @@ impl<'a> Bake<'a> {
                 self.step_community(idx, era, year);
             }
         }
+        self.plague_phase(&snapshot, era, year);
         // The Granary T4: predation runs after every snapshot community has
         // grown. Anything opened this epoch waits for the next snapshot.
         self.raid_phases(&snapshot, era, year);
@@ -4756,6 +4767,32 @@ impl<'a> Bake<'a> {
         // then, so a target whose granary bottoms out mid-year becomes
         // beatable exactly when its hoard is gone, not at the epoch boundary.
         self.grow(idx, era, year, pressure);
+    }
+
+    /// Resolve one production epoch in its load-bearing order: growth,
+    /// epidemic, then raids. The same helper is used by the world bake and by
+    /// the live H-M3 fixture, so the fixture cannot silently reproduce an
+    /// ordering that production does not execute.
+    fn resolve_epoch(&mut self, snapshot: &[usize], era: &EraClimate, year: f64) -> EpochTrace {
+        for &idx in snapshot {
+            self.step_community(idx, era, year);
+        }
+        let growth_population = snapshot
+            .iter()
+            .map(|&idx| (idx, self.communities[idx].population))
+            .collect();
+        let stream_after_growth = self.stream.clone();
+        self.plague_phase(snapshot, era, year);
+        let epidemic_population = snapshot
+            .iter()
+            .map(|&idx| (idx, self.communities[idx].population))
+            .collect();
+        self.raid_phases(snapshot, era, year);
+        EpochTrace {
+            growth_population,
+            epidemic_population,
+            stream_after_growth,
+        }
     }
 
     /// Resolve reservoir spillovers and their graph waves after growth and
@@ -6840,7 +6877,12 @@ mod tests {
             );
         }
         let graphs = vec![graph];
-        let caps = caps_from_fn(geo, |_| 100.0);
+        let caps = caps_from_fn(
+            geo,
+            |vertex| {
+                if vertex == Vertex(1) { 200.0 } else { 100.0 }
+            },
+        );
         let river_prox = VertexMap::from_fn(geo, |_| 0.0);
         let refugia = VertexMap::from_fn(geo, |_| false);
         let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
@@ -6849,10 +6891,10 @@ mod tests {
         let epidemic = crate::plague_bake::EpidemicKind {
             kind,
             hosts: BTreeMap::from([(people, 0.5), (KindId("kobold"), 0.25)]),
-            fit_by_era: vec![VertexMap::from_fn(geo, |_| 0.0)],
+            fit_by_era: vec![VertexMap::from_fn(geo, |_| 1.0)],
             attack_max: 0.1,
             fatality: 0.1,
-            spillover_weight: 1.0,
+            spillover_weight: 1_000.0,
             immunizing: true,
             ccs: 150.0,
         };
@@ -6878,14 +6920,37 @@ mod tests {
             None,
             0.0,
         );
+        let absent_host = bake.open(
+            KindId("human"),
+            Vertex(1),
+            0.0,
+            100.0,
+            Founding::Genesis(Vertex(1)),
+            None,
+            0.0,
+        );
+        let mut snapshot = indices.clone();
+        snapshot.extend([non_host, absent_host]);
 
+        let era = era_at(0.0);
         let adjacency = bake.epidemic_adjacency();
         let adjacency_refs: Vec<(u32, &[u32])> = adjacency
             .iter()
             .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
             .collect();
-        let components = bake.epidemic_components(&adjacency_refs);
-        bake.record_persistence(&components, Vertex(0), kind, &epidemic.hosts);
+        let targets: Vec<_> = snapshot
+            .iter()
+            .map(|&idx| bake.epidemic_targets(&adjacency_refs, bake.communities[idx].site))
+            .collect();
+        let mut expected_stream = bake.stream.clone();
+        for target in &targets {
+            assert!(expected_stream.next_f64() < 1_000.0 * crate::plague_bake::SPILLOVER_RATE);
+            for _ in target {
+                expected_stream.next_f64();
+            }
+        }
+        bake.plague_phase(&snapshot, &era, 0.0);
+        assert_eq!(bake.stream.next_f64(), expected_stream.next_f64());
         for &idx in &indices[..4] {
             assert!(
                 bake.persistent
@@ -6893,24 +6958,63 @@ mod tests {
             );
         }
         assert!(
+            bake.persistent
+                .contains(&(bake.communities[non_host].lineage, kind))
+        );
+        assert!(
+            !bake
+                .persistent
+                .contains(&(bake.communities[absent_host].lineage, kind))
+        );
+        assert!(
             !bake
                 .persistent
                 .contains(&(bake.communities[indices[4]].lineage, kind))
         );
 
-        let era = era_at(0.0);
-        bake.plague_phase(&indices, &era, 0.0);
-        let expected = 100.0 - 100.0 * (25.0 / 30.0) * 0.5 * 0.1 * 0.1;
-        assert!((bake.communities[indices[3]].population - expected).abs() < 1e-12);
-        assert_eq!(bake.communities[non_host].population, 100.0);
-        assert_eq!(bake.communities[indices[4]].population, 100.0);
-
-        for &idx in &indices[..4] {
-            bake.communities[idx].population = 20.0;
+        // Persistence came from the live spillover. Recurrence attacks the
+        // partial host at fixed A_max, while only the unconditional spillover
+        // draws advance the stream.
+        let partial_before = bake.communities[non_host].population;
+        bake.epidemics = &[];
+        let mut recurrence_epidemic = epidemic.clone();
+        recurrence_epidemic.spillover_weight = 0.0;
+        bake.epidemics = std::slice::from_ref(&recurrence_epidemic);
+        let mut recurrence_stream = bake.stream.clone();
+        for _ in &snapshot {
+            recurrence_stream.next_f64();
         }
-        bake.communities[non_host].population = 20.0;
-        bake.plague_phase(&indices, &era, 25.0);
-        assert!(indices.iter().all(|&idx| {
+        bake.plague_phase(&snapshot, &era, 25.0);
+        let expected_partial = partial_before
+            * (1.0
+                - (25.0 / 30.0)
+                    * 0.25
+                    * recurrence_epidemic.attack_max
+                    * recurrence_epidemic.fatality);
+        assert!((bake.communities[non_host].population - expected_partial).abs() < 1e-12);
+        assert_eq!(bake.stream.next_f64(), recurrence_stream.next_f64());
+
+        // Exactly CCS, then below CCS, clears the marker for every host that
+        // was propagated, including the partial host.
+        for &idx in &indices[..4] {
+            bake.communities[idx].population = 60.0;
+        }
+        bake.communities[non_host].population = 120.0;
+        let members = indices[..4]
+            .iter()
+            .copied()
+            .chain([non_host, absent_host])
+            .collect::<Vec<_>>();
+        assert_eq!(bake.host_population(&members, &recurrence_epidemic), 150.0);
+        bake.plague_phase(&snapshot, &era, 50.0);
+        assert!(snapshot.iter().all(|&idx| {
+            !bake
+                .persistent
+                .contains(&(bake.communities[idx].lineage, kind))
+        }));
+        bake.communities[indices[0]].population = 59.0;
+        bake.plague_phase(&snapshot, &era, 75.0);
+        assert!(snapshot.iter().all(|&idx| {
             !bake
                 .persistent
                 .contains(&(bake.communities[idx].lineage, kind))
@@ -6960,10 +7064,10 @@ mod tests {
     }
 
     #[test]
-    fn live_spillover_wave_and_plague_boundary_follow_the_epoch_order() {
+    fn overlapping_live_spillovers_consume_all_attacks_and_aggregate_once() {
         let geo = fixture_geo();
         let mut graph = ConnectionGraph::new(geo.vertex_count());
-        for (from, to) in [(0, 1), (1, 2), (2, 3), (4, 5)] {
+        for (from, to) in [(0, 1), (1, 2)] {
             graph.add_edge(
                 Vertex(from),
                 Edge {
@@ -6979,9 +7083,105 @@ mod tests {
         let refugia = VertexMap::from_fn(geo, |_| false);
         let people = KindId("goblin");
         let epidemic = crate::plague_bake::EpidemicKind {
-            kind: KindId("live-fever"),
+            kind: KindId("overlap-fever"),
             hosts: BTreeMap::from([(people, 1.0)]),
             fit_by_era: vec![VertexMap::from_fn(geo, |_| 1.0)],
+            attack_max: 0.1,
+            fatality: 0.1,
+            spillover_weight: 1_000.0,
+            immunizing: false,
+            ccs: f64::MAX,
+        };
+        let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
+        bake.epidemics = std::slice::from_ref(&epidemic);
+        let snapshot = (0..3)
+            .map(|site| {
+                bake.open(
+                    people,
+                    Vertex(site),
+                    0.0,
+                    100.0,
+                    Founding::Genesis(Vertex(site)),
+                    None,
+                    0.0,
+                )
+            })
+            .collect::<Vec<_>>();
+        let adjacency = bake.epidemic_adjacency();
+        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+        let targets: Vec<_> = snapshot
+            .iter()
+            .map(|&idx| bake.epidemic_targets(&adjacency_refs, bake.communities[idx].site))
+            .collect();
+        let mut expected_stream = bake.stream.clone();
+        let mut expected_deaths = 0.0;
+        let mut expected_target_deaths = 0.0;
+        let mut expected_population = vec![100.0; snapshot.len()];
+        for target in &targets {
+            assert!(expected_stream.next_f64() < 1_000.0 * crate::plague_bake::SPILLOVER_RATE);
+            for &idx in target {
+                let attack = expected_stream.next_f64() * epidemic.attack_max;
+                let population = expected_population[idx];
+                let deaths = population * attack * epidemic.fatality;
+                expected_population[idx] -= deaths;
+                expected_deaths += deaths;
+                if idx == snapshot[1] {
+                    expected_target_deaths += deaths;
+                }
+            }
+        }
+        bake.plague_phase(&snapshot, &era_at(0.0), 0.0);
+        assert_eq!(bake.stream.next_f64(), expected_stream.next_f64());
+        let events: Vec<_> = bake
+            .outbreaks
+            .iter()
+            .filter(|event| event.pathogen == epidemic.kind)
+            .collect();
+        assert_eq!(events.len(), 3);
+        let target_event = events
+            .iter()
+            .find(|event| event.occupation == bake.records[snapshot[1]].community)
+            .unwrap();
+        let target_deaths = 100.0 - bake.communities[snapshot[1]].population;
+        assert!((target_event.deaths - expected_target_deaths).abs() < 1e-12);
+        assert!((target_event.deaths - target_deaths).abs() < 1e-12);
+        assert!(expected_deaths > target_deaths);
+    }
+
+    #[test]
+    fn live_spillover_wave_and_plague_boundary_follow_the_epoch_order() {
+        let geo = fixture_geo();
+        let mut graph = ConnectionGraph::new(geo.vertex_count());
+        for (from, to) in [(0, 1), (1, 2), (2, 3), (4, 5), (6, 7)] {
+            graph.add_edge(
+                Vertex(from),
+                Edge {
+                    to: Vertex(to),
+                    kind: EdgeKind::Adjacency,
+                    conductance: 1.0,
+                },
+            );
+        }
+        let graphs = vec![graph];
+        let caps = caps_from_fn(
+            geo,
+            |vertex| {
+                if vertex == Vertex(1) { 200.0 } else { 100.0 }
+            },
+        );
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let people = KindId("goblin");
+        let raider_people = KindId("kobold");
+        let epidemic = crate::plague_bake::EpidemicKind {
+            kind: KindId("live-fever"),
+            hosts: BTreeMap::from([(people, 1.0)]),
+            fit_by_era: vec![VertexMap::from_fn(geo, |vertex| {
+                if vertex == Vertex(0) { 1.0 } else { 0.0 }
+            })],
             attack_max: 0.1,
             fatality: 0.1,
             // Force the live spillover arm without changing its draw order.
@@ -6992,49 +7192,82 @@ mod tests {
         let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
         bake.epidemics = std::slice::from_ref(&epidemic);
         let mut indices = Vec::new();
-        for site in [0, 1, 2, 3] {
+        for (site, kind, population) in [
+            (0, raider_people, 150.0),
+            (1, people, 100.0),
+            (2, people, 10.0),
+            (3, people, 10.0),
+            (4, people, 10.0),
+        ] {
             indices.push(bake.open(
-                people,
+                kind,
                 Vertex(site),
                 0.0,
-                10.0,
+                population,
                 Founding::Genesis(Vertex(site)),
                 None,
                 0.0,
             ));
         }
+        bake.communities[indices[0]].disposition = Some(1.0);
         let era = era_at(0.0);
-        let before = bake.communities[indices[0]].population;
-        bake.step_community(indices[0], &era, 0.0);
-        let grown = bake.communities[indices[0]].population;
-        assert!(grown > before, "growth must precede the epidemic phase");
-        let untouched = bake.communities[indices[3]].population;
-        let mut expected_stream = bake.stream.clone();
-        assert!(expected_stream.next_f64() < 1_000.0 * crate::plague_bake::SPILLOVER_RATE);
-        bake.plague_phase(&[indices[0]], &era, 0.0);
-        for (position, &idx) in indices[..3].iter().enumerate() {
-            let population = bake.communities[idx].population;
-            let expected = if idx == indices[0] { grown } else { 10.0 };
-            let attack = expected_stream.next_f64() * epidemic.attack_max;
-            assert!(
-                (population - expected * (1.0 - attack * epidemic.fatality)).abs() < 1e-12,
-                "wave position {position}"
-            );
+        bake.begin_epoch();
+        let adjacency = bake.epidemic_adjacency();
+        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+        let targets = bake.epidemic_targets(&adjacency_refs, Vertex(0));
+        let trace = bake.resolve_epoch(&indices, &era, 0.0);
+        assert!(trace.growth_population.contains_key(&indices[0]));
+        let mut expected_stream = trace.stream_after_growth.clone();
+        for &idx in &indices {
+            let spill = expected_stream.next_f64();
+            if idx == indices[0] {
+                assert!(spill < 1_000.0 * crate::plague_bake::SPILLOVER_RATE);
+                for _ in &targets {
+                    expected_stream.next_f64();
+                }
+            }
         }
-        assert_eq!(bake.communities[indices[3]].population, untouched);
-        // The epoch driver invokes raids only after this epidemic pass; the
-        // follow-on pass must not manufacture another outbreak or alter the
-        // already-emitted epidemic event set.
-        let outbreak_count = bake.outbreaks.len();
-        bake.raid_phases(&[indices[0]], &era, 0.0);
-        assert_eq!(bake.outbreaks.len(), outbreak_count);
+        assert_eq!(bake.stream.next_f64(), expected_stream.next_f64());
+        for &idx in &indices[..3] {
+            let host_weight = if idx == indices[0] { 0.0 } else { 1.0 };
+            let attack = if idx == indices[0] {
+                0.0
+            } else {
+                // The production target order is ascending site order.
+                let mut draws = trace.stream_after_growth.clone();
+                draws.next_f64();
+                let position = targets.iter().position(|&target| target == idx).unwrap();
+                for _ in 0..position {
+                    draws.next_f64();
+                }
+                draws.next_f64() * epidemic.attack_max
+            };
+            let expected =
+                trace.growth_population[&idx] * (1.0 - host_weight * attack * epidemic.fatality);
+            assert!((trace.epidemic_population[&idx] - expected).abs() < 1e-12);
+        }
+        assert_eq!(
+            trace.epidemic_population[&indices[3]],
+            trace.growth_population[&indices[3]]
+        );
+        assert_eq!(
+            trace.epidemic_population[&indices[4]],
+            trace.growth_population[&indices[4]]
+        );
+        assert!(
+            bake.tally.raided > 0,
+            "raids must see the epidemic-reduced target"
+        );
 
         let victim = bake.open(
             people,
-            Vertex(5),
+            Vertex(7),
             0.0,
             100.0,
-            Founding::Genesis(Vertex(5)),
+            Founding::Genesis(Vertex(7)),
             None,
             0.0,
         );
@@ -7053,15 +7286,15 @@ mod tests {
         assert!(
             bake.communities
                 .iter()
-                .any(|c| c.alive && c.site != Vertex(5) && (c.population - 70.0).abs() < 1e-12)
+                .any(|c| c.alive && c.site != Vertex(7) && (c.population - 70.0).abs() < 1e-12)
         );
 
         let epsilon = bake.open(
             people,
-            Vertex(7),
+            Vertex(9),
             0.0,
             100.0,
-            Founding::Genesis(Vertex(7)),
+            Founding::Genesis(Vertex(9)),
             None,
             0.0,
         );

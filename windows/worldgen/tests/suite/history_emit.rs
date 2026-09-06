@@ -46,11 +46,9 @@ fn seed_42_emits_paired_outbreak_history_and_plague_endings() {
     );
     assert_eq!(struck.len(), deaths.len());
     for event in struck {
-        assert!(
-            deaths
-                .iter()
-                .any(|death| { death.subject == event.subject && death.day == event.day })
-        );
+        assert!(deaths.iter().any(|death| {
+            death.subject == event.subject && death.place == event.place && death.day == event.day
+        }));
     }
     assert!(
         world
@@ -86,14 +84,24 @@ fn outbreak_events_emit_as_a_paired_dated_fact() {
     let deaths: Vec<_> = world.ledger.find("outbreak-deaths").collect();
     assert_eq!(struck.len(), 2);
     assert_eq!(deaths.len(), 2);
+    let strike_ids: Vec<_> = struck.iter().map(|fact| fact.subject).collect();
+    let death_ids: Vec<_> = deaths.iter().map(|fact| fact.subject).collect();
+    assert_eq!(strike_ids, death_ids);
+    assert_eq!(
+        strike_ids
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        2
+    );
     for strike in &struck {
         let death = deaths
             .iter()
-            .find(|death| death.place == strike.place)
+            .find(|death| death.subject == strike.subject)
             .expect("each outbreak pair shares its event identity");
-        assert_eq!(strike.subject, death.subject);
+        assert_eq!(strike.place, death.place);
         assert_eq!(strike.day, death.day);
-        assert_ne!(strike.place, Some(strike.subject));
+        assert_ne!(strike.subject, strike.place.unwrap());
     }
     assert_eq!(
         struck[0].object,
@@ -106,10 +114,20 @@ fn outbreak_events_emit_as_a_paired_dated_fact() {
     let restored_struck: Vec<_> = restored.find("struck-by").collect();
     let restored_deaths: Vec<_> = restored.find("outbreak-deaths").collect();
     assert_eq!(restored_struck.len(), 2);
+    let restored_strike_ids: Vec<_> = restored_struck.iter().map(|fact| fact.subject).collect();
+    let restored_death_ids: Vec<_> = restored_deaths.iter().map(|fact| fact.subject).collect();
+    assert_eq!(restored_strike_ids, restored_death_ids);
+    assert_eq!(
+        restored_strike_ids
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        2
+    );
     assert!(restored_struck.iter().all(|strike| {
         restored_deaths
             .iter()
-            .any(|death| death.place == strike.place)
+            .any(|death| death.subject == strike.subject && death.place == strike.place)
     }));
 }
 

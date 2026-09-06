@@ -139,9 +139,10 @@ fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
     fact_at(subject, predicate, object, day, Some(subject))
 }
 
-/// Build a dated fact with an explicit event identity in its serialized place
-/// field. Paired epidemic facts use this to share one stable join token while
-/// retaining the struck occupation as their subject.
+/// Build a dated fact with an explicit subject and place. Paired epidemic
+/// facts make the minted outbreak event their subject and retain the struck
+/// occupation in `place`, which preserves the kernel envelope's location
+/// contract while giving both facts one serialized event identity.
 fn fact_at(
     subject: EntityId,
     predicate: &str,
@@ -415,36 +416,38 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         }
     }
 
-    // Epidemic events are paired by (occupation, day, pathogen). Validate that join key
-    // before committing either half so malformed bake output cannot leave a
-    // plausible orphan fact in the ledger.
+    // Epidemic events are paired by (occupation, day, pathogen). Validate that
+    // join key before committing either half so malformed bake output cannot
+    // leave a plausible orphan fact in the ledger. The event entity is the
+    // subject of both facts; its place remains the struck occupation.
     let mut outbreak_keys = BTreeSet::new();
-    for (ordinal, event) in h.outbreaks.iter().enumerate() {
-        let subject = *bake_to_ledger
-            .get(&event.occupation)
+    for (ordinal, outbreak) in h.outbreaks.iter().enumerate() {
+        let occupation = *bake_to_ledger
+            .get(&outbreak.occupation)
             .expect("an outbreak names an occupation minted in this history");
-        let day = ledger_day_of_bake_year(event.year);
+        let day = ledger_day_of_bake_year(outbreak.year);
         assert!(
-            outbreak_keys.insert((subject, day.to_bits(), event.pathogen)),
+            outbreak_keys.insert((occupation, day.to_bits(), outbreak.pathogen)),
             "one aggregated outbreak event per occupation, day, and pathogen"
         );
+        let event = outbreak_entities[ordinal];
         world.ledger.commit(
             fact_at(
-                subject,
+                event,
                 hornvale_epidemiology::STRUCK_BY,
-                Value::Text(event.pathogen.0.to_string()),
+                Value::Text(outbreak.pathogen.0.to_string()),
                 day,
-                Some(outbreak_entities[ordinal]),
+                Some(occupation),
             ),
             &world.registry,
         )?;
         world.ledger.commit(
             fact_at(
-                subject,
+                event,
                 hornvale_epidemiology::OUTBREAK_DEATHS,
-                Value::Number(event.deaths),
+                Value::Number(outbreak.deaths),
                 day,
-                Some(outbreak_entities[ordinal]),
+                Some(occupation),
             ),
             &world.registry,
         )?;

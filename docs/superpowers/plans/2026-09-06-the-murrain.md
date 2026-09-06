@@ -65,7 +65,7 @@
 
 - [ ] **Step 1: Add failing bake tests** in `windows/worldgen/tests/suite/history_bake.rs` and `history_emit.rs` for stream version, phase ordering, paired facts, wave boundaries, and Plague endings.
 - [ ] **Step 2: Implement `windows/worldgen/src/plague_bake.rs`** with deterministic spillover, wave traversal, susceptible calculation, outbreak arithmetic, persistence/newborn attack, survivor relocation through existing paths, and snapshot/catalogue ordering.
-- [ ] **Step 3: Register and emit `struck-by` and `outbreak-deaths`** through the epidemiology-owned predicate registry and `history_emit`; assert one paired event per `(occupation, day)`.
+- [ ] **Step 3: Register and emit `struck-by` and `outbreak-deaths`** through the epidemiology-owned predicate registry and `history_emit`; assert one paired event per `(occupation, day, pathogen)`, with the outbreak entity as subject and occupation preserved in `Fact.place`.
 - [ ] **Step 4: Wire the phase into `history_bake.rs`** after community growth and before raids, and change only the bake stream label from v3 to v4 as specified.
 - [ ] **Step 5: Run focused worldgen/history tests** and inspect the first deterministic diff; resolve only expected epoch movement through the declared artifact path.
 - [ ] **Step 6: Rebaseline declared goldens and fixtures** using the repository's artifact commands, read the diff, and commit the source/epoch change separately from generated artifacts.
