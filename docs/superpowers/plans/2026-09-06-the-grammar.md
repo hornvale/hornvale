@@ -24,7 +24,7 @@
 
 ---
 
-## Stage 1: Establish the species-owned reproductive affordance contract
+## Task 1: Establish the species-owned reproductive affordance contract
 
 **Goal:** Add a narrow, body-plan-facing BIO-3 vocabulary that can express ordinary, fantastic, asexual, parasitic, manufactured, non-reproducing, and naturally transitioning bodies without exposing detailed anatomy to consumers.
 
@@ -56,7 +56,7 @@
 - [ ] Run `cargo fmt --check` and `cargo clippy -p hornvale-species --all-targets -- -D warnings`.
 - [ ] Commit as `feat(species): add BIO-3 reproductive affordance contract`.
 
-## Stage 2: Implement the composable reproductive grammar and compatibility relation
+## Task 2: Implement the composable reproductive grammar and compatibility relation
 
 **Goal:** Turn affordances into a pure, inspectable grammar that distinguishes what is possible from how often it occurs, and evaluate hybrid outcomes as relations between profiles rather than species-name exceptions.
 
@@ -89,7 +89,7 @@
 - [ ] Review operation composition against §§3–7 of the design spec and confirm no social interpretation leaked into the biology API.
 - [ ] Commit as `feat(species): compose reproductive pathways and hybrid relations`.
 
-## Stage 3: Add probe profiles and a species-independent population handoff
+## Task 3: Add probe profiles and a species-independent population handoff
 
 **Goal:** Exercise the grammar with synthetic calibration profiles and define the plain-data contract that BIO-3 hands to the Murrain-compatible population substrate.
 
@@ -125,7 +125,7 @@
 - [ ] Run the architecture/layering tests if the workspace test harness checks new module dependencies.
 - [ ] Commit as `feat(demography): define BIO-3 population handoff`.
 
-## Stage 4: Wire the composition-root boundary without changing world behavior
+## Task 4: Wire the composition-root boundary without changing world behavior
 
 **Goal:** Make worldgen able to resolve species affordances and hand plain reproductive inputs to demography while preserving all existing generated-world outputs until a later campaign opts into realization.
 
@@ -157,7 +157,7 @@
 - [ ] Run the relevant architecture and docs tests to catch layer or prose drift.
 - [ ] Commit as `feat(worldgen): expose additive reproductive substrate input`.
 
-## Stage 5: Freeze the probe panel and handoff documentation
+## Task 5: Freeze the probe panel and handoff documentation
 
 **Goal:** Make the new model measurable and leave SOC-2 with a stable, explicit contract for the successor campaign.
 
