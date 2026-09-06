@@ -82,6 +82,14 @@ mod the_fare_calibration;
 mod the_mire_calibration;
 #[path = "suite/tripwire.rs"]
 mod tripwire;
+#[path = "suite/warp_calibration.rs"]
+mod warp_calibration;
+#[path = "suite/warp_instrument.rs"]
+mod warp_instrument;
+#[path = "suite/warp_probe.rs"]
+mod warp_probe;
+#[path = "suite/warp_readout.rs"]
+mod warp_readout;
 #[path = "suite/wear_funnel.rs"]
 mod wear_funnel;
 #[path = "suite/weft_density.rs"]

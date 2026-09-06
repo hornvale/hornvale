@@ -264,3 +264,92 @@ fn a_chamber_wait_derives_a_shadowcast_on_each_side_of_its_tick() {
         w.shadowcasts
     );
 }
+
+/// **THE ROUTE MEMO IS SESSION-LIVED, not merely used** (The Culvert, Task 7
+/// fix round 1). After a first `wait` has warmed it, SEVEN further waits add
+/// ZERO `plan_to_room` searches: a warm memo asked the same `(home, dest)`
+/// questions answers them from its map.
+///
+/// # Why this test exists at all, and what it catches that nothing else does
+///
+/// `the_culvert.rs`'s sweep witness proves the memo collapses duplicates
+/// WITHIN one sweep — it builds its own memo, so it says nothing about
+/// whether the memo survives between reads. Session-lived is the campaign's
+/// entire claim, not an implementation detail: if a later change constructed
+/// a fresh `RouteMemo` inside `believed_water`, or reset `Session`'s field
+/// per wait, that witness would stay green at 83 while every warm-read saving
+/// evaporated. The `&mut RouteMemo` parameter forces a caller to OWN one; it
+/// cannot force the caller to KEEP one. This test is the half that can.
+///
+/// `HomeNavCache`'s equivalent property is pinned — through
+/// `TurnWorkRead::plan_searches` and the scaling probes. This is the route
+/// memo's.
+///
+/// # The denominator, measured rather than assumed
+///
+/// A zero here would be worthless if the later waits simply asked nothing.
+/// They ask a great deal. With `RouteMemo::hops`'s cache lookup neutralised
+/// so `searches()` counts ASKS rather than misses (the fix round's own
+/// mutation, run on a rebuilt binary), seed 42's flagship reads:
+///
+/// ```text
+/// wait 1: total  270, delta 270      wait 5: total 1512, delta 566
+/// wait 2: total  540, delta 270      wait 6: total 1784, delta 272
+/// wait 3: total  810, delta 270      wait 7: total 2198, delta 414
+/// wait 4: total  946, delta 136      wait 8: total 2692, delta 494
+/// ```
+///
+/// **2,692 route questions across eight waits, against ONE real search.**
+/// Unmutated, the same run reads `total 1` at every wait from the first
+/// onward. So the invariance below is the memo serving 2,691 hits, not an
+/// empty belief set quietly asking nothing.
+///
+/// MUTATION THIS MUST FAIL AGAINST, observed: neutralise the cache lookup in
+/// `RouteMemo::hops` (`liveness.rs`) so every ask runs a search. Wait 2's
+/// delta goes from 0 to 270 and this test reddens on its first warm wait.
+/// Restored by copy from a pre-mutation file, re-verified by grep, and re-run
+/// on a rebuilt binary.
+#[test]
+fn the_route_memo_survives_between_waits() {
+    let world = common::build(42).expect("seed 42 builds");
+    let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");
+
+    // The COLD wait: it pays for whatever pairs this roster's belief fold
+    // asks about for the first time.
+    session.handle("wait");
+    let cold = session.route_searches();
+    assert!(
+        cold > 0,
+        "denominator: the first wait ran no route searches at all, so this seed's belief \
+         fold never reaches the memo and the invariance below would be vacuous"
+    );
+
+    // The WARM waits. Nothing new is asked, so nothing new is searched.
+    const WARM_WAITS: usize = 7;
+    let day_before = session.day();
+    for _ in 0..WARM_WAITS {
+        session.handle("wait");
+    }
+    assert!(
+        session.day() > day_before,
+        "denominator: {WARM_WAITS} waits did not advance the day, so 'no new searches' \
+         would mean 'nothing happened'"
+    );
+    assert_eq!(
+        session.route_searches(),
+        cold,
+        "{WARM_WAITS} further waits added {} route searches on top of the first wait's {cold}. \
+         A session-lived RouteMemo answers an already-asked (home, dest) pair from its map; \
+         a non-zero here means the memo is being rebuilt somewhere between waits (see this \
+         test's own doc for the 2,692-ask denominator it is measured against). \
+         BEFORE CONCLUDING THE MEMO IS BROKEN, CHECK THE OTHER CAUSE: this asserts EXACT \
+         equality across the warm waits, so a change in main that makes a seed-42 creature \
+         PERCEIVE NEW WATER partway through this script adds a genuinely new (home, dest) \
+         pair, and the extra search is correct behaviour rather than a memo defect. The \
+         discriminator is whether the delta is a handful of new pairs (belief moved) or on \
+         the order of the cold wait's own {cold} (the memo is not surviving). If belief \
+         moved, re-pin this test's expectation; do not weaken it to an inequality, because \
+         the exactness is what catches a rebuilt memo at all.",
+        session.route_searches() - cold
+    );
+}

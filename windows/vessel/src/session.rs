@@ -9,10 +9,10 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SUSTENANCE,
     Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
-    derive_wild_herds, renders_unconscious, settlement_room_index, slept_fact, slept_on_fact,
-    species_activity, village_or_fallback,
+    derive_wild_herds, errand_predicates, renders_unconscious, settlement_room_index, slept_fact,
+    slept_on_fact, species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -192,12 +192,23 @@ const IN_CHARACTER_VERBS: [&str; 28] = [
 /// The provenance a walk-band step commits under (The Deed, Task 7).
 ///
 /// **An in-world reason, deliberately, and this is the acceptance test's
-/// hinge.** A creature's `agent-at` provenance names its errand ("went down to
-/// the river it knew (thirst)"); the keystone requires that "nothing in the
-/// trace may reveal that a different mind chose", so a possessed body's must
-/// name an errand too. It must never name the driver — `provoke`/`soothe`
+/// hinge.** The keystone requires that "nothing in the trace may reveal that a
+/// different mind chose", and this string satisfies it by naming the walk, not
+/// the walker's driver. It must never name the driver — `provoke`/`soothe`
 /// stamp `player: …` precisely because those ARE operator acts (spec §2.3),
 /// and an in-character act is the opposite case.
+///
+/// **The argument used to run through a creature's provenance, and since The
+/// Warrant it cannot.** It read: a creature's `agent-at` provenance names its
+/// errand ("went down to the river it knew (thirst)"), so a possessed body's
+/// must name an errand too. That gloss is now the registry doc of
+/// `errand/water-known`, not any fact's provenance; a creature's step names
+/// its producer, `vessel/liveness`. The inference is therefore retired, and
+/// the constant is not: a possessed body has no `Mode`, so there is no errand
+/// to promote onto a predicate for it, and spec §7.4 accepts that asymmetry
+/// deliberately. The distinguishability is not new either — pre-flip the two
+/// sides already drew from disjoint sets of glosses; the flip made the
+/// contrast starker, not real.
 const WALKED_PROVENANCE: &str = "walked on (its own errand)";
 
 /// The provenance `back` commits under — the same in-world register as
@@ -294,9 +305,12 @@ const OBJECTIVE_EYES: crate::eyes::Eyes = crate::eyes::Eyes::Off;
 // which side of a doorway the player was standing. See `Session::sighting`.
 
 /// The ways-on name for the aperture leading DEEPER into a structure — a
-/// direction, not a thing, because a chamber address carries no bearing and the
-/// chambers of one structure are prose-identical, so only depth distinguishes
-/// them.
+/// direction, not a thing, because a chamber address carries no bearing. On a
+/// CHAIN this is also the only name that makes sense: there is exactly one way
+/// in, so naming it by role would say nothing the direction does not already
+/// say. At a FORK there is no single "deeper" to name this way at all — see
+/// [`Session::further_in`] and [`Session::named_neighbour`], which is why this
+/// constant is never reached for one.
 const FURTHER_IN: &str = "further in";
 
 /// Every token `enter` accepts for [`FURTHER_IN`]. `in` and `on` are here
@@ -599,6 +613,11 @@ pub(crate) fn possessor_of(ledger: &Ledger, body: EntityId) -> Option<EntityId> 
     held
 }
 
+/// The flag that switches `!why` from the rolled-up errand view to one line
+/// per step (The Warrant, spec §5.2). One spelling, used by the parser and
+/// named in [`HELP`], so the two cannot drift.
+const STEPS_FLAG: &str = "--steps";
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -648,7 +667,9 @@ verbs:
 operator instruments (out-of-character; bypass the body, never the world):
   !whoami          the one you possess
   !npcs            the derived NPCs sharing this world (label, number)
-  !why <who>       recount an NPC's dated history (by label or number)
+  !why <who>       recount an NPC's dated history (by label or number); each
+                   errand it set out on is named once, rolled up over the
+                   steps it took — add --steps for one line per step
   !eyes [who]      whose eyes you see colour through (a species, 'own',
                    'standard', or 'off'); bare, it says what yours drop
   !provoke [who]   shift a co-located NPC's disposition, your own mark
@@ -957,9 +978,10 @@ pub struct Session<'w> {
     /// which also RETIRED `PASSAGE_CLEARED` from this list), and the
     /// drive/needs predicates beside
     /// them — every one registered per-session, never at genesis (spec §3).
-    /// The roster is `Session::start`'s own `register_predicate` block, which
-    /// is where a reader should look rather than trusting this list to stay
-    /// exhaustive; it has already gone stale three predicates in a row.
+    /// The drive-predicate roster is `liveness::DRIVE_PREDICATES`, which is
+    /// where a reader should look — it is the one published list
+    /// `Session::start` and both `examples/` benches all consume (The
+    /// Culvert), so it cannot go stale in exactly one of its readers again.
     registry: ConceptRegistry,
     /// Whose eyes the possession's chart is coloured through (The Beholding,
     /// Task 4), carried from `PossessOpts::eyes`.
@@ -1121,6 +1143,25 @@ pub struct Session<'w> {
     /// `wait` after its first, which requires the cache itself, not merely
     /// its backing memo, to outlive one tick. See `HomeNavCache`'s own doc.
     home_nav_cache: HomeNavCache,
+    /// The session-lived, CROSS-tick water-belief route memo (The Culvert,
+    /// Task 7): the home-anchored `plan_to_room` that `believed_water` and
+    /// `nearer_to_home` rank through, cached on `(home, dest, budget)`.
+    /// Session-scoped for the same reason `home_nav_cache` is — every `wait`
+    /// after the first pays nothing for a pair already asked — and SHARED
+    /// across creatures, unlike `home_nav_cache`, because the
+    /// duplicates this collapses are duplicates across the roster (see
+    /// `RouteMemo`'s own doc). Byte-identical by construction: it memoizes a
+    /// pure function of mesh geometry.
+    ///
+    /// **Held for the session because it is CHEAP, not because its population
+    /// was shown to stop growing.** This doc said "an NPC's `home` is fixed for
+    /// a possession, so its key population saturates". That is a non-sequitur —
+    /// a fixed `home` bounds the key's first component while `dest` keeps
+    /// accumulating — and the campaign's own Task 5 measured the home-anchored
+    /// population at 83 distinct pairs at wait 12 rising to **190 at wait 60**,
+    /// with no ceiling demonstrated. See The Culvert's spec §1.3(d), which is
+    /// the canonical statement, and its ledger #14.
+    route_memo: RouteMemo,
     // THE THREE SIDE-FIELDS ARE GONE (The Rack, Task 3). `driven_mode`,
     // `driven_affect` and `driven_suppressed` used to sit here: three
     // separately-declared copies of what is now one `Felt` in the roster's own
@@ -1480,8 +1521,11 @@ fn derive_herd_bodies(
 /// The body among `bodies` that `needle` (already lowercased-and-compared
 /// case-insensitively) names — the shared resolution three matchers
 /// (`why`, `npc_grievance`, `colocated_npc`) apply to a typed label. An
-/// EXACT case-insensitive match wins outright; failing that, the LONGEST
-/// label merely CONTAINING `needle` wins.
+/// EXACT case-insensitive match wins outright (unchanged, The Roll, Task
+/// 10); failing that, `Ok(Some(_))` names the single unambiguous substring
+/// winner, `Ok(None)` means nothing here matches at all, and `Err(_)` names
+/// every candidate an ambiguous needle matched (The Ken, Task 5) — a
+/// caller must not silently pick one.
 ///
 /// **The Roll, Task 10.** Before this, each site took the first roster-order
 /// substring hit, which let a shorter resident's name be shadowed by a
@@ -1496,22 +1540,74 @@ fn derive_herd_bodies(
 /// full, but an exact query for either must still win outright — the exact
 /// check above is what guarantees that).
 ///
+/// **The Ken, Task 10 -> Task 5.** The Roll's `max_by_key` picked a winner
+/// from ANY number of substring matches, with no check that the winner had
+/// anything to do with the others — so three dragons sharing the suffix
+/// "-dragon" resolved `examine dragon` to whichever was longest, confidently
+/// and wrongly. The winner earns the pick only when it is a strict
+/// EXTENSION of every other match — every other match's label is itself a
+/// substring of the winner's ("goblin" is a substring of "goblin chief," so
+/// "goblin chief" wins over an ambiguous short query naming both). When the
+/// longest match does NOT contain every other match ("black-dragon" does
+/// not contain "red-dragon"), the needle is genuinely ambiguous and every
+/// match is returned as a candidate, in `bodies` order, rather than one
+/// being silently chosen.
+///
 /// MUTATION THIS MUST FAIL AGAINST: drop the exact-match branch and fall
-/// straight to `.find()` (first roster-order substring hit) —
+/// straight to the first roster-order substring hit —
 /// `the_roll.rs::a_prefix_name_does_not_shadow_a_longer_one` reddens.
-fn body_by_needle<'a>(bodies: &[&'a Body], needle: &str) -> Option<&'a Body> {
+/// MUTATION THIS MUST ALSO FAIL AGAINST: drop the extension check and
+/// always return the longest substring match — `the_roll.rs::
+/// an_ambiguous_needle_is_refused_and_names_its_candidates` reddens.
+fn body_by_needle<'a>(
+    bodies: &[&'a Body],
+    needle: &str,
+) -> Result<Option<&'a Body>, Vec<&'a Body>> {
     let needle = needle.to_lowercase();
-    let exact = bodies
+    if let Some(exact) = bodies.iter().find(|n| n.label.to_lowercase() == needle) {
+        return Ok(Some(exact));
+    }
+    let matches: Vec<&Body> = bodies
         .iter()
-        .find(|n| n.label.to_lowercase() == needle)
-        .copied();
-    exact.or_else(|| {
-        bodies
-            .iter()
-            .filter(|n| n.label.to_lowercase().contains(&needle))
-            .max_by_key(|n| n.label.len())
-            .copied()
-    })
+        .filter(|n| n.label.to_lowercase().contains(&needle))
+        .copied()
+        .collect();
+    match matches.len() {
+        0 => Ok(None),
+        1 => Ok(Some(matches[0])),
+        _ => {
+            // `max_by_key` returns the LAST of equal-length ties, same as
+            // The Roll's original `.max_by_key` here — no behaviour change
+            // for the case that already had a unique longest match.
+            let winner = *matches
+                .iter()
+                .max_by_key(|b| b.label.len())
+                .expect("matches is non-empty in this arm");
+            let winner_lc = winner.label.to_lowercase();
+            let winner_is_extension = matches
+                .iter()
+                .all(|b| winner_lc.contains(&b.label.to_lowercase()));
+            if winner_is_extension {
+                Ok(Some(winner))
+            } else {
+                Err(matches)
+            }
+        }
+    }
+}
+
+/// The refusal `why`, `colocated_npc`'s callers, and (indirectly) `examine`
+/// answer with when a typed needle names more than one candidate with no
+/// single winner (The Ken, Task 5) — naming what would have worked instead
+/// of silently guessing one, per the campaign's own §4.5.
+/// type-audit: bare-ok(identifier-text: typed)
+fn ambiguous_needle_refusal(typed: &str, candidates: &[&Body]) -> String {
+    let labels: Vec<&str> = candidates.iter().map(|b| b.label.as_str()).collect();
+    format!(
+        "'{typed}' could mean more than one thing here: {}. Be more specific.",
+        crate::chamber_prose::listed(&labels)
+            .expect("an ambiguous needle always carries at least two candidates")
+    )
 }
 
 impl<'w> Session<'w> {
@@ -1589,11 +1685,16 @@ impl<'w> Session<'w> {
         check_species_known(world, &village)?;
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
-        // Idempotent (same def every session): never conflicts, since
-        // AGENT_AT is never registered at genesis (spec §3).
-        registry
-            .register_predicate(AGENT_AT, false, "an agent's position on a day")
-            .expect("AGENT_AT registers identically every session");
+        // Idempotent (same def every session): never conflicts, since the
+        // drive predicates are never registered at genesis (spec §3). The
+        // full roster — AGENT_AT plus the needs predicates registered further
+        // below — is `liveness::DRIVE_PREDICATES` (The Culvert), the one
+        // published list `Session::start` and both `examples/` benches share.
+        for (name, doc) in crate::liveness::DRIVE_PREDICATES {
+            registry
+                .register_predicate(name, false, doc)
+                .expect("every DRIVE_PREDICATES entry registers identically every session");
+        }
         // PASSAGE_CLEARED USED TO BE REGISTERED HERE, and its registration is
         // gone rather than kept as a compatibility stub (The Chattel, Task 8;
         // decision 0396 supersedes 0367). A cave mouth is a thing now, and the
@@ -1646,36 +1747,29 @@ impl<'w> Session<'w> {
                 crate::thing::LOCKEDNESS_DOC,
             )
             .expect("LOCKEDNESS registers identically every session");
-        // Idempotent (same def every session): never conflicts, since DRANK
-        // is never registered at genesis either (spec §3).
-        registry
-            .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
-            .expect("DRANK registers identically every session");
-        registry
-            .register_predicate(
-                RESTED,
-                false,
-                "an agent rested on a day, for this many ticks",
-            )
-            .expect("RESTED registers identically every session");
-        registry
-            .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
-            .expect("SLEPT registers identically every session");
-        // The site half (The Pallet, Task 3): which KIND of anchor a sleep
-        // landed on, in the room `SLEPT` above already dates. Registered on
-        // the same terms — by the session, not at genesis — for the same
-        // reason: `slept-on` did not exist before this campaign, so no
-        // committed world can already disagree with this definition.
-        registry
-            .register_predicate(
-                SLEPT_ON,
-                false,
-                "the kind of anchor an agent slept on, within the room it slept in",
-            )
-            .expect("SLEPT_ON registers identically every session");
-        registry
-            .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
-            .expect("EATEN registers identically every session");
+        // The Warrant, Task 1: the eight errand predicates, from the one
+        // table — registered beside `AGENT_AT` for the same reason `EATEN`
+        // is, above. Idempotent (same defs every session), same as every
+        // predicate registered on this clone.
+        //
+        // THE TWO LOOPS STAY SEPARATE, and that is the merge decision The
+        // Culvert made here rather than an accident of resolution. Both
+        // families are session-registered on identical terms, so folding
+        // `errand_predicates()` into `DRIVE_PREDICATES` would compile and
+        // pass — which is exactly why the choice is recorded. They are
+        // different families with different owners: the drive roster is
+        // the list `Session::start` and both `examples/` benches share (the
+        // thing The Culvert published so a new drive predicate cannot be
+        // added to one caller and not the others), while the errand table
+        // is The Warrant's own and is consumed by its own scans. The
+        // roster guard in `liveness.rs` is scoped to the drive family for
+        // the same reason, and the errand consts carry waivers naming this
+        // table rather than roster membership.
+        for (key, doc) in errand_predicates() {
+            registry
+                .register_predicate(key, false, doc)
+                .expect("the errand predicates register identically every session");
+        }
         // The player's disposition mark — the first player-authored predicate.
         // Non-functional (a subject may be provoked and later soothed; each is
         // one dated fact). Additive: registering a new predicate perturbs
@@ -2099,6 +2193,7 @@ impl<'w> Session<'w> {
             mesh_memo,
             weft_window: hornvale_worldgen::WeftWindow::new(),
             home_nav_cache: HomeNavCache::new(),
+            route_memo: RouteMemo::new(),
             folds,
             ground,
             driven_overrides: std::collections::BTreeMap::new(),
@@ -3440,9 +3535,15 @@ impl<'w> Session<'w> {
     /// one answer.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
     pub fn would_turn_hostile(&self, who: &str) -> bool {
-        self.colocated_npc(who)
-            .map(|npc| grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD)
-            .unwrap_or(false)
+        // An ambiguous `who` (The Ken, Task 5) answers `false` — the same
+        // conservative default an unresolved `who` already got, and for the
+        // same reason this method's own doc gives for narrowing to
+        // co-located NPCs at all: `false` about a creature not cleanly
+        // reached is the safe answer, never a guess among candidates.
+        match self.colocated_npc(who) {
+            Ok(Some(npc)) => grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD,
+            Ok(None) | Err(_) => false,
+        }
     }
 
     /// A named NPC's current grievance fold toward the player (test
@@ -3454,16 +3555,28 @@ impl<'w> Session<'w> {
     /// Roll, Task 10: exact label match first, then the longest containing
     /// label — never merely the first substring hit in roster order);
     /// `None` if no derived NPC matches `who`.
+    ///
+    /// **An ambiguous needle also answers `None` (The Ken, Task 5).** This
+    /// accessor's return type carries a number or nothing, with no room for
+    /// a candidate list, so `None` is the honest signal this signature can
+    /// give — the alternative, silently folding one of the ambiguous
+    /// candidates' own grievance, is exactly the wrong answer §4.5 exists
+    /// to close. `why` and `colocated_npc`'s callers get the textual
+    /// refusal this type cannot carry.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
     pub fn npc_grievance(&self, who: &str) -> Option<f64> {
         let others = other_bodies(self.roster.bodies(), self.roster.driven());
-        who.parse::<usize>()
+        let by_handle = who
+            .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .copied()
-            .or_else(|| body_by_needle(&others, who))
-            .map(|npc| grievance(&self.ledger, npc.entity))
+            .copied();
+        let npc = match by_handle {
+            Some(npc) => Some(npc),
+            None => body_by_needle(&others, who).unwrap_or(None),
+        };
+        npc.map(|npc| grievance(&self.ledger, npc.entity))
     }
 
     /// The session's owned, evolving ledger, serialized — a determinism
@@ -4090,9 +4203,10 @@ impl<'w> Session<'w> {
     /// shares it, which is exactly why `offered_to_observer`'s knowledge gate
     /// can never fail indoors. Keying a thing on it would give the strongbox
     /// of a structure's third chamber and the strongbox of its fourth the
-    /// SAME `EntityId`: `role_for` returns `Role::Store` for chamber index 2
-    /// and for every index past it, so a four-chamber dwelling composes two
-    /// strongboxes and two keys, in two different rooms, that
+    /// SAME `EntityId`: for a place with no differentiating business, chamber
+    /// index 2 and every index past it compose `Role::Store`, so a
+    /// four-chamber dwelling of that shape composes two strongboxes and two
+    /// keys, in two different rooms, that
     /// `thing::thing_id` could not tell apart. `Structure::chambers` is a
     /// `Vec<Facet>` — a chamber IS a facet, drawn from the locale's own seed
     /// under `room/chambers/v1` and asserted distinct by
@@ -4822,8 +4936,9 @@ impl<'w> Session<'w> {
     /// verb nobody can reach". That reasoning was sound and its conclusion
     /// was still wrong, because it treated the two halves as alternatives.
     /// They are one change: `interior::pattern`'s `the-key-by-the-loom`
-    /// puts a key in the loomroom (`Role::Loomroom`) — a room `role_for`
-    /// guarantees is shallower than any `Role::Store` — so the lid can close
+    /// puts a key in the loomroom (`Role::Loomroom`) — a room the structure's
+    /// own role derivation guarantees is shallower than any `Role::Store` —
+    /// so the lid can close
     /// without the strongbox becoming unopenable. Neither half is safe alone.
     ///
     /// **THAT PATTERN NAME IS A CORRECTION, NOT AN EDIT** (The Brattice,
@@ -5779,6 +5894,24 @@ impl<'w> Session<'w> {
             };
         }
         turn
+    }
+
+    /// How many real `plan_to_room` searches this session's water-belief
+    /// [`RouteMemo`] has run since the session opened — a CUMULATIVE count,
+    /// never reset, in the shape [`HomeNavCache::searches`] already has (The
+    /// Culvert, Task 7 fix round 1).
+    ///
+    /// **It is deliberately NOT folded into [`TurnWorkRead`], and that is not
+    /// an oversight.** `TurnWorkRead::plan_searches` is `home_nav_cache`'s
+    /// counter, and `turn_budget.rs` asserts it is `0` for a cold snapshot;
+    /// adding a second, differently-scoped counter to that struct would put
+    /// two unrelated quantities behind one published number with a live
+    /// assertion on it. A caller wanting this one takes deltas across calls,
+    /// which is exactly what the session-liveness witness
+    /// (`turn_budget.rs::the_route_memo_survives_between_waits`) does.
+    /// type-audit: bare-ok(count: return)
+    pub fn route_searches(&self) -> u64 {
+        self.route_memo.searches()
     }
 
     /// This turn's work counters (The Rack, spec §3.5), read as of NOW.
@@ -6897,7 +7030,41 @@ impl<'w> Session<'w> {
         Ok(())
     }
 
-    /// The full room rendering: room id, prose, presence, ways on.
+    /// The full room rendering: header, prose, presence, ways on.
+    ///
+    /// The Ken (spec §4.2, superseded on a controller ruling — ledger #5):
+    /// the header used to read `[room 3733133217, day 0.01172]`, putting a
+    /// raw facet id and a decimal day in the character's own mouth. Neither
+    /// datum is lost — `!whoami` already states both, and that is the
+    /// author's-instrument frame where an id and a fractional day belong.
+    /// The header carries no time either: the spec asked it to derive a
+    /// time-of-day phrase from the same source as the sky line, but no such
+    /// shared derivation exists (the phase logic lives baked into
+    /// `sky_at`'s description string in `domains/astronomy`, which exposes
+    /// no `daypart` accessor), and the sky line one row below already says
+    /// the time of day in the character's own words (`Night.`, `Twilight.`,
+    /// `The sun climbs the morning sky.`). Minting new astronomy API so two
+    /// callers could share a derivation that does not exist would be worse
+    /// than noticing the duplication.
+    ///
+    /// **Fix round 2: a header that never varies is not orientation, and
+    /// `[room]` alone was exactly that** — every ordinary walk-band header
+    /// read identically regardless of position, which is what surfaced when
+    /// the coordinator ran `sort -u` over a real multi-room transcript and
+    /// got one line back. The header now spends its one remaining slot on
+    /// [`hornvale_locale::Regime::descriptor_noun`] (`v.locale.regime.
+    /// descriptor_noun` — "buttressed canopy", "a stream gully"), which this
+    /// crate's own doc comment on that field already names as the thing
+    /// authored "so homogeneous biome still varies room-to-room" — precisely
+    /// the property this header needed. **The village name was tried first
+    /// and rejected**: `Vantage::village` is `village_or_fallback(npc)`, the
+    /// DRIVEN BODY's own home settlement, constant for the whole session
+    /// regardless of position (confirmed against a real ten-room walk — see
+    /// the fix-round commit), so it fails the one property this fix exists
+    /// to deliver. `descriptor_noun` never has a missing case (every facet's
+    /// `Regime` is derived unconditionally, marine included) — unlike a
+    /// settlement name, which is `None` for a wild body, this token never
+    /// needed a stated fallback in the first place.
     ///
     /// `how` decides [`Self::presence_line`]'s own roster the same way it
     /// decides every other `!`-narrowed read (The Roll, Task 9): every
@@ -6991,10 +7158,15 @@ impl<'w> Session<'w> {
         // continuous test that can pass even when the single heaviest corner
         // is ocean. Measured directly on seed 42 (every walk-depth facet over
         // all 40,962 vertices, comparing the two predicates independently):
-        // 29,713 facets are afloat by the corner-pick test, and of those, 35
-        // (0.118% of afloat facets, 0.085% of all facets) ALSO carry >= 1
+        // 29,713 facets are afloat by the corner-pick test, and of those, 28
+        // (0.094% of afloat facets, 0.068% of all facets) ALSO carry >= 1
         // weft feature by the blend test — real, not merely constructible,
-        // though rare. This gate closes it at the render, the cheaper of the
+        // though rare. (The Warp, Task 6, 2026-09-05: 35 -> 27 -> 30 -> 28. Neither
+        // predicate moved; spring and overhang stopped occurring on ground
+        // with no cause, and afloat coastal ground is exactly that. The
+        // number is asserted exactly by `the_weft.rs`'s
+        // `afloat_facets_never_render_a_weft_clause`, which carries the
+        // reasoning in full.) This gate closes it at the render, the cheaper of the
         // two fixes named in review (aligning the eligibility rule with the
         // corner-pick rule would touch every kind's own derivation instead of
         // one render site).
@@ -7013,6 +7185,31 @@ impl<'w> Session<'w> {
         } else {
             String::new()
         };
+        // The warp clause (The Warp, Task 3, spec §4): the rock underfoot at
+        // the room's dominant corner — the vertex the biome word and the
+        // colour layer already read (`hornvale_locale::dominant_corner`) —
+        // and the pitch from the blended slope, through
+        // `hornvale_worldgen::warp`'s single implementation of each word.
+        // Gated on `vantage.is_none()` for the reason the weft clause is.
+        let warp_clause = if vantage.is_none() {
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
+            match self.position().corner_weights(geo, index) {
+                Some(weights) => {
+                    let rock = self
+                        .wctx
+                        .ctx
+                        .terrain()
+                        .rock_at(hornvale_locale::dominant_corner(&weights).0);
+                    let slope =
+                        hornvale_kernel::blend_corner_weights(weights, &self.wctx.pack.slope);
+                    crate::warp_prose::warp_clause(rock, hornvale_worldgen::steepness_sign(slope))
+                }
+                None => String::new(),
+            }
+        } else {
+            String::new()
+        };
         // F1 (The Rhumb, final review): this render doubles as the SUBMERGED
         // vantage's (see the `"look"`/`dive`/`surface` arms above), and while
         // under, `go` and a bare compass token both refuse EVERY lateral
@@ -7027,8 +7224,17 @@ impl<'w> Session<'w> {
         // this band actually leads anywhere. Underground no longer shares
         // that excuse — it has real cells now, and `underground_ways_from_
         // cell` reports them.
-        let closing = if self.submerged.is_some() {
-            "Ways on: surface.".to_string()
+        // The Ken, spec §4.3: openness is the default and a wall is news, so
+        // the clause now earns its line only when something is actually
+        // closed. It used to be unconditional — "No direction here is
+        // closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW." on
+        // every ordinary outdoor turn — spending twelve words twice
+        // asserting that nothing was unusual. `closing` is `Option<String>`
+        // now and threaded into the look block the same way `presence` is
+        // below: `None` (nobody sensed / nothing to report) contributes no
+        // line at all, never a blank one.
+        let closing: Option<String> = if self.submerged.is_some() {
+            Some("Ways on: surface.".to_string())
         } else {
             let ways: Vec<String> = v
                 .locale
@@ -7040,41 +7246,70 @@ impl<'w> Session<'w> {
                     _ => None,
                 })
                 .collect();
-            // **The leading clause is conditional now, and it has to be.** It
-            // was a flat "No direction here is closed", which was true while
-            // `go` could not refuse a bearing outdoors at all. It can, at
-            // exactly the 24 cube-corner rooms (8 corners, three quads meeting at
-            // each), where one compass word names
-            // no room (`CORNER_BEARING_REFUSAL`) — so the flat claim would be a
-            // one-turn observable falsehood there, the class of defect decision
-            // 0141 exists to remove. Everywhere else the sentence is unchanged,
-            // byte for byte.
+            // The lead clause was already conditional (fix round 1): flat
+            // "No direction here is closed" was true only while `go` could
+            // not refuse a bearing outdoors at all, and it can, at exactly
+            // the 24 cube-corner rooms (8 corners, three quads meeting at
+            // each), where one compass word names no room
+            // (`CORNER_BEARING_REFUSAL`). Everywhere else the refused set is
+            // empty, and The Ken's own contribution is what happens THEN:
+            // silence, rather than restating the fixed "No direction here is
+            // closed" half.
             let refused: Vec<String> = heading_rose(&self.position())
                 .iter()
                 .zip(COMPASS_ROSE)
                 .filter(|(n, _)| n.is_none())
                 .map(|(_, c)| bearing_letter(c))
                 .collect();
-            let lead = if refused.is_empty() {
-                "No direction here is closed".to_string()
+            // **The spec's middle row — "nothing refused, some bearings lack
+            // ground" — is UNREACHABLE here, not merely unobserved, and this
+            // is a property of the two computations above rather than a
+            // prediction.** `ways` is read off `v.locale.exits`, which is
+            // `exits_of(addr)` (`windows/locale/src/lib.rs`): one `Edge`
+            // exit per compass word `heading_rose(addr)` assigns `Some`,
+            // nothing else. `refused` is read directly off the same
+            // `heading_rose(self.position())` call's `None` entries, and
+            // `addr == self.position()` here (`observable_at` passes
+            // `position` straight through to `describe_at`). So `ways` and
+            // `refused` partition the same eight words by construction:
+            // `ways` is a proper subset of the eight if and only if
+            // `refused` is non-empty. There is no room where ground is
+            // merely missing without a bearing being refused.
+            if refused.is_empty() {
+                None
             } else {
-                format!("Every direction here is open but {}", refused.join(", "))
-            };
-            format!("{lead}; the nearest ground lies {}.", ways.join(", "))
+                Some(format!(
+                    "Every direction here is open but {}; the nearest ground lies {}.",
+                    refused.join(", "),
+                    ways.join(", ")
+                ))
+            }
         };
         // The presence line (The Roll, Task 9, spec §4): its own line, after
         // the room's prose and before the ways — a room says what it looks
         // like, then who is in it, then how to leave. `None` (nobody
         // sensed) contributes no line at all, never a blank one.
-        let presence = self
-            .presence_line(how)
-            .map(|line| format!("{line}\n"))
-            .unwrap_or_default();
+        let presence = self.presence_line(how);
+        // The Ken, spec §4.3: `closing` is now ALSO frequently `None` (any
+        // ordinary outdoor room), so the footer as a whole — presence, then
+        // the exits clause — must earn its leading newline rather than
+        // always spending one, AND must never spend a trailing one either:
+        // the whole message historically never ends in "\n" (`closing`
+        // never had a trailing newline), and threading each piece through
+        // the `presence` idiom independently would have given presence one
+        // whenever it was the LAST line present — a state that could not
+        // arise before this task, because `closing` was never empty.
+        // Collecting only the lines that exist and joining them is what
+        // keeps both ends honest regardless of which of the two fired.
+        let footer_lines: Vec<String> = [presence, closing].into_iter().flatten().collect();
+        let footer = if footer_lines.is_empty() {
+            String::new()
+        } else {
+            format!("\n{}", footer_lines.join("\n"))
+        };
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}\n{presence}{closing}",
-            v.locale.id,
-            self.day.as_std_days(),
-            f.prose,
+            "[room — {}]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}{footer}",
+            v.locale.regime.descriptor_noun, f.prose,
         ))
     }
 
@@ -7255,10 +7490,14 @@ impl<'w> Session<'w> {
             .map(|i| (i.structure.clone(), i.at, i.brief.clone()))
         {
             let Some(next) = self.named_neighbour(&structure, at, target, &brief) else {
-                // Asked for the deeper way where there is none: say which wall
-                // was reached, not "no way to further in", which reads as a
-                // parse failure rather than the end of the place.
+                // Asked for the deeper way: say which wall was reached, or —
+                // at a FORK — name the ways, rather than "no way to further
+                // in", which reads as a parse failure rather than an
+                // unanswered question.
                 if FURTHER_IN_WORDS.contains(&target.trim().to_lowercase().as_str()) {
+                    if let Some(ways) = Self::ways_in_refusal(&structure, at) {
+                        return Turn::Out(ways);
+                    }
                     return Turn::Out("This is as far in as the place goes.".to_string());
                 }
                 // A CHOICE of apertures is never "no way" — it is an unanswered
@@ -7269,11 +7508,23 @@ impl<'w> Session<'w> {
                 // be as false here as "no way to anywhere" was.
                 let neighbours = Self::neighbours(&structure, at);
                 if neighbours.len() > 1 {
-                    // Count-aware rather than hard-coded: `structure_at` builds
-                    // a path graph, so today every such chamber has exactly two
-                    // apertures — but a richer topology (The Precincts) would
-                    // make a fixed "two" a lie told to a real player, and a
-                    // debug-only assertion would not catch it in release.
+                    // AT A FORK, name them (The Cruck, Task 3, closing a
+                    // Task 5a review note). The generic reply below tells the
+                    // player to say 'further in' — and at a fork that is the
+                    // one thing that does NOT work, since `further_in` refuses
+                    // rather than guess a direction. Advising a token the very
+                    // next turn will refuse is worse than saying nothing, so
+                    // this arm answers the way the direction refusal above
+                    // does, through the same function.
+                    if let Some(ways) = Self::ways_in_refusal(&structure, at) {
+                        return Turn::Out(ways);
+                    }
+                    // Count-aware rather than hard-coded: THIS is the richer
+                    // topology a fixed "two" used to be a lie told in advance
+                    // of (The Cruck) — a fork's own chamber can carry more than
+                    // two apertures once it hangs more than one child off the
+                    // parent it stands beside, so a debug-only assertion would
+                    // not have caught it in release.
                     let how_many = match neighbours.len() {
                         2 => "two ways".to_string(),
                         n => format!("{n} ways"),
@@ -7661,11 +7912,18 @@ impl<'w> Session<'w> {
     /// The chambers one aperture away from `at`, in `links` order. Undirected:
     /// a link names its pair either way round.
     ///
-    /// `structure_at` builds a PATH GRAPH rooted at `chambers[0]`, the
-    /// threshold, so index order is depth order and a chamber has at most two
-    /// neighbours: one back toward the threshold and one further in. Both
-    /// [`Self::further_in`] and the ways-on footer rely on that ordering, but
-    /// read it out of `links` rather than assuming `at ± 1` exists.
+    /// **`structure_at` builds a rooted TREE now, not a path graph** (The
+    /// Cruck, Task 3), and this doc used to promise the narrower shape: "index
+    /// order is depth order and a chamber has at most two neighbours: one back
+    /// toward the threshold and one further in". Only the WILD path still
+    /// draws a chain. A built chamber has one parent and any number of
+    /// children, so the returned list may hold three or four entries and index
+    /// order is no longer depth order.
+    ///
+    /// What survives is the property [`Self::further_in`] and the ways-on
+    /// footer actually rely on, and the reason they were written this way:
+    /// both read the shape out of `links` rather than assuming `at ± 1`
+    /// exists, so neither needed changing when the shape widened.
     fn neighbours(structure: &crate::structure::Structure, at: usize) -> Vec<usize> {
         structure
             .links
@@ -7682,14 +7940,43 @@ impl<'w> Session<'w> {
             .collect()
     }
 
-    /// The aperture leading DEEPER from `at`: the lowest-numbered neighbour
-    /// above it. The backward aperture needs no name — `out` already walks that
-    /// direction — so this is the only one the footer advertises.
+    /// The refusal a FORK gives, naming each way by the role behind it, or
+    /// `None` where `at` is not a fork.
+    ///
+    /// **One function, two callers, one string** (The Cruck, Task 3, fix round
+    /// 1). Both arms of `enter`'s refusal path reach a fork — the DIRECTION
+    /// arm (`enter further in`, which `further_in` declines to guess at) and
+    /// the NOUN arm (an empty or prose-ambiguous target) — and the reply they
+    /// owe is the same reply. It was written out twice, verbatim; a reworded
+    /// fork refusal that moved only one of them would have left the game
+    /// answering the same question two ways depending on which token the
+    /// player happened to type.
+    fn ways_in_refusal(structure: &crate::structure::Structure, at: usize) -> Option<String> {
+        let children = structure.children(at);
+        if children.len() < 2 {
+            return None;
+        }
+        let list = children
+            .iter()
+            .map(|&c| format!("the {}", structure.roles[c].noun()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Some(format!(
+            "There are {} ways in from here: {list}; name one, or 'out' to leave.",
+            children.len()
+        ))
+    }
+
+    /// The aperture leading DEEPER from `at`: its only child. `None` at a leaf
+    /// AND at a fork — three ways in is not one way in, and guessing the
+    /// lowest index would silently pick a direction the player never named.
+    /// The backward aperture needs no name — `out` already walks that
+    /// direction — so this is the only kind of "deeper" the footer advertises.
     fn further_in(structure: &crate::structure::Structure, at: usize) -> Option<usize> {
-        Self::neighbours(structure, at)
-            .into_iter()
-            .filter(|&n| n > at)
-            .min()
+        match structure.children(at).as_slice() {
+            [only] => Some(*only),
+            _ => None,
+        }
     }
 
     /// Resolve `target` to a chamber one aperture away.
@@ -7697,18 +7984,23 @@ impl<'w> Session<'w> {
     /// Two accepted forms, and the split between them is what makes every
     /// chamber reachable:
     ///
-    /// 1. A [`FURTHER_IN_WORDS`] token — the DIRECTION, always unambiguous, and
-    ///    the one the footer names. Repeating it walks the path graph to its far
-    ///    end, so no chamber is stranded.
-    /// 2. A case-insensitive substring of the destination's own PROSE nouns
-    ///    (`chamber_nouns`, the same catalogue `describe_chamber` renders from),
-    ///    accepted ONLY where the chamber has exactly one aperture. Task 6 made
-    ///    chambers differ, so noun lists now *sometimes* tell two apertures apart
-    ///    — but not reliably: every role's prose names a doorway, so `enter
-    ///    doorway` with two apertures open is still ambiguous. The restriction is
-    ///    kept rather than relaxed, because matching with a choice still open
-    ///    would silently pick a direction the player never named on exactly the
-    ///    nouns the roles happen to share.
+    /// 1. A [`FURTHER_IN_WORDS`] token — the DIRECTION, always unambiguous on
+    ///    a chain, and the one the footer names. At a FORK there is no single
+    ///    "deeper" to walk, so [`Self::further_in`] refuses and `enter` names
+    ///    the ways instead of guessing one.
+    /// 2. A ROLE NOUN ([`crate::structure::Role::noun`]) or a case-insensitive
+    ///    substring of a neighbour's own PROSE nouns (`chamber_nouns`, the
+    ///    same catalogue `describe_chamber` renders from), accepted where it
+    ///    is UNIQUE among this chamber's apertures — spec §5.3's relaxation of
+    ///    the old "exactly one aperture open" rule (ledger #14). A role noun
+    ///    is unique among a chamber's two apertures by construction, on a
+    ///    built structure (no role repeats — spec §5.1 invariant 3) and on a
+    ///    wild chain alike (a chamber's apertures are `index_role(i - 1)` and
+    ///    `index_role(i + 1)`, never both `Store`); a prose noun every
+    ///    neighbour's prose carries — every role's prose names a doorway, so
+    ///    `doorway` — still refuses: matching on a noun that names more than
+    ///    one aperture would silently pick a direction the player never
+    ///    named.
     ///
     /// An empty `target` takes the sole neighbour, if there is exactly one; with
     /// a choice to make, silence is not an answer.
@@ -7730,35 +8022,58 @@ impl<'w> Session<'w> {
         if FURTHER_IN_WORDS.contains(&target.as_str()) {
             return Self::further_in(structure, at);
         }
-        let [only] = neighbours.as_slice() else {
-            return None;
-        };
+        // A LEADING ARTICLE IS DROPPED, because the game asks for one and then
+        // refused it (The Cruck, Task 3). The ways-on footer at a fork reads
+        // `Ways on: out, the hearth, the store.` and the direction refusal
+        // reads `name one`, so `enter the hearth` is the literal reply to a
+        // literal instruction — and it matched nothing, because the role noun
+        // is `hearth` and `"hearth".contains("the hearth")` is false. Nobody
+        // could see it before this task: production drew only chains, so the
+        // footer never printed a `the <noun>` way in a real session.
+        let target = ["the ", "an ", "a "]
+            .iter()
+            .find_map(|a| target.strip_prefix(a))
+            .map(str::to_string)
+            .unwrap_or(target);
         let terrain = self.terrain_here();
-        crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
-            &structure.chambers[*only],
-            &terrain,
-            self.walk_depth(),
-            brief,
-            *only,
-        ))
-        .iter()
-        .any(|noun| noun.to_lowercase().contains(&target))
-        .then_some(*only)
+        let matches: Vec<usize> = neighbours
+            .iter()
+            .copied()
+            .filter(|&n| {
+                let role = structure.roles[n];
+                role.noun().contains(target.as_str())
+                    || crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
+                        &structure.chambers[n],
+                        &terrain,
+                        self.walk_depth(),
+                        brief,
+                        role,
+                    ))
+                    .iter()
+                    .any(|noun| noun.to_lowercase().contains(&target))
+            })
+            .collect();
+        match matches.as_slice() {
+            [only] => Some(*only),
+            _ => None,
+        }
     }
 
     /// The chamber rendering, in `describe_here`'s own shape one band down:
-    /// address, prose, ways on. `[chamber …]` rather than `[room …]` because
-    /// the band word IS the information — an id at depth 21 is not a locale.
+    /// header, prose, ways on. `[chamber]` rather than `[room]` because the
+    /// band word IS the information — an id at depth 21 is not a locale, and
+    /// (The Ken, spec §4.2, superseded — ledger #5) neither is a decimal day:
+    /// both survive in `!whoami`'s author's-instrument frame, and the header
+    /// now carries only the band. See [`Self::describe_here`]'s own doc
+    /// comment for the fuller ruling.
     ///
-    /// The ways are `out`, plus `further in` where a deeper chamber exists.
-    /// Naming apertures by DIRECTION rather than by what lies through them is
-    /// what makes the list navigable, and Task 6 did NOT change that: chambers
-    /// now differ, but the two apertures of a middle chamber lead to a chamber
-    /// nearer the door and one further in, and *both* of those are rooms whose
-    /// prose names a doorway. So a noun-named aperture list would still advertise
-    /// one way where two exist — which is how the deeper chambers became
-    /// unreachable under The Lintel, where the reason was starker (every chamber
-    /// derived the identical interior).
+    /// The ways are `out`, then `further in` where exactly one child exists —
+    /// a CHAIN, still named by direction because there is only one way in and
+    /// naming it by role would say nothing the direction does not already say
+    /// — or, at a FORK, one `the <noun>` per child in index order, since
+    /// there is no single "deeper" left to name. A chain's footer is
+    /// therefore byte-identical to what it always was; only a fork's differs
+    /// (spec §5.3, ledger #7).
     ///
     /// `how` reaches [`Self::presence_line`] the same way it reaches
     /// [`Self::describe_here`]'s own copy — see that doc comment (The Roll,
@@ -7775,12 +8090,22 @@ impl<'w> Session<'w> {
         let (structure, brief, at) = (&inside.structure, &inside.brief, inside.at);
         let chamber = &structure.chambers[at];
         let terrain = self.terrain_here();
+        let role = structure.roles[at];
         let interior =
-            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), brief, at);
-        let id = chamber_id(chamber)?;
-        let mut ways = vec!["out"];
-        if Self::further_in(structure, at).is_some() {
-            ways.push(FURTHER_IN);
+            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), brief, role);
+        // Validates that this chamber packs to an id (the same fallibility
+        // the header used to surface by printing it); the value itself is no
+        // longer displayed — see this function's own doc comment.
+        let _ = chamber_id(chamber)?;
+        let mut ways = vec!["out".to_string()];
+        match structure.children(at).as_slice() {
+            [] => {}
+            [_only] => ways.push(FURTHER_IN.to_string()),
+            children => {
+                for &child in children {
+                    ways.push(format!("the {}", structure.roles[child].noun()));
+                }
+            }
         }
         // The presence line (The Roll, Task 9, spec §4) — same placement
         // rule as `describe_here`'s own: its own line, after the chamber's
@@ -7790,9 +8115,8 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[chamber {}, day {}]\n{}\n{presence}Ways on: {}.",
-            id,
-            self.day.as_std_days(),
+            "[chamber — {}]\n{}\n{presence}Ways on: {}.",
+            chamber_place_word(role),
             crate::chamber_prose::describe_chamber(&interior, brief),
             ways.join(", ")
         ))
@@ -8392,7 +8716,7 @@ impl<'w> Session<'w> {
             &terrain,
             self.walk_depth(),
             &inside.brief,
-            inside.at,
+            inside.structure.roles[inside.at],
         ))
     }
 
@@ -8901,8 +9225,12 @@ impl<'w> Session<'w> {
         // snapshot's present-entry read the way it always has (Important 4,
         // The Threshold whole-branch review); `facts` is now committed
         // directly below instead of being thrown away and recomputed.
-        let (facts, occupancy, written) =
-            sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo, &mut self.home_nav_cache);
+        let (facts, occupancy, written) = sys.step_with_occupancy(
+            &self.ledger,
+            &mut self.mesh_memo,
+            &mut self.home_nav_cache,
+            &mut self.route_memo,
+        );
         // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
         // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
         // just called, in a solo band-of-one walk (`step_one_with_controller`'s
@@ -8976,6 +9304,7 @@ impl<'w> Session<'w> {
             &driven_npc,
             &mut self.mesh_memo,
             &mut self.home_nav_cache,
+            &mut self.route_memo,
             driven_controller,
         );
         // The override RECORD accumulates across the whole possession, so it
@@ -9545,6 +9874,33 @@ impl<'w> Session<'w> {
         if let Some(n) = prose.nouns.iter().find(|n| n.matches(&wanted)) {
             return Turn::Out(n.datum.clone());
         }
+        // A CO-LOCATED CREATURE is resolved through the same ambiguity-safe
+        // rule `why`/`colocated_npc`/`npc_grievance` share (`body_by_needle`,
+        // The Roll Task 10 -> The Ken Task 5), BEFORE the chart legend's
+        // plain word match below ever sees it. The legend's own `.find()`
+        // has no ambiguity check at all — it takes the first entry any
+        // shared WORD matches — so three same-suffix creatures sharing the
+        // word "dragon" ("black-dragon"/"red-dragon") resolved silently to
+        // whichever came first, confidently and wrongly (spec §4.5, #12b).
+        //
+        // `Ok(None)` (this needle names no co-located creature) falls
+        // through to the legend match below UNCHANGED — a creature charted
+        // but not currently co-located, a furnishing, or a ground mark all
+        // resolve exactly as before this task.
+        let colocated = self.colocated_npcs();
+        match body_by_needle(&colocated, &wanted) {
+            Ok(Some(npc)) => {
+                let held = self.carried_by(npc.entity);
+                let nouns: Vec<&str> = held.iter().map(|(_, noun)| *noun).collect();
+                return Turn::Out(crate::purview::creature_datum(
+                    &npc.label,
+                    &npc.species,
+                    &nouns,
+                ));
+            }
+            Ok(None) => {}
+            Err(candidates) => return Turn::Out(ambiguous_needle_refusal(noun, &candidates)),
+        }
         // Drawn through the CALLER's eyes (The Deed, Task 6). Nothing
         // observable turns on it here — the legend carries nouns and datums,
         // not colour — but `!examine` claiming an objective read while
@@ -9618,9 +9974,14 @@ impl<'w> Session<'w> {
     }
 
     /// Recount an NPC's dated history — the provenance read (the-quickening
-    /// T4): the world remembers, so `why` over an NPC that has moved names
-    /// each committed `agent-at` with the day it was asserted (`recount` in
-    /// `windows/historiography` renders the day suffix). `who` is matched
+    /// T4): the world remembers, so `why` over an NPC that has moved says what
+    /// it set out to do and when. The default view names each **errand** once
+    /// — its origin, its step count, and the span it covers — rolling the run
+    /// of steps beneath it up into that one line (`recount` in
+    /// `windows/historiography`, The Warrant spec §5.1). [`STEPS_FLAG`]
+    /// switches to `recount_steps`, which names each committed `agent-at`
+    /// under its covering errand with its position within it. Both render the
+    /// day a fact was asserted. `who` is matched
     /// first as the `npcs` listing's 1-based handle, else by
     /// [`body_by_needle`] (The Roll, Task 10: exact label match first, then
     /// the longest containing label — never merely the first substring hit
@@ -9630,23 +9991,49 @@ impl<'w> Session<'w> {
     /// handle is deliberately NOT the NPC's `EntityId` (The Signet) — it is
     /// a short-lived, session-local position a player can type back,
     /// resolved fresh from `other_bodies` on every call.
-    fn why(&self, who: &str) -> String {
+    ///
+    /// **An ambiguous needle is refused, not guessed (The Ken, Task 5).** A
+    /// handle number resolves before `body_by_needle` is even consulted, so
+    /// only a typed label can be ambiguous; when it is, this names every
+    /// candidate rather than silently recounting one of them.
+    fn why(&self, rest: &str) -> String {
+        // `--steps` may sit on either side of the name, and a label may
+        // contain spaces, so the flag is filtered out of the token stream
+        // rather than parsed positionally. The bare `!why <who>` form is
+        // untouched: with no flag present, `who` is the whole trimmed
+        // argument exactly as before.
+        let mut steps = false;
+        let mut kept: Vec<&str> = Vec::new();
+        for token in rest.split_whitespace() {
+            if token == STEPS_FLAG {
+                steps = true;
+            } else {
+                kept.push(token);
+            }
+        }
+        let who = kept.join(" ");
         let who = who.trim();
         if who.is_empty() {
             return "Why what? Name an NPC (label or number — see 'npcs').".to_string();
         }
         let others = other_bodies(self.roster.bodies(), self.roster.driven());
-        let target = who
+        let by_handle = who
             .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .copied()
-            .or_else(|| body_by_needle(&others, who));
+            .copied();
+        let target = match by_handle {
+            Some(npc) => Some(npc),
+            None => match body_by_needle(&others, who) {
+                Ok(npc) => npc,
+                Err(candidates) => return ambiguous_needle_refusal(who, &candidates),
+            },
+        };
         let Some(npc) = target else {
             return format!("No one here answers to '{who}' (see 'npcs').");
         };
-        self.recount(npc.entity)
+        self.recount(npc.entity, steps)
             .unwrap_or_else(|| format!("Nothing is yet recorded of {}.", npc.label))
     }
 
@@ -9655,7 +10042,7 @@ impl<'w> Session<'w> {
     /// — an NPC's `agent-at` facts live only in the session's evolved
     /// state), handed to the domain-agnostic historiography window exactly
     /// as the CLI repl's `why` hands it the genesis world.
-    fn recount(&self, entity: EntityId) -> Option<String> {
+    fn recount(&self, entity: EntityId, steps: bool) -> Option<String> {
         let evolved = World {
             seed: self.world.seed,
             registry: self.registry.clone(),
@@ -9665,7 +10052,11 @@ impl<'w> Session<'w> {
             // duration of one provenance read.
             derived_under: std::collections::BTreeMap::new(),
         };
-        hornvale_historiography::recount(&evolved, entity)
+        if steps {
+            hornvale_historiography::recount_steps(&evolved, entity)
+        } else {
+            hornvale_historiography::recount(&evolved, entity)
+        }
     }
 
     /// Every derived NPC sharing the possessed agent's current room — the
@@ -9822,9 +10213,66 @@ impl<'w> Session<'w> {
     /// group names its first [`N_NAMED`] labels through
     /// [`crate::chamber_prose::listed`] and appends `", and {n} others"` for
     /// whatever is left; a wild group has no individual names to give, so it
-    /// collapses entirely to a single count-first clause — `"a wild
-    /// {species}"` for one, `"{n} wild {species}"` for more, the species
-    /// word never pluralised.
+    /// collapses entirely to a single count-first clause — `"{n} wild
+    /// {species}"` for more than one, the species word never pluralised.
+    ///
+    /// **A wild group of exactly one renders its LABEL, not `"a wild
+    /// {species}"` built from `species` (The Ken, Task 4).** Before this
+    /// task the group of one rendered a fresh string built from `species`,
+    /// which is not what `examine` matches (`examine` matches `label`) — a
+    /// STAGED body's label is bare `{species}` (`derive_staged_npcs`), so
+    /// the old species-built `"a wild {species}"` line showed a noun
+    /// `examine` then denied.
+    ///
+    /// **Two rounds, because the first one fixed the wrong site.** A body
+    /// from `derive_wild_npcs` happened to escape the display/label
+    /// mismatch because its OWN label used to read `"a wild {species}"`
+    /// too, coincidentally matching what this line built — but that label
+    /// carried the same defect `liveness.rs`'s doc comment on
+    /// `derive_staged_npcs` records ("The a wild carrion-crawler looks
+    /// lost"), so round one fixed it at the source rather than displaying
+    /// it unchanged. It was the wrong target: `derive_wild_npcs` is reached
+    /// only from `windows/lab` and tests, never from a real `possess`
+    /// session — every wild creature an ordinary possession actually meets
+    /// comes from the sibling `derive_wild_herds` (`session.rs` calls it
+    /// directly for real herds), which independently hardcoded the same
+    /// `"a wild {species}"` label and was the one actually reproducing "The
+    /// a wild carrion-crawler looks lost" in live play (seed 3, `wait` then
+    /// `needs`). Round two (a controller correction) fixed
+    /// `derive_wild_herds`'s label the same way. All three wild-shaped
+    /// derivations now share one bare-`species` labelling convention; the
+    /// two edits within each round must land together with this line's own
+    /// change.
+    ///
+    /// **A group of several keeps the species-built count clause
+    /// deliberately, and this was a judgement call, not a mechanical
+    /// carry-over**: every member of such a group shares one species
+    /// string, and for every wild-shaped derivation that string is ALSO
+    /// every member's own label (none of the three names an individual —
+    /// see `derive_bodies_at` and `derive_wild_herds`), so the species word
+    /// this clause prints is already an examinable noun; it merely does not
+    /// promise WHICH of the group it names, which is `body_by_needle`'s
+    /// ambiguity to answer, not this line's.
+    ///
+    /// **The count clause drops "wild" too (controller ruling, ledger #7).**
+    /// Task 4 dropped the article from a WILD label (`derive_bodies_at`,
+    /// `derive_wild_herds`), so a singleton group renders bare
+    /// (`labels[0]` above, just the label) — but this clause still read
+    /// `"{n} wild {species}"`, mixing a bare singleton with an
+    /// article-and-adjective count form in the same "Here:" line
+    /// ("…; 2 wild otyugh; owlbear; …"). Before Task 4 both forms carried
+    /// "wild" uniformly (`"a wild X"` / `"N wild X"`); Task 4 is what broke
+    /// that uniformity, so closing it is this campaign's, not a
+    /// pre-existing defect. This clause still names the species
+    /// (unpluralised — the existing convention) and the count; only the
+    /// adjective "wild" is gone, matching what a singleton already renders
+    /// since Task 4.
+    ///
+    /// **Declined alternative (ledger #7): teaching the RESOLVER to strip a
+    /// leading article off a wild label so this line could display one
+    /// over a bare label.** That would reopen the display/label split §4.4
+    /// exists to close, so this line adapts to the label's own convention
+    /// instead of the label growing a second, display-only shape.
     fn presence_line(&self, how: Perceiving) -> Option<String> {
         let roll = self.perceived_npcs(how);
         if roll.is_empty() {
@@ -9865,9 +10313,9 @@ impl<'w> Session<'w> {
                         heads
                     }
                 } else if labels.len() == 1 {
-                    format!("a wild {species}")
+                    labels[0].to_string()
                 } else {
-                    format!("{} wild {species}", labels.len())
+                    format!("{} {species}", labels.len())
                 }
             })
             .collect();
@@ -9904,13 +10352,20 @@ impl<'w> Session<'w> {
     ///
     /// The unplaced row of `sensed_npcs`' table holds here as everywhere: a
     /// creature the embedding could not place is sensed, so it stays provokable.
-    fn colocated_npc(&self, who: &str) -> Option<&Body> {
+    ///
+    /// **`Err` names an ambiguous needle's candidates rather than picking one
+    /// (The Ken, Task 5)** — [`Self::act_on_disposition`] surfaces it as text;
+    /// [`Self::would_turn_hostile`] cannot (its own return is a bare `bool`)
+    /// and treats it the same as `Ok(None)`, which its own doc says is the
+    /// conservative, honest default.
+    fn colocated_npc(&self, who: &str) -> Result<Option<&Body>, Vec<&Body>> {
         let here = self.sensed_npcs(self.sighting().as_ref());
         let who = who.trim();
         if who.is_empty() {
-            return here.into_iter().next();
+            return Ok(here.into_iter().next());
         }
-        who.parse::<usize>()
+        let by_handle = who
+            .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             // `.copied()`: `other_bodies` (now an owned `Vec<&Body>`, The Hand,
@@ -9923,11 +10378,14 @@ impl<'w> Session<'w> {
                     .get(n - 1)
                     .copied()
             })
-            .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
+            .filter(|npc| here.iter().any(|h| h.entity == npc.entity));
+        match by_handle {
+            Some(npc) => Ok(Some(npc)),
             // The Roll, Task 10: [`body_by_needle`] — exact label match
             // first, then the longest containing label — never merely the
             // first substring hit in roster order.
-            .or_else(|| body_by_needle(&here, who))
+            None => body_by_needle(&here, who),
+        }
     }
 
     /// Commit the first player-authored fact: a signed disposition shift on
@@ -9946,8 +10404,14 @@ impl<'w> Session<'w> {
     /// return value rather than assuming success, so the player is never
     /// told a mark landed when the ledger disagrees.
     fn act_on_disposition(&mut self, who: &str, sign: i8) -> Turn {
-        let Some(npc) = self.colocated_npc(who) else {
-            return Turn::Out("There is no one here to provoke or soothe.".to_string());
+        let npc = match self.colocated_npc(who) {
+            Ok(Some(npc)) => npc,
+            Ok(None) => {
+                return Turn::Out("There is no one here to provoke or soothe.".to_string());
+            }
+            // The Ken, Task 5: name the candidates rather than silently
+            // provoking/soothing one of them.
+            Err(candidates) => return Turn::Out(ambiguous_needle_refusal(who, &candidates)),
         };
         let entity = npc.entity;
         let label = npc.label.clone();
@@ -10576,6 +11040,29 @@ fn render_felt_state_word(
                 Some(concept.to_string()),
             )
         }
+    }
+}
+
+/// A short, lowercase noun for a chamber's role — the header's per-chamber
+/// varying token (The Ken, Task 3, fix round 2). The header must vary as the
+/// character moves (the coordinator's own `sort -u` over a real multi-room
+/// walk caught `[chamber]` failing this), and role is the one thing
+/// [`crate::interior::chamber_interior_of`] derives per CHAMBER INDEX rather
+/// than per structure — two chambers of the same house otherwise share every
+/// other observable this function has on hand (the structure's site name,
+/// its `built`/`cold` flags). `role_for` is total over every `chamber_index`
+/// a structure can hold, so this match is exhaustive with no fallback arm to
+/// pick.
+fn chamber_place_word(role: crate::interior::pattern::Role) -> &'static str {
+    use crate::interior::pattern::Role;
+    match role {
+        Role::Threshold => "threshold",
+        Role::Hearthroom => "hearthroom",
+        Role::Store => "storeroom",
+        Role::Hall => "hall",
+        Role::Loomroom => "loomroom",
+        Role::Smithy => "smithy",
+        Role::Shrine => "shrine",
     }
 }
 
@@ -11210,6 +11697,7 @@ fn parse_compass(s: &str) -> Option<Compass> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::liveness::SLEPT_ON;
 
     /// **[`COMPASS_ROSE`] and `Compass::all()` must agree, and nothing asserted
     /// it until the Task 11 fix round.** `describe_here` zips this constant
@@ -11279,6 +11767,41 @@ mod tests {
             &SettlementPins::default(),
         )
         .ok()
+    }
+
+    /// The seed whose flagship dwelling forks at the threshold, for the Task
+    /// 5b tests that need a REAL fork rather than the hand-built
+    /// [`fork_structure`] the mechanics tests use.
+    ///
+    /// **Measured, not assumed.** A throwaway test walked
+    /// `[42, 14, 1, 13, 7]` through `Session::start` and printed each seed's
+    /// `structure_at(…).children(0).len()`: seed 42 forks with **two**
+    /// children (`links=[(0,1),(1,2),(0,3)]`, roles
+    /// `[Threshold, Hearthroom, Loomroom, Store]` — the backroom shape
+    /// `T{ H{ W }, S }` Task 3's ledger record already measured), seed 14
+    /// forks with **three** (the bush `T{ H, W, S }`), seed 1 with two (the
+    /// same backroom shape as 42), seed 13 does not fork at all (one child —
+    /// a chain), and seed 7 forks with two. 42 is the first seed tried that
+    /// forks at the threshold, so it is pinned here. It is also seed 42's own
+    /// virtue that its backroom shape carries BOTH a fork (the threshold) and
+    /// a chain segment (the hearth's one child, the loomroom) in one
+    /// structure, which is what lets one flagship walk exercise every ways-on
+    /// shape Step 2's second test needs.
+    const FORKING_FLAGSHIP_SEED: u64 = 42;
+
+    /// The world whose flagship forks at the threshold — [`seam_world`]
+    /// itself, since [`FORKING_FLAGSHIP_SEED`] and `seam_world`'s own seed
+    /// (42) are the same seed. Named separately so a future re-measurement
+    /// that pins a different seed only has to change one `const`, never every
+    /// call site; the assertion below is what keeps the two from silently
+    /// drifting apart if `seam_world`'s own seed ever moves.
+    fn forking_world() -> World {
+        let world = seam_world();
+        assert_eq!(
+            world.seed.0, FORKING_FLAGSHIP_SEED,
+            "seam_world's seed has moved off the measured forking seed"
+        );
+        world
     }
 
     /// The walk depth the default globe level puts a room at, as a `Facet`
@@ -12657,18 +13180,20 @@ mod tests {
             Turn::Released(t) => panic!("`{line}` must not release: {t}"),
         };
 
-        // Walk in and as far in as the place goes — the same route
+        // Walk in and then to the STORE by name — the same route
         // `tests/suite/strongbox_reachability.rs` walks, for the same reason:
-        // `Role::Store` is only ever chamber index >= 2 (`pattern::role_for`).
+        // the strongbox stands in a `Role::Store` chamber.
+        //
+        // **NAMED, not "as far in as the place goes"** (The Cruck, Task 3).
+        // The old walk was four `enter further in`s and rested on the store
+        // being the deepest link of a chain. Seed 14's flagship is the bush —
+        // the store hangs off the threshold — so `further in` refuses at the
+        // door and the old loop stood still.
         assert!(
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
-            }
-        }
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a strongbox") && nouns.iter().any(|n| n == "a key"),
@@ -12864,8 +13389,8 @@ mod tests {
     ///
     /// **It was one `enter` and it is three now, and the extra two steps are
     /// the point rather than an inconvenience.** The Chattel put this key in
-    /// the threshold chamber, which `role_for` gives to every built structure
-    /// unconditionally, so every dwelling in every world furnished a key at
+    /// the threshold chamber, which every built structure gets at chamber
+    /// index 0 unconditionally, so every dwelling in every world furnished a key at
     /// its own front door and finding one was a formality. The pattern moved
     /// to `roles: &[Role::Loomroom]`; seed 1's flagship is agrarian, so its
     /// index-2 chamber is a loomroom and the walk below is what reaches it.
@@ -12883,13 +13408,12 @@ mod tests {
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        for _ in 0..2 {
-            assert!(
-                say(&mut session, "enter further in").starts_with("[chamber "),
-                "the chambered seed's structure no longer reaches chamber index 2, \
-                 so the loomroom this key stands in is unreachable"
-            );
-        }
+        // NAMED, not counted (The Cruck, Task 3). This was two `enter further
+        // in`s, which reached the loomroom only while the structure was a
+        // chain. Seed 14's flagship is the BUSH — `T{ H, W, S }`, three
+        // children at the door — so `further in` refuses at the threshold and
+        // the loomroom is one named step away, not two anonymous ones.
+        walk_to_role(&mut session, crate::structure::Role::Loomroom);
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a key"),
@@ -12921,15 +13445,17 @@ mod tests {
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
-            }
-        }
+        // NAMED, not "as far in as the place goes" (The Cruck, Task 3): the
+        // room this helper wants is the STORE, and a bush hangs it off the
+        // door rather than at the end of a chain. The claim the old walk made
+        // — "the deepest chamber" — was never the claim the callers needed;
+        // they need the room the strongbox stands in, which is the Store
+        // whatever depth the brief puts it at.
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let nouns = session.chamber_nouns_here();
         assert!(
             nouns.iter().any(|n| n == "a key"),
-            "precondition: the chambered seed's deepest chamber must hold a key, \
+            "precondition: the chambered seed's store room must hold a key, \
              or this test drives nothing: {nouns:?}"
         );
         session
@@ -12951,11 +13477,11 @@ mod tests {
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
-        for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
-            }
-        }
+        // Loomroom -> Store. Under the bush both hang off the threshold, so
+        // this walks back out to the door and in again — which is exactly the
+        // route a player takes, and exactly what `walk_to_role` derives from
+        // the tree rather than counting.
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let store = session
             .chamber_facet_here()
             .expect("the walk ended in a chamber");
@@ -12986,6 +13512,67 @@ mod tests {
             Turn::Out(t) => t,
             Turn::Released(t) => panic!("`{line}` must not release: {t}"),
         }
+    }
+
+    /// Walk the possession to the chamber whose role is `role`, naming every
+    /// aperture crossed by its role noun, and return the arrival reply.
+    ///
+    /// **A structure is a TREE now (The Cruck, Task 3), so "walk in until it
+    /// stops" is no longer a route to anywhere.** `enter further in` refuses at
+    /// a fork rather than guess a direction, so a loop of it lands in the
+    /// threshold and stops — and every custody test that wanted a Store or a
+    /// Loomroom would then assert against the wrong room, or against a
+    /// precondition that fires. The route is derived from the structure's own
+    /// `parent` chain instead of counted in steps, so it holds for whatever
+    /// shape the brief derives.
+    ///
+    /// It goes UP to the threshold first and then down. In a four-chamber tree
+    /// that is never longer than the direct route by more than two steps, and
+    /// it removes the only case that needs a lowest-common-ancestor walk.
+    fn walk_to_role(session: &mut Session<'_>, role: crate::structure::Role) -> String {
+        let inside = |s: &Session<'_>| {
+            let i = s
+                .inside
+                .as_ref()
+                .expect("walk_to_role is called with the possession already indoors");
+            (i.structure.clone(), i.at)
+        };
+        let (structure, _) = inside(session);
+        let target = structure
+            .roles
+            .iter()
+            .position(|r| *r == role)
+            .unwrap_or_else(|| panic!("this structure holds no {role:?}: {:?}", structure.roles));
+        loop {
+            let (structure, at) = inside(session);
+            let Some(parent) = structure.parent(at) else {
+                break;
+            };
+            let noun = structure.roles[parent].noun();
+            let reply = say(session, &format!("enter {noun}"));
+            assert!(
+                reply.starts_with("[chamber "),
+                "`enter {noun}` did not walk one aperture back toward the door: {reply}"
+            );
+        }
+        let mut down = vec![target];
+        let mut i = target;
+        while let Some(p) = structure.parent(i) {
+            down.push(p);
+            i = p;
+        }
+        down.reverse();
+        let mut reply = say(session, "look");
+        for &step in &down[1..] {
+            let noun = structure.roles[step].noun();
+            reply = say(session, &format!("enter {noun}"));
+            assert!(
+                reply.starts_with("[chamber "),
+                "`enter {noun}` did not lead to the {:?}: {reply}",
+                structure.roles[step]
+            );
+        }
+        reply
     }
 
     /// **A thing taken in one room is carried into another and is still held
@@ -13052,10 +13639,14 @@ mod tests {
             "the take must reach custody, or the walk below tests nothing"
         );
 
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        // A SECOND ROOM, named rather than "further in" (The Cruck, Task 3).
+        // The claim is that custody crosses a threshold, never that the room
+        // it crosses into is deeper — and under the bush the store is a
+        // sibling of the loomroom, not its child, so `further in` refuses here.
+        walk_to_role(&mut session, crate::structure::Role::Store);
         let deeper = session
             .chamber_facet_here()
-            .expect("`enter further in` lands in a chamber");
+            .expect("the walk lands in a chamber");
         assert_ne!(
             deeper, loom,
             "precondition: the walk must have changed rooms, or 'carried \
@@ -13064,7 +13655,7 @@ mod tests {
         assert_eq!(
             say(&mut session, "carrying"),
             "You are carrying a key.",
-            "the key must still be in hand one room further in"
+            "the key must still be in hand one room on"
         );
 
         assert!(say(&mut session, "out").starts_with("[room "));
@@ -13307,10 +13898,15 @@ mod tests {
 
         assert!(say(&mut session, "out").starts_with("[room "));
         assert!(say(&mut session, "enter").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        // The HEARTHROOM by name (The Cruck, Task 3). The alcove is the only
+        // lidless container the grammar composes and it is gated
+        // `roles: &[Role::Hearthroom]`, so that is the room this test has
+        // always wanted; `enter further in` reached it only because the
+        // hearthroom was chamber index 1 of a chain.
+        walk_to_role(&mut session, crate::structure::Role::Hearthroom);
         let alcove_room = session
             .chamber_facet_here()
-            .expect("`enter further in` lands in a chamber");
+            .expect("the walk lands in a chamber");
         assert_ne!(alcove_room, store, "precondition: a different room");
         let nouns = session.chamber_nouns_here();
         assert!(
@@ -13497,14 +14093,16 @@ mod tests {
             say(&mut session, "put a key in a strongbox"),
             "You put the key in the strongbox."
         );
-        // And bring the STORE room's key back to the loomroom instead. `out`
-        // leaves the structure from any chamber, so the return trip is
-        // `enter` plus two `enter further in` — the loomroom is index 2.
+        // And bring the STORE room's key back to the loomroom instead. The
+        // return trip is `enter` and then the loomroom BY NAME (The Cruck,
+        // Task 3): it was "two `enter further in`s — the loomroom is index 2",
+        // and index 2 is still the loomroom, but a bush hangs it off the
+        // threshold rather than behind the hearthroom, so the count no longer
+        // names the room and the noun does.
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
         assert!(say(&mut session, "out").starts_with("[room "));
         assert!(say(&mut session, "enter").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        walk_to_role(&mut session, crate::structure::Role::Loomroom);
         let loom = session
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
@@ -14790,10 +15388,16 @@ mod tests {
         }
     }
 
-    /// A `Structure` of `count` chambers under `base`, linked as the path graph
-    /// rooted at the threshold that `structure_at` builds. Synthetic because
-    /// `structure_at`'s own count is a seed draw, and the naming layer must hold
-    /// for every count — so these tests choose it rather than hoping for it.
+    /// A `Structure` of `count` chambers under `base`, linked as a path graph
+    /// rooted at the threshold — the shape a WILD site still draws, and the
+    /// special case of the tree where every chamber has one child.
+    ///
+    /// Synthetic because the naming layer must hold for every count and every
+    /// shape, so these tests choose one rather than hoping for it. That was
+    /// true when the count was a seed draw and it is still true now that a
+    /// BUILT count is the grammar's (The Cruck, Task 3): a fixture derived
+    /// from a brief would test whichever shape that brief happens to admit.
+    /// [`fork_structure`] is its counterpart.
     fn path_structure(base: &Facet, count: usize) -> crate::structure::Structure {
         assert!(
             (1..=crate::structure::MAX_CHAMBERS).contains(&count),
@@ -14817,8 +15421,278 @@ mod tests {
         crate::structure::Structure {
             threshold: chambers[0].clone(),
             links: (1..count).map(|i| (i - 1, i)).collect(),
+            roles: (0..count).map(crate::structure::index_role).collect(),
             chambers,
         }
+    }
+
+    /// T{ H, W, S }: the bush — a threshold with three children.
+    ///
+    /// Hand-built rather than derived, and still worth being so now that
+    /// `structure_at` really does produce this shape (The Cruck, Task 3): the
+    /// naming layer must hold for every tree, not only for whichever one a
+    /// flagship's brief happens to derive, and a hand-built fixture chooses
+    /// the shape instead of hoping for it. Reuses `path_structure`'s own four
+    /// chambers so the addresses are real, then overwrites the shape and
+    /// roles.
+    fn fork_structure(base: &Facet) -> crate::structure::Structure {
+        use crate::structure::Role;
+        let mut s = path_structure(base, 4);
+        s.links = vec![(0, 1), (0, 2), (0, 3)];
+        s.roles = vec![
+            Role::Threshold,
+            Role::Hearthroom,
+            Role::Loomroom,
+            Role::Store,
+        ];
+        s
+    }
+
+    #[test]
+    fn further_in_is_the_only_child_and_nothing_at_a_fork() {
+        let chain = path_structure(&synthetic_locale(), 3);
+        assert_eq!(Session::further_in(&chain, 0), Some(1));
+        assert_eq!(
+            Session::further_in(&chain, 1),
+            Some(2),
+            "from a middle chamber, deeper is the child, never the way back"
+        );
+        assert_eq!(Session::further_in(&chain, 2), None);
+        let fork = fork_structure(&synthetic_locale());
+        assert_eq!(
+            Session::further_in(&fork, 0),
+            None,
+            "three ways in is not one way in"
+        );
+        assert_eq!(
+            Session::further_in(&fork, 1),
+            None,
+            "a leaf has nothing deeper"
+        );
+    }
+
+    /// **The footer's own words must work when typed** (The Cruck, Task 3).
+    ///
+    /// At a fork the ways-on line reads `Ways on: out, the hearth, the
+    /// loomroom, the store.` and the direction refusal says `name one`. A
+    /// player naming one types what is written — `enter the hearth` — and that
+    /// matched nothing until this task, because a role noun is `hearth` and
+    /// `"hearth".contains("the hearth")` is false. It was invisible while
+    /// production drew only chains: no real session had ever seen a
+    /// `the <noun>` way printed.
+    ///
+    /// Both forms are asserted, so a later change that accepts the article by
+    /// dropping the bare noun would redden too.
+    #[test]
+    fn the_ways_on_footers_own_words_are_accepted_as_typed() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let fork = fork_structure(&session.position());
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        for (typed, want) in [
+            ("the hearth", 1),
+            ("hearth", 1),
+            ("the loomroom", 2),
+            ("loomroom", 2),
+            ("the store", 3),
+            ("store", 3),
+        ] {
+            assert_eq!(
+                session.named_neighbour(&fork, 0, typed, &brief),
+                Some(want),
+                "`enter {typed}` must name one aperture"
+            );
+        }
+    }
+
+    #[test]
+    fn a_role_noun_names_one_aperture_at_a_fork_and_the_bare_direction_names_none() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let fork = fork_structure(&session.position());
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        assert_eq!(session.named_neighbour(&fork, 0, "store", &brief), Some(3));
+        assert_eq!(
+            session.named_neighbour(&fork, 0, "loomroom", &brief),
+            Some(2)
+        );
+        assert_eq!(session.named_neighbour(&fork, 0, "hearth", &brief), Some(1));
+        assert_eq!(
+            session.named_neighbour(&fork, 0, "further in", &brief),
+            None,
+            "a fork refuses the bare direction"
+        );
+        assert_eq!(
+            session.named_neighbour(&fork, 0, "", &brief),
+            None,
+            "silence with a choice open is not an answer"
+        );
+        // Walking BACK by role: from the store, the threshold is one aperture
+        // away and nameable.
+        assert_eq!(
+            session.named_neighbour(&fork, 3, "threshold", &brief),
+            Some(0)
+        );
+    }
+
+    /// The structure of the possession's OWN starting dwelling — a session
+    /// starts at a seed's flagship settlement and there is no test-only mover —
+    /// after `enter`ing it. Asserts it forks at the threshold.
+    fn walk_to_a_forking_structure(session: &mut Session<'_>) -> crate::structure::Structure {
+        let brief = session.brief_here().expect("a flagship room has a brief");
+        let locale = crate::depth::truncate_to_walk(&session.position(), session.walk_depth());
+        let s = crate::structure::structure_at(
+            &locale,
+            &brief,
+            session.world.seed,
+            session.walk_depth(),
+        )
+        .expect("the flagship dwelling is a structure");
+        assert!(
+            s.children(0).len() >= 2,
+            "seed {}'s flagship does not fork at the threshold: {:?}",
+            session.world.seed.0,
+            s.links
+        );
+        assert!(say(session, "enter").starts_with("[chamber "));
+        s
+    }
+
+    /// **Every mechanic Task 5a unit-tested against [`fork_structure`] (a
+    /// hand-built fixture) also holds against a REAL fork — the flagship
+    /// [`FORKING_FLAGSHIP_SEED`] draws, reached the only way a real session
+    /// ever reaches one: `Session::start` then `enter`.** The hand-built
+    /// tests prove the mechanism is capable of the shape; these prove
+    /// production actually PRODUCES it and the session actually WALKS it.
+    #[test]
+    fn a_fork_is_named_by_role_noun_and_refuses_the_bare_direction() {
+        let w = forking_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let structure = walk_to_a_forking_structure(&mut session);
+        let children = structure.children(0);
+        let refusal = say(&mut session, "enter further in");
+        let ways = children
+            .iter()
+            .map(|&c| format!("the {}", structure.roles[c].noun()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        assert_eq!(
+            refusal,
+            format!(
+                "There are {} ways in from here: {ways}; name one, or 'out' to leave.",
+                children.len()
+            ),
+            "the refusal must be the spec's exact wording"
+        );
+        // Naming the SECOND way takes it (the first would be what a lazy min-index pick gives).
+        let target = structure.roles[children[1]].noun();
+        let stepped = say(&mut session, &format!("enter {target}"));
+        assert!(
+            stepped.starts_with("[chamber "),
+            "naming a way must take it: {stepped}"
+        );
+        // And the chamber entered is the one named: its role noun is in the footer's way back.
+        let here = say(&mut session, "look");
+        assert!(here.contains("Ways on: out"), "{here}");
+    }
+
+    #[test]
+    fn the_footer_lists_the_ways_by_role_at_a_fork_and_further_in_on_a_chain() {
+        let w = forking_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let structure = walk_to_a_forking_structure(&mut session);
+        let here = say(&mut session, "look");
+        let ways_line = here
+            .lines()
+            .find(|l| l.starts_with("Ways on:"))
+            .expect("a chamber names its ways");
+        let want = std::iter::once("out".to_string())
+            .chain(
+                structure
+                    .children(0)
+                    .iter()
+                    .map(|&c| format!("the {}", structure.roles[c].noun())),
+            )
+            .collect::<Vec<_>>()
+            .join(", ");
+        assert_eq!(ways_line, format!("Ways on: {want}."), "{here}");
+        // A child with exactly one child of its own is a chain segment: `further in`.
+        // A leaf: only `out`. Walk to whichever exists in this structure and assert accordingly.
+        for &c in &structure.children(0) {
+            assert!(
+                say(
+                    &mut session,
+                    &format!("enter {}", structure.roles[c].noun())
+                )
+                .starts_with("[chamber ")
+            );
+            let there = say(&mut session, "look");
+            let line = there
+                .lines()
+                .find(|l| l.starts_with("Ways on:"))
+                .expect("ways");
+            match structure.children(c).as_slice() {
+                [] => assert_eq!(line, "Ways on: out.", "{there}"),
+                [_only] => assert_eq!(line, "Ways on: out, further in.", "{there}"),
+                many => {
+                    let w = many
+                        .iter()
+                        .map(|&g| format!("the {}", structure.roles[g].noun()))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    assert_eq!(line, format!("Ways on: out, {w}."), "{there}");
+                }
+            }
+            // Back to the threshold by its role noun.
+            assert!(
+                say(&mut session, "enter threshold").starts_with("[chamber "),
+                "the parent's role noun walks back"
+            );
+        }
+    }
+
+    #[test]
+    fn a_prose_noun_shared_by_two_ways_names_them_rather_than_guessing() {
+        let w = forking_world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let structure = walk_to_a_forking_structure(&mut session);
+        // Every role's prose names a doorway, so `doorway` matches every child.
+        let refusal = say(&mut session, "enter doorway");
+        assert!(refusal.starts_with("There are "), "{refusal}");
+        for &c in &structure.children(0) {
+            assert!(
+                refusal.contains(structure.roles[c].noun()),
+                "the refusal must name the {} way: {refusal}",
+                structure.roles[c].noun()
+            );
+        }
+        assert!(
+            !refusal.contains("further in"),
+            "at a fork the refusal must not tell the player to say 'further in': {refusal}"
+        );
+    }
+
+    #[test]
+    fn a_chain_resolves_exactly_as_before() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let chain = path_structure(&session.position(), 3);
+        let brief = session.brief_here().expect("seed 42 has a valid brief");
+        assert_eq!(
+            session.named_neighbour(&chain, 1, "further in", &brief),
+            Some(2)
+        );
+        assert_eq!(session.named_neighbour(&chain, 1, "in", &brief), Some(2));
+        assert_eq!(
+            session.named_neighbour(&chain, 2, "", &brief),
+            Some(1),
+            "one aperture: silence takes it"
+        );
+        assert_eq!(
+            session.named_neighbour(&chain, 1, "", &brief),
+            None,
+            "two apertures: silence is refused"
+        );
     }
 
     #[test]
@@ -14877,32 +15751,82 @@ mod tests {
         );
     }
 
+    /// **Spec §5.3's relaxation, restated over this campaign's tree (ledger
+    /// #14).** The old rule this test pinned — "a prose noun is accepted only
+    /// where exactly one aperture is open" — was a guard against picking a
+    /// direction the player never named; "unique among this chamber's
+    /// apertures" keeps that guard (a noun BOTH neighbours carry — every
+    /// role's prose names a doorway — still refuses) and stops refusing a
+    /// noun only ONE neighbour carries, which was never actually ambiguous.
+    /// Both halves are asserted here, over the real intersection and
+    /// difference of chambers 0 and 2's own prose, so neither is a hand-typed
+    /// guess about what seed 42's structure actually draws.
     #[test]
-    fn a_bare_noun_refuses_while_two_apertures_are_open() {
+    fn a_bare_noun_shared_by_two_apertures_refuses_and_one_unique_to_a_chamber_is_taken() {
         let world = seam_world();
         let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let s = path_structure(&session.position(), 4);
-        // Precondition: the noun really IS in the neighbouring chamber's prose,
-        // so the refusal below is about ambiguity, not about an absent word.
         let terrain = session.terrain_here();
         let brief = session.brief_here().expect("seed 42 has a valid brief");
-        let nouns = crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
-            &s.chambers[2],
-            &terrain,
-            session.walk_depth(),
-            &brief,
-            2,
-        ));
-        let noun = *nouns
-            .first()
-            .expect("a built chamber's prose names something");
-        assert_eq!(
-            session.named_neighbour(&s, 1, noun, &brief),
-            None,
-            "an ambiguous noun must refuse, not silently pick a direction"
+        let nouns_at = |i: usize| {
+            crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
+                &s.chambers[i],
+                &terrain,
+                session.walk_depth(),
+                &brief,
+                s.roles[i],
+            ))
+        };
+        let nouns0 = nouns_at(0);
+        let nouns2 = nouns_at(2);
+        // Precondition: chamber 1's two apertures (0 and 2) really do share a
+        // noun in their prose, so the refusal below is about ambiguity, not
+        // about an absent word.
+        let shared: Vec<&str> = nouns0
+            .iter()
+            .filter(|n| nouns2.contains(n))
+            .copied()
+            .collect();
+        assert!(
+            !shared.is_empty(),
+            "chambers 0 and 2 share no noun, so this test's ambiguity \
+             precondition does not hold: {nouns0:?} vs {nouns2:?}"
         );
         assert_eq!(
-            session.named_neighbour(&s, 0, noun, &brief),
+            session.named_neighbour(&s, 1, shared[0], &brief),
+            None,
+            "a noun BOTH apertures carry must refuse, not silently pick a direction"
+        );
+        // The relaxation itself: a noun unique to chamber 2's prose is no
+        // longer refused just because chamber 0 is also in reach.
+        let unique_to_2: Vec<&str> = nouns2
+            .iter()
+            .filter(|n| !nouns0.contains(n))
+            .copied()
+            .collect();
+        // Precondition, symmetric to `shared`'s guard above: without this,
+        // the relaxation assertion below would silently stop running (rather
+        // than fail) if a future genesis or walk-band change ever made
+        // chamber 2's prose a subset of chamber 0's — the one assertion that
+        // actually exercises spec §5.3's relaxation cannot be allowed to
+        // disappear with a green run. Measured as of this writing: chamber 0
+        // (the Threshold) is `["a doorway", "a screen", "a bench"]`, chamber
+        // 2 (the Store) is `["a doorway", "a water jar", "a strongbox", "a
+        // key"]`, so `unique_to_2` is `["a water jar", "a strongbox", "a
+        // key"]`.
+        assert!(
+            !unique_to_2.is_empty(),
+            "chamber 2's prose is a subset of chamber 0's, so this test's \
+             relaxation precondition does not hold: {nouns0:?} vs {nouns2:?}"
+        );
+        assert_eq!(
+            session.named_neighbour(&s, 1, unique_to_2[0], &brief),
+            Some(2),
+            "a noun unique to chamber 2's prose must resolve there under \
+             the relaxed rule, even with chamber 0 also in reach"
+        );
+        assert_eq!(
+            session.named_neighbour(&s, 0, shared[0], &brief),
             Some(1),
             "with exactly one aperture the same noun is unambiguous, and accepted"
         );
@@ -15000,18 +15924,34 @@ mod tests {
             .structure
             .chambers
             .len();
-        // `total` is a seed draw over `1..=MAX_CHAMBERS`. At 1 the loop below
-        // never runs and the visited-set assertion passes trivially — the exact
-        // vacuity shape this round fixed elsewhere — so pin the fixture instead
-        // of trusting today's draw.
+        // At 1 chamber the walk below is trivial and the visited-set assertion
+        // passes for free — the exact vacuity shape this round fixed elsewhere
+        // — so pin the fixture instead of trusting today's shape.
         assert!(
             total > 1,
-            "fixture must draw a multi-chamber structure for this test to mean anything"
+            "fixture must derive a multi-chamber structure for this test to mean anything"
+        );
+        // **The claim is the same and the walk is not** (The Cruck, Task 3).
+        // This was `total - 1` repetitions of `enter further in` — which is a
+        // route only in a CHAIN. Seed 42's flagship is the backroom,
+        // `T{ H{ W }, S }`, so the door forks and `further in` refuses there
+        // rather than guess. What "reachable BY INPUT" means in a tree is that
+        // every chamber has a NAME the player can type, which is what this
+        // walks now: each aperture named by the role behind it.
+        let structure = session
+            .inside
+            .as_ref()
+            .expect("a successful enter is inside something")
+            .structure
+            .clone();
+        assert!(
+            structure.children(0).len() > 1,
+            "the flagship must FORK for this to test the case that broke: {:?}",
+            structure.links
         );
         let mut visited = std::collections::BTreeSet::new();
-        visited.insert(session.inside.as_ref().unwrap().at);
-        for _ in 1..total {
-            session.handle("enter further in");
+        for role in &structure.roles {
+            walk_to_role(&mut session, *role);
             visited.insert(session.inside.as_ref().unwrap().at);
         }
         assert_eq!(
@@ -15019,6 +15959,19 @@ mod tests {
             total,
             "every chamber must be reachable by input; visited {visited:?} of {total}"
         );
+        // And the far end still names itself. Asked from a LEAF, since that is
+        // where "as far in as the place goes" is now the true answer; at a
+        // fork the refusal names the ways instead, which
+        // `a_role_noun_names_one_aperture_at_a_fork_and_the_bare_direction_names_none`
+        // and Task 5b's own tests hold.
+        let leaf = *structure
+            .roles
+            .iter()
+            .enumerate()
+            .find(|(i, _)| structure.children(*i).is_empty())
+            .map(|(_, r)| r)
+            .expect("a finite tree has a leaf");
+        walk_to_role(&mut session, leaf);
         let wall = match session.handle("enter further in") {
             Turn::Out(t) => t,
             Turn::Released(_) => panic!("enter must not release"),
@@ -15051,13 +16004,13 @@ mod tests {
         // Take a noun the chamber's prose has just named to the player.
         let terrain = session.terrain_here();
         let brief = session.brief_here().expect("seed 42 has a valid brief");
+        let inside = session.inside.as_ref().unwrap();
         let interior = crate::interior::chamber_interior_of(
-            &session.inside.as_ref().unwrap().structure.chambers
-                [session.inside.as_ref().unwrap().at],
+            &inside.structure.chambers[inside.at],
             &terrain,
             session.walk_depth(),
             &brief,
-            session.inside.as_ref().unwrap().at,
+            inside.structure.roles[inside.at],
         );
         let nouns = crate::chamber_prose::chamber_nouns(&interior);
         let noun = *nouns
@@ -15150,7 +16103,7 @@ mod tests {
             &terrain,
             session.walk_depth(),
             &brief,
-            inside.at,
+            inside.structure.roles[inside.at],
         );
         let id = interior
             .ids()
@@ -15590,8 +16543,22 @@ mod tests {
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         session.handle("enter");
-        for line in ["go n", "go e", "go s", "go w", "enter further in"] {
-            session.handle(line);
+        // **`enter the hearth`, not `enter further in`** (The Cruck, Task 3,
+        // fix round 1). Seed 42's flagship is the backroom, so the threshold
+        // FORKS and `further in` is refused there — which made that iteration
+        // a no-op that re-compared the state `go w` had already left, while
+        // reading as though it were checking the cache across an aperture. The
+        // hearthroom is a chamber every built structure has, so naming it
+        // costs this test nothing and restores the step it was written for.
+        for line in ["go n", "go e", "go s", "go w", "enter the hearth"] {
+            let reply = match session.handle(line) {
+                Turn::Out(t) | Turn::Released(t) => t,
+            };
+            assert!(
+                reply.starts_with("[chamber ") || reply.starts_with("You step"),
+                "{line:?} must actually act, or the assertion below re-checks \
+                 the state the previous line left: {reply}"
+            );
             let inside = session.inside.as_ref().expect("still indoors");
             assert_eq!(
                 inside.lattice,
@@ -20689,24 +21656,30 @@ mod tests {
     /// nothing, because a silent one would make every caller vacuous.
     fn possessed_where_the_plan_draws(world: &World) -> Session<'_> {
         let mut session = possessed_inside(world);
-        // `MAX_CHAMBERS` is 4, so four steps is one more than any structure
-        // has; the loop stops on the far-end reply rather than on the count.
-        for _ in 0..4 {
+        // EVERY chamber, by role noun (The Cruck, Task 3). This was a loop of
+        // `enter further in`, which walked a chain; a structure is a rooted
+        // tree now, so `further in` refuses at a fork and the loop would have
+        // asserted its own precondition in the threshold and stopped. Which
+        // chamber draws both a lit and an unlit anchor is still a search, and
+        // it still refuses loudly rather than returning one that draws
+        // nothing.
+        let structure = session
+            .inside
+            .as_ref()
+            .expect("possessed_inside leaves the possession in a chamber")
+            .structure
+            .clone();
+        for role in structure.roles {
+            walk_to_role(&mut session, role);
             let (near, far) = sight_split(&session);
             if near.is_some() && far.is_some() {
                 return session;
             }
-            let deeper = matches!(
-                session.handle("enter further in"),
-                Turn::Out(ref t) if t.starts_with("[chamber ")
-            );
-            assert!(
-                deeper,
-                "no chamber of this structure draws BOTH a lit and an unlit room \
-                 anchor, so nothing that places a creature here can be tested"
-            );
         }
-        panic!("the structure ran past MAX_CHAMBERS without the plan ever drawing")
+        panic!(
+            "no chamber of this structure draws BOTH a lit and an unlit room \
+             anchor, so nothing that places a creature here can be tested"
+        )
     }
 
     /// Commit an `agent-at` putting `who` in `room` as of the session's current
@@ -21245,11 +22218,33 @@ mod tests {
             "perturbing the embedding must NOT move what is known (spec §2.1): \
              sight has leaked into belief"
         );
-        assert_eq!(
-            before.sensed.present, after.sensed.present,
-            "nor may it move who is REPORTED here — the placed companion must \
-             stay in sight under both placements"
-        );
+        // THE PLACED COMPANION STAYS IN SIGHT UNDER BOTH PLACEMENTS — which is
+        // the claim this line's own comment always made, and which it did not
+        // assert.
+        //
+        // **It compared the whole `sensed.present` list, and that equality is
+        // something the code deliberately does not promise** (The Cruck, Task
+        // 3). `sensed.present` is SIGHT-NARROWED at the roster — see
+        // `snapshot`'s own comment, "SIGHT NARROWS WHAT IS SENT (spec §2.1)" —
+        // so which creatures it reports is a function of the placement by
+        // construction. The old equality held because the chamber this fixture
+        // happened to land in had nobody standing on the edge of the
+        // shadowcast; it is not a property of the sim. Measured while the
+        // structure grammar moved which chamber that is: 66 entries against
+        // 67, one resident entering sight under the perturbed placement, with
+        // `known` byte-identical throughout.
+        //
+        // `known` above is the §2.1 claim and it is unchanged. This line is the
+        // positive control it needs: without it, `before.spatial != after.spatial`
+        // could be satisfied by the companion simply vanishing.
+        let placed = session.bodies()[1].entity.0.get();
+        for (label, snap) in [("before", &before), ("after", &after)] {
+            assert!(
+                snap.sensed.present.iter().any(|p| p.entity == placed),
+                "{label}: the placed companion must stay in sight under both \
+                 placements, or `spatial` moving proves nothing"
+            );
+        }
     }
 
     /// A hand-built [`WordViews`] for [`render_testimony`]'s tests — the
@@ -21900,9 +22895,22 @@ mod tests {
             say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
-        // `MAX_CHAMBERS` is 4; five steps is one more than any structure has,
-        // and the loop stops on the far-end reply rather than on the count.
-        for _ in 0..5 {
+        // EVERY chamber, by role noun (The Cruck, Task 3). This was five
+        // `enter further in`s — "one more than any structure has" — which
+        // walked a chain. A structure is a rooted tree now, so `further in`
+        // refuses at a fork and the walk would have covered the threshold
+        // alone while `rooms >= 3` fired as a precondition failure. The roster
+        // is the structure's own `roles`, so the loop covers exactly the rooms
+        // that exist whatever shape the brief derives.
+        let roles = session
+            .inside
+            .as_ref()
+            .expect("a successful enter is inside something")
+            .structure
+            .roles
+            .clone();
+        for role in roles {
+            walk_to_role(&mut session, role);
             let room = session
                 .chamber_facet_here()
                 .expect("the walk is standing in a chamber");
@@ -21951,10 +22959,6 @@ mod tests {
                     let _ = session.handle(&format!("put {noun} in {holder}"));
                     let _ = session.handle(&format!("take {noun}"));
                 }
-            }
-
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
-                break;
             }
         }
 
@@ -22088,6 +23092,7 @@ mod tests {
             &frozen,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
         );
         assert_eq!(
             written.len(),
@@ -22124,6 +23129,7 @@ mod tests {
             &driven_body,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut PlayerController::new(),
         );
         let driven = session.roster.driven();
@@ -22221,6 +23227,7 @@ mod tests {
             &driven_body,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut ImposedController::new(),
         );
         let driven = session.roster.driven();
@@ -22323,6 +23330,7 @@ mod tests {
                     &body,
                     &mut hornvale_kernel::RoomMeshMemo::new(),
                     &mut HomeNavCache::new(),
+                    &mut RouteMemo::new(),
                     &mut PlayerController::new(),
                 );
                 assert!(

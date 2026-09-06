@@ -598,6 +598,37 @@ pub struct FullView {
     /// per world, so ordering has no cost here worth trading away.
     lexicon_cache:
         std::cell::RefCell<std::collections::BTreeMap<String, hornvale_language::Lexicon>>,
+    /// This view's own Lot sample (The Lot, Task 9): the assembled
+    /// `hornvale_lot::context::LotContext` plus 200 drawn lots (indices
+    /// 0-199, `Pick::default()`), computed on first demand by [`lot_sample`]
+    /// and then reused by all six `lot-*` metrics.
+    ///
+    /// **Scoping is the whole safety argument, so it is stated here, the
+    /// same way [`TerrainView::band_transects`] states it.** The cell is a  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// private field of the view, so its lifetime is exactly one world's
+    /// evaluation: `build_row` constructs a `BuiltView` per (seed, pin set),
+    /// applies every metric to it, and drops it. There is no key to
+    /// collide, no `static` to outlive a world, and no way to hand this
+    /// cache a sample other than the one [`lot_sample`]'s own uncached body
+    /// draws for THIS view's `world()`. `OnceCell` (not `OnceLock`) is  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// deliberate: it is `!Sync`, so a view carrying a filled sample cannot
+    /// be shared across the runner's worker threads even by accident — the
+    /// same reasoning [`TerrainView::band_transects`] documents for its own
+    /// `OnceCell`.  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    ///
+    /// The stored value is an `Option`, so "assembled, and this world has no
+    /// occupations (or predates `occ-person-years`)" (`Some(None)` once
+    /// filled) stays distinct from "not yet sampled" (the cell itself  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
+    /// unset). A world `hornvale_lot::context::assemble` refuses is
+    /// therefore sampled once and answered `Absent` by all six metrics,
+    /// never re-attempted. `Box`ed: `LotSample` embeds a whole
+    /// `hornvale_lot::context::LotContext` (a rebuilt terrain, the
+    /// composition root's registries, every occupation prepared), and
+    /// storing it inline would make `FullView` — and therefore every
+    /// `BuiltView` variant, `clippy::large_enum_variant` — as large as this
+    /// view's single biggest field; the indirection costs one allocation
+    /// per world instead.
+    lot: std::cell::OnceCell<Option<Box<LotSample>>>, // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
 }
 
 impl FullView {
@@ -619,6 +650,7 @@ impl FullView {
                 demography_cache: std::cell::RefCell::new(None), // lexicon: std::cell::RefCell/Cell/Ref/OnceCell — the Rust interior-mutability type, not the mesh sense
             },
             lexicon_cache: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            lot: std::cell::OnceCell::new(), // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense (`Box<LotSample>` inside — see this field's own doc)
         })
     }
 
@@ -647,6 +679,64 @@ impl FullView {
     pub fn terrain(&self) -> &hornvale_terrain::GeneratedTerrain {
         self.settlement.terrain()
     }
+}
+
+/// One world's Lot sample (The Lot, Task 9): the assembled
+/// `hornvale_lot::context::LotContext` plus the world's souls-ever total
+/// (`hornvale_lot::draw::curve`'s own field) and 200 drawn lots (indices
+/// 0-199, `Pick::default()`) with their told stories, in draw order —
+/// built once per view by [`lot_sample`] and shared by all six `lot-*`
+/// metrics. See [`FullView::lot`]'s own doc for the memo's scoping
+/// argument.
+struct LotSample {
+    /// The assembled context every draw and telling reads.
+    ctx: hornvale_lot::context::LotContext,
+    /// The world's souls-ever total, computed once alongside the sample
+    /// rather than re-derived by `lot-souls-ever` on every call.
+    souls_ever: f64,
+    /// 200 drawn lives and their told stories, in draw order.
+    lots: Vec<(hornvale_lot::draw::Life, hornvale_lot::slots::Story)>,
+}
+
+/// The four story slots spec §4.4 excludes by design — no model in this
+/// world backs them, so a lot never "fills" them and H-P5's denominator
+/// (spec §8: "the by-design silences are excluded so the number measures
+/// the world, not the lens") counts only the other 22.
+const LOT_BY_DESIGN_SLOTS: [&str; 4] = ["sex", "family", "work", "literacy"];
+
+/// Build (once, memoised on `v.lot`) this world's Lot sample: `None` when
+/// `hornvale_lot::context::assemble` refuses this world (no occupations, or
+/// one saved before The Lot with no `occ-person-years` fact) — exactly the
+/// condition each `lot-*` metric's doc names as `Absent`. A drawn `Pick::
+/// default()` index never itself fails once `assemble` has succeeded (every
+/// index in `0..200` draws a birth year and site from the same context
+/// `assemble` just built), so a failure there would be a genuine bug rather
+/// than an expected shape — this still folds it into `None` rather than
+/// panicking, matching [`TerrainView::band_transects`]'s own "answer Absent,
+/// never crash" discipline for `metric_roster_safety`.
+fn lot_sample(v: &FullView) -> Option<&LotSample> {
+    v.lot
+        .get_or_init(|| {
+            let ctx = hornvale_lot::context::assemble(v.world()).ok()?;
+            let souls_ever = hornvale_lot::draw::curve(&ctx).souls_ever;
+            let mut lots = Vec::with_capacity(200);
+            for i in 0..200u64 {
+                let life = hornvale_lot::draw::draw(
+                    &ctx,
+                    hornvale_lot::LotIndex(i),
+                    &hornvale_lot::Pick::default(),
+                )
+                .ok()?;
+                let story = hornvale_lot::slots::tell(v.world(), &ctx, &life);
+                lots.push((life, story));
+            }
+            Some(Box::new(LotSample {
+                ctx,
+                souls_ever,
+                lots,
+            }))
+        })
+        .as_deref()
 }
 
 impl AsRef<SettlementView> for FullView {
@@ -5601,10 +5691,15 @@ pub fn registry() -> Vec<Metric> {
                   makes the shared eligibility gate a constant, so it contributes zero MI \
                   by construction and cannot flatter any kind — see the spec's own \
                   amendment paragraph for the whole-sphere confound this removes). The \
-                  preregistered claim is the ORDERING `spring > thicket > overhang > \
+                  preregistered claim WAS the ORDERING `spring > thicket > overhang > \
                   erratic`, not a threshold on this reading alone: spring is H3's own \
-                  sign case (\"diagnostic of what is underfoot\", contextuality 0.85), so \
-                  it is predicted HIGHEST of the four.",
+                  sign case (\"diagnostic of what is underfoot\"), so it was predicted \
+                  HIGHEST of the four. The Weft measured this ordering FALSE (`thicket > \
+                  spring`, 2026-09-04); The Warp's re-parameterisation of the sign kinds \
+                  then moved spring's reading to 0.086464 and overhang's to 0.076536 at \
+                  seed 42, while thicket (0.038604) and erratic (0.000000) are unchanged, \
+                  falsifying the ordering again — now on `thicket > overhang`. This \
+                  metric is a RECORD of that original prediction, not a live claim.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
@@ -5615,9 +5710,10 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "weft-legibility-mi-overhang",
             doc: "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) \
-                  — see `weft-legibility-mi-spring`'s doc for the shared estimator. \
-                  Predicted THIRD of the four (contextuality 0.6, gentler than \
-                  spring/thicket).",
+                  — see `weft-legibility-mi-spring`'s doc for the shared estimator and \
+                  its falsification record. Overhang was predicted THIRD of the four, \
+                  gentler than spring/thicket; it now reads 0.076536 at seed 42, ABOVE \
+                  thicket's 0.038604.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
@@ -5628,8 +5724,9 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "weft-legibility-mi-thicket",
             doc: "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — \
-                  see `weft-legibility-mi-spring`'s doc for the shared estimator. \
-                  Predicted SECOND of the four.",
+                  see `weft-legibility-mi-spring`'s doc for the shared estimator and its \
+                  falsification record. Thicket was predicted SECOND of the four; it now \
+                  reads 0.038604 at seed 42, BELOW overhang's 0.076536.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
@@ -5647,13 +5744,678 @@ pub fn registry() -> Vec<Metric> {
                   so this metric's own construction predicts the near-zero reading before \
                   any world is measured. If it does NOT read near zero, the instrument is \
                   measuring something other than legibility and that is the finding, per \
-                  spec §7 and this task's own brief.",
+                  spec §7 and this task's own brief. This piece of the ordering held: \
+                  erratic's reading (0.000000 at seed 42) stayed lowest through The \
+                  Warp's re-parameterisation of the sign kinds, even as the ordering \
+                  elsewhere falsified again — see `weft-legibility-mi-spring`'s doc for \
+                  the record.",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.05, 0.1, 0.3, 1.0],
             },
             domain: Domain::Terrain,
             role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| weft_legibility_mi(v, 3)),
+        },
+        // --- The Warp (spec §5): the legibility instrument — the same
+        // occurrence variable the Weft's H3 reads, tabulated against the
+        // WORDS a walker is told rather than against the world's own hidden
+        // macro-state scalar. Eight readout families x four kinds = 32
+        // registrations, all riding the SAME cached grid sweep the nine
+        // `weft-*` grid metrics ride (`ClimateView::weft_grid`); the sign
+        // columns are filled inside that existing loop, never in a second
+        // sweep. Population is the land-eligible SURFACE facets spec §5.1
+        // names, which is the population the `weft-*` grid metrics already
+        // read.
+        //
+        // THEY ARE NOT "three map reads per facet", WHICH IS WHAT §5.4
+        // ASSUMED BEFORE TASK 5 MEASURED IT. Biome, rock and steepness are
+        // free — an ablation that stubbed out the fourth sign returned the
+        // pool to its pre-Warp cost exactly — and the WETNESS sign is 100%
+        // of the pool's added 0.218 CPU-s/world, because
+        // `hornvale_locale::micro_field_at` grounds it through the rill
+        // network's nearest-branch query, once per land facet. That is the
+        // seam any future optimisation attacks; the sign itself cannot be
+        // read more cheaply without ceasing to be the word the prose
+        // renders. Total added cost of these 32 registrations, measured in
+        // release over 20 worlds: 0.331 CPU-s/world, accepted as-is rather
+        // than subsampled (spec §5.4, ledger #10 — halving the population
+        // would blunt §5.3's controls to save ~23 s of census wall).
+        //
+        // EVERY CHANNEL READING IS REGISTERED WITH ITS NULL, and the pair is
+        // the point (spec §5.2). A sign tuple of several hundred classes over
+        // ~11,000 facets carries a finite-sample bias of the same order as
+        // the signal — the pre-spec probe measured the whole rendered
+        // sentence at 0.15-0.37 bits with a null reading the same — so a raw
+        // MI column alone would be a number that looks like legibility and
+        // is not. The erratic (whose cause is a constant) and the
+        // `warp-false-sign-net-*` family (three address-noise axes) are the
+        // instrument's own negative controls: both must read ~0 net of null
+        // on every world, and a reading that does not is a finding about the
+        // INSTRUMENT (spec §5.3, H4). ---
+        Metric {
+            name: "warp-channel-mi-spring",
+            doc: "The Warp's channel reading for spring/seep (spec §5.2): discrete mutual \
+                  information in bits between the walker's SIGN TUPLE — the biome word, the rock \
+                  word, the steepness word and the wetness word, exactly as `windows/locale`'s \
+                  room sentence renders them — and whether the kind occurs, over the same \
+                  land-eligible population the `weft-*` grid metrics read. Distinct from \
+                  `weft-legibility-mi-spring`, which reads the kind's own HIDDEN macro-state \
+                  scalar: that is what the world knows, this is what the walker is told. **Never \
+                  read alone.** A tuple of several hundred classes over ~11,000 facets carries a \
+                  finite-sample bias of the same order as the signal, so the reading is this \
+                  number MINUS `warp-channel-null-spring`, and the null is registered beside it \
+                  for exactly that reason. `Absent` only on a world with no land-eligible facet at \
+                  all.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_mi(v, 0)),
+        },
+        Metric {
+            name: "warp-channel-mi-overhang",
+            doc: "The Warp's channel reading for overhang/hollow (spec §5.2) — see \
+                  `warp-channel-mi-spring`'s doc for the shared estimator and why it is never read \
+                  without its null.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_mi(v, 1)),
+        },
+        Metric {
+            name: "warp-channel-mi-thicket",
+            doc: "The Warp's channel reading for thicket/brake (spec §5.2) — see \
+                  `warp-channel-mi-spring`'s doc for the shared estimator and why it is never read \
+                  without its null.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_mi(v, 2)),
+        },
+        Metric {
+            name: "warp-channel-mi-erratic",
+            doc: "The Warp's channel reading for erratic/scatter (spec §5.2) — see \
+                  `warp-channel-mi-spring`'s doc for the shared estimator and why it is never read \
+                  without its null. The erratic is the instrument's own negative control (spec \
+                  §5.3): its cause is a CONSTANT, so this reading net of its null must be ~0 on \
+                  every world, and if it is not, the instrument is crediting noise and that is the \
+                  finding.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_mi(v, 3)),
+        },
+        Metric {
+            name: "warp-channel-null-spring",
+            doc: "The permutation null for `warp-channel-mi-spring` (spec §5.2): the same \
+                  statistic averaged over five cyclic shifts of the occurrence bit vector (1,000 \
+                  to 5,000 places in vertex order, over the land-only reading vector). A cyclic \
+                  shift is a permutation, so both marginals are held exactly and every bit of what \
+                  survives is the estimator's own finite-sample bias at this tuple's cardinality. \
+                  Subtract it from `warp-channel-mi-spring` to get the reading; a channel MI at \
+                  its null is bias, not legibility. `Absent` only on a world with no land-eligible \
+                  facet at all.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_null(v, 0)),
+        },
+        Metric {
+            name: "warp-channel-null-overhang",
+            doc: "The Warp's channel null for overhang/hollow (spec §5.2) — see \
+                  `warp-channel-null-spring`'s doc for the shared construction.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_null(v, 1)),
+        },
+        Metric {
+            name: "warp-channel-null-thicket",
+            doc: "The Warp's channel null for thicket/brake (spec §5.2) — see \
+                  `warp-channel-null-spring`'s doc for the shared construction.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_null(v, 2)),
+        },
+        Metric {
+            name: "warp-channel-null-erratic",
+            doc: "The Warp's channel null for erratic/scatter (spec §5.2) — see \
+                  `warp-channel-null-spring`'s doc for the shared construction. For the erratic — \
+                  whose cause is a constant — this null is essentially the whole of \
+                  `warp-channel-mi-erratic`, which is what makes the pair the instrument's own \
+                  negative control (spec §5.3).",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.3],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_channel_null(v, 3)),
+        },
+        Metric {
+            name: "warp-found-fraction-spring",
+            doc: "The Warp's found fraction for spring/seep (spec §5.2, H1): the share of this \
+                  kind's occurrences standing on a facet whose own `macro_state` reads at or above \
+                  0.5 — how much of what a walker meets was FOUND at a cause rather than extruded \
+                  by the recipe's noise floor over the other 90-odd per cent of land. This is the \
+                  number the campaign's premise measurement is about: before The Warp, 333 of seed \
+                  42's 403 springs stood on a facet with no cause at all. `Absent` when the kind \
+                  never occurs on land.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.3, 0.5, 0.7, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_found_fraction(v, 0)),
+        },
+        Metric {
+            name: "warp-found-fraction-overhang",
+            doc: "The Warp's found fraction for overhang/hollow (spec §5.2) — see \
+                  `warp-found-fraction-spring`'s doc for the shared reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.3, 0.5, 0.7, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_found_fraction(v, 1)),
+        },
+        Metric {
+            name: "warp-found-fraction-thicket",
+            doc: "The Warp's found fraction for thicket/brake (spec §5.2) — see \
+                  `warp-found-fraction-spring`'s doc for the shared reading.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.3, 0.5, 0.7, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_found_fraction(v, 2)),
+        },
+        Metric {
+            name: "warp-found-fraction-erratic",
+            doc: "The Warp's found fraction for erratic/scatter (spec §5.2) — see \
+                  `warp-found-fraction-spring`'s doc for the shared reading. **Always `Absent` for \
+                  the erratic, by construction**: its `macro_state` is a constant, so \"the share \
+                  of occurrences standing on a strong cause\" names no quantity. Absent here is the \
+                  honest value, deliberately not 0.0 — a kind with no cause and a kind whose \
+                  occurrences all miss their cause are different facts.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.3, 0.5, 0.7, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_found_fraction(v, 3)),
+        },
+        Metric {
+            name: "warp-best-lift-spring",
+            doc: "The Warp's best-class lift for spring/seep (spec §5.2, H2): the largest `P(Y | \
+                  sign class) / P(Y)` over sign classes carrying at least 100 land facets — the \
+                  walker-facing number, \"features of this kind are N times as likely where the \
+                  ground reads like this\". **Compare it against `warp-best-lift-erratic` on the \
+                  SAME seed, never against an absolute bar**: a lift above 1 arises from tuple \
+                  cardinality alone, and the erratic — whose cause is a constant — is precisely a \
+                  measurement of how much. `Absent` when the kind never occurs, or when no sign \
+                  class clears the support floor.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 1.5, 2.0, 3.0, 5.0, 10.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_best_lift(v, 0)),
+        },
+        Metric {
+            name: "warp-best-lift-overhang",
+            doc: "The Warp's best-class lift for overhang/hollow (spec §5.2) — see \
+                  `warp-best-lift-spring`'s doc for the shared reading and the comparison it must \
+                  be made against.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 1.5, 2.0, 3.0, 5.0, 10.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_best_lift(v, 1)),
+        },
+        Metric {
+            name: "warp-best-lift-thicket",
+            doc: "The Warp's best-class lift for thicket/brake (spec §5.2) — see \
+                  `warp-best-lift-spring`'s doc for the shared reading and the comparison it must \
+                  be made against.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 1.5, 2.0, 3.0, 5.0, 10.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_best_lift(v, 2)),
+        },
+        Metric {
+            name: "warp-best-lift-erratic",
+            doc: "The Warp's best-class lift for erratic/scatter (spec §5.2) — see \
+                  `warp-best-lift-spring`'s doc for the shared reading and the comparison it must \
+                  be made against. The erratic's reading IS the null lift for H2's comparison: \
+                  whatever it reads is what tuple cardinality alone buys on this seed.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 1.5, 2.0, 3.0, 5.0, 10.0],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_best_lift(v, 3)),
+        },
+        Metric {
+            name: "warp-learner-gain-spring",
+            doc: "The Warp's learner gain for spring/seep (spec §5.2, H3): the `P(Y | sign class)` \
+                  table fitted on the EVEN-indexed land facets and scored on the ODD ones, as mean \
+                  log-loss reduction against the base rate, in bits per facet. Positive means the \
+                  words a walker is told genuinely help predict this kind on facets the table \
+                  never saw; NEGATIVE means the table overfits, which is reported rather than \
+                  clamped. The index is the facet's position in the land-only vector in vertex \
+                  order, so the two halves interleave across the whole globe rather than splitting \
+                  it by region. Smoothing is an EQUIVALENT-SAMPLE-SIZE PRIOR TOWARD THE BASE RATE: \
+                  a class with `n` fit facets and `k` hits predicts `(k + a * p) / (n + a)`, for \
+                  `a` ten facets and `p` the fit half's own base rate, so a thin or unseen class \
+                  predicts the base rate and scores exactly zero, never below it. It was Laplace \
+                  `(k + 1) / (n + 2)` in this metric's first implementation and that was a defect \
+                  (controller ruling, ledger #10): Laplace is a prior toward 0.5, these kinds \
+                  occur on 3-14% of land, and with 469 sign classes over ~11,000 facets most \
+                  classes are thin enough for that prior to dominate — the table lost to the base \
+                  rate in sample, which was a fact about the prior and not about the world. Read \
+                  against `warp-oracle-gain-spring`, the same table's in-sample reading. `Absent` \
+                  on a world with no land-eligible facet, and on one whose fit half carries no \
+                  occurrence of this kind at all (or nothing but occurrences): there is no base \
+                  rate to beat.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_learner_gain(v, 0)),
+        },
+        Metric {
+            name: "warp-learner-gain-overhang",
+            doc: "The Warp's learner gain for overhang/hollow (spec §5.2) — see \
+                  `warp-learner-gain-spring`'s doc for the shared split, the smoothing and the \
+                  fallback.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_learner_gain(v, 1)),
+        },
+        Metric {
+            name: "warp-learner-gain-thicket",
+            doc: "The Warp's learner gain for thicket/brake (spec §5.2) — see \
+                  `warp-learner-gain-spring`'s doc for the shared split, the smoothing and the \
+                  fallback.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_learner_gain(v, 2)),
+        },
+        Metric {
+            name: "warp-learner-gain-erratic",
+            doc: "The Warp's learner gain for erratic/scatter (spec §5.2) — see \
+                  `warp-learner-gain-spring`'s doc for the shared split, the smoothing and the \
+                  fallback. This is the negative control: nothing about the erratic's occurrence \
+                  depends on any sign, so the table cannot BEAT the base rate out of sample, and a \
+                  reading that did would mean the instrument was crediting noise. It can and does \
+                  LOSE — seed 42 reads -0.0138 bits/facet, the price of fitting several hundred \
+                  classes of pure noise on half the land and being scored on the other half. Spec \
+                  §7's H3 therefore bars this ONE-SIDED at <= 0.001 bits/facet (amended \
+                  2026-09-05 from \"within +/- 0.001\", which no held-out table over ~469 classes \
+                  could ever meet): the control is that the erratic never GAINS, not that its loss \
+                  is small.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_learner_gain(v, 3)),
+        },
+        Metric {
+            name: "warp-false-sign-net-spring",
+            doc: "The Warp's false-sign control for spring/seep (spec §5.2/§5.3, H4): the channel \
+                  reading NET OF ITS OWN NULL for a tuple of pure address noise — the room's \
+                  `relief`, `aspect` and `openness` micro-habitat axes, each cut at the same \
+                  threshold the wetness word is cut at. Those three are drawn from the facet's \
+                  address seed and correlate with nothing the world knows, so the instrument must \
+                  credit them nothing: spec §7's H4 bars this within +/- 0.002 bits — four \
+                  standard deviations of this 27-class tuple's own null estimator, amended \
+                  2026-09-05 from +/- 0.001, which sat below the estimator's resolution — and a \
+                  reading outside it is a finding about the INSTRUMENT, not about the world. **The descriptor noun is deliberately not in \
+                  this tuple**, though spec §5.2's table names it: `windows/locale/src/grammar.rs` \
+                  exposes no `pub fn`, so the noun's variety draw is unreachable from the lab \
+                  without rendering a whole document per facet — and its pool is keyed on \
+                  `(formation, stratum, substrate)`, so it is partly biome-correlated and would \
+                  have been the weakest member of a control anyway. `Absent` only on a world with \
+                  no land-eligible facet at all.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_false_sign_net(v, 0)),
+        },
+        Metric {
+            name: "warp-false-sign-net-overhang",
+            doc: "The Warp's false-sign control for overhang/hollow (spec §5.2) — see \
+                  `warp-false-sign-net-spring`'s doc for the shared control tuple and what a \
+                  non-zero reading would mean.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_false_sign_net(v, 1)),
+        },
+        Metric {
+            name: "warp-false-sign-net-thicket",
+            doc: "The Warp's false-sign control for thicket/brake (spec §5.2) — see \
+                  `warp-false-sign-net-spring`'s doc for the shared control tuple and what a \
+                  non-zero reading would mean.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_false_sign_net(v, 2)),
+        },
+        Metric {
+            name: "warp-false-sign-net-erratic",
+            doc: "The Warp's false-sign control for erratic/scatter (spec §5.2) — see \
+                  `warp-false-sign-net-spring`'s doc for the shared control tuple and what a \
+                  non-zero reading would mean.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_false_sign_net(v, 3)),
+        },
+        Metric {
+            name: "warp-oracle-gain-spring",
+            doc: "The Warp's oracle gain for spring/seep (spec §5.2): the SAME `P(Y | sign class)` \
+                  table as `warp-learner-gain-spring`, fitted and scored on ALL land facets with \
+                  no split, under the same equivalent-sample-size prior toward the base rate. It \
+                  is not a legibility reading on its own — an in-sample table always looks better \
+                  than it is — and it is REPORTED, NEVER GATED. Spec §7's H3 originally asked the \
+                  learner to reach at least half of this number, and that clause is WITHDRAWN \
+                  (controller ruling, ledger #10; spec §7's H3 amendment): a ratio needs a \
+                  denominator whose sign is fixed, and this one has none — under the withdrawn \
+                  Laplace prior it read NEGATIVE for spring and erratic at seed 42, which would \
+                  make \"at least half of it\" satisfiable by being worse. What it is good for is \
+                  the difference a reader takes, how much of the in-sample reading survives the \
+                  held-out half. `Absent` under the same conditions as `warp-learner-gain-spring`, \
+                  over the whole land population rather than a half of it.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_oracle_gain(v, 0)),
+        },
+        Metric {
+            name: "warp-oracle-gain-overhang",
+            doc: "The Warp's oracle gain for overhang/hollow (spec §5.2) — see \
+                  `warp-oracle-gain-spring`'s doc for the shared reading and for why it is \
+                  reported and never gated.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_oracle_gain(v, 1)),
+        },
+        Metric {
+            name: "warp-oracle-gain-thicket",
+            doc: "The Warp's oracle gain for thicket/brake (spec §5.2) — see \
+                  `warp-oracle-gain-spring`'s doc for the shared reading and for why it is \
+                  reported and never gated.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_oracle_gain(v, 2)),
+        },
+        Metric {
+            name: "warp-oracle-gain-erratic",
+            doc: "The Warp's oracle gain for erratic/scatter (spec §5.2) — see \
+                  `warp-oracle-gain-spring`'s doc for the shared reading and for why it is \
+                  reported and never gated. The erratic's in-sample reading is the ceiling \
+                  overfitting alone can reach on this population, which is why it is worth \
+                  registering even though nothing predicts the erratic.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.01, -0.001, 0.0, 0.001, 0.005, 0.02],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_oracle_gain(v, 3)),
+        },
+        Metric {
+            name: "warp-max-class-rate-spring",
+            doc: "The Warp's wallpaper guard for spring/seep (spec §5.2, H5): the largest `P(Y | \
+                  sign class)` over sign classes carrying at least 100 land facets — the absolute \
+                  rate behind `warp-best-lift-spring`'s ratio. H5 asks that no class exceed 0.75 \
+                  on any seed: above that the sign kind has stopped distinguishing a place and \
+                  become wallpaper, and the reading is a finding about the recipe's high end, not \
+                  a success. `Absent` when no sign class clears the support floor.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.25, 0.5, 0.75, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_max_class_rate(v, 0)),
+        },
+        Metric {
+            name: "warp-max-class-rate-overhang",
+            doc: "The Warp's wallpaper guard for overhang/hollow (spec §5.2) — see \
+                  `warp-max-class-rate-spring`'s doc for the shared reading and H5's 0.75 bar.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.25, 0.5, 0.75, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_max_class_rate(v, 1)),
+        },
+        Metric {
+            name: "warp-max-class-rate-thicket",
+            doc: "The Warp's wallpaper guard for thicket/brake (spec §5.2) — see \
+                  `warp-max-class-rate-spring`'s doc for the shared reading and H5's 0.75 bar.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.25, 0.5, 0.75, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_max_class_rate(v, 2)),
+        },
+        Metric {
+            name: "warp-max-class-rate-erratic",
+            doc: "The Warp's wallpaper guard for erratic/scatter (spec §5.2) — see \
+                  `warp-max-class-rate-spring`'s doc for the shared reading and H5's 0.75 bar. For \
+                  the erratic this is the base rate plus sampling noise, since no sign class has \
+                  any relationship to it.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.25, 0.5, 0.75, 0.9],
+            },
+            domain: Domain::Terrain,
+            role: Role::Descriptor,
+            extract: Extractor::Climate(|v: &ClimateView| warp_max_class_rate(v, 3)),
+        },
+        // --- The Lot (Task 9): six census columns over 200 drawn lots
+        // (indices 0-199, `Pick::default()`), one representative life per
+        // index from everyone who ever lived in the world. `Absent` when
+        // `hornvale_lot::context::assemble` refuses this world (no
+        // occupations, or one saved before The Lot with no
+        // `occ-person-years` fact) — see `lot_sample`'s own doc. ---
+        Metric {
+            name: "lot-souls-ever",
+            doc: "Souls ever: the integral of the world's births curve, the number of \
+                  lives the world has held; Absent if the world has no occupations or \
+                  predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1e4, 3e4, 1e5, 3e5, 1e6],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(sample.souls_ever),
+            }),
+        },
+        Metric {
+            name: "lot-median-scaled-death-age",
+            doc: "Median age at death over lots 0-199, in scaled years (age x 60 / the \
+                  people's lifespan); Absent if the world has no occupations or predates \
+                  occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[5.0, 10.0, 20.0, 30.0, 40.0, 60.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let mut scaled: Vec<f64> = sample
+                        .lots
+                        .iter()
+                        .map(|(life, _)| {
+                            let lifespan = sample.ctx.occupations[life.occ].lifespan_years;
+                            life.age_at_death * hornvale_lot::hazard::HUMAN_ANCHOR_YEARS / lifespan
+                        })
+                        .collect();
+                    // `scaled` always holds exactly 200 values here (a
+                    // filled `LotSample` always drew 200 lots), so
+                    // `median`'s `None` (empty input) never fires — matched
+                    // anyway rather than `.unwrap()`, the same discipline
+                    // every other `lot-*` metric uses to stay panic-free.
+                    match median(&mut scaled) {
+                        Some(m) => MetricValue::Number(m),
+                        None => MetricValue::Absent,
+                    }
+                }
+            }),
+        },
+        Metric {
+            name: "lot-witness-community-end-share",
+            doc: "Share of lots 0-199 whose life ended in, or moved at, its \
+                  community's own committed ending; Absent if the world has no \
+                  occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let witnessing = sample
+                        .lots
+                        .iter()
+                        .filter(|(life, _)| {
+                            matches!(life.ending, hornvale_lot::draw::Ending::CommunityFate(_))
+                                || life.moved_to.is_some()
+                        })
+                        .count();
+                    MetricValue::Number(witnessing as f64 / sample.lots.len() as f64)
+                }
+            }),
+        },
+        Metric {
+            name: "lot-silent-subsistence-share",
+            doc: "Share of lots 0-199 whose subsistence slot is silent — culture \
+                  facts attach to living settlements; Absent if the world has no \
+                  occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let silent = sample
+                        .lots
+                        .iter()
+                        .filter(|(_, story)| {
+                            story.slot("subsistence").is_some_and(|slot| {
+                                matches!(slot.value, hornvale_lot::slots::SlotValue::Silent(_))
+                            })
+                        })
+                        .count();
+                    MetricValue::Number(silent as f64 / sample.lots.len() as f64)
+                }
+            }),
+        },
+        Metric {
+            name: "lot-slots-filled-mean",
+            doc: "Mean number of the 22 non-by-design story slots filled per lot \
+                  over lots 0-199; Absent if the world has no occupations or predates \
+                  occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let total: usize = sample
+                        .lots
+                        .iter()
+                        .map(|(_, story)| {
+                            story
+                                .slots
+                                .iter()
+                                .filter(|slot| {
+                                    !LOT_BY_DESIGN_SLOTS.contains(&slot.key)
+                                        && matches!(
+                                            slot.value,
+                                            hornvale_lot::slots::SlotValue::Filled(_)
+                                        )
+                                })
+                                .count()
+                        })
+                        .sum();
+                    MetricValue::Number(total as f64 / sample.lots.len() as f64)
+                }
+            }),
+        },
+        Metric {
+            name: "lot-born-last-quarter-share",
+            doc: "Share of lots 0-199 born in the last quarter of the bake span; \
+                  Absent if the world has no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.35, 0.5, 0.75],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let cutoff = sample.ctx.start_year
+                        + 0.75 * (sample.ctx.present_year - sample.ctx.start_year);
+                    let born_late = sample
+                        .lots
+                        .iter()
+                        .filter(|(life, _)| life.birth_year >= cutoff)
+                        .count();
+                    MetricValue::Number(born_late as f64 / sample.lots.len() as f64)
+                }
+            }),
         },
     ]
 }
@@ -8940,10 +9702,156 @@ struct WeftContext {
 /// unconditionally (it is a cheap blend, never a noise draw) even off land,
 /// so H3's estimator can see the true land/water split rather than a value
 /// that was skipped.
+/// The sign tuple a walker is TOLD at a facet (The Warp, spec §5.1): the
+/// biome word, the rock word, the steepness word and the wetness word, in
+/// the exact form `windows/locale`'s room sentence and `windows/vessel`'s
+/// warp clause render them. Every field is read through the one published
+/// function that owns it (spec §4.4) — `hornvale_locale::dominant_corner`
+/// for the corner every categorical reading comes from,
+/// `hornvale_climate::GeneratedClimate::biome_at` /
+/// `hornvale_locale::biome_prose_name` for the biome word (exactly how
+/// `Locale.biome` is built), `hornvale_terrain::GeneratedTerrain::rock_at` /
+/// `hornvale_worldgen::rock_word`, `hornvale_worldgen::steepness_sign` and
+/// `hornvale_worldgen::wetness_sign` — so the instrument can never tabulate
+/// a partition the prose does not render.
+///
+/// `#[doc(hidden)] pub` only so
+/// [`warp_sign_tuple_for_test`] can hand one back to the instrument's own
+/// agreement test; nothing outside this crate's tests should read it.
+#[doc(hidden)]
+#[derive(Clone, Copy)]
+pub struct SignTuple {
+    /// The biome at the dominant corner — the word `Locale.biome` carries.
+    pub biome: hornvale_climate::Biome,
+    /// The rock at the dominant corner — the word the room sentence names.
+    pub rock: RockClass,
+    /// How hard the ground tilts, cut from the blended `FieldPack.slope`.
+    pub steep: hornvale_worldgen::Steepness,
+    /// The wetness word, cut from the room's own `MicroField.wetness`.
+    pub wet: hornvale_worldgen::Wetness,
+}
+
+/// One land facet's full Warp reading: the walker's [`SignTuple`] plus the
+/// three ADDRESS-NOISE axes of the same `MicroField` that the false-sign
+/// control tabulates (`relief`, `aspect`, `openness`), each cut at the same
+/// [`hornvale_worldgen::MICRO_WORD_THRESHOLD`] the wetness word is cut at —
+/// which is the cut `windows/locale`'s `grammar.rs` has always made on all
+/// four axes. They live beside the tuple rather than inside it because they
+/// are the CONTROL, not the signal: the instrument's own claim is that they
+/// read at their nulls (spec §5.3, H4).
+#[derive(Clone, Copy)]
+struct WarpSigns {
+    tuple: SignTuple,
+    relief: hornvale_worldgen::Wetness,
+    aspect: hornvale_worldgen::Wetness,
+    openness: hornvale_worldgen::Wetness,
+}
+
+/// The walker-facing sign class a reading falls in, as a cheap `Ord + Copy`
+/// key: the two words verbatim (`&'static str`, and both word functions are
+/// injective, so keying on the WORD is keying on the enum) and the two
+/// three-valued signs. No allocation, so the null's five re-tabulations cost
+/// no string cloning.
+type WarpSignKey = (
+    &'static str,
+    &'static str,
+    hornvale_worldgen::Steepness,
+    hornvale_worldgen::Wetness,
+);
+
+/// The false-sign class: the three address-noise axes only (spec §5.2's
+/// control, less the descriptor noun — see [`warp_false_sign_net`]'s doc).
+type WarpFalseKey = (
+    hornvale_worldgen::Wetness,
+    hornvale_worldgen::Wetness,
+    hornvale_worldgen::Wetness,
+);
+
+impl WarpSigns {
+    /// The walker's sign class.
+    fn key(&self) -> WarpSignKey {
+        (
+            hornvale_locale::biome_prose_name(self.tuple.biome),
+            hornvale_worldgen::rock_word(self.tuple.rock),
+            self.tuple.steep,
+            self.tuple.wet,
+        )
+    }
+
+    /// The control's sign class.
+    fn false_key(&self) -> WarpFalseKey {
+        (self.relief, self.aspect, self.openness)
+    }
+}
+
+/// The Warp's (Task 5) sign derivation, in ONE place: the pool loop below
+/// and [`warp_sign_tuple_for_test`] both call this, so the tuple the
+/// instrument tabulates and the tuple the agreement test compares against
+/// the rendered prose cannot drift apart.
+///
+/// **The population is land-eligible SURFACE facets** (spec §5.1).
+/// `hornvale_locale::micro_field_at` reproduces the `None`-stratum branch of
+/// `LocaleContext::describe`'s grounding — the branch `describe` takes for
+/// exactly this population — so it would be the wrong read for a submerged
+/// room. There is no submerged room in this pool: every reading here comes
+/// from a walk-band facet centred on a geosphere vertex whose blended land
+/// eligibility is at or above [`WEFT_LAND_ELIGIBILITY_THRESHOLD`].
+fn warp_signs_at(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+    index: &hornvale_kernel::NearestVertexIndex,
+    seed: Seed,
+    facet: &hornvale_kernel::Facet,
+    weights: &[(Vertex, u64); 4],
+    pack: &hornvale_worldgen::FieldPack,
+) -> WarpSigns {
+    let dominant = hornvale_locale::dominant_corner(weights).0;
+    let micro = hornvale_locale::micro_field_at(terrain, climate, index, seed, facet, weights);
+    WarpSigns {
+        tuple: SignTuple {
+            biome: climate.biome_at(dominant),
+            rock: terrain.rock_at(dominant),
+            steep: hornvale_worldgen::steepness_sign(hornvale_kernel::blend_corner_weights(
+                *weights,
+                &pack.slope,
+            )),
+            wet: hornvale_worldgen::wetness_sign(micro.wetness),
+        },
+        relief: hornvale_worldgen::wetness_sign(micro.relief),
+        aspect: hornvale_worldgen::wetness_sign(micro.aspect),
+        openness: hornvale_worldgen::wetness_sign(micro.openness),
+    }
+}
+
+/// The Warp's (Task 5) sign derivation, exposed for the instrument's own
+/// agreement test — `#[doc(hidden)]`, and the ONLY reason it is `pub` is
+/// that `windows/lab/tests/suite/warp_instrument.rs` compares each field
+/// against the word `LocaleContext::describe` renders for the same facet.
+/// Nothing in production calls it; the pool calls [`warp_signs_at`] directly.
+/// type-audit: bare-ok(count: weights)
+#[doc(hidden)]
+pub fn warp_sign_tuple_for_test(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+    index: &hornvale_kernel::NearestVertexIndex,
+    seed: Seed,
+    facet: &hornvale_kernel::Facet,
+    weights: &[(Vertex, u64); 4],
+    pack: &hornvale_worldgen::FieldPack,
+) -> SignTuple {
+    warp_signs_at(terrain, climate, index, seed, facet, weights, pack).tuple
+}
+
 #[derive(Clone, Copy)]
 struct WeftVertexReading {
     land: bool,
     per_kind: [(f64, f64, bool); 4],
+    /// The Warp's (Task 5) sign reading — `Some` exactly on land, because
+    /// the legibility population IS the land-eligible one (spec §5.1) and
+    /// the micro-field read behind it is the surface branch of the locale's
+    /// grounding. `None` off land, and every `warp-*` metric folds over the
+    /// land subset, so the `None` arm is never tabulated.
+    signs: Option<WarpSigns>,
 }
 
 /// The Weft's (Task 9) whole-grid readout: one [`WeftVertexReading`] per
@@ -9026,6 +9934,7 @@ fn weft_grid_pool_with_prepared_prevalence(
             readings.push(WeftVertexReading {
                 land: false,
                 per_kind: [(0.0, 0.0, false); 4],
+                signs: None,
             });
             continue;
         };
@@ -9038,7 +9947,18 @@ fn weft_grid_pool_with_prepared_prevalence(
             let occ = hornvale_worldgen::occurs(kind, &facet, seed, p);
             per_kind[slot] = (macro_state, p, occ);
         }
-        readings.push(WeftVertexReading { land, per_kind });
+        // The Warp (Task 5): the sign columns ride this ONE sweep, and are
+        // read only where the legibility population is defined — on land.
+        // Off land the micro-field read would be the surface branch of a
+        // grounding that does not apply, and no `warp-*` metric would
+        // tabulate it anyway.
+        let signs = land
+            .then(|| warp_signs_at(terrain, &view.climate, index, seed, &facet, &weights, pack));
+        readings.push(WeftVertexReading {
+            land,
+            per_kind,
+            signs,
+        });
     }
     WeftGridPool { readings }
 }
@@ -9359,14 +10279,20 @@ const WEFT_MI_BINS: usize = 4;
 /// amendment: restricting to land-eligible facets makes the eligibility
 /// gate itself a constant, so it contributes zero MI by construction and
 /// cannot flatter any kind — see the spec's own amendment paragraph for the
-/// whole-sphere confound this removes). The preregistered claim is the
+/// whole-sphere confound this removes). The preregistered claim WAS the
 /// ORDERING `spring > thicket > overhang > erratic`, with erratic near
 /// zero — erratic's own [`hornvale_worldgen::WeftKind::macro_state`] is a
 /// CONSTANT (`erratic_macro_state`), so `X` has no genuine variance for
 /// erratic even before binning, and MI between `Y` and a constant is
 /// algebraically zero: this metric's own construction predicts erratic's
-/// near-zero reading, independent of anything measured. `Absent` only on a
-/// world with no land-eligible facet at all.
+/// near-zero reading, independent of anything measured. The Weft measured
+/// the ordering FALSE (`thicket > spring`, 2026-09-04); The Warp's
+/// re-parameterisation of the sign kinds then moved spring's reading to
+/// 0.086464 and overhang's to 0.076536 at seed 42, while thicket
+/// (0.038604) and erratic (0.000000) are unchanged, falsifying the
+/// ordering again — now on `thicket > overhang`. This function is a
+/// RECORD of that original prediction, not a live claim. `Absent` only on
+/// a world with no land-eligible facet at all.
 fn weft_legibility_mi(view: &ClimateView, kind_idx: usize) -> MetricValue {
     let pool = view.weft_grid();
     let land: Vec<&WeftVertexReading> = pool.readings.iter().filter(|r| r.land).collect();
@@ -9403,6 +10329,483 @@ fn weft_legibility_mi(view: &ClimateView, kind_idx: usize) -> MetricValue {
         }
     }
     MetricValue::Number(mi)
+}
+
+// ============================================================================
+// The Warp (spec §5): the legibility instrument.
+//
+// The Weft's H3 measured mutual information between a kind's own hidden
+// macro-state scalar and its occurrence — the WORLD's knowledge. This block
+// measures the WALKER's: the same occurrence variable against the words the
+// room sentence actually renders, over the same land-eligible population,
+// with every reading paired with a permutation null so a rich tuple's
+// finite-sample bias is subtracted rather than reported as legibility. The
+// committed pre-spec probe (`windows/lab/tests/suite/warp_probe.rs`) is the
+// prototype these eight readouts were promoted from; its module doc carries
+// the seed-42 numbers that motivated the campaign.
+//
+// All 32 registrations (eight families x four kinds) ride the SAME cached
+// grid sweep the Weft's own 9 grid metrics ride (`ClimateView::weft_grid`) —
+// the sign columns are filled inside that existing loop, never in a second
+// sweep.
+//
+// WHAT THE SIGN COLUMNS COST, MEASURED (Task 5; spec §5.4 assumed "three map
+// reads per facet" and that was wrong): three of the four signs are free,
+// and `hornvale_locale::micro_field_at` is the whole of it — the wetness
+// sign is grounded through the rill network's nearest-branch query, once per
+// land facet, and stubbing it out returns the pool to its pre-Warp cost. The
+// pool pays 0.218 CPU-s/world for it and the 32 metric functions another
+// 0.113, for 0.331 total, accepted rather than subsampled (ledger #10).
+// ============================================================================
+
+/// Cyclic shifts of the occurrence bit vector that define the Warp's
+/// permutation null (spec §5.2). Reading `i`'s signs are paired with reading
+/// `(i + shift) % n`'s occurrence over the land-only vector in vertex order:
+/// a cyclic shift IS a permutation, so both marginals are held exactly and
+/// what remains is the estimator's own finite-sample bias at that tuple's
+/// cardinality. Five of them, averaged, rather than the probe's single lag,
+/// because one shift is one sample of that bias.
+/// plumb: universal(an instrument parameter — the lag lengths of the permutation null, in facets of the land-only reading vector — fixed across every world)
+const WARP_NULL_SHIFTS: [usize; 5] = [1000, 2000, 3000, 4000, 5000];
+
+/// The support floor a sign class must clear before its rate is eligible to
+/// be the best-class lift or the maximum class rate (spec §5.2). Below it a
+/// class's `P(Y | class)` is an estimate over too few facets to be a
+/// walker-facing claim ("three times as likely here").
+/// plumb: universal(an instrument parameter — the minimum facet count a sign class needs before its occurrence rate is reported — fixed across every world)
+const WARP_LIFT_SUPPORT: u64 = 100;
+
+/// The cause-strength floor the found fraction reads against (spec §5.2):
+/// the share of a kind's occurrences standing on a facet whose own
+/// `macro_state` is at or above this. Half of the documented `[0,1]` range —
+/// the same cut the pre-spec probe reported as "the share of occurrences on
+/// a facet whose cause reads >= 0.5".
+/// plumb: universal(an instrument parameter — the point on a kind's documented [0,1] macro-state range above which an occurrence counts as FOUND rather than extruded — fixed across every world)
+const WARP_FOUND_CAUSE_FLOOR: f64 = 0.5;
+
+/// The equivalent sample size of the learner's prior, in facets (spec §5.2,
+/// as amended by the controller's ruling at ledger #10). A sign class with
+/// `n` fit facets is shrunk toward the fit half's own base rate as if that
+/// base rate had already been observed `WARP_LEARNER_PRIOR` times there, so
+/// a class the fit half saw fewer than about ten times contributes almost
+/// nothing and an unseen class contributes exactly nothing. Ten facets
+/// against a population of ~11,000 and a base rate of 3-14%: large enough
+/// that a class of two or three cannot swing a reading, small enough that
+/// the several hundred classes carrying real support still speak.
+/// plumb: universal(an instrument parameter — the equivalent sample size, in facets, of the learner's prior toward the base rate — fixed across every world)
+const WARP_LEARNER_PRIOR: f64 = 10.0;
+
+/// Discrete mutual information, in bits, between a categorical sign and a
+/// binary occurrence, from their joint count table. Generic over the key so
+/// the sign tuple and the false-sign tuple share one estimator and neither
+/// pays for a `String` allocation per facet per shift.
+///
+/// Promoted verbatim (bar the key type) from `warp_probe.rs`'s own `mi`,
+/// which is the function whose readings the campaign's spec was written
+/// from. Zero on an empty table, which is the right answer for a world with
+/// no land-eligible facet — though every caller returns `Absent` before
+/// reaching that.
+fn discrete_mi<K: Ord>(joint: &std::collections::BTreeMap<(K, bool), u64>) -> f64 {
+    let total: u64 = joint.values().sum();
+    if total == 0 {
+        return 0.0;
+    }
+    let total = total as f64;
+    let mut px: std::collections::BTreeMap<&K, f64> = std::collections::BTreeMap::new();
+    let mut py = [0.0f64; 2];
+    for ((x, y), &c) in joint {
+        *px.entry(x).or_insert(0.0) += c as f64 / total;
+        py[*y as usize] += c as f64 / total;
+    }
+    let mut out = 0.0;
+    for ((x, y), &c) in joint {
+        let pxy = c as f64 / total;
+        let p = px.get(&x).copied().unwrap_or(0.0) * py[*y as usize];
+        if pxy > 0.0 && p > 0.0 {
+            out += pxy * hornvale_kernel::math::log2(pxy / p);
+        }
+    }
+    out
+}
+
+/// The land-eligible readings of a view's cached grid sweep, in vertex
+/// order — the Warp's population (spec §5.1) and the vector every shift in
+/// [`WARP_NULL_SHIFTS`] wraps around.
+fn warp_land(view: &ClimateView) -> Vec<&WeftVertexReading> {
+    view.weft_grid()
+        .readings
+        .iter()
+        .filter(|r| r.land)
+        .collect()
+}
+
+/// One sign column's joint table against a kind's occurrence, at a given
+/// cyclic shift of the occurrence bits (`0` = the real pairing). `key` picks
+/// which sign column — the walker's tuple or the false-sign control.
+fn warp_joint<K: Ord>(
+    land: &[&WeftVertexReading],
+    kind_idx: usize,
+    shift: usize,
+    key: impl Fn(&WarpSigns) -> K,
+) -> std::collections::BTreeMap<(K, bool), u64> {
+    let n = land.len();
+    let mut joint = std::collections::BTreeMap::new();
+    for (i, r) in land.iter().enumerate() {
+        let Some(signs) = r.signs.as_ref() else {
+            continue;
+        };
+        let y = land[(i + shift) % n].per_kind[kind_idx].2;
+        *joint.entry((key(signs), y)).or_insert(0) += 1;
+    }
+    joint
+}
+
+/// One sign column's real MI and its five-shift null, in bits.
+fn warp_mi_and_null<K: Ord>(
+    land: &[&WeftVertexReading],
+    kind_idx: usize,
+    key: impl Fn(&WarpSigns) -> K,
+) -> (f64, f64) {
+    (
+        discrete_mi(&warp_joint(land, kind_idx, 0, &key)),
+        warp_null(land, kind_idx, key),
+    )
+}
+
+/// The five-shift permutation null alone, without the real pairing beside
+/// it — [`warp_channel_null`] wants only this half, and computing the real
+/// MI to throw it away would make six tabulations of eleven thousand facets
+/// where five are wanted.
+///
+/// **A shift that is a multiple of `n` is not a null**, it is the real
+/// pairing under another name, and averaging one in would silently pull the
+/// null toward the reading it exists to subtract. It cannot happen at the
+/// shifts [`WARP_NULL_SHIFTS`] declares and the population this pool
+/// produces (`n` is about 11,218 land facets and the largest shift is
+/// 5,000), but "cannot happen today" is a property of two numbers that live
+/// in different files, so the case is skipped rather than trusted. Skipping
+/// every shift would leave no null at all, which is why the result is
+/// `Absent` rather than zero in that (unreachable) event — a null of zero
+/// would read as "no bias", the most flattering possible answer.
+fn warp_null<K: Ord>(
+    land: &[&WeftVertexReading],
+    kind_idx: usize,
+    key: impl Fn(&WarpSigns) -> K,
+) -> f64 {
+    let n = land.len();
+    let usable: Vec<usize> = WARP_NULL_SHIFTS
+        .into_iter()
+        .filter(|shift| n == 0 || shift % n != 0)
+        .collect();
+    if usable.is_empty() {
+        return f64::NAN;
+    }
+    usable
+        .iter()
+        .map(|&shift| discrete_mi(&warp_joint(land, kind_idx, shift, &key)))
+        .sum::<f64>()
+        / usable.len() as f64
+}
+
+/// The Warp's channel reading (spec §5.2) for one `WeftKind` slot: discrete
+/// mutual information in bits between the walker's sign tuple and whether
+/// the kind occurs, over the land-eligible population. `Absent` only on a
+/// world with no land-eligible facet at all.
+fn warp_channel_mi(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(discrete_mi(&warp_joint(&land, kind_idx, 0, WarpSigns::key)))
+}
+
+/// The Warp's permutation null for the channel reading (spec §5.2): the same
+/// statistic averaged over [`WARP_NULL_SHIFTS`]. Read it BESIDE
+/// `warp-channel-mi-<kind>`, never alone — the difference is the reading, and
+/// the raw MI of a several-hundred-class tuple over ~11,000 facets is mostly
+/// this. `Absent` only on a world with no land-eligible facet at all.
+fn warp_channel_null(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    let null = warp_null(&land, kind_idx, WarpSigns::key);
+    if null.is_nan() {
+        // Every declared shift was a multiple of the land count — see
+        // [`warp_null`]. Unreachable at this pool's population; `Absent`
+        // rather than a fabricated zero if it ever is not.
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(null)
+}
+
+/// The Warp's found fraction (spec §5.2) for one `WeftKind` slot: the share
+/// of the kind's occurrences standing on a facet whose own `macro_state` is
+/// at or above [`WARP_FOUND_CAUSE_FLOOR`] — how much of what a walker meets
+/// was FOUND at a cause rather than extruded by the recipe's noise floor.
+/// `Absent` for the erratic, whose `macro_state` is a constant, so the
+/// quantity is undefined rather than zero; `Absent` too on a world where the
+/// kind never occurs or has no land-eligible facet.
+fn warp_found_fraction(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    if hornvale_worldgen::WeftKind::ALL[kind_idx] == hornvale_worldgen::WeftKind::Erratic {
+        return MetricValue::Absent;
+    }
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    let mut occurrences = 0u64;
+    let mut on_cause = 0u64;
+    for r in &land {
+        let (macro_state, _, occ) = r.per_kind[kind_idx];
+        if occ {
+            occurrences += 1;
+            if macro_state >= WARP_FOUND_CAUSE_FLOOR {
+                on_cause += 1;
+            }
+        }
+    }
+    if occurrences == 0 {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(on_cause as f64 / occurrences as f64)
+}
+
+/// Per-sign-class `(facets, occurrences)` for one kind, over the land
+/// population — the table both the best-class lift and the maximum class
+/// rate read, and the table the learner is fitted from.
+fn warp_class_table(
+    land: &[&WeftVertexReading],
+    kind_idx: usize,
+    only: impl Fn(usize) -> bool,
+) -> std::collections::BTreeMap<WarpSignKey, (u64, u64)> {
+    let mut table: std::collections::BTreeMap<WarpSignKey, (u64, u64)> =
+        std::collections::BTreeMap::new();
+    for (i, r) in land.iter().enumerate() {
+        if !only(i) {
+            continue;
+        }
+        let Some(signs) = r.signs.as_ref() else {
+            continue;
+        };
+        let counts = table.entry(signs.key()).or_insert((0, 0));
+        counts.0 += 1;
+        if r.per_kind[kind_idx].2 {
+            counts.1 += 1;
+        }
+    }
+    table
+}
+
+/// The Warp's best-class lift (spec §5.2) for one `WeftKind` slot: the
+/// largest `P(Y | class) / P(Y)` over sign classes with at least
+/// [`WARP_LIFT_SUPPORT`] facets — the walker-facing number ("three times as
+/// likely where the ground reads like this"). Compare it against the
+/// erratic's reading on the same seed, never against an absolute bar: a lift
+/// above 1 arises from tuple cardinality alone, which is exactly what the
+/// erratic's own lift measures. `Absent` when the kind never occurs, or when
+/// no class clears the support floor.
+fn warp_best_lift(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    let occurrences = land.iter().filter(|r| r.per_kind[kind_idx].2).count();
+    if occurrences == 0 {
+        return MetricValue::Absent;
+    }
+    let base = occurrences as f64 / land.len() as f64;
+    match warp_best_class_rate(&land, kind_idx) {
+        Some(rate) => MetricValue::Number(rate / base),
+        None => MetricValue::Absent,
+    }
+}
+
+/// The Warp's wallpaper guard (spec §5.2, H5) for one `WeftKind` slot: the
+/// largest `P(Y | class)` over sign classes with at least
+/// [`WARP_LIFT_SUPPORT`] facets. A reading above 0.75 means a sign kind has
+/// become wallpaper — the words no longer distinguish the place — and is a
+/// finding about the recipe's high end, not a success. `Absent` when no
+/// class clears the support floor.
+fn warp_max_class_rate(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    match warp_best_class_rate(&land, kind_idx) {
+        Some(rate) => MetricValue::Number(rate),
+        None => MetricValue::Absent,
+    }
+}
+
+/// The largest `P(Y | class)` over classes clearing [`WARP_LIFT_SUPPORT`],
+/// shared by [`warp_best_lift`] and [`warp_max_class_rate`] so the two can
+/// never disagree about which class won.
+fn warp_best_class_rate(land: &[&WeftVertexReading], kind_idx: usize) -> Option<f64> {
+    warp_class_table(land, kind_idx, |_| true)
+        .values()
+        .filter(|(n, _)| *n >= WARP_LIFT_SUPPORT)
+        .map(|(n, k)| *k as f64 / *n as f64)
+        .max_by(|a, b| a.total_cmp(b))
+}
+
+/// The mean log-loss reduction, in bits per facet, of a `P(Y | sign class)`
+/// table over the base rate. `fit` selects the facets the table is built
+/// from and `score` the facets it is judged on; both are predicates on the
+/// facet's position in the land vector.
+///
+/// Smoothing is an EQUIVALENT-SAMPLE-SIZE prior toward the base rate: a
+/// class with `n` fit facets and `k` hits predicts `(k + a * p) / (n + a)`
+/// for `a = WARP_LEARNER_PRIOR` and `p` the fit half's own base rate. A
+/// class the fit half never saw, or saw a handful of times, therefore
+/// predicts the base rate and scores exactly zero — never below it — by
+/// construction.
+///
+/// **Laplace `(k + 1) / (n + 2)` was the first implementation and it was a
+/// defect** (controller ruling, ledger #10). Laplace is an
+/// equivalent-sample-size prior toward 0.5, and these kinds occur on 3-14%
+/// of land: a thin class with no hits predicted `1 / (n + 2)`, which for
+/// small `n` is an order of magnitude ABOVE the base rate, so every hit in
+/// a thin class cost about 4.6 bits against a base rate that would have
+/// cost about 4.8 — and with 469 classes over 11,218 facets, most classes
+/// are thin. The result was a table that lost to the base rate IN SAMPLE
+/// (seed 42's spring oracle read -0.014), which is not a fact about the
+/// world's legibility but about a prior pointed at the wrong place.
+fn warp_table_gain(
+    land: &[&WeftVertexReading],
+    kind_idx: usize,
+    fit: impl Fn(usize) -> bool,
+    score: impl Fn(usize) -> bool,
+) -> Option<f64> {
+    let table = warp_class_table(land, kind_idx, fit);
+    let fit_n: u64 = table.values().map(|(n, _)| *n).sum();
+    let fit_k: u64 = table.values().map(|(_, k)| *k).sum();
+    // A fit half in which the kind never occurs, or always occurs, gives a
+    // base rate of exactly 0 or 1 and an infinite log-loss for the first
+    // score facet that disagrees with it. There is nothing to learn from
+    // such a half, so the reading is undefined rather than infinite.
+    if fit_n == 0 || fit_k == 0 || fit_k == fit_n {
+        return None;
+    }
+    let base = fit_k as f64 / fit_n as f64;
+
+    let mut total = 0.0;
+    let mut scored = 0u64;
+    for (i, r) in land.iter().enumerate() {
+        if !score(i) {
+            continue;
+        }
+        let Some(signs) = r.signs.as_ref() else {
+            continue;
+        };
+        let y = r.per_kind[kind_idx].2;
+        let p = match table.get(&signs.key()) {
+            Some((n, k)) => {
+                (*k as f64 + WARP_LEARNER_PRIOR * base) / (*n as f64 + WARP_LEARNER_PRIOR)
+            }
+            // The same formula at `n = k = 0`, written out because a reader
+            // should not have to evaluate it to see that an unseen class
+            // predicts the base rate exactly and therefore scores zero.
+            None => base,
+        };
+        let loss_table = -hornvale_kernel::math::log2(if y { p } else { 1.0 - p });
+        let loss_base = -hornvale_kernel::math::log2(if y { base } else { 1.0 - base });
+        total += loss_base - loss_table;
+        scored += 1;
+    }
+    (scored > 0).then(|| total / scored as f64)
+}
+
+/// The Warp's learner gain (spec §5.2) for one `WeftKind` slot: the sign
+/// table fitted on the EVEN-indexed land facets and scored on the ODD ones,
+/// as mean log-loss reduction against the base rate, in bits per facet.
+/// Positive means the words a walker is told genuinely help predict the
+/// kind on facets the table never saw; NEGATIVE means the table overfits,
+/// which is the honest reading for a rich tuple over a rare occurrence and
+/// is reported rather than clamped. The index is the facet's position in the
+/// land-only vector in vertex order, so the two halves are interleaved
+/// across the whole globe rather than split by region. Smoothing is an
+/// equivalent-sample-size prior toward the base rate — a class with `n` fit
+/// facets and `k` hits predicts `(k + a * p) / (n + a)` for
+/// `a = WARP_LEARNER_PRIOR` and `p` the fit half's base rate — so a thin or
+/// unseen class predicts the base rate and scores zero, never below it. See
+/// [`warp_table_gain`] for why the first implementation's Laplace prior was
+/// a defect. Read it against `warp-oracle-gain-<kind>`, the same table's
+/// in-sample reading. `Absent` on a world with no land-eligible facet, and
+/// on one where the fit half carries no occurrence of this kind at all (or
+/// nothing but occurrences): there is no base rate to beat.
+fn warp_learner_gain(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    match warp_table_gain(&land, kind_idx, |i| i % 2 == 0, |i| i % 2 == 1) {
+        Some(gain) => MetricValue::Number(gain),
+        None => MetricValue::Absent,
+    }
+}
+
+/// The Warp's oracle gain (spec §5.2) for one `WeftKind` slot: the SAME sign
+/// table as `warp-learner-gain-<kind>`, fitted and scored on ALL land facets
+/// with no split, under the same equivalent-sample-size prior toward the
+/// base rate. It is not a legibility reading on its own — an in-sample table
+/// always looks better than it is — and it is **reported, never gated**.
+///
+/// Spec §7's H3 originally asked the learner to reach at least half of this
+/// number, and that clause is WITHDRAWN (controller ruling, ledger #10, spec
+/// §7 H3 amendment). A ratio needs a denominator with a fixed sign, and this
+/// one has none: under the first implementation's Laplace prior it read
+/// NEGATIVE for spring and erratic at seed 42, which makes "at least half of
+/// it" satisfiable by being worse. What it is good for is the comparison it
+/// was always really making — how much of the in-sample reading survives the
+/// held-out half — which is a difference a reader makes, not a bar a gate
+/// enforces. `Absent` under the same conditions as
+/// `warp-learner-gain-<kind>`, over the whole land population rather than a
+/// half of it.
+fn warp_oracle_gain(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    match warp_table_gain(&land, kind_idx, |_| true, |_| true) {
+        Some(gain) => MetricValue::Number(gain),
+        None => MetricValue::Absent,
+    }
+}
+
+/// The Warp's false-sign control (spec §5.2/§5.3) for one `WeftKind` slot:
+/// the channel reading NET OF ITS NULL for a tuple of pure address noise —
+/// the room's `relief`, `aspect` and `openness` axes, each cut at the same
+/// [`hornvale_worldgen::MICRO_WORD_THRESHOLD`] the wetness word is cut at.
+/// These are drawn from the facet's address seed and correlate with nothing
+/// the world knows, so the instrument must credit them nothing. Spec §7's H4
+/// bars this within +/- 0.002 bits — four standard deviations of this
+/// 27-class tuple's own null estimator (sd 0.000464 at seed 42's 11,218 land
+/// facets), amended 2026-09-05 from +/- 0.001, which sat below what the
+/// estimator can resolve — and a reading outside it is a finding about the
+/// INSTRUMENT, not the world. `windows/lab/tests/suite/warp_instrument.rs`
+/// holds the same number as `WARP_FALSE_SIGN_NOISE_FLOOR_BITS`.
+///
+/// **The descriptor noun is NOT in this tuple**, and spec §5.2's table names
+/// it. `windows/locale/src/grammar.rs` exposes no `pub fn` at all, so the
+/// noun's variety draw is unreachable from here without either calling
+/// `LocaleContext::describe` per facet (which renders a whole document) or
+/// duplicating the draw. Three address-noise axes are a sufficient control,
+/// and the noun would have been the weakest member anyway: its pool is keyed
+/// on `(formation, stratum, substrate)`, so it is partly biome-correlated —
+/// the pre-spec probe measured it at 0.0057 bits for spring, well above its
+/// own null, for exactly that reason.
+/// `Absent` only on a world with no land-eligible facet at all.
+fn warp_false_sign_net(view: &ClimateView, kind_idx: usize) -> MetricValue {
+    let land = warp_land(view);
+    if land.is_empty() {
+        return MetricValue::Absent;
+    }
+    let (mi, null) = warp_mi_and_null(&land, kind_idx, WarpSigns::false_key);
+    if null.is_nan() {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(mi - null)
 }
 
 /// The seven toponymic terrain gates (Task 4) and the concept each steeps
@@ -11001,6 +12404,7 @@ mod tests {
                 },
                 notability: Notability::Common,
                 delve_depth_m: 0.0,
+                person_years: 0.0,
             },
             id: eid(id),
             founded_from: Founding::Genesis(Vertex(0)),
@@ -11462,7 +12866,28 @@ mod tests {
         // post-Task-11 lefford profile (3.51% of the 150-world all-metrics
         // run, about 0.75 CPU-s/world) this caching exists to avoid
         // multiplying by 22.
-        assert_eq!(registry().len(), 249);
+        //
+        // +32 for THE WARP (Task 5): the legibility instrument's eight
+        // readout families (`warp-channel-mi-*`, `warp-channel-null-*`,
+        // `warp-found-fraction-*`, `warp-best-lift-*`, `warp-learner-gain-*`,
+        // `warp-false-sign-net-*`, `warp-oracle-gain-*`,
+        // `warp-max-class-rate-*`) across the same four `WeftKind` suffixes.
+        // Eight and not six: spec §5.2's G4 amendment added the oracle bound
+        // H3 measures the learner against and the wallpaper guard H5 reads.
+        // All 32 ride the SAME cached grid sweep the nine `weft-*` grid
+        // metrics ride, the sign columns filled inside that existing loop
+        // rather than in a second sweep. Measured before it landed, under
+        // spec §5.4's decision rule: 0.331 CPU-s/world added, of which 0.218
+        // is the pool's fourth sign alone — `micro_field_at`'s rill query,
+        // the other three signs being free — and 0.113 the 32 metric
+        // functions. Over the 0.25 rule and accepted as-is (ledger #10).
+        // +6 for THE LOT (Task 9): `lot-souls-ever`,
+        // `lot-median-scaled-death-age`, `lot-witness-community-end-share`,
+        // `lot-silent-subsistence-share`, `lot-slots-filled-mean`,
+        // `lot-born-last-quarter-share` — over 200 lots drawn from
+        // `hornvale_lot::context::assemble`, memoised per world on
+        // `FullView::lot` and shared by all six (`lot_sample`'s own doc).
+        assert_eq!(registry().len(), 287);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -11496,7 +12921,11 @@ mod tests {
         // one of them is, and the pair is what caught this edit.
         // THE WEFT (Task 9): 227 -> 249 (+22, see this test's first assertion
         // for the roster).
-        assert_eq!(registry().len(), 249);
+        // THE WARP (Task 5): 249 -> 281 (+32, see this test's first assertion
+        // for the roster).
+        // THE LOT (Task 9): 281 -> 287 (+6, see this test's first assertion
+        // for the roster).
+        assert_eq!(registry().len(), 287);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel

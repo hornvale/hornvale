@@ -1,11 +1,11 @@
 enter
 carrying
 take a key
-enter further in
-enter further in
+enter the loomroom
 take a key
 carrying
-enter further in
+enter the threshold
+enter the store
 examine a strongbox
 take a key
 open a strongbox

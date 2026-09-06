@@ -119,16 +119,16 @@ fn micro_habitat(micro: MicroField, expr: BiomeExpr) -> String {
 /// no light reaches, so it drops out entirely; wetness is how much the rock
 /// weeps.
 fn rock_micro_habitat(micro: MicroField) -> String {
-    let relief = if micro.relief > 0.33 {
+    let relief = if micro.relief > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "beneath a low ceiling"
-    } else if micro.relief < -0.33 {
+    } else if micro.relief < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "over a drop"
     } else {
         ""
     };
-    let wet = if micro.wetness > 0.33 {
+    let wet = if micro.wetness > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "weeping with seep-water"
-    } else if micro.wetness < -0.33 {
+    } else if micro.wetness < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "bone dry"
     } else {
         ""
@@ -144,23 +144,23 @@ fn rock_micro_habitat(micro: MicroField) -> String {
 /// Relief is the surface's own shape, aspect is glare rather than warmth, and
 /// wetness is how much snow the wind has left rather than how wet the ground is.
 fn ice_micro_habitat(micro: MicroField) -> String {
-    let relief = if micro.relief > 0.33 {
+    let relief = if micro.relief > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "on a swell of ice"
-    } else if micro.relief < -0.33 {
+    } else if micro.relief < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "in a hollow"
     } else {
         ""
     };
-    let glare = if micro.aspect > 0.33 {
+    let glare = if micro.aspect > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "glaring"
-    } else if micro.aspect < -0.33 {
+    } else if micro.aspect < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "in blue shadow"
     } else {
         ""
     };
-    let cover = if micro.wetness > 0.33 {
+    let cover = if micro.wetness > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "drifted deep"
-    } else if micro.wetness < -0.33 {
+    } else if micro.wetness < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "scoured bare"
     } else {
         ""
@@ -174,26 +174,24 @@ fn ice_micro_habitat(micro: MicroField) -> String {
 
 /// The overworld's habitat clause — the original body, unchanged.
 fn land_micro_habitat(micro: MicroField) -> String {
-    let relief = if micro.relief > 0.33 {
+    let relief = if micro.relief > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "on a rise"
-    } else if micro.relief < -0.33 {
+    } else if micro.relief < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "in a hollow"
     } else {
         ""
     };
-    let aspect = if micro.aspect > 0.33 {
+    let aspect = if micro.aspect > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "sun-warmed"
-    } else if micro.aspect < -0.33 {
+    } else if micro.aspect < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "shaded"
     } else {
         ""
     };
-    let wet = if micro.wetness > 0.33 {
-        "damp"
-    } else if micro.wetness < -0.33 {
-        "dry"
-    } else {
-        ""
+    let wet = match hornvale_worldgen::wetness_sign(micro.wetness) {
+        hornvale_worldgen::Wetness::Damp => "damp",
+        hornvale_worldgen::Wetness::Dry => "dry",
+        hornvale_worldgen::Wetness::Mid => "",
     };
     [aspect, wet, relief]
         .into_iter()
@@ -210,17 +208,17 @@ fn land_micro_habitat(micro: MicroField) -> String {
 /// nothing is sun-warmed or shaded, it is simply dark; and wetness, which
 /// means nothing in the sea, becomes the set of the current.
 fn water_micro_habitat(micro: MicroField, stratum: Stratum) -> String {
-    let relief = if micro.relief > 0.33 {
+    let relief = if micro.relief > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "over a seamount"
-    } else if micro.relief < -0.33 {
+    } else if micro.relief < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "over a trough"
     } else {
         ""
     };
     let light = if matches!(stratum, Stratum::Epipelagic | Stratum::Surface) {
-        if micro.aspect > 0.33 {
+        if micro.aspect > hornvale_worldgen::MICRO_WORD_THRESHOLD {
             "sunlit"
-        } else if micro.aspect < -0.33 {
+        } else if micro.aspect < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
             "in blue shadow"
         } else {
             ""
@@ -228,9 +226,9 @@ fn water_micro_habitat(micro: MicroField, stratum: Stratum) -> String {
     } else {
         ""
     };
-    let current = if micro.wetness > 0.33 {
+    let current = if micro.wetness > hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "swept by a current"
-    } else if micro.wetness < -0.33 {
+    } else if micro.wetness < -hornvale_worldgen::MICRO_WORD_THRESHOLD {
         "in slack water"
     } else {
         ""

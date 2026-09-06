@@ -20,7 +20,14 @@ use hornvale_vessel::{PossessOpts, Session, Turn};
 /// unrelated neighbour's water access into three tests that say nothing
 /// about it.
 fn walked(session: &mut Session, label: &str) -> bool {
-    match session.handle(&format!("!why {label}")) {
+    // `--steps` since The Warrant, Task 5: the default `!why` now ROLLS an
+    // errand and the steps under it into one line, so the position
+    // predicate's own doc no longer appears there. `--steps` is the same
+    // recount this witness has always read — one line per committed
+    // positional fact — and reading it keeps the witness the per-NPC
+    // recount rather than swapping in a session-wide count, which is the
+    // proxy this helper's own callers record narrowing away from.
+    match session.handle(&format!("!why {label} --steps")) {
         Turn::Out(s) => s.contains("position on a day"),
         Turn::Released(_) => panic!("why never releases"),
     }
@@ -663,8 +670,12 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
     let w = world_at(WILD_SEED);
     let (mut wild_session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
 
-    // Wild agents enlarge the roster over the peoples-only session, and read as
-    // beasts ("a wild <species>").
+    // Wild agents enlarge the roster over the peoples-only session, and are
+    // genuinely wild (village-less) bodies — checked against `Body.village`
+    // rather than the label text: since The Ken, Task 4 (round two), a wild
+    // body's label is bare `species`, matching the settled convention
+    // (`derive_staged_npcs`'s doc: "the label carries NO article"), so a
+    // label no longer contains the word "wild" at all.
     let peopled_count = {
         let opts = PossessOpts {
             wild_agents: false,
@@ -684,8 +695,8 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
         labels.len()
     );
     assert!(
-        labels.iter().any(|l| l.contains("wild")),
-        "at least one appended agent reads as a wild beast: {labels:?}"
+        wild_session.bodies().iter().any(|b| b.village.is_none()),
+        "at least one appended agent reads as a wild (village-less) beast: {labels:?}"
     );
 
     // Cross the seek crossing (~5.667 days from day 0.5): the wild beasts,

@@ -818,7 +818,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluable_columns_measured_surface_on_the_249_column_census() {
+    fn evaluable_columns_measured_surface_on_the_287_column_census() {
         // Pinned so a future census refresh that moves this materially is
         // visible here, not just in prose. See task-4-report.md for the
         // comparison against the spec's original 204-column figure
@@ -886,7 +886,27 @@ mod tests {
         // `weft-legibility-mi-erratic` is the sole new exclusion, frozen at
         // one value across all 1000 worlds. The generated anomaly report's
         // exclusion table independently records that same one-column delta.
-        // The test's NAME carries the census's metric-column count (252 CSV
+        // THE WARP (2026-09-05, canonical census on lefford at 4a419e996ef7):
+        // evaluable 139 -> 170, excluded 51 -> 52, metric columns 249 -> 281
+        // (284 CSV columns less `seed`, `pin_set` and `refusal`). All 32 new
+        // `warp-*` columns are Numeric; 31 vary across the 1000 worlds and
+        // land EVALUABLE, while `warp-found-fraction-erratic` is the sole
+        // new exclusion — Absent on every world by construction, because the
+        // erratic's cause is a constant and a found fraction over it is
+        // undefined (spec section 5.2). The Weft's spring/overhang columns
+        // moved in VALUE at this refresh (the sign kinds' recipe was
+        // re-parameterised) but stayed on the evaluable side.
+        // THE LOT (2026-09-06, canonical census on lefford at 6e46132790fb,
+        // goldens delivered as d2bd513f1): evaluable 170 -> 176, excluded
+        // unchanged at 52, metric columns 281 -> 287 (290 CSV columns less
+        // `seed`, `pin_set` and `refusal`). All six new `lot-*` columns are
+        // Numeric and vary across the 1000 worlds, so all six land EVALUABLE
+        // and none is a new exclusion — the asymmetry the paragraphs above
+        // call informative reads the right way for every one of them. The
+        // committed fixture had read PREDATES for these columns until this
+        // refresh (the additive case), which is why this pin did not move
+        // when the metrics were registered.
+        // The test's NAME carries the census's metric-column count (290 CSV
         // columns less `seed`, `pin_set` and `refusal`);
         // `docs/timings/subfloor-roster.tsv`
         // selects sub-floor tests by EXACT name and is updated in the same
@@ -895,12 +915,12 @@ mod tests {
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            139,
+            176,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            51,
+            52,
             "excluded count moved — re-measure and update this"
         );
     }

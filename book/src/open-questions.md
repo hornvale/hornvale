@@ -2538,6 +2538,61 @@ closed question: a superseded decision does not merely stop being true, it keeps
 producing correct-looking answers from readers acting in good faith, and this
 ledger is one of the places those answers accumulate.
 
+**Re-scored by [The Cruck](./chronicle/the-cruck.md) (2026-09-05): the row's
+own defect shape turned up on one more surface, and the way it stayed hidden
+is the part worth keeping.** The Handle widened the parity check from the
+floor plan to every catalog surface after finding four of them denying nouns
+they had just printed. The Cruck found a fifth kind of catalog — not of nouns
+but of *ways*: the footer that lists what a player may type to leave a room.
+It advertised `the hearth`; the parser accepted only `hearth`, and refused the
+footer's own word.
+
+What kept it invisible was not an unchecked surface but an unreachable one.
+Production had only ever derived chain-shaped structures, where the footer
+says `further in` and names nothing, so no real session had ever printed a
+named way for a parser to refuse. The defect was fully written and fully
+latent, and it became reachable the moment a dwelling could fork. Neither the
+plan-parity contract nor the Handle's widening could have caught it, because
+neither had a case that produced the output.
+
+What is mechanized is exact and small: `the_ways_on_footers_own_words_are_accepted_as_typed`
+types the footer's own words back and requires them accepted; the refusal
+half is covered separately — a shared prose noun by
+`a_prose_noun_shared_by_two_ways_names_them_rather_than_guessing`, a chain's
+own refusal shapes by `a_chain_resolves_exactly_as_before` — so both
+directions are checked, since a one-directional form is blind to
+over-admission, which is the limit this row already carries. What is
+not mechanized is the general rule that any surface naming a thing must accept
+that name; that remains a per-surface regression test each time. The standing
+lesson gains a clause: a check is blind not only where it does not reach, but
+wherever the code it covers cannot yet produce the output that would fail it.
+
+**Re-scored by [The Ken](./chronicle/the-ken.md) (2026-09-06): a sixth surface,
+found by a player rather than by any check, and a second failure shape the
+row had not yet named.** The presence line built a wild group's displayed
+noun from `species` while `examine` matched on `label` — the same
+denies-a-noun-it-just-printed shape The Handle and The Cruck had already
+found on four surfaces and a fifth, but this one escaped every mechanized
+form of the contract rather than an unreached one: the roster was reachable
+in ordinary play, the check simply never looked at it, because nothing had
+told the check this roster existed. It surfaced from report #12, a player
+saying a white dragon "said" it was a black one, not from the ledger's own
+instrument.
+
+Fixing the display half exposed a second shape this row had not yet
+distinguished from the first: **a noun can be printed, accepted, *and*
+answered wrong.** With three same-suffix labels in one room, `examine
+dragon` no longer denied the noun — it silently picked one, confidently and
+arbitrarily, which is a worse failure than a refusal because it gives the
+player no signal a choice was even made. The fix refuses instead of
+guessing, which converts this instance but establishes no general check for
+it: nothing yet asserts that an ambiguous needle is never silently resolved,
+anywhere else in the parser it could recur. The standing lesson holds
+without amendment — a surface escapes a check either by being unreached or
+by never having been told to look — and gains a worked example of the
+second: the check existed, the surface was live, and nobody had pointed the
+one at the other.
+
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
@@ -3613,6 +3668,29 @@ its honest size.
    read stays the gate; what changes, again, is that one more named guardrail
    moved from promissory note to a mechanism with a measured, partly-null
    result.
+   **Re-scored a third time by [The Warrant](./chronicle/the-warrant.md)
+   (2026-09-06): the third guardrail, *sparsity*, now has a mechanism, and for
+   once the mechanism came with a number that says how badly it was needed.**
+   Every guardrail this row names had until now been argued rather than
+   measured. This campaign rendered the account the world actually produces —
+   through `recount`, the same call the repl's `why` makes — and counted. A
+   walking creature's twelve days of history rendered as sixty-five or
+   seventy-seven consecutive lines carrying **one distinct sentence between
+   them**: on two of the three seeds sampled, **98.46% and 98.70% of the
+   positional lines rendered were repetition**. That is not a failure of taste; it is a failure of
+   sparsity, and it was invisible because nobody had looked at the output.
+   The reason a creature sets out is now a committed fact of its own, rendered
+   once with its origin, its extent and its end, and forty-two lines become
+   four with nothing a reader could distinguish removed — pinned as exact
+   equality of every rendered gloss and its first day, across 252 entities and
+   1242 runs. **What has not moved is the bet, and the reason is now sharper
+   than "taste".** All three guardrails have mechanisms; none of them is
+   evidence that an account is *worth reading*, and this campaign's own
+   rendering is still one creature's twelve days rather than a history. What
+   it adds to the chapter is the instrument: the guardrails are measurable on
+   the rendered artifact, and until someone rendered it, one of them was
+   failing by a factor of sixty-five with every gate green. The row stays
+   low-confidence and the human read stays the gate.
 
 4. **An inhabited moment worth standing in.** The project's thesis is that the
    world becomes interesting enough to be worth stewarding, and stewardship is
@@ -3831,6 +3909,43 @@ plain texture. Nothing was retuned on the strength of that reading. The bet
 above therefore keeps its position on the gradient rather than being promoted
 by the density result: dense is settled, *found rather than extruded* is not,
 and the campaign's own instrument now says so with a number.
+
+**(2026-09-05) *Found rather than extruded* now has its first measured
+reading, and it was bought with density.** [The Warp](./chronicle/the-warp.md)
+answered the open fork the paragraph above left — the falsified ordering was a
+base-rate effect in the recipe, not an artefact of a coarse estimator: **333 of
+seed 42's 403 springs stood on a facet with no cause at all**, and a
+nineteen-class biome word ranks the thicket above the spring exactly as the
+four-bin cause did. So the two sign kinds' recipes were re-parameterised as a
+reliability against a soft step in the cause, with the floor authored to zero,
+and the bet's second half was measured on four seeds frozen in advance. The
+**found fraction** — the share of a kind's occurrences standing where its cause
+was there to be read — moved from 0.077 and 0.057 to a minimum of **0.68519**
+(spring) and **0.74348** (overhang), medians 0.77717 and 0.84622, against a bar
+of 0.60 set before any of those worlds existed. A walker's own held-out table
+over the rendered words beats guessing on every seed and every kind, and
+recovers most of the information the channel carries. **Seventy-one of
+seventy-two preregistered bar-instances held.** The one that did not is on the
+record at its measured value: on seed 13 the spring's best-class lift reads
+**4.759** against a bar of **5.253**, a ratio of 1.812 where 2.000 was frozen —
+the seed where the spring is rarest and the causeless control's lift is
+largest, both halves of the ratio moving against it at once. Nothing was
+retuned after the reading.
+
+**What it cost, stated plainly.** Frequency was not set by anything; it fell
+out. At seed 42 the spring's existence density went 0.0359 → 0.0134 and the
+overhang's 0.0751 → 0.0215 — 2.7× and 3.5× rarer — and the union of all four
+kinds fell from 0.2563 to 0.1952 of land-eligible facets — a fall of roughly a
+quarter, against a density result that clears its frozen claim by more than an
+order of magnitude, so nothing about that result is disturbed. *Dense* stays
+settled. What a walker now reads is two more words in the room sentence — the
+rock underfoot and the pitch of the ground — and they are the difference
+between a spring that could not be predicted and one that can: but on two of
+five worlds the spring is not met inside the walk band at all. So *found rather
+than extruded* is no longer unmeasured, and it is not yet promoted either. It
+has a number, on a distribution of seeds, with one failure named; the honest
+position is that the mechanism works and the frequency it leaves behind is the
+open question a successor inherits.
 
 **A partial rescore, now that population has a field to vary.** The
 carrying-capacity field promoted above (see the high-confidence tier) is an
@@ -5406,3 +5521,180 @@ Unscored as a bet — it resolves nothing that was open. It is filed as an
 instrument correction: the population a measurement is taken over decides
 whether a constant is a finding or a fact, and this chapter now carries one
 example of each.
+
+### The census's dual, and what one life can be told from the ledger (2026-09-05)
+
+[The Lot](./chronicle/the-lot.md) built the census's opposite number. The census
+aggregates the record into two hundred columns over a thousand worlds; the lot
+draws one life out of one world's whole history and tells it from committed
+facts alone, so that the questions the story cannot answer are counted rather
+than filled. Two of its six preregistered predictions were about that count,
+and both were confirmed at a resolution the census cannot reach.
+
+**The record fills 17.5 to 18.2 of 22 questions per life**, across nine seeds
+at two hundred lives each — where a question is a named slot in a fixed roster,
+and four further slots that no domain models at all are declared silent by
+design and excluded so the number measures the world rather than the lens.
+That is a higher figure than the campaign expected, and it is the first
+quantity this project has that answers *at the level of a person* the question
+this chapter has otherwise only asked at the level of a settlement, a people or
+a sky.
+
+**The silences are not distributed noise; they have one cause.** Subsistence
+and social standing are silent for 76 to 95% of lives, and the reason is
+structural: the record's cultural facts attach to *living* settlements, and the
+great majority of person-years were lived in communities that have since ended.
+So the cultural record does not reach backwards. A lens over the deep past sees
+economy and rank on the few communities still standing and nothing at all on
+the rest — which is a fact about where the world writes culture down, not about
+how much culture it has.
+
+**This is a new instrument over an old question in this chapter.** The
+constant-column entries above ask whether a registered vocabulary is ever
+exercised, and answer it by looking for variation across seeds. The lot asks
+the harder half of the same question — whether the record *reaches an
+individual* at all — and answers it by naming every question in advance and
+counting the refusals. The two are complementary and disagree about nothing:
+the first finds a column that cannot move, the second finds a question nothing
+can answer, and a project that only had the first would read a fully-populated
+census as evidence that the world is legible at every scale.
+
+**Two predictions were falsified, and the second is an accounting error worth
+carrying.** A representative life is shorter than the design expected — the
+median scaled age at death is 8.95 to 15.79 and under ten on three seeds,
+against a predicted band of ten to thirty-five — which is what the mortality
+model says once its infant term is calibrated to the pre-modern band it was
+frozen against. And the share of lives that witness their own community's
+ending is 0.015 to 0.075, below the predicted floor on five of eight growing
+seeds. That prediction was derived from a measurement of *person-years* in
+communities that ended, twelve to thirty-four percent; a life of ten to thirty
+years laid against a tenure of fifty to two hundred rarely overlaps the single
+year the ending falls in. **The two quantities have the same units and count
+different things**, and the derivation moved between them without saying so.
+
+Unscored against any standing bet: nothing in this chapter's own text stakes a
+claim the readout moves, and the accounting above is filed as a new axis rather
+than a re-score of an existing one.
+
+### A preregistered floor over a wider population than its own argument (2026-09-06)
+
+[The Warrant](./chronicle/the-warrant.md) moves the *historiography worth
+reading* bet, re-scored above. It belongs here for a second reason: it produced
+the clearest instance yet of a failure this chapter has recorded twice before in
+different clothes.
+
+Two sections of one specification disagreed, and only one of them was audited.
+The spec's §1 argued its whole case about a single quantity — the prose repeated
+on every step of a creature's walk — and measured it: one distinct sentence
+across sixty-five steps, 98.46% repetition. The spec's §10 then froze a
+prediction that this quantity would fall by at least fifty per cent, but wrote
+the denominator as *all committed provenance*, a population §1 had never
+discussed. The mechanism can only shrink one term of that sum, and it adds a new
+one. The prediction failed on two of three seeds — 49.04% and 22.18% against a
+50% floor — while the quantity actually argued about fell by 65.72%, 65.82% and
+54.56%.
+
+**Both numbers are in the chronicle, and the falsification is reported
+unamended.** That ordering is the whole discipline: a preregistration that can
+be re-scoped after unblinding is not one, so the narrower figure is stated as
+*context for why the frozen prediction came out as it did*, never as a
+substitute result, and the spec carries a dated note recording the mismatch
+rather than a corrected threshold.
+
+The chapter already held the pieces. It records that *a ratio frozen before the
+code is only as durable as its denominator* — from a campaign whose 2.1% size
+bound was falsified at 6.25% because the world it was computed against had been
+rebuilt underneath it. That is a denominator that **moved**. This one never
+moved; it was **written wider than the argument on the day it was frozen**, and
+nothing about the state of the world would have changed the outcome. The two
+share a remedy and it is cheap: name, in the same sentence as the threshold, the
+population the threshold is taken over, and check it against the section that
+argued for it.
+
+The generalization is worth the paragraph, because it is not really about
+denominators. A specification carries two kinds of claim — what is required, and
+that some concrete thing shown alongside satisfies the requirement — and reviews
+routinely audit only the first. The same campaign supplied the smaller sibling
+of this failure within days of the larger one: a requirement correctly stated in
+prose ("a test that fails if either copy drifts") beside example code that
+compared two sets, which two swapped entries satisfy. **Prose and its own
+formalisation must be checked against each other, not only against the world.**
+
+Unscored as a bet. It is filed as an instrument correction, beside the others
+in this section: a preregistration is falsifiable only over the population it
+names, and the population it names is the part nobody reads twice.
+
+### The sixth look at cost was scored by a count, because the clock could not see it (2026-09-06)
+
+Five sections above record that cost in this project is scored "when a campaign
+chooses to look", that the first two looks each found an unpredicted quadratic,
+that a third found a distribution, a fourth closed a loop, and a fifth found a
+repetition. This is the sixth, and it is at the fold the fifth look's own
+predecessor left standing: the water belief, which re-ran a budgeted graph
+search once per remembered water room, once per read.
+
+**The finding is again a repetition, and the shape of the redundancy is new.**
+[The Culvert](./chronicle/the-culvert.md) established that the search is a pure
+function of mesh geometry — the ranking passes an empty hazard set, and the
+search space consults no terrain, no ledger, and no tick — so a session-lived
+table of `(origin, destination, budget) → hop count` is byte-identical by
+construction. The distinct population at the counted horizon is **83 pairs**,
+against 679 and 4,060 calls on the two measured shapes — small and
+decelerating, though **no ceiling was demonstrated**: extended to sixty waits it
+reads 190, and the campaign's own ledger rules that it has been shown to pause
+rather than to stop. Searches per
+roster-wide sweep fell 679 → 83 and 4,060 → 83; node expansions fell 425,042 →
+57,190 and 392,391 → 14,474. Across reads rather than within a sweep, 2,692
+route questions over eight waits now cost **one** real search.
+
+**What is genuinely new is which instrument answered.** The campaign
+preregistered a count as its criterion of record and a timing criterion — a
+tenfold effect-size floor on the fold's slope against history — as the weaker
+companion. The timing criterion **failed, at 1.13×**, and the count established
+why: the timing probe constructs a fresh table inside its own repetition loop,
+so it never hits, and a same-tree control arm reproduced the pre-memo search
+counts *digit for digit at every band and every wait* on the campaign's own
+head. The instrument's call path does byte-identical work before and after. A
+column whose work is unchanged cannot fall tenfold.
+
+That is a sharper statement of a fault this chapter has now recorded three
+times in three different clothes. The fourth look found a criterion that could
+not see its own result because its instrument's *range* was too narrow. The
+fifth found a goodness-of-fit filter that emptied its sample precisely by
+succeeding. This one found a criterion whose instrument does not execute the
+mechanism at all — not too narrow, not mis-filtered, simply pointed elsewhere —
+and it was invisible until the readout. **A criterion is only worth the range
+its instrument samples, the filter it survives, and the code path it actually
+runs.** The third clause is the one added here, and it is the only one of the
+three that a count could settle where a clock could not.
+
+**The accounting does not move, and it moves for a reason worth naming.** There
+is still no cost gate on the simulation beyond the per-commit count the section
+above records, and that count cannot see this fold either. The unwatched
+dimension is narrowed by one more fold and is otherwise where the fifth look
+left it. What changed is the *method's* standing rather than the bet's: on this
+occasion the deterministic count was not merely the cheaper witness, it was the
+**only** one available, and the campaign would have reported a null on a
+mechanism that demonstrably works had it carried the clock alone.
+
+**One measurement escapes the accounting entirely, and it is about the world.**
+The roster member holding the most remembered water — forty-six rooms — can
+reach **none of it** within the plan budget from its own home, at every band,
+while members holding four rooms reach all four. The mechanism is causal: a
+creature accumulates remembered water by wandering, wandering carries it from
+home, and the belief plans from home. So the biggest believer behaves as
+ignorant while holding the largest memory, and the campaign's own headline
+figure — 95.1% of node expansions spent on searches that exhaust their budget
+and return nothing — is not a quirk of where the budget sits but a structure
+that concentrates on exactly the creatures that know the most. The fold's own
+documentation had recorded the anchoring choice; nothing had recorded its
+price. Fixing it moves committed facts, so it is filed with its measurement
+rather than acted on, and it is a claim about legibility, not cost: **a memory a
+creature cannot act on is not distinguishable, from outside, from no memory at
+all.**
+
+No bet in the graded tables above moved. The world's behaviour is unchanged by
+construction, and the two axes this readout touches — the standing of counts
+against clocks, and the reachability of a creature's own memory — are recorded
+here as new material on the cost thread rather than as a re-score of an
+existing row.

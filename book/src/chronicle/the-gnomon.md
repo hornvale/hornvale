@@ -614,3 +614,88 @@ not a ritual that automatically blesses comparability. The Winze's ablation
 read null, so comparison survived; The Weft's read minus three hits, so the
 honest record is an incomparable current witness and an unchanged historical
 series.
+
+## Postscript 7 — ablate family by family (The Warp, 2026-09-05)
+
+The Warp added thirty-two numeric metrics to the canonical census. Thirty-one
+vary across the thousand worlds and enter the anomaly report's evaluable
+surface; only the erratic found-fraction column is excluded, absent by
+construction. The surface grew from 139 columns to 170, the excluded roster
+from 51 to 52, and the census as a whole from 249 metric columns to 281. The
+eight injection arms were re-authored by their dedicated script on lefford
+against those goldens, twenty seeds each, zero refusals.
+
+On the full new surface the witness reads **66/120 = 0.5500**, with no void
+pairs. Arm for arm: geothermal 20/20, unconformity 2/20, aquifer 20/20, karst
+2/20, pantheon 6/20, phonology 16/20. The bar stays at 0.60.
+
+The previous campaign's ablation asked one question. This census needed two,
+and the difference is the whole postscript. Removing the thirty-two new
+columns from the census held in memory reproduces the *previous* surface
+exactly — 139 evaluable, 51 excluded, the same two integers the last campaign
+recorded — and yet it reads **67/120**, not the 69/120 that campaign pinned.
+So the new family displaced exactly one hit, in the phonology arm. The other
+two did not come from the surface at all. This campaign re-parameterised two
+of the four kinds the previous one measured, and the census non-regression
+check found every spring and overhang column moving on 998 to 1,000 of the
+thousand rows while every thicket and erratic column moved on none. A column
+whose *value* moves moves both the ranking prior it contributes to and the
+set of moved columns a hit is scored against — a third mechanism, distinct
+from adding a column and from moving the worlds, and one that only shows up
+if the ablation is run family by family.
+
+Removing both families together restores the surface of two campaigns ago —
+118 evaluable, 50 excluded — and reads **72/120**, arm for arm 20/20, 4/20,
+20/20, 2/20, 7/20, 19/20: identical to the reading taken on that surface then,
+and identical to the ablated tally the last campaign measured. On the ground
+all three share, nothing has moved across two further census epochs. That is
+the closest thing to a control this witness has. It is reassuring about the
+scorer and says nothing whatever about the bar.
+
+So this is an eighth canonical reading and the second consecutive
+*incomparable* one. It extends the previous campaign's case rather than the
+six-epoch series, which stands unchanged at 0.5667 / 0.6083 / 0.6000 / 0.6083
+/ 0.6083 / 0.6000. The verdict remains “cannot tell,” the instrument remains
+underpowered, and the remedy remains more pairs.
+
+The reusable part is smaller than the verdict and more useful. Ablating the
+newest family is the obvious move and it is not sufficient: on its own it
+would have reported that the instrument displaced one hit and let the other
+two be attributed to the world, which is the wrong story told with real
+numbers. Ablate every family that changed since the pinned reading — the one
+that was added, and the ones whose values moved — and publish the ladder
+rather than one rung of it.
+
+## Postscript 8 — when the diff says additive, one ablation is the ladder (The Lot, 2026-09-06)
+
+The Lot added six numeric metrics to the canonical census, each read off two
+hundred lives drawn from a world. All six vary across the thousand worlds and
+enter the evaluable surface; none is excluded. The surface grew from 170
+columns to 176, the excluded roster stayed at 52, and the census as a whole
+went from 281 metric columns to 287. The eight injection arms were re-authored
+by their script on lefford against those goldens, under the same claim a
+census takes, twenty seeds each, zero refusals.
+
+On the full new surface the witness reads **65/120 = 0.5417**, with no void
+pairs. Arm for arm: geothermal 20/20, unconformity 2/20, aquifer 20/20, karst
+2/20, pantheon 5/20, phonology 16/20. The bar stays at 0.60.
+
+The previous postscript asked for the ablation to be run family by family,
+because a column can move a reading in two ways — by joining the surface, or
+by changing its values — and one ablation cannot tell them apart. This refresh
+lets the two be separated before any ablation is run. A value-by-value
+comparison of the census before and after it finds a thousand rows and 284
+shared columns with **no value moved**: the refresh is purely additive. That
+rules out the value mechanism outright. Removing the six new columns from the
+census held in memory then reproduces the previous surface exactly, 170
+evaluable and 52 excluded, and reads **66/120** — the previous pin to the
+integer, so the previous test passes unchanged on the ablated census. The six
+new columns displaced one hit, in the pantheon arm, and that is the whole
+move.
+
+So this is a ninth canonical reading and the third consecutive *incomparable*
+one. The six-epoch series stands where it stood, and the verdict remains
+"cannot tell." What this postscript adds to the last one is the order of
+operations: diff the census first, and when the diff says additive, the single
+ablation of the new family *is* the ladder, with nothing further to climb.
+

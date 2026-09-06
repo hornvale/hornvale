@@ -500,9 +500,19 @@ fn run_scan_shape(
             .register_predicate(pred, false, doc)
             .expect("the drive predicates register identically every run");
     }
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside the drive predicates above for the same reason: this
+    // bench runs a real walk over real ticks, and an unregistered predicate
+    // a walk tries to commit fails outright.
+    for (key, doc) in errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
     let npcs = derive_npcs(&world, ctx, &mut ledger, agents, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), run-lived like the two
+    // above — the scope production gives it.
+    let mut route_memo = RouteMemo::new();
     let folds = OwnedFolds::new(ResidentFolds::new());
     let ground: OwnedGround = OwnedGround::new(GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
@@ -532,8 +542,12 @@ fn run_scan_shape(
             };
             // The third element is the roster write-back `Session::wait` needs
             // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
-            let (facts, _occupancy, _written) =
-                sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+            let (facts, _occupancy, _written) = sys.step_with_occupancy(
+                &ledger,
+                &mut mesh_memo,
+                &mut home_nav_cache,
+                &mut route_memo,
+            );
             for fact in facts {
                 ledger
                     .commit(fact, &registry)

@@ -118,6 +118,7 @@ pub mod traversal;
 pub mod underworld_readout;
 pub mod vestige;
 pub mod volcano;
+pub mod warp;
 pub mod weft;
 pub use ablation::ChannelMask;
 pub use character::{
@@ -142,9 +143,9 @@ pub use graph_derive::{
 };
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
-    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, History, ORE_CUT,
-    TributeRelation, bake, cascade_sizes, census, defensibility_for_test,
-    weakest_point_defensibility,
+    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP, GENESIS_POP,
+    History, MIGRATE_SURVIVAL, ORE_CUT, TributeRelation, WAR_LOSS, bake, cascade_sizes, census,
+    defensibility_for_test, weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
@@ -175,6 +176,10 @@ pub use vestige::{
     vestige_from_occupation, vestiges_at, vestiges_field,
 };
 pub use volcano::{EruptionStyle, Volcano, volcano_at, volcano_name};
+pub use warp::{
+    MICRO_WORD_THRESHOLD, STEEP_HI, STEEP_LO, Steepness, Wetness, rock_word, steepness_sign,
+    steepness_word, wetness_sign,
+};
 pub use weft::{
     WeftFeature, WeftKey, WeftKind, WeftWindow, all_features_at_cached, features_at_cached, occurs,
     prevalence, prevalence_with_weights,

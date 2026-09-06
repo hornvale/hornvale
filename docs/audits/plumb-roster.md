@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 318 |
+| Files parsed | 330 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 741 |
-| … file-level | 698 |
+| Quantity consts judged (the denominator) | 760 |
+| … file-level | 717 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 34 |
-| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 172 |
-| Excluded: declared non-quantity type | 506 |
-| **Every `const` the walk touched** | **1419** |
+| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
+| Excluded: declared non-quantity type | 524 |
+| **Every `const` the walk touched** | **1457** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **665**: file-level
+nor the whole `file-level` row — it is **684**: file-level
 constants of those five types. The `file-level` row itself is
-**698**, and the denominator is **741**; the difference is
+**717**, and the denominator is **760**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -68,11 +68,11 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 543 |
+| `f64` | 561 |
 | `i32` | 7 |
 | `i64` | 2 |
 | `u32` | 79 |
-| `u64` | 17 |
+| `u64` | 18 |
 | `u8` | 8 |
 | `usize` | 56 |
 
@@ -86,7 +86,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[&[&str]]` | 1 |
 | `&[&dyn …]` | 1 |
 | `&[&str]` | 20 |
-| `&[(…)]` | 10 |
+| `&[(…)]` | 11 |
 | `&[Biome]` | 1 |
 | `&[Character]` | 1 |
 | `&[CommonWordSource]` | 1 |
@@ -98,7 +98,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[PronounRow]` | 1 |
 | `&[Role]` | 2 |
 | `&[VerbRow]` | 1 |
-| `&str` | 257 |
+| `&str` | 270 |
 | `()` | 6 |
 | `(…)` | 10 |
 | `AffectLabel` | 1 |
@@ -111,8 +111,8 @@ bare count would hide a quantity someone had wrongly denied.
 | `Segment` | 3 |
 | `StreamLabel<…>` | 37 |
 | `Transmission` | 1 |
-| `[&str; …]` | 32 |
-| `[(…); …]` | 6 |
+| `[&str; …]` | 33 |
+| `[(…); …]` | 7 |
 | `[Accumulation; …]` | 1 |
 | `[Action; …]` | 1 |
 | `[AffectLabel; …]` | 2 |
@@ -138,6 +138,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `[Quality; …]` | 1 |
 | `[Rcc8; …]` | 1 |
 | `[ResourceAxis; …]` | 1 |
+| `[Rule; …]` | 1 |
 | `[RuleKind; …]` | 3 |
 | `[Rung; …]` | 1 |
 | `[Stratum; …]` | 1 |
@@ -147,6 +148,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `[char; …]` | 1 |
 | `[f64; …]` | 20 |
 | `[u8; …]` | 9 |
+| `[usize; …]` | 1 |
 | `char` | 8 |
 
 ## Coverage
@@ -157,13 +159,13 @@ bare count would hide a quantity someone had wrongly denied.
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 32 |
-| per-world | 5 |
-| universal | 120 |
+| per-world | 6 |
+| universal | 138 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 741 |
+| _total_ | 760 |
 
-Declared: **741 of 741**. Undeclared is backlog; a malformed
+Declared: **760 of 760**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -173,7 +175,7 @@ converted.** Every row below is a constant judged to vary along an axis
 the code does not yet have -- nothing about the world changed to produce
 this table, and nothing here is scheduled for conversion by this
 campaign. `universal` and `pending(wave-N)` constants are excluded; their
-counts are already the Coverage table above. 40 finding(s).
+counts are already the Coverage table above. 41 finding(s).
 
 | File:line | Constant | Rung | Reason |
 |------|------|------|------|
@@ -198,32 +200,33 @@ counts are already the Coverage table above. 40 finding(s).
 | `domains/species/src/lib.rs:6210` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6215` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6219` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
-| `windows/vessel/src/liveness.rs:155` | `SUSTENANCE` | per-species | a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
-| `windows/vessel/src/liveness.rs:233` | `FURNISHING_COLD_C` | per-people | whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire |
-| `windows/vessel/src/liveness.rs:317` | `THERMAL_FEAR_SPAN_C` | per-species | how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span |
-| `windows/vessel/src/liveness.rs:891` | `ENDOTHERM_HEAT_K` | per-species | how strongly heat drives extra dehydration is a property of a species' own thermoregulation -- currently one coefficient shared by the whole endotherm class |
-| `windows/vessel/src/liveness.rs:898` | `ECTOTHERM_K` | per-species | how strongly ambient heat drives dehydration tracks a species' own thermal biology -- currently one coefficient shared by the whole ectotherm class |
-| `windows/vessel/src/liveness.rs:904` | `ECTOTHERM_FLOOR` | per-species | a species' own torpor tolerance sets how far its metabolism can slow in the cold -- currently one floor shared by the whole ectotherm class |
-| `windows/vessel/src/liveness.rs:2807` | `TWILIGHT_DEG` | per-species | how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species |
-| `windows/vessel/src/liveness.rs:2875` | `FATIGUE_FALL` | per-species | a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry |
-| `windows/vessel/src/liveness.rs:2922` | `REST_FALL` | per-species | a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species |
-| `windows/vessel/src/liveness.rs:3008` | `REST_BOUT` | per-world | a rest's length is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3060` | `SLEEP_BOUT` | per-world | a sleep's floor is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3143` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3160` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
-| `windows/vessel/src/liveness.rs:3171` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
-| `windows/vessel/src/liveness.rs:4723` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
-| `windows/vessel/src/liveness.rs:5310` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
+| `windows/lot/src/shape.rs:12` | `EPOCH_YEARS` | per-world | the bake's epoch length, BakeConfig::epoch_years; 25 is default_millennia's value |
+| `windows/vessel/src/liveness.rs:307` | `SUSTENANCE` | per-species | a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
+| `windows/vessel/src/liveness.rs:385` | `FURNISHING_COLD_C` | per-people | whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire |
+| `windows/vessel/src/liveness.rs:469` | `THERMAL_FEAR_SPAN_C` | per-species | how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span |
+| `windows/vessel/src/liveness.rs:1043` | `ENDOTHERM_HEAT_K` | per-species | how strongly heat drives extra dehydration is a property of a species' own thermoregulation -- currently one coefficient shared by the whole endotherm class |
+| `windows/vessel/src/liveness.rs:1050` | `ECTOTHERM_K` | per-species | how strongly ambient heat drives dehydration tracks a species' own thermal biology -- currently one coefficient shared by the whole ectotherm class |
+| `windows/vessel/src/liveness.rs:1056` | `ECTOTHERM_FLOOR` | per-species | a species' own torpor tolerance sets how far its metabolism can slow in the cold -- currently one floor shared by the whole ectotherm class |
+| `windows/vessel/src/liveness.rs:3181` | `TWILIGHT_DEG` | per-species | how wide a solar-altitude band a crepuscular species is active in is a property of that species' own activity biology -- currently one width for every crepuscular species |
+| `windows/vessel/src/liveness.rs:3249` | `FATIGUE_FALL` | per-species | a creature's own physiology should set how fast rest repays fatigue debt, symmetric to the now-per-species RISE rate -- currently one recovery rate for every species; the doc's own text names this asymmetry |
+| `windows/vessel/src/liveness.rs:3296` | `REST_FALL` | per-species | a creature's own physiology should set how fast a conscious rest repays fatigue, half of FATIGUE_FALL's own rate -- currently one recovery rate for every species |
+| `windows/vessel/src/liveness.rs:3382` | `REST_BOUT` | per-world | a rest's length is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3434` | `SLEEP_BOUT` | per-world | a sleep's floor is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3517` | `WAKE_SCAN_STEP` | per-world | the wake-scan step is a fixed fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3534` | `SCAN_LIMIT` | per-world | the scan loop's search bound is a fraction of the local day, not of the standard one |
+| `windows/vessel/src/liveness.rs:3545` | `ONE_DAY` | per-world | the give-up fallback span is the local day, not the standard one |
+| `windows/vessel/src/liveness.rs:5097` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
+| `windows/vessel/src/liveness.rs:5684` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
-| `windows/vessel/src/session.rs:513` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
-| `windows/vessel/src/session.rs:523` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:527` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:537` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
 
 ## The contested middle
 
-359 of the 741 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 134 of the 318 files parsed —
+368 of the 760 constants sit in a file mentioning one of
+the kind-adjacency markers above, across 137 of the 330 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 359 of them are declared.
+where `FATIGUE_RISE` lived. 368 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -240,9 +243,10 @@ in the inclusive direction on purpose.
 | climate | 105 | 0 | 0 | 105 |
 | demography | 14 | 0 | 0 | 14 |
 | history | 6 | 0 | 0 | 6 |
-| lab | 45 | 0 | 0 | 45 |
+| lab | 48 | 0 | 0 | 48 |
 | language | 25 | 0 | 0 | 25 |
 | locale | 19 | 0 | 0 | 19 |
+| lot | 9 | 0 | 0 | 9 |
 | paleoclimate | 12 | 0 | 0 | 12 |
 | religion | 2 | 0 | 0 | 2 |
 | scene | 7 | 0 | 0 | 7 |
@@ -251,4 +255,4 @@ in the inclusive direction on purpose.
 | species | 39 | 0 | 0 | 39 |
 | terrain | 152 | 0 | 0 | 152 |
 | vessel | 110 | 0 | 0 | 110 |
-| worldgen | 152 | 0 | 0 | 152 |
+| worldgen | 159 | 0 | 0 | 159 |

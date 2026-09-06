@@ -30,8 +30,9 @@ pub use chart::{bar_chart_svg, charts_for};
 pub use diff::{render_diff, render_diff_results};
 pub use metrics::{
     AstronomyView, BuiltView, ClimateView, Extractor, FullView, Metric, MetricValue,
-    SettlementView, SummaryKind, TerrainView, ViewRung, WorldView, registry,
+    SettlementView, SignTuple, SummaryKind, TerrainView, ViewRung, WorldView, registry,
     render_confidant_report, render_metric_list, steepable_concept_roster,
+    warp_sign_tuple_for_test,
 };
 pub use publish::publish;
 pub use reticence::render_reticence_report;

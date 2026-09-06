@@ -37,6 +37,22 @@ the test that pins it asserts the relations that survived and stays silent
 about the one that did not, so a later campaign that moves a constant will not
 find a green assertion quietly protecting a falsified claim.
 
+**(2026-09-05) The fork this reading left open is closed, and these numbers no
+longer describe the shipped world.** [The Warp](./the-warp.md) measured, before
+it designed anything, that **333 of these 403 springs stood on a facet with no
+cause at all** — the ordering was a base-rate effect in the recipe, not an
+artefact of a four-bin estimator, and a nineteen-class biome word ranks the
+thicket above the spring exactly as the four bins did. It then
+re-parameterised the two sign kinds, and on the same statistic and the same
+seed the spring reads **0.086464** where it reads 0.007812 here — an 11.1×
+rise — while the overhang reads **0.076536** against 0.002497. The thicket and
+the erratic are untouched at 0.038604 and 0.000000. So the ordering above is
+falsified again at the shipped constants, but by a different relation:
+`spring > overhang > thicket > erratic`, in which `thicket > overhang` fails
+where the Weft's `thicket > spring` did. The table above is this campaign's
+measurement and stands as its record; the current world's readings are in the
+successor's chapter.
+
 The erratic's zero is not a near-miss that happened to land well. Its macro
 state is a literal constant, so its mutual information with anything is
 algebraically zero rather than empirically small — the control could not have
@@ -116,11 +132,29 @@ Four kinds shipped:
 | thicket / brake | temperature × moisture | high | texture, aimed at biome monotony |
 | erratic / scatter | none | near zero | the negative control |
 
+**(2026-09-05) Two of these four rows now use a different parameterisation.**
+[The Warp](./the-warp.md) regrouped the spring's and the overhang's recipes as
+a **reliability** against a soft step in the cause plus a **floor** against
+noise, with both floors authored to zero — algebraically the same two degrees
+of freedom, rotated onto the quantities a walker-side readout measures.
+Contextuality and abundance survive unchanged for the thicket and the erratic,
+which are that campaign's non-regression controls and whose derived output it
+proved byte-identical.
+
 ## Density, which was the deliverable
 
 The union of the four kinds occupies **0.256285** of land-eligible facets —
 2,875 of 11,218 — roughly one facet in four. Per kind, on the same population:
 spring 403, overhang 843, thicket 1,517, erratic 428.
+
+**(2026-09-05) The sign kinds are rarer now.** [The Warp](./the-warp.md) traded
+frequency for found-ness on the spring and the overhang, whose existence
+densities at this same seed went 0.0359 → 0.0134 and 0.0751 → 0.0215 — 2.7×
+and 3.5× rarer. The union fell to **0.195222** of land-eligible facets, about a
+quarter below the figure above; the thicket and the erratic, untouched, are
+unmoved to five places. The density result and the multiple below are not
+disturbed by that, but the per-kind counts in this section describe the world
+as this campaign shipped it rather than the world today.
 
 The placed tier, measured immediately before this campaign, sits at one
 enterable site per ~84,200 land facets. The derived surface is therefore about

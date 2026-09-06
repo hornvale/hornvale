@@ -18,7 +18,7 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, HomeNavCache,
-    LocaleTerrain, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE, Terrain,
+    LocaleTerrain, PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SLEPT_ON, SUSTENANCE, Terrain,
     affect_of_memo_occupied, agent_position, built_rooms, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
@@ -123,6 +123,18 @@ pub fn run_simulation(
     // scaling bar (a stationary, unchanged-belief creature pays zero searches
     // after its first tick) — lives here too, one per run.
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), at exactly the scope
+    // `home_nav_cache` is — one per run, never per tick. It keys on
+    // `(home, dest, budget)`, and a per-tick memo would throw every entry away
+    // every tick.
+    //
+    // This comment said "homes are fixed for a run, so its population
+    // saturates". That is a non-sequitur — a fixed home bounds the key's first
+    // component while `dest` keeps accumulating — and The Culvert's own Task 5
+    // measured the population at 83 pairs at wait 12 rising to 190 at wait 60
+    // with no ceiling demonstrated (spec §1.3(d), ledger #14). The memo is run-
+    // lived because it is cheap, not because it was shown to stop growing.
+    let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
@@ -151,8 +163,12 @@ pub fn run_simulation(
         // gets to see.
         // The third element is the roster write-back `Session::wait` needs
         // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
-        let (_facts, occupancy, _written) =
-            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (_facts, occupancy, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut route_memo,
+        );
         // The kernel tick applies the drive-movement facts; the same headless
         // step `Session::wait` runs, minus the player. This path goes through
         // `TickSystem::step`, whose signature is kernel-fixed and so cannot
@@ -186,6 +202,7 @@ pub fn run_simulation(
                 Some(&occupancy),
                 &mut mesh_memo,
                 &mut home_nav_cache,
+                &mut route_memo,
                 &folds,
             ));
         }
@@ -231,6 +248,18 @@ pub fn run_simulation_with_locale(
     let mut mesh_memo = RoomMeshMemo::new();
     // Cross-tick, one per run — see `run_simulation`'s identical comment.
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), at exactly the scope
+    // `home_nav_cache` is — one per run, never per tick. It keys on
+    // `(home, dest, budget)`, and a per-tick memo would throw every entry away
+    // every tick.
+    //
+    // This comment said "homes are fixed for a run, so its population
+    // saturates". That is a non-sequitur — a fixed home bounds the key's first
+    // component while `dest` keeps accumulating — and The Culvert's own Task 5
+    // measured the population at 83 pairs at wait 12 rising to 190 at wait 60
+    // with no ceiling demonstrated (spec §1.3(d), ledger #14). The memo is run-
+    // lived because it is cheap, not because it was shown to stop growing.
+    let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
@@ -282,8 +311,12 @@ pub fn run_simulation_with_locale(
         };
         // The third element is the roster write-back `Session::wait` needs
         // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
-        let (_facts, occupancy, _written) =
-            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (_facts, occupancy, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut route_memo,
+        );
         ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
             Ok(next) => next,
             Err(_) => break,
@@ -303,6 +336,7 @@ pub fn run_simulation_with_locale(
                 Some(&occupancy),
                 &mut mesh_memo,
                 &mut home_nav_cache,
+                &mut route_memo,
                 &folds,
             ));
         }
@@ -359,6 +393,13 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         "the kind of anchor an agent slept on, within the room it slept in",
     );
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside `AGENT_AT` here for the same reason SLEPT_ON is,
+    // above: an unregistered predicate a walk tries to commit truncates the
+    // simulation silently rather than failing loudly.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
     let home = match hornvale_settlement::all_settlements(world).first() {
         Some(v) => v.id,
         None => return Vec::new(),

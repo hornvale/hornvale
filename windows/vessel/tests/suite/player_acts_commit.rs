@@ -2,11 +2,23 @@
 //! time against the body's own mass and post facts into the session ledger,
 //! so the trail they leave is indistinguishable from a creature's.
 //!
+//! **THE PROVENANCE KINDS NOW DIFFER, AND THAT IS DELIBERATE (The Warrant,
+//! Task 3).** A creature's step carries the producer name `vessel/liveness`;
+//! a player's still carries authored prose (`session.rs`'s
+//! `WALKED_PROVENANCE`/`RETRACED_PROVENANCE`), because a player has no `Mode`
+//! to promote onto an errand predicate — spec §7.4 accepts and names the
+//! asymmetry. So claim 2's "same provenance kind" is no longer true in
+//! substance, and the tests below never asserted it: they assert the
+//! provenance is non-empty and names no driver, both of which still hold on
+//! both sides. Read the sameness claim as being about predicate, object arity
+//! and driver-anonymity, not about the shape of the provenance string.
+//!
 //! The four claims, each with its own test:
 //!
 //! 1. a walk commits `agent-at` and moves the clock;
 //! 2. the committed facts have the SHAPE a creature's do — same predicate,
-//!    same object arity, same provenance kind, and nothing naming the driver;
+//!    same object arity, and nothing naming the driver (the provenance kind
+//!    is the deliberate exception above);
 //! 3. those facts survive `into_played_world` unfiltered (spec §2.4);
 //! 4. a sleeping body refuses in-character acts and permits out-of-character
 //!    ones (the gate, spec §3.3).
@@ -55,22 +67,17 @@ fn out(t: Turn) -> String {
     }
 }
 
-/// The day a walk-band room line reports: `[room <id>, day <d>]`.
+/// The day a walk-band room line used to report: `[room <id>, day <d>]`.
 ///
-/// Read out of the prose rather than off an accessor deliberately — it is the
-/// number a PLAYER sees, and it is what the gallery transcripts freeze, so a
-/// test that watches it is watching the observable rather than a field.
-fn day_of(text: &str) -> f64 {
-    let (_, after) = text.split_once(", day ").unwrap_or_else(|| {
-        panic!("no room line to read a day from in: {text}");
-    });
-    let digits: String = after
-        .chars()
-        .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == 'e')
-        .collect();
-    digits
-        .parse()
-        .unwrap_or_else(|e| panic!("day '{digits}' does not parse: {e}"))
+/// **Retired by The Ken's Task 3.** The header carried the number a PLAYER
+/// saw, and this parsed the observable rather than a field on purpose — but
+/// Task 3 removed the day (and the id) from the header entirely, so there is
+/// no longer a rendered day here to watch. `s.day()` is the only surface
+/// left, and this test now reads it directly; the walk's `agent-at` count
+/// above is still read off the render-independent ledger, so this file loses
+/// no coverage, only the one channel that stopped existing.
+fn day_of(s: &Session<'_>) -> f64 {
+    s.day().as_std_days()
 }
 
 #[test]
@@ -79,7 +86,8 @@ fn a_players_walk_leaves_an_agent_at_trail_and_charges_time() {
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
 
     let before = s.committed_agent_at_count();
-    let day_before = day_of(&out(s.handle("look")));
+    let _ = out(s.handle("look"));
+    let day_before = day_of(&s);
 
     let walked = out(s.handle("go n"));
     assert!(
@@ -94,7 +102,8 @@ fn a_players_walk_leaves_an_agent_at_trail_and_charges_time() {
         s.committed_agent_at_count()
     );
 
-    let day_after = day_of(&out(s.handle("look")));
+    let _ = out(s.handle("look"));
+    let day_after = day_of(&s);
     assert!(
         day_after > day_before,
         "an in-character walk must charge time: day {day_before} -> {day_after}"
@@ -139,7 +148,12 @@ fn a_players_trail_is_shaped_exactly_like_a_creatures() {
     // "Indistinguishable" is the acceptance test's own word, and a COUNT does
     // not establish it. This compares the envelopes: same predicate, same
     // object arity, same field set, and a provenance that names an act in the
-    // world rather than the mind that chose it (spec §3.1).
+    // world rather than the mind that chose it (spec §3.1). The two sides'
+    // provenance STRINGS diverged with The Warrant's Task 3 — a creature's
+    // names its producer, a player's is still authored prose — and the
+    // assertions below were always about non-emptiness and driver-anonymity
+    // rather than about that string's shape; see the module doc and The
+    // Warrant spec §7.4 for why the asymmetry is deliberate.
     // At `WALKING_SEED` rather than 42: this comparison needs a creature that
     // WALKED, and seed 42's flagship residents drink in place (see the
     // constant's own note).
@@ -353,9 +367,17 @@ fn a_band_change_charges_time_and_commits_nothing() {
     // Each step names the band line its reply MUST carry, so a refusal ("There
     // is no way to anywhere from here.", "Nothing here is built") can never be
     // mistaken for a free act that correctly charged nothing.
+    // `enter the hearth` rather than `enter further in` (The Cruck, Task 3):
+    // seed 42's flagship is the backroom, `T{ H{ W }, S }`, so the threshold
+    // forks and `further in` REFUSES there — and a refusal charges nothing, so
+    // the "must actually change band" guard below would have fired with
+    // exactly the message it was written to print. The hearthroom is a chamber
+    // every built structure has, so naming it costs this test nothing; what it
+    // asserts is unchanged, that a band change charges time and commits no
+    // fact.
     for (verb, expected) in [
         ("enter", "[chamber "),
-        ("enter further in", "[chamber "),
+        ("enter the hearth", "[chamber "),
         ("out", "[room "),
     ] {
         let facts_before = s.committed_fact_count();

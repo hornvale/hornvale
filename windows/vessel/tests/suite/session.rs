@@ -3,7 +3,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
-use hornvale_vessel::{PossessOpts, Session, Turn, run};
+use hornvale_vessel::{PossessOpts, Session, Tableau, Turn, run};
 use hornvale_worldgen::{SettlementPins, build_world};
 
 /// Seed 42's world under default pins, read from the committed fixture rather
@@ -24,6 +24,39 @@ fn opts() -> PossessOpts {
     }
 }
 
+/// A bearing `look` text does NOT refuse, read without depending on the
+/// (now usually silent) exits clause — The Ken, spec §4.3.
+///
+/// Ordinary ground prints no exits clause at all any more; that silence IS
+/// the room offering all eight bearings (see the unreachability argument at
+/// the `closing` construction site in `session.rs`), so this only needs to
+/// consult a refusal clause when the room prints one — the rare cube-corner
+/// case — and otherwise any of the eight is fine. Several tests in this file
+/// used to parse a direction off "the nearest ground lies ..." or a bare
+/// "Ways on: ..." token list; that text is gone from ordinary ground now, so
+/// they share this instead.
+fn an_open_bearing(look: &str) -> String {
+    let refused: Vec<String> = look
+        .lines()
+        .find(|l| l.contains("Every direction here is open but"))
+        .map(|l| {
+            l.trim_start_matches("Every direction here is open but ")
+                .split(';')
+                .next()
+                .unwrap_or("")
+                .split(", ")
+                .map(|w| w.trim().to_lowercase())
+                .filter(|w| !w.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
+        .iter()
+        .map(|w| w.to_string())
+        .find(|w| !refused.contains(w))
+        .expect("a room cannot refuse all eight bearings")
+}
+
 #[test]
 fn possession_opens_with_a_focalized_description() {
     let world = seam_world();
@@ -31,7 +64,7 @@ fn possession_opens_with_a_focalized_description() {
     assert!(opening.contains("in the lands of"));
     assert!(
         opening.contains("[room "),
-        "the opening carries the room id"
+        "the opening carries a room header"
     );
 }
 
@@ -45,20 +78,7 @@ fn go_moves_and_back_retraces() {
         Turn::Out(t) => t,
         _ => panic!("look must not release"),
     };
-    // Exact, word-boundary token match against the "Ways on: NE, NW, S."
-    // line — a substring check (e.g. `ways.contains("N")`) would false-
-    // positive "n" against "NE"/"NW" whenever neither bare "N" nor "S" is
-    // actually offered.
-    let tokens: Vec<String> = ways
-        .split([' ', ',', '.'])
-        .filter(|t| !t.is_empty())
-        .map(str::to_lowercase)
-        .collect();
-    let dir = ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
-        .iter()
-        .find(|d| tokens.iter().any(|t| t == *d))
-        .copied()
-        .expect("some way on");
+    let dir = an_open_bearing(&ways);
     match s.handle(&format!("go {dir}")) {
         Turn::Out(t) => assert!(t.contains("[room ")),
         _ => panic!("go must not release"),
@@ -204,12 +224,17 @@ fn examine_honors_the_contract_and_release_ends() {
 fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
     // The-quickening (T3): `wait` now runs the NPC layer's tick, so its
     // output narrates motion rather than re-describing the room. The
-    // observation day still advances (visible via a follow-up `look`), and
-    // the possessed agent itself still never moves — only the session's
-    // owned NPC ledger evolves.
+    // observation day still advances, and the possessed agent itself still
+    // never moves — only the session's owned NPC ledger evolves.
+    //
+    // **Re-pointed by The Ken's Task 3.** The day used to be readable straight
+    // off the room header ("day 0", then "day 90" after the wait); Task 3
+    // removed the day from the header entirely, so this now reads `s.day()`
+    // directly — the render-independent accessor, not a re-pinned prose
+    // phrase that would go vacuous the moment the wording moved again.
     let world = seam_world();
-    let (mut s, opening) = Session::start(&world, &opts()).unwrap();
-    assert!(opening.contains("day 0"));
+    let (mut s, _opening) = Session::start(&world, &opts()).unwrap();
+    assert_eq!(s.day(), WorldTime::GENESIS, "the possession opens at day 0");
     let home = s.position().pack().unwrap().0;
     let out = match s.handle("wait 90") {
         Turn::Out(t) => t,
@@ -217,9 +242,10 @@ fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
     };
     assert!(!out.is_empty(), "wait narrates what happened");
     match s.handle("look") {
-        Turn::Out(t) => assert!(t.contains("day 90"), "the observation day moved"),
+        Turn::Out(_) => {}
         _ => panic!("look must not release"),
     }
+    assert_eq!(s.day().as_std_days(), 90.0, "the observation day moved");
     assert_eq!(
         s.position().pack().unwrap().0,
         home,
@@ -247,18 +273,7 @@ fn knows_grows_as_you_walk() {
         Turn::Out(t) => t,
         _ => panic!(),
     };
-    // Exact, word-boundary token match — see `go_moves_and_back_retraces`'s
-    // comment: a substring check false-positives "n" against "NE"/"NW".
-    let tokens: Vec<String> = ways
-        .split([' ', ',', '.'])
-        .filter(|t| !t.is_empty())
-        .map(str::to_lowercase)
-        .collect();
-    let dir = ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
-        .iter()
-        .find(|d| tokens.iter().any(|t| t == *d))
-        .copied()
-        .expect("some way on");
+    let dir = an_open_bearing(&ways);
     s.handle(&format!("go {dir}"));
     assert!(
         s.knowledge().0.len() > before,
@@ -517,42 +532,162 @@ fn run_drives_a_script_deterministically() {
     assert!(text.contains("in the lands of"));
 }
 
-/// The room says "the nearest ground lies SE, N, SW." — every one of those
-/// tokens must be a command you can actually type. This is the exact bug:
-/// the parser already accepted them, but the verb dispatch never reached it.
+/// The Ken: openness is the default and a wall is news. On ordinary ground
+/// — nothing refused, every bearing carrying ground — the clause said
+/// "No direction here is closed; the nearest ground lies N, NE, E, SE, S,
+/// SW, W, NW.", which spends twelve words twice asserting that nothing is
+/// unusual. It now says nothing at all.
+#[test]
+fn ordinary_ground_says_nothing_about_its_exits() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let look = match s.handle("look") {
+        Turn::Out(t) => t,
+        _ => panic!("look must not release"),
+    };
+    assert!(
+        !look.contains("No direction here is closed"),
+        "the vacuous clause survived: {look:?}"
+    );
+    assert!(
+        !look.contains("the nearest ground lies N, NE, E, SE, S, SW, W, NW"),
+        "the all-eight enumeration survived: {look:?}"
+    );
+}
+
+/// Every bearing a room implies is a way out must be a command you can
+/// actually type. This is the exact bug: the parser already accepted them,
+/// but the verb dispatch never reached it.
+///
+/// **Re-pointed by The Ken.** The room used to print "the nearest ground
+/// lies SE, N, SW." on every ordinary turn, and this test read the token
+/// list straight off that sentence. Spec §4.3 makes the clause silent on
+/// ordinary ground (nothing refused, every bearing carrying ground) — there
+/// is nothing left to parse a list out of there. But "ordinary ground" is
+/// exactly the row where every one of the eight compass words IS a real way
+/// out (that's what makes the clause safe to omit — see the unreachability
+/// argument at the `closing` construction site in `session.rs`), so the
+/// same invariant is tested directly against all eight rather than against
+/// a vanished list. The guard below confirms the fixture is still ordinary
+/// ground and not one of the 24 cube-corner rooms, where this blanket walk
+/// would be unsound.
 #[test]
 fn every_printed_way_out_is_a_command_you_can_type() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let ways = match s.handle("look") {
+    let look = match s.handle("look") {
         Turn::Out(t) => t,
         _ => panic!("look must not release"),
     };
-    let line = ways
-        .lines()
-        .find(|l| l.contains("the nearest ground lies"))
-        .expect("a room names its nearest ground")
-        .to_string();
-    let tokens: Vec<String> = line
-        .split("lies ")
-        .nth(1)
-        .expect("the sentence names a bearing list")
-        .trim_end_matches('.')
-        .split(',')
-        .map(|t| t.trim().to_lowercase())
-        .filter(|t| !t.is_empty())
-        .collect();
-    assert!(!tokens.is_empty(), "no exits to test: {line}");
-    for t in tokens {
-        let out = match s.handle(&t) {
+    assert!(
+        !look.contains("Every direction here is open but"),
+        "fixture assumption failed: the flagship start refuses a bearing, \
+         so this test's blanket eight-word walk needs a different room: {look:?}"
+    );
+    for t in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
+        let out = match s.handle(t) {
             Turn::Out(o) => o,
             _ => panic!("a direction must not release"),
         };
         assert!(
             !out.contains("No verb"),
-            "the room printed '{t}' as a way out but the parser rejects it: {out}"
+            "an ordinary-ground bearing must be typeable: '{t}' was rejected: {out}"
         );
         s.handle("back");
+    }
+}
+
+/// The Ken: the header was telemetry in the character's voice —
+/// "[room 3733133217, day 0]". Neither datum is lost: `!whoami` already
+/// answers "A bugbear of Doaba (agent 3286669968037249024), day 0, room
+/// 3733133217.", which is the author's-instrument frame and the right home
+/// for both. Controller ruling (ledger #5) supersedes spec §4.2's "share a
+/// derivation with the sky line": no such derivation exists to share (the
+/// phase logic is baked into `sky_at`'s description string, and
+/// `domains/astronomy` exposes no `daypart` accessor), so the header now
+/// carries a place and nothing about time at all.
+#[test]
+fn the_turn_header_carries_no_facet_id_and_no_decimal_day() {
+    let world = seam_world();
+    let (mut s, opening) = Session::start(&world, &opts()).unwrap();
+    let look = match s.handle("look") {
+        Turn::Out(t) => t,
+        _ => panic!("look must not release"),
+    };
+    for text in [opening, look] {
+        let header = text.lines().next().expect("a turn opens with a header");
+        assert!(
+            !header.contains("3733133217"),
+            "a raw facet id survived in the header: {header:?}"
+        );
+        assert!(
+            !header.contains('.'),
+            "a decimal day survived in the header: {header:?}"
+        );
+    }
+}
+
+/// Issue one command and unwrap the turn's text — none of this file's turns
+/// releases the possession. `pub(crate)`: The Ken, Task 5 reuses this from
+/// `the_roll.rs`, a sibling module in the same `suite` binary.
+pub(crate) fn say(session: &mut Session<'_>, cmd: &str) -> String {
+    match session.handle(cmd) {
+        Turn::Out(t) | Turn::Released(t) => t,
+    }
+}
+
+/// Every noun a `"Here: ..."` line names, in prose order: split on the
+/// group separator and strip the line's own leading label and trailing
+/// period. Test-local — production code never parses its own prose back.
+fn presence_nouns(here: &str) -> Vec<String> {
+    here.trim_start_matches("Here: ")
+        .trim_end_matches('.')
+        .split("; ")
+        .map(str::to_string)
+        .collect()
+}
+
+/// The staged three-dragon cast that reproduces #12 deterministically —
+/// seed 42, `{"cast":[{"species":"white-dragon"},{"species":"black-dragon"},
+/// {"species":"red-dragon"}]}` — committed here (The Ken, Task 4) because
+/// Task 5 depends on three same-suffix labels sharing one room, which is
+/// otherwise a search rather than a stipulation.
+///
+/// Leaks the world to get a `'static` session out of a zero-argument helper
+/// — acceptable in test code, and the shape every caller of this function
+/// wants: `let (mut session, _) = open_staged_dragons_session();` with
+/// nothing to keep alive. `pub(crate)`: The Ken, Task 5 reuses this from
+/// `the_roll.rs`, a sibling module in the same `suite` binary.
+pub(crate) fn open_staged_dragons_session() -> (Session<'static>, String) {
+    let world: &'static World = Box::leak(Box::new(seam_world()));
+    let staged = PossessOpts {
+        tableau: Some(Tableau::new().with_cast(["white-dragon", "black-dragon", "red-dragon"])),
+        ..opts()
+    };
+    Session::start(world, &staged).expect("a staged session starts")
+}
+
+/// The Ken: the game displayed a noun and then denied it existed.
+/// `presence_line` rendered a wild group from `species` while `examine`
+/// matched `label`, so the staged tableau reproducing #12 printed "Here: a
+/// wild black-dragon; a wild red-dragon." and then answered "You see no a
+/// wild black-dragon here." — the repo's own §6 contract ("every depicted
+/// noun must answer") failing on the one roster that escaped it.
+#[test]
+fn every_noun_the_presence_line_shows_can_be_examined() {
+    let (mut session, _) = open_staged_dragons_session();
+    let look = say(&mut session, "look");
+    let here = look
+        .lines()
+        .find(|l| l.starts_with("Here: "))
+        .expect("the staged cast is present");
+
+    for noun in presence_nouns(here) {
+        let answer = say(&mut session, &format!("examine {noun}"));
+        assert!(
+            !answer.starts_with("You see no"),
+            "the presence line showed {noun:?} and examine denied it: {answer:?}"
+        );
     }
 }
 
@@ -583,12 +718,32 @@ fn a_genuine_non_verb_still_reports_itself() {
 
 /// The sky follows the walker. While weather was resolved from the flagship
 /// settlement, a possession saw the capital's sky no matter how far it walked.
+///
+/// **Re-pointed by The Ken.** This used to follow "whatever ground this room
+/// actually names" by parsing the (now-silent-on-ordinary-ground) exits
+/// clause — spec §4.3 — which left `dir` permanently `None` and the walker
+/// standing still for the whole loop: it still happened to pass, because the
+/// sky varies with elapsed time too, but it was no longer testing what its
+/// own name claims. A fixed south-westward bias (matching
+/// `the_water_column_is_a_place_you_can_be`'s own technique) makes real
+/// progress instead — every bearing is a real way out on ordinary ground —
+/// and `rooms.len() > 1` is the direct check that the walker actually moved,
+/// so this cannot go quietly vacuous the same way twice.
+///
+/// **Re-pointed again by The Ken's Task 3.** The header used to carry the
+/// room id, which is how `rooms` proved movement; Task 3 removed the id (and
+/// the day) from the header entirely, so parsing it here would make `rooms`
+/// a set of one forever regardless of whether the walker moved — a second
+/// silent vacuity of exactly the shape this test's own doc comment already
+/// warns about. `s.position()` is the room identity itself, not a rendering
+/// of it, so it stays live no matter what the header prints.
 #[test]
 fn the_sky_follows_the_walker() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let mut skies = std::collections::BTreeSet::new();
-    for _ in 0..40 {
+    let mut rooms = std::collections::BTreeSet::new();
+    for dir in std::iter::repeat(["w", "nw", "sw"]).flatten().take(40) {
         let out = match s.handle("look") {
             Turn::Out(t) => t,
             _ => panic!("look must not release"),
@@ -596,18 +751,11 @@ fn the_sky_follows_the_walker() {
         if let Some(l) = out.lines().find(|l| l.contains("The sky is")) {
             skies.insert(l.to_string());
         }
-        // Follow whatever ground this room actually names.
-        let dir = out
-            .lines()
-            .find(|l| l.contains("the nearest ground lies"))
-            .and_then(|l| l.split("lies ").nth(1))
-            .and_then(|l| l.split(',').next())
-            .map(|d| d.trim().trim_end_matches('.').to_lowercase());
-        if let Some(d) = dir {
-            s.handle(&d);
-        }
+        rooms.insert(s.position());
+        s.handle(dir);
         s.handle("wait 3");
     }
+    assert!(rooms.len() > 1, "the walker never moved: {rooms:?}");
     assert!(
         skies.len() > 1,
         "the sky never changed across a long walk: {skies:?}"
@@ -746,20 +894,20 @@ fn the_water_column_is_a_place_you_can_be() {
     // On the surface: afloat on open water, not standing in the floor's biome.
     assert!(afloat.contains("Open water —"), "{afloat}");
 
-    // A direction this room ACTUALLY offers, read off the surface `look`
-    // before diving. Hardcoding `n` was wrong and The Tense exposed it: the
-    // mesh is triangular, every room offers one of two exit triads, and the
-    // exit check runs BEFORE the submersion rule — so on a room without `n`
-    // the reply is "No way n from here." and the lateral-refusal claim below
-    // is never reached. The test would have gone green on a refusal it was not
-    // testing for, which is worse than the red.
-    let lateral_dir = afloat
-        .lines()
-        .find(|l| l.contains("the nearest ground lies"))
-        .and_then(|l| l.trim_end_matches('.').split("lies ").nth(1))
-        .and_then(|w| w.split(", ").next())
-        .expect("open water reports its ways")
-        .to_lowercase();
+    // A direction this room ACTUALLY offers. Hardcoding `n` was wrong and The
+    // Tense exposed it: the exit check runs BEFORE the submersion rule, so on
+    // a room that refuses `n` the reply is the corner refusal and the
+    // lateral-refusal claim below is never reached — a green run on a
+    // refusal it was not testing for, worse than a red one.
+    //
+    // **Re-pointed by The Ken (spec §4.3).** The technique used to read the
+    // direction off "the nearest ground lies ..."; that clause is silent on
+    // ordinary ground now, and open water is ordinary ground (unaffected by
+    // Task 2 — only the exits clause's own conditionality changed, not what
+    // `go` accepts). `an_open_bearing` is the shared fallback: it consults a
+    // refusal clause when the room prints one (the rare cube-corner case The
+    // Tense's own worry was about), and otherwise any of the eight is fine.
+    let lateral_dir = an_open_bearing(&afloat);
 
     // Down: a different place at the same coordinate.
     let under = match s.handle("dive") {
@@ -1092,25 +1240,26 @@ fn custody_survives_a_save_and_a_re_possession() {
     //
     // It was ONE `enter` until The Custodian, which moved the key pattern off
     // `Role::Threshold` — the role every built structure has — so that a key
-    // stopped standing in every dwelling's front room. Seed 1's flagship is
-    // agrarian, so its index-2 chamber is the loomroom the key now stands in.
-    for _ in 0..2 {
-        assert!(
-            say(&mut session, "enter further in").starts_with("[chamber "),
-            "seed 1's structure no longer reaches the loomroom, so nothing \
-             below is tested"
-        );
-    }
+    // stopped standing in every dwelling's front room. The flagship is
+    // agrarian, so the loomroom the key now stands in is chamber index 2.
+    //
+    // **NAMED, not counted** (The Cruck, Task 3). It was two `enter further
+    // in`s and then a loop of them "as far in as the place goes"; a structure
+    // is a rooted tree now, so `further in` refuses at a fork and both walks
+    // would have stood still. Index 2 is still the loomroom — the grammar puts
+    // the workroom there for an agrarian brief — but the ROUTE to it is the
+    // brief's, so the room is named and every chamber is visited.
+    assert!(
+        crate::common::walk_to_role_noun(&mut session, "loomroom"),
+        "this seed's structure no longer reaches the loomroom, so nothing \
+         below is tested"
+    );
     assert_eq!(
         say(&mut session, "take a key"),
         "You take the key.",
-        "precondition: seed 1's loomroom must hold a takeable key"
+        "precondition: the loomroom must hold a takeable key"
     );
-    for _ in 0..4 {
-        if !say(&mut session, "enter further in").starts_with("[chamber ") {
-            break;
-        }
-    }
+    crate::common::visit_every_chamber(&mut session);
     assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
 
     let saved_at = session.day();

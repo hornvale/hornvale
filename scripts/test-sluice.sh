@@ -85,20 +85,38 @@ tmp="$(mktemp -d)"
 # scripts/ (see their own comments for why $tmp cannot host them), so the
 # EXIT trap sweeps those paths too — belt-and-suspenders alongside the
 # `rm -f`/`update-ref -d` immediately after each test uses them, in case
-# `set -e` aborts the script somewhere in between. The two `refs/remotes/
-# sluice-test/*` refs are throwaway local refs the headline-refusal test
+# `set -e` aborts the script somewhere in between. The `refs/remotes/
+# sluice-test-$$/*` refs are throwaway local refs the headline-refusal test
 # creates with `git commit-tree` + `update-ref` (never a real remote, never
-# pushed) so a real commit object exists to test the headline check
-# against; swept here too for the same belt-and-suspenders reason.
+# pushed) so a real commit object exists to test the headline check against;
+# swept here too for the same belt-and-suspenders reason.
+#
+# THE `$$` IS LOAD-BEARING AND WAS ADDED AFTER THIS SUITE REDDENED A CAMPAIGN.
+# The refs must live in the REAL repository, because `git branch -r --contains`
+# is what sluice-request.sh checks and only the real ref store answers it. But
+# `refs/remotes/*` is SHARED ACROSS LINKED WORKTREES, and the chamber's
+# worktree (/home/nathan/Projects/hornvale-sluice-wt) is a linked worktree of
+# this repository rather than a clone. So two concurrent runs of this file used
+# ONE ref, and whichever finished first deleted it: the survivor's next
+# sluice-request call reported "<sha> is not on any remote branch — push first"
+# and five assertions failed on a tree with nothing wrong with it.
+#
+# That happened on 2026-09-05. campaign/the-lot went red at `outboard` rc=11
+# after 420 s — 241 passed, 5 failed — because the OPERATOR was running this
+# same file in another worktree while the chamber ran it, and three of those
+# local runs' EXIT traps fired inside the chamber's window. The campaign was
+# billed a serial-box slot for a collision in the gate, and the first reading
+# of it was "flaky test", which it is not: it is deterministic given overlap.
+# Naming the refs per-process removes the shared object entirely.
 trap 'rm -rf "$tmp"; \
       rm -f "$repo_root/scripts/.sluice-request-mutant-for-test.sh" \
             "$repo_root/scripts/.sluice-request-headline-mutant-for-test.sh"; \
-      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/wip 2>/dev/null || true; \
-      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/empty 2>/dev/null || true; \
-      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true; \
-      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/trailer 2>/dev/null || true; \
-      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/nudge 2>/dev/null || true; \
-      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/stranded 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/wip 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/empty 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/good 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/trailer 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/nudge 2>/dev/null || true; \
+      env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/stranded 2>/dev/null || true; \
       rm -f "$repo_root/scripts/.sluice-request-trailer-mutant-for-test.sh"' EXIT
 export HV_SLUICE_DIR="$tmp/state"
 
@@ -2411,7 +2429,7 @@ pushed_ref="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree \
     -p "$pushed_base" -m "chore: a commit for the enqueue-path tests
 
 Sluice-Headline: a headline so these tests reach the enqueue step")"
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/nudge "$pushed_ref"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test-$$/nudge "$pushed_ref"
 
 if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=fail \
     bash "$repo_root/scripts/sluice-request.sh" campaign/x "$pushed_ref" \
@@ -2554,9 +2572,9 @@ wip_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$he
 # and gets blamed on whatever was most recently added.
 empty_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD -m "" </dev/null)"
 good_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree "$headline_test_tree" -p HEAD -m "feat(sluice): a real headline for testing")"
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/wip "$wip_sha"
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/empty "$empty_sha"
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/good "$good_sha"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test-$$/wip "$wip_sha"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test-$$/empty "$empty_sha"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test-$$/good "$good_sha"
 
 # HV_SLUICE_BASE IS PINNED TO HEAD FOR EVERY INVOCATION IN THIS SECTION, and
 # that is hermeticity rather than convenience. The trailer is searched over
@@ -2607,7 +2625,7 @@ trailer_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree 
     -m "chore: tidy up after the real work
 
 Sluice-Headline: the thing that actually landed")"
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/trailer "$trailer_sha"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test-$$/trailer "$trailer_sha"
 if PATH="$tmp/bin:$PATH" FAKE_SSH_RESULT=ok \
     req campaign/x "$trailer_sha" >"$tmp/trailer.out" 2>"$tmp/trailer.err"; then
     ok "a submission carrying a Sluice-Headline: trailer is accepted, whatever its subject says"
@@ -2628,7 +2646,7 @@ stranded_sha="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" commit-tree
 Sluice-Headline: this line is stranded above a blank line
 
 Claude-Session: https://example.invalid/session")"
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test/stranded "$stranded_sha"
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref refs/remotes/sluice-test-$$/stranded "$stranded_sha"
 if req campaign/x "$stranded_sha" 2>"$tmp/stranded.err"; then
     bad "a Sluice-Headline stranded outside the final block was ACCEPTED — it would silently fall back at merge time"
 else
@@ -2713,9 +2731,9 @@ else
 fi
 rm -f "$mutant2"
 
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/wip 2>/dev/null || true
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/empty 2>/dev/null || true
-env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test/good 2>/dev/null || true
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/wip 2>/dev/null || true
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/empty 2>/dev/null || true
+env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" update-ref -d refs/remotes/sluice-test-$$/good 2>/dev/null || true
 
 echo "== make sluice-status / sluice-log: MUST reach the canonical box over ssh, never read local state directly"
 # Fix round 1, Critical. The first cut of these two Makefile targets read
@@ -3674,6 +3692,137 @@ if ! grep -q "OVERLAP" "$tmp/cross2.err"; then
     ok "cross-candidate anti-noise: an artifacts-only collision prints NO advisory"
 else
     bad "cross-candidate anti-noise: OVERLAP fired on a regenerated-only collision: $(cat "$tmp/cross2.err")"
+fi
+
+# --- 2b. THE MIXED COLLISION: artifacts paths must not be listed ------------
+# Case 2 above collides ONLY in artifacts paths and is silenced. That is the
+# easy half, and it is the half that was already right. The advisory judged
+# the set AS A WHOLE — `sluice_is_regenerated_only` returns 0 only if EVERY
+# member qualifies — so a collision in one hand-authored file plus two
+# generated ones printed all three under the heading "source path(s)".
+#
+# Observed on its first production firing, 2026-09-05: campaign/the-lot vs
+# campaign/the-warp listed docs/audits/type-audit-report.md beside one real
+# file. The advisory must name the real path, count only it, and say the rest
+# exist without listing them.
+# The declaration must live on BOTH refs, so it goes onto main before either
+# branch exists. This mirrors production exactly: a directory row saying
+# `artifacts`, and a more specific FILE row overriding it to none() — which is
+# how docs/audits/campaign-reconciliation.tsv is declared.
+g checkout -q main
+mkdir -p docs/audits
+cat > docs/generated-paths.txt <<'DECL2B'
+# path	author
+docs/audits/report.md	artifacts
+docs/audits/	artifacts
+docs/audits/handmade2b.tsv	none(hand-authored by each campaign; never regenerated)
+DECL2B
+printf 'base hand 2b\n' > docs/audits/handmade2b.tsv
+g add -A; g commit -qm main-declares-handmade2b
+
+g checkout -q -b campaign/candidate2b main
+mkdir -p docs/audits src
+printf 'candidate report 2b\n' > docs/audits/report.md
+printf 'candidate hand 2b\n' > docs/audits/handmade2b.tsv
+printf 'candidate src 2b\n' > src/mixed.rs
+g add -A; g commit -qm candidate2b-touches-all-three
+CAND2B="$(g rev-parse campaign/candidate2b)"
+
+g checkout -q -b campaign/other2b main
+mkdir -p docs/audits src
+printf 'other report 2b\n' > docs/audits/report.md
+printf 'other hand 2b\n' > docs/audits/handmade2b.tsv
+printf 'other src 2b\n' > src/mixed.rs
+g add -A; g commit -qm other2b-touches-all-three
+OTHER2B="$(g rev-parse campaign/other2b)"
+g checkout -q campaign/candidate2b
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/other2b "$OTHER2B" merge >/dev/null
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate2b "$CAND2B" >/dev/null 2>"$tmp/cross2b.err"
+cross2b_rc=$?
+set -e
+if [ "$cross2b_rc" -eq 0 ]; then
+    ok "mixed collision: still ADMITs (the advisory never changes the exit code)"
+else
+    bad "mixed collision: expected exit 0, got $cross2b_rc"
+fi
+if grep -q "overlap: *src/mixed.rs" "$tmp/cross2b.err"; then
+    ok "mixed collision: the genuine source path IS listed"
+else
+    bad "mixed collision: the real path was not reported: $(cat "$tmp/cross2b.err")"
+fi
+if ! grep -q "overlap: *docs/audits/report.md" "$tmp/cross2b.err"; then
+    ok "mixed collision: THE REGRESSION — an artifacts-authored path is NOT listed as a source overlap"
+else
+    bad "mixed collision: docs/audits/report.md was listed as a source path: $(cat "$tmp/cross2b.err")"
+fi
+if grep -q "overlap: *docs/audits/handmade2b.tsv" "$tmp/cross2b.err"; then
+    ok "mixed collision: a file declared hand-authored by BOTH refs is listed"
+else
+    bad "mixed collision: the hand-authored file was suppressed as noise: $(cat "$tmp/cross2b.err")"
+fi
+if grep -qE "OVERLAP — campaign/other2b \(queued\): 2 source path" "$tmp/cross2b.err"; then
+    ok "mixed collision: the COUNT is of real paths only, not of the whole collision"
+else
+    bad "mixed collision: wrong count in the heading: $(grep OVERLAP "$tmp/cross2b.err")"
+fi
+if grep -q "1 artifacts-authored path(s) also collide" "$tmp/cross2b.err"; then
+    ok "mixed collision: the suppressed paths are ACKNOWLEDGED by count, not silently dropped"
+else
+    bad "mixed collision: no note that artifacts paths were omitted: $(cat "$tmp/cross2b.err")"
+fi
+
+# --- 2c. THE ASYMMETRIC DECLARATION -----------------------------------------
+# Everything above declares the same thing on both refs, so it pins the RULE
+# and not its INPUTS — the precise blind spot that let the mouth and the
+# chamber disagree earlier today while sharing one function and passing an
+# agreement test. Here the two refs disagree: the candidate overrides the
+# directory row to none(), the queued row inherits `artifacts`. "Both must
+# agree before it counts as noise" means this path stays listed.
+g checkout -q main
+printf 'base asym\n' > docs/audits/asym.md
+g add -A; g commit -qm main-adds-asym
+
+# THE DIRECTION MATTERS AND THE FIRST DRAFT GOT IT WRONG. Putting the none()
+# override on the CANDIDATE does not discriminate: both the real rule and a
+# candidate-only rule refuse to call it noise, so the test passed against a
+# mutant that consulted one ref. The override therefore lives on the QUEUED
+# ROW, where the candidate reads `artifacts` and only the other side objects.
+g checkout -q -b campaign/candidate2c main
+printf 'candidate asym\n' > docs/audits/asym.md
+g add -A; g commit -qm candidate2c-touches-asym-inheriting-artifacts
+CAND2C="$(g rev-parse campaign/candidate2c)"
+
+g checkout -q -b campaign/other2c main
+cat > docs/generated-paths.txt <<'DECL2C'
+# path	author
+docs/audits/report.md	artifacts
+docs/audits/	artifacts
+docs/audits/handmade2b.tsv	none(hand-authored by each campaign; never regenerated)
+docs/audits/asym.md	none(this campaign says a human writes it)
+DECL2C
+printf 'other asym\n' > docs/audits/asym.md
+g add -A; g commit -qm other2c-declares-asym-hand-authored
+OTHER2C="$(g rev-parse campaign/other2c)"
+g checkout -q campaign/candidate2c
+
+bash "$repo_root/scripts/sluice-queue.sh" add campaign/other2c "$OTHER2C" merge >/dev/null
+
+set +e
+bash "$repo_root/scripts/sluice-mouth.sh" campaign/candidate2c "$CAND2C" >/dev/null 2>"$tmp/cross2c.err"
+cross2c_rc=$?
+set -e
+if [ "$cross2c_rc" -eq 0 ]; then
+    ok "asymmetric declaration: still ADMITs"
+else
+    bad "asymmetric declaration: expected exit 0, got $cross2c_rc"
+fi
+if grep -q "overlap: *docs/audits/asym.md" "$tmp/cross2c.err"; then
+    ok "asymmetric declaration: the QUEUED ROW calling it hand-authored keeps it listed, though the candidate reads artifacts"
+else
+    bad "asymmetric declaration: suppressed on the strength of ONE ref's declaration — the refs were not both consulted: $(cat "$tmp/cross2c.err")"
 fi
 
 # --- 3. no collision at all: total silence ----------------------------------

@@ -20,7 +20,9 @@ commands:
   village          the settlement
   castes           the settlement's castes
   beliefs          recorded beliefs
-  why <id>         recount how an entity came to be (ids from beliefs/places)
+  why <id>         recount how an entity came to be (ids from beliefs/places);
+                   an errand is named once, rolled up over its steps
+  why <id> --steps one line per step, each under its covering errand
   word <concept>   every species' word for a concept, or its reasoned gap
   phenomena [day] [--as <species>] — salient phenomena, optionally through a species' eyes
   facts <id>       every fact about entity id
@@ -271,44 +273,62 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 }
                 Err(e) => writeln!(output, "error: {e}")?,
             },
-            "why" => match argument.and_then(|a| a.parse::<u64>().ok()) {
-                Some(id) => match EntityId::new(id).and_then(|target| {
-                    hornvale_historiography::recount(world, target).map(|text| (target, text))
-                }) {
-                    Some((target, text)) => {
-                        write!(output, "{text}")?;
-                        // A belief recounts onward to the eyes that ranked
-                        // its phenomenon: held-by → settlement → peopled-by
-                        // → the species entity's authored vector.
-                        if let Some(Value::Entity(community)) =
-                            world.ledger.value_of(target, hornvale_religion::HELD_BY)
-                            && let Some(species) = hornvale_species::species_of(world, *community)
-                            && let Some(entity) = hornvale_species::species_entity(world, &species)
-                            && let Some(text) = hornvale_historiography::recount(world, entity)
-                        {
-                            writeln!(output, "Seen through {species} eyes:")?;
+            "why" => {
+                // `why <id>` and `why <id> --steps` (in either order). The
+                // flag is filtered out of the token stream rather than parsed
+                // positionally, so the bare id form is untouched.
+                const STEPS_FLAG: &str = "--steps";
+                let tokens: Vec<&str> = argument.into_iter().chain(parts).collect();
+                let steps = tokens.contains(&STEPS_FLAG);
+                let id = tokens
+                    .iter()
+                    .find(|t| **t != STEPS_FLAG)
+                    .and_then(|t| t.parse::<u64>().ok());
+                match id {
+                    // ONE view chooser, used by the top-level recount and by
+                    // the nested species recount below. Two call sites reading
+                    // the same flag independently is how the nested one came
+                    // to ignore `--steps` in the first place.
+                    Some(id) => match EntityId::new(id).and_then(|target| {
+                        recount_view(world, target, steps).map(|text| (target, text))
+                    }) {
+                        Some((target, text)) => {
                             write!(output, "{text}")?;
+                            // A belief recounts onward to the eyes that ranked
+                            // its phenomenon: held-by → settlement → peopled-by
+                            // → the species entity's authored vector.
+                            if let Some(Value::Entity(community)) =
+                                world.ledger.value_of(target, hornvale_religion::HELD_BY)
+                                && let Some(species) =
+                                    hornvale_species::species_of(world, *community)
+                                && let Some(entity) =
+                                    hornvale_species::species_entity(world, &species)
+                                && let Some(text) = recount_view(world, entity, steps)
+                            {
+                                writeln!(output, "Seen through {species} eyes:")?;
+                                write!(output, "{text}")?;
+                            }
+                            // A generated proper name carries a `name-gloss`
+                            // fact (Task 9 of The Words) when its site had a
+                            // true story to tell; recount it too.
+                            if let Some(gloss) =
+                                world.ledger.text_of(target, hornvale_kernel::NAME_GLOSS)
+                            {
+                                writeln!(
+                                    output,
+                                    "named for: {gloss} ({})",
+                                    site_facts_of(world, gloss)
+                                )?;
+                            }
                         }
-                        // A generated proper name carries a `name-gloss`
-                        // fact (Task 9 of The Words) when its site had a
-                        // true story to tell; recount it too.
-                        if let Some(gloss) =
-                            world.ledger.text_of(target, hornvale_kernel::NAME_GLOSS)
-                        {
-                            writeln!(
-                                output,
-                                "named for: {gloss} ({})",
-                                site_facts_of(world, gloss)
-                            )?;
-                        }
-                    }
-                    None => writeln!(output, "nothing is recorded about entity {id}")?,
-                },
-                None => writeln!(
-                    output,
-                    "usage: why <entity-id> (ids from `beliefs`, `places`)"
-                )?,
-            },
+                        None => writeln!(output, "nothing is recorded about entity {id}")?,
+                    },
+                    None => writeln!(
+                        output,
+                        "usage: why <entity-id> [--steps] (ids from `beliefs`, `places`)"
+                    )?,
+                }
+            }
             "phenomena" => {
                 // `argument` already popped one token from `parts`; the rest
                 // of the line (e.g. the species name after `--as`) is still
@@ -487,6 +507,24 @@ fn interpretations_of(names: &[&str], gloss: &str) -> Vec<String> {
         }
     }
     found
+}
+
+/// One entity's recount, in whichever view `steps` names: the rolled-up
+/// default, or one line per step (The Warrant, spec §5).
+///
+/// It exists so that `why`'s two recount call sites — the entity the reader
+/// asked for, and the species entity a belief recounts onward through — cannot
+/// disagree about which view the reader asked for. They did: the nested one
+/// called `recount` unconditionally, so `why <belief> --steps` rendered the
+/// belief per-step and the species rolled up. Harmless in practice, because a
+/// species entity commits no errands and its two views are identical today —
+/// which is exactly why nothing would have caught it.
+fn recount_view(world: &World, entity: EntityId, steps: bool) -> Option<String> {
+    if steps {
+        hornvale_historiography::recount_steps(world, entity)
+    } else {
+        hornvale_historiography::recount(world, entity)
+    }
 }
 
 fn render_value(value: &Value) -> String {

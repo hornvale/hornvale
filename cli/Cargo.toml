@@ -25,6 +25,7 @@ hornvale-worldgen = { path = "../windows/worldgen" }
 hornvale-lab = { path = "../windows/lab" }
 hornvale-historiography = { path = "../windows/historiography" }
 hornvale-locale = { path = "../windows/locale" }
+hornvale-lot = { path = "../windows/lot" }
 hornvale-scene = { path = "../windows/scene" }
 hornvale-sentiment = { path = "../windows/sentiment" }
 hornvale-vessel = { path = "../windows/vessel" }

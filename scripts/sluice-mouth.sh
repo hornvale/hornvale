@@ -104,9 +104,8 @@ HV_PHASES_LIB=1 . "$(dirname "${BASH_SOURCE[0]}")/sluice-phases.sh"
 # form that actually works here.
 sluice_report_queue_overlaps() {
     local branch="$1" sha="$2"
-    local mouth_dir root rows
+    local mouth_dir rows
     mouth_dir="$(dirname "${BASH_SOURCE[0]}")"
-    root="$(env -u GIT_DIR -u GIT_INDEX_FILE git rev-parse --show-toplevel 2>/dev/null || echo .)"
     rows="$(bash "$mouth_dir/sluice-queue.sh" list 2>/dev/null || true)"
     [ -n "$rows" ] || return 0
     local rid rbranch rsha rstate
@@ -133,13 +132,54 @@ sluice_report_queue_overlaps() {
         mconf="$(printf '%s\n' "$mt_out" \
             | awk 'length($0) == 40 && /^[0-9a-f]+$/ { seen = 1; next } seen && /^$/ { exit } seen { print }')"
         [ -n "$mconf" ] || continue
-        if sluice_is_regenerated_only "$mconf" "$root"; then
-            continue   # bookkeeping only — the chamber resolves it by regeneration
-        fi
+        # PARTITION THE PATHS; DO NOT JUDGE THE SET AS A WHOLE.
+        #
+        # This was `sluice_is_regenerated_only "$mconf" "$root"`, which is
+        # all-or-nothing: it suppresses the advisory only when EVERY colliding
+        # path is artifacts-authored. A MIXED collision therefore printed the
+        # artifacts paths too, under the heading "source path(s)" — which is
+        # exactly what they are not. Observed on its first production firing,
+        # 2026-09-05: campaign/the-lot against campaign/the-warp reported
+        # docs/audits/type-audit-report.md and docs/audits/plumb-roster.md as
+        # source overlaps beside one genuine hand-authored file. A reader
+        # either acts on noise or learns to skim the advisory, and the second
+        # is worse, because the one line that mattered was in the same list.
+        #
+        # It also read `$root` — the working tree — which is the staleness this
+        # file's other classifier call was fixed for earlier the same evening.
+        # The fix was applied to the conflict path and missed here. Both call
+        # sites now ask the REFS.
+        local cand_decl row_decl real="" noise=0 p author_c author_r
+        cand_decl="$(mktemp)"; row_decl="$(mktemp)"
+        env -u GIT_DIR -u GIT_INDEX_FILE git show "$sha:docs/generated-paths.txt" \
+            > "$cand_decl" 2>/dev/null || : > "$cand_decl"
+        env -u GIT_DIR -u GIT_INDEX_FILE git show "$rsha:docs/generated-paths.txt" \
+            > "$row_decl" 2>/dev/null || : > "$row_decl"
+        while IFS= read -r p; do
+            [ -n "$p" ] || continue
+            author_c="$(sluice_path_author "$p" "$cand_decl")"
+            author_r="$(sluice_path_author "$p" "$row_decl")"
+            # Both sides must call it artifacts before it counts as noise. An
+            # undeclared path is not artifacts, so it stays — failing toward
+            # reporting, which for an advisory is the safe direction.
+            if [ "$author_c" = "artifacts" ] && [ "$author_r" = "artifacts" ]; then
+                noise=$((noise + 1))
+            else
+                real="${real}${p}
+"
+            fi
+        done <<PATHS
+$mconf
+PATHS
+        rm -f "$cand_decl" "$row_decl"
+        real="${real%
+}"
+        [ -n "$real" ] || continue   # every path regenerable: the chamber resolves it
         local n
-        n="$(printf '%s\n' "$mconf" | grep -c .)"
+        n="$(printf '%s\n' "$real" | grep -c .)"
         echo "sluice-mouth: OVERLAP — $rbranch ($rstate): $n source path(s)" >&2
-        printf '%s\n' "$mconf" | sed 's/^/  overlap: /' >&2
+        printf '%s\n' "$real" | sed 's/^/  overlap: /' >&2
+        [ "$noise" -gt 0 ] && echo "sluice-mouth:   ($noise artifacts-authored path(s) also collide; the chamber regenerates those — not listed)" >&2
         echo "sluice-mouth: this is ADVISORY. That candidate may never land; if it does, absorb main and resubmit." >&2
     done <<EOF
 $rows

@@ -445,7 +445,13 @@ pub struct LocaleContext {
 /// whose reflectance the colour layer reads — names the same vertex. Splitting
 /// this would let a room be described as granite lowland and drawn in
 /// basalt grey.
-fn dominant_corner(weights: &[(Vertex, u64); 4]) -> (Vertex, u64) {
+///
+/// **`pub` since The Warp (Task 2):** `windows/lab`'s legibility instrument
+/// reads the rock sign at the same vertex the room's biome word and colour
+/// come from, and a second copy of this tie-break is exactly how they would
+/// drift.
+/// type-audit: bare-ok(count: weights), bare-ok(count: return)
+pub fn dominant_corner(weights: &[(Vertex, u64); 4]) -> (Vertex, u64) {
     let mut best = weights[0];
     for &cand in &weights[1..] {
         if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
@@ -467,6 +473,93 @@ fn blend_at_corners(weights: &[(Vertex, u64); 4], value: &dyn Fn(Vertex) -> f64)
     let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
     let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
     quantize(sum / denom as f64)
+}
+
+/// Wetness is a budget and an allocation (The Rill, R-7/R-8): the climate
+/// supply this room's vertices receive, redistributed by where the room sits
+/// relative to its own sub-vertex watercourse. Grounded only where the axis
+/// means ground wetness — at sea the same axis is the set of the current, on
+/// ice it is snow cover, and in the rock column it is seep, and a river's
+/// proximity governs none of those.
+///
+/// Lifted from [`LocaleContext::grounded_wetness_for`]'s own body since The
+/// Warp (Task 2), which now calls this taking `&self.terrain`/`&self.index`,
+/// so [`wetness_axis`] can ground a wetness reading without a
+/// `LocaleContext` of its own. `moisture` is the caller's already-blended,
+/// already-quantized four-corner reading ([`blend_at_corners`]), never a raw
+/// vertex sample.
+fn grounded_wetness_with(
+    terrain: &GeneratedTerrain,
+    index: &NearestVertexIndex,
+    addr: &Facet,
+    expr: BiomeExpr,
+    moisture: f64,
+) -> Option<f64> {
+    crate::micro::wetness_is_grounded(expr).then(|| {
+        let globe = terrain.globe();
+        crate::micro::grounded_wetness(
+            moisture,
+            rill_reading(
+                addr.centroid(),
+                terrain.channels(),
+                globe,
+                terrain.geosphere(),
+                index,
+                // `Drawn`, never `Even`: `Even` is R-5's falsification arm
+                // and is not a production partition.
+                &CatchmentCut::Drawn(globe.rill_partition_seed()),
+            ),
+        )
+    })
+}
+
+/// The room's full sub-vertex [`MicroField`] — the SAME one `describe` and
+/// [`LocaleContext::reflectance_at_facet`] build (`grounded_wetness` where
+/// the ground is bare under open air, the address draw spent either way).
+///
+/// **Free, not a method, since The Warp (Task 2):** `windows/lab` holds a
+/// terrain, a climate and a nearest-vertex index of its own and must read
+/// these axes without cloning both into a `LocaleContext` per world; one
+/// implementation, two callers (spec §4.4). Built whole, not per-axis,
+/// because a later `windows/lab` task reads relief/aspect/openness the same
+/// way it reads wetness, and a second, axis-scoped copy of this call chain
+/// is exactly how they would drift apart from `describe`'s own.
+/// type-audit: bare-ok(count: weights)
+pub fn micro_field_at(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    index: &NearestVertexIndex,
+    seed: Seed,
+    addr: &Facet,
+    weights: &[(Vertex, u64); 4],
+) -> MicroField {
+    let best = dominant_corner(weights);
+    let expr = climate.biome_expr_at(best.0);
+    let moisture = blend_at_corners(weights, &|c| climate.moisture_at(c));
+    let grounded = grounded_wetness_with(terrain, index, addr, expr, moisture);
+    crate::micro::micro_field(addr.seed(seed), grounded)
+}
+
+/// The grounded wetness axis a room's descriptor reads, in `[-1, 1]` — the
+/// `MicroField.wetness` [`micro_field_at`] builds, which is exactly what
+/// `describe` emits. A one-line wrapper with no production caller today —
+/// `windows/lab`'s legibility instrument calls [`micro_field_at`] directly
+/// and reads `.wetness` off the whole field, the same as everything else
+/// does — kept anyway because it costs one line and names the axis the
+/// descriptor's wetness word cuts; its own callers are this crate's tests
+/// (`windows/locale/tests/suite/warp_wetness.rs`). The wrapper's own
+/// arithmetic can never diverge from `micro_field_at`'s because it has
+/// none.
+/// type-audit: bare-ok(count: weights), bare-ok(ratio: return)
+pub fn wetness_axis(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    index: &NearestVertexIndex,
+    seed: Seed,
+    addr: &Facet,
+    weights: &[(Vertex, u64); 4],
+) -> f64 {
+    micro_field_at(terrain, climate, index, seed, addr, weights).wetness
 }
 
 /// What a step from one room to another does to the water between them.
@@ -912,22 +1005,7 @@ impl LocaleContext {
     /// already-blended, already-quantized four-corner reading
     /// ([`blend_at_corners`]), never a raw vertex sample.
     fn grounded_wetness_for(&self, addr: &Facet, expr: BiomeExpr, moisture: f64) -> Option<f64> {
-        crate::micro::wetness_is_grounded(expr).then(|| {
-            let globe = self.terrain.globe();
-            crate::micro::grounded_wetness(
-                moisture,
-                rill_reading(
-                    addr.centroid(),
-                    self.terrain.channels(),
-                    globe,
-                    self.terrain.geosphere(),
-                    &self.index,
-                    // `Drawn`, never `Even`: `Even` is R-5's falsification
-                    // arm and is not a production partition.
-                    &CatchmentCut::Drawn(globe.rill_partition_seed()),
-                ),
-            )
-        })
+        grounded_wetness_with(&self.terrain, &self.index, addr, expr, moisture)
     }
 
     /// The surface mixture at `addr` on `at`, un-integrated, so a caller can
@@ -1605,6 +1683,21 @@ impl LocaleContext {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
         Some(Self::blend_with_weights(weights, field))
+    }
+
+    /// [`wetness_axis`] for a facet this context can resolve; `None` above
+    /// the globe level, exactly as [`Self::blend_at`] answers.
+    /// type-audit: bare-ok(ratio: return)
+    pub fn wetness_axis_at(&self, addr: &Facet) -> Option<f64> {
+        let weights = addr.corner_weights(self.climate.geosphere(), &self.index)?;
+        Some(wetness_axis(
+            &self.terrain,
+            &self.climate,
+            &self.index,
+            self.seed,
+            addr,
+            &weights,
+        ))
     }
 
     /// [`Self::blend_at`], consulting a caller-owned, READ-ONLY
