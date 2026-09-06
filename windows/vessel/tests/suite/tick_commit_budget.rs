@@ -82,6 +82,7 @@
 //! genesis.
 
 use crate::common;
+use hornvale_vessel::liveness::{ERRAND_COMPANY, ERRAND_FLIGHT};
 use hornvale_vessel::{PossessOpts, Session};
 
 /// How many consecutive `wait`s to drive. **Not** separating a transient
@@ -301,17 +302,30 @@ const MAX_SHARE_CEILING_PCT: f64 = 10.0;
 /// the failure this floor exists to catch).
 const MIN_CONTRIBUTING_RESIDENTS: usize = 60;
 
-/// The ceiling on how many `(fear)`- or `(belonging)`-tagged provenance
-/// facts may appear across the whole [`TICKS`]-tick run, summed over every
-/// subject. **Measured 0.** Seed 42's roll carries no wild body (the
-/// nearest attractor sits roughly 100 rooms out — see the module doc), so
-/// the two-place fear/belonging pair this file used to pin as a limit cycle
+/// The ceiling on how many fear- or belonging-driven errands may appear
+/// across the whole [`TICKS`]-tick run, summed over every subject.
+/// **Measured 0.** Seed 42's roll carries no wild body (the nearest
+/// attractor sits roughly 100 rooms out — see the module doc), so the
+/// two-place fear/belonging pair this file used to pin as a limit cycle
 /// cannot be produced by anything on today's roll at all. A small ceiling
-/// rather than a literal zero, so an unrelated future predicate reusing one
-/// of these two parenthetical tags for an ordinary resident emotion does not
-/// false-fail this witness; more than a handful is the shape this exists to
-/// catch returning (the old cycle produced 117 such facts and 43 switches
-/// between them).
+/// rather than a literal zero, so an unrelated future emission of one of
+/// these two errands for an ordinary resident does not false-fail this
+/// witness; more than a handful is the shape this exists to catch returning
+/// (the old cycle produced 117 such facts and 43 switches between them).
+///
+/// **IT KEYS ON THE PREDICATE NOW, NOT ON PROVENANCE TEXT (The Warrant,
+/// Task 3 Step 1 — done BEFORE the flip, on purpose).** This witness used
+/// to count committed facts whose `provenance` string contained the literal
+/// substrings `"(fear)"` or `"(belonging)"`, because a walking creature's
+/// `agent-at` provenance was the authored gloss naming its drive. Task 3
+/// retires that: every `agent-at` now carries the producer name
+/// `vessel/liveness`, so the old substring search would match **nothing**,
+/// read 0, and **pass** — an instrument that had silently stopped measuring
+/// inside a green gate (spec §7.2). [`ERRAND_FLIGHT`] and [`ERRAND_COMPANY`]
+/// are the same two drives named as permanent on-disk predicate keys, which
+/// is a strictly better anchor than a substring of a prose sentence: the
+/// keys cannot be reworded, and `errand_key`'s exhaustive match makes a new
+/// `DriveKind` a compile error rather than a silently unmatched string.
 const FEAR_OR_BELONGING_CEILING: usize = 5;
 
 /// **THE PREMISE THIS WITNESS PINNED IS GONE (The Roll, Task 8) — RE-MEASURED,
@@ -338,7 +352,9 @@ const FEAR_OR_BELONGING_CEILING: usize = 5;
 /// distinct residents contributing in the last half   67 of 67
 /// per-resident last-half count                       19-20 (min-max), dead even
 /// (fear)/(belonging)-tagged facts, whole run              0
-/// provenance carrying the total (both halves, all subjects):
+/// provenance carrying the total (both halves, all subjects) — HISTORICAL:
+/// the strings below were `agent-at`-era recovery-act provenance and are
+/// unmoved by The Warrant, which flips only `agent-at`'s own field:
 /// "drank from the river (thirst sated)" 482
 /// "grazed the productive ground (hunger sated)" 294
 /// "slept at home (fatigue eased)" 1788
@@ -369,7 +385,7 @@ const FEAR_OR_BELONGING_CEILING: usize = 5;
 ///   little" from "the roll commits almost nothing", which this measurement
 ///   is not: 2564 facts over 40 ticks is the same steady-state rate
 ///   [`STEADY_STATE_CEILING`]'s own doc records;
-/// - no `(fear)`/`(belonging)` drive facts reappear in force
+/// - no fear/belonging ERRANDS reappear in force
 ///   ([`FEAR_OR_BELONGING_CEILING`]) — the direct witness that the old
 ///   two-place cycle, or something wearing its shape, has not quietly
 ///   rejoined the roll.
@@ -414,18 +430,32 @@ const FEAR_OR_BELONGING_CEILING: usize = 5;
 /// doc claims
 /// ```
 ///
-/// MUTATION THIS MUST FAIL AGAINST (3): in the drive-fact count, replace the
-/// `(fear)`/`(belonging)` filter with `|_p| true`, counting every committed
-/// provenance string as a hit against [`FEAR_OR_BELONGING_CEILING`]. Red
-/// observed:
+/// MUTATION THIS MUST FAIL AGAINST (3), RE-TAKEN FOR THE WARRANT because
+/// the assertion now keys on the predicate rather than on provenance text
+/// (see [`FEAR_OR_BELONGING_CEILING`]). **The obvious candidate is a no-op
+/// here and that is worth recording rather than quietly skipping**: seed 42
+/// commits ZERO fear/belonging errands, so dropping the ceiling from 5 to 0
+/// still passes (`0 <= 0`), verified 2026-09-05. A ceiling mutation cannot
+/// witness anything against a measured zero.
+///
+/// So the mutation substitutes the FILTER instead, swapping the two errand
+/// keys for two predicates this run does commit in quantity —
+/// `p.as_str() == "drank" || p.as_str() == "slept"`. That is strictly
+/// stronger than the old `|_p| true`: it proves the filter really reads the
+/// JSON `predicate` field and matches on exact key equality, which is the
+/// one thing a permanently-zero witness otherwise cannot demonstrate.
+/// Target text asserted present before substituting; file restored and
+/// `diff`-confirmed byte-identical afterward. Red observed 2026-09-05:
 ///
 /// ```text
+/// fear/belonging errands over the whole run = 2256
 /// thread 'tick_commit_budget::the_commit_rate_is_carried_by_the_settled_rosters_even_churn'
-/// panicked at windows/vessel/tests/suite/tick_commit_budget.rs:466:5:
-/// 24403 (fear)/(belonging)-tagged facts were committed over the run, past
-/// the ceiling of 5 (measured 0 when this witness was re-measured for The
-/// Roll) — a wild body's drive cycle looks to have re-entered seed 42's
-/// derived roll
+/// panicked at windows/vessel/tests/suite/tick_commit_budget.rs:529:5:
+/// 2256 errand/flight/errand/company errands were committed over the run,
+/// past the ceiling of 5 (measured 0 when this witness was re-measured for
+/// The Roll, and 0 again when The Warrant re-pointed it off provenance text
+/// onto these two predicates) — a wild body's drive cycle looks to have
+/// re-entered seed 42's derived roll
 /// ```
 #[test]
 fn the_commit_rate_is_carried_by_the_settled_rosters_even_churn() {
@@ -434,10 +464,13 @@ fn the_commit_rate_is_carried_by_the_settled_rosters_even_churn() {
         Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
 
     // Facts per subject, read out of the session's own committed ledger. The
-    // JSON is the only public read of a fact's SUBJECT and PROVENANCE from an
-    // integration test, and provenance is the whole point here: the drive
-    // that committed a fact is what would distinguish a cycle from churn, if
-    // one existed.
+    // JSON is the only public read of a fact's SUBJECT and PREDICATE from an
+    // integration test, and the predicate is what distinguishes a drive cycle
+    // from ordinary churn: an errand key names the drive that set the
+    // creature walking. Assertions (1) and (2) use only the per-subject
+    // COUNT, so what each `Vec` holds is (3)'s concern alone — see
+    // `FEAR_OR_BELONGING_CEILING`'s doc for why it is the predicate and no
+    // longer the provenance string.
     let by_subject = |s: &Session<'_>| -> std::collections::BTreeMap<String, Vec<String>> {
         let doc: serde_json::Value =
             serde_json::from_str(&s.session_ledger_json()).expect("a ledger serializes");
@@ -445,7 +478,7 @@ fn the_commit_rate_is_carried_by_the_settled_rosters_even_churn() {
         for f in doc["facts"].as_array().expect("the ledger carries facts") {
             out.entry(f["subject"].to_string())
                 .or_default()
-                .push(f["provenance"].as_str().unwrap_or("").to_string());
+                .push(f["predicate"].as_str().unwrap_or("").to_string());
         }
         out
     };
@@ -499,16 +532,18 @@ fn the_commit_rate_is_carried_by_the_settled_rosters_even_churn() {
         "only {contributing} distinct subjects committed anything in the last half, under the floor of {MIN_CONTRIBUTING_RESIDENTS} — measured 67 of 67 when this witness was re-measured for The Roll. The steady-state rate STEADY_STATE_CEILING gates on would then be resting on a handful of residents rather than the settled roster this doc claims"
     );
 
-    // (3) No (fear)/(belonging) drive facts — the direct witness that the
-    //     old two-place limit cycle has not quietly rejoined the roll.
+    // (3) No fear/belonging ERRANDS — the direct witness that the old
+    //     two-place limit cycle has not quietly rejoined the roll. Keyed on
+    //     the two permanent predicate names, not on a prose substring; see
+    //     FEAR_OR_BELONGING_CEILING's doc.
     let fear_or_belonging: usize = at_end
         .values()
         .flatten()
-        .filter(|p| p.contains("(fear)") || p.contains("(belonging)"))
+        .filter(|p| p.as_str() == ERRAND_FLIGHT || p.as_str() == ERRAND_COMPANY)
         .count();
-    println!("(fear)/(belonging) facts over the whole run = {fear_or_belonging}");
+    println!("fear/belonging errands over the whole run = {fear_or_belonging}");
     assert!(
         fear_or_belonging <= FEAR_OR_BELONGING_CEILING,
-        "{fear_or_belonging} (fear)/(belonging)-tagged facts were committed over the run, past the ceiling of {FEAR_OR_BELONGING_CEILING} (measured 0 when this witness was re-measured for The Roll) — a wild body's drive cycle looks to have re-entered seed 42's derived roll"
+        "{fear_or_belonging} {ERRAND_FLIGHT}/{ERRAND_COMPANY} errands were committed over the run, past the ceiling of {FEAR_OR_BELONGING_CEILING} (measured 0 when this witness was re-measured for The Roll, and 0 again when The Warrant re-pointed it off provenance text onto these two predicates) — a wild body's drive cycle looks to have re-entered seed 42's derived roll"
     );
 }

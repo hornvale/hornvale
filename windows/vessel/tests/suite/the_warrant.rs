@@ -2,7 +2,7 @@
 use crate::common;
 use hornvale_vessel::liveness::{
     AGENT_AT, ERRAND_COMFORT, ERRAND_COMPANY, ERRAND_FLIGHT, ERRAND_FORAGE, ERRAND_HOME,
-    ERRAND_REST, ERRAND_WATER_BLIND, ERRAND_WATER_KNOWN, errand_predicates,
+    ERRAND_PRODUCER, ERRAND_REST, ERRAND_WATER_BLIND, ERRAND_WATER_KNOWN, errand_predicates,
 };
 use hornvale_vessel::{PossessOpts, Session};
 
@@ -140,36 +140,153 @@ fn an_errand_commits_once_and_its_steps_commit_under_it() {
     }
 }
 
-/// The count of errand facts equals the count of REASON CHANGES in the trail
-/// — this is the losslessness claim of spec §1, asserted mechanically rather
-/// than argued. Compared against the provenance runs the steps still carry
-/// (Task 2 has not flipped them yet), which is why this test is written NOW
-/// and not after Task 3.
+/// THE EPOCH (The Warrant, Task 3). No committed `agent-at` fact carries
+/// authored prose any more: its provenance names the PRODUCER, like every
+/// other fact in the repo. The reader-facing words live in the concept
+/// registry, on the eight `errand/*` predicates (spec §4.2), where
+/// `hornvale_historiography::recount` renders them from
+/// `register_predicate`'s doc string.
+///
+/// **The assertion is exact equality against [`ERRAND_PRODUCER`], not an
+/// absence check.** "No provenance contains a parenthetical drive tag" would
+/// be satisfied by any new prose that happened to avoid the eight strings,
+/// which is the failure this epoch exists to close permanently rather than
+/// once.
 #[test]
-fn one_errand_fact_per_run_of_constant_step_provenance() {
+fn no_agent_at_provenance_is_authored_prose() {
     let facts = walk_facts(WARRANT_WALK_SEED, WARRANT_WALK_WAITS);
-    let mut subjects: Vec<&str> = facts.iter().map(|f| f.subject.as_str()).collect();
-    subjects.sort_unstable();
-    subjects.dedup();
+    let steps: Vec<&ParsedFact> = facts.iter().filter(|f| f.predicate == AGENT_AT).collect();
     assert!(
-        !subjects.is_empty(),
-        "the harness must derive at least one subject, or this test is vacuous"
+        !steps.is_empty(),
+        "the harness must walk, or this test is vacuous"
     );
-    for entity in subjects {
-        let provs: Vec<&str> = facts
-            .iter()
-            .filter(|f| f.subject == entity && f.predicate == AGENT_AT)
-            .map(|f| f.provenance.as_str())
-            .collect();
-        let runs =
-            provs.windows(2).filter(|w| w[0] != w[1]).count() + usize::from(!provs.is_empty());
-        let errands = facts
-            .iter()
-            .filter(|f| f.subject == entity && f.predicate.starts_with("errand/"))
-            .count();
+    for step in &steps {
         assert_eq!(
-            errands, runs,
-            "entity {entity}: {errands} errand facts against {runs} provenance runs"
+            step.provenance, ERRAND_PRODUCER,
+            "an agent-at provenance still carries prose: {:?}",
+            step.provenance
         );
     }
+}
+
+/// The frozen before-image this file's H1 test compares against:
+/// `windows/vessel/tests/fixtures/the-warrant-glosses.json`, captured in
+/// Task 2 **while the per-step prose was still live**.
+///
+/// **It is deliberately NOT in `docs/generated-paths.txt` and must never be
+/// regenerated.** A re-derivation of the after-side compared against itself
+/// would pass unconditionally and prove nothing — the whole content of H1 is
+/// that the after-side agrees with a record taken before the change. If the
+/// comparison below fails, the finding is the disagreement, not a stale
+/// fixture.
+const GLOSS_FIXTURE: &str = "tests/fixtures/the-warrant-glosses.json";
+
+/// H1, the losslessness claim of spec §1, asserted as EXACT EQUALITY rather
+/// than approximation: the sequence of reason-glosses a reader can see, and
+/// the day each run of one begins, is identical before and after the flip.
+///
+/// The "before" side is the frozen fixture — each entity's run-start `(day,
+/// provenance)` pairs off the live `agent-at` prose, taken in Task 2. The
+/// "after" side is each entity's `errand/*` facts in commit order, with each
+/// predicate resolved through [`errand_predicates`] to the gloss the registry
+/// now carries. A run boundary is *defined* as the point where the string
+/// changes, so a per-errand fact is lossless by construction — this test is
+/// what makes that argument a measurement.
+///
+/// **THIS TEST REPLACES `one_errand_fact_per_run_of_constant_step_provenance`
+/// AND IS STRICTLY STRONGER, WHICH IS WHY THE OLD ONE IS GONE RATHER THAN
+/// KEPT.** That test compared errand COUNTS against the runs of live
+/// `agent-at` prose in the SAME run — a comparison the flip destroys by
+/// construction, since every `agent-at` provenance is now the identical
+/// producer string and every entity would read as exactly one run. It could
+/// not have survived in any form. What it pinned (one errand per run of
+/// constant reason) is a strict weakening of what this pins (the same runs,
+/// same order, same days, same glosses, against a record taken before the
+/// change) — a count is implied by an equal sequence.
+///
+/// claim: invariant(forall-entity on one pinned seed — every entity carrying
+/// an errand trail on `WARRANT_WALK_SEED` has exactly the gloss sequence and
+/// the day sequence the frozen before-image records; the quantifier ranges
+/// over that seed's entities, not over seeds, because a before-image can
+/// only exist for a seed captured before the flip)
+#[test]
+fn every_gloss_and_its_first_day_survives_the_flip() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(GLOSS_FIXTURE);
+    let raw = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("the frozen before-image must exist at {path:?}: {e}"));
+    let doc: serde_json::Value = serde_json::from_str(&raw).expect("the fixture is JSON");
+    let expected = doc["entities"]
+        .as_object()
+        .expect("the fixture carries an entity map");
+    assert!(
+        !expected.is_empty(),
+        "the frozen before-image is empty, so this test would prove nothing"
+    );
+
+    let facts = walk_facts(WARRANT_WALK_SEED, WARRANT_WALK_WAITS);
+    let table: std::collections::BTreeMap<&str, &str> = errand_predicates().into_iter().collect();
+
+    let mut checked = 0usize;
+    for (entity, pairs) in expected {
+        let before: Vec<(i64, String)> = pairs
+            .as_array()
+            .expect("each entity carries an array of run starts")
+            .iter()
+            .map(|p| {
+                (
+                    p["day"].as_i64().expect("a run start is dated"),
+                    p["provenance"]
+                        .as_str()
+                        .expect("a run start carries its gloss")
+                        .to_string(),
+                )
+            })
+            .collect();
+        let after: Vec<(i64, String)> = facts
+            .iter()
+            .filter(|f| f.subject.as_str() == entity && f.predicate.starts_with("errand/"))
+            .map(|f| {
+                (
+                    f.day,
+                    (*table
+                        .get(f.predicate.as_str())
+                        .unwrap_or_else(|| panic!("{} is not a registered errand", f.predicate)))
+                    .to_string(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            after, before,
+            "entity {entity}: the errand glosses and their days differ from the frozen \
+             before-image. This is the H1 disagreement, NOT a stale fixture — do not \
+             regenerate {GLOSS_FIXTURE}"
+        );
+        checked += 1;
+    }
+    assert_eq!(
+        checked,
+        expected.len(),
+        "every entity in the before-image must be compared"
+    );
+
+    // The other direction: no entity gained an errand trail the before-image
+    // does not know about. A per-entity equality alone cannot see that.
+    let mut after_subjects: Vec<&str> = facts
+        .iter()
+        .filter(|f| f.predicate.starts_with("errand/"))
+        .map(|f| f.subject.as_str())
+        .collect();
+    after_subjects.sort_unstable();
+    after_subjects.dedup();
+    for s in &after_subjects {
+        assert!(
+            expected.contains_key(*s),
+            "entity {s} commits errands but is absent from the frozen before-image"
+        );
+    }
+    assert_eq!(
+        after_subjects.len(),
+        expected.len(),
+        "the set of entities with an errand trail must match the before-image exactly"
+    );
 }

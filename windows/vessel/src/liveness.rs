@@ -77,10 +77,12 @@ pub const ERRAND_HOME: &str = "errand/home";
 /// fall-through into the wrong errand — for an enum widening the compiler is
 /// the enumeration, and a wildcard would void it.
 ///
-/// **The production caller is the walk's own `MoveTo` commit** (beside
-/// [`prose_for`], The Warrant, Task 2) — this names the errand boundary that
-/// commits one [`errand_fact`] per maximal run of the same key, rather than
-/// once per step.
+/// **The production caller is the walk's own `MoveTo` commit** — this names
+/// the errand boundary that commits one [`errand_fact`] per maximal run of
+/// the same key, rather than once per step. Since The Warrant's Task 3 it is
+/// also the ONLY `Mode` → reason mapping in the crate: the eight-arm prose
+/// match that stood beside it is deleted, so there is no second copy to
+/// drift.
 pub(crate) fn errand_key(mode: Mode, believed: bool) -> &'static str {
     match mode {
         Mode::Pursuing(DriveKind::Thirst) if believed => ERRAND_WATER_KNOWN,
@@ -199,13 +201,40 @@ fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Optio
 ///
 /// Unlike `agent-at`, the errand namespace is eight distinct predicate
 /// strings rather than one, so this scans each of [`errand_predicates`]'s
-/// eight commit streams for its own latest fact and keeps whichever has the
-/// greatest `day` — the same "latest wins" rule [`agent_position`] applies
-/// within a single predicate, generalised across all eight.
-fn latest_committed_errand(ledger: &Ledger, entity: EntityId) -> Option<&'static str> {
+/// eight commit streams for its own latest fact with day ≤ `t` and keeps
+/// whichever has the greatest `day` — the same "latest wins" rule
+/// [`agent_position`] applies within a single predicate, generalised across
+/// all eight.
+///
+/// **THE `day <= t` FILTER IS A NO-OP FOR TODAY'S ONE CALLER, AND IT IS HERE
+/// ANYWAY (The Warrant, Task 3).** [`WalkState::begin`] passes the walk's own
+/// `from` against the FROZEN pre-tick ledger, and a tick's `frozen` never
+/// holds facts past its own `from` — so the filter excludes nothing and this
+/// reduces to the absolute-latest errand, exactly as it did without it.
+///
+/// It was written the other way first: unfiltered, safe only because of that
+/// invariant, which is stated in [`agent_position`]'s doc — a DIFFERENT
+/// function. A correctness argument that lives somewhere else is one a reader
+/// of this function cannot see and a future caller cannot be expected to
+/// preserve, and the sibling [`latest_committed_position`] carries the filter
+/// for precisely the case that would break it: The Phantom's transient-danger
+/// memory re-derives a PAST instant, and against a whole-history ledger an
+/// unfiltered read would answer with the future. Matching the sibling costs a
+/// `filter` and removes the dependency rather than documenting it.
+fn latest_committed_errand(
+    ledger: &Ledger,
+    entity: EntityId,
+    t: WorldTime,
+) -> Option<&'static str> {
     errand_predicates()
         .iter()
-        .filter_map(|(key, _)| ledger.facts_of(entity, key).last().map(|f| (*key, f.day)))
+        .filter_map(|(key, _)| {
+            ledger
+                .facts_of(entity, key)
+                .filter(|f| f.day.map(|d| d <= t).unwrap_or(false))
+                .last()
+                .map(|f| (*key, f.day))
+        })
         .max_by_key(|(_, day)| *day)
         .map(|(key, _)| key)
 }
@@ -6776,8 +6805,17 @@ pub(crate) fn agent_at_fact(
 
 /// The producer named on every committed [`errand_fact`] — the concept
 /// registry's provenance for the eight `errand/*` predicates (The Warrant
-/// spec §4.2).
-const ERRAND_PRODUCER: &str = "vessel/liveness";
+/// spec §4.2) — and, since The Warrant's Task 3, on every committed
+/// [`agent_at_fact`] as well: a walking creature's step names its PRODUCER
+/// like every other fact in the repo, and the reader-facing gloss lives on
+/// the errand predicate in the concept registry.
+///
+/// **ONE constant, not two, deliberately.** The errand fact and the step it
+/// covers are emitted by the same producer at the same site; a second
+/// spelling for the step would be free to drift from this one with nothing
+/// to notice.
+/// type-audit: bare-ok(identifier-text)
+pub const ERRAND_PRODUCER: &str = "vessel/liveness";
 
 /// A committed errand fact: `entity` set out from `origin` on `day`, for the
 /// reason `key` names. The object is the ORIGIN — see spec §4.0 for why there
@@ -8105,7 +8143,7 @@ impl WalkState {
         // Seeded from `frozen`, not a placeholder — see the field's own doc
         // and `latest_committed_errand`'s for why a bare `None` here would
         // recommit an unchanged errand at every `wait` boundary.
-        let errand = latest_committed_errand(frozen, npc.entity);
+        let errand = latest_committed_errand(frozen, npc.entity, day);
         WalkState {
             pos,
             day,
@@ -8120,29 +8158,6 @@ impl WalkState {
             interior,
             errand,
         }
-    }
-}
-
-/// The prose gloss for a `MoveTo`'s provenance, from the commitment [`Mode`]
-/// and whether the creature currently believes in a water source.
-///
-/// **TRANSITIONAL (delete with its call site in Task 3).** This duplicates
-/// [`errand_predicates`]'s docs in prose form, string for string — the
-/// duplication [`the_registry_glosses_and_the_live_prose_match_agree_both_ways`](tests::the_registry_glosses_and_the_live_prose_match_agree_both_ways)
-/// exists to catch. Lifted out of `advance_one`'s `match st.mode` so that
-/// test can see it under its own name.
-fn prose_for(mode: Mode, believed: bool) -> &'static str {
-    match mode {
-        Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
-        Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
-        Mode::Pursuing(DriveKind::Hunger) => "foraged toward richer ground (hunger)",
-        Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
-        Mode::Pursuing(DriveKind::Social) => "drifted homeward, missing its people (belonging)",
-        Mode::Pursuing(DriveKind::Thirst) if believed => "went down to the river it knew (thirst)",
-        Mode::Pursuing(DriveKind::Thirst) => {
-            "wandered, having found no water yet (thirst)" // ignorant
-        }
-        Mode::Homing | Mode::Idle => "walking home (sated)",
     }
 }
 
@@ -8301,11 +8316,13 @@ impl<'a> DriveMovements<'a> {
         }
         match intent {
             Intent::Do(Action::MoveTo(n)) => {
-                // Provenance follows the committed errand (the mode):
-                // thirst distinguishes BELIEVED (beelining a known
-                // source) from IGNORANT (exploring blind); thermal names
-                // the comfort-seeking; homing names the sated walk back.
-                let provenance = prose_for(st.mode, st.believed.is_some());
+                // THE EPOCH (The Warrant, Task 3). A step names its PRODUCER,
+                // not a reason: the eight-arm `match st.mode` that used to
+                // author a prose sentence here is DELETED, not moved, because
+                // `errand_key` below is now the single Mode -> reason mapping
+                // and two copies would drift with nothing to notice. The
+                // reader-facing words live on the errand predicate in the
+                // concept registry, which is where `recount` renders them.
                 // THE ERRAND BOUNDARY. `st.mode` was assigned from this
                 // tick's resolution sixty lines above; a step whose errand
                 // key differs from the one this walk is carrying is the first
@@ -8319,7 +8336,7 @@ impl<'a> DriveMovements<'a> {
                     out.push(errand_fact(npc.entity, &st.pos, st.day, key));
                     st.errand = Some(key);
                 }
-                out.push(agent_at_fact(npc.entity, &n, st.day, provenance));
+                out.push(agent_at_fact(npc.entity, &n, st.day, ERRAND_PRODUCER));
                 st.visited.insert(n.clone());
                 st.pos = n;
                 // Crossing into a DIFFERENT room: re-derive ITS interior and
@@ -9790,47 +9807,6 @@ mod tests {
             assert!(
                 key.starts_with("errand/"),
                 "{key} is not in the errand namespace"
-            );
-        }
-    }
-
-    /// TRANSITIONAL (delete with the prose match in Task 3). The eight
-    /// glosses live in two places until the flip: `prose_for` (lifted from
-    /// `advance_one`'s `match st.mode`), and `errand_predicates()`. A
-    /// one-directional check would let either copy drift.
-    ///
-    /// **Pairwise through `errand_key`, not set equality.** An earlier draft
-    /// of this test compared two `BTreeSet<&str>`s of the eight glosses.
-    /// Set equality is multiplicity- and order-independent over the VALUES,
-    /// so swapping two glosses between keys — `errand/forage` given
-    /// "sought a kinder clime (comfort)" and vice versa — leaves both sets
-    /// the identical eight strings and a set comparison stays green. A swap
-    /// is the likelier authoring mistake precisely because it leaves no
-    /// orphan string for a set comparison to notice, and once Task 3
-    /// deletes `prose_for`, a swap latent at that moment becomes permanent
-    /// and undetectable — the wrong gloss forever on the right key, every
-    /// test green. Routing each mode's prose through `errand_key` to find
-    /// its OWN table entry, rather than pooling all eight into a set,
-    /// catches exactly that swap.
-    #[test]
-    fn the_registry_glosses_and_the_live_prose_match_agree_both_ways() {
-        let modes: [(Mode, bool); 8] = [
-            (Mode::Pursuing(DriveKind::Thirst), true),
-            (Mode::Pursuing(DriveKind::Thirst), false),
-            (Mode::Pursuing(DriveKind::Hunger), false),
-            (Mode::Pursuing(DriveKind::Thermal), false),
-            (Mode::Pursuing(DriveKind::Fatigue), false),
-            (Mode::Pursuing(DriveKind::Danger), false),
-            (Mode::Pursuing(DriveKind::Social), false),
-            (Mode::Homing, false),
-        ];
-        let table: std::collections::BTreeMap<&str, &str> =
-            errand_predicates().into_iter().collect();
-        for (mode, believed) in modes {
-            assert_eq!(
-                prose_for(mode, believed),
-                table[errand_key(mode, believed)],
-                "{mode:?} believed={believed}"
             );
         }
     }
@@ -11443,6 +11419,25 @@ mod tests {
         // re-anchored with `water_beyond_the_doorstep` precisely so its days
         // would stay bit-identical, and they did.
         //
+        // AND ONCE MORE AGAIN, THE FLIP (The Warrant, Task 3): 132 rows still,
+        // none added and none removed, with EXACTLY the 48 `agent-at` rows'
+        // trailing field replaced by `vessel/liveness` — 24 that carried
+        // `went down to the river it knew (thirst)` and 24 that carried
+        // `walking home (sated)`. The other 84 rows are byte-identical: 24
+        // `slept`, 18 `rested`, 12 `drank`, 6 `eaten` (recovery-act
+        // provenance, which this task does not touch) and the 24 `errand/*`
+        // rows, which already printed `vessel/liveness`. So the literal now
+        // carries 72 rows ending `|vessel/liveness` and none carrying any of
+        // the eight authored glosses.
+        //
+        // WRITTEN DOWN BEFORE THE TEST WAS RUN AND THEN CONFIRMED BY RUNNING
+        // IT, as this doc's own standing rule requires: the row counts and
+        // the two displaced strings were enumerated off the PRE-flip literal,
+        // the transformation was applied mechanically to those 48 rows, and
+        // the test went green on the first attempt. Nothing here was
+        // transcribed from a failure — a literal taken from a panic message
+        // witnesses only that the code agrees with itself.
+        //
         // AND ONCE MORE, 108 -> 132 (The Warrant, Task 2): 24 `errand/*` rows
         // interleaved in, one per errand boundary, each sharing its following
         // `agent-at`'s exact day and printing `vessel/liveness` where an
@@ -11458,51 +11453,51 @@ mod tests {
             r#"knower|slept|Number(25000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(25000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/water-known|Text("229376")|Some(576667)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(576667)|vessel/liveness"#,
             r#"lost|errand/water-known|Text("229376")|Some(576667)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(576667)|vessel/liveness"#,
             r#"knower|slept|Number(50000.0)|Some(576817)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(50000.0)|Some(576817)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("229504")|Some(636817)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("229504")|Some(636817)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229504")|Some(636817)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229504")|Some(636817)|vessel/liveness"#,
             r#"knower|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
             r#"knower|errand/home|Text("229504")|Some(646967)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(646967)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(646967)|vessel/liveness"#,
             r#"lost|errand/home|Text("229504")|Some(646967)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(646967)|walking home (sated)"#,
-            r#"knower|agent-at|Text("229376")|Some(656967)|walking home (sated)"#,
-            r#"lost|agent-at|Text("229376")|Some(656967)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(646967)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229376")|Some(656967)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229376")|Some(656967)|vessel/liveness"#,
             r#"knower|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
             r#"knower|slept|Number(20000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(20000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/water-known|Text("229376")|Some(1236784)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(1236784)|vessel/liveness"#,
             r#"lost|errand/water-known|Text("229376")|Some(1236784)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(1236784)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("229504")|Some(1246784)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("229504")|Some(1246784)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(1236784)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229504")|Some(1246784)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229504")|Some(1246784)|vessel/liveness"#,
             r#"knower|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
             r#"knower|rested|Number(25000.0)|Some(1247084)|lay down where it stood (fatigue eased)"#,
             r#"lost|rested|Number(25000.0)|Some(1247084)|lay down where it stood (fatigue eased)"#,
             r#"knower|errand/home|Text("229504")|Some(1282084)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(1282084)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(1282084)|vessel/liveness"#,
             r#"lost|errand/home|Text("229504")|Some(1282084)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(1282084)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(1282084)|vessel/liveness"#,
             r#"knower|slept|Number(45000.0)|Some(1282234)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(45000.0)|Some(1282234)|slept through its off-phase (fatigue eased)"#,
-            r#"knower|agent-at|Text("229376")|Some(1337234)|walking home (sated)"#,
-            r#"lost|agent-at|Text("229376")|Some(1337234)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229376")|Some(1337234)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229376")|Some(1337234)|vessel/liveness"#,
             r#"knower|slept|Number(15000.0)|Some(1813751)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(15000.0)|Some(1813751)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/water-known|Text("229376")|Some(1838751)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(1838751)|vessel/liveness"#,
             r#"lost|errand/water-known|Text("229376")|Some(1838751)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(1838751)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("229504")|Some(1848751)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("229504")|Some(1848751)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(1838751)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229504")|Some(1848751)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229504")|Some(1848751)|vessel/liveness"#,
             r#"knower|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(1848901)|drank from the river (thirst sated)"#,
             r#"knower|rested|Number(25000.0)|Some(1849051)|lay down where it stood (fatigue eased)"#,
@@ -11512,21 +11507,21 @@ mod tests {
             r#"knower|slept|Number(30000.0)|Some(1899351)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(1899351)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/home|Text("229504")|Some(1939351)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(1939351)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(1939351)|vessel/liveness"#,
             r#"lost|errand/home|Text("229504")|Some(1939351)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(1939351)|walking home (sated)"#,
-            r#"knower|agent-at|Text("229376")|Some(1949351)|walking home (sated)"#,
-            r#"lost|agent-at|Text("229376")|Some(1949351)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(1939351)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229376")|Some(1949351)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229376")|Some(1949351)|vessel/liveness"#,
             r#"knower|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
             r#"knower|slept|Number(10000.0)|Some(2418718)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(10000.0)|Some(2418718)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/water-known|Text("229376")|Some(2438718)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(2438718)|vessel/liveness"#,
             r#"lost|errand/water-known|Text("229376")|Some(2438718)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(2438718)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("229504")|Some(2448718)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("229504")|Some(2448718)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(2438718)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229504")|Some(2448718)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229504")|Some(2448718)|vessel/liveness"#,
             r#"knower|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(2448868)|drank from the river (thirst sated)"#,
             r#"knower|rested|Number(25000.0)|Some(2449018)|lay down where it stood (fatigue eased)"#,
@@ -11536,19 +11531,19 @@ mod tests {
             r#"knower|slept|Number(30000.0)|Some(2499318)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(2499318)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/home|Text("229504")|Some(2539318)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(2539318)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(2539318)|vessel/liveness"#,
             r#"lost|errand/home|Text("229504")|Some(2539318)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(2539318)|walking home (sated)"#,
-            r#"knower|agent-at|Text("229376")|Some(2549318)|walking home (sated)"#,
-            r#"lost|agent-at|Text("229376")|Some(2549318)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(2539318)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229376")|Some(2549318)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229376")|Some(2549318)|vessel/liveness"#,
             r#"knower|slept|Number(10000.0)|Some(3015685)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(10000.0)|Some(3015685)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/water-known|Text("229376")|Some(3035685)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(3035685)|vessel/liveness"#,
             r#"lost|errand/water-known|Text("229376")|Some(3035685)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(3035685)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("229504")|Some(3045685)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("229504")|Some(3045685)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(3035685)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229504")|Some(3045685)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229504")|Some(3045685)|vessel/liveness"#,
             r#"knower|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(3045835)|drank from the river (thirst sated)"#,
             r#"knower|rested|Number(25000.0)|Some(3045985)|lay down where it stood (fatigue eased)"#,
@@ -11558,21 +11553,21 @@ mod tests {
             r#"knower|slept|Number(30000.0)|Some(3096285)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(3096285)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/home|Text("229504")|Some(3136285)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(3136285)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(3136285)|vessel/liveness"#,
             r#"lost|errand/home|Text("229504")|Some(3136285)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(3136285)|walking home (sated)"#,
-            r#"knower|agent-at|Text("229376")|Some(3146285)|walking home (sated)"#,
-            r#"lost|agent-at|Text("229376")|Some(3146285)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(3136285)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229376")|Some(3146285)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229376")|Some(3146285)|vessel/liveness"#,
             r#"knower|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
             r#"lost|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
             r#"knower|slept|Number(10000.0)|Some(3615652)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(10000.0)|Some(3615652)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/water-known|Text("229376")|Some(3635652)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"knower|agent-at|Text("229408")|Some(3635652)|vessel/liveness"#,
             r#"lost|errand/water-known|Text("229376")|Some(3635652)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(3635652)|went down to the river it knew (thirst)"#,
-            r#"knower|agent-at|Text("229504")|Some(3645652)|went down to the river it knew (thirst)"#,
-            r#"lost|agent-at|Text("229504")|Some(3645652)|went down to the river it knew (thirst)"#,
+            r#"lost|agent-at|Text("229408")|Some(3635652)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229504")|Some(3645652)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229504")|Some(3645652)|vessel/liveness"#,
             r#"knower|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(3645802)|drank from the river (thirst sated)"#,
             r#"knower|rested|Number(25000.0)|Some(3645952)|lay down where it stood (fatigue eased)"#,
@@ -11582,11 +11577,11 @@ mod tests {
             r#"knower|slept|Number(30000.0)|Some(3696252)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(3696252)|slept through its off-phase (fatigue eased)"#,
             r#"knower|errand/home|Text("229504")|Some(3736252)|vessel/liveness"#,
-            r#"knower|agent-at|Text("229408")|Some(3736252)|walking home (sated)"#,
+            r#"knower|agent-at|Text("229408")|Some(3736252)|vessel/liveness"#,
             r#"lost|errand/home|Text("229504")|Some(3736252)|vessel/liveness"#,
-            r#"lost|agent-at|Text("229408")|Some(3736252)|walking home (sated)"#,
-            r#"knower|agent-at|Text("229376")|Some(3746252)|walking home (sated)"#,
-            r#"lost|agent-at|Text("229376")|Some(3746252)|walking home (sated)"#,
+            r#"lost|agent-at|Text("229408")|Some(3736252)|vessel/liveness"#,
+            r#"knower|agent-at|Text("229376")|Some(3746252)|vessel/liveness"#,
+            r#"lost|agent-at|Text("229376")|Some(3746252)|vessel/liveness"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -13597,8 +13592,9 @@ mod tests {
         );
         assert!(
             free_shapes.is_subset(&known_predicates),
-            "every emitted predicate must be one of the five this file can \
-             ever commit: got {free_shapes:?}"
+            "every emitted predicate must be one of the {} this file can \
+             ever commit: got {free_shapes:?}",
+            known_predicates.len()
         );
         assert_eq!(
             imposed_shapes,
@@ -13709,10 +13705,29 @@ mod tests {
         // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`'s
         // measurement of the real seed-42 world's own settlement/water
         // placement.
-        // Mutation-verify: blanking `agent_at_fact`'s "went down to the
-        // river it knew (thirst)" string, or `drank_fact`'s "drank from the
-        // river (thirst sated)" string, reds ONE of the two assertions
-        // below without touching the other.
+        // THE ROUTE CHANGED UNDER THIS TEST AND IT KEPT PASSING (The
+        // Warrant, Task 3) — which is exactly why the assertions below are
+        // widened rather than left alone. The gloss "went down to the river
+        // it knew (thirst)" used to reach `recount` as the `agent-at` fact's
+        // own `provenance`. It now reaches it as the REGISTRY DOC of the
+        // `errand/water-known` predicate, because `recount` renders
+        // `register_predicate`'s doc string for every predicate it replays.
+        // Same words on the same line, different producer — so a test that
+        // only greps the transcript can no longer tell you which mechanism
+        // put them there, and would have gone on reading green if the flip
+        // had lost the gloss and some other fact had happened to carry it.
+        // The extra assertions below pin the route itself: the errand fact
+        // exists, and the step's provenance is the bare producer name.
+        //
+        // Mutation-verify: blanking `errand_predicates`'s "went down to the
+        // river it knew (thirst)" doc, or `drank_fact`'s "drank from the
+        // river (thirst sated)" string, reds ONE of the two transcript
+        // assertions below without touching the other. And observed directly
+        // 2026-09-05: repointing `errand_key`'s two `Thirst` arms at
+        // `ERRAND_HOME` reds the ROUTE assertion first ("the believer's
+        // beeline must commit an errand/water-known errand"), which is the
+        // assertion added for exactly that mutation — restored and
+        // `diff`-confirmed byte-identical afterward.
         // (This test predates The Freshet re-wire; kept on planted terrain
         // deliberately — the mechanism-level provenance read should not
         // depend on any one real seed's fresh-water placement.)
@@ -13808,10 +13823,31 @@ mod tests {
             &world.registry,
         )
         .unwrap();
+        // THE ROUTE, asserted before the transcript is read: the believer's
+        // beeline commits an `errand/water-known` fact, and the steps under
+        // it carry the bare producer name rather than any prose. Without
+        // these two, the transcript assertions below cannot distinguish the
+        // registry doc from some other fact's provenance.
+        assert!(
+            world
+                .ledger
+                .facts_of(entity, ERRAND_WATER_KNOWN)
+                .next()
+                .is_some(),
+            "the believer's beeline must commit an {ERRAND_WATER_KNOWN} errand, or the \
+             gloss below could only be coming from somewhere else"
+        );
+        for f in world.ledger.facts_of(entity, AGENT_AT) {
+            assert_eq!(
+                f.provenance, ERRAND_PRODUCER,
+                "a step names its producer, never a reason (The Warrant, Task 3)"
+            );
+        }
         let recount = hornvale_historiography::recount(&world, entity).expect("facts exist");
         assert!(
             recount.contains("went down to the river it knew (thirst)"),
-            "the recount names the drive's own reason for the move: {recount}"
+            "the recount names the drive's own reason for the move — now via the \
+             errand predicate's registry doc, not the step's provenance: {recount}"
         );
         assert!(
             recount.contains("drank from the river (thirst sated)"),
@@ -14061,12 +14097,46 @@ mod tests {
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         let first = next.find(AGENT_AT).find(|f| f.subject == e).unwrap();
-        assert!(
-            first.provenance.contains("thirst")
-                || first.provenance.contains("water")
-                || first.provenance.contains("sustenance"),
-            "provenance names the drive: {}",
+        // THE FIELD MOVED, THE CLAIM DID NOT (The Warrant, Task 3). This
+        // assertion used to read `first.provenance.contains("thirst")` — the
+        // move's own provenance was the authored gloss. It is
+        // `vessel/liveness` now, so the claim "a move names the drive that
+        // caused it" is re-pointed at the ERRAND fact covering that move,
+        // which is where the drive's identity actually lives. The test is
+        // NOT deleted and re-added: what it pinned (a thirst-driven step is
+        // attributable to thirst) is pinned here, on the new carrier, plus
+        // the step's own field asserted exactly so the old carrier cannot
+        // quietly come back.
+        //
+        // TWO MUTATIONS, both observed red 2026-09-05, target text asserted
+        // present before substituting, file `diff`-confirmed byte-identical
+        // after:
+        //   (1) `errand_key`'s two `Thirst` arms -> `ERRAND_HOME`. Red: "the
+        //       errand covering the first move names the thirst drive:
+        //       errand/home". This is the mutation of what the OLD assertion
+        //       pinned — a thirst-driven step attributable to thirst — and it
+        //       is exactly what the old form could NOT have caught, since it
+        //       read `prose_for`'s output and `prose_for` carried no errand
+        //       key at all.
+        //   (2) the `MoveTo` commit's provenance -> "went down to the river
+        //       it knew (thirst)". Red: "a move names its producer, never a
+        //       drive". The OLD assertion (`contains("thirst")`) would have
+        //       PASSED on this one, which is the sense in which the re-point
+        //       is a strict gain rather than a translation.
+        assert_eq!(
+            first.provenance, ERRAND_PRODUCER,
+            "a move names its producer, never a drive: {}",
             first.provenance
+        );
+        let errand = errand_predicates()
+            .iter()
+            .filter_map(|(key, _)| next.facts_of(e, key).next().map(|f| (*key, f.day)))
+            .min_by_key(|(_, day)| *day)
+            .map(|(key, _)| key)
+            .expect("a move commits an errand covering it");
+        assert!(
+            errand == ERRAND_WATER_KNOWN || errand == ERRAND_WATER_BLIND,
+            "the errand covering the first move names the thirst drive: {errand}"
         );
         let _ = ledger;
     }
@@ -16138,13 +16208,22 @@ mod tests {
             .find(AGENT_AT)
             .filter(|f| f.subject == b_entity && f.provenance != "test")
             .collect();
-        let b_fear_moves = b_moves_1
-            .iter()
-            .filter(|f| f.provenance.contains("fear"))
+        // KEYED ON THE ERRAND PREDICATE, NOT ON PROVENANCE TEXT (The Warrant,
+        // Task 3). This read used to be `f.provenance.contains("fear")` over
+        // the `agent-at` facts above. Every step's provenance is
+        // `vessel/liveness` now, so that substring search would match nothing
+        // and this assertion would fail honestly — but its CONTROL twin at
+        // the bottom of this test (`c_fear == 0`) would have gone on passing
+        // for exactly the wrong reason, which is the more dangerous half.
+        // Both are re-pointed at [`ERRAND_FLIGHT`], the permanent on-disk key
+        // for the same drive.
+        let b_fear_moves = after1
+            .find(ERRAND_FLIGHT)
+            .filter(|f| f.subject == b_entity)
             .count();
         assert!(
             b_fear_moves >= 1,
-            "B, with no primary fear of its own, FLEES the borrowed alarm (a fear-provenance move)"
+            "B, with no primary fear of its own, FLEES the borrowed alarm (an {ERRAND_FLIGHT} errand)"
         );
         // Bounded — no perpetual within-tick stampede (the field is fixed across
         // the interval; an oscillating B would run to MAX_STEPS, committing
@@ -16195,8 +16274,8 @@ mod tests {
 
         // --- The control run: B alone (A absent). ---
         // With no primary-afraid neighbour the alarm field is EMPTY, so B feels
-        // nothing borrowed and never flees. (It may amble home, but never with
-        // the fear provenance — the flight was borrowed, not intrinsic.)
+        // nothing borrowed and never flees. (It may amble home, but never on a
+        // flight errand — the flight was borrowed, not intrinsic.)
         let mut control = Ledger::default();
         let cb = build_b(&mut control);
         let cb_entity = cb.entity;
@@ -16213,9 +16292,15 @@ mod tests {
             folds: &folds,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
+        // THE NEGATIVE CONTROL, and the reason the re-point above is not
+        // cosmetic: a control that reads zero because its predicate can never
+        // match is indistinguishable from one that reads zero because the
+        // behaviour is absent. `b_fear_moves >= 1` above is this control's
+        // positive twin on the same instrument, which is what keeps this
+        // zero meaningful.
         let c_fear = cafter
-            .find(AGENT_AT)
-            .filter(|f| f.subject == cb_entity && f.provenance.contains("fear"))
+            .find(ERRAND_FLIGHT)
+            .filter(|f| f.subject == cb_entity)
             .count();
         assert_eq!(
             c_fear, 0,

@@ -405,3 +405,107 @@ message at `:13600`, and `latest_committed_errand` lacking the `day <= t`
 filter its sibling carries (safe today only through an invariant documented in
 a *different* function, which is the kind of safety that stops being safe
 quietly). · ideonomy passes / overturns: 0.
+
+---
+
+#13 [Task 3] — **H2 IS FALSIFIED, and the null is the headline.** Preregistered
+(spec §10): *provenance bytes committed per agent per tick fall by at least 50%
+in the walking regime, and by exactly 0% on seed 42.* The instrument is the §1
+probe's shape (`Session::start` + 12 `wait`s), measured as the provenance-byte
+sum over the facts committed during the wait loop, over `roll_len() - 1`
+agents × 12 ticks. Before-side taken by building the **merge base**
+`20c0cd375` in a throwaway worktree and running the same probe there — not
+derived, not extrapolated:
+
+```
+seed  agents  main (bytes/agent/tick)  after   reduction   agent-at prov bytes
+  7     101         141.037954        71.878713   49.04%    129886 ->  44520 (65.72%)
+ 14      58         196.903736        87.912356   55.35%    117093 ->  40020 (65.82%)
+ 23     109         109.123089        84.918960   22.18%     83319 ->  37860 (54.56%)
+ 42      67          73.250000        73.250000    0.00%          0 ->      0
+```
+
+**Clause 2 holds exactly**: seed 42 moves by zero, to the byte — same fact
+count (1407), same provenance total (58893), same rate. **Clause 1 fails on
+two of the three walking seeds.** Nothing is retuned. · **Why it fails is not
+a defect in the flip, and stating it precisely matters more than the verdict.**
+The preregistered quantity is *all* committed provenance, and only `agent-at`'s
+share of it shrinks. On seed 23 the drive tick commits 920 errands to 2524
+steps — an errand every 2.7 steps, the worst-case regime §1 itself
+identified — so the errand facts' own `vessel/liveness` bytes (13800) buy back a
+sixth of what the steps give up, and `agent-at` was only 58% of the total to
+begin with. The right reading is the fourth column: **the `agent-at` provenance
+reduction is 65.72% / 65.82% / 54.56%, over 50% on all three**. That is the
+quantity §1 argued about ("the repetition is 98.5% of the rendered lines") and
+the quantity the flip actually governs; §10 wrote the denominator wider than the
+claim. Recorded as a falsification of what was frozen, with the narrower
+measurement stated beside it — not as a redefinition of the hypothesis after
+unblinding. · **H1 holds**, as exact equality: `every_gloss_and_its_first_day_
+survives_the_flip` compares each entity's `errand/*` glosses and days against
+`windows/vessel/tests/fixtures/the-warrant-glosses.json`, the before-image Task 2
+froze while the prose was live — 26 entities, 138 run-starts, equal in both
+directions (no entity in the fixture missing from the run, none in the run
+absent from the fixture). · **This task removed no fact.** Pre-flip and post-flip
+fact counts are identical on every seed (4035 / 3213 / 4870 / 1407), as are the
+`agent-at` counts (2968 / 2668 / 2524 / 0). · ideonomy passes / overturns: 0.
+
+---
+
+#14 [Task 3] — **The brief's own suggested RED proof for the re-pointed
+fear/belonging witness is a no-op, and finding that out is the point of Step 1.**
+`tick_commit_budget`'s `FEAR_OR_BELONGING_CEILING` assertion counted facts whose
+provenance contained `"(fear)"`/`"(belonging)"`; after the flip that matches
+nothing, reads 0 and passes — an instrument that stops measuring inside a green
+gate. It is re-pointed at `ERRAND_FLIGHT`/`ERRAND_COMPANY` **before** the flip,
+as sequenced. The brief names "lowering the ceiling to 0" as the obvious
+mutation: seed 42 commits **zero** fear/belonging errands, so `0 <= 0` still
+passes and that mutation witnesses nothing. A ceiling mutation cannot fire
+against a measured zero. · Substituted the FILTER instead — the two errand keys
+for `"drank"`/`"slept"`, predicates this run does commit in quantity. Red at
+2256, which proves the thing a permanently-zero witness otherwise cannot: that
+the filter really reads the JSON `predicate` field and matches on exact key
+equality. Both mutations recorded in the constant's own doc, target text
+asserted present before substituting, file `diff`-confirmed byte-identical
+after. · ideonomy passes / overturns: 0.
+
+---
+
+#15 [Task 3] — **A fourth in-crate provenance reader the brief did not list,
+and its dangerous half was the NEGATIVE control.**
+`the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle` reads
+`f.provenance.contains("fear")` twice: once as a positive floor (`b_fear_moves
+>= 1`) and once as a control asserting a lone creature never flees (`c_fear ==
+0`). The flip reddens the positive arm honestly — which is how it was found —
+but the control would have gone on passing **for exactly the wrong reason**, a
+zero that means "the predicate can never match" wearing the clothes of a zero
+that means "the behaviour is absent". Both re-pointed at `ERRAND_FLIGHT`. The
+lesson generalises past this test: when a flip retires a field, the arms that go
+red announce themselves and the arms that assert ABSENCE over that field do
+not. · **Method note, recorded because it cost a full 533 s suite run.** The
+mutation-restore in one bash block ran as `set -e` + `cargo nextest … | grep …`;
+the shell has `pipefail`, the failing test aborted the block before the `cp`
+restore, and the "RESTORED byte-identical" line that would have said so was
+simply never printed. Two subsequent edits landed on a mutated file and six
+tests failed for a reason that looked like the flip. The tell was the absent
+confirmation line, not the failures. Restore-and-`diff` belongs in its own
+invocation, never downstream of a command that is expected to fail. · ideonomy
+passes / overturns: 0.
+
+---
+
+#16 [Task 3] — **The two carried Minors, both closed.** (a) The H4 assertion
+message said "one of the five this file can ever commit" against a roster of 13;
+it now interpolates `known_predicates.len()`, so the denominator cannot go stale
+again rather than being corrected to a new literal that can. (b)
+`latest_committed_errand` gains the `day <= t` filter its sibling
+`latest_committed_position` carries, rather than a doc note — **the filter, not
+the documented invariant, and here is why.** The unfiltered form was safe only
+through an invariant stated in `agent_position`'s doc, a *different* function: a
+correctness argument a reader of this function cannot see and a future caller
+cannot be expected to preserve. The sibling carries the filter for precisely the
+case that would break it (The Phantom's transient-danger memory re-derives a
+PAST instant, where an unfiltered read answers with the future). It is a no-op
+for today's one caller — `WalkState::begin` passes the walk's own `from` against
+the frozen pre-tick ledger — and the doc says so, so nobody deletes it as dead
+code. Full vessel suite (1169 tests) green after, confirming the no-op. ·
+ideonomy passes / overturns: 0.
