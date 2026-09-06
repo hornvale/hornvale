@@ -360,11 +360,13 @@ impl HybridOutcomeDistribution {
 }
 
 /// Possibility facts from the reproductive grammar, with no frequencies.
-/// type-audit: bare-ok(count: pathway_count)
+/// type-audit: bare-ok(count: pathway_count), bare-ok(flag: hybrid_applicable)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReproductivePossibility {
     /// Number of complete pathways permitted by the queried conditions.
     pub pathway_count: u32,
+    /// Whether hybrid compatibility was queried for at least one partner.
+    pub hybrid_applicable: bool,
     /// Hybrid outcomes that are possible; order is caller-authored.
     pub hybrid_outcomes: Vec<HybridOutcome>,
 }
@@ -487,36 +489,36 @@ pub struct SocialSubstrateInput {
 pub fn summarize_reproduction(
     input: &ReproductivePopulationInput,
 ) -> Result<ReproductivePopulationSummary, ReproductiveInputError> {
-    let applicable = input.possibility.pathway_count > 0;
+    let ordinary_applicable = input.possibility.pathway_count > 0;
     require_applicable_distribution(
         "offspring",
         input.typicality.offspring.len(),
         input.typicality.offspring.total_weight(),
-        applicable,
+        ordinary_applicable,
     )?;
     require_applicable_distribution(
         "survival to independence",
         input.typicality.survival_to_independence.len(),
         input.typicality.survival_to_independence.total_weight(),
-        applicable,
+        ordinary_applicable,
     )?;
     require_applicable_distribution(
         "care burden",
         input.typicality.care_burden.len(),
         input.typicality.care_burden.total_weight(),
-        applicable,
+        ordinary_applicable,
     )?;
     require_applicable_distribution(
         "reproductive roles",
         input.typicality.reproductive_roles.len(),
         input.typicality.reproductive_roles.total_weight(),
-        applicable,
+        ordinary_applicable,
     )?;
     require_applicable_distribution(
         "hybrid outcomes",
         input.typicality.hybrid_outcomes.len(),
         input.typicality.hybrid_outcomes.total_weight(),
-        applicable,
+        input.possibility.hybrid_applicable,
     )?;
 
     let expected_offspring = input.typicality.offspring.mean();

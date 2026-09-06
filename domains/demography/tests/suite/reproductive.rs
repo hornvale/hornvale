@@ -27,6 +27,7 @@ fn typical_input() -> ReproductivePopulationInput {
     ReproductivePopulationInput {
         possibility: ReproductivePossibility {
             pathway_count: 2,
+            hybrid_applicable: true,
             hybrid_outcomes: vec![HybridOutcome::Fertile, HybridOutcome::ViableButSterile],
         },
         typicality: ReproductiveTypicality {
@@ -162,6 +163,7 @@ fn handoff_surface_is_species_independent_plain_data() {
     } = input;
     let ReproductivePossibility {
         pathway_count,
+        hybrid_applicable,
         hybrid_outcomes: possible_hybrids,
     } = possibility;
     let ReproductiveTypicality {
@@ -176,6 +178,7 @@ fn handoff_surface_is_species_independent_plain_data() {
     } = typicality;
 
     assert_eq!(pathway_count, 2);
+    assert!(hybrid_applicable);
     assert_eq!(possible_hybrids.len(), 2);
     assert_eq!(maturity_age.get(), 12.0);
     assert_eq!(generation_length.get(), 20.0);
@@ -346,6 +349,7 @@ fn non_reproducing_control_accepts_inapplicable_missing_measurements() {
     let input = ReproductivePopulationInput {
         possibility: ReproductivePossibility {
             pathway_count: 0,
+            hybrid_applicable: false,
             hybrid_outcomes: vec![],
         },
         typicality: ReproductiveTypicality {
@@ -398,6 +402,18 @@ fn applicable_reproduction_rejects_missing_survival_and_care_measurements() {
             .unwrap_err()
             .to_string(),
         "care burden distribution must contain a positive-weight measurement for applicable reproduction"
+    );
+}
+
+#[test]
+fn applicable_hybrids_reject_missing_measurements_without_ordinary_pathways() {
+    let mut input = typical_input();
+    input.possibility.pathway_count = 0;
+    input.typicality.hybrid_outcomes = HybridOutcomeDistribution::new(vec![]).unwrap();
+
+    assert_eq!(
+        summarize_reproduction(&input).unwrap_err().to_string(),
+        "hybrid outcomes distribution must contain a positive-weight measurement for applicable reproduction"
     );
 }
 

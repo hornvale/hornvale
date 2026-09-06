@@ -5,7 +5,9 @@
 //! artifacts are the existing seam the additive adapter must leave unchanged.
 #![allow(clippy::disallowed_methods)]
 
-use hornvale_demography::{HybridOutcome, IndependenceOutcome, ReproductivePopulationInput};
+use hornvale_demography::{
+    HybridOutcome, IndependenceOutcome, ReproductivePopulationInput, summarize_reproduction,
+};
 use hornvale_kernel::{ComponentStore, KindId, Years};
 use hornvale_species::{
     CompatibilityContext, CompatibilityRule, DevelopmentSite, DevelopmentalTiming, GuardStatus,
@@ -167,6 +169,20 @@ fn worldgen_owns_the_species_to_demography_boundary() {
 }
 
 #[test]
+fn ordinary_reproduction_without_hybrid_partners_summarizes_successfully() {
+    let affordances = registry(vec![(PAIRBORN, pairborn())]);
+    let configs = configurations(vec![(PAIRBORN, ordinary_config())]);
+
+    let substrate = reproductive_substrate_from(&affordances, &configs).unwrap();
+    let input = substrate.get(&PAIRBORN).unwrap();
+    let summary = summarize_reproduction(input).unwrap();
+
+    assert_eq!(summary.possibility.pathway_count, 1);
+    assert!(!summary.possibility.hybrid_applicable);
+    assert!(summary.hybrid_outcomes.is_empty());
+}
+
+#[test]
 fn hybrid_relations_are_converted_directionally_without_species_pair_exceptions() {
     let affordances = registry(vec![(PAIRBORN, pairborn()), (DEVELOPER, developer_only())]);
     let mut config = ordinary_config();
@@ -181,6 +197,7 @@ fn hybrid_relations_are_converted_directionally_without_species_pair_exceptions(
     let substrate = reproductive_substrate_from(&affordances, &configs).unwrap();
     let input = substrate.get(&PAIRBORN).unwrap();
 
+    assert!(input.possibility.hybrid_applicable);
     assert_eq!(
         input.possibility.hybrid_outcomes,
         vec![HybridOutcome::Fertile]

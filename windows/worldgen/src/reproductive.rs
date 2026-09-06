@@ -159,6 +159,7 @@ fn population_input_from(
     Ok(ReproductivePopulationInput {
         possibility: ReproductivePossibility {
             pathway_count,
+            hybrid_applicable: !configuration.hybrid_partners.is_empty(),
             hybrid_outcomes: possible_hybrids,
         },
         typicality: ReproductiveTypicality {
