@@ -77,13 +77,10 @@ pub const ERRAND_HOME: &str = "errand/home";
 /// fall-through into the wrong errand — for an enum widening the compiler is
 /// the enumeration, and a wildcard would void it.
 ///
-/// **The production caller lands in a later Penstock 7b task** (the walk's
-/// own `MoveTo` commit, beside [`prose_for`]) — Task 1 commits no fact and
-/// changes no behaviour, so until that caller exists, only this module's own
-/// `mod tests` reaches this function, and an ordinary (non-test) build sees
-/// it as genuinely unreferenced. Same posture [`grade_of`]'s doc records for
-/// its own staged introduction ahead of its caller (The Tenon, Task 5).
-#[allow(dead_code)]
+/// **The production caller is the walk's own `MoveTo` commit** (beside
+/// [`prose_for`], The Warrant, Task 2) — this names the errand boundary that
+/// commits one [`errand_fact`] per maximal run of the same key, rather than
+/// once per step.
 pub(crate) fn errand_key(mode: Mode, believed: bool) -> &'static str {
     match mode {
         Mode::Pursuing(DriveKind::Thirst) if believed => ERRAND_WATER_KNOWN,
@@ -184,6 +181,33 @@ fn latest_committed_position(ledger: &Ledger, npc: &Body, t: WorldTime) -> Optio
             Value::Text(s) => Some(room_from_text(s)),
             _ => None,
         })
+}
+
+/// The most recently committed errand key for `npc`, read off `frozen` — the
+/// errand-continuity analogue of [`latest_committed_position`]. `None`
+/// before this entity's very first committed errand fact.
+///
+/// **Why `WalkState::begin` cannot simply seed `errand: None`, the way a
+/// naive reading of "tick-local, re-derived, never persisted" would
+/// suggest.** `step_with_occupancy` opens a fresh `WalkState` once per
+/// `wait` ("one walk per wait" — `Session::wait`'s own comment), so a
+/// same-reason errand that merely straddles a `wait` boundary would
+/// otherwise recommit — one fact per TICK on that boundary, not one per
+/// ERRAND. Re-deriving from `frozen` is exactly the fix `last_drank`/
+/// `last_ate` already apply to the same problem for their own fields, so
+/// this follows their shape rather than inventing a new one.
+///
+/// Unlike `agent-at`, the errand namespace is eight distinct predicate
+/// strings rather than one, so this scans each of [`errand_predicates`]'s
+/// eight commit streams for its own latest fact and keeps whichever has the
+/// greatest `day` — the same "latest wins" rule [`agent_position`] applies
+/// within a single predicate, generalised across all eight.
+fn latest_committed_errand(ledger: &Ledger, entity: EntityId) -> Option<&'static str> {
+    errand_predicates()
+        .iter()
+        .filter_map(|(key, _)| ledger.facts_of(entity, key).last().map(|f| (*key, f.day)))
+        .max_by_key(|(_, day)| *day)
+        .map(|(key, _)| key)
 }
 
 /// Encode a `Facet` as save-format text: the packed `FacetId` (decision
@@ -6750,6 +6774,25 @@ pub(crate) fn agent_at_fact(
     }
 }
 
+/// The producer named on every committed [`errand_fact`] — the concept
+/// registry's provenance for the eight `errand/*` predicates (The Warrant
+/// spec §4.2).
+const ERRAND_PRODUCER: &str = "vessel/liveness";
+
+/// A committed errand fact: `entity` set out from `origin` on `day`, for the
+/// reason `key` names. The object is the ORIGIN — see spec §4.0 for why there
+/// is no target to record.
+pub(crate) fn errand_fact(entity: EntityId, origin: &Facet, day: WorldTime, key: &str) -> Fact {
+    Fact {
+        subject: entity,
+        predicate: key.to_string(),
+        object: Value::Text(room_to_text(origin)),
+        place: None,
+        day: Some(day),
+        provenance: ERRAND_PRODUCER.to_string(),
+    }
+}
+
 /// Plant an agent at `room` on `day` — the very `agent-at` fact the drive tick
 /// commits, exposed so a scenario harness can POSITION an agent before running
 /// the sim (e.g. stranding a creature far from a water source it believes in,
@@ -7957,6 +8000,15 @@ struct WalkState {
     /// `Interior` it indexes (`Occupancy`'s own doc). The tenth piece of
     /// per-creature walk state, and the one this branch added.
     interior: Interior,
+    /// The errand key this walk is currently on — `None` before this
+    /// entity's very first committed errand fact. Unlike [`WalkState::mode`]
+    /// (a true per-tick placeholder, always overwritten before it is read),
+    /// this field is SEEDED from `frozen` in [`WalkState::begin`]
+    /// (`latest_committed_errand`), because a same-reason errand can
+    /// straddle a `wait` boundary and `begin` runs fresh every `wait` — see
+    /// that function's doc for why a naive `None` here would recommit once
+    /// per tick rather than once per errand.
+    errand: Option<&'static str>,
 }
 
 impl WalkState {
@@ -8050,6 +8102,10 @@ impl WalkState {
         // A placeholder (nothing suppressed) — see the field's own doc for
         // why this is always overwritten before any caller reads it back.
         let suppressed = Vec::new();
+        // Seeded from `frozen`, not a placeholder — see the field's own doc
+        // and `latest_committed_errand`'s for why a bare `None` here would
+        // recommit an unchanged errand at every `wait` boundary.
+        let errand = latest_committed_errand(frozen, npc.entity);
         WalkState {
             pos,
             day,
@@ -8062,6 +8118,7 @@ impl WalkState {
             affect,
             suppressed,
             interior,
+            errand,
         }
     }
 }
@@ -8249,6 +8306,19 @@ impl<'a> DriveMovements<'a> {
                 // source) from IGNORANT (exploring blind); thermal names
                 // the comfort-seeking; homing names the sated walk back.
                 let provenance = prose_for(st.mode, st.believed.is_some());
+                // THE ERRAND BOUNDARY. `st.mode` was assigned from this
+                // tick's resolution sixty lines above; a step whose errand
+                // key differs from the one this walk is carrying is the first
+                // step of a new errand, and that is the discrete divergence
+                // the Penstock metaplan §5.6 rules must commit. The ORIGIN
+                // goes in the object, not the target: the arbitration seam
+                // exposes only `Intent::Do(Action)`, so no destination exists
+                // here to record (spec §4.0). The endpoint is derived.
+                let key = errand_key(st.mode, st.believed.is_some());
+                if st.errand != Some(key) {
+                    out.push(errand_fact(npc.entity, &st.pos, st.day, key));
+                    st.errand = Some(key);
+                }
                 out.push(agent_at_fact(npc.entity, &n, st.day, provenance));
                 st.visited.insert(n.clone());
                 st.pos = n;
@@ -11065,6 +11135,9 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             r
         };
         let mut ledger = Ledger::default();
@@ -11369,10 +11442,24 @@ mod tests {
         // diagonal `√2`, but this fixture's walk is the one The Pavement
         // re-anchored with `water_beyond_the_doorstep` precisely so its days
         // would stay bit-identical, and they did.
+        //
+        // AND ONCE MORE, 108 -> 132 (The Warrant, Task 2): 24 `errand/*` rows
+        // interleaved in, one per errand boundary, each sharing its following
+        // `agent-at`'s exact day and printing `vessel/liveness` where an
+        // `agent-at` row prints its own prose. Diffed mechanically against the
+        // pre-Warrant 108-fact roster with every `errand/*` row filtered back
+        // out: byte-identical, same order, same days, same ids — this task
+        // ADDS facts and moves nothing. The two subjects' errand keys are
+        // symmetric by construction (twins on a shared belief, per the doc
+        // above), so each of the walk's six errand switches — three
+        // `water-known` (departing home) and three `home` (departing water) —
+        // contributes one row per creature, 6 x 2 x 2 = 24.
         const EXPECTED: &[&str] = &[
             r#"knower|slept|Number(25000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(25000.0)|Some(100150)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/water-known|Text("229376")|Some(576667)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(576667)|went down to the river it knew (thirst)"#,
+            r#"lost|errand/water-known|Text("229376")|Some(576667)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(576667)|went down to the river it knew (thirst)"#,
             r#"knower|slept|Number(50000.0)|Some(576817)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(50000.0)|Some(576817)|slept through its off-phase (fatigue eased)"#,
@@ -11380,7 +11467,9 @@ mod tests {
             r#"lost|agent-at|Text("229504")|Some(636817)|went down to the river it knew (thirst)"#,
             r#"knower|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
             r#"lost|drank|Flag(true)|Some(636967)|drank from the river (thirst sated)"#,
+            r#"knower|errand/home|Text("229504")|Some(646967)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(646967)|walking home (sated)"#,
+            r#"lost|errand/home|Text("229504")|Some(646967)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(646967)|walking home (sated)"#,
             r#"knower|agent-at|Text("229376")|Some(656967)|walking home (sated)"#,
             r#"lost|agent-at|Text("229376")|Some(656967)|walking home (sated)"#,
@@ -11388,7 +11477,9 @@ mod tests {
             r#"lost|eaten|Flag(true)|Some(1206634)|grazed the productive ground (hunger sated)"#,
             r#"knower|slept|Number(20000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(20000.0)|Some(1206784)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/water-known|Text("229376")|Some(1236784)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(1236784)|went down to the river it knew (thirst)"#,
+            r#"lost|errand/water-known|Text("229376")|Some(1236784)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(1236784)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("229504")|Some(1246784)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("229504")|Some(1246784)|went down to the river it knew (thirst)"#,
@@ -11396,7 +11487,9 @@ mod tests {
             r#"lost|drank|Flag(true)|Some(1246934)|drank from the river (thirst sated)"#,
             r#"knower|rested|Number(25000.0)|Some(1247084)|lay down where it stood (fatigue eased)"#,
             r#"lost|rested|Number(25000.0)|Some(1247084)|lay down where it stood (fatigue eased)"#,
+            r#"knower|errand/home|Text("229504")|Some(1282084)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(1282084)|walking home (sated)"#,
+            r#"lost|errand/home|Text("229504")|Some(1282084)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(1282084)|walking home (sated)"#,
             r#"knower|slept|Number(45000.0)|Some(1282234)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(45000.0)|Some(1282234)|slept through its off-phase (fatigue eased)"#,
@@ -11404,7 +11497,9 @@ mod tests {
             r#"lost|agent-at|Text("229376")|Some(1337234)|walking home (sated)"#,
             r#"knower|slept|Number(15000.0)|Some(1813751)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(15000.0)|Some(1813751)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/water-known|Text("229376")|Some(1838751)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(1838751)|went down to the river it knew (thirst)"#,
+            r#"lost|errand/water-known|Text("229376")|Some(1838751)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(1838751)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("229504")|Some(1848751)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("229504")|Some(1848751)|went down to the river it knew (thirst)"#,
@@ -11416,7 +11511,9 @@ mod tests {
             r#"lost|rested|Number(25000.0)|Some(1874201)|lay down where it stood (fatigue eased)"#,
             r#"knower|slept|Number(30000.0)|Some(1899351)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(1899351)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/home|Text("229504")|Some(1939351)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(1939351)|walking home (sated)"#,
+            r#"lost|errand/home|Text("229504")|Some(1939351)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(1939351)|walking home (sated)"#,
             r#"knower|agent-at|Text("229376")|Some(1949351)|walking home (sated)"#,
             r#"lost|agent-at|Text("229376")|Some(1949351)|walking home (sated)"#,
@@ -11424,7 +11521,9 @@ mod tests {
             r#"lost|eaten|Flag(true)|Some(2418568)|grazed the productive ground (hunger sated)"#,
             r#"knower|slept|Number(10000.0)|Some(2418718)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(10000.0)|Some(2418718)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/water-known|Text("229376")|Some(2438718)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(2438718)|went down to the river it knew (thirst)"#,
+            r#"lost|errand/water-known|Text("229376")|Some(2438718)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(2438718)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("229504")|Some(2448718)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("229504")|Some(2448718)|went down to the river it knew (thirst)"#,
@@ -11436,13 +11535,17 @@ mod tests {
             r#"lost|rested|Number(25000.0)|Some(2474168)|lay down where it stood (fatigue eased)"#,
             r#"knower|slept|Number(30000.0)|Some(2499318)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(2499318)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/home|Text("229504")|Some(2539318)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(2539318)|walking home (sated)"#,
+            r#"lost|errand/home|Text("229504")|Some(2539318)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(2539318)|walking home (sated)"#,
             r#"knower|agent-at|Text("229376")|Some(2549318)|walking home (sated)"#,
             r#"lost|agent-at|Text("229376")|Some(2549318)|walking home (sated)"#,
             r#"knower|slept|Number(10000.0)|Some(3015685)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(10000.0)|Some(3015685)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/water-known|Text("229376")|Some(3035685)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(3035685)|went down to the river it knew (thirst)"#,
+            r#"lost|errand/water-known|Text("229376")|Some(3035685)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(3035685)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("229504")|Some(3045685)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("229504")|Some(3045685)|went down to the river it knew (thirst)"#,
@@ -11454,7 +11557,9 @@ mod tests {
             r#"lost|rested|Number(25000.0)|Some(3071135)|lay down where it stood (fatigue eased)"#,
             r#"knower|slept|Number(30000.0)|Some(3096285)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(3096285)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/home|Text("229504")|Some(3136285)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(3136285)|walking home (sated)"#,
+            r#"lost|errand/home|Text("229504")|Some(3136285)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(3136285)|walking home (sated)"#,
             r#"knower|agent-at|Text("229376")|Some(3146285)|walking home (sated)"#,
             r#"lost|agent-at|Text("229376")|Some(3146285)|walking home (sated)"#,
@@ -11462,7 +11567,9 @@ mod tests {
             r#"lost|eaten|Flag(true)|Some(3615502)|grazed the productive ground (hunger sated)"#,
             r#"knower|slept|Number(10000.0)|Some(3615652)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(10000.0)|Some(3615652)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/water-known|Text("229376")|Some(3635652)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(3635652)|went down to the river it knew (thirst)"#,
+            r#"lost|errand/water-known|Text("229376")|Some(3635652)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(3635652)|went down to the river it knew (thirst)"#,
             r#"knower|agent-at|Text("229504")|Some(3645652)|went down to the river it knew (thirst)"#,
             r#"lost|agent-at|Text("229504")|Some(3645652)|went down to the river it knew (thirst)"#,
@@ -11474,7 +11581,9 @@ mod tests {
             r#"lost|rested|Number(25000.0)|Some(3671102)|lay down where it stood (fatigue eased)"#,
             r#"knower|slept|Number(30000.0)|Some(3696252)|slept through its off-phase (fatigue eased)"#,
             r#"lost|slept|Number(30000.0)|Some(3696252)|slept through its off-phase (fatigue eased)"#,
+            r#"knower|errand/home|Text("229504")|Some(3736252)|vessel/liveness"#,
             r#"knower|agent-at|Text("229408")|Some(3736252)|walking home (sated)"#,
+            r#"lost|errand/home|Text("229504")|Some(3736252)|vessel/liveness"#,
             r#"lost|agent-at|Text("229408")|Some(3736252)|walking home (sated)"#,
             r#"knower|agent-at|Text("229376")|Some(3746252)|walking home (sated)"#,
             r#"lost|agent-at|Text("229376")|Some(3746252)|walking home (sated)"#,
@@ -11510,6 +11619,9 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             r
         };
         let mut ledger = Ledger::default();
@@ -11646,8 +11758,18 @@ mod tests {
         // it emits must be strictly later than the one before. That also pins
         // the `rested`-atop-`eaten` tie the T3 golden recorded (both
         // `4622963782494261520`) as gone — a meal and lying down cost time too.
+        //
+        // **`errand/*` facts are excluded from the strict-advance check (The
+        // Warrant, Task 2), and that is deliberate rather than a weakening.**
+        // An errand fact names the REASON for the step that immediately
+        // follows it, committed at that step's own origin — same tick, same
+        // day, zero elapsed cost between deciding an errand and taking its
+        // first step (spec §4.0: the object is the origin, not a delayed
+        // target). So an errand fact and its accompanying `agent-at` are the
+        // one pair in this walk that SHOULD share a day; everything else —
+        // one action after another — still must not.
         let mut prev = f64::NEG_INFINITY;
-        for f in &facts {
+        for f in facts.iter().filter(|f| !f.predicate.starts_with("errand/")) {
             let d = f.day.expect("every emitted fact is dated").as_std_days();
             assert!(
                 d > prev,
@@ -11985,6 +12107,9 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             r
         };
         let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
@@ -12076,6 +12201,9 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             r
         };
         let mut ledger = Ledger::default();
@@ -13011,6 +13139,9 @@ mod tests {
             .unwrap();
         world_reg.register_predicate(SLEPT, false, "slept").unwrap();
         world_reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            world_reg.register_predicate(key, false, doc).unwrap();
+        }
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = raddr(1.0);
@@ -13347,16 +13478,19 @@ mod tests {
         let known_predicates: std::collections::BTreeSet<String> =
             [AGENT_AT, DRANK, RESTED, SLEPT, EATEN]
                 .into_iter()
+                .chain(errand_predicates().iter().map(|(key, _)| *key))
                 .map(str::to_string)
                 .collect();
         assert_eq!(
             known_predicates.len(),
-            5,
+            13,
             "the stated denominator: DriveMovements's own closed predicate \
-             roster (AGENT_AT/DRANK/RESTED/SLEPT/EATEN). It was FOUR until The \
-             Wicket's Task 8 split the one recovery act into a conscious rest \
-             and an unconscious sleep, which needed two predicates because the \
-             fold repays them at different rates"
+             roster (AGENT_AT/DRANK/RESTED/SLEPT/EATEN, plus the eight \
+             `errand/*` predicates The Warrant Task 2 added at every MoveTo's \
+             errand boundary). It was FOUR until The Wicket's Task 8 split the \
+             one recovery act into a conscious rest and an unconscious sleep, \
+             which needed two predicates because the fold repays them at \
+             different rates; it was five until The Warrant."
         );
 
         fn shapes_of(facts: &[Fact]) -> std::collections::BTreeSet<String> {
@@ -13603,6 +13737,9 @@ mod tests {
             .registry
             .register_predicate(EATEN, false, "eaten")
             .unwrap();
+        for (key, doc) in errand_predicates() {
+            world.registry.register_predicate(key, false, doc).unwrap();
+        }
         let entity = world
             .ledger
             .mint_entity(test_lineage(world.ledger.entity_count() as u16));
@@ -13703,6 +13840,9 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         let ledger = Ledger::default();
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
@@ -13797,6 +13937,9 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         let ledger = Ledger::default();
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
@@ -13877,6 +14020,9 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
         let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
         let home = addr(1.0);
         let resource = home.neighbors()[0].clone();
@@ -14100,6 +14246,9 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
 
         // Geometry: discover the straight S→W path (hazard-free planning) and pick
         // an INTERIOR room X (distance 2 from S) as the frightening ground. X is
@@ -14285,6 +14434,9 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
 
         // Geometry (as THE SHUN): the straight S→W path, X an interior room not
         // adjacent to either endpoint (so standing at S/W is never frightening).
@@ -14525,6 +14677,9 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
 
         // GEOMETRY — copied verbatim from
         // `the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe`
@@ -15837,6 +15992,9 @@ mod tests {
         reg.register_predicate(RESTED, false, "rested").unwrap();
         reg.register_predicate(SLEPT, false, "slept").unwrap();
         reg.register_predicate(EATEN, false, "eaten").unwrap();
+        for (key, doc) in errand_predicates() {
+            reg.register_predicate(key, false, doc).unwrap();
+        }
 
         // Geometry, read from the real mesh so the scenario is topology-robust.
         let x = raddr(1.0); // A's room — the core of the hazard
@@ -16482,6 +16640,9 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             r
         };
         let home = raddr(1.0);
@@ -16579,6 +16740,9 @@ mod tests {
             r.register_predicate(RESTED, false, "rested").unwrap();
             r.register_predicate(SLEPT, false, "slept").unwrap();
             r.register_predicate(EATEN, false, "eaten").unwrap();
+            for (key, doc) in errand_predicates() {
+                r.register_predicate(key, false, doc).unwrap();
+            }
             r
         };
         // A downhill chain home(100) -> a(50) -> water(fresh); other neighbors high

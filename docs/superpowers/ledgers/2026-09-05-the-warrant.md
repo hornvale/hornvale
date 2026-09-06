@@ -271,3 +271,81 @@ evidence that Task 1's registration there is correctly wired — the run got
 A build check would have proved neither. That is the difference between
 compiling a site and exercising it, and it cost twelve seconds. · Follow-up
 rows owed at close for both. · ideonomy passes / overturns: 0.
+
+---
+
+#11 [G5] — **Task 2 complete: the errand-boundary commit, and a cross-tick
+continuity defect the brief's own test caught.** · Implemented exactly as the
+brief's Step 3 specified — `WalkState.errand: Option<&'static str>`,
+`errand_fact` beside `agent_at_fact`, the boundary check immediately before
+`out.push(agent_at_fact(...))` in the `MoveTo` arm — then ran the brief's own
+`one_errand_fact_per_run_of_constant_step_provenance` and it went RED: one
+walked entity showed 7 errand facts against 5 provenance runs. · Root cause:
+`step_with_occupancy` opens a fresh `WalkState` once per `wait` ("one walk per
+wait", `session.rs`'s own comment on the call site), so seeding
+`errand: None` in `begin` — literally what Step 3 says — recommits an errand
+fact at the START of every `wait` whose reason merely CONTINUES from the
+previous one, one per TICK on that boundary rather than one per ERRAND. ·
+Decision: seed `errand` from `frozen` in `begin` instead, via a new
+`latest_committed_errand` helper (scans all eight `errand_predicates()`
+streams for the entity's own latest, mirroring `last_drank`/`last_ate`'s
+existing shape for the identical problem). Both of the brief's tests pass
+after the fix, and `an_errand_commits_once_and_its_steps_commit_under_it`'s
+own coverage assertion (every step has a covering errand at or before its
+day) also depends on this — it would have passed even under the naive `None`
+seed, so it did not catch this on its own; only the run-count test did. · This
+is a deviation from the brief's literal Step 3 text, not from its intent —
+the brief's own two tests state the intent precisely, and the naive
+implementation fails the second one. · ideonomy passes / overturns: 0.
+
+#12 [G5] — **Fourteen liveness.rs unit tests moved, all legitimately.** ·
+Full-crate `cargo nextest run -p hornvale-vessel` after the boundary landed:
+14 failures, all self-contained in `liveness.rs`'s own `mod tests` (none in
+`tests/suite/`, none outside this crate). Three shapes, not one: (a) 11
+`UnknownPredicate { predicate: "errand/..." }` panics — narrow hand-built
+`ConceptRegistry`s that predate this campaign's new commit path and were
+correctly left unregistered by Task 1 (Task 1 added no new committed
+predicate; Task 2 does) — fixed by registering `errand_predicates()` beside
+each site's existing `AGENT_AT`/`DRANK`/`RESTED`/`SLEPT`/`EATEN` block; (b)
+`h4_the_distinct_fact_shapes_imposed_and_free_can_reach_are_identical`'s
+closed 5-predicate roster assertion, now 13 (updated the assertion, not
+silenced it); (c) `drinking_and_eating_now_cost_time`'s strict
+day-must-strictly-advance loop, which an errand fact and its accompanying
+`agent-at` deliberately violate (same tick, same day, zero elapsed cost
+between naming a reason and taking its first step — spec §4.0) — narrowed
+the loop to exclude `errand/*` facts, with the reasoning stated inline rather
+than silently dropped. · The 80→108→132-fact `the_hoisted_walk_emits_
+exactly_what_the_loop_emitted` golden moved too: mechanically diffed the
+regenerated 132-fact sequence against the committed 108 with every
+`errand/*` row filtered back out — byte-identical, same order, same days,
+same ids — before replacing the literal, so the update is a verified
+addition rather than a re-recorded failure. · All 1169 `hornvale-vessel`
+tests, all 513 `hornvale-lab` tests, and all 460 `hornvale` (cli) tests pass
+after. · ideonomy passes / overturns: 0.
+
+#13 [G5] — **H3 (spec §10) measured; no STOP triggered.**
+`tick_commit_budget::facts_committed_per_agent_per_tick_stays_bounded`:
+last-half rate **1.785075** facts/agent/tick against `STEADY_STATE_CEILING`
+= 2.5 (first-half 1.855970 — non-growing, well inside `NON_GROWTH_MARGIN` =
+1.10). `the_commit_rate_is_carried_by_the_settled_rosters_even_churn`: 67
+residents contributing in the last half (>= `MIN_CONTRIBUTING_RESIDENTS` =
+60), 0 (fear)/(belonging)-tagged facts. Both green; none of the three guard
+rails moved against this task, matching the brief's own prediction (this
+task only adds facts). Seed 42's own agent roster at this point in the
+codebase's history is 67 agents, not the 6-7 an older comment block in that
+file's own doc records — a pre-existing staleness in that file, unrelated to
+this campaign, left unfixed (widening this diff to a documentation sweep of
+an unrelated file was not this task). · ideonomy passes / overturns: 0.
+
+#14 [G5] — **Step 5 fixture: `tests/fixtures/the-warrant-glosses.json`,
+frozen and undeclared.** · Captured, by hand, the ordered `(day, provenance)`
+run-start pairs for every entity that committed at least one `agent-at` under
+the same harness the new tests use (seed 11, 12 waits) — 26 entities, empty
+walkers omitted as noise. Generated via a scratch `#[test]` added to
+`the_warrant.rs`, run once with `--nocapture`, its stdout piped to the fixture
+file, then the generator test deleted before this commit — the fixture is a
+historical snapshot of the PRE-flip prose, and nothing should ever regenerate
+it from live code once Task 3 lands (regenerating would just re-derive the
+NEW provenance strings, defeating its purpose as a positive control). Left
+undeclared in `docs/generated-paths.txt` for exactly that reason: it is a
+frozen pin, not a generated artifact. · ideonomy passes / overturns: 0.
