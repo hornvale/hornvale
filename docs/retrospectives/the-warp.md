@@ -274,6 +274,18 @@ destroyed the argument that the withdrawn clause was defective.
 | decisions | 0776–0785 reserved | **4 minted** (0776–0779) |
 | epochs / stream labels / draws | 0 | 0 |
 
+## A close-walk finding about the ledger itself
+
+Eight operational rulings — the unminted-decision cite rule, the
+surface-branch ruling on the locale's free function, the golden-not-recorder
+ruling, the stage-gate move, the census-before-stage-gate sequencing, the
+SUMMARY order, the by-hand injection run, and the TSV absorb rule — were made
+contemporaneously in the task ledger and reached the committed ledger only as
+a backfilled entry (#13) at the close walk. They should have been written to
+`docs/superpowers/ledgers/` as they occurred; the task ledger is scratch and
+dies with the worktree. The retrospective records this as the campaign's own
+instance of the pattern The Cartulary was founded to remove.
+
 ## Do differently next time
 
 1. **Measure the premise first.** 1.2 seconds changed what the campaign was.
