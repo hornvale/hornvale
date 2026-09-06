@@ -2707,19 +2707,42 @@ impl Driver {
     /// tell apart, or a reader could infer "something is here" from the
     /// readout falling silent versus not.
     ///
-    /// **Structurally live only at band B's own rung, and that is
-    /// correct, not a gap.** `facet` is always [`Self::world_view_tile`]'s
-    /// `.facet` — a facet at the ACTIVE window's own depth — while
-    /// `MapSite::placed` is addressed at walk-band granularity
-    /// (`hornvale_worldgen::site_facet_for`'s own doc). The two can only
-    /// ever agree where the active depth IS [`BAND_B_RUNG`], which
-    /// [`Self::resolve`] reaches whenever [`Self::resolve_walk_band`]
-    /// finds no perceived facet at BAND_B_RUNG itself — never at a coarser
-    /// world-view rung, where a screen character already spans many real
-    /// facets ([`Self::oversample_disclosure`]) and a specific site mention
-    /// would be a false precision the picture does not have. Task 4's own
-    /// chart-mark gate has the identical shape: `ChartMarks::update` only
-    /// ever reads a WALK-band chart, never a coarser one.
+    /// **Structurally live only at band B's own rung — a known limitation
+    /// of this call, not a deliberate precision choice, and fix round 1
+    /// corrects an earlier version of this doc that claimed otherwise.**
+    /// `facet` is always [`Self::world_view_tile`]'s `.facet` — a facet at
+    /// the ACTIVE window's own depth — while `MapSite::placed` is a facet
+    /// fixed at walk-band granularity (`hornvale_worldgen::site_facet_for`'s
+    /// own doc). Facet equality between the two can only ever hold where
+    /// the active depth IS [`BAND_B_RUNG`], which [`Self::resolve`] reaches
+    /// whenever [`Self::resolve_walk_band`] finds no perceived facet at
+    /// BAND_B_RUNG itself — never at a coarser world-view rung.
+    ///
+    /// **This is NOT false precision being avoided.** A site's glyph is
+    /// drawn by [`plate::draw_feature_layer`] at every rung via a pure
+    /// geometric projection of `MapSite::coord`, independent of
+    /// `window.depth` — its screen position is exact at every zoom, unlike
+    /// the statistically blended terrain readout
+    /// [`Self::oversample_disclosure`] exists to caveat. So a reader who
+    /// points the cursor exactly at a drawn glyph at, say, `GLOBE_RUNG` and
+    /// gets no mention is not being protected from an over-precise claim —
+    /// the readout is simply silent because the matching primitive this
+    /// method reuses (`plate::sites_standing_in`'s exact `Facet` equality)
+    /// was shaped for the walk band's own room-standing check
+    /// (`Self::discover_placed_sites_at`) and was never adapted for a
+    /// coarser rung. Task 4's `ChartMarks::update` is not a precedent for
+    /// this shape either: its silence off the walk band is a different
+    /// axis (it reads no chart at all outside `Spatial::Walk`), not a
+    /// rung-vs-rung facet mismatch.
+    ///
+    /// **What would lift it:** matching by something rung-independent —
+    /// e.g. projecting `MapSite::coord` through the active window the same
+    /// way [`plate::draw_feature_layer`] does and comparing screen tiles,
+    /// or matching on [`plate::MapSite::vertex`]'s canonical mesh vertex
+    /// (the same granularity [`Self::resolve_world_view_at`]'s containment
+    /// chain already resolves at) instead of the placed `Facet`. Out of
+    /// scope for this task; recorded here so the silence is legible rather
+    /// than looking like a design decision it is not.
     fn site_note(&self, facet: &Facet) -> Option<String> {
         plate::sites_standing_in(&self.sites, facet)
             .into_iter()
