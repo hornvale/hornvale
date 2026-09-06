@@ -15,6 +15,19 @@ and invalidation cost are the next untested source of process value.
 **Capture:** Spec and plan are the Insulator design and implementation plan in
 docs/superpowers/specs/ and docs/superpowers/plans/.
 
+## #2 [G3] Use a measurement cell instead of a generic command runner
+
+The recorder will execute only frozen named workloads inside a platform
+enforced cell: the checkout is read-only, the target and evidence roots are
+writable, and every other write is denied. It refuses before launch when the
+host cannot enforce that policy and tests both denied and permitted writes.
+
+**Why:** Three repair rounds showed that declared ownership did not enforce
+anything for an arbitrary subprocess. A named workload plus an enforced cell
+keeps the measurement claim smaller than the mechanism.
+
+**Capture:** This ruling amends the Insulator spec and implementation plan.
+
 ## Follow-ups
 
 - Baseline the existing tools/digest contributor graph and costs.

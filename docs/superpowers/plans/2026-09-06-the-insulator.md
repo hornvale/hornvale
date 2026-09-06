@@ -45,7 +45,7 @@
 
 **Interfaces:**
 - `load_workloads(path: Path) -> dict`: loads and validates the frozen workload list, including command argv, expected outputs, and output comparison mode.
-- `capture(command: list[str], cwd: Path, destination: Path, timeout_s: int = 3600) -> dict`: runs one owned command, retains bounded stdout/stderr, timing, exit status, and cleanup metadata.
+- `capture(workload_id: str, checkout: Path, target: Path, evidence_root: Path, destination: Path, timeout_s: int = 3600) -> dict`: resolves one frozen named workload, enforces a read-only checkout plus writable target/evidence roots, and retains bounded stdout/stderr, timing, exit status, and cleanup metadata.
 - `manifest_for_attempt(...) -> dict`: returns a complete attempt record with source, graph, toolchain, target, command, timing, output, and failure fields.
 - `validate_attempt(record: dict) -> None`: raises `ValueError` for missing identity, unbounded output, incomplete cleanup, invalid status, or missing cost fields.
 
@@ -65,7 +65,7 @@
 
 - [ ] **Step 3: Implement the recorder and frozen workload loader.**
 
-  Reuse the Counterpart `sha256`, JSON persistence, subprocess deadline, and bounded-output patterns. Use `time.monotonic_ns()` for wall duration, write attempts to a temporary file before renaming, and keep preparation/build/test timings as separate fields. Do not run a live build from unit tests.
+  Reuse the Counterpart `sha256`, JSON persistence, subprocess deadline, and bounded-output patterns. Use `time.monotonic_ns()` for wall duration, write attempts to a temporary file before renaming, and keep preparation/build/test timings as separate fields. Resolve only named workload identifiers. Canonicalize the checkout, target, and evidence roots before constructing the macOS or Linux policy; make the checkout read-only, allow writes only to target/evidence, and refuse before launch when enforcement is unavailable. Do not run a live build from unit tests.
 
 - [ ] **Step 4: Run the focused tests and verify they pass.**
 

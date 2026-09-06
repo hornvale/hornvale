@@ -53,6 +53,8 @@ It excludes:
 - claims about natural contributor behavior, universal build throughput, or
   hostile authors;
 - a general workspace restructuring before one boundary is measured.
+- arbitrary command execution without a named workload and an enforced write
+  boundary.
 
 ## Baseline and candidate
 
@@ -65,7 +67,9 @@ The candidate is an experimental build island around the narrowest observer
 that currently reaches `windows/lab`. The island may introduce a protocol
 adapter or a data-only boundary. It may not copy production behavior into a
 second implementation. The existing authoritative implementation remains the
-comparison path.
+comparison path. Every execution is selected by an identifier in the frozen
+workload registry; the recorder does not accept arbitrary caller commands as
+measurement authority.
 
 Baseline and candidate runs are paired by commit, workload, host class, target
 policy, and run order. Cold runs use an owned empty target and an explicitly
@@ -85,6 +89,8 @@ Each attempt retains a manifest containing:
 - output paths, sizes, hashes, and byte comparison results;
 - queue and authoring costs, recorded separately or explicitly unavailable;
 - failure reason and whether the attempt is valid evidence.
+- canonical checkout, target, evidence roots, and the host enforcement method;
+- the named workload identifier and its frozen command template.
 
 No failed or incomplete attempt may be omitted. A failed preparation is an
 operational failure, not a behavioral result. A product output mismatch is a
@@ -113,10 +119,17 @@ recorded without admitting the candidate.
 
 ## Failure handling
 
-The experiment fails closed when a required input, source identity, command
+The experiment fails closed when a required input, source identity, workload
 record, output, cleanup result, or comparison is missing. An invalid run is
 retained with its logs and owned paths. The controller stops later sampling
 after uncertain cleanup rather than reusing a possibly contaminated target.
+
+The execution wrapper makes the checkout read-only and grants writes only to
+the owned target and evidence roots. On macOS it uses `sandbox-exec`; on Linux
+it uses `bwrap`. It canonicalizes roots before creating the policy, tests both
+blocked and allowed writes, and refuses before launch when the host cannot
+provide the required enforcement. A path declaration by itself is never
+treated as an isolation guarantee.
 
 The candidate is rejected if it imports outside its declared boundary, relies
 on an undocumented generated file, changes simulation outputs, or requires a
