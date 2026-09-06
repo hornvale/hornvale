@@ -6991,10 +6991,15 @@ impl<'w> Session<'w> {
         // continuous test that can pass even when the single heaviest corner
         // is ocean. Measured directly on seed 42 (every walk-depth facet over
         // all 40,962 vertices, comparing the two predicates independently):
-        // 29,713 facets are afloat by the corner-pick test, and of those, 35
-        // (0.118% of afloat facets, 0.085% of all facets) ALSO carry >= 1
+        // 29,713 facets are afloat by the corner-pick test, and of those, 28
+        // (0.094% of afloat facets, 0.068% of all facets) ALSO carry >= 1
         // weft feature by the blend test — real, not merely constructible,
-        // though rare. This gate closes it at the render, the cheaper of the
+        // though rare. (The Warp, Task 6, 2026-09-05: 35 -> 27 -> 30 -> 28. Neither
+        // predicate moved; spring and overhang stopped occurring on ground
+        // with no cause, and afloat coastal ground is exactly that. The
+        // number is asserted exactly by `the_weft.rs`'s
+        // `afloat_facets_never_render_a_weft_clause`, which carries the
+        // reasoning in full.) This gate closes it at the render, the cheaper of the
         // two fixes named in review (aligning the eligibility rule with the
         // corner-pick rule would touch every kind's own derivation instead of
         // one render site).
@@ -7010,6 +7015,31 @@ impl<'w> Session<'w> {
                 Some(&self.weft_window),
             );
             crate::weft_prose::weft_clause(&features)
+        } else {
+            String::new()
+        };
+        // The warp clause (The Warp, Task 3, spec §4): the rock underfoot at
+        // the room's dominant corner — the vertex the biome word and the
+        // colour layer already read (`hornvale_locale::dominant_corner`) —
+        // and the pitch from the blended slope, through
+        // `hornvale_worldgen::warp`'s single implementation of each word.
+        // Gated on `vantage.is_none()` for the reason the weft clause is.
+        let warp_clause = if vantage.is_none() {
+            let geo = self.wctx.ctx.climate().geosphere();
+            let index = self.wctx.ctx.nearest_index();
+            match self.position().corner_weights(geo, index) {
+                Some(weights) => {
+                    let rock = self
+                        .wctx
+                        .ctx
+                        .terrain()
+                        .rock_at(hornvale_locale::dominant_corner(&weights).0);
+                    let slope =
+                        hornvale_kernel::blend_corner_weights(weights, &self.wctx.pack.slope);
+                    crate::warp_prose::warp_clause(rock, hornvale_worldgen::steepness_sign(slope))
+                }
+                None => String::new(),
+            }
         } else {
             String::new()
         };
@@ -7111,7 +7141,7 @@ impl<'w> Session<'w> {
             format!("\n{}", footer_lines.join("\n"))
         };
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}{footer}",
+            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}{footer}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,

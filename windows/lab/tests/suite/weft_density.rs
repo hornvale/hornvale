@@ -66,6 +66,55 @@
 //! | overhang | 0.002497 |
 //! | erratic | 0.000000 |
 //!
+//! # THE WARP, Task 6 (2026-09-05) — what the three tables above read now
+//!
+//! The tables above are THE WEFT's readout and are left as it measured them;
+//! this one is the same readout at the Warp's frozen constants, so the two
+//! can be compared row by row. Same seed, same populations, same estimators.
+//!
+//! | kind | existence density | encounter rate | Moran's I | occurs-count | MI (bits) |
+//! | --- | ---: | ---: | ---: | ---: | ---: |
+//! | spring | 0.013371 | 0.000000 | **Absent** | 0 | 0.086464 |
+//! | overhang | 0.021483 | 0.019444 | 0.926325 | 91 | 0.076536 |
+//! | thicket | 0.135229 | 0.197436 | 0.962205 | 924 | 0.038604 |
+//! | erratic | 0.038153 | 0.049786 | 0.587038 | 233 | 0.000000 |
+//! | any (union) | 0.195222 | 0.255983 | — | — | — |
+//!
+//! Overhang's row is the FINAL reading, at `OVERHANG_RATE = 0.50`. Two other
+//! values of that one constant were measured and each held for a commit, and
+//! the three together are worth more than any one of them:
+//!
+//! | rate | existence density | encounter rate | Moran's I | occurs | MI |
+//! | ---: | ---: | ---: | ---: | ---: | ---: |
+//! | 0.16 | 0.006240 | 0.007692 | 0.874918 | 36 | 0.020901 |
+//! | **0.50** | **0.021483** | **0.019444** | **0.926325** | **91** | **0.076536** |
+//! | 0.75 | 0.031289 | 0.022009 | 0.946788 | 103 | 0.115161 |
+//!
+//! Every column is monotone in the reliability, and **spring's row is
+//! byte-identical across all three**, because no spring constant moved at any
+//! point. See the amended witness at the foot of this file and
+//! `OVERHANG_RATE`'s own doc for what that pins down.
+//!
+//! **Thicket's and erratic's five columns are byte-identical to the Weft's.**
+//! They are the campaign's controls; their recipe is untouched (spec §6.1)
+//! and `windows/worldgen/tests/suite/weft_controls.rs` proves the
+//! bit-for-bit claim directly. That agreement is what licenses reading the
+//! spring and overhang rows as the recipe change rather than as drift.
+//!
+//! **Spring's walk-band columns went to zero and its Moran's I to `Absent`,
+//! and that is a fact about this INSTRUMENT, not about the world.** The walk
+//! pool is 78 land-eligible 60-step walks — 78 LOCATIONS, since 60 adjacent
+//! facets at the walk depth cover one small patch — and the largest spring
+//! cause anywhere in it is about 0.244, below the 0.35 its soft step opens
+//! at. Meanwhile the GRID band reads spring on one land facet in 75
+//! (0.013371). A regionally-clustered kind present at ~1.3% of locations is
+//! missed by 78 draws about a THIRD of the time (0.987^78 = 0.36); the
+//! Weft's own recipe hid
+//! that by giving every kind an unconditional noise floor. The H2 block in
+//! the test below asserts the absence exactly, so it cannot become a silent
+//! skip. The same measurement, from the other side, is in
+//! `weft_prevalence.rs`'s `KIND_BOUNDS` doc.
+//!
 //! # Reading the numbers
 //!
 //! **H1 holds, cleanly.** The union existence density (0.2563, "one in about
@@ -118,6 +167,51 @@
 //! this is a hypothesis about THIS estimator and THIS world, not a
 //! re-derivation, and it is recorded as a hypothesis rather than asserted.
 //!
+//! **THE WARP, Task 6 (2026-09-05): the ordering is STILL FALSIFIED, and by
+//! exactly one relation as before — but a DIFFERENT one.** At the final
+//! constants it reads **spring (0.086464), overhang (0.076536), thicket
+//! (0.038604), erratic (0.000000)**. Three of the preregistered ordering's
+//! relations hold — spring first, erratic last and exactly zero, spring above
+//! overhang — and the one that fails is `thicket > overhang`, the reverse of
+//! the Weft's own failure, which was `thicket > spring`.
+//!
+//! **Spring's own reading rose 11.1x against the Weft's** (0.007812 ->
+//! 0.086464) and that is the campaign's actual claim about spring, measured
+//! against spring's own past. The Warp's spring reads its cause through a
+//! soft step with a zero floor, so a spring stands where its
+//! karst-and-drainage cause actually is; under the Weft's recipe 333 of seed
+//! 42's 403 springs stood on facets with no cause at all, which is precisely
+//! what a mutual information between occurrence and macro-state measures
+//! away. Thicket's and erratic's readings are byte-identical to the Weft's,
+//! as their untouched recipes require.
+//!
+//! **THIS ORDERING WAS MEASURED AT THREE VALUES OF ONE CONSTANT IN ONE DAY,
+//! AND CAME OUT DIFFERENT EACH TIME. That is the finding, not the ordering.**
+//! Only `OVERHANG_RATE` moved; spring read 0.086464 at every one:
+//!
+//! | rate | measured ordering |
+//! | ---: | --- |
+//! | 0.16 | spring, thicket, overhang, erratic — **exactly the preregistration** |
+//! | **0.50** | **spring, overhang, thicket, erratic — the final reading** |
+//! | 0.75 | overhang, spring, thicket, erratic |
+//!
+//! The 0.16 rung was set to satisfy an H2 clause requiring spring's channel
+//! net to beat overhang's, and it confirmed the preregistered ordering
+//! outright — a prediction confirmed by making a different kind twelve times
+//! rarer is not being tested by its confirmation. The clause was withdrawn
+//! from spec §7's gate the same day (ledger #11), and `OVERHANG_RATE` was
+//! then set on overhang's OWN bands: first to 0.75, the highest passing rung,
+//! and finally to **0.50**, the middle of the passing range, for H5 headroom
+//! and because a reliability near three in four sits at the "told" boundary
+//! spec §2 draws. See `OVERHANG_RATE`'s own doc.
+//!
+//! **This is one seed and it is the CALIBRATION seed, so it gates nothing.**
+//! Task 7's four readout seeds, built after the constants were frozen
+//! (decision 0016), are what can say anything general. Of the two relations
+//! this file ASSERTS, erratic-is-smallest never moved; `spring > overhang`
+//! left and came back within the day, and its witness carries the whole
+//! round trip at the assertion itself.
+//!
 //! # Cost
 //!
 //! `#[ignore]`d rather than left in the commit or stage gate: this test
@@ -151,6 +245,22 @@ fn number(built: &BuiltView, name: &str) -> f64 {
     match metric.extract.apply(built) {
         MetricValue::Number(n) => n,
         other => panic!("metric {name} did not read a Number: {other:?}"),
+    }
+}
+
+/// Read one registered metric as `Some(value)`, or `None` when it is
+/// `Absent`. The Warp, Task 6 (2026-09-05): added for the one family whose
+/// `Absent` is now a real, expected reading rather than a defect — see the
+/// H2 block's own comment.
+fn maybe_number(built: &BuiltView, name: &str) -> Option<f64> {
+    let metric = registry()
+        .into_iter()
+        .find(|m| m.name == name)
+        .unwrap_or_else(|| panic!("metric {name} is registered"));
+    match metric.extract.apply(built) {
+        MetricValue::Number(n) => Some(n),
+        MetricValue::Absent => None,
+        other => panic!("metric {name} did not read a Number or Absent: {other:?}"),
     }
 }
 
@@ -211,18 +321,71 @@ fn the_preregistered_readout_is_measured_and_recorded() {
 
     println!("\n=== H2: coherence + anti-vacuity companion ===");
     println!("kind        Moran's I  occurs-count");
-    let mut morans = [0.0; 4];
+    // THE WARP, Task 6 (2026-09-05): `Option`, not `f64`. Spring's Moran's I
+    // is now `Absent` — the statistic's denominator is the indicator's own
+    // variance over the walk pool, and spring occurs on none of that pool's
+    // steps, so there is no variance to divide by. `number()` panics on
+    // `Absent` by design, which is why this one family is read through
+    // `maybe_number` instead. See SILENT_IN_THE_WALK_BAND below for the
+    // measurement and the witness that keeps it honest.
+    let mut morans: [Option<f64>; 4] = [None; 4];
     let mut occurs_count = [0.0; 4];
     for (i, kind) in KINDS.iter().enumerate() {
-        morans[i] = number(&built, &format!("weft-coherence-morans-i-{kind}"));
+        morans[i] = maybe_number(&built, &format!("weft-coherence-morans-i-{kind}"));
         occurs_count[i] = number(&built, &format!("weft-coherence-occurs-count-{kind}"));
-        println!("{kind:<10} {:>10.6} {:>13.0}", morans[i], occurs_count[i]);
+        match morans[i] {
+            Some(v) => println!("{kind:<10} {v:>10.6} {:>13.0}", occurs_count[i]),
+            None => println!("{kind:<10} {:>10} {:>13.0}", "Absent", occurs_count[i]),
+        }
+    }
+
+    // THE WARP, Task 6 (2026-09-05) — the witness for the kind this file's
+    // H2 assertions now skip. It is asserted BEFORE the skips below so the
+    // skips can never be silently wider than the fact that licenses them: a
+    // kind that reappears in the walk band, or a second kind that vanishes
+    // from it, reddens here rather than quietly dropping out of H2.
+    //
+    // WHAT MOVED AND WHY. The Warp gives spring/seep a zero floor and a soft
+    // step opening at a `macro_state` of 0.35 (spec §6.1, §6.2: honest
+    // silence off the sign). This walk pool is 78 land-eligible 60-step
+    // walks, 4,680 steps in all — but 78 LOCATIONS, since 60 adjacent facets
+    // at the walk depth cover one small patch — and the largest spring cause
+    // anywhere in it is about 0.244, so spring's prevalence is an exact zero
+    // across every step of it. Not "a walker never meets a seep":
+    // the GRID band (one facet per geosphere vertex, 11,218 land facets)
+    // reads `weft-existence-density-spring = 0.01337`, one facet in 75, and
+    // H1's table above prints it. The walk band simply has no power for a
+    // regionally-clustered kind present at ~1.3% of locations.
+    const SILENT_IN_THE_WALK_BAND: usize = 0; // spring, KINDS[0]
+    assert_eq!(
+        (
+            morans[SILENT_IN_THE_WALK_BAND],
+            occurs_count[SILENT_IN_THE_WALK_BAND]
+        ),
+        (None, 0.0),
+        "{}'s walk-band coherence reading is back — re-derive H2's skips below from the \
+         new measurement and delete them if every kind reads again",
+        KINDS[SILENT_IN_THE_WALK_BAND]
+    );
+    for (i, kind) in KINDS.iter().enumerate() {
+        assert_eq!(
+            morans[i].is_none(),
+            i == SILENT_IN_THE_WALK_BAND,
+            "{kind}: exactly one kind may be absent from the walk band, and it is \
+             {}; this reading changes which",
+            KINDS[SILENT_IN_THE_WALK_BAND]
+        );
     }
 
     // The anti-vacuity companion: every kind's occurs-count is well above a
     // degenerate few-points regime, so none of the Moran's I readings above
-    // are numerically suspect on that account.
-    for (kind, &count) in KINDS.iter().zip(occurs_count.iter()) {
+    // are numerically suspect on that account. (The Warp: over the kinds
+    // that HAVE a reading — a kind with no reading has nothing to be
+    // suspect about, and its absence is asserted exactly, above.)
+    for (i, (kind, &count)) in KINDS.iter().zip(occurs_count.iter()).enumerate() {
+        if i == SILENT_IN_THE_WALK_BAND {
+            continue;
+        }
         assert!(
             count >= 20.0,
             "H2 anti-vacuity: {kind}'s occurs-count ({count}) is small enough that its \
@@ -242,7 +405,10 @@ fn the_preregistered_readout_is_measured_and_recorded() {
     // above its address-hashed mutant's -0.025, even though it is the
     // weakest of the four kinds there too). So erratic is asserted to be
     // the WEAKEST reading, not a near-zero one.
-    for (kind, &i_stat) in KINDS.iter().zip(morans.iter()) {
+    for (kind, i_stat) in KINDS.iter().zip(morans.iter()) {
+        let Some(i_stat) = *i_stat else {
+            continue; // asserted Absent, exactly, above
+        };
         assert!(
             i_stat > 0.2,
             "H2: {kind}'s Moran's I ({i_stat}) reads inside the near-zero band an \
@@ -250,12 +416,22 @@ fn the_preregistered_readout_is_measured_and_recorded() {
              statistic performs has failed"
         );
     }
-    let erratic_is_weakest = morans[3] == morans.iter().cloned().fold(f64::INFINITY, f64::min);
+    // The Warp (2026-09-05): "weakest of the four" is now "weakest of those
+    // that read" — spring has no reading to be weaker than (see the witness
+    // above). The relation itself is unchanged and still asserted.
+    let erratic_is_weakest = morans[3]
+        == morans
+            .iter()
+            .flatten()
+            .cloned()
+            .fold(f64::INFINITY, f64::min)
+            .into();
     assert!(
         erratic_is_weakest,
-        "erratic's Moran's I ({}) is not the weakest of the four — its short (5-facet) \
-         correlation length predicts it should cluster least, even though H2 is not the \
-         axis erratic is built to score near zero on (that is H3): {morans:?}",
+        "erratic's Moran's I ({:?}) is not the weakest of the kinds the walk band reads — \
+         its short (5-facet) correlation length predicts it should cluster least, even \
+         though H2 is not the axis erratic is built to score near zero on (that is H3): \
+         {morans:?}",
         morans[3]
     );
 
@@ -287,8 +463,18 @@ fn the_preregistered_readout_is_measured_and_recorded() {
     );
 
     // THE PREREGISTERED CLAIM (spec §7): the ORDERING spring > thicket >
-    // overhang > erratic. Measured on this tree: this does NOT hold —
-    // thicket outscores spring. Per decision 0016 this is reported as the
+    // overhang > erratic. Measured on the Weft's own tree: this did NOT hold
+    // — thicket outscored spring. THE WARP, Task 6 (2026-09-05): it STILL
+    // does not hold at the final constants, by one relation as before but a
+    // DIFFERENT one. Seed 42 reads spring 0.086464, overhang 0.076536,
+    // thicket 0.038604, erratic 0.000000 — so `spring > thicket` holds now
+    // and `thicket > overhang` is the relation that fails. See this file's
+    // module doc for the reading, for the three values of `OVERHANG_RATE`
+    // this ordering was measured at in one day (it came out different at
+    // each), and for why one seed — the calibration seed — cannot settle it.
+    // Still printed, still not asserted: promoting it now would gate on the
+    // seed the constants were fitted to, which is Task 7's job to avoid.
+    // Per decision 0016 this is reported as the
     // result, not fixed by retuning a world constant, and the test does
     // NOT fail on it (a falsified prediction is a finding, not a bug —
     // `site_density.rs`'s own H3 readout asserts only that its reading is a
@@ -308,15 +494,23 @@ fn the_preregistered_readout_is_measured_and_recorded() {
              as the result, not rescued). See this file's module doc for the reading."
         );
     }
-    // The witness: erratic is the smallest of the four (holds under both
-    // the preregistered and the measured ordering) and spring beats
-    // overhang (also holds under both) — the two ordering relations the
-    // measured result shares with the prediction, asserted so a FUTURE
-    // change that breaks even these is visible. The one relation that does
-    // NOT hold (spring vs. thicket) is deliberately not asserted here: a
-    // hard assertion on a relation already known false would be
-    // permanently red, which is the "disable a red instead of reporting
-    // it" shape decision 0016 forbids in the other direction.
+    // The witness: the ordering relations the measured result SHARES with
+    // the prediction, asserted so a future change that breaks even these is
+    // visible. At the final constants that is three of the four — erratic
+    // smallest, `spring > overhang` (below), and `spring > thicket` — and
+    // the one that does NOT hold is `thicket > overhang` (0.038604 against
+    // 0.076536). It is deliberately not asserted: a hard assertion on a
+    // relation already known false would be permanently red, which is the
+    // "disable a red instead of reporting it" shape decision 0016 forbids in
+    // the other direction.
+    //
+    // THE FAILING RELATION USED TO BE `thicket > spring`, and this comment
+    // said so until 2026-09-05. It is not a wording change: spring's
+    // legibility rose 11.1x under the Warp (0.007812 -> 0.086464), which
+    // moved it above thicket and left thicket above nothing but the erratic.
+    // A justification that names the wrong relation is how an assertion set
+    // drifts out of agreement with the file that explains it, so the two are
+    // stated together here.
     assert!(
         mi_erratic < mi_overhang && mi_erratic < mi_spring && mi_erratic < mi_thicket,
         "erratic is no longer the smallest of the four legibility readings — a change \
@@ -324,8 +518,63 @@ fn the_preregistered_readout_is_measured_and_recorded() {
          spring={mi_spring:.6} thicket={mi_thicket:.6} overhang={mi_overhang:.6} \
          erratic={mi_erratic:.6}"
     );
+    // `spring > thicket` — the preregistered relation the WEFT measured
+    // false and the Warp turned true (0.086464 against 0.038604). Newly
+    // asserted here on 2026-09-05, for the same reason the other two are:
+    // it is a relation the measurement now shares with the prediction, so a
+    // change that breaks it should be visible rather than absorbed. It is
+    // a WITNESS on one seed, not a claim — Task 7's readout seeds are what
+    // could make it one.
+    assert!(
+        mi_spring > mi_thicket,
+        "spring no longer outscores thicket — the Weft measured this relation FALSE \
+         (0.007812 against 0.038604) and the Warp turned it true; it now reads \
+         spring={mi_spring:.6} thicket={mi_thicket:.6}. Re-derive it and say which \
+         constant moved."
+    );
+
+    // ── THE WARP, Task 6 (2026-09-05): `spring > overhang` left, came back,
+    // and the round trip is now the most useful thing this witness has ever
+    // said. Amended twice in one day, never deleted. ──
+    //
+    // THE RELATION, AT EVERY VALUE MEASURED. Only `OVERHANG_RATE` moved
+    // between these; no spring constant moved at any point, and spring reads
+    // 0.086464 in all three:
+    //
+    //   rate 0.16 (fix round 1's predecessor)  spring 0.086464  overhang 0.020901
+    //   rate 0.50 (FINAL, fix round 2)         spring 0.086464  overhang 0.076536
+    //   rate 0.75 (fix round 1)                spring 0.086464  overhang 0.115161
+    //
+    // The Weft measured it 0.007812 against 0.002497 before the campaign.
+    //
+    // WHAT THAT SHOWS, and it is the reason to keep all three numbers here
+    // rather than only the current pair: overhang's legibility MI is
+    // MONOTONE IN ITS RELIABILITY and crosses spring's somewhere between 0.50
+    // and 0.75, while nothing about either kind's cause, response shape or
+    // sign words changes across the range. This statistic is in BITS, so it
+    // scales with the event's own entropy `H(Y)`; a between-kind comparison
+    // of two MIs is therefore a comparison of two base rates as much as of
+    // two legibilities, and can be flipped either way by a frequency dial.
+    // H2's own between-kind clause was withdrawn from spec §7's gate on this
+    // date for exactly that reason (ledger #11). This witness is the SAME
+    // shape of statement, which is why it is a witness and not a bar — and
+    // why the correct reading of "spring outscores overhang again" is "the
+    // reliability came down", not "spring got more legible".
+    //
+    // The campaign's actual claim about spring is measured against spring's
+    // own past and is untouched by any of this: 0.007812 -> 0.086464, 11.1x.
+    //
+    // RE-PINNED IN THE MEASURED DIRECTION, which at the final constants is
+    // the Weft's original one. Fix round 1 pinned `overhang > spring` at rate
+    // 0.75; that assertion then FIRED on the very next change, naming both
+    // values and pointing at this comment, which is what a witness is for.
     assert!(
         mi_spring > mi_overhang,
-        "spring no longer outscores overhang — spring={mi_spring:.6} overhang={mi_overhang:.6}"
+        "the spring/overhang legibility relation moved again — it reads \
+         spring={mi_spring:.6} overhang={mi_overhang:.6}, and was re-pinned as \
+         spring > overhang on 2026-09-05 at OVERHANG_RATE = 0.50 (0.086464 against \
+         0.076536). Re-derive it and say which constant moved, the way the table in \
+         the comment above this assertion does — the relation tracks overhang's \
+         reliability and crosses between 0.50 and 0.75."
     );
 }
