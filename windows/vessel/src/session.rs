@@ -599,6 +599,11 @@ pub(crate) fn possessor_of(ledger: &Ledger, body: EntityId) -> Option<EntityId> 
     held
 }
 
+/// The flag that switches `!why` from the rolled-up errand view to one line
+/// per step (The Warrant, spec §5.2). One spelling, used by the parser and
+/// named in [`HELP`], so the two cannot drift.
+const STEPS_FLAG: &str = "--steps";
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -648,7 +653,9 @@ verbs:
 operator instruments (out-of-character; bypass the body, never the world):
   !whoami          the one you possess
   !npcs            the derived NPCs sharing this world (label, number)
-  !why <who>       recount an NPC's dated history (by label or number)
+  !why <who>       recount an NPC's dated history (by label or number); each
+                   errand it set out on is named once, rolled up over the
+                   steps it took — add --steps for one line per step
   !eyes [who]      whose eyes you see colour through (a species, 'own',
                    'standard', or 'off'); bare, it says what yours drop
   !provoke [who]   shift a co-located NPC's disposition, your own mark
@@ -9639,7 +9646,22 @@ impl<'w> Session<'w> {
     /// handle is deliberately NOT the NPC's `EntityId` (The Signet) — it is
     /// a short-lived, session-local position a player can type back,
     /// resolved fresh from `other_bodies` on every call.
-    fn why(&self, who: &str) -> String {
+    fn why(&self, rest: &str) -> String {
+        // `--steps` may sit on either side of the name, and a label may
+        // contain spaces, so the flag is filtered out of the token stream
+        // rather than parsed positionally. The bare `!why <who>` form is
+        // untouched: with no flag present, `who` is the whole trimmed
+        // argument exactly as before.
+        let mut steps = false;
+        let mut kept: Vec<&str> = Vec::new();
+        for token in rest.split_whitespace() {
+            if token == STEPS_FLAG {
+                steps = true;
+            } else {
+                kept.push(token);
+            }
+        }
+        let who = kept.join(" ");
         let who = who.trim();
         if who.is_empty() {
             return "Why what? Name an NPC (label or number — see 'npcs').".to_string();
@@ -9655,7 +9677,7 @@ impl<'w> Session<'w> {
         let Some(npc) = target else {
             return format!("No one here answers to '{who}' (see 'npcs').");
         };
-        self.recount(npc.entity)
+        self.recount(npc.entity, steps)
             .unwrap_or_else(|| format!("Nothing is yet recorded of {}.", npc.label))
     }
 
@@ -9664,7 +9686,7 @@ impl<'w> Session<'w> {
     /// — an NPC's `agent-at` facts live only in the session's evolved
     /// state), handed to the domain-agnostic historiography window exactly
     /// as the CLI repl's `why` hands it the genesis world.
-    fn recount(&self, entity: EntityId) -> Option<String> {
+    fn recount(&self, entity: EntityId, steps: bool) -> Option<String> {
         let evolved = World {
             seed: self.world.seed,
             registry: self.registry.clone(),
@@ -9674,7 +9696,11 @@ impl<'w> Session<'w> {
             // duration of one provenance read.
             derived_under: std::collections::BTreeMap::new(),
         };
-        hornvale_historiography::recount(&evolved, entity)
+        if steps {
+            hornvale_historiography::recount_steps(&evolved, entity)
+        } else {
+            hornvale_historiography::recount(&evolved, entity)
+        }
     }
 
     /// Every derived NPC sharing the possessed agent's current room — the

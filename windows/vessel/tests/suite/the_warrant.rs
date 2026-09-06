@@ -424,3 +424,198 @@ fn every_gloss_and_its_first_day_survives_the_flip() {
          went quiet and the equality above got easier, not that anything improved."
     );
 }
+
+/// Identical to the helper in `display_handle.rs` and `the_first_mark.rs`.
+fn out_text(t: hornvale_vessel::Turn) -> String {
+    match t {
+        hornvale_vessel::Turn::Out(s) => s,
+        hornvale_vessel::Turn::Released(s) => panic!("!why never releases: {s}"),
+    }
+}
+
+/// The seeds Task 5's renderings are measured on, the wait count that makes
+/// each one walk, and whether that seed's walk is expected to COMPRESS — that
+/// is, whether any one errand there covers more than a single step.
+///
+/// Seed 7's first resident takes ONE long errand over these twelve waits (38
+/// steps: the regime where the roll-up buys the most). Seed 23's alternates
+/// short errands every step or two, which is the regime a roll-up could
+/// destroy texture in and must not — and at twelve waits its two errands are
+/// one step each, so the rolled-up and per-step views are the SAME length
+/// there. That is the correct outcome, not a failure, so compression is
+/// asserted where it is claimed and not where it is not.
+///
+/// **Twelve waits on both, and the ceiling is cost.** Seed 23 at forty waits
+/// produces the richest exhibit in the campaign (nine errands interleaved with
+/// grazing and sleeping) and costs ~1,300 s in one test — measured, not
+/// estimated. It lives in the chronicle's rendering exhibit instead; the
+/// invariants below hold at twelve.
+///
+/// Seed 42 commits no `agent-at` at all, so it would make every assertion
+/// below vacuous (spec §1).
+/// type-audit: bare-ok(index)
+const RENDER_SEEDS: [(u64, usize, bool); 2] = [(7, 12, true), (23, 12, false)];
+
+/// One resident's recount, in both views, off a fresh walk.
+fn both_views(seed: u64, waits: usize) -> (String, String) {
+    let world = common::build(seed).expect("the pinned seed builds a world");
+    let (mut session, _) =
+        Session::start(&world, &PossessOpts::default()).expect("the pinned seed starts a session");
+    for _ in 0..waits {
+        session.handle("wait");
+    }
+    let rolled = out_text(session.handle("!why 1"));
+    let stepped = out_text(session.handle("!why 1 --steps"));
+    for text in [&rolled, &stepped] {
+        assert!(
+            !text.contains("No one here answers"),
+            "seed {seed}: handle 1 must resolve to a resident: {text}"
+        );
+    }
+    (rolled, stepped)
+}
+
+/// THE CAMPAIGN'S HEADLINE CLAIM, ASSERTED ON A REAL WALK.
+///
+/// **One test rather than the four its assertions would naturally be, and the
+/// reason is measured cost.** Building a world and walking a session twelve
+/// times is the whole expense here; the `!why` calls are free beside it, and
+/// nextest is process-per-test, so four tests would pay for four walks of each
+/// seed instead of one. The assertions are grouped under headings and each
+/// carries its own message.
+///
+/// claim: invariant(forall-seed over [`RENDER_SEEDS`] — for each of the two
+/// pinned seeds, the first resident's recount renders the producer token on no
+/// line in either view, renders no step line of its own in the rolled-up view,
+/// numbers every step within its covering errand in the per-step view, and
+/// names a step count on every rolled-up errand. The seed quantifier is a
+/// fixed two-element panel rather than a range because each element is a world
+/// build plus a twelve-wait walk, and the panel is chosen to span both walk
+/// regimes — one long errand, and short alternating ones)
+#[test]
+fn the_rendered_recount_names_its_errands_and_never_the_bare_producer() {
+    for (seed, waits, compresses) in RENDER_SEEDS {
+        let (rolled, stepped) = both_views(seed, waits);
+        let step_lines = stepped
+            .lines()
+            .filter(|l| l.contains("an agent's position on a day"))
+            .count();
+        assert!(
+            step_lines >= 2,
+            "seed {seed}: the walk must produce at least two steps, or every \
+             assertion below is vacuous:\n{stepped}"
+        );
+
+        // (1) No rendered line shows the bare producer token. Task 3 replaced
+        // each `agent-at` fact's authored prose with `vessel/liveness`, which
+        // — until this task — made every one of a walker's step lines read
+        // `(asserted by vessel/liveness, day …)`, identical but for the clock.
+        // The assertion is over the producer token, not over "some gloss is
+        // present": a renderer that dropped the parenthetical entirely would
+        // satisfy the weaker form, and (3) is what checks something replaced
+        // it.
+        for (view, text) in [("rolled-up", &rolled), ("per-step", &stepped)] {
+            assert!(
+                !text.contains(ERRAND_PRODUCER),
+                "seed {seed}, {view} view: a step still renders the bare producer \
+                 token instead of its errand's gloss:\n{text}"
+            );
+        }
+
+        // (2) The roll-up renders no step line of its own, and where an errand
+        // actually covers more than one step it is strictly shorter. Both
+        // halves together, because either alone is satisfiable by a mistake: a
+        // roll-up that dropped the steps would pass the first, and a `--steps`
+        // flag that did nothing would pass the second.
+        assert_eq!(
+            rolled
+                .lines()
+                .filter(|l| l.contains("an agent's position on a day"))
+                .count(),
+            0,
+            "seed {seed}: the rolled-up view renders no step line of its own:\n{rolled}"
+        );
+        let (a, b) = (rolled.lines().count(), stepped.lines().count());
+        if compresses {
+            assert!(
+                a < b,
+                "seed {seed}: this seed's walk has a multi-step errand, so the \
+                 roll-up must be strictly shorter than the per-step view ({a} vs {b})"
+            );
+        } else {
+            assert!(
+                a <= b,
+                "seed {seed}: a roll-up may tie the per-step view when every errand \
+                 covers one step, but must never be longer ({a} vs {b})"
+            );
+        }
+
+        // (3) Every step names its position within its errand, and every
+        // rolled-up errand names a step count. Task 2's
+        // `an_errand_commits_once_and_its_steps_commit_under_it` asserts the
+        // coverage holds among the committed FACTS; this asserts the renderer
+        // actually uses it, which is a separate claim and the one a reader
+        // sees.
+        for line in stepped
+            .lines()
+            .filter(|l| l.contains("an agent's position on a day"))
+        {
+            assert!(
+                line.contains(" — step ") && line.contains(" of "),
+                "seed {seed}: a step line names no position within its errand: {line}"
+            );
+        }
+        assert!(
+            stepped.contains("step 1 of "),
+            "seed {seed}: steps are numbered from one:\n{stepped}"
+        );
+        for line in rolled.lines().filter(|l| l.contains(" — ")) {
+            assert!(
+                line.contains(" step, day ")
+                    || line.contains(" steps, days ")
+                    || line.contains("no steps recorded"),
+                "seed {seed}: a rolled-up errand names no step count: {line}"
+            );
+        }
+    }
+}
+
+/// THE BARE `!why <who>` FORM IS UNCHANGED. `--steps` is filtered out of the
+/// token stream rather than parsed positionally, so a label that happens to
+/// contain spaces, and the numeric handle, both still resolve — and an
+/// unknown name still refuses rather than silently recounting resident 1.
+///
+/// claim: behavior(one seed — [`RENDER_SEEDS`]'s first entry — over the four
+/// argument forms `!why <label>`, `!why <handle>`, `!why <unknown>` and
+/// `!why --steps`: the first two resolve, the third refuses, the fourth is an
+/// empty request. This is an argument-parsing claim, not a world claim, so one
+/// world is the right denominator: the parse is world-independent and a second
+/// seed would re-assert the same branch)
+#[test]
+fn the_bare_why_form_still_resolves_and_an_unknown_name_still_refuses() {
+    let world = common::build(RENDER_SEEDS[0].0).expect("the pinned seed builds a world");
+    let (mut session, _) =
+        Session::start(&world, &PossessOpts::default()).expect("the pinned seed starts a session");
+    session.handle("wait 4");
+    let listing = out_text(session.handle("!npcs"));
+    let label = listing
+        .lines()
+        .find_map(|l| l.split_once("] "))
+        .map(|(_, name)| name.to_string())
+        .expect("the listing names at least one NPC");
+    for form in [format!("!why {label}"), "!why 1".to_string()] {
+        let text = out_text(session.handle(&form));
+        assert!(
+            !text.contains("No one here answers"),
+            "`{form}` must resolve exactly as it did before --steps existed: {text}"
+        );
+    }
+    assert!(
+        out_text(session.handle("!why nobody-by-this-name")).contains("No one here answers"),
+        "an unknown name still refuses"
+    );
+    assert!(
+        out_text(session.handle("!why --steps")).contains("Why what?"),
+        "`!why --steps` with no name is still an empty request, not a recount"
+    );
+}

@@ -20,7 +20,14 @@ use hornvale_vessel::{PossessOpts, Session, Turn};
 /// unrelated neighbour's water access into three tests that say nothing
 /// about it.
 fn walked(session: &mut Session, label: &str) -> bool {
-    match session.handle(&format!("!why {label}")) {
+    // `--steps` since The Warrant, Task 5: the default `!why` now ROLLS an
+    // errand and the steps under it into one line, so the position
+    // predicate's own doc no longer appears there. `--steps` is the same
+    // recount this witness has always read — one line per committed
+    // positional fact — and reading it keeps the witness the per-NPC
+    // recount rather than swapping in a session-wide count, which is the
+    // proxy this helper's own callers record narrowing away from.
+    match session.handle(&format!("!why {label} --steps")) {
         Turn::Out(s) => s.contains("position on a day"),
         Turn::Released(_) => panic!("why never releases"),
     }
