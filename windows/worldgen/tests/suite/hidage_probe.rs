@@ -552,7 +552,12 @@ fn hidage_probe() {
                 if att == Some(v) {
                     attr_sites += 1;
                 }
-                hops.push(hops_to_attractor(geo, &pf.k, &pf.flow, v));
+                // K==0 sites have no attractor at all (already counted in
+                // `k_zero_sites` above) — `hops_to_attractor` requires
+                // `K(v) > 0` and panics otherwise, so this must not call it.
+                if k > 0.0 {
+                    hops.push(hops_to_attractor(geo, &pf.k, &pf.flow, v));
+                }
                 if built
                     .fields
                     .iter()
@@ -690,6 +695,13 @@ fn hidage_probe() {
 /// walk must end at the attractor `f` reports; if it does not, this routing
 /// copy has diverged from `domains/demography/src/flow.rs`'s, so it panics
 /// rather than prints a wrong number.
+///
+/// **Requires `K(v) > 0`.** `flow.rs` never sets `attractor` for a zero-K
+/// vertex (`term[...]` stays `None`), so `f.attractor.get(v)` is `None`
+/// exactly there — this function has no site with no attractor to walk to,
+/// so a `None` here is a caller error, not a zero-hop answer. The caller
+/// filters (`k > 0.0`) before calling; a K==0 alive site is counted in
+/// `k_zero_sites` instead and never reaches this function.
 fn hops_to_attractor(geo: &Geosphere, k: &VertexMap<f64>, f: &Flow, v: Vertex) -> usize {
     let expected = *f.attractor.get(v);
     let mut cur = v;
@@ -720,7 +732,7 @@ fn hops_to_attractor(geo: &Geosphere, k: &VertexMap<f64>, f: &Flow, v: Vertex) -
     }
     assert_eq!(
         Some(cur),
-        expected.or(Some(cur)),
+        expected,
         "the walk must end where flow says it ends"
     );
     n

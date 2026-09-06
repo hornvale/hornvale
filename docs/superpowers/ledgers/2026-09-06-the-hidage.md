@@ -188,9 +188,9 @@ overturns: 0 — a review gate, not a design choice. · Capture: this entry.
 
 ## Task 1 — readout
 
-HEAD at run time: `0eb166a75043c02ac37be1fdda57c0cdf2c8cd9e` (the probe file
-lands in the next commit, on top of this SHA). Machine: `MacBookPro.local`.
-Wall time: 17.965 s real (16.978 s user, 0.794 s sys) for
+HEAD at run time: `9b72518a18116fc61f2edf0faa1137a9aa5eac60` (the fix-round-1
+commit lands on top of this SHA). Machine: `MacBookPro.local`.
+Wall time: 17.767 s real (16.904 s user, 0.642 s sys) for
 `cargo test -p hornvale-worldgen --test suite -- hidage_probe --ignored --nocapture`,
 five world builds plus one `flow` per settling people per world — well under
 the sub-two-minute bound that would have required hoisting `hops_to_attractor`
@@ -221,6 +221,16 @@ a static bound, not an era-dependent one. RED was the original strict
 assertion failing on real seed-42 data (an assertion failure, not a compile
 error — the acceptable stopping point Step 2 names); GREEN is the
 spec-aligned version above.
+
+**Re-taken after fix round 1** (`hops_to_attractor`'s closing assert absorbed
+a `None` expected — the K==0 case — into a vacuous `Some(cur) == Some(cur)`;
+the call site now skips K==0 sites entirely and the assert compares against
+`expected` directly). Only the wall-time footer line moved in the diff
+against the pre-fix readout — the printed `P1 hops to attractor:`
+median/max and `m` median/max were byte-identical on every seed, because the
+erroneous zero-hop entries the bug added sat alongside genuine zero-hop
+entries (a site that is its own attractor) already in the distribution and
+did not move the median or the max; full diff in the task report.
 
 Probe output, verbatim:
 
@@ -350,7 +360,7 @@ HAMLET_POPULATION_CEILING = 150  LONGHOUSE_POPULATION_FLOOR = 200
 == VERDICT (spec §4, mechanical): Rescale
 test hidage_probe::hidage_probe ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 493 filtered out; finished in 17.88s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 493 filtered out; finished in 17.68s
 
 ```
 
