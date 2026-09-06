@@ -48,6 +48,18 @@ count still clearing them is `>= 378/390`, `250/250`, `262/262`, `60/60`,
 correction to the bar, not a fifth clause, and the corrected bar still fires.
 The verdict is RESCALE.
 
+**Disclosed, because the step is an interpretation.** This campaign's
+implementation plan (Task 3 Step 1) froze the clause more strongly than the
+spec did: *"if the verdict is RESCALE and median `a < 0.5`, the branch is
+MIXED and the entry says why."* Read literally, seeds 100 and 1234 put this
+campaign on MIXED — no strike, the table back to the metaplan — rather than on
+RESCALE. It was read as a bar correction because every other §4 clause is
+quantified "on every seed" and the caveat's preamble is a statement about what
+the bar measures, and the corrected bar fires on every seed; but that is a
+post-unblinding reading of preregistered text by the party it favours, and it
+was put to Nathan with the MIXED alternative named rather than absorbed.
+**Ratified at G6.**
+
 **The four characterizations** (spec §4.1), stated before the probe was
 written so being wrong would be visible:
 

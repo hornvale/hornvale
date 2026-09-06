@@ -4,7 +4,8 @@
 0827 carry the verdict and the criterion it was read off.*
 
 The arc's first probe-only campaign since The Staple itself: one committed
-measurement, one verdict, no mechanism. The rung it was opened to clear the way for is struck.
+measurement, one verdict, no mechanism. The rung it was opened to clear the
+way for is struck.
 
 ## A metaplan lagged the code twice in the same arc, and the second time it was the correction that was stale
 
@@ -105,9 +106,12 @@ deliberately built to look finished.
 The Cruck's retrospective recorded, as a discipline miss, that no stage gate
 was submitted at any plan-stage boundary and the branch first met main at
 close. This campaign submitted one at the Task 1 boundary, as the cadence
-asks. It then queued behind a census already running on the one serial claim
-and one stage gate ahead of it, and the campaign's records were written while
-it waited.
+asks. The first request was **refused at the mouth** — a merge conflict on
+`docs/audits/campaign-reconciliation.tsv`, where both this branch and main had
+appended rows — so the box was never taken; main was absorbed locally with a
+union resolution and the resubmission is what actually queued, behind a census
+already running on the one serial claim and one stage gate ahead of it. The
+campaign's records were written while it waited.
 
 Stated plainly and without complaint, because the cost is the design working
 as intended: a stage gate that queues costs queue position, not attention, and
@@ -132,12 +136,22 @@ blocking.
   which this verdict corroborates without moving — a uniform rescale of a
   ceiling is not the persistent per-entity multiplier that bet is about, and
   this campaign measured no entity sizes.
-- **Deferred minors:** three, all recorded in the campaign ledger as they
-  occurred rather than promoted at close — an untested even-length branch in
-  the median helper, a guard written as `<= 0.0` where `== 0.0` is the stated
-  case, and a shared-attractor count that is per settlement-record rather than
-  per place. The last is stated in the chronicle in exactly those terms rather
-  than left to be inferred from the number.
+- **Deferred minors:** seven rows in the campaign ledger's table, six
+  accepted or deferred and one recording work already done, all written as
+  they occurred rather than promoted at close. Task 0: `median`'s even-length
+  branch has no test (deferred to the final review); `gini` guards
+  `mean <= 0.0` where `== 0.0` is the stated case, unreachable on non-negative
+  inputs (accepted). Task 1: `multi_people_attractor_sites` counts per
+  `(vertex, people)` P1 entry rather than per distinct vertex, so a vertex
+  hosting two peoples counts twice (accepted as consistent with every sibling
+  P1 statistic, and stated in the chronicle in exactly those terms). Task 3:
+  the chronicle's epigraph reads as a stronger null than was measured
+  (accepted — the body is precise, an epigraph is a stance); the chronicle
+  does not quote the caveat's literal MIXED wording, which decision 0827
+  carries in full (accepted); the `SOC-staple-ladder` compaction to fit the
+  600-character cap dropped a clause that survives elsewhere (accepted); and a
+  review ruling that minors which are FALSE STATEMENTS in permanent records
+  are promoted rather than deferred (fixed in fix round 1).
 - **Predictions:** four preregistered, two held, two failed, none retuned. The
   failure of the size-tracks-capacity prediction is the finding the arc
   carries forward; it is reported as the headline of that section rather than

@@ -123,6 +123,19 @@ counted: at least 378 of 390, then 250 of 250, 262 of 262, 60 of 60, and 35 of
 not close: the median top-`N` catchment holds 1,366 to 2,929 headcount of
 capacity against a 150 bar.
 
+That step deserves naming rather than burying, because it is an
+interpretation and not an arithmetic. The frozen rule said the MIXED response
+applies if RESCALE fires with median attainment below 0.5, and this campaign's
+own implementation plan said it more strongly still — *the branch is MIXED*.
+It was read instead as a correction to the **bar**, on the grounds that every
+other clause of the rule is quantified "on every seed" and that the caveat's
+own preamble is a statement about what the bar measures; the corrected bar
+then fires on every seed. That is a post-unblinding reading of preregistered
+text, made by the party it favours, so it was put to the project's owner for
+ratification rather than assumed — with the alternative named: read the plan's
+sentence literally and the verdict is MIXED, the table goes back to the
+metaplan, and nothing is struck.
+
 ## What the predictions did
 
 Four characterizations were stated before the probe existed, so that being
@@ -197,16 +210,19 @@ median, and the distribution is genuinely uneven. What died is D1 as
 specified — the catchment wired in as the growth ceiling *at today's scale*,
 which lifts everything over the ceiling at once. Whether a rescaled catchment
 would make a differentiated apex is a question about the constant that turns
-suitability into headcount, and that constant's future moves out of the
-metaplan's open list and into D2's opening brief rather than being answered
-here.
+suitability into headcount. That constant's future **carries into D2's
+opening brief while remaining the metaplan's own open item** — the §6 bullet
+stays where it is, annotated with what this readout bears on it — rather than
+being answered here.
 
 Four observations go back to the metaplan as material rather than findings.
 Bake settlements cluster into remarkably few watersheds — 354 of seed 42's 390
 share an attractor with another settlement of the same people — so a catchment
 per settlement would need a splitting rule before it could be wired anywhere.
 Alive settlements with zero present-era capacity exist. Attainment above 1.0
-occurs, up to 2.05, which the collapse-pressure threshold permits. And
+occurs, up to 2.05 — a community standing above the capacity the probe's
+present-era reconstruction gives its vertex, which is the same approximation
+the zero-capacity sites come from and not a growth rule. And
 occupancy is low: 21 of seed 42's 390 top-ranked catchments carry an alive
 settlement of that people, 2 of 60 on the smallest world. The places the flow
 field would rank first are mostly not where anybody lives.

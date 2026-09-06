@@ -188,8 +188,9 @@ overturns: 0 — a review gate, not a design choice. · Capture: this entry.
 
 ## Task 1 — readout
 
-HEAD at run time: `9b72518a18116fc61f2edf0faa1137a9aa5eac60` (the fix-round-1
-commit lands on top of this SHA). Machine: `MacBookPro.local`.
+HEAD at run time: `9b72518a18116fc61f2edf0faa1137a9aa5eac60` (the pre-fix run;
+the committed probe is `20f48585e`, whose re-take was byte-identical except the
+footer). Machine: `MacBookPro.local`.
 Wall time: 17.767 s real (16.904 s user, 0.642 s sys) for
 `cargo test -p hornvale-worldgen --test suite -- hidage_probe --ignored --nocapture`,
 five world builds plus one `flow` per settling people per world — well under
@@ -401,6 +402,32 @@ ideonomy passes / overturns: 0 — a mechanical application of a frozen rule,
 with the arithmetic shown. · Capture: this entry; Task 3's verdict section;
 decision 0827.
 
+**The plan's own sentence, disclosed:** this entry was written against spec
+§4's caveat and did NOT cite the implementation plan, which froze a stronger
+form of the same clause before the probe ran —
+`docs/superpowers/plans/2026-09-06-the-hidage.md`, Task 3 Step 1: *"if the
+verdict is RESCALE and median `a < 0.5`, the branch is MIXED and the entry
+says why."* The spec says the MIXED **response** applies; the plan says the
+**branch is** MIXED, and it makes the trigger a bare per-seed comparison with
+no arithmetic in between. Under the plan's literal reading, seeds 100 (0.40)
+and 1234 (0.11) put this campaign on **MIXED** — no verdict, the per-seed
+table goes back to the metaplan §4 D1 as the finding, and the arc's next step
+is a metaplan decision — rather than on **RESCALE**, which strikes D1 and
+licenses the metaplan to assert that worked land is a uniform rescale on this
+field. Those two responses differ in exactly what the record may claim, so the
+difference is not cosmetic. The reading taken above is that the caveat
+corrects the **bar** (150 divided by each seed's own median attainment) rather
+than adding a fifth clause: every other §4 clause is quantified "on every
+seed", the caveat's own preamble frames itself as a statement about what the
+bar measures ("the bar is on capacity, not population"), and the corrected bar
+still fires on every seed, tightest at 35 of 44. **But that is a
+post-unblinding interpretation of preregistered text, made by the party the
+interpretation favours**, and it is disclosed here rather than absorbed. It is
+put to Nathan at G6 for ratification, with the alternative named: read the
+plan's sentence literally, the verdict is MIXED and the arc returns to the
+metaplan with the same table and no strike. Nathan may choose either; nothing
+downstream of this ledger assumes the ratification.
+
 **The characterization predictions (§4.1), against the readout:**
 
 ```
@@ -429,8 +456,12 @@ acted on here):
   seed. The bake's last era is not the present (spec §3.1's approximation is
   real), or those communities are on ground that no longer feeds them.
   Counted and printed, never dropped from `m`.
-- **Attainment above 1.0 occurs** (max 2.05 on seed 42): communities above
-  their vertex's capacity, as `COLLAPSE_PRESSURE = 2.0` permits.
+- **Attainment above 1.0 occurs** (max 2.05 on seed 42): a community standing
+  above the capacity the PROBE's present-era reconstruction gives its vertex.
+  `COLLAPSE_PRESSURE = 2.0` does not explain a reading of 2.05, and the
+  approximation does: the bake grew that community against its own last era's
+  `temp_offset`/`sea_level`, not the present's (spec §3.1, and the same cause
+  as the K==0 sites above).
 - **Occupancy is low**: 21 of 390 top-N attractors on seed 42 carry an alive
   settlement of that people (8/250, 17/262, 2/60, 3/44). The places the flow
   field would rank first are mostly not where the bake put anyone.
@@ -471,6 +502,23 @@ acted on here):
 - **A clippy allow was added** (`#![allow(clippy::disallowed_methods)]`,
   file-level) with a comment citing decision 0092 and the two sibling
   probes carrying the same line; the reviewer confirmed both. Accepted.
+
+## Task 2 — stage gate
+
+Submitted at the Task 1 plan-stage boundary, per the standing cadence (and
+per The Cruck's recorded miss of exactly this).
+
+- `req-f02fb4f7d3e1-20260906T153314Z`, `f02fb4f7d`, 2026-09-06T15:33Z —
+  **REFUSED AT THE MOUTH**: merge conflict between `origin/main` and the
+  candidate on `docs/audits/campaign-reconciliation.tsv`, where both sides had
+  appended rows. The box was never taken, which is the mouth working as
+  designed: a conflict costs milliseconds instead of a claim.
+- Main absorbed locally at `30604a92f` (union resolution on the TSV — both
+  sides' rows kept; the digest's decision index regenerated in the same
+  commit, since main had added records of its own).
+- `req-4feb86d81540-20260906T161648Z`, `4feb86d81`, 2026-09-06T16:16Z —
+  resubmitted. **Outcome: pending at the time of this entry; recorded when it
+  reports.**
 
 ## Task 3 — verdict and records
 
@@ -535,6 +583,38 @@ not a rung, and neither decision record decides it.
   `shipped`, chronicle and retro rows added; spec and plan `**Status:**`
   headers updated.
 
+### Book freshness sweep — what was corrected, and what was left
+
+Swept on the INVARIANT the verdict touches — "the production path reads a
+catchment" — not on the wording.
+
+Corrected:
+
+- `book/src/domains/settlement.md` (a first pass at `bed5ada34`, the rest
+  here): the "the condensation flow still builds the capacity field the
+  history reads" passage and the seed-42 settlement-count paragraph, both put
+  in the bake's terms; "An attractor becomes a committed settlement once …"
+  → *became … until The Living Community made the bake the provider; the flow
+  survives as the Lab's readout of the field*; "because each species now
+  condenses its field independently, two peoples may settle overlapping
+  ground" → past tense, with "and the Lab's readout still does" kept, because
+  the overlap consequence is a real property of that instrument.
+- `book/src/domains/overview.md`: the Settlement row's Inputs cell named "the
+  sibling `demography` domain's field **and flow**"; the flow is an input to
+  nothing on the production path, so the cell names the field only.
+
+Left, with the reason:
+
+- **The Tier 1 heading** ("settlements condense out of a carrying-capacity
+  field (Campaign 4a … re-founded on a field by *The Gathering*)"). It is a
+  tier label naming the campaigns that built it, in a chapter whose tier
+  ladder is a historical record; it asserts no present-tense provision, and
+  the paragraph beneath it now carries the correction.
+- **The chronicle-pointer paragraph and "the tier ladder ahead"** (~line 470):
+  "[The Gathering] for the move from a suitability scatter to the
+  carrying-capacity field and its condensation" is a claim about what that
+  campaign did, which is still true. No present-tense provision is asserted.
+
 ### Confidence Gradient — no bet moved
 
 Grepped `book/src/open-questions.md` on the invariant (`hamlet`,
@@ -551,9 +631,14 @@ re-score paragraph written, per decision 0030's condition (resolves or moves).
 
 ### Deferred minors found in Task 3
 
-None new. The three in the table above stand as recorded; the Task 1 minor
-(`multi_people_attractor_sites` counting per P1 entry, not per distinct
-vertex) is reported in the chronicle in exactly those terms.
+**Four Task 3 rows were added to the table above** — the epigraph's stance,
+the chronicle not quoting the caveat's literal MIXED wording, the
+`SOC-staple-ladder` compaction, and the review ruling that promoted the
+FALSE-STATEMENT minors into fix round 1 rather than deferring them. Three are
+accepted as-is; the fourth records what was fixed. The earlier tasks'
+minors stand as recorded, including the Task 1 one
+(`multi_people_attractor_sites` counting per `(vertex, people)` P1 entry, not
+per distinct vertex), which the chronicle reports in exactly those terms.
 
 ### No census, no world moved
 
@@ -576,7 +661,8 @@ so no census is needed at this close.
 - **Era-varying catchments** — whether a cooling era shrinks a watershed
   faster than it shrinks the apex vertex — is D1's climate payoff (metaplan §3
   consequence 3) and is not measured here. If D1 lives, its design's own
-  probe should take it.
+  probe should take it. **(Moot: D1 is struck; carried only as a note for D2's
+  brief.)**
 
 ## Deferred minors
 

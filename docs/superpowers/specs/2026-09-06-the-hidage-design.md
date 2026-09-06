@@ -5,7 +5,8 @@ worked land" — the probe that must precede the rung, standing rule 1) ·
 **Decision block:** 0826–0835 · **Ledger:**
 [`2026-09-06-the-hidage.md`](../ledgers/2026-09-06-the-hidage.md) ·
 **Status:** implemented and closed 2026-09-06: verdict RESCALE, D1 struck
-(decision 0827).
+(decision 0827). §4's frozen table is unedited and carries one bracketed
+close-time note beneath it.
 
 *The Tribal Hidage assessed each people's land in hides — the unit of worked
 land that feeds one household — before anyone ploughed it. This campaign
@@ -202,6 +203,10 @@ of the five seeds:
                                                                 which seeds fell where; the arc's next step
                                                                 is a metaplan decision, not a rung.
 ```
+
+[Close, 2026-09-06: the readout says the field does carry an apex (S4
+2.9–11.2); "it makes no apex" was wrong about the field and right about the
+rung — decision 0827.]
 
 **Why a count, and why two dead poles.** A flatness statistic cannot fire:
 `flow` is the drainage algorithm and drainage-basin sizes are heavy-tailed on

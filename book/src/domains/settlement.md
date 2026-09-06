@@ -69,11 +69,14 @@ way drainage breaks elevation ties), and a cell's accumulation is the sum
 of `K` over every cell whose climbing path passes through it. A cell with
 no higher-`K` neighbor is an *attractor* — a candidate settlement — and
 every other cell joins the catchment of the attractor its path leads to.
-An attractor becomes a committed settlement once its catchment accumulation
-clears a concentration threshold (frozen once, calibrated to a manageable
+An attractor *became* a committed settlement once its catchment accumulation
+cleared a concentration threshold (frozen once, calibrated to a manageable
 seed-42 count — 182 settlements, average catchment about 22 people, down
-from 998 at an untuned threshold); its population is that accumulation
-exactly, a readout of the field rather than a draw. Conservation is
+from 998 at an untuned threshold), its population that accumulation exactly,
+a readout of the field rather than a draw — until [The Living
+Community](../chronicle/the-living-community.md) made the deep-history bake
+the settlement provider. The flow survives as the Lab's readout of the field;
+nothing on the production path reads a catchment. Conservation is
 structural, not tuned: summed over every attractor at no threshold at all,
 `Σ population == Σ K` holds exactly, per species, because settlements
 *partition* the carrying-capacity budget rather than each sampling a local
@@ -140,10 +143,10 @@ psychology-folded field from the same per-species machinery, so goblin's
 placement and population outcomes trace the same species substrate
 described fully in [Species](./species.md). The settlement noun itself is
 species-specific: a goblin settlement is a "village," a kobold one a
-"warren." One deliberate, documented step back rides along: because each
-species now condenses its field independently, two peoples may settle
-overlapping ground — the old 12° cross-species spacing rule is not rebuilt
-here. Restoring real multi-species exclusion, with footprint-scaled home
+"warren." One deliberate, documented step back rode along: because each
+species condensed its field independently — and the Lab's readout still
+does — two peoples may settle overlapping ground, and the old 12°
+cross-species spacing rule was not rebuilt here. Restoring real multi-species exclusion, with footprint-scaled home
 ranges and competitive sharing rather than a fixed separation distance, is
 the coexistence-stack campaign's job, building on this field rather than
 inside it.
