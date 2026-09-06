@@ -110,6 +110,7 @@ windows/vessel/tests/common/mod.rs	1	unmigrated:1
 windows/vessel/tests/suite/act.rs	1	unmigrated:1
 windows/vessel/tests/suite/body_fields.rs	1	unmigrated:1
 windows/vessel/tests/suite/controller_swap.rs	1	unmigrated:1
+windows/vessel/tests/suite/cruck_readout.rs	1	identity:1
 windows/vessel/tests/suite/display_handle.rs	1	unmigrated:1
 windows/vessel/tests/suite/furnishing_marks.rs	1	unmigrated:1
 windows/vessel/tests/suite/housemark_readout.rs	1	identity:1

@@ -39,6 +39,8 @@ mod coercion_calibration;
 mod controller_swap;
 #[path = "suite/corner_rule.rs"]
 mod corner_rule;
+#[path = "suite/cruck_readout.rs"]
+mod cruck_readout;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
 #[path = "suite/doctrine.rs"]
@@ -137,6 +139,8 @@ mod the_rack;
 mod the_roll;
 #[path = "suite/the_terrier.rs"]
 mod the_terrier;
+#[path = "suite/the_warp.rs"]
+mod the_warp;
 #[path = "suite/the_weft.rs"]
 mod the_weft;
 #[path = "suite/thing.rs"]

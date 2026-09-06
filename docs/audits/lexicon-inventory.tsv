@@ -100,8 +100,8 @@ windows/vessel/src/fabric.rs	21
 windows/vessel/src/interior/pattern.rs	1
 windows/vessel/src/lattice/allocate.rs	31
 windows/vessel/src/lattice/anchor_cells.rs	107
-windows/vessel/src/lattice/classify.rs	134
-windows/vessel/src/lattice/grow.rs	99
+windows/vessel/src/lattice/classify.rs	139
+windows/vessel/src/lattice/grow.rs	106
 windows/vessel/src/lattice/mod.rs	123
 windows/vessel/src/lattice/occupancy.rs	55
 windows/vessel/src/lattice/render.rs	55

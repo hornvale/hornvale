@@ -28,6 +28,8 @@ use hornvale_vessel::light::{ATTENUATION, Source, TORCH_KELVIN, light_field};
 /// distance-4 test below): strictly above the pre-change reading, well under
 /// what a nearer cell renders.
 const BRIGHT_SUM: u32 = 172;
+use hornvale_history::record::{Function, Notability};
+use hornvale_vessel::housemark::{AuthorityMark, Housemark, ThresholdPosture};
 use hornvale_vessel::site::{Site, SiteKind};
 use hornvale_vessel::structure::{Structure, structure_at};
 use hornvale_vessel::{
@@ -38,8 +40,49 @@ use std::collections::BTreeSet;
 /// The walk depth the vessel's own lattice fixtures use.
 const WALK: u32 = 13;
 
-/// A built place; the brief `allocate` is selected by.
+/// A living, warm, communal, plain-postured agrarian dwelling: the BUSH shape,
+/// four chambers, `T{ H, W, S }` — a fork of three at the door.
+///
+/// **A built place names the shape it wants with a brief now** (The Cruck,
+/// Task 3): the chamber count and links come from `structure::grammar`, so
+/// there is nothing left to scan locales for. The wild path still draws its
+/// count, and [`wild_structure_of`] still scans.
+fn bush() -> Brief {
+    Brief::from_parts(
+        Some(Function::Agrarian),
+        None,
+        Some(Notability::Common),
+        None,
+        Some(Housemark {
+            authority: AuthorityMark::Common,
+            threshold: ThresholdPosture::Plain,
+        }),
+        0,
+        true,
+        false,
+        Some(Site::placed(SiteKind::Settlement, None)),
+        None,
+    )
+}
+
+/// A waypoint: `Trade`'s business IS keeping goods, so three chambers.
+fn trade() -> Brief {
+    let mut b = bush();
+    b.function = Some(Function::Trade);
+    b
+}
+
+/// A built place with no business at all: the grammar's floor, two chambers.
 fn built() -> Brief {
+    let mut b = bush();
+    b.function = None;
+    b
+}
+
+/// A CAVE: a site nobody built — the brief `grow` is selected by, and the one
+/// whose draw still decides its own chamber count. It carries a SITE because
+/// `structure_at` gates on `brief.site` (decision 0666).
+fn wild() -> Brief {
     Brief::from_parts(
         None,
         None,
@@ -47,16 +90,11 @@ fn built() -> Brief {
         None,
         None,
         0,
+        false,
         true,
-        true,
-        Some(Site::placed(SiteKind::Settlement, None)),
+        Some(Site::placed(SiteKind::Cave, None)),
         None,
     )
-}
-
-/// A wild place; the brief `grow` is selected by — the hostile geometry.
-fn wild() -> Brief {
-    Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
 }
 
 fn locale_number(n: u64) -> Facet {
@@ -66,30 +104,42 @@ fn locale_number(n: u64) -> Facet {
     }
 }
 
-fn structure_of(chamber_count: usize, seed: Seed) -> Structure {
+/// A REAL wild structure of exactly `chamber_count` chambers, found by
+/// scanning locales — the wild count really is drawn (spec §3.5).
+fn wild_structure_of(chamber_count: usize, seed: Seed) -> Structure {
     for n in 0u64..4096 {
         let locale = locale_number(n);
-        let s = structure_at(&locale, &built(), seed, WALK).expect("built");
+        let s = structure_at(&locale, &wild(), seed, WALK).expect("a cave is a site");
         if s.chambers.len() == chamber_count {
             return s;
         }
     }
-    panic!("no locale in 4096 draws a {chamber_count}-chamber structure at {seed:?}");
+    panic!("no locale in 4096 draws a {chamber_count}-chamber cave at {seed:?}");
 }
 
-fn embedded(chamber_count: usize, seed: Seed, method: &Brief) -> Lattice {
-    let structure = structure_of(chamber_count, seed);
-    let extent = extent_for(&structure);
-    embed_with(&structure, method, extent, seed)
+fn embedded(structure: &Structure, seed: Seed, method: &Brief) -> Lattice {
+    let extent = extent_for(structure);
+    embed_with(structure, method, extent, seed)
 }
 
 /// The lattices this battery reads: both embedders, several chamber counts.
+///
+/// The rectilinear arm names its three shapes by brief (two, three and four
+/// chambers); the grown arm still asks for a count, because a cave's count is
+/// the draw's.
 fn fixtures() -> Vec<(String, Lattice)> {
     let mut out = Vec::new();
-    for (label, brief) in [("rectilinear", built()), ("grown", wild())] {
-        for (n, seed) in [(2usize, Seed(4)), (3, Seed(1)), (4, Seed(2))] {
-            out.push((format!("{label} n={n} {seed:?}"), embedded(n, seed, &brief)));
-        }
+    for (label, shape, seed) in [
+        ("rectilinear no-business", built(), Seed(4)),
+        ("rectilinear trade", trade(), Seed(1)),
+        ("rectilinear bush", bush(), Seed(2)),
+    ] {
+        let s = structure_at(&locale_number(seed.0), &shape, seed, WALK).expect("a built site");
+        out.push((format!("{label} {seed:?}"), embedded(&s, seed, &shape)));
+    }
+    for (n, seed) in [(2usize, Seed(4)), (3, Seed(1)), (4, Seed(2))] {
+        let s = wild_structure_of(n, seed);
+        out.push((format!("grown n={n} {seed:?}"), embedded(&s, seed, &wild())));
     }
     out
 }

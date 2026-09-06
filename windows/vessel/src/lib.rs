@@ -51,6 +51,7 @@ pub mod turn_work;
 mod underground;
 pub mod underworld_level;
 mod vantage;
+pub mod warp_prose;
 pub mod weft_prose;
 pub use agent::{most_populous_settlement, walk_depth};
 pub use brief::{Brief, brief_of};
@@ -77,7 +78,7 @@ pub use snapshot::{
     SelfChannel, SensedChannel, SessionSnapshot, SocialEntry, SpatialChannel, snapshot_json,
 };
 pub use streams::stream_labels;
-pub use structure::{MAX_CHAMBERS, Structure, structure_at};
+pub use structure::{MAX_CHAMBERS, Role, Structure, structure_at};
 pub use tableau::{StagedBody, Tableau};
 pub use underworld_level::{
     Level, LevelCellKind, generate_descent, generate_descent_for_character, generate_level,

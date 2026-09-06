@@ -19,8 +19,7 @@ pub use anchor::{Anchor, AnchorId, Interior};
 pub use derive::{chamber_interior_of, interior_of};
 pub use field::{HEARTH_WARMTH, WARMTH_DECAY, warmth_at};
 pub use pattern::{
-    Attach, EVERY_ROLE, INVENTORY, Pattern, Role, compose, permits, role_for, selection,
-    selection_for,
+    Attach, EVERY_ROLE, INVENTORY, Pattern, Role, compose, permits, selection, selection_for,
 };
 // `relation::compose` and `pattern::compose` collide; the relation one is
 // re-exported under an unambiguous name rather than shadowing either.

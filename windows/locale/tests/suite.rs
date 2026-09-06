@@ -15,6 +15,8 @@ mod column_delegation;
 mod site_address_agreement;
 #[path = "suite/surface_mixture.rs"]
 mod surface_mixture;
+#[path = "suite/warp_wetness.rs"]
+mod warp_wetness;
 #[path = "suite/water_reading.rs"]
 mod water_reading;
 #[path = "suite/wetness_reading.rs"]

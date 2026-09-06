@@ -82,9 +82,11 @@ impl Occupancy {
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::lattice::{embed_with, extent_for};
     use crate::site::{Site, SiteKind};
     use crate::structure::structure_at;
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 13;
@@ -104,20 +106,47 @@ mod tests {
     /// kind"* — a fixture premise failing in the language of a rule about
     /// where a creature may stand. The premise was never the seed; it is "a
     /// plan with a floor and a threshold in it".
+    ///
+    /// **WHAT THE SEED STILL VARIES CHANGED UNDER IT, and the search would
+    /// have gone quietly dead** (The Cruck, Task 3, fix round 1). The brief
+    /// here was built, cold and businessless, and once `structure_at` began
+    /// running the grammar for built sites that brief derives one fixed
+    /// two-chamber `T{ H }` at every seed — so the 64-seed loop below was
+    /// evaluating 64 identical structures while its own doc said it was
+    /// sampling. It is the BUSH brief now (`T{ H, W, S }`: warm, communal,
+    /// plain-postured, agrarian), which is the fullest frame the grammar
+    /// derives without a Seat, so these rules are checked against a real fork
+    /// rather than the grammar's floor.
+    ///
+    /// The SEARCH survives and is still over the seed, but say what it now
+    /// varies: the STRUCTURE is the brief's and fixed, and the EMBEDDING is
+    /// the seed's — `embed_with` spends one draw per interior boundary — so
+    /// the loop samples 64 different plans of one shape. That is what the
+    /// premise was always about (a plan holding a floor and a threshold), and
+    /// it is a guard rather than a hunt: with four chambers a threshold cell  // lexicon: a lattice square, which IS an area — this module's whole subject
+    /// is expected at every seed, and an embedder that stopped realizing one
+    /// would still be caught here rather than in `a_cell`'s panic.  // lexicon: a FUNCTION NAME in this module, and the squares it finds are areas
+    ///
+    /// No terrain stub stands behind this fixture — nothing here composes an
+    /// interior, only a lattice — so `cold` is free to be the bush's `false`
+    /// with nothing to disagree with it.
     fn plan() -> Lattice {
         let addr = Facet {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         };
         let brief = Brief::from_parts(
+            Some(Function::Agrarian),
             None,
+            Some(Notability::Common),
             None,
-            None,
-            None,
-            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
             0,
             true,
-            true,
+            false,
             Some(Site::placed(SiteKind::Settlement, None)),
             None,
         );
