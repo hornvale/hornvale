@@ -321,6 +321,7 @@ chronicle-the-vigil	shipped	none		published chronicle				book/src/chronicle/the-
 chronicle-the-wakeful-sun	shipped	none		published chronicle				book/src/chronicle/the-wakeful-sun.md	
 chronicle-the-wandering-sun	shipped	none		published chronicle				book/src/chronicle/the-wandering-sun.md	
 chronicle-the-wanting	shipped	none		published chronicle				book/src/chronicle/the-wanting.md	
+chronicle-the-warrant	shipped	none		published chronicle; G6 approved 2026-09-06				book/src/chronicle/the-warrant.md	
 chronicle-the-warren	shipped	none		published chronicle				book/src/chronicle/the-warren.md	
 chronicle-the-wash	shipped	none		published chronicle				book/src/chronicle/the-wash.md	
 chronicle-the-waterline	shipped	none		published chronicle				book/src/chronicle/the-waterline.md	
@@ -657,6 +658,7 @@ plan-2026-09-04-the-housemark	shipped	none		status header records closure		docs/
 plan-2026-09-04-the-cruck	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-cruck.md			
 plan-2026-09-05-the-sluicegate	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it		docs/superpowers/plans/2026-09-05-the-sluicegate.md			
 plan-2026-09-05-the-lot	shipped	none		merged via the queue 2026-09-05; all twelve tasks and the plan amendment executed		docs/superpowers/plans/2026-09-05-the-lot.md			
+plan-2026-09-05-the-warrant	shipped	none		plan: COMPLETE through Task 6; Task 4 struck before execution (ledger #7 R2); G6 approved 2026-09-06		docs/superpowers/plans/2026-09-05-the-warrant.md			
 plan-the-contour-baseline	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline.md			
 plan-the-contour-baseline-v2	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline-v2.md			
 plan-the-contour-readout	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-readout.md			
@@ -1337,6 +1339,7 @@ the-kerf	shipped	none		spec: status header records closure; plan: COMPLETE throu
 plan-2026-09-04-the-charter	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission		docs/superpowers/plans/2026-09-04-the-charter.md			
 spec-2026-09-04-federated-development-program-metaplan-design	active	none		bounded Charter pilot qualified; broader federation program remains active	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
 spec-2026-09-04-the-charter-design	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission	docs/superpowers/specs/2026-09-04-the-charter-design.md				
+spec-2026-09-05-the-warrant-design	shipped	none		status header records closure; H2 falsified and reported unamended in the appended results note	docs/superpowers/specs/2026-09-05-the-warrant-design.md				
 retrospective-the-sluicegate	shipped	none		published retrospective					docs/retrospectives/the-sluicegate.md
 chronicle-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission				book/src/chronicle/the-charter.md	
 retrospective-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission					docs/retrospectives/the-charter.md
@@ -1347,4 +1350,5 @@ retro-the-cruck	shipped	none		committed retrospective					docs/retrospectives/th
 the-spillway	active	none		spec approved at G3 2026-09-06; plan written; census-delivery deadlock (registry row TOOL-census-delivery-and-injection-fixtures-deadlock)	docs/superpowers/specs/2026-09-06-the-spillway-design.md	docs/superpowers/plans/2026-09-06-the-spillway.md			
 chronicle-the-lot	shipped	none		published chronicle				book/src/chronicle/the-lot.md	
 retrospective-the-lot	shipped	none		published retrospective					docs/retrospectives/the-lot.md
+retrospective-the-warrant	shipped	none		published retrospective; G6 approved 2026-09-06					docs/retrospectives/the-warrant.md
 the-ken	active	none		plan complete through Task 6; chronicle and retrospective committed; awaiting G6 approval before sluice submission	docs/superpowers/specs/2026-09-05-the-ken-design.md	docs/superpowers/plans/2026-09-05-the-ken.md		book/src/chronicle/the-ken.md	docs/retrospectives/the-ken.md

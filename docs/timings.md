@@ -6103,6 +6103,31 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T20:41:14Z | sluice:gate | 825.258 | 21787.432 | 612.169 | 27.14 | 0 | f89570edd |  | lefford | 40 |
 | 2026-09-05T20:43:58Z | sluice:clients | 163.755 | 2295.989 | 214.149 | 15.33 | 0 | fde6418d6 |  | lefford | 40 |
 | 2026-09-05T20:51:49Z | sluice:heavy | 470.334 | 10251.012 | 171.545 | 22.16 | 0 | 3af4fe0af |  | lefford | 40 |
+| 2026-09-05T21:59:41Z | prewarm | 224.456 | 916.547 | 50.218 | 4.31 | 0 | 8c971261d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T22:33:51Z | rebaseline | 302.828 | 444.262 | 21.649 | 1.54 | 0 | 8c971261d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T22:36:29Z | gate-commit | 122.148 | 77.608 | 19.281 | 0.79 | 0 | 8c971261d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T22:38:12Z | gate-commit | 80.393 | 76.198 | 16.960 | 1.16 | 0 | 8c971261d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T23:04:01Z | rebaseline | 188.258 | 437.027 | 19.100 | 2.42 | 0 | 52df5c2b1 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T23:04:56Z | gate-commit | 37.448 | 70.162 | 16.134 | 2.30 | 0 | 52df5c2b1 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T23:06:53Z | gate-commit | 37.482 | 70.279 | 16.028 | 2.30 | 0 | 52df5c2b1 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T23:51:31Z | gate-commit | 26.930 | 26.031 | 0.699 | 0.99 | 0 | 3aa975838 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-05T23:52:45Z | gate-commit | 43.028 | 72.009 | 15.702 | 2.04 | 0 | 3aa975838 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T00:01:11Z | rebaseline | 218.253 | 433.306 | 16.213 | 2.06 | 0 | 3aa975838 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T00:02:29Z | gate-commit | 38.682 | 70.700 | 15.511 | 2.23 | 0 | 3aa975838 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T00:03:40Z | gate-commit | 35.954 | 69.267 | 15.577 | 2.36 | 0 | 3aa975838 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T01:03:04Z | rebaseline | 167.788 | 427.918 | 18.057 | 2.66 | 0 | ece6b756d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T01:18:56Z | gate-commit | 65.463 | 86.871 | 25.785 | 1.72 | 0 | ece6b756d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T01:22:28Z | gate-commit | 71.887 | 76.124 | 16.124 | 1.28 | 0 | ece6b756d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T02:11:04Z | gate-commit | 62.729 | 86.814 | 26.114 | 1.80 | 0 | dcca185a2 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T02:12:55Z | gate-commit | 38.690 | 70.180 | 15.770 | 2.22 | 0 | dcca185a2 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T03:20:52Z | rebaseline | 467.732 | 457.132 | 18.804 | 1.02 | 0 | c87825be0 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T03:21:20Z | gate-commit | 14.063 | 13.462 | 8.807 | 1.58 | 0 | c87825be0 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T03:22:53Z | gate-commit | 79.985 | 113.293 | 19.972 | 1.67 | 0 | c87825be0 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T03:23:59Z | gate-commit | 49.267 | 75.242 | 16.456 | 1.86 | 0 | c87825be0 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T03:48:02Z | gate-commit | 38.404 | 71.188 | 15.576 | 2.26 | 0 | c87825be0 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T03:50:07Z | gate-commit | 46.727 | 74.257 | 16.275 | 1.94 | 0 | c87825be0 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T04:17:30Z | gate-commit | 74.128 | 201.821 | 40.720 | 3.27 | 0 | 12d040a6d | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T04:32:05Z | gate-commit | 50.637 | 75.117 | 16.033 | 1.80 | 0 | 12d040a6d | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-05T21:14:54Z | gate-commit | 47.476 | 59.912 | 14.588 | 1.57 | 0 | 67252eabe | campaign/the-warp | MacBookPro | 10 |
 | 2026-09-05T21:15:34Z | gate-commit | 21.989 | 17.127 | 0.424 | 0.80 | 0 | 67252eabe | campaign/the-warp | MacBookPro | 10 |
 | 2026-09-05T21:26:48Z | gate-commit | 95.858 | 211.309 | 31.898 | 2.54 | 0 | 67252eabe | campaign/the-warp | MacBookPro | 10 |
@@ -6204,6 +6229,15 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T02:29:28Z | sluice:clients | 161.677 | 2256.665 | 216.086 | 15.29 | 0 | 48547597e |  | lefford | 40 |
 | 2026-09-06T02:37:19Z | sluice:heavy | 470.955 | 10441.817 | 160.025 | 22.51 | 0 | 308c759bc |  | lefford | 40 |
 | 2026-09-06T13:10:43Z | prewarm | 113.270 | 796.921 | 52.122 | 7.50 | 0 | 51b838f09 | campaign/the-spillway | MacBookPro | 10 |
+| 2026-09-06T05:13:55Z | gate-commit | 184.306 | 616.200 | 69.081 | 3.72 | 0 | 25f0ffe5f | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T05:35:44Z | rebaseline | 213.362 | 431.826 | 16.489 | 2.10 | 0 | 27de2a7f1 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T05:36:59Z | gate-commit | 58.143 | 165.287 | 34.436 | 3.44 | 0 | 27de2a7f1 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T05:37:54Z | gate-commit | 35.213 | 68.613 | 15.566 | 2.39 | 0 | 27de2a7f1 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T06:32:29Z | gate-commit | 35.752 | 69.159 | 15.282 | 2.36 | 0 | 1e48956e9 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T06:50:25Z | gate-commit | 45.120 | 74.322 | 15.437 | 1.99 | 0 | db45f02e6 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T07:31:47Z | gate-commit | 34.613 | 36.701 | 8.267 | 1.30 | 0 | 4d5032430 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T07:33:24Z | gate-commit | 72.000 | 211.098 | 32.900 | 3.39 | 0 | 4d5032430 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T07:35:54Z | gate-commit | 51.821 | 77.725 | 16.697 | 1.82 | 0 | 4d5032430 | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T02:59:57Z | rebaseline | 219.043 | 478.057 | 18.518 | 2.27 | 0 | 9e2ec71c0 | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-06T03:12:57Z | gate-commit | 174.032 | 574.069 | 102.798 | 3.89 | 0 | 9e2ec71c0 | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-06T04:16:48Z | gate-commit | 53.497 | 102.958 | 17.450 | 2.25 | 0 | 2c9d7b711 | campaign/the-lot | MacBookPro | 10 |
@@ -6219,6 +6253,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T05:50:10Z | sluice:gate | 865.604 | 21936.415 | 632.494 | 26.07 | 0 | dadeae723 |  | lefford | 40 |
 | 2026-09-06T05:52:40Z | sluice:clients | 150.057 | 2404.189 | 178.158 | 17.21 | 0 | 3bd1b78ba |  | lefford | 40 |
 | 2026-09-06T06:00:48Z | sluice:heavy | 487.623 | 11472.542 | 147.466 | 23.83 | 0 | 914763dfd |  | lefford | 40 |
+| 2026-09-06T12:52:42Z | rebaseline | 208.662 | 478.277 | 19.582 | 2.39 | 0 | 8438a1a06 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T13:02:07Z | gate-commit | 145.401 | 636.098 | 103.957 | 5.09 | 0 | 8438a1a06 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T13:04:46Z | gate-commit | 35.319 | 69.985 | 15.445 | 2.42 | 0 | 3233bc1de | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T13:08:02Z | gate-commit | 35.649 | 70.183 | 15.327 | 2.40 | 0 | 6ab631209 | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T07:33:16Z | rebaseline | 190.766 | 432.359 | 18.040 | 2.36 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T07:48:15Z | gate-commit | 50.980 | 107.764 | 45.268 | 3.00 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T07:48:58Z | vessel-check | 39.460 | 46.205 | 1.380 | 1.21 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
@@ -6236,3 +6274,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T14:05:07Z | gate-commit | 197.001 | 954.750 | 177.274 | 5.75 | 0 | 21ebd79ee | campaign/the-spillway | MacBookPro | 10 |
 | 2026-09-06T14:15:17Z | gate-commit | 50.614 | 111.040 | 28.944 | 2.77 | 0 | 817d50f19 | campaign/the-spillway | MacBookPro | 10 |
 | 2026-09-06T14:16:33Z | gate-commit | 35.883 | 69.389 | 15.556 | 2.37 | 0 | 817d50f19 | campaign/the-spillway | MacBookPro | 10 |
+| 2026-09-06T13:34:53Z | rebaseline | 171.682 | 430.303 | 18.234 | 2.61 | 0 | acc6d35a8 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T13:36:13Z | gate-commit | 64.673 | 122.009 | 75.033 | 3.05 | 0 | acc6d35a8 | campaign/the-warrant | MacBookPro | 10 |
+| 2026-09-06T13:49:24Z | sluice:artifacts | 257.882 | 1176.765 | 42.074 | 4.73 | 0 | 1522d8996 |  | lefford | 40 |
+| 2026-09-06T13:50:59Z | sluice:outboard | 94.305 | 92.619 | 77.948 | 1.81 | 0 | f4f599f6e |  | lefford | 40 |
+| 2026-09-06T14:06:06Z | sluice:gate | 906.942 | 22101.065 | 584.204 | 25.01 | 0 | 3dc564763 |  | lefford | 40 |
+| 2026-09-06T14:08:38Z | sluice:clients | 152.097 | 2324.336 | 179.653 | 16.46 | 0 | a93da4e45 |  | lefford | 40 |
+| 2026-09-06T14:16:42Z | sluice:heavy | 483.564 | 11409.246 | 144.191 | 23.89 | 0 | 8db2ffe74 |  | lefford | 40 |

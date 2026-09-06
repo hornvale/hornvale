@@ -159,6 +159,13 @@ fn harness_registry() -> ConceptRegistry {
     let _ =
         registry.register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks");
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside `AGENT_AT` here for the same reason `health.rs`'s
+    // harness registry is: an unregistered predicate a walk tries to commit
+    // truncates the simulation silently rather than failing loudly.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
     registry
 }
 

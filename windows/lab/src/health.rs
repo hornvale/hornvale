@@ -359,6 +359,13 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         "the kind of anchor an agent slept on, within the room it slept in",
     );
     let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside `AGENT_AT` here for the same reason SLEPT_ON is,
+    // above: an unregistered predicate a walk tries to commit truncates the
+    // simulation silently rather than failing loudly.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
     let home = match hornvale_settlement::all_settlements(world).first() {
         Some(v) => v.id,
         None => return Vec::new(),
