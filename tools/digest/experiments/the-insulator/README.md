@@ -50,6 +50,15 @@ comparison, and paired qualification. Those stages must keep Cargo's full
 workspace gate authoritative and must not treat a selector, smaller graph, or
 candidate output as production facts.
 
+Task 2 adds a deterministic graph and summary contract. `cargo_graph` invokes
+locked offline `cargo metadata` and retains bounded stdout/stderr evidence;
+`changed_closure` reports direct package edits separately from their reverse
+dependents; and `summarize_baseline` accepts exactly one complete cold/warm
+pair. The representative baseline workloads are `digest-census-publication`
+and `digest-thing`; their preparation, build, and test costs remain separate.
+This commit freezes the contract and its fixture tests only. It does not run a
+minutes-scale build or create `results/baseline.json`.
+
 ## Limits
 
 This experiment cannot establish that a smaller graph is always faster, that

@@ -97,6 +97,143 @@ def _workload(workload_id: str) -> dict:
     raise ValueError(f"unknown workload id: {workload_id}")
 
 
+def _bounded_evidence(raw: bytes, label: str) -> dict:
+    if len(raw) > OUTPUT_LIMIT:
+        raise ValueError(f"cargo metadata {label} exceeds output limit")
+    return _stream(raw)
+
+
+def cargo_graph(manifest: Path, target_dir: Path) -> dict:
+    """Read a locked, offline Cargo graph and return its canonical identity."""
+    manifest = Path(manifest)
+    target_dir = Path(target_dir)
+    if not manifest.is_absolute() or not target_dir.is_absolute():
+        raise ValueError("cargo graph paths must be absolute")
+    command = ["cargo", "metadata", "--locked", "--offline", "--format-version", "1", "--manifest-path", str(manifest)]
+    try:
+        completed = subprocess.run(command, cwd=manifest.parent,
+                                   env={**os.environ, "CARGO_TARGET_DIR": str(target_dir)},
+                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, check=False)
+    except OSError as exc:
+        raise ValueError(f"cargo metadata could not start: {exc}") from exc
+    stdout = _bounded_evidence(completed.stdout, "stdout")
+    stderr = _bounded_evidence(completed.stderr, "stderr")
+    if completed.returncode != 0:
+        raise ValueError(f"cargo metadata failed with exit code {completed.returncode}")
+    try:
+        metadata = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError("cargo metadata did not emit JSON") from exc
+    packages_by_id = {package["id"]: package for package in metadata.get("packages", [])}
+    members = set(metadata.get("workspace_members", []))
+    packages = [{
+        "id": package["id"], "name": package["name"], "version": package["version"],
+        "manifest_path": str(Path(package["manifest_path"]).resolve()),
+        "dependencies": sorted({dependency["name"] for dependency in package.get("dependencies", [])}),
+        "workspace_member": package["id"] in members,
+    } for package in metadata.get("packages", [])]
+    packages.sort(key=lambda package: (package["name"], package["version"], package["id"]))
+    id_to_name = {identifier: package["name"] for identifier, package in packages_by_id.items()}
+    edges = {}
+    for node in metadata.get("resolve", {}).get("nodes", []):
+        name = id_to_name.get(node.get("id"))
+        if name is not None:
+            edges[name] = sorted({id_to_name[dependency] for dependency in node.get("dependencies", []) if dependency in id_to_name})
+    edges = {name: edges.get(name, []) for name in sorted(edges)}
+    canonical = {"packages": packages, "workspace_members": sorted(members), "edges": edges}
+    identity = sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode())
+    return {"identity": {"format": "cargo-metadata-v1", "sha256": identity},
+            "package_count": len(packages), "workspace_member_count": len(members),
+            "packages": packages, "edges": edges,
+            "command": {"argv": command, "returncode": completed.returncode, "stdout": stdout, "stderr": stderr}}
+
+
+def _path_matches_package(changed: str, manifest_path: str, workspace_root: tuple[str, ...]) -> bool:
+    changed_parts = Path(changed).parts
+    package_parts = Path(manifest_path).parent.parts
+    if not package_parts or package_parts[:len(workspace_root)] != workspace_root:
+        return False
+    relative_root = package_parts[len(workspace_root):]
+    if changed_parts and changed_parts[0] == "/":
+        changed_parts = changed_parts[1:]
+    if changed_parts[:len(workspace_root)] == workspace_root:
+        changed_parts = changed_parts[len(workspace_root):]
+    return bool(relative_root) and changed_parts[:len(relative_root)] == relative_root
+
+
+def changed_closure(graph: dict, changed_paths: list[str]) -> dict:
+    """Classify directly changed packages and their reverse dependents."""
+    packages = graph.get("packages")
+    if not isinstance(packages, list):
+        raise ValueError("graph packages are required")
+    names = {package["name"] for package in packages}
+    manifest_parts = [Path(package["manifest_path"]).parent.parts for package in packages]
+    workspace_root = tuple(manifest_parts[0]) if manifest_parts else ()
+    for parts in manifest_parts[1:]:
+        length = 0
+        while length < len(workspace_root) and length < len(parts) and workspace_root[length] == parts[length]:
+            length += 1
+        workspace_root = workspace_root[:length]
+    direct = sorted({package["name"] for package in packages
+                     if any(_path_matches_package(path, package["manifest_path"], workspace_root)
+                            for path in changed_paths)})
+    reverse = {name: set() for name in names}
+    for dependency, dependents in graph.get("edges", {}).items():
+        for dependent in dependents:
+            if dependency in names and dependent in names:
+                reverse[dependency].add(dependent)
+    dependents = set()
+    frontier = list(direct)
+    while frontier:
+        package = frontier.pop()
+        for dependent in sorted(reverse.get(package, ())):
+            if dependent not in dependents:
+                dependents.add(dependent)
+                frontier.append(dependent)
+    reverse_dependents = sorted(dependents)
+    return {"directly_changed": direct, "reverse_dependents": reverse_dependents,
+            "full_invalidation": direct + [name for name in reverse_dependents if name not in direct]}
+
+
+def summarize_baseline(attempts: list[dict]) -> dict:
+    """Summarize one complete cold/warm pair without flattening nested timings."""
+    if not isinstance(attempts, list) or not attempts:
+        raise ValueError("baseline attempts are required")
+    by_class = {"cold": [], "warm": []}
+    for attempt in attempts:
+        if not isinstance(attempt, dict) or attempt.get("valid") is not True:
+            raise ValueError("incomplete baseline attempt")
+        classification = attempt.get("target", {}).get("classification")
+        if classification not in by_class:
+            raise ValueError("baseline attempts must be cold or warm")
+        if by_class[classification]:
+            raise ValueError("duplicate baseline classification")
+        timing = attempt.get("timing")
+        cleanup = attempt.get("cleanup", {})
+        if (not isinstance(timing, dict) or cleanup.get("complete") is not True or
+                any(not isinstance(timing.get(field), (int, float)) or timing[field] < 0
+                    for field in ("preparation_s", "build_s", "test_s"))):
+            raise ValueError("incomplete baseline attempt")
+        by_class[classification].append(attempt)
+    if not by_class["cold"] or not by_class["warm"]:
+        raise ValueError("baseline attempts must be paired")
+    graph_counts = {}
+    for field in ("package_count", "workspace_member_count"):
+        values = [attempt.get("graph", {}).get(field) for attempt in attempts]
+        if any(not isinstance(value, int) or value < 0 for value in values):
+            raise ValueError("incomplete baseline graph")
+        if len(set(values)) != 1:
+            raise ValueError("baseline graph counts differ")
+        graph_counts[field] = values[:1]
+    costs = {}
+    for classification, records in by_class.items():
+        timing = records[0]["timing"]
+        costs[classification] = {field: [float(timing[field])] for field in ("preparation_s", "build_s", "test_s")}
+        costs[classification]["total_s"] = [sum(costs[classification][field][0] for field in ("preparation_s", "build_s", "test_s"))]
+    return {"pair_count": 1, "graph_counts": graph_counts, "costs": costs}
+
+
 def _stream(raw: bytes) -> dict:
     return {
         "base64": base64.b64encode(raw).decode("ascii"),
