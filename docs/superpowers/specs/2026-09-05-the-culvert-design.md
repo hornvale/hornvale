@@ -1,5 +1,14 @@
 # The Culvert — design
 
+**Status (2026-09-06):** COMPLETE. Tasks 1-7 and 9 shipped; Task 8 excluded by
+Task 5's measurement under Rule 3's conservative-default branch (ledger #14).
+Readout in §11: **C1a PASS** (the criterion of record), **C1b PASS**, **C2
+FAILED** at 1.13x against a 10x floor with the cause measured rather than
+argued, **C3 PASS** as a no-regression control. Byte-identity held through two
+absorptions and was re-established at the close by a same-tree control
+(ledger #16). Chronicle, retrospective, registry rows and the reconciliation
+rows landed with it.
+
 **Campaign** `campaign/the-culvert` · branch cut from `main` at `a8bde6769`
 **Decision block** 0806–0815 (main ceiling 0756 at reservation)
 **Ledger** [`2026-09-05-the-culvert.md`](../ledgers/2026-09-05-the-culvert.md)

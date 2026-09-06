@@ -2,6 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status (2026-09-06):** COMPLETE. Tasks 1-7 and 9 landed with clean reviews;
+**Task 8 was not run**, excluded by Task 5's measurement of the moving-anchor
+key population under spec Rule 3 (ledger #14). Task 10's close artifacts —
+chronicle, retrospective, freshness sweep, Confidence-Gradient section, nine
+registry rows and the reconciliation rows — landed together. Per-task state,
+reviews and fix rounds are in the campaign's SDD scratch; the fifteen rulings
+and the deferred-minors table are in the committed ledger. The step checkboxes
+below were never ticked during execution and are left as written: task state
+lived in `progress.md`, and re-ticking them now would assert a tracking
+discipline the campaign did not actually run.
+
 **Goal:** Remove `believed_water`'s repeated route search — a shared,
 session-lived memo of `(from, dest, budget) -> Option<hop count>` — without
 moving a committed byte.
