@@ -6029,3 +6029,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T23:37:06Z | gate-commit | 36.389 | 69.970 | 15.839 | 2.36 | 0 | eb43c6357 | campaign/the-cruck | MacBookPro | 10 |
 | 2026-09-06T00:44:01Z | gate-commit | 41.516 | 71.620 | 15.888 | 2.11 | 0 | 80dc003c7 | campaign/the-cruck | MacBookPro | 10 |
 | 2026-09-06T01:22:33Z | game-check | 250.969 | 850.754 | 33.395 | 3.52 | 0 | 818ef56bb | campaign/the-cruck | MacBookPro | 10 |
+| 2026-09-06T01:24:14Z | gate-commit | 66.091 | 77.235 | 16.849 | 1.42 | 0 | 818ef56bb | campaign/the-cruck | MacBookPro | 10 |
+| 2026-09-06T01:25:25Z | gate-commit | 69.808 | 76.551 | 16.103 | 1.33 | 0 | 4d57958a9 | campaign/the-cruck | MacBookPro | 10 |
