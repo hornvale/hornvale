@@ -1,7 +1,7 @@
 # The Fetch — belief follows the creature
 
 **Campaign:** The Fetch  
-**Status:** G3 draft (awaiting Nathan)  
+**Status:** implementation complete; G6 approved 2026-09-06  
 **Ledger:** `docs/superpowers/ledgers/2026-09-06-the-fetch.md`  
 **Decision block:** 0866–0875
 

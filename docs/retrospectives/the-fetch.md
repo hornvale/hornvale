@@ -37,7 +37,8 @@ rewrite.
 
 ## Close boundary
 
-The close package is prepared, but G6 approval is still required before stage
-or merge submission. The outstanding technical follow-up is a separately
-designed, bounded position-keyed route cache only if later measurement warrants
-one.
+G6 was approved on 2026-09-06. The first main absorption happened at close,
+not at a stage boundary; its only conflict was the shared root
+`IMPLEMENTATION_PLAN.md`, resolved in favor of main's active Counterpart plan.
+The outstanding technical follow-up is a separately designed, bounded
+position-keyed route cache only if later measurement warrants one.
