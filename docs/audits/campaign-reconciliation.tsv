@@ -1337,4 +1337,4 @@ chronicle-the-charter	shipped	none		G6 approved; approved close for ordinary slu
 retrospective-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission					docs/retrospectives/the-charter.md
 the-tenon	shipped	none		plan: COMPLETE; Nathan authorized G6 close; retrospective and chronicle record accepted result	docs/superpowers/specs/2026-09-04-the-tenon-design.md	docs/superpowers/plans/2026-09-04-the-tenon.md		book/src/chronicle/the-tenon.md	docs/retrospectives/the-tenon.md
 the-zenith	shipped	none		plan and spec: IMPLEMENTED (2026-09-04) pending merge; chronicle and retrospective committed at close	docs/superpowers/specs/2026-09-04-the-zenith-design.md	docs/superpowers/plans/2026-09-04-the-zenith.md		book/src/chronicle/the-zenith.md	docs/retrospectives/the-zenith.md
-the-ken	active	none		spec written and committed; awaiting G3 review before planning	docs/superpowers/specs/2026-09-05-the-ken-design.md				
+the-ken	active	none		spec and plan committed; implementation in progress	docs/superpowers/specs/2026-09-05-the-ken-design.md	docs/superpowers/plans/2026-09-05-the-ken.md			
