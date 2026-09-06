@@ -1189,6 +1189,71 @@ have had to. Recorded in the retrospective.
 | m6 | 9 | Load readings for six of nine timed runs are attested only by the committed spec prose; the two raw traces live in scratch that dies with the worktree. | **Open, and accepted.** The §4.4 table was deliberately moved INTO the committed spec for this reason; the raw traces are corroboration, not the record. |
 | m7 | 9 | The 57,190 identity — Shape A's memoized total equalling the control's cost of the 83 distinct pairs once — was unstated. | **Fixed** in Task 9's fix round, with the 1.00×-duplicate-rate qualification that keeps it from over-claiming to Shape B. |
 
+### #18 [G5] — the G6 absorption, and two more corrections to my own brief
+
+**Question.** At the merge stop, main was **89 commits** ahead — two campaigns
+(The Warrant, The Ken) touching 772 lines of `liveness.rs` and 508 of
+`session.rs`. Eight conflicts. What survived?
+
+**Decision.** All ten witnesses green, `gate-commit` rc=0, drift clean, both
+retired ledger witnesses surviving an 89-commit world change with no
+non-vacuity floor failing. Merge `6c304be85`.
+
+**Nathan asked whether I had merged from main recently, and I had not.** The G6
+package was assembled against a tree stale by 89 commits. That is the
+"a ratchet can land between your last absorption and your close" failure,
+caught by the question rather than by me.
+
+**MY BRIEF WAS WRONG TWICE MORE, and both would have been silent.**
+
+**(a) `agent_scaling.rs` is not a threading conflict.** I classified it as one —
+"both sides additive, keep both". It is a **second instance of the `session.rs`
+consolidation shape**, and resolving it as I prescribed merges cleanly,
+compiles, passes every test, and **silently restores the hand-copied
+registration block this campaign exists to remove** — because
+`register_predicate` is idempotent, so the duplicate registration is invisible
+to every gate. I described that exact trap for `session.rs` in the same brief
+and then mis-classified its sibling three paragraphs later.
+
+**(b) The ninth const is not an errand predicate.** `ERRAND_PRODUCER` is
+`"vessel/liveness"` — a `Fact.provenance` producer label. It names no registry
+key and never reaches `register_predicate`. My instruction was one shared
+waiver reason for all nine, which would have put **false text behind a green
+guard** — the failure mode a waiver exists to prevent. It got its own reason;
+the eight genuine errand predicates share one.
+
+**The guard fired on someone else's addition, which is the first thing it has
+done that nobody arranged.** The Warrant added nine `pub const <NAME>: &str` to
+`liveness.rs` and the default-deny scan refused all nine. Task 1 built it
+because a drive began committing a new predicate and two benches were not
+updated; it was written to catch ADDITIONS and it caught one, unprompted, from
+a campaign that had never heard of it. Both refusal arms were re-demonstrated
+on a throwaway const at this absorption — unwaived RED, and reasonless
+`waiver()` RED.
+
+**A real defect in that guard, found here and parked.** Its waiver parser
+truncates the reason at the first `)`, so a reason containing
+`errand_predicates()` parses as empty and reports as *reasonless* rather than
+*truncated* — a confusing refusal rather than a wrong pass. No current waiver
+hits it (the resolver's avoid one). **Parked rather than fixed**: it is Minor,
+has no live instance, and opening a code round at the merge stop to change a
+guard's parser is worse than carrying it. Registry row owed.
+
+**Alternatives discarded.** Fixing the parser now — scope creep at a merge stop
+on a defect with no instance. Adding the errand predicates to
+`DRIVE_PREDICATES` to silence the guard — it would have made the roster claim a
+family it does not own, and the roster's scope is documented as the drive
+family only.
+
+**ideonomy passes / overturns.** None; a conflict resolution and two defect
+adjudications.
+
+**Capture actions.** Registry row for the waiver-parser truncation. The
+`agent_scaling.rs` mis-classification goes to the retrospective — it is the
+same enumeration-versus-reading failure as the method lesson, one layer down.
+
+---
+
 ## Follow-ups
 
 *(This section read "none yet — entries above carry their own capture actions"
