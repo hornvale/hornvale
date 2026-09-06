@@ -300,6 +300,42 @@ same campaign. The spec's §6 records the strike in place rather than being
 quietly rewritten, and Nathan sees it at G6 as a scope reduction with a reason
 attached.
 
+## Deferred minors, and where each one landed
+
+Ten minors were deferred at a task boundary. "It is in the ledger" is not a
+location, so each is named here with its outcome, verified at HEAD rather than
+recalled:
+
+| minor | outcome |
+|---|---|
+| `#[allow(dead_code)]` on `errand_key` | **Fixed**, Task 2, when its production caller landed — the attribute is gone (`grep` over the definition returns 0). |
+| `liveness.rs`'s "one of the five this file can ever commit" against a roster of 13 | **Fixed**, Task 3; the string no longer occurs. |
+| `latest_committed_errand` lacking the `day <= t` filter its sibling carries | **Fixed**, Task 3, by adding the filter rather than documenting the invariant — a correctness argument living in another function's doc is one a future caller cannot be expected to preserve. |
+| `session_length_scaling.rs` panics on an unregistered `slept-on` | **Parked**, pre-existing; registry row `TOOL-walk-harness-registries-lag-the-committer`. |
+| `emitter_scan.rs` has the identical gap | **Parked**, same row. |
+| A report said "eleven" registration sites where the diff had fifteen | **Accepted as-is.** Eleven was the count of *failing tests* presented as the count of *edited registries*; every edit was additive and green. Bookkeeping only — but it is the same count-without-counting shape as the rest of this page, in a report rather than a document. |
+| Neither Task 2 test pinned that the errand key matches the run's reason | **Closed** one task later by Task 3's `every_gloss_and_its_first_day_survives_the_flip`, and again by the fix round's eight-row key→gloss table. Plan-mandated: the brief specified both tests verbatim. |
+| Task 3's specified behavioural red was not recorded; a stronger, different one was | **Accepted.** The substitute red (7 errands against 5 runs) is strictly more diagnostic than the one asked for, but it is a *different* assertion, and swapping one for the other without saying so is how a replacement comes to cover a different branch. Said so here. |
+| The seed-23 fixture reported as ~120 KB | **Corrected**; it is 64,846 bytes. |
+| The repl tolerates a typo'd flag (`why 123 --step` renders the default view) where the session refuses | **Accepted as-is**, ruled deliberately. Extra tokens were tolerated before this campaign, so tightening it is a behaviour change to pre-existing latitude and not this epoch's business. The cost is that two surfaces now disagree on malformed input; recorded so the divergence is deliberate rather than unnoticed. |
+
+## The stage gate was never used, and that is a process miss
+
+CLAUDE.md's Process section says a campaign submits `make sluice-stage` at
+every plan-stage boundary, which merges main into the branch *in the chamber*
+and gates that real merge product. This campaign never did. It absorbed main
+locally — twice, at Task 6 and at close — and relied on `make gate-commit` plus
+per-task review in between.
+
+Nothing went wrong, and that is the weaker half of the lesson. The stronger
+half is what the close cost: the final absorption met **54 commits and five
+conflicts**, two of them in hand-authored files where a uniform
+"resolve by regeneration" would have silently dropped one side's rows — the
+exact failure `docs/generated-paths.txt:200` records another campaign hitting
+on 2026-09-05. That resolution had to be done by hand, at the close, under the
+worst conditions for it. A stage gate at each of the five task boundaries would
+have met those commits four or five at a time.
+
 ## What went right, briefly
 
 The campaign's headline exists because a premise was measured instead of
