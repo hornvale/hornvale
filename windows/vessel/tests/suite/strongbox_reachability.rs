@@ -82,14 +82,14 @@ fn out(t: Turn) -> String {
 fn nouns_by_depth(session: &mut Session) -> Vec<Vec<String>> {
     let reply = out(session.handle("enter"));
     assert!(
-        reply.starts_with("[chamber "),
+        reply.starts_with("[chamber]"),
         "the possession never got indoors, so nothing below is tested: {reply}"
     );
     let mut per_chamber = vec![session.chamber_nouns_here()];
     // `MAX_CHAMBERS` is 4, so four steps is one more than any structure has;
     // the loop stops on the far-end reply rather than on the count.
     for _ in 0..4 {
-        if !out(session.handle("enter further in")).starts_with("[chamber ") {
+        if !out(session.handle("enter further in")).starts_with("[chamber]") {
             break;
         }
         per_chamber.push(session.chamber_nouns_here());
@@ -296,11 +296,11 @@ fn the_snapshot_carries_what_the_body_holds() {
     // Custodian moved the pattern off `Role::Threshold`, the role every built
     // structure has — the move that stopped a key standing in every
     // dwelling's front room in every world.
-    assert!(out(session.handle("out")).starts_with("[room "));
-    assert!(out(session.handle("enter")).starts_with("[chamber "));
+    assert!(out(session.handle("out")).starts_with("[room]"));
+    assert!(out(session.handle("enter")).starts_with("[chamber]"));
     for _ in 0..2 {
         assert!(
-            out(session.handle("enter further in")).starts_with("[chamber "),
+            out(session.handle("enter further in")).starts_with("[chamber]"),
             "the chambered seed's structure no longer reaches the loomroom"
         );
     }
@@ -329,12 +329,12 @@ fn the_snapshot_carries_what_the_body_holds() {
     // That identity is the campaign's own headline, and nothing else on this
     // wire would carry it.
     for _ in 0..4 {
-        if !out(session.handle("enter further in")).starts_with("[chamber ") {
+        if !out(session.handle("enter further in")).starts_with("[chamber]") {
             break;
         }
     }
-    assert!(out(session.handle("out")).starts_with("[room "));
-    assert!(out(session.handle("enter")).starts_with("[chamber "));
+    assert!(out(session.handle("out")).starts_with("[room]"));
+    assert!(out(session.handle("enter")).starts_with("[chamber]"));
     let still_held = session.snapshot().expect("the snapshot builds").me.carrying;
     assert_eq!(
         still_held.len(),

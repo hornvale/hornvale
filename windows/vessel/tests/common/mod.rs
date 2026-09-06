@@ -121,7 +121,7 @@ pub fn deepen_until_the_plan_draws(session: &mut Session<'_>, who: EntityId) {
             Turn::Out(t) | Turn::Released(t) => t,
         };
         assert!(
-            reply.starts_with("[chamber "),
+            reply.starts_with("[chamber]"),
             "no chamber of this structure draws a placed creature on its plan, so \
              nothing below is tested: {reply}"
         );

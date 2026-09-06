@@ -85,45 +85,53 @@ assert.doesNotMatch(
 assert.equal(send("go n"), 0);
 const stepped = readOut();
 assert.notEqual(stepped, golden, "moving changed the room");
-assert.match(stepped, /^\[room /, "room header present");
+assert.match(stepped, /^\[room\]/, "room header present");
 
 // 3. Retrace.
 //
-// An in-character move now CHARGES TIME (The Deed, decision 0168), so the room
-// header's day advances and full-text equality against the day-0 opening is
-// false BY DESIGN rather than broken. What `back` actually promises is that you
-// return to the same room, rendered the same way — so the day is elided and
-// everything else stays pinned: the room id in the header, the prose, and the
-// exits sentence.
+// An in-character move now CHARGES TIME (The Deed, decision 0168). The room
+// header USED to carry that day, so a full-text equality against the day-0
+// opening needed the day elided out first. The Ken's Task 3 removed the day
+// (and the room id) from the header entirely — a controller ruling, since
+// no shared derivation with the sky line existed to honour the spec's
+// literal ask — so the header is now identical on every visit to the same
+// room regardless of the clock, and `back`'s promise ("you return to the
+// same room, rendered the same way") is a plain byte-for-byte equality
+// against the opening, no elision required.
 //
-// Verified before weakening it, because "the assertion moved" and "the feature
-// regressed" look identical from here: driving seed 42 through `go n` + `back`
-// natively returns room 896860167, the room it opened in, and the two blocks
-// are BYTE-IDENTICAL once the day is normalised out.
+// Verified before weakening it, because "the assertion moved" and "the
+// feature regressed" look identical from here: driving seed 42 through
+// `go n` + `back` natively returns to the room it opened in, and the two
+// blocks are BYTE-IDENTICAL.
 //
-// The second assertion is the anti-vacuity half, and it compares `back`'s day
-// against the STEP's day rather than against the opening's. The obvious form —
-// "the retraced text differs from the day-0 golden" — is VACUOUS, and it was
-// written that way first: `go n` alone already moves the clock off zero, so
-// that assertion holds even when `back` charges nothing. Proved by mutation:
-// deleting `back`'s charge entirely and rebuilding the wasm left it green.
-// Comparing the two days is what actually pins `back`'s own charge.
-const elideDay = (s) => s.replace(/day [0-9.]+/g, "day <t>");
+// The day itself still has to be checked SOMEWHERE, or `back`'s own charge
+// could regress silently while this passes — the exact anti-vacuity concern
+// this file's history already records once. `!whoami` is where the day
+// lives now (it always did; the header was a second, redundant clock). It
+// is the out-of-character instrument (spec §3.2 group A), so reading it
+// costs no time of its own, and comparing the day it reports right after
+// the step against the day right after `back` is what actually pins
+// `back`'s own charge — comparing against the OPENING's day would be
+// vacuous, since `go n` alone already moves the clock off zero.
 const dayOf = (s) => {
-  const m = s.match(/^\[room \d+, day ([0-9.]+)\]/);
-  assert.ok(m, `room header carries a day: ${s.slice(0, 60)}`);
+  const m = s.match(/, day ([0-9.]+), room \d+\.$/);
+  assert.ok(m, `!whoami reports a day: ${s}`);
   return Number(m[1]);
 };
+assert.equal(send("!whoami"), 0);
+const dayAfterStep = dayOf(readOut());
 assert.equal(send("back"), 0);
 const retraced = readOut();
 assert.equal(
-  elideDay(retraced),
-  elideDay(golden),
-  "back retraces to the opening room (day elided: a move charges time)",
+  retraced,
+  golden,
+  "back retraces to the opening room, byte for byte (the header carries no day to elide since The Ken)",
 );
+assert.equal(send("!whoami"), 0);
+const dayAfterBack = dayOf(readOut());
 assert.ok(
-  dayOf(retraced) > dayOf(stepped),
-  `back charges time of its own: day ${dayOf(stepped)} -> ${dayOf(retraced)}`,
+  dayAfterBack > dayAfterStep,
+  `back charges time of its own: day ${dayAfterStep} -> ${dayAfterBack}`,
 );
 
 // 4. Unknown verbs answer politely, in-session.

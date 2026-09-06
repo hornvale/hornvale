@@ -6897,7 +6897,22 @@ impl<'w> Session<'w> {
         Ok(())
     }
 
-    /// The full room rendering: room id, prose, presence, ways on.
+    /// The full room rendering: header, prose, presence, ways on.
+    ///
+    /// The Ken (spec §4.2, superseded on a controller ruling — ledger #5):
+    /// the header used to read `[room 3733133217, day 0.01172]`, putting a
+    /// raw facet id and a decimal day in the character's own mouth. Neither
+    /// datum is lost — `!whoami` already states both, and that is the
+    /// author's-instrument frame where an id and a fractional day belong.
+    /// The header carries no time either: the spec asked it to derive a
+    /// time-of-day phrase from the same source as the sky line, but no such
+    /// shared derivation exists (the phase logic lives baked into
+    /// `sky_at`'s description string in `domains/astronomy`, which exposes
+    /// no `daypart` accessor), and the sky line one row below already says
+    /// the time of day in the character's own words (`Night.`, `Twilight.`,
+    /// `The sun climbs the morning sky.`). Minting new astronomy API so two
+    /// callers could share a derivation that does not exist would be worse
+    /// than noticing the duplication: the header now names only the band.
     ///
     /// `how` decides [`Self::presence_line`]'s own roster the same way it
     /// decides every other `!`-narrowed read (The Roll, Task 9): every
@@ -7141,9 +7156,7 @@ impl<'w> Session<'w> {
             format!("\n{}", footer_lines.join("\n"))
         };
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}{footer}",
-            v.locale.id,
-            self.day.as_std_days(),
+            "[room]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}{footer}",
             f.prose,
         ))
     }
@@ -7817,8 +7830,12 @@ impl<'w> Session<'w> {
     }
 
     /// The chamber rendering, in `describe_here`'s own shape one band down:
-    /// address, prose, ways on. `[chamber …]` rather than `[room …]` because
-    /// the band word IS the information — an id at depth 21 is not a locale.
+    /// header, prose, ways on. `[chamber]` rather than `[room]` because the
+    /// band word IS the information — an id at depth 21 is not a locale, and
+    /// (The Ken, spec §4.2, superseded — ledger #5) neither is a decimal day:
+    /// both survive in `!whoami`'s author's-instrument frame, and the header
+    /// now carries only the band. See [`Self::describe_here`]'s own doc
+    /// comment for the fuller ruling.
     ///
     /// The ways are `out`, plus `further in` where a deeper chamber exists.
     /// Naming apertures by DIRECTION rather than by what lies through them is
@@ -7847,7 +7864,10 @@ impl<'w> Session<'w> {
         let terrain = self.terrain_here();
         let interior =
             crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), brief, at);
-        let id = chamber_id(chamber)?;
+        // Validates that this chamber packs to an id (the same fallibility
+        // the header used to surface by printing it); the value itself is no
+        // longer displayed — see this function's own doc comment.
+        let _ = chamber_id(chamber)?;
         let mut ways = vec!["out"];
         if Self::further_in(structure, at).is_some() {
             ways.push(FURTHER_IN);
@@ -7860,9 +7880,7 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[chamber {}, day {}]\n{}\n{presence}Ways on: {}.",
-            id,
-            self.day.as_std_days(),
+            "[chamber]\n{}\n{presence}Ways on: {}.",
             crate::chamber_prose::describe_chamber(&interior, brief),
             ways.join(", ")
         ))
@@ -12731,11 +12749,11 @@ mod tests {
         // `tests/suite/strongbox_reachability.rs` walks, for the same reason:
         // `Role::Store` is only ever chamber index >= 2 (`pattern::role_for`).
         assert!(
-            say(&mut session, "enter").starts_with("[chamber "),
+            say(&mut session, "enter").starts_with("[chamber]"),
             "the possession never got indoors, so nothing below is tested"
         );
         for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+            if !say(&mut session, "enter further in").starts_with("[chamber]") {
                 break;
             }
         }
@@ -12950,12 +12968,12 @@ mod tests {
         let (mut session, _) =
             Session::start(world, &PossessOpts::default()).expect("the chambered seed possesses");
         assert!(
-            say(&mut session, "enter").starts_with("[chamber "),
+            say(&mut session, "enter").starts_with("[chamber]"),
             "the possession never got indoors, so nothing below is tested"
         );
         for _ in 0..2 {
             assert!(
-                say(&mut session, "enter further in").starts_with("[chamber "),
+                say(&mut session, "enter further in").starts_with("[chamber]"),
                 "the chambered seed's structure no longer reaches chamber index 2, \
                  so the loomroom this key stands in is unreachable"
             );
@@ -12988,11 +13006,11 @@ mod tests {
         let (mut session, _) =
             Session::start(world, &PossessOpts::default()).expect("the chambered seed possesses");
         assert!(
-            say(&mut session, "enter").starts_with("[chamber "),
+            say(&mut session, "enter").starts_with("[chamber]"),
             "the possession never got indoors, so nothing below is tested"
         );
         for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+            if !say(&mut session, "enter further in").starts_with("[chamber]") {
                 break;
             }
         }
@@ -13022,7 +13040,7 @@ mod tests {
             .expect("the walk lands in a chamber");
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
         for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+            if !say(&mut session, "enter further in").starts_with("[chamber]") {
                 break;
             }
         }
@@ -13122,7 +13140,7 @@ mod tests {
             "the take must reach custody, or the walk below tests nothing"
         );
 
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
         let deeper = session
             .chamber_facet_here()
             .expect("`enter further in` lands in a chamber");
@@ -13137,7 +13155,7 @@ mod tests {
             "the key must still be in hand one room further in"
         );
 
-        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "out").starts_with("[room]"));
         assert_eq!(
             say(&mut session, "carrying"),
             "You are carrying a key.",
@@ -13202,8 +13220,8 @@ mod tests {
             .expect("the walk lands in a chamber");
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
 
-        assert!(say(&mut session, "out").starts_with("[room "));
-        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        assert!(say(&mut session, "out").starts_with("[room]"));
+        assert!(say(&mut session, "enter").starts_with("[chamber]"));
         let entrance = session
             .chamber_facet_here()
             .expect("`enter` lands in a chamber");
@@ -13375,9 +13393,9 @@ mod tests {
             .chamber_facet_here()
             .expect("the walk above ended in a chamber");
 
-        assert!(say(&mut session, "out").starts_with("[room "));
-        assert!(say(&mut session, "enter").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        assert!(say(&mut session, "out").starts_with("[room]"));
+        assert!(say(&mut session, "enter").starts_with("[chamber]"));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
         let alcove_room = session
             .chamber_facet_here()
             .expect("`enter further in` lands in a chamber");
@@ -13571,10 +13589,10 @@ mod tests {
         // leaves the structure from any chamber, so the return trip is
         // `enter` plus two `enter further in` — the loomroom is index 2.
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
-        assert!(say(&mut session, "out").starts_with("[room "));
-        assert!(say(&mut session, "enter").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        assert!(say(&mut session, "out").starts_with("[room]"));
+        assert!(say(&mut session, "enter").starts_with("[chamber]"));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
         let loom = session
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
@@ -14828,13 +14846,13 @@ mod tests {
             snap.narration.prose
         );
         assert!(
-            !snap.narration.prose.starts_with("[room "),
+            !snap.narration.prose.starts_with("[room]"),
             "the room block must NOT be substituted for a verb's own response"
         );
         session.handle("look");
         let snap = session.snapshot().unwrap();
         assert!(
-            snap.narration.prose.starts_with("[room "),
+            snap.narration.prose.starts_with("[room]"),
             "after `look` the narration IS the room block"
         );
     }
@@ -15553,7 +15571,7 @@ mod tests {
                 Turn::Released(_) => panic!("{line:?} must not release"),
             };
             assert!(
-                !reply.starts_with("[room "),
+                !reply.starts_with("[room]"),
                 "{line:?} indoors must not render a LOCALE: {reply:?}"
             );
             assert_eq!(
@@ -15601,7 +15619,7 @@ mod tests {
             Turn::Released(_) => panic!("back must not release"),
         };
         assert!(
-            retraced.starts_with("[room "),
+            retraced.starts_with("[room]"),
             "the outdoor `back` path is unchanged: {retraced:?}"
         );
         assert_eq!(
@@ -20768,7 +20786,7 @@ mod tests {
             }
             let deeper = matches!(
                 session.handle("enter further in"),
-                Turn::Out(ref t) if t.starts_with("[chamber ")
+                Turn::Out(ref t) if t.starts_with("[chamber]")
             );
             assert!(
                 deeper,
@@ -21967,7 +21985,7 @@ mod tests {
         let mut rooms = 0usize;
 
         assert!(
-            say(&mut session, "enter").starts_with("[chamber "),
+            say(&mut session, "enter").starts_with("[chamber]"),
             "the possession never got indoors, so nothing below is tested"
         );
         // `MAX_CHAMBERS` is 4; five steps is one more than any structure has,
@@ -22023,7 +22041,7 @@ mod tests {
                 }
             }
 
-            if !say(&mut session, "enter further in").starts_with("[chamber ") {
+            if !say(&mut session, "enter further in").starts_with("[chamber]") {
                 break;
             }
         }

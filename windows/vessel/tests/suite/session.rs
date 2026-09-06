@@ -63,8 +63,8 @@ fn possession_opens_with_a_focalized_description() {
     let (_s, opening) = Session::start(&world, &opts()).unwrap();
     assert!(opening.contains("in the lands of"));
     assert!(
-        opening.contains("[room "),
-        "the opening carries the room id"
+        opening.contains("[room]"),
+        "the opening carries a room header"
     );
 }
 
@@ -80,7 +80,7 @@ fn go_moves_and_back_retraces() {
     };
     let dir = an_open_bearing(&ways);
     match s.handle(&format!("go {dir}")) {
-        Turn::Out(t) => assert!(t.contains("[room ")),
+        Turn::Out(t) => assert!(t.contains("[room]")),
         _ => panic!("go must not release"),
     }
     assert_ne!(s.position(), home, "go moved");
@@ -224,12 +224,17 @@ fn examine_honors_the_contract_and_release_ends() {
 fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
     // The-quickening (T3): `wait` now runs the NPC layer's tick, so its
     // output narrates motion rather than re-describing the room. The
-    // observation day still advances (visible via a follow-up `look`), and
-    // the possessed agent itself still never moves — only the session's
-    // owned NPC ledger evolves.
+    // observation day still advances, and the possessed agent itself still
+    // never moves — only the session's owned NPC ledger evolves.
+    //
+    // **Re-pointed by The Ken's Task 3.** The day used to be readable straight
+    // off the room header ("day 0", then "day 90" after the wait); Task 3
+    // removed the day from the header entirely, so this now reads `s.day()`
+    // directly — the render-independent accessor, not a re-pinned prose
+    // phrase that would go vacuous the moment the wording moved again.
     let world = seam_world();
-    let (mut s, opening) = Session::start(&world, &opts()).unwrap();
-    assert!(opening.contains("day 0"));
+    let (mut s, _opening) = Session::start(&world, &opts()).unwrap();
+    assert_eq!(s.day(), WorldTime::GENESIS, "the possession opens at day 0");
     let home = s.position().pack().unwrap().0;
     let out = match s.handle("wait 90") {
         Turn::Out(t) => t,
@@ -237,9 +242,10 @@ fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
     };
     assert!(!out.is_empty(), "wait narrates what happened");
     match s.handle("look") {
-        Turn::Out(t) => assert!(t.contains("day 90"), "the observation day moved"),
+        Turn::Out(_) => {}
         _ => panic!("look must not release"),
     }
+    assert_eq!(s.day().as_std_days(), 90.0, "the observation day moved");
     assert_eq!(
         s.position().pack().unwrap().0,
         home,
@@ -591,6 +597,36 @@ fn every_printed_way_out_is_a_command_you_can_type() {
     }
 }
 
+/// The Ken: the header was telemetry in the character's voice —
+/// "[room 3733133217, day 0]". Neither datum is lost: `!whoami` already
+/// answers "A bugbear of Doaba (agent 3286669968037249024), day 0, room
+/// 3733133217.", which is the author's-instrument frame and the right home
+/// for both. Controller ruling (ledger #5) supersedes spec §4.2's "share a
+/// derivation with the sky line": no such derivation exists to share (the
+/// phase logic is baked into `sky_at`'s description string, and
+/// `domains/astronomy` exposes no `daypart` accessor), so the header now
+/// carries a place and nothing about time at all.
+#[test]
+fn the_turn_header_carries_no_facet_id_and_no_decimal_day() {
+    let world = seam_world();
+    let (mut s, opening) = Session::start(&world, &opts()).unwrap();
+    let look = match s.handle("look") {
+        Turn::Out(t) => t,
+        _ => panic!("look must not release"),
+    };
+    for text in [opening, look] {
+        let header = text.lines().next().expect("a turn opens with a header");
+        assert!(
+            !header.contains("3733133217"),
+            "a raw facet id survived in the header: {header:?}"
+        );
+        assert!(
+            !header.contains('.'),
+            "a decimal day survived in the header: {header:?}"
+        );
+    }
+}
+
 /// Long-form names work as bare commands too.
 #[test]
 fn long_direction_names_work_as_bare_commands() {
@@ -629,6 +665,14 @@ fn a_genuine_non_verb_still_reports_itself() {
 /// progress instead — every bearing is a real way out on ordinary ground —
 /// and `rooms.len() > 1` is the direct check that the walker actually moved,
 /// so this cannot go quietly vacuous the same way twice.
+///
+/// **Re-pointed again by The Ken's Task 3.** The header used to carry the
+/// room id, which is how `rooms` proved movement; Task 3 removed the id (and
+/// the day) from the header entirely, so parsing it here would make `rooms`
+/// a set of one forever regardless of whether the walker moved — a second
+/// silent vacuity of exactly the shape this test's own doc comment already
+/// warns about. `s.position()` is the room identity itself, not a rendering
+/// of it, so it stays live no matter what the header prints.
 #[test]
 fn the_sky_follows_the_walker() {
     let world = seam_world();
@@ -643,9 +687,7 @@ fn the_sky_follows_the_walker() {
         if let Some(l) = out.lines().find(|l| l.contains("The sky is")) {
             skies.insert(l.to_string());
         }
-        if let Some(l) = out.lines().find(|l| l.starts_with("[room ")) {
-            rooms.insert(l.to_string());
-        }
+        rooms.insert(s.position());
         s.handle(dir);
         s.handle("wait 3");
     }
@@ -1121,7 +1163,7 @@ fn custody_survives_a_save_and_a_re_possession() {
     let (mut session, _) =
         Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
     assert!(
-        say(&mut session, "enter").starts_with("[chamber "),
+        say(&mut session, "enter").starts_with("[chamber]"),
         "the possession never got indoors, so nothing below is tested"
     );
     // The LOOMROOM's key, not the storeroom's: since Task 13's fix round the
@@ -1138,7 +1180,7 @@ fn custody_survives_a_save_and_a_re_possession() {
     // agrarian, so its index-2 chamber is the loomroom the key now stands in.
     for _ in 0..2 {
         assert!(
-            say(&mut session, "enter further in").starts_with("[chamber "),
+            say(&mut session, "enter further in").starts_with("[chamber]"),
             "seed 1's structure no longer reaches the loomroom, so nothing \
              below is tested"
         );
@@ -1149,7 +1191,7 @@ fn custody_survives_a_save_and_a_re_possession() {
         "precondition: seed 1's loomroom must hold a takeable key"
     );
     for _ in 0..4 {
-        if !say(&mut session, "enter further in").starts_with("[chamber ") {
+        if !say(&mut session, "enter further in").starts_with("[chamber]") {
             break;
         }
     }

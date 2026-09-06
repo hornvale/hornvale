@@ -55,22 +55,17 @@ fn out(t: Turn) -> String {
     }
 }
 
-/// The day a walk-band room line reports: `[room <id>, day <d>]`.
+/// The day a walk-band room line used to report: `[room <id>, day <d>]`.
 ///
-/// Read out of the prose rather than off an accessor deliberately — it is the
-/// number a PLAYER sees, and it is what the gallery transcripts freeze, so a
-/// test that watches it is watching the observable rather than a field.
-fn day_of(text: &str) -> f64 {
-    let (_, after) = text.split_once(", day ").unwrap_or_else(|| {
-        panic!("no room line to read a day from in: {text}");
-    });
-    let digits: String = after
-        .chars()
-        .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == 'e')
-        .collect();
-    digits
-        .parse()
-        .unwrap_or_else(|e| panic!("day '{digits}' does not parse: {e}"))
+/// **Retired by The Ken's Task 3.** The header carried the number a PLAYER
+/// saw, and this parsed the observable rather than a field on purpose — but
+/// Task 3 removed the day (and the id) from the header entirely, so there is
+/// no longer a rendered day here to watch. `s.day()` is the only surface
+/// left, and this test now reads it directly; the walk's `agent-at` count
+/// above is still read off the render-independent ledger, so this file loses
+/// no coverage, only the one channel that stopped existing.
+fn day_of(s: &Session<'_>) -> f64 {
+    s.day().as_std_days()
 }
 
 #[test]
@@ -79,7 +74,8 @@ fn a_players_walk_leaves_an_agent_at_trail_and_charges_time() {
     let (mut s, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
 
     let before = s.committed_agent_at_count();
-    let day_before = day_of(&out(s.handle("look")));
+    let _ = out(s.handle("look"));
+    let day_before = day_of(&s);
 
     let walked = out(s.handle("go n"));
     assert!(
@@ -94,7 +90,8 @@ fn a_players_walk_leaves_an_agent_at_trail_and_charges_time() {
         s.committed_agent_at_count()
     );
 
-    let day_after = day_of(&out(s.handle("look")));
+    let _ = out(s.handle("look"));
+    let day_after = day_of(&s);
     assert!(
         day_after > day_before,
         "an in-character walk must charge time: day {day_before} -> {day_after}"
@@ -354,9 +351,9 @@ fn a_band_change_charges_time_and_commits_nothing() {
     // is no way to anywhere from here.", "Nothing here is built") can never be
     // mistaken for a free act that correctly charged nothing.
     for (verb, expected) in [
-        ("enter", "[chamber "),
-        ("enter further in", "[chamber "),
-        ("out", "[room "),
+        ("enter", "[chamber]"),
+        ("enter further in", "[chamber]"),
+        ("out", "[room]"),
     ] {
         let facts_before = s.committed_fact_count();
         let day_before = s.day().as_std_days();

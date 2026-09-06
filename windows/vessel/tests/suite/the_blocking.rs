@@ -31,7 +31,7 @@ fn out(t: Turn) -> String {
 fn inside(session: &mut Session) {
     let reply = out(session.handle("enter"));
     assert!(
-        reply.starts_with("[chamber "),
+        reply.starts_with("[chamber]"),
         "the possession did not get indoors, so nothing below is tested: {reply}"
     );
 }
@@ -162,7 +162,7 @@ fn map_outdoors_still_draws_the_chart() {
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     let chart = out(session.handle("map"));
     assert!(
-        !chart.is_empty() && !chart.starts_with("[chamber "),
+        !chart.is_empty() && !chart.starts_with("[chamber]"),
         "outdoors, `map` must still draw the locale chart: {chart}"
     );
     assert!(
@@ -350,7 +350,7 @@ fn every_noun_the_chamber_speaks_of_is_examinable_too() {
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     let shown = out(session.handle("enter"));
     assert!(
-        shown.starts_with("[chamber "),
+        shown.starts_with("[chamber]"),
         "the possession did not get indoors: {shown}"
     );
     let nouns = session.chamber_nouns_here();
@@ -396,7 +396,7 @@ fn every_destination_the_plan_depicts_is_command_reachable() {
         }
         let stepped = out(session.handle("enter further in"));
         assert!(
-            stepped.starts_with("[chamber "),
+            stepped.starts_with("[chamber]"),
             "the footer advertised a way further in and the command did not take it: {stepped}"
         );
         walked += 1;
@@ -476,11 +476,11 @@ fn go_indoors_moves_one_cell_and_says_where_you_are() {
     assert!(
         replies
             .iter()
-            .any(|r| r.starts_with("You step") || r.starts_with("[chamber ")),
+            .any(|r| r.starts_with("You step") || r.starts_with("[chamber]")),
         "no bearing produced a step at all: {replies:?}"
     );
     assert!(
-        replies.iter().all(|r| !r.starts_with("[room ")),
+        replies.iter().all(|r| !r.starts_with("[room]")),
         "a compass step indoors must not put the possession out of doors: {replies:?}"
     );
 }
@@ -563,7 +563,7 @@ fn the_plan_marks_where_you_stand_and_the_mark_moves_with_you() {
     let doorways = drawn(&before, '+');
     let stepped = out(session.handle("go n"));
     assert!(
-        stepped.starts_with("You step") || stepped.starts_with("[chamber "),
+        stepped.starts_with("You step") || stepped.starts_with("[chamber]"),
         "the entry cell must be able to step north in the seed-42 structure: {stepped}"
     );
     let after = out(session.handle("map"));
@@ -599,7 +599,7 @@ fn two_chambers_of_one_structure_do_not_read_alike() {
     let first = out(session.handle("look"));
     let stepped = out(session.handle("enter further in"));
     assert!(
-        stepped.starts_with("[chamber "),
+        stepped.starts_with("[chamber]"),
         "this structure has only one chamber, so the headline cannot be observed \
          here at all: {stepped}"
     );

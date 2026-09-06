@@ -47,11 +47,11 @@ for the same reason, so the test that guards this shape and the page that
 publishes it now name the same world.)*
 
 ```text
-[room 4189198211, day 0]
+[room]
 Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 > enter
-[chamber 1098173175083363, day 0.00985]
+[chamber]
 A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
@@ -60,12 +60,12 @@ You are carrying nothing.
 > take a key
 You see no a key here.
 > enter further in
-[chamber 1098173178103715, day 0.0197]
+[chamber]
 A small room in Vapatkapak, holding a doorway, an alcove and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
 > enter further in
-[chamber 1098173182570403, day 0.02955]
+[chamber]
 A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key, a brazier and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
@@ -74,7 +74,7 @@ You take the key.
 > carrying
 You are carrying a key.
 > enter further in
-[chamber 1098173179279043, day 0.04925]
+[chamber]
 A small room in Vapatkapak, holding a doorway, a water jar, a strongbox, a key and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out.
@@ -97,11 +97,11 @@ You close the strongbox.
 > open a strongbox
 You open the strongbox. Within it: a key.
 > out
-[room 4189198211, day 0.10835]
+[room]
 Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 > enter
-[chamber 1098173175083363, day 0.1182]
+[chamber]
 A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out, further in.
