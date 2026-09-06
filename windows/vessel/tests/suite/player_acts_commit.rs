@@ -2,11 +2,23 @@
 //! time against the body's own mass and post facts into the session ledger,
 //! so the trail they leave is indistinguishable from a creature's.
 //!
+//! **THE PROVENANCE KINDS NOW DIFFER, AND THAT IS DELIBERATE (The Warrant,
+//! Task 3).** A creature's step carries the producer name `vessel/liveness`;
+//! a player's still carries authored prose (`session.rs`'s
+//! `WALKED_PROVENANCE`/`RETRACED_PROVENANCE`), because a player has no `Mode`
+//! to promote onto an errand predicate — spec §7.4 accepts and names the
+//! asymmetry. So claim 2's "same provenance kind" is no longer true in
+//! substance, and the tests below never asserted it: they assert the
+//! provenance is non-empty and names no driver, both of which still hold on
+//! both sides. Read the sameness claim as being about predicate, object arity
+//! and driver-anonymity, not about the shape of the provenance string.
+//!
 //! The four claims, each with its own test:
 //!
 //! 1. a walk commits `agent-at` and moves the clock;
 //! 2. the committed facts have the SHAPE a creature's do — same predicate,
-//!    same object arity, same provenance kind, and nothing naming the driver;
+//!    same object arity, and nothing naming the driver (the provenance kind
+//!    is the deliberate exception above);
 //! 3. those facts survive `into_played_world` unfiltered (spec §2.4);
 //! 4. a sleeping body refuses in-character acts and permits out-of-character
 //!    ones (the gate, spec §3.3).
@@ -139,7 +151,12 @@ fn a_players_trail_is_shaped_exactly_like_a_creatures() {
     // "Indistinguishable" is the acceptance test's own word, and a COUNT does
     // not establish it. This compares the envelopes: same predicate, same
     // object arity, same field set, and a provenance that names an act in the
-    // world rather than the mind that chose it (spec §3.1).
+    // world rather than the mind that chose it (spec §3.1). The two sides'
+    // provenance STRINGS diverged with The Warrant's Task 3 — a creature's
+    // names its producer, a player's is still authored prose — and the
+    // assertions below were always about non-emptiness and driver-anonymity
+    // rather than about that string's shape; see the module doc and The
+    // Warrant spec §7.4 for why the asymmetry is deliberate.
     // At `WALKING_SEED` rather than 42: this comparison needs a creature that
     // WALKED, and seed 42's flagship residents drink in place (see the
     // constant's own note).
