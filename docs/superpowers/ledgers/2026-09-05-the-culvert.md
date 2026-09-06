@@ -1047,6 +1047,66 @@ count is taken through `RouteMemo::searches()`.
 
 ---
 
+### #16 [G5] — both hash constants moved at the close, and a same-tree control said whose fault it was
+
+**Question.** Absorbing 54 commits of main at the close moved BOTH campaign-time
+hash constants. Is the campaign's byte-identity claim false?
+
+**Decision.** **No. The move is main's, established by a same-tree control
+rather than by argument.**
+
+**The experiment.** Neutralise `RouteMemo`'s cache lookup so it can never serve
+a hit — which makes the memo do exactly what the pre-memo code did, one fresh
+search per ask — and re-take both hashes on the SAME tree:
+
+| constant | cache neutralised | memo live |
+|---|---|---|
+| seed 42 | `0x9dd87f4cea554d28` | `0x9dd87f4cea554d28` |
+| seed 17 | `0xbde5058309750ca4` | `0xbde5058309750ca4` |
+
+Identical in both rows. The memo changes no committed byte. What moved is the
+world underneath it.
+
+**Attribution.** The absorbed range carries **The Lot** (`f8859b8d7`), which
+edits `windows/worldgen/src/{lib,person_promote,vestige}.rs` — world
+generation, upstream of every possession-shape ledger.
+
+**The corroborating control the campaign already held**, and which is why the
+answer took one experiment rather than a bisect: at `8acd377c5`, with the memo
+FULLY WIRED after the previous 99-commit absorption, both constants matched
+their minted values. The only delta since is main's.
+
+**Why this is the instrument working rather than an alarm.** A moved constant
+is exactly what a campaign-time hash is for. Its job is not to stay green — it
+is to force the question "whose change was that?" at a moment when the honest
+answer is still cheap to get. Had the constants been absent, this absorption
+would have been silent, and the campaign would have merged with no evidence
+either way about whether 153 commits of main had interacted with its change.
+
+**And the discipline it exercised is the one the module doc already
+prescribed:** re-record MAIN-FIRST. Not "the test is red, update the number" —
+measure whether the campaign's own code is responsible first, then re-record
+with the evidence attached. The dated record in
+`windows/vessel/tests/suite/the_culvert.rs` now carries both values, both
+controls, and the attribution.
+
+**Alternatives discarded.** (a) Re-recording without the control — it would
+have produced the same two numbers and no knowledge, and is indistinguishable
+from quietly accepting a real regression. (b) Bisecting main's 54 commits — the
+same-tree control answers the question directly in one run; a bisect would have
+found the same commit at far greater cost, and only after assuming the answer
+lay in main at all.
+
+**ideonomy passes / overturns.** None; a defect adjudication against a measured
+control.
+
+**Capture actions.** The dated record is updated in place with the full
+before/after and both control rows. The retrospective gets the general lesson:
+a campaign-time constant's value is disposable, but the CONTROL that attributes
+its movement is the thing worth building.
+
+---
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*

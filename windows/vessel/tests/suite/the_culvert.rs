@@ -49,6 +49,31 @@
 //! witness                    green (minted)          under the control
 //! CULVERT_SEED_42_LEDGER     0x9874b73557337f83      0x9874b73557337f83   (unmoved)
 //! CULVERT_WATER_LEDGER       0x1d03ec0fc13050fe      0xb09d0ac58c46025e   (MOVED)
+//!
+//! # RE-RECORDED MAIN-FIRST, 2026-09-06, at the close absorption
+//!
+//! Both constants MOVED when 54 commits of main were absorbed at `63ce3c5e2`:
+//!
+//!   CULVERT_SEED_42_LEDGER   0x9874_b735_5733_7f83 -> 0x9dd8_7f4c_ea55_4d28
+//!   CULVERT_WATER_LEDGER     0x1d03_ec0f_c130_50fe -> 0xbde5_0583_0975_0ca4
+//!
+//! **The move is MAIN's, not this campaign's, and that was established by a
+//! same-tree control rather than by argument.** Neutralising `RouteMemo`'s
+//! cache lookup so it can never serve a hit makes the memo do exactly what
+//! the pre-memo code did — one fresh search per ask. Run that way, on this
+//! same tree, both hashes are IDENTICAL to their memoized values:
+//!
+//!   seed 42   neutralised 0x9dd87f4cea554d28   memoized 0x9dd87f4cea554d28
+//!   seed 17   neutralised 0xbde5058309750ca4   memoized 0xbde5058309750ca4
+//!
+//! So the memo changes no committed byte, and the movement is attributable to
+//! main. The absorbed range contains The Lot (`f8859b8d7`), which edits
+//! `windows/worldgen/src/{lib,person_promote,vestige}.rs` — world generation,
+//! upstream of every possession-shape ledger.
+//!
+//! The corroborating control the campaign already held: at `8acd377c5`, with
+//! the memo FULLY WIRED after a 99-commit absorption, both constants matched
+//! their minted values. The only delta since is main's.
 //! ```
 //!
 //! **`CULVERT_SEED_42_LEDGER` DID NOT MOVE, and that is recorded rather than
@@ -396,7 +421,7 @@ fn culvert_water_ledger_hash() -> u64 {
 /// a MEDIAN agent making zero water searches (this campaign's own Task 2
 /// measurement), so a green run here is a blast-radius check on the whole
 /// walk, never evidence that the water-belief route memo did anything.
-const CULVERT_SEED_42_LEDGER: u64 = 0x9874_b735_5733_7f83;
+const CULVERT_SEED_42_LEDGER: u64 = 0x9dd8_7f4c_ea55_4d28;
 
 /// The water-belief possession shape's (seed 17, 12 waits) committed ledger,
 /// hashed. Minted from two agreeing runs, and MOVED under the positive
@@ -406,7 +431,7 @@ const CULVERT_SEED_42_LEDGER: u64 = 0x9874_b735_5733_7f83;
 /// belief-rich shape (52 of 67 residents hold a non-empty belief, max 23
 /// rooms), so a fold that changed which known water an agent walks toward
 /// has somewhere to show up.
-const CULVERT_WATER_LEDGER: u64 = 0x1d03_ec0f_c130_50fe;
+const CULVERT_WATER_LEDGER: u64 = 0xbde5_0583_0975_0ca4;
 
 /// Two fresh seed-42 sessions must commit the same ledger bytes, and that
 /// hash must equal the minted constant. [`CULVERT_SEED_42_LEDGER`]'s own doc
