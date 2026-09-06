@@ -1063,3 +1063,107 @@ fn culvert_here_anchored_key_population_curve() {
          band-to-tick arithmetic above has drifted from bench_shape's own loop"
     );
 }
+
+/// **THE PRIMARY WITNESS (Task 6).** For every `(from, dest, budget)` the memo
+/// is asked, its answer equals a fresh
+/// `plan_to_room(from, dest, budget, ∅)` — **including when both are `None`**.
+///
+/// This is deliberately stronger than a ledger hash, on The Kerf's own
+/// finding: its control B moved none of four script hashes yet reddened all
+/// four real-shape FOLD-equals-SCAN sweeps, so a hash is the weaker
+/// instrument. The campaign's byte-identity claim is that
+/// `plan_to_room(from, dest, budget, ∅)` is pure over mesh geometry
+/// (`NavSpace` holds only `dest` and `avoid` and never reads `Terrain`, the
+/// ledger, or the tick); this test is what makes that claim falsifiable
+/// rather than merely argued.
+///
+/// The `None` case is not an afterthought: 59.5% of real calls are
+/// budget-exhausted failures and they are 95.1% of all node expansions, so a
+/// memo that stored only successes would re-pay the worst calls forever while
+/// its hit rate read 87.8%.
+///
+/// **The population unions both shapes, and is DEDUPED.** The possession
+/// shape has no unreachable pair and [`Shape::Lab`] does, so neither alone
+/// exercises both arms; the two shapes are different seeds and nothing
+/// guarantees their `(from, dest)` pairs are disjoint, so the union is
+/// collected through a `BTreeSet` before it is measured. `searches` and
+/// `len()` are then compared against the DISTINCT pair count, which is the
+/// property actually claimed ("one search per distinct key") rather than an
+/// accident of how the two populations were concatenated.
+///
+/// **Both arms are asserted as PROPERTIES, never as counts** — the same
+/// discipline
+/// [`culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair`]
+/// already states in its own doc: a population that shifts by one member must
+/// not redden a correctness test.
+#[test]
+fn the_memo_answers_exactly_what_a_fresh_search_answers() {
+    // Real (home, water room) pairs from the two measured shapes — NOT
+    // synthetic facets. The property must hold on the pairs production
+    // actually asks about, including the unreachable ones.
+    let mut union: std::collections::BTreeSet<(Facet, Facet)> =
+        culvert_real_pairs(Shape::Possession).into_iter().collect();
+    union.extend(culvert_real_pairs(Shape::Lab));
+    let pairs: Vec<(Facet, Facet)> = union.into_iter().collect();
+    assert!(!pairs.is_empty(), "denominator: no pairs to compare");
+
+    let mut memo = liveness::RouteMemo::new();
+    assert!(memo.is_empty(), "a fresh memo holds nothing");
+    let mut reached = 0usize;
+    let mut unreachable = 0usize;
+    for (from, dest) in &pairs {
+        let fresh = plan_to_room(
+            from,
+            dest,
+            PLAN_BUDGET_MIRROR,
+            &std::collections::BTreeSet::new(),
+        )
+        .map(|p| p.len());
+        let missed = memo.hops(from, dest, PLAN_BUDGET_MIRROR);
+        assert_eq!(
+            missed, fresh,
+            "the memo's MISS disagreed with a fresh search for {from:?} -> {dest:?}"
+        );
+        // And again, to exercise the HIT path, not only the miss path.
+        assert_eq!(
+            memo.hops(from, dest, PLAN_BUDGET_MIRROR),
+            fresh,
+            "the memo's HIT disagreed with its own miss for {from:?} -> {dest:?}"
+        );
+        match fresh {
+            Some(_) => reached += 1,
+            None => unreachable += 1,
+        }
+    }
+    println!(
+        "--- the memo vs a fresh search: {} distinct pairs, {reached} reachable, \
+         {unreachable} unreachable within PLAN_BUDGET_MIRROR={PLAN_BUDGET_MIRROR}; \
+         searches {}, entries {} ---",
+        pairs.len(),
+        memo.searches(),
+        memo.len()
+    );
+    // Both arms must fire or the test is half a test.
+    assert!(
+        reached > 0,
+        "no reachable pair in the population — the Some arm is untested"
+    );
+    assert!(
+        unreachable > 0,
+        "no unreachable pair in the population — the None arm, which is 95.1% of the real \
+         cost, is untested"
+    );
+    // A miss inserts exactly one entry, so any divergence here means the memo
+    // re-searched a key it already held, or holds a key it never searched.
+    assert_eq!(
+        memo.searches() as usize,
+        pairs.len(),
+        "one real search per distinct pair and no more: the second ask for each pair must \
+         have hit"
+    );
+    assert_eq!(
+        memo.len(),
+        pairs.len(),
+        "entries == searches: every search inserted exactly one entry"
+    );
+}

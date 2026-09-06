@@ -1228,6 +1228,115 @@ pub fn believed_water(
         .map(|(_, r)| r)
 }
 
+/// A memo of `plan_to_room(from, dest, budget, ∅)` — the hop count only, and
+/// `None` when `dest` is not reachable from `from` within `budget`.
+///
+/// **Byte-identical by construction, not by testing.** `NavSpace`
+/// (`windows/vessel/src/action.rs`, private) holds exactly `dest` and `avoid`, and its `edges_from` computes
+/// `move_cost` over [`Facet::neighbors`]: it never consults a [`Terrain`], the
+/// ledger, or the tick. (Its `heuristic` returns `0`, so the search is
+/// Dijkstra, not A\*.) So with `avoid` fixed empty the memoized function is
+/// pure over mesh geometry, and caching it is exactly caching that function.
+/// Nothing within a process invalidates an entry — not a commit, not a terrain
+/// rebuild, not a belief change. The equivalence test
+/// (`the_memo_answers_exactly_what_a_fresh_search_answers`) confirms the
+/// construction; it is not the reason to believe it.
+///
+/// **It takes no `avoid` parameter, and that is the point.** Every belief fold
+/// that plans a route passes a freshly-allocated EMPTY set
+/// ([`believed_water`], `nearer_to_home`); only `HomeNavCache::home_nav`
+/// passes a real hazard set (`view.believed_hazard`). A future caller holding
+/// one cannot reach this memo, because there is nowhere to pass it — a compile
+/// error instead of a stale answer. `budget` IS in the key, for the reason
+/// [`HomeNavCache`]'s own private `HomeNavState` puts it in its: today every caller
+/// passes `PLAN_BUDGET` and nothing enforces that.
+///
+/// **It stores the NEGATIVE result too, deliberately.** A memo holding only
+/// successes would re-pay the budget-exhausted searches forever while its hit
+/// rate read healthy — and those are the expensive ones: the campaign's own
+/// Task 2 measurement puts 59.5% of real calls in the `None` arm and 95.1% of
+/// all node expansions behind it. Caching `None` is not an optimisation of
+/// this memo, it is most of its point.
+///
+/// **Shared across entities, deliberately — the opposite of
+/// [`HomeNavCache`].** [`crate::resident::LatestVisit::water_at`] returns each
+/// entity's DISTINCT rooms, so an entity never duplicates its own pair within
+/// one sweep; every duplicate is a duplicate ACROSS entities, and on the
+/// possession shape the same `(home, dest)` pair is asked 6.4x-9.1x per sweep
+/// by different entities. `HomeNavCache` is per-entity because `pos` and its
+/// avoid-epoch are per-entity; neither is in this key, so that half of the
+/// precedent does not transfer.
+///
+/// **It stores the hop count, not the plan**, because `p.len()` is all any
+/// consumer of these two folds reads — the same refinement The Waymark reached
+/// for `HomeNavFeature`.
+///
+/// **This is NOT a resident index and decision 0756 does not govern it.** That
+/// rule is about resident indexes — folds over the ledger that absorb facts and
+/// must be asymptotically cheaper than a parent scan. This memo is derived from
+/// no fact, absorbs no fact, and has no parent to be cheaper than; it is the
+/// same category as [`hornvale_kernel::RoomMeshMemo`] and
+/// [`PrimaryAfraidMemo`] — a cache of a pure function over a fixed lattice.
+#[derive(Default)]
+pub struct RouteMemo {
+    /// `(from, dest, budget) → hops`, `None` = not reachable within `budget`.
+    /// The value is an `Option`, so an occupied entry holding `None` is a
+    /// CACHED FAILURE and a vacant entry is an unasked question — the
+    /// distinction the negative-caching paragraph above turns on.
+    hops: std::collections::BTreeMap<(Facet, Facet, usize), Option<usize>>,
+    /// How many real `plan_to_room` searches this memo has run, ever — the
+    /// deterministic witness this campaign preregisters on, in the shape
+    /// [`HomeNavCache::searches`] already has. Never a wall-clock proxy.
+    searches: u64,
+}
+
+impl RouteMemo {
+    /// An empty memo. Its lifetime is the caller's: nothing invalidates an
+    /// entry, so a memo may be as long-lived as the process (see the type
+    /// doc).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// `plan_to_room(from, dest, budget, ∅).map(|p| p.len())`, memoized.
+    ///
+    /// A hit costs one `BTreeMap` lookup; a miss runs the real search (costing
+    /// exactly what the caller always paid), counts it in [`Self::searches`],
+    /// and inserts — including when the answer is `None`.
+    /// type-audit: bare-ok(count: budget), bare-ok(count: return)
+    pub fn hops(&mut self, from: &Facet, dest: &Facet, budget: usize) -> Option<usize> {
+        let key = (from.clone(), dest.clone(), budget);
+        if let Some(cached) = self.hops.get(&key) {
+            return *cached;
+        }
+        self.searches += 1;
+        let answer =
+            plan_to_room(from, dest, budget, &std::collections::BTreeSet::new()).map(|p| p.len());
+        self.hops.insert(key, answer);
+        answer
+    }
+
+    /// How many real `plan_to_room` searches this memo has run, ever.
+    /// type-audit: bare-ok(count: return)
+    pub fn searches(&self) -> u64 {
+        self.searches
+    }
+
+    /// How many distinct `(from, dest, budget)` keys this memo holds. A miss
+    /// inserts exactly one entry, so on a memo nothing has reset this equals
+    /// [`Self::searches`].
+    /// type-audit: bare-ok(count: return)
+    pub fn len(&self) -> usize {
+        self.hops.len()
+    }
+
+    /// Whether this memo holds no entries at all.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_empty(&self) -> bool {
+        self.hops.is_empty()
+    }
+}
+
 /// A memo of the PRIMARY-AFRAID emission `(entity, day) → arousal` (`0.0` when
 /// the creature's Danger drive does NOT win — no emission). The Phantom's
 /// re-derivation asks "was this emitter primary-afraid on that past day?" the
