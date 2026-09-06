@@ -21,6 +21,10 @@
 
 ### Task 1: Complete measurement and observer inventory
 
+**Status:** Complete — the direct two-room witness measured 2 home and 2
+current searches; seed-42/17 integration constructors were documented as
+unavailable to the unit probe.
+
 **Files:**
 - Modify: `windows/vessel/src/liveness.rs` — ignored Fetch probe beside the existing belief tests.
 - Modify: `docs/superpowers/ledgers/2026-09-06-the-fetch.md` — measured output and observer ruling.
@@ -36,6 +40,8 @@
 
 ### Task 2: Add red behavior tests
 
+**Status:** Complete — four tests compile and fail against the old home anchor.
+
 **Files:**
 - Modify: `windows/vessel/src/liveness.rs` — private unit tests next to the existing `believed_water` tests.
 
@@ -50,6 +56,9 @@
 - [ ] **Step 5: Commit the red tests.** Commit message: `test(the-fetch): pin actor-relative water belief`.
 
 ### Task 3: Implement the actor-relative fold
+
+**Status:** Complete — implementation committed as `dca20b44c`; commit gate
+passed all audits and 1,298 sub-floor tests.
 
 **Files:**
 - Modify: `windows/vessel/src/liveness.rs` — `believed_water`, the private incremental helper, and their callers/docs.
@@ -68,6 +77,9 @@
 
 ### Task 4: Verify observers and artifacts
 
+**Status:** Complete — focused belief, errand, affect, and seed-42 snapshot
+observers pass; no value fixtures moved.
+
 **Files:**
 - Modify: affected value fixtures under `windows/vessel/tests/fixtures/` only when the reviewed diff proves they move.
 - Modify: affected trace/golden documentation only when required by observed behavior.
@@ -84,6 +96,9 @@
 - [ ] **Step 6: Commit only reviewed fixture updates.** Commit message: `test(the-fetch): rebaseline actor-relative belief observers`.
 
 ### Task 5: Close preparation
+
+**Status:** In Progress — close records remain to be written and submitted for
+G6 review.
 
 **Files:**
 - Create: `book/src/chronicle/2026-09-06-the-fetch.md` using the repository chronicle convention.
