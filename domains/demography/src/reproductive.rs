@@ -481,9 +481,12 @@ pub struct SocialSubstrateInput {
 }
 
 /// Summarize BIO-3's plain input without random draws or cohort creation.
+///
+/// Derived aggregate values are checked before they cross into the population
+/// substrate, so finite authored inputs cannot produce a non-finite handoff.
 pub fn summarize_reproduction(
     input: &ReproductivePopulationInput,
-) -> ReproductivePopulationSummary {
+) -> Result<ReproductivePopulationSummary, ReproductiveInputError> {
     let expected_offspring = input.typicality.offspring.mean();
     let survival_to_independence = input
         .typicality
@@ -492,8 +495,15 @@ pub fn summarize_reproduction(
     let expected_independent_offspring_per_event = expected_offspring * survival_to_independence;
     let expected_independent_offspring_per_generation = expected_independent_offspring_per_event
         * input.persistence.reproductive_events_per_generation;
+    validate_derived(
+        "expected independent offspring per generation",
+        expected_independent_offspring_per_generation,
+    )?;
+    let persistence_balance =
+        expected_independent_offspring_per_generation - input.persistence.replacement_requirement;
+    validate_derived("persistence balance", persistence_balance)?;
 
-    ReproductivePopulationSummary {
+    Ok(ReproductivePopulationSummary {
         possibility: input.possibility.clone(),
         maturity_age: input.typicality.maturity_age,
         generation_length: input.typicality.generation_length,
@@ -503,10 +513,20 @@ pub fn summarize_reproduction(
         expected_care_burden: input.typicality.care_burden.mean(),
         expected_independent_offspring_per_event,
         expected_independent_offspring_per_generation,
-        persistence_balance: expected_independent_offspring_per_generation
-            - input.persistence.replacement_requirement,
+        persistence_balance,
         reproductive_roles: input.typicality.reproductive_roles.clone(),
         hybrid_outcomes: input.typicality.hybrid_outcomes.clone(),
+    })
+}
+
+fn validate_derived(field: &'static str, value: f64) -> Result<(), ReproductiveInputError> {
+    if value.is_finite() {
+        Ok(())
+    } else {
+        Err(ReproductiveInputError::new(
+            field.to_string(),
+            "must be finite after summary",
+        ))
     }
 }
 

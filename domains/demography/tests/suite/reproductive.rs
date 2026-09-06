@@ -43,7 +43,7 @@ fn typical_input() -> ReproductivePopulationInput {
 
 #[test]
 fn summary_carries_the_complete_population_handoff() {
-    let summary = summarize_reproduction(&typical_input());
+    let summary = summarize_reproduction(&typical_input()).unwrap();
 
     assert_eq!(summary.possibility.pathway_count, 2);
     assert_eq!(summary.maturity_age.get(), 12.0);
@@ -114,7 +114,7 @@ fn consume_socially(
 
 #[test]
 fn different_social_contexts_do_not_rewrite_biological_summary() {
-    let biological = summarize_reproduction(&typical_input());
+    let biological = summarize_reproduction(&typical_input()).unwrap();
     let social = social_substrate_input(biological.clone());
     let pair = consume_socially(&social, SocialContext::PairHousehold);
     let communal = consume_socially(&social, SocialContext::CommunalCare);
@@ -161,7 +161,7 @@ fn consumers_can_read_normalized_outcomes_without_mutating_them() {
         input.typicality.care_burden.entries(),
         &[(2.0, 0.25), (6.0, 0.75)]
     );
-    let summary = summarize_reproduction(&input);
+    let summary = summarize_reproduction(&input).unwrap();
     assert_eq!(
         summary.reproductive_roles.entries(),
         &[
@@ -245,10 +245,24 @@ fn zero_and_no_reproduction_are_valid_inputs() {
         persistence: PopulationPersistenceInputs::new(0.0, 0.0).unwrap(),
     };
 
-    let summary = summarize_reproduction(&input);
+    let summary = summarize_reproduction(&input).unwrap();
     assert_eq!(summary.expected_offspring, 0.0);
     assert_eq!(summary.survival_to_independence, 0.0);
     assert_eq!(summary.expected_care_burden, 0.0);
     assert_eq!(summary.expected_independent_offspring_per_generation, 0.0);
     assert_eq!(summary.persistence_balance, 0.0);
+}
+
+#[test]
+fn overflowing_generation_summary_is_rejected_before_the_social_handoff() {
+    let mut input = typical_input();
+    input.typicality.offspring = OffspringDistribution::new(vec![(2, 1.0)]).unwrap();
+    input.typicality.survival_to_independence =
+        SurvivalDistribution::new(vec![(IndependenceOutcome::Survives, 1.0)]).unwrap();
+    input.persistence = PopulationPersistenceInputs::new(f64::MAX, 0.0).unwrap();
+
+    assert_eq!(
+        summarize_reproduction(&input).unwrap_err().to_string(),
+        "expected independent offspring per generation must be finite after summary"
+    );
 }
