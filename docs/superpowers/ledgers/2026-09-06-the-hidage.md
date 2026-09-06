@@ -204,7 +204,10 @@ overturns: 0 — a review gate, not a design choice. · Capture: this entry.
 
 ## Deferred minors
 
-(none yet)
+| task | minor | outcome |
+| --- | --- | --- |
+| 0 | `median`'s even-length branch has no test (the brief's case is odd-length) | deferred to the final review |
+| 0 | `gini` guards `mean <= 0.0` where `== 0.0` is the stated case; unreachable on non-negative inputs | accepted as-is |
 
 ## Capture manifest
 
