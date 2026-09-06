@@ -3944,6 +3944,73 @@ fn bake_eras(
     Ok((eras, adjusts, years))
 }
 
+/// The deep-history bake's own per-era connection graphs, keyed by the bake
+/// year each era begins at, derived exactly as [`bake_history_from`] derives
+/// them and never committed (The Sundering: "the graph stays derived").
+///
+/// A reader that wants to ask a question of the transport topology the bake
+/// actually walked — which sites could reach which, in which era — reads it
+/// here rather than re-deriving a present-day graph and calling it history.
+/// The first consumer is The Murrain's Task 0 probe, which measures the
+/// connected metapopulation a pathogen would have to persist in
+/// (`windows/worldgen/tests/suite/murrain_probe.rs`).
+///
+/// The era count and the bake span are the bake's own
+/// (`CLIMATE_ERAS`, `BakeConfig::default_millennia`), so the returned years
+/// are the same `era_years` the bake's `era_index_for` reads: an era holds
+/// every bake year from its own start up to the next era's.
+///
+/// A reader that already holds the world's terrain and climate — the Lot's
+/// context does — should call [`bake_era_graphs_from`] and not pay a second
+/// sculpt and fit through this wrapper (the same redundancy
+/// `connection_graph_of`'s doc names).
+// Named construction site (decision 0092): the sole caller of `terrain_of`/
+// `climate_of` on this path -- sculpts/fits once for its own era-graph
+// readout, then hands the pair to `bake_era_graphs_from`, which takes an
+// already-built terrain/climate and therefore calls neither disallowed
+// method itself and needs no allow of its own.
+/// type-audit: bare-ok(count: return)
+#[allow(clippy::disallowed_methods)]
+pub fn bake_era_graphs(
+    world: &World,
+) -> Result<Vec<(f64, hornvale_topology::ConnectionGraph)>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    bake_era_graphs_from(world, &terrain, &climate)
+}
+
+/// [`bake_era_graphs`] over an already-built terrain and climate: the same
+/// derivation, none of the sculpting.
+/// type-audit: bare-ok(count: return)
+pub fn bake_era_graphs_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<Vec<(f64, hornvale_topology::ConnectionGraph)>, BuildError> {
+    let cfg = history_bake::BakeConfig::default_millennia();
+    let (eras, _adjusts, years) = bake_eras(world, terrain, &cfg)?;
+    let geo = terrain.geosphere();
+    let current = hornvale_kernel::VertexMap::from_fn(geo, |c| climate.current_at(c));
+    let elevation = &terrain.globe().elevation;
+    Ok(years
+        .into_iter()
+        .zip(eras.iter())
+        .map(|(year, era)| {
+            (
+                year,
+                crate::graph_derive::connection_graph_at(
+                    geo,
+                    elevation,
+                    era.sea_level,
+                    &current,
+                    &[],
+                    &crate::graph_derive::GraphConfig::default(),
+                ),
+            )
+        })
+        .collect())
+}
+
 /// Headline biome/habitability lines for the almanac's Land section.
 /// type-audit: bare-ok(prose: return)
 pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
