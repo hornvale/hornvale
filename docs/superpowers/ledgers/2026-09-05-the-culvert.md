@@ -1107,6 +1107,66 @@ its movement is the thing worth building.
 
 ---
 
+### #17 [close] — the 86.2% figure is PARKED, not corrected: it is a lower bound, and 559 is a sum
+
+**Question.** The final fix wave corrected the `6.4×–9.1×` duplicate-rate range
+for two faults: it excluded wait 1, and its divisor was the CUMULATIVE
+distinct-pair column rather than the within-sweep count. The re-review then
+found the sibling figure carries the identical defect —
+**"within-sweep dedup alone would cut 4,060 calls to 559 (−86.2%)"**, at spec
+`:134`, `:160`, `:290` and this ledger's #5 (`:288`) and #8 (`:465`). Correct
+the numbers, or park the finding?
+
+**Decision. PARKED — the figures stand and this entry is the record.** Nothing
+downstream is edited.
+
+**What 559 actually is, established by independent derivation rather than
+inherited.** It is the **SUM of the cumulative distinct-pair column across
+waits 1–12**: `8 + 17 + 29 + 29 + 42 + 48 + 51 + 58 + 60 + 64 + 70 + 83 = 559`
+— the same `home_dest_cum` column #14's table prints. Two consequences the
+prose does not say and a reader would not guess:
+
+1. **559 is not "distinct pairs per sweep."** It is a total over twelve sweeps
+   of a *running* count. The largest single sweep's cumulative reading is 83;
+   no sweep ever holds 559 of anything.
+2. **86.2% is therefore a LOWER BOUND on the within-sweep win, not a
+   measurement of it.** Within-sweep distinct ≤ cumulative distinct at every
+   wait, so the true reduction is **≥ 86.2%**, in the same conservative
+   direction as the range correction above.
+
+**Why parked rather than fixed.** Every conclusion drawn from the figure needs
+only a rate above 1×, which it clears by a wide margin under either reading:
+it argues that the memo must be SHARED across entities rather than per-entity
+(§1.3(c)), and a lower bound is sufficient for that argument in full. Correcting
+it would require re-deriving a within-sweep distinct count that was never
+measured — a new probe run, at real cost, to move a number no decision depends
+on.
+
+**Why parking requires this entry and not just silence.** The fix wave added a
+note under spec §1.2's Shape B table saying "anything DIVIDED by this column is
+a lower bound". **That note does not reach 559**, which is *summed* from the
+column rather than divided by it — so a reader checking the 86.2% figure against
+the nearest caution would find it inapplicable and conclude the figure is a
+clean within-sweep measurement. That is the exact re-derivation this entry
+exists to prevent. A parked defect with no record is indistinguishable from an
+undetected one.
+
+**Alternatives discarded.** (a) Correcting the prose to "≥86.2%" without a new
+measurement — rejected: it would quietly convert a stated measurement into a
+bound with nothing saying why, which is how the original defect was formed.
+(b) Running a within-sweep probe to get the real figure — rejected on cost
+against a number no conclusion turns on; recorded here so a future campaign that
+wants it knows exactly what to measure.
+
+**ideonomy passes / overturns.** None; an adjudication about whether to spend
+measurement, not a design choice.
+
+**Capture actions.** This entry. No prose edited, no registry row owed — the
+finding is about a figure in this campaign's own artifacts, not about the
+program.
+
+---
+
 ## Deferred minors
 
 **Backfilled at close, and that is itself the finding.** Every one of these was

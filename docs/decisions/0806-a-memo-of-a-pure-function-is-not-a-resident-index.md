@@ -48,10 +48,35 @@ distinguishable by where the code sits, only by what the state is derived from.
 
 **What this does not say.** It does not relax 0756 for anything that absorbs a
 fact, and it does not license a fact-free cache to skip the question of whether
-it earns its memory — `RouteMemo` answers that separately and by measurement
-(83 entries, saturating, bounded by the distinct-pair population rather than by
-history length). A cache that could grow without bound in session length is
-excluded on that ground alone, which is why The Culvert's own
-`shared_believed_water` site is not memoized.
+it earns its memory. `RouteMemo` answers that separately and by measurement —
+and the measurement is **not a demonstrated ceiling**. The distinct-pair
+population is small and *decelerating*: 83 entries at wait 12, 190 at wait 60,
+with no ceiling shown in sixty waits. So the memo is held for a session because
+190 entries of two `Facet`s and a `usize` is trivially cheap, not because the
+population was shown to stop growing. **The Culvert's spec §1.3(d) is the
+canonical statement of that and this record defers to it rather than restating
+it** — because the draft of this paragraph that shipped at `a6c6cfa46` did
+restate it, and restated it wrongly: it read "83 entries, saturating, bounded by
+the distinct-pair population rather than by history length", which this record's
+own cited ledger #14 refutes.
 
-See The Culvert's ledger #14 and #16, and spec §2.3.
+**And it states no bar about unbounded growth.** That same draft continued: "a
+cache that could grow without bound in session length is excluded on that ground
+alone, which is why The Culvert's own `shared_believed_water` site is not
+memoized." Read as a general rule that is wrong twice over. The campaign did not
+apply it evenly — it excluded `shared_believed_water` for failing to demonstrate
+a ceiling while including two sites whose own curve had not demonstrated one
+either — and the exclusion did not rest on a measured separation at all: ledger
+#14's ruling R12 decides it on spec Rule 3's **conservative default under
+genuine uncertainty**, explicitly saying so. That asymmetry is the campaign's
+own inconsistency, recorded in §1.3(d) as such, and it is not a bar this
+decision hands forward. **Whether a fact-free cache earns its memory stays a
+live question at each site**, answered by measurement rather than by this rule —
+which is what the still-open `TOOL-route-memo-has-no-held-bytes-accessor` exists
+to make possible.
+
+*(Pre-merge correction, 2026-09-06, before ratification: this record was
+branch-only when the two paragraphs above were rewritten. What was false is
+named inline rather than summarised, per `docs/CLAUDE.md`.)*
+
+See The Culvert's ledger #14 and #16, and spec §1.3(d) and §2.3.

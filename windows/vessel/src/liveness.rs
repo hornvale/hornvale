@@ -1261,9 +1261,23 @@ pub fn believed_water(
 /// `npc.home`, which is fixed for a session. So its key population is
 /// `positions x water rooms` rather than `homes x water rooms`, and this
 /// campaign's Task 5 measured it over 60 waits without finding it
-/// demonstrably saturate. A memo whose key space grows with session length
-/// is a leak wearing a cache's clothes, so this one deliberately does not
-/// reach that site. It is listed here rather than omitted because a
+/// demonstrably saturate, so this one deliberately does not
+/// reach that site.
+///
+/// **Read that exclusion for what it is, because the sentence that used to
+/// follow it here overstated it.** It said "a memo whose key space grows with
+/// session length is a leak wearing a cache's clothes", offered as the general
+/// rule the exclusion rests on. It is not one, and this campaign did not apply
+/// it evenly: the SAME 60-wait measurement found the home-anchored population
+/// — the one this memo does serve — still climbing, 83 pairs at wait 12 to 190
+/// at wait 60, with no ceiling demonstrated either. The exclusion rests on spec
+/// Rule 3's conservative default under genuine uncertainty (ledger #14, ruling
+/// R12), not on a measured separation between the two curves. This memo is held
+/// for a session because it is CHEAP, and the other site is not memoized
+/// because nobody has shown its growth is bounded — two different arguments,
+/// and only the second is about growth at all. See spec §1.3(d).
+///
+/// It is listed here rather than omitted because a
 /// two-item list reads as an oversight and would tell the next reader the
 /// site does not exist; what they will actually want to know is that it was
 /// considered.
@@ -1993,10 +2007,12 @@ pub fn hazard_memory_memo(
 /// (The Culvert, Task 7). This function's OWN pooling `plan_to_room` a few
 /// lines below still runs a fresh search every time, deliberately: it anchors
 /// at `here` — the agent's CURRENT position — where the memoized fold anchors
-/// at `npc.home`, so its key space is `positions x water rooms` and does not
-/// demonstrably saturate over a session. See [`RouteMemo`]'s own doc for the
-/// measurement and the reasoning; the memo has nowhere to be passed at that
-/// site precisely so a later reader cannot wire it there by reflex.
+/// at `npc.home`, so its key space is `positions x water rooms` and was not
+/// shown to stop growing over 60 waits. Neither was the home-anchored
+/// population, as it happens — the exclusion rests on spec Rule 3's
+/// conservative default, not on a measured separation. See [`RouteMemo`]'s own
+/// doc for the measurement and the reasoning; the memo has nowhere to be passed
+/// at that site precisely so a later reader cannot wire it there by reflex.
 /// type-audit: bare-ok(count: budget)
 #[allow(clippy::too_many_arguments)]
 pub fn shared_believed_water(

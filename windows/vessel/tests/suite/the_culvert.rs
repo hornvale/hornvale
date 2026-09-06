@@ -1141,8 +1141,13 @@ fn the_expensive_200_tick_lab_shape_also_has_an_unreachable_pair() {
 // the npc's CURRENT position, which moves every tick -- rather than at
 // `home` (fixed for a session). Its memo key space is therefore
 // `positions x water rooms`, not `homes x water rooms`, which is the one way
-// this campaign's home-anchored bound (83 pairs, saturating -- Task 4) could
-// fail to cover a real long-running session. Spec Rule 3 asks whether the
+// this campaign's home-anchored bound (83 pairs, believed at the time to be
+// saturating -- Task 4) could
+// fail to cover a real long-running session. That belief is what this very
+// task went on to refute, for BOTH curves: see the verdict doc below, and
+// spec §1.3(d). The premise is stated as it stood when the task was framed,
+// because the task only makes sense read that way.
+// Spec Rule 3 asks whether the
 // `(here, dest)` population SATURATES (stops rising -- safe to memoize) or
 // KEEPS RISING (unbounded -- exclude the site), a question about the CURVE's
 // shape, never about comparing an endpoint to 83.
@@ -1259,8 +1264,10 @@ fn culvert_here_dest_pairs(
 /// On the possession shape (the only shape where `colocated` is ever
 /// non-zero -- consistently 52-63 of 67 members every wait), `home_dest_cum`
 /// reaches a flat stretch by the end of the run (187, 189, 190, 190, 190
-/// across waits 56-60) -- the same saturating shape Task 4's 83 already
-/// established, reproduced here on a second, longer-running shape. But
+/// across waits 56-60) -- the same flattening shape Task 4's 83 was read as
+/// establishing, reproduced here on a second, longer-running shape. (Read as
+/// establishing; NOT established. Three flat waits is a pause, not a ceiling,
+/// which is what the rest of this doc goes on to argue.) But
 /// `here_dest_cum` ALSO plateaus mid-run -- five consecutive equal reads (41)
 /// across waits 21-25, LONGER than the reference's own three-wait plateau --
 /// and then resumes climbing. So a plateau in this system does not imply a
