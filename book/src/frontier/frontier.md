@@ -2652,9 +2652,13 @@ it. The embedding is not bookkeeping: it is what later determines the verb.
 replaying its committed facts, and the ledger yields those in **commit
 order** — a contract deliberate enough to carry its own kernel test. Each
 line is stamped with the day it was asserted; nothing sorts by it. So the one
-narrative surface the project has renders *storage* order and presents it as a
-timeline, which in Genette's vocabulary is nearer achrony than chronicle. The
-repair is not to reorder the ledger. That contract is load-bearing, and
+narrative surface the project has largely renders *storage* order and presents
+it as a timeline, which in Genette's vocabulary is nearer achrony than
+chronicle. One exception now exists and it is a small one: a run of steps
+committed under an errand is collapsed beneath that errand's line rather than
+replayed, and the line reports a span instead of a position in the stream.
+Everything else is still the flat sequence. The repair is not to reorder the
+ledger. That contract is load-bearing, and
 reordering it would be precisely the Simulator/Teller confusion the
 architecture exists to prevent: an order of telling is a structure computed
 *over* the ledger for one telling and discarded afterward.
@@ -2663,8 +2667,21 @@ architecture exists to prevent: an order of telling is a structure computed
 time needs a partition of the facts, and the concept registry already
 partitions every fact by predicate and by asserting domain. "Everything the
 world knows about its water, then everything about its stone, each internally
-chronological" is a telling available today and never used — the cheapest of
-the orders, and the least like anything a game normally does.
+chronological" is the cheapest of the orders and the least like anything a
+game normally does.
+
+The cheapest has now been taken, in the narrowest form it has. A recount
+partitions a creature's facts on **one** predicate namespace — an `errand/`
+predicate opens a node, and the positional steps that follow are embedded
+beneath it rather than concatenated with it. That is an ordered tree of the
+kind the argument above says is required, one level deep. What it is not is
+syllepsis: the partition is a single hard-coded prefix rather than a category
+chosen per telling, an entity's other predicates are not grouped at all, and
+no anachrony is computed anywhere — the embedded steps are in the order they
+were committed, and nothing reaches back or forward. So the interesting
+question the essay was pointing at is undisturbed. It is only worth knowing
+that the first level cost almost nothing, which was the claim, and that the
+general case is where the difficulty actually lives.
 
 **The tense bridge.** Reichenbach's three times — speech, reference, event —
 determine a clause's tense, and Montfort's move is to compute tense from them

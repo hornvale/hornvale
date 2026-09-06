@@ -2236,9 +2236,24 @@ pub enum DriveKind {
 }
 
 /// The per-NPC behavioural commitment mode — the errand an NPC is on
-/// (spec §5). Session-sandboxed (tick-local, never save-format): it carries
-/// across the steps of one walk to give hysteresis (no boundary-dithering, no
-/// mid-errand flip-flop), and is re-derived, never persisted.
+/// (spec §5). The value itself is tick-local and re-derived: it carries across
+/// the steps of one walk to give hysteresis (no boundary-dithering, no
+/// mid-errand flip-flop), and no `Mode` is ever serialized.
+///
+/// **Its ARMS are save-format, and this doc said the opposite until The
+/// Warrant.** A maximal run of constant `Mode` is committed, once, as an
+/// `errand/*` fact: [`errand_key`] maps every arm of this enum (paired with
+/// [`DriveKind`]) onto one of the eight permanent on-disk predicate keys whose
+/// contract [`ERRAND_WATER_KNOWN`]'s doc block states. So **widening this enum
+/// is a save-format act** — a new arm forces a new permanent key, and
+/// `errand_key`'s match has no `_` arm so the compiler will say so — even
+/// though the enum is never itself written to disk.
+///
+/// **And the errand identity a `Mode` names IS read back.**
+/// [`WalkState::begin`] seeds `st.errand` from the committed ledger through
+/// `latest_committed_errand`, because `begin` runs fresh on every `wait` and a
+/// same-reason errand can straddle that boundary. Persistence is load-bearing
+/// for correctness there, not an optimisation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
     /// Not pursuing any drive, and already home — nothing to do.
@@ -2884,8 +2899,9 @@ pub const RESTED: &str = "rested";
 /// rates ([`REST_FALL`] against [`FATIGUE_FALL`]) — so the fold must be able to
 /// tell, per bout, which act the body performed. `Fact`'s object is a single
 /// `Value` already carrying the span, its `place` is an `EntityId` and its
-/// `provenance` is free-form prose no fold may key on, so the predicate is the
-/// only field left that can carry a KIND. Encoding the kind by scaling the
+/// `provenance` names a producer that no fold may key on (one *renderer*
+/// does — see [`ERRAND_PRODUCER`]), so the predicate is the only field left
+/// that can carry a KIND. Encoding the kind by scaling the
 /// recorded span was rejected outright: [`rest_span_of`]'s contract, and the
 /// gallery line that renders it, both say the object is how long the body was
 /// down, and a scaled span would make both quietly false.
@@ -6786,7 +6802,23 @@ fn landing_interior(pos: &Facet, terrain: &dyn Terrain) -> Option<(Interior, Anc
 }
 
 /// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
-/// `provenance` naming why.
+/// `provenance` naming the **producer** that asserted it — not why it moved.
+///
+/// **This line said "naming why" until The Warrant, and the parameter still
+/// takes a `&str`, so read it as a contract rather than a suggestion.** The
+/// reason a creature moved lives on the covering `errand/*` fact's predicate,
+/// whose registry doc is the prose a recount renders; see
+/// [`ERRAND_PRODUCER`] for the one sentence this crate now states about the
+/// field. A caller that wants to say *why* commits an errand
+/// ([`errand_fact`]); it does not write a sentence into this parameter.
+///
+/// Three writers, and only three:
+/// - the drive tick, passing [`ERRAND_PRODUCER`] — every walked step;
+/// - [`place_agent`], passing `"harness-placement"` — a scenario harness
+///   positioning an agent before the sim runs;
+/// - `Session::commit_agent_at`, passing the player's in-world prose — a
+///   possessed body has no [`Mode`] and so no errand to commit, an asymmetry
+///   spec §7.4 accepts deliberately.
 pub(crate) fn agent_at_fact(
     entity: EntityId,
     target: &Facet,
@@ -6814,6 +6846,18 @@ pub(crate) fn agent_at_fact(
 /// covers are emitted by the same producer at the same site; a second
 /// spelling for the step would be free to drift from this one with nothing
 /// to notice.
+///
+/// **What `Fact.provenance` is, stated once here so the other sites can point
+/// at it rather than each keeping a version that drifts.** Provenance names
+/// the producer — the system that asserted the fact — and carries no
+/// semantics a *fold* may key on; the reason a fact exists lives in its
+/// predicate, whose registry doc is the only prose a recount renders. One
+/// **renderer** does read the field: `hornvale_historiography::group` joins a
+/// step to its covering errand by producer identity. So "no fold keys on it"
+/// is still literally true and still licenses [`SLEPT`]'s argument that the
+/// predicate is the only field left that can carry a KIND — but it no longer
+/// licenses treating the field as free to vary per call site. The operative
+/// constraint is narrower and sharper: **within one producer, one spelling.**
 /// type-audit: bare-ok(identifier-text)
 pub const ERRAND_PRODUCER: &str = "vessel/liveness";
 
@@ -7995,7 +8039,13 @@ impl<'a> TickSystem for DriveMovements<'a> {
 /// shared clock. The extraction is behaviour-preserving on its own: the fields
 /// are the same values, initialised in the same way, mutated in the same order.
 ///
-/// Tick-local and re-derived, never persisted — like [`Mode`], which it carries.
+/// Tick-local: the struct is opened per `wait` and discarded, and no
+/// `WalkState` is ever serialized. **Most** of its fields are re-derived from
+/// the frozen pre-tick ledger — but not all of them, and the blanket this line
+/// used to assert is what The Warrant made false. `errand` is SEEDED from
+/// committed history (`latest_committed_errand`, see that field's own doc);
+/// `mode`, which it carries, is re-derived per tick but its arms name
+/// permanent on-disk keys (see [`Mode`]).
 struct WalkState {
     /// Where the creature currently stands.
     pos: Facet,

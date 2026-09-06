@@ -56,9 +56,23 @@ instant the errand's first step is charged is always available and never wrong,
 and it is what makes an errand a *segment* rather than a point.
 
 **The provenance names the producer.** `agent-at`'s `provenance` becomes
-`"vessel/liveness"`, which restores the truth of `liveness.rs`'s own claim that
-"`provenance` is free-form prose no fold may key on" — a claim one test
-violated for as long as the prose was semantic.
+`"vessel/liveness"`, retiring the semantic content that one test keyed on for
+as long as the prose stayed meaningful.
+
+*This paragraph first said the flip "restores the truth of `liveness.rs`'s own
+claim that '`provenance` is free-form prose no fold may key on'", and that
+overstates what happened — corrected here, in this campaign's own unmerged
+record, rather than left to read as a settled result.* The literal claim never
+stopped being true and still is: `hornvale_historiography::group` joins a step
+to its covering errand by comparing provenance, but `group` is a **renderer** —
+it computes a presentation over a fact list already collected, holds no state,
+and nothing downstream of it re-enters the ledger. No fold keys on provenance.
+What the flip did not restore is the *licence* that sentence was being read
+for. A renderer now depends on the field, so provenance is no longer free to
+vary per call site; the constraint the campaign actually created is narrower
+and is the one worth quoting — **within one producer, one spelling** — and it
+is why `the_errand_producer_commits_only_agent_at_and_the_eight_errand_keys`
+exists.
 
 ## Consequence
 

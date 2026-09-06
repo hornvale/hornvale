@@ -151,7 +151,7 @@ any other entity (a settlement, a place), the same generic replay. The
 REPL's `why <id>` verb, previously wired straight to religion's own belief
 lookup, now calls `recount` for any entity id — subsuming tier 0's `why`
 without changing what a player already knew to type. This is
-**historiography tier 0**: a flat, single-entity replay, deliberately not a
+**historiography tier 0**: a single-entity replay, deliberately not a
 causal chain across entities. It is the seam the Year-2 event ledger and
 fields-of-history will deepen, not a preview of them.
 

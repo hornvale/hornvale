@@ -192,12 +192,23 @@ const IN_CHARACTER_VERBS: [&str; 28] = [
 /// The provenance a walk-band step commits under (The Deed, Task 7).
 ///
 /// **An in-world reason, deliberately, and this is the acceptance test's
-/// hinge.** A creature's `agent-at` provenance names its errand ("went down to
-/// the river it knew (thirst)"); the keystone requires that "nothing in the
-/// trace may reveal that a different mind chose", so a possessed body's must
-/// name an errand too. It must never name the driver — `provoke`/`soothe`
+/// hinge.** The keystone requires that "nothing in the trace may reveal that a
+/// different mind chose", and this string satisfies it by naming the walk, not
+/// the walker's driver. It must never name the driver — `provoke`/`soothe`
 /// stamp `player: …` precisely because those ARE operator acts (spec §2.3),
 /// and an in-character act is the opposite case.
+///
+/// **The argument used to run through a creature's provenance, and since The
+/// Warrant it cannot.** It read: a creature's `agent-at` provenance names its
+/// errand ("went down to the river it knew (thirst)"), so a possessed body's
+/// must name an errand too. That gloss is now the registry doc of
+/// `errand/water-known`, not any fact's provenance; a creature's step names
+/// its producer, `vessel/liveness`. The inference is therefore retired, and
+/// the constant is not: a possessed body has no `Mode`, so there is no errand
+/// to promote onto a predicate for it, and spec §7.4 accepts that asymmetry
+/// deliberately. The distinguishability is not new either — pre-flip the two
+/// sides already drew from disjoint sets of glosses; the flip made the
+/// contrast starker, not real.
 const WALKED_PROVENANCE: &str = "walked on (its own errand)";
 
 /// The provenance `back` commits under — the same in-world register as
@@ -9756,9 +9767,14 @@ impl<'w> Session<'w> {
     }
 
     /// Recount an NPC's dated history — the provenance read (the-quickening
-    /// T4): the world remembers, so `why` over an NPC that has moved names
-    /// each committed `agent-at` with the day it was asserted (`recount` in
-    /// `windows/historiography` renders the day suffix). `who` is matched
+    /// T4): the world remembers, so `why` over an NPC that has moved says what
+    /// it set out to do and when. The default view names each **errand** once
+    /// — its origin, its step count, and the span it covers — rolling the run
+    /// of steps beneath it up into that one line (`recount` in
+    /// `windows/historiography`, The Warrant spec §5.1). [`STEPS_FLAG`]
+    /// switches to `recount_steps`, which names each committed `agent-at`
+    /// under its covering errand with its position within it. Both render the
+    /// day a fact was asserted. `who` is matched
     /// first as the `npcs` listing's 1-based handle, else by
     /// [`body_by_needle`] (The Roll, Task 10: exact label match first, then
     /// the longest containing label — never merely the first substring hit
