@@ -329,3 +329,6 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0728](0728-a-scalar-lives-in-the-row-of-the-marker-it-depends-on.md) | A scalar lives in the row of the marker it depends on | Accepted |
 | [0729](0729-recovery-grades-the-committed-kind-not-a-room-boolean.md) | Recovery grades the committed kind, not a room boolean | Accepted |
 | [0730](0730-the-chooser-prefers-and-no-travel-preserves-the-diagnostic.md) | The chooser prefers; no-travel preserves the diagnostic | Accepted |
+| [0796](0796-a-lot-is-an-observation-not-a-fact.md) | A lot is an observation, not a fact | Accepted |
+| [0797](0797-commit-the-integral-never-the-path.md) | Commit the integral, never the path | Accepted |
+| [0798](0798-silence-is-a-measurement.md) | Silence is a measurement | Accepted |

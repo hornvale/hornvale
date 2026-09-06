@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 322 |
+| Files parsed | 330 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 751 |
-| … file-level | 708 |
+| Quantity consts judged (the denominator) | 760 |
+| … file-level | 717 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 34 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
-| Excluded: declared non-quantity type | 508 |
-| **Every `const` the walk touched** | **1432** |
+| Excluded: declared non-quantity type | 512 |
+| **Every `const` the walk touched** | **1445** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **675**: file-level
+nor the whole `file-level` row — it is **684**: file-level
 constants of those five types. The `file-level` row itself is
-**708**, and the denominator is **751**; the difference is
+**717**, and the denominator is **760**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -68,7 +68,7 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `SurfaceWetness` | 1 |
 | `TickSpan` | 5 |
 | `WorldTime` | 1 |
-| `f64` | 552 |
+| `f64` | 561 |
 | `i32` | 7 |
 | `i64` | 2 |
 | `u32` | 79 |
@@ -98,7 +98,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[PronounRow]` | 1 |
 | `&[Role]` | 2 |
 | `&[VerbRow]` | 1 |
-| `&str` | 257 |
+| `&str` | 259 |
 | `()` | 6 |
 | `(…)` | 10 |
 | `AffectLabel` | 1 |
@@ -111,8 +111,8 @@ bare count would hide a quantity someone had wrongly denied.
 | `Segment` | 3 |
 | `StreamLabel<…>` | 37 |
 | `Transmission` | 1 |
-| `[&str; …]` | 32 |
-| `[(…); …]` | 6 |
+| `[&str; …]` | 33 |
+| `[(…); …]` | 7 |
 | `[Accumulation; …]` | 1 |
 | `[Action; …]` | 1 |
 | `[AffectLabel; …]` | 2 |
@@ -159,13 +159,13 @@ bare count would hide a quantity someone had wrongly denied.
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 32 |
-| per-world | 5 |
-| universal | 130 |
+| per-world | 6 |
+| universal | 138 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 751 |
+| _total_ | 760 |
 
-Declared: **751 of 751**. Undeclared is backlog; a malformed
+Declared: **760 of 760**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -175,7 +175,7 @@ converted.** Every row below is a constant judged to vary along an axis
 the code does not yet have -- nothing about the world changed to produce
 this table, and nothing here is scheduled for conversion by this
 campaign. `universal` and `pending(wave-N)` constants are excluded; their
-counts are already the Coverage table above. 40 finding(s).
+counts are already the Coverage table above. 41 finding(s).
 
 | File:line | Constant | Rung | Reason |
 |------|------|------|------|
@@ -200,6 +200,7 @@ counts are already the Coverage table above. 40 finding(s).
 | `domains/species/src/lib.rs:6210` | `DROW_WATER` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6215` | `DROW_SUBSTRATE` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
 | `domains/species/src/lib.rs:6219` | `DROW_LIGHT` | per-species | a species' own niche preference -- authored for drow specifically, by constant name rather than entered into a KindId-keyed species table; the data is per-species, the shape is not |
+| `windows/lot/src/shape.rs:12` | `EPOCH_YEARS` | per-world | the bake's epoch length, BakeConfig::epoch_years; 25 is default_millennia's value |
 | `windows/vessel/src/liveness.rs:155` | `SUSTENANCE` | per-species | a creature's own metabolism sets how fast thirst/foraging need accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:233` | `FURNISHING_COLD_C` | per-people | whether a room's people build around a fire tracks that people's own cold tolerance and culture, not a fixed climate cutoff for every people -- doc: a room's people build around a fire |
 | `windows/vessel/src/liveness.rs:317` | `THERMAL_FEAR_SPAN_C` | per-species | how WIDE a creature's comfort band is before fear ramps to full weight is a trait separate from where the band is centered -- a stenotherm and a eurytherm can share an optimum and differ entirely in span |
@@ -222,10 +223,10 @@ counts are already the Coverage table above. 40 finding(s).
 
 ## The contested middle
 
-362 of the 751 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 134 of the 322 files parsed —
+368 of the 760 constants sit in a file mentioning one of
+the kind-adjacency markers above, across 137 of the 330 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
-where `FATIGUE_RISE` lived. 362 of them are declared.
+where `FATIGUE_RISE` lived. 368 of them are declared.
 
 **This is a reading aid, not a gate.** The markers are substrings, and
 `Body` is shared with astronomy's celestial bodies, so the set is loose
@@ -245,6 +246,7 @@ in the inclusive direction on purpose.
 | lab | 48 | 0 | 0 | 48 |
 | language | 25 | 0 | 0 | 25 |
 | locale | 19 | 0 | 0 | 19 |
+| lot | 9 | 0 | 0 | 9 |
 | paleoclimate | 12 | 0 | 0 | 12 |
 | religion | 2 | 0 | 0 | 2 |
 | scene | 7 | 0 | 0 | 7 |

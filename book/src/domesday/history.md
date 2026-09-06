@@ -228,6 +228,66 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 1 | 4 | 5 | 6 | 10 | 4.739 |
 
+### `lot-born-last-quarter-share`
+
+Share of lots 0-199 born in the last quarter of the bake span; Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.1 | 0.395 | 0.435 | 0.475 | 0.685 | 0.428705 |
+
+### `lot-median-scaled-death-age`
+
+Median age at death over lots 0-199, in scaled years (age x 60 / the people's lifespan); Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 5.5249812 | 10.354932 | 12.209358 | 13.849141 | 22.199822 | 12.232569 |
+
+### `lot-silent-subsistence-share`
+
+Share of lots 0-199 whose subsistence slot is silent — culture facts attach to living settlements; Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0.62 | 0.86 | 0.89 | 0.92 | 1 | 0.884765 |
+
+### `lot-slots-filled-mean`
+
+Mean number of the 22 non-by-design story slots filled per lot over lots 0-199; Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 17.07 | 17.75 | 17.88 | 17.98 | 18.525 | 17.857415 |
+
+### `lot-souls-ever`
+
+Souls ever: the integral of the world's births curve, the number of lives the world has held; Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 10415.725 | 120687.35 | 185039.26 | 235341 | 441178.22 | 177901.15 |
+
+### `lot-witness-community-end-share`
+
+Share of lots 0-199 whose life ended in, or moved at, its community's own committed ending; Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 0 | 0.015 | 0.03 | 0.05 | 0.3 | 0.0415 |
+
 ### `mean-warning-legibility`
 
 Mean warning_legibility over every land-vertex vestige layer (The Vestige, spec §9.2); 0.0 where no land vertex bears a vestige

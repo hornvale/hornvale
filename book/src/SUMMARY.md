@@ -58,6 +58,8 @@
 - [A Possession of Seed 14 — a thing carried](./gallery/possession-carry-seed-14.md)
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview of Seed 42](./gallery/surrounds-seed-42.md)
+- [Ten Lives of Seed 42](./gallery/generated/the-lot-seed-42.md)
+- [The Lot, Live](./gallery/the-lot.md)
 
 # The Laboratory
 
@@ -100,6 +102,7 @@
 
 - [The Lexicon of Place](./reference/lexicon-of-place.md)
 - [The Concept Registry](./reference/concept-registry.md)
+- [The Four Kinds of Individual](./reference/individuals.md)
 - [The Concept Manifest](./reference/concept-manifest-generated.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
@@ -465,6 +468,7 @@
 - [The Coda](./chronicle/the-coda.md)
 - [The Sluicegate](./chronicle/the-sluicegate.md)
 - [The Charter](./chronicle/the-charter.md)
+- [The Lot](./chronicle/the-lot.md)
 - [The Warp](./chronicle/the-warp.md)
 - [The Cruck](./chronicle/the-cruck.md)
 

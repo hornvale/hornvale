@@ -1270,7 +1270,7 @@ hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_281_column_census
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_287_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
@@ -2010,6 +2010,40 @@ hornvale-locale::hornvale_locale$surface::tests::a_desert_vertex_leans_sand_or_s
 hornvale-locale::hornvale_locale$surface::tests::legend_index_and_name_agree_for_every_variant
 hornvale-locale::hornvale_locale$tests::the_eight_bearings_are_distinct_and_evenly_spaced
 hornvale-locale::suite$water_reading::the_schema_tag_is_still_v2
+# hornvale-lot: provisional rows authored by hand at the crate's first commit (The Lot, ledger #14); the next green chamber run rewrites this file from measurement.
+hornvale-lot::suite$draw::a_world_without_the_fact_is_refused
+hornvale-lot::suite$draw::pins_are_honoured_or_refused_with_the_reason
+hornvale-lot::suite$draw::the_curve_integrates_to_souls_ever_and_births_track_person_years
+hornvale-lot::suite$draw::the_reconstructed_curve_never_exceeds_the_committed_peak
+hornvale-lot::suite$draw::the_same_index_draws_the_same_life_and_indices_differ
+hornvale-lot::suite$draw::uniform_is_pure_and_label_sensitive
+hornvale-lot::suite$draw::places_agrees_with_draws_own_site_selection
+hornvale-lot::suite$hazard::calibration_band_holds_at_the_human_anchor
+hornvale-lot::suite$hazard::death_age_is_the_inverse_of_survival
+hornvale-lot::suite$hazard::e0_is_monotone_in_lifespan_and_strife
+hornvale-lot::suite$hazard::survival_starts_at_one_and_is_nonincreasing
+hornvale-lot::suite$render::the_payload_is_byte_stable_and_names_its_schema
+hornvale-lot::suite$render::the_prose_has_four_stages_and_a_sources_list_numbered_from_one
+hornvale-lot::suite$render::the_prose_numbers_every_source_once_in_first_citation_order
+hornvale-lot::suite$render::every_slot_is_told_in_exactly_one_stage
+hornvale-lot::suite$render::the_other_three_payloads_name_their_schemas_and_are_byte_stable
+hornvale-lot::suite$render::the_when_graph_names_its_total_and_bins_the_span_by_century
+hornvale-lot::suite$render::curve_texts_flat_arm_fires_on_a_uniform_curve
+hornvale-lot::suite$shape::a_community_that_died_before_plateau_is_a_triangle
+hornvale-lot::suite$shape::epoch_years_matches_the_bakes_own_default
+hornvale-lot::suite$shape::every_seed_42_occupation_reconstructs_to_its_committed_integral
+hornvale-lot::suite$shape::rise_then_plateau_has_the_committed_area_and_peak
+hornvale-lot::suite$slots::every_slot_is_asked_and_by_design_silences_are_declared
+hornvale-lot::suite$slots::every_cited_fact_names_a_registered_predicate
+hornvale-lot::suite$slots::the_by_design_silences_are_exactly_the_specs_four
+hornvale-lot::suite$slots::the_per_slot_fill_counts_are_printed
+hornvale-lot::suite$slots::every_cited_fact_stands_in_the_ledger_and_where_shows_the_facts_own_coordinates
+hornvale-lot::suite$slots::a_slot_that_prints_a_settlements_name_cites_the_name_fact
+hornvale-lot::suite$slots::the_when_sentences_triple_is_internally_consistent
+hornvale-lot::suite$slots::community_fate_and_climate_cite_only_what_they_render
+# hornvale-lot: streamless.rs added by the final review's fix wave (item 4), same provisional-row discipline as the rest of this block.
+hornvale-lot::suite$streamless::the_lot_window_draws_nothing
+hornvale-lot::suite$streamless::word_boundary_self_test::matches_a_bare_word_but_not_a_substring_of_a_longer_identifier
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::genesis_commits_the_frost_retreat_and_maximum
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::register_is_idempotent
 hornvale-paleoclimate::hornvale_paleoclimate$facts::tests::zero_ice_world_records_no_frost_retreat
@@ -3848,6 +3882,7 @@ hornvale::hornvale$tests::usage_mentions_biome_map
 hornvale::hornvale$tests::usage_mentions_book_at
 hornvale::hornvale$tests::usage_mentions_dictionary
 hornvale::hornvale$tests::usage_mentions_lab
+hornvale::hornvale$tests::usage_mentions_lot
 hornvale::hornvale$tests::usage_mentions_paleo_map
 hornvale::hornvale$tests::usage_mentions_proto
 hornvale::hornvale$tests::usage_mentions_scene

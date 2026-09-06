@@ -232,7 +232,45 @@ use std::path::{Path, PathBuf};
 /// repair is to denominate against `cpu_ratio` so contention and regression
 /// separate. Every raise so far has bought signal-to-noise instead. This one
 /// does too.
-const CENSUS_ALARM_SECS: f64 = 1000.0;
+/// # 1000 -> 1320 (2026-09-06)
+///
+/// **Attribution: three world-scale features in a week, and the refusal
+/// ceiling below fired on the third.** Every census since 2026-09-03 has been
+/// over 1000 (973.5, 1019.1, 1060.3, 1070.9, 1142.2, 1278.2 s), so the alarm
+/// has fired on five consecutive healthy runs — a threshold at the median again,
+/// the exact shape the 900 -> 950 section retired. The steps are attributed,
+/// not drift: The Warp added 32 columns riding a cached grid sweep (1070.9 ->
+/// 1142.2 s, +71 s), and The Lot added six columns that draw 200 lives per
+/// world (1142.2 -> 1278.2 s, +136 s wall, +5,376 CPU-s, cpu_ratio 28.35 ->
+/// 29.57 — more work, not a busier box). The Lot's share was measured BEFORE
+/// it landed: ~4,000 CPU-s over the 1,000-seed study; the refresh read +3,661
+/// on `census-study-the-census` (20,916 -> 24,577) and +1,668 on
+/// `census-study-the-meeting` (8,968 -> 10,636), the estimate within 9%.
+///
+/// **The distribution, and why 1320.** n=1 on the post-Lot tree (1278.160 s at
+/// 2026-09-06T04:00:44Z). The 950 -> 1000 raise left 30.8 s over its observed
+/// maximum of 969.2 — 3.2% — and the run-to-run spread on an unchanged tree
+/// is at least 26.5 s. 3.2% of 1278 is 41 s; 1320 leaves 42 s. The precedent's
+/// ratio is followed, not re-derived. A second reading arrives with the
+/// re-run this raise exists to unblock, and is recorded in The Lot's ledger.
+///
+/// **Optimisable share: The Lot's is measured, The Warp's is not.**
+/// `hornvale_lot::context::assemble` rebuilds terrain, climate, the demography
+/// report and the sky that `FullView` already holds — ~0.9 s of each world's
+/// ~4.2 s, about 22% of the six columns' cost, ~800 CPU-s, ~20 s of wall on a
+/// 40-core box: around 2% of the census, not a path back under 1200
+/// (`TOOL-lot-assemble-reuses-the-view` in the idea registry carries the
+/// measurement). The remaining 78% is the draws themselves — 200 lives per
+/// world, each filling 26 slots from the ledger — which is the metric's
+/// definition, preregistered before the readout and not to be thinned after it.
+/// The Warp's 0.331 CPU-s/world was accepted over its own 0.25 rule at its
+/// ledger #10, with no optimisable share named.
+///
+/// **Ratchet back down when: the median over ten consecutive runs falls below
+/// 1200 s.** At that point 1240 restores this raise's headroom-to-spread ratio,
+/// and the refusal ceiling below follows it at the same ratio. Read the median
+/// from `docs/timings.md`, never from this comment.
+const CENSUS_ALARM_SECS: f64 = 1320.0;
 
 /// **The refusal ceiling, and why there are now two numbers instead of one.**
 ///
@@ -297,7 +335,31 @@ const CENSUS_ALARM_SECS: f64 = 1000.0;
 /// `PROC-census-budget-denominated-by-cpu-ratio` in the idea registry. The
 /// alarm below REQUIRES that row to exist, so the follow-up cannot be silently
 /// dropped while the census keeps alarming.
-const CENSUS_REFUSAL_SECS: f64 = 1200.0;
+/// # 1200 -> 1650 (2026-09-06)
+///
+/// **The forward-looking argument above expired, exactly as it said it would.**
+/// "The work in prospect is local-level ... it stops holding the moment
+/// campaigns return to world-scale generation." They did: The Sources (an energy
+/// field over the rock), The Warp (32 columns over a grid sweep) and The Lot
+/// (200 lives drawn per world) landed inside eight days, and the census went
+/// 873 -> 1278 s across them with cpu_ratio flat (28–32). The Lot's refresh read
+/// 1278.160 s on 2026-09-06 and this ceiling refused it — a 12% step on one
+/// attributed feature, not the ~33% single-run jump the pair was designed to
+/// call foul on.
+///
+/// **So the pair moves together, per the rule above.** ALARM goes to 1320 (its
+/// own section states the arithmetic); RED follows at 1650 = 1320 x 1.25, inside
+/// the "RED ≈ typical x 1.3" band the worked example gives (17 -> 21 min is
+/// 1.24) and 29% over the one post-Lot reading. This is the first time the pair
+/// has been re-set as a pair; the two raises before it moved ALARM alone.
+///
+/// **What would have been wrong:** raising RED to 1300 to clear one red run,
+/// which is the flap-hiding move the doc above refuses, and which would have
+/// left a ceiling 1.7% over the reading it was raised for.
+///
+/// **Ratchet back down with ALARM:** when the median over ten consecutive runs
+/// falls below 1200 s, ALARM returns to 1240 and this ceiling to 1550.
+const CENSUS_REFUSAL_SECS: f64 = 1650.0;
 
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {
