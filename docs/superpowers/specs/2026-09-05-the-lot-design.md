@@ -474,14 +474,19 @@ on `book/src/gallery/the-lot.md`, the way the Casement mounts on
 since decision 0125 retired the book's deploy there is no builder but
 `make wasm-world`, which copies the catalog to `book/src/gallery/world.wasm`
 exactly as `make wasm-vessel` does for the Casement, and the page says it is
-dark until that has run — ledger #9) and reads four new ABI entry points, all `hw_*`, all returning the window's
-JSON into the existing out buffer:
+dark until that has run — ledger #9) and reads four new ABI entry points from the lot's OWN wasm crate,
+`clients/lot/wasm` (ledger #17: the catalog could not carry the lot's weight
+under its size gate on the canonical box, so the exhibit takes the Casement's
+posture — its own crate, `make wasm-lot`, `book/src/gallery/lot.wasm`,
+gitignored, ungated), all `hl_*`, all returning the window's JSON into that
+crate's out buffer:
 
 ```
-  hw_lot(index: u64) -> i32                       `lot/life/v1`
-  hw_lot_pinned(index: u64, year: f64, site: u32)  the picked form
-  hw_lot_curve() -> i32                            `lot/curve/v1`
-  hw_lot_places(year: f64) -> i32                  `lot/places/v1`
+  hl_new(seed: u64) -> i32                         genesis, the catalog's hw_new shape
+  hl_lot(index: u64) -> i32                       `lot/life/v1`
+  hl_lot_pinned(index: u64, year: f64, site: u32)  the picked form
+  hl_lot_curve() -> i32                            `lot/curve/v1`
+  hl_lot_places(year: f64) -> i32                  `lot/places/v1`
 ```
 
 The client owns the theatre and nothing else: the log/linear axis switch,
