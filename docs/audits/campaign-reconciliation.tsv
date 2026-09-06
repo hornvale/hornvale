@@ -1351,3 +1351,4 @@ chronicle-the-lot	shipped	none		published chronicle				book/src/chronicle/the-lo
 retrospective-the-lot	shipped	none		published retrospective					docs/retrospectives/the-lot.md
 retrospective-the-warrant	shipped	none		published retrospective; G6 approved 2026-09-06					docs/retrospectives/the-warrant.md
 the-ken	active	none		plan complete through Task 6; chronicle and retrospective committed; awaiting G6 approval before sluice submission	docs/superpowers/specs/2026-09-05-the-ken-design.md	docs/superpowers/plans/2026-09-05-the-ken.md		book/src/chronicle/the-ken.md	docs/retrospectives/the-ken.md
+the-newel	active	none		spec written; reproductions committed; awaiting G3 approval before planning	docs/superpowers/specs/2026-09-06-the-newel-design.md				
