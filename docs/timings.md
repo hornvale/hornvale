@@ -5982,3 +5982,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T23:56:57Z | gate-commit | 68.526 | 156.597 | 50.656 | 3.02 | 0 | 5dbfefee3 | tooling/overlap-advisory-partition | lefford | 40 |
 | 2026-09-06T00:02:01Z | gate-commit | 71.234 | 166.167 | 54.200 | 3.09 | 0 | 248083a17 | tooling/overlap-advisory-partition | lefford | 40 |
 | 2026-09-06T00:07:38Z | sluice:artifacts | 286.724 | 1679.134 | 68.213 | 6.09 | 0 | 3ed84d68a |  | lefford | 40 |
+| 2026-09-06T00:09:14Z | sluice:outboard | 96.128 | 97.069 | 78.283 | 1.82 | 0 | 316c921ff |  | lefford | 40 |
