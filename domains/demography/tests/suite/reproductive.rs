@@ -7,7 +7,21 @@ use hornvale_demography::{
     ReproductiveTypicality, RoleAvailabilityDistribution, SocialSubstrateInput,
     SurvivalDistribution, social_substrate_input, summarize_reproduction,
 };
-use hornvale_kernel::Years;
+use hornvale_kernel::{Seed, Years};
+
+const POPULATION_MEASUREMENT_LABELS: [&str; 11] = [
+    "birth-intensity-inputs",
+    "generation-length",
+    "offspring-distribution",
+    "survival-to-independence",
+    "dependency-duration",
+    "care-burden",
+    "care-topology",
+    "role-distribution",
+    "hybrid-outcome",
+    "persistence",
+    "handoff-stability",
+];
 
 fn typical_input() -> ReproductivePopulationInput {
     ReproductivePopulationInput {
@@ -59,6 +73,82 @@ fn summary_carries_the_complete_population_handoff() {
     assert_eq!(summary.hybrid_outcomes.total_weight(), 1.0);
 }
 
+#[test]
+fn preregistered_population_measurement_panel_is_frozen() {
+    let input = typical_input();
+    let summary = summarize_reproduction(&input).unwrap();
+
+    assert_eq!(
+        POPULATION_MEASUREMENT_LABELS,
+        [
+            "birth-intensity-inputs",
+            "generation-length",
+            "offspring-distribution",
+            "survival-to-independence",
+            "dependency-duration",
+            "care-burden",
+            "care-topology",
+            "role-distribution",
+            "hybrid-outcome",
+            "persistence",
+            "handoff-stability",
+        ]
+    );
+
+    // Birth intensity remains an aggregate input, not a realized birth draw.
+    assert_eq!(input.typicality.maturity_age.get(), 12.0);
+    assert_eq!(input.persistence.reproductive_events_per_generation(), 0.8);
+    assert_eq!(summary.expected_independent_offspring_per_event, 1.875);
+    assert_eq!(summary.expected_independent_offspring_per_generation, 1.5);
+
+    assert_eq!(input.typicality.generation_length.get(), 20.0);
+    assert_eq!(
+        input.typicality.offspring.entries(),
+        &[(1, 0.25), (3, 0.75)]
+    );
+    assert_eq!(
+        input.typicality.survival_to_independence.entries(),
+        &[
+            (IndependenceOutcome::Survives, 0.75),
+            (IndependenceOutcome::DoesNotSurvive, 0.25),
+        ]
+    );
+    assert_eq!(input.typicality.dependency_duration.get(), 4.0);
+    assert_eq!(
+        input.typicality.care_burden.entries(),
+        &[(2.0, 0.25), (6.0, 0.75)]
+    );
+    assert_eq!(
+        input.typicality.reproductive_roles.entries(),
+        &[
+            (ReproductiveRole::MaterialProducer, 0.25),
+            (ReproductiveRole::DevelopmentCarrier, 0.75),
+        ]
+    );
+    assert_eq!(
+        input.possibility.hybrid_outcomes,
+        [HybridOutcome::Fertile, HybridOutcome::ViableButSterile]
+    );
+    assert_eq!(
+        input.typicality.hybrid_outcomes.entries(),
+        &[
+            (HybridOutcome::Fertile, 0.5),
+            (HybridOutcome::ViableButSterile, 0.5),
+        ]
+    );
+    assert_eq!(input.persistence.replacement_requirement(), 1.5);
+    assert_eq!(summary.persistence_balance, 0.0);
+
+    // Care topology is the species pathway's structural `SupportMode`, frozen
+    // in the sibling probe panel. This handoff retains the independently
+    // measurable burden and leaves topology as an explicit SOC-2 input question.
+    assert_eq!(summary.expected_care_burden, 5.0);
+    assert_eq!(
+        social_substrate_input(summary.clone()).reproductive,
+        summary
+    );
+}
+
 /// Exhaustive destructuring fixes the direction of this check: the public
 /// handoff contains exactly these plain biological fields, so adding an
 /// identity, registry, anatomy, social-gender, or projection field fails here.
@@ -97,6 +187,10 @@ fn handoff_surface_is_species_independent_plain_data() {
     assert_eq!(hybrid_outcomes.len(), 2);
     assert_eq!(persistence.reproductive_events_per_generation(), 0.8);
     assert_eq!(persistence.replacement_requirement(), 1.5);
+
+    let summary = summarize_reproduction(&typical_input()).unwrap();
+    let SocialSubstrateInput { reproductive } = social_substrate_input(summary.clone());
+    assert_eq!(reproductive, summary);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -131,6 +225,27 @@ fn identical_plain_inputs_produce_identical_summaries() {
         summarize_reproduction(&input),
         summarize_reproduction(&input)
     );
+}
+
+/// Selection seeds are deliberately metadata at this structural stage: the
+/// production summary API accepts no seed and performs no draw. A later
+/// realization layer may vary outcomes by seed without rewriting this panel.
+/// claim: structural(selection seeds 1, 7, 42, and 1234 leave the seedless handoff identical)
+#[test]
+fn structural_handoff_is_stable_across_selection_seeds_without_realization_draws() {
+    let expected = summarize_reproduction(&typical_input()).unwrap();
+    let selections = [Seed(1), Seed(7), Seed(42), Seed(1_234)].map(|seed| {
+        let structural = summarize_reproduction(&typical_input()).unwrap();
+        (seed, structural)
+    });
+
+    assert_eq!(
+        selections.iter().map(|(seed, _)| *seed).collect::<Vec<_>>(),
+        vec![Seed(1), Seed(7), Seed(42), Seed(1_234)]
+    );
+    for (_, structural) in &selections {
+        assert_eq!(structural, &expected);
+    }
 }
 
 #[test]

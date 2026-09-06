@@ -2,7 +2,8 @@
 
 **Campaign:** The Grammar — BIO-3 reproductive architecture and the SOC-2
 social derivations it enables. **Branch:** `campaign/the-grammar`.
-**Decision block:** 0876–0885. **Status:** at G3 (spec review).
+**Decision block:** 0876–0885. **Status:** BIO-3 implementation complete
+through Task 5; local verification passed and the stage gate is pending.
 
 The Grammar asks whether biology and society can be represented as small,
 composable grammars rather than as a catalogue of species exceptions. A body
@@ -78,9 +79,10 @@ BIO-3 substrate contract is stable.
 
 ## 3. Body-plan affordances
 
-`ReproductiveAffordances` is a conceptual interface, not a commitment to a
-particular Rust shape yet. It answers only the questions required by the
-reproductive grammar:
+`ReproductiveAffordances` began as a conceptual interface. Implementation
+resolved it as ordered operation, development-site, support-mode, role, and
+natural-transition collections with fail-closed validation. It answers only
+the questions required by the reproductive grammar:
 
 ```text
 what can this body produce?
@@ -434,3 +436,46 @@ The eventual implementation plan should stage work as follows:
 
 No implementation begins from this spec until G3 review is complete and a
 separate execution plan has been approved through the campaign process.
+
+## 15. Implemented shape and SOC-2 successor contract
+
+BIO-3 now exposes ordered, plain structural values in `hornvale_species`.
+`ReproductiveAffordances` composes into `ReproductivePathway` values through
+`possible_pathways`; `CompatibilityContext` and `CompatibilityRule` compose
+into directional `CompatibilityRelation` values through `compatibility`.
+`ReproductiveProfile<T>` keeps possibility separate from caller-owned
+typicality. None of these operations realizes a birth, transition, cohort, or
+person, and none accepts a random stream.
+
+The population handoff is the species-independent sequence
+`ReproductivePopulationInput` → `ReproductivePopulationSummary` →
+`SocialSubstrateInput` in `hornvale_demography`. Possibility is carried by
+`ReproductivePossibility`; typicality by `ReproductiveTypicality` and its
+typed distributions; persistence by `PopulationPersistenceInputs`. The pure
+`summarize_reproduction` transform measures maturity and generation timing,
+offspring and survival distributions, dependency duration, care burden,
+role availability, hybrid outcomes, and replacement balance. Selection seeds
+therefore leave this structural handoff unchanged. Seeded draws and transition
+histories remain the responsibility of a future population realization layer.
+
+The named Pairborn, Turning, Broodweave, Budded, Forged, Guestborn, Crossing,
+and non-reproducing cases remain integration-test fixtures. They have no
+`KindId` row in the species registry and assign no reproductive canon to an
+existing kind. Their frozen structural measurements are offspring pathway,
+care topology (`SupportMode`), compatibility relation, and transition-history
+capability; the population panel separately freezes birth-intensity inputs,
+generation length, offspring distribution, survival to independence,
+dependency duration, care burden, role distribution, hybrid outcome,
+persistence, and handoff stability.
+
+SOC-2's successor input is broader than the aggregate summary currently
+shipped. It must retain reproductive roles, offspring pathway, dependency
+profile, care topology, descent relation, compatibility relation, and
+transition history as distinct inputs, then combine them with subsistence,
+property, mobility, population pressure, authority, religion, and contact.
+The successor may implement `recognize`, `associate`, `bind`, `care`,
+`assign`, `inherit`, `adopt`, `exchange`, `exclude`, and `dissolve`, together
+with lifecycle states and historical transmission. It must not reinterpret a
+BIO-3 possibility, typicality distribution, or realized exception as social
+destiny. In particular, no prejudice, hierarchy, household, or identity
+default crosses `SocialSubstrateInput`.

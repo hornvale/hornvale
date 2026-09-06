@@ -41,3 +41,64 @@ sequence are in the G3 spec.
   the world needs a genus taxonomy.
 - Revisit the future magic transition contract only when the magic campaign
   begins.
+
+## Task 5 — BIO-3 probe panel frozen; SOC-2 handoff finalized
+
+**Decision.** Freeze the eight synthetic cases exactly as Pairborn, Turning,
+Broodweave, Budded, Forged, Guestborn, Crossing, and the non-reproducing
+control, with the expected operations, development site, support topology,
+transition prerequisite, and directional compatibility asserted in
+`domains/species/tests/suite/reproduction.rs`. These remain test-only names:
+the test proves that none is a row in `biosphere_registry`. No existing
+species profile, society vector, prejudice default, or household rule was
+authored to make the panel pass.
+
+**Exact public BIO-3 types.** `hornvale_species` exposes
+`ReproductiveOperation`, `DevelopmentSite`, `SupportMode`, `ReproductiveRole`,
+`TransitionCapability`, `ReproductiveAffordances`, `GuardStatus`,
+`DevelopmentalTiming`, `AssistanceCapability`, `MaterialCompatibility`,
+`CompatibilityRule`, `CompatibilityContext`, `ReproductivePathway`,
+`ReproductiveProfile<T>`, `CompatibilityOutcome`,
+`DirectionalCompatibility`, and `CompatibilityRelation`, evaluated by
+`possible_pathways` and `compatibility`. Possibility, typicality, and
+realization remain separate: the species grammar evaluates possibility,
+`ReproductiveProfile<T>` carries uninterpreted caller-owned typicality, and no
+realization type or random draw exists in this domain.
+
+**Exact public population-handoff types.** `hornvale_demography` exposes
+`OffspringDistribution`, `IndependenceOutcome`, `SurvivalDistribution`,
+`CareBurdenDistribution`, its own species-independent `ReproductiveRole`,
+`RoleAvailabilityDistribution`, `HybridOutcome`,
+`HybridOutcomeDistribution`, `ReproductivePossibility`,
+`ReproductiveTypicality`, `PopulationPersistenceInputs`,
+`ReproductivePopulationInput`, `ReproductivePopulationSummary`, and
+`SocialSubstrateInput`, with `summarize_reproduction` and
+`social_substrate_input` as the pure handoff operations. `hornvale_worldgen`
+owns the sibling-domain conversion through `HybridPartnerConfig`,
+`ReproductivePopulationConfig`, `ReproductiveSubstrate`, and
+`reproductive_substrate_from`; neither domain imports the other.
+
+**Measurement ruling.** The frozen population labels are birth-intensity
+inputs, generation length, offspring distribution, survival to independence,
+dependency duration, care burden, care topology, role distribution, hybrid
+outcome, persistence, and handoff stability. Care topology remains the
+species pathway's structural `SupportMode`; the present demography summary
+measures care burden and does not flatten topology into a scalar. A cross-seed
+test deliberately varies selection keys while calling the seedless pure
+summary API, proving structural stability without adding realization
+randomness.
+
+**Deliberate plan boundary and SOC-2 successor questions.** The current
+`SocialSubstrateInput` contains the aggregate reproductive summary only. The
+successor must decide the public shapes for offspring pathway, dependency
+profile, care topology, descent relation, compatibility relation, and
+transition history rather than smuggling them into household defaults. It
+must also decide which of descent and transition history are aggregate
+relations versus realized cohort records, how lifecycle states transmit and
+decay historically, and where contact combines with subsistence, property,
+mobility, population pressure, authority, and religion. Its operation
+vocabulary may include `recognize`, `associate`, `bind`, `care`, `assign`,
+`inherit`, `adopt`, `exchange`, `exclude`, and `dissolve`; none may turn BIO-3
+possibility into typicality, realized biography, prejudice, or social destiny.
+No deviation from the approved scope added household, institution, magic, or
+existing-species behavior.

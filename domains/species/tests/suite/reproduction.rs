@@ -8,8 +8,62 @@ use hornvale_species::{
     AssistanceCapability, CompatibilityContext, CompatibilityOutcome, CompatibilityRule,
     DevelopmentSite, DevelopmentalTiming, GuardStatus, MaterialCompatibility,
     ReproductiveAffordances, ReproductiveOperation, ReproductiveProfile, ReproductiveRole,
-    SupportMode, TransitionCapability, compatibility, possible_pathways,
+    SupportMode, TransitionCapability, biosphere_registry, compatibility, possible_pathways,
 };
+
+const SYNTHETIC_PROBE_PANEL: [(&str, hornvale_species::KindId); 8] = [
+    ("Pairborn", hornvale_species::KindId("pairborn")),
+    ("Turning", hornvale_species::KindId("turning")),
+    ("Broodweave", hornvale_species::KindId("broodweave")),
+    ("Budded", hornvale_species::KindId("budded")),
+    ("Forged", hornvale_species::KindId("forged")),
+    ("Guestborn", hornvale_species::KindId("guestborn")),
+    ("Crossing", hornvale_species::KindId("crossing")),
+    (
+        "Non-reproducing control",
+        hornvale_species::KindId("non-reproducing-control"),
+    ),
+];
+
+const STRUCTURAL_MEASUREMENT_LABELS: [&str; 4] = [
+    "offspring-pathway",
+    "care-topology",
+    "compatibility-relation",
+    "transition-history-capability",
+];
+
+#[derive(Debug, PartialEq, Eq)]
+enum ProbeBranch {
+    Pathway {
+        operations: Vec<ReproductiveOperation>,
+        development_site: DevelopmentSite,
+        support_mode: Option<SupportMode>,
+        transition: Option<TransitionCapability>,
+    },
+    Crossing {
+        first_to_second: CompatibilityOutcome,
+        first_development_site: DevelopmentSite,
+        second_to_first: CompatibilityOutcome,
+        second_development_site: DevelopmentSite,
+    },
+    None,
+}
+
+fn single_pathway_branch(
+    affordances: &ReproductiveAffordances,
+    context: &CompatibilityContext,
+) -> ProbeBranch {
+    let pathways = possible_pathways(affordances, context);
+    let [pathway] = pathways.as_slice() else {
+        panic!("probe expected exactly one pathway, got {pathways:?}");
+    };
+    ProbeBranch::Pathway {
+        operations: pathway.operations.clone(),
+        development_site: pathway.development_site,
+        support_mode: pathway.support_mode,
+        transition: pathway.transition,
+    }
+}
 
 fn pairborn() -> ReproductiveAffordances {
     use ReproductiveOperation::{Grow, Join, Make, Release, Support};
@@ -134,6 +188,153 @@ fn ready_context() -> CompatibilityContext {
             material: MaterialCompatibility::Fertile,
             required_assistance: vec![],
         },
+    }
+}
+
+#[test]
+fn synthetic_probe_panel_names_branches_and_structural_measurements_are_frozen() {
+    use ReproductiveOperation::{Build, Change, Convert, Copy, Grow, Join, Make, Release, Support};
+
+    let mut turning_context = ready_context();
+    turning_context.timing = DevelopmentalTiming::After(TransitionCapability::SequentialRole);
+    let mut forged_context = ready_context();
+    forged_context.timing = DevelopmentalTiming::After(TransitionCapability::Maturation);
+    let crossing = compatibility(&pairborn(), &broodweave(), &ready_context());
+
+    let actual = vec![
+        (
+            SYNTHETIC_PROBE_PANEL[0].0,
+            single_pathway_branch(&pairborn(), &ready_context()),
+        ),
+        (
+            SYNTHETIC_PROBE_PANEL[1].0,
+            single_pathway_branch(&turning(), &turning_context),
+        ),
+        (
+            SYNTHETIC_PROBE_PANEL[2].0,
+            single_pathway_branch(&broodweave(), &ready_context()),
+        ),
+        (
+            SYNTHETIC_PROBE_PANEL[3].0,
+            single_pathway_branch(&budded(), &ready_context()),
+        ),
+        (
+            SYNTHETIC_PROBE_PANEL[4].0,
+            single_pathway_branch(&forged(), &forged_context),
+        ),
+        (
+            SYNTHETIC_PROBE_PANEL[5].0,
+            single_pathway_branch(&guestborn(), &ready_context()),
+        ),
+        (
+            SYNTHETIC_PROBE_PANEL[6].0,
+            ProbeBranch::Crossing {
+                first_to_second: crossing.first_to_second.outcome,
+                first_development_site: crossing.first_to_second.pathways[0].development_site,
+                second_to_first: crossing.second_to_first.outcome,
+                second_development_site: crossing.second_to_first.pathways[0].development_site,
+            },
+        ),
+        (SYNTHETIC_PROBE_PANEL[7].0, ProbeBranch::None),
+    ];
+
+    assert_eq!(
+        actual,
+        vec![
+            (
+                "Pairborn",
+                ProbeBranch::Pathway {
+                    operations: vec![Make, Join, Grow, Support, Release],
+                    development_site: DevelopmentSite::Body,
+                    support_mode: Some(SupportMode::Pair),
+                    transition: None,
+                },
+            ),
+            (
+                "Turning",
+                ProbeBranch::Pathway {
+                    operations: vec![Change, Make, Join, Grow, Support, Release],
+                    development_site: DevelopmentSite::Body,
+                    support_mode: Some(SupportMode::Pair),
+                    transition: Some(TransitionCapability::SequentialRole),
+                },
+            ),
+            (
+                "Broodweave",
+                ProbeBranch::Pathway {
+                    operations: vec![Make, Join, Grow, Support, Release],
+                    development_site: DevelopmentSite::BroodStructure,
+                    support_mode: Some(SupportMode::Group),
+                    transition: None,
+                },
+            ),
+            (
+                "Budded",
+                ProbeBranch::Pathway {
+                    operations: vec![Copy, Grow, Support, Release],
+                    development_site: DevelopmentSite::Body,
+                    support_mode: Some(SupportMode::Individual),
+                    transition: None,
+                },
+            ),
+            (
+                "Forged",
+                ProbeBranch::Pathway {
+                    operations: vec![Change, Build],
+                    development_site: DevelopmentSite::Workshop,
+                    support_mode: None,
+                    transition: Some(TransitionCapability::Maturation),
+                },
+            ),
+            (
+                "Guestborn",
+                ProbeBranch::Pathway {
+                    operations: vec![Make, Convert, Grow, Release],
+                    development_site: DevelopmentSite::Host,
+                    support_mode: None,
+                    transition: None,
+                },
+            ),
+            (
+                "Crossing",
+                ProbeBranch::Crossing {
+                    first_to_second: CompatibilityOutcome::Fertile,
+                    first_development_site: DevelopmentSite::BroodStructure,
+                    second_to_first: CompatibilityOutcome::Fertile,
+                    second_development_site: DevelopmentSite::Body,
+                },
+            ),
+            ("Non-reproducing control", ProbeBranch::None),
+        ]
+    );
+    assert_eq!(
+        STRUCTURAL_MEASUREMENT_LABELS,
+        [
+            "offspring-pathway",
+            "care-topology",
+            "compatibility-relation",
+            "transition-history-capability",
+        ]
+    );
+    assert!(
+        possible_pathways(&non_reproducing(), &ready_context()).is_empty(),
+        "the negative control must remain a valid no-pathway branch"
+    );
+}
+
+/// The synthetic names are calibration cases in this integration-test module,
+/// not authored kinds. Keeping the panel disjoint from the canonical registry
+/// prevents the fixture from assigning reproductive or social meaning to an
+/// existing species; the reproductive API itself contains no prejudice field.
+#[test]
+fn synthetic_probe_panel_remains_test_only_without_social_defaults() {
+    let canonical = biosphere_registry();
+
+    for (display_name, kind) in SYNTHETIC_PROBE_PANEL {
+        assert!(
+            canonical.get(&kind).is_none(),
+            "synthetic probe {display_name} leaked into existing species canon"
+        );
     }
 }
 
