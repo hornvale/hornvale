@@ -533,12 +533,14 @@ fn the_objective_wait_narrates_a_departure_the_body_could_not_see() {
     let w = world_at(WILD_SEED).expect("the wild seed builds");
     //
     // The candidate's LABEL must also be unique in the roster, and that is
-    // not fussiness: every member of a herd shares the label `a wild
-    // <species>` (`derive_wild_herds`), so `subjective.contains(&hidden)`
-    // below would match a SIBLING of the hidden creature that the possession
-    // could see perfectly well, and the sight-narrowing assertion would fail
-    // on a name collision rather than on a disclosure. Measured directly: the
-    // first run of this test at seed 3 failed exactly that way, on `a wild
+    // not fussiness: every member of a herd shares one bare `<species>`
+    // label (`derive_wild_herds` — the article was dropped by The Ken, Task
+    // 4 round two, but the sharing was never about the article), so
+    // `subjective.contains(&hidden)` below would match a SIBLING of the
+    // hidden creature that the possession could see perfectly well, and the
+    // sight-narrowing assertion would fail on a name collision rather than
+    // on a disclosure. Measured directly: the first run of this test at
+    // seed 3 failed exactly that way, on what then read as `a wild
     // giant-crocodile`.
     let candidates: Vec<usize> = {
         let (s, _) = Session::start(&w, &PossessOpts::default()).unwrap();

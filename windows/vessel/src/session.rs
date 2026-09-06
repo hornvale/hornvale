@@ -1483,8 +1483,11 @@ fn derive_herd_bodies(
 /// The body among `bodies` that `needle` (already lowercased-and-compared
 /// case-insensitively) names — the shared resolution three matchers
 /// (`why`, `npc_grievance`, `colocated_npc`) apply to a typed label. An
-/// EXACT case-insensitive match wins outright; failing that, the LONGEST
-/// label merely CONTAINING `needle` wins.
+/// EXACT case-insensitive match wins outright (unchanged, The Roll, Task
+/// 10); failing that, `Ok(Some(_))` names the single unambiguous substring
+/// winner, `Ok(None)` means nothing here matches at all, and `Err(_)` names
+/// every candidate an ambiguous needle matched (The Ken, Task 5) — a
+/// caller must not silently pick one.
 ///
 /// **The Roll, Task 10.** Before this, each site took the first roster-order
 /// substring hit, which let a shorter resident's name be shadowed by a
@@ -1499,22 +1502,74 @@ fn derive_herd_bodies(
 /// full, but an exact query for either must still win outright — the exact
 /// check above is what guarantees that).
 ///
+/// **The Ken, Task 10 -> Task 5.** The Roll's `max_by_key` picked a winner
+/// from ANY number of substring matches, with no check that the winner had
+/// anything to do with the others — so three dragons sharing the suffix
+/// "-dragon" resolved `examine dragon` to whichever was longest, confidently
+/// and wrongly. The winner earns the pick only when it is a strict
+/// EXTENSION of every other match — every other match's label is itself a
+/// substring of the winner's ("goblin" is a substring of "goblin chief," so
+/// "goblin chief" wins over an ambiguous short query naming both). When the
+/// longest match does NOT contain every other match ("black-dragon" does
+/// not contain "red-dragon"), the needle is genuinely ambiguous and every
+/// match is returned as a candidate, in `bodies` order, rather than one
+/// being silently chosen.
+///
 /// MUTATION THIS MUST FAIL AGAINST: drop the exact-match branch and fall
-/// straight to `.find()` (first roster-order substring hit) —
+/// straight to the first roster-order substring hit —
 /// `the_roll.rs::a_prefix_name_does_not_shadow_a_longer_one` reddens.
-fn body_by_needle<'a>(bodies: &[&'a Body], needle: &str) -> Option<&'a Body> {
+/// MUTATION THIS MUST ALSO FAIL AGAINST: drop the extension check and
+/// always return the longest substring match — `the_roll.rs::
+/// an_ambiguous_needle_is_refused_and_names_its_candidates` reddens.
+fn body_by_needle<'a>(
+    bodies: &[&'a Body],
+    needle: &str,
+) -> Result<Option<&'a Body>, Vec<&'a Body>> {
     let needle = needle.to_lowercase();
-    let exact = bodies
+    if let Some(exact) = bodies.iter().find(|n| n.label.to_lowercase() == needle) {
+        return Ok(Some(exact));
+    }
+    let matches: Vec<&Body> = bodies
         .iter()
-        .find(|n| n.label.to_lowercase() == needle)
-        .copied();
-    exact.or_else(|| {
-        bodies
-            .iter()
-            .filter(|n| n.label.to_lowercase().contains(&needle))
-            .max_by_key(|n| n.label.len())
-            .copied()
-    })
+        .filter(|n| n.label.to_lowercase().contains(&needle))
+        .copied()
+        .collect();
+    match matches.len() {
+        0 => Ok(None),
+        1 => Ok(Some(matches[0])),
+        _ => {
+            // `max_by_key` returns the LAST of equal-length ties, same as
+            // The Roll's original `.max_by_key` here — no behaviour change
+            // for the case that already had a unique longest match.
+            let winner = *matches
+                .iter()
+                .max_by_key(|b| b.label.len())
+                .expect("matches is non-empty in this arm");
+            let winner_lc = winner.label.to_lowercase();
+            let winner_is_extension = matches
+                .iter()
+                .all(|b| winner_lc.contains(&b.label.to_lowercase()));
+            if winner_is_extension {
+                Ok(Some(winner))
+            } else {
+                Err(matches)
+            }
+        }
+    }
+}
+
+/// The refusal `why`, `colocated_npc`'s callers, and (indirectly) `examine`
+/// answer with when a typed needle names more than one candidate with no
+/// single winner (The Ken, Task 5) — naming what would have worked instead
+/// of silently guessing one, per the campaign's own §4.5.
+/// type-audit: bare-ok(identifier-text: typed)
+fn ambiguous_needle_refusal(typed: &str, candidates: &[&Body]) -> String {
+    let labels: Vec<&str> = candidates.iter().map(|b| b.label.as_str()).collect();
+    format!(
+        "'{typed}' could mean more than one thing here: {}. Be more specific.",
+        crate::chamber_prose::listed(&labels)
+            .expect("an ambiguous needle always carries at least two candidates")
+    )
 }
 
 impl<'w> Session<'w> {
@@ -3443,9 +3498,15 @@ impl<'w> Session<'w> {
     /// one answer.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
     pub fn would_turn_hostile(&self, who: &str) -> bool {
-        self.colocated_npc(who)
-            .map(|npc| grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD)
-            .unwrap_or(false)
+        // An ambiguous `who` (The Ken, Task 5) answers `false` — the same
+        // conservative default an unresolved `who` already got, and for the
+        // same reason this method's own doc gives for narrowing to
+        // co-located NPCs at all: `false` about a creature not cleanly
+        // reached is the safe answer, never a guess among candidates.
+        match self.colocated_npc(who) {
+            Ok(Some(npc)) => grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD,
+            Ok(None) | Err(_) => false,
+        }
     }
 
     /// A named NPC's current grievance fold toward the player (test
@@ -3457,16 +3518,28 @@ impl<'w> Session<'w> {
     /// Roll, Task 10: exact label match first, then the longest containing
     /// label — never merely the first substring hit in roster order);
     /// `None` if no derived NPC matches `who`.
+    ///
+    /// **An ambiguous needle also answers `None` (The Ken, Task 5).** This
+    /// accessor's return type carries a number or nothing, with no room for
+    /// a candidate list, so `None` is the honest signal this signature can
+    /// give — the alternative, silently folding one of the ambiguous
+    /// candidates' own grievance, is exactly the wrong answer §4.5 exists
+    /// to close. `why` and `colocated_npc`'s callers get the textual
+    /// refusal this type cannot carry.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
     pub fn npc_grievance(&self, who: &str) -> Option<f64> {
         let others = other_bodies(self.roster.bodies(), self.roster.driven());
-        who.parse::<usize>()
+        let by_handle = who
+            .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .copied()
-            .or_else(|| body_by_needle(&others, who))
-            .map(|npc| grievance(&self.ledger, npc.entity))
+            .copied();
+        let npc = match by_handle {
+            Some(npc) => Some(npc),
+            None => body_by_needle(&others, who).unwrap_or(None),
+        };
+        npc.map(|npc| grievance(&self.ledger, npc.entity))
     }
 
     /// The session's owned, evolving ledger, serialized — a determinism
@@ -6902,7 +6975,41 @@ impl<'w> Session<'w> {
         Ok(())
     }
 
-    /// The full room rendering: room id, prose, presence, ways on.
+    /// The full room rendering: header, prose, presence, ways on.
+    ///
+    /// The Ken (spec §4.2, superseded on a controller ruling — ledger #5):
+    /// the header used to read `[room 3733133217, day 0.01172]`, putting a
+    /// raw facet id and a decimal day in the character's own mouth. Neither
+    /// datum is lost — `!whoami` already states both, and that is the
+    /// author's-instrument frame where an id and a fractional day belong.
+    /// The header carries no time either: the spec asked it to derive a
+    /// time-of-day phrase from the same source as the sky line, but no such
+    /// shared derivation exists (the phase logic lives baked into
+    /// `sky_at`'s description string in `domains/astronomy`, which exposes
+    /// no `daypart` accessor), and the sky line one row below already says
+    /// the time of day in the character's own words (`Night.`, `Twilight.`,
+    /// `The sun climbs the morning sky.`). Minting new astronomy API so two
+    /// callers could share a derivation that does not exist would be worse
+    /// than noticing the duplication.
+    ///
+    /// **Fix round 2: a header that never varies is not orientation, and
+    /// `[room]` alone was exactly that** — every ordinary walk-band header
+    /// read identically regardless of position, which is what surfaced when
+    /// the coordinator ran `sort -u` over a real multi-room transcript and
+    /// got one line back. The header now spends its one remaining slot on
+    /// [`hornvale_locale::Regime::descriptor_noun`] (`v.locale.regime.
+    /// descriptor_noun` — "buttressed canopy", "a stream gully"), which this
+    /// crate's own doc comment on that field already names as the thing
+    /// authored "so homogeneous biome still varies room-to-room" — precisely
+    /// the property this header needed. **The village name was tried first
+    /// and rejected**: `Vantage::village` is `village_or_fallback(npc)`, the
+    /// DRIVEN BODY's own home settlement, constant for the whole session
+    /// regardless of position (confirmed against a real ten-room walk — see
+    /// the fix-round commit), so it fails the one property this fix exists
+    /// to deliver. `descriptor_noun` never has a missing case (every facet's
+    /// `Regime` is derived unconditionally, marine included) — unlike a
+    /// settlement name, which is `None` for a wild body, this token never
+    /// needed a stated fallback in the first place.
     ///
     /// `how` decides [`Self::presence_line`]'s own roster the same way it
     /// decides every other `!`-narrowed read (The Roll, Task 9): every
@@ -7062,8 +7169,17 @@ impl<'w> Session<'w> {
         // this band actually leads anywhere. Underground no longer shares
         // that excuse — it has real cells now, and `underground_ways_from_
         // cell` reports them.
-        let closing = if self.submerged.is_some() {
-            "Ways on: surface.".to_string()
+        // The Ken, spec §4.3: openness is the default and a wall is news, so
+        // the clause now earns its line only when something is actually
+        // closed. It used to be unconditional — "No direction here is
+        // closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW." on
+        // every ordinary outdoor turn — spending twelve words twice
+        // asserting that nothing was unusual. `closing` is `Option<String>`
+        // now and threaded into the look block the same way `presence` is
+        // below: `None` (nobody sensed / nothing to report) contributes no
+        // line at all, never a blank one.
+        let closing: Option<String> = if self.submerged.is_some() {
+            Some("Ways on: surface.".to_string())
         } else {
             let ways: Vec<String> = v
                 .locale
@@ -7075,41 +7191,70 @@ impl<'w> Session<'w> {
                     _ => None,
                 })
                 .collect();
-            // **The leading clause is conditional now, and it has to be.** It
-            // was a flat "No direction here is closed", which was true while
-            // `go` could not refuse a bearing outdoors at all. It can, at
-            // exactly the 24 cube-corner rooms (8 corners, three quads meeting at
-            // each), where one compass word names
-            // no room (`CORNER_BEARING_REFUSAL`) — so the flat claim would be a
-            // one-turn observable falsehood there, the class of defect decision
-            // 0141 exists to remove. Everywhere else the sentence is unchanged,
-            // byte for byte.
+            // The lead clause was already conditional (fix round 1): flat
+            // "No direction here is closed" was true only while `go` could
+            // not refuse a bearing outdoors at all, and it can, at exactly
+            // the 24 cube-corner rooms (8 corners, three quads meeting at
+            // each), where one compass word names no room
+            // (`CORNER_BEARING_REFUSAL`). Everywhere else the refused set is
+            // empty, and The Ken's own contribution is what happens THEN:
+            // silence, rather than restating the fixed "No direction here is
+            // closed" half.
             let refused: Vec<String> = heading_rose(&self.position())
                 .iter()
                 .zip(COMPASS_ROSE)
                 .filter(|(n, _)| n.is_none())
                 .map(|(_, c)| bearing_letter(c))
                 .collect();
-            let lead = if refused.is_empty() {
-                "No direction here is closed".to_string()
+            // **The spec's middle row — "nothing refused, some bearings lack
+            // ground" — is UNREACHABLE here, not merely unobserved, and this
+            // is a property of the two computations above rather than a
+            // prediction.** `ways` is read off `v.locale.exits`, which is
+            // `exits_of(addr)` (`windows/locale/src/lib.rs`): one `Edge`
+            // exit per compass word `heading_rose(addr)` assigns `Some`,
+            // nothing else. `refused` is read directly off the same
+            // `heading_rose(self.position())` call's `None` entries, and
+            // `addr == self.position()` here (`observable_at` passes
+            // `position` straight through to `describe_at`). So `ways` and
+            // `refused` partition the same eight words by construction:
+            // `ways` is a proper subset of the eight if and only if
+            // `refused` is non-empty. There is no room where ground is
+            // merely missing without a bearing being refused.
+            if refused.is_empty() {
+                None
             } else {
-                format!("Every direction here is open but {}", refused.join(", "))
-            };
-            format!("{lead}; the nearest ground lies {}.", ways.join(", "))
+                Some(format!(
+                    "Every direction here is open but {}; the nearest ground lies {}.",
+                    refused.join(", "),
+                    ways.join(", ")
+                ))
+            }
         };
         // The presence line (The Roll, Task 9, spec §4): its own line, after
         // the room's prose and before the ways — a room says what it looks
         // like, then who is in it, then how to leave. `None` (nobody
         // sensed) contributes no line at all, never a blank one.
-        let presence = self
-            .presence_line(how)
-            .map(|line| format!("{line}\n"))
-            .unwrap_or_default();
+        let presence = self.presence_line(how);
+        // The Ken, spec §4.3: `closing` is now ALSO frequently `None` (any
+        // ordinary outdoor room), so the footer as a whole — presence, then
+        // the exits clause — must earn its leading newline rather than
+        // always spending one, AND must never spend a trailing one either:
+        // the whole message historically never ends in "\n" (`closing`
+        // never had a trailing newline), and threading each piece through
+        // the `presence` idiom independently would have given presence one
+        // whenever it was the LAST line present — a state that could not
+        // arise before this task, because `closing` was never empty.
+        // Collecting only the lines that exist and joining them is what
+        // keeps both ends honest regardless of which of the two fired.
+        let footer_lines: Vec<String> = [presence, closing].into_iter().flatten().collect();
+        let footer = if footer_lines.is_empty() {
+            String::new()
+        } else {
+            format!("\n{}", footer_lines.join("\n"))
+        };
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}\n{presence}{closing}",
-            v.locale.id,
-            self.day.as_std_days(),
-            f.prose,
+            "[room — {}]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}{footer}",
+            v.locale.regime.descriptor_noun, f.prose,
         ))
     }
 
@@ -7860,8 +8005,12 @@ impl<'w> Session<'w> {
     }
 
     /// The chamber rendering, in `describe_here`'s own shape one band down:
-    /// address, prose, ways on. `[chamber …]` rather than `[room …]` because
-    /// the band word IS the information — an id at depth 21 is not a locale.
+    /// header, prose, ways on. `[chamber]` rather than `[room]` because the
+    /// band word IS the information — an id at depth 21 is not a locale, and
+    /// (The Ken, spec §4.2, superseded — ledger #5) neither is a decimal day:
+    /// both survive in `!whoami`'s author's-instrument frame, and the header
+    /// now carries only the band. See [`Self::describe_here`]'s own doc
+    /// comment for the fuller ruling.
     ///
     /// The ways are `out`, then `further in` where exactly one child exists —
     /// a CHAIN, still named by direction because there is only one way in and
@@ -7886,14 +8035,13 @@ impl<'w> Session<'w> {
         let (structure, brief, at) = (&inside.structure, &inside.brief, inside.at);
         let chamber = &structure.chambers[at];
         let terrain = self.terrain_here();
-        let interior = crate::interior::chamber_interior_of(
-            chamber,
-            &terrain,
-            self.walk_depth(),
-            brief,
-            structure.roles[at],
-        );
-        let id = chamber_id(chamber)?;
+        let role = structure.roles[at];
+        let interior =
+            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), brief, role);
+        // Validates that this chamber packs to an id (the same fallibility
+        // the header used to surface by printing it); the value itself is no
+        // longer displayed — see this function's own doc comment.
+        let _ = chamber_id(chamber)?;
         let mut ways = vec!["out".to_string()];
         match structure.children(at).as_slice() {
             [] => {}
@@ -7912,9 +8060,8 @@ impl<'w> Session<'w> {
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
         Ok(format!(
-            "[chamber {}, day {}]\n{}\n{presence}Ways on: {}.",
-            id,
-            self.day.as_std_days(),
+            "[chamber — {}]\n{}\n{presence}Ways on: {}.",
+            chamber_place_word(role),
             crate::chamber_prose::describe_chamber(&interior, brief),
             ways.join(", ")
         ))
@@ -9667,6 +9814,33 @@ impl<'w> Session<'w> {
         if let Some(n) = prose.nouns.iter().find(|n| n.matches(&wanted)) {
             return Turn::Out(n.datum.clone());
         }
+        // A CO-LOCATED CREATURE is resolved through the same ambiguity-safe
+        // rule `why`/`colocated_npc`/`npc_grievance` share (`body_by_needle`,
+        // The Roll Task 10 -> The Ken Task 5), BEFORE the chart legend's
+        // plain word match below ever sees it. The legend's own `.find()`
+        // has no ambiguity check at all — it takes the first entry any
+        // shared WORD matches — so three same-suffix creatures sharing the
+        // word "dragon" ("black-dragon"/"red-dragon") resolved silently to
+        // whichever came first, confidently and wrongly (spec §4.5, #12b).
+        //
+        // `Ok(None)` (this needle names no co-located creature) falls
+        // through to the legend match below UNCHANGED — a creature charted
+        // but not currently co-located, a furnishing, or a ground mark all
+        // resolve exactly as before this task.
+        let colocated = self.colocated_npcs();
+        match body_by_needle(&colocated, &wanted) {
+            Ok(Some(npc)) => {
+                let held = self.carried_by(npc.entity);
+                let nouns: Vec<&str> = held.iter().map(|(_, noun)| *noun).collect();
+                return Turn::Out(crate::purview::creature_datum(
+                    &npc.label,
+                    &npc.species,
+                    &nouns,
+                ));
+            }
+            Ok(None) => {}
+            Err(candidates) => return Turn::Out(ambiguous_needle_refusal(noun, &candidates)),
+        }
         // Drawn through the CALLER's eyes (The Deed, Task 6). Nothing
         // observable turns on it here — the legend carries nouns and datums,
         // not colour — but `!examine` claiming an objective read while
@@ -9752,19 +9926,30 @@ impl<'w> Session<'w> {
     /// handle is deliberately NOT the NPC's `EntityId` (The Signet) — it is
     /// a short-lived, session-local position a player can type back,
     /// resolved fresh from `other_bodies` on every call.
+    ///
+    /// **An ambiguous needle is refused, not guessed (The Ken, Task 5).** A
+    /// handle number resolves before `body_by_needle` is even consulted, so
+    /// only a typed label can be ambiguous; when it is, this names every
+    /// candidate rather than silently recounting one of them.
     fn why(&self, who: &str) -> String {
         let who = who.trim();
         if who.is_empty() {
             return "Why what? Name an NPC (label or number — see 'npcs').".to_string();
         }
         let others = other_bodies(self.roster.bodies(), self.roster.driven());
-        let target = who
+        let by_handle = who
             .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .copied()
-            .or_else(|| body_by_needle(&others, who));
+            .copied();
+        let target = match by_handle {
+            Some(npc) => Some(npc),
+            None => match body_by_needle(&others, who) {
+                Ok(npc) => npc,
+                Err(candidates) => return ambiguous_needle_refusal(who, &candidates),
+            },
+        };
         let Some(npc) = target else {
             return format!("No one here answers to '{who}' (see 'npcs').");
         };
@@ -9944,9 +10129,66 @@ impl<'w> Session<'w> {
     /// group names its first [`N_NAMED`] labels through
     /// [`crate::chamber_prose::listed`] and appends `", and {n} others"` for
     /// whatever is left; a wild group has no individual names to give, so it
-    /// collapses entirely to a single count-first clause — `"a wild
-    /// {species}"` for one, `"{n} wild {species}"` for more, the species
-    /// word never pluralised.
+    /// collapses entirely to a single count-first clause — `"{n} wild
+    /// {species}"` for more than one, the species word never pluralised.
+    ///
+    /// **A wild group of exactly one renders its LABEL, not `"a wild
+    /// {species}"` built from `species` (The Ken, Task 4).** Before this
+    /// task the group of one rendered a fresh string built from `species`,
+    /// which is not what `examine` matches (`examine` matches `label`) — a
+    /// STAGED body's label is bare `{species}` (`derive_staged_npcs`), so
+    /// the old species-built `"a wild {species}"` line showed a noun
+    /// `examine` then denied.
+    ///
+    /// **Two rounds, because the first one fixed the wrong site.** A body
+    /// from `derive_wild_npcs` happened to escape the display/label
+    /// mismatch because its OWN label used to read `"a wild {species}"`
+    /// too, coincidentally matching what this line built — but that label
+    /// carried the same defect `liveness.rs`'s doc comment on
+    /// `derive_staged_npcs` records ("The a wild carrion-crawler looks
+    /// lost"), so round one fixed it at the source rather than displaying
+    /// it unchanged. It was the wrong target: `derive_wild_npcs` is reached
+    /// only from `windows/lab` and tests, never from a real `possess`
+    /// session — every wild creature an ordinary possession actually meets
+    /// comes from the sibling `derive_wild_herds` (`session.rs` calls it
+    /// directly for real herds), which independently hardcoded the same
+    /// `"a wild {species}"` label and was the one actually reproducing "The
+    /// a wild carrion-crawler looks lost" in live play (seed 3, `wait` then
+    /// `needs`). Round two (a controller correction) fixed
+    /// `derive_wild_herds`'s label the same way. All three wild-shaped
+    /// derivations now share one bare-`species` labelling convention; the
+    /// two edits within each round must land together with this line's own
+    /// change.
+    ///
+    /// **A group of several keeps the species-built count clause
+    /// deliberately, and this was a judgement call, not a mechanical
+    /// carry-over**: every member of such a group shares one species
+    /// string, and for every wild-shaped derivation that string is ALSO
+    /// every member's own label (none of the three names an individual —
+    /// see `derive_bodies_at` and `derive_wild_herds`), so the species word
+    /// this clause prints is already an examinable noun; it merely does not
+    /// promise WHICH of the group it names, which is `body_by_needle`'s
+    /// ambiguity to answer, not this line's.
+    ///
+    /// **The count clause drops "wild" too (controller ruling, ledger #7).**
+    /// Task 4 dropped the article from a WILD label (`derive_bodies_at`,
+    /// `derive_wild_herds`), so a singleton group renders bare
+    /// (`labels[0]` above, just the label) — but this clause still read
+    /// `"{n} wild {species}"`, mixing a bare singleton with an
+    /// article-and-adjective count form in the same "Here:" line
+    /// ("…; 2 wild otyugh; owlbear; …"). Before Task 4 both forms carried
+    /// "wild" uniformly (`"a wild X"` / `"N wild X"`); Task 4 is what broke
+    /// that uniformity, so closing it is this campaign's, not a
+    /// pre-existing defect. This clause still names the species
+    /// (unpluralised — the existing convention) and the count; only the
+    /// adjective "wild" is gone, matching what a singleton already renders
+    /// since Task 4.
+    ///
+    /// **Declined alternative (ledger #7): teaching the RESOLVER to strip a
+    /// leading article off a wild label so this line could display one
+    /// over a bare label.** That would reopen the display/label split §4.4
+    /// exists to close, so this line adapts to the label's own convention
+    /// instead of the label growing a second, display-only shape.
     fn presence_line(&self, how: Perceiving) -> Option<String> {
         let roll = self.perceived_npcs(how);
         if roll.is_empty() {
@@ -9987,9 +10229,9 @@ impl<'w> Session<'w> {
                         heads
                     }
                 } else if labels.len() == 1 {
-                    format!("a wild {species}")
+                    labels[0].to_string()
                 } else {
-                    format!("{} wild {species}", labels.len())
+                    format!("{} {species}", labels.len())
                 }
             })
             .collect();
@@ -10026,13 +10268,20 @@ impl<'w> Session<'w> {
     ///
     /// The unplaced row of `sensed_npcs`' table holds here as everywhere: a
     /// creature the embedding could not place is sensed, so it stays provokable.
-    fn colocated_npc(&self, who: &str) -> Option<&Body> {
+    ///
+    /// **`Err` names an ambiguous needle's candidates rather than picking one
+    /// (The Ken, Task 5)** — [`Self::act_on_disposition`] surfaces it as text;
+    /// [`Self::would_turn_hostile`] cannot (its own return is a bare `bool`)
+    /// and treats it the same as `Ok(None)`, which its own doc says is the
+    /// conservative, honest default.
+    fn colocated_npc(&self, who: &str) -> Result<Option<&Body>, Vec<&Body>> {
         let here = self.sensed_npcs(self.sighting().as_ref());
         let who = who.trim();
         if who.is_empty() {
-            return here.into_iter().next();
+            return Ok(here.into_iter().next());
         }
-        who.parse::<usize>()
+        let by_handle = who
+            .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             // `.copied()`: `other_bodies` (now an owned `Vec<&Body>`, The Hand,
@@ -10045,11 +10294,14 @@ impl<'w> Session<'w> {
                     .get(n - 1)
                     .copied()
             })
-            .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
+            .filter(|npc| here.iter().any(|h| h.entity == npc.entity));
+        match by_handle {
+            Some(npc) => Ok(Some(npc)),
             // The Roll, Task 10: [`body_by_needle`] — exact label match
             // first, then the longest containing label — never merely the
             // first substring hit in roster order.
-            .or_else(|| body_by_needle(&here, who))
+            None => body_by_needle(&here, who),
+        }
     }
 
     /// Commit the first player-authored fact: a signed disposition shift on
@@ -10068,8 +10320,14 @@ impl<'w> Session<'w> {
     /// return value rather than assuming success, so the player is never
     /// told a mark landed when the ledger disagrees.
     fn act_on_disposition(&mut self, who: &str, sign: i8) -> Turn {
-        let Some(npc) = self.colocated_npc(who) else {
-            return Turn::Out("There is no one here to provoke or soothe.".to_string());
+        let npc = match self.colocated_npc(who) {
+            Ok(Some(npc)) => npc,
+            Ok(None) => {
+                return Turn::Out("There is no one here to provoke or soothe.".to_string());
+            }
+            // The Ken, Task 5: name the candidates rather than silently
+            // provoking/soothing one of them.
+            Err(candidates) => return Turn::Out(ambiguous_needle_refusal(who, &candidates)),
         };
         let entity = npc.entity;
         let label = npc.label.clone();
@@ -10698,6 +10956,29 @@ fn render_felt_state_word(
                 Some(concept.to_string()),
             )
         }
+    }
+}
+
+/// A short, lowercase noun for a chamber's role — the header's per-chamber
+/// varying token (The Ken, Task 3, fix round 2). The header must vary as the
+/// character moves (the coordinator's own `sort -u` over a real multi-room
+/// walk caught `[chamber]` failing this), and role is the one thing
+/// [`crate::interior::chamber_interior_of`] derives per CHAMBER INDEX rather
+/// than per structure — two chambers of the same house otherwise share every
+/// other observable this function has on hand (the structure's site name,
+/// its `built`/`cold` flags). `role_for` is total over every `chamber_index`
+/// a structure can hold, so this match is exhaustive with no fallback arm to
+/// pick.
+fn chamber_place_word(role: crate::interior::pattern::Role) -> &'static str {
+    use crate::interior::pattern::Role;
+    match role {
+        Role::Threshold => "threshold",
+        Role::Hearthroom => "hearthroom",
+        Role::Store => "storeroom",
+        Role::Hall => "hall",
+        Role::Loomroom => "loomroom",
+        Role::Smithy => "smithy",
+        Role::Shrine => "shrine",
     }
 }
 
