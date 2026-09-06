@@ -1,6 +1,6 @@
 // The exhibit's worker: owns the wasm instance so multi-second genesis
 // never blocks the page. One worker = one world, exactly as the Casement's
-// worker is one worker = one possession — `hw_new` invalidates whatever
+// worker is one worker = one possession — `hl_new` invalidates whatever
 // world the instance held, so a second world means a second worker.
 import {
   type Envelope,
@@ -9,16 +9,16 @@ import {
   type WorkerResponse,
 } from "./protocol.ts";
 
-/** The `hw_*` catalog exports this exhibit uses (`clients/world-wasm`). */
-interface CatalogExports {
+/** The `hl_*` exports this exhibit uses (`clients/lot/wasm`). */
+interface LotWasmExports {
   memory: WebAssembly.Memory;
-  hw_new(seed: bigint): number;
-  hw_lot(index: bigint): number;
-  hw_lot_pinned(index: bigint, year: number, site: number): number;
-  hw_lot_curve(): number;
-  hw_lot_places(year: number): number;
-  hw_out_ptr(): number;
-  hw_out_len(): number;
+  hl_new(seed: bigint): number;
+  hl_lot(index: bigint): number;
+  hl_lot_pinned(index: bigint, year: number, site: number): number;
+  hl_lot_curve(): number;
+  hl_lot_places(year: number): number;
+  hl_out_ptr(): number;
+  hl_out_len(): number;
 }
 
 // Deno's default check lib types `self` for a window; cast to the small
@@ -29,20 +29,20 @@ const scope = self as unknown as {
   location: { href: string };
 };
 
-let catalog: CatalogExports | null = null;
+let lotWasm: LotWasmExports | null = null;
 
-async function instantiate(): Promise<CatalogExports> {
-  if (catalog) return catalog;
-  const url = new URL("./world.wasm", scope.location.href);
+async function instantiate(): Promise<LotWasmExports> {
+  if (lotWasm) return lotWasm;
+  const url = new URL("./lot.wasm", scope.location.href);
   const resp = await fetch(url);
   if (!resp.ok) {
     throw new Error(
-      `world.wasm is missing (HTTP ${resp.status}) — local build? run 'make wasm-world'`,
+      `lot.wasm is missing (HTTP ${resp.status}) — local build? run 'make wasm-lot'`,
     );
   }
   // Streaming needs an application/wasm MIME; fall back for local
   // mdbook-serve setups that mislabel it. The imports object is EMPTY —
-  // the catalog asks the host for nothing, which is what makes a world
+  // the module asks the host for nothing, which is what makes a world
   // derived here identical to one derived natively.
   let instance: WebAssembly.Instance;
   try {
@@ -50,31 +50,31 @@ async function instantiate(): Promise<CatalogExports> {
   } catch {
     ({ instance } = await WebAssembly.instantiate(await resp.arrayBuffer(), {}));
   }
-  catalog = instance.exports as unknown as CatalogExports;
-  return catalog;
+  lotWasm = instance.exports as unknown as LotWasmExports;
+  return lotWasm;
 }
 
-/** The out buffer as UTF-8 — every `hw_*` answer, error envelope included,
+/** The out buffer as UTF-8 — every `hl_*` answer, error envelope included,
  * arrives here. */
-function readOut(c: CatalogExports): string {
+function readOut(c: LotWasmExports): string {
   return new TextDecoder().decode(
-    new Uint8Array(c.memory.buffer, c.hw_out_ptr(), c.hw_out_len()),
+    new Uint8Array(c.memory.buffer, c.hl_out_ptr(), c.hl_out_len()),
   );
 }
 
 /** Run one request against the live instance, returning its status code. */
-function dispatch(c: CatalogExports, request: WorkerRequest): number {
+function dispatch(c: LotWasmExports, request: WorkerRequest): number {
   switch (request.kind) {
     case "new":
-      return c.hw_new(BigInt(request.seed));
+      return c.hl_new(BigInt(request.seed));
     case "lot":
       return request.year === null
-        ? c.hw_lot(BigInt(request.index))
-        : c.hw_lot_pinned(BigInt(request.index), request.year, siteArgument(request.site));
+        ? c.hl_lot(BigInt(request.index))
+        : c.hl_lot_pinned(BigInt(request.index), request.year, siteArgument(request.site));
     case "curve":
-      return c.hw_lot_curve();
+      return c.hl_lot_curve();
     case "places":
-      return c.hw_lot_places(request.year);
+      return c.hl_lot_places(request.year);
   }
 }
 

@@ -66,7 +66,7 @@ export interface Envelope {
   request: WorkerRequest;
 }
 
-/** The sentinel `hw_lot_pinned` reads as "no site pin" — `u32::MAX`. Vertex
+/** The sentinel `hl_lot_pinned` reads as "no site pin" — `u32::MAX`. Vertex
  * 0 is a legal site, so the ABI needs a value outside the range rather than
  * a zero. */
 export const NO_SITE = 4294967295;

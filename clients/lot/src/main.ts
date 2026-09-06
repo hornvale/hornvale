@@ -367,7 +367,7 @@ function mount(container: HTMLElement): void {
   function oddsTiles(subject: Life): [string, string][] {
     // EVERY ONE OF THESE IS A FIELD OF `lot/life/v1`. The odds payload's
     // e0 and q_maturity would belong here and are NOT reachable: there is
-    // no `hw_lot_odds` export, so the exhibit shows the life course the
+    // no `hl_lot_odds` export, so the exhibit shows the life course the
     // payload carries rather than the mortality profile behind it.
     const rows: [string, string][] = [
       ["Born", year(subject.birth_year)],

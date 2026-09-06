@@ -1,12 +1,14 @@
 [package]
-name = "hornvale-world-wasm"
+name = "hornvale-lot-wasm"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-description = "The catalog: worldgen + scene JSON behind extern-C exports for external clients."
+description = "The Lot: one life drawn from everyone who ever lived, as a wasm cdylib for the project book."
 
-# Standalone workspace (root Cargo.toml excludes this path, like
-# clients/vessel/wasm) so this crate owns the size-critical profile.
+# Standalone workspace (the root Cargo.toml `exclude`s this path, like
+# clients/vessel/wasm and clients/world-wasm) so this crate can own the
+# size-critical release profile below — workspace members cannot set
+# per-package panic/LTO.
 [workspace]
 
 [lib]
@@ -14,11 +16,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 serde_json = "1"
-hornvale-kernel = { path = "../../kernel" }
-hornvale-worldgen = { path = "../../windows/worldgen" }
-hornvale-scene = { path = "../../windows/scene" }
-hornvale-astronomy = { path = "../../domains/astronomy" }
-hornvale-terrain = { path = "../../domains/terrain" }
+hornvale-kernel = { path = "../../../kernel" }
+hornvale-worldgen = { path = "../../../windows/worldgen" }
+hornvale-lot = { path = "../../../windows/lot" }
+hornvale-astronomy = { path = "../../../domains/astronomy" }
+hornvale-terrain = { path = "../../../domains/terrain" }
 
 [profile.release]
 # Vessel's measured profile (decision 0052): ties go to the smaller binary.

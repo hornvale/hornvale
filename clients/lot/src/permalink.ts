@@ -80,7 +80,7 @@ export function parse(hash: string): Permalink | null {
   if (rawYear !== null && year === null) return null;
   if (rawSite !== null && site === null) return null;
   // A site pin with no year is not a link this exhibit ever writes, and the
-  // ABI cannot express it: `hw_lot_pinned` takes a finite year, and the
+  // ABI cannot express it: `hl_lot_pinned` takes a finite year, and the
   // Where stage only offers a location once a year has settled. Refusing it
   // outright beats silently dropping half the pin and drawing a life the
   // link does not name.

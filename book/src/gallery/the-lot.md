@@ -22,11 +22,11 @@ from `(seed, index)` and the pins, never re-rolled here. The byte-stable
 text of lots 0–9, as the native binary prints them, is on
 [Ten Lives of Seed 42](./generated/the-lot-seed-42.md).
 
-Reading this locally and the page is dark? The catalog wasm is deploy-built
-and never committed (decision 0052), and since decision 0125 retired CI the
-book has no deploy to build it — run `make wasm-world`, then serve the book
-again. Genesis then takes a few seconds in your browser, every time,
-because everything you see derives from the seed.
+Reading this locally and the page is dark? The exhibit's own wasm is
+deploy-built and never committed (decision 0052), and since decision 0125
+retired CI the book has no deploy to build it — run `make wasm-lot`, then
+serve the book again. Genesis then takes a few seconds in your browser,
+every time, because everything you see derives from the seed.
 
 <div id="lot"></div>
 <noscript><p>The exhibit needs JavaScript — the world derives in your

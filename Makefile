@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check lot-check lot-check-run world-then-lot-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -870,14 +870,11 @@ world-check-run: wasm-world
 	cargo run -p hornvale -- scene system --world /tmp/hv-wc.json > /tmp/hv-wc-system.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc.json --width 256 > /tmp/hv-wc-tiles.json
 	cargo run -p hornvale -- scene tiles-region --world /tmp/hv-wc.json --face 0 --level 3 --ix 4 --iy 4 --samples 16 > /tmp/hv-wc-region.json
-	cargo run -p hornvale -- lot --world /tmp/hv-wc.json --index 0 --json > /tmp/hv-wc-lot0.json
-	cargo run -p hornvale -- lot --world /tmp/hv-wc.json --index 3 --year 1500 --json > /tmp/hv-wc-lot3y1500.json
 	cargo run -p hornvale -- new --seed 42 --plates 12 --out /tmp/hv-wc-pinned.json
 	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc-pinned.json --width 256 > /tmp/hv-wc-pinned-tiles.json
 	node clients/world-wasm/drive.mjs \
 	  clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
-	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json \
-	  /tmp/hv-wc-lot0.json /tmp/hv-wc-lot3y1500.json
+	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json /tmp/hv-wc-region.json
 	@# The gate is denominated in COMPRESSED bytes, because that is what a
 	@# visitor actually downloads: GitHub Pages serves the catalog gzipped
 	@# (brotli where the client offers it), so the raw figure overstates the
@@ -897,6 +894,25 @@ world-check-run: wasm-world
 	  gz=$$(gzip -9 -c clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm | wc -c); \
 	  echo "world wasm size: $$gz bytes gzipped ($$raw raw)"; \
 	  [ $$gz -le 524288 ] || { echo "SIZE GATE FAILED: > 512 KiB gzipped"; exit 1; }
+
+wasm-lot: ## Build the Lot's own exhibit wasm into book/src/gallery (deploy runs this too; never committed)
+	rustup target add wasm32-unknown-unknown 2>/dev/null || true
+	cargo build --manifest-path clients/lot/wasm/Cargo.toml --release --target wasm32-unknown-unknown
+	@# Same wasm-opt in-place step as wasm-world (Task 10b, ledger #17): the
+	@# byte-identity smoke and the shipped asset see the binary we actually
+	@# ship. No size gate follows it — an exhibit in an unpublished book is
+	@# not a released download (see lot-check-run below).
+	@if command -v wasm-opt >/dev/null 2>&1; then \
+	  wasm-opt -Oz $(WASM_OPT_FEATURES) \
+	    clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm \
+	    -o clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm.opt \
+	  && mv clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm.opt \
+	        clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm \
+	  && echo "wasm-opt -Oz applied"; \
+	else \
+	  echo "WARNING: wasm-opt not found (brew install binaryen) — shipping unoptimized; CI will optimize"; \
+	fi
+	cp clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm book/src/gallery/lot.wasm
 
 game-check: ## The game client's local gate: fmt/clippy/test on both crates
 	@bash scripts/timed.sh game-check -- make --no-print-directory game-check-run
@@ -930,9 +946,10 @@ atlas-check:
 	    echo "atlas: book/src/gallery/atlas.js is stale — commit the rebuilt bundle." >&2; exit 1; }
 
 # THE LOT EXHIBIT: the same shape as atlas-check, plus a wasm smoke, because
-# this client is the only one whose bundle typechecks against an INTERFACE it
-# declares for `hw_*` rather than against the binary it will load. `deno check`
-# cannot tell you the export is gone; the smoke can, and costs a wasm load.
+# this client is the only deno-driven one whose bundle typechecks against an
+# INTERFACE it declares for its wasm exports rather than against the binary
+# it will load. `deno check` cannot tell you the export is gone; the smoke
+# can, and costs a wasm load.
 #
 # THIS CHECK IS BLIND TO COMMENT-ONLY EDITS, exactly as atlas-check is and for
 # the same reason: `deno task build` runs `deno bundle --minify`, which strips
@@ -942,22 +959,40 @@ atlas-check:
 # `//` line — that passes silently and reads as a vacuous check when it is only
 # a vacuous probe.
 #
-# It depends on wasm-world the way vessel-check-run depends on wasm-vessel: the
-# smoke needs the catalog the page loads, and that wasm is deploy-built and
-# never committed (decision 0052), so a fresh checkout has none.
+# THE LOT HAS ITS OWN WASM CRATE (Task 10b, ledger #17), not the catalog's.
+# Task 10 put the four `hw_lot*` exports into `clients/world-wasm` and grew the
+# catalog from ~337 KiB to ~490 KiB gzipped on this Mac; the canonical box's
+# older binaryen emits ~11-13% larger output, which projected the catalog past
+# its 512 KiB release-asset size gate. An exhibit in an unpublished book is not
+# a released download, so `clients/lot/wasm` (exports `hl_*`) carries no size
+# gate of its own — the same shape as the Casement's `clients/vessel/wasm`
+# (decision 0052) — and the catalog is back at its pre-campaign weight. This
+# depends on `wasm-lot` the way `vessel-check-run` depends on `wasm-vessel`:
+# the smoke needs the exhibit wasm the page loads, and that wasm is
+# deploy-built and never committed, so a fresh checkout has none.
 lot-check: ## The Lot exhibit's local gate: deno checks + bundle drift + a wasm smoke
 	@bash scripts/timed.sh lot-check -- make --no-print-directory lot-check-run
 
-lot-check-run: wasm-world
-	cd clients/lot && deno fmt --check && deno lint && deno task check && deno task test
-	cd clients/lot && deno task build
+lot-check-run: wasm-lot
+	cd clients/lot && deno fmt --check && deno lint && deno task check && deno task test && deno task build
 	@git diff --exit-code -- book/src/gallery/lot.js book/src/gallery/lot-worker.js || { \
 	    echo "lot: book/src/gallery/lot.js or lot-worker.js is stale — commit the rebuilt bundles." >&2; exit 1; }
-	node clients/lot/drive.mjs book/src/gallery/world.wasm
+	cargo fmt --check --manifest-path clients/lot/wasm/Cargo.toml
+	cargo clippy --manifest-path clients/lot/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+	cargo run -p hornvale -- new --seed 42 --out /tmp/hv-lc.json
+	cargo run -p hornvale -- lot --world /tmp/hv-lc.json --index 0 --json > /tmp/hv-lc-lot0.json
+	cargo run -p hornvale -- lot --world /tmp/hv-lc.json --index 3 --year 1500 --json > /tmp/hv-lc-lot3y1500.json
+	node clients/lot/wasm/drive.mjs book/src/gallery/lot.wasm /tmp/hv-lc-lot0.json /tmp/hv-lc-lot3y1500.json
+	@# No size gate (see the note above): an exhibit wasm in an unpublished
+	@# book is not a released download. Printed so growth is still visible.
+	@raw=$$(wc -c < clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm); \
+	  gz=$$(gzip -9 -c clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm | wc -c); \
+	  echo "lot wasm size: $$gz bytes gzipped ($$raw raw)"
 
-# THE FOUR ARMS RUN IN PARALLEL, and they used to be plain prerequisites
+# THE FIVE ARMS RUN IN PARALLEL, and they used to be plain prerequisites
 # (i.e. serial). Measured on lefford 2026-08-23, alternating arms on an idle
-# box to cancel cache-warming drift, when the four arms were four checks:
+# box to cancel cache-warming drift, when there were four arms (vessel, world,
+# game, atlas — the Lot exhibit did not exist yet):
 #
 #     serial    337, 337, 324 s   mean 330   <- matches the chamber's own
 #     parallel  239, 236, 250 s   mean 243      clients phase, 330.8 s
@@ -969,27 +1004,23 @@ lot-check-run: wasm-world
 # against an 87 s difference.
 #
 # WHY IT WINS is not "more cores": the box has 40 and cargo already uses them.
-# It is that the four are differently shaped — world-check-run spends most of
+# It is that the arms are differently shaped — world-check-run spends most of
 # its time in six SERIAL single-process `cargo run` scene generations, which
 # occupy roughly one core while game-check-run's builds want all of them.
 # Overlapping a latency-bound job with a throughput-bound one is the whole
-# saving, which is also why adding more parallelism beyond these four would buy
-# nothing.
+# saving.
 #
-# THERE ARE FIVE CHECKS AND FOUR ARMS, and the pairing is a CORRECTNESS
-# constraint rather than a scheduling preference (The Lot). `world-check-run`
-# and `lot-check-run` both depend on `wasm-world`, which is .PHONY and so
-# re-runs its recipe every time: two concurrent arms would each run `cargo
-# build`, `wasm-opt -Oz` (an in-place `mv` over its own output) and a `cp` onto
-# the SAME `book/src/gallery/world.wasm`, while the lot smoke reads that file.
-# Every one of those is a real writer of one path. So the two share one arm and
-# run in sequence — the second `wasm-world` is an incremental no-op plus a
-# wasm-opt pass, and `lot-check-run` itself is deno work measured in seconds,
-# so the arm the analysis above calls latency-bound absorbs it. This is the
-# first time two members wanted the same wasm; `vessel-check-run` builds
-# `wasm-vessel`, a different crate to a different path, and never contended.
+# LOT-CHECK-RUN IS NOW A FIFTH, INDEPENDENT ARM, not a second phase sharing
+# world-check-run's arm the way Task 11's `world-then-lot-run` had it. That
+# arrangement existed only because the two checks both built `wasm-world` —
+# a single `.PHONY` target whose recipe (a `cargo build`, an in-place
+# `wasm-opt` `mv`, and a `cp`) would otherwise race onto the same
+# `book/src/gallery/world.wasm` if run concurrently. Task 10b gives the Lot
+# its own crate and its own `wasm-lot` target writing a different path
+# (`book/src/gallery/lot.wasm`), so the two no longer share a writer and the
+# correctness constraint that paired them is gone with it.
 #
-# WHY SHELL BACKGROUNDING AND NOT `$(MAKE) -j4 -O`. The -j form works and
+# WHY SHELL BACKGROUNDING AND NOT `$(MAKE) -j5 -O`. The -j form works and
 # measured the same, but every cargo it spawns prints:
 #
 #     warning: failed to connect to jobserver from environment variable
@@ -1003,20 +1034,13 @@ lot-check-run: wasm-world
 # are how people learn to stop reading gate logs. `--jobserver-style=fifo`
 # fixes it upstream and needs make 4.4; lefford has 4.3.
 #
-# Backgrounding four SERIAL sub-makes creates no jobserver at all, so the
+# Backgrounding five SERIAL sub-makes creates no jobserver at all, so the
 # warning cannot arise. Each target's output is captured to its own file and
 # printed whole after the `wait`, which gives strictly better grouping than
 # -Otarget did, and every target's pass/fail is named before the logs.
-# One arm of clients-check-run's fan-out: the two checks that both build
-# `wasm-world`, run in sequence so they cannot write its output at once. See
-# the FIVE CHECKS AND FOUR ARMS note above.
-world-then-lot-run:
-	$(MAKE) --no-print-directory world-check-run
-	$(MAKE) --no-print-directory lot-check-run
-
 clients-check-run:
 	@set -u; pids=""; names=""; \
-	for t in vessel-check-run world-then-lot-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check; do \
 	  $(MAKE) --no-print-directory $$t > /tmp/hv-clients-$$t.log 2>&1 & \
 	  pids="$$pids $$!"; names="$$names $$t"; \
 	done; \
@@ -1025,7 +1049,7 @@ clients-check-run:
 	  n=$$(echo $$names | cut -d' ' -f$$i); i=$$((i+1)); \
 	  if wait $$p; then echo "clients: $$n OK"; else rc=1; echo "clients: $$n FAILED"; fi; \
 	done; \
-	for t in vessel-check-run world-then-lot-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-check-run lot-check-run game-check-run atlas-check; do \
 	  echo "----- $$t -----"; cat /tmp/hv-clients-$$t.log; \
 	done; \
 	exit $$rc

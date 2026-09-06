@@ -1,6 +1,6 @@
 // Test fixtures: the smallest payloads that still carry the shapes the
-// modules branch on. Shaped after the real seed-42 payloads (`hw_lot(0)`,
-// `hw_lot_curve`, `hw_lot_places(1500)`), reduced by hand so a test reads.
+// modules branch on. Shaped after the real seed-42 payloads (`hl_lot(0)`,
+// `hl_lot_curve`, `hl_lot_places(1500)`), reduced by hand so a test reads.
 //
 // Not `_test.ts`, because several test files share these; `deno test` only
 // collects `*_test.ts`, so this file is compiled with the sources and

@@ -3,7 +3,7 @@
 //
 // **WHY `matured` IS UNDATED, AND WHY THAT IS NOT A GAP TO PAPER OVER.**
 // The life payload carries `matured: bool` and no maturity age; the age
-// itself lives in `lot/odds/v1`, which has no `hw_*` export and which the
+// itself lives in `lot/odds/v1`, which has no `hl_*` export and which the
 // exhibit therefore cannot read. So this module emits maturity as an event
 // with `age: null` and the timeline draws it beside the axis rather than on
 // it. Placing it at a guessed age — 15, say, because that is what the
