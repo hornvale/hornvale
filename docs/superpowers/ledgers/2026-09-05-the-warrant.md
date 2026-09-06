@@ -349,3 +349,32 @@ it from live code once Task 3 lands (regenerating would just re-derive the
 NEW provenance strings, defeating its purpose as a positive control). Left
 undeclared in `docs/generated-paths.txt` for exactly that reason: it is a
 frozen pin, not a generated artifact. · ideonomy passes / overturns: 0.
+
+---
+
+#11 [G5] — **H3 is CONFIRMED, not falsified, and the implementer's report says
+otherwise because it compared against a stale committed baseline.** · Task 2
+reported "H3 measured at 1.785075 facts/agent/tick against a 2.5 ceiling",
+implicitly against the 1.06 that `liveness.rs`'s own comment records — a jump
+that would mean seed 42 had started committing errand facts, contradicting the
+spec's §1 measurement. · **Measured both sides rather than reasoning about
+them.** Two independent probes (`possess --seed 42` with one `wait 40`, and
+again with forty single `wait`s, sweeping all 67 residents by `!why`) find
+**zero** `agent-at` renders and **zero** errand glosses. Then the decisive one:
+checked out `3aa975838` — the commit immediately before Task 2 — and ran the
+instrument there. The per-tick series is **byte-identical** and the rates are
+identical to six decimal places: first-half 1.855970, last-half 1.785075. Task
+2 moved nothing on seed 42. **H3's "and by exactly 0% on seed 42" holds
+exactly.** · **The real finding is a repo defect this nearly turned into a
+false alarm.** `tick_commit_budget.rs`'s module doc records the rate as
+"roughly flat at ~0.92-0.96", and `liveness.rs`'s hoist-golden comment records
+"1.06 … (0.96 before Task 7, 1.24 after it, 1.01 before this fix round)". The
+instrument reads **1.79-1.86**. Both prose baselines are stale by roughly 2x,
+drifted there by campaigns that raised the ceiling (1.5 -> 2.5) without
+restating the measured value beside it. A reader arriving at this number finds
+two committed explanations waiting for it and both are wrong — which is the
+exact failure that file's OWN module doc, at line 51, warns about in a
+different register ("this doc had already pre-committed to the benign
+reading"). · Decision: correct both prose baselines as part of this campaign's
+freshness sweep, with the date and the commit they were measured at, and add a
+follow-up row. Do **not** touch the ceiling. · ideonomy passes / overturns: 0.
