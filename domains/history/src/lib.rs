@@ -55,6 +55,12 @@ pub const OCC_ENDED: &str = "occ-ended";
 /// Predicate: the occupation's peak population (functional, Number).
 /// type-audit: bare-ok(identifier-text)
 pub const OCC_PEAK: &str = "occ-peak";
+/// Predicate: the integral of the occupation's live population over its
+/// tenure, in person-years (functional, Number). The Lot's draw weight.
+/// The delve-depth argument: the ledger keeps no population trajectory, so
+/// it commits the one integral nothing can re-derive.
+/// type-audit: bare-ok(identifier-text)
+pub const OCC_PERSON_YEARS: &str = "occ-person-years";
 /// Predicate: the occupation's technological horizon (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const OCC_TECH: &str = "occ-tech";
@@ -121,6 +127,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "the standard day the occupation ended, absent while alive",
     )?;
     registry.register_predicate(OCC_PEAK, true, "the occupation's peak population")?;
+    registry.register_predicate(
+        OCC_PERSON_YEARS,
+        true,
+        "the integral of the occupation's population over its tenure, in person-years",
+    )?;
     registry.register_predicate(OCC_TECH, true, "the occupation's technological horizon")?;
     registry.register_predicate(OCC_FUNCTION, true, "what the occupation was for")?;
     registry.register_predicate(
