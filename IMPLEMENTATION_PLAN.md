@@ -8,7 +8,7 @@
 **Goal**: Add deterministic epidemic phases, paired facts, Plague endings, and bake v4.
 **Success Criteria**: H-M3/H-M5 pass; paired facts round-trip; expected genesis artifacts regenerate.
 **Tests**: History phase, stream, graph boundary, emission, and byte-identity tests.
-**Status**: Not Started
+**Status**: Complete — `39087f079`, `0d37f1ef0`, `7619761e3`; final review approved
 
 ## Stage 3: Endemic read and Lot projection
 **Goal**: Add substrate-based endemic burden, causes, composite cases, and materialized outbreak outcomes.

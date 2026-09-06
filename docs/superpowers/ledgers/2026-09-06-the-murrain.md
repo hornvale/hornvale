@@ -285,6 +285,8 @@ the preregistered endemicity predictions, but retaining the proxy would make
 the campaign's central population claim false. · **Capture:** fix round 1 of
 Task 1; update the plan only if the shared-helper boundary changes.
 
+#12 [G5] — **Task 2 review closure: epidemic facts and ledger identity.** · **Ruling:** the history bake advances to `history/bake/v4`; epidemic work runs through the production epoch helper after growth and before raids; persistence is host-weighted and connected-component-wide, with fixed `attack_max` recurrence and deterministic draw accounting. Outbreak pairs use a minted outbreak-event subject while preserving the struck occupation in `Fact.place`; `struck-by` and `outbreak-deaths` join on that shared event subject, matching place, and day. The v4 keystone and generated artifacts are rebaselined without census changes. · **Why:** review found that a location envelope cannot double as event identity, that manually repeated phase tests could pass while production order drifted, and that stale fixture/prose contracts would make the new identity misleading. · **Capture:** Task 2 fix rounds and final review; source `39087f079`, artifacts `0d37f1ef0`, documentation `7619761e3`.
+
 ## Ideonomy — the G1 organon
 
 Tuple picked: operators *negation* + *abstraction-lift*; organon
