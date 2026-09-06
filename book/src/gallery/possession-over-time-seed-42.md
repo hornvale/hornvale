@@ -163,7 +163,7 @@ The Vngavngoshnga seems content.
 Time passes; the world keeps its shape.
 > look
 [room 3733133217, day 5]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
@@ -238,7 +238,7 @@ The Vngavngoshnga seems content.
 Time passes. You sense movement nearby (214 stirred).
 > look
 [room 3733133217, day 6]
-Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
+Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs

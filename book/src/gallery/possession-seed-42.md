@@ -128,11 +128,11 @@ No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 You are already out of doors.
 > go ne
 [room 3733134689, day 0.32997]
-Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
+Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > back
 [room 3733134593, day 0.49631]
-Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun, a yellow dwarf (G), stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
+Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > wait 90
 Time passes. You sense movement nearby (4623 stirred).
