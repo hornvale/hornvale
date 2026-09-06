@@ -70,10 +70,17 @@ assert.equal(readOut(), golden, "wasm opening === native transcript opening");
 // stronger check now, not the weaker one: if any of the eight ever stops
 // resolving, this fails, whereas a parse would quietly follow the prose
 // wherever it went. The exits sentence is pinned separately, just below.
-assert.match(
+//
+// The Ken (spec §4.3): openness is the default and a wall is news, so the
+// once-unconditional "No direction here is closed; the nearest ground lies
+// ..." line is gone from ordinary ground — and seed 42's flagship start is
+// ordinary ground (nothing refused, every bearing carrying ground), so the
+// opening prints no exits clause at all now. The positive pin the comment
+// above promises ("just below") is therefore this absence, not a match.
+assert.doesNotMatch(
   golden,
-  /No direction here is closed; the nearest ground lies /,
-  "opening states that nothing is closed and names the nearest ground",
+  /No direction here is closed/,
+  "the vacuous exits clause must not survive on ordinary ground",
 );
 assert.equal(send("go n"), 0);
 const stepped = readOut();

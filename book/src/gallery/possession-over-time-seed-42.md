@@ -16,12 +16,10 @@ inside a possess session; a freshly built world commits none of this.)*
 [room 3733133217, day 0]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
-No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > look
 [room 3733133217, day 0]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
-No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > !npcs
 67 NPC(s) derived this session:
   [1] Dvoashngashngo
@@ -165,7 +163,6 @@ Time passes; the world keeps its shape.
 [room 3733133217, day 5]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
-No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
 The Dvoashngashngo seems content.
 The Qvoshngavngo seems content.
@@ -240,7 +237,6 @@ Time passes. You sense movement nearby (214 stirred).
 [room 3733133217, day 6]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: The sun sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
-No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
 The Dvoashngashngo grows restless.
 The Qvoshngavngo grows restless.
@@ -315,7 +311,6 @@ Time passes. You sense movement nearby (353 stirred).
 [room 3733133217, day 7]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The sky is a low grey rain-deck. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
-No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
 The Dvoashngashngo grows restless.
 The Qvoshngavngo grows restless.
@@ -392,7 +387,6 @@ Time passes. You sense movement nearby (4628 stirred).
 [room 3733133217, day 97]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
-No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > needs
 The Dvoashngashngo grows restless.
 The Qvoshngavngo grows restless.

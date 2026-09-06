@@ -7027,8 +7027,17 @@ impl<'w> Session<'w> {
         // this band actually leads anywhere. Underground no longer shares
         // that excuse — it has real cells now, and `underground_ways_from_
         // cell` reports them.
-        let closing = if self.submerged.is_some() {
-            "Ways on: surface.".to_string()
+        // The Ken, spec §4.3: openness is the default and a wall is news, so
+        // the clause now earns its line only when something is actually
+        // closed. It used to be unconditional — "No direction here is
+        // closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW." on
+        // every ordinary outdoor turn — spending twelve words twice
+        // asserting that nothing was unusual. `closing` is `Option<String>`
+        // now and threaded into the look block the same way `presence` is
+        // below: `None` (nobody sensed / nothing to report) contributes no
+        // line at all, never a blank one.
+        let closing: Option<String> = if self.submerged.is_some() {
+            Some("Ways on: surface.".to_string())
         } else {
             let ways: Vec<String> = v
                 .locale
@@ -7040,38 +7049,69 @@ impl<'w> Session<'w> {
                     _ => None,
                 })
                 .collect();
-            // **The leading clause is conditional now, and it has to be.** It
-            // was a flat "No direction here is closed", which was true while
-            // `go` could not refuse a bearing outdoors at all. It can, at
-            // exactly the 24 cube-corner rooms (8 corners, three quads meeting at
-            // each), where one compass word names
-            // no room (`CORNER_BEARING_REFUSAL`) — so the flat claim would be a
-            // one-turn observable falsehood there, the class of defect decision
-            // 0141 exists to remove. Everywhere else the sentence is unchanged,
-            // byte for byte.
+            // The lead clause was already conditional (fix round 1): flat
+            // "No direction here is closed" was true only while `go` could
+            // not refuse a bearing outdoors at all, and it can, at exactly
+            // the 24 cube-corner rooms (8 corners, three quads meeting at
+            // each), where one compass word names no room
+            // (`CORNER_BEARING_REFUSAL`). Everywhere else the refused set is
+            // empty, and The Ken's own contribution is what happens THEN:
+            // silence, rather than restating the fixed "No direction here is
+            // closed" half.
             let refused: Vec<String> = heading_rose(&self.position())
                 .iter()
                 .zip(COMPASS_ROSE)
                 .filter(|(n, _)| n.is_none())
                 .map(|(_, c)| bearing_letter(c))
                 .collect();
-            let lead = if refused.is_empty() {
-                "No direction here is closed".to_string()
+            // **The spec's middle row — "nothing refused, some bearings lack
+            // ground" — is UNREACHABLE here, not merely unobserved, and this
+            // is a property of the two computations above rather than a
+            // prediction.** `ways` is read off `v.locale.exits`, which is
+            // `exits_of(addr)` (`windows/locale/src/lib.rs`): one `Edge`
+            // exit per compass word `heading_rose(addr)` assigns `Some`,
+            // nothing else. `refused` is read directly off the same
+            // `heading_rose(self.position())` call's `None` entries, and
+            // `addr == self.position()` here (`observable_at` passes
+            // `position` straight through to `describe_at`). So `ways` and
+            // `refused` partition the same eight words by construction:
+            // `ways` is a proper subset of the eight if and only if
+            // `refused` is non-empty. There is no room where ground is
+            // merely missing without a bearing being refused.
+            if refused.is_empty() {
+                None
             } else {
-                format!("Every direction here is open but {}", refused.join(", "))
-            };
-            format!("{lead}; the nearest ground lies {}.", ways.join(", "))
+                Some(format!(
+                    "Every direction here is open but {}; the nearest ground lies {}.",
+                    refused.join(", "),
+                    ways.join(", ")
+                ))
+            }
         };
         // The presence line (The Roll, Task 9, spec §4): its own line, after
         // the room's prose and before the ways — a room says what it looks
         // like, then who is in it, then how to leave. `None` (nobody
         // sensed) contributes no line at all, never a blank one.
-        let presence = self
-            .presence_line(how)
-            .map(|line| format!("{line}\n"))
-            .unwrap_or_default();
+        let presence = self.presence_line(how);
+        // The Ken, spec §4.3: `closing` is now ALSO frequently `None` (any
+        // ordinary outdoor room), so the footer as a whole — presence, then
+        // the exits clause — must earn its leading newline rather than
+        // always spending one, AND must never spend a trailing one either:
+        // the whole message historically never ends in "\n" (`closing`
+        // never had a trailing newline), and threading each piece through
+        // the `presence` idiom independently would have given presence one
+        // whenever it was the LAST line present — a state that could not
+        // arise before this task, because `closing` was never empty.
+        // Collecting only the lines that exist and joining them is what
+        // keeps both ends honest regardless of which of the two fired.
+        let footer_lines: Vec<String> = [presence, closing].into_iter().flatten().collect();
+        let footer = if footer_lines.is_empty() {
+            String::new()
+        } else {
+            format!("\n{}", footer_lines.join("\n"))
+        };
         Ok(format!(
-            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}\n{presence}{closing}",
+            "[room {}, day {}]\n{}{site_clause}{ruin_clause}{weft_clause}{footer}",
             v.locale.id,
             self.day.as_std_days(),
             f.prose,

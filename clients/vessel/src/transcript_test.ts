@@ -15,14 +15,20 @@ Deno.test("the outdoor nearest-ground sentence is meta, not prose (The Rhumb, F2
   // sentence. It is exit-list content wearing different words, so it must
   // stay muted monospace like the line it replaced — not fall through to
   // the serif prose class, which is what happened before this fix.
+  //
+  // The Ken (spec §4.3) made the clause conditional: openness is the
+  // default and a wall is news, so "No direction here is closed; the
+  // nearest ground lies ..." (unconditional, every ordinary turn) is gone,
+  // and this test's fixture moved to the surviving sibling that still
+  // fires — a bearing actually refused.
   const text =
-    "[room 1, day 0]\nYou stand in a test.\nNo direction here is closed; the nearest ground lies E, NW, SW.";
+    "[room 1, day 0]\nYou stand in a test.\nEvery direction here is open but SE; the nearest ground lies E, NW, SW.";
   assertEquals(splitResponse(text), [
     { cls: "casement-meta", text: "[room 1, day 0]" },
     { cls: "casement-prose", text: "You stand in a test." },
     {
       cls: "casement-meta",
-      text: "No direction here is closed; the nearest ground lies E, NW, SW.",
+      text: "Every direction here is open but SE; the nearest ground lies E, NW, SW.",
     },
   ]);
 });

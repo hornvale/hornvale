@@ -29,7 +29,7 @@ export function splitResponse(text: string): Line[] {
     const cls = inMap
       ? "casement-map" as const
       : line.startsWith("[room ") || line.startsWith("Ways on:") ||
-          line.startsWith("No direction here is closed;")
+          line.startsWith("Every direction here is open but")
       ? "casement-meta" as const
       : "casement-prose" as const;
     if (inMap && (line.trim() === "" || line.startsWith("  legend: "))) {

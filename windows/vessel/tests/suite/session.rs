@@ -24,6 +24,39 @@ fn opts() -> PossessOpts {
     }
 }
 
+/// A bearing `look` text does NOT refuse, read without depending on the
+/// (now usually silent) exits clause — The Ken, spec §4.3.
+///
+/// Ordinary ground prints no exits clause at all any more; that silence IS
+/// the room offering all eight bearings (see the unreachability argument at
+/// the `closing` construction site in `session.rs`), so this only needs to
+/// consult a refusal clause when the room prints one — the rare cube-corner
+/// case — and otherwise any of the eight is fine. Several tests in this file
+/// used to parse a direction off "the nearest ground lies ..." or a bare
+/// "Ways on: ..." token list; that text is gone from ordinary ground now, so
+/// they share this instead.
+fn an_open_bearing(look: &str) -> String {
+    let refused: Vec<String> = look
+        .lines()
+        .find(|l| l.contains("Every direction here is open but"))
+        .map(|l| {
+            l.trim_start_matches("Every direction here is open but ")
+                .split(';')
+                .next()
+                .unwrap_or("")
+                .split(", ")
+                .map(|w| w.trim().to_lowercase())
+                .filter(|w| !w.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
+        .iter()
+        .map(|w| w.to_string())
+        .find(|w| !refused.contains(w))
+        .expect("a room cannot refuse all eight bearings")
+}
+
 #[test]
 fn possession_opens_with_a_focalized_description() {
     let world = seam_world();
@@ -45,20 +78,7 @@ fn go_moves_and_back_retraces() {
         Turn::Out(t) => t,
         _ => panic!("look must not release"),
     };
-    // Exact, word-boundary token match against the "Ways on: NE, NW, S."
-    // line — a substring check (e.g. `ways.contains("N")`) would false-
-    // positive "n" against "NE"/"NW" whenever neither bare "N" nor "S" is
-    // actually offered.
-    let tokens: Vec<String> = ways
-        .split([' ', ',', '.'])
-        .filter(|t| !t.is_empty())
-        .map(str::to_lowercase)
-        .collect();
-    let dir = ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
-        .iter()
-        .find(|d| tokens.iter().any(|t| t == *d))
-        .copied()
-        .expect("some way on");
+    let dir = an_open_bearing(&ways);
     match s.handle(&format!("go {dir}")) {
         Turn::Out(t) => assert!(t.contains("[room ")),
         _ => panic!("go must not release"),
@@ -247,18 +267,7 @@ fn knows_grows_as_you_walk() {
         Turn::Out(t) => t,
         _ => panic!(),
     };
-    // Exact, word-boundary token match — see `go_moves_and_back_retraces`'s
-    // comment: a substring check false-positives "n" against "NE"/"NW".
-    let tokens: Vec<String> = ways
-        .split([' ', ',', '.'])
-        .filter(|t| !t.is_empty())
-        .map(str::to_lowercase)
-        .collect();
-    let dir = ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
-        .iter()
-        .find(|d| tokens.iter().any(|t| t == *d))
-        .copied()
-        .expect("some way on");
+    let dir = an_open_bearing(&ways);
     s.handle(&format!("go {dir}"));
     assert!(
         s.knowledge().0.len() > before,
@@ -517,40 +526,66 @@ fn run_drives_a_script_deterministically() {
     assert!(text.contains("in the lands of"));
 }
 
-/// The room says "the nearest ground lies SE, N, SW." — every one of those
-/// tokens must be a command you can actually type. This is the exact bug:
-/// the parser already accepted them, but the verb dispatch never reached it.
+/// The Ken: openness is the default and a wall is news. On ordinary ground
+/// — nothing refused, every bearing carrying ground — the clause said
+/// "No direction here is closed; the nearest ground lies N, NE, E, SE, S,
+/// SW, W, NW.", which spends twelve words twice asserting that nothing is
+/// unusual. It now says nothing at all.
+#[test]
+fn ordinary_ground_says_nothing_about_its_exits() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let look = match s.handle("look") {
+        Turn::Out(t) => t,
+        _ => panic!("look must not release"),
+    };
+    assert!(
+        !look.contains("No direction here is closed"),
+        "the vacuous clause survived: {look:?}"
+    );
+    assert!(
+        !look.contains("the nearest ground lies N, NE, E, SE, S, SW, W, NW"),
+        "the all-eight enumeration survived: {look:?}"
+    );
+}
+
+/// Every bearing a room implies is a way out must be a command you can
+/// actually type. This is the exact bug: the parser already accepted them,
+/// but the verb dispatch never reached it.
+///
+/// **Re-pointed by The Ken.** The room used to print "the nearest ground
+/// lies SE, N, SW." on every ordinary turn, and this test read the token
+/// list straight off that sentence. Spec §4.3 makes the clause silent on
+/// ordinary ground (nothing refused, every bearing carrying ground) — there
+/// is nothing left to parse a list out of there. But "ordinary ground" is
+/// exactly the row where every one of the eight compass words IS a real way
+/// out (that's what makes the clause safe to omit — see the unreachability
+/// argument at the `closing` construction site in `session.rs`), so the
+/// same invariant is tested directly against all eight rather than against
+/// a vanished list. The guard below confirms the fixture is still ordinary
+/// ground and not one of the 24 cube-corner rooms, where this blanket walk
+/// would be unsound.
 #[test]
 fn every_printed_way_out_is_a_command_you_can_type() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
-    let ways = match s.handle("look") {
+    let look = match s.handle("look") {
         Turn::Out(t) => t,
         _ => panic!("look must not release"),
     };
-    let line = ways
-        .lines()
-        .find(|l| l.contains("the nearest ground lies"))
-        .expect("a room names its nearest ground")
-        .to_string();
-    let tokens: Vec<String> = line
-        .split("lies ")
-        .nth(1)
-        .expect("the sentence names a bearing list")
-        .trim_end_matches('.')
-        .split(',')
-        .map(|t| t.trim().to_lowercase())
-        .filter(|t| !t.is_empty())
-        .collect();
-    assert!(!tokens.is_empty(), "no exits to test: {line}");
-    for t in tokens {
-        let out = match s.handle(&t) {
+    assert!(
+        !look.contains("Every direction here is open but"),
+        "fixture assumption failed: the flagship start refuses a bearing, \
+         so this test's blanket eight-word walk needs a different room: {look:?}"
+    );
+    for t in ["n", "ne", "e", "se", "s", "sw", "w", "nw"] {
+        let out = match s.handle(t) {
             Turn::Out(o) => o,
             _ => panic!("a direction must not release"),
         };
         assert!(
             !out.contains("No verb"),
-            "the room printed '{t}' as a way out but the parser rejects it: {out}"
+            "an ordinary-ground bearing must be typeable: '{t}' was rejected: {out}"
         );
         s.handle("back");
     }
@@ -583,12 +618,24 @@ fn a_genuine_non_verb_still_reports_itself() {
 
 /// The sky follows the walker. While weather was resolved from the flagship
 /// settlement, a possession saw the capital's sky no matter how far it walked.
+///
+/// **Re-pointed by The Ken.** This used to follow "whatever ground this room
+/// actually names" by parsing the (now-silent-on-ordinary-ground) exits
+/// clause — spec §4.3 — which left `dir` permanently `None` and the walker
+/// standing still for the whole loop: it still happened to pass, because the
+/// sky varies with elapsed time too, but it was no longer testing what its
+/// own name claims. A fixed south-westward bias (matching
+/// `the_water_column_is_a_place_you_can_be`'s own technique) makes real
+/// progress instead — every bearing is a real way out on ordinary ground —
+/// and `rooms.len() > 1` is the direct check that the walker actually moved,
+/// so this cannot go quietly vacuous the same way twice.
 #[test]
 fn the_sky_follows_the_walker() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let mut skies = std::collections::BTreeSet::new();
-    for _ in 0..40 {
+    let mut rooms = std::collections::BTreeSet::new();
+    for dir in std::iter::repeat(["w", "nw", "sw"]).flatten().take(40) {
         let out = match s.handle("look") {
             Turn::Out(t) => t,
             _ => panic!("look must not release"),
@@ -596,18 +643,13 @@ fn the_sky_follows_the_walker() {
         if let Some(l) = out.lines().find(|l| l.contains("The sky is")) {
             skies.insert(l.to_string());
         }
-        // Follow whatever ground this room actually names.
-        let dir = out
-            .lines()
-            .find(|l| l.contains("the nearest ground lies"))
-            .and_then(|l| l.split("lies ").nth(1))
-            .and_then(|l| l.split(',').next())
-            .map(|d| d.trim().trim_end_matches('.').to_lowercase());
-        if let Some(d) = dir {
-            s.handle(&d);
+        if let Some(l) = out.lines().find(|l| l.starts_with("[room ")) {
+            rooms.insert(l.to_string());
         }
+        s.handle(dir);
         s.handle("wait 3");
     }
+    assert!(rooms.len() > 1, "the walker never moved: {rooms:?}");
     assert!(
         skies.len() > 1,
         "the sky never changed across a long walk: {skies:?}"
@@ -746,20 +788,20 @@ fn the_water_column_is_a_place_you_can_be() {
     // On the surface: afloat on open water, not standing in the floor's biome.
     assert!(afloat.contains("Open water —"), "{afloat}");
 
-    // A direction this room ACTUALLY offers, read off the surface `look`
-    // before diving. Hardcoding `n` was wrong and The Tense exposed it: the
-    // mesh is triangular, every room offers one of two exit triads, and the
-    // exit check runs BEFORE the submersion rule — so on a room without `n`
-    // the reply is "No way n from here." and the lateral-refusal claim below
-    // is never reached. The test would have gone green on a refusal it was not
-    // testing for, which is worse than the red.
-    let lateral_dir = afloat
-        .lines()
-        .find(|l| l.contains("the nearest ground lies"))
-        .and_then(|l| l.trim_end_matches('.').split("lies ").nth(1))
-        .and_then(|w| w.split(", ").next())
-        .expect("open water reports its ways")
-        .to_lowercase();
+    // A direction this room ACTUALLY offers. Hardcoding `n` was wrong and The
+    // Tense exposed it: the exit check runs BEFORE the submersion rule, so on
+    // a room that refuses `n` the reply is the corner refusal and the
+    // lateral-refusal claim below is never reached — a green run on a
+    // refusal it was not testing for, worse than a red one.
+    //
+    // **Re-pointed by The Ken (spec §4.3).** The technique used to read the
+    // direction off "the nearest ground lies ..."; that clause is silent on
+    // ordinary ground now, and open water is ordinary ground (unaffected by
+    // Task 2 — only the exits clause's own conditionality changed, not what
+    // `go` accepts). `an_open_bearing` is the shared fallback: it consults a
+    // refusal clause when the room prints one (the rare cube-corner case The
+    // Tense's own worry was about), and otherwise any of the eight is fine.
+    let lateral_dir = an_open_bearing(&afloat);
 
     // Down: a different place at the same coordinate.
     let under = match s.handle("dive") {
