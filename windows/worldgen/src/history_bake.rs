@@ -7022,6 +7022,12 @@ mod tests {
             );
         }
         assert_eq!(bake.communities[indices[3]].population, untouched);
+        // The epoch driver invokes raids only after this epidemic pass; the
+        // follow-on pass must not manufacture another outbreak or alter the
+        // already-emitted epidemic event set.
+        let outbreak_count = bake.outbreaks.len();
+        bake.raid_phases(&[indices[0]], &era, 0.0);
+        assert_eq!(bake.outbreaks.len(), outbreak_count);
 
         let victim = bake.open(
             people,
