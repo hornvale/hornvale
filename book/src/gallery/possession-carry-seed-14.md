@@ -2,11 +2,9 @@
 
 *(This transcript is frozen. It is the only gallery page that types the
 custody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it
-is the campaign's thesis end to end: a fork off the threshold gives this
-dwelling three ways in, and the key is picked up beside a loom in the
-loomroom, one aperture from the door — then carried back through the
-threshold and into a sibling chamber, the store, refused by a shut lid, and
-then used to open that chest. Two refusals are the evidence, not
+is the campaign's thesis end to end: a key is picked up beside a loom two
+chambers into a village dwelling, carried one room further, refused by a shut
+lid, and then used to open that chest. Two refusals are the evidence, not
 the noise. `take a key` in the very first room answers "You see no a key
 here." — that room composes none, since The Custodian moved the key pattern
 off `Role::Threshold`, the one role every built structure has — which is

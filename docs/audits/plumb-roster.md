@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 320 |
+| Files parsed | 322 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -31,9 +31,9 @@ naming them explicitly (`plumb report kernel cli`).
 | … file-level | 708 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 34 |
-| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 172 |
-| Excluded: declared non-quantity type | 507 |
-| **Every `const` the walk touched** | **1430** |
+| Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
+| Excluded: declared non-quantity type | 508 |
+| **Every `const` the walk touched** | **1432** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
@@ -138,6 +138,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `[Quality; …]` | 1 |
 | `[Rcc8; …]` | 1 |
 | `[ResourceAxis; …]` | 1 |
+| `[Rule; …]` | 1 |
 | `[RuleKind; …]` | 3 |
 | `[Rung; …]` | 1 |
 | `[Stratum; …]` | 1 |
@@ -216,13 +217,13 @@ counts are already the Coverage table above. 40 finding(s).
 | `windows/vessel/src/liveness.rs:4723` | `HUNGER` | per-species | a creature's own metabolism sets how fast hunger accrues -- currently one authored rate for every species, the same shape FATIGUE_RISE was before its per-species conversion |
 | `windows/vessel/src/liveness.rs:5310` | `LONELY_SCALE_HOPS` | per-species | a creature's own territorial range and wander tolerance sets how many hops from home feel isolating -- currently one distance for every species |
 | `windows/vessel/src/purview.rs:19` | `PURVIEW_RADIUS` | per-species | a creature's own senses set its purview radius -- doc states explicitly: the seam for a per-species radius is Body::perception EXP-3, untouched here |
-| `windows/vessel/src/session.rs:513` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
-| `windows/vessel/src/session.rs:523` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:516` | `GRIEVANCE_GAIN` | per-individual | how readily one NPC's grievance accumulates from a slight is a personality trait -- currently one gain for every NPC, not derived from Lineage |
+| `windows/vessel/src/session.rs:526` | `HOSTILITY_THRESHOLD` | per-individual | how many net provokes it takes before one NPC turns hostile is a personality trait -- currently one threshold for every NPC, not derived from Lineage |
 
 ## The contested middle
 
 362 of the 751 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 134 of the 320 files parsed —
+the kind-adjacency markers above, across 134 of the 322 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 362 of them are declared.
 
