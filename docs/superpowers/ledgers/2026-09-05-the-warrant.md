@@ -378,3 +378,30 @@ different register ("this doc had already pre-committed to the benign
 reading"). · Decision: correct both prose baselines as part of this campaign's
 freshness sweep, with the date and the commit they were measured at, and add a
 follow-up row. Do **not** touch the ceiling. · ideonomy passes / overturns: 0.
+
+---
+
+#12 [G5] — **Task 2 approved (spec ✅, 0 Critical, 0 Important, 5 Minor).** ·
+The review re-derived the task's central claims from a live ledger built in a
+throwaway probe outside the repo rather than reading the report: 290 steps,
+138 errand facts, 138 provenance run-starts, zero per-entity mismatch, zero
+double-commits, and every errand fact's object equal to the PREVIOUS
+`agent-at` object — the origin, confirmed rather than argued. A→B→A was
+observed live (`comfort, home, water-blind, comfort, home, comfort,
+water-known` on one entity), so an interrupted-and-resumed errand does
+re-commit. · **The Step-3 override is upheld and is load-bearing.** Within a
+tick, `st.errand` carries; across ticks, `latest_committed_errand` re-derives
+from the frozen ledger, and `Session::wait` commits the walk's facts into that
+ledger before the next tick passes it back — no gap between the two. The case
+occurs: one entity's `comfort` run spans days 1.43 to 2.98, straddling two
+wait boundaries, and would have re-committed once per tick under the brief's
+`None` seed. Two probe runs byte-identical. · The 108→132 golden is additive,
+verified from the diff mechanically (`grep -c '^-'` over the golden hunks
+returns 0; the whole `liveness.rs` diff removes nine lines, all accounted
+for), and corroborated independently by `plumb-roster.md` moving `&str`
+265→266 — exactly one new const. · Two Minors are carried into Task 3 rather
+than deferred, because Task 3 edits the same file: the stale "the five" roster
+message at `:13600`, and `latest_committed_errand` lacking the `day <= t`
+filter its sibling carries (safe today only through an invariant documented in
+a *different* function, which is the kind of safety that stops being safe
+quietly). · ideonomy passes / overturns: 0.
