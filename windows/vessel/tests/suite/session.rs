@@ -628,8 +628,9 @@ fn the_turn_header_carries_no_facet_id_and_no_decimal_day() {
 }
 
 /// Issue one command and unwrap the turn's text — none of this file's turns
-/// releases the possession.
-fn say(session: &mut Session<'_>, cmd: &str) -> String {
+/// releases the possession. `pub(crate)`: The Ken, Task 5 reuses this from
+/// `the_roll.rs`, a sibling module in the same `suite` binary.
+pub(crate) fn say(session: &mut Session<'_>, cmd: &str) -> String {
     match session.handle(cmd) {
         Turn::Out(t) | Turn::Released(t) => t,
     }
@@ -655,8 +656,9 @@ fn presence_nouns(here: &str) -> Vec<String> {
 /// Leaks the world to get a `'static` session out of a zero-argument helper
 /// — acceptable in test code, and the shape every caller of this function
 /// wants: `let (mut session, _) = open_staged_dragons_session();` with
-/// nothing to keep alive.
-fn open_staged_dragons_session() -> (Session<'static>, String) {
+/// nothing to keep alive. `pub(crate)`: The Ken, Task 5 reuses this from
+/// `the_roll.rs`, a sibling module in the same `suite` binary.
+pub(crate) fn open_staged_dragons_session() -> (Session<'static>, String) {
     let world: &'static World = Box::leak(Box::new(seam_world()));
     let staged = PossessOpts {
         tableau: Some(Tableau::new().with_cast(["white-dragon", "black-dragon", "red-dragon"])),

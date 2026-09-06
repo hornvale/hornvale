@@ -1480,8 +1480,11 @@ fn derive_herd_bodies(
 /// The body among `bodies` that `needle` (already lowercased-and-compared
 /// case-insensitively) names — the shared resolution three matchers
 /// (`why`, `npc_grievance`, `colocated_npc`) apply to a typed label. An
-/// EXACT case-insensitive match wins outright; failing that, the LONGEST
-/// label merely CONTAINING `needle` wins.
+/// EXACT case-insensitive match wins outright (unchanged, The Roll, Task
+/// 10); failing that, `Ok(Some(_))` names the single unambiguous substring
+/// winner, `Ok(None)` means nothing here matches at all, and `Err(_)` names
+/// every candidate an ambiguous needle matched (The Ken, Task 5) — a
+/// caller must not silently pick one.
 ///
 /// **The Roll, Task 10.** Before this, each site took the first roster-order
 /// substring hit, which let a shorter resident's name be shadowed by a
@@ -1496,22 +1499,74 @@ fn derive_herd_bodies(
 /// full, but an exact query for either must still win outright — the exact
 /// check above is what guarantees that).
 ///
+/// **The Ken, Task 10 -> Task 5.** The Roll's `max_by_key` picked a winner
+/// from ANY number of substring matches, with no check that the winner had
+/// anything to do with the others — so three dragons sharing the suffix
+/// "-dragon" resolved `examine dragon` to whichever was longest, confidently
+/// and wrongly. The winner earns the pick only when it is a strict
+/// EXTENSION of every other match — every other match's label is itself a
+/// substring of the winner's ("goblin" is a substring of "goblin chief," so
+/// "goblin chief" wins over an ambiguous short query naming both). When the
+/// longest match does NOT contain every other match ("black-dragon" does
+/// not contain "red-dragon"), the needle is genuinely ambiguous and every
+/// match is returned as a candidate, in `bodies` order, rather than one
+/// being silently chosen.
+///
 /// MUTATION THIS MUST FAIL AGAINST: drop the exact-match branch and fall
-/// straight to `.find()` (first roster-order substring hit) —
+/// straight to the first roster-order substring hit —
 /// `the_roll.rs::a_prefix_name_does_not_shadow_a_longer_one` reddens.
-fn body_by_needle<'a>(bodies: &[&'a Body], needle: &str) -> Option<&'a Body> {
+/// MUTATION THIS MUST ALSO FAIL AGAINST: drop the extension check and
+/// always return the longest substring match — `the_roll.rs::
+/// an_ambiguous_needle_is_refused_and_names_its_candidates` reddens.
+fn body_by_needle<'a>(
+    bodies: &[&'a Body],
+    needle: &str,
+) -> Result<Option<&'a Body>, Vec<&'a Body>> {
     let needle = needle.to_lowercase();
-    let exact = bodies
+    if let Some(exact) = bodies.iter().find(|n| n.label.to_lowercase() == needle) {
+        return Ok(Some(exact));
+    }
+    let matches: Vec<&Body> = bodies
         .iter()
-        .find(|n| n.label.to_lowercase() == needle)
-        .copied();
-    exact.or_else(|| {
-        bodies
-            .iter()
-            .filter(|n| n.label.to_lowercase().contains(&needle))
-            .max_by_key(|n| n.label.len())
-            .copied()
-    })
+        .filter(|n| n.label.to_lowercase().contains(&needle))
+        .copied()
+        .collect();
+    match matches.len() {
+        0 => Ok(None),
+        1 => Ok(Some(matches[0])),
+        _ => {
+            // `max_by_key` returns the LAST of equal-length ties, same as
+            // The Roll's original `.max_by_key` here — no behaviour change
+            // for the case that already had a unique longest match.
+            let winner = *matches
+                .iter()
+                .max_by_key(|b| b.label.len())
+                .expect("matches is non-empty in this arm");
+            let winner_lc = winner.label.to_lowercase();
+            let winner_is_extension = matches
+                .iter()
+                .all(|b| winner_lc.contains(&b.label.to_lowercase()));
+            if winner_is_extension {
+                Ok(Some(winner))
+            } else {
+                Err(matches)
+            }
+        }
+    }
+}
+
+/// The refusal `why`, `colocated_npc`'s callers, and (indirectly) `examine`
+/// answer with when a typed needle names more than one candidate with no
+/// single winner (The Ken, Task 5) — naming what would have worked instead
+/// of silently guessing one, per the campaign's own §4.5.
+/// type-audit: bare-ok(identifier-text: typed)
+fn ambiguous_needle_refusal(typed: &str, candidates: &[&Body]) -> String {
+    let labels: Vec<&str> = candidates.iter().map(|b| b.label.as_str()).collect();
+    format!(
+        "'{typed}' could mean more than one thing here: {}. Be more specific.",
+        crate::chamber_prose::listed(&labels)
+            .expect("an ambiguous needle always carries at least two candidates")
+    )
 }
 
 impl<'w> Session<'w> {
@@ -3440,9 +3495,15 @@ impl<'w> Session<'w> {
     /// one answer.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
     pub fn would_turn_hostile(&self, who: &str) -> bool {
-        self.colocated_npc(who)
-            .map(|npc| grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD)
-            .unwrap_or(false)
+        // An ambiguous `who` (The Ken, Task 5) answers `false` — the same
+        // conservative default an unresolved `who` already got, and for the
+        // same reason this method's own doc gives for narrowing to
+        // co-located NPCs at all: `false` about a creature not cleanly
+        // reached is the safe answer, never a guess among candidates.
+        match self.colocated_npc(who) {
+            Ok(Some(npc)) => grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD,
+            Ok(None) | Err(_) => false,
+        }
     }
 
     /// A named NPC's current grievance fold toward the player (test
@@ -3454,16 +3515,28 @@ impl<'w> Session<'w> {
     /// Roll, Task 10: exact label match first, then the longest containing
     /// label — never merely the first substring hit in roster order);
     /// `None` if no derived NPC matches `who`.
+    ///
+    /// **An ambiguous needle also answers `None` (The Ken, Task 5).** This
+    /// accessor's return type carries a number or nothing, with no room for
+    /// a candidate list, so `None` is the honest signal this signature can
+    /// give — the alternative, silently folding one of the ambiguous
+    /// candidates' own grievance, is exactly the wrong answer §4.5 exists
+    /// to close. `why` and `colocated_npc`'s callers get the textual
+    /// refusal this type cannot carry.
     /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
     pub fn npc_grievance(&self, who: &str) -> Option<f64> {
         let others = other_bodies(self.roster.bodies(), self.roster.driven());
-        who.parse::<usize>()
+        let by_handle = who
+            .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .copied()
-            .or_else(|| body_by_needle(&others, who))
-            .map(|npc| grievance(&self.ledger, npc.entity))
+            .copied();
+        let npc = match by_handle {
+            Some(npc) => Some(npc),
+            None => body_by_needle(&others, who).unwrap_or(None),
+        };
+        npc.map(|npc| grievance(&self.ledger, npc.entity))
     }
 
     /// The session's owned, evolving ledger, serialized — a determinism
@@ -9654,6 +9727,33 @@ impl<'w> Session<'w> {
         if let Some(n) = prose.nouns.iter().find(|n| n.matches(&wanted)) {
             return Turn::Out(n.datum.clone());
         }
+        // A CO-LOCATED CREATURE is resolved through the same ambiguity-safe
+        // rule `why`/`colocated_npc`/`npc_grievance` share (`body_by_needle`,
+        // The Roll Task 10 -> The Ken Task 5), BEFORE the chart legend's
+        // plain word match below ever sees it. The legend's own `.find()`
+        // has no ambiguity check at all — it takes the first entry any
+        // shared WORD matches — so three same-suffix creatures sharing the
+        // word "dragon" ("black-dragon"/"red-dragon") resolved silently to
+        // whichever came first, confidently and wrongly (spec §4.5, #12b).
+        //
+        // `Ok(None)` (this needle names no co-located creature) falls
+        // through to the legend match below UNCHANGED — a creature charted
+        // but not currently co-located, a furnishing, or a ground mark all
+        // resolve exactly as before this task.
+        let colocated = self.colocated_npcs();
+        match body_by_needle(&colocated, &wanted) {
+            Ok(Some(npc)) => {
+                let held = self.carried_by(npc.entity);
+                let nouns: Vec<&str> = held.iter().map(|(_, noun)| *noun).collect();
+                return Turn::Out(crate::purview::creature_datum(
+                    &npc.label,
+                    &npc.species,
+                    &nouns,
+                ));
+            }
+            Ok(None) => {}
+            Err(candidates) => return Turn::Out(ambiguous_needle_refusal(noun, &candidates)),
+        }
         // Drawn through the CALLER's eyes (The Deed, Task 6). Nothing
         // observable turns on it here — the legend carries nouns and datums,
         // not colour — but `!examine` claiming an objective read while
@@ -9739,19 +9839,30 @@ impl<'w> Session<'w> {
     /// handle is deliberately NOT the NPC's `EntityId` (The Signet) — it is
     /// a short-lived, session-local position a player can type back,
     /// resolved fresh from `other_bodies` on every call.
+    ///
+    /// **An ambiguous needle is refused, not guessed (The Ken, Task 5).** A
+    /// handle number resolves before `body_by_needle` is even consulted, so
+    /// only a typed label can be ambiguous; when it is, this names every
+    /// candidate rather than silently recounting one of them.
     fn why(&self, who: &str) -> String {
         let who = who.trim();
         if who.is_empty() {
             return "Why what? Name an NPC (label or number — see 'npcs').".to_string();
         }
         let others = other_bodies(self.roster.bodies(), self.roster.driven());
-        let target = who
+        let by_handle = who
             .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             .and_then(|n| others.get(n - 1))
-            .copied()
-            .or_else(|| body_by_needle(&others, who));
+            .copied();
+        let target = match by_handle {
+            Some(npc) => Some(npc),
+            None => match body_by_needle(&others, who) {
+                Ok(npc) => npc,
+                Err(candidates) => return ambiguous_needle_refusal(who, &candidates),
+            },
+        };
         let Some(npc) = target else {
             return format!("No one here answers to '{who}' (see 'npcs').");
         };
@@ -9971,6 +10082,26 @@ impl<'w> Session<'w> {
     /// this clause prints is already an examinable noun; it merely does not
     /// promise WHICH of the group it names, which is `body_by_needle`'s
     /// ambiguity to answer, not this line's.
+    ///
+    /// **The count clause drops "wild" too (controller ruling, ledger #7).**
+    /// Task 4 dropped the article from a WILD label (`derive_bodies_at`,
+    /// `derive_wild_herds`), so a singleton group renders bare
+    /// (`labels[0]` above, just the label) — but this clause still read
+    /// `"{n} wild {species}"`, mixing a bare singleton with an
+    /// article-and-adjective count form in the same "Here:" line
+    /// ("…; 2 wild otyugh; owlbear; …"). Before Task 4 both forms carried
+    /// "wild" uniformly (`"a wild X"` / `"N wild X"`); Task 4 is what broke
+    /// that uniformity, so closing it is this campaign's, not a
+    /// pre-existing defect. This clause still names the species
+    /// (unpluralised — the existing convention) and the count; only the
+    /// adjective "wild" is gone, matching what a singleton already renders
+    /// since Task 4.
+    ///
+    /// **Declined alternative (ledger #7): teaching the RESOLVER to strip a
+    /// leading article off a wild label so this line could display one
+    /// over a bare label.** That would reopen the display/label split §4.4
+    /// exists to close, so this line adapts to the label's own convention
+    /// instead of the label growing a second, display-only shape.
     fn presence_line(&self, how: Perceiving) -> Option<String> {
         let roll = self.perceived_npcs(how);
         if roll.is_empty() {
@@ -10013,7 +10144,7 @@ impl<'w> Session<'w> {
                 } else if labels.len() == 1 {
                     labels[0].to_string()
                 } else {
-                    format!("{} wild {species}", labels.len())
+                    format!("{} {species}", labels.len())
                 }
             })
             .collect();
@@ -10050,13 +10181,20 @@ impl<'w> Session<'w> {
     ///
     /// The unplaced row of `sensed_npcs`' table holds here as everywhere: a
     /// creature the embedding could not place is sensed, so it stays provokable.
-    fn colocated_npc(&self, who: &str) -> Option<&Body> {
+    ///
+    /// **`Err` names an ambiguous needle's candidates rather than picking one
+    /// (The Ken, Task 5)** — [`Self::act_on_disposition`] surfaces it as text;
+    /// [`Self::would_turn_hostile`] cannot (its own return is a bare `bool`)
+    /// and treats it the same as `Ok(None)`, which its own doc says is the
+    /// conservative, honest default.
+    fn colocated_npc(&self, who: &str) -> Result<Option<&Body>, Vec<&Body>> {
         let here = self.sensed_npcs(self.sighting().as_ref());
         let who = who.trim();
         if who.is_empty() {
-            return here.into_iter().next();
+            return Ok(here.into_iter().next());
         }
-        who.parse::<usize>()
+        let by_handle = who
+            .parse::<usize>()
             .ok()
             .filter(|n| *n >= 1)
             // `.copied()`: `other_bodies` (now an owned `Vec<&Body>`, The Hand,
@@ -10069,11 +10207,14 @@ impl<'w> Session<'w> {
                     .get(n - 1)
                     .copied()
             })
-            .filter(|npc| here.iter().any(|h| h.entity == npc.entity))
+            .filter(|npc| here.iter().any(|h| h.entity == npc.entity));
+        match by_handle {
+            Some(npc) => Ok(Some(npc)),
             // The Roll, Task 10: [`body_by_needle`] — exact label match
             // first, then the longest containing label — never merely the
             // first substring hit in roster order.
-            .or_else(|| body_by_needle(&here, who))
+            None => body_by_needle(&here, who),
+        }
     }
 
     /// Commit the first player-authored fact: a signed disposition shift on
@@ -10092,8 +10233,14 @@ impl<'w> Session<'w> {
     /// return value rather than assuming success, so the player is never
     /// told a mark landed when the ledger disagrees.
     fn act_on_disposition(&mut self, who: &str, sign: i8) -> Turn {
-        let Some(npc) = self.colocated_npc(who) else {
-            return Turn::Out("There is no one here to provoke or soothe.".to_string());
+        let npc = match self.colocated_npc(who) {
+            Ok(Some(npc)) => npc,
+            Ok(None) => {
+                return Turn::Out("There is no one here to provoke or soothe.".to_string());
+            }
+            // The Ken, Task 5: name the candidates rather than silently
+            // provoking/soothing one of them.
+            Err(candidates) => return Turn::Out(ambiguous_needle_refusal(who, &candidates)),
         };
         let entity = npc.entity;
         let label = npc.label.clone();

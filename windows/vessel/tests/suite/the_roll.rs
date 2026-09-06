@@ -5,6 +5,7 @@ use hornvale_settlement::village_info;
 use hornvale_vessel::{PossessOpts, Session};
 
 use crate::common;
+use crate::session::{open_staged_dragons_session, say};
 
 /// One seed's reading for M1: does a fresh flagship possession have anyone in
 /// `sensed.present` on its first look, and could it — is the home
@@ -1387,7 +1388,7 @@ fn the_count_is_the_sensed_roster() {
 }
 
 /// The wild-group render branch (`presence_line`'s `resident == false` arm —
-/// collapse to a bare `"{species}"` for one, `"{n} wild {species}"` for
+/// collapse to a bare `"{species}"` for one, `"{n} {species}"` for
 /// more) and the multi-group join/ordering (resident group first, `"; "`
 /// between groups), in one test (review fix round 1 of Task 9).
 ///
@@ -1405,6 +1406,14 @@ fn the_count_is_the_sensed_roster() {
 /// intent survives unchanged: a lone wild body is still ONE un-joined
 /// clause following the resident group, not merged into it and not
 /// pluralised — only the literal expected string moved.
+///
+/// **The plural form lost its own "wild" too (controller ruling, ledger
+/// #7, The Ken, Task 5).** Task 4's article drop left the singular form
+/// bare (`{species}`) while the plural form still read `"{n} wild
+/// {species}"`, so one "Here:" line mixed both forms — a bare singleton
+/// beside a "wild"-qualified group. This campaign introduced that
+/// inconsistency, so it is this task's to close: the count clause now
+/// reads `"{n} {species}"`, uniformly bare.
 ///
 /// **No natural seed conveniently isolates ONE wild group beside
 /// residents at a fresh look**, so this test builds the scene by hand
@@ -1543,8 +1552,8 @@ fn a_wild_group_collapses_and_follows_the_residents() {
     let line = here_line(&looked).unwrap_or_else(|| panic!("no presence line: {looked:?}"));
     assert_eq!(
         line,
-        format!("Here: {resident_label}; 2 wild {wild_species}."),
-        "two wild bodies of one species must collapse to `{{n}} wild          {{species}}`, count first, the species word unpluralised"
+        format!("Here: {resident_label}; 2 {wild_species}."),
+        "two wild bodies of one species must collapse to `{{n}} {{species}}`          (no \"wild\" — controller ruling, ledger #7), count first, the          species word unpluralised"
     );
     assert_eq!(
         line.matches("; ").count(),
@@ -1760,5 +1769,24 @@ fn a_prefix_name_does_not_shadow_a_longer_one() {
         why.starts_with("Tosk:\n"),
         "'why tosk' must resolve the resident actually named 'Tosk', not \
          'Toska' merely because 'toska' also contains 'tosk': {why:?}"
+    );
+}
+
+/// The Ken: with three dragons present, `examine dragon` answered
+/// "black-dragon — a black-dragon of this world, alive and moving." — the
+/// longest-label tiebreak silently picking one of three. Confidently wrong
+/// with no signal to the player is the worst available behaviour; refusing
+/// and naming the candidates is both honester and more useful.
+#[test]
+fn an_ambiguous_needle_is_refused_and_names_its_candidates() {
+    let (mut session, _) = open_staged_dragons_session();
+    let answer = say(&mut session, "examine dragon");
+    assert!(
+        !answer.contains("alive and moving"),
+        "an ambiguous needle resolved to one creature: {answer:?}"
+    );
+    assert!(
+        answer.contains("black-dragon") && answer.contains("red-dragon"),
+        "a refusal must name what would have worked: {answer:?}"
     );
 }
