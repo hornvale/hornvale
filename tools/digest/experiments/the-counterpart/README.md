@@ -287,3 +287,16 @@ outcomes per arm between the two canonical runs, preserving candidate objects
 separately; compare timings as host/preparation observations, not reusable
 verdicts. Each run's stage receipt must identify the actual tested merge product
 and complete phase results. A green assay does not replace the campaign gate.
+
+## Results and retained full12 replays
+
+The reviewed result is in [RESULTS.md](RESULTS.md). It keeps the original
+eleven-arm denominator separate from the reserved singleton and final
+twelve-arm aggregate. The primary and independent full12 dossiers are
+archived under `evidence/primary-full12-replay/` and
+`evidence/independent-full12-replay/`; their receipts retain dependency
+preparation metadata, source identities and invocation provenance while
+excluding checkout and target trees. The frozen `run.summarize` check accepts
+both dossiers, and `evidence/full12-replay-comparison.json` records the
+per-arm source and outcome comparison. Candidate outputs remain separate and
+never provide checker authority.

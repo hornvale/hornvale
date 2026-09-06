@@ -19,4 +19,6 @@ Detailed plan: [implementation plan](docs/superpowers/plans/2026-09-05-the-count
 **Success Criteria**: Original misses retained; primary/comparative results separated; reviewed final stage/census receipts and G6 package ready.
 **Tests**: Reserved real-source challenge, Mac/Linux CLI qualification, independent replay, focused final checks and canonical stage gate.
 **Status**: In Progress
-Independent reserved authorship is complete; Stage2 accepted and formal qualification is next.
+Independent reserved authorship, full12 primary/independent replay, comparison
+and narrative package are complete. Stage3 gate, whole-branch review, census
+and G6 remain pending.

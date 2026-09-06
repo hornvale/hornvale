@@ -1,0 +1,647 @@
+{
+  "all_candidates_equal": true,
+  "all_outcomes_equal": true,
+  "all_source_identities_equal": true,
+  "candidate_equality": {
+    "base": true,
+    "collision-joint": true,
+    "lender-joint": true,
+    "reserved-inferred-owner": true,
+    "safe-joint": true,
+    "settlement-collision": true,
+    "settlement-lender-rename": true,
+    "settlement-safe": true,
+    "thing-joint-claim": true,
+    "thing-safe-addition": true,
+    "thing-unusual-borrow": true,
+    "unusual-joint": true
+  },
+  "environment": {
+    "independent_host": "Linux-6.8.4-2-pve-x86_64-with-glibc2.36",
+    "independent_tool_environment": {
+      "LANG": "en_US.UTF-8",
+      "PATH": "/home/nathan/.elan/bin:/home/nathan/.local/bin:/usr/local/sbin:/home/nathan/.local/bin:/home/nathan/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/home/nathan/.claude/plugins/cache/claude-plugins-official/superpowers/6.2.0/bin"
+    },
+    "primary_host": "Linux-6.8.4-2-pve-x86_64-with-glibc2.36",
+    "primary_tool_environment": {
+      "LANG": "en_US.UTF-8",
+      "PATH": "/home/nathan/.elan/bin:/home/nathan/.local/bin:/usr/local/sbin:/home/nathan/.local/bin:/home/nathan/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/home/nathan/.claude/plugins/cache/claude-plugins-official/superpowers/6.2.0/bin"
+    },
+    "same_host_string": true
+  },
+  "independent_parent": "/home/nathan/.local/state/hornvale/counterpart-independent-full12-m1o2h8zh",
+  "outcomes": {
+    "base": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "collision-joint": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      }
+    },
+    "lender-joint": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "violated",
+          "reason": "'hearth' requires one prior owner 'settlement'; observed []"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "violated",
+          "reason": "'hearth' requires one prior owner 'settlement'; observed []"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      }
+    },
+    "reserved-inferred-owner": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "violated",
+          "reason": "'key' expected owner ['thing']; observed ['settlement']"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "violated",
+          "reason": "'key' expected owner ['thing']; observed ['settlement']"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "safe-joint": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "settlement-collision": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "settlement-lender-rename": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "violated",
+          "reason": "'hearth' requires one prior owner 'settlement'; observed []"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "violated",
+          "reason": "'hearth' requires one prior owner 'settlement'; observed []"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      }
+    },
+    "settlement-safe": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "thing-joint-claim": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "thing-safe-addition": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "thing-unusual-borrow": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "unusual-joint": {
+      "equal": true,
+      "independent": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "primary": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    }
+  },
+  "primary_parent": "/home/nathan/.local/state/hornvale/counterpart-full12-replay-7ky110gd",
+  "schema": "counterpart-full12-replay-comparison-v1",
+  "source_identity": {
+    "base": {
+      "equal": true,
+      "independent": {
+        "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+        "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+      },
+      "primary": {
+        "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+        "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+      }
+    },
+    "collision-joint": {
+      "equal": true,
+      "independent": {
+        "commit": "86d6c17e6ac3cfb023b4a6e0c816cdeefc9650d8",
+        "tree": "7ca56912a3cc44631b955f0687eaff628a3fd27a"
+      },
+      "primary": {
+        "commit": "86d6c17e6ac3cfb023b4a6e0c816cdeefc9650d8",
+        "tree": "7ca56912a3cc44631b955f0687eaff628a3fd27a"
+      }
+    },
+    "lender-joint": {
+      "equal": true,
+      "independent": {
+        "commit": "99b0aa2682d042c02c1eb9bd31135d93245b6cca",
+        "tree": "c5391c4fb9345811c0ba85be7af0126a74567466"
+      },
+      "primary": {
+        "commit": "99b0aa2682d042c02c1eb9bd31135d93245b6cca",
+        "tree": "c5391c4fb9345811c0ba85be7af0126a74567466"
+      }
+    },
+    "reserved-inferred-owner": {
+      "equal": true,
+      "independent": {
+        "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+        "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+      },
+      "primary": {
+        "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+        "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+      }
+    },
+    "safe-joint": {
+      "equal": true,
+      "independent": {
+        "commit": "486b4e32aff92ebb381d62d666f8eaa197910986",
+        "tree": "4a0c77a43ab9a33c6dd56cd55f794022b113dc35"
+      },
+      "primary": {
+        "commit": "486b4e32aff92ebb381d62d666f8eaa197910986",
+        "tree": "4a0c77a43ab9a33c6dd56cd55f794022b113dc35"
+      }
+    },
+    "settlement-collision": {
+      "equal": true,
+      "independent": {
+        "commit": "38097214dc44cda42d5272dc7fb5e6c3429f410e",
+        "tree": "4a84d9135198a3fda374fa3d6a88d5a4e4efd3b2"
+      },
+      "primary": {
+        "commit": "38097214dc44cda42d5272dc7fb5e6c3429f410e",
+        "tree": "4a84d9135198a3fda374fa3d6a88d5a4e4efd3b2"
+      }
+    },
+    "settlement-lender-rename": {
+      "equal": true,
+      "independent": {
+        "commit": "21172fafaadfd930c5bff459dd188e3b8e54ec05",
+        "tree": "9504483d57c5fb4105bfb6702a2d949ba6e8f6d9"
+      },
+      "primary": {
+        "commit": "21172fafaadfd930c5bff459dd188e3b8e54ec05",
+        "tree": "9504483d57c5fb4105bfb6702a2d949ba6e8f6d9"
+      }
+    },
+    "settlement-safe": {
+      "equal": true,
+      "independent": {
+        "commit": "b29a77abd0e317100a70e91a4a9b3a613f6c1ca2",
+        "tree": "0a1dcf3fedc22bc403f85a76b42893070e3d25d7"
+      },
+      "primary": {
+        "commit": "b29a77abd0e317100a70e91a4a9b3a613f6c1ca2",
+        "tree": "0a1dcf3fedc22bc403f85a76b42893070e3d25d7"
+      }
+    },
+    "thing-joint-claim": {
+      "equal": true,
+      "independent": {
+        "commit": "851c1f708c911453097ab97c4342ebf59bfde420",
+        "tree": "76292cbe5419822de681ebcebe4fdd66f0c12500"
+      },
+      "primary": {
+        "commit": "851c1f708c911453097ab97c4342ebf59bfde420",
+        "tree": "76292cbe5419822de681ebcebe4fdd66f0c12500"
+      }
+    },
+    "thing-safe-addition": {
+      "equal": true,
+      "independent": {
+        "commit": "ad3de13d62586abbc7456526a7d728ce9bef04c6",
+        "tree": "a3398e00ef86fe0a6941b56d79d94809d0255522"
+      },
+      "primary": {
+        "commit": "ad3de13d62586abbc7456526a7d728ce9bef04c6",
+        "tree": "a3398e00ef86fe0a6941b56d79d94809d0255522"
+      }
+    },
+    "thing-unusual-borrow": {
+      "equal": true,
+      "independent": {
+        "commit": "b94c69f16f312cc00eb5fbd1bb7349281092ebbe",
+        "tree": "3f34037b3feee2164ef5c6eb3dd53deacf224819"
+      },
+      "primary": {
+        "commit": "b94c69f16f312cc00eb5fbd1bb7349281092ebbe",
+        "tree": "3f34037b3feee2164ef5c6eb3dd53deacf224819"
+      }
+    },
+    "unusual-joint": {
+      "equal": true,
+      "independent": {
+        "commit": "29495400c477ec872385c586679b130eb9585407",
+        "tree": "902ed51e0f252ed9a70fb9b3cc4b8e5fd56ae562"
+      },
+      "primary": {
+        "commit": "29495400c477ec872385c586679b130eb9585407",
+        "tree": "902ed51e0f252ed9a70fb9b3cc4b8e5fd56ae562"
+      }
+    }
+  },
+  "timing": {
+    "delta_arm_wall_seconds": 0.0287795914337039,
+    "delta_observe_seconds": -0.0008323797956109047,
+    "independent_arm_wall_total": 127.79364378098398,
+    "independent_observe_total": 0.14268795400857925,
+    "primary_arm_wall_total": 127.76486418955028,
+    "primary_observe_total": 0.14352033380419016
+  }
+}

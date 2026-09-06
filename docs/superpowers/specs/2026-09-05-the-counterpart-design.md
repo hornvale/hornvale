@@ -387,3 +387,18 @@ G3 flags:
 Nathan approved proceeding after the plain-language explanation on 2026-09-05
 ("Great! Let's move forward."). Implementation planning proceeds under
 campaign-autopilot; the next human review boundary is G6 before merge/close.
+
+## 12. Task 6/7 outcome crosswalk
+
+The reserved challenge and both full12 behavioral replays are retained in the
+experiment evidence. The frozen checker identifies the reserved `key`
+ownership violation; the candidate reports satisfaction because it trusts the
+observed registry owner. The original eleven-arm result remains 44 answers
+(36 satisfied, 5 violated, 3 unknown), while the final twelve-arm primary and
+independent dossiers each contain 48 answers (39 satisfied, 6 violated, 3
+unknown). Frozen `run.summarize` accepts both dossiers; every source commit/tree
+identity and all four outcomes compare equal across the two runs. Agreement's
+reserved unknown mapping falls back to all four questions, preserving the
+unknown-scope rule. This evidence supports no admission privilege, gate
+narrowing, portable verdict reuse, natural fault-frequency or throughput
+claim. Stage 3 review, preclose census and G6 remain required.

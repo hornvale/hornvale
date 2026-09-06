@@ -1118,3 +1118,46 @@ submission identities; original independent script bytes remain unchanged.
 The transport branch is never a merge candidate. Task6/7 full acceptance
 requires the actual dossiers, independent comparison and all canonical phases.
 No new Q or Ideonomy decision is involved in executing the approved plan.
+
+## Task 7 — complete evidence package; G6 hard stop remains
+
+The canonical diagnostic `sluice-921beef713c4-20260905T225215Z.log` reports
+`completed=true` for all twelve arms in both retained parents:
+
+- primary: `/home/nathan/.local/state/hornvale/counterpart-full12-replay-7ky110gd`, source identity `8bd22b72a0650c72e9e6980a2b8b7712ef089525`;
+- independent: `/home/nathan/.local/state/hornvale/counterpart-independent-full12-m1o2h8zh`, source identity `8bd22b72a0650c72e9e6980a2b8b7712ef089525`.
+
+Task 7 streamed bounded dossier archives into the experiment evidence home.
+The primary archive is 12,125,738 bytes (SHA256
+`5b6af132ae2ad7dccc683234cc891befe984203563fa052731cb13cf9c697046`) with
+358 members; the independent archive is 12,162,572 bytes (SHA256
+`2a76b5410d659ccd2c2f205cb487f865b931c502e3efed993b328995f2c9c3d9`) with
+359 members. Both exclude checkout and target trees. Dependency-fetch,
+preparation before/after, source identity and invocation provenance are
+retained. Candidate outputs are copied separately for each replay.
+
+Frozen `run.summarize` accepted both dossiers independently. All twelve source
+commit/tree identities and all four question outcomes per arm compare equal;
+candidate copies compare equal but remain non-authoritative. Both runs report
+the same Linux host string and committed instrument identities. Primary arm
+wall total was 127.765 seconds versus 127.794 seconds independent; observation
+totals were 0.144 versus 0.143 seconds. These are environmental/timing
+differences on the disclosed shared registry cache, not behavioral differences;
+queue and author costs remain null.
+
+The full12 result is 48 answers: 39 satisfied, 6 violated and 3 unknown. The
+original eleven-arm denominator remains separately 44 answers: 36 satisfied,
+5 violated and 3 unknown. The reserved checker/candidate disagreement is a
+valid correlated candidate miss: the checker reports `key` ownership violated
+while the candidate reports satisfied. Agreement initially selects no
+reserved questions, then its unknown-scope fallback selects all four and
+catches the violation; Cargo and path also catch it. Across all twelve arms,
+agreement has no demonstrated selection advantage over Cargo.
+
+Task 6/7 status is complete for evidence capture, interpretation and narrative
+integration. Stage 3 gate, whole-branch review, preclose census and Nathan's
+G6 adjudication remain pending. This entry does not authorize merge, push or
+campaign close. The independent replay is procedural independence from the
+originating scratch and execution; embedded predictions were visible, so it is
+not a blinded oracle. Existing Charter follow-ups and Nathan's profiling row
+remain open.
