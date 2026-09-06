@@ -12,6 +12,7 @@ dependencies = [
  "hornvale-chronicle",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-epidemiology",
  "hornvale-explain",
  "hornvale-historiography",
  "hornvale-kernel",

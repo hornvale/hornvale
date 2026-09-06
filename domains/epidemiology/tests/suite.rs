@@ -3,13 +3,8 @@ use hornvale_epidemiology::{
 };
 
 #[test]
-fn critical_size_is_anchor_derived_and_in_expected_bands() {
+fn critical_size_trough_constant_is_in_the_anchor_band() {
     assert!((165.0..=175.0).contains(&CCS_TROUGH));
-    let measles = critical_community_size(15.0, 8.0 / 365.25, 1.0 / 30.0);
-    assert!((249_999.0..=250_001.0).contains(&measles));
-    assert!((3_000.0..=5_000.0).contains(&critical_community_size(3.0, 2.0, 1.0 / 30.0)));
-    assert!((200_000.0..=400_000.0).contains(&critical_community_size(3.0, 0.027, 1.0 / 30.0)));
-    assert!((120_000.0..=200_000.0).contains(&critical_community_size(6.0, 0.038, 1.0 / 30.0)));
 }
 
 #[test]

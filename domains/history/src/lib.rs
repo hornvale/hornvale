@@ -15,6 +15,7 @@ pub mod descent;
 pub mod flesh;
 pub mod record;
 pub mod streams;
+pub mod trajectory;
 pub use streams::stream_labels;
 
 use hornvale_kernel::{ConceptRegistry, RegistryError};

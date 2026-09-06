@@ -1998,6 +1998,36 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "the-consumption": {
+        "name": "the-consumption",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "the consumption"
+      },
+      "the-flux": {
+        "name": "the-flux",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "the flux"
+      },
+      "the-marsh-fever": {
+        "name": "the-marsh-fever",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "the marsh fever"
+      },
+      "the-pest": {
+        "name": "the-pest",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "the pest"
+      },
+      "the-pox": {
+        "name": "the-pox",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "the pox"
+      },
       "think": {
         "name": "think",
         "domain": "language",

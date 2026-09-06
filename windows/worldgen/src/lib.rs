@@ -14,6 +14,8 @@ use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, PrecipRegime, RotationRegime, SeafloorFeature,
     UniformClimate, diurnal_waveform,
 };
+use hornvale_history::record::Founding;
+use hornvale_history::trajectory::{population_at, shape_of};
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
@@ -194,9 +196,10 @@ pub use weft::{
 
 /// The population substrate at one site and the beginning of one bake era.
 ///
-/// This is a read-only projection of committed occupation peaks.  It is
-/// deliberately independent of `windows/lot`: epidemiology and other windows
-/// consume these plain numbers without reconstructing named lives.
+/// This is a read-only projection of reconstructed live occupation
+/// trajectories. It is deliberately independent of `windows/lot`:
+/// epidemiology and other windows consume these plain numbers without
+/// reconstructing named lives.
 /// type-audit: bare-ok(count: era_start), bare-ok(count: population)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EraSitePopulation {
@@ -205,7 +208,7 @@ pub struct EraSitePopulation {
     pub era_start: f64,
     /// The occupied site.
     pub site: hornvale_kernel::Vertex,
-    /// Sum of substrate population at this site during the era.
+    /// Reconstructed live population at this site during the era.
     /// type-audit: bare-ok(count)
     pub population: f64,
 }
@@ -234,9 +237,13 @@ impl EraPopulationView {
 
 /// Build the authoritative, read-only era/site population substrate view.
 ///
-/// Population is summed from the history bake's occupation peaks for the
-/// occupations alive in each era.  The Lot is a projection consumer and is
-/// intentionally not involved in this accessor.
+/// Population is reconstructed from the committed trajectory facts, using
+/// the same lower-layer helper as the Lot: founded/ended span, peak,
+/// person-years, and the founding-kind opening value. Each era samples the
+/// reconstructed live curves at its midpoint. Peaks are only an upper-bound
+/// diagnostic and are never published as this epidemiological substrate.
+/// The Lot is a projection consumer and is intentionally not involved in this
+/// accessor.
 pub fn bake_era_population_view(world: &World) -> Result<EraPopulationView, BuildError> {
     let eras = bake_era_graphs(world)?;
     let now = present_year(world);
@@ -244,13 +251,25 @@ pub fn bake_era_population_view(world: &World) -> Result<EraPopulationView, Buil
     let mut rows = Vec::new();
     for (index, (era_start, _)) in eras.iter().enumerate() {
         let era_end = eras.get(index + 1).map_or(now, |(year, _)| *year);
+        let midpoint = *era_start + (era_end - *era_start) / 2.0;
         let mut by_site: BTreeMap<hornvale_kernel::Vertex, f64> = BTreeMap::new();
         for occupation in &occupations {
             if occupation.core.founded < era_end
                 && occupation.core.ended.unwrap_or(now) > *era_start
             {
+                let opening = match occupation.founded_from {
+                    Founding::Genesis(_) => GENESIS_POP,
+                    Founding::From(_) => DAUGHTER_POP,
+                };
+                let shape = shape_of(
+                    occupation.core.founded,
+                    occupation.core.ended.unwrap_or(now),
+                    occupation.core.peak_population,
+                    occupation.core.person_years,
+                    opening,
+                );
                 *by_site.entry(occupation.core.site).or_default() +=
-                    f64::from(occupation.core.peak_population);
+                    population_at(&shape, midpoint);
             }
         }
         rows.extend(
