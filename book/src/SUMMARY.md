@@ -473,6 +473,7 @@
 - [The Cruck](./chronicle/the-cruck.md)
 - [The Warrant](./chronicle/the-warrant.md)
 - [The Ken](./chronicle/the-ken.md)
+- [The Spillway](./chronicle/the-spillway.md)
 
 # Appendix: The Frontier
 
