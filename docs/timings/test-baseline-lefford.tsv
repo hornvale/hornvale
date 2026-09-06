@@ -1,4 +1,4 @@
-# Hornvale test-duration baseline (The Timekeeper). Recorded at 8507e6c52.
+# Hornvale test-duration baseline (The Timekeeper). Recorded at 25d98a18d.
 # One row per test: <test-id>\t<seconds, millisecond precision>.
 # The reserved id <below-floor> carries a THIRD field instead:
 # <below-floor>\t<summed seconds>\t<count of tests folded in>.
@@ -6,7 +6,7 @@
 # into gate-run; `make ci` is now an alias). A red run leaves it
 # untouched. History lives in git, so `git log -p` on this file is
 # the record.
-<below-floor>	150.411	4107
+<below-floor>	150.411	4111
 hornvale-almanac::suite$interlinear::a_real_occupation_reaches_the_common_sentence_with_its_people_site_and_both_years	9.798
 hornvale-almanac::suite$interlinear::a_tongue_that_lacks_a_bound_concept_gaps_and_names_it	10.987
 hornvale-almanac::suite$interlinear::the_tongue_shares_no_word_with_common_but_the_autonym_and_the_numerals	11.244
@@ -66,7 +66,7 @@ hornvale-lab::hornvale_lab$domesday::detect::tests::the_live_census_reproduces_t
 hornvale-lab::hornvale_lab$domesday::render::tests::a_metric_that_trips_two_detectors_is_grouped_under_one_heading_not_two	1.118
 hornvale-lab::hornvale_lab$domesday::render::tests::d8_findings_appear_on_the_index_and_not_on_any_domain_page	1.515
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_page_or_the_index_cites_the_registry	1.525
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants	1.005
+hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants	1.264
 hornvale-lab::hornvale_lab$metrics::tests::a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor	17.616
 hornvale-lab::hornvale_lab$metrics::tests::all_daughters_is_the_rosters_own_lexicon_population	9.970
 hornvale-lab::hornvale_lab$metrics::tests::at_least_one_first_day_metric_is_absent_on_seed_42	9.402
@@ -83,7 +83,7 @@ hornvale-lab::hornvale_lab$metrics::tests::core_homophony_is_eliminated_at_seed_
 hornvale-lab::hornvale_lab$metrics::tests::crisis_fires_reads_a_real_world_as_a_flag	12.798
 hornvale-lab::hornvale_lab$metrics::tests::demography_metrics_share_one_report_build_per_view	10.967
 hornvale-lab::hornvale_lab$metrics::tests::divergence_magnitude_and_inventory_closure_use_the_species_own_phonology_not_the_family_proto	10.062
-hornvale-lab::hornvale_lab$metrics::tests::divergence_magnitude_is_a_nonnegative_number_for_every_goblinoid_daughter_at_seed_42	12.428
+hornvale-lab::hornvale_lab$metrics::tests::divergence_magnitude_is_a_nonnegative_number_for_every_goblinoid_daughter_at_seed_42	9.815
 hornvale-lab::hornvale_lab$metrics::tests::divergence_real_holds_at_seed_42	10.885
 hornvale-lab::hornvale_lab$metrics::tests::divergence_real_the_census_column_still_reads_the_goblinoid_family	10.288
 hornvale-lab::hornvale_lab$metrics::tests::each_peoples_belief_kind_is_its_own_not_the_first_minted	8.618
@@ -142,14 +142,14 @@ hornvale-lab::hornvale_lab$metrics::tests::the_null_controls_goblin_solo_still_r
 hornvale-lab::hornvale_lab$metrics::tests::the_null_controls_twin_is_skipped_not_panicked_on	5.319
 hornvale-lab::hornvale_lab$metrics::tests::the_vestige_metrics_extract_for_seed_42	11.216
 hornvale-lab::hornvale_lab$metrics::tests::toponymic_roots_won_reads_a_real_world_and_is_bounded_by_the_core	10.900
-hornvale-lab::hornvale_lab$metrics::tests::vowel_graphemes_come_from_the_inventory_not_a_hardcoded_alphabet	13.106
+hornvale-lab::hornvale_lab$metrics::tests::vowel_graphemes_come_from_the_inventory_not_a_hardcoded_alphabet	10.409
 hornvale-lab::hornvale_lab$metrics::tests::weft_grid_uses_prepared_prevalence_four_times_per_facet	2.673
 hornvale-lab::hornvale_lab$metrics::tests::weft_land_flag_agrees_with_worldgen_eligibility	2.696
 hornvale-lab::hornvale_lab$metrics::tests::weft_walk_uses_prepared_prevalence_for_every_kind	1.620
-hornvale-lab::hornvale_lab$runner::tests::goblin_twin_solo_components_build_and_populate_twin_metrics	7.933
-hornvale-lab::hornvale_lab$synthetic::tests::a_colocated_band_is_healthier_than_the_same_band_apart	12.466
-hornvale-lab::hornvale_lab$synthetic::tests::sharing_never_increases_band_distress	12.022
-hornvale-lab::suite$affect_trace_golden::seed_42_affect_trace_reproduces_the_pinned_bytes	60.297
+hornvale-lab::hornvale_lab$runner::tests::goblin_twin_solo_components_build_and_populate_twin_metrics	5.380
+hornvale-lab::hornvale_lab$synthetic::tests::a_colocated_band_is_healthier_than_the_same_band_apart	4.088
+hornvale-lab::hornvale_lab$synthetic::tests::sharing_never_increases_band_distress	4.312
+hornvale-lab::suite$affect_trace_golden::seed_42_affect_trace_reproduces_the_pinned_bytes	41.662
 hornvale-lab::suite$affect_trace_golden::the_affect_trace_digest_is_itself_deterministic	85.711
 hornvale-lab::suite$anomaly_injection::the_falsified_recall_is_pinned_as_a_witness	36.417
 hornvale-lab::suite$anomaly_injection::two_independent_baseline_runs_rank_identically	12.250
@@ -162,8 +162,8 @@ hornvale-lab::suite$depth_ladder::depth_scoped_metrics_match_full_build	25.485
 hornvale-lab::suite$fixture_staleness::a_stale_fixture_fails_with_the_regeneration_instruction	13.396
 hornvale-lab::suite$gathering_calibration::world_level_population_conserves_against_total_capacity	12.782
 hornvale-lab::suite$health_calibration::a_stranded_creature_is_scored_chronic_end_to_end	1.766
-hornvale-lab::suite$health_calibration::a_stranded_creature_learns_helplessness_end_to_end	2.136
-hornvale-lab::suite$health_calibration::by_species_separates_a_stricken_people_end_to_end	1.544
+hornvale-lab::suite$health_calibration::a_stranded_creature_learns_helplessness_end_to_end	1.651
+hornvale-lab::suite$health_calibration::by_species_separates_a_stricken_people_end_to_end	1.921
 hornvale-lab::suite$health_calibration::heat_hastens_thirst_end_to_end	3.032
 hornvale-lab::suite$health_calibration::the_harness_scenarios_are_deterministic	2.977
 hornvale-lab::suite$health_calibration::the_null_control_reads_no_chronic_distress	97.704
@@ -194,21 +194,21 @@ hornvale-lab::suite$wear_funnel::the_wear_funnel_is_reproducible	47.750
 hornvale-locale::hornvale_locale$budget::tests::budget_is_deterministic	26.567
 hornvale-locale::hornvale_locale$budget::tests::placed_sites_are_a_small_minority	13.432
 hornvale-locale::hornvale_locale$budget::tests::placement_is_byte_identical_on_rebuild	25.584
-hornvale-locale::hornvale_locale$substrate::tests::high_unrest_vertices_read_volcanic	3.354
+hornvale-locale::hornvale_locale$substrate::tests::high_unrest_vertices_read_volcanic	2.438
 hornvale-locale::hornvale_locale$substrate::tests::substrate_is_deterministic_and_total	3.047
 hornvale-locale::hornvale_locale$surface::tests::a_frozen_vertex_carries_snow_and_reads_snow_dominant	1.535
 hornvale-locale::hornvale_locale$surface::tests::an_unfrozen_open_water_vertex_is_bare	1.561
 hornvale-locale::hornvale_locale$surface::tests::covered_fraction_never_exceeds_the_bare_ground_budget	1.528
 hornvale-locale::hornvale_locale$surface::tests::openness_moves_the_chlorophyll_litter_split_but_not_the_total	1.682
 hornvale-locale::hornvale_locale$tests::a_locale_reports_height_above_sea_level_not_the_raw_reading	1.906
-hornvale-locale::hornvale_locale$tests::blend_and_inheritance_pin_exact_values	2.810
+hornvale-locale::hornvale_locale$tests::blend_and_inheritance_pin_exact_values	1.828
 hornvale-locale::hornvale_locale$tests::cached_readers_assert_against_geo_level_aliasing_on_read	2.225
-hornvale-locale::hornvale_locale$tests::describe_above_the_grid_errors	1.964
+hornvale-locale::hornvale_locale$tests::describe_above_the_grid_errors	2.603
 hornvale-locale::hornvale_locale$tests::describe_and_reflectance_agree_on_one_dominant_vertex	1.992
 hornvale-locale::hornvale_locale$tests::describe_is_deterministic_across_two_contexts	3.679
-hornvale-locale::hornvale_locale$tests::describe_over_deep_address_errors	1.606
+hornvale-locale::hornvale_locale$tests::describe_over_deep_address_errors	2.167
 hornvale-locale::hornvale_locale$tests::describe_reports_the_cave_at_its_dominant_corner_on_seed_42	1.665
-hornvale-locale::hornvale_locale$tests::every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill	1.744
+hornvale-locale::hornvale_locale$tests::every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill	2.517
 hornvale-locale::hornvale_locale$tests::every_room_labels_each_neighbour_with_its_own_compass_word	2.045
 hornvale-locale::hornvale_locale$tests::exits_are_eight_lateral_plus_vertical	1.874
 hornvale-locale::hornvale_locale$tests::fields_are_within_the_corner_range	2.095
@@ -218,7 +218,7 @@ hornvale-locale::hornvale_locale$tests::regime_is_deterministic_and_siblings_dif
 hornvale-locale::hornvale_locale$tests::room_water_is_conserved_when_aggregated_over_a_canonical_vertex	1.970
 hornvale-locale::hornvale_locale$tests::schema_is_v2_and_regime_present	1.762
 hornvale-locale::hornvale_locale$tests::strange_site_rows_carry_their_own_descriptor	1.777
-hornvale-locale::hornvale_locale$tests::strange_sites_are_exposed	1.701
+hornvale-locale::hornvale_locale$tests::strange_sites_are_exposed	2.062
 hornvale-locale::hornvale_locale$tests::the_grounded_wetness_is_the_moisture_redistributed_by_the_watercourse	1.662
 hornvale-locale::hornvale_locale$tests::the_memoized_reflectance_is_the_uncached_one	1.914
 hornvale-locale::hornvale_locale$tests::the_worst_compass_word_is_within_the_measured_ceiling	13.201
@@ -265,7 +265,7 @@ hornvale-lot::suite$slots::a_slot_that_prints_a_settlements_name_cites_the_name_
 hornvale-lot::suite$slots::community_fate_and_climate_cite_only_what_they_render	5.940
 hornvale-lot::suite$slots::every_cited_fact_names_a_registered_predicate	4.919
 hornvale-lot::suite$slots::every_cited_fact_stands_in_the_ledger_and_where_shows_the_facts_own_coordinates	5.180
-hornvale-lot::suite$slots::every_slot_is_asked_and_by_design_silences_are_declared	6.269
+hornvale-lot::suite$slots::every_slot_is_asked_and_by_design_silences_are_declared	4.780
 hornvale-lot::suite$slots::the_by_design_silences_are_exactly_the_specs_four	3.945
 hornvale-lot::suite$slots::the_per_slot_fill_counts_are_printed	14.999
 hornvale-lot::suite$slots::the_when_sentences_triple_is_internally_consistent	4.940
@@ -518,7 +518,7 @@ hornvale-vessel::hornvale_vessel$session::tests::taking_the_stairs_advances_the_
 hornvale-vessel::hornvale_vessel$session::tests::the_brattice_walk_one_a_locked_door_sends_the_walk_the_long_way_round_to_its_key	5.565
 hornvale-vessel::hornvale_vessel$session::tests::the_brattice_walk_three_a_shark_crosses_the_sump_and_a_dragon_climbs_the_chute	5.860
 hornvale-vessel::hornvale_vessel$session::tests::the_brattice_walk_two_a_chute_is_taken_down_and_the_loop_closed_by_the_far_stairway	5.103
-hornvale-vessel::hornvale_vessel$session::tests::the_carried_lattice_is_the_one_the_place_derives	4.248
+hornvale-vessel::hornvale_vessel$session::tests::the_carried_lattice_is_the_one_the_place_derives	5.177
 hornvale-vessel::hornvale_vessel$session::tests::the_chute_and_the_sump_read_the_body_that_walks_them	5.163
 hornvale-vessel::hornvale_vessel$session::tests::the_deepest_rungs_stairs_down_refuses_without_moving	5.080
 hornvale-vessel::hornvale_vessel$session::tests::the_footer_lists_the_ways_by_role_at_a_fork_and_further_in_on_a_chain	4.245
@@ -663,8 +663,8 @@ hornvale-vessel::suite$resident_folds::the_cost_of_a_read_does_not_grow_with_the
 hornvale-vessel::suite$resident_folds::the_hazard_folds_integration_does_not_grow_with_the_tick_index	181.116
 hornvale-vessel::suite$resident_folds::the_kerf_lab_shape_fold_equals_scan_discarding_at_every_position	25.131
 hornvale-vessel::suite$resident_folds::the_kerf_lab_shape_fold_equals_scan_discarding_at_every_third_position	24.743
-hornvale-vessel::suite$resident_folds::the_kerf_possession_shape_fold_equals_scan_discarding_at_every_position	69.368
-hornvale-vessel::suite$resident_folds::the_kerf_possession_shape_fold_equals_scan_discarding_at_every_third_position	67.496
+hornvale-vessel::suite$resident_folds::the_kerf_possession_shape_fold_equals_scan_discarding_at_every_position	49.806
+hornvale-vessel::suite$resident_folds::the_kerf_possession_shape_fold_equals_scan_discarding_at_every_third_position	47.647
 hornvale-vessel::suite$resident_folds::the_sessions_own_store_stands_exactly_at_the_ledger_each_turns_readers_were_given	14.538
 hornvale-vessel::suite$resident_folds::the_store_is_current_with_a_real_sessions_ledger	16.983
 hornvale-vessel::suite$resident_folds::the_tick_to_standard_day_round_trip_is_exact_at_every_instant_the_hazard_fold_reads	14.795
@@ -688,17 +688,17 @@ hornvale-vessel::suite$session::ordinary_ground_says_nothing_about_its_exits	4.3
 hornvale-vessel::suite$session::possession_opens_with_a_focalized_description	4.175
 hornvale-vessel::suite$session::run_drives_a_script_deterministically	8.556
 hornvale-vessel::suite$session::the_coarse_ward_exit_refuses_diegetically	5.106
-hornvale-vessel::suite$session::the_day_law	68.291
+hornvale-vessel::suite$session::the_day_law	88.541
 hornvale-vessel::suite$session::the_eyes_verb_reports_whose_eyes_and_what_the_projection_drops	4.250
 hornvale-vessel::suite$session::the_flagships_own_starting_vertex_refuses_a_delve_and_names_why	4.286
 hornvale-vessel::suite$session::the_purity_law	21.590
-hornvale-vessel::suite$session::the_sky_follows_the_walker	8.649
+hornvale-vessel::suite$session::the_sky_follows_the_walker	6.365
 hornvale-vessel::suite$session::the_stitch_law_end_to_end	23.191
 hornvale-vessel::suite$session::the_turn_header_carries_no_facet_id_and_no_decimal_day	4.459
 hornvale-vessel::suite$session::the_water_column_is_a_place_you_can_be	9.533
 hornvale-vessel::suite$session::there_is_nothing_to_dive_into_on_dry_land	5.177
 hornvale-vessel::suite$session::wait_advances_the_day_and_moves_the_npc_layer_without_moving_you	10.699
-hornvale-vessel::suite$session::write_is_the_verb_and_the_margin_answers	83.654
+hornvale-vessel::suite$session::write_is_the_verb_and_the_margin_answers	104.720
 hornvale-vessel::suite$session_snapshot::a_co_located_creature_reports_what_it_carries_and_reports_an_empty_hand_as_empty	4.535
 hornvale-vessel::suite$session_snapshot::a_creature_standing_in_the_chamber_reaches_the_plan	4.632
 hornvale-vessel::suite$session_snapshot::a_settlement_free_world_refuses_possession_rather_than_panicking	4.259
@@ -742,12 +742,18 @@ hornvale-vessel::suite$the_blocking::the_plan_marks_where_you_stand_and_the_mark
 hornvale-vessel::suite$the_blocking::the_walk_back_out_of_a_single_child_chamber_returns_rather_than_descending	4.751
 hornvale-vessel::suite$the_blocking::two_chambers_of_one_structure_do_not_read_alike	5.173
 hornvale-vessel::suite$the_blocking::walking_a_chamber_commits_nothing	4.517
+hornvale-vessel::suite$the_culvert::culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair	64.510
+hornvale-vessel::suite$the_culvert::culvert_sweep_collapses_calls_onto_distinct_pairs	41.011
+hornvale-vessel::suite$the_culvert::the_culvert_seed_42_walk_is_deterministic	77.544
+hornvale-vessel::suite$the_culvert::the_culvert_water_belief_walk_is_deterministic	78.968
+hornvale-vessel::suite$the_culvert::the_memo_answers_exactly_what_a_fresh_search_answers	64.073
+hornvale-vessel::suite$the_culvert::the_memo_keys_on_budget_not_only_on_the_room_pair	22.459
 hornvale-vessel::suite$the_detent::a_room_memo_belongs_to_one_predator_field_and_a_second_field_gets_its_own	14.824
 hornvale-vessel::suite$the_detent::ground_memo_survives_chaos_eviction	16.311
 hornvale-vessel::suite$the_detent::h5_witness_the_hazard_reads_terrain_samples_on_the_bench_shape	91.344
 hornvale-vessel::suite$the_detent::rule_five_witness_past_instant_reads_on_the_lab_shape	13.188
 hornvale-vessel::suite$the_detent::rule_four_witness_the_emitter_timeline_copy	85.293
-hornvale-vessel::suite$the_detent::rule_two_witness_the_affect_replay_share_of_the_hazard_read	31.492
+hornvale-vessel::suite$the_detent::rule_two_witness_the_affect_replay_share_of_the_hazard_read	22.689
 hornvale-vessel::suite$the_detent::the_detent_emitter_walk_is_deterministic	24.692
 hornvale-vessel::suite$the_detent::the_detent_seed_42_walk_is_deterministic	66.934
 hornvale-vessel::suite$the_first_mark::a_reloaded_played_world_does_not_re_fire_the_consequence_on_a_fresh_wait	18.497
@@ -761,7 +767,7 @@ hornvale-vessel::suite$the_first_mark::why_over_an_unprovoked_npc_names_no_playe
 hornvale-vessel::suite$the_first_mark::why_traces_the_fired_consequence_back_to_the_players_hand	16.163
 hornvale-vessel::suite$the_handle::every_significant_word_of_every_catalog_entry_resolves	17.073
 hornvale-vessel::suite$the_kerf::the_kerf_seed_11_walk_is_deterministic_with_its_floors	51.852
-hornvale-vessel::suite$the_kerf::the_kerf_seed_17_walk_is_deterministic_with_its_floors	125.061
+hornvale-vessel::suite$the_kerf::the_kerf_seed_17_walk_is_deterministic_with_its_floors	78.888
 hornvale-vessel::suite$the_lintel::enter_reaches_a_chamber_and_out_returns	13.431
 hornvale-vessel::suite$the_lintel::entering_and_leaving_commits_nothing	13.842
 hornvale-vessel::suite$the_lintel::entering_where_nothing_is_built_gives_a_physical_reason	13.445
@@ -772,7 +778,7 @@ hornvale-vessel::suite$the_minute::p7_the_wait_line_minutes_the_held_bodys_acts	
 hornvale-vessel::suite$the_prospect::a_cave_site_carries_no_name	1.672
 hornvale-vessel::suite$the_prospect::a_placed_cave_is_a_site_and_is_enterable	1.620
 hornvale-vessel::suite$the_prospect::a_settlement_sites_name_is_keyed_to_the_room	11.173
-hornvale-vessel::suite$the_prospect::an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour	1.990
+hornvale-vessel::suite$the_prospect::an_exotic_site_stands_at_one_facet_and_not_at_its_neighbour	1.576
 hornvale-vessel::suite$the_prospect::entering_a_named_site_names_the_place_and_not_the_possession	13.564
 hornvale-vessel::suite$the_prospect::salience_decides_the_winner_at_an_exotic_cave_collision	1.616
 hornvale-vessel::suite$the_prospect::salience_decides_the_winner_when_a_facet_holds_two_sites	1.636
@@ -826,7 +832,7 @@ hornvale-vessel::suite$the_warrant::every_gloss_and_its_first_day_survives_the_f
 hornvale-vessel::suite$the_warrant::no_agent_at_provenance_is_authored_prose	26.321
 hornvale-vessel::suite$the_warrant::the_bare_why_form_still_resolves_and_an_unknown_name_still_refuses	33.468
 hornvale-vessel::suite$the_warrant::the_errand_producer_commits_only_agent_at_and_the_eight_errand_keys	26.348
-hornvale-vessel::suite$the_warrant::the_rendered_recount_names_its_errands_and_never_the_bare_producer	239.862
+hornvale-vessel::suite$the_warrant::the_rendered_recount_names_its_errands_and_never_the_bare_producer	190.743
 hornvale-vessel::suite$the_weft::a_dead_occupation_reports_a_ruin_signature	2.377
 hornvale-vessel::suite$the_weft::a_facet_with_nothing_derived_stays_silent	5.879
 hornvale-vessel::suite$the_weft::afloat_facets_never_render_a_weft_clause	3.348
@@ -840,6 +846,7 @@ hornvale-vessel::suite$turn_budget::a_chamber_wait_derives_a_shadowcast_on_each_
 hornvale-vessel::suite$turn_budget::a_snapshot_performs_no_folds	13.157
 hornvale-vessel::suite$turn_budget::a_turn_derives_one_shadowcast	13.637
 hornvale-vessel::suite$turn_budget::a_wait_folds_the_roll_and_nothing_more	14.016
+hornvale-vessel::suite$turn_budget::the_route_memo_survives_between_waits	15.257
 hornvale-vessel::suite$underworld_level_generation::measure_flooded_cell_reachability_across_the_descent	88.398
 hornvale-vessel::suite$walker_battery::the_walker_battery_holds_the_four_invariants	13.372
 hornvale-vessel::suite$world_context::a_reused_context_produces_identical_sessions	16.846
@@ -894,12 +901,11 @@ hornvale-worldgen::hornvale_worldgen$plat::tests::every_level_has_one_entry_one_
 hornvale-worldgen::hornvale_worldgen$plat_readout::tests::the_section_speaks_in_the_specs_frozen_words	313.340
 hornvale-worldgen::hornvale_worldgen$render::tests::vestige_png_is_well_formed_and_byte_deterministic	11.814
 hornvale-worldgen::hornvale_worldgen$residents::tests::a_draw_does_not_depend_on_the_cohort	10.340
-hornvale-worldgen::hornvale_worldgen$residents::tests::a_settlement_with_no_site_fails_loudly	12.136
+hornvale-worldgen::hornvale_worldgen$residents::tests::a_settlement_with_no_site_fails_loudly	9.607
 hornvale-worldgen::hornvale_worldgen$residents::tests::dials_are_clamped_ratios_and_vary	11.624
 hornvale-worldgen::hornvale_worldgen$residents::tests::draws_are_deterministic	9.856
 hornvale-worldgen::hornvale_worldgen$residents::tests::names_are_distinct_within_a_settlement	9.632
 hornvale-worldgen::hornvale_worldgen$residents::tests::the_stream_order_is_pinned	10.068
-hornvale-worldgen::hornvale_worldgen$resolve::tests::a_covered_vertex_resolves_to_the_most_specific_features_name	1.178
 hornvale-worldgen::hornvale_worldgen$resolve::tests::resolve_chain_at_genuinely_asks_its_predicate	1.149
 hornvale-worldgen::hornvale_worldgen$resolve::tests::the_chain_names_every_feature_most_specific_first	1.157
 hornvale-worldgen::hornvale_worldgen$tests::a_dragon_emits_mind_perception_and_speech_but_no_society	9.447
@@ -918,7 +924,7 @@ hornvale-worldgen::hornvale_worldgen$tests::climate_reconstructs_deterministical
 hornvale-worldgen::hornvale_worldgen$tests::corrupt_scenario_pin_errors_instead_of_panicking_through_every_accessor	2.296
 hornvale-worldgen::hornvale_worldgen$tests::deposit_of_overlays_laterite_and_passes_through_primary_deposits	11.847
 hornvale-worldgen::hornvale_worldgen$tests::different_seeds_differ	40.891
-hornvale-worldgen::hornvale_worldgen$tests::diurnal_lines_feed_the_almanac_context	10.358
+hornvale-worldgen::hornvale_worldgen$tests::diurnal_lines_feed_the_almanac_context	12.452
 hornvale-worldgen::hornvale_worldgen$tests::diurnal_lines_show_dry_interior_and_ocean_and_are_empty_when_locked	18.727
 hornvale-worldgen::hornvale_worldgen$tests::dominant_people_changes_when_the_winners_mass_is_crushed	9.629
 hornvale-worldgen::hornvale_worldgen$tests::dominant_people_changes_when_the_winners_population_is_crushed	11.927
@@ -1220,7 +1226,7 @@ hornvale-worldgen::suite$weft_fieldpack::drainage_is_total_over_the_grid_and_mat
 hornvale-worldgen::suite$weft_fieldpack::induration_is_total_over_the_grid_and_in_range	1.297
 hornvale-worldgen::suite$weft_fieldpack::land_is_total_over_the_grid_and_matches_is_ocean	1.277
 hornvale-worldgen::suite$weft_fieldpack::moisture_is_total_over_the_grid_and_matches_the_accessor	1.317
-hornvale-worldgen::suite$weft_fieldpack::slope_is_total_over_the_grid_and_matches_local_slope	1.281
+hornvale-worldgen::suite$weft_fieldpack::slope_is_total_over_the_grid_and_matches_local_slope	1.540
 hornvale-worldgen::suite$weft_fieldpack::temperature_is_total_over_the_grid_and_matches_mean_temperature_at	1.276
 hornvale-worldgen::suite$weft_fieldpack::the_field_pack_is_total_over_the_grid_and_in_range	1.280
 hornvale-worldgen::suite$weft_prevalence::a_sign_kind_with_a_zero_floor_is_silent_below_its_lower_step_edge	1.823
@@ -1245,7 +1251,7 @@ hornvale::hornvale$repl::tests::eof_ends_the_loop_without_quit	1.835
 hornvale::hornvale$repl::tests::map_and_land_answer_terrain_queries	2.676
 hornvale::hornvale$repl::tests::phenomena_as_kobold_ranks_the_night_sky_first	12.462
 hornvale::hornvale$repl::tests::phenomena_as_unknown_species_fails_loudly	10.279
-hornvale::hornvale$repl::tests::phenomena_reports_an_error_instead_of_panicking_on_a_non_finite_day	1.346
+hornvale::hornvale$repl::tests::phenomena_reports_an_error_instead_of_panicking_on_a_non_finite_day	1.739
 hornvale::hornvale$repl::tests::possess_hands_off_and_release_returns_to_the_scholar_loop	4.575
 hornvale::hornvale$repl::tests::settlements_and_settlement_answer_queries	1.819
 hornvale::hornvale$repl::tests::site_facts_of_a_whole_concept_gloss_echoes_itself_across_the_entire_registry	5.328
@@ -1311,7 +1317,7 @@ hornvale::suite$repertory_corpus::a_beat_whose_assertion_does_not_hold_names_tha
 hornvale::suite$repertory_corpus::a_co_located_selector_resolves_to_a_world_where_someone_is_present	30.340
 hornvale::suite$repertory_corpus::a_scene_no_world_can_stage_is_unwitnessed_rather_than_absent	29.924
 hornvale::suite$repertory_corpus::every_founding_scene_passes_every_beat	194.305
-hornvale::suite$repertory_corpus::no_scene_has_fallen_below_its_recorded_floor	373.143
+hornvale::suite$repertory_corpus::no_scene_has_fallen_below_its_recorded_floor	292.637
 hornvale::suite$repertory_corpus::the_orange_stands_declared_at_its_first_missing_beat	43.514
 hornvale::suite$repertory_corpus::the_runner_returns_a_v2_snapshot_from_a_real_possession	21.180
 hornvale::suite$repose_byte_identity::seed_42_almanac_is_unmoved_by_the_repose	12.933

@@ -3275,6 +3275,9 @@ hornvale-vessel::suite$the_blocking::a_locale_composition_is_untouched_by_the_ro
 hornvale-vessel::suite$the_blocking::a_role_admits_a_different_composition_not_a_bigger_one
 hornvale-vessel::suite$the_blocking::the_role_table_reads_a_different_room_for_every_role
 hornvale-vessel::suite$the_blocking::threshold_patterns_admit_each_housemark_relation_once
+hornvale-vessel::suite$the_culvert::every_drive_predicate_the_stack_commits_is_on_the_roster
+hornvale-vessel::suite$the_culvert::every_str_predicate_const_in_liveness_joins_the_roster_or_is_waived
+hornvale-vessel::suite$the_culvert::the_drive_predicate_roster_is_well_formed
 hornvale-vessel::suite$the_first_mark::the_two_grievance_npc_copies_agree
 hornvale-vessel::suite$the_prospect::a_sites_facet_is_stable_and_vertex_distinct
 hornvale-vessel::suite$the_terrier::no_session_path_re_surveys_the_occupation_register
@@ -3545,6 +3548,7 @@ hornvale-worldgen::hornvale_worldgen$plat::tests::the_reading_is_pure
 hornvale-worldgen::hornvale_worldgen$render::tests::every_kind_valence_pair_has_a_distinct_palette_color
 hornvale-worldgen::hornvale_worldgen$render::tests::most_dread_picks_the_highest_dread_layer_breaking_ties_first
 hornvale-worldgen::hornvale_worldgen$render::tests::venerated_and_forgotten_read_distinctly_within_a_kind
+hornvale-worldgen::hornvale_worldgen$resolve::tests::a_covered_vertex_resolves_to_the_most_specific_features_name
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_empty_index_resolves_to_none
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_inner_link_does_not_borrow_the_outer_links_name
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_outer_link_keeps_its_class_but_loses_its_name
