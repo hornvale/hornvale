@@ -407,12 +407,16 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     // Two peoples, not four: the map must stay demonstrably under-occupied, so
     // that "there was nowhere else to go" is never available as an explanation.
     let people = vec![KindId("goblin"), KindId("kobold")];
-    let cfg = BakeConfig {
+    let mut cfg = BakeConfig {
         start_year: 0.0,
-        end_year: 500.0,
+        end_year: 250.0,
         epoch_years: 25.0,
         ..BakeConfig::default_millennia()
     };
+    // This is the pre-epidemic raid isolation fixture. Keep the original
+    // land-to-spare premise measurable instead of weakening its bound to
+    // accommodate an unrelated mortality system.
+    cfg.epidemics.clear();
     let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
     let h = bake(
         Seed(42),
@@ -437,7 +441,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     );
     // (b) Land genuinely to spare: a large share of the map is still empty at `now`.
     assert!(
-        (c.alive_at_now as usize) * 3 < geo.vertex_count() * 2,
+        (c.alive_at_now as usize) * 2 < geo.vertex_count(),
         "fixture must leave land to spare (alive {} of {} vertices): {c:?}",
         c.alive_at_now,
         geo.vertex_count()

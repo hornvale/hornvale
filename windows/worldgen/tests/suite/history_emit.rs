@@ -74,12 +74,18 @@ fn outbreak_events_emit_as_a_paired_dated_fact() {
         year: 75.0,
         deaths: 12.5,
     });
+    history.outbreaks.push(OutbreakEvent {
+        occupation: bid(2),
+        pathogen: KindId("the-fever"),
+        year: 75.0,
+        deaths: 3.5,
+    });
 
     emit_history(&mut world, &history).unwrap();
     let struck: Vec<_> = world.ledger.find("struck-by").collect();
     let deaths: Vec<_> = world.ledger.find("outbreak-deaths").collect();
-    assert_eq!(struck.len(), 1);
-    assert_eq!(deaths.len(), 1);
+    assert_eq!(struck.len(), 2);
+    assert_eq!(deaths.len(), 2);
     assert_eq!(struck[0].subject, deaths[0].subject);
     assert_eq!(struck[0].day, deaths[0].day);
     assert_eq!(

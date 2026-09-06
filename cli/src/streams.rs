@@ -620,7 +620,8 @@ mod tests {
                 // every world ever generated. See
                 // `windows/worldgen/src/streams.rs`'s `SETTLEMENT_BREACH` for
                 // why it is a keyed leg rather than a draw on
-                // `history/bake/v3`.
+                // the current `history/bake/v4` stream (the v3 measurement
+                // remains historical).
                 "settlement/breach v1",
                 // The Tolerance: the per-settlement disposition draw, a
                 // people's authored mind perturbed by its authored

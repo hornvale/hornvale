@@ -386,7 +386,7 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         }
     }
 
-    // Epidemic events are paired by (occupation, day). Validate that join key
+    // Epidemic events are paired by (occupation, day, pathogen). Validate that join key
     // before committing either half so malformed bake output cannot leave a
     // plausible orphan fact in the ledger.
     let mut outbreak_keys = BTreeSet::new();
@@ -396,8 +396,8 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
             .expect("an outbreak names an occupation minted in this history");
         let day = ledger_day_of_bake_year(event.year);
         assert!(
-            outbreak_keys.insert((subject, day.to_bits())),
-            "one outbreak event per occupation and day"
+            outbreak_keys.insert((subject, day.to_bits(), event.pathogen)),
+            "one aggregated outbreak event per occupation, day, and pathogen"
         );
         world.ledger.commit(
             fact(
