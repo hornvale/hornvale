@@ -270,6 +270,37 @@ class AttemptTests(unittest.TestCase):
                 capture_fixture([sys.executable, "-c", "print('fixture')"], checkout,
                                 root / "attempt.json", target=root / "target")
 
+    def test_capture_rejects_target_equal_to_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout = Path(directory) / "checkout"
+            checkout.mkdir()
+            with self.assertRaisesRegex(ValueError, "target must not overlap"):
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], checkout,
+                    Path(directory) / "attempt.json", target=checkout,
+                )
+
+    def test_capture_rejects_evidence_root_equal_to_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout = Path(directory) / "checkout"
+            checkout.mkdir()
+            with self.assertRaisesRegex(ValueError, "evidence root must not overlap"):
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], checkout,
+                    checkout / "attempt.json", evidence_root=checkout,
+                )
+
+    def test_capture_rejects_evidence_root_ancestor_of_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "checkout"
+            checkout.mkdir()
+            with self.assertRaisesRegex(ValueError, "evidence root must not overlap"):
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], checkout,
+                    root / "attempt.json", evidence_root=root,
+                )
+
     def test_capture_rejects_unowned_evidence_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

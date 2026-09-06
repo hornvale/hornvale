@@ -112,6 +112,11 @@ def _owned_path(path: Path, root: Path) -> bool:
         return False
 
 
+def _covers_checkout(path: Path, checkout: Path) -> bool:
+    """Return whether a writable root includes the checkout itself."""
+    return _owned_path(checkout, path)
+
+
 def _sandbox_profile(roots: list[Path]) -> str:
     lines = ["(version 1)", "(deny default)", "(allow process*)", "(allow file-read*)"]
     lines.extend(f'(allow file-write* (subpath "{root}"))' for root in roots)
@@ -261,6 +266,10 @@ def capture(workload_id: str, checkout: Path, target: Path,
         raise ValueError("target must be owned by the checkout")
     if not evidence_root.is_absolute():
         raise ValueError("evidence root must be absolute")
+    if _covers_checkout(target, checkout):
+        raise ValueError("target must not overlap the checkout root")
+    if _covers_checkout(evidence_root, checkout):
+        raise ValueError("evidence root must not overlap the checkout root")
     if not _owned_path(destination, evidence_root):
         raise ValueError("evidence destination must be owned")
     if destination.exists():
