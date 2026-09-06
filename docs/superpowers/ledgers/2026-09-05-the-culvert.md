@@ -1107,6 +1107,28 @@ its movement is the thing worth building.
 
 ---
 
+## Deferred minors
+
+**Backfilled at close, and that is itself the finding.** Every one of these was
+recorded contemporaneously — in `.superpowers/sdd/…/progress.md`, which is
+git-ignored scratch that dies with the worktree. None reached this committed
+file until the close walk went looking. `campaign-autopilot` names exactly this
+split (task state to scratch, rulings and deferred minors to the committed
+ledger) and I applied it correctly to the sixteen rulings above and incorrectly
+to every minor below. The closing walk's step 2A is what caught it, which is
+the backstop working — but the improvement worth wanting is that it should not
+have had to. Recorded in the retrospective.
+
+| # | task | minor | outcome |
+|---|---|---|---|
+| m1 | 1 | The implementer reverted `docs/timings.md` twice, discarding the cost rows `make rebaseline` and `make gate-commit` had recorded for its own runs. Defensible — they were not that task's diff — but The Governor added the general `add -u` precisely so a run's cost measurement is durable. | **Open.** Later tasks committed their timings rows, so the practice self-corrected without being asked. |
+| m2 | 2 | The report never states the pre/post `believed_water_us` pair (79,128.70 against 109,510.31) that spec §6 Task 1c calls for, though both numbers were in hand. | **Superseded.** Ruling R8 made the omission moot by forbidding the unlabelled pair outright and putting the three-subject table in spec §11 instead — which is what a reader actually needs. |
+| m3 | 6 | `RouteMemo::hops` builds its key — cloning two `Facet`s, each a `Vec<u8>` — BEFORE the map lookup, so every cache HIT allocates. Hits are the common case and the path Task 9 measures. | **Open.** Negligible against the Dijkstra it replaces; a nested `BTreeMap<Facet, BTreeMap<(Facet, usize), _>>` would allow a borrowed outer lookup if a later measurement wants it. Registry row. |
+| m4 | 6 | `RouteMemo` has no `held_bytes()` accessor though `LatestVisit` and `GroundHazards` both carry one, and this campaign's siblings measure held state. `len()` is a count, not a size. | **Open.** Registry row; it is the natural instrument for the growth question that excluded `shared_believed_water`. |
+| m5 | 6 | One appositive called `PrimaryAfraidMemo` a cache "over a fixed lattice"; it is over a fixed ledger snapshot. | **Fixed** in Task 6's fix round. |
+| m6 | 9 | Load readings for six of nine timed runs are attested only by the committed spec prose; the two raw traces live in scratch that dies with the worktree. | **Open, and accepted.** The §4.4 table was deliberately moved INTO the committed spec for this reason; the raw traces are corroboration, not the record. |
+| m7 | 9 | The 57,190 identity — Shape A's memoized total equalling the control's cost of the 83 distinct pairs once — was unstated. | **Fixed** in Task 9's fix round, with the 1.00×-duplicate-rate qualification that keeps it from over-claiming to Shape B. |
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*
