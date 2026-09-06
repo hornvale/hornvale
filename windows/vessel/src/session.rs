@@ -1593,6 +1593,29 @@ fn ambiguous_needle_refusal(typed: &str, candidates: &[&Body]) -> String {
     )
 }
 
+/// What `descend` does at the walk band, as a PURE function of the three
+/// availability booleans (The Newel, Task 2 fix round 1) — split out of
+/// [`Session::descend_walk_band`] so the SELECTION itself can be
+/// table-tested over all eight `(has_enter, has_delve, has_dive)`
+/// combinations without a live ambiguous facet
+/// (`descend_walk_band_exhausts_every_availability_combination`), rather
+/// than only the refusal FORMATTER the `Ambiguous` arm calls
+/// (`ambiguous_descent_names_every_way`, which by itself proved the wording
+/// but never drove this selection through any executable path — the review
+/// finding this fix round closes). [`Session::descend_walk_band`] is now
+/// nothing but three probes and a call to [`Session::choose_walk_descent`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum DescentChoice {
+    /// None of `enter`/`delve`/`dive` is available here.
+    None,
+    /// Exactly one is available — its name (`"enter"`, `"delve"` or
+    /// `"dive"`), to dispatch to.
+    One(&'static str),
+    /// Two or more are available — every one of their names, in probe
+    /// order, for [`ambiguous_descent_refusal`] to list.
+    Ambiguous(Vec<&'static str>),
+}
+
 impl<'w> Session<'w> {
     /// Begin a possession, deriving a fresh [`WorldContext`] for it: build the
     /// locale context, mint the flagship agent, absorb the first projection,
@@ -6611,8 +6634,8 @@ impl<'w> Session<'w> {
         Turn::Out(NOTHING_TO_ASCEND_REFUSAL.to_string())
     }
 
-    /// [`Self::descend_band`]'s walk-band arm: whichever of `enter`/
-    /// `delve`/`dive` this facet offers.
+    /// The three walk-band descent sources this facet's own state makes
+    /// available, and what `descend` does about each combination.
     ///
     /// **Availability is checked with the same three independent probes
     /// production already reads, never a fourth derivation of "is there
@@ -6635,10 +6658,7 @@ impl<'w> Session<'w> {
     /// all facets). **A null is a finding, not a reason to skip the arm**
     /// (spec §4.1): the shape is representable even though this seed's own
     /// terrain never exercises it in practice.
-    fn descend_walk_band(&mut self) -> Turn {
-        let has_enter = matches!(self.brief_here(), Ok(brief) if brief.site.is_some());
-        let has_delve = self.chamber_column_here().is_some();
-        let has_dive = !self.column_here().is_empty();
+    fn choose_walk_descent(has_enter: bool, has_delve: bool, has_dive: bool) -> DescentChoice {
         let offered: Vec<&'static str> = [
             (has_enter, "enter"),
             (has_delve, "delve"),
@@ -6647,15 +6667,30 @@ impl<'w> Session<'w> {
         .into_iter()
         .filter_map(|(has, name)| has.then_some(name))
         .collect();
-        match offered.as_slice() {
-            [] => Turn::Out(NOTHING_TO_DESCEND_REFUSAL.to_string()),
-            [only] => match *only {
-                "enter" => self.enter(""),
-                "delve" => self.delve(),
-                "dive" => self.dive(),
-                _ => unreachable!("offered only ever holds enter/delve/dive"),
-            },
-            many => Turn::Out(ambiguous_descent_refusal(many)),
+        match offered.len() {
+            0 => DescentChoice::None,
+            1 => DescentChoice::One(offered[0]),
+            _ => DescentChoice::Ambiguous(offered),
+        }
+    }
+
+    /// [`Self::descend_band`]'s walk-band arm: whichever of `enter`/
+    /// `delve`/`dive` this facet offers. Nothing but the three probes and a
+    /// dispatch on [`Self::choose_walk_descent`]'s answer — see that
+    /// function's own doc for the availability rule and the measurement.
+    fn descend_walk_band(&mut self) -> Turn {
+        let has_enter = matches!(self.brief_here(), Ok(brief) if brief.site.is_some());
+        let has_delve = self.chamber_column_here().is_some();
+        let has_dive = !self.column_here().is_empty();
+        match Self::choose_walk_descent(has_enter, has_delve, has_dive) {
+            DescentChoice::None => Turn::Out(NOTHING_TO_DESCEND_REFUSAL.to_string()),
+            DescentChoice::One("enter") => self.enter(""),
+            DescentChoice::One("delve") => self.delve(),
+            DescentChoice::One("dive") => self.dive(),
+            DescentChoice::One(other) => {
+                unreachable!("choose_walk_descent only ever names enter/delve/dive, got {other}")
+            }
+            DescentChoice::Ambiguous(ways) => Turn::Out(ambiguous_descent_refusal(&ways)),
         }
     }
 
@@ -17486,20 +17521,30 @@ mod tests {
     /// the walk band is a refusal that names them, following
     /// [`ambiguous_needle_refusal`]'s own wording shape.
     ///
-    /// **Unit-tested against the pure formatter directly, not built from a
-    /// live ambiguous facet.** Task 2's own preregistered measurement (2,000
-    /// walk-depth facets sampled uniformly on seed 42) found 0 offering two
-    /// or more of `enter`/`delve`/`dive` — consistent with the arithmetic:
-    /// a site covers ~0.01% of facets (site.rs's own coverage math) and a
-    /// cave can never coexist with water at the same facet
-    /// (`GeneratedTerrain::cave_at` refuses over ocean outright), so the
-    /// only way two ways can ever coincide is a site standing over a cave or
-    /// over water — on the order of one in several hundred thousand facets.
-    /// Walking (or scanning) to find one is the same impracticality
+    /// **This tests the WORDING only — the pure refusal FORMATTER,
+    /// [`ambiguous_descent_refusal`], called directly with a synthetic
+    /// list.** It does not exercise `descend_walk_band`'s own SELECTION
+    /// logic at all: whether `many` really is the set of ways a live facet
+    /// offers is a separate claim, tested exhaustively (all eight
+    /// `(has_enter, has_delve, has_dive)` combinations, including both
+    /// `Ambiguous` cases) by
+    /// `descend_walk_band_exhausts_every_availability_combination` just
+    /// below — added in fix round 1 after review found this test alone
+    /// left that wiring asserted only by doc comment, never driven through
+    /// any executable path.
+    ///
+    /// A synthetic list is the right instrument for THIS claim, though:
+    /// Task 2's own preregistered measurement (2,000 walk-depth facets
+    /// sampled uniformly on seed 42) found 0 offering two or more of
+    /// `enter`/`delve`/`dive` — consistent with the arithmetic: a site
+    /// covers ~0.01% of facets (site.rs's own coverage math) and a cave can
+    /// never coexist with water at the same facet (`GeneratedTerrain::
+    /// cave_at` refuses over ocean outright), so the only way two ways can
+    /// ever coincide is a site standing over a cave or over water — on the
+    /// order of one in several hundred thousand facets. Walking (or
+    /// scanning) to find one is the same impracticality
     /// [`find_open_cave_vertex`]'s own doc argues against, one order of
-    /// magnitude worse. [`ambiguous_descent_refusal`] is a pure function of
-    /// its `&[&str]` argument, so a synthetic list of ways is a faithful test
-    /// of the wording without needing the facet that would produce it.
+    /// magnitude worse.
     #[test]
     fn ambiguous_descent_names_every_way() {
         let refusal = ambiguous_descent_refusal(&["enter", "delve"]);
@@ -17518,6 +17563,68 @@ mod tests {
         assert!(three.contains("enter"), "{three}");
         assert!(three.contains("delve"), "{three}");
         assert!(three.contains("dive"), "{three}");
+    }
+
+    /// **Fix round 1, closing the review finding that
+    /// `ambiguous_descent_names_every_way` proved the wording but never
+    /// drove `descend_walk_band`'s SELECTION through any executable path.**
+    /// [`Session::choose_walk_descent`] is a pure function of the three
+    /// availability booleans, so every one of the 2³ = 8 combinations is
+    /// exercised directly — no live facet, no injection seam, no new
+    /// infrastructure, and in particular BOTH `Ambiguous` cases (exactly two
+    /// available, and all three) are driven through the real selection code
+    /// `descend_walk_band` calls, not a hand-built substitute for it.
+    ///
+    /// This is what actually pins that `many` in `descend_walk_band`'s
+    /// `DescentChoice::Ambiguous(ways) => Turn::Out(ambiguous_descent_refusal(&ways))`
+    /// arm is the true set of available ways, in probe order
+    /// (`enter`, `delve`, `dive`) — the fact the doc comment alone used to
+    /// assert.
+    ///
+    /// MUTATION THIS MUST FAIL AGAINST: swap `has_delve`/`has_dive` inside
+    /// [`Session::choose_walk_descent`]'s probe tuple (or drop one arm of
+    /// the `filter_map`) — any of the eight rows below would then name the
+    /// wrong way, or the wrong SET of ways, and this test is the only thing
+    /// that reads the actual chosen names rather than just their count.
+    #[test]
+    fn descend_walk_band_exhausts_every_availability_combination() {
+        let cases: [(bool, bool, bool, DescentChoice); 8] = [
+            (false, false, false, DescentChoice::None),
+            (true, false, false, DescentChoice::One("enter")),
+            (false, true, false, DescentChoice::One("delve")),
+            (false, false, true, DescentChoice::One("dive")),
+            (
+                true,
+                true,
+                false,
+                DescentChoice::Ambiguous(vec!["enter", "delve"]),
+            ),
+            (
+                true,
+                false,
+                true,
+                DescentChoice::Ambiguous(vec!["enter", "dive"]),
+            ),
+            (
+                false,
+                true,
+                true,
+                DescentChoice::Ambiguous(vec!["delve", "dive"]),
+            ),
+            (
+                true,
+                true,
+                true,
+                DescentChoice::Ambiguous(vec!["enter", "delve", "dive"]),
+            ),
+        ];
+        for (has_enter, has_delve, has_dive, want) in cases {
+            assert_eq!(
+                Session::choose_walk_descent(has_enter, has_delve, has_dive),
+                want,
+                "has_enter={has_enter} has_delve={has_delve} has_dive={has_dive}"
+            );
+        }
     }
 
     /// The Gallery, Task 12 (spec §6 acceptance criterion 9): the campaign's
