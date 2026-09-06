@@ -48,34 +48,34 @@ publishes it now name the same world.)*
 
 ```text
 [room 4189198211, day 0]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A low overhang offers shelter from the weather, and a place to build a fire. A dense thicket presses close around you.
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Twilight. The horizon shines pale blue-white. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 1098173175083363, day 0.00985]
+[chamber 1098173182543299, day 0.00985]
 A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying nothing.
 > take a key
 You see no a key here.
-> enter further in
-[chamber 1098173178103715, day 0.0197]
-A small room in Vapatkapak, holding a doorway, an alcove and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
-> enter further in
-[chamber 1098173182570403, day 0.02955]
+> enter the loomroom
+[chamber 1098173182260419, day 0.0197]
 A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key, a brazier and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out.
 > take a key
 You take the key.
 > carrying
 You are carrying a key.
-> enter further in
-[chamber 1098173179279043, day 0.04925]
+> enter the threshold
+[chamber 1098173182543299, day 0.0394]
+A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+Ways on: out, the hearth, the loomroom, the store.
+> enter the store
+[chamber 1098173180704195, day 0.04925]
 A small room in Vapatkapak, holding a doorway, a water jar, a strongbox, a key and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out.
@@ -99,14 +99,14 @@ You close the strongbox.
 You open the strongbox. Within it: a key.
 > out
 [room 4189198211, day 0.10835]
-Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A low overhang offers shelter from the weather, and a place to build a fire. A dense thicket presses close around you.
+Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands of Vapatkapak. The sky above: Night. The small, distant moon shows its last-quarter face. The sky is fair, with scattered cumulus. You can enter the settlement of Vapatkapak. Something ended here: migration. A dense thicket presses close around you. Underfoot, pale limestone; the ground slopes.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 1098173175083363, day 0.1182]
+[chamber 1098173182543299, day 0.1182]
 A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying a key.
 > drop a key

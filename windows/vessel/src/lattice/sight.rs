@@ -32,9 +32,19 @@
 //! floor↔floor asymmetric ordered pairs number exactly zero everywhere, while
 //! the asymmetry that does exist is dominated by MIXED floor↔wall pairs at
 //! three to seven times the wall↔wall count — 3624 mixed against 842
-//! wall↔wall on `fixture(3, Seed(1))`, 5714 against 780 on the grown twin.
-//! A later campaign reading this output as symmetric for anything
+//! wall↔wall on the then-`fixture(3, Seed(1))`, 5714 against 780 on the grown
+//! twin. A later campaign reading this output as symmetric for anything
 //! wall-involving would be wrong.
+//!
+//! **Those two counts are a claim with a date, and the fixture they were taken
+//! on no longer exists under that name** (The Cruck, Task 3). A built
+//! structure's chamber count is the grammar's now, so the rectilinear fixtures
+//! are named by BRIEF (`fixture(&trade(), Seed(1))` is the nearest heir to the
+//! old three-chamber call) and stand at different locales. The counts are NOT
+//! re-measured here — nothing asserts them, they are cited only to say which
+//! kind of pair dominates the asymmetry, and that ordering is a property of
+//! the wall rule rather than of any one corpus. Re-measure before quoting
+//! either number as current.
 //!
 //! The narrowing is safe for the reason §2.1 cares about: nothing stands in a
 //! wall, so a wall's visibility can never reach belief. Passable cells are the
@@ -294,11 +304,13 @@ fn scan(
 #[cfg(test)]
 mod tests {
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::lattice::{
         Cell, CellKind, Lattice, Rect, embed_with, extent_for, kind_of, shadowcast,
     };
     use crate::site::{Site, SiteKind};
     use crate::structure::{Structure, structure_at};
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::{Facet, Seed};
     use std::collections::{BTreeMap, BTreeSet};
 
@@ -398,7 +410,34 @@ mod tests {
         assert_eq!(lit, expected);
     }
 
+    /// A living, warm, communal, plain-postured agrarian dwelling: the BUSH
+    /// shape, four chambers, `T{ H, W, S }` — a fork of three at the door.
+    ///
+    /// The chamber count is the GRAMMAR's since The Cruck, Task 3, so a built
+    /// fixture names the shape it wants with a brief instead of scanning
+    /// locales for one. This is the fullest frame the grammar derives without a
+    /// Seat, so it is what a corpus uses to reach `MAX_CHAMBERS`.
     fn built() -> Brief {
+        Brief::from_parts(
+            Some(Function::Agrarian),
+            None,
+            Some(Notability::Common),
+            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        )
+    }
+
+    /// A built site whose brief names no business: the grammar's floor, two
+    /// chambers, `T{ H }`.
+    fn no_business() -> Brief {
         Brief::from_parts(
             None,
             None,
@@ -413,10 +452,35 @@ mod tests {
         )
     }
 
-    /// The brief that selects the GROWN embedding, passed to `embed_with` and
-    /// nothing else — the same fixture idiom `anchor_cells` settled on.
+    /// A waypoint: `Trade`'s business IS keeping goods, so three chambers,
+    /// `T{ H, S }`.
+    fn trade() -> Brief {
+        let mut b = built();
+        b.function = Some(Function::Trade);
+        b
+    }
+
+    /// A CAVE: a site nobody built. Both the structure source for a grown
+    /// fixture — a wild draw is still a chain of 1..=MAX_CHAMBERS, spec §3.5 —
+    /// and the method selector `embed_with` reads to send it to `grow`.
+    ///
+    /// It carries a SITE now, and must: `structure_at` gates on `brief.site`
+    /// (decision 0666), so a site-less method selector derives no structure at
+    /// all. Giving it a real cave site is what lets a grown fixture come from
+    /// the derivation production's caves actually take.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            Some(Site::placed(SiteKind::Cave, None)),
+            None,
+        )
     }
 
     fn locale_number(n: u64) -> Facet {
@@ -426,36 +490,43 @@ mod tests {
         }
     }
 
-    fn structure_of(chamber_count: usize, seed: Seed) -> (Facet, Structure) {
+    /// A REAL WILD structure of exactly `chamber_count` chambers, found by
+    /// scanning locales: the wild count is DRAWN (spec §3.5), so the honest way
+    /// to get a four-chamber cave is still to go and find a locale that has
+    /// one.
+    ///
+    /// The BUILT path no longer works this way and no longer needs to — its
+    /// count is the grammar's, so a built fixture names the shape it wants with
+    /// a brief. See [`fixture`].
+    fn wild_structure_of(chamber_count: usize, seed: Seed) -> (Facet, Structure) {
         for n in 0u64..4096 {
             let locale = locale_number(n);
-            let s = structure_at(&locale, &built(), seed, WALK).expect("built");
+            let s = structure_at(&locale, &wild(), seed, WALK).expect("a cave is a site");
             if s.chambers.len() == chamber_count {
                 return (locale, s);
             }
         }
-        panic!("no locale in 4096 draws a {chamber_count}-chamber structure at {seed:?}");
+        panic!("no locale in 4096 draws a {chamber_count}-chamber cave at {seed:?}");
     }
 
-    fn embedded(chamber_count: usize, seed: Seed, method: &Brief) -> Lattice {
-        let (locale, structure) = structure_of(chamber_count, seed);
-        embed_with(
-            &structure,
-            method,
-            extent_for(&structure),
-            locale.seed(seed),
-        )
-    }
-
-    /// The rectilinear lattice production actually reaches.
-    fn fixture(chamber_count: usize, seed: Seed) -> Lattice {
-        embedded(chamber_count, seed, &built())
+    /// The rectilinear lattice production actually reaches, for the shape
+    /// `shape` derives — four chambers for [`built`], the bush.
+    fn fixture(shape: &Brief, seed: Seed) -> Lattice {
+        let locale = locale_number(seed.0);
+        let structure = structure_at(&locale, shape, seed, WALK).expect("a built site");
+        embed_with(&structure, shape, extent_for(&structure), locale.seed(seed))
     }
 
     /// The GROWN lattice: non-convex, pinched, sometimes disconnected floor.
     /// The hostile geometry, where a naive sight test shows itself.
     fn wild_fixture(chamber_count: usize, seed: Seed) -> Lattice {
-        embedded(chamber_count, seed, &wild())
+        let (locale, structure) = wild_structure_of(chamber_count, seed);
+        embed_with(
+            &structure,
+            &wild(),
+            extent_for(&structure),
+            locale.seed(seed),
+        )
     }
 
     fn floors(lattice: &Lattice) -> Vec<Cell> {
@@ -552,8 +623,8 @@ mod tests {
     /// Ordinary recursive shadowcasting FAILS this.
     #[test]
     fn sight_is_symmetric() {
-        assert_symmetric(&fixture(3, Seed(1)), "rectilinear n=3 seed=1");
-        assert_symmetric(&fixture(4, Seed(2)), "rectilinear n=4 seed=2");
+        assert_symmetric(&fixture(&trade(), Seed(1)), "rectilinear trade seed=1");
+        assert_symmetric(&fixture(&built(), Seed(2)), "rectilinear bush seed=2");
         // The grown corpus is where a pinched, non-convex blob can force the
         // one-sided reveal that plain shadowcasting is famous for.
         assert_symmetric(&wild_fixture(3, Seed(1)), "grown n=3 seed=1");
@@ -565,7 +636,10 @@ mod tests {
         // The negative control. Without it, a `shadowcast` that returned every
         // cell in radius would pass the symmetry test perfectly.
         for (label, lattice) in [
-            ("rectilinear n=2 seed=4", fixture(2, Seed(4))),
+            (
+                "rectilinear no-business seed=4",
+                fixture(&no_business(), Seed(4)),
+            ),
             ("grown n=2 seed=4", wild_fixture(2, Seed(4))),
             ("grown n=4 seed=22", wild_fixture(4, Seed(22))),
         ] {
@@ -587,14 +661,14 @@ mod tests {
 
     #[test]
     fn you_always_see_your_own_cell() {
-        let lattice = fixture(1, Seed(2));
+        let lattice = fixture(&no_business(), Seed(2));
         let here = some_floor_cell(&lattice);
         assert!(shadowcast(&lattice, here, 0).contains(&here));
     }
 
     #[test]
     fn radius_bounds_the_result() {
-        let lattice = fixture(4, Seed(9));
+        let lattice = fixture(&built(), Seed(9));
         let here = some_floor_cell(&lattice);
         for cell in shadowcast(&lattice, here, 3) {
             let (dx, dy) = ((cell.0 - here.0).abs(), (cell.1 - here.1).abs());
@@ -610,7 +684,7 @@ mod tests {
     /// cell.
     #[test]
     fn the_radius_is_reached_as_well_as_respected() {
-        let lattice = fixture(4, Seed(9));
+        let lattice = fixture(&built(), Seed(9));
         let here = some_floor_cell(&lattice);
         let wide = shadowcast(&lattice, here, 12);
         let narrow = shadowcast(&lattice, here, 1);
@@ -629,7 +703,7 @@ mod tests {
 
     #[test]
     fn sight_is_deterministic() {
-        let lattice = fixture(2, Seed(6));
+        let lattice = fixture(&no_business(), Seed(6));
         let here = some_floor_cell(&lattice);
         assert_eq!(shadowcast(&lattice, here, 8), shadowcast(&lattice, here, 8));
     }

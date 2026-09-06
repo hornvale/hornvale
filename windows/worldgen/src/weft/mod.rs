@@ -102,9 +102,16 @@ fn noise_frequency_for(kind: WeftKind, facet: &Facet) -> f64 {
     1.0 / (kind.correlation_length_facets() * edge)
 }
 
-/// `prevalence ∈ [0,1]` at `facet`: [`WeftKind::macro_state`] over `pack`,
-/// mixed against a position-continuous noise sample by the kind's own
-/// [`WeftKind::contextuality`], scaled by [`WeftKind::abundance`].
+/// `prevalence ∈ [0,1]` at `facet`, from [`WeftKind::macro_state`] over
+/// `pack` and a position-continuous noise sample — combined two different
+/// ways depending on whether `kind` is a sign kind (The Warp, spec §6.1;
+/// see [`prevalence_with_weights`], which does the work):
+///
+/// - a **sign kind** (spring, overhang) reads
+///   [`WeftKind::rate`] × [`WeftKind::response`]`(cause)` +
+///   [`WeftKind::floor`] × noise;
+/// - a **control** (thicket, erratic) keeps the Weft's own
+///   [`WeftKind::abundance`] × lerp-by-[`WeftKind::contextuality`].
 ///
 /// `None` exactly when [`Facet::corner_weights`] is — `facet` shallower than
 /// `geo`'s own level, which has nothing to blend between. `Some(0.0)` when
@@ -129,10 +136,18 @@ pub fn prevalence(
 /// already prepared. This is the same computation as [`prevalence`] after
 /// its geometry lookup; callers evaluating several kinds at one facet can
 /// reuse one [`Facet::corner_weights`] result without changing the
-/// eligibility, macro-state, noise, or abundance evaluation order.
+/// eligibility, macro-state, noise, or combination evaluation order.
 ///
 /// Returns `0.0` when `kind` is not eligible at this ground (Task 7, R1),
 /// before any macro-state read or noise draw.
+///
+/// **The noise sample is drawn before the sign/control branch, always (The
+/// Warp, spec §6.1).** A sign kind's floor is zero today, so its noise term
+/// contributes nothing — but the draw itself is a save-format contract
+/// (stream consumption order), and skipping it where the coefficient
+/// happens to be zero would make the recipe's stream consumption depend on
+/// a tunable constant. Drawn unconditionally, a later calibration that
+/// lifts a floor off zero changes prevalence and moves nothing else.
 /// type-audit: bare-ok(count: weights), bare-ok(ratio: return)
 pub fn prevalence_with_weights(
     kind: WeftKind,
@@ -152,9 +167,19 @@ pub fn prevalence_with_weights(
     let fbm = SphereFbm::new(noise_seed, noise_frequency_for(kind, facet), WEFT_OCTAVES);
     let noise = hornvale_terrain::features::uniformize(fbm.sample(facet.centroid()));
 
-    let contextuality = kind.contextuality();
-    let mixed = contextuality * macro_state + (1.0 - contextuality) * noise;
-    (kind.abundance() * mixed).clamp(0.0, 1.0)
+    if kind.is_sign_kind() {
+        // The Warp (spec §6.1–6.2): reliability × step(cause) + floor × noise.
+        (kind.rate() * kind.response(macro_state) + kind.floor() * noise).clamp(0.0, 1.0)
+    } else {
+        // The Weft's expression, character for character — thicket and erratic
+        // are The Warp's non-regression controls (spec §6.1; weft_controls.rs).
+        // Do NOT regroup this into the rate/floor form: `a · (c · m + (1 − c) ·
+        // n)` and `(a · c) · m + (a · (1 − c)) · n` can differ in the last unit,
+        // and an occurrence is a comparison against exactly this value.
+        let contextuality = kind.contextuality();
+        let mixed = contextuality * macro_state + (1.0 - contextuality) * noise;
+        (kind.abundance() * mixed).clamp(0.0, 1.0)
+    }
 }
 
 /// Whether `facet` actually carries a `kind` feature, given a `prevalence`

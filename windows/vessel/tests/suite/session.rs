@@ -1092,25 +1092,26 @@ fn custody_survives_a_save_and_a_re_possession() {
     //
     // It was ONE `enter` until The Custodian, which moved the key pattern off
     // `Role::Threshold` — the role every built structure has — so that a key
-    // stopped standing in every dwelling's front room. Seed 1's flagship is
-    // agrarian, so its index-2 chamber is the loomroom the key now stands in.
-    for _ in 0..2 {
-        assert!(
-            say(&mut session, "enter further in").starts_with("[chamber "),
-            "seed 1's structure no longer reaches the loomroom, so nothing \
-             below is tested"
-        );
-    }
+    // stopped standing in every dwelling's front room. The flagship is
+    // agrarian, so the loomroom the key now stands in is chamber index 2.
+    //
+    // **NAMED, not counted** (The Cruck, Task 3). It was two `enter further
+    // in`s and then a loop of them "as far in as the place goes"; a structure
+    // is a rooted tree now, so `further in` refuses at a fork and both walks
+    // would have stood still. Index 2 is still the loomroom — the grammar puts
+    // the workroom there for an agrarian brief — but the ROUTE to it is the
+    // brief's, so the room is named and every chamber is visited.
+    assert!(
+        crate::common::walk_to_role_noun(&mut session, "loomroom"),
+        "this seed's structure no longer reaches the loomroom, so nothing \
+         below is tested"
+    );
     assert_eq!(
         say(&mut session, "take a key"),
         "You take the key.",
-        "precondition: seed 1's loomroom must hold a takeable key"
+        "precondition: the loomroom must hold a takeable key"
     );
-    for _ in 0..4 {
-        if !say(&mut session, "enter further in").starts_with("[chamber ") {
-            break;
-        }
-    }
+    crate::common::visit_every_chamber(&mut session);
     assert_eq!(say(&mut session, "carrying"), "You are carrying a key.");
 
     let saved_at = session.day();

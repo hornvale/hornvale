@@ -46,17 +46,19 @@ pub fn interior_of(room: &Facet, terrain: &dyn Terrain) -> Interior {
 /// warmth it implies), so it must stay bit-for-bit what The Threshold shipped.
 /// That is why the role layer lives HERE and why `selection` gained no parameter.
 ///
-/// `brief` and `chamber_index` are what the role is derived from
-/// ([`crate::interior::pattern::role_for`]) — the brief for what the place's
-/// business is, the index for how far in the chamber is. Both are already in
-/// every caller's hand.
-/// type-audit: bare-ok(count: walk_depth), bare-ok(index: chamber_index)
+/// `role` is what chamber the caller is composing FOR — [`crate::structure::
+/// Structure::roles`]'s own entry for it, or a literal `Role` in a test that
+/// built no structure. This function used to derive it from `chamber_index`
+/// and `brief` itself (`role_for`); now that `Structure` carries a role per
+/// chamber, deriving it twice would be two sources of truth for one fact, so
+/// the caller — which already has the structure in hand — passes it.
+/// type-audit: bare-ok(count: walk_depth)
 pub fn chamber_interior_of(
     chamber: &Facet,
     terrain: &dyn Terrain,
     walk_depth: u32,
     brief: &crate::brief::Brief,
-    chamber_index: usize,
+    role: crate::structure::Role,
 ) -> Interior {
     let locale = crate::depth::truncate_to_walk(chamber, walk_depth);
     let built = terrain.is_built(&locale);
@@ -67,7 +69,6 @@ pub fn chamber_interior_of(
     // the walk-band truncation necessary in the first place.
     debug_assert_eq!(brief.built, built, "the brief disagrees about `built`");
     debug_assert_eq!(brief.cold, cold, "the brief disagrees about `cold`");
-    let role = super::pattern::role_for(chamber_index, brief);
     compose(&super::pattern::selection_for(
         role,
         built,
@@ -254,7 +255,13 @@ mod tests {
             !terrain.is_built(&chamber_addr()),
             "precondition: a raw chamber read is UNBUILT — this is the footgun"
         );
-        let i = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(true), 1);
+        let i = chamber_interior_of(
+            &chamber_addr(),
+            &terrain,
+            WALK,
+            &brief(true),
+            crate::structure::Role::Hearthroom,
+        );
         let anchor_kinds: Vec<KindId> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
         assert!(
             anchor_kinds.contains(&kinds::HEARTH),
@@ -267,7 +274,13 @@ mod tests {
         let terrain = WalkKeyedTerrain {
             built_walk_ids: std::collections::BTreeSet::new(),
         };
-        let i = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(false), 1);
+        let i = chamber_interior_of(
+            &chamber_addr(),
+            &terrain,
+            WALK,
+            &brief(false),
+            crate::structure::Role::Hearthroom,
+        );
         let anchor_kinds: Vec<KindId> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
         assert!(
             !anchor_kinds.contains(&kinds::BED),
@@ -294,8 +307,20 @@ mod tests {
             built_walk_ids: [walk_addr().pack().unwrap().0].into_iter().collect(),
         };
         let locale = interior_of(&walk_addr(), &terrain);
-        let threshold = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(true), 0);
-        let hearthroom = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(true), 1);
+        let threshold = chamber_interior_of(
+            &chamber_addr(),
+            &terrain,
+            WALK,
+            &brief(true),
+            crate::structure::Role::Threshold,
+        );
+        let hearthroom = chamber_interior_of(
+            &chamber_addr(),
+            &terrain,
+            WALK,
+            &brief(true),
+            crate::structure::Role::Hearthroom,
+        );
         assert_ne!(
             threshold, locale,
             "a chamber is FOR something and a locale is not; they must not compose alike"
@@ -308,23 +333,24 @@ mod tests {
 
     #[test]
     fn every_role_at_every_chamber_index_is_well_formed_and_landable() {
-        // The validator's rule and the seam's, swept over every index a
-        // structure can have — because `chamber_interior_of` is the ONLY
-        // composer the session calls, and a role whose composition the validator
-        // rejects would strand a possession in an unwalkable room.
+        // The validator's rule and the seam's, swept over every DECLARED role
+        // rather than an index — `chamber_interior_of` takes the role directly
+        // now (The Cruck, Task 5a), so an index no longer picks it, and this is
+        // the ONLY composer the session calls: a role whose composition the
+        // validator rejects would strand a possession in an unwalkable room.
         use crate::interior::seam::{landing, seam_kind};
         let terrain = WalkKeyedTerrain {
             built_walk_ids: [walk_addr().pack().unwrap().0].into_iter().collect(),
         };
-        for index in 0..crate::structure::MAX_CHAMBERS {
-            let i = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(true), index);
+        for &role in crate::interior::EVERY_ROLE {
+            let i = chamber_interior_of(&chamber_addr(), &terrain, WALK, &brief(true), role);
             assert!(
                 crate::interior::permits(&i),
-                "chamber {index}'s role composes an interior the validator rejects"
+                "role {role:?}'s composition is an interior the validator rejects"
             );
             assert!(
                 landing(&i, seam_kind(true)).is_some(),
-                "chamber {index}'s role leaves a possession nowhere to arrive"
+                "role {role:?} leaves a possession nowhere to arrive"
             );
         }
     }
@@ -366,7 +392,13 @@ mod tests {
         for mark in marks {
             let mut cultural = brief(true);
             cultural.housemark = Some(mark);
-            let interior = chamber_interior_of(&chamber_addr(), &terrain, WALK, &cultural, 0);
+            let interior = chamber_interior_of(
+                &chamber_addr(),
+                &terrain,
+                WALK,
+                &cultural,
+                crate::structure::Role::Threshold,
+            );
             let has = |kind| {
                 interior
                     .ids()

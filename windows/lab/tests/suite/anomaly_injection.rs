@@ -329,7 +329,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5750 over 120 pairs; seventh canonical reading, but NOT comparable to the six-epoch series: The Weft grew the evaluable surface 118 -> 139 columns, and ablating the Weft family (21 evaluable columns; one already excluded) restores 72/120 arm for arm (20, 4, 20, 2, 7, 19 vs full 20, 4, 20, 2, 6, 17), so the instrument itself displaced three hits. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5500 over 120 pairs; eighth canonical reading, incomparable like the seventh and for a compound reason: The Warp grew the evaluable surface 139 -> 170 columns (excluded 51 -> 52), and ablating the warp family reproduces The Weft's exact 139-column surface but reads 67/120, not its 69/120 - the 32 new columns displaced ONE hit (phonology 17 -> 16) and this campaign's re-parameterised spring/overhang moved the Weft's own columns in value for the other two. Ablating warp AND weft restores The Winze's 118-column surface and reads 72/120 arm for arm (20, 4, 20, 2, 7, 19), unchanged across two further epochs. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -611,7 +611,71 @@ fn h1_recall_at_10() {
 /// from The Winze is the durable finding: an ablation licenses comparison
 /// only when it reads null; this one does not.
 ///
-/// claim: invariant(the committed battery scores exactly 69 hits over 120
+/// **RE-READ A SEVENTH TIME AT THE WARP'S CLOSE (2026-09-05), AND THE
+/// ABLATION HAD TO BE RUN FAMILY BY FAMILY TO MEAN ANYTHING.** The Warp
+/// registered 32 numeric `warp-*` metrics. Thirty-one vary and enter the
+/// ranked surface; only `warp-found-fraction-erratic` is excluded, Absent by
+/// construction. The surface therefore grew 139 -> 170 while excluded columns
+/// grew 51 -> 52 (the census's metric columns, 249 -> 281). Its goldens were
+/// authored on lefford at `4a419e996ef7`, and the eight fixture arms were
+/// re-authored there against them in the same delivery (manifest sha
+/// `8c33817b9`, 8 arms x 20 rows, zero refusals).
+///
+/// On the full new surface the witness reads **66/120 = 0.5500**, zero void
+/// pairs. Arm for arm: geothermal 20/20, unconformity 2/20, aquifer 20/20,
+/// karst 2/20, pantheon 6/20, phonology 16/20. The bar is still 0.60 and this
+/// re-read does not move it.
+///
+/// **The Weft's ablation asked one question; this census needed two.** The
+/// obvious ablation — drop the newest family and re-score — does NOT restore
+/// the previous witness, and reading only that would have mis-attributed the
+/// move. Measured over the same freshly authored rows, dropping columns from
+/// the in-memory `Census` by name prefix:
+///
+/// ```text
+///     ablated                      surface (eval/excl)   tally           arms (geo, unc, aqu, kar, pan, pho)
+///     none (the committed census)      170 / 52          66/120 0.5500   20, 2, 20, 2, 6, 16
+///     warp-*                           139 / 51          67/120 0.5583   20, 2, 20, 2, 6, 17
+///     warp-* and weft-*                118 / 50          72/120 0.6000   20, 4, 20, 2, 7, 19
+///     warp-* and weft-legibility-mi-*  136 / 50          68/120 0.5667   20, 3, 20, 2, 6, 17
+///     weft-legibility-mi-* alone       167 / 51          66/120 0.5500   20, 2, 20, 2, 6, 16
+///     weft-* alone                     149 / 51          67/120 0.5583   20, 2, 20, 2, 6, 17
+/// ```
+///
+/// Read the first three rows in order. Ablating `warp-*` reproduces The
+/// Weft's surface EXACTLY — 139 evaluable, 51 excluded, the same two integers
+/// that campaign recorded — and yet it reads **67/120, not the 69/120 The Weft
+/// pinned**. So the Warp family's own instrument share is **one hit**
+/// (phonology 17 -> 16); the other two hits of the 69 -> 66 move are NOT the
+/// new surface at all. They are the Weft's own columns changing in VALUE:
+/// this campaign re-parameterised the spring and overhang kinds, and the
+/// census non-regression readout at its close measured every `weft-*` spring
+/// and overhang column moving on 998-1,000 of 1,000 rows while every thicket
+/// and erratic column moved on zero. A column that moves in value moves both
+/// the ranking prior it contributes to and the moved-set a hit is scored
+/// against, which is a third mechanism neither The Winze nor The Weft had to
+/// separate.
+///
+/// Ablating both families restores The Winze's 118-column surface and reads
+/// **72/120 arm for arm (20, 4, 20, 2, 7, 19)** — identical to The Winze's own
+/// reading, and identical to the ablated tally The Weft measured. On the
+/// surface all three campaigns share, nothing has moved across two further
+/// census epochs. That is the closest thing to a control this witness has,
+/// and it is reassuring about the SCORER while saying nothing about the bar.
+///
+/// So 66/120 is the eighth canonical reading and the second consecutive
+/// **incomparable** one: it extends The Weft's case rather than the
+/// six-epoch series, which stays 0.5667 / 0.6083 / 0.6000 / 0.6083 / 0.6083 /
+/// 0.6000. The standing verdict is unchanged — "cannot tell", an underpowered
+/// instrument, and the remedy is more pairs rather than a moved bar.
+///
+/// **The durable lesson is the family-by-family requirement.** A single
+/// ablation of the newest family would have read "the instrument displaced
+/// one hit" and quietly attributed the other two to the world. Ablate each
+/// family that CHANGED since the pinned reading — the one that was added and
+/// the ones whose values moved — and report the ladder, not one rung of it.
+///
+/// claim: invariant(the committed battery scores exactly 66 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
 /// committed fixtures and a committed census, not a statistic.
 #[test]
@@ -624,13 +688,14 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
             t.void_no_movement,
             t.void_unrankable_only
         ),
-        (69, 120, 0, 0),
+        (66, 120, 0, 0),
         "the injection battery's recall tally moved. This is the WITNESS to The \
-         Gnomon's finding (recall@10 now reads 69/120 = 0.5750 against the \
+         Gnomon's finding (recall@10 now reads 66/120 = 0.5500 against the \
          preregistered bar of 0.60 — a bar this battery is NOT powered to \
-         adjudicate; this seventh reading is incomparable to the prior six \
-         because its measured instrument ablation restores 72/120, see the doc \
-         comment), and it is pinned so that a change to \
+         adjudicate; this eighth reading is incomparable to the six-epoch \
+         series, as the seventh was, because its measured ablation is non-null \
+         in TWO directions at once, see the doc comment), and it is pinned so \
+         that a change to \
          the report — REPORT_SIZE, TAIL_DEPTH_BAR, the scorer, the evaluable \
          surface, the census, or the fixtures — cannot silently turn the \
          published figure into fiction. \
@@ -657,15 +722,16 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          `heavy tier` literally is exactly what makes a reader conclude the \
          site is gone. It is not. \
          \
-         THE PIN HAS NOW BEEN RE-STATED SIX TIMES, producing seven readings \
+         THE PIN HAS NOW BEEN RE-STATED SEVEN TIMES, producing eight readings \
          with The Gnomon's original: The Glasshouse (2026-08-15, overturned \
          the verdict); The Underworld (2026-08-17, corroborated the withdrawal \
          at a third census epoch); The Burr (2026-08-18/19, reproduced The \
          Glasshouse's exact reading at a fourth); The Granary (2026-08-24, \
          whose canonical reading repeated it a fifth time after a \
          host-divergent local pilot first said otherwise); The Winze \
-         (2026-08-29, the sixth); and The Weft (2026-09-04, the seventh and \
-         first genuinely incomparable reading). (This message previously said FIVE TIMES \
+         (2026-08-29, the sixth); The Weft (2026-09-04, the seventh and first \
+         genuinely incomparable reading); and The Warp (2026-09-05, the \
+         eighth, incomparable for a compound reason). (This message previously said FIVE TIMES \
          while naming four campaigns — it was counting readings in one clause \
          and re-statements in the other. Both counts are given above so the \
          next reader does not have to guess which is meant.) \
@@ -679,16 +745,29 @@ fn the_falsified_recall_is_pinned_as_a_witness() {
          QUESTION this sentence has always warned about, and the way through \
          it is to MEASURE the instrument's share rather than to declare the \
          reading incomparable: diff evaluable_columns across the two censuses \
-         to bound what moved, then ablate the moved column out of an \
+         to bound what moved, then ablate the moved columns out of an \
          in-memory Census and re-score. Both are cheap, neither touches the \
          scorer, and for The Winze both read null — the ablated tally is \
          72/120 arm for arm. See the doc comment for the full derivation. If \
          your own ablation does NOT read null, you have a genuinely \
-         incomparable reading, and THAT is when to stop and say so. The \
-         Weft is that case: its full surface reads 69/120 (20, 4, 20, 2, 6, \
-         17 by arm), while ablating the Weft family restores 72/120 (20, 4, \
-         20, 2, 7, 19). The instrument itself displaced three hits, so the \
-         current number is pinned but does not extend the comparable series."
+         incomparable reading, and THAT is when to stop and say so. The Weft \
+         is that case: its full surface read 69/120 (20, 4, 20, 2, 6, 17 by \
+         arm), while ablating the Weft family restored 72/120 (20, 4, 20, 2, \
+         7, 19). \
+         \
+         ABLATE FAMILY BY FAMILY, NOT JUST THE NEWEST ONE — The Warp is why. \
+         Its full surface reads 66/120 (20, 2, 20, 2, 6, 16). Ablating only \
+         the 32 `warp-*` columns reproduces The Weft's surface exactly (139 \
+         evaluable, 51 excluded) but reads 67/120, NOT The Weft's 69/120: the \
+         new family displaced ONE hit, and the other two moved because this \
+         campaign re-parameterised the spring and overhang kinds, so the \
+         Weft's own columns changed in VALUE (998-1,000 rows of 1,000 each; \
+         thicket and erratic moved on zero). Ablating `warp-*` AND `weft-*` \
+         together restores The Winze's 118-column surface and reads 72/120 \
+         arm for arm (20, 4, 20, 2, 7, 19) — unchanged across two further \
+         epochs, which is the control. Had only the newest family been \
+         ablated, two of the three moved hits would have been silently \
+         attributed to the world."
     );
 }
 
