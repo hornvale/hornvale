@@ -1,0 +1,40 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/source-objects",
+    "rev-parse",
+    "b0ae89d8a93cda6fe8932ed24e38db8d64865613^"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/source-objects",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.0315217908937484,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79070,
+  "peak_rss_bytes": 5423104,
+  "peak_rss_raw": 5423104,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:02Z",
+  "stderr": "",
+  "stderr_base64": "",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_base64": "NWNjNjJkOGI2YWUzMDU1MmYyMmE2OGU4NWZkOWEyODg1YWM2ZTFkZAo=",
+  "stdout_bytes": 41,
+  "stdout_sha256": "7bf3ac0bec254792f847f0228242a69e0ae67bd9952cdcc07be6126f04a60235",
+  "time_output": "        0.01 real         0.00 user         0.00 sys\n             5423104  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                1116  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  24  involuntary context switches\n           100615975  instructions retired\n            39460222  cycles elapsed\n             2917248  peak memory footprint\n"
+}

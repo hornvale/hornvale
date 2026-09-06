@@ -1,0 +1,19 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling serde_core v1.0.229
+   Compiling serde v1.0.229
+   Compiling zmij v1.0.23
+   Compiling libm v0.2.16
+   Compiling serde_json v1.0.151
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling syn v3.0.3
+   Compiling serde_derive v1.0.229
+   Compiling hornvale-kernel v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/kernel)
+   Compiling digest-protocol v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/tools/digest/packages/protocol)
+   Compiling hornvale-settlement v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/domains/settlement)
+   Compiling hornvale-thing v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/domains/thing)
+   Compiling digest-thing v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/tools/digest/packages/thing)
+   Compiling digest-counterpart v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/tools/digest/packages/counterpart)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 18.76s

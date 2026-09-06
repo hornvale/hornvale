@@ -1,0 +1,83 @@
+{
+  "schema": "counterpart-reserved-author-interpretation-v1",
+  "interpreted_utc": "2026-09-05T20:34:37.332196+00:00",
+  "challenge_id": "reserved-inferred-owner",
+  "status": "author raw-observation interpretation; formal checker/comparator scoring not run",
+  "preregistration_commit": "fbb3949a067dbd2b24e93ad4912a069921b6cea3",
+  "preregistered_before_first_qualification": "2026-09-05T20:30:32.690483+00:00",
+  "qualification_started_utc": "2026-09-05T20:33:17.651878+00:00",
+  "raw_effect": {
+    "key": "Both source and component rosters include key; before registry and BORROWED do not; final registry assigns key to settlement.",
+    "registration": "Settlement and Thing registrations both accepted.",
+    "candidate": "Candidate contribution accepted; actual registration, component-roster and concept-ownership observations all satisfied."
+  },
+  "authority_reading": "The frozen ownership question requires every nonborrowed Thing name to be owned by thing. Therefore the observed key attribution violates the accepted property as an author interpretation. Controller must independently score after the stage prerequisite.",
+  "correlated_error": "The proposed all-satisfied declared-answer record agrees with candidate checks because the candidate now reads expected ownership from the same registry it compares, masking a real source registrar misattribution. Other check branches still execute; no outcome was replaced by a constant.",
+  "predicted_effect_observed": true,
+  "attempts": {
+    "attempt-01-build.json": {
+      "started_utc": "2026-09-05T20:33:17Z",
+      "elapsed_seconds": 6.398153542075306,
+      "exit_code": 0,
+      "harness_deadline_exceeded": false,
+      "output_limit_exceeded": false,
+      "cleanup_error": null,
+      "direct_child_waited": true,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stderr_sha256": "147cf049fc55ed86b3f5ce53a1204fb35eac72d0e983bf8e7ac9acfc71639919",
+      "stderr_bytes": 1228
+    },
+    "attempt-02-observation.json": {
+      "started_utc": "2026-09-05T20:33:24Z",
+      "elapsed_seconds": 0.17685283301398158,
+      "exit_code": 0,
+      "harness_deadline_exceeded": false,
+      "output_limit_exceeded": false,
+      "cleanup_error": null,
+      "direct_child_waited": true,
+      "stdout_sha256": "4811a0d01f1211c981f36020ebb64be4932532fbc914b1b925c0ecadf382c3b0",
+      "stdout_bytes": 5166,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  },
+  "failed_attempts": 0,
+  "patch_revisions_after_preregistration": 0,
+  "author_effort": {
+    "independent_selections": 1,
+    "source_files_changed_in_patch": 2,
+    "source_hunks": 2,
+    "qualification_build_attempts": 1,
+    "qualification_observation_attempts": 1,
+    "preregistration_to_restoration_seconds": 171.753853,
+    "timing_limit": "Interval includes ordinary preregistration-hook setup and compile-slot wait; it is not active authored labor or controlled challenge compilation. Earlier reading/selection labor was not separately instrumented.",
+    "setup_contention": "Normal preregistration artifact hook unexpectedly rebuilt vessel/lab/CLI after branch switch, overlapping the controller merge gate. Controller directed foreground completion and labeled this ambient/setup cost. Challenge compile/probe waited for explicit slot release."
+  },
+  "restoration": {
+    "restored_utc": "2026-09-05T20:33:24.444336+00:00",
+    "before_sha256": {
+      "domains/thing/src/lib.rs": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+      "tools/digest/packages/thing/src/lib.rs": "58380075bf83ed7e43c00ea219214b1b87e3bfbab4b2d84b8eacc24230377379",
+      "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+      "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+    },
+    "during_sha256": {
+      "domains/thing/src/lib.rs": "840f8603619a4a383b476834e3e85205375631bb610b371a29478b805d52230c",
+      "tools/digest/packages/thing/src/lib.rs": "d47df566e33f5fa5ab920a12c1d8e4e0a4d5631120280f8f1a50afc262b30888",
+      "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+      "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+    },
+    "after_sha256": {
+      "domains/thing/src/lib.rs": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+      "tools/digest/packages/thing/src/lib.rs": "58380075bf83ed7e43c00ea219214b1b87e3bfbab4b2d84b8eacc24230377379",
+      "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+      "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+    },
+    "exact_source_and_lock_restoration": true,
+    "locks_unchanged_during_qualification": true,
+    "all_qualification_processes_reaped": true,
+    "scoring": "not run"
+  },
+  "boundary": "No frozen checker, contract, comparator/rules, raw observer, owner record, or panel was changed; no formal checker/comparator was run. Source changes remain patch data only."
+}

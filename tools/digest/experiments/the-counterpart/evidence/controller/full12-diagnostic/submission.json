@@ -1,0 +1,11 @@
+{
+  "candidate": "921beef713c4ef543cbbb5a75610c19b89f99190",
+  "transport_commit": "859904500360eb838b0541bea30aaf56dabf6365",
+  "controller_base": "15e5fe064087bff86179438db36258eca4f2c7d2",
+  "request": "req-921beef713c4-20260905T223632Z",
+  "commit_gate_seconds": 61.904,
+  "commit_gate_exit_code": 0,
+  "transport_patch_sha256": "e35fabc9c6cdd3f7ab2e9771791b11582d057973175e567e1cd526a654ef419f",
+  "scope": "Diagnostic stage only: primary full12 then independently authored actual full12 replay; never a merge candidate",
+  "status": "queued; no full12 execution result yet"
+}

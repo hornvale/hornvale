@@ -1,0 +1,7 @@
+
+thread 'main' (209555001) panicked at /Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-settlement/domains/thing/src/lib.rs:414:21:
+BORROWED declares "hearth" ceded to "settlement", but no such concept is registered -- delete the stale declaration
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'main' (209555001) panicked at /Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-settlement/domains/thing/src/lib.rs:414:21:
+BORROWED declares "hearth" ceded to "settlement", but no such concept is registered -- delete the stale declaration

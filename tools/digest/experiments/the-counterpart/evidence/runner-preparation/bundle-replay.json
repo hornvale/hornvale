@@ -1,0 +1,82 @@
+{
+  "arm_count": 11,
+  "arms": [
+    {
+      "arm": "base",
+      "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+      "input_hashes_verified": true,
+      "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+    },
+    {
+      "arm": "collision-joint",
+      "commit": "86d6c17e6ac3cfb023b4a6e0c816cdeefc9650d8",
+      "input_hashes_verified": true,
+      "tree": "7ca56912a3cc44631b955f0687eaff628a3fd27a"
+    },
+    {
+      "arm": "lender-joint",
+      "commit": "99b0aa2682d042c02c1eb9bd31135d93245b6cca",
+      "input_hashes_verified": true,
+      "tree": "c5391c4fb9345811c0ba85be7af0126a74567466"
+    },
+    {
+      "arm": "safe-joint",
+      "commit": "486b4e32aff92ebb381d62d666f8eaa197910986",
+      "input_hashes_verified": true,
+      "tree": "4a0c77a43ab9a33c6dd56cd55f794022b113dc35"
+    },
+    {
+      "arm": "settlement-collision",
+      "commit": "38097214dc44cda42d5272dc7fb5e6c3429f410e",
+      "input_hashes_verified": true,
+      "tree": "4a84d9135198a3fda374fa3d6a88d5a4e4efd3b2"
+    },
+    {
+      "arm": "settlement-lender-rename",
+      "commit": "21172fafaadfd930c5bff459dd188e3b8e54ec05",
+      "input_hashes_verified": true,
+      "tree": "9504483d57c5fb4105bfb6702a2d949ba6e8f6d9"
+    },
+    {
+      "arm": "settlement-safe",
+      "commit": "b29a77abd0e317100a70e91a4a9b3a613f6c1ca2",
+      "input_hashes_verified": true,
+      "tree": "0a1dcf3fedc22bc403f85a76b42893070e3d25d7"
+    },
+    {
+      "arm": "thing-joint-claim",
+      "commit": "851c1f708c911453097ab97c4342ebf59bfde420",
+      "input_hashes_verified": true,
+      "tree": "76292cbe5419822de681ebcebe4fdd66f0c12500"
+    },
+    {
+      "arm": "thing-safe-addition",
+      "commit": "ad3de13d62586abbc7456526a7d728ce9bef04c6",
+      "input_hashes_verified": true,
+      "tree": "a3398e00ef86fe0a6941b56d79d94809d0255522"
+    },
+    {
+      "arm": "thing-unusual-borrow",
+      "commit": "b94c69f16f312cc00eb5fbd1bb7349281092ebbe",
+      "input_hashes_verified": true,
+      "tree": "3f34037b3feee2164ef5c6eb3dd53deacf224819"
+    },
+    {
+      "arm": "unusual-joint",
+      "commit": "29495400c477ec872385c586679b130eb9585407",
+      "input_hashes_verified": true,
+      "tree": "902ed51e0f252ed9a70fb9b3cc4b8e5fd56ae562"
+    }
+  ],
+  "bundle_prerequisites": [
+    "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+  ],
+  "bundle_sha256": "6199ffccfe88ad3782ce7b88a7b6a064029bcddb3307cef18bf4b9e8e878609b",
+  "independent_owned_checkout": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-bundle-replay-d5eivsch/checkout",
+  "kind": "bundle/source-only replay; no Cargo build or behavioral observation",
+  "panel_sha256": "6e76e021acb31773f96ea792648a3ec0b635b3a8852196fbc23047be6e9f53d6",
+  "replay_repository": "controller checkout with frozen base; original source-object scratch not read",
+  "schema": "counterpart-preparation-receipt-v1",
+  "source_compilation_count": 0,
+  "source_observation_count": 0
+}

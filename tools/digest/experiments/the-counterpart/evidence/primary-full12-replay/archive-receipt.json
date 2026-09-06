@@ -1,0 +1,10 @@
+{
+  "archive": "dossier.tar.gz",
+  "archive_bytes": 12125738,
+  "archive_sha256": "5b6af132ae2ad7dccc683234cc891befe984203563fa052731cb13cf9c697046",
+  "command": "ssh lefford 'set -eu; d=/home/nathan/.local/state/hornvale/counterpart-full12-replay-7ky110gd; tar -C \"$d\" --exclude=checkout --exclude=target -czf - dossier dependency-fetch.json invocation-source.sha preparation-before.json preparation-after.json' > /tmp/counterpart-task7-transfer/primary.tar.gz",
+  "members": 358,
+  "parent": "/home/nathan/.local/state/hornvale/counterpart-full12-replay-7ky110gd",
+  "excluded": ["checkout", "target"],
+  "source_sha256": "8bd22b72a0650c72e9e6980a2b8b7712ef089525"
+}

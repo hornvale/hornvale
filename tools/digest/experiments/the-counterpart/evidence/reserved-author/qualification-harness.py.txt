@@ -1,0 +1,111 @@
+"""Qualification only: reuse the frozen supervisor; never import scoring code."""
+from pathlib import Path
+import base64
+import datetime
+import hashlib
+import importlib.util
+import json
+import subprocess
+import sys
+
+root = Path.cwd()
+evidence = root / 'tools/digest/experiments/the-counterpart/evidence/reserved-author'
+prereg_path = evidence / 'preregistration.json'
+prereg = json.loads(prereg_path.read_text())
+patch_path = root / prereg['patch']['path']
+assert hashlib.sha256(patch_path.read_bytes()).hexdigest() == prereg['patch']['sha256']
+assert subprocess.check_output(['git', 'branch', '--show-current'], text=True).strip() == 'codex/counterpart-challenge'
+commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+assert subprocess.check_output(['git', 'show', f'{commit}:{prereg_path.relative_to(root)}']) == prereg_path.read_bytes()
+
+spec = importlib.util.spec_from_file_location('reserved_charter_measure', root / 'scripts/charter_measure.py')
+measure = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(measure)
+assert hashlib.sha256((root / 'scripts/charter_measure.py').read_bytes()).hexdigest() == prereg['frozen_identities']['measure']
+paths = list(prereg['patch']['sources']) + ['Cargo.lock', 'tools/digest/Cargo.lock']
+originals = {path: (root / path).read_bytes() for path in paths}
+hash_bytes = lambda data: hashlib.sha256(data).hexdigest()
+for path, identities in prereg['patch']['sources'].items():
+    assert hash_bytes(originals[path]) == identities['before_sha256']
+
+
+def persist(name, obj):
+    path = evidence / name
+    with path.open('x') as stream:
+        json.dump(obj, stream, indent=2)
+        stream.write('\n')
+
+
+def completed(sample):
+    return (
+        sample['exit_code'] == 0
+        and sample['direct_child_waited']
+        and not any(sample[key] for key in (
+            'interrupted', 'harness_deadline_exceeded', 'launch_error',
+            'cleanup_error', 'output_limit_exceeded',
+        ))
+    )
+
+
+context = {
+    'schema': 'counterpart-reserved-author-qualification-v1',
+    'preregistration_commit': commit,
+    'preregistration_sha256': hash_bytes(prereg_path.read_bytes()),
+    'patch_sha256': hash_bytes(patch_path.read_bytes()),
+    'qualification_started_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'source_and_lock_before_sha256': {path: hash_bytes(data) for path, data in originals.items()},
+    'scoring': 'Author compile/raw qualification only; no checker or comparator invoked.',
+}
+persist('qualification-context.json', context)
+error = None
+try:
+    subprocess.run(['git', 'apply', '--check', str(patch_path)], check=True)
+    subprocess.run(['git', 'apply', str(patch_path)], check=True)
+    for path, identities in prereg['patch']['sources'].items():
+        assert hash_bytes((root / path).read_bytes()) == identities['after_sha256']
+    for index, (kind, command) in enumerate((
+        ('build', prereg['qualification_protocol']['build_command']),
+        ('observation', prereg['qualification_protocol']['observation_command']),
+    ), start=1):
+        print(f'Starting {kind} through charter_measure.measure', flush=True)
+        sample = measure.measure(command, root, retain_output=True,
+                                 output_limit_bytes=16777216, deadline_seconds=3600)
+        persist(f'attempt-{index:02d}-{kind}.json', sample)
+        print(f'{kind}: rc={sample["exit_code"]}, elapsed={sample["elapsed_seconds"]:.3f}s, '
+              f'cleanup_error={sample["cleanup_error"]}', flush=True)
+        if not completed(sample):
+            raise RuntimeError(f'{kind} incomplete; inspect retained attempt')
+        if kind == 'observation':
+            output = base64.b64decode(sample['stdout_base64'])
+            with (evidence / 'observation.stdout.json').open('xb') as stream:
+                stream.write(output)
+            with (evidence / 'observation.stderr.txt').open('xb') as stream:
+                stream.write(base64.b64decode(sample['stderr_base64']))
+except BaseException as exc:
+    error = {'type': type(exc).__name__, 'message': str(exc)}
+    persist('qualification-failure.json', error)
+finally:
+    if measure.unsafe_cleanup:
+        persist('cleanup-uncertain.json', {
+            'source_restoration': 'not attempted while owned process cleanup is uncertain',
+            'retained_worktree': str(root),
+        })
+    else:
+        during = {path: hash_bytes((root / path).read_bytes()) for path in paths}
+        for path, original in originals.items():
+            (root / path).write_bytes(original)
+        after = {path: hash_bytes((root / path).read_bytes()) for path in paths}
+        persist('restoration.json', {
+            'restored_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            'before_sha256': context['source_and_lock_before_sha256'],
+            'during_sha256': during,
+            'after_sha256': after,
+            'exact_source_and_lock_restoration': after == context['source_and_lock_before_sha256'],
+            'locks_unchanged_during_qualification': all(during[path] == after[path] for path in paths if path.endswith('Cargo.lock')),
+            'all_qualification_processes_reaped': True,
+            'scoring': 'not run',
+        })
+        assert after == context['source_and_lock_before_sha256']
+        print('Source and lock restoration verified byte-exact', flush=True)
+if error or measure.unsafe_cleanup:
+    sys.exit(1)

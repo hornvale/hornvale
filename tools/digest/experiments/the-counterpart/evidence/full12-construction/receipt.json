@@ -1,0 +1,135 @@
+{
+  "bundle_bytes": 9823,
+  "bundle_prerequisites": [
+    "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+  ],
+  "bundle_sha256": "33ea34e8774bd11e1b237eb6f62d40601838e67d56f7b3b79ecc1eb4578102f8",
+  "frozen_files_verified": {
+    "checker.py": {
+      "bytes": 8304,
+      "sha256": "ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90"
+    },
+    "compare.py": {
+      "bytes": 8756,
+      "sha256": "ea13353f2133cc1f168fea6dcb2447405786af8ef37e3a4ccb158885ac9e03a5"
+    },
+    "contract.json": {
+      "bytes": 2062,
+      "sha256": "37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34"
+    },
+    "owners/settlement.json": {
+      "bytes": 9725,
+      "sha256": "99e4bb9eac1c1ed24fc4e783bfc44df9c323f494d6a9c0e110e9b61aea3f0787"
+    },
+    "owners/thing.json": {
+      "bytes": 13643,
+      "sha256": "0c18e52b78224bc66aad62cff9cf7222df10de38ec6d4e644418ec3f4d280010"
+    },
+    "panel.json": {
+      "bytes": 45866,
+      "sha256": "27648766387798093fd683580a38644b1a4b3b246a9a8869a5fa96acaa1581df"
+    },
+    "run.py": {
+      "bytes": 22608,
+      "sha256": "4890c2185e175a47ad4cd90b7612c4149c93f9efe82b3498f5df281428e08a5f"
+    },
+    "specimens.bundle": {
+      "bytes": 4642,
+      "sha256": "6199ffccfe88ad3782ce7b88a7b6a064029bcddb3307cef18bf4b9e8e878609b"
+    }
+  },
+  "panel_base_reserved_sha256": "eb6a4f825648ba421c566aeef49b1063329338782d01527eebe875366cdf8cec",
+  "panel_full12_sha256": "4d7588e3f25523358deae71a45c4e8d9529f73c5370511b0dd5b1810d759931c",
+  "reserved_source": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+  "retained_scratch": "/Users/nathan/.local/state/hornvale/counterpart-task6-package-dd69wiqj",
+  "schema": "counterpart-full12-construction-v1",
+  "source_reauthored": false,
+  "source_runs": 0,
+  "unchanged_original_arms": [
+    "base",
+    "collision-joint",
+    "lender-joint",
+    "safe-joint",
+    "settlement-collision",
+    "settlement-lender-rename",
+    "settlement-safe",
+    "thing-joint-claim",
+    "thing-safe-addition",
+    "thing-unusual-borrow",
+    "unusual-joint"
+  ],
+  "verified": [
+    {
+      "arm": "base",
+      "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+      "inputs_verified": true,
+      "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+    },
+    {
+      "arm": "collision-joint",
+      "commit": "86d6c17e6ac3cfb023b4a6e0c816cdeefc9650d8",
+      "inputs_verified": true,
+      "tree": "7ca56912a3cc44631b955f0687eaff628a3fd27a"
+    },
+    {
+      "arm": "lender-joint",
+      "commit": "99b0aa2682d042c02c1eb9bd31135d93245b6cca",
+      "inputs_verified": true,
+      "tree": "c5391c4fb9345811c0ba85be7af0126a74567466"
+    },
+    {
+      "arm": "safe-joint",
+      "commit": "486b4e32aff92ebb381d62d666f8eaa197910986",
+      "inputs_verified": true,
+      "tree": "4a0c77a43ab9a33c6dd56cd55f794022b113dc35"
+    },
+    {
+      "arm": "settlement-collision",
+      "commit": "38097214dc44cda42d5272dc7fb5e6c3429f410e",
+      "inputs_verified": true,
+      "tree": "4a84d9135198a3fda374fa3d6a88d5a4e4efd3b2"
+    },
+    {
+      "arm": "settlement-lender-rename",
+      "commit": "21172fafaadfd930c5bff459dd188e3b8e54ec05",
+      "inputs_verified": true,
+      "tree": "9504483d57c5fb4105bfb6702a2d949ba6e8f6d9"
+    },
+    {
+      "arm": "settlement-safe",
+      "commit": "b29a77abd0e317100a70e91a4a9b3a613f6c1ca2",
+      "inputs_verified": true,
+      "tree": "0a1dcf3fedc22bc403f85a76b42893070e3d25d7"
+    },
+    {
+      "arm": "thing-joint-claim",
+      "commit": "851c1f708c911453097ab97c4342ebf59bfde420",
+      "inputs_verified": true,
+      "tree": "76292cbe5419822de681ebcebe4fdd66f0c12500"
+    },
+    {
+      "arm": "thing-safe-addition",
+      "commit": "ad3de13d62586abbc7456526a7d728ce9bef04c6",
+      "inputs_verified": true,
+      "tree": "a3398e00ef86fe0a6941b56d79d94809d0255522"
+    },
+    {
+      "arm": "thing-unusual-borrow",
+      "commit": "b94c69f16f312cc00eb5fbd1bb7349281092ebbe",
+      "inputs_verified": true,
+      "tree": "3f34037b3feee2164ef5c6eb3dd53deacf224819"
+    },
+    {
+      "arm": "unusual-joint",
+      "commit": "29495400c477ec872385c586679b130eb9585407",
+      "inputs_verified": true,
+      "tree": "902ed51e0f252ed9a70fb9b3cc4b8e5fd56ae562"
+    },
+    {
+      "arm": "reserved-inferred-owner",
+      "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+      "inputs_verified": true,
+      "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+    }
+  ]
+}

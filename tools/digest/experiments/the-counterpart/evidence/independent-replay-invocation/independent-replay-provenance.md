@@ -1,0 +1,15 @@
+# Independent full12 invocation preparation
+
+Author: counterpart_independent_replay subagent, independent of originating implementation execution. Package: ca4872744fe57801384ff9cd7149fe25ad197ef4. This note records executable preparation only, not behavioral completion.
+
+Authored invocation: independent-replay-invocation.sh, SHA256 33b9df21d209e381b061de047772555aeba034d65b3128bbb9b87a5f06197d10.
+
+Read scope for this preparation: the committed package README canonical replay sequence and frozen run.py public helpers. Earlier source-only inputs and disclosure remain in source-only receipt SHA256 3e12b5271d427dbfe6c93556c30f2a8246850fc8acf96126e90f107791acba8d. Committed panel/owner records contain author predictions/observations, which were visible; these are not result authority. No originating scratch, author/reviewer reports, or primary target was read. Independence concerns reconstruction/execution, not blinded outcome adjudication or the distinct checker-author independence claim.
+
+The script runs from the diagnostic chamber repository root, after the primary invocation, under the same ordinary canonical serial claim. It creates a new persistent counterpart-independent-full12-* parent in XDG_STATE_HOME/hornvale (default ~/.local/state/hornvale), announces it on stderr immediately, and preserves its exact invocation bytes, actual chamber HEAD, committed package/panel/bundle identities, command and disclosures. It uses the frozen reconstruct/capture/validate_sample helpers to make its own preparation checkout and supervise precisely cargo fetch --locked --manifest-path tools/digest/Cargo.toml. Before/after source/lock/pin hashes and source commit/tree checks precede the unchanged full12 CLI. The CLI creates a separate dossier/checkout and dossier/target. Shared machine Cargo registry cache is disclosed; timings are not a cold benchmark.
+
+No independent command consumes first-run scratch, output or target. No implementation, panel, checker, offline flag or source object is modified. The supervisor retains interrupted/failed evidence before refusing; shell failure stops before the CLI. The final CLI uses exec so it receives the ordinary invocation process signals directly. The parent is never removed. The diagnostic script is evidence/transport only and never a merge candidate.
+
+Static validation completed locally: bash -n, shellcheck, and AST parsing of embedded Python all passed. The full panel was not executed and no remote job was started. No tracked files or commits were authored by this subagent.
+
+Later acceptance requires independent inspection of the actual second run: preparation integrity and cleanup flags; 12 source/command/capture contexts; raw stream lengths/hashes and frozen checker judgments; separate candidate objects; complete pair/imports-only supplement; exact final panel/contract; and then comparison with the primary actual outcomes. Source-only reconstruction and the present syntax checks cannot establish this acceptance. Full behavioral replay remains CANNOT VERIFY until the actual second run.
