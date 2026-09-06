@@ -6218,3 +6218,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T05:50:10Z | sluice:gate | 865.604 | 21936.415 | 632.494 | 26.07 | 0 | dadeae723 |  | lefford | 40 |
 | 2026-09-06T05:52:40Z | sluice:clients | 150.057 | 2404.189 | 178.158 | 17.21 | 0 | 3bd1b78ba |  | lefford | 40 |
 | 2026-09-06T06:00:48Z | sluice:heavy | 487.623 | 11472.542 | 147.466 | 23.83 | 0 | 914763dfd |  | lefford | 40 |
+| 2026-09-06T07:33:16Z | rebaseline | 190.766 | 432.359 | 18.040 | 2.36 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T07:48:15Z | gate-commit | 50.980 | 107.764 | 45.268 | 3.00 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T07:48:58Z | vessel-check | 39.460 | 46.205 | 1.380 | 1.21 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T07:51:05Z | game-check | 125.409 | 779.437 | 38.549 | 6.52 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T07:58:39Z | gate-commit | 36.231 | 70.545 | 15.623 | 2.38 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
