@@ -828,7 +828,7 @@ nobody's finding list: "five of the seven … only two needed a reviewer" is
 **four and three** when enumerated against this ledger (code or probe: #6, #7
 R2, #7 R3, #17; reviewer: #8, #9, #23), and a "that is now four times" claim
 contradicted itself and could not be enumerated from what it held, so it now
-cites #35 rather than restating a count as its own. · **(c) The finding worth
+cites #18a rather than restating a count as its own. · **(c) The finding worth
 keeping is its third concern, and it goes beyond this campaign.** CLAUDE.md
 says the committed ledger's path is "keyed by campaign slug, touched by exactly
 one campaign, ever, **so there is no collision to have**". That is true across
