@@ -1242,14 +1242,33 @@ pub fn believed_water(
 /// (`the_memo_answers_exactly_what_a_fresh_search_answers`) confirms the
 /// construction; it is not the reason to believe it.
 ///
-/// **It takes no `avoid` parameter, and that is the point.** Every belief fold
-/// that plans a route passes a freshly-allocated EMPTY set
-/// ([`believed_water`], `nearer_to_home`); only `HomeNavCache::home_nav`
-/// passes a real hazard set (`view.believed_hazard`). A future caller holding
-/// one cannot reach this memo, because there is nowhere to pass it — a compile
-/// error instead of a stale answer. `budget` IS in the key, for the reason
-/// [`HomeNavCache`]'s own private `HomeNavState` puts it in its: today every caller
-/// passes `PLAN_BUDGET` and nothing enforces that.
+/// **It takes no `avoid` parameter, and that is the point.** THREE belief
+/// folds plan a route with a freshly-allocated EMPTY set — [`believed_water`],
+/// `nearer_to_home`, and [`shared_believed_water`] — and only
+/// `HomeNavCache::home_nav` passes a real hazard set (`view.believed_hazard`).
+/// A future caller holding one cannot reach this memo, because there is
+/// nowhere to pass it — a compile error instead of a stale answer.
+///
+/// **The third of those three is EXCLUDED, and the reason is its key space,
+/// not its avoid set.** [`shared_believed_water`]'s pooling search anchors at
+/// `here` — the agent's CURRENT position — where the other two anchor at
+/// `npc.home`, which is fixed for a session. So its key population is
+/// `positions x water rooms` rather than `homes x water rooms`, and this
+/// campaign's Task 5 measured it over 60 waits without finding it
+/// demonstrably saturate. A memo whose key space grows with session length
+/// is a leak wearing a cache's clothes, so this one deliberately does not
+/// reach that site. It is listed here rather than omitted because a
+/// two-item list reads as an oversight and would tell the next reader the
+/// site does not exist; what they will actually want to know is that it was
+/// considered.
+///
+/// `budget` IS in the key, for the reason [`HomeNavCache`]'s own private
+/// `HomeNavState` puts it in its: today every caller passes `PLAN_BUDGET` and
+/// nothing enforces that. That component is exercised, not merely argued —
+/// see `the_memo_keys_on_budget_not_only_on_the_room_pair`, which asks one
+/// REACHABLE pair at `budget = 1` (`None`) and then at the real budget
+/// (`Some`), and reddens if the second ask returns the first's cached
+/// failure.
 ///
 /// **It stores the NEGATIVE result too, deliberately.** A memo holding only
 /// successes would re-pay the budget-exhausted searches forever while its hit
@@ -1276,7 +1295,8 @@ pub fn believed_water(
 /// must be asymptotically cheaper than a parent scan. This memo is derived from
 /// no fact, absorbs no fact, and has no parent to be cheaper than; it is the
 /// same category as [`hornvale_kernel::RoomMeshMemo`] and
-/// [`PrimaryAfraidMemo`] — a cache of a pure function over a fixed lattice.
+/// [`PrimaryAfraidMemo`] — a cache of a pure function over a fixed lattice
+/// (`RoomMeshMemo`) or a fixed ledger snapshot (`PrimaryAfraidMemo`).
 #[derive(Default)]
 pub struct RouteMemo {
     /// `(from, dest, budget) → hops`, `None` = not reachable within `budget`.

@@ -1096,6 +1096,20 @@ fn culvert_here_anchored_key_population_curve() {
 /// [`culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair`]
 /// already states in its own doc: a population that shifts by one member must
 /// not redden a correctness test.
+///
+/// **THE STRONGEST THING THIS TEST DEMONSTRATES IS NOT IN ITS ASSERTIONS, so
+/// it is written here** (Task 6, fix round 1 — the reviewer's finding, and
+/// neither the implementer nor the controller had noticed it). The population
+/// unions pairs from TWO DIFFERENT WORLDS — [`Shape::Possession`] is seed 17
+/// and [`Shape::Lab`] is seed 42 — into ONE memo, and every answer still
+/// matches a fresh search. That would be UNSOUND if `plan_to_room` had any
+/// world input at all: a memo shared across two worlds would hand seed 42's
+/// answer to a seed 17 question the moment their key spaces met. It passes
+/// because the search is pure over mesh geometry, which is exactly the
+/// campaign's byte-identity premise. Read this test as evidence for that
+/// premise and not only for the memo's bookkeeping — the union is load-bearing
+/// twice over (both arms of `plan_to_room`, AND cross-world purity), and
+/// collapsing it back to one shape would silently discard the second.
 #[test]
 fn the_memo_answers_exactly_what_a_fresh_search_answers() {
     // Real (home, water room) pairs from the two measured shapes — NOT
@@ -1165,5 +1179,81 @@ fn the_memo_answers_exactly_what_a_fresh_search_answers() {
         memo.len(),
         pairs.len(),
         "entries == searches: every search inserted exactly one entry"
+    );
+}
+
+/// **THE KEY-COMPONENT WITNESS (Task 6, fix round 1 — Finding A).** `budget`
+/// is part of [`liveness::RouteMemo`]'s key, and
+/// [`the_memo_answers_exactly_what_a_fresh_search_answers`] cannot see it:
+/// every ask there passes the same [`PLAN_BUDGET_MIRROR`], so a memo that
+/// DROPPED `budget` from its key would pass that test unchanged. An untested
+/// key component is one nobody knows is there, and this campaign has already
+/// met the cannot-fire pattern twice (a roster guard that only detected
+/// removals; a population spec that pinned counts).
+///
+/// The falsifier is the smallest one that discriminates: take a pair the
+/// search CAN reach, ask it at `budget = 1` — one expansion cannot cross a
+/// multi-hop route, so the answer must be `None` and must be CACHED as `None`
+/// (the negative-caching half of the type's own contract) — then ask the SAME
+/// `(from, dest)` at the real budget and require `Some`. If `budget` is not
+/// really in the key, the second ask returns the first's cached failure and
+/// this reddens.
+///
+/// **Demonstrated to fail without the key component** (fix round 1 evidence,
+/// not merely asserted): with `budget` dropped from the key in
+/// `RouteMemo::hops`, this test failed on
+/// `the second ask must return the memo's own Some(...)` with `None`, while
+/// [`the_memo_answers_exactly_what_a_fresh_search_answers`] stayed GREEN —
+/// which is the whole point of the round.
+#[test]
+fn the_memo_keys_on_budget_not_only_on_the_room_pair() {
+    let empty = std::collections::BTreeSet::new();
+    // A pair the search reaches in MORE than one hop — a one-hop pair would
+    // make `budget = 1` a `Some` too and the probe would discriminate nothing.
+    let (from, dest, hops) = culvert_real_pairs(Shape::Lab)
+        .into_iter()
+        .find_map(|(from, dest)| {
+            plan_to_room(&from, &dest, PLAN_BUDGET_MIRROR, &empty)
+                .filter(|p| p.len() > 1)
+                .map(|p| (from, dest, p.len()))
+        })
+        .expect(
+            "denominator: Shape::Lab must contain a pair reachable in more than one hop, or \
+             this probe discriminates nothing",
+        );
+
+    let mut memo = liveness::RouteMemo::new();
+    // A budget of one expansion cannot cross a route of `hops` > 1 hops.
+    let starved = memo.hops(&from, &dest, 1);
+    assert_eq!(
+        starved, None,
+        "a budget of 1 must not reach {from:?} -> {dest:?}, which is {hops} hops away — the \
+         probe's own premise"
+    );
+    assert_eq!(
+        memo.len(),
+        1,
+        "the starved ask must have CACHED its failure"
+    );
+
+    // The same room pair, a different budget: a distinct key, so a fresh
+    // search, so the real answer — never the cached None above.
+    let fed = memo.hops(&from, &dest, PLAN_BUDGET_MIRROR);
+    assert_eq!(
+        fed,
+        Some(hops),
+        "the second ask must return the memo's own Some({hops}) for {from:?} -> {dest:?}. A \
+         None here means `budget` is not in RouteMemo's key and the starved ask's cached \
+         failure was served to a question it does not answer."
+    );
+    assert_eq!(
+        memo.searches(),
+        2,
+        "two distinct budgets over one room pair are two distinct keys, so two real searches"
+    );
+    assert_eq!(
+        memo.len(),
+        2,
+        "entries == searches across the budget axis too"
     );
 }
