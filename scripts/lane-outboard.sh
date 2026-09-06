@@ -134,6 +134,10 @@ run "absorb"          bash scripts/test-absorb.sh
 # phase whose last line was "regenerate-artifacts: done.". Cheap and belongs
 # here rather than nowhere.
 run "timing wrapper" bash scripts/test-timed.sh
+# The reconciliation ledger is merge=union. This proves both directions against
+# real git merges — two appends resolve, a same-row edit lands in the
+# duplicate-key guard — plus a control showing the attribute is what does it.
+run "reconciliation union" bash scripts/test-reconciliation-union.sh
 # The post-merge hook's own suite, added the same way pre-push's was:
 # nothing exercised this hook, so its own author (Task 3, The Attestation)
 # shipped a Critical that made it silent on every merge, for all ten
