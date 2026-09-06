@@ -86,13 +86,31 @@ fn outbreak_events_emit_as_a_paired_dated_fact() {
     let deaths: Vec<_> = world.ledger.find("outbreak-deaths").collect();
     assert_eq!(struck.len(), 2);
     assert_eq!(deaths.len(), 2);
-    assert_eq!(struck[0].subject, deaths[0].subject);
-    assert_eq!(struck[0].day, deaths[0].day);
+    for strike in &struck {
+        let death = deaths
+            .iter()
+            .find(|death| death.place == strike.place)
+            .expect("each outbreak pair shares its event identity");
+        assert_eq!(strike.subject, death.subject);
+        assert_eq!(strike.day, death.day);
+        assert_ne!(strike.place, Some(strike.subject));
+    }
     assert_eq!(
         struck[0].object,
         hornvale_kernel::Value::Text("the-pest".into())
     );
     assert_eq!(deaths[0].object, hornvale_kernel::Value::Number(12.5));
+
+    let bytes = serde_json::to_vec(&world.ledger).unwrap();
+    let restored: hornvale_kernel::Ledger = serde_json::from_slice(&bytes).unwrap();
+    let restored_struck: Vec<_> = restored.find("struck-by").collect();
+    let restored_deaths: Vec<_> = restored.find("outbreak-deaths").collect();
+    assert_eq!(restored_struck.len(), 2);
+    assert!(restored_struck.iter().all(|strike| {
+        restored_deaths
+            .iter()
+            .any(|death| death.place == strike.place)
+    }));
 }
 
 fn test_world() -> World {
