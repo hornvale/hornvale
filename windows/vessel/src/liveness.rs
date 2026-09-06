@@ -8775,20 +8775,29 @@ pub fn derive_wild_npcs(
 /// [`derive_wild_npcs`]'s sibling, and deliberately the same derivation: a
 /// staged body and a wild one are the same shape — village-less, built from
 /// (species, position) — so they must not drift into two ways of making one
-/// thing. **The Ken, Task 4: they are now also identical in labelling.**
+/// thing. **The Ken, Task 4: all three wild-shaped derivations —
+/// this one, [`derive_wild_npcs`], and [`derive_wild_herds`] — are now
+/// identical in labelling, fixed in two rounds.**
+///
 /// This doc used to record a difference here — a staged goblin was labelled
 /// `goblin`, a wild one `"a wild goblin"` — and named the WILD side a
 /// pre-existing defect (it rendered "The a wild carrion-crawler looks
 /// lost") left alone because its blast radius was committed goldens and
-/// book galleries. `presence_line` (`session.rs`) started rendering a
-/// wild GROUP's label rather than its species, which would have moved that
+/// book galleries. `presence_line` (`session.rs`) started rendering a wild
+/// GROUP's label rather than its species, which would have moved that
 /// defect into the presence line instead of fixing it, so this campaign
-/// paid the golden-blast-radius cost instead: `derive_wild_npcs` now shares
-/// this function's bare `species.to_string()` label. If labelling is now
-/// the whole difference between the two derivations, that is a real
-/// question for a future campaign to collapse them outright — this one
-/// does not, because a caller elsewhere may yet depend on them staying two
-/// named functions.
+/// paid the golden-blast-radius cost instead. Round one fixed
+/// `derive_wild_npcs`'s label to match this function's bare
+/// `species.to_string()` — the wrong target, reached only from
+/// `windows/lab` and tests, never from a live `possess` session. Round two
+/// (a controller correction) fixed `derive_wild_herds`'s label the same
+/// way: it is what an ordinary possession actually derives (`session.rs`
+/// calls it directly), and its own `"a wild {species}"` label was the one
+/// reproducing "The a wild carrion-crawler looks lost" in real play (seed
+/// 3, `wait` then `needs`). If labelling is now the whole difference
+/// between the three derivations, that is a real question for a future
+/// campaign to collapse them outright — this one does not, because a
+/// caller elsewhere may yet depend on them staying separately named.
 ///
 /// **The label carries NO article, and that is the settled convention rather
 /// than a style choice.** A settled NPC is "hobgoblin of Naabeena"; the prose
@@ -8959,6 +8968,16 @@ fn wild_body(
 /// unchanged for the health battery and the benches. The two share
 /// `wild_body`; only the identity (the `Lineage` each mints) differs.
 ///
+/// **This is the wild-shaped derivation an ordinary possession actually
+/// walks through** (`session.rs` calls it directly for real herds), which
+/// is why its label — bare `species`, same as [`derive_wild_npcs`] and
+/// [`derive_staged_npcs`] since The Ken, Task 4 round two — is the one that
+/// mattered for closing "The a wild {species} …" in live play. It used to
+/// read `format!("a wild {}", herd.species)`, independently of the other two
+/// derivations' labelling, which is exactly how a first pass at this
+/// campaign fixed the two functions nobody plays through and missed the one
+/// everybody does.
+///
 /// type-audit: bare-ok(identifier-text: species)
 pub fn derive_wild_herds(
     world: &World,
@@ -8984,7 +9003,7 @@ pub fn derive_wild_herds(
                 role: &role,
                 ordinal: i,
             });
-            let label = format!("a wild {}", herd.species);
+            let label = herd.species.clone();
             ledger
                 .commit(
                     Fact {

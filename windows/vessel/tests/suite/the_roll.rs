@@ -1387,37 +1387,51 @@ fn the_count_is_the_sensed_roster() {
 }
 
 /// The wild-group render branch (`presence_line`'s `resident == false` arm —
-/// collapse to `"a wild {species}"`/`"{n} wild {species}"`) and the
-/// multi-group join/ordering (resident group first, `"; "` between groups),
-/// in one test (review fix round 1 of Task 9).
+/// collapse to a bare `"{species}"` for one, `"{n} wild {species}"` for
+/// more) and the multi-group join/ordering (resident group first, `"; "`
+/// between groups), in one test (review fix round 1 of Task 9).
+///
+/// **The singular form lost its `"a wild "` prefix under The Ken, Task 4
+/// (round two).** It used to read `"a wild {species}"`, built fresh from
+/// `species` — a fresh possession never actually reads that string, because
+/// a wild body's `label` (what `examine` matches) is now the same bare
+/// `species` this line renders, and `derive_wild_herds` — the derivation an
+/// ordinary possession actually walks through — mints that label directly.
+/// Before that round, `derive_wild_herds` still minted `"a wild {species}"`
+/// labels, so this line's old species-built string coincidentally matched
+/// them; the "coincidentally" is exactly what let the label carry the
+/// double-article defect `liveness.rs` records ("The a wild
+/// carrion-crawler looks lost") into real play undetected. This test's own
+/// intent survives unchanged: a lone wild body is still ONE un-joined
+/// clause following the resident group, not merged into it and not
+/// pluralised — only the literal expected string moved.
 ///
 /// **No natural seed conveniently isolates ONE wild group beside
 /// residents at a fresh look**, so this test builds the scene by hand
 /// rather than searching further. Seed 3 (`WILD_SEED` in
 /// `possession_moves.rs`) was the first candidate tried and rejected: its
 /// fresh flagship possession already shows all FOURTEEN of its wild
-/// species simultaneously (measured: `Here: <4 named>, and 52 others; a
-/// wild black-dragon; a wild carrion-crawler; …` — fifteen groups), which
-/// exercises the collapse but not a clean single-semicolon ordering check.
-/// So instead: walk seed 0's possession to an empty room (the same
-/// technique `an_empty_room_says_nothing_about_company` uses — a dormant
-/// body's `agent-at` never follows), then place exactly the bodies wanted
-/// with `Session::place_creature_at_me`. Seed 0 was chosen because its
-/// roster derives two bodies of the SAME wild species within call — found
-/// by scanning seeds 0..40 for a species appearing at least twice among
+/// species simultaneously (measured: `Here: <4 named>, and 52 others;
+/// black-dragon; carrion-crawler; …` — fifteen groups), which exercises the
+/// collapse but not a clean single-semicolon ordering check. So instead:
+/// walk seed 0's possession to an empty room (the same technique
+/// `an_empty_room_says_nothing_about_company` uses — a dormant body's
+/// `agent-at` never follows), then place exactly the bodies wanted with
+/// `Session::place_creature_at_me`. Seed 0 was chosen because its roster
+/// derives two bodies of the SAME wild species within call — found by
+/// scanning seeds 0..40 for a species appearing at least twice among
 /// `village.is_none()` bodies, since a herd's individual members are not
 /// otherwise guaranteed to survive the roll's own within-call filter (most
 /// of seed 3's fourteen wild species have exactly one member within call).
 ///
 /// MUTATION THIS MUST FAIL AGAINST: the `resident == false` arm's `n == 1`
 /// case rendering the plural form unconditionally, i.e. swapping
-/// `format!("a wild {species}")` for `format!("1 wild {species}")`.
-/// Performed by hand: made that swap, ran this test alone, and it went red
-/// — `assertion `left == right` failed: a single wild body must collapse
-/// to `a wild {species}` …`, left `"Here: Kmompmon; 1 wild otyugh."`, right
-/// `"Here: Kmompmon; a wild otyugh."` (species and resident name are
-/// seed-0-specific and read off the live session, not hardcoded) — then
-/// reverted the edit.
+/// `labels[0].to_string()` for `format!("1 wild {species}")`. Performed by
+/// hand: made that swap, ran this test alone, and it went red —
+/// `assertion `left == right` failed: a single wild body must collapse to
+/// `a wild {species}` …`, left `"Here: Kmompmon; 1 wild otyugh."`, right
+/// `"Here: Kmompmon; otyugh."` (species and resident name are seed-0-specific
+/// and read off the live session, not hardcoded) — then reverted the edit.
 #[test]
 fn a_wild_group_collapses_and_follows_the_residents() {
     let world = common::build(0).expect("seed 0 builds");
@@ -1509,8 +1523,8 @@ fn a_wild_group_collapses_and_follows_the_residents() {
     let line = here_line(&looked).unwrap_or_else(|| panic!("no presence line: {looked:?}"));
     assert_eq!(
         line,
-        format!("Here: {resident_label}; a wild {wild_species}."),
-        "a single wild body must collapse to `a wild {{species}}`, joined          after the resident group by exactly one `; `"
+        format!("Here: {resident_label}; {wild_species}."),
+        "a single wild body must collapse to its bare label ({{species}}), joined          after the resident group by exactly one `; `"
     );
     assert_eq!(
         line.matches("; ").count(),
@@ -1518,7 +1532,7 @@ fn a_wild_group_collapses_and_follows_the_residents() {
         "two groups must be joined by exactly one separator: {line:?}"
     );
     assert!(
-        line.find(&resident_label) < line.find("wild"),
+        line.find(&resident_label) < line.find(&wild_species),
         "the resident group must precede the wild group: {line:?}"
     );
 

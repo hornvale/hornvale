@@ -9940,32 +9940,37 @@ impl<'w> Session<'w> {
     /// which is not what `examine` matches (`examine` matches `label`) — a
     /// STAGED body's label is bare `{species}` (`derive_staged_npcs`), so
     /// the old species-built `"a wild {species}"` line showed a noun
-    /// `examine` then denied. A body from `derive_wild_npcs` happened to
-    /// escape the bug because its OWN label used to read `"a wild
-    /// {species}"` too, coincidentally matching what this line built — but
-    /// that label carried the same defect `liveness.rs:8783`(-area) records
-    /// ("The a wild carrion-crawler looks lost"), so this task fixed that
-    /// label at the source (`derive_wild_npcs`, `liveness.rs`) rather than
-    /// displaying it unchanged; the two edits must land together. **A
-    /// SEPARATE sibling, `derive_wild_herds` (real herds, the common case a
-    /// fresh possession actually meets), still mints `"a wild {species}"`
-    /// labels and is untouched by this task** — its display and its label
-    /// were already the same string before this task (so it never violated
-    /// the examinability contract this task closes), and it still carries
-    /// the double-article defect this task fixed only for `derive_wild_npcs`.
-    /// A future task may want to unify the two; this one does not.
+    /// `examine` then denied.
+    ///
+    /// **Two rounds, because the first one fixed the wrong site.** A body
+    /// from `derive_wild_npcs` happened to escape the display/label
+    /// mismatch because its OWN label used to read `"a wild {species}"`
+    /// too, coincidentally matching what this line built — but that label
+    /// carried the same defect `liveness.rs`'s doc comment on
+    /// `derive_staged_npcs` records ("The a wild carrion-crawler looks
+    /// lost"), so round one fixed it at the source rather than displaying
+    /// it unchanged. It was the wrong target: `derive_wild_npcs` is reached
+    /// only from `windows/lab` and tests, never from a real `possess`
+    /// session — every wild creature an ordinary possession actually meets
+    /// comes from the sibling `derive_wild_herds` (`session.rs` calls it
+    /// directly for real herds), which independently hardcoded the same
+    /// `"a wild {species}"` label and was the one actually reproducing "The
+    /// a wild carrion-crawler looks lost" in live play (seed 3, `wait` then
+    /// `needs`). Round two (a controller correction) fixed
+    /// `derive_wild_herds`'s label the same way. All three wild-shaped
+    /// derivations now share one bare-`species` labelling convention; the
+    /// two edits within each round must land together with this line's own
+    /// change.
     ///
     /// **A group of several keeps the species-built count clause
     /// deliberately, and this was a judgement call, not a mechanical
     /// carry-over**: every member of such a group shares one species
-    /// string, and for `derive_wild_npcs`/`derive_staged_npcs` bodies that
-    /// string is ALSO every member's own label (neither derivation names an
-    /// individual — see `derive_bodies_at`), so the species word this
-    /// clause prints is already an examinable noun; it merely does not
+    /// string, and for every wild-shaped derivation that string is ALSO
+    /// every member's own label (none of the three names an individual —
+    /// see `derive_bodies_at` and `derive_wild_herds`), so the species word
+    /// this clause prints is already an examinable noun; it merely does not
     /// promise WHICH of the group it names, which is `body_by_needle`'s
-    /// ambiguity to answer, not this line's. (A `derive_wild_herds` group's
-    /// species word is likewise always its members' own label, unchanged
-    /// by this task.)
+    /// ambiguity to answer, not this line's.
     fn presence_line(&self, how: Perceiving) -> Option<String> {
         let roll = self.perceived_npcs(how);
         if roll.is_empty() {
