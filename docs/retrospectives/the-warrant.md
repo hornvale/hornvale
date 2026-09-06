@@ -2,21 +2,25 @@
 
 Process, not product. The product is in
 [the chronicle](../../book/src/chronicle/the-warrant.md); every ruling is in
-[the campaign ledger](../superpowers/ledgers/2026-09-05-the-warrant.md), 28
-entries; the falsified hypothesis and its dated results note are in the spec's
+[the campaign ledger](../superpowers/ledgers/2026-09-05-the-warrant.md) —
+**thirty-four entries**, numbered to #38 with a gap at #13-#16 left by the
+renumbering described below under *A shared append-only document with several
+writers*; the falsified hypothesis and its dated results note are in the spec's
 §10.
 
 ## Seven defects originated in my own spec, plan and brief text
 
-That is the campaign's dominant pattern and it should lead, because five of the
-seven were caught by *reading code or running a probe* and only two needed a
-reviewer — which means the cheapest possible check was, in most cases, the one
-that was skipped.
+That is the campaign's dominant pattern and it should lead. **Four of the seven
+were caught by reading code or running a probe; three needed a reviewer.** The
+split is worth stating exactly, because the four cost minutes each — a grep, a
+read of the seam, one measurement — and every one of them could have been run
+before the text was written rather than after. The other three could not: they
+needed someone who was not the author.
 
 They fall into two families, and the second is the one this campaign adds to
 the record.
 
-**Family one: a claim about the world that was never checked.** Four instances,
+**Family one: a claim about the world that was never checked.** Five instances,
 all in text I wrote with confidence.
 
 - **The errand's target.** The spec's §4 specified `object: Text(target)`. The
@@ -46,6 +50,14 @@ all in text I wrote with confidence.
   choice. The implementer changed it because a rendering regressed; the
   reviewer's argument from the producer is the better one and is what the
   ledger records.
+- **The resident tenant's consumer.** The spec's §6 said `why?` needs a
+  binary-searchable index over errand facts. `recount` takes `&World`, holds no
+  `ResidentFolds`, and cannot acquire one without a dependency the layering test
+  forbids — and §5.4's own grouping pass needs no index, because it walks a fact
+  list `recount` has already collected. **The tenant would have shipped
+  unused**, which is the second "no possible caller" defect in this list and the
+  reason Task 4 was struck; the strike itself is described further down, but the
+  defect belongs here, with its four siblings.
 
 **Family two, and it is new: prose and its own formalisation disagreeing, with
 only the prose audited.** Two instances, and they are the same shape at two
@@ -136,9 +148,10 @@ failures.
    going quiet.** That direction was judged correct, and the point is that it
    was *stated*: a check that does not state its direction reads as total.
 
-Twice this campaign, naming the property and letting the implementer find the
-mutation beat prescribing one from outside the code. That is now four times
-across the campaign's ledger.
+Item 2 is the sharpest case of a habit the ledger counts **four** times in this
+campaign (#18a): naming the property and letting the implementer find the
+mutation beat prescribing one from outside the code. A mutation prescribed from
+the prose can only test what the prose already imagined.
 
 ## I relayed a reviewer's example without measuring it
 
@@ -157,6 +170,70 @@ It was one probe away from being checked and the implementer ran that probe.
 **A reviewer's sentence can overstate its data, and a relay adds no evidence
 while adding authority.** The correction is a ledger entry rather than a silent
 edit for that reason.
+
+## Two committed prose baselines had been wrong by ~2x for weeks
+
+The campaign's freshness sweep acted on this; the finding is a process lesson in
+its own right and belongs here rather than only in the sweep's diff.
+
+Task 2 reported H3 at 1.785075 facts/agent/tick. `tick_commit_budget.rs`'s
+module doc said the rate holds "roughly flat at ~0.92-0.96"; `liveness.rs`'s
+hoist-golden comment said "1.06 … (0.96 before Task 7, 1.24 after it, 1.01
+before this fix round)" against "its 1.5 ceiling". Both were stale by roughly a
+factor of two, and the ceiling they referenced had since moved 1.5 to 2.5. **The
+reading that a jump of that size invites is that the campaign had started
+committing errand facts on the flagship seed** — which would have contradicted
+the spec's own §1 measurement and turned a green instrument into a false alarm.
+
+What settled it was measuring both sides rather than reasoning about either:
+two live probes on seed 42 found zero rendered `agent-at` lines and zero errand
+glosses, and then a checkout of the commit *immediately before* the errand
+commit landed reproduced the per-tick series byte-for-byte and the rates to six
+decimal places. The campaign moved nothing. The rate really is 1.79.
+
+**The defect is that a reader arriving at that number finds two committed
+explanations waiting for it and both are wrong.** Neither was written
+carelessly: each was true of a six-agent roster on the day it was recorded, and
+a sibling campaign then made a session's roster the residents of the settlement
+you stand in. The campaigns that raised the ceiling 1.5 to 2.5 did not restate
+the measured value beside it. That is the same shape as this chapter's opening
+family — a claim whose truth lives in a *population* rather than in a location,
+falsified by an edit somewhere else, by people who did not know they had done
+it. The corrections carry their date and the commit they were measured at, and
+say outright that every other rate in both files is history.
+
+The transferable rule: **a measured rate recorded in prose is a claim with a
+denominator, and the denominator is the roster.** When a campaign changes who is
+in the world, it has invalidated every rate anyone wrote down, silently, and
+nothing in this repository will tell you.
+
+## A shared append-only document with several writers needs its numbers allocated
+
+This campaign's ledger acquired **eight duplicate entry numbers** — two `#11`s,
+two `#12`s, two `#13`s, two `#14`s — plus a reused `#7`. Task 2's implementer
+and Task 3's implementer each wrote their rulings into it, correctly, and each
+numbered from what it could see while the controller numbered from what *it*
+could see. Nothing in any entry body cited a colliding number, so the collision
+was invisible until a reviewer counted the entries and got a different total
+from the one this retrospective's own opening line claimed.
+
+The repair renumbered the implementers' blocks to #30-#33 and #34-#37, leaving
+physical order and every in-body cross-reference intact — which makes the
+numbers non-monotonic in file order, and that is the honest trade: restoring
+monotonicity would have broken the five cites a reader actually follows.
+
+**The defect is the dispatcher's, not the writers'.** Five implementers were
+sent at one append-only document with no ranges allocated. It is the same shape
+as `.superpowers/sdd/followups.md` before decision 0493 — one path, several
+writers, silent collision — at smaller scale, and the remedy is the same one:
+hand each writer a range up front, or key entries by something that cannot
+collide. **The Cartulary moved the campaign ledger out of per-worktree scratch
+precisely so it could be shared; sharing a document is what creates this
+problem, and nothing was added to handle it.**
+
+The smaller lesson rides along and is the one this campaign keeps re-learning:
+**a stated total is a claim, and it is checkable by counting the visible rows.**
+Nobody counted until a reviewer did.
 
 ## A method note that cost 533 seconds
 

@@ -34,8 +34,9 @@ trail:
 
 A run of identical strings carries the information of **one** string. Between
 2.36 and 77 steps restate the same sentence, and the distinct-string count per
-resident over twelve days is one, one and three. On seeds 7 and 14 the
-repetition is **98.5% of the rendered lines**. A per-errand fact is therefore
+resident over twelve days is one, one and three. Repetition — steps beyond the
+first of each errand, over the positional lines rendered — is **98.46%** on
+seed 7 ((2600-40)/2600) and **98.70%** on seed 14 ((3080-40)/3080). A per-errand fact is therefore
 lossless with respect to today's rendered prose *by construction*, because a run
 boundary is defined as the point where the string changes.
 

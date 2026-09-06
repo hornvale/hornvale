@@ -3650,8 +3650,8 @@ its honest size.
    through `recount`, the same call the repl's `why` makes — and counted. A
    walking creature's twelve days of history rendered as sixty-five or
    seventy-seven consecutive lines carrying **one distinct sentence between
-   them**: on two of the three seeds sampled, **98.5% of the rendered lines
-   were repetition**. That is not a failure of taste; it is a failure of
+   them**: on two of the three seeds sampled, **98.46% and 98.70% of the
+   positional lines rendered were repetition**. That is not a failure of taste; it is a failure of
    sparsity, and it was invisible because nobody had looked at the output.
    The reason a creature sets out is now a committed fact of its own, rendered
    once with its origin, its extent and its end, and forty-two lines become
@@ -5506,7 +5506,7 @@ different clothes.
 Two sections of one specification disagreed, and only one of them was audited.
 The spec's §1 argued its whole case about a single quantity — the prose repeated
 on every step of a creature's walk — and measured it: one distinct sentence
-across sixty-five steps, 98.5% repetition. The spec's §10 then froze a
+across sixty-five steps, 98.46% repetition. The spec's §10 then froze a
 prediction that this quantity would fall by at least fifty per cent, but wrote
 the denominator as *all committed provenance*, a population §1 had never
 discussed. The mechanism can only shrink one term of that sum, and it adds a new

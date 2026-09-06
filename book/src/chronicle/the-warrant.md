@@ -43,8 +43,9 @@ direction of the errand, and three renderers put it in front of a reader. But
 information of one string. A seed-7 resident's twelve days produce sixty-five
 steps bearing **one** sentence; a seed-14 resident's produce seventy-seven,
 also bearing one. The busiest regime measured, seed 23, alternates enough to
-produce three. On seeds 7 and 14 the repetition is **98.5% of the rendered
-lines**.
+produce three. The repetition — steps beyond the first of each errand, as a
+share of the positional lines rendered — is **98.46%** on seed 7 and **98.70%**
+on seed 14.
 
 The fourth row is its own finding and it bounds everything that follows. Seed
 42 — the flagship, the seed on which every committed artifact in this repository
@@ -122,7 +123,7 @@ A seed-7 resident, twelve days, before:
 - wandered, having found no water yet (thirst): 3874794881 (asserted by vessel/liveness, day 5.83239)
 - an agent's position on a day: 3874794977 (asserted by vessel/liveness, day 5.83239)
 - an agent's position on a day: 3874798081 (asserted by vessel/liveness, day 5.99811)
-   … thirty-six further lines, the parenthetical identical on every one …
+   … thirty-five further lines, the parenthetical identical on every one …
 - an agent's position on a day: 3874984961 (asserted by vessel/liveness, day 11.96403)
 ```
 
@@ -140,7 +141,7 @@ and the destination are named once each. The per-step view survives behind
 express at all: each step is numbered *within* its errand, `step 12 of 38`.
 
 The compression is not the interesting case; the alternating regime is. Seed 23
-at forty waits renders nine errands scattered among the drinks, grazes and
+at forty waits renders twelve errands scattered among the drinks, grazes and
 sleeps they happened around — *sought a kinder clime (comfort): from 3610257411
 — 5 steps, days 13.66271 to 15.12597, ending at 3610258659*, then a graze, then
 a sleep, then *walking home (sated)*. The roll-up removes repetition and nothing
