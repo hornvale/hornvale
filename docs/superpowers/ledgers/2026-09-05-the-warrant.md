@@ -562,3 +562,65 @@ stronger. **That claim is the review's job to check** — a delete-plus-add read
 as a replacement while covering a different branch, and the honest test is
 whether the successor catches what the retired one caught. · ideonomy passes /
 overturns: 0.
+
+---
+
+#19 [G5] — **Task 3 review, Important: deleting the transitional test left the
+key→gloss pairing unpinned for four of the eight errands, exactly as that
+test's own doc predicted.** · Deleting
+`the_registry_glosses_and_the_live_prose_match_agree_both_ways` was correct —
+`prose_for` is gone, so it cannot exist in that form. But it was the pin, and
+what survives it is thinner than it looks: `every_mode_maps_to_exactly_one_errand_key`
+pins Mode→key for all eight, the spelling test pins the eight key strings, and
+`every_errand_predicate_carries_a_distinct_non_empty_doc` checks only
+distinctness and non-emptiness — **which a swap satisfies**. The only thing
+pinning key→gloss is the H1 fixture, and seed 11 produces just four of the
+eight glosses. `errand/forage`, `errand/rest`, `errand/flight` and
+`errand/company` are pinned by nothing: swap two of their glosses today and
+the whole suite stays green, permanently, with the wrong words rendering on
+the right key. · **This is Task 1's Critical (#8) resurfacing one task later
+in a new shape.** There the defect was a test too weak to catch a swap; here
+it is the correct deletion of the only test that could, with no successor
+taking over its half of the job. A transitional guard's retirement is a
+coverage event and must be accounted for like one — "delete it with the thing
+it pins" is only half an instruction. · Decision: upheld and fixed in this
+task's fix round — an eight-row literal key→gloss table in `the_warrant.rs`,
+the same shape as the spelling test, making the pairing a save-format-grade pin
+rather than a seed-11 accident. · ideonomy passes / overturns: 0.
+
+#20 [G5] — **Task 3 review, plan-mandated Minor: H1 was measured on a
+different population than the one preregistered, and I recorded it as
+"HOLDS".** · Spec §10 freezes H1 as "for every resident on **seeds 7, 14,
+23** over 12 days". The implemented test runs on **seed 11**, because Task 2's
+before-image fixture was frozen on seed 11 and the brief pointed H1 at that
+fixture. The test is a real exact-equality before/after comparison and it does
+hold — on seed 11. · **The reviewer's framing is the part I want kept:** both
+preregistered hypotheses were evaluated against a population other than the
+frozen one; H2's mismatch was ruled a falsification and reported unamended
+(#17), and H1's was not surfaced at all. Reporting one and not the other is not
+a defensible asymmetry, and the direction of the omission — the one that made
+the campaign look better — is exactly the direction that needs a rule rather
+than a judgement. · Decision: **discharge it properly rather than confess it.**
+The reason H1 landed on one seed is structural — a before-image can only exist
+for a seed captured while the prose was live — but that is a reason to go build
+the missing before-images, not to narrow the hypothesis. The merge-base build
+the implementer already stood up for H2 can capture seeds 7, 14 and 23 the same
+way. H1 is then discharged as written. If any of the three disagrees, that is a
+finding and it is reported like #17 was. · Interim status, until the fix round
+returns: **H1 is discharged on seed 11 and untested on 7/14/23** — not
+"HOLDS". · ideonomy passes / overturns: 0.
+
+#21 [G5] — **Two further Task 3 Minors, both to the freshness sweep.** ·
+(a) `player_acts_commit.rs`'s module doc claims a player's trail is
+"indistinguishable from a creature's … same provenance kind". After the flip
+that is false in substance — a creature's step carries `vessel/liveness`, a
+player's carries prose — while the test still passes, because it asserts only
+non-emptiness and the absence of five driver tells. Not a defect in the diff
+(spec §7.4 makes the asymmetry deliberate and the brief forbids touching the
+player constants), but a doc that now reads as coverage it no longer has.
+(b) The H1 test's panic says "do not regenerate the fixture", which is right
+for a provenance regression and **wrong for the case that will actually
+occur** — a future terrain or drive change moves seed 11's walk and this test
+reds with a message forbidding the one legitimate remedy. Name that cause and
+its corroborating evidence (the `hoist_walk_shape` golden moving in the same
+commit) so the guard does not become a trap. · ideonomy passes / overturns: 0.
