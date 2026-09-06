@@ -197,3 +197,22 @@ and a full regeneration at close produced an empty diff apart from its own
 timing row. No census was refreshed and nothing was pushed. The temporary
 `IMPLEMENTATION_PLAN.md` was completed and deleted; the durable plan and design
 are marked complete.
+
+## The merge went red on a gate no local check covers
+
+The first submission (`req-818ef56bbfa3`) failed the chamber's `clients`
+phase after 1,290 s: `clients/game/core/tests/plan.rs` pins the sim's own
+`map` picture of seed 42's arrival chamber as a constant, the campaign
+regenerated the session fixture that picture describes, and the constant
+stayed old. That crate is outside the cargo workspace, so `make
+gate-commit` never builds it, and the constant's own doc — written by The
+Pavement after the identical miss — names `make game-check` as the gate to
+run after any fixture regeneration. The campaign regenerated two client
+fixtures and ran none of the three client gates by hand before submitting.
+The fix was mechanical (re-take from the sim, not from the client; the two
+agreed byte for byte), and the lesson is the one already written above the
+constant: a regenerated fixture that crosses a gate boundary obliges you to
+run that boundary's gate, and a green workspace suite says nothing about
+it. A memory already said this too (`gate-commit does NOT scan clients/`);
+a controller memory is inert unless it reaches the checklist that runs
+before submission.
