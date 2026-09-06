@@ -225,10 +225,13 @@ under slack, founding a daughter into vacant favourable ground, retreating
 toward refugia when its cell turns against it, or ending. The **present world
 is the last frame** of that run. A living settlement is a community still alive
 at the final year; a ruin is one that died; the grassy clearing is one that
-died lifetimes ago. The condensation flow above still builds the capacity
-field the history reads, but it no longer emits the present map — history is
-the sole provider of both settlement and ruin facts, and each carries a
-provenance pointer to the skeleton event that produced it.
+died lifetimes ago. The carrying-capacity field above is what the history
+reads; its condensation — the flow accumulation and the attractors it names —
+is read by nothing on the production path any more, and survives as the Lab's
+readout of the field ([The Hidage](../chronicle/the-hidage.md) measured
+exactly that gap). History is the sole provider of both settlement and ruin
+facts, and each carries a provenance pointer to the skeleton event that
+produced it.
 
 The history lives as a **committed skeleton, locally-derived flesh**: a
 compact, dated event log (foundings, migrations, endings, each with
@@ -413,8 +416,9 @@ Tithe](../chronicle/the-tithe.md).
   envelope, and no new fact shape, cause of ending, or stream label.
 
 Seed 42 under a spinning sky now grows **230 settlements** as the present
-frame of its derived history (the field-condensation model above supplies the
-substrate the history plays out on; it no longer emits the map). Since [The
+frame of its derived history (the carrying-capacity field above supplies the
+substrate the history plays out on; the condensation of that field no longer
+emits the map, nor anything else the bake reads). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
 competitive niche-K stack, **fifteen peoples** share the landscape — the four
 goblinoids (goblin, hobgoblin, bugbear, and kobold, since [The
