@@ -6,7 +6,8 @@ import sys
 import tempfile
 import unittest
 
-from measure import load_workloads, capture, manifest_for_attempt, validate_attempt
+from measure import (load_workloads, capture, command_for_workload,
+                     manifest_for_attempt, validate_attempt)
 
 
 ROOT = Path(__file__).parent
@@ -26,12 +27,19 @@ def valid_attempt():
         source={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40},
         graph={"sha256": "d" * 64, "package_count": 1},
         toolchain={"rustc": "rustc 1.80.0", "host_class": "mac"},
-        target={"path": "/owned/target", "classification": "cold"},
+        target={"path": "/owned/checkout/target", "classification": "cold"},
         command=["fixture-command"],
         capture={
             "exit_code": 0,
+            "cwd": "/owned/checkout",
             "deadline_s": 3600,
             "elapsed_s": 0.1,
+            "ownership": {
+                "checkout": "/owned/checkout",
+                "target": "/owned/checkout/target",
+                "evidence_root": "/owned/evidence",
+                "evidence_destination": "/owned/evidence/attempt.json",
+            },
             "cleanup": {"complete": True, "error": None},
             "interrupted": False,
             "deadline_exceeded": False,
@@ -52,6 +60,13 @@ class WorkloadTests(unittest.TestCase):
         for workload in workloads["workloads"]:
             self.assertIsInstance(workload["command"], list)
             self.assertTrue(workload["expected_outputs"])
+
+    def test_census_workload_uses_the_collect_contract(self):
+        workload = load_workloads(ROOT / "workloads.json")["workloads"][0]
+        command = command_for_workload(workload, Path("/owned/checkout"))
+        self.assertEqual(
+            command[-3:], ["collect", "--repo-root", "/owned/checkout"],
+        )
 
     def test_missing_output_declaration_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -75,6 +90,46 @@ class WorkloadTests(unittest.TestCase):
 class AttemptTests(unittest.TestCase):
     def test_valid_attempt_is_accepted(self):
         validate_attempt(valid_attempt())
+
+    def test_malformed_output_entries_are_rejected(self):
+        cases = [
+            [],
+            [{"path": "", "bytes": 0, "sha256": "e" * 64}],
+            [{"path": "../result.json", "bytes": 0, "sha256": "e" * 64}],
+            [{"path": "result.json", "bytes": -1, "sha256": "e" * 64}],
+            [{"path": "result.json", "bytes": True, "sha256": "e" * 64}],
+            [{"path": "result.json", "bytes": 0, "sha256": "bad"}],
+        ]
+        for outputs in cases:
+            with self.subTest(outputs=outputs):
+                attempt = valid_attempt()
+                attempt["outputs"] = outputs
+                with self.assertRaisesRegex(ValueError, "outputs"):
+                    validate_attempt(attempt)
+
+    def test_malformed_numeric_and_status_fields_are_rejected(self):
+        cases = [
+            ("graph", "package_count", -1),
+            ("graph", "sha256", "short"),
+            ("capture", "exit_code", "0"),
+            ("capture", "elapsed_s", float("nan")),
+            ("capture", "deadline_s", True),
+            ("capture", "interrupted", "false"),
+            ("capture", "output_limit_exceeded", "false"),
+            ("costs", "build_s", float("inf")),
+        ]
+        for section, key, value in cases:
+            with self.subTest(section=section, key=key):
+                attempt = valid_attempt()
+                attempt[section][key] = value
+                with self.assertRaises(ValueError):
+                    validate_attempt(attempt)
+
+    def test_unowned_capture_paths_are_rejected(self):
+        attempt = valid_attempt()
+        attempt["capture"]["ownership"]["target"] = "/shared/target"
+        with self.assertRaisesRegex(ValueError, "ownership"):
+            validate_attempt(attempt)
 
     def test_incomplete_cleanup_is_rejected(self):
         attempt = valid_attempt()
@@ -101,10 +156,55 @@ class AttemptTests(unittest.TestCase):
                 [sys.executable, "-c", "print('fixture')"],
                 Path(directory),
                 destination,
+                owned_checkout=Path(directory),
+                owned_target=Path(directory) / "target",
+                owned_evidence_root=Path(directory),
             )
             self.assertEqual(result["exit_code"], 0)
             self.assertTrue(destination.exists())
             self.assertLessEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
+
+    def test_capture_hard_stops_oversized_subprocess_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root / "attempt.json"
+            result = capture(
+                [sys.executable, "-c", "import sys; sys.stdout.write('x' * (20 * 1024 * 1024))"],
+                root,
+                destination,
+                owned_checkout=root,
+                owned_target=root / "target",
+                owned_evidence_root=root,
+            )
+            self.assertTrue(result["output_limit_exceeded"])
+            self.assertEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
+            self.assertLessEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
+
+    def test_capture_rejects_unowned_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(ValueError, "owned"):
+                capture(
+                    [sys.executable, "-c", "print('fixture')"],
+                    root,
+                    root / "attempt.json",
+                    owned_checkout=root / "other-checkout",
+                    owned_target=root / "target",
+                    owned_evidence_root=root,
+                )
+
+    def test_capture_rejects_unowned_evidence_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(ValueError, "evidence"):
+                capture(
+                    [sys.executable, "-c", "print('fixture')"],
+                    root,
+                    root / "attempt.json",
+                    owned_checkout=root,
+                    owned_target=root / "target",
+                    owned_evidence_root=root / "evidence",
+                )
 
 
 if __name__ == "__main__":

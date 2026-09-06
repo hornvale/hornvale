@@ -20,11 +20,12 @@ Preparation, compilation, test, queue, and authoring costs remain separate.
 Failed preparation and incomplete cleanup are retained and fail closed; they
 are never converted into a successful product result.
 
-The recorder uses the existing Counterpart measurement supervisor. Its 16 MiB
-per-stream threshold is a termination threshold, so a writer may overshoot
-between polls; oversized bytes remain retained and the attempt is invalid.
-Unit tests use fixture Python commands only and never invoke Cargo or a live
-build.
+The recorder uses the existing Counterpart process-session cleanup pattern and
+reads each stream through a hard 16 MiB retention cap. An oversized writer is
+terminated as soon as a read crosses the cap; the retained attempt is marked
+invalid. Workload argv may contain `${CHECKOUT}`, which is replaced with the
+absolute owned checkout at execution time. Unit tests use fixture Python
+commands only and never invoke Cargo or a live build.
 
 ## Commands
 

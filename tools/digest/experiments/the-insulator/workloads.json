@@ -12,7 +12,10 @@
         "--manifest-path",
         "tools/digest/Cargo.toml",
         "-p",
-        "digest-census-publication"
+        "digest-census-publication",
+        "collect",
+        "--repo-root",
+        "${CHECKOUT}"
       ],
       "expected_outputs": [
         {
