@@ -3668,6 +3668,29 @@ its honest size.
    read stays the gate; what changes, again, is that one more named guardrail
    moved from promissory note to a mechanism with a measured, partly-null
    result.
+   **Re-scored a third time by [The Warrant](./chronicle/the-warrant.md)
+   (2026-09-06): the third guardrail, *sparsity*, now has a mechanism, and for
+   once the mechanism came with a number that says how badly it was needed.**
+   Every guardrail this row names had until now been argued rather than
+   measured. This campaign rendered the account the world actually produces —
+   through `recount`, the same call the repl's `why` makes — and counted. A
+   walking creature's twelve days of history rendered as sixty-five or
+   seventy-seven consecutive lines carrying **one distinct sentence between
+   them**: on two of the three seeds sampled, **98.46% and 98.70% of the
+   positional lines rendered were repetition**. That is not a failure of taste; it is a failure of
+   sparsity, and it was invisible because nobody had looked at the output.
+   The reason a creature sets out is now a committed fact of its own, rendered
+   once with its origin, its extent and its end, and forty-two lines become
+   four with nothing a reader could distinguish removed — pinned as exact
+   equality of every rendered gloss and its first day, across 252 entities and
+   1242 runs. **What has not moved is the bet, and the reason is now sharper
+   than "taste".** All three guardrails have mechanisms; none of them is
+   evidence that an account is *worth reading*, and this campaign's own
+   rendering is still one creature's twelve days rather than a history. What
+   it adds to the chapter is the instrument: the guardrails are measurable on
+   the rendered artifact, and until someone rendered it, one of them was
+   failing by a factor of sixty-five with every gate green. The row stays
+   low-confidence and the human read stays the gate.
 
 4. **An inhabited moment worth standing in.** The project's thesis is that the
    world becomes interesting enough to be worth stewarding, and stewardship is
@@ -5552,3 +5575,52 @@ different things**, and the derivation moved between them without saying so.
 Unscored against any standing bet: nothing in this chapter's own text stakes a
 claim the readout moves, and the accounting above is filed as a new axis rather
 than a re-score of an existing one.
+
+### A preregistered floor over a wider population than its own argument (2026-09-06)
+
+[The Warrant](./chronicle/the-warrant.md) moves the *historiography worth
+reading* bet, re-scored above. It belongs here for a second reason: it produced
+the clearest instance yet of a failure this chapter has recorded twice before in
+different clothes.
+
+Two sections of one specification disagreed, and only one of them was audited.
+The spec's §1 argued its whole case about a single quantity — the prose repeated
+on every step of a creature's walk — and measured it: one distinct sentence
+across sixty-five steps, 98.46% repetition. The spec's §10 then froze a
+prediction that this quantity would fall by at least fifty per cent, but wrote
+the denominator as *all committed provenance*, a population §1 had never
+discussed. The mechanism can only shrink one term of that sum, and it adds a new
+one. The prediction failed on two of three seeds — 49.04% and 22.18% against a
+50% floor — while the quantity actually argued about fell by 65.72%, 65.82% and
+54.56%.
+
+**Both numbers are in the chronicle, and the falsification is reported
+unamended.** That ordering is the whole discipline: a preregistration that can
+be re-scoped after unblinding is not one, so the narrower figure is stated as
+*context for why the frozen prediction came out as it did*, never as a
+substitute result, and the spec carries a dated note recording the mismatch
+rather than a corrected threshold.
+
+The chapter already held the pieces. It records that *a ratio frozen before the
+code is only as durable as its denominator* — from a campaign whose 2.1% size
+bound was falsified at 6.25% because the world it was computed against had been
+rebuilt underneath it. That is a denominator that **moved**. This one never
+moved; it was **written wider than the argument on the day it was frozen**, and
+nothing about the state of the world would have changed the outcome. The two
+share a remedy and it is cheap: name, in the same sentence as the threshold, the
+population the threshold is taken over, and check it against the section that
+argued for it.
+
+The generalization is worth the paragraph, because it is not really about
+denominators. A specification carries two kinds of claim — what is required, and
+that some concrete thing shown alongside satisfies the requirement — and reviews
+routinely audit only the first. The same campaign supplied the smaller sibling
+of this failure within days of the larger one: a requirement correctly stated in
+prose ("a test that fails if either copy drifts") beside example code that
+compared two sets, which two swapped entries satisfy. **Prose and its own
+formalisation must be checked against each other, not only against the world.**
+
+Unscored as a bet. It is filed as an instrument correction, beside the others
+in this section: a preregistration is falsifiable only over the population it
+names, and the population it names is the part nobody reads twice.
+

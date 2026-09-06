@@ -500,6 +500,13 @@ fn run_scan_shape(
             .register_predicate(pred, false, doc)
             .expect("the drive predicates register identically every run");
     }
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside the drive predicates above for the same reason: this
+    // bench runs a real walk over real ticks, and an unregistered predicate
+    // a walk tries to commit fails outright.
+    for (key, doc) in errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
     let npcs = derive_npcs(&world, ctx, &mut ledger, agents, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();

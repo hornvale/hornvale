@@ -714,6 +714,11 @@ fn main() {
     registry
         .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
         .expect("DRANK registers identically every run");
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside `AGENT_AT` for the same reason `DRANK` is, above.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
 
     println!(
         "fold_depth_sweep: {} depths x {PASSES} passes (alternating direction) x {FOLD_REPS} reps/reading, two reset regimes",

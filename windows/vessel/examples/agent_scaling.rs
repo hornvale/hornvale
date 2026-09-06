@@ -374,6 +374,11 @@ fn run_rung(
             "an agent ate (eased its hunger) on a day",
         )
         .expect("EATEN registers identically every run");
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside `AGENT_AT` for the same reason the four above are.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
 
     let npcs = derive_npcs(world, ctx, &mut ledger, agents, home_settlement);
     let n = npcs.len();
