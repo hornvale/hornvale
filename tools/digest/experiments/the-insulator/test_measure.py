@@ -17,7 +17,8 @@ from measure import (EnforcementUnavailable, load_workloads, capture, command_fo
 ROOT = Path(__file__).parent
 
 
-def capture_fixture(command, root, destination, *, target=None, evidence_root=None):
+def capture_fixture(command, root, destination, *, target=None, evidence_root=None,
+                    timeout_s=3600):
     target = target or root / "target"
     evidence_root = evidence_root or root / "evidence"
     workload = {
@@ -27,7 +28,8 @@ def capture_fixture(command, root, destination, *, target=None, evidence_root=No
     }
     with mock.patch.object(measure, "load_workloads",
                            return_value={"workloads": [workload]}):
-        return capture("fixture", root, target, evidence_root, destination)
+        return capture("fixture", root, target, evidence_root, destination,
+                       timeout_s=timeout_s)
 
 
 def stream(raw=b""):
@@ -229,6 +231,39 @@ class AttemptTests(unittest.TestCase):
             self.assertTrue(result["output_limit_exceeded"])
             self.assertEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
             self.assertLessEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
+
+    def test_capture_terminates_timed_out_workload_and_retains_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            destination = root / "evidence" / "attempt.json"
+            started = target / "started"
+            late = target / "late"
+            child_script = (
+                "import time; "
+                f"time.sleep(0.5); open({str(late)!r}, 'w').write('late')"
+            )
+            script = (
+                "import subprocess, sys, time; "
+                f"open({str(started)!r}, 'w').write('started'); "
+                f"subprocess.Popen([sys.executable, '-c', {child_script!r}]); "
+                "time.sleep(10)"
+            )
+            result = capture_fixture(
+                [sys.executable, "-c", script], root, destination,
+                target=target, timeout_s=0.5,
+            )
+
+            persisted = json.loads(destination.read_text())
+            self.assertTrue(started.exists())
+            self.assertTrue(result["deadline_exceeded"])
+            self.assertNotEqual(result["exit_code"], 0)
+            self.assertTrue(result["cleanup"]["complete"])
+            self.assertEqual(persisted, result)
+            self.assertGreaterEqual(result["elapsed_s"], result["deadline_s"])
+            self.assertFalse(late.exists())
+            self.assertIn("deadline_exceeded", persisted)
+            self.assertIn("exit_code", persisted)
 
     def test_capture_blocks_external_write(self):
         with tempfile.TemporaryDirectory() as directory:
