@@ -866,3 +866,29 @@ argued in §1 that per-step prose repeats a fact N times and should be stated
 once where it can be resolved, then spent four rounds restating a count in
 prose that had a command behind it the whole time. · ideonomy passes /
 overturns: 0.
+
+---
+
+#41 [G5] — **My prediction about the self-falsifying count was itself
+outrun before the fix could be written.** · I told the implementer the ledger
+was at "35 now, 36 after this round". It ran the counting command first and
+found **36 already** — my number was stale between composing the message and
+the implementer reading it. That is the fourth value in this thread (28 → 34 →
+35 → 36) and the cleanest possible demonstration that the fix had to be
+structural: I could not state this integer correctly even in the act of
+explaining why it could not be stated. · Three further things it did that are
+worth keeping: (a) it **verified the counting command before adopting it**,
+because a command that over-counts relocates the defect rather than closing it
+— the anchored `grep -cE '^#[0-9]+ \['` returns 36 while the naive
+`^#[0-9]+` returns 38, matching two cross-references inside entry bodies, and
+the retrospective now names that trap so a reader substituting the obvious
+regex does not get a wrong number; (b) its own replacement paragraph contained
+the same error class and it caught it pre-commit — it had written "three
+different totals" while naming two; (c) adding the first-half rate falsified
+the paragraph *below* it ("a reader arriving at **that number**", singular),
+which it also fixed. · **Every one of those is the campaign's thesis
+recurring**: a number stated in prose acquires dependents, and each dependent
+is a place the correction has to reach. That is precisely the argument spec §1
+makes about a provenance string repeated at every step, and it is why the
+remedy in both cases is to state the thing once, where it can be resolved,
+rather than to state it accurately more often. · ideonomy passes / overturns: 0.
