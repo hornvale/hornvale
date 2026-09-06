@@ -585,6 +585,10 @@ so no census is needed at this close.
 | 0 | `median`'s even-length branch has no test (the brief's case is odd-length) | deferred to the final review |
 | 0 | `gini` guards `mean <= 0.0` where `== 0.0` is the stated case; unreachable on non-negative inputs | accepted as-is |
 | 1 | `multi_people_attractor_sites` counts per `(vertex, people)` P1 entry, not per distinct vertex; a vertex hosting two peoples' alive occupations counts twice | accepted as-is: consistent with every sibling P1 statistic; read it as "P1 entries whose vertex is a multi-people attractor" (Task 3) |
+| 3 | chronicle epigraph reads as a stronger null than measured ("ploughing would change nothing worth having") while the body says D1 would re-order settlements | accepted as-is: the body is precise; an epigraph is a stance |
+| 3 | chronicle's verdict section does not quote the caveat's literal MIXED wording; decision 0827 carries it in full | accepted as-is |
+| 3 | `SOC-staple-ladder` compaction to fit 600 chars dropped "one flow ends in a sink" and shortened R2's clause; both survive in metaplan §1.1/§2.2 and decision 0786 | accepted as-is: a compaction, recoverable |
+| 3 | review ruling: minors that are FALSE STATEMENTS in permanent records (retro:6 "second in a row", metaplan:424 "moves out of §6", metaplan §6 still awaiting a probe that has reported, §4 D1's wrong-units figure with no local note, retro:126 omitting the digest regen, chronicle "three to eleven") were promoted into fix round 1 rather than deferred; wording minors stayed deferred | fixed in Task 3 fix round 1 |
 
 ## Capture manifest
 
