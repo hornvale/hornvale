@@ -19,7 +19,16 @@
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
-LEDGER="$ROOT/docs/timings.md"
+# The ledger path is overridable ONLY as a test seam, and nothing in
+# production sets it. scripts/test-timed.sh points it at a scratch file so a
+# probe cannot append rows to the tracked ledger — which it otherwise does,
+# because a successful probe run is indistinguishable from a real one. The
+# first draft of that test cleaned up afterwards with `git checkout --
+# docs/timings.md` and destroyed a carried measurement row along with the
+# probe rows: exactly the trap scripts/CLAUDE.md already documents for
+# mutate.py ("`git checkout -- <file>` reverts your uncommitted work along
+# with the mutation"). Not writing to the file beats cleaning up after it.
+LEDGER="${HV_TIMINGS_LEDGER:-$ROOT/docs/timings.md}"
 
 cores() { getconf _NPROCESSORS_ONLN 2>/dev/null || echo '?'; }
 
@@ -72,7 +81,43 @@ cmd_run() {
     tmp="$(mktemp)"
     { TIMEFORMAT='%R %U %S'; time "$@" 1>&8 2>&9; } 8>&1 9>&2 2>"$tmp"
     rc=$?
-    read -r real user sys < "$tmp"; rm -f "$tmp"
+
+    # THE MEASUREMENT MUST NEVER VETO THE MEASURED COMMAND.
+    #
+    # This was `read -r real user sys < "$tmp"` with no guard, under
+    # `set -u`. If $tmp is gone or empty at read time, the read fails, the
+    # three variables stay unset, and the FIRST expansion of them aborts the
+    # script — turning a command that SUCCEEDED into a non-zero exit from the
+    # stopwatch wrapped around it.
+    #
+    # That is not hypothetical. campaign/the-warrant, 2026-09-06: the chamber's
+    # `artifacts` phase ran to completion — its last line is
+    # "regenerate-artifacts: done." after the full seed-42 regen, the domesday
+    # survey and the anomaly report — and the merge was then reported
+    # CHAMBER RED rc=11, because two mktemp files (this one and
+    # sluice-run.sh's) vanished during the ~290 s the phase was running. The
+    # campaign was billed a serial-box slot and an attribution for a defect in
+    # the instrument.
+    #
+    # WHAT DELETED THEM IS STILL UNKNOWN and this fix does not depend on
+    # finding out. Ruled out: /usr/lib/tmpfiles.d/tmp.conf sets /tmp with age
+    # `-`, i.e. no aging at all, so systemd-tmpfiles cannot have done it; there
+    # is no tmpwatch/tmpreaper cron; /tmp was 34% full; the journal is silent
+    # for the window. Not ruled out: a concurrent actor on the box removing
+    # /tmp/tmp.* by glob — and note that agent shells are non-interactive and
+    # write no ~/.bash_history, so an empty history is NOT evidence against it.
+    # One occurrence in 324 chamber logs.
+    #
+    # Whatever the cause, a timing wrapper holding veto power over the thing it
+    # times is wrong on its own terms. An absent measurement is a missing row,
+    # never a failed command.
+    real=""; user=""; sys=""
+    if [ -r "$tmp" ]; then read -r real user sys < "$tmp" || true; fi
+    rm -f "$tmp"
+    if [ -z "$real" ] || [ -z "$user" ] || [ -z "$sys" ]; then
+        echo "timed.sh: '$label' finished rc=$rc but its timing was unreadable — NOT recorded, and the command's own exit code stands." >&2
+        return "$rc"
+    fi
 
     ratio="$(awk -v u="$user" -v s="$sys" -v r="$real" 'BEGIN{ if(r+0>0) printf "%.2f",(u+s)/r; else print "?" }')"
     [ -f "$LEDGER" ] || init_ledger

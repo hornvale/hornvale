@@ -6270,6 +6270,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T13:09:44Z | sluice:gate | 840.810 | 21094.408 | 586.918 | 25.79 | 0 | b63d1626b |  | lefford | 40 |
 | 2026-09-06T13:12:16Z | sluice:clients | 152.174 | 2422.635 | 196.806 | 17.21 | 0 | 5b724ae6e |  | lefford | 40 |
 | 2026-09-06T13:20:22Z | sluice:heavy | 485.147 | 11438.771 | 161.035 | 23.91 | 0 | 5b48c6569 |  | lefford | 40 |
+| 2026-09-06T13:55:55Z | gate-commit | 291.750 | 2519.868 | 184.362 | 9.27 | 0 | e6fcf92f0 | tooling/timing-must-not-veto-the-phase | lefford | 40 |
 | 2026-09-06T13:34:53Z | rebaseline | 171.682 | 430.303 | 18.234 | 2.61 | 0 | acc6d35a8 | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T13:36:13Z | gate-commit | 64.673 | 122.009 | 75.033 | 3.05 | 0 | acc6d35a8 | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T13:49:24Z | sluice:artifacts | 257.882 | 1176.765 | 42.074 | 4.73 | 0 | 1522d8996 |  | lefford | 40 |
@@ -6277,3 +6278,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T14:06:06Z | sluice:gate | 906.942 | 22101.065 | 584.204 | 25.01 | 0 | 3dc564763 |  | lefford | 40 |
 | 2026-09-06T14:08:38Z | sluice:clients | 152.097 | 2324.336 | 179.653 | 16.46 | 0 | a93da4e45 |  | lefford | 40 |
 | 2026-09-06T14:16:42Z | sluice:heavy | 483.564 | 11409.246 | 144.191 | 23.89 | 0 | 8db2ffe74 |  | lefford | 40 |
+| 2026-09-06T14:27:24Z | gate-commit | 120.970 | 770.613 | 110.341 | 7.28 | 0 | c7cb40a33 | tooling/timing-must-not-veto-the-phase | lefford | 40 |
