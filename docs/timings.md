@@ -6043,3 +6043,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T01:34:10Z | lot-check | 88.651 | 42.440 | 1.655 | 0.50 | 0 | 726bee542 | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-06T01:38:24Z | gate-commit | 87.657 | 105.756 | 16.850 | 1.40 | 0 | 726bee542 | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-06T01:40:49Z | gate-commit | 41.207 | 98.223 | 16.212 | 2.78 | 0 | 726bee542 | campaign/the-lot | MacBookPro | 10 |
+| 2026-09-05T21:39:03Z | gate-commit | 86.042 | 158.825 | 37.543 | 2.28 | 0 | 62440c78d | tooling/claim-refuses-running-sha | lefford | 40 |
+| 2026-09-05T23:56:57Z | gate-commit | 68.526 | 156.597 | 50.656 | 3.02 | 0 | 5dbfefee3 | tooling/overlap-advisory-partition | lefford | 40 |
+| 2026-09-06T00:02:01Z | gate-commit | 71.234 | 166.167 | 54.200 | 3.09 | 0 | 248083a17 | tooling/overlap-advisory-partition | lefford | 40 |
+| 2026-09-06T00:07:38Z | sluice:artifacts | 286.724 | 1679.134 | 68.213 | 6.09 | 0 | 3ed84d68a |  | lefford | 40 |
+| 2026-09-06T00:09:14Z | sluice:outboard | 96.128 | 97.069 | 78.283 | 1.82 | 0 | 316c921ff |  | lefford | 40 |
+| 2026-09-06T00:21:58Z | sluice:gate | 763.701 | 20454.957 | 586.685 | 27.55 | 0 | f6f581a71 |  | lefford | 40 |
+| 2026-09-06T00:24:27Z | sluice:clients | 148.525 | 2212.464 | 206.207 | 16.28 | 0 | 7ad689094 |  | lefford | 40 |
+| 2026-09-06T00:31:51Z | sluice:heavy | 443.505 | 10238.026 | 154.705 | 23.43 | 0 | ce65d0acc |  | lefford | 40 |
