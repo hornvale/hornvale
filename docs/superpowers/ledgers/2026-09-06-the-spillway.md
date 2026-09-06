@@ -1000,3 +1000,7 @@ the arms step, and it stubs the census.
 'test(docs_consistency)'` green over these four prose-only edits.
 `docs/timings.md` carries local mtime/duration churn from running that
 suite and is intentionally left unstaged.
+
+### G6 — approved
+
+Nathan approved the G6 package on 2026-09-06 ("Looks great"); the branch contained `origin/main` at `fd7f1d4f4` (0 behind) at submission. Merge submitted through the queue.
