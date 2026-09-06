@@ -35,8 +35,11 @@ pub use allometry::{
 };
 mod reproduction;
 pub use reproduction::{
-    DevelopmentSite, ReproductiveAffordances, ReproductiveOperation, ReproductiveRole, SupportMode,
-    TransitionCapability,
+    AssistanceCapability, CompatibilityContext, CompatibilityOutcome, CompatibilityRelation,
+    CompatibilityRule, DevelopmentSite, DevelopmentalTiming, DirectionalCompatibility, GuardStatus,
+    MaterialCompatibility, ReproductiveAffordances, ReproductiveOperation, ReproductivePathway,
+    ReproductiveProfile, ReproductiveRole, SupportMode, TransitionCapability, compatibility,
+    possible_pathways,
 };
 
 /// Predicate: a species entity's name (functional, Text).

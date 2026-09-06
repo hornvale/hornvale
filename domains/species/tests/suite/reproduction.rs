@@ -5,9 +5,459 @@
 //! explicit coverage decision.
 
 use hornvale_species::{
-    DevelopmentSite, ReproductiveAffordances, ReproductiveOperation, ReproductiveRole, SupportMode,
-    TransitionCapability,
+    AssistanceCapability, CompatibilityContext, CompatibilityOutcome, CompatibilityRule,
+    DevelopmentSite, DevelopmentalTiming, GuardStatus, MaterialCompatibility,
+    ReproductiveAffordances, ReproductiveOperation, ReproductiveProfile, ReproductiveRole,
+    SupportMode, TransitionCapability, compatibility, possible_pathways,
 };
+
+fn pairborn() -> ReproductiveAffordances {
+    use ReproductiveOperation::{Grow, Join, Make, Release, Support};
+    affordances(
+        vec![Make, Join, Grow, Support, Release],
+        vec![DevelopmentSite::Body],
+        vec![SupportMode::Pair],
+        vec![
+            ReproductiveRole::MaterialProducer,
+            ReproductiveRole::MaterialContributor,
+            ReproductiveRole::DevelopmentCarrier,
+            ReproductiveRole::DevelopmentSupporter,
+        ],
+        vec![],
+    )
+}
+
+fn ready_context() -> CompatibilityContext {
+    CompatibilityContext {
+        available_roles: vec![
+            ReproductiveRole::MaterialProducer,
+            ReproductiveRole::MaterialContributor,
+            ReproductiveRole::DevelopmentCarrier,
+            ReproductiveRole::DevelopmentSupporter,
+            ReproductiveRole::Host,
+            ReproductiveRole::Builder,
+        ],
+        development_sites: vec![
+            DevelopmentSite::Body,
+            DevelopmentSite::Egg,
+            DevelopmentSite::BroodStructure,
+            DevelopmentSite::Colony,
+            DevelopmentSite::Host,
+            DevelopmentSite::Environment,
+            DevelopmentSite::Workshop,
+        ],
+        support_modes: vec![
+            SupportMode::Individual,
+            SupportMode::Pair,
+            SupportMode::Group,
+            SupportMode::Host,
+            SupportMode::Environment,
+            SupportMode::Artificial,
+        ],
+        timing: DevelopmentalTiming::Ready,
+        environment: GuardStatus::Satisfied,
+        resources: GuardStatus::Satisfied,
+        assistance: vec![],
+        first_to_second: CompatibilityRule {
+            material: MaterialCompatibility::Fertile,
+            required_assistance: vec![],
+        },
+        second_to_first: CompatibilityRule {
+            material: MaterialCompatibility::Fertile,
+            required_assistance: vec![],
+        },
+    }
+}
+
+#[test]
+fn pairborn_composes_one_complete_pathway() {
+    use ReproductiveOperation::{Grow, Join, Make, Release, Support};
+    let paths = possible_pathways(&pairborn(), &ready_context());
+    assert_eq!(paths.len(), 1);
+    assert_eq!(paths[0].operations, [Make, Join, Grow, Support, Release]);
+    assert_eq!(paths[0].development_site, DevelopmentSite::Body);
+    assert_eq!(paths[0].support_mode, Some(SupportMode::Pair));
+}
+
+#[test]
+fn copy_group_host_and_manufacturing_compose_from_capabilities() {
+    use ReproductiveOperation::{Build, Convert, Copy, Grow, Join, Make, Release, Support};
+    use ReproductiveRole::{
+        Builder, DevelopmentCarrier, DevelopmentSupporter, Host, MaterialContributor,
+        MaterialProducer,
+    };
+    let cases = [
+        (
+            vec![Copy, Grow, Support, Release],
+            DevelopmentSite::Body,
+            vec![SupportMode::Individual],
+            vec![MaterialProducer, DevelopmentCarrier, DevelopmentSupporter],
+        ),
+        (
+            vec![Make, Join, Grow, Support, Release],
+            DevelopmentSite::BroodStructure,
+            vec![SupportMode::Group],
+            vec![MaterialProducer, MaterialContributor, DevelopmentSupporter],
+        ),
+        (
+            vec![Make, Convert, Grow, Release],
+            DevelopmentSite::Host,
+            vec![],
+            vec![MaterialProducer, Host],
+        ),
+        (
+            vec![Build],
+            DevelopmentSite::Workshop,
+            vec![],
+            vec![Builder],
+        ),
+    ];
+    for (operations, site, support, roles) in cases {
+        let aff = affordances(
+            operations.clone(),
+            vec![site],
+            support.clone(),
+            roles,
+            vec![],
+        );
+        let paths = possible_pathways(&aff, &ready_context());
+        assert_eq!(paths.len(), 1, "{aff:?}");
+        assert_eq!(paths[0].operations, operations);
+        assert_eq!(paths[0].development_site, site);
+        assert_eq!(paths[0].support_mode, support.first().copied());
+    }
+}
+
+#[test]
+fn each_natural_transition_is_an_explicit_timing_prerequisite() {
+    use ReproductiveOperation::{Change, Grow, Join, Make, Release, Support};
+    for transition in [
+        TransitionCapability::Maturation,
+        TransitionCapability::Metamorphosis,
+        TransitionCapability::Seasonal,
+        TransitionCapability::SequentialRole,
+    ] {
+        let base = pairborn();
+        let aff = affordances(
+            vec![Make, Join, Grow, Support, Release, Change],
+            base.development_sites().to_vec(),
+            base.support_modes().to_vec(),
+            base.roles().to_vec(),
+            vec![transition],
+        );
+        let mut context = ready_context();
+        context.timing = DevelopmentalTiming::After(transition);
+        let paths = possible_pathways(&aff, &context);
+        assert_eq!(
+            paths[0].operations,
+            [Change, Make, Join, Grow, Support, Release]
+        );
+        assert_eq!(paths[0].transition, Some(transition));
+        assert!(possible_pathways(&base, &context).is_empty());
+        assert_eq!(
+            possible_pathways(&aff, &ready_context())[0].transition,
+            None
+        );
+    }
+}
+
+#[test]
+fn every_development_guard_can_block_an_otherwise_possible_pathway() {
+    let ready = ready_context();
+    let mut blocked = vec![];
+    let mut context = ready.clone();
+    context.available_roles.clear();
+    blocked.push(context);
+    let mut context = ready.clone();
+    context.development_sites.clear();
+    blocked.push(context);
+    let mut context = ready.clone();
+    context.support_modes.clear();
+    blocked.push(context);
+    let mut context = ready.clone();
+    context.timing = DevelopmentalTiming::Unavailable;
+    blocked.push(context);
+    let mut context = ready.clone();
+    context.environment = GuardStatus::Unsatisfied;
+    blocked.push(context);
+    let mut context = ready.clone();
+    context.resources = GuardStatus::Unsatisfied;
+    blocked.push(context);
+    for context in blocked {
+        assert!(
+            possible_pathways(&pairborn(), &context).is_empty(),
+            "{context:?}"
+        );
+        assert_eq!(
+            compatibility(&pairborn(), &pairborn(), &context)
+                .first_to_second
+                .outcome,
+            CompatibilityOutcome::Impossible
+        );
+    }
+    assert_eq!(possible_pathways(&pairborn(), &ready).len(), 1);
+}
+
+#[test]
+fn missing_body_roles_cannot_be_supplied_by_a_context_flag() {
+    let base = pairborn();
+    for missing in base.roles() {
+        let roles = base
+            .roles()
+            .iter()
+            .copied()
+            .filter(|role| role != missing)
+            .collect();
+        let aff = affordances(
+            base.operations().to_vec(),
+            base.development_sites().to_vec(),
+            base.support_modes().to_vec(),
+            roles,
+            vec![],
+        );
+        assert!(
+            possible_pathways(&aff, &ready_context()).is_empty(),
+            "{missing:?}"
+        );
+    }
+}
+
+#[test]
+fn empty_invalid_and_incomplete_affordances_produce_no_pathways() {
+    use ReproductiveOperation::{Grow, Join, Make, Support};
+    let base = pairborn();
+    let cases = [
+        ReproductiveAffordances::empty(),
+        affordances(
+            vec![Make, Join, Grow, Support],
+            base.development_sites().to_vec(),
+            base.support_modes().to_vec(),
+            base.roles().to_vec(),
+            vec![],
+        ),
+        affordances(vec![Make, Make], vec![], vec![], vec![], vec![]),
+    ];
+    for aff in cases {
+        assert!(possible_pathways(&aff, &ready_context()).is_empty());
+    }
+}
+
+#[test]
+fn alternatives_have_stable_initiation_site_and_support_order() {
+    use ReproductiveOperation::{Copy, Grow, Join, Make, Release, Support};
+    let base = pairborn();
+    let aff = affordances(
+        vec![Release, Support, Grow, Copy, Join, Make],
+        vec![DevelopmentSite::Egg, DevelopmentSite::Body],
+        vec![SupportMode::Group, SupportMode::Pair],
+        base.roles().to_vec(),
+        vec![],
+    );
+    let paths = possible_pathways(&aff, &ready_context());
+    let signatures: Vec<_> = paths
+        .iter()
+        .map(|p| (p.operations[0], p.development_site, p.support_mode))
+        .collect();
+    assert_eq!(
+        signatures,
+        vec![
+            (Make, DevelopmentSite::Egg, Some(SupportMode::Group)),
+            (Make, DevelopmentSite::Egg, Some(SupportMode::Pair)),
+            (Make, DevelopmentSite::Body, Some(SupportMode::Group)),
+            (Make, DevelopmentSite::Body, Some(SupportMode::Pair)),
+            (Copy, DevelopmentSite::Egg, Some(SupportMode::Group)),
+            (Copy, DevelopmentSite::Egg, Some(SupportMode::Pair)),
+            (Copy, DevelopmentSite::Body, Some(SupportMode::Group)),
+            (Copy, DevelopmentSite::Body, Some(SupportMode::Pair)),
+        ]
+    );
+    assert_eq!(possible_pathways(&aff, &ready_context()), paths);
+}
+
+#[test]
+fn material_relations_distinguish_fertility_sterility_instability_and_impossibility() {
+    let cases = [
+        (
+            MaterialCompatibility::Fertile,
+            CompatibilityOutcome::Fertile,
+        ),
+        (
+            MaterialCompatibility::ViableButSterile,
+            CompatibilityOutcome::ViableButSterile,
+        ),
+        (
+            MaterialCompatibility::Unstable,
+            CompatibilityOutcome::Unstable,
+        ),
+        (
+            MaterialCompatibility::Incompatible,
+            CompatibilityOutcome::Impossible,
+        ),
+    ];
+    for (material, expected) in cases {
+        let mut context = ready_context();
+        context.first_to_second.material = material;
+        context.second_to_first.material = material;
+        let relation = compatibility(&pairborn(), &pairborn(), &context);
+        assert_eq!(relation.first_to_second.outcome, expected);
+        assert_eq!(relation.first_to_second, relation.second_to_first);
+    }
+}
+
+#[test]
+fn one_way_material_relation_does_not_infer_reverse_compatibility() {
+    let mut context = ready_context();
+    context.second_to_first.material = MaterialCompatibility::Incompatible;
+    let relation = compatibility(&pairborn(), &pairborn(), &context);
+    assert_eq!(
+        relation.first_to_second.outcome,
+        CompatibilityOutcome::Fertile
+    );
+    assert_eq!(
+        relation.second_to_first.outcome,
+        CompatibilityOutcome::Impossible
+    );
+    assert!(relation.second_to_first.pathways.is_empty());
+}
+
+#[test]
+fn parental_direction_preserves_specialized_producer_and_developer_roles() {
+    use ReproductiveOperation::{Grow, Join, Make, Release, Support};
+    let donor = affordances(
+        vec![Make],
+        vec![],
+        vec![],
+        vec![
+            ReproductiveRole::MaterialProducer,
+            ReproductiveRole::MaterialContributor,
+        ],
+        vec![],
+    );
+    let receiver = affordances(
+        vec![Join, Grow, Support, Release],
+        vec![DevelopmentSite::Body],
+        vec![SupportMode::Pair],
+        vec![
+            ReproductiveRole::MaterialContributor,
+            ReproductiveRole::DevelopmentCarrier,
+            ReproductiveRole::DevelopmentSupporter,
+        ],
+        vec![],
+    );
+    let relation = compatibility(&donor, &receiver, &ready_context());
+    assert_eq!(
+        relation.first_to_second.outcome,
+        CompatibilityOutcome::Fertile
+    );
+    assert_eq!(
+        relation.first_to_second.pathways[0].operations,
+        [Make, Join, Grow, Support, Release]
+    );
+    assert_eq!(
+        relation.second_to_first.outcome,
+        CompatibilityOutcome::Impossible
+    );
+    let swapped = compatibility(&receiver, &donor, &ready_context());
+    assert_eq!(swapped.second_to_first, relation.first_to_second);
+}
+
+#[test]
+fn assistance_is_required_observable_and_never_repairs_missing_body_operations() {
+    for capability in [
+        AssistanceCapability::Developmental,
+        AssistanceCapability::Magic,
+    ] {
+        let mut context = ready_context();
+        context.first_to_second.required_assistance = vec![capability];
+        let absent = compatibility(&pairborn(), &pairborn(), &context);
+        assert_eq!(
+            absent.first_to_second.outcome,
+            CompatibilityOutcome::Impossible
+        );
+        assert_eq!(absent.first_to_second.missing_assistance, [capability]);
+        context.assistance.push(capability);
+        let present = compatibility(&pairborn(), &pairborn(), &context);
+        assert_eq!(
+            present.first_to_second.outcome,
+            match capability {
+                AssistanceCapability::Developmental =>
+                    CompatibilityOutcome::Assisted(MaterialCompatibility::Fertile),
+                AssistanceCapability::Magic =>
+                    CompatibilityOutcome::MagicOnly(MaterialCompatibility::Fertile),
+            }
+        );
+        assert_eq!(present.first_to_second.required_assistance, [capability]);
+        assert!(present.first_to_second.missing_assistance.is_empty());
+        assert_eq!(
+            present.second_to_first.outcome,
+            CompatibilityOutcome::Fertile
+        );
+        assert_eq!(
+            compatibility(&ReproductiveAffordances::empty(), &pairborn(), &context)
+                .first_to_second
+                .outcome,
+            CompatibilityOutcome::Impossible
+        );
+    }
+}
+
+#[test]
+fn magic_capability_does_not_substitute_for_developmental_assistance() {
+    let mut context = ready_context();
+    context.first_to_second.required_assistance = vec![
+        AssistanceCapability::Developmental,
+        AssistanceCapability::Magic,
+    ];
+    context.assistance = vec![AssistanceCapability::Magic];
+    let relation = compatibility(&pairborn(), &pairborn(), &context);
+    assert_eq!(
+        relation.first_to_second.outcome,
+        CompatibilityOutcome::Impossible
+    );
+    assert_eq!(
+        relation.first_to_second.missing_assistance,
+        [AssistanceCapability::Developmental]
+    );
+}
+
+#[test]
+fn copy_only_profiles_do_not_become_hybrids_when_material_is_declared_fertile() {
+    let aff = affordances(
+        vec![
+            ReproductiveOperation::Copy,
+            ReproductiveOperation::Grow,
+            ReproductiveOperation::Release,
+        ],
+        vec![DevelopmentSite::Environment],
+        vec![],
+        vec![ReproductiveRole::MaterialProducer],
+        vec![],
+    );
+    assert_eq!(possible_pathways(&aff, &ready_context()).len(), 1);
+    assert_eq!(
+        compatibility(&aff, &aff, &ready_context())
+            .first_to_second
+            .outcome,
+        CompatibilityOutcome::Impossible
+    );
+}
+
+#[test]
+fn possibility_profile_needs_no_event_or_frequency_and_typicality_cannot_filter_it() {
+    #[derive(Debug, PartialEq, Eq)]
+    enum TypicalityInput {
+        Unspecified,
+        Seasonal,
+    }
+    let paths = possible_pathways(&pairborn(), &ready_context());
+    let mut profile = ReproductiveProfile {
+        pathways: paths.clone(),
+        typicality: TypicalityInput::Unspecified,
+    };
+    profile.typicality = TypicalityInput::Seasonal;
+    assert_eq!(profile.pathways, paths);
+    assert_eq!(profile.typicality, TypicalityInput::Seasonal);
+}
 
 fn affordances(
     operations: Vec<ReproductiveOperation>,
