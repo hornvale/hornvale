@@ -10363,6 +10363,12 @@ mod tests {
     /// current-position ranking. This is deliberately ignored: it measures the
     /// disagreement that the design must explain, rather than asserting a
     /// production choice before the spec is written.
+    ///
+    /// The seed-42 and seed-17 possession constructors live as private helpers
+    /// in integration-suite modules (`the_culvert.rs` and `resident_folds.rs`).
+    /// A library-unit probe cannot call them without exporting or duplicating
+    /// their session scaffolding, so this keeps the strongest existing direct
+    /// two-room shape and records its direct planner counts instead.
     #[test]
     #[ignore = "probe: The Fetch home/current admission and ranking comparison"]
     fn fetch_probe_compares_home_and_current_water_decisions() {
@@ -10410,41 +10416,38 @@ mod tests {
             10_000,
             &mut RouteMemo::new(),
         );
-        let current_ranked = remembered
-            .iter()
-            .filter_map(|room| {
-                plan_to_room(&here, room, 10_000, &std::collections::BTreeSet::new())
-                    .map(|path| (path.len(), room.clone()))
-            })
-            .min_by(|(a_hops, a_room), (b_hops, b_room)| {
-                a_hops.cmp(b_hops).then_with(|| a_room.cmp(b_room))
-            })
-            .map(|(_, room)| room);
+        // Count the direct searches, rather than timing them: each remembered
+        // room asks exactly one deterministic `plan_to_room` question from
+        // each anchor, whether or not that room is admitted.
+        let rank_from = |from: &Facet| {
+            let mut searches = 0usize;
+            let admitted: Vec<(usize, Facet)> = remembered
+                .iter()
+                .filter_map(|room| {
+                    searches += 1;
+                    plan_to_room(from, room, 10_000, &std::collections::BTreeSet::new())
+                        .map(|path| (path.len(), room.clone()))
+                })
+                .collect();
+            let ranked = admitted
+                .iter()
+                .min_by(|(a_hops, a_room), (b_hops, b_room)| {
+                    a_hops.cmp(b_hops).then_with(|| a_room.cmp(b_room))
+                })
+                .map(|(_, room)| room.clone());
+            (admitted.len(), ranked, searches)
+        };
+        let (home_admitted, home_direct_ranked, home_searches) = rank_from(&home);
+        let (current_admitted, current_ranked, current_searches) = rank_from(&here);
         println!(
-            "fetch probe: remembered={} home_ranked={:?} current_ranked={:?} home_admitted={} current_admitted={}",
+            "fetch probe: remembered={} home_admitted={} current_admitted={} home_ranked={:?} current_ranked={:?} home_direct_searches={} current_direct_searches={}",
             remembered.len(),
+            home_admitted,
+            current_admitted,
             home_ranked,
             current_ranked,
-            remembered
-                .iter()
-                .filter(|room| plan_to_room(
-                    &home,
-                    room,
-                    10_000,
-                    &std::collections::BTreeSet::new()
-                )
-                .is_some())
-                .count(),
-            remembered
-                .iter()
-                .filter(|room| plan_to_room(
-                    &here,
-                    room,
-                    10_000,
-                    &std::collections::BTreeSet::new()
-                )
-                .is_some())
-                .count(),
+            home_searches,
+            current_searches,
         );
         assert_eq!(
             remembered.len(),
@@ -10458,6 +10461,20 @@ mod tests {
         assert!(
             current_ranked.is_some(),
             "probe denominator: here must rank at least one remembered source"
+        );
+        assert_eq!(
+            home_ranked, home_direct_ranked,
+            "probe control: the direct home ranking must agree with believed_water"
+        );
+        assert_eq!(
+            home_searches,
+            remembered.len(),
+            "probe count: home must issue one direct route search per remembered room"
+        );
+        assert_eq!(
+            current_searches,
+            remembered.len(),
+            "probe count: current must issue one direct route search per remembered room"
         );
         assert_ne!(
             home_ranked, current_ranked,
