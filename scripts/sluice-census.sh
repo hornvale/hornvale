@@ -31,6 +31,30 @@
 # committing a moved column is a deliberate act survives intact; it just stops
 # being manual labour.
 #
+# WHAT IT NOW CARRIES BESIDE THE GOLDENS (The Spillway, decision 0836). The
+# Gnomon injection arms (windows/lab/tests/fixtures/injection/) are evidence
+# scored against the census, and the commit gate compares their column set to
+# the census's. A refresh that registers a metric was therefore refused by
+# its own delivery commit, and the authoring script refused the delivery's
+# staged goldens as dirt — a cycle The Warp broke by hand (ledger #12). The
+# delivery now re-authors the arms itself, at the censused ref, with the
+# ref's OWN gnomon-injection.sh (its literals must match that source), under
+# the same flock every expensive job takes (decision 0133), timed into
+# docs/timings.md under `gnomon-injection`, and commits them with the
+# goldens. Trigger: the world moved (goldens > 0) OR an arm's columns differ.
+#
+# THE RULE THAT PLACES EACH CENSUS-SHAPED CHECK: a delivery SATISFIES every
+# check whose remedy is a regeneration, and DEFERS only a check whose remedy
+# is a human re-statement. The arms are the former. The column-COUNT witness
+# in anomaly.rs is the latter — pre-commit stands it down for this one commit
+# under HV_CENSUS_DELIVERY, and the merge of the delivery branch demands the
+# re-pin, exactly as it demands the calibration pins.
+#
+# NO CLAIM FILE IS WRITTEN for the arms. The eight-field claim format belongs
+# to census_claim.rs and its two writers; a third would be the drift
+# lane_sets.rs fails on. So for those minutes `census-run.sh status` reports
+# nothing while every flock-taker waits. Accepted (spec §3.2).
+#
 # Decision 0079 (one enforced authoring host) is NOT re-implemented here:
 # census-run.sh's own hostname guard is the single source of truth for it, and
 # a second copy is the drift `cli/tests/lane_sets.rs` exists to fail on.
@@ -105,7 +129,7 @@ EOF
 census_schema_columns() {
     local f="${1:?census_schema_columns <schema.json>}"
     [ -f "$f" ] || return 0
-    grep -E '^ {4,}"name": "' "$f" | sed -E 's/^ *"name": "([^"]*)".*/\1/' | sort
+    grep -E '^ {4,}"name": "' "$f" | sed -E 's/^ *"name": "([^"]*)".*/\1/' | LC_ALL=C sort
 }
 injection_arms_stale() {
     local wt="${1:?injection_arms_stale <worktree>}"
@@ -251,8 +275,11 @@ fi
 # Reached only through the EXIT trap below, which the linter cannot follow —
 # same reason as the SC2317 directive further up this file. NOTE: no line of
 # this comment may BEGIN with the linter's own name, which is inline-directive
-# syntax and fails the whole file with SC1073.
-# shellcheck disable=SC2317
+# syntax and fails the whole file with SC1073. SC2329 added alongside it
+# (The Spillway): shellcheck 0.11 reports this as a function never invoked —
+# lefford runs 0.9.0, which does not, so the extra code is a silent no-op
+# there and a needed one wherever 0.11 runs this file.
+# shellcheck disable=SC2317,SC2329
 release_census_row() {
     [ "$census_claimed" = "1" ] || return 0
     [ -n "$census_row_id" ] || return 0
@@ -339,6 +366,63 @@ else
 fi
 git -C "$wt" diff --cached --stat | sed 's/^/sluice-census:   /'
 
+# --- THE GNOMON ARMS (The Spillway, decision 0836; header) -------------------
+# Reached only when something is staged (the empty-index branch above exited),
+# which is every production run, since the timings row is always staged.
+stale="$(injection_arms_stale "$wt")"
+arms_note=""
+if [ "$n_goldens" -gt 0 ] || [ -n "$stale" ]; then
+    if [ "$n_goldens" -gt 0 ]; then
+        echo "sluice-census: the world moved ($n_goldens golden path(s)) — re-authoring the Gnomon injection arms at ${ref:0:12}"
+    else
+        echo "sluice-census: the census moved nothing but the arms are stale — re-authoring the Gnomon injection arms at ${ref:0:12}:"
+    fi
+    [ -z "$stale" ] || printf '%s\n' "$stale" | sed 's/^/sluice-census:   /'
+    gnomon="$wt/scripts/gnomon-injection.sh"
+    if [ ! -f "$gnomon" ]; then
+        echo "sluice-census: ARMS NOT RE-AUTHORED — $ref carries no scripts/gnomon-injection.sh." >&2
+        echo "sluice-census: the goldens stay staged in $wt; nothing was pushed. Recover by hand (The Warp, ledger #12)." >&2
+        exit 4
+    fi
+    # The ref's OWN copy, before the lock: a ref that predates The Spillway
+    # refuses the delivery's staged goldens here, in milliseconds, and the
+    # box is never taken for it.
+    if ! (cd "$wt" && bash "$gnomon" check); then
+        echo "sluice-census: ARMS NOT RE-AUTHORED — ${ref:0:12}'s gnomon-injection.sh refused its pre-flight (above)." >&2
+        echo "sluice-census: a ref that predates The Spillway refuses the delivery's own staged goldens as dirt." >&2
+        echo "sluice-census: the goldens stay staged in $wt; nothing was pushed. Recover by hand (The Warp, ledger #12)." >&2
+        exit 4
+    fi
+    if ! command -v flock >/dev/null 2>&1; then
+        echo "sluice-census: ARMS NOT RE-AUTHORED — no flock(1) on $(hostname -s), and the census could not have run here without one." >&2
+        exit 4
+    fi
+    arms_lock="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
+    exec 9>"$arms_lock"
+    arms_wait_began=$SECONDS
+    if ! flock -w "${HV_CENSUS_WAIT_TIMEOUT:-2700}" 9; then
+        echo "sluice-census: ARMS NOT RE-AUTHORED — timed out waiting for the box lock ($arms_lock); the goldens stay staged in $wt; nothing was pushed." >&2
+        exit 4
+    fi
+    arms_waited=$((SECONDS - arms_wait_began))
+    echo "sluice-census: holds the box lock for the arms after ${arms_waited}s queued (no claim file — see the header)"
+    if ! (cd "$wt" && HV_CENSUS_WAITED_S="$arms_waited" bash "$repo_root/scripts/timed.sh" gnomon-injection -- bash "$gnomon"); then
+        exec 9>&-
+        echo "sluice-census: ARMS NOT RE-AUTHORED — gnomon-injection.sh failed (read its output above)." >&2
+        echo "sluice-census: this is a refusal, not a census failure: the goldens stay staged in $wt; nothing was pushed." >&2
+        echo "sluice-census: a VOID arm is a real finding; do not deliver the goldens without the arms." >&2
+        exit 4
+    fi
+    exec 9>&-
+    git -C "$wt" add -A -- windows/lab/tests/fixtures/injection 2>/dev/null || true
+    git -C "$wt" add -u 2>/dev/null || true
+    n_arms="$(find "$wt/windows/lab/tests/fixtures/injection" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
+    arms_note="Gnomon arms re-authored at ${ref:0:12} ($n_arms arms)."
+else
+    arms_note="Gnomon arms unchanged (census moved nothing; columns match)."
+fi
+echo "sluice-census: $arms_note"
+
 # HV_CENSUS_DELIVERY=1 tells pre-commit's golden-pins guard to stand down for
 # THIS commit only. It is a scoped, named opt-out of ONE check; every other
 # hook check still runs, and the hooks themselves stay installed and armed.
@@ -366,7 +450,8 @@ the queue rather than by hand. NOT pushed to main: census goldens are what the
 calibration batteries assert against, so they land through the chamber like any
 other change. Submit this branch as an ordinary merge to gate it.
 
-Census wall time: ${elapsed}s."; then
+Census wall time: ${elapsed}s.
+${arms_note}"; then
     echo "sluice-census: COMMIT REFUSED — the census ran and its output is NOT delivered." >&2
     echo "sluice-census: $(git -C "$wt" diff --cached --name-only | wc -l) staged path(s) ($n_goldens golden) remain in $wt; nothing was pushed." >&2
     echo "sluice-census: this is a hook refusal, not a census failure — read the log above." >&2
@@ -384,5 +469,6 @@ if [ "$n_goldens" -eq 0 ]; then
 else
     echo "sluice-census: DELIVERED on $branch — $n_goldens golden path(s) moved."
 fi
+echo "sluice-census: $arms_note"
 echo "sluice-census: submit it with — make sluice BRANCH=$branch REF=$(git -C "$wt" rev-parse HEAD)"
 exit 0

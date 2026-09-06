@@ -371,3 +371,127 @@ now at `scripts/sluice-census.sh:256` (shifted from line 216 by this task's
 38 inserted lines landing earlier in the file; confirmed the same function,
 same finding, by diffing against `HEAD`). Not touched here, per the
 controller's resolution — Task 3 owns it.
+
+---
+
+## Task 3 — complete
+
+**What shipped.** `scripts/sluice-census.sh`'s delivery flow now re-authors
+the Gnomon injection arms itself, between staging the census's own diff and
+the `HV_CENSUS_DELIVERY=1` commit. Trigger: `n_goldens -gt 0` (the world
+moved) OR `injection_arms_stale "$wt"` is non-empty (an arm's column set has
+drifted, even on a null census). On trigger it runs the REF'S OWN
+`scripts/gnomon-injection.sh check` first (a fast, lock-free refusal for a
+ref that predates The Spillway and would refuse the delivery's own staged
+goldens as dirt — spec §3.2 step 2), then takes `HV_CENSUS_LOCK`
+(`flock -w "${HV_CENSUS_WAIT_TIMEOUT:-2700}"`, default `/tmp/hv-census.lock`,
+the same claim every expensive job takes), runs the real authoring under
+`scripts/timed.sh gnomon-injection --`, stages the re-authored arm files with
+the goldens, and releases the lock before the commit. Every arms failure
+(missing script, refused check, lock timeout, authoring failure) exits 4 —
+the same code `COMMIT REFUSED` already used — leaving the goldens staged in
+`$wt` for by-hand recovery (The Warp, ledger #12) and pushing nothing. The
+arms' outcome (`Gnomon arms re-authored at <ref12> (<n> arms).` or `Gnomon
+arms unchanged (census moved nothing; columns match).`) is echoed to the log,
+appended as its own line in the delivery commit message, and echoed again in
+the final DELIVERED report — three separate call sites per the brief's Step
+3, not one shared helper. Folded in alongside the arms wiring: `SC2329` added
+to the `# shellcheck disable=SC2317` directive above `release_census_row`
+(Task 1's flagged concern, now closed), and `LC_ALL=C` pinned on
+`census_schema_columns`'s `sort` (paired `comm` needs matching collation on
+both sides).
+
+**Corrections applied, both from the controller's brief review.**
+
+1. **Arm (c)'s reset target.** The brief's own text used
+   `reset --hard HEAD~1`, which lands one commit short once the delivery's own
+   commit sits on top of the "stale arm" commit. Fixed by recording
+   `pre_c="$(g -C "$cen_wt" rev-parse HEAD)"` *before* the stale-arm commit and
+   resetting to that captured sha afterward, rather than counting commits.
+
+2. **Arms (d) and (e) never entered the arms path as literally written**, and
+   this was caught by running the RED test and finding these two returned
+   `rc=0`/`rc=3` — wrong exit codes but crucially *not* the failure text the
+   brief predicted, which is what sent this to investigation rather than
+   straight to "not implemented yet". Root cause: after the first `moves`
+   delivery the worktree golden already reads `42,2`, and `write_stub moves`
+   always writes the same literal `42,2` — a genuine no-op the second time — so
+   `n_goldens` read 0 and, with the arms otherwise matching, the delivery
+   skipped them entirely, running past the two failure-path assertions on an
+   empty diff. Fixed exactly as directed: before arm (d), the golden is written
+   back to `42,1` and committed in `$cen_wt`, so `moves` moves it again; arm
+   (e) inherits that same `42,1` HEAD from (d)'s bare `reset --hard`, so
+   `moves` (still baked from (d)'s `write_stub`) moves it there too. Both
+   arms' `if` conditions gained the brief-specified additional assertion —
+   `grep -q 're-authoring the Gnomon injection arms'` — as the positive proof
+   the arms path was actually entered, not merely that *some* rc=4 fired.
+
+**A third, undirected fix, found the same way (RED, then investigate rather
+than assume "not implemented").** Even after correction 2, the FIRST arm
+("arms rode along" — the main `moves` test) still failed all five of its own
+assertions on the first green attempt, with the log reading `NO GOLDENS
+MOVED` despite the golden file genuinely differing. Traced to
+`census_golden_count`: it reads `docs/generated-paths.txt` off the worktree,
+falling back to `HV_SLUICE_REPO_ROOT`'s copy — and this test's `$cen` fixture
+had never declared that file at all, for any test in this section, at any
+point before this campaign. `sluice_path_author` (`scripts/sluice-phases.sh`)
+tolerates the missing file by returning an empty author rather than failing
+loudly, so `census_golden_count` has silently read 0 for every `moves` run
+this file has ever driven — invisible until now because nothing before The
+Spillway asserted the *count*, only the delivered branch's eventual content
+(which stages unconditionally on `git add -A`/`add -u`, independent of
+`n_goldens`). The arms' own trigger (`n_goldens -gt 0`) is the first thing in
+this file's history to actually depend on the count being right. Fixed by
+adding a `docs/generated-paths.txt` to the `$cen` fixture, mirroring the real
+committed file's two rows for this exact path (`.../the-census/schema.json
+artifacts` then `.../the-census/ census`, exact-row-beats-directory) — purely
+additive to the fixture, so no pre-existing assertion in this file changed
+behaviour; confirmed by the full-suite run reporting the same pass count for
+every pre-existing arm before and after.
+
+**Plan-shape change not directed by either correction.** The brief's Step 1
+text for `c_log`/`af_log`/`ar_log` reads
+`ls -t "$tmp/cen-state"/census-*.log | head -1`, which `make shellcheck`
+flags (SC2012). The file already carries a house idiom for the identical
+job two lines above (`t_log`/`still_log`: a `for _f in glob; do [ -e "$_f" ]
+&& x="$_f"; done` loop, picking the lexicographically-last match, which is
+chronological given the `%Y%m%dT%H%M%SZ` suffix) — used it for consistency
+and a clean `make shellcheck` rather than a new directive.
+
+**TDD evidence.** RED, on lefford (`ssh lefford … bash
+scripts/test-sluice.sh`), against `scripts/test-sluice.sh` with its new arms
+but `scripts/sluice-census.sh` still at `HEAD` (pre-Task-3): `254 passed, 9
+failed`, all 9 failures exactly the new arms-related assertions (`a moving
+census did NOT run gnomon-injection.sh`, `the arms were authored with the
+lock FREE`, `the delivered branch does not carry the re-authored arm`, `the
+commit message does not name the arms`, `no gnomon-injection row …`, `null
+census: ran=no, log lacks 'Gnomon arms unchanged'`, `stale-arm census: rc=0
+ran=no …`, `failed authoring: rc=3 …`, `refused check: rc=0 …`); every
+pre-existing assertion green. GREEN, same host, same command, after the
+implementation and both fixture fixes above: `263 passed, 0 failed`, wall
+27.844s (`real 0m27.844s user 0m6.768s sys 0m17.032s`, measured with `time`).
+All 18 census-block assertions read `ok`, including the five new "arms rode
+along" checks, the null/stale-arm pair, and the failed-authoring/refused-check
+pair. Confirmed again from the pushed commit (below) with a final run.
+`bash scripts/test-sluice-census.sh` (15 passed, 0 failed) and `bash
+scripts/test-gnomon-injection.sh` (10 passed, 0 failed) both stayed green
+throughout — unaffected by this task's changes, run locally on the Mac since
+neither needs `flock`. `make shellcheck` is clean (no output, exit 0) —
+Task 1's flagged SC2329 concern on `release_census_row` is now closed by the
+directive update above.
+
+**Ideonomy: none.** The brief specifies the arms block's exact code, the
+header prose, the commit-message line, the report line, and the test text
+verbatim; the two corrections and the fixture fix above are bug fixes
+surfaced by actually running RED and reading what failed, not design
+choices — there was no open design question for this task to explore.
+
+**Files changed:** `scripts/sluice-census.sh` (header prose, the arms block,
+the commit-message line, the report line, the two folded minors),
+`scripts/test-sluice.sh` (the census-block stub/arms per the brief plus the
+`docs/generated-paths.txt` fixture addition and the `ls -t` → `for` loop
+change), this ledger.
+
+**Concerns.** None outstanding. The controller's Step 6 (stage gate) is
+explicitly out of scope for this task per the dispatch brief and is left for
+the controller to submit after review.

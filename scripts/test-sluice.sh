@@ -3007,19 +3007,68 @@ cen_origin="$tmp/cen-origin.git"; git init -q --bare -b main "$cen_origin"
     g config user.email c@c; g config user.name c
     mkdir -p book/src/laboratory/generated/the-census
     printf 'seed,value\n42,1\n' > book/src/laboratory/generated/the-census/rows.csv
+    # census_golden_count (sluice-census.sh) and injection_arms_stale both read
+    # docs/generated-paths.txt off the WORKTREE, falling back to HV_SLUICE_REPO_ROOT
+    # (=$cen here) when the worktree copy is absent — and this fixture never
+    # declared either, which sluice_path_author (sluice-phases.sh) tolerates by
+    # returning empty rather than failing, so census_golden_count silently read 0
+    # for every "moves" run this file has ever driven. Nothing before The Spillway
+    # asserted the COUNT, only the branch's eventual content, so the gap was mute
+    # until the arms' own trigger (`n_goldens -gt 0`) started depending on it.
+    # Mirrors the real file's two rows for this path (exact-row-beats-directory).
+    mkdir -p docs
+    cat > docs/generated-paths.txt <<'DECL'
+# path	author
+book/src/laboratory/generated/the-census/schema.json	artifacts
+book/src/laboratory/generated/the-census/	census
+DECL
     # docs/timings.md must be TRACKED here or this fixture cannot reproduce
     # production at all. The run's own ledger row is what the general `add -u`
     # sweeps, and its absence from this fixture is exactly why the production
     # null went unexercised while these tests appeared to cover it: with no
     # row, "nothing moved" means an EMPTY index, which is a different branch
     # of sluice-census.sh than the one real censuses actually take.
-    mkdir -p docs
     printf 'baseline\n' > docs/timings.md
+    # The Spillway: the delivery compares the census's column set with the
+    # Gnomon arms' and re-authors the arms when the world moved or the sets
+    # differ. Both files in serde's pretty-print shape (study name at indent
+    # 2, column names at indent 6), matching, so the null arms below stay null.
+    mkdir -p windows/lab/tests/fixtures/injection/baseline-a
+    printf '{\n  "columns": [\n    {\n      "name": "seed"\n    },\n    {\n      "name": "value"\n    }\n  ],\n  "name": "the-census"\n}\n' \
+        > book/src/laboratory/generated/the-census/schema.json
+    printf '{\n  "columns": [\n    {\n      "name": "seed"\n    },\n    {\n      "name": "value"\n    }\n  ],\n  "name": "gnomon-injection"\n}\n' \
+        > windows/lab/tests/fixtures/injection/baseline-a/schema.json
+    printf 'seed,value\n0,1\n' > windows/lab/tests/fixtures/injection/baseline-a/rows.csv
     g add -A; g commit -qm root
     g remote add origin "$cen_origin"; g push -q origin main
 )
 cen_ref="$(g -C "$cen" rev-parse HEAD)"
 cen_wt="$tmp/cen-wt"; cp -r "$cen" "$cen_wt"
+
+# THE STUB AUTHORING SCRIPT lives in the WORKTREE copy, because the delivery
+# runs the ref's own gnomon-injection.sh (its ARMS literals must match the
+# source at that ref), never the queue's. `check` answers per the mode; a run
+# records that it happened, records whether the box lock was HELD around it
+# (flock -n on a fresh descriptor fails while the delivery holds the lock —
+# the positive control for spec §3.2 step 3), and rewrites one arm file.
+# Markers go under $tmp, outside the worktree, so `add -u` cannot sweep them.
+cp "$repo_root/scripts/timed.sh" "$cen/scripts/timed.sh"
+write_gnomon() {  # $1 = ok|refuse|fail
+    cat > "$cen_wt/scripts/gnomon-injection.sh" <<STUB
+#!/usr/bin/env bash
+if [ "\${1:-}" = "check" ]; then
+    [ "$1" = "refuse" ] && { echo "gnomon-injection: REFUSING to run with a dirty tree (stub)" >&2; exit 1; }
+    exit 0
+fi
+echo authored >> "$tmp/gnomon-ran"
+if flock -n "\${HV_CENSUS_LOCK:?}" -c true 2>/dev/null; then echo free > "$tmp/gnomon-lock"; else echo held > "$tmp/gnomon-lock"; fi
+[ "$1" = "fail" ] && { echo "stub authoring exploded" >&2; exit 1; }
+printf 'seed,value\n0,9\n' > "$cen_wt/windows/lab/tests/fixtures/injection/baseline-a/rows.csv"
+exit 0
+STUB
+    chmod +x "$cen_wt/scripts/gnomon-injection.sh"
+}
+write_gnomon ok
 
 # The stub: `worktree` prints the path; a real invocation does what the mode says.
 write_stub() {  # $1 = moves|still|fails
@@ -3040,7 +3089,7 @@ STUB
 }
 
 run_census() {  # $1 = ref ; echoes rc
-    HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" \
+    HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" HV_CENSUS_LOCK="$tmp/census.lock" \
         bash "$repo_root/scripts/sluice-census.sh" "$1" >/dev/null 2>&1
     echo $?
 }
@@ -3072,6 +3121,27 @@ if [ -n "$delivered" ] && g -C "$cen_origin" show "$delivered:book/src/laborator
 else
     bad "the delivered branch does not carry the new golden"
 fi
+
+# --- THE ARMS RODE ALONG (The Spillway, spec §3.2) --------------------------
+# The world moved, so the delivery re-authored the arms, under the lock, and
+# committed them with the goldens.
+if [ -f "$tmp/gnomon-ran" ]; then ok "a moving census re-authored the Gnomon arms"
+else bad "a moving census did NOT run gnomon-injection.sh"; fi
+if [ "$(cat "$tmp/gnomon-lock" 2>/dev/null)" = "held" ]; then
+    ok "the box lock was HELD while the arms were authored (flock -n failed inside the stub)"
+else
+    bad "the arms were authored with the lock FREE (marker: $(cat "$tmp/gnomon-lock" 2>/dev/null || echo none))"
+fi
+if [ -n "$delivered" ] && g -C "$cen_origin" show "$delivered:windows/lab/tests/fixtures/injection/baseline-a/rows.csv" 2>/dev/null | grep -q '0,9'; then
+    ok "the delivered branch carries the RE-AUTHORED arm beside the goldens"
+else bad "the delivered branch does not carry the re-authored arm"; fi
+if [ -n "$delivered" ] && g -C "$cen_origin" log -1 --format=%B "$delivered" | grep -q 'Gnomon arms re-authored at'; then
+    ok "the commit message names the arms"
+else bad "the commit message does not name the arms"; fi
+if [ -n "$delivered" ] && g -C "$cen_origin" show "$delivered:docs/timings.md" 2>/dev/null | grep -q '| gnomon-injection |'; then
+    ok "the re-authoring's cost landed as a gnomon-injection row in docs/timings.md"
+else bad "no gnomon-injection row in the delivered timings ledger — the cost went unrecorded"; fi
+rm -f "$tmp/gnomon-ran" "$tmp/gnomon-lock"
 
 # MUTATION: a run that moves nothing must not manufacture a branch.
 before_n="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
@@ -3137,6 +3207,64 @@ if [ "$t_files" = "1" ] && g -C "$cen_origin" show --name-only --format= "$t_bra
 else
     bad "timings-only branch carried $t_files path(s), expected exactly docs/timings.md"
 fi
+
+# --- ARMS: the null does not re-author; a stale column set does -------------
+if [ ! -f "$tmp/gnomon-ran" ] && grep -q 'Gnomon arms unchanged' "$t_log"; then
+    ok "a census that moved nothing, with matching arms, left the arms alone and said so"
+else bad "null census: ran=$([ -f "$tmp/gnomon-ran" ] && echo yes || echo no), log lacks 'Gnomon arms unchanged'"; fi
+
+# The column trigger alone: the census moves nothing, but an arm was authored
+# against a registry the census has since outgrown. Committed in the worktree
+# so the tree is clean when the delivery starts, exactly as a real ref is.
+pre_c="$(g -C "$cen_wt" rev-parse HEAD)"
+printf '{\n  "columns": [\n    {\n      "name": "seed"\n    }\n  ],\n  "name": "gnomon-injection"\n}\n' \
+    > "$cen_wt/windows/lab/tests/fixtures/injection/baseline-a/schema.json"
+g -C "$cen_wt" add -A; g -C "$cen_wt" -c user.name=c -c user.email=c@c commit -qm "stale arm"
+rm -f "$tmp/gnomon-ran"
+rc_c=$(run_census "$cen_ref")
+c_log=""
+for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && c_log="$_f"; done
+if [ "$rc_c" = "0" ] && [ -f "$tmp/gnomon-ran" ] && grep -q 'arms are stale' "$c_log" && grep -q '^sluice-census:   baseline-a: 1 column' "$c_log"; then
+    ok "a null census with a STALE arm re-authors, and the log names the arm and the count"
+else bad "stale-arm census: rc=$rc_c ran=$([ -f "$tmp/gnomon-ran" ] && echo yes || echo no) log=$c_log"; fi
+g -C "$cen_wt" reset -q --hard "$pre_c"
+rm -f "$tmp/gnomon-ran" "$tmp/gnomon-lock"
+
+# --- ARMS: a failed authoring is a refusal, not a delivery --------------------
+# After the first `moves` delivery, the worktree golden already reads 42,2, so
+# a second `moves` stub moves nothing (n_goldens=0) and, with matching
+# columns, the delivery would skip the arms entirely. Write it back to 42,1
+# and commit, so `moves` moves it again and the arms path is actually entered.
+printf 'seed,value\n42,1\n' > "$cen_wt/book/src/laboratory/generated/the-census/rows.csv"
+g -C "$cen_wt" add -A; g -C "$cen_wt" -c user.name=c -c user.email=c@c commit -qm "golden back to 1"
+write_stub moves; write_gnomon fail
+before_af="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+rc_af=$(run_census "$cen_ref")
+after_af="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+af_log=""
+for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && af_log="$_f"; done
+if [ "$rc_af" = "4" ] && [ "$before_af" = "$after_af" ] && grep -q 'ARMS NOT RE-AUTHORED' "$af_log" \
+   && grep -q 're-authoring the Gnomon injection arms' "$af_log" \
+   && [ -n "$(g -C "$cen_wt" diff --cached --name-only)" ]; then
+    ok "a failed re-authoring exits 4, pushes nothing, names itself, and leaves the goldens staged for recovery"
+else bad "failed authoring: rc=$rc_af branches $before_af -> $after_af staged=$(g -C "$cen_wt" diff --cached --name-only | wc -l) log=$af_log"; fi
+g -C "$cen_wt" reset -q --hard; rm -f "$tmp/gnomon-ran" "$tmp/gnomon-lock"
+
+# --- ARMS: a refused pre-flight never authors and never takes the lock -------
+# Follows (d)'s reset --hard, whose HEAD carries the golden-back-to-1 commit
+# (42,1), so `moves` (still baked from write_stub above) moves it again here too.
+write_gnomon refuse
+before_ar="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+rc_ar=$(run_census "$cen_ref")
+after_ar="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+ar_log=""
+for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && ar_log="$_f"; done
+if [ "$rc_ar" = "4" ] && [ "$before_ar" = "$after_ar" ] && grep -q 'refused its pre-flight' "$ar_log" \
+   && grep -q 're-authoring the Gnomon injection arms' "$ar_log" && [ ! -f "$tmp/gnomon-ran" ]; then
+    ok "a refused check exits 4, pushes nothing, and authoring was never entered"
+else bad "refused check: rc=$rc_ar branches $before_ar -> $after_ar ran=$([ -f "$tmp/gnomon-ran" ] && echo yes || echo no) log=$ar_log"; fi
+g -C "$cen_wt" reset -q --hard; rm -f "$tmp/gnomon-ran" "$tmp/gnomon-lock"
+write_gnomon ok
 
 
 write_stub fails
