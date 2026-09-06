@@ -3,7 +3,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
-use hornvale_vessel::{PossessOpts, Session, Turn, run};
+use hornvale_vessel::{PossessOpts, Session, Tableau, Turn, run};
 use hornvale_worldgen::{SettlementPins, build_world};
 
 /// Seed 42's world under default pins, read from the committed fixture rather
@@ -623,6 +623,68 @@ fn the_turn_header_carries_no_facet_id_and_no_decimal_day() {
         assert!(
             !header.contains('.'),
             "a decimal day survived in the header: {header:?}"
+        );
+    }
+}
+
+/// Issue one command and unwrap the turn's text — none of this file's turns
+/// releases the possession.
+fn say(session: &mut Session<'_>, cmd: &str) -> String {
+    match session.handle(cmd) {
+        Turn::Out(t) | Turn::Released(t) => t,
+    }
+}
+
+/// Every noun a `"Here: ..."` line names, in prose order: split on the
+/// group separator and strip the line's own leading label and trailing
+/// period. Test-local — production code never parses its own prose back.
+fn presence_nouns(here: &str) -> Vec<String> {
+    here.trim_start_matches("Here: ")
+        .trim_end_matches('.')
+        .split("; ")
+        .map(str::to_string)
+        .collect()
+}
+
+/// The staged three-dragon cast that reproduces #12 deterministically —
+/// seed 42, `{"cast":[{"species":"white-dragon"},{"species":"black-dragon"},
+/// {"species":"red-dragon"}]}` — committed here (The Ken, Task 4) because
+/// Task 5 depends on three same-suffix labels sharing one room, which is
+/// otherwise a search rather than a stipulation.
+///
+/// Leaks the world to get a `'static` session out of a zero-argument helper
+/// — acceptable in test code, and the shape every caller of this function
+/// wants: `let (mut session, _) = open_staged_dragons_session();` with
+/// nothing to keep alive.
+fn open_staged_dragons_session() -> (Session<'static>, String) {
+    let world: &'static World = Box::leak(Box::new(seam_world()));
+    let staged = PossessOpts {
+        tableau: Some(Tableau::new().with_cast(["white-dragon", "black-dragon", "red-dragon"])),
+        ..opts()
+    };
+    Session::start(world, &staged).expect("a staged session starts")
+}
+
+/// The Ken: the game displayed a noun and then denied it existed.
+/// `presence_line` rendered a wild group from `species` while `examine`
+/// matched `label`, so the staged tableau reproducing #12 printed "Here: a
+/// wild black-dragon; a wild red-dragon." and then answered "You see no a
+/// wild black-dragon here." — the repo's own §6 contract ("every depicted
+/// noun must answer") failing on the one roster that escaped it.
+#[test]
+fn every_noun_the_presence_line_shows_can_be_examined() {
+    let (mut session, _) = open_staged_dragons_session();
+    let look = say(&mut session, "look");
+    let here = look
+        .lines()
+        .find(|l| l.starts_with("Here: "))
+        .expect("the staged cast is present");
+
+    for noun in presence_nouns(here) {
+        let answer = say(&mut session, &format!("examine {noun}"));
+        assert!(
+            !answer.starts_with("You see no"),
+            "the presence line showed {noun:?} and examine denied it: {answer:?}"
         );
     }
 }

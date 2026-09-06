@@ -9931,9 +9931,41 @@ impl<'w> Session<'w> {
     /// group names its first [`N_NAMED`] labels through
     /// [`crate::chamber_prose::listed`] and appends `", and {n} others"` for
     /// whatever is left; a wild group has no individual names to give, so it
-    /// collapses entirely to a single count-first clause — `"a wild
-    /// {species}"` for one, `"{n} wild {species}"` for more, the species
-    /// word never pluralised.
+    /// collapses entirely to a single count-first clause — `"{n} wild
+    /// {species}"` for more than one, the species word never pluralised.
+    ///
+    /// **A wild group of exactly one renders its LABEL, not `"a wild
+    /// {species}"` built from `species` (The Ken, Task 4).** Before this
+    /// task the group of one rendered a fresh string built from `species`,
+    /// which is not what `examine` matches (`examine` matches `label`) — a
+    /// STAGED body's label is bare `{species}` (`derive_staged_npcs`), so
+    /// the old species-built `"a wild {species}"` line showed a noun
+    /// `examine` then denied. A body from `derive_wild_npcs` happened to
+    /// escape the bug because its OWN label used to read `"a wild
+    /// {species}"` too, coincidentally matching what this line built — but
+    /// that label carried the same defect `liveness.rs:8783`(-area) records
+    /// ("The a wild carrion-crawler looks lost"), so this task fixed that
+    /// label at the source (`derive_wild_npcs`, `liveness.rs`) rather than
+    /// displaying it unchanged; the two edits must land together. **A
+    /// SEPARATE sibling, `derive_wild_herds` (real herds, the common case a
+    /// fresh possession actually meets), still mints `"a wild {species}"`
+    /// labels and is untouched by this task** — its display and its label
+    /// were already the same string before this task (so it never violated
+    /// the examinability contract this task closes), and it still carries
+    /// the double-article defect this task fixed only for `derive_wild_npcs`.
+    /// A future task may want to unify the two; this one does not.
+    ///
+    /// **A group of several keeps the species-built count clause
+    /// deliberately, and this was a judgement call, not a mechanical
+    /// carry-over**: every member of such a group shares one species
+    /// string, and for `derive_wild_npcs`/`derive_staged_npcs` bodies that
+    /// string is ALSO every member's own label (neither derivation names an
+    /// individual — see `derive_bodies_at`), so the species word this
+    /// clause prints is already an examinable noun; it merely does not
+    /// promise WHICH of the group it names, which is `body_by_needle`'s
+    /// ambiguity to answer, not this line's. (A `derive_wild_herds` group's
+    /// species word is likewise always its members' own label, unchanged
+    /// by this task.)
     fn presence_line(&self, how: Perceiving) -> Option<String> {
         let roll = self.perceived_npcs(how);
         if roll.is_empty() {
@@ -9974,7 +10006,7 @@ impl<'w> Session<'w> {
                         heads
                     }
                 } else if labels.len() == 1 {
-                    format!("a wild {species}")
+                    labels[0].to_string()
                 } else {
                     format!("{} wild {species}", labels.len())
                 }
