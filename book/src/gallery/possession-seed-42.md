@@ -4,11 +4,11 @@
 the same world in your browser — same crates, same bytes.)*
 
 ```text
-[room]
+[room — buttressed canopy]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 > look
-[room]
+[room — buttressed canopy]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 > map
@@ -33,12 +33,12 @@ Night. The vast moon is a smear of light. The small, distant moon is a smear of 
 > !whoami
 A bugbear of Doaba (agent 3286669968037249024), day 0, room 3733133217.
 > enter
-[chamber]
+[chamber — threshold]
 A small room in Doaba, holding a doorway, a screen, a bench and a stone ledge.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
 > enter further in
-[chamber]
+[chamber — hearthroom]
 A small room in Doaba, holding a doorway, an alcove and a stone ledge.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 Ways on: out, further in.
@@ -93,11 +93,11 @@ A recess cut back from the main space, deep enough to sit in.
 > examine a wall
 Set close and plumb, with no gap in it wide enough to pass.
 > out
-[room]
+[room — buttressed canopy]
 Tropical seasonal forest — buttressed canopy, sun-warmed, damp, on a rise — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. You can enter the settlement of Doaba. Something ended here: flight. Underfoot, pale limestone; the ground is level.
 Here: Dvoashngashngo, Qvoshngavngo, Shngovngo and Shngoqvo, and 63 others.
 > go n
-[room]
+[room — a liana tangle]
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > map out 2
 [lens: colour · depth 11 · radius 4 · north-up]
@@ -117,15 +117,15 @@ Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — i
 > enter
 There is nothing here to enter.
 > look
-[room]
+[room — a liana tangle]
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > out
 You are already out of doors.
 > go ne
-[room]
+[room — a liana tangle]
 Tropical seasonal forest — a liana tangle, shaded, damp, in a hollow — in the lands of Doaba. The sky above: The sun climbs the morning sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > back
-[room]
+[room — a liana tangle]
 Tropical seasonal forest — a liana tangle, sun-warmed, damp, in a hollow — in the lands of Doaba. The sky above: The sun stands high in the sky. The light is golden. The days are near their longest. The sky is a flat overcast. Something ended here: flight. A dense thicket presses close around you. Underfoot, pale limestone; the ground is level.
 > wait 90
 Time passes. You sense movement nearby (4623 stirred).

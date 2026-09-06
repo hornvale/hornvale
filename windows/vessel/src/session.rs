@@ -6912,7 +6912,26 @@ impl<'w> Session<'w> {
     /// the time of day in the character's own words (`Night.`, `Twilight.`,
     /// `The sun climbs the morning sky.`). Minting new astronomy API so two
     /// callers could share a derivation that does not exist would be worse
-    /// than noticing the duplication: the header now names only the band.
+    /// than noticing the duplication.
+    ///
+    /// **Fix round 2: a header that never varies is not orientation, and
+    /// `[room]` alone was exactly that** — every ordinary walk-band header
+    /// read identically regardless of position, which is what surfaced when
+    /// the coordinator ran `sort -u` over a real multi-room transcript and
+    /// got one line back. The header now spends its one remaining slot on
+    /// [`hornvale_locale::Regime::descriptor_noun`] (`v.locale.regime.
+    /// descriptor_noun` — "buttressed canopy", "a stream gully"), which this
+    /// crate's own doc comment on that field already names as the thing
+    /// authored "so homogeneous biome still varies room-to-room" — precisely
+    /// the property this header needed. **The village name was tried first
+    /// and rejected**: `Vantage::village` is `village_or_fallback(npc)`, the
+    /// DRIVEN BODY's own home settlement, constant for the whole session
+    /// regardless of position (confirmed against a real ten-room walk — see
+    /// the fix-round commit), so it fails the one property this fix exists
+    /// to deliver. `descriptor_noun` never has a missing case (every facet's
+    /// `Regime` is derived unconditionally, marine included) — unlike a
+    /// settlement name, which is `None` for a wild body, this token never
+    /// needed a stated fallback in the first place.
     ///
     /// `how` decides [`Self::presence_line`]'s own roster the same way it
     /// decides every other `!`-narrowed read (The Roll, Task 9): every
@@ -7156,8 +7175,8 @@ impl<'w> Session<'w> {
             format!("\n{}", footer_lines.join("\n"))
         };
         Ok(format!(
-            "[room]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}{footer}",
-            f.prose,
+            "[room — {}]\n{}{site_clause}{ruin_clause}{weft_clause}{warp_clause}{footer}",
+            v.locale.regime.descriptor_noun, f.prose,
         ))
     }
 
@@ -7879,8 +7898,10 @@ impl<'w> Session<'w> {
             .presence_line(how)
             .map(|line| format!("{line}\n"))
             .unwrap_or_default();
+        let role = crate::interior::pattern::role_for(at, brief);
         Ok(format!(
-            "[chamber]\n{}\n{presence}Ways on: {}.",
+            "[chamber — {}]\n{}\n{presence}Ways on: {}.",
+            chamber_place_word(role),
             crate::chamber_prose::describe_chamber(&interior, brief),
             ways.join(", ")
         ))
@@ -10667,6 +10688,29 @@ fn render_felt_state_word(
     }
 }
 
+/// A short, lowercase noun for a chamber's role — the header's per-chamber
+/// varying token (The Ken, Task 3, fix round 2). The header must vary as the
+/// character moves (the coordinator's own `sort -u` over a real multi-room
+/// walk caught `[chamber]` failing this), and role is the one thing
+/// [`crate::interior::chamber_interior_of`] derives per CHAMBER INDEX rather
+/// than per structure — two chambers of the same house otherwise share every
+/// other observable this function has on hand (the structure's site name,
+/// its `built`/`cold` flags). `role_for` is total over every `chamber_index`
+/// a structure can hold, so this match is exhaustive with no fallback arm to
+/// pick.
+fn chamber_place_word(role: crate::interior::pattern::Role) -> &'static str {
+    use crate::interior::pattern::Role;
+    match role {
+        Role::Threshold => "threshold",
+        Role::Hearthroom => "hearthroom",
+        Role::Store => "storeroom",
+        Role::Hall => "hall",
+        Role::Loomroom => "loomroom",
+        Role::Smithy => "smithy",
+        Role::Shrine => "shrine",
+    }
+}
+
 /// A chamber's packed room id, for the blocks that print one.
 ///
 /// One place rather than two: `FacetError` implements `Debug` but not
@@ -12749,11 +12793,11 @@ mod tests {
         // `tests/suite/strongbox_reachability.rs` walks, for the same reason:
         // `Role::Store` is only ever chamber index >= 2 (`pattern::role_for`).
         assert!(
-            say(&mut session, "enter").starts_with("[chamber]"),
+            say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
         for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber]") {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
                 break;
             }
         }
@@ -12968,12 +13012,12 @@ mod tests {
         let (mut session, _) =
             Session::start(world, &PossessOpts::default()).expect("the chambered seed possesses");
         assert!(
-            say(&mut session, "enter").starts_with("[chamber]"),
+            say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
         for _ in 0..2 {
             assert!(
-                say(&mut session, "enter further in").starts_with("[chamber]"),
+                say(&mut session, "enter further in").starts_with("[chamber "),
                 "the chambered seed's structure no longer reaches chamber index 2, \
                  so the loomroom this key stands in is unreachable"
             );
@@ -13006,11 +13050,11 @@ mod tests {
         let (mut session, _) =
             Session::start(world, &PossessOpts::default()).expect("the chambered seed possesses");
         assert!(
-            say(&mut session, "enter").starts_with("[chamber]"),
+            say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
         for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber]") {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
                 break;
             }
         }
@@ -13040,7 +13084,7 @@ mod tests {
             .expect("the walk lands in a chamber");
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
         for _ in 0..4 {
-            if !say(&mut session, "enter further in").starts_with("[chamber]") {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
                 break;
             }
         }
@@ -13140,7 +13184,7 @@ mod tests {
             "the take must reach custody, or the walk below tests nothing"
         );
 
-        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
         let deeper = session
             .chamber_facet_here()
             .expect("`enter further in` lands in a chamber");
@@ -13155,7 +13199,7 @@ mod tests {
             "the key must still be in hand one room further in"
         );
 
-        assert!(say(&mut session, "out").starts_with("[room]"));
+        assert!(say(&mut session, "out").starts_with("[room "));
         assert_eq!(
             say(&mut session, "carrying"),
             "You are carrying a key.",
@@ -13220,8 +13264,8 @@ mod tests {
             .expect("the walk lands in a chamber");
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
 
-        assert!(say(&mut session, "out").starts_with("[room]"));
-        assert!(say(&mut session, "enter").starts_with("[chamber]"));
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
         let entrance = session
             .chamber_facet_here()
             .expect("`enter` lands in a chamber");
@@ -13393,9 +13437,9 @@ mod tests {
             .chamber_facet_here()
             .expect("the walk above ended in a chamber");
 
-        assert!(say(&mut session, "out").starts_with("[room]"));
-        assert!(say(&mut session, "enter").starts_with("[chamber]"));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
         let alcove_room = session
             .chamber_facet_here()
             .expect("`enter further in` lands in a chamber");
@@ -13589,10 +13633,10 @@ mod tests {
         // leaves the structure from any chamber, so the return trip is
         // `enter` plus two `enter further in` — the loomroom is index 2.
         assert_eq!(say(&mut session, "take a key"), "You take the key.");
-        assert!(say(&mut session, "out").starts_with("[room]"));
-        assert!(say(&mut session, "enter").starts_with("[chamber]"));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
-        assert!(say(&mut session, "enter further in").starts_with("[chamber]"));
+        assert!(say(&mut session, "out").starts_with("[room "));
+        assert!(say(&mut session, "enter").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
+        assert!(say(&mut session, "enter further in").starts_with("[chamber "));
         let loom = session
             .chamber_facet_here()
             .expect("the walk lands in a chamber");
@@ -14846,13 +14890,13 @@ mod tests {
             snap.narration.prose
         );
         assert!(
-            !snap.narration.prose.starts_with("[room]"),
+            !snap.narration.prose.starts_with("[room "),
             "the room block must NOT be substituted for a verb's own response"
         );
         session.handle("look");
         let snap = session.snapshot().unwrap();
         assert!(
-            snap.narration.prose.starts_with("[room]"),
+            snap.narration.prose.starts_with("[room "),
             "after `look` the narration IS the room block"
         );
     }
@@ -15571,7 +15615,7 @@ mod tests {
                 Turn::Released(_) => panic!("{line:?} must not release"),
             };
             assert!(
-                !reply.starts_with("[room]"),
+                !reply.starts_with("[room "),
                 "{line:?} indoors must not render a LOCALE: {reply:?}"
             );
             assert_eq!(
@@ -15619,7 +15663,7 @@ mod tests {
             Turn::Released(_) => panic!("back must not release"),
         };
         assert!(
-            retraced.starts_with("[room]"),
+            retraced.starts_with("[room "),
             "the outdoor `back` path is unchanged: {retraced:?}"
         );
         assert_eq!(
@@ -20786,7 +20830,7 @@ mod tests {
             }
             let deeper = matches!(
                 session.handle("enter further in"),
-                Turn::Out(ref t) if t.starts_with("[chamber]")
+                Turn::Out(ref t) if t.starts_with("[chamber ")
             );
             assert!(
                 deeper,
@@ -21985,7 +22029,7 @@ mod tests {
         let mut rooms = 0usize;
 
         assert!(
-            say(&mut session, "enter").starts_with("[chamber]"),
+            say(&mut session, "enter").starts_with("[chamber "),
             "the possession never got indoors, so nothing below is tested"
         );
         // `MAX_CHAMBERS` is 4; five steps is one more than any structure has,
@@ -22041,7 +22085,7 @@ mod tests {
                 }
             }
 
-            if !say(&mut session, "enter further in").starts_with("[chamber]") {
+            if !say(&mut session, "enter further in").starts_with("[chamber ") {
                 break;
             }
         }

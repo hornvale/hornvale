@@ -1318,7 +1318,7 @@ fn an_empty_room_says_nothing_about_company() {
         "an empty room names no company: {looked:?}"
     );
     assert!(
-        looked.starts_with("[room]"),
+        looked.starts_with("[room "),
         "the room's own rendering must still be intact with nobody present: {looked:?}"
     );
 }
@@ -1580,7 +1580,7 @@ fn examine_resolves_a_resident_by_name_on_both_bands() {
 
     let reply = out(session.handle("enter"));
     assert!(
-        reply.starts_with("[chamber]"),
+        reply.starts_with("[chamber "),
         "the possession did not get indoors, so nothing below is tested: {reply}"
     );
     common::deepen_until_the_plan_draws(&mut session, companion);

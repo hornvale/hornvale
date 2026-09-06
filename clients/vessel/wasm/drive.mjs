@@ -85,7 +85,7 @@ assert.doesNotMatch(
 assert.equal(send("go n"), 0);
 const stepped = readOut();
 assert.notEqual(stepped, golden, "moving changed the room");
-assert.match(stepped, /^\[room\]/, "room header present");
+assert.match(stepped, /^\[room /, "room header present");
 
 // 3. Retrace.
 //

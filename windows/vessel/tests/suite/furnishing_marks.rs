@@ -107,12 +107,12 @@ fn out(t: Turn) -> String {
 fn enter_the_hearthroom(session: &mut Session) {
     let reply = out(session.handle("enter"));
     assert!(
-        reply.starts_with("[chamber]"),
+        reply.starts_with("[chamber "),
         "the possession did not get indoors, so nothing below is tested: {reply}"
     );
     let reply = out(session.handle("enter further in"));
     assert!(
-        reply.starts_with("[chamber]"),
+        reply.starts_with("[chamber "),
         "could not step further in from the threshold chamber: {reply}"
     );
     let snap = session.snapshot().expect("a live session snapshots");

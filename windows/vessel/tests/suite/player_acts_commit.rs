@@ -351,9 +351,9 @@ fn a_band_change_charges_time_and_commits_nothing() {
     // is no way to anywhere from here.", "Nothing here is built") can never be
     // mistaken for a free act that correctly charged nothing.
     for (verb, expected) in [
-        ("enter", "[chamber]"),
-        ("enter further in", "[chamber]"),
-        ("out", "[room]"),
+        ("enter", "[chamber "),
+        ("enter further in", "[chamber "),
+        ("out", "[room "),
     ] {
         let facts_before = s.committed_fact_count();
         let day_before = s.day().as_std_days();

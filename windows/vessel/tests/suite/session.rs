@@ -63,7 +63,7 @@ fn possession_opens_with_a_focalized_description() {
     let (_s, opening) = Session::start(&world, &opts()).unwrap();
     assert!(opening.contains("in the lands of"));
     assert!(
-        opening.contains("[room]"),
+        opening.contains("[room "),
         "the opening carries a room header"
     );
 }
@@ -80,7 +80,7 @@ fn go_moves_and_back_retraces() {
     };
     let dir = an_open_bearing(&ways);
     match s.handle(&format!("go {dir}")) {
-        Turn::Out(t) => assert!(t.contains("[room]")),
+        Turn::Out(t) => assert!(t.contains("[room ")),
         _ => panic!("go must not release"),
     }
     assert_ne!(s.position(), home, "go moved");
@@ -1163,7 +1163,7 @@ fn custody_survives_a_save_and_a_re_possession() {
     let (mut session, _) =
         Session::start(&world, &PossessOpts::default()).expect("seed 1 possesses");
     assert!(
-        say(&mut session, "enter").starts_with("[chamber]"),
+        say(&mut session, "enter").starts_with("[chamber "),
         "the possession never got indoors, so nothing below is tested"
     );
     // The LOOMROOM's key, not the storeroom's: since Task 13's fix round the
@@ -1180,7 +1180,7 @@ fn custody_survives_a_save_and_a_re_possession() {
     // agrarian, so its index-2 chamber is the loomroom the key now stands in.
     for _ in 0..2 {
         assert!(
-            say(&mut session, "enter further in").starts_with("[chamber]"),
+            say(&mut session, "enter further in").starts_with("[chamber "),
             "seed 1's structure no longer reaches the loomroom, so nothing \
              below is tested"
         );
@@ -1191,7 +1191,7 @@ fn custody_survives_a_save_and_a_re_possession() {
         "precondition: seed 1's loomroom must hold a takeable key"
     );
     for _ in 0..4 {
-        if !say(&mut session, "enter further in").starts_with("[chamber]") {
+        if !say(&mut session, "enter further in").starts_with("[chamber ") {
             break;
         }
     }
