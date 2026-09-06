@@ -718,8 +718,29 @@ an order of magnitude, in both directions around the valid runs' 313–318 — a
 the lowest of them, taken on a *before* tree, would have read as a 9.8× fall
 against a valid after run. §4.4 is not boilerplate on this box: on the night
 these were taken the 1-minute average moved between 1.4 and 64.5 under other
-campaigns' gates, and no run of this length could be scheduled around it. Every
-load average, before and after, for all nine runs is in the task report.
+campaigns' gates, and no run of this length could be scheduled around it.
+
+**All three load averages, before and after, for every timed run.** Recorded
+here rather than only in the task report, because that report lives in
+git-ignored campaign scratch and dies with the worktree, and §4.4 is a
+condition on the numbers above.
+
+| run | window (UTC, 2026-09-06) | load before | load after | verdict |
+|---|---|---|---|---|
+| C3 before (`fold_depth_sweep`, `d36a23bd7`) | 05:07:15–05:07:17 | 5.39 / 23.98 / 36.80 | 5.39 / 23.98 / 36.80 | valid |
+| C3 after (`fold_depth_sweep`, `8acd377c5`) | 05:07:20–05:07:22 | 5.36 / 23.66 / 36.61 | 5.36 / 23.66 / 36.61 | valid |
+| C2 after, run 1 | 06:25:32–06:32:25 | 4.20 / 24.25 / 39.25 | 4.72 / 8.60 / 25.44 | valid |
+| C2 before, run 2 | 06:32:33–06:39:51 | 5.25 / 8.60 / 25.24 | 1.92 / 3.71 / 16.05 | valid |
+| C2 before, run 4 | 07:07:58–07:15:34 | 5.27 / 19.40 / 22.19 | 2.69 / 7.85 / 15.32 | valid |
+| C2 after, run 3 | 07:52:51–07:59:43 | 4.71 / 12.02 / 16.94 | 6.58 / 6.64 / 12.19 | valid |
+| C2 before, run 1 | 04:44:53–04:56:00 | 6.30 / 27.36 / 36.58 | **50.74** / 52.08 / 46.88 | **SET ASIDE** — read k = 31.838, r² = 0.001, final band 57,069.96 |
+| C2 before, run 3 | 06:40:26–06:48:38 | 1.42 / 3.40 / 15.44 | **64.46** / 28.56 / 20.55 | **SET ASIDE** — read k = 469.840, r² = 0.853, final band 140,695.95 |
+| C2 after, run 2 | 07:15:39–07:23:26 | 2.47 / 7.72 / 15.23 | **46.05** / 22.89 / 17.82 | **SET ASIDE** — read k = 327.447, r² = 0.565, final band 143,742.68 |
+
+Count runs, listed for completeness and exempt under §4.1: Shape A after
+8.09/11.02/27.00 → 46.08/57.20/46.76; Shape B after 10.13/11.62/27.68 →
+8.85/11.26/27.27; Shape A before 60.85/51.71/46.04 → 52.37/45.55/43.89;
+Shape B before 38.76/46.67/43.92 → 49.42/48.51/44.66.
 
 **The counts were taken first and are exempt**, as §4.1 says: they were read at
 loads between 8.09 and 60.85 and every one of the twelve cross-checks in §11.2
