@@ -15,7 +15,16 @@
 //! not the glyph, disambiguates them. Do not reintroduce a rank parameter
 //! to chase distinctness; that is the defect this fix round removed.
 
-use hornvale_game_core::creature_glyph;
+use hornvale_game_core::{
+    CandidateSource,
+    Chart,
+    ChartCell, // lexicon: `ChartCell` is the wire's own frozen type name for a chart room — an area, not a vertex
+    ChartMarks,
+    Mark,
+    Micro,
+    Spatial,
+    creature_glyph,
+};
 
 #[test]
 fn a_goblin_and_a_bugbear_draw_differently() {
@@ -114,4 +123,179 @@ fn the_real_twelve_noun_roster_from_task_5_is_stable_not_distinct() {
     assert_eq!(creature_glyph("drow"), creature_glyph("dire wolf"));
     assert_eq!(creature_glyph("hobgoblin"), creature_glyph("human"));
     assert_eq!(creature_glyph("kobold"), creature_glyph("killer whale"));
+}
+
+/// The chart's second completion scope (The Newel, Task 4): a settlement or
+/// cave mark drawn on the walk-band chart, gated by discovery so that
+/// widening completion to the map does not also widen it into a way to
+/// read the map before exploring it (decision 0670: a placed site's glyph
+/// draws ungated, its proper name does not).
+mod chart_marks {
+    use super::*;
+
+    // An alias so the rest of this module can say "room" instead of the
+    // wire's own frozen type name.
+    type Room = ChartCell; // lexicon: an area, not a vertex
+
+    /// A minimal walk-band chart room carrying exactly one mark.
+    fn room_with_mark(room: u64, noun: &str, kind: &str) -> Room {
+        Room {
+            room,
+            u: Some(0),
+            v: Some(0),
+            w: None,
+            up: None,
+            seam: false,
+            state: "sensed".to_string(),
+            biome: 0,
+            water: 0,
+            relief: 0,
+            color: None,
+            micro: Micro {
+                relief: 0.0,
+                aspect: 0.0,
+                wetness: 0.0,
+                openness: 1.0,
+            },
+            marks: vec![Mark {
+                noun: noun.to_string(),
+                kind: kind.to_string(),
+                datum: format!("{noun} — a {kind} of this world."),
+                salience: 10,
+            }],
+            bearing_deg: 0.0,
+            distance_rad: 0.0,
+        }
+    }
+
+    /// A one-room walk-band chart whose only room carries one settlement
+    /// mark, at packed room id `room`.
+    fn spatial_with_a_marked_settlement(room: u64, noun: &str) -> Spatial {
+        Spatial::Walk {
+            chart: Chart {
+                radius: 1,
+                depth: 12,
+                biome_legend: vec![],
+                water_legend: vec![],
+                relief_legend: vec![],
+                cells: vec![room_with_mark(room, noun, "settlement")], // lexicon: `Chart::cells` is the wire's own frozen field name — an area, not a vertex
+                legend: vec![],
+                sight: None,
+            },
+        }
+    }
+
+    /// Decision 0670: a placed site's glyph is drawn ungated; its proper
+    /// name is withheld until discovery. Completion is a name surface, so
+    /// it takes the same gate. Written before the source that needs it —
+    /// this is the campaign's one silent-failure risk (task brief, Step
+    /// 1): widening completion to chart marks with no gate at all would
+    /// leave the whole suite green while Tab read the map for you.
+    #[test]
+    fn an_undiscovered_settlements_name_is_not_offered_as_a_completion() {
+        let spatial = spatial_with_a_marked_settlement(42, "Nenotata");
+        let mut scope = ChartMarks::default();
+        scope.update(&spatial, |_kind, _room| false);
+        let candidates = scope.candidates();
+        let names: Vec<&str> = candidates.iter().map(|c| c.name.as_str()).collect();
+        assert!(
+            !names.contains(&"Nenotata"),
+            "completion offered a settlement the player has not discovered: {names:?}"
+        );
+    }
+
+    /// The positive control the negative test above needs to not be
+    /// satisfiable by offering nothing at all (task brief, Step 5): a
+    /// discovered settlement's name DOES complete.
+    #[test]
+    fn a_discovered_settlements_name_is_offered_as_a_completion() {
+        let spatial = spatial_with_a_marked_settlement(42, "Nenotata");
+        let mut scope = ChartMarks::default();
+        scope.update(&spatial, |_kind, _room| true);
+        let candidates = scope.candidates();
+        let names: Vec<&str> = candidates.iter().map(|c| c.name.as_str()).collect();
+        assert!(
+            names.contains(&"Nenotata"),
+            "a discovered settlement's name must complete: {names:?}"
+        );
+    }
+
+    /// An `"agent"` mark (a live creature visible on the chart, not a
+    /// placed site) is never gated by decision 0670 — it draws the same
+    /// way `CurrentTurnNouns` already offers a creature in the current
+    /// room, and `is_discovered` is never even consulted for it here (the
+    /// closure would panic on any call; it never runs).
+    #[test]
+    fn an_agent_mark_completes_with_no_discovery_check_at_all() {
+        let spatial = Spatial::Walk {
+            chart: Chart {
+                radius: 1,
+                depth: 12,
+                biome_legend: vec![],
+                water_legend: vec![],
+                relief_legend: vec![],
+                cells: vec![room_with_mark(7, "Dvoashngashngo", "agent")], // lexicon: `Chart::cells` is the wire's own frozen field name — an area, not a vertex
+                legend: vec![],
+                sight: None,
+            },
+        };
+        let mut scope = ChartMarks::default();
+        scope.update(&spatial, |_kind, _room| {
+            panic!("an agent mark must never consult the discovery predicate")
+        });
+        let candidates = scope.candidates();
+        let names: Vec<&str> = candidates.iter().map(|c| c.name.as_str()).collect();
+        assert!(
+            names.contains(&"Dvoashngashngo"),
+            "an agent mark must complete unconditionally: {names:?}"
+        );
+    }
+
+    /// A non-walk band (chamber or underground) has no chart, so the scope
+    /// clears to empty rather than holding a stale walk-band roster.
+    #[test]
+    fn a_non_walk_band_clears_the_scope() {
+        let mut scope = ChartMarks::default();
+        scope.update(
+            &Spatial::Walk {
+                chart: Chart {
+                    radius: 1,
+                    depth: 12,
+                    biome_legend: vec![],
+                    water_legend: vec![],
+                    relief_legend: vec![],
+                    cells: vec![room_with_mark(1, "Nenotata", "settlement")], // lexicon: `Chart::cells` is the wire's own frozen field name — an area, not a vertex
+                    legend: vec![],
+                    sight: None,
+                },
+            },
+            |_kind, _room| true,
+        );
+        assert!(
+            !scope.candidates().is_empty(),
+            "sanity: the walk band populated the scope"
+        );
+
+        scope.update(
+            &Spatial::Chamber {
+                plan: hornvale_game_core::Plan {
+                    extent: hornvale_game_core::PlanExtent {
+                        x: 0,
+                        y: 0,
+                        w: 1,
+                        h: 1,
+                    },
+                    palette: vec![],
+                    cells: vec![0], // lexicon: `Plan::cells` is the wire's own frozen field name — an area, not a vertex
+                    you: hornvale_game_core::PlanPoint { x: 0, y: 0 },
+                    marks: vec![],
+                },
+            },
+            |_kind, _room| true,
+        );
+        assert!(
+            scope.candidates().is_empty(),
+            "a chamber-band snapshot must clear the walk-band roster, not leave it stale"
+        );
+    }
 }

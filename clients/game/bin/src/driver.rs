@@ -81,7 +81,7 @@ use crate::line::Line;
 use crate::mercator::{self, Frame};
 use crate::plate::{self, BAND_B_RUNG, GLOBE_RUNG, Window};
 use hornvale_astronomy::SkyPins;
-use hornvale_game_core::{CandidateSource, Cursor, Focus};
+use hornvale_game_core::{ChartMarks, CurrentTurnNouns, Cursor, Focus, Lexicon};
 use hornvale_kernel::{Facet, FacetId, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
@@ -457,15 +457,31 @@ pub struct Driver {
     /// overwritten by the next submission: it names "what was asked most
     /// recently", not "what was asked this exact turn".
     echo: Option<String>,
-    /// The completion vocabulary's v1 scope, refreshed from every parsed
-    /// snapshot (see [`Driver::refresh`]). Held DIRECTLY rather than behind
-    /// a [`hornvale_game_core::Lexicon`]: spec §3 registers exactly one
-    /// scope in v1, so the fold (`Lexicon::candidates`'s ordered
-    /// first-wins dedup over scopes) has nothing to fold — wrapping a single
-    /// scope in a `Vec<Box<dyn CandidateSource>>` would buy allocation and
-    /// indirection without behaviour. The Lexicon becomes the right shape
-    /// the day a second scope lands; this field swaps for it then.
-    scope: hornvale_game_core::CurrentTurnNouns,
+    /// The completion vocabulary's first scope: the current turn's
+    /// examinable catalog, refreshed from every parsed snapshot (see
+    /// [`Driver::refresh`]).
+    ///
+    /// **The day a second scope landed (The Newel, Task 4).** This field
+    /// used to be held directly, with a doc note explaining that v1
+    /// registered exactly one scope so a [`hornvale_game_core::Lexicon`]
+    /// fold had nothing to fold. [`Self::chart_scope`] is that second
+    /// scope, and [`Self::scope`] is the `Lexicon` the two fold into —
+    /// this field now holds the mutable half `Lexicon` itself cannot (a
+    /// `Box<dyn CandidateSource>` cannot be updated in place; only
+    /// re-folded).
+    current_turn_scope: hornvale_game_core::CurrentTurnNouns,
+    /// The completion vocabulary's second scope (The Newel, Task 4):
+    /// settlement/cave marks drawn on the walk-band chart, gated by
+    /// discovery — see [`hornvale_game_core::ChartMarks`]'s own doc for
+    /// why the gate is supplied here rather than inside `core`.
+    chart_scope: hornvale_game_core::ChartMarks,
+    /// The completion vocabulary itself: an ordered, first-wins fold of
+    /// [`Self::current_turn_scope`] then [`Self::chart_scope`], rebuilt at
+    /// the end of every [`Driver::refresh`] from those two fields. First
+    /// wins so a noun in the room you are standing in beats a distant
+    /// chart mark of the same name (seed 42 has 390 settlements under 240
+    /// distinct names, so a collision is real, not hypothetical).
+    scope: hornvale_game_core::Lexicon,
     /// How an ambiguous completion presents (spec §4.2). [`TabStyle::Cycle`]
     /// is implemented and unit-tested but unbound — no preference mechanism
     /// exists yet, so every session runs [`TabStyle::Hint`].
@@ -1067,7 +1083,9 @@ impl Driver {
             line: Line::new(),
             history: History::new(),
             echo: None,
-            scope: hornvale_game_core::CurrentTurnNouns::default(),
+            current_turn_scope: CurrentTurnNouns::default(),
+            chart_scope: ChartMarks::default(),
+            scope: Lexicon::new(vec![]),
             tab_style: TabStyle::Hint,
             hint: None,
             cycle: None,
@@ -2899,6 +2917,45 @@ impl Driver {
             .map(|h| (h.stem.clone(), h.matches.clone()))
     }
 
+    /// The discovery predicate [`Self::refresh`] feeds
+    /// [`hornvale_game_core::ChartMarks::update`] (The Newel, Task 4;
+    /// decision 0670). A free associated function rather than an inline
+    /// closure so a test can drive it directly against a known room,
+    /// without needing that room's own settlement or cave to actually
+    /// appear on a live chart within walking distance of wherever a test
+    /// driver happens to start.
+    ///
+    /// Resolves the same chain [`Self::resolve_walk_band`] resolves a
+    /// cursor position with: a packed room id, [`FacetId::unpack`] to a
+    /// [`Facet`], [`Facet::coord`] to a lat/lon,
+    /// [`NearestVertexIndex::nearest`] to a [`hornvale_kernel::Vertex`] —
+    /// and then the same `discovered` ledger [`Self::update_discovery`]
+    /// writes. `kind` is only ever `"settlement"` or `"cave"`
+    /// (`ChartMarks::update`'s own doc: an `"agent"` mark never reaches
+    /// this function at all, because it is not a placed site and decision
+    /// 0670 never asked to gate it). An unpackable room id gates closed
+    /// (`false`) rather than panicking — the same defensive posture
+    /// `Self::resolve_walk_band`'s own `FacetId::unpack().ok()?` takes.
+    fn site_is_discovered(
+        geo: &hornvale_kernel::Geosphere,
+        nearest: &NearestVertexIndex,
+        discovered: &Discovered,
+        kind: &str,
+        room: u64,
+    ) -> bool {
+        let Ok(facet) = FacetId(room).unpack() else {
+            return false;
+        };
+        let coord = facet.coord();
+        let vertex = nearest.nearest(geo, coord.latitude, coord.longitude);
+        let feature = if kind == "settlement" {
+            FeatureId::Settlement(vertex)
+        } else {
+            FeatureId::Cave(vertex)
+        };
+        discovered.contains(feature)
+    }
+
     /// Re-derive `cached` from the live session. A snapshot read can fail
     /// only when the session itself is not live, which cannot happen
     /// between `start` succeeding and `Drop` running — so a failure here
@@ -2912,12 +2969,33 @@ impl Driver {
             .unwrap_or_default();
         // The completion scope rides every refresh: parse (which can fail
         // only as `refresh`'s own doc describes — a dead session) and
-        // replace the noun catalog from the new narration. On failure the
-        // previous catalog stands rather than being cleared: stale
-        // candidates complete nothing harmful, and an empty one mid-session
-        // would be a regression masquerading as caution.
+        // replace both scopes from the new snapshot, then re-fold them into
+        // `self.scope`. On failure every stale value stands rather than
+        // being cleared: stale candidates complete nothing harmful, and an
+        // empty one mid-session would be a regression masquerading as
+        // caution.
         if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
-            self.scope.update(&snap.narration);
+            self.current_turn_scope.update(&snap.narration);
+            // The chart scope's own discovery gate (decision 0670: a
+            // placed site's glyph draws ungated, its proper name does
+            // not). Resolved the same way `Self::resolve_walk_band`
+            // resolves a cursor position — a packed room id,
+            // `FacetId::unpack` to a `Facet`, `Facet::coord` to a
+            // lat/lon, `NearestVertexIndex::nearest` to a `Vertex` — and
+            // then the same `self.discovered` ledger `update_discovery`
+            // writes. `ChartMarks::update`'s own doc: an `"agent"` mark
+            // never reaches this closure at all, because it is not a
+            // placed site and decision 0670 never asked to gate it.
+            let geo = &self.geo;
+            let nearest = &self.nearest;
+            let discovered = &self.discovered;
+            self.chart_scope.update(&snap.spatial, |kind, room| {
+                Self::site_is_discovered(geo, nearest, discovered, kind, room)
+            });
+            self.scope = Lexicon::new(vec![
+                Box::new(self.current_turn_scope.clone()),
+                Box::new(self.chart_scope.clone()),
+            ]);
             // The band, from the same parse (see `on_walk_band`'s own doc for
             // why it is cached and not re-derived per keypress). On a parse
             // failure the previous value stands, the same posture the scope
@@ -6757,12 +6835,17 @@ mod completion_tests {
     }
 
     /// A live driver whose scope has been overwritten with the fixture
-    /// catalog — the real refresh path (`scope.update` from a parsed
+    /// catalog — the real refresh path (`Driver::refresh`, from a parsed
     /// snapshot) is exercised by the integration suite; these tests need a
-    /// KNOWN vocabulary.
+    /// KNOWN vocabulary. `chart_scope` is left at its `start`-time default
+    /// (empty), so the fold below contributes nothing beyond the fixture.
     pub(crate) fn seeded_driver() -> Driver {
         let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-        d.scope.update(&fixture_narration());
+        d.current_turn_scope.update(&fixture_narration());
+        d.scope = hornvale_game_core::Lexicon::new(vec![
+            Box::new(d.current_turn_scope.clone()),
+            Box::new(d.chart_scope.clone()),
+        ]);
         d
     }
 
@@ -6914,6 +6997,127 @@ mod completion_tests {
         assert_eq!(
             completion_decision("examine bramble", 11, &cands(&["bramble"])),
             CompletionDecision::Fill("bramble".into())
+        );
+    }
+}
+
+/// The Newel, Task 4: the chart scope's own discovery gate (decision
+/// 0670), proven against `Driver::refresh`'s REAL wiring — not a
+/// test-supplied closure. `hornvale-game-core`'s own test suite
+/// (`clients/game/core/tests/lexicon.rs`) proves `ChartMarks`' abstract
+/// filtering mechanism is non-vacuous in isolation; these tests prove the
+/// production closure this crate feeds it (`Driver::site_is_discovered`:
+/// `FacetId::unpack` → `Facet::coord` → `NearestVertexIndex::nearest` →
+/// `Discovered::contains`) resolves and gates correctly against a real
+/// seed-42 world.
+#[cfg(test)]
+mod chart_scope_tests {
+    use super::*;
+    use crate::discovery::FeatureId;
+    use hornvale_game_core::CandidateSource;
+
+    fn test_driver() -> Driver {
+        Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("seed 42 generates")
+    }
+
+    /// `Driver::site_is_discovered` directly, against a real,
+    /// self-consistent round trip: pack the observer's OWN position,
+    /// unpack it back, resolve its vertex the same way the closure does.
+    /// No second settlement needs to stand within chart radius of
+    /// wherever a test driver happens to start.
+    #[test]
+    fn site_is_discovered_gates_a_settlement_and_a_cave_separately() {
+        let d = test_driver();
+        let position = d.session.position();
+        let room = position
+            .pack()
+            .expect("a live possession's own position always packs")
+            .0;
+        let vertex = d.nearest.nearest(
+            &d.geo,
+            position.coord().latitude,
+            position.coord().longitude,
+        );
+
+        let empty = Discovered::default();
+        assert!(
+            !Driver::site_is_discovered(&d.geo, &d.nearest, &empty, "settlement", room),
+            "nothing has been discovered yet"
+        );
+
+        let mut settlement_discovered = Discovered::default();
+        settlement_discovered.record(FeatureId::Settlement(vertex));
+        assert!(
+            Driver::site_is_discovered(
+                &d.geo,
+                &d.nearest,
+                &settlement_discovered,
+                "settlement",
+                room
+            ),
+            "the settlement at this room's own vertex is now discovered"
+        );
+
+        // A CAVE discovery at the identical vertex must not leak into the
+        // SETTLEMENT gate — the two are different `FeatureId` variants
+        // (`discovery.rs`'s own module doc on why a point site's kind is
+        // part of its identity).
+        let mut cave_discovered = Discovered::default();
+        cave_discovered.record(FeatureId::Cave(vertex));
+        assert!(
+            !Driver::site_is_discovered(&d.geo, &d.nearest, &cave_discovered, "settlement", room),
+            "a discovered cave must not gate a settlement mark open"
+        );
+    }
+
+    /// An unpackable room id gates closed rather than panicking — the same
+    /// defensive posture `Self::resolve_walk_band`'s own
+    /// `FacetId::unpack().ok()?` takes.
+    #[test]
+    fn an_unpackable_room_id_gates_closed_not_panics() {
+        let d = test_driver();
+        // `FacetId(0)`'s sentinel bit is unset — `FacetId::unpack`'s own
+        // doc names this malformed.
+        assert!(!Driver::site_is_discovered(
+            &d.geo,
+            &d.nearest,
+            d.discovered(),
+            "settlement",
+            0
+        ));
+    }
+
+    /// End to end through `Driver::refresh` itself: the flagship's own
+    /// home settlement is on `chart_scope`'s own roster only once
+    /// `Self::discovered_mut_for_test` records it — proving `refresh`'s
+    /// wiring, not merely `ChartMarks`' abstract mechanism.
+    #[test]
+    fn refresh_gates_chart_scope_against_the_real_discovery_ledger() {
+        let mut d = test_driver();
+        let home = hornvale_game_core::Snapshot::parse(&d.snapshot())
+            .unwrap()
+            .me
+            .settlement;
+        assert!(!home.is_empty(), "sanity: the flagship names its own home");
+
+        assert!(
+            !d.chart_scope.candidates().iter().any(|c| c.name == home),
+            "the home settlement must not be offered by the chart scope before discovery"
+        );
+
+        let position = d.session.position();
+        let vertex = d.nearest.nearest(
+            &d.geo,
+            position.coord().latitude,
+            position.coord().longitude,
+        );
+        d.discovered_mut_for_test()
+            .record(FeatureId::Settlement(vertex));
+        d.refresh();
+
+        assert!(
+            d.chart_scope.candidates().iter().any(|c| c.name == home),
+            "the home settlement must be offered by the chart scope once discovered"
         );
     }
 }

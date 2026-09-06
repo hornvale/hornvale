@@ -476,6 +476,7 @@ mod tests {
     /// sending `null` there unconditionally.
     fn chart_cell(bearing_deg: f64, distance_rad: f64, state: &str) -> ChartCell {
         ChartCell {
+            room: 0,
             u: Some(0),
             v: Some(0),
             w: None,
