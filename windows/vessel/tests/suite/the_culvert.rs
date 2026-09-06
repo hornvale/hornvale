@@ -838,3 +838,219 @@ fn the_expensive_200_tick_lab_shape_also_has_an_unreachable_pair() {
         lab.len()
     );
 }
+
+// ---------------------------------------------------------------------------
+// Task 5: the moving-anchor key population -- measured, not assumed.
+//
+// `shared_believed_water` (liveness.rs:1880) anchors its ranking at `here` --
+// the npc's CURRENT position, which moves every tick -- rather than at
+// `home` (fixed for a session). Its memo key space is therefore
+// `positions x water rooms`, not `homes x water rooms`, which is the one way
+// this campaign's home-anchored bound (83 pairs, saturating -- Task 4) could
+// fail to cover a real long-running session. Spec Rule 3 asks whether the
+// `(here, dest)` population SATURATES (stops rising -- safe to memoize) or
+// KEEPS RISING (unbounded -- exclude the site), a question about the CURVE's
+// shape, never about comparing an endpoint to 83.
+// ---------------------------------------------------------------------------
+
+/// The distinct `(here, dest)` pairs one roster-wide `shared_believed_water`
+/// sweep over `npcs` at `t` implies, and how many `npcs` members had at least
+/// one co-located peer -- mirroring `shared_believed_water`'s own logic
+/// exactly (liveness.rs:1880-1896) rather than instrumenting it: an npc with
+/// NO co-located peer contributes NOTHING here (its `own` suggestion is
+/// ranked at `home` via `believed_water`'s internal `plan_to_room` call,
+/// already counted by [`culvert_sweep_counts`]'s `(home, dest)` population --
+/// this is the byte-identical alone-path no-op `shared_believed_water`'s own
+/// doc describes). A co-located npc pools its own and every peer's
+/// `believed_water` suggestion and queries `plan_to_room` from ITS OWN
+/// current position once per pooled room -- exactly the calls this
+/// diagnostic counts as `(here, room)` pairs. The co-located count is
+/// returned alongside the pairs so an empty population can be told apart, at
+/// a glance, from "nobody was ever co-located" (the alone-path never reaches
+/// a `(here, dest)` call at all) versus "co-located, but the pool was empty"
+/// (a co-located npc whose own and every peer's `believed_water` is `None`).
+fn culvert_here_dest_pairs(
+    ledger: &Ledger,
+    folds: &OwnedFolds,
+    npcs: &[Body],
+    t: WorldTime,
+    terrain: &dyn liveness::Terrain,
+    budget: usize,
+) -> (std::collections::BTreeSet<(Facet, Facet)>, usize) {
+    let mut pairs = std::collections::BTreeSet::new();
+    let mut co_located = 0usize;
+    for npc in npcs {
+        let here = liveness::agent_position(ledger, npc, t);
+        let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
+        let mut has_peer = false;
+        for other in npcs {
+            if other.entity != npc.entity && liveness::agent_position(ledger, other, t) == here {
+                has_peer = true;
+                if let Some(w) = liveness::believed_water(ledger, folds, other, t, terrain, budget)
+                {
+                    pool.insert(w);
+                }
+            }
+        }
+        if !has_peer {
+            continue;
+        }
+        co_located += 1;
+        if let Some(w) = liveness::believed_water(ledger, folds, npc, t, terrain, budget) {
+            pool.insert(w);
+        }
+        for room in pool {
+            pairs.insert((here.clone(), room));
+        }
+    }
+    (pairs, co_located)
+}
+
+/// **THE MOVING-ANCHOR KEY-POPULATION CURVE (Task 5, controller ruling R10).**
+///
+/// Prints, and does not gate on, the cumulative distinct `(here, dest)`
+/// population next to the cumulative `(home, dest)` population, per wait
+/// (possession shape, seed 17, extended past Task 4's 12 waits to 60 -- cheap)
+/// and per 20-tick band (lab shape, seed 42, 50 agents, 200 ticks -- the SAME
+/// construction [`Shape::LabAt200Ticks`] pays 129.337s for, read at ten bands
+/// off the ONE resulting ledger rather than re-run per band: `water_at`'s
+/// `day <= t` filter over an already-complete history means every earlier
+/// band's population is a cheap read over the same finished ledger, exactly
+/// how `session_length_scaling.rs`'s own per-band table is produced).
+///
+/// The `(home, dest)` column is genuinely CUMULATIVE by construction, with no
+/// running union needed: `LatestVisit::water_at(entity, t, ...)` is
+/// monotonically non-decreasing in `t` (a room qualifies once its FIRST visit
+/// is `<= t`, and stays qualified for every larger `t` -- see its own doc), so
+/// a fresh [`culvert_sweep_counts`] read at each checkpoint's `t` already IS
+/// the full population as of that checkpoint. `here`, by contrast, is NOT
+/// monotonic -- it is the npc's CURRENT position, which can revisit an
+/// earlier room or move away from one -- so the `(here, dest)` column is a
+/// running union of every checkpoint's own [`culvert_here_dest_pairs`] output,
+/// which is what a real memo over the creature's whole session would
+/// accumulate.
+///
+/// This is a measurement, never a guard: no assertion here can fail. Spec
+/// Rule 3's saturates/keeps-rising/cannot-decide verdict is read off the
+/// PRINTED curve by a human (recorded in this campaign's Task 5 report), not
+/// computed by this test.
+///
+/// **THE DATED RECORD (2026-09-05, this campaign's own Task 5).** On the lab
+/// shape, `colocated` was `0` and `here_dest_cum` was `0` at all ten bands --
+/// confirming The Kerf's own prior finding on this exact construction (its
+/// ledger `2026-09-04-the-kerf.md`: "false at all ten bands, zero co-located
+/// peers") on a SECOND, independent instrument. The `home_dest_cum` column
+/// reproduced Task 2's own per-band table digit for digit (37, 56, 61, 65,
+/// 67, 71, 77, 79, 83, 83), a cross-validation this diagnostic did not need
+/// but got for free.
+///
+/// On the possession shape (the only shape where `colocated` is ever
+/// non-zero -- consistently 52-63 of 67 members every wait), `home_dest_cum`
+/// reaches a genuinely FLAT stretch by the end of the run (187, 189, 190,
+/// 190, 190 across waits 56-60) -- the same saturating shape Task 4's 83
+/// already established, reproduced here on a second, longer-running shape.
+/// `here_dest_cum` shows NO analogous flat stretch anywhere in the 60-wait
+/// window (98, 98, 99, 101 across the same waits) and its running ratio
+/// to `home_dest_cum` climbs for the entire run rather than levelling off
+/// (0.25 at wait 10, 0.33 at wait 20, 0.42 at wait 40, 0.53 at wait 60) --
+/// the population is growing FASTER than the reference that is known to
+/// saturate, at the very point in the run where the reference has stopped
+/// moving. **Verdict: KEEPS RISING, not saturates** -- see the Task 5 report
+/// for the full per-wait/per-band tables and reasoning.
+#[test]
+#[ignore = "diagnostic, run once by hand: 1077.86s measured end to end (release profile) -- \
+            the lab-shape half reuses Shape::LabAt200Ticks's own 129.337s construction, but the \
+            possession-shape half's 60 independent roster-wide culvert_here_dest_pairs sweeps \
+            (each re-running believed_water's budgeted plan_to_room over a co-located roster of \
+            ~55-63 of 67 members) dominate the wall clock; nothing here gates a commit or a \
+            stage gate -- it exists to feed spec Rule 3's saturates/keeps-rising verdict by \
+            hand, per docs/superpowers/plans/2026-09-05-the-culvert.md Task 5 (controller \
+            ruling R10)"]
+fn culvert_here_anchored_key_population_curve() {
+    // --- Possession shape: seed 17, extended to 60 waits (cheap). ---
+    const EXTENDED_WAITS: usize = 60;
+    let world = common::build(CULVERT_WATER_SEED).expect("the water-belief seed builds a world");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the water-belief seed starts a session");
+    let mut checkpoints: Vec<WorldTime> = Vec::with_capacity(EXTENDED_WAITS);
+    for _ in 0..EXTENDED_WAITS {
+        session.handle("wait");
+        checkpoints.push(session.day());
+    }
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+    let npcs = session.bodies().to_vec();
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("the locale context builds");
+    let terrain = liveness::LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+    let folds = OwnedFolds::new(ResidentFolds::new());
+
+    println!(
+        "--- Task 5: moving-anchor key population (possession shape, seed \
+         {CULVERT_WATER_SEED}, {EXTENDED_WAITS} waits) ---"
+    );
+    println!(
+        "{:>4} {:>16} {:>16} {:>10}",
+        "wait", "home_dest_cum", "here_dest_cum", "colocated"
+    );
+    let mut here_running: std::collections::BTreeSet<(Facet, Facet)> =
+        std::collections::BTreeSet::new();
+    for (i, &t) in checkpoints.iter().enumerate() {
+        let home_counts = culvert_sweep_counts(&ledger, &folds, &npcs, t, &terrain);
+        let (here_pairs, co_located) =
+            culvert_here_dest_pairs(&ledger, &folds, &npcs, t, &terrain, PLAN_BUDGET_MIRROR);
+        here_running.extend(here_pairs);
+        println!(
+            "{:>4} {:>16} {:>16} {:>10}",
+            i + 1,
+            home_counts.distinct_pairs,
+            here_running.len(),
+            co_located
+        );
+    }
+
+    // --- Lab shape: seed 42, 50 agents, Shape::LabAt200Ticks's own
+    // construction, read at ten 20-tick bands off the one finished ledger. ---
+    let lab = crate::the_detent::bench_shape(42, 200, 50);
+    let mesh = lab.mesh_memo.clone();
+    let lab_terrain =
+        liveness::LocaleTerrain::with_fields(&lab.ctx, None, None, None, None, Some(&mesh));
+    let day0 = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
+
+    println!(
+        "--- Task 5: moving-anchor key population (lab shape, seed 42, 50 agents, \
+         200 ticks in bands of 20) ---"
+    );
+    println!(
+        "{:>5} {:>16} {:>16} {:>10}",
+        "band", "home_dest_cum", "here_dest_cum", "colocated"
+    );
+    let mut lab_here_running: std::collections::BTreeSet<(Facet, Facet)> =
+        std::collections::BTreeSet::new();
+    for band in 1..=10usize {
+        let ticks = (band * 20) as i64;
+        let t = WorldTime::from_ticks(day0.ticks() + ticks * WorldTime::TICKS_PER_STD_DAY);
+        let home_counts = culvert_sweep_counts(&lab.ledger, &lab.folds, &lab.npcs, t, &lab_terrain);
+        let (here_pairs, co_located) = culvert_here_dest_pairs(
+            &lab.ledger,
+            &lab.folds,
+            &lab.npcs,
+            t,
+            &lab_terrain,
+            PLAN_BUDGET_MIRROR,
+        );
+        lab_here_running.extend(here_pairs);
+        println!(
+            "{:>5} {:>16} {:>16} {:>10}",
+            band,
+            home_counts.distinct_pairs,
+            lab_here_running.len(),
+            co_located
+        );
+    }
+    assert_eq!(
+        WorldTime::from_ticks(day0.ticks() + 200 * WorldTime::TICKS_PER_STD_DAY),
+        lab.day,
+        "band 10's reconstructed WorldTime must equal bench_shape's own final day, or the \
+         band-to-tick arithmetic above has drifted from bench_shape's own loop"
+    );
+}
