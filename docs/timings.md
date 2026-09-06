@@ -6401,3 +6401,12 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T19:18:57Z | sluice:gate | 791.575 | 21357.078 | 512.683 | 27.63 | 0 | d6ca14cae |  | lefford | 40 |
 | 2026-09-06T19:21:16Z | sluice:clients | 138.528 | 2187.140 | 198.389 | 17.22 | 0 | 406ce7076 |  | lefford | 40 |
 | 2026-09-06T19:29:12Z | sluice:heavy | 476.068 | 11285.058 | 155.642 | 24.03 | 0 | 1061f2d6b |  | lefford | 40 |
+| 2026-09-06T16:01:12Z | prewarm | 186.036 | 1097.663 | 54.531 | 6.19 | 0 | fd7f1d4f4 | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:14:17Z | gate-commit | 70.307 | 137.893 | 80.491 | 3.11 | 0 | 561b9379d | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:17:08Z | gate-commit | 56.051 | 88.080 | 39.332 | 2.27 | 0 | 0bc7c415f | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:40:45Z | gate-commit | 66.535 | 96.084 | 39.224 | 2.03 | 0 | 407300d2d | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:46:35Z | gate-commit | 64.505 | 89.907 | 40.357 | 2.02 | 0 | 24bf8d844 | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:47:04Z | gate-commit | 51.363 | 67.713 | 17.755 | 1.66 | 0 | a6ce4c6bf | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:54:18Z | gate-commit | 31.748 | 34.692 | 8.801 | 1.37 | 0 | a6ce4c6bf | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:54:58Z | gate-commit | 28.233 | 24.472 | 0.676 | 0.89 | 0 | a6ce4c6bf | campaign/the-fetch | MacBookPro | 10 |
+| 2026-09-06T19:57:02Z | gate-commit | 93.678 | 177.303 | 34.805 | 2.26 | 0 | a6ce4c6bf | campaign/the-fetch | MacBookPro | 10 |
