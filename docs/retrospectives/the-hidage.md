@@ -111,7 +111,8 @@ asks. The first request was **refused at the mouth** — a merge conflict on
 appended rows — so the box was never taken; main was absorbed locally with a
 union resolution and the resubmission is what actually queued, behind a census
 already running on the one serial claim and one stage gate ahead of it. The
-campaign's records were written while it waited.
+campaign's records were written while it waited, and it reported green — all
+stage phases rc=0 in 1345 s — before the close was submitted.
 
 Stated plainly and without complaint, because the cost is the design working
 as intended: a stage gate that queues costs queue position, not attention, and

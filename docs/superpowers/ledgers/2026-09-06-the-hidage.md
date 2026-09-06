@@ -517,8 +517,11 @@ per The Cruck's recorded miss of exactly this).
   sides' rows kept; the digest's decision index regenerated in the same
   commit, since main had added records of its own).
 - `req-4feb86d81540-20260906T161648Z`, `4feb86d81`, 2026-09-06T16:16Z —
-  resubmitted. **Outcome: pending at the time of this entry; recorded when it
-  reports.**
+  resubmitted. **Outcome: `reported`, all stage phases rc=0 in 1345 s, main
+  unchanged at `fd7f1d4f4`** (read back from `make sluice-status` at
+  2026-09-06T16:5xZ; it queued behind a running census and one stage gate,
+  then ran ~22 minutes). The merge product this gated is the absorbed tree at
+  `4feb86d81`; the four docs-only commits after it carry no Rust change.
 
 ## Task 3 — verdict and records
 
