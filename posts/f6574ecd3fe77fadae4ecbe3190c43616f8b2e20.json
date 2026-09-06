@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/census-tail","note":"sluice: queued req-46724da59d39-20260906T165819Z census for campaign/census-tail at 46724da59d39; measure parallel census readout trailer","paths":["scripts/sluice-queue.sh","scripts/regenerate-artifacts.sh"]}
