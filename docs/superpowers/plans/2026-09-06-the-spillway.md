@@ -930,9 +930,9 @@ Claude-Session: https://claude.ai/code/session_01DCmbLQnYU317DpApjFm1k5"
 **Interfaces:**
 - Produces: decision 0836, citable from Rust comments from this task on.
 
-- [ ] **Step 1: Mint the decision record**
+- [ ] **Step 1: Verify the decision record (minted in Task 2 by controller ruling)**
 
-Create `docs/decisions/0836-a-census-delivery-regenerates-the-evidence-its-gate-reads.md`:
+**Superseded in execution.** `decision_cites_in_sources_resolve` scans `scripts/` as well as Rust, so the first script comment citing 0836 (Task 2) could not land before the record existed; the record below was therefore minted INSIDE Task 2 (commit `7f7333b72`) with this exact text, and the digest regenerated there. In this task, only VERIFY: `ls docs/decisions/0836-*` shows the file, `git diff --exit-code docs/digest/` after re-running the two `render` commands below is empty. The record's text, for reference — `docs/decisions/0836-a-census-delivery-regenerates-the-evidence-its-gate-reads.md`:
 
 ```markdown
 # 0836. A census delivery regenerates the evidence its gate reads, and defers only what needs a human re-statement
