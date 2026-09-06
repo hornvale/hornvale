@@ -695,18 +695,32 @@ saturating) fails: an unbounded memo in a long session.
 
 **This is not measured.** The probe measured the home-anchored fold only.
 
-- [ ] **Step 1: Count the `(here, dest)` key population**
+- [ ] **Step 1: Count the `(here, dest)` key population, as an `#[ignore]`d diagnostic**
 
-Over Shape B's 12 waits and Shape A's 200 ticks, count distinct `(here, dest)`
-pairs cumulatively per band/wait, exactly as Task 4 counts `(home, dest)`.
-Report the growth curve, not just the endpoint.
+Count distinct `(here, dest)` pairs cumulatively per band/wait, exactly as
+Task 4 counts `(home, dest)`. **Report the growth CURVE, not the endpoint** —
+the endpoint cannot distinguish a population that has stopped growing from one
+still climbing, and that distinction is the entire verdict.
 
-- [ ] **Step 2: Apply spec Rule 3**
+Seeing saturation needs enough ticks, which means the 200-tick shape
+(`Shape::LabAt200Ticks`, already present from Task 4) at ~129 s. **Mark this
+test `#[ignore]` with a reason naming that cost.** It is a measurement taken
+once by hand, not a guard; nothing about it belongs on every gate run. This is
+controller ruling R10, and it exists because ruling R9 had just removed a 129 s
+per-gate tax that arrived the same way.
 
-Bounded and comparable to the home-anchored 83 → **include** the site in Task 8,
-and say in your report what bounds it. Growing with tick count → **exclude** the
-site, and Task 8 is not run. Either way the number goes in the report and the
-ledger; the site is not included on the strength of an expectation.
+- [ ] **Step 2: Apply spec Rule 3 — the criterion is a SHAPE, not a magnitude**
+
+- The count **saturates** (stops rising as ticks are added, as the
+  home-anchored population does at 83) → **include** the site in Task 8, and
+  say in your report what bounds it.
+- The count **keeps rising** without saturating → **exclude** the site, and
+  Task 8 is not run.
+
+**Do not decide this by comparing to 83.** A population of 200 that has stopped
+growing is safe to memoize; a population of 40 still climbing is not. Either
+way the curve goes in the report and the ledger, and the site is not included
+on the strength of an expectation.
 
 - [ ] **Step 3: Commit the measurement**
 

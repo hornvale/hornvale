@@ -244,13 +244,28 @@ Kerf's own finding: its control B moved none of four script hashes yet reddened
 all four real-shape FOLD-equals-SCAN sweeps, so *a hash is a weaker instrument
 than the direct set comparison*.
 
-**Rule 3 — the moving-anchor site (`shared_believed_water`).** Task 2 measures
-its would-be key population over Shape B's 12 waits and Shape A's 200 ticks.
-Distinct `(here, dest)` pairs bounded and comparable to the home-anchored 83
-→ include the site, and say what bounds it. Distinct pairs growing with tick
-count → **exclude the site**, say so in the code at the call, and record the
-growth curve. Either way the number is reported; the site is not included on
-the strength of an expectation.
+**Rule 3 — the moving-anchor site (`shared_believed_water`).** Task 5 measures
+its would-be key population and the criterion is a **shape, not a magnitude**:
+
+- Distinct `(here, dest)` pairs **saturate** — the count stops rising as ticks
+  are added, the way the home-anchored population does at 83 → **include** the
+  site, and name what bounds it.
+- Distinct pairs **keep rising** with tick count without saturating →
+  **exclude** the site, say so in a comment at the call, and record the curve.
+
+**The criterion is deliberately not "comparable to 83".** An earlier draft said
+that, and it is an observed value standing in for a predicate — the same defect
+R9 corrected one task earlier. A magnitude cannot decide this question: a
+population of 200 that has stopped growing is safe to memoize and a population
+of 40 that is still climbing is not. Saturation is the property; the number is
+only how you see it.
+
+**The measurement is a one-off diagnostic and is `#[ignore]`d by
+construction.** Seeing saturation needs enough ticks to distinguish "stopped"
+from "rising slowly", which means the 200-tick shape, which costs ~129 s. That
+is paid ONCE, by hand, and its result is recorded — never on every gate. What
+lands in the gate is whatever assertion the verdict licenses, on a cheap shape.
+(Controller ruling R10.)
 
 **Rule 4 — the belief probe's vacuity.** Task 1 turns the two `println!`
 vacuity notes into failures. If the repaired probe still reports a vacuous
