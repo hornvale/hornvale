@@ -3,9 +3,15 @@
 **Campaign:** The Lot · **Decision block:** 0796–0805 · **Ledger:**
 [`2026-09-05-the-lot.md`](../ledgers/2026-09-05-the-lot.md)
 
-**Status.** Spec at G3 — written under autopilot, awaiting Nathan's review
-before the implementation plan is written. Task 0 (§1) has run; nothing
-else has.
+**Status.** Shipped, pending merge (2026-09-05). Every section is built: the
+`occ-person-years` fact, `windows/lot`, `hornvale lot`, the committed gallery
+page, the six census metrics, the nine-seed readout (§8's H-M1..H-M4 and
+H-P1/H-P4/H-P5/H-P6 pass; **H-P2 and H-P3 are falsified**, and the findings are
+in the chronicle), and the browser exhibit over the lot's own wasm. §4.1, §5,
+§6.1 and §6.4 carry pre-merge corrections made in place (ledger #8, #15, #17,
+and the final review's `odds_json` finding).
+Decisions 0796-0798 are recorded; the chronicle is
+`book/src/chronicle/the-lot.md`.
 
 *A lot is what chance draws, and a person's lot is the life they were dealt.
 Any Human Ever (anyhumanever.com) draws one life from the hundred billion
@@ -436,7 +442,14 @@ surface, every primitive tagged for `type-audit`:
   odds(&World, people, site, year) -> Odds         e0, q_maturity, the hazard's parts, strife
   narrate(&Life) -> String                         the four stages as prose, sources numbered
   life_json(&Life) -> String                       `lot/life/v1`, quantized at emit
-  curve_json / places_json / odds_json             the exhibit's other three payloads
+  curve_json / places_json                         the exhibit's other two payloads
+  odds_json                                        `lot/odds/v1` — a CLI-testable payload
+                                                   with NO exhibit consumer: §6.4's ABI
+                                                   exports no odds entry point, and the
+                                                   client reads `lot/life/v1` fields, so
+                                                   the Life stage shows the life course
+                                                   rather than a mortality profile
+                                                   (pre-merge correction, final review)
 ```
 
 `Life` carries the worldline, the drawn events, every slot's value-or-silence

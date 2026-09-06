@@ -146,11 +146,12 @@ book/src/gallery/lithology-seed-42.png	none(no current writer -- `hornvale map -
 # until it is `git add`-ed.
 book/src/gallery/generated/the-lot-seed-42.md	artifacts
 
-# --- book/src/reference/ — 21 tracked, 9 `artifacts`-written; 12 exceptions ---
+# --- book/src/reference/ — 22 tracked, 9 `artifacts`-written; 13 exceptions ---
 book/src/reference/	artifacts
 book/src/reference/concept-registry.md	none(hand-written prose companion to concept-registry-generated.md, never regenerated)
 book/src/reference/layering.md	none(hand-written prose companion to layering-generated.md, never regenerated)
 book/src/reference/lexicon-of-place.md	none(hand-written prose, never regenerated)
+book/src/reference/individuals.md	none(hand-written prose, never regenerated -- the four kinds of individual, The Lot Task 12)
 book/src/reference/stream-manifest.md	none(hand-written prose companion to stream-manifest-generated.md, never regenerated)
 book/src/reference/scene-eclipses-v2.md	none(hand-written schema-reference prose, never regenerated)
 book/src/reference/scene-moons-v1.md	none(hand-written schema-reference prose, never regenerated)
