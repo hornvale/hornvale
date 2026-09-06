@@ -19,6 +19,7 @@ ROOT = HERE.parents[3]
 WORKLOADS_PATH = HERE / "workloads.json"
 OUTPUT_LIMIT = 16 * 1024 * 1024
 DEFAULT_TIMEOUT = 3600
+SUPPORTED_ENFORCEMENT_METHODS = {"sandbox-exec", "bwrap"}
 
 
 class EnforcementUnavailable(RuntimeError):
@@ -141,7 +142,7 @@ def _enforced_command(command: list[str], cwd: Path, writable_roots: list[Path])
             profile.close()
             Path(profile.name).unlink(missing_ok=True)
             raise
-        return [executable, "-f", profile.name, "--", *command], Path(profile.name)
+        return [executable, "-f", profile.name, "--", *command], Path(profile.name), "sandbox-exec"
     if system == "Linux":
         executable = shutil.which("bwrap")
         if executable is None:
@@ -152,7 +153,7 @@ def _enforced_command(command: list[str], cwd: Path, writable_roots: list[Path])
             root.mkdir(parents=True, exist_ok=True)
             wrapped.extend(["--bind", str(root), str(root)])
         wrapped.extend(["--chdir", str(cwd), "--", *command])
-        return wrapped, None
+        return wrapped, None, "bwrap"
     raise EnforcementUnavailable(
         f"{system or 'unknown'} capture has no supported filesystem sandbox"
     )
@@ -170,8 +171,9 @@ def _bounded_measure(command: list[str], cwd: Path, timeout_s: int,
     launch_error = None
     cleanup_error = None
     profile_path = None
+    enforcement_method = None
     try:
-        command, profile_path = _enforced_command(command, cwd, writable_roots)
+        command, profile_path, enforcement_method = _enforced_command(command, cwd, writable_roots)
         process = subprocess.Popen(
             command,
             cwd=cwd,
@@ -242,6 +244,7 @@ def _bounded_measure(command: list[str], cwd: Path, timeout_s: int,
         "harness_deadline_exceeded": deadline_exceeded,
         "output_limit_exceeded": output_limit_exceeded,
         "launch_error": launch_error,
+        "enforcement_method": enforcement_method if process is not None else None,
         "stdout": bytes(stdout),
         "stderr": bytes(stderr),
     }
@@ -283,6 +286,7 @@ def capture(workload_id: str, checkout: Path, target: Path,
     )
     record = {
         "workload_id": workload_id,
+        "workload_command_template": workload["command"],
         "command": command,
         "cwd": str(checkout),
         "exit_code": result.get("exit_code"),
@@ -297,6 +301,7 @@ def capture(workload_id: str, checkout: Path, target: Path,
         "interrupted": result.get("interrupted"),
         "deadline_exceeded": result.get("harness_deadline_exceeded"),
         "output_limit_exceeded": result.get("output_limit_exceeded"),
+        "enforcement_method": result.get("enforcement_method"),
         "launch_error": result.get("launch_error"),
         "retained_sample_directory": result.get("retained_sample_directory"),
         "ownership": {
@@ -318,7 +323,7 @@ def capture(workload_id: str, checkout: Path, target: Path,
 
 
 def manifest_for_attempt(*, source: dict, graph: dict, toolchain: dict,
-                         target: dict, command: list[str], capture: dict,
+                         target: dict, workload_id: str, capture: dict,
                          costs: dict, outputs: list[dict],
                          failure: dict | None = None) -> dict:
     record = {
@@ -327,7 +332,9 @@ def manifest_for_attempt(*, source: dict, graph: dict, toolchain: dict,
         "graph": graph,
         "toolchain": toolchain,
         "target": target,
-        "command": command,
+        "workload_id": workload_id,
+        "workload_command_template": _workload(workload_id)["command"],
+        "command": capture.get("command"),
         "capture": capture,
         "costs": costs,
         "outputs": outputs,
@@ -368,6 +375,13 @@ def validate_attempt(record: dict) -> None:
     target = record.get("target")
     if not isinstance(target, dict) or not isinstance(target.get("path"), str) or target.get("classification") not in {"cold", "warm"}:
         raise ValueError("missing target identity")
+    workload_id = record.get("workload_id")
+    if not isinstance(workload_id, str) or not workload_id:
+        raise ValueError("missing workload provenance")
+    workload = _workload(workload_id)
+    template = record.get("workload_command_template")
+    if template != workload["command"]:
+        raise ValueError("invalid workload command template")
     command = record.get("command")
     if not isinstance(command, list) or not command or not all(isinstance(arg, str) for arg in command):
         raise ValueError("invalid command")
@@ -383,11 +397,21 @@ def validate_attempt(record: dict) -> None:
             or not isinstance(captured.get("cwd"), str)
             or Path(captured["cwd"]).resolve() != Path(ownership["checkout"]).resolve()
             or not _owned_path(Path(ownership["target"]), Path(ownership["checkout"]))
+            or _covers_checkout(Path(ownership["target"]), Path(ownership["checkout"]))
+            or _covers_checkout(Path(ownership["evidence_root"]), Path(ownership["checkout"]))
             or not _owned_path(Path(ownership["evidence_destination"]), Path(ownership["evidence_root"]))
             or not isinstance(target.get("path"), str)
             or not Path(target["path"]).is_absolute()
             or Path(target["path"]).resolve() != Path(ownership["target"]).resolve()):
         raise ValueError("invalid ownership metadata")
+    if command != command_for_workload(workload, Path(ownership["checkout"])):
+        raise ValueError("command does not match workload")
+    if captured.get("workload_id") != workload_id:
+        raise ValueError("capture workload provenance mismatch")
+    if captured.get("workload_command_template") != template:
+        raise ValueError("capture workload template mismatch")
+    if captured.get("enforcement_method") not in SUPPORTED_ENFORCEMENT_METHODS:
+        raise ValueError("missing enforcement method")
     cleanup = captured.get("cleanup")
     if not isinstance(cleanup, dict) or cleanup.get("complete") is not True or cleanup.get("error") is not None:
         raise ValueError("incomplete cleanup")

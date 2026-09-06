@@ -40,15 +40,22 @@ def stream(raw=b""):
 
 
 def valid_attempt():
+    workload = load_workloads(ROOT / "workloads.json")["workloads"][0]
+    checkout = "/owned/checkout"
+    command = command_for_workload(workload, Path(checkout))
     return manifest_for_attempt(
         source={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40},
         graph={"sha256": "d" * 64, "package_count": 1},
         toolchain={"rustc": "rustc 1.80.0", "host_class": "mac"},
         target={"path": "/owned/checkout/target", "classification": "cold"},
-        command=["fixture-command"],
+        workload_id=workload["id"],
         capture={
             "exit_code": 0,
-            "cwd": "/owned/checkout",
+            "cwd": checkout,
+            "workload_id": workload["id"],
+            "workload_command_template": workload["command"],
+            "command": command,
+            "enforcement_method": "sandbox-exec",
             "deadline_s": 3600,
             "elapsed_s": 0.1,
             "ownership": {
@@ -146,6 +153,37 @@ class AttemptTests(unittest.TestCase):
         attempt = valid_attempt()
         attempt["capture"]["ownership"]["target"] = "/shared/target"
         with self.assertRaisesRegex(ValueError, "ownership"):
+            validate_attempt(attempt)
+
+    def test_persisted_manifest_rejects_writable_root_equal_to_checkout(self):
+        attempt = valid_attempt()
+        attempt["capture"]["ownership"]["target"] = "/owned/checkout"
+        attempt["target"]["path"] = "/owned/checkout"
+        with self.assertRaisesRegex(ValueError, "ownership"):
+            validate_attempt(attempt)
+
+    def test_persisted_manifest_rejects_writable_root_covering_checkout(self):
+        attempt = valid_attempt()
+        attempt["capture"]["ownership"]["evidence_root"] = "/owned"
+        with self.assertRaisesRegex(ValueError, "ownership"):
+            validate_attempt(attempt)
+
+    def test_persisted_manifest_requires_named_workload_provenance(self):
+        attempt = valid_attempt()
+        del attempt["workload_id"]
+        with self.assertRaisesRegex(ValueError, "workload provenance"):
+            validate_attempt(attempt)
+
+    def test_persisted_manifest_rejects_command_tampering(self):
+        attempt = valid_attempt()
+        attempt["command"][-1] = "/other/checkout"
+        with self.assertRaisesRegex(ValueError, "command"):
+            validate_attempt(attempt)
+
+    def test_persisted_manifest_requires_supported_enforcement_method(self):
+        attempt = valid_attempt()
+        attempt["capture"]["enforcement_method"] = "declared-only"
+        with self.assertRaisesRegex(ValueError, "enforcement method"):
             validate_attempt(attempt)
 
     def test_incomplete_cleanup_is_rejected(self):
