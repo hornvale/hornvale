@@ -509,3 +509,56 @@ for today's one caller — `WalkState::begin` passes the walk's own `from` again
 the frozen pre-tick ledger — and the doc says so, so nobody deletes it as dead
 code. Full vessel suite (1169 tests) green after, confirming the no-op. ·
 ideonomy passes / overturns: 0.
+
+---
+
+#17 [G5] — **H2 IS FALSIFIED, AND IT STAYS FALSIFIED.** · Measured against a
+real build of merge base `20c0cd375`: provenance bytes per agent per tick fall
+**49.04% / 55.35% / 22.18%** on seeds 7 / 14 / 23 against a preregistered floor
+of 50%, and by **exactly zero** on seed 42 (1407 facts, 58893 bytes,
+unchanged). Two of three walking seeds miss the floor. · **Ruling: the
+hypothesis is reported falsified, unamended.** Spec §10 says a null on H2 is
+the headline and is not retuned away; that binds when the null is inconvenient
+or it binds never. The chronicle leads with the falsification. · **The cause is
+a defect in my own §10, and naming it must not become a retroactive rescue.**
+§1 argued about the **`agent-at` trail's** prose; §10 then froze the
+denominator as **all committed provenance**, a quantity §1 never discussed.
+Only `agent-at`'s share can shrink, and errand facts add provenance back — on
+seed 23 an errand commits every 2.7 steps, which is why it lands at 22%. On the
+quantity the flip actually governs, the reduction is **65.72% / 65.82% /
+54.56%** — comfortably past 50% on all three. **Both numbers are reported. The
+second is context for why the first came out as it did, not a substitute
+result**, and the difference between those two sentences is the whole
+discipline. · This is the ledger's own memory twice over: *a null needs its
+denominator*, and *filter the numerator too*. I wrote a floor over one
+population having argued the case for a different one, which is the same
+family of error as #6 and #8 — prose and its own formalisation disagreeing,
+audited only on the prose side. · **The spec is NOT edited to move the
+goalpost.** §10 gains a dated note recording that its denominator does not
+match §1's argument, that the prediction failed as written, and what the
+correctly-scoped figure was. A preregistration that can be re-scoped after
+unblinding is not one. · ideonomy passes / overturns: 0.
+
+#18 [G5] — **Task 3's three incidental findings, all upheld.** ·
+(a) **The brief's suggested RED proof for the re-pointed fear/belonging
+witness was a no-op.** I wrote "lowering the ceiling to 0 against a run that
+produces one is the obvious candidate"; seed 42 measures zero fear/belonging
+errands, so ceiling→0 passes. The implementer mutated the *filter* instead
+(errand keys → `"drank"`/`"slept"`, red at 2256), which additionally proves the
+check reads the `predicate` field rather than merely that a number is under a
+ceiling. Strictly better than what I asked for, and it is the fourth time this
+campaign that naming the property and letting the implementer find the mutation
+beat prescribing one from outside the code. · (b) **A fourth provenance reader
+the brief did not list, whose dangerous half was a NEGATIVE CONTROL.**
+`the_herd_bolts_…`'s `c_fear == 0` assertion would have kept passing after the
+flip *for exactly the wrong reason* — the control asserts an absence, and the
+flip makes the absence unconditional. A vacuous positive check reads as
+coverage; a vacuous negative control reads as *proof*, which is worse.
+Re-pointed at `ERRAND_FLIGHT`. · (c) **`one_errand_fact_per_run_of_constant_step_provenance`
+is retired**, not deleted quietly: it compared errand counts against live
+`agent-at` prose runs, which the flip destroys by construction. Its successor
+is the fixture-backed H1 test, which the implementer states is strictly
+stronger. **That claim is the review's job to check** — a delete-plus-add reads
+as a replacement while covering a different branch, and the honest test is
+whether the successor catches what the retired one caught. · ideonomy passes /
+overturns: 0.
