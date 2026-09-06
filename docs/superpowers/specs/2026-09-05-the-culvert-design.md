@@ -619,6 +619,19 @@ sweep, never re-derived analytically, and a campaign-time kernel counter on
 Shape A clears by 4.7%, Shape B by 3.5%. Both are real passes and neither has
 much room; a shape whose distinct-pair population grew would cross them.
 
+**Shape A's after figure is the memo's STRUCTURAL FLOOR, and that is checkable
+in one line.** 57,190 is exactly the control arm's band-10 cost — and band 10's
+sweep asks 83 occurrences over 83 distinct pairs, a within-sweep duplicate rate
+of exactly 1.00× (§1.3(b)), so the control there *is* one search per distinct
+pair. The memo's whole-run total therefore equals one uncached pass over the
+full pair population: it searched each of the 83 pairs **exactly once, and never
+twice, across all ten bands**. Nothing cheaper exists without changing what is
+searched. So the thin 4.7% margin is a fact about **this shape's pair population
+against a threshold set close to the mechanism's floor**, not run-to-run
+fragility — and it is also the tidiest single check that both instruments are
+correct, since a memo that re-searched anything, or a counter that
+double-counted, would break the equality.
+
 **THE DATED RECORD (§4.1's own discipline).** Recorded 2026-09-06. Before
 column at `d36a23bd7612a26e39bf6419213f6cd7c180c803`; after column at
 `8acd377c5`. Instrument: two `AtomicU64` statics beside `AStarSolver::solve`'s
@@ -715,8 +728,23 @@ Monotonicity 6/6 rises in both regimes on both trees.
 average above 10 at one end: 50.74, 64.46 and 46.05, against valid runs taken
 between 1.42 and 6.58. Their `k` readings scatter from **31.838 to 469.840** —
 an order of magnitude, in both directions around the valid runs' 313–318 — and
-the lowest of them, taken on a *before* tree, would have read as a 9.8× fall
-against a valid after run. §4.4 is not boilerplate on this box: on the night
+the lowest of them, taken on a *before* tree, would have read as a 9.8× **rise**
+in `k` (312.98384 / 31.838, against valid after-run 3): an apparent catastrophic
+regression this campaign did not cause. **Contention could not have manufactured
+a pass, only alarm.** The criterion ratio is before/after, so the largest
+spurious *fall* available anywhere in this set — max before over min after,
+469.840 / 244.700 — is **1.92×**, nowhere near the 10× floor.
+
+*(This sentence said "9.8× fall" as first written, at fix round 1. The
+magnitude and the tree attribution were right and the direction was inverted,
+which turned "noise nearly manufactured alarm" into "noise nearly manufactured
+a pass" — the stronger claim, and the false one. It is the third time this
+campaign produced a real number, in the right units, beside a real measurement,
+attributed to the wrong thing; the arithmetic flags none of them, which is why
+§11's standing constraint exists and why this correction is left visible rather
+than quietly applied.)*
+
+§4.4 is not boilerplate on this box: on the night
 these were taken the 1-minute average moved between 1.4 and 64.5 under other
 campaigns' gates, and no run of this length could be scheduled around it.
 
