@@ -98,7 +98,7 @@
 - `domains/species/tests/suite/reproduction.rs` — synthetic probe profiles and invariant tests.
 - `domains/demography/src/reproductive.rs` — new kernel-only population input/output contract and pure summary functions.
 - `domains/demography/src/lib.rs` — module declaration and re-exports.
-- `domains/demography/tests/suite.rs` — add the reproductive handoff module if the crate’s suite needs one.
+- `domains/demography/tests/suite.rs` — new consolidated integration-test crate for the reproductive handoff.
 - `domains/demography/tests/suite/reproductive.rs` — substrate contract tests.
 - `domains/demography/Cargo.toml` — no species dependency; update only if the existing test layout requires a dev dependency.
 
