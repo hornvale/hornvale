@@ -167,6 +167,25 @@ this entry says so. · Alternatives discarded: a pre-flight that runs every
 plan command (does not earn its cost — autopilot skill). · ideonomy passes /
 overturns: 0 — a review gate, not a design choice. · Capture: this entry.
 
+## Task 0 — the instrument (implemented at `665733eab`)
+
+- **A plan-text defect, caught by the control it prescribed.** The brief's
+  H2 construction (peaks `[0, 3, 7, 11]` on `Geosphere::new(2)`) yielded two
+  basins, not four: vertices 7 and 11 sit at dot 0.447 from vertex 0, and the
+  height-10 peak's tail (`10 × 0.447^8 ≈ 0.016`) tilted their neighbourhoods
+  so each drained into vertex 0. The implementer moved the minor peaks to
+  vertex 0's far set (`[0, 2, 4, 8]`, dot −0.447, clamped to zero
+  contribution) and got exactly four on the first try; the assertion was
+  untouched, per the plan's own branch. Lesson already on record — never
+  prescribe a construction from outside the code; name the property — and
+  the plan named the property, which is why this cost one attempt and not a
+  weakened test. No ideonomy pass: a task-boundary factual finding.
+- **Unrelated stale binary swept.** `domains/alchemy`'s test binary in the
+  recycled worktree was stale (`cargo clean -p hornvale-alchemy` fixed it);
+  a pool member's warm `target/` is warm for its previous campaign's tree.
+- `docs/timings.md` gained gate-commit rows (uncommitted); they ride with
+  Task 1's commit.
+
 ## Follow-ups
 
 - **`scripts/worktree-take.sh` should refuse to recycle a member whose branch
