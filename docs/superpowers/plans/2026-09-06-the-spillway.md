@@ -328,6 +328,8 @@ Claude-Session: https://claude.ai/code/session_01DCmbLQnYU317DpApjFm1k5"
 
 ### Task 2: `sluice-census.sh` library — column sets and stale arms
 
+> **Corrected in execution (fix wave, commit `81968faee`).** This task's text below says the study's name sits at indent 2 and anchors the extractor on `^ {4,}`. Both were false: a lab `schema.json` nests the study under `"study"` at indent 4, and column names sit at exactly six spaces (`^ {6}"name": "`, verified on all nine real files at close: kind=290, names at indent 6 = 290, at indent 4 = 1, at indent 2 = 0). The `≥ 4` rule kept the study name and read every arm stale; the test fixture below copied the false shape and could not catch it. The shipped code and tests carry the six-space rule and the real fixture shape; the spec's §3.2 carries the loud correction. The text below is left as executed.
+
 **Files:**
 - Modify: `scripts/sluice-census.sh` (the library section: insert after `census_golden_count()` and before the `if [ -n "${HV_CENSUS_LIB:-}" ]` early return)
 - Modify: `scripts/test-sluice-census.sh` (append arms before the final `printf`)
