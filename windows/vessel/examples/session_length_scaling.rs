@@ -179,9 +179,9 @@ use hornvale_species::ThermalStrategy;
 // writing the probes below. Named directly rather than routed around.
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RestSites, SUSTENANCE,
-    SleepTraits, Terrain, believed_water, derive_npcs, drive_at, fatigue_at, hazard_memory_memo,
-    hunger_at, shared_believed_water,
+    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RestSites, RouteMemo,
+    SUSTENANCE, SleepTraits, Terrain, believed_water, derive_npcs, drive_at, fatigue_at,
+    hazard_memory_memo, hunger_at, shared_believed_water,
 };
 use hornvale_worldgen::{SettlementPins, build_world};
 // The measurement harness times each tick for a diagnostic (never sim logic,
@@ -472,7 +472,16 @@ fn probe_believed_water_us(
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if believed_water(ledger, folds, npc, t, terrain, budget).is_some() {
+        // A FRESH memo per rep, deliberately (The Culvert, Task 7). This
+        // column means "what one `believed_water` call costs against a
+        // history of this length", and it is compared across bands and
+        // against pre-campaign runs; a memo hoisted out of this loop would
+        // make every rep after the first a `BTreeMap` lookup and turn the
+        // column into a measurement of memo warmth instead. Production owns
+        // a session-lived one; this probe deliberately measures the cold
+        // call the memo now spares it.
+        let mut route_memo = RouteMemo::new();
+        if believed_water(ledger, folds, npc, t, terrain, budget, &mut route_memo).is_some() {
             some_count += 1;
         }
     }
@@ -533,7 +542,20 @@ fn probe_shared_believed_water_us(
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if shared_believed_water(ledger, folds, npc, band, t, terrain, budget).is_some() {
+        // Fresh per rep, same reason as `probe_believed_water_us`'s.
+        let mut route_memo = RouteMemo::new();
+        if shared_believed_water(
+            ledger,
+            folds,
+            npc,
+            band,
+            t,
+            terrain,
+            budget,
+            &mut route_memo,
+        )
+        .is_some()
+        {
             some_count += 1;
         }
     }
@@ -1448,6 +1470,10 @@ fn run(
     let npcs = derive_npcs(world, ctx, &mut ledger, AGENTS, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), run-lived like the two
+    // above — this is the scope production gives it, so the tick walk's own
+    // reads see the same warmth a session's do.
+    let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
@@ -1537,8 +1563,12 @@ fn run(
         // must not fold a per-tick harness clone into the answer.
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
-        let (facts, _occupancy, _written) =
-            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (facts, _occupancy, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut route_memo,
+        );
         for fact in facts {
             ledger
                 .commit(fact, &registry)

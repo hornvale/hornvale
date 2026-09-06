@@ -9,10 +9,10 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SUSTENANCE, Terrain,
-    act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs, derive_wild_herds,
-    renders_unconscious, settlement_room_index, slept_fact, slept_on_fact, species_activity,
-    village_or_fallback,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SUSTENANCE,
+    Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
+    derive_wild_herds, renders_unconscious, settlement_room_index, slept_fact, slept_on_fact,
+    species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -1122,6 +1122,17 @@ pub struct Session<'w> {
     /// `wait` after its first, which requires the cache itself, not merely
     /// its backing memo, to outlive one tick. See `HomeNavCache`'s own doc.
     home_nav_cache: HomeNavCache,
+    /// The session-lived, CROSS-tick water-belief route memo (The Culvert,
+    /// Task 7): the home-anchored `plan_to_room` that `believed_water` and
+    /// `nearer_to_home` rank through, cached on `(home, dest, budget)`.
+    /// Session-scoped for the same reason `home_nav_cache` is — an NPC's
+    /// `home` is fixed for a possession, so its key population saturates and
+    /// every `wait` after the first pays nothing for a pair already asked —
+    /// and SHARED across creatures, unlike `home_nav_cache`, because the
+    /// duplicates this collapses are duplicates across the roster (see
+    /// `RouteMemo`'s own doc). Byte-identical by construction: it memoizes a
+    /// pure function of mesh geometry.
+    route_memo: RouteMemo,
     // THE THREE SIDE-FIELDS ARE GONE (The Rack, Task 3). `driven_mode`,
     // `driven_affect` and `driven_suppressed` used to sit here: three
     // separately-declared copies of what is now one `Felt` in the roster's own
@@ -2075,6 +2086,7 @@ impl<'w> Session<'w> {
             mesh_memo,
             weft_window: hornvale_worldgen::WeftWindow::new(),
             home_nav_cache: HomeNavCache::new(),
+            route_memo: RouteMemo::new(),
             folds,
             ground,
             driven_overrides: std::collections::BTreeMap::new(),
@@ -8877,8 +8889,12 @@ impl<'w> Session<'w> {
         // snapshot's present-entry read the way it always has (Important 4,
         // The Threshold whole-branch review); `facts` is now committed
         // directly below instead of being thrown away and recomputed.
-        let (facts, occupancy, written) =
-            sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo, &mut self.home_nav_cache);
+        let (facts, occupancy, written) = sys.step_with_occupancy(
+            &self.ledger,
+            &mut self.mesh_memo,
+            &mut self.home_nav_cache,
+            &mut self.route_memo,
+        );
         // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
         // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
         // just called, in a solo band-of-one walk (`step_one_with_controller`'s
@@ -8952,6 +8968,7 @@ impl<'w> Session<'w> {
             &driven_npc,
             &mut self.mesh_memo,
             &mut self.home_nav_cache,
+            &mut self.route_memo,
             driven_controller,
         );
         // The override RECORD accumulates across the whole possession, so it
@@ -22065,6 +22082,7 @@ mod tests {
             &frozen,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
         );
         assert_eq!(
             written.len(),
@@ -22101,6 +22119,7 @@ mod tests {
             &driven_body,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut PlayerController::new(),
         );
         let driven = session.roster.driven();
@@ -22198,6 +22217,7 @@ mod tests {
             &driven_body,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut ImposedController::new(),
         );
         let driven = session.roster.driven();
@@ -22300,6 +22320,7 @@ mod tests {
                     &body,
                     &mut hornvale_kernel::RoomMeshMemo::new(),
                     &mut HomeNavCache::new(),
+                    &mut RouteMemo::new(),
                     &mut PlayerController::new(),
                 );
                 assert!(

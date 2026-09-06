@@ -1194,7 +1194,15 @@ pub fn drive_at(
 /// The store guard is DROPPED before the ranking: `plan_to_room` is a budgeted
 /// A* over terrain and touches no fold, so holding the borrow across it would
 /// buy nothing and would make any future fold read inside the planner a
-/// runtime panic rather than a compile error.
+/// runtime panic rather than a compile error. `route_memo` is taken by the
+/// ranking for the same reason it is safe to take there at all: it is read
+/// AFTER that guard is dropped, so the two borrows never overlap.
+///
+/// `route_memo` (The Culvert, Task 7) is the caller-owned [`RouteMemo`] the
+/// home-anchored ranking reads instead of re-running its budgeted search once
+/// per known water room per read. Byte-identical by construction — see the
+/// memo's own doc — and shared across entities on purpose: every duplicate
+/// `(home, dest)` pair in a roster-wide sweep is a duplicate ACROSS creatures.
 /// type-audit: bare-ok(count: budget)
 pub fn believed_water(
     ledger: &Ledger,
@@ -1203,6 +1211,7 @@ pub fn believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
+    route_memo: &mut RouteMemo,
 ) -> Option<Facet> {
     let seen: Vec<Facet> = {
         let mut store = folds.borrow_mut();
@@ -1220,10 +1229,7 @@ pub fn believed_water(
         latest_visit.water_at(npc.entity, t, terrain)
     };
     seen.into_iter()
-        .filter_map(|r| {
-            plan_to_room(&npc.home, &r, budget, &std::collections::BTreeSet::new())
-                .map(|p| (p.len(), r))
-        })
+        .filter_map(|r| route_memo.hops(&npc.home, &r, budget).map(|hops| (hops, r)))
         .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
         .map(|(_, r)| r)
 }
@@ -1971,6 +1977,15 @@ pub fn hazard_memory_memo(
 /// a stranded creature adopt a here-reachable water its home-anchored memory
 /// could never admit. Order-independent by construction (`BTreeSet` union +
 /// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
+///
+/// `route_memo` is THREADED THROUGH TO [`believed_water`] AND NOWHERE ELSE
+/// (The Culvert, Task 7). This function's OWN pooling `plan_to_room` a few
+/// lines below still runs a fresh search every time, deliberately: it anchors
+/// at `here` — the agent's CURRENT position — where the memoized fold anchors
+/// at `npc.home`, so its key space is `positions x water rooms` and does not
+/// demonstrably saturate over a session. See [`RouteMemo`]'s own doc for the
+/// measurement and the reasoning; the memo has nowhere to be passed at that
+/// site precisely so a later reader cannot wire it there by reflex.
 /// type-audit: bare-ok(count: budget)
 #[allow(clippy::too_many_arguments)]
 pub fn shared_believed_water(
@@ -1981,8 +1996,9 @@ pub fn shared_believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
+    route_memo: &mut RouteMemo,
 ) -> Option<Facet> {
-    let own = believed_water(frozen, folds, npc, t, terrain, budget);
+    let own = believed_water(frozen, folds, npc, t, terrain, budget, route_memo);
     let here = agent_position(frozen, npc, t);
     let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     let mut has_peer = false;
@@ -1990,7 +2006,7 @@ pub fn shared_believed_water(
     for other in band {
         if other.entity != npc.entity && agent_position(frozen, other, t) == here {
             has_peer = true;
-            if let Some(w) = believed_water(frozen, folds, other, t, terrain, budget) {
+            if let Some(w) = believed_water(frozen, folds, other, t, terrain, budget, route_memo) {
                 pool.insert(w);
             }
         }
@@ -6343,6 +6359,14 @@ pub fn affect_of_memo(
     mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
     let mut home_nav_cache = HomeNavCache::new();
+    // `route_memo` takes the SAME throwaway carve-out `home_nav_cache` does,
+    // for the same reason and with the same consequence: this function's
+    // public signature stays as every existing caller expects it, and a
+    // caller that HAS a session-lived scope to share (`run_simulation`) calls
+    // [`affect_of_memo_occupied`] directly instead. A throwaway costs exactly
+    // what this path already paid before The Culvert — one fresh search per
+    // known water room per call — never more.
+    let mut route_memo = RouteMemo::new();
     affect_of_memo_occupied(
         frozen,
         npc,
@@ -6353,6 +6377,7 @@ pub fn affect_of_memo(
         None,
         mesh_memo,
         &mut home_nav_cache,
+        &mut route_memo,
         folds,
     )
 }
@@ -6422,6 +6447,7 @@ pub fn affect_of_memo_occupied(
     occupancy: Option<&Occupancy>,
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    route_memo: &mut RouteMemo,
     folds: &OwnedFolds,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
@@ -6447,7 +6473,16 @@ pub fn affect_of_memo_occupied(
         .last_reset(npc.entity)
         .unwrap_or(WorldTime::GENESIS)
         .max(WorldTime::GENESIS);
-    let believed = shared_believed_water(frozen, folds, npc, band, day, terrain, PLAN_BUDGET);
+    let believed = shared_believed_water(
+        frozen,
+        folds,
+        npc,
+        band,
+        day,
+        terrain,
+        PLAN_BUDGET,
+        route_memo,
+    );
     let drive = drive_at(
         frozen,
         folds,
@@ -7170,6 +7205,12 @@ fn hold_step(
 /// session-lived like `mesh_memo`, but cross-tick rather than per-tick (see
 /// the cache's own doc for why a stationary, unchanged-belief creature must
 /// reach zero searches across ticks, not merely within one).
+///
+/// `route_memo` (The Culvert, Task 7) is the caller-owned [`RouteMemo`] the
+/// standing-in-water belief update below reads through [`nearer_to_home`] —
+/// session-lived and shared across creatures, the same scope `home_nav_cache`
+/// occupies, and the SAME memo [`believed_water`] ranks through, which is what
+/// makes the two folds' tie-break agreement structural.
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
     day: WorldTime,
@@ -7190,12 +7231,19 @@ fn decide_step(
     out: &[Fact],
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    route_memo: &mut RouteMemo,
     folds: &OwnedFolds,
 ) -> (Resolution, f64) {
     // Standing in water forms/updates belief (nearest-to-home wins) — the
     // live walk's own first step of every iteration.
     if is_water(pos, terrain) {
-        *believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
+        *believed = nearer_to_home(
+            &npc.home,
+            believed.take(),
+            pos.clone(),
+            PLAN_BUDGET,
+            route_memo,
+        );
     }
     // THE ONE CROSSING IN THIS FUNCTION. The thirst and hunger path integrals
     // are CONTINUOUS quantities — a temperature-weighted rate integrated over
@@ -7483,6 +7531,7 @@ fn catch_up(
     // statement that the two lattices have merged.
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    route_memo: &mut RouteMemo,
     folds: &OwnedFolds,
     controller: &mut dyn Controller,
 ) -> Mode {
@@ -7551,6 +7600,7 @@ fn catch_up(
             out,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             folds,
         );
         mode = resolution.mode;
@@ -7672,6 +7722,7 @@ impl<'a> DriveMovements<'a> {
         frozen: &Ledger,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        route_memo: &mut RouteMemo,
     ) -> (Vec<Fact>, Occupancy, Vec<Written>) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
@@ -7748,8 +7799,15 @@ impl<'a> DriveMovements<'a> {
         let to_ticks = local_ticks_of(self.to);
         let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
-            let mut st =
-                WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain, self.folds);
+            let mut st = WalkState::begin(
+                frozen,
+                npc,
+                &self.npcs,
+                self.from,
+                self.terrain,
+                self.folds,
+                route_memo,
+            );
             // THE THRESHOLD's crossing: arrive at the landing anchor of the
             // interior `WalkState::begin` just derived — the entry point for a
             // creature crossing INTO the room from the coarse (room-graph)
@@ -7820,6 +7878,7 @@ impl<'a> DriveMovements<'a> {
                 CATCH_UP_STEP_CAP,
                 mesh_memo,
                 home_nav_cache,
+                route_memo,
                 self.folds,
                 // Every body here is GOAP-driven (the driven body's own
                 // catch-up runs separately — see `step_one_with_controller`),
@@ -7847,6 +7906,7 @@ impl<'a> DriveMovements<'a> {
                 &mut out,
                 mesh_memo,
                 home_nav_cache,
+                route_memo,
                 // Every body in `self.npcs` today is GOAP-driven (a possessed
                 // body's own walk goes through `step_one_with_controller`
                 // instead, on a separate call, so `band`/`alarm` here never
@@ -7961,7 +8021,10 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // nothing beyond what the pre-Finding-2 code already paid every call.
         // `throwaway_nav` (Task 4) carries the identical carve-out: this path
         // pays a fresh `plan_to_room` per creature per pop, exactly what
-        // EVERY call paid before this task.
+        // EVERY call paid before this task. `throwaway_route` (The Culvert,
+        // Task 7) is the third of the same shape, for the same kernel-trait
+        // reason: this path pays what every call paid before that task, never
+        // more.
         //
         // THE RESIDENT FOLD STORE IS THE EXCEPTION, and it is why it lives on
         // the struct rather than beside these two (The Pawl, spec §2.1):
@@ -7971,8 +8034,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // path the store exists to take it off.
         let mut throwaway = RoomMeshMemo::new();
         let mut throwaway_nav = HomeNavCache::new();
-        self.step_with_occupancy(frozen, &mut throwaway, &mut throwaway_nav)
-            .0
+        let mut throwaway_route = RouteMemo::new();
+        self.step_with_occupancy(
+            frozen,
+            &mut throwaway,
+            &mut throwaway_nav,
+            &mut throwaway_route,
+        )
+        .0
     }
 }
 
@@ -8035,7 +8104,9 @@ impl WalkState {
     /// Open a walk for `npc` at `from`, deriving every field from the FROZEN
     /// pre-tick ledger — nothing here reads another creature's mid-tick state
     /// (spec §5), `band` being consulted only through `shared_believed_water`'s
-    /// own frozen reads.
+    /// own frozen reads. `route_memo` (The Culvert, Task 7) is the caller-owned
+    /// [`RouteMemo`] that read ranks through — session-lived and shared across
+    /// creatures, exactly like `step_with_occupancy`'s `home_nav_cache`.
     fn begin(
         frozen: &Ledger,
         npc: &Body,
@@ -8043,6 +8114,7 @@ impl WalkState {
         from: WorldTime,
         terrain: &dyn Terrain,
         folds: &OwnedFolds,
+        route_memo: &mut RouteMemo,
     ) -> WalkState {
         let pos = agent_position(frozen, npc, from);
         // The interval start, carried as the instant it already is — the walk
@@ -8097,7 +8169,16 @@ impl WalkState {
         // pre-tick history; grow it whenever the agent stands in water.
         // The Tidings: seed from the BAND's pooled belief (co-located
         // members share what they know), not the creature's alone.
-        let believed = shared_believed_water(frozen, folds, npc, band, from, terrain, PLAN_BUDGET);
+        let believed = shared_believed_water(
+            frozen,
+            folds,
+            npc,
+            band,
+            from,
+            terrain,
+            PLAN_BUDGET,
+            route_memo,
+        );
         let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         visited.insert(pos.clone());
         let steps = 0usize;
@@ -8175,6 +8256,7 @@ impl<'a> DriveMovements<'a> {
         out: &mut Vec<Fact>,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        route_memo: &mut RouteMemo,
         controller: &mut dyn Controller,
     ) -> bool {
         if st.day > self.to || st.steps >= MAX_STEPS {
@@ -8214,6 +8296,7 @@ impl<'a> DriveMovements<'a> {
             &*out,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             self.folds,
         );
         st.mode = resolution.mode;
@@ -8542,6 +8625,7 @@ impl<'a> DriveMovements<'a> {
         body: &Body,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        route_memo: &mut RouteMemo,
         controller: &mut dyn Controller,
     ) -> (Vec<Fact>, Written) {
         let band = [body.clone()];
@@ -8564,7 +8648,15 @@ impl<'a> DriveMovements<'a> {
             &band,
             &mut afraid_memo,
         );
-        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain, self.folds);
+        let mut st = WalkState::begin(
+            frozen,
+            body,
+            &band,
+            self.from,
+            self.terrain,
+            self.folds,
+            route_memo,
+        );
         occupancy.arrive(
             body.entity,
             &st.pos,
@@ -8626,6 +8718,7 @@ impl<'a> DriveMovements<'a> {
             CATCH_UP_STEP_CAP,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             self.folds,
             &mut PlayerController::new(),
         );
@@ -8639,6 +8732,7 @@ impl<'a> DriveMovements<'a> {
             &mut out,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             controller,
         ) {}
         (
@@ -8662,15 +8756,21 @@ impl<'a> DriveMovements<'a> {
 /// belief could disagree with the same belief re-derived from the committed
 /// history, making the chosen source faintly sensitive to `wait` granularity
 /// (the-surmise T3+T4 review). Aligned here so the two folds are identical.
+///
+/// `route_memo` (The Culvert, Task 7) is the SAME caller-owned [`RouteMemo`]
+/// [`believed_water`] reads, and sharing it makes that alignment STRUCTURAL
+/// rather than maintained: the two folds now rank the same `(home, dest)` pair
+/// through one memo, so they cannot answer differently without the memo itself
+/// being wrong. Both `d()` calls below are memoized — a perception of water
+/// costs two searches on a cold memo and none on a warm one.
 fn nearer_to_home(
     home: &Facet,
     current: Option<Facet>,
     found: Facet,
     budget: usize,
+    route_memo: &mut RouteMemo,
 ) -> Option<Facet> {
-    let d = |r: &Facet| {
-        plan_to_room(home, r, budget, &std::collections::BTreeSet::new()).map(|p| p.len())
-    };
+    let mut d = |r: &Facet| route_memo.hops(home, r, budget);
     match current {
         None => Some(found),
         Some(c) => match (d(&c), d(&found)) {
@@ -9770,7 +9870,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None
         );
@@ -9783,7 +9884,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             Some(water)
         );
@@ -9825,7 +9927,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None
         );
@@ -9875,7 +9978,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             Some(far.clone())
         );
@@ -9887,7 +9991,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             Some(near),
             "belief switches to the nearer known source"
@@ -9930,7 +10035,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None
         );
@@ -9975,7 +10081,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None,
             "another agent's sighting does not become e's belief"
@@ -9988,6 +10095,7 @@ mod tests {
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
+            &mut RouteMemo::new(),
         );
         let json = serde_json::to_string(&ledger).unwrap();
         let reloaded: Ledger = serde_json::from_str(&json).unwrap();
@@ -9998,7 +10106,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             a
         );
@@ -10053,6 +10162,7 @@ mod tests {
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
+            &mut RouteMemo::new(),
         );
         assert_eq!(
             got,
@@ -10068,7 +10178,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             got,
             "the tie resolves identically after reload"
@@ -10500,12 +10611,29 @@ mod tests {
 
         // Alone, `lost` is ignorant.
         assert_eq!(
-            believed_water(&ledger, &test_folds(), &lost, now, &t, 10_000),
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             None
         );
         // Co-located with `knower`, it learns the water.
         assert_eq!(
-            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                &band,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             Some(water.clone())
         );
     }
@@ -10936,11 +11064,29 @@ mod tests {
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let ab = [knower.clone(), lost.clone()];
         let ba = [lost.clone(), knower.clone()];
-        let result = shared_believed_water(&ledger, &test_folds(), &lost, &ab, now, &t, 10_000);
+        let result = shared_believed_water(
+            &ledger,
+            &test_folds(),
+            &lost,
+            &ab,
+            now,
+            &t,
+            10_000,
+            &mut RouteMemo::new(),
+        );
         assert_eq!(result, Some(water));
         assert_eq!(
             result,
-            shared_believed_water(&ledger, &test_folds(), &lost, &ba, now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                &ba,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             "permuting the band must not change the pooled belief"
         );
     }
@@ -10960,11 +11106,28 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
-        let solo = believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000);
+        let solo = believed_water(
+            &ledger,
+            &test_folds(),
+            &knower,
+            now,
+            &t,
+            10_000,
+            &mut RouteMemo::new(),
+        );
         assert_eq!(solo, Some(water));
 
         assert_eq!(
-            shared_believed_water(&ledger, &test_folds(), &knower, &[], now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &knower,
+                &[],
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             solo,
             "an empty band changes nothing"
         );
@@ -10976,7 +11139,8 @@ mod tests {
                 std::slice::from_ref(&knower),
                 now,
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             solo,
             "a band of only itself changes nothing"
@@ -11009,12 +11173,29 @@ mod tests {
 
         // sanity: knower does know water when consulted directly...
         assert_eq!(
-            believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000),
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &knower,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             Some(water)
         );
         // ...but lost gains nothing, since knower is in a different room.
         assert_eq!(
-            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                &band,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             None
         );
     }
@@ -11972,8 +12153,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts1, _occ1, _written1) =
-            sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (facts1, _occ1, _written1) = sys1.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut RouteMemo::new(),
+        );
         assert!(
             !facts1.is_empty(),
             "the fixture's first tick emitted nothing; it cannot pin cross-tick order"
@@ -11998,8 +12183,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts2, _occ2, _written2) =
-            sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
+        let (facts2, _occ2, _written2) = sys2.step_with_occupancy(
+            &ledger2,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut RouteMemo::new(),
+        );
         assert!(
             !facts2.is_empty(),
             "the fixture's second tick emitted nothing; it cannot pin cross-tick order"
@@ -13118,6 +13307,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         assert!(
@@ -13131,6 +13321,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::PlayerController::new(),
         );
         assert!(
@@ -13198,6 +13389,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         let (imposed_facts, imposed_written) = sys.step_one_with_controller(
@@ -13205,6 +13397,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::ImposedController::new(),
         );
 
@@ -13352,6 +13545,7 @@ mod tests {
             &npc_a,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         let (imposed_facts_a, ..) = sys_a.step_one_with_controller(
@@ -13359,6 +13553,7 @@ mod tests {
             &npc_a,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::ImposedController::new(),
         );
 
@@ -13410,6 +13605,7 @@ mod tests {
             &npc_b,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         let (imposed_facts_b, ..) = sys_b.step_one_with_controller(
@@ -13417,6 +13613,7 @@ mod tests {
             &npc_b,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::ImposedController::new(),
         );
 
@@ -13522,6 +13719,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut player,
         );
         assert!(
@@ -16614,7 +16812,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 &terrain,
-                PLAN_BUDGET
+                PLAN_BUDGET,
+                &mut RouteMemo::new(),
             ),
             Some(water)
         );
@@ -18616,8 +18815,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, _occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         // `slept`, not `rested`: the phase decides the act, and this fixture
         // put the body in its off-phase deliberately. A walk that had gone back
         // to committing one predicate for both acts fails here on the count.
@@ -18742,8 +18945,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, _occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         assert!(
             facts.iter().any(|f| f.subject == e && f.predicate == SLEPT),
             "the body must still sleep, bare ground or not: {facts:?}"
@@ -18813,8 +19020,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, _occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         let slept: Vec<&Fact> = facts
             .iter()
             .filter(|f| f.subject == e && f.predicate == SLEPT)
@@ -20381,8 +20592,12 @@ mod tests {
             terrain: &hearth_terrain,
             folds: &folds,
         };
-        let (_facts, occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (_facts, occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         let interior = interior_of(&home, &hearth_terrain);
         let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
         let hearth_id = interior
@@ -20430,8 +20645,12 @@ mod tests {
             terrain: &wild_terrain,
             folds: &folds,
         };
-        let (_facts2, occ2, _written) =
-            sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (_facts2, occ2, _written) = sys2.step_with_occupancy(
+            &ledger2,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         let wild_interior = interior_of(&home, &wild_terrain);
         let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
         assert_eq!(
@@ -20838,8 +21057,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         assert!(
             facts.is_empty(),
             "an instantaneous tick (from == to) leaves the live walk nothing \
@@ -20936,6 +21159,7 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &test_folds(),
         );
         assert!(
@@ -20975,6 +21199,7 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &test_folds(),
         );
         assert_eq!(
@@ -21044,6 +21269,7 @@ mod tests {
             CATCH_UP_STEP_CAP,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &test_folds(),
             &mut DefaultController,
         );
@@ -21108,6 +21334,7 @@ mod tests {
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
         );
 
         let folds = test_folds();
@@ -21127,6 +21354,7 @@ mod tests {
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
         );
 
         assert_eq!(
@@ -21249,6 +21477,7 @@ mod tests {
                 CAP,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
+                &mut RouteMemo::new(),
                 &test_folds(),
                 &mut DefaultController,
             );

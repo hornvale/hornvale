@@ -239,7 +239,7 @@
 use hornvale_kernel::{EntityId, Fact, Ledger, RoomMeshMemo, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
-    DriveMovements, HomeNavCache, LocaleTerrain, SUSTENANCE, derive_npcs,
+    DriveMovements, HomeNavCache, LocaleTerrain, RouteMemo, SUSTENANCE, derive_npcs,
 };
 use hornvale_worldgen::{SettlementPins, build_world};
 // The measurement harness times a single tick loop for a diagnostic (never
@@ -350,6 +350,10 @@ fn run_rung(
 
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), run-lived for the same
+    // reason `home_nav_cache` is: its `(home, dest, budget)` key population
+    // saturates over a run, and a per-tick memo would throw that away.
+    let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
@@ -401,8 +405,12 @@ fn run_rung(
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occupancy, _written) =
-            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (facts, _occupancy, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut route_memo,
+        );
         for fact in facts {
             ledger
                 .commit(fact, &registry)

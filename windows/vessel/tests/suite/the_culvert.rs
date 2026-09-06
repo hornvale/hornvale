@@ -471,9 +471,27 @@ fn the_culvert_water_belief_ledger_hash_is_pinned() {
 /// resident's known-water set. Produced by [`culvert_sweep_counts`] and
 /// consumed by Tasks 5, 6, 7 and 9.
 struct SweepCounts {
-    /// Total `plan_to_room` calls a roster-wide sweep makes —
-    /// `Σ|water_at(entity, t)|` over every `npcs` member.
+    /// The REAL `plan_to_room` searches one roster-wide `believed_water`
+    /// sweep runs, read off the shared [`liveness::RouteMemo`]'s own
+    /// `searches()` counter after the sweep (The Culvert, Task 7).
+    ///
+    /// **This field's MEANING changed in Task 7, and the change is the
+    /// point.** Task 4 derived it analytically as `Σ|water_at(entity, t)|`
+    /// without calling `believed_water` at all, because at that time no memo
+    /// existed and the two were equal by construction. That derivation is a
+    /// PROXY, and a proxy the memo cannot move: it reads set sizes off
+    /// `LatestVisit`, which Task 7 does not touch, so it would still report
+    /// 529 on a fully-memoized tree and this witness could never have gone
+    /// green. The occurrence count it used to hold is not lost — it is
+    /// [`Self::occurrences`] now — and `calls` is measured on the real
+    /// wired path instead.
     calls: usize,
+    /// `Σ|water_at(entity, t)|` — how many times the sweep ASKS for a route,
+    /// i.e. what it cost before the memo (529 on the possession shape at
+    /// wait 12, Task 4's own measurement). Derived from `LatestVisit`
+    /// independently of the sweep, so `occurrences > distinct_pairs` is the
+    /// non-vacuity check that there were duplicates to collapse at all.
+    occurrences: usize,
     /// Distinct `(home, dest)` pairs among those calls — the population the
     /// memo (Task 6) actually needs to hold, always `<= calls`.
     distinct_pairs: usize,
@@ -484,16 +502,31 @@ struct SweepCounts {
     max_set: usize,
 }
 
-/// Count the `plan_to_room` calls, and the distinct `(home, dest)` pairs
-/// among them, that one roster-wide `believed_water` sweep over `npcs` at `t`
-/// implies — read straight off [`hornvale_vessel::resident::LatestVisit::
-/// water_at`], which is exactly what `believed_water` itself reads before
-/// planning to each room it returns (`liveness.rs`'s
-/// `seen.into_iter().filter_map(|r| plan_to_room(...))`). One shared
-/// `borrow_mut` for the whole sweep, the same shape
-/// `session_length_scaling.rs`'s own `water_belief_counts` and
-/// `resident_folds.rs`'s `kerf_fold_equals_scan` both use rather than
-/// re-borrowing the fold store per member.
+/// What one roster-wide `believed_water` sweep over `npcs` at `t` costs, in
+/// TWO independently-derived halves.
+///
+/// The first half is analytic and reads straight off
+/// [`hornvale_vessel::resident::LatestVisit::water_at`] — exactly what
+/// `believed_water` itself reads before ranking the rooms it returns: how
+/// many route questions the sweep asks (`occurrences`), how many DISTINCT
+/// `(home, dest)` pairs those questions fall on (`distinct_pairs`), and the
+/// two denominators. One shared `borrow_mut` for that whole pass, the same
+/// shape `session_length_scaling.rs`'s own `water_belief_counts` and
+/// `resident_folds.rs`'s `kerf_fold_equals_scan` both use.
+///
+/// The second half RUNS THE SWEEP — every `npcs` member's real
+/// `believed_water`, through ONE shared [`liveness::RouteMemo`], the scope
+/// production gives it — and reads `searches()` back off that memo. That is
+/// `calls`.
+///
+/// **The two halves must not be folded into one, and that is the whole
+/// design.** `distinct_pairs` is computed from the fold store without a memo
+/// in sight; `calls` is computed from the memo without counting a pair. So
+/// the witness below compares two numbers that arrive by different routes,
+/// rather than an instrument against itself. The fold-store borrow is
+/// DROPPED before the sweep runs, for the same reason `believed_water`'s own
+/// is (`liveness.rs`): the sweep re-borrows it, and holding it across would
+/// be a runtime panic.
 fn culvert_sweep_counts(
     ledger: &Ledger,
     folds: &OwnedFolds,
@@ -501,25 +534,40 @@ fn culvert_sweep_counts(
     t: WorldTime,
     terrain: &dyn liveness::Terrain,
 ) -> SweepCounts {
-    let mut store = folds.borrow_mut();
-    let latest_visit = store.latest_visit(ledger);
-    let mut calls = 0usize;
+    let mut occurrences = 0usize;
     let mut non_empty = 0usize;
     let mut max_set = 0usize;
     let mut pairs: std::collections::BTreeSet<(Facet, Facet)> = std::collections::BTreeSet::new();
-    for npc in npcs {
-        let seen = latest_visit.water_at(npc.entity, t, terrain);
-        if !seen.is_empty() {
-            non_empty += 1;
-        }
-        max_set = max_set.max(seen.len());
-        calls += seen.len();
-        for room in seen {
-            pairs.insert((npc.home.clone(), room));
+    {
+        let mut store = folds.borrow_mut();
+        let latest_visit = store.latest_visit(ledger);
+        for npc in npcs {
+            let seen = latest_visit.water_at(npc.entity, t, terrain);
+            if !seen.is_empty() {
+                non_empty += 1;
+            }
+            max_set = max_set.max(seen.len());
+            occurrences += seen.len();
+            for room in seen {
+                pairs.insert((npc.home.clone(), room));
+            }
         }
     }
+    let mut memo = liveness::RouteMemo::new();
+    for npc in npcs {
+        let _ = liveness::believed_water(
+            ledger,
+            folds,
+            npc,
+            t,
+            terrain,
+            PLAN_BUDGET_MIRROR,
+            &mut memo,
+        );
+    }
     SweepCounts {
-        calls,
+        calls: memo.searches() as usize,
+        occurrences,
         distinct_pairs: pairs.len(),
         non_empty,
         max_set,
@@ -672,24 +720,26 @@ fn culvert_real_pairs(shape: Shape) -> Vec<(Facet, Facet)> {
     }
 }
 
-/// **THE SWEEP-COUNT WITNESS.** One roster-wide `believed_water` sweep over
-/// the possession shape (seed 17, 12 waits) must make exactly
-/// `Σ|water_at(entity, t)|` `plan_to_room` calls — measured at 529 calls over
-/// 83 distinct `(home, dest)` pairs on the pre-memo tree. This witness pins
-/// that count so a later change (The Culvert, Task 7) can assert the search
-/// count collapsed onto the pair count instead of paying it per resident.
+/// **THE SWEEP-COUNT WITNESS — the campaign's result, measured.** One
+/// roster-wide `believed_water` sweep over the possession shape (seed 17, 12
+/// waits) asked 529 route questions over 83 distinct `(home, dest)` pairs on
+/// the pre-memo tree, and paid one budgeted search per QUESTION. Wired to
+/// [`liveness::RouteMemo`] (Task 7) it pays one per PAIR, which is what the
+/// equality below states.
 ///
-/// **Must fail on the pre-memo tree, and does.** `SweepCounts` here has no
-/// idea whether a memo exists; it counts calls a *sweep* would make, which
-/// today is one call per `(home, dest)` occurrence rather than one per
-/// distinct pair — so `calls` (529) is far above `distinct_pairs` (83), and
-/// the assertion below, which requires them close together, fails until the
-/// memo lands.
+/// **It is not asserted against a magic number, and it is not vacuous.**
+/// `calls` comes off the memo's own `searches()` counter after a real sweep;
+/// `distinct_pairs` comes off `LatestVisit` with no memo involved. Their
+/// equality is therefore two independent derivations agreeing, and
+/// `occurrences > distinct_pairs` is checked FIRST so a shape with no
+/// duplicate pairs — where the equality would hold trivially and prove
+/// nothing — reddens instead of passing.
+///
+/// **This test was `#[ignore]`d and RED through Task 6** (529 calls, 83
+/// pairs). See [`SweepCounts::calls`] for what had to change in the
+/// instrument before it could go green, and why the old derivation could
+/// never have.
 #[test]
-#[ignore = "red until The Culvert Task 7 wires RouteMemo into believed_water/nearer_to_home \
-            (docs/superpowers/plans/2026-09-05-the-culvert.md, Task 7); today's roster-wide \
-            sweep makes ~529 plan_to_room calls over 83 distinct pairs, one call per occurrence \
-            rather than one per distinct pair"]
 fn culvert_sweep_collapses_calls_onto_distinct_pairs() {
     let (ledger, npcs, t, ctx) = culvert_possession_shape();
     let terrain = liveness::LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
@@ -700,8 +750,9 @@ fn culvert_sweep_collapses_calls_onto_distinct_pairs() {
          {CULVERT_WATER_WAITS} waits) ---"
     );
     println!(
-        "calls {}, distinct_pairs {}, non_empty {} of {} residents, max_set {}",
+        "calls {}, occurrences {}, distinct_pairs {}, non_empty {} of {} residents, max_set {}",
         counts.calls,
+        counts.occurrences,
         counts.distinct_pairs,
         counts.non_empty,
         npcs.len(),
@@ -712,16 +763,24 @@ fn culvert_sweep_collapses_calls_onto_distinct_pairs() {
         "denominator: no resident holds a water belief on this shape"
     );
     assert!(
-        counts.calls > 0,
-        "denominator: the sweep made no plan_to_room calls"
+        counts.occurrences > 0,
+        "denominator: the sweep asked for no routes at all"
     );
     assert!(
-        counts.calls <= 100,
-        "one roster-wide believed_water sweep makes {} plan_to_room calls over {} \
-         distinct (home, dest) pairs. Before The Culvert this was 529 calls over 83 \
-         pairs at wait 12; the memo is meant to collapse the calls onto the pairs.",
-        counts.calls,
+        counts.occurrences > counts.distinct_pairs,
+        "NON-VACUITY: this shape asked {} route questions over {} distinct pairs, so there \
+         is nothing for a memo to collapse and the equality below would prove nothing. \
+         Before The Culvert this shape measured 529 occurrences over 83 pairs.",
+        counts.occurrences,
         counts.distinct_pairs
+    );
+    assert_eq!(
+        counts.calls, counts.distinct_pairs,
+        "one roster-wide believed_water sweep ran {} real plan_to_room searches over {} \
+         distinct (home, dest) pairs and {} occurrences. Before The Culvert it ran one \
+         search per OCCURRENCE (529 over 83 pairs at wait 12); the memo collapses them \
+         onto the pairs, so these two independently-derived numbers must now agree.",
+        counts.calls, counts.distinct_pairs, counts.occurrences
     );
 }
 
@@ -879,6 +938,11 @@ fn culvert_here_dest_pairs(
 ) -> (std::collections::BTreeSet<(Facet, Facet)>, usize) {
     let mut pairs = std::collections::BTreeSet::new();
     let mut co_located = 0usize;
+    // ONE memo for the whole sweep (The Culvert, Task 7), mirroring how
+    // `shared_believed_water` threads the session's own memo into
+    // `believed_water`. It changes no answer here — the memo is a cache of a
+    // pure function — only how many searches this diagnostic pays.
+    let mut route_memo = liveness::RouteMemo::new();
     for npc in npcs {
         let here = liveness::agent_position(ledger, npc, t);
         let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
@@ -886,8 +950,15 @@ fn culvert_here_dest_pairs(
         for other in npcs {
             if other.entity != npc.entity && liveness::agent_position(ledger, other, t) == here {
                 has_peer = true;
-                if let Some(w) = liveness::believed_water(ledger, folds, other, t, terrain, budget)
-                {
+                if let Some(w) = liveness::believed_water(
+                    ledger,
+                    folds,
+                    other,
+                    t,
+                    terrain,
+                    budget,
+                    &mut route_memo,
+                ) {
                     pool.insert(w);
                 }
             }
@@ -896,7 +967,9 @@ fn culvert_here_dest_pairs(
             continue;
         }
         co_located += 1;
-        if let Some(w) = liveness::believed_water(ledger, folds, npc, t, terrain, budget) {
+        if let Some(w) =
+            liveness::believed_water(ledger, folds, npc, t, terrain, budget, &mut route_memo)
+        {
             pool.insert(w);
         }
         for room in pool {

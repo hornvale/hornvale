@@ -57,8 +57,8 @@ use hornvale_vessel::affordance::{
 use hornvale_vessel::body::Body;
 use hornvale_vessel::interior::interior_of;
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, DriveMovements, EATEN, HomeNavCache, LocaleTerrain, RESTED, SLEPT, SLEPT_ON,
-    SUSTENANCE, Terrain, agent_position, built_rooms, derive_npcs,
+    AGENT_AT, DRANK, DriveMovements, EATEN, HomeNavCache, LocaleTerrain, RESTED, RouteMemo, SLEPT,
+    SLEPT_ON, SUSTENANCE, Terrain, agent_position, built_rooms, derive_npcs,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -452,6 +452,9 @@ fn walk(
 ) -> usize {
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), run-lived like the two
+    // above: `(home, dest, budget)` keys, and homes are fixed for a run.
+    let mut route_memo = RouteMemo::new();
     let folds =
         hornvale_vessel::resident::OwnedFolds::new(hornvale_vessel::resident::ResidentFolds::new());
     let ground =
@@ -495,7 +498,8 @@ fn walk(
         // `run_simulation_with_locale` both make before the commit, kept so
         // this walk shares their fold-store advance exactly rather than
         // differing from production in a way nothing would notice.
-        let _ = sys.step_with_occupancy(ledger, &mut mesh_memo, &mut home_nav_cache);
+        let _ =
+            sys.step_with_occupancy(ledger, &mut mesh_memo, &mut home_nav_cache, &mut route_memo);
         *ledger = match tick(ledger, &[&sys], &["drive-movements"], registry) {
             Ok(next) => next,
             // The one place this probe DIVERGES from `health.rs`: it stops
