@@ -1,0 +1,41 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "checkout",
+    "--detach",
+    "b0ae89d8a93cda6fe8932ed24e38db8d64865613"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.19294383306987584,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79133,
+  "peak_rss_bytes": 13090816,
+  "peak_rss_raw": 13090816,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:05Z",
+  "stderr": "Previous HEAD position was 5cc62d8 Add Counterpart raw observer and retained process evidence\nHEAD is now at b0ae89d Counterpart experimental source: reserved-inferred-owner\n",
+  "stderr_base64": "UHJldmlvdXMgSEVBRCBwb3NpdGlvbiB3YXMgNWNjNjJkOCBBZGQgQ291bnRlcnBhcnQgcmF3IG9ic2VydmVyIGFuZCByZXRhaW5lZCBwcm9jZXNzIGV2aWRlbmNlCkhFQUQgaXMgbm93IGF0IGIwYWU4OWQgQ291bnRlcnBhcnQgZXhwZXJpbWVudGFsIHNvdXJjZTogcmVzZXJ2ZWQtaW5mZXJyZWQtb3duZXIK",
+  "stderr_bytes": 174,
+  "stderr_sha256": "8f07ef438052c3085dd48d651352a68550cef8a6498b561ee41b99471e01122c",
+  "stdout_base64": "",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "time_output": "        0.18 real         0.06 user         0.16 sys\n            13090816  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                5833  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                 219  involuntary context switches\n          1910140234  instructions retired\n           679332140  cycles elapsed\n             7373888  peak memory footprint\n"
+}

@@ -1,0 +1,10 @@
+{
+  "supervised_git_commands": 43,
+  "all_git_exit_codes_zero": true,
+  "cleanup_timeout_output_interruption_failures": 0,
+  "all_retained_stream_lengths_and_hashes_verified": true,
+  "total_supervised_git_elapsed_seconds": 5.666311958339065,
+  "startup_failure": "First driver passed a pathlib.Path to run.load_json, which consumes raw bytes. TypeError before any Git command/construction; driver and traceback retained. Corrected only to prereg_path.read_bytes(); second attempt passed.",
+  "source_patch_changed": false,
+  "scoring_build_observation_runs": 0
+}

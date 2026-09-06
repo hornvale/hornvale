@@ -1,0 +1,14 @@
+{
+  "schema": "counterpart-reserved-author-qualification-v1",
+  "preregistration_commit": "fbb3949a067dbd2b24e93ad4912a069921b6cea3",
+  "preregistration_sha256": "24b568ef2a3649066aa93dd2b4bb36f22ea157379bd1c9136ef6caf92bb6ef44",
+  "patch_sha256": "77fde4719e32393242c057bf3cdbfff9edd34b688ffee18ca8ddc1a280bcedcf",
+  "qualification_started_utc": "2026-09-05T20:33:17.651878+00:00",
+  "source_and_lock_before_sha256": {
+    "domains/thing/src/lib.rs": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+    "tools/digest/packages/thing/src/lib.rs": "58380075bf83ed7e43c00ea219214b1b87e3bfbab4b2d84b8eacc24230377379",
+    "Cargo.lock": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67",
+    "tools/digest/Cargo.lock": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+  },
+  "scoring": "Author compile/raw qualification only; no checker or comparator invoked."
+}

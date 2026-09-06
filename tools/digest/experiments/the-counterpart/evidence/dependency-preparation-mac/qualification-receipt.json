@@ -1,0 +1,92 @@
+{
+  "fetch_command": [
+    "cargo",
+    "fetch",
+    "--locked",
+    "--manifest-path",
+    "tools/digest/Cargo.toml"
+  ],
+  "fetch_exit_code": 0,
+  "fetch_seconds": 0.1499795001000166,
+  "inputs_after": {
+    ".cargo/config.toml": {
+      "bytes": 2036,
+      "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+    },
+    "Cargo.lock": {
+      "bytes": 8000,
+      "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+    },
+    "domains/settlement/src/lib.rs": {
+      "bytes": 13259,
+      "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+    },
+    "domains/thing/src/lib.rs": {
+      "bytes": 42202,
+      "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+    },
+    "rust-toolchain.toml": {
+      "bytes": 66,
+      "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+    },
+    "tools/digest/Cargo.lock": {
+      "bytes": 9981,
+      "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+    }
+  },
+  "inputs_before": {
+    ".cargo/config.toml": {
+      "bytes": 2036,
+      "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+    },
+    "Cargo.lock": {
+      "bytes": 8000,
+      "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+    },
+    "domains/settlement/src/lib.rs": {
+      "bytes": 13259,
+      "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+    },
+    "domains/thing/src/lib.rs": {
+      "bytes": 42202,
+      "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+    },
+    "rust-toolchain.toml": {
+      "bytes": 66,
+      "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+    },
+    "tools/digest/Cargo.lock": {
+      "bytes": 9981,
+      "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+    }
+  },
+  "metadata_command": [
+    "cargo",
+    "metadata",
+    "--locked",
+    "--offline",
+    "--format-version",
+    "1",
+    "--manifest-path",
+    "tools/digest/Cargo.toml"
+  ],
+  "metadata_exit_code": 0,
+  "metadata_package_count": 53,
+  "metadata_seconds": 0.18385399994440377,
+  "preparation_body_sha256": "3544804703520d028b873b5762c7ffe5466cb27f2d003b5a94e0e1910c6e4e52",
+  "retained_directory": "/Users/nathan/.local/state/hornvale/counterpart-prepared-mac-28lmcls8",
+  "scope": "Mac exact diagnostic preparation plus offline metadata only; no build or assay",
+  "source": {
+    "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+    "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+  },
+  "source_and_locks_unchanged": true,
+  "source_compilation_count": 0,
+  "source_observation_count": 0,
+  "windows_link_packages": [
+    {
+      "name": "windows-link",
+      "version": "0.2.1"
+    }
+  ]
+}

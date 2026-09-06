@@ -1,0 +1,11 @@
+{
+  "source_directory": "/private/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-independent-source-only-mqwk8ths",
+  "scope": "Independent reconstruction only; behavioral replay remains required",
+  "archive": {
+    "path": "git-records.tar.gz",
+    "bytes": 39780,
+    "sha256": "61f9aa76d2802bbea42c33e9df07fb9c64e091f91e3c07beb536f56de67f0d2f"
+  },
+  "member_index": "evidence-index.json",
+  "validated_members": 67
+}

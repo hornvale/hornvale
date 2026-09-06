@@ -1,0 +1,77 @@
+{
+  "schema": "counterpart-v1",
+  "contributor": "hornvale.thing",
+  "scope": "domains/thing",
+  "questions": [
+    {
+      "id": "registration",
+      "question": "Does Settlement then Thing registration complete without refusal?",
+      "packages": [
+        "hornvale-settlement",
+        "hornvale-thing"
+      ],
+      "inputs": [
+        "hornvale_settlement::register_concepts",
+        "hornvale_thing::register_concepts",
+        "ConceptRegistry::concepts"
+      ],
+      "sources": [
+        "domains/thing/src/lib.rs",
+        "domains/settlement/src/lib.rs"
+      ]
+    },
+    {
+      "id": "components",
+      "question": "Do Thing source and component rosters agree in both directions, with no duplicates?",
+      "packages": [
+        "hornvale-thing"
+      ],
+      "inputs": [
+        "THING_KINDS",
+        "thing_registry"
+      ],
+      "sources": [
+        "domains/thing/src/lib.rs"
+      ]
+    },
+    {
+      "id": "borrowing",
+      "question": "Are borrowing declarations unique, members of the Thing roster, non-self, and supplied by the stated owner before Thing registration?",
+      "packages": [
+        "hornvale-settlement",
+        "hornvale-thing"
+      ],
+      "inputs": [
+        "BORROWED",
+        "ConceptRegistry::concepts (before Thing)"
+      ],
+      "sources": [
+        "domains/thing/src/lib.rs",
+        "domains/settlement/src/lib.rs"
+      ]
+    },
+    {
+      "id": "ownership",
+      "question": "Does the completed registry give every Thing name its stated owner, contain no extra Thing-owned names, and preserve lender owners?",
+      "packages": [
+        "hornvale-settlement",
+        "hornvale-thing"
+      ],
+      "inputs": [
+        "ConceptRegistry::concepts (before and after Thing)",
+        "THING_KINDS",
+        "BORROWED"
+      ],
+      "sources": [
+        "domains/thing/src/lib.rs",
+        "domains/settlement/src/lib.rs"
+      ]
+    }
+  ],
+  "authorities": [
+    "domains/CLAUDE.md",
+    "domains/thing/src/lib.rs",
+    "domains/settlement/src/lib.rs",
+    "kernel/src/registry.rs"
+  ]
+}

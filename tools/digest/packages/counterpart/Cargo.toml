@@ -1,0 +1,13 @@
+[package]
+name = "digest-counterpart"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+hornvale-kernel = { path = "../../../../kernel" }
+hornvale-settlement = { path = "../../../../domains/settlement" }
+hornvale-thing = { path = "../../../../domains/thing" }
+digest-thing = { path = "../thing" }
+serde_json = "1"

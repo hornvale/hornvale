@@ -1,0 +1,8 @@
+{
+  "base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "source_path": "domains/thing/src/lib.rs",
+  "before_sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+  "after_sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+  "elapsed_seconds": 21.713,
+  "lock_diff": ""
+}

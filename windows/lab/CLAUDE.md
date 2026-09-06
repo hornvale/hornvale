@@ -169,14 +169,20 @@ and staled The Gnomon's injection fixtures under
 and untouched by `make rebaseline`. Nothing caught it except their reader test
 going red in a full stage-gate run — after the census refresh had already run.
 
-**That last sentence no longer describes what happens, and the replacement is
-QUIETER, not louder.** `anomaly_injection` reads the arms as authored now, so
-a newly registered metric leaves it GREEN and prints a PREDATES line naming
-the column instead of reddening. The arms are still stale, still owed a
-re-authoring on the canonical box, and still covered by no drift check — the
-one signal that used to shout about it is now a line of stdout that nextest
-shows only on failure or under `--success-output`. The check below is
-therefore MORE load-bearing than it was, not less.
+**That last sentence no longer describes what happens, twice over.**
+`anomaly_injection` reads the arms as authored, so a newly registered metric
+leaves its movement control GREEN and prints a PREDATES line. Only
+`the_fixture_columns_match_the_census` reds, and it does so in the commit
+gate. And since The Spillway (decision 0836) the arms are re-authored by the
+**census delivery itself** — `make sluice-census` runs
+`scripts/gnomon-injection.sh` at the censused ref, under the box lock, when
+the world moved or the columns differ, and commits the arms with the
+goldens. So the second refresh a registration used to owe by hand is paid
+by the same queued job as the first. What is still true: the arms are
+covered by no drift check between censuses, and a ref that predates The
+Spillway cannot self-deliver (its authoring script refuses the delivery's
+staged goldens as dirt) — that ref's census is refused at pre-flight and
+the by-hand path applies.
 
 So the check before you register: `grep -rl 'rows.csv\|schema.json'
 windows/lab/tests/fixtures/` and ask which of those have their own host-pinned

@@ -1,0 +1,351 @@
+{
+  "owner": "thing",
+  "base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "owned_paths": [
+    "domains/thing/src/lib.rs"
+  ],
+  "supplies": [
+    "alcove",
+    "altar",
+    "anvil",
+    "bed",
+    "bench",
+    "brazier",
+    "cave-mouth",
+    "door",
+    "ground",
+    "high-seat",
+    "key",
+    "log",
+    "loom",
+    "pool",
+    "screen",
+    "strongbox",
+    "threshold",
+    "vessel",
+    "counterpart-token",
+    "counterpart-marker"
+  ],
+  "consumes": [
+    "hearth",
+    "home"
+  ],
+  "positive_assumptions": [
+    "lender:hearth:settlement \u2014 Settlement registers hearth before Thing.",
+    "lender:home:settlement \u2014 The unusual-borrow variant additionally requires Settlement to register home before Thing.",
+    "roster:components \u2014 Each authored Thing source label has exactly one component row."
+  ],
+  "negative_assumptions": [
+    "unclaimed:counterpart-token \u2014 No earlier registrant claims this new Thing-owned name in the safe-addition variant.",
+    "unclaimed:counterpart-marker \u2014 No earlier registrant claims this new Thing-owned name in the joint-claim variant.",
+    "unclaimed:base-owned-names \u2014 No earlier registrant claims any unchanged Thing-owned label listed in supplies."
+  ],
+  "affected_questions": [
+    "registration",
+    "components",
+    "borrowing",
+    "ownership"
+  ],
+  "unknowns": [
+    "Supplies and consumes are the union across baseline and the three alternatives, not a claim that all alternatives run together. Per-variant deltas identify the active names.",
+    "An imports-only narrower comparator omits every unclaimed:* negative namespace assumption; hearth/home imports do not describe the namespace of names not yet imported.",
+    "The candidate declaration is authored experiment data, never accepted authority or a correctness oracle.",
+    "Joint collision is predicted from the disclosed shared name; this author has not observed or inspected the other owner variant.",
+    "Only the finite registry obligations are qualified; source FROZEN test roster is deliberately unchanged, no full-domain test or world/save correctness claim is made."
+  ],
+  "authority": [
+    "domains/CLAUDE.md \u2014 domain isolation and one concept name, one owner.",
+    "domains/thing/src/lib.rs \u2014 THING_KINDS, thing_registry, BORROWED and register_concepts.",
+    "domains/settlement/src/lib.rs \u2014 baseline home/hearth supplied by settlement.",
+    "tools/digest/experiments/the-counterpart/contract.json \u2014 four frozen questions."
+  ],
+  "coordination_disclosures": [
+    "Reviewed source base, frozen question IDs, raw observer, shared contract and joint name counterpart-marker were provided by controller.",
+    "Baseline production Settlement registration was read to identify the actual existing lender home; no sibling author worktree, implementation, patch or declaration was inspected.",
+    "Controller disclosed prewarm progress and compilation-slot scheduling only; no claim of security blindness or wall-clock author overlap."
+  ],
+  "variants": [
+    {
+      "id": "thing-safe-addition",
+      "patch": "patches/thing-safe-addition.patch",
+      "changed_subjects": [
+        "THING_KINDS",
+        "thing_registry"
+      ],
+      "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact.",
+      "actual_observations": {
+        "source_count": 20,
+        "component_count": 20,
+        "new_name": "counterpart-token",
+        "new_name_in_source": true,
+        "new_name_in_components": true,
+        "new_name_before": [],
+        "new_name_after": [
+          {
+            "name": "counterpart-token",
+            "owner": "thing"
+          }
+        ],
+        "borrowed": [
+          {
+            "name": "hearth",
+            "owner": "settlement"
+          }
+        ],
+        "settlement_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "thing_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "candidate_observations": {
+          "hornvale.thing:registration": "satisfied",
+          "hornvale.thing:component-roster": "satisfied",
+          "hornvale.thing:concept-ownership": "satisfied"
+        },
+        "raw_properties": {
+          "registrations_accepted": true,
+          "rosters_equal_no_duplicates": true,
+          "borrowing_unique_in_roster_nonself_and_supplied": true,
+          "roster_owners_match": true,
+          "no_extra_thing_names": true,
+          "lender_owners_preserved": true
+        }
+      },
+      "source_sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211",
+      "patch_sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+      "compile": {
+        "command": [
+          "cargo",
+          "build",
+          "--locked",
+          "--manifest-path",
+          "tools/digest/Cargo.toml",
+          "-p",
+          "digest-counterpart"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 18.854,
+        "stdout": "evidence/thing-author/thing-safe-addition-build.stdout",
+        "stderr": "evidence/thing-author/thing-safe-addition-build.stderr"
+      },
+      "raw": {
+        "command": [
+          "tools/digest/target/debug/digest-counterpart"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 0.182,
+        "stdout": "evidence/thing-author/thing-safe-addition-raw.stdout",
+        "stderr": "evidence/thing-author/thing-safe-addition-raw.stderr"
+      },
+      "supplies": [
+        "counterpart-token"
+      ],
+      "consumes": [],
+      "name_delta_semantics": "Variant supplies/consumes lists are additions to the baseline owner record; unchanged hearth borrowing remains in force.",
+      "negative_assumptions": [
+        "unclaimed:counterpart-token"
+      ],
+      "positive_assumptions": [
+        "roster:components"
+      ],
+      "observed_effect": "20 source labels and component rows agree; Settlement and Thing accept registration. counterpart-token is absent before Thing and owned by thing afterwards."
+    },
+    {
+      "id": "thing-joint-claim",
+      "patch": "patches/thing-joint-claim.patch",
+      "changed_subjects": [
+        "THING_KINDS",
+        "thing_registry"
+      ],
+      "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact. When combined with a prospective Settlement claim of counterpart-marker, predict Thing registration refusal and unknown completed ownership. Not observed by this author.",
+      "actual_observations": {
+        "source_count": 20,
+        "component_count": 20,
+        "new_name": "counterpart-marker",
+        "new_name_in_source": true,
+        "new_name_in_components": true,
+        "new_name_before": [],
+        "new_name_after": [
+          {
+            "name": "counterpart-marker",
+            "owner": "thing"
+          }
+        ],
+        "borrowed": [
+          {
+            "name": "hearth",
+            "owner": "settlement"
+          }
+        ],
+        "settlement_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "thing_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "candidate_observations": {
+          "hornvale.thing:registration": "satisfied",
+          "hornvale.thing:component-roster": "satisfied",
+          "hornvale.thing:concept-ownership": "satisfied"
+        },
+        "raw_properties": {
+          "registrations_accepted": true,
+          "rosters_equal_no_duplicates": true,
+          "borrowing_unique_in_roster_nonself_and_supplied": true,
+          "roster_owners_match": true,
+          "no_extra_thing_names": true,
+          "lender_owners_preserved": true
+        }
+      },
+      "source_sha256": "a51644aecdd53e3e4aca3779937717f2a0278ac732227a93c3082a7bdbb77dd1",
+      "patch_sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433",
+      "compile": {
+        "command": [
+          "cargo",
+          "build",
+          "--locked",
+          "--manifest-path",
+          "tools/digest/Cargo.toml",
+          "-p",
+          "digest-counterpart"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 0.831,
+        "stdout": "evidence/thing-author/thing-joint-claim-build.stdout",
+        "stderr": "evidence/thing-author/thing-joint-claim-build.stderr"
+      },
+      "raw": {
+        "command": [
+          "tools/digest/target/debug/digest-counterpart"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 0.19,
+        "stdout": "evidence/thing-author/thing-joint-claim-raw.stdout",
+        "stderr": "evidence/thing-author/thing-joint-claim-raw.stderr"
+      },
+      "supplies": [
+        "counterpart-marker"
+      ],
+      "consumes": [],
+      "name_delta_semantics": "Variant supplies/consumes lists are additions to the baseline owner record; unchanged hearth borrowing remains in force.",
+      "negative_assumptions": [
+        "unclaimed:counterpart-marker"
+      ],
+      "positive_assumptions": [
+        "roster:components"
+      ],
+      "observed_effect": "20 source labels and component rows agree; Settlement and Thing accept registration. counterpart-marker is absent before Thing and owned by thing afterwards."
+    },
+    {
+      "id": "thing-unusual-borrow",
+      "patch": "patches/thing-unusual-borrow.patch",
+      "changed_subjects": [
+        "THING_KINDS",
+        "thing_registry",
+        "BORROWED"
+      ],
+      "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact.",
+      "actual_observations": {
+        "source_count": 20,
+        "component_count": 20,
+        "new_name": "home",
+        "new_name_in_source": true,
+        "new_name_in_components": true,
+        "new_name_before": [
+          {
+            "name": "home",
+            "owner": "settlement"
+          }
+        ],
+        "new_name_after": [
+          {
+            "name": "home",
+            "owner": "settlement"
+          }
+        ],
+        "borrowed": [
+          {
+            "name": "hearth",
+            "owner": "settlement"
+          },
+          {
+            "name": "home",
+            "owner": "settlement"
+          }
+        ],
+        "settlement_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "thing_registration": {
+          "detail": "",
+          "outcome": "accepted"
+        },
+        "candidate_observations": {
+          "hornvale.thing:registration": "satisfied",
+          "hornvale.thing:component-roster": "satisfied",
+          "hornvale.thing:concept-ownership": "satisfied"
+        },
+        "raw_properties": {
+          "registrations_accepted": true,
+          "rosters_equal_no_duplicates": true,
+          "borrowing_unique_in_roster_nonself_and_supplied": true,
+          "roster_owners_match": true,
+          "no_extra_thing_names": true,
+          "lender_owners_preserved": true
+        }
+      },
+      "source_sha256": "04a137c6d1955ad63f0a7f3849d408becb53bd929a244570588cdda8652f8835",
+      "patch_sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c",
+      "compile": {
+        "command": [
+          "cargo",
+          "build",
+          "--locked",
+          "--manifest-path",
+          "tools/digest/Cargo.toml",
+          "-p",
+          "digest-counterpart"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 0.864,
+        "stdout": "evidence/thing-author/thing-unusual-borrow-build.stdout",
+        "stderr": "evidence/thing-author/thing-unusual-borrow-build.stderr"
+      },
+      "raw": {
+        "command": [
+          "tools/digest/target/debug/digest-counterpart"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 0.174,
+        "stdout": "evidence/thing-author/thing-unusual-borrow-raw.stdout",
+        "stderr": "evidence/thing-author/thing-unusual-borrow-raw.stderr"
+      },
+      "supplies": [],
+      "consumes": [
+        "home"
+      ],
+      "name_delta_semantics": "Variant supplies/consumes lists are additions to the baseline owner record; unchanged hearth borrowing remains in force.",
+      "negative_assumptions": [],
+      "positive_assumptions": [
+        "lender:home:settlement"
+      ],
+      "observed_effect": "20 source labels and component rows agree; Settlement and Thing accept registration. home remains settlement-owned before and after Thing, with explicit borrowing."
+    }
+  ],
+  "author_effort": {
+    "draft_started_at": "2026-09-05T18:26:06.241091+00:00",
+    "completed_at": "2026-09-05T18:28:39.024828+00:00",
+    "sequential_compile_and_capture_seconds": 21.713,
+    "qualification": "Draft timestamps exclude initial source study and include queue waiting; no invented overlap or performance comparison. Controller reported prewarm 433.952 seconds. An ordinary gate ran in a separate checkout during these feasibility runs."
+  },
+  "attempt_history": [
+    "Three attempted source variants, each compiled and produced valid raw JSON on its first attempt. No rejected, timed-out or incomplete specimen attempt occurred.",
+    "Initial guidance lookup domains/AGENTS.md failed because this checkout carries domains/CLAUDE.md; read the latter. No source mutation depended on the failed lookup."
+  ]
+}

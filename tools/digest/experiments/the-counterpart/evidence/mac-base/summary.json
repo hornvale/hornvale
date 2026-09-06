@@ -1,0 +1,81 @@
+{
+  "arms": {
+    "base": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    }
+  },
+  "completed": true,
+  "parent_panel_sha256": "27648766387798093fd683580a38644b1a4b3b246a9a8869a5fa96acaa1581df",
+  "properties": {},
+  "scope": "Mac CLI qualification: base arm only; not full-panel acceptance"
+}

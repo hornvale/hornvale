@@ -1,0 +1,115 @@
+{
+  "archive": {
+    "bytes": 38851,
+    "path": "records.tar.gz",
+    "sha256": "14bfd6de9a4074c8a7a822cb47f201ee47158fda4f16fbdeb5157eaef0b95857"
+  },
+  "members": {
+    "commit-receipt.json": {
+      "bytes": 371,
+      "sha256": "5889c42250847b193aef064b9434d9796ac54a746bd48b1ff35c7019e2fc3c79"
+    },
+    "dependency-fetch.json": {
+      "bytes": 2119,
+      "sha256": "3336230c909b1313f9ed7289d5fd3c34a5b24a93c32ef88db9810309c3d9ac10"
+    },
+    "offline-metadata.json": {
+      "bytes": 313833,
+      "sha256": "cfb9b8f2be568e6d510629664ae6429a010e1bf0abb292ccbdb77639ecf952a7"
+    },
+    "preparation-after.json": {
+      "bytes": 1026,
+      "sha256": "b1260e14b38d960e74470aa1d857e96b65199fdfa393716b3b7bc2bbcce8a314"
+    },
+    "preparation-before.json": {
+      "bytes": 1146,
+      "sha256": "df68e59077c210a7a3a24b0ae7eed625488e8c0fa529888423b6f052c6025233"
+    },
+    "preparation-git/020409ec7b3742179be21e1cf1c3fc5c.json": {
+      "bytes": 2006,
+      "sha256": "c11b16f555a1527b53f0c60588b51c294041d96f336759fbab426d30c65dc0ad"
+    },
+    "preparation-git/0524c37d2a5945c693087dce2710d98c.json": {
+      "bytes": 2005,
+      "sha256": "512c1d175ce449f15f26323fa2d675a92ddf9b48da2096454a55548528d62434"
+    },
+    "preparation-git/0abeab30f51c45d181d48d3d8b4a39dd.json": {
+      "bytes": 1975,
+      "sha256": "bea764ef69b6a198b1624c1f77d7d74e80157d331a79180dffd0cdbc3999fe2c"
+    },
+    "preparation-git/1fb1d7897fc444bc8775fa0a1c011013.json": {
+      "bytes": 2200,
+      "sha256": "b29f08f7693e108a9a044c44a7232447d302bd0f48623b2581806e3796b87b36"
+    },
+    "preparation-git/284982b4ef7546bcaa1bdaf4533630a0.json": {
+      "bytes": 2013,
+      "sha256": "2c194d3d8f11d1f439e4b7edc7a98f4eb7c630c96cae2fa5001c83d81ab42ade"
+    },
+    "preparation-git/4c9a20b99b8246f2892695a55b34dee4.json": {
+      "bytes": 2012,
+      "sha256": "5cb7c7adbe3229f07f742c1fb4af5e4bba50f4c33b91ca0031ee8f7977880719"
+    },
+    "preparation-git/66881cb0d7ff4cb8bd507b3a6d947dc2.json": {
+      "bytes": 2005,
+      "sha256": "e9ce95474c0f274fa4dba871c456bb84ee7104c613610495189fbceb894ab551"
+    },
+    "preparation-git/78fa6bd26ec9452788cb89c4a38fc7bb.json": {
+      "bytes": 3675,
+      "sha256": "3dde0d1d405c0881f5693ae268b4a3c9c0567a2d705c0155b1a6e6db013e39bf"
+    },
+    "preparation-git/790fee2a70fc4e5490f15f3825e42e19.json": {
+      "bytes": 2012,
+      "sha256": "88656c4995650765c6d06df9d4ee6f266a2b08b186e8094b3804675f3ede90cc"
+    },
+    "preparation-git/b3adb1747ea94009bccba292a73b77b4.json": {
+      "bytes": 1976,
+      "sha256": "58d2895496073543ad2f6fc6528491566902c05cf53a4ddcf35a944408188b1f"
+    },
+    "preparation-git/b92dc12968a345f88bdd0445522b7fe7.json": {
+      "bytes": 4591,
+      "sha256": "9727b2a761adff68418857ba89a32c12887a740d661df2f67bf624e3d1e872a8"
+    },
+    "preparation-git/ce0aee280c374f9f8cc470d6c449440c.json": {
+      "bytes": 1980,
+      "sha256": "ac575561b9f0fd2d1e330e5f46c31fb75c3ec32680c8eadf90f3d8afe94e634e"
+    },
+    "preparation-git/d64c1d3e1cdd457bbbefd44d6dc1a060.json": {
+      "bytes": 1973,
+      "sha256": "d44e3ec82d0654a0da67789aed2acd3dee4484a5d38f9c2171d6173efe0ef1ec"
+    },
+    "preparation-git/f51226d7af8e44d88c4a4305f41c2bc2.json": {
+      "bytes": 2401,
+      "sha256": "499649603788f1946f74d639da397fae1dd291dbbd6a47d3bc1777dc0cd131ea"
+    },
+    "qualification-git/22adafeeacf149a5800b9855d9294146.json": {
+      "bytes": 2006,
+      "sha256": "665e2b4a953c886215b721b5e2e60da5cccab64c5dc039384927afcfb9fe4b15"
+    },
+    "qualification-git/4385c8b7567846da82868acf23330437.json": {
+      "bytes": 1980,
+      "sha256": "20ab9226da9f248a90bebe597ee31da94b5e73e19230e3636985e49c9e9c6e6c"
+    },
+    "qualification-git/92da13b5e15e40439cdd2d93edf28d5c.json": {
+      "bytes": 1980,
+      "sha256": "91cf6d63ea63713fde12d4adad6637735a41dc06850f595246735bc4f9eba345"
+    },
+    "qualification-git/d85780403f6b4a25bfe70915aa1b5050.json": {
+      "bytes": 2012,
+      "sha256": "b1a1252c0ae44c3a028fd8529e85749bf2d207a22725ad2d99ffb3092311c952"
+    },
+    "qualification-git/e7f681f32afa496ead55c668283623bd.json": {
+      "bytes": 2012,
+      "sha256": "f5741604f87cb27c8626738d2080d99a2eb6c3b0c44baffb65db7fd0c3ba2c73"
+    },
+    "qualification-git/f0a0100aaeac4a2593a7eadf9f1f8120.json": {
+      "bytes": 2005,
+      "sha256": "e87a4ff1ccc6677dc04f3c754cd583f383bdd9501bc4a989993919812fd27bcc"
+    },
+    "qualification-receipt.json": {
+      "bytes": 2837,
+      "sha256": "227e8938b40d661533a58f9bf3f8d6b382d4bf93c157e07c0847cb3358bf425f"
+    }
+  },
+  "scope": "Mac dependency preparation only; no source builds or observations",
+  "source_directory": "/Users/nathan/.local/state/hornvale/counterpart-prepared-mac-28lmcls8"
+}

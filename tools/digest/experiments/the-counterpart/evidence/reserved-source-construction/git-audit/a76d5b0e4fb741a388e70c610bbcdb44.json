@@ -1,0 +1,40 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "rev-parse",
+    "HEAD"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.027704417007043958,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79138,
+  "peak_rss_bytes": 3899392,
+  "peak_rss_raw": 3899392,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:05Z",
+  "stderr": "",
+  "stderr_base64": "",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_base64": "YjBhZTg5ZDhhOTNjZGE2ZmU4OTMyZWQyNGUzOGRiOGQ2NDg2NTYxMwo=",
+  "stdout_bytes": 41,
+  "stdout_sha256": "f6098afd5afda52a1a182072eb171cea70374a1aac846031ced6fcabced61aed",
+  "time_output": "        0.01 real         0.00 user         0.00 sys\n             3899392  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                 974  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  12  involuntary context switches\n            87588348  instructions retired\n            33063664  cycles elapsed\n             1999680  peak memory footprint\n"
+}

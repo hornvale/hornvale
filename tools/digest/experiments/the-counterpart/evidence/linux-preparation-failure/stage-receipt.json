@@ -1,0 +1,25 @@
+{
+  "request": "req-ad4c65d41997-20260905T204249Z",
+  "candidate": "ad4c65d41997949d7d06d4b3cf40920c6bd4f9a2",
+  "remote_log": "/home/nathan/.local/state/hornvale/sluice/sluice-ad4c65d41997-20260905T211315Z.log",
+  "log_bytes": 107331,
+  "log_sha256": "c4d94a30cc0dfd6a1c2227233955864488cb92f068383e8515a2de451eed87bf",
+  "excerpts": [
+    "sluice-run: sluice-ad4c65d41997-20260905T211315Z started 2026-09-05T17:13:15-04:00 on lefford as pid 680627 kind=stage",
+    "sluice-run: queued for the staff (/tmp/hv-census.lock; up to 7200s) \u2026",
+    "sluice-run: holds the staff at 2026-09-05T17:13:15-04:00 after 0s queued",
+    "sluice-run: detached at 20c0cd375 (origin/main)",
+    "sluice-run: no Sluice-Headline: trailer in origin/main..ad4c65d41997; falling back to the tip subject.",
+    "sluice-run: merge product is 447006bfa4d70fe74a8a193c9aa09216e65f8798",
+    "sluice-run: === phase artifacts ===",
+    "timed.sh: 'sluice:artifacts' wall=233.138s user=952.234s sys=27.459s cpu_ratio=4.20 (recorded) rc=0",
+    "sluice-run: committed tracked drift from artifacts",
+    "sluice-run: === phase outboard ===",
+    "counterpart: retained output /home/nathan/.local/state/hornvale/counterpart-unreserved.1ffoIB/dossier",
+    "incomplete: failed command or uncollected child",
+    "timed.sh: 'sluice:outboard' wall=126.595s user=73.712s sys=100.158s cpu_ratio=1.37 (recorded) rc=1",
+    "sluice-run: PHASE outboard FAILED \u2014 holding.",
+    "sluice-run: phase 'outboard' failed \u2014 refusing to push.",
+    "sluice-run: finished 2026-09-05T17:19:18-04:00 rc=11 why=exit"
+  ]
+}

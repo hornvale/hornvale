@@ -368,6 +368,22 @@ make doctor        # the repo self-map — run this first in a fresh session
 # check whether its test is exercising the case that actually occurs before
 # concluding nobody wrote one.
 #
+# A DELIVERY NOW CARRIES THE GNOMON ARMS BESIDE THE GOLDENS (The Spillway,
+# decision 0836). The commit gate compares the injection arms' column set to
+# the census's, so a refresh that REGISTERED a metric was refused by its own
+# delivery commit, and the arms' authoring script refused the delivery's
+# staged goldens as dirt — a cycle The Warp broke by hand (ledger #12). The
+# delivery re-authors the arms itself, at the censused ref, under the box
+# lock, timed as `gnomon-injection` in docs/timings.md, whenever a golden
+# moved or an arm's columns differ; a ref that predates The Spillway is
+# refused at pre-flight with the goldens left staged. THE RULE, so the next
+# census-shaped check is placed by it and not by precedent: a delivery
+# SATISFIES every check a regeneration remedies and DEFERS only what needs a
+# human re-statement. Three checks are deferred under HV_CENSUS_DELIVERY —
+# the golden pins, the yellow alarm, and the column-count witness whose name
+# carries the count — and the MERGE of the delivery branch demands all three
+# of the campaign that submits it.
+#
 #   make sluice-ack REASON='...'         # adjudicate an out-of-band landing (see below)
 #   make sluice-status                   # what is queued, running, held, landed, reported
 #   make sluice-log [JOB=<id>]           # read a finished chamber job back

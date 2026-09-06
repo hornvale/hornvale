@@ -1,0 +1,41 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "bundle",
+    "verify",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/specimens.bundle"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.031535709043964744,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79120,
+  "peak_rss_bytes": 4947968,
+  "peak_rss_raw": 4947968,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:05Z",
+  "stderr": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/specimens.bundle is okay\n",
+  "stderr_base64": "L3Zhci9mb2xkZXJzL18wL2owX3prcV9kM2puMGtsejAzM2dxMzNjYzAwMDBnbi9UL2NvdW50ZXJwYXJ0LXJlc2VydmVkLXNvdXJjZS0xOWlvZ215ZC9jb25zdHJ1Y3Rpb24vc3BlY2ltZW5zLmJ1bmRsZSBpcyBva2F5Cg==",
+  "stderr_bytes": 124,
+  "stderr_sha256": "783c57963c35aea3835f0d521dc26d297413e5477ac58e7f6e44e56aa2f85403",
+  "stdout_base64": "VGhlIGJ1bmRsZSBjb250YWlucyB0aGlzIHJlZjoKYjBhZTg5ZDhhOTNjZGE2ZmU4OTMyZWQyNGUzOGRiOGQ2NDg2NTYxMyByZWZzL2hlYWRzL3NwZWNpbWVuLXJlc2VydmVkLWluZmVycmVkLW93bmVyClRoZSBidW5kbGUgcmVxdWlyZXMgdGhpcyByZWY6CjVjYzYyZDhiNmFlMzA1NTJmMjJhNjhlODVmZDlhMjg4NWFjNmUxZGQgClRoZSBidW5kbGUgdXNlcyB0aGlzIGhhc2ggYWxnb3JpdGhtOiBzaGExCg==",
+  "stdout_bytes": 229,
+  "stdout_sha256": "ba7243d9a1bf216dc805e19a15963784c61903b6eea8670ef4b2ab64e11d0f28",
+  "time_output": "        0.01 real         0.00 user         0.00 sys\n             4947968  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                1073  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  18  involuntary context switches\n            97753113  instructions retired\n            38155095  cycles elapsed\n             2622272  peak memory footprint\n"
+}

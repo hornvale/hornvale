@@ -1,0 +1,43 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "fetch",
+    "--no-tags",
+    "--depth=1",
+    "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+    "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 1.0660928329452872,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79085,
+  "peak_rss_bytes": 194904064,
+  "peak_rss_raw": 194904064,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:03Z",
+  "stderr": "From /Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker\n * branch            5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd -> FETCH_HEAD\n",
+  "stderr_base64": "RnJvbSAvVXNlcnMvbmF0aGFuLy5jb25maWcvc3VwZXJwb3dlcnMvd29ya3RyZWVzL2hvcm52YWxlL2NvdW50ZXJwYXJ0LWNoZWNrZXIKICogYnJhbmNoICAgICAgICAgICAgNWNjNjJkOGI2YWUzMDU1MmYyMmE2OGU4NWZkOWEyODg1YWM2ZTFkZCAtPiBGRVRDSF9IRUFECg==",
+  "stderr_bytes": 154,
+  "stderr_sha256": "b1ace36ff46d4368fdbaf49a640138856dbb23980d82849711333120514076cc",
+  "stdout_base64": "",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "time_output": "        1.05 real         1.94 user         0.18 sys\n           194904064  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n               18341  page reclaims\n                  44  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                5578  voluntary context switches\n                7728  involuntary context switches\n           154563075  instructions retired\n            90551200  cycles elapsed\n             3834944  peak memory footprint\n"
+}

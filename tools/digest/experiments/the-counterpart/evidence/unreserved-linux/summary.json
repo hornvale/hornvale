@@ -1,0 +1,1226 @@
+{
+  "arms": {
+    "base": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "collision-joint": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: domains/settlement/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      }
+    },
+    "lender-joint": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: domains/settlement/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "violated",
+          "reason": "'hearth' requires one prior owner 'settlement'; observed []"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      }
+    },
+    "safe-joint": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: domains/settlement/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "settlement-collision": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: domains/settlement/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "settlement-lender-rename": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "components"
+            ],
+            "selected_unknown": [
+              "ownership"
+            ],
+            "selected_violating": [
+              "borrowing",
+              "registration"
+            ],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: domains/settlement/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [
+              "ownership"
+            ],
+            "unselected_violating": [
+              "borrowing",
+              "registration"
+            ]
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "violated",
+          "reason": "'hearth' requires one prior owner 'settlement'; observed []"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "unknown",
+          "reason": "Registration refused; the composed registry is incomplete"
+        },
+        "registration": {
+          "outcome": "violated",
+          "reason": "thing registration refused"
+        }
+      }
+    },
+    "settlement-safe": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: domains/settlement/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "thing-joint-claim": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "thing-safe-addition": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "thing-unusual-borrow": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    },
+    "unusual-joint": {
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: domains/settlement/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "ownership",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      }
+    }
+  },
+  "completed": true,
+  "parent_panel_sha256": null,
+  "properties": {
+    "collision": {
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "classes": [
+        "joint-only interaction",
+        "missing negative assumption"
+      ],
+      "joint_only_interaction": true,
+      "joint_unknown": [
+        "ownership"
+      ],
+      "joint_violating": [
+        "registration"
+      ],
+      "safe_pair": false,
+      "solo_dependency_failure": false
+    },
+    "lender": {
+      "base_satisfied": true,
+      "both_solos_satisfied": false,
+      "classes": [
+        "existing dependency failure"
+      ],
+      "joint_only_interaction": false,
+      "joint_unknown": [
+        "ownership"
+      ],
+      "joint_violating": [
+        "registration",
+        "borrowing"
+      ],
+      "safe_pair": false,
+      "solo_dependency_failure": true
+    },
+    "safe": {
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "classes": [
+        "safe pair"
+      ],
+      "joint_only_interaction": false,
+      "joint_unknown": [],
+      "joint_violating": [],
+      "safe_pair": true,
+      "solo_dependency_failure": false
+    },
+    "unusual": {
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "classes": [
+        "correct unusual borrowing"
+      ],
+      "joint_only_interaction": false,
+      "joint_unknown": [],
+      "joint_violating": [],
+      "safe_pair": true,
+      "solo_dependency_failure": false
+    }
+  },
+  "scope": "full unreserved panel: 11 unique arms across 4 four-arm pairs"
+}

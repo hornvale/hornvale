@@ -1282,10 +1282,8 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_287_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -3548,7 +3546,6 @@ hornvale-worldgen::hornvale_worldgen$plat::tests::the_reading_is_pure
 hornvale-worldgen::hornvale_worldgen$render::tests::every_kind_valence_pair_has_a_distinct_palette_color
 hornvale-worldgen::hornvale_worldgen$render::tests::most_dread_picks_the_highest_dread_layer_breaking_ties_first
 hornvale-worldgen::hornvale_worldgen$render::tests::venerated_and_forgotten_read_distinctly_within_a_kind
-hornvale-worldgen::hornvale_worldgen$resolve::tests::a_covered_vertex_resolves_to_the_most_specific_features_name
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_empty_index_resolves_to_none
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_inner_link_does_not_borrow_the_outer_links_name
 hornvale-worldgen::hornvale_worldgen$resolve::tests::an_undiscovered_outer_link_keeps_its_class_but_loses_its_name
@@ -3699,6 +3696,11 @@ hornvale-worldgen::suite$graph_derive::a_water_route_links_the_two_coasts
 hornvale-worldgen::suite$graph_derive::land_route_attempts_are_bounded_on_the_fixture
 hornvale-worldgen::suite$graph_derive::no_land_route_crosses_the_peak
 hornvale-worldgen::suite$graph_derive::the_graph_is_deterministic_across_rebuilds
+hornvale-worldgen::suite$hidage_probe::a_constructed_field_with_one_dominant_basin_reads_lives_no_city_and_rescale
+hornvale-worldgen::suite$hidage_probe::count_against_a_bar_returns_the_straddle_inclusively
+hornvale-worldgen::suite$hidage_probe::gini_is_zero_for_a_constant_vector_and_near_one_for_a_one_hot
+hornvale-worldgen::suite$hidage_probe::spearman_is_one_on_agreement_minus_one_on_reversal_and_zero_on_a_constant
+hornvale-worldgen::suite$hidage_probe::the_verdict_rule_is_spec_section_4_on_every_seed
 hornvale-worldgen::suite$history_bake::a_displaced_people_rolls_downhill_and_the_cascade_is_recorded
 hornvale-worldgen::suite$history_bake::a_hostile_vertex_in_a_full_world_starves_instead_of_cascading
 hornvale-worldgen::suite$history_bake::a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare

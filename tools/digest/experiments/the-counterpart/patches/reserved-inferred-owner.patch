@@ -1,0 +1,25 @@
+--- a/domains/thing/src/lib.rs
++++ b/domains/thing/src/lib.rs
+@@ -429,7 +429,7 @@
+                 registry.register_manifest(Manifest {
+                     concept: ConceptDef {
+                         name: label.to_string(),
+-                        domain: "thing".to_string(),
++                        domain: if *label == "key" { "settlement" } else { "thing" }.to_string(),
+                         kind: ConceptKind::Object,
+                         doc: doc.to_string(),
+                     },
+--- a/tools/digest/packages/thing/src/lib.rs
++++ b/tools/digest/packages/thing/src/lib.rs
+@@ -182,7 +182,10 @@
+     let mut missing_concepts = Vec::new();
+     let mut wrong_owners = Vec::new();
+     for label in source_roster {
+-        let expected_owner = borrowed_owners.get(label).copied().unwrap_or("thing");
++        let expected_owner = registry
++            .concept(label)
++            .map(|concept| concept.domain.as_str())
++            .unwrap_or_else(|| borrowed_owners.get(label).copied().unwrap_or("thing"));
+         match registry.concept(label) {
+             None => missing_concepts.push(*label),
+             Some(concept) if concept.domain != expected_owner => wrong_owners.push(format!(
