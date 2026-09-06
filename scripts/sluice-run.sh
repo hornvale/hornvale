@@ -368,10 +368,22 @@ run_bg() {
     _tmp="$(mktemp)"
     { TIMEFORMAT='%R %U %S'; time wait "$current_child_pid"; } 2>"$_tmp"
     _rc=$?
-    read -r _real _user _sys < "$_tmp"
+    # The same rule as scripts/timed.sh: a phase's CPU accounting must never
+    # decide whether the phase passed. This copy of the pattern failed in the
+    # same instant as that one on 2026-09-06 (campaign/the-warrant), for the
+    # same reason — the mktemp file was gone by the time it was read — and
+    # under `set -u` the unset `_user` aborted the run AFTER the phase had
+    # already succeeded. Losing a CPU figure costs a cell in jobs.tsv; losing
+    # the phase costs a campaign a slot on a strictly serial box.
+    _real=""; _user=""; _sys=""
+    if [ -r "$_tmp" ]; then read -r _real _user _sys < "$_tmp" || true; fi
     rm -f "$_tmp"
-    job_user_s="$(awk -v a="${job_user_s:-0}" -v b="$_user" 'BEGIN{printf "%.3f", a+b}')"
-    job_sys_s="$(awk -v a="${job_sys_s:-0}" -v b="$_sys" 'BEGIN{printf "%.3f", a+b}')"
+    if [ -n "$_user" ] && [ -n "$_sys" ]; then
+        job_user_s="$(awk -v a="${job_user_s:-0}" -v b="$_user" 'BEGIN{printf "%.3f", a+b}')"
+        job_sys_s="$(awk -v a="${job_sys_s:-0}" -v b="$_sys" 'BEGIN{printf "%.3f", a+b}')"
+    else
+        echo "sluice-run: phase CPU accounting unreadable; the phase's own rc=$_rc stands." >&2
+    fi
     current_child_pid=""
     return "$_rc"
 }

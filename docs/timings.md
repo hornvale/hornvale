@@ -6232,3 +6232,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T13:09:44Z | sluice:gate | 840.810 | 21094.408 | 586.918 | 25.79 | 0 | b63d1626b |  | lefford | 40 |
 | 2026-09-06T13:12:16Z | sluice:clients | 152.174 | 2422.635 | 196.806 | 17.21 | 0 | 5b724ae6e |  | lefford | 40 |
 | 2026-09-06T13:20:22Z | sluice:heavy | 485.147 | 11438.771 | 161.035 | 23.91 | 0 | 5b48c6569 |  | lefford | 40 |
+| 2026-09-06T13:55:55Z | gate-commit | 291.750 | 2519.868 | 184.362 | 9.27 | 0 | e6fcf92f0 | tooling/timing-must-not-veto-the-phase | lefford | 40 |
