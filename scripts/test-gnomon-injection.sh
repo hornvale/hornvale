@@ -39,7 +39,7 @@ g init -q 2>/dev/null
 g config user.name t; g config user.email t@t
 g add -A; g commit -qm base
 
-canonical="$(cat "$root/scripts/census-canonical-host.txt" | tr '[:upper:]' '[:lower:]')"
+canonical="$(tr '[:upper:]' '[:lower:]' < "$root/scripts/census-canonical-host.txt")"
 here="$(hostname -s 2>/dev/null || hostname)"; here="$(printf '%s' "$here" | tr '[:upper:]' '[:lower:]')"
 
 # Runs `check` with the host guard lifted (PILOT) unless we ARE the canonical
