@@ -475,6 +475,46 @@ fn an_unplaceable_sun_lights_the_plate_flat() {
     );
 }
 
+/// An ocean tile (`water == 0`) with no ground reflectance at all — the
+/// wet arm never reads [`hornvale_game::plate::TileTerrain::reflectance`],
+/// so every other field is a placeholder built from the cheapest legal
+/// value for its type. `facet`/`vertex` are the empty-path root facet and
+/// vertex 0; `height_asl` is a plausible ocean depth. None of these three
+/// participate in [`hornvale_game::plate::color_for`]'s wet arms — only
+/// `water` does.
+fn ocean_tile() -> hornvale_game::plate::TileTerrain {
+    hornvale_game::plate::TileTerrain {
+        ocean: true,
+        facet: hornvale_kernel::Facet {
+            face: 0,
+            path: Vec::new(),
+        },
+        vertex: hornvale_kernel::Vertex(0),
+        band: 0,
+        reflectance: None,
+        height_asl: hornvale_kernel::SeaLevelHeight::from_metres(-1000.0),
+        water: 0,
+    }
+}
+
+/// B6: open water must answer to the clock like everything else. Before
+/// The Newel, `color_for`'s wet arms called `obs.show`, which takes no
+/// illuminant at all, so the ocean ink was byte-identical from a sun 80
+/// degrees up to one 60 degrees below the horizon.
+#[test]
+fn an_ocean_tile_is_a_different_colour_at_noon_and_at_midnight() {
+    let obs = hornvale_game::observer::TerminalObserver::new(
+        hornvale_game::observer::ColorDepth::TrueColor,
+    );
+    let (.., world) = wash_support::seed_42_world();
+    let noon = hornvale_game::driver::plate_illuminant_at(world, 80.0);
+    let night = hornvale_game::driver::plate_illuminant_at(world, -60.0);
+    let tile = ocean_tile();
+    let a = hornvale_game::plate::color_for(&tile, &noon, &obs).expect("truecolor renders");
+    let b = hornvale_game::plate::color_for(&tile, &night, &obs).expect("truecolor renders");
+    assert_ne!(a, b, "the ocean drew the same ink at noon and at midnight");
+}
+
 // =====================================================================
 // Task 6: the collapse — colour stops being keyed on elevation.
 // =====================================================================
@@ -570,23 +610,33 @@ mod wash_collapse {
             .collect()
     }
 
-    /// Every colour the SPECTRAL arm of [`plate::color_for`] claims over the
-    /// sample window, plus how many tiles were asked — the population the
-    /// deleted `RELIEF_COLORS` ladder used to colour, and the ONLY
-    /// population a claim about the spectral collapse may be made over.
+    /// Every colour [`plate::color_for`] claims over the sample window,
+    /// plus how many tiles were asked — the population the deleted
+    /// `RELIEF_COLORS` ladder used to colour, plus the two wet classes The
+    /// Newel (B6) moved onto a spectrum of their own.
     ///
-    /// **Why this is not read off the drawn grid.** A drawn `Grid` position carries an
-    /// ink and no water class, so a whole-plate colour set mixes the
-    /// spectral answers with the three invented water-palette entries — and
-    /// those three are chromatic. Measured, not reasoned: collapsing the
-    /// spectral arm to greyscale (`[g, g, g]`) and re-running left the
-    /// whole-plate form of the hue assertion GREEN, satisfied entirely by
-    /// ocean, salt basin and river. That is finding (c)'s blind spot
-    /// reproduced one level up from where it was first found.
+    /// **Why this is not read off the drawn grid.** A drawn `Grid` position
+    /// carries an ink and no water class, so a whole-plate colour set mixes
+    /// every class together and cannot be broken back down by substance.
+    /// Measured, not reasoned: collapsing the spectral arm to greyscale
+    /// (`[g, g, g]`) and re-running left the whole-plate form of the hue
+    /// assertion GREEN, satisfied entirely by ocean, salt basin and river.
+    /// That is finding (c)'s blind spot reproduced one level up from where
+    /// it was first found.
     ///
-    /// `water >= 2` is exactly [`plate::color_for`]'s own `_` arm — ocean
-    /// (0) and salt basin (1) take the palette, every wetter-or-drier class
-    /// from the river class up takes the spectrum.
+    /// **The `water < 2` skip is gone, and this is why.** Before B6, ocean
+    /// (0) and salt basin (1) took a fixed sRGB palette through
+    /// `TerminalObserver::show` — a call with no illuminant parameter at
+    /// all — so this population used to be exactly [`plate::color_for`]'s
+    /// spectral `_` arm, `water >= 2`, and including the wet classes would
+    /// have mixed two channels that varied on different axes (the invented
+    /// palette varied only with display depth; the spectrum varied with the
+    /// ground). B6 routes ocean and salt basin through
+    /// `TerminalObserver::observe` under the SAME flat illuminant every
+    /// other tile answers to, so all three water classes now vary on the
+    /// same axis as dry land and the split this comment used to justify no
+    /// longer holds anything back — every tile in the sample window is
+    /// counted.
     fn spectral_land_colours() -> (BTreeSet<[u8; 3]>, usize) {
         let ctx = super::wash_support::seed_42_context();
         let terrain = ctx.terrain();
@@ -615,9 +665,6 @@ mod wash_collapse {
                 plate::season_bucket(0.0),
                 None,
             );
-            if t.water < 2 {
-                continue;
-            }
             sampled += 1;
             if let Some(c) = plate::color_for(&t, light.illuminant(), light.observer()) {
                 colours.insert(c);
