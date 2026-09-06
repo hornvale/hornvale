@@ -1,0 +1,41 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "checkout",
+    "--detach",
+    "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.030806749826297164,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79155,
+  "peak_rss_bytes": 8634368,
+  "peak_rss_raw": 8634368,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:06Z",
+  "stderr": "Warning: you are leaving 1 commit behind, not connected to\nany of your branches:\n\n  b0ae89d Counterpart experimental source: reserved-inferred-owner\n\nIf you want to keep it by creating a new branch, this may be a good time\nto do so with:\n\n git branch <new-branch-name> b0ae89d\n\nHEAD is now at 5cc62d8 Add Counterpart raw observer and retained process evidence\n",
+  "stderr_base64": "V2FybmluZzogeW91IGFyZSBsZWF2aW5nIDEgY29tbWl0IGJlaGluZCwgbm90IGNvbm5lY3RlZCB0bwphbnkgb2YgeW91ciBicmFuY2hlczoKCiAgYjBhZTg5ZCBDb3VudGVycGFydCBleHBlcmltZW50YWwgc291cmNlOiByZXNlcnZlZC1pbmZlcnJlZC1vd25lcgoKSWYgeW91IHdhbnQgdG8ga2VlcCBpdCBieSBjcmVhdGluZyBhIG5ldyBicmFuY2gsIHRoaXMgbWF5IGJlIGEgZ29vZCB0aW1lCnRvIGRvIHNvIHdpdGg6CgogZ2l0IGJyYW5jaCA8bmV3LWJyYW5jaC1uYW1lPiBiMGFlODlkCgpIRUFEIGlzIG5vdyBhdCA1Y2M2MmQ4IEFkZCBDb3VudGVycGFydCByYXcgb2JzZXJ2ZXIgYW5kIHJldGFpbmVkIHByb2Nlc3MgZXZpZGVuY2UK",
+  "stderr_bytes": 360,
+  "stderr_sha256": "e16f048933134879c9d08f874ec550615efde48313090776f048c37d2cbae7f4",
+  "stdout_base64": "",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "time_output": "        0.02 real         0.00 user         0.02 sys\n             8634368  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                1348  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  80  involuntary context switches\n           183348323  instructions retired\n           117771137  cycles elapsed\n             5670016  peak memory footprint\n"
+}

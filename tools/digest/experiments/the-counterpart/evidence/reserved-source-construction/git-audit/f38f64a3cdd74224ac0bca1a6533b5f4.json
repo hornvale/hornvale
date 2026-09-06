@@ -1,0 +1,42 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+    "diff",
+    "--name-only",
+    "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+    "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/recovery",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.028607665793970227,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79174,
+  "peak_rss_bytes": 5210112,
+  "peak_rss_raw": 5210112,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:06Z",
+  "stderr": "",
+  "stderr_base64": "",
+  "stderr_bytes": 0,
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_base64": "ZG9tYWlucy90aGluZy9zcmMvbGliLnJzCnRvb2xzL2RpZ2VzdC9wYWNrYWdlcy90aGluZy9zcmMvbGliLnJzCg==",
+  "stdout_bytes": 64,
+  "stdout_sha256": "a5978e2fdee7587bd3cf9d22f2e8d80aa4fc17f0eb65b38a9dff8ea0dd6734c6",
+  "time_output": "        0.01 real         0.00 user         0.00 sys\n             5210112  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                1084  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  22  involuntary context switches\n            96471626  instructions retired\n            38632864  cycles elapsed\n             2622336  peak memory footprint\n"
+}

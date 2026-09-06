@@ -1,0 +1,1182 @@
+{
+  "arms": {
+    "base": {
+      "changed_paths": [],
+      "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "tree": "7350d1b4abc83775de94f35860a47e158c61dedc",
+      "variants": []
+    },
+    "collision-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "86d6c17e6ac3cfb023b4a6e0c816cdeefc9650d8",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13328,
+          "sha256": "725520ca2bfd3704932daa4b5c1b3794adc54a2f6ae2dc6f767b85e0c1e45679"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42443,
+          "sha256": "a51644aecdd53e3e4aca3779937717f2a0278ac732227a93c3082a7bdbb77dd1"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433",
+          "variant": "thing-joint-claim"
+        },
+        {
+          "sha256": "26ca7415560bae20f8b3e7887043d0f06b479d6dbf58a87be911b39393c88551",
+          "variant": "settlement-collision"
+        }
+      ],
+      "tree": "7ca56912a3cc44631b955f0687eaff628a3fd27a",
+      "variants": [
+        "thing-joint-claim",
+        "settlement-collision"
+      ]
+    },
+    "lender-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "99b0aa2682d042c02c1eb9bd31135d93245b6cca",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13270,
+          "sha256": "a618e441a46d845039dc2a6455b6659280cd797b25b02614b9319fa8d2a2a513"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42440,
+          "sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+          "variant": "thing-safe-addition"
+        },
+        {
+          "sha256": "cd086ff132dca931b4353ab62bfcd159c4f3a867a710ae8c8cec7d7420e05be5",
+          "variant": "settlement-lender-rename"
+        }
+      ],
+      "tree": "c5391c4fb9345811c0ba85be7af0126a74567466",
+      "variants": [
+        "thing-safe-addition",
+        "settlement-lender-rename"
+      ]
+    },
+    "safe-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "486b4e32aff92ebb381d62d666f8eaa197910986",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13337,
+          "sha256": "4ea29702dccb64ee0664a54c366739daf535c48188a2da732a030dc0fa60f465"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42440,
+          "sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+          "variant": "thing-safe-addition"
+        },
+        {
+          "sha256": "cd84cdbd973bf6c84731d2b72c530e8e13b90e56113df1694295b1fbf3e574c3",
+          "variant": "settlement-safe"
+        }
+      ],
+      "tree": "4a0c77a43ab9a33c6dd56cd55f794022b113dc35",
+      "variants": [
+        "thing-safe-addition",
+        "settlement-safe"
+      ]
+    },
+    "settlement-collision": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs"
+      ],
+      "commit": "38097214dc44cda42d5272dc7fb5e6c3429f410e",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13328,
+          "sha256": "725520ca2bfd3704932daa4b5c1b3794adc54a2f6ae2dc6f767b85e0c1e45679"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "26ca7415560bae20f8b3e7887043d0f06b479d6dbf58a87be911b39393c88551",
+          "variant": "settlement-collision"
+        }
+      ],
+      "tree": "4a84d9135198a3fda374fa3d6a88d5a4e4efd3b2",
+      "variants": [
+        "settlement-collision"
+      ]
+    },
+    "settlement-lender-rename": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs"
+      ],
+      "commit": "21172fafaadfd930c5bff459dd188e3b8e54ec05",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13270,
+          "sha256": "a618e441a46d845039dc2a6455b6659280cd797b25b02614b9319fa8d2a2a513"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "cd086ff132dca931b4353ab62bfcd159c4f3a867a710ae8c8cec7d7420e05be5",
+          "variant": "settlement-lender-rename"
+        }
+      ],
+      "tree": "9504483d57c5fb4105bfb6702a2d949ba6e8f6d9",
+      "variants": [
+        "settlement-lender-rename"
+      ]
+    },
+    "settlement-safe": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs"
+      ],
+      "commit": "b29a77abd0e317100a70e91a4a9b3a613f6c1ca2",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13337,
+          "sha256": "4ea29702dccb64ee0664a54c366739daf535c48188a2da732a030dc0fa60f465"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "cd84cdbd973bf6c84731d2b72c530e8e13b90e56113df1694295b1fbf3e574c3",
+          "variant": "settlement-safe"
+        }
+      ],
+      "tree": "0a1dcf3fedc22bc403f85a76b42893070e3d25d7",
+      "variants": [
+        "settlement-safe"
+      ]
+    },
+    "thing-joint-claim": {
+      "changed_paths": [
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "851c1f708c911453097ab97c4342ebf59bfde420",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42443,
+          "sha256": "a51644aecdd53e3e4aca3779937717f2a0278ac732227a93c3082a7bdbb77dd1"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433",
+          "variant": "thing-joint-claim"
+        }
+      ],
+      "tree": "76292cbe5419822de681ebcebe4fdd66f0c12500",
+      "variants": [
+        "thing-joint-claim"
+      ]
+    },
+    "thing-safe-addition": {
+      "changed_paths": [
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "ad3de13d62586abbc7456526a7d728ce9bef04c6",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42440,
+          "sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+          "variant": "thing-safe-addition"
+        }
+      ],
+      "tree": "a3398e00ef86fe0a6941b56d79d94809d0255522",
+      "variants": [
+        "thing-safe-addition"
+      ]
+    },
+    "thing-unusual-borrow": {
+      "changed_paths": [
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "b94c69f16f312cc00eb5fbd1bb7349281092ebbe",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42388,
+          "sha256": "04a137c6d1955ad63f0a7f3849d408becb53bd929a244570588cdda8652f8835"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c",
+          "variant": "thing-unusual-borrow"
+        }
+      ],
+      "tree": "3f34037b3feee2164ef5c6eb3dd53deacf224819",
+      "variants": [
+        "thing-unusual-borrow"
+      ]
+    },
+    "unusual-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "29495400c477ec872385c586679b130eb9585407",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13337,
+          "sha256": "4ea29702dccb64ee0664a54c366739daf535c48188a2da732a030dc0fa60f465"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42388,
+          "sha256": "04a137c6d1955ad63f0a7f3849d408becb53bd929a244570588cdda8652f8835"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c",
+          "variant": "thing-unusual-borrow"
+        },
+        {
+          "sha256": "cd84cdbd973bf6c84731d2b72c530e8e13b90e56113df1694295b1fbf3e574c3",
+          "variant": "settlement-safe"
+        }
+      ],
+      "tree": "902ed51e0f252ed9a70fb9b3cc4b8e5fd56ae562",
+      "variants": [
+        "thing-unusual-borrow",
+        "settlement-safe"
+      ]
+    }
+  },
+  "base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "bundle": "specimens.bundle",
+  "bundle_prerequisites": [
+    "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd"
+  ],
+  "bundle_sha256": "6199ffccfe88ad3782ce7b88a7b6a064029bcddb3307cef18bf4b9e8e878609b",
+  "frozen_inputs": {
+    "owners/settlement.json": {
+      "bytes": 9725,
+      "sha256": "99e4bb9eac1c1ed24fc4e783bfc44df9c323f494d6a9c0e110e9b61aea3f0787"
+    },
+    "owners/thing.json": {
+      "bytes": 13643,
+      "sha256": "0c18e52b78224bc66aad62cff9cf7222df10de38ec6d4e644418ec3f4d280010"
+    },
+    "patches/settlement-collision.patch": {
+      "bytes": 563,
+      "sha256": "26ca7415560bae20f8b3e7887043d0f06b479d6dbf58a87be911b39393c88551"
+    },
+    "patches/settlement-lender-rename.patch": {
+      "bytes": 586,
+      "sha256": "cd086ff132dca931b4353ab62bfcd159c4f3a867a710ae8c8cec7d7420e05be5"
+    },
+    "patches/settlement-safe.patch": {
+      "bytes": 572,
+      "sha256": "cd84cdbd973bf6c84731d2b72c530e8e13b90e56113df1694295b1fbf3e574c3"
+    },
+    "patches/thing-joint-claim.patch": {
+      "bytes": 821,
+      "sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433"
+    },
+    "patches/thing-safe-addition.patch": {
+      "bytes": 818,
+      "sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239"
+    },
+    "patches/thing-unusual-borrow.patch": {
+      "bytes": 1259,
+      "sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c"
+    }
+  },
+  "identities": {
+    "checker": "ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90",
+    "contract": "37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34",
+    "implementation": "792a2df84ba144b207c7bac94c27d2872d11ed72",
+    "measure": "178183964c86f46b14b6ea31c1c647d5b7e8031d245f9e66297acb1447edc37a",
+    "owners": "5402a554e6437e2117c7e27172359ede265c6bc0b23f8829de18b41206d0f7f3",
+    "roster": "230bcfc8cd38bd8eeb91701894dc5399a7cf9fa4cb6b5b6af19330f6bfd6c3c6",
+    "rules": "ea13353f2133cc1f168fea6dcb2447405786af8ef37e3a4ccb158885ac9e03a5"
+  },
+  "owner_records": [
+    {
+      "affected_questions": [
+        "registration",
+        "components",
+        "borrowing",
+        "ownership"
+      ],
+      "attempt_history": [
+        "Three attempted source variants, each compiled and produced valid raw JSON on its first attempt. No rejected, timed-out or incomplete specimen attempt occurred.",
+        "Initial guidance lookup domains/AGENTS.md failed because this checkout carries domains/CLAUDE.md; read the latter. No source mutation depended on the failed lookup."
+      ],
+      "author_effort": {
+        "completed_at": "2026-09-05T18:28:39.024828+00:00",
+        "draft_started_at": "2026-09-05T18:26:06.241091+00:00",
+        "qualification": "Draft timestamps exclude initial source study and include queue waiting; no invented overlap or performance comparison. Controller reported prewarm 433.952 seconds. An ordinary gate ran in a separate checkout during these feasibility runs.",
+        "sequential_compile_and_capture_seconds": 21.713
+      },
+      "authority": [
+        "domains/CLAUDE.md \u2014 domain isolation and one concept name, one owner.",
+        "domains/thing/src/lib.rs \u2014 THING_KINDS, thing_registry, BORROWED and register_concepts.",
+        "domains/settlement/src/lib.rs \u2014 baseline home/hearth supplied by settlement.",
+        "tools/digest/experiments/the-counterpart/contract.json \u2014 four frozen questions."
+      ],
+      "base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+      "consumes": [
+        "hearth",
+        "home"
+      ],
+      "coordination_disclosures": [
+        "Reviewed source base, frozen question IDs, raw observer, shared contract and joint name counterpart-marker were provided by controller.",
+        "Baseline production Settlement registration was read to identify the actual existing lender home; no sibling author worktree, implementation, patch or declaration was inspected.",
+        "Controller disclosed prewarm progress and compilation-slot scheduling only; no claim of security blindness or wall-clock author overlap."
+      ],
+      "negative_assumptions": [
+        "unclaimed:counterpart-token \u2014 No earlier registrant claims this new Thing-owned name in the safe-addition variant.",
+        "unclaimed:counterpart-marker \u2014 No earlier registrant claims this new Thing-owned name in the joint-claim variant.",
+        "unclaimed:base-owned-names \u2014 No earlier registrant claims any unchanged Thing-owned label listed in supplies."
+      ],
+      "owned_paths": [
+        "domains/thing/src/lib.rs"
+      ],
+      "owner": "thing",
+      "positive_assumptions": [
+        "lender:hearth:settlement \u2014 Settlement registers hearth before Thing.",
+        "lender:home:settlement \u2014 The unusual-borrow variant additionally requires Settlement to register home before Thing.",
+        "roster:components \u2014 Each authored Thing source label has exactly one component row."
+      ],
+      "supplies": [
+        "alcove",
+        "altar",
+        "anvil",
+        "bed",
+        "bench",
+        "brazier",
+        "cave-mouth",
+        "door",
+        "ground",
+        "high-seat",
+        "key",
+        "log",
+        "loom",
+        "pool",
+        "screen",
+        "strongbox",
+        "threshold",
+        "vessel",
+        "counterpart-token",
+        "counterpart-marker"
+      ],
+      "unknowns": [
+        "Supplies and consumes are the union across baseline and the three alternatives, not a claim that all alternatives run together. Per-variant deltas identify the active names.",
+        "An imports-only narrower comparator omits every unclaimed:* negative namespace assumption; hearth/home imports do not describe the namespace of names not yet imported.",
+        "The candidate declaration is authored experiment data, never accepted authority or a correctness oracle.",
+        "Joint collision is predicted from the disclosed shared name; this author has not observed or inspected the other owner variant.",
+        "Only the finite registry obligations are qualified; source FROZEN test roster is deliberately unchanged, no full-domain test or world/save correctness claim is made."
+      ],
+      "variants": [
+        {
+          "actual_observations": {
+            "borrowed": [
+              {
+                "name": "hearth",
+                "owner": "settlement"
+              }
+            ],
+            "candidate_observations": {
+              "hornvale.thing:component-roster": "satisfied",
+              "hornvale.thing:concept-ownership": "satisfied",
+              "hornvale.thing:registration": "satisfied"
+            },
+            "component_count": 20,
+            "new_name": "counterpart-token",
+            "new_name_after": [
+              {
+                "name": "counterpart-token",
+                "owner": "thing"
+              }
+            ],
+            "new_name_before": [],
+            "new_name_in_components": true,
+            "new_name_in_source": true,
+            "raw_properties": {
+              "borrowing_unique_in_roster_nonself_and_supplied": true,
+              "lender_owners_preserved": true,
+              "no_extra_thing_names": true,
+              "registrations_accepted": true,
+              "roster_owners_match": true,
+              "rosters_equal_no_duplicates": true
+            },
+            "settlement_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            },
+            "source_count": 20,
+            "thing_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            }
+          },
+          "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact.",
+          "changed_subjects": [
+            "THING_KINDS",
+            "thing_registry"
+          ],
+          "compile": {
+            "command": [
+              "cargo",
+              "build",
+              "--locked",
+              "--manifest-path",
+              "tools/digest/Cargo.toml",
+              "-p",
+              "digest-counterpart"
+            ],
+            "elapsed_seconds": 18.854,
+            "exit_code": 0,
+            "stderr": "evidence/thing-author/thing-safe-addition-build.stderr",
+            "stdout": "evidence/thing-author/thing-safe-addition-build.stdout"
+          },
+          "consumes": [],
+          "id": "thing-safe-addition",
+          "name_delta_semantics": "Variant supplies/consumes lists are additions to the baseline owner record; unchanged hearth borrowing remains in force.",
+          "negative_assumptions": [
+            "unclaimed:counterpart-token"
+          ],
+          "observed_effect": "20 source labels and component rows agree; Settlement and Thing accept registration. counterpart-token is absent before Thing and owned by thing afterwards.",
+          "patch": "patches/thing-safe-addition.patch",
+          "patch_sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+          "positive_assumptions": [
+            "roster:components"
+          ],
+          "raw": {
+            "command": [
+              "tools/digest/target/debug/digest-counterpart"
+            ],
+            "elapsed_seconds": 0.182,
+            "exit_code": 0,
+            "stderr": "evidence/thing-author/thing-safe-addition-raw.stderr",
+            "stdout": "evidence/thing-author/thing-safe-addition-raw.stdout"
+          },
+          "source_sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211",
+          "supplies": [
+            "counterpart-token"
+          ]
+        },
+        {
+          "actual_observations": {
+            "borrowed": [
+              {
+                "name": "hearth",
+                "owner": "settlement"
+              }
+            ],
+            "candidate_observations": {
+              "hornvale.thing:component-roster": "satisfied",
+              "hornvale.thing:concept-ownership": "satisfied",
+              "hornvale.thing:registration": "satisfied"
+            },
+            "component_count": 20,
+            "new_name": "counterpart-marker",
+            "new_name_after": [
+              {
+                "name": "counterpart-marker",
+                "owner": "thing"
+              }
+            ],
+            "new_name_before": [],
+            "new_name_in_components": true,
+            "new_name_in_source": true,
+            "raw_properties": {
+              "borrowing_unique_in_roster_nonself_and_supplied": true,
+              "lender_owners_preserved": true,
+              "no_extra_thing_names": true,
+              "registrations_accepted": true,
+              "roster_owners_match": true,
+              "rosters_equal_no_duplicates": true
+            },
+            "settlement_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            },
+            "source_count": 20,
+            "thing_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            }
+          },
+          "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact. When combined with a prospective Settlement claim of counterpart-marker, predict Thing registration refusal and unknown completed ownership. Not observed by this author.",
+          "changed_subjects": [
+            "THING_KINDS",
+            "thing_registry"
+          ],
+          "compile": {
+            "command": [
+              "cargo",
+              "build",
+              "--locked",
+              "--manifest-path",
+              "tools/digest/Cargo.toml",
+              "-p",
+              "digest-counterpart"
+            ],
+            "elapsed_seconds": 0.831,
+            "exit_code": 0,
+            "stderr": "evidence/thing-author/thing-joint-claim-build.stderr",
+            "stdout": "evidence/thing-author/thing-joint-claim-build.stdout"
+          },
+          "consumes": [],
+          "id": "thing-joint-claim",
+          "name_delta_semantics": "Variant supplies/consumes lists are additions to the baseline owner record; unchanged hearth borrowing remains in force.",
+          "negative_assumptions": [
+            "unclaimed:counterpart-marker"
+          ],
+          "observed_effect": "20 source labels and component rows agree; Settlement and Thing accept registration. counterpart-marker is absent before Thing and owned by thing afterwards.",
+          "patch": "patches/thing-joint-claim.patch",
+          "patch_sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433",
+          "positive_assumptions": [
+            "roster:components"
+          ],
+          "raw": {
+            "command": [
+              "tools/digest/target/debug/digest-counterpart"
+            ],
+            "elapsed_seconds": 0.19,
+            "exit_code": 0,
+            "stderr": "evidence/thing-author/thing-joint-claim-raw.stderr",
+            "stdout": "evidence/thing-author/thing-joint-claim-raw.stdout"
+          },
+          "source_sha256": "a51644aecdd53e3e4aca3779937717f2a0278ac732227a93c3082a7bdbb77dd1",
+          "supplies": [
+            "counterpart-marker"
+          ]
+        },
+        {
+          "actual_observations": {
+            "borrowed": [
+              {
+                "name": "hearth",
+                "owner": "settlement"
+              },
+              {
+                "name": "home",
+                "owner": "settlement"
+              }
+            ],
+            "candidate_observations": {
+              "hornvale.thing:component-roster": "satisfied",
+              "hornvale.thing:concept-ownership": "satisfied",
+              "hornvale.thing:registration": "satisfied"
+            },
+            "component_count": 20,
+            "new_name": "home",
+            "new_name_after": [
+              {
+                "name": "home",
+                "owner": "settlement"
+              }
+            ],
+            "new_name_before": [
+              {
+                "name": "home",
+                "owner": "settlement"
+              }
+            ],
+            "new_name_in_components": true,
+            "new_name_in_source": true,
+            "raw_properties": {
+              "borrowing_unique_in_roster_nonself_and_supplied": true,
+              "lender_owners_preserved": true,
+              "no_extra_thing_names": true,
+              "registrations_accepted": true,
+              "roster_owners_match": true,
+              "rosters_equal_no_duplicates": true
+            },
+            "settlement_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            },
+            "source_count": 20,
+            "thing_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            }
+          },
+          "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact.",
+          "changed_subjects": [
+            "THING_KINDS",
+            "thing_registry",
+            "BORROWED"
+          ],
+          "compile": {
+            "command": [
+              "cargo",
+              "build",
+              "--locked",
+              "--manifest-path",
+              "tools/digest/Cargo.toml",
+              "-p",
+              "digest-counterpart"
+            ],
+            "elapsed_seconds": 0.864,
+            "exit_code": 0,
+            "stderr": "evidence/thing-author/thing-unusual-borrow-build.stderr",
+            "stdout": "evidence/thing-author/thing-unusual-borrow-build.stdout"
+          },
+          "consumes": [
+            "home"
+          ],
+          "id": "thing-unusual-borrow",
+          "name_delta_semantics": "Variant supplies/consumes lists are additions to the baseline owner record; unchanged hearth borrowing remains in force.",
+          "negative_assumptions": [],
+          "observed_effect": "20 source labels and component rows agree; Settlement and Thing accept registration. home remains settlement-owned before and after Thing, with explicit borrowing.",
+          "patch": "patches/thing-unusual-borrow.patch",
+          "patch_sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c",
+          "positive_assumptions": [
+            "lender:home:settlement"
+          ],
+          "raw": {
+            "command": [
+              "tools/digest/target/debug/digest-counterpart"
+            ],
+            "elapsed_seconds": 0.174,
+            "exit_code": 0,
+            "stderr": "evidence/thing-author/thing-unusual-borrow-raw.stderr",
+            "stdout": "evidence/thing-author/thing-unusual-borrow-raw.stdout"
+          },
+          "source_sha256": "04a137c6d1955ad63f0a7f3849d408becb53bd929a244570588cdda8652f8835",
+          "supplies": []
+        }
+      ]
+    },
+    {
+      "affected_questions": [
+        "registration",
+        "borrowing",
+        "ownership"
+      ],
+      "attempts": {
+        "base_observation": "evidence/settlement-author/base.stdout.json",
+        "corrections": [],
+        "invalid_or_noop_specimens": [],
+        "restoration": "evidence/settlement-author/restoration.json",
+        "restored_base_observation": "evidence/settlement-author/restored-base.stdout.json",
+        "runs": "evidence/settlement-author/runs.json"
+      },
+      "author_effort": {
+        "draft_complete_utc": "2026-09-05T18:29:12Z",
+        "measurement_limit": "Interval starts after initial source study and draft patch creation; includes waiting for controller-owned prewarm and is not active labor time. Initial reading/drafting was not timed.",
+        "qualification_complete_utc": "2026-09-05T18:37:11.520552+00:00",
+        "tracked_elapsed_seconds": 479.521,
+        "work": "Three independently authored tiny source patches, owner declaration, four initial raw runs and one restored-base raw run; no subagents."
+      },
+      "authority": [
+        "domains/CLAUDE.md: one concept name, one owner; domains depend only on kernel",
+        "domains/settlement/src/lib.rs::register_concepts",
+        "domains/thing/src/lib.rs::BORROWED and register_concepts",
+        "kernel/src/registry.rs::insert_concept and register_manifest",
+        "tools/digest/experiments/the-counterpart/contract.json"
+      ],
+      "base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+      "consumes": [],
+      "limits": [
+        "Safe means agreement on the four frozen assay questions only.",
+        "No production tests or FROZEN rosters are edited; speculative source patches are data only."
+      ],
+      "negative_assumptions": [
+        "Settlement own names must not overlap unborrowed Thing names; this excludes every prospective new Thing name, not just the current BORROWED import hearth.",
+        "settlement-common-room is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+        "counterpart-marker is not claimed by Thing or any earlier registration in the solo base; a prospective independent claim invalidates this negative assumption.",
+        "settlement-hearth is not claimed by Thing or any earlier registration in the observed two-domain composition."
+      ],
+      "owned_paths": [
+        "domains/settlement/src/lib.rs"
+      ],
+      "owner": "settlement",
+      "positive_assumptions": [
+        "Settlement registers before Thing in the frozen observer.",
+        "Thing BORROWED consumes hearth with owner settlement.",
+        "The frozen ConceptRegistry rejects differing definitions under one name."
+      ],
+      "schema": "counterpart-v1",
+      "source_sharing": [
+        "Shared frozen base, frozen question map, raw observer and shared name counterpart-marker.",
+        "Read baseline Settlement and Thing production source, kernel registry and existing digest-thing candidate implementation.",
+        "Did not inspect sibling author worktrees, patches, records or observations."
+      ],
+      "supplies": [
+        "home",
+        "hearth"
+      ],
+      "unknowns": [
+        "World generation, full-domain behavior, save compatibility, production admission and other registrars are outside the four frozen questions.",
+        "Changes outside the owned source and undeclared subject/namespace changes require fallback to all four questions.",
+        "Ownership cannot be established from a partial registry after registration refusal."
+      ],
+      "variants": [
+        {
+          "candidate_prediction": {
+            "component-roster": "satisfied",
+            "concept-ownership": "satisfied",
+            "registration": "satisfied"
+          },
+          "changed_subjects": [
+            "settlement-common-room"
+          ],
+          "consumes": [],
+          "id": "settlement-safe",
+          "observations": {
+            "author_question_interpretation": {
+              "borrowing": "satisfied",
+              "components": "satisfied",
+              "ownership": "satisfied",
+              "registration": "satisfied"
+            },
+            "before_names": [
+              "hearth",
+              "home",
+              "settlement-common-room"
+            ],
+            "candidate_outcomes": {
+              "hornvale.thing:component-roster": "satisfied",
+              "hornvale.thing:concept-ownership": "satisfied",
+              "hornvale.thing:registration": "satisfied"
+            },
+            "command_exit_code": 0,
+            "interpretation_authority": "Hand interpretation of frozen four questions from retained raw facts; not independent checker output.",
+            "raw_stderr": "evidence/settlement-author/settlement-safe.stderr.txt",
+            "raw_stdout": "evidence/settlement-author/settlement-safe.stdout.json",
+            "settlement_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            },
+            "source_component_rosters_equal": true,
+            "status": "completed",
+            "thing_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            }
+          },
+          "patch": "patches/settlement-safe.patch",
+          "properties": [
+            "Compiles and introduces an observable Settlement-owned concept.",
+            "Solo composition remains accepted for the four frozen questions; full-domain admission safety not claimed."
+          ],
+          "question_prediction": {
+            "borrowing": "satisfied",
+            "components": "satisfied",
+            "ownership": "satisfied",
+            "registration": "satisfied"
+          },
+          "supplies": [
+            "home",
+            "hearth",
+            "settlement-common-room"
+          ]
+        },
+        {
+          "candidate_prediction": {
+            "component-roster": "satisfied",
+            "concept-ownership": "satisfied",
+            "registration": "satisfied"
+          },
+          "changed_subjects": [
+            "counterpart-marker"
+          ],
+          "consumes": [],
+          "id": "settlement-collision",
+          "observations": {
+            "author_question_interpretation": {
+              "borrowing": "satisfied",
+              "components": "satisfied",
+              "ownership": "satisfied",
+              "registration": "satisfied"
+            },
+            "before_names": [
+              "counterpart-marker",
+              "hearth",
+              "home"
+            ],
+            "candidate_outcomes": {
+              "hornvale.thing:component-roster": "satisfied",
+              "hornvale.thing:concept-ownership": "satisfied",
+              "hornvale.thing:registration": "satisfied"
+            },
+            "command_exit_code": 0,
+            "interpretation_authority": "Hand interpretation of frozen four questions from retained raw facts; not independent checker output.",
+            "raw_stderr": "evidence/settlement-author/settlement-collision.stderr.txt",
+            "raw_stdout": "evidence/settlement-author/settlement-collision.stdout.json",
+            "settlement_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            },
+            "source_component_rosters_equal": true,
+            "status": "completed",
+            "thing_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            }
+          },
+          "patch": "patches/settlement-collision.patch",
+          "properties": [
+            "Compiles and introduces an observable Settlement-owned concept.",
+            "Solo composition remains accepted for the four frozen questions; full-domain admission safety not claimed.",
+            "Prospective collision input only; no joint patch or result inspected by this author."
+          ],
+          "question_prediction": {
+            "borrowing": "satisfied",
+            "components": "satisfied",
+            "ownership": "satisfied",
+            "registration": "satisfied"
+          },
+          "supplies": [
+            "home",
+            "hearth",
+            "counterpart-marker"
+          ]
+        },
+        {
+          "candidate_prediction": {
+            "component-roster": "satisfied",
+            "concept-ownership": "unknown",
+            "registration": "contradicted"
+          },
+          "changed_subjects": [
+            "hearth",
+            "settlement-hearth"
+          ],
+          "consumes": [],
+          "id": "settlement-lender-rename",
+          "observations": {
+            "author_question_interpretation": {
+              "borrowing": "violated",
+              "components": "satisfied",
+              "ownership": "unknown",
+              "registration": "violated"
+            },
+            "before_names": [
+              "home",
+              "settlement-hearth"
+            ],
+            "candidate_outcomes": {
+              "hornvale.thing:component-roster": "satisfied",
+              "hornvale.thing:concept-ownership": "unknown",
+              "hornvale.thing:registration": "contradicted"
+            },
+            "command_exit_code": 0,
+            "interpretation_authority": "Hand interpretation of frozen four questions from retained raw facts; not independent checker output.",
+            "raw_stderr": "evidence/settlement-author/settlement-lender-rename.stderr.txt",
+            "raw_stdout": "evidence/settlement-author/settlement-lender-rename.stdout.json",
+            "settlement_registration": {
+              "detail": "",
+              "outcome": "accepted"
+            },
+            "source_component_rosters_equal": true,
+            "status": "completed",
+            "thing_registration": {
+              "detail": "BORROWED declares \"hearth\" ceded to \"settlement\", but no such concept is registered -- delete the stale declaration",
+              "outcome": "refused"
+            }
+          },
+          "patch": "patches/settlement-lender-rename.patch",
+          "properties": [
+            "Compiles and produces completed observation with captured expected Thing refusal.",
+            "Base green, solo registration and borrowing violated, ownership unknown; never joint-only.",
+            "Settlement concepts_registered production unit test remains untouched and is not claimed to pass under this specimen."
+          ],
+          "question_prediction": {
+            "borrowing": "violated",
+            "components": "satisfied",
+            "ownership": "unknown",
+            "registration": "violated"
+          },
+          "supplies": [
+            "home",
+            "settlement-hearth"
+          ]
+        }
+      ]
+    }
+  ],
+  "owners": [
+    "owners/thing.json",
+    "owners/settlement.json"
+  ],
+  "pairs": {
+    "collision": {
+      "base": "base",
+      "classes": [
+        "joint-only interaction",
+        "missing negative assumption"
+      ],
+      "joint": "collision-joint",
+      "left": "thing-joint-claim",
+      "right": "settlement-collision"
+    },
+    "lender": {
+      "base": "base",
+      "classes": [
+        "existing dependency failure"
+      ],
+      "joint": "lender-joint",
+      "left": "thing-safe-addition",
+      "right": "settlement-lender-rename"
+    },
+    "safe": {
+      "base": "base",
+      "classes": [
+        "safe pair"
+      ],
+      "joint": "safe-joint",
+      "left": "thing-safe-addition",
+      "right": "settlement-safe"
+    },
+    "unusual": {
+      "base": "base",
+      "classes": [
+        "correct unusual borrowing"
+      ],
+      "joint": "unusual-joint",
+      "left": "thing-unusual-borrow",
+      "right": "settlement-safe"
+    }
+  },
+  "schema": "counterpart-v1",
+  "scope": "full unreserved panel: 11 unique arms across 4 four-arm pairs",
+  "source_construction": {
+    "implementation_commit": "792a2df84ba144b207c7bac94c27d2872d11ed72",
+    "method": "exact git apply --index, write-tree and commit-tree in owned clone; no semantic conflict resolution",
+    "parent": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+    "retained_scratch": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-panel-xs2zrvf0/construction",
+    "source_runs": 0
+  }
+}

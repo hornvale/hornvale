@@ -421,7 +421,29 @@ if ! git diff --cached --name-only --diff-filter=ACMR | grep -qE "$rust_relevant
     exit 0
 fi
 
-if ! make gate-commit; then
+# THE COLUMN-COUNT WITNESS CANNOT BE SATISFIED BY A DELIVERY COMMIT either, so
+# it is stood down for that one commit — the third scoped opt-out under the
+# same variable, set by the same script (The Spillway, decision 0836).
+#
+# `domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_<N>_column_census`
+# carries the census's metric-column count in its NAME and in two assertions,
+# and its doc-comment is a per-epoch narrative ("re-measure and update this").
+# It is in the sub-floor roster by exact name, and it is what refused The
+# Warp's census delivery FIRST. No machine may re-pin it: that is the rule
+# separating this from the injection arms, which the delivery regenerates
+# itself — satisfy what a regeneration remedies, defer what needs a human.
+# DEFERRED, not discharged: the merge of the delivery branch runs the full
+# suite and demands the re-pin of the campaign that submits it, exactly as it
+# demands the calibration pins. scripts/test-census-guard.sh reads this
+# pattern out of the hook and asserts it omits exactly one roster term.
+subfloor_exclude=""
+if [ -n "${HV_CENSUS_DELIVERY:-}" ]; then
+    subfloor_exclude='evaluable_columns_measured_surface_on_the_[0-9]+_column_census'
+    echo "pre-commit: HV_CENSUS_DELIVERY=1 — standing down the census column-count witness for this delivery." >&2
+    echo "pre-commit: its name carries a count that does not exist until the census does; only a human re-states it." >&2
+    echo "pre-commit: the obligation is DEFERRED, not discharged — the merge of the delivery branch will demand the re-pin." >&2
+fi
+if ! HV_SUBFLOOR_EXCLUDE="$subfloor_exclude" make gate-commit; then
     echo "pre-commit: 'make gate-commit' failed — fix fmt/clippy/type-audit/tests before committing." >&2
     exit 1
 fi

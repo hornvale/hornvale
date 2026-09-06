@@ -864,7 +864,13 @@ mod tests {
         // neighbouring `hue-depth-goblin` case pins. It surfaced only at the
         // merge re-run: the previous chamber run reddened on `census_duration`
         // first and nextest's fail-fast cancelled this test, so the budget red
-        // masked it (this test is not in the sub-floor tier a local gate runs).
+        // masked it. (An earlier draft of this line said this test "is not in
+        // the sub-floor tier a local gate runs". It IS: docs/timings/
+        // subfloor-roster.tsv selects it by exact name, and it is what refused
+        // The Warp's census delivery first. Since The Spillway a census
+        // delivery commit stands it down under HV_CENSUS_DELIVERY, and the
+        // merge of the delivery branch demands the re-pin of the campaign
+        // that submits it — decision 0836.)
         // THE GRANARY: evaluable 114 -> 117, excluded 51 -> 50, total
         // 227 -> 229 — the campaign's two new census columns
         // (`granary-raid-phase-concentration`,

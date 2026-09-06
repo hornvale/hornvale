@@ -92,8 +92,8 @@ use hornvale_kernel::{
 };
 use hornvale_species::ThermalStrategy;
 use hornvale_vessel::liveness::{
-    DriveParams, HomeNavCache, PrimaryAfraidMemo, SUSTENANCE, Terrain, affect_of_memo_occupied,
-    sustenance_at,
+    DriveParams, HomeNavCache, PrimaryAfraidMemo, RouteMemo, SUSTENANCE, Terrain,
+    affect_of_memo_occupied, sustenance_at,
 };
 use hornvale_vessel::resident::{LatestVisit, ReadWitness, ResidentFolds, Trail};
 use hornvale_vessel::{PossessOpts, Session};
@@ -819,6 +819,7 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
         let mut afraid = PrimaryAfraidMemo::new();
         let mut mesh = hornvale_kernel::RoomMeshMemo::new();
         let mut nav = HomeNavCache::new();
+        let mut route = RouteMemo::new();
         for npc in &bodies {
             let _ = affect_of_memo_occupied(
                 &ledger,
@@ -830,6 +831,7 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
                 None,
                 &mut mesh,
                 &mut nav,
+                &mut route,
                 &present,
             );
         }
@@ -877,6 +879,7 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
         let mut afraid = PrimaryAfraidMemo::new();
         let mut mesh = hornvale_kernel::RoomMeshMemo::new();
         let mut nav = HomeNavCache::new();
+        let mut route = RouteMemo::new();
         for npc in &bodies {
             let days: Vec<WorldTime> = ledger
                 .facts_of(npc.entity, AGENT_AT)
@@ -893,6 +896,7 @@ fn rule_one_witness_no_read_runs_before_a_reset_of_the_same_entity() {
                     None,
                     &mut mesh,
                     &mut nav,
+                    &mut route,
                     &past,
                 );
             }
@@ -2505,6 +2509,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
         let mut afraid = PrimaryAfraidMemo::new();
         let mut mesh = hornvale_kernel::RoomMeshMemo::new();
         let mut nav = HomeNavCache::new();
+        let mut route = RouteMemo::new();
         for npc in &bodies {
             let _ = affect_of_memo_occupied(
                 &ledger,
@@ -2516,6 +2521,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
                 None,
                 &mut mesh,
                 &mut nav,
+                &mut route,
                 &present,
             );
         }
@@ -2535,6 +2541,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
         let mut afraid = PrimaryAfraidMemo::new();
         let mut mesh = hornvale_kernel::RoomMeshMemo::new();
         let mut nav = HomeNavCache::new();
+        let mut route = RouteMemo::new();
         for npc in &bodies {
             let days: Vec<WorldTime> = ledger
                 .facts_of(npc.entity, AGENT_AT)
@@ -2554,6 +2561,7 @@ fn rule_six_witness_belief_reads_run_at_past_instants() {
                     None,
                     &mut mesh,
                     &mut nav,
+                    &mut route,
                     &past,
                 );
             }
@@ -2704,6 +2712,7 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
         let mut afraid = PrimaryAfraidMemo::new();
         let mut mesh = hornvale_kernel::RoomMeshMemo::new();
         let mut nav = HomeNavCache::new();
+        let mut route = RouteMemo::new();
         for npc in &bodies {
             let _ = affect_of_memo_occupied(
                 &ledger,
@@ -2715,6 +2724,7 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
                 None,
                 &mut mesh,
                 &mut nav,
+                &mut route,
                 &present,
             );
         }
@@ -2740,6 +2750,7 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
         let mut afraid = PrimaryAfraidMemo::new();
         let mut mesh = hornvale_kernel::RoomMeshMemo::new();
         let mut nav = HomeNavCache::new();
+        let mut route = RouteMemo::new();
         for npc in &bodies {
             let days: Vec<WorldTime> = ledger
                 .facts_of(npc.entity, AGENT_AT)
@@ -2756,6 +2767,7 @@ fn rule_six_witness_hazard_memory_reads_run_at_past_instants() {
                     None,
                     &mut mesh,
                     &mut nav,
+                    &mut route,
                     &past,
                 );
             }

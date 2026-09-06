@@ -1,0 +1,163 @@
+"""Package only the preregistered reserved arm; no build, observer, or scoring."""
+from pathlib import Path
+import datetime
+import hashlib
+import importlib.util
+import json
+import shutil
+import sys
+import tempfile
+
+root = Path.cwd()
+experiment = root / 'tools/digest/experiments/the-counterpart'
+evidence = experiment / 'evidence/reserved-source-construction'
+runner_path = Path('/Users/nathan/.config/superpowers/worktrees/hornvale/federation-next/tools/digest/experiments/the-counterpart/run.py')
+expected_runner_hash = '4890c2185e175a47ad4cd90b7612c4149c93f9efe82b3498f5df281428e08a5f'
+hash_bytes = lambda data: hashlib.sha256(data).hexdigest()
+assert hash_bytes(runner_path.read_bytes()) == expected_runner_hash
+sys.path.insert(0, str(runner_path.parent))
+spec = importlib.util.spec_from_file_location('reserved_packaging_run', runner_path)
+run = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(run)
+run.git_audit_directory = evidence / 'git-audit'
+assert not run.git_audit_directory.exists()
+
+base = '5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd'
+arm_id = 'reserved-inferred-owner'
+owned_paths = ['domains/thing/src/lib.rs', 'tools/digest/packages/thing/src/lib.rs']
+patch = experiment / 'patches/reserved-inferred-owner.patch'
+patch_hash = '77fde4719e32393242c057bf3cdbfff9edd34b688ffee18ca8ddc1a280bcedcf'
+assert hash_bytes(patch.read_bytes()) == patch_hash
+prereg_path = experiment / 'evidence/reserved-author/preregistration.json'
+prereg = run.load_json(prereg_path)
+assert prereg['challenge_id'] == arm_id
+assert prereg['source_base'] == base
+assert run.git(root, 'branch', '--show-current') == 'codex/counterpart-challenge'
+assert run.git(root, 'rev-parse', 'HEAD') == '41ceed7a270771833e8b738366e61721e5ab1ab7'
+assert run.git(root, 'diff', '--name-only') == ''
+
+scratch = Path(tempfile.mkdtemp(prefix='counterpart-reserved-source-'))
+construction = scratch / 'construction'
+recovery = scratch / 'recovery'
+provenance = {
+    'schema': 'counterpart-reserved-source-construction-v1',
+    'started_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    'author': '/root/counterpart_checker',
+    'repository': str(root),
+    'branch': 'codex/counterpart-challenge',
+    'author_head_before_packaging': '41ceed7a270771833e8b738366e61721e5ab1ab7',
+    'source_base': base,
+    'patch_sha256': patch_hash,
+    'scratch_directory': str(scratch),
+    'runner': {'path': str(runner_path), 'sha256': expected_runner_hash,
+               'frozen_implementation': '02796fe0ae719a55f431f8aedc2ab6853c9a2776'},
+    'post_preregistration_disclosure': 'Read only run.py construction, supervised Git, capture, source verification/reconstruction and input-hash helper definitions, imports/constants and function names for packaging mechanics. Imported the frozen runner (which imports checker/comparator definitions); no scoring or observation function was invoked. No panel, owner records, unreserved evidence or other worker reports read.',
+    'limits': {'deadline_seconds': run.DEADLINE, 'output_limit_bytes': run.LIMIT,
+               'retain_output': True},
+    'method': 'Frozen construct_sources produces the arm in a new owned clone; a separately initialized shallow base-only repository fetches only the declared prerequisite, verifies/imports the bundle, and compares the recovered source tree with an independent exact patch application.',
+    'not_run': ['run_panel', 'evaluate', 'suggest', 'score', 'Cargo build', 'raw observation'],
+}
+run.persist(evidence / 'provenance.json', provenance)
+try:
+    arms = run.construct_sources(
+        root, base, {arm_id: {'patch': str(patch.resolve()), 'owned_paths': owned_paths}},
+        {}, construction,
+    )
+    arm = arms[arm_id]
+    assert arm['changed_paths'] == owned_paths
+    assert 'tools/digest/packages/thing/src/lib.rs' not in arm['inputs']
+    assert arm['patches'] == [{'variant': arm_id, 'sha256': patch_hash}]
+    bundle = construction / 'specimens.bundle'
+    assert run.prerequisites(bundle) == [base]
+    source_checkout = construction / 'source-objects'
+    assert run.git(source_checkout, 'rev-parse', arm['commit'] + '^') == base
+    assert run.git(source_checkout, 'rev-list', '--count', base + '..' + arm['commit']) == '1'
+
+    # This recovery repo receives only the declared base and its content closure
+    # from the original author branch, which does not contain the new arm object.
+    run.git(scratch, 'init', str(recovery))
+    run.git(recovery, 'fetch', '--no-tags', '--depth=1', str(root), base)
+    run.git(recovery, 'checkout', '--detach', base)
+    assert run.git(recovery, 'rev-list', 'HEAD') == base
+    assert run.git(recovery, 'rev-parse', '--is-shallow-repository') == 'true'
+    before = run.input_hashes(recovery)
+    assert before == arms['base']['inputs']
+    collector = 'tools/digest/packages/thing/src/lib.rs'
+    collector_before = (recovery / collector).read_bytes()
+    run.git(recovery, 'bundle', 'verify', str(bundle))
+    run.git(recovery, 'fetch', str(bundle), 'refs/heads/specimen-' + arm_id)
+    run.git(recovery, 'checkout', '--detach', arm['commit'])
+    run.verify_source(recovery, arm)
+    assert run.input_hashes(recovery) == arm['inputs']
+    collector_after = (recovery / collector).read_bytes()
+    assert hash_bytes(collector_before) == prereg['patch']['sources'][collector]['before_sha256']
+    assert hash_bytes(collector_after) == prereg['patch']['sources'][collector]['after_sha256']
+    for path in owned_paths:
+        assert hash_bytes((recovery / path).read_bytes()) == prereg['patch']['sources'][path]['after_sha256']
+
+    # Compare the entire recovered tree, not just the two inspected blobs.
+    run.git(recovery, 'checkout', '--detach', base)
+    run.git(recovery, 'apply', '--index', '--whitespace=error', str(patch.resolve()))
+    expected_tree = run.git(recovery, 'write-tree')
+    assert expected_tree == arm['tree']
+    assert run.git(recovery, 'diff', '--name-only', base, expected_tree).splitlines() == owned_paths
+    run.git(recovery, 'restore', '--source=' + base, '--staged', '--worktree', '.')
+    run.git(recovery, 'checkout', '--detach', arm['commit'])
+    run.verify_source(recovery, arm)
+
+    destination_bundle = experiment / 'specimens-reserved.bundle'
+    assert not destination_bundle.exists()
+    shutil.copyfile(bundle, destination_bundle)
+    assert destination_bundle.read_bytes() == bundle.read_bytes()
+    bundle_info = {
+        'path': str(destination_bundle.relative_to(root)),
+        'sha256': hash_bytes(destination_bundle.read_bytes()),
+        'bytes': destination_bundle.stat().st_size,
+        'prerequisites': run.prerequisites(destination_bundle),
+        'ref': 'refs/heads/specimen-' + arm_id,
+    }
+    record = {
+        'schema': 'counterpart-reserved-source-v1',
+        'arm_id': arm_id,
+        'source_base': base,
+        'base_record': arms['base'],
+        'arm': arm,
+        'bundle': bundle_info,
+        'candidate_collector': {
+            'path': collector,
+            'before': {'sha256': hash_bytes(collector_before), 'bytes': len(collector_before)},
+            'after': {'sha256': hash_bytes(collector_after), 'bytes': len(collector_after)},
+            'note': 'Extra provenance only. Not added to frozen arm.inputs; source commit/tree cover this changed blob.',
+        },
+        'preregistration_commit': 'fbb3949a067dbd2b24e93ad4912a069921b6cea3',
+        'preregistration_sha256': hash_bytes(prereg_path.read_bytes()),
+        'patch_sha256': patch_hash,
+        'status': 'authorship packaging only; no formal score or controller acceptance',
+    }
+    run.persist(experiment / 'reserved-source.json', record)
+    run.persist(evidence / 'verification.json', {
+        'finished_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'arm_commit': arm['commit'], 'arm_tree': arm['tree'],
+        'parent_verified': base,
+        'bundle': bundle_info,
+        'recovery_repository': str(recovery),
+        'recovery_started_with_only_declared_base_commit': True,
+        'bundle_verified_and_reconstructed': True,
+        'recovered_inputs_match_frozen_runner_record': True,
+        'recovered_tree_matches_exact_preregistered_patch_application': True,
+        'expected_tree_from_independent_patch_application': expected_tree,
+        'changed_paths_exact': owned_paths,
+        'candidate_collector_hashes_match_preregistration': True,
+        'root_production_diff': run.git(root, 'diff', '--name-only'),
+        'all_git_commands_supervised_and_retained': True,
+        'all_owned_processes_cleaned_up': not run.measurement.unsafe_cleanup,
+        'scoring_or_observation_run': False,
+    })
+    print(json.dumps({'arm': arm, 'bundle': bundle_info}, indent=2), flush=True)
+except BaseException as error:
+    run.persist(evidence / 'construction-failure.json', {
+        'type': type(error).__name__, 'message': str(error),
+        'scratch_retained': str(scratch),
+        'unsafe_cleanup': run.measurement.unsafe_cleanup,
+    })
+    raise

@@ -1,0 +1,4 @@
+   Compiling hornvale-thing v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/domains/thing)
+   Compiling digest-thing v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/tools/digest/packages/thing)
+   Compiling digest-counterpart v0.1.0 (/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-thing/tools/digest/packages/counterpart)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.76s

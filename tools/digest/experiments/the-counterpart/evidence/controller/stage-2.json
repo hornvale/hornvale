@@ -1,0 +1,32 @@
+{
+  "request": "req-f04ace294b8f-20260905T203639Z",
+  "candidate": "f04ace294b8f3edd54a7292e15b8060432c59f9d",
+  "host": "lefford",
+  "remote_log": "/home/nathan/.local/state/hornvale/sluice/sluice-f04ace294b8f-20260905T205246Z.log",
+  "log_bytes": 812342,
+  "log_sha256": "218db89daa58c1e47000f446e934c28f08b24c684ec3d703355f11370a0bd2a4",
+  "excerpts": [
+    "sluice-run: sluice-f04ace294b8f-20260905T205246Z started 2026-09-05T16:52:46-04:00 on lefford as pid 631891 kind=stage",
+    "sluice-run: queued for the staff (/tmp/hv-census.lock; up to 7200s) \u2026",
+    "sluice-run: holds the staff at 2026-09-05T16:52:46-04:00 after 0s queued",
+    "sluice-run: detached at 20c0cd375 (origin/main)",
+    "sluice-run: no Sluice-Headline: trailer in origin/main..f04ace294b8f; falling back to the tip subject.",
+    "sluice-run: merge product is 4b53923f491d161f3c8cc95e54ff491570dcad09",
+    "sluice-run: === phase artifacts ===",
+    "timed.sh: 'sluice:artifacts' wall=227.941s user=953.676s sys=27.940s cpu_ratio=4.31 (recorded) rc=0",
+    "sluice-run: committed tracked drift from artifacts",
+    "sluice-run: === phase outboard ===",
+    "timed.sh: 'sluice:outboard' wall=71.826s user=57.189s sys=64.947s cpu_ratio=1.70 (recorded) rc=0",
+    "sluice-run: committed tracked drift from outboard",
+    "sluice-run: === phase gate ===",
+    "timed.sh: 'sluice:gate' wall=753.779s user=20353.079s sys=527.111s cpu_ratio=27.70 (recorded) rc=0",
+    "sluice-run: committed tracked drift from gate",
+    "sluice-run: === phase clients ===",
+    "timed.sh: 'sluice:clients' wall=138.025s user=2089.252s sys=143.760s cpu_ratio=16.18 (recorded) rc=0",
+    "sluice-run: committed tracked drift from clients",
+    "sluice-run: all phases green at 4bb35b4a5.",
+    "sluice-run: STAGE REPORT \u2014 every phase green on merge product 4b53923f491d161f3c8cc95e54ff491570dcad09 (final tree 4bb35b4a5acfe0e554ccb88525cbd4ac8cc1267c).",
+    "sluice-run: nothing pushed; main is unchanged at 20c0cd375719459ff75dc8e4b9615bf60a31fa97. kind=stage.",
+    "sluice-run: finished 2026-09-05T17:12:42-04:00 rc=0 why=exit"
+  ]
+}

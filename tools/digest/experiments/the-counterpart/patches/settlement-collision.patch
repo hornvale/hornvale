@@ -1,0 +1,12 @@
+diff --git a/domains/settlement/src/lib.rs b/domains/settlement/src/lib.rs
+index 3ed5ce57d..7daeaa04f 100644
+--- a/domains/settlement/src/lib.rs
++++ b/domains/settlement/src/lib.rs
+@@ -124,6 +124,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
+     for (name, doc) in [
+         ("home", "one's dwelling"),
+         ("hearth", "the fire at the center of a home"),
++        ("counterpart-marker", "a marker of settlement membership"),
+     ] {
+         registry.register_manifest(Manifest {
+             concept: ConceptDef {

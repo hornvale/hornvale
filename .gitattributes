@@ -35,6 +35,32 @@ docs/timings.md merge=union
 # Shelf-Mark did to the idea registry), override it for that merge exactly as
 # the caveat above describes.
 docs/retrospectives/README.md merge=union
+docs/audits/campaign-reconciliation.tsv merge=union
+# docs/audits/campaign-reconciliation.tsv is one row per campaign record,
+# keyed by slug, appended at close. It became the single most common conflict
+# in the queue: six campaigns bounced or collided on it in twelve hours on
+# 2026-09-05/06 (the-lot, the-ken, the-warrant, the-culvert,
+# codex/federation-next, the-hidage), every time on the tail, every time
+# resolved by hand by unioning two appends.
+#
+# THE CAVEAT ABOVE DOES BITE HERE, UNLIKE docs/timings.md, AND THE NUMBER IS
+# MEASURED RATHER THAN GUESSED: 7 of the last 30 commits to this file contain
+# DELETIONS, so roughly a quarter rewrite a row instead of only appending. It
+# is therefore the idea-registry.md case, not the timings.md case — union is
+# taken knowing that edits happen.
+#
+# Why it is still right: union's bad case needs two branches editing THE SAME
+# ROW, not merely both touching the file, and rows are keyed by campaign slug
+# with each campaign editing its own. When it does go wrong the product has a
+# DUPLICATE KEY, which cli/tests/suite/docs_consistency.rs rejects at gate
+# time — a loud, immediate failure replacing a constant quiet one. The quiet
+# one has already cost real rows: campaign/the-warp lost its two by having the
+# conflict "resolved by regeneration" before the file was declared
+# hand-authored in docs/generated-paths.txt.
+#
+# Reversible in one line. scripts/test-reconciliation-union.sh proves both
+# directions against real git merges rather than asserting them.
+
 
 # TIER B IS RETIRED (decision 0166). Six fully-re-derived documents used to
 # route through `merge=hv-regenerate` (scripts/merge-regenerate.sh), which

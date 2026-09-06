@@ -117,6 +117,11 @@ run "census path"      bash scripts/test-census-path.sh
 # 28 pins while the hook fired on nothing (c54fb62c9, the third such staleness
 # after 2026-07-13 and 2026-07-20).
 run "census guard"    bash scripts/test-census-guard.sh
+# The authoring script's guards, driven without a build. The guard used to
+# refuse the whole tree, which deadlocked a census delivery against the arms
+# its own gate reads (The Spillway); this pins the narrowed predicate in
+# BOTH directions — book/docs dirt allowed, source dirt still refused.
+run "gnomon injection" bash scripts/test-gnomon-injection.sh
 # The drain harness. Registered here at the same moment it was promoted out of
 # an operator's scratchpad, because an unrun test is the failure this set was
 # widened to fix twice already (test-pre-push.sh, then the seam-guard suite).
@@ -129,6 +134,15 @@ run "sluice vet"      bash scripts/test-sluice-vet.sh
 # for the life of sluice-census.sh precisely because nothing exercised it.
 run "sluice census"   bash scripts/test-sluice-census.sh
 run "absorb"          bash scripts/test-absorb.sh
+# The timing wrapper is in every phase's path, so a defect in it reds phases
+# that succeeded — campaign/the-warrant, 2026-09-06, rc=11 on an `artifacts`
+# phase whose last line was "regenerate-artifacts: done.". Cheap and belongs
+# here rather than nowhere.
+run "timing wrapper" bash scripts/test-timed.sh
+# The reconciliation ledger is merge=union. This proves both directions against
+# real git merges — two appends resolve, a same-row edit lands in the
+# duplicate-key guard — plus a control showing the attribute is what does it.
+run "reconciliation union" bash scripts/test-reconciliation-union.sh
 # The post-merge hook's own suite, added the same way pre-push's was:
 # nothing exercised this hook, so its own author (Task 3, The Attestation)
 # shipped a Critical that made it silent on every merge, for all ten

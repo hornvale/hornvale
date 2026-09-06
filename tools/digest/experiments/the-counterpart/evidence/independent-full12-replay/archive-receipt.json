@@ -1,0 +1,10 @@
+{
+  "archive": "dossier.tar.gz",
+  "archive_bytes": 12162572,
+  "archive_sha256": "2a76b5410d659ccd2c2f205cb487f865b931c502e3efed993b328995f2c9c3d9",
+  "command": "ssh lefford 'set -eu; d=/home/nathan/.local/state/hornvale/counterpart-independent-full12-m1o2h8zh; tar -C \"$d\" --exclude=checkout --exclude=target -czf - dossier dependency-fetch.json invocation-provenance.json invocation-source.sha preparation-before.json preparation-after.json' > /tmp/counterpart-task7-transfer/independent.tar.gz",
+  "members": 359,
+  "parent": "/home/nathan/.local/state/hornvale/counterpart-independent-full12-m1o2h8zh",
+  "excluded": ["checkout", "target"],
+  "source_sha256": "8bd22b72a0650c72e9e6980a2b8b7712ef089525"
+}

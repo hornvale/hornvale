@@ -1,0 +1,435 @@
+[
+  {
+    "id": "thing-safe-addition",
+    "patch": "patches/thing-safe-addition.patch",
+    "changed_subjects": [
+      "THING_KINDS",
+      "thing_registry"
+    ],
+    "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact.",
+    "actual_observations": {
+      "source_count": 20,
+      "component_count": 20,
+      "new_name": "counterpart-token",
+      "new_name_in_source": true,
+      "new_name_in_components": true,
+      "new_name_before": [],
+      "new_name_after": [
+        {
+          "name": "counterpart-token",
+          "owner": "thing"
+        }
+      ],
+      "borrowed": [
+        {
+          "name": "hearth",
+          "owner": "settlement"
+        }
+      ],
+      "settlement_registration": {
+        "detail": "",
+        "outcome": "accepted"
+      },
+      "thing_registration": {
+        "detail": "",
+        "outcome": "accepted"
+      },
+      "candidate": {
+        "contribution": {
+          "display_name": "Thing domain registry",
+          "instructions": [
+            {
+              "id": "hornvale.thing:maintainer-guide",
+              "markdown": "Consult `domains/CLAUDE.md` before editing the domain. `hornvale_thing::THING_KINDS` is the authored ordered roster and `hornvale_thing::thing_registry` supplies its component rows. A concept is owned by Thing unless `hornvale_thing::BORROWED` names another owner; the actual composition calls `hornvale_settlement::register_concepts` before `hornvale_thing::register_concepts` and inspects owners through `ConceptRegistry::concept`. These finite checks establish roster and concept-owner agreement only. They do not construct a world, inspect world-generation wiring, validate save compatibility, or establish portable, openable, lockable, placement, or other item behavior.",
+              "observations": [
+                "hornvale.thing:registration",
+                "hornvale.thing:component-roster",
+                "hornvale.thing:concept-ownership"
+              ],
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ]
+            }
+          ],
+          "namespace": "hornvale.thing",
+          "observations": [
+            {
+              "details": "The supplied Settlement-then-Thing registration completed without error or panic.",
+              "id": "hornvale.thing:registration",
+              "method": "Call hornvale_settlement::register_concepts, then hornvale_thing::register_concepts, while catching a registration panic as refusal",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "The composed ConceptRegistry used to observe Thing concept ownership"
+            },
+            {
+              "details": "source roster: counterpart-token, alcove, altar, anvil, bed, bench, brazier, cave-mouth, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; component registry: alcove, altar, anvil, bed, bench, brazier, cave-mouth, counterpart-token, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; missing from component registry: (none); extra in component registry: (none); duplicate source labels: (none); duplicate component labels: (none). Source roster order is retained as authored.",
+              "id": "hornvale.thing:component-roster",
+              "method": "Compare hornvale_thing::THING_KINDS with hornvale_thing::thing_registry().ids() as sets in both directions",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "The authored Thing kind roster and canonical Thing component registry"
+            },
+            {
+              "details": "source roster: counterpart-token, alcove, altar, anvil, bed, bench, brazier, cave-mouth, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; declared borrowing: hearth->settlement; missing concepts: (none); wrong owners: (none); extra Thing-owned concepts: (none); borrowed labels outside source roster: (none); duplicate borrowing declarations: (none). Concepts owned by other domains and absent from THING_KINDS are outside the reverse Thing-owned comparison.",
+              "id": "hornvale.thing:concept-ownership",
+              "method": "Use ConceptRegistry::concept for forward owner checks and ConceptRegistry::concepts for reverse inclusion of Thing-owned concepts",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "THING_KINDS, BORROWED, and the composed concept registry owners"
+            }
+          ],
+          "protocol": 1,
+          "requirements": [
+            {
+              "evidence": {
+                "checked": {
+                  "required_observations": [
+                    "hornvale.thing:registration",
+                    "hornvale.thing:component-roster",
+                    "hornvale.thing:concept-ownership"
+                  ]
+                }
+              },
+              "id": "hornvale.thing:registry-contract",
+              "sources": [
+                "domains/thing/src/lib.rs (THING_KINDS, BORROWED, thing_registry, register_concepts)",
+                "domains/settlement/src/lib.rs (register_concepts)",
+                "domains/CLAUDE.md"
+              ],
+              "statement": "The Thing source roster, component registry, and composed concept registry agree in both directions, with each kind owned by Thing unless BORROWED cedes it to its declared owner."
+            }
+          ],
+          "scopes": [
+            "domains/thing"
+          ]
+        },
+        "detail": "",
+        "outcome": "accepted"
+      }
+    },
+    "source_sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211",
+    "patch_sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+    "compile": {
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--manifest-path",
+        "tools/digest/Cargo.toml",
+        "-p",
+        "digest-counterpart"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 18.854,
+      "stdout": "evidence/thing-author/thing-safe-addition-build.stdout",
+      "stderr": "evidence/thing-author/thing-safe-addition-build.stderr"
+    },
+    "raw": {
+      "command": [
+        "tools/digest/target/debug/digest-counterpart"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.182,
+      "stdout": "evidence/thing-author/thing-safe-addition-raw.stdout",
+      "stderr": "evidence/thing-author/thing-safe-addition-raw.stderr"
+    }
+  },
+  {
+    "id": "thing-joint-claim",
+    "patch": "patches/thing-joint-claim.patch",
+    "changed_subjects": [
+      "THING_KINDS",
+      "thing_registry"
+    ],
+    "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact.",
+    "actual_observations": {
+      "source_count": 20,
+      "component_count": 20,
+      "new_name": "counterpart-marker",
+      "new_name_in_source": true,
+      "new_name_in_components": true,
+      "new_name_before": [],
+      "new_name_after": [
+        {
+          "name": "counterpart-marker",
+          "owner": "thing"
+        }
+      ],
+      "borrowed": [
+        {
+          "name": "hearth",
+          "owner": "settlement"
+        }
+      ],
+      "settlement_registration": {
+        "detail": "",
+        "outcome": "accepted"
+      },
+      "thing_registration": {
+        "detail": "",
+        "outcome": "accepted"
+      },
+      "candidate": {
+        "contribution": {
+          "display_name": "Thing domain registry",
+          "instructions": [
+            {
+              "id": "hornvale.thing:maintainer-guide",
+              "markdown": "Consult `domains/CLAUDE.md` before editing the domain. `hornvale_thing::THING_KINDS` is the authored ordered roster and `hornvale_thing::thing_registry` supplies its component rows. A concept is owned by Thing unless `hornvale_thing::BORROWED` names another owner; the actual composition calls `hornvale_settlement::register_concepts` before `hornvale_thing::register_concepts` and inspects owners through `ConceptRegistry::concept`. These finite checks establish roster and concept-owner agreement only. They do not construct a world, inspect world-generation wiring, validate save compatibility, or establish portable, openable, lockable, placement, or other item behavior.",
+              "observations": [
+                "hornvale.thing:registration",
+                "hornvale.thing:component-roster",
+                "hornvale.thing:concept-ownership"
+              ],
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ]
+            }
+          ],
+          "namespace": "hornvale.thing",
+          "observations": [
+            {
+              "details": "The supplied Settlement-then-Thing registration completed without error or panic.",
+              "id": "hornvale.thing:registration",
+              "method": "Call hornvale_settlement::register_concepts, then hornvale_thing::register_concepts, while catching a registration panic as refusal",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "The composed ConceptRegistry used to observe Thing concept ownership"
+            },
+            {
+              "details": "source roster: counterpart-marker, alcove, altar, anvil, bed, bench, brazier, cave-mouth, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; component registry: alcove, altar, anvil, bed, bench, brazier, cave-mouth, counterpart-marker, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; missing from component registry: (none); extra in component registry: (none); duplicate source labels: (none); duplicate component labels: (none). Source roster order is retained as authored.",
+              "id": "hornvale.thing:component-roster",
+              "method": "Compare hornvale_thing::THING_KINDS with hornvale_thing::thing_registry().ids() as sets in both directions",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "The authored Thing kind roster and canonical Thing component registry"
+            },
+            {
+              "details": "source roster: counterpart-marker, alcove, altar, anvil, bed, bench, brazier, cave-mouth, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; declared borrowing: hearth->settlement; missing concepts: (none); wrong owners: (none); extra Thing-owned concepts: (none); borrowed labels outside source roster: (none); duplicate borrowing declarations: (none). Concepts owned by other domains and absent from THING_KINDS are outside the reverse Thing-owned comparison.",
+              "id": "hornvale.thing:concept-ownership",
+              "method": "Use ConceptRegistry::concept for forward owner checks and ConceptRegistry::concepts for reverse inclusion of Thing-owned concepts",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "THING_KINDS, BORROWED, and the composed concept registry owners"
+            }
+          ],
+          "protocol": 1,
+          "requirements": [
+            {
+              "evidence": {
+                "checked": {
+                  "required_observations": [
+                    "hornvale.thing:registration",
+                    "hornvale.thing:component-roster",
+                    "hornvale.thing:concept-ownership"
+                  ]
+                }
+              },
+              "id": "hornvale.thing:registry-contract",
+              "sources": [
+                "domains/thing/src/lib.rs (THING_KINDS, BORROWED, thing_registry, register_concepts)",
+                "domains/settlement/src/lib.rs (register_concepts)",
+                "domains/CLAUDE.md"
+              ],
+              "statement": "The Thing source roster, component registry, and composed concept registry agree in both directions, with each kind owned by Thing unless BORROWED cedes it to its declared owner."
+            }
+          ],
+          "scopes": [
+            "domains/thing"
+          ]
+        },
+        "detail": "",
+        "outcome": "accepted"
+      }
+    },
+    "source_sha256": "a51644aecdd53e3e4aca3779937717f2a0278ac732227a93c3082a7bdbb77dd1",
+    "patch_sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433",
+    "compile": {
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--manifest-path",
+        "tools/digest/Cargo.toml",
+        "-p",
+        "digest-counterpart"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.831,
+      "stdout": "evidence/thing-author/thing-joint-claim-build.stdout",
+      "stderr": "evidence/thing-author/thing-joint-claim-build.stderr"
+    },
+    "raw": {
+      "command": [
+        "tools/digest/target/debug/digest-counterpart"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.19,
+      "stdout": "evidence/thing-author/thing-joint-claim-raw.stdout",
+      "stderr": "evidence/thing-author/thing-joint-claim-raw.stderr"
+    }
+  },
+  {
+    "id": "thing-unusual-borrow",
+    "patch": "patches/thing-unusual-borrow.patch",
+    "changed_subjects": [
+      "THING_KINDS",
+      "thing_registry",
+      "BORROWED"
+    ],
+    "candidate_prediction": "All existing candidate observations satisfied in this isolated variant. All four frozen obligations predicted satisfied; joint collision remains an integration prediction, not an observed fact.",
+    "actual_observations": {
+      "source_count": 20,
+      "component_count": 20,
+      "new_name": "home",
+      "new_name_in_source": true,
+      "new_name_in_components": true,
+      "new_name_before": [
+        {
+          "name": "home",
+          "owner": "settlement"
+        }
+      ],
+      "new_name_after": [
+        {
+          "name": "home",
+          "owner": "settlement"
+        }
+      ],
+      "borrowed": [
+        {
+          "name": "hearth",
+          "owner": "settlement"
+        },
+        {
+          "name": "home",
+          "owner": "settlement"
+        }
+      ],
+      "settlement_registration": {
+        "detail": "",
+        "outcome": "accepted"
+      },
+      "thing_registration": {
+        "detail": "",
+        "outcome": "accepted"
+      },
+      "candidate": {
+        "contribution": {
+          "display_name": "Thing domain registry",
+          "instructions": [
+            {
+              "id": "hornvale.thing:maintainer-guide",
+              "markdown": "Consult `domains/CLAUDE.md` before editing the domain. `hornvale_thing::THING_KINDS` is the authored ordered roster and `hornvale_thing::thing_registry` supplies its component rows. A concept is owned by Thing unless `hornvale_thing::BORROWED` names another owner; the actual composition calls `hornvale_settlement::register_concepts` before `hornvale_thing::register_concepts` and inspects owners through `ConceptRegistry::concept`. These finite checks establish roster and concept-owner agreement only. They do not construct a world, inspect world-generation wiring, validate save compatibility, or establish portable, openable, lockable, placement, or other item behavior.",
+              "observations": [
+                "hornvale.thing:registration",
+                "hornvale.thing:component-roster",
+                "hornvale.thing:concept-ownership"
+              ],
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ]
+            }
+          ],
+          "namespace": "hornvale.thing",
+          "observations": [
+            {
+              "details": "The supplied Settlement-then-Thing registration completed without error or panic.",
+              "id": "hornvale.thing:registration",
+              "method": "Call hornvale_settlement::register_concepts, then hornvale_thing::register_concepts, while catching a registration panic as refusal",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "The composed ConceptRegistry used to observe Thing concept ownership"
+            },
+            {
+              "details": "source roster: home, alcove, altar, anvil, bed, bench, brazier, cave-mouth, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; component registry: alcove, altar, anvil, bed, bench, brazier, cave-mouth, door, ground, hearth, high-seat, home, key, log, loom, pool, screen, strongbox, threshold, vessel; missing from component registry: (none); extra in component registry: (none); duplicate source labels: (none); duplicate component labels: (none). Source roster order is retained as authored.",
+              "id": "hornvale.thing:component-roster",
+              "method": "Compare hornvale_thing::THING_KINDS with hornvale_thing::thing_registry().ids() as sets in both directions",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "The authored Thing kind roster and canonical Thing component registry"
+            },
+            {
+              "details": "source roster: home, alcove, altar, anvil, bed, bench, brazier, cave-mouth, door, ground, hearth, high-seat, key, log, loom, pool, screen, strongbox, threshold, vessel; declared borrowing: hearth->settlement, home->settlement; missing concepts: (none); wrong owners: (none); extra Thing-owned concepts: (none); borrowed labels outside source roster: (none); duplicate borrowing declarations: (none). Concepts owned by other domains and absent from THING_KINDS are outside the reverse Thing-owned comparison.",
+              "id": "hornvale.thing:concept-ownership",
+              "method": "Use ConceptRegistry::concept for forward owner checks and ConceptRegistry::concepts for reverse inclusion of Thing-owned concepts",
+              "outcome": "satisfied",
+              "requirements": [
+                "hornvale.thing:registry-contract"
+              ],
+              "subject": "THING_KINDS, BORROWED, and the composed concept registry owners"
+            }
+          ],
+          "protocol": 1,
+          "requirements": [
+            {
+              "evidence": {
+                "checked": {
+                  "required_observations": [
+                    "hornvale.thing:registration",
+                    "hornvale.thing:component-roster",
+                    "hornvale.thing:concept-ownership"
+                  ]
+                }
+              },
+              "id": "hornvale.thing:registry-contract",
+              "sources": [
+                "domains/thing/src/lib.rs (THING_KINDS, BORROWED, thing_registry, register_concepts)",
+                "domains/settlement/src/lib.rs (register_concepts)",
+                "domains/CLAUDE.md"
+              ],
+              "statement": "The Thing source roster, component registry, and composed concept registry agree in both directions, with each kind owned by Thing unless BORROWED cedes it to its declared owner."
+            }
+          ],
+          "scopes": [
+            "domains/thing"
+          ]
+        },
+        "detail": "",
+        "outcome": "accepted"
+      }
+    },
+    "source_sha256": "04a137c6d1955ad63f0a7f3849d408becb53bd929a244570588cdda8652f8835",
+    "patch_sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c",
+    "compile": {
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--manifest-path",
+        "tools/digest/Cargo.toml",
+        "-p",
+        "digest-counterpart"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.864,
+      "stdout": "evidence/thing-author/thing-unusual-borrow-build.stdout",
+      "stderr": "evidence/thing-author/thing-unusual-borrow-build.stderr"
+    },
+    "raw": {
+      "command": [
+        "tools/digest/target/debug/digest-counterpart"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.174,
+      "stdout": "evidence/thing-author/thing-unusual-borrow-raw.stdout",
+      "stderr": "evidence/thing-author/thing-unusual-borrow-raw.stderr"
+    }
+  }
+]

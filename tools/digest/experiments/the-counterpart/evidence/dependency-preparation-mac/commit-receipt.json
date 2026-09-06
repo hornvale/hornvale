@@ -1,0 +1,9 @@
+{
+  "commit": "e6d96a5fc0603576ce3e20b25fa67fb3c41a93c5",
+  "only_changed_path": "scripts/lane-outboard.sh",
+  "frozen_bytes_unchanged": true,
+  "qualified_body_matches_commit": true,
+  "patch_sha256": "4b76b3498e6ddf50c622babdeefeb0fe2226c3c595e4ed051dadfe694cd21e07",
+  "old_diagnostic_branch": "ad4c65d41997949d7d06d4b3cf40920c6bd4f9a2",
+  "working_tree_status": ""
+}

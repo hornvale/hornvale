@@ -468,11 +468,15 @@
 - [The Coda](./chronicle/the-coda.md)
 - [The Sluicegate](./chronicle/the-sluicegate.md)
 - [The Charter](./chronicle/the-charter.md)
+- [The Counterpart](./chronicle/the-counterpart.md)
 - [The Lot](./chronicle/the-lot.md)
 - [The Warp](./chronicle/the-warp.md)
 - [The Cruck](./chronicle/the-cruck.md)
+- [The Hidage](./chronicle/the-hidage.md)
+- [The Culvert](./chronicle/the-culvert.md)
 - [The Warrant](./chronicle/the-warrant.md)
 - [The Ken](./chronicle/the-ken.md)
+- [The Spillway](./chronicle/the-spillway.md)
 
 # Appendix: The Frontier
 

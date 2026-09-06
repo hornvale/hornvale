@@ -1,0 +1,17 @@
+sluice-run: sluice-0c6a920898c2-20260905T192956Z started 2026-09-05T15:29:56-04:00 on lefford as pid 319498 kind=stage
+sluice-mouth: MERGE CONFLICT between origin/main and 0c6a920898c2e86789d2aa60b93edcdbe50f879c.
+  conflict: docs/audits/campaign-reconciliation.tsv
+sluice-mouth: ADMIT codex/counterpart-diagnostic 0c6a920898c2e86789d2aa60b93edcdbe50f879c — all 1 conflict(s) are artifacts-authored; the chamber resolves them by regeneration.
+sluice-run: queued for the staff (/tmp/hv-census.lock; up to 7200s) …
+sluice-run: holds the staff at 2026-09-05T15:29:57-04:00 after 0s queued
+HEAD is now at 6ce23c620 chore(artifacts): regenerate after heavy
+sluice-run: detached at 6ce23c620 (origin/main)
+sluice-run: no Sluice-Headline: trailer in origin/main..0c6a920898c2; falling back to the tip subject.
+Auto-merging book/src/frontier/idea-registry.md
+Auto-merging docs/audits/campaign-reconciliation.tsv
+CONFLICT (content): Merge conflict in docs/audits/campaign-reconciliation.tsv
+Auto-merging docs/timings.md
+Automatic merge failed; fix conflicts and then commit the result.
+sluice-run: MERGE CONFLICT — holding. A human resolves this.
+sluice-run: phase '<merge>' failed — refusing to push.
+sluice-run: finished 2026-09-05T15:29:59-04:00 rc=10 why=exit
