@@ -108,12 +108,6 @@ const NOTHING_HERE_YET: &str = "nothing here yet";
 /// than on a second copy of it.
 const RUNG_OPENING: &str = "rung";
 
-/// What the strip says when the resolver ran and genuinely found no
-/// individuated feature at the observer's vertex — real terrain below every
-/// class's individuation floor, not "nothing there" (seed 42 measured 377
-/// of 40,962 vertices like this; spec §3.4).
-const UNNAMED_TERRAIN: &str = "unnamed terrain";
-
 /// The fixed, sim-authored prefix `windows/vessel/src/session.rs`'s
 /// `delve_at` prints on a SUCCESSFUL delve (`Session::delve`'s own
 /// `Surface -> Undercroft` transition, F9's cited arrival predicate for
@@ -532,10 +526,10 @@ pub struct Driver {
     // observable without timing anything (`Instant` is banned) — see its
     // own doc for the assertion that could not fail before it existed.
     //
-    // `world_view_vertex` still does NOT thread it (fix round 1, Fix 1):
-    // that call site reads `.vertex` alone and can never populate or read a
-    // hit here, so making three read-only queries advertise mutation to
-    // reach it would buy nothing.
+    // `world_view_tile` still does NOT thread it (fix round 1, Fix 1;
+    // widened at Task 5): that call site never populates or reads a hit
+    // here, so making three read-only queries advertise mutation to reach
+    // it would buy nothing.
     reflectance_cache: plate::ReflectanceCache,
 }
 
@@ -2332,8 +2326,20 @@ impl Driver {
     /// walk-band scene, in which case the vertex the cursor points at
     /// ([`Self::resolve_walk_band`]; see the module doc for the chain from
     /// a screen position to a `Vertex`) is resolved against the
-    /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
-    /// empty at any step.
+    /// terrain-feature index, falling back to [`Self::resolve_world_view_at`]
+    /// (the SAME fallback the world view itself uses) wherever
+    /// `resolve_walk_band` finds no perceived facet under the cursor — the
+    /// common case, per that method's own doc.
+    ///
+    /// **B4 (Task 5): the fallback branch also carries [`Self::site_note`]**
+    /// — decision 0670's own gate, applied here exactly as Task 4 applied it
+    /// to a chart mark's name. It is asked separately from [`Self::resolve_
+    /// world_view_at`], not folded into it, because that method's own
+    /// structural blindness to [`Self::sites`] is a pinned property (see its
+    /// doc). **`UNNAMED_TERRAIN` is retired at this task**: since
+    /// [`Self::resolve_world_view`] is total (`plate::terrain_at_tile` never
+    /// fails), there is no longer a case where this method has nothing to
+    /// say about the tile under the cursor.
     fn resolve(&self) -> String {
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
@@ -2359,10 +2365,27 @@ impl Driver {
         // returns `None` off band B and on any tile the overlay left to the
         // raster, which is what makes the fallback the common case rather
         // than an error path.
-        let base = self
-            .resolve_walk_band()
-            .or_else(|| self.resolve_world_view())
-            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
+        let base = match self.resolve_walk_band() {
+            Some(text) => text,
+            None => {
+                // `resolve_world_view` (the chain plus the terrain readout)
+                // and `site_note` (the decision-0670 gate) each resolve the
+                // cursor's own tile independently rather than sharing one —
+                // `resolve_world_view`'s signature is exercised directly by
+                // several tests (`the_vertex_under_the_cursor_matches_the_
+                // window_at_every_zoom_and_offset` among them), so it stays
+                // a self-contained `&self -> Option<String>` query rather
+                // than threading a pre-resolved tile through it.
+                let mut text = self
+                    .resolve_world_view()
+                    .expect("Self::resolve_world_view is total since Task 5");
+                if let Some(note) = self.site_note(&self.world_view_tile().facet) {
+                    text.push_str(" — ");
+                    text.push_str(&note);
+                }
+                text
+            }
+        };
         let text = self.world_view_caption(base);
         if self.at_walk_band_rung() {
             caption(text, sight.as_ref())
@@ -2373,8 +2396,8 @@ impl Driver {
 
     /// Append §3.3's clamp/central-line caption, and F5's resolution
     /// disclosure when the active zoom covers more than one terrain vertex
-    /// per character, to `base` (the resolved containment chain, or
-    /// [`UNNAMED_TERRAIN`]). Unlike the walk band's [`caption`], this runs
+    /// per character, to `base` (the resolved containment chain plus B4's
+    /// terrain readout — see [`Self::resolve`]). Unlike the walk band's [`caption`], this runs
     /// UNCONDITIONALLY — the world view carries no sight channel to gate on
     /// ([`Self::resolve_world_view`]'s own doc), and both captions are true
     /// of the picture itself, independent of whether the cursor happens to
@@ -2515,11 +2538,11 @@ impl Driver {
         ))
     }
 
-    /// The world view's own resolved [`hornvale_kernel::Vertex`] at the
+    /// The world view's own resolved [`plate::TileTerrain`] at the
     /// cursor's current screen position — [`plate::terrain_at_tile`], the
     /// SAME per-tile mesh addressing [`plate::draw_with`] itself paints
     /// from (one source of truth; see that function's own doc), asked for
-    /// the painted class's own representative vertex.
+    /// the painted class's own representative tile.
     ///
     /// **Fix round 1, Finding 2 (the reviewer's own framing, which
     /// improved on this task's first pass): the earlier single-centre-
@@ -2534,7 +2557,7 @@ impl Driver {
     /// still real: a player could point at a character drawn `~` and have
     /// the strip name a real feature on a LAND vertex nearest that
     /// character's exact centre. This method closes that: it can never
-    /// return a vertex whose class
+    /// return a tile whose class
     /// disagrees with what [`plate::draw_with`] would paint at the same
     /// screen position, because it asks the identical question for the
     /// identical answer, and picks a REPRESENTATIVE of the painted class.
@@ -2553,21 +2576,29 @@ impl Driver {
     /// position, against holding cross-call state for a pure function.
     ///
     /// **Stays `&self` (fix round 1, Fix 1: reverted from an earlier `&mut
-    /// self`).** This method's own next line reads only `.vertex` off the
-    /// result and discards the rest — a context here "would buy a discarded
-    /// reflectance per keypress", and that argument is STRUCTURAL, not
-    /// until-Task-6: this call site can never populate the `(FacetId,
-    /// season)` cache and can never read a hit from it, so threading
-    /// [`Self::reflectance_cache`] through by `&mut` here bought a false
-    /// appearance of use at the cost of making three read-only queries
-    /// (`resolve`/`resolve_world_view`/this one) advertise mutation to
-    /// every future caller. `season`/`reflectance_cache` below stay `0`/
-    /// `None` for that reason — and note that this is now the ONLY
-    /// `terrain_at_tile` call in the shipped tree that passes `ctx: None`
-    /// deliberately: [`plate::draw_terrain_layer`]'s call was the other one
-    /// and The Wash's Task 6 flipped it. See [`Self::reflectance_cache`]'s
-    /// own doc for where the field's real readers are.
-    fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
+    /// self`).** Before Task 5 this method returned only `.vertex` and
+    /// discarded the rest of the struct — a context here "would buy a
+    /// discarded reflectance per keypress", and that argument is
+    /// STRUCTURAL, not until-Task-6: this
+    /// call site can never populate the `(FacetId, season)` cache and can
+    /// never read a hit from it, so threading [`Self::reflectance_cache`]
+    /// through by `&mut` here bought a false appearance of use at the cost
+    /// of making three read-only queries (`resolve`/`resolve_world_view`/
+    /// this one) advertise mutation to every future caller.
+    /// `season`/`reflectance_cache` below stay `0`/`None` for that reason —
+    /// and note that this is now the ONLY `terrain_at_tile` call in the
+    /// shipped tree that passes `ctx: None` deliberately:
+    /// [`plate::draw_terrain_layer`]'s call was the other one and The
+    /// Wash's Task 6 flipped it. See [`Self::reflectance_cache`]'s own doc
+    /// for where the field's real readers are.
+    ///
+    /// **Widened from a bare `Vertex` at Task 5 (B4).** The tile readout
+    /// (`Self::terrain_readout`) needs `water`/`band`/`height_asl`, and the
+    /// site note (`Self::site_note`) needs `facet` — three more fields off
+    /// the exact tile this call already resolves, so [`Self::resolve`] and
+    /// [`Self::resolve_world_view_at`] share the one struct rather than
+    /// each re-resolving the cursor's screen position.
+    fn world_view_tile(&self) -> plate::TileTerrain {
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         plate::terrain_at_tile(
             &self.terrain,
@@ -2580,32 +2611,127 @@ impl Driver {
             virtual_h,
             u32::from(self.cursor.y),
             u32::from(self.cursor.x),
-            // This reads `.vertex` and nothing else, so a context here would
-            // buy a discarded reflectance per keypress.
+            // This reads `.vertex`/`.water`/`.band`/`.height_asl`/`.facet`
+            // and nothing else, so a context here would buy a discarded
+            // reflectance per keypress.
             None,
             hornvale_kernel::WorldTime::GENESIS,
             0,
             None,
         )
-        .vertex
     }
 
-    /// The world view's own resolution chain: [`Self::world_view_vertex`] to
-    /// the FULL containment chain there (Task 4, Step 1) — every feature at
-    /// the resolved vertex, most specific first, each with its class named in
-    /// prose (design spec §5).
-    fn resolve_world_view(&self) -> Option<String> {
-        let vertex_id = self.world_view_vertex();
+    /// **B4's terrain readout** (spec §4.4): the tile's own water class,
+    /// relief band and height above sea level, in prose — independent of
+    /// whether any gazetteer feature is named there at all. Before this
+    /// task the strip's standing content was 13.3% tile / 86.7% map (188
+    /// characters measured at the flagship, 25 about the tile); this is
+    /// the fill for that gap, built entirely from fields already carried
+    /// on [`plate::TileTerrain`] (`plate.rs:2170-2233`) rather than a new
+    /// derivation.
+    ///
+    /// `water`/`band` are indices into the SAME legends the renderer
+    /// itself classifies by (`hornvale_terrain::WaterKind::LEGEND`,
+    /// `hornvale_scene::RELIEF_LEGEND`), so this can never name a class the
+    /// picture disagrees with. `height_asl` is rounded to the nearest
+    /// metre for prose — the continuous reading is what
+    /// [`plate::TileTerrain::height_asl`]'s own doc says a sub-band
+    /// consumer would want, and a marquee line is not that consumer.
+    fn terrain_readout(tile: &plate::TileTerrain) -> String {
+        let water = hornvale_terrain::WaterKind::LEGEND[usize::from(tile.water)];
+        let relief = hornvale_scene::RELIEF_LEGEND[tile.band as usize];
+        let height = tile.height_asl.get().round() as i64;
+        format!("{water}, {relief}, {height} m above sea level")
+    }
+
+    /// The world view's own resolution chain plus B4's terrain readout, at
+    /// an ALREADY-RESOLVED `tile` — the shared body [`Self::resolve_world_
+    /// view`] and [`Self::resolve`] both build on, so the tile is paid for
+    /// once per keypress rather than once per consumer.
+    ///
+    /// **Deliberately blind to [`Self::sites`]**, and that is a pinned
+    /// property, not an oversight: `site_drawing_never_depends_on_
+    /// discovery_and_the_cursor_never_leaks_a_name` proves the cursor
+    /// readout is a pure function of `self.index` and the cursor position,
+    /// structurally unable to read `self.sites` at all. A placed site's
+    /// mention belongs to [`Self::site_note`], called separately by
+    /// [`Self::resolve`] — never folded in here, or that proof would stop
+    /// being true.
+    fn resolve_world_view_at(&self, tile: &plate::TileTerrain) -> String {
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(
+        let chain = resolve_chain_at(
             &self.index,
-            vertex_id,
+            tile.vertex,
             self.seed,
             species,
             ph,
             morph,
             &|id| self.discovered.contains(FeatureId::Extent(id)),
-        )
+        );
+        let readout = Self::terrain_readout(tile);
+        match chain {
+            Some(chain) => format!("{chain} — {readout}"),
+            None => readout,
+        }
+    }
+
+    /// The world view's own resolution chain plus B4's terrain readout, at
+    /// the cursor's current screen position — [`Self::world_view_tile`]
+    /// widened to the FULL containment chain there (Task 4, Step 1)
+    /// plus [`Self::terrain_readout`] (Task 5, B4). Every feature at the
+    /// resolved vertex, most specific first, each with its class named in
+    /// prose (design spec §5), followed by the tile's own water/relief/
+    /// height reading.
+    ///
+    /// **Always `Some` now** (Task 5): [`plate::terrain_at_tile`] is total,
+    /// so there is always a terrain readout to report even where the
+    /// containment chain is empty — the `None` this used to return for an
+    /// unfeatured vertex is gone, and with it the whole reason `Self::resolve`
+    /// ever needed a literal `"unnamed terrain"` fallback string (retired
+    /// at this task; see [`Self::resolve`]'s own doc).
+    fn resolve_world_view(&self) -> Option<String> {
+        Some(self.resolve_world_view_at(&self.world_view_tile()))
+    }
+
+    /// **Decision 0670's gate, applied to the world view's tile readout**
+    /// (Task 5, B4) — exactly the rule Task 4 applied to a chart mark's
+    /// proper name: a placed site's glyph draws whether or not it has been
+    /// discovered, but a mention of it in text does not. `MapSite` carries
+    /// no proper name at all (spec §7 non-goal), so there is no name for
+    /// this gate to redact; what it withholds is the MENTION itself — even
+    /// naming the site's KIND before encounter would tell a reader
+    /// something the glyph alone does not.
+    ///
+    /// `None` when nothing placed stands on `facet`, or when something does
+    /// but has not yet been discovered — the two cases the strip must not
+    /// tell apart, or a reader could infer "something is here" from the
+    /// readout falling silent versus not.
+    ///
+    /// **Structurally live only at band B's own rung, and that is
+    /// correct, not a gap.** `facet` is always [`Self::world_view_tile`]'s
+    /// `.facet` — a facet at the ACTIVE window's own depth — while
+    /// `MapSite::placed` is addressed at walk-band granularity
+    /// (`hornvale_worldgen::site_facet_for`'s own doc). The two can only
+    /// ever agree where the active depth IS [`BAND_B_RUNG`], which
+    /// [`Self::resolve`] reaches whenever [`Self::resolve_walk_band`]
+    /// finds no perceived facet at BAND_B_RUNG itself — never at a coarser
+    /// world-view rung, where a screen character already spans many real
+    /// facets ([`Self::oversample_disclosure`]) and a specific site mention
+    /// would be a false precision the picture does not have. Task 4's own
+    /// chart-mark gate has the identical shape: `ChartMarks::update` only
+    /// ever reads a WALK-band chart, never a coarser one.
+    fn site_note(&self, facet: &Facet) -> Option<String> {
+        plate::sites_standing_in(&self.sites, facet)
+            .into_iter()
+            .find(|id| self.discovered.contains(*id))
+            .map(|id| match id {
+                FeatureId::Settlement(_) => "a settlement stands here".to_string(),
+                FeatureId::Cave(_) => "a cave mouth stands here".to_string(),
+                FeatureId::Exotic(_) => "something unusual stands here".to_string(),
+                FeatureId::Extent(_) => {
+                    unreachable!("plate::sites_standing_in never yields a FeatureId::Extent")
+                }
+            })
     }
 
     /// The walk band's own resolution chain, cursor position to the full
@@ -4433,7 +4559,7 @@ mod portolan_tests {
     /// bug shared by both copies (one living in `virtual_dims`, or in
     /// `move_cursor`'s scroll math). What it DOES catch, and the reason it
     /// is kept rather than deleted: a future edit that reintroduces a
-    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_vertex`
+    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_tile`
     /// alone — a revert-to-no-op mutation of the whole zoom/scroll feature
     /// failed 12 of 15 tests in this module (task report, "behavioural
     /// REDs"), proving this is not vacuous even though it is not
@@ -4461,7 +4587,7 @@ mod portolan_tests {
                 d.apply(Action::CursorBy(dx, dy));
 
                 let (virtual_w, virtual_h) = plate::virtual_dims(d.window().depth);
-                let expected_vertex = plate::terrain_at_tile(
+                let expected_tile = plate::terrain_at_tile(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
@@ -4476,8 +4602,7 @@ mod portolan_tests {
                     hornvale_kernel::WorldTime::GENESIS,
                     0,
                     None,
-                )
-                .vertex;
+                );
                 let (species, ph, morph) = &d.namer;
                 // `resolve_chain_at`, not `resolve_at`: Task 4 made
                 // `resolve_world_view` (`resolved`, below) return the FULL
@@ -4485,15 +4610,27 @@ mod portolan_tests {
                 // must build the same chain to stay comparable — this test's
                 // own H3 claim (window/cursor state agrees with the
                 // resolver) is orthogonal to how many features get named.
-                let expected = resolve_chain_at(
+                //
+                // **Widened at Task 5 (B4) to the chain plus the terrain
+                // readout**, the same combination `resolve_world_view_at`
+                // builds — `resolve_world_view` is no longer chain-only, so
+                // an independent reconstruction that stopped at the chain
+                // would silently compare against a value the resolver no
+                // longer returns.
+                let expected_chain = resolve_chain_at(
                     &d.index,
-                    expected_vertex,
+                    expected_tile.vertex,
                     d.seed,
                     species,
                     ph,
                     morph,
                     &|id| d.discovered.contains(FeatureId::Extent(id)),
                 );
+                let expected_readout = Driver::terrain_readout(&expected_tile);
+                let expected = Some(match expected_chain {
+                    Some(chain) => format!("{chain} — {expected_readout}"),
+                    None => expected_readout,
+                });
 
                 let resolved = d.resolve_world_view();
                 assert_eq!(
@@ -4562,7 +4699,7 @@ mod portolan_tests {
             );
             let drawn_ocean = grid.get(d.cursor.x, d.cursor.y).and_then(|c| c.glyph) == Some('~');
 
-            let resolved_vertex = d.world_view_vertex();
+            let resolved_vertex = d.world_view_tile().vertex;
             let resolved_ocean = d.terrain.is_ocean(resolved_vertex);
 
             assert_eq!(
@@ -4597,20 +4734,72 @@ mod portolan_tests {
         );
     }
 
+    /// Split B4's terrain readout at its trailing height clause:
+    /// `("… relief,", height_m)`. `height_asl` is a CONTINUOUS reading
+    /// (`Self::terrain_readout`'s own doc), unlike the water/relief/chain
+    /// classes beside it, which are all discrete lookups keyed on the
+    /// NEAREST mesh vertex — kilometres-scale snapping that a sub-pixel
+    /// re-projection can never cross. `recentre_keeps_the_same_geographic_
+    /// point_under_the_cursor` needs this split for exactly that reason.
+    fn split_off_height(s: &str) -> (String, i64) {
+        let suffix = " m above sea level";
+        let with_suffix = s
+            .strip_suffix(suffix)
+            .expect("a world-view readout always ends in the height clause");
+        let comma = with_suffix
+            .rfind(", ")
+            .expect("the readout always has a relief clause before the height");
+        let (prefix, height) = with_suffix.split_at(comma);
+        (
+            prefix.to_string(),
+            height[2..]
+                .parse()
+                .expect("the height clause is a signed integer"),
+        )
+    }
+
+    /// **Finding, not a regression (Task 5).** Before B4 this compared the
+    /// two readouts for exact equality, which held because the only content
+    /// was the containment chain — a NAME keyed to the nearest mesh vertex,
+    /// kilometres apart, so no sub-pixel re-projection jitter could ever
+    /// change it. B4 adds `height_asl`, a CONTINUOUS reading
+    /// (`plate::TileTerrain::height_asl`'s own doc): `recentre` re-derives
+    /// the window's origin so the cursor's own SCREEN tile lands where it
+    /// already sat (`Self::recentre`'s own doc), not so the exact
+    /// real-valued (lat, lon) under it is bit-identical — Mercator's
+    /// non-linearity means those are not quite the same promise. Measured
+    /// on this fixture: a 1 m drift (-2321 to -2322) survives the round
+    /// trip. So this test now asserts what recentring actually promises —
+    /// the SAME feature named, at the SAME water class and relief band —
+    /// exactly, and the continuous height within a bound generous enough to
+    /// absorb re-projection noise without being vacuous (a real
+    /// off-by-a-band error, ≥300 m, would still fail it).
     #[test]
     fn recentre_keeps_the_same_geographic_point_under_the_cursor() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         d.apply(Action::CursorBy(9, 5));
-        let before_name = d.resolve_world_view();
+        let before_name = d
+            .resolve_world_view()
+            .expect("Self::resolve_world_view is total since Task 5");
 
         d.apply(Action::Recentre);
-        let after_name = d.resolve_world_view();
+        let after_name = d
+            .resolve_world_view()
+            .expect("Self::resolve_world_view is total since Task 5");
 
+        let (before_prefix, before_height) = split_off_height(&before_name);
+        let (after_prefix, after_height) = split_off_height(&after_name);
         assert_eq!(
-            before_name, after_name,
+            before_prefix, after_prefix,
             "recentring must roll the map UNDER a still cursor, not change what the cursor \
-             names"
+             names, its water class or its relief band"
+        );
+        assert!(
+            (before_height - after_height).abs() <= 50,
+            "recentring moved the cursor's own height reading by more than \
+             re-projection noise should ever cost: {before_height} m before, \
+             {after_height} m after"
         );
     }
 
@@ -4719,7 +4908,7 @@ mod portolan_tests {
     /// majority and a single centre-point answer can disagree at a
     /// coastline — was and remains real.
     ///
-    /// The fix ([`Self::world_view_vertex`], now
+    /// The fix ([`Self::world_view_tile`], now built directly on
     /// [`plate::terrain_at_tile`]) makes the resolver ask the SAME question
     /// the plate draws from, and take the representative of the PAINTED
     /// class — so agreement is no longer a measured ratio, it is a
@@ -4872,7 +5061,7 @@ mod portolan_tests {
     /// coincidence of the example's own invented names, not a fact about
     /// this fixture. So this test SEARCHES the coarsest (whole-planet)
     /// world view for a real multi-feature vertex, through the actual
-    /// `Driver::world_view_vertex`/`resolve_chain_at` production path,
+    /// `Driver::world_view_tile`/`resolve_chain_at` production path,
     /// rather than assuming one at a fixed position.
     #[test]
     fn the_strip_carries_the_whole_containment_chain_most_specific_first() {
@@ -4893,7 +5082,7 @@ mod portolan_tests {
         'search: for y in 0..plate_h {
             for x in 0..plate_w {
                 d.cursor = hornvale_game_core::Cursor { x, y };
-                let vertex = d.world_view_vertex();
+                let vertex = d.world_view_tile().vertex;
                 if d.index.at(vertex).len() >= 2 {
                     found = Some(vertex);
                     break 'search;
@@ -6704,6 +6893,125 @@ mod portolan_tests {
             "the observer fell outside the coarse rung's own window: observer at \
              ({row}, {col}), window {:?}, plate {plate_w}x{plate_h}",
             d.window
+        );
+    }
+
+    // -- The Newel, Task 5 / B4: the strip's standing content is the tile -
+
+    /// B4 (spec §4.4): the strip's standing content is the tile under the
+    /// cursor, not the map's own resolution. Measured before the fix: 188
+    /// characters, of which 25 (13.3%) described the tile and 160 (86.7%)
+    /// were the four map-wide clauses (the rung line, the tile count, the
+    /// oversample disclosure, the clamp caption) — the last of those
+    /// reachable only after 44.4 s of marquee scroll on the 80x24 floor.
+    ///
+    /// **Asserts the strip LEADS WITH the tile readout, not that a
+    /// map-wide clause is absent** (controller ruling on this task's own
+    /// brief): Task 6 makes those clauses appear-and-decay on a rung
+    /// change, and entering the world view (this test's own setup) is such
+    /// a change, so an absence assertion here would redden the moment that
+    /// lands. Leading with the tile is true both before and after Task 6 —
+    /// only what follows it changes.
+    #[test]
+    fn the_strip_describes_the_tile_under_the_cursor() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let s = d.strip_text().expect("the world view has a strip");
+        assert!(
+            !s.starts_with(RUNG_OPENING),
+            "the standing line must not lead with the map-wide rung clause: {s}"
+        );
+        assert!(
+            s.contains("above sea level"),
+            "the standing line says nothing about the tile's own height: {s}"
+        );
+        let tile_pos = s
+            .find("above sea level")
+            .expect("checked immediately above");
+        let rung_pos = s
+            .find(RUNG_OPENING)
+            .expect("the map-wide rung clause is still appended after the tile");
+        assert!(
+            tile_pos < rung_pos,
+            "the tile's own height reading must reach the reader before the map-wide \
+             rung clause, got {s:?}"
+        );
+    }
+
+    /// **Decision 0670 gates a placed site's MENTION here, exactly as Task
+    /// 4 gated its NAME on the chart** (`Self::site_note`'s own doc):
+    /// `MapSite` carries no proper name at all (spec §7 non-goal), so what
+    /// is withheld before discovery is the fact that anything stands there
+    /// at all, not merely a name string.
+    #[test]
+    fn an_undiscovered_site_is_not_mentioned_but_a_discovered_one_is() {
+        use hornvale_vessel::site::SiteKind;
+
+        // AT BAND B'S OWN RUNG, deliberately, not a coarser world-view one:
+        // a placed site's own `Facet` (`MapSite::placed`) is addressed at
+        // walk-band granularity (`hornvale_worldgen::site_facet_for`'s own
+        // doc: "up to ~40 walk-facet edges"), and `Self::site_note` reads
+        // `Self::world_view_tile`'s `.facet`, which is a facet at the
+        // ACTIVE window's own depth — so the two can only ever agree where
+        // that depth IS band B's. A coarser rung's tile facet is a
+        // different, larger patch at a different level of the same
+        // hierarchy and can never equal a site's own placed facet.
+        let (w, h) = (104u16, 56u16);
+        let mut d = test_driver();
+        enter_band_b(&mut d);
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let site = centre_on_a_placed_site(&mut d, SiteKind::Cave, plate_w, plate_h);
+        assert!(
+            !d.discovered().contains(site.feature_id()),
+            "guard: the cave must not already read as discovered"
+        );
+
+        // Find the exact screen position the cave's own glyph occupies —
+        // searched, not assumed at the plate's own centre, the same reason
+        // `site_drawing_never_depends_on_discovery_and_the_cursor_never_
+        // leaks_a_name` searches rather than computes.
+        let grid = d.world_plate(w, h);
+        let mut found: Option<(u16, u16)> = None;
+        'search: for y in 0..plate_h {
+            for x in 0..plate_w {
+                if grid.get(x, y).and_then(|c| c.glyph) == Some(plate::CAVE_GLYPH) {
+                    found = Some((x, y));
+                    break 'search;
+                }
+            }
+        }
+        let (x, y) = found.expect("an undiscovered, centred cave must still be drawn");
+        d.cursor = hornvale_game_core::Cursor { x, y };
+        d.refresh_strip();
+
+        let before = d
+            .strip_text()
+            .expect("the world view has a strip")
+            .to_string();
+        assert!(
+            !before.contains("cave"),
+            "an undiscovered site's kind leaked into the standing line: {before:?}"
+        );
+
+        // Discover whichever site actually sits under the CURSOR's own
+        // resolved facet — not necessarily `site`, the one
+        // `centre_on_a_placed_site` happened to centre on: the glyph search
+        // above finds the first cave glyph the whole plate draws, which at
+        // this rung can be a DIFFERENT cave than the centred one if more
+        // than one is in view. `site_note` gates on exactly this facet, so
+        // discovery must be recorded against the same one it reads.
+        let facet = d.world_view_tile().facet;
+        let ids = plate::sites_standing_in(&d.sites, &facet);
+        let id = ids.first().copied().unwrap_or_else(|| site.feature_id());
+        d.discovered_mut_for_test().record(id);
+        d.refresh_strip();
+        let after = d
+            .strip_text()
+            .expect("the world view has a strip")
+            .to_string();
+        assert!(
+            after.contains("a cave mouth stands here"),
+            "a discovered cave must be mentioned once encountered: {after:?}"
         );
     }
 }
