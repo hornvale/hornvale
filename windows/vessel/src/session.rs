@@ -11,8 +11,8 @@ use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
     LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
     Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
-    derive_wild_herds, renders_unconscious, settlement_room_index, slept_fact, slept_on_fact,
-    species_activity, village_or_fallback,
+    derive_wild_herds, errand_predicates, renders_unconscious, settlement_room_index, slept_fact,
+    slept_on_fact, species_activity, village_or_fallback,
 };
 use crate::residents::derive_residents;
 use crate::roll::{ROLL_BUDGET, ROLL_HOPS, RollKeyStatic, roll_of, rooms_within};
@@ -192,12 +192,23 @@ const IN_CHARACTER_VERBS: [&str; 28] = [
 /// The provenance a walk-band step commits under (The Deed, Task 7).
 ///
 /// **An in-world reason, deliberately, and this is the acceptance test's
-/// hinge.** A creature's `agent-at` provenance names its errand ("went down to
-/// the river it knew (thirst)"); the keystone requires that "nothing in the
-/// trace may reveal that a different mind chose", so a possessed body's must
-/// name an errand too. It must never name the driver — `provoke`/`soothe`
+/// hinge.** The keystone requires that "nothing in the trace may reveal that a
+/// different mind chose", and this string satisfies it by naming the walk, not
+/// the walker's driver. It must never name the driver — `provoke`/`soothe`
 /// stamp `player: …` precisely because those ARE operator acts (spec §2.3),
 /// and an in-character act is the opposite case.
+///
+/// **The argument used to run through a creature's provenance, and since The
+/// Warrant it cannot.** It read: a creature's `agent-at` provenance names its
+/// errand ("went down to the river it knew (thirst)"), so a possessed body's
+/// must name an errand too. That gloss is now the registry doc of
+/// `errand/water-known`, not any fact's provenance; a creature's step names
+/// its producer, `vessel/liveness`. The inference is therefore retired, and
+/// the constant is not: a possessed body has no `Mode`, so there is no errand
+/// to promote onto a predicate for it, and spec §7.4 accepts that asymmetry
+/// deliberately. The distinguishability is not new either — pre-flip the two
+/// sides already drew from disjoint sets of glosses; the flip made the
+/// contrast starker, not real.
 const WALKED_PROVENANCE: &str = "walked on (its own errand)";
 
 /// The provenance `back` commits under — the same in-world register as
@@ -602,6 +613,11 @@ pub(crate) fn possessor_of(ledger: &Ledger, body: EntityId) -> Option<EntityId> 
     held
 }
 
+/// The flag that switches `!why` from the rolled-up errand view to one line
+/// per step (The Warrant, spec §5.2). One spelling, used by the parser and
+/// named in [`HELP`], so the two cannot drift.
+const STEPS_FLAG: &str = "--steps";
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -651,7 +667,9 @@ verbs:
 operator instruments (out-of-character; bypass the body, never the world):
   !whoami          the one you possess
   !npcs            the derived NPCs sharing this world (label, number)
-  !why <who>       recount an NPC's dated history (by label or number)
+  !why <who>       recount an NPC's dated history (by label or number); each
+                   errand it set out on is named once, rolled up over the
+                   steps it took — add --steps for one line per step
   !eyes [who]      whose eyes you see colour through (a species, 'own',
                    'standard', or 'off'); bare, it says what yours drop
   !provoke [who]   shift a co-located NPC's disposition, your own mark
@@ -1734,6 +1752,15 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
+        // The Warrant, Task 1: the eight errand predicates, from the one
+        // table — registered beside `AGENT_AT` for the same reason `EATEN`
+        // is, above. Idempotent (same defs every session), same as every
+        // predicate registered on this clone.
+        for (key, doc) in errand_predicates() {
+            registry
+                .register_predicate(key, false, doc)
+                .expect("the errand predicates register identically every session");
+        }
         // The player's disposition mark — the first player-authored predicate.
         // Non-functional (a subject may be provoked and later soothed; each is
         // one dated fact). Additive: registering a new predicate perturbs
@@ -9914,9 +9941,14 @@ impl<'w> Session<'w> {
     }
 
     /// Recount an NPC's dated history — the provenance read (the-quickening
-    /// T4): the world remembers, so `why` over an NPC that has moved names
-    /// each committed `agent-at` with the day it was asserted (`recount` in
-    /// `windows/historiography` renders the day suffix). `who` is matched
+    /// T4): the world remembers, so `why` over an NPC that has moved says what
+    /// it set out to do and when. The default view names each **errand** once
+    /// — its origin, its step count, and the span it covers — rolling the run
+    /// of steps beneath it up into that one line (`recount` in
+    /// `windows/historiography`, The Warrant spec §5.1). [`STEPS_FLAG`]
+    /// switches to `recount_steps`, which names each committed `agent-at`
+    /// under its covering errand with its position within it. Both render the
+    /// day a fact was asserted. `who` is matched
     /// first as the `npcs` listing's 1-based handle, else by
     /// [`body_by_needle`] (The Roll, Task 10: exact label match first, then
     /// the longest containing label — never merely the first substring hit
@@ -9931,7 +9963,22 @@ impl<'w> Session<'w> {
     /// handle number resolves before `body_by_needle` is even consulted, so
     /// only a typed label can be ambiguous; when it is, this names every
     /// candidate rather than silently recounting one of them.
-    fn why(&self, who: &str) -> String {
+    fn why(&self, rest: &str) -> String {
+        // `--steps` may sit on either side of the name, and a label may
+        // contain spaces, so the flag is filtered out of the token stream
+        // rather than parsed positionally. The bare `!why <who>` form is
+        // untouched: with no flag present, `who` is the whole trimmed
+        // argument exactly as before.
+        let mut steps = false;
+        let mut kept: Vec<&str> = Vec::new();
+        for token in rest.split_whitespace() {
+            if token == STEPS_FLAG {
+                steps = true;
+            } else {
+                kept.push(token);
+            }
+        }
+        let who = kept.join(" ");
         let who = who.trim();
         if who.is_empty() {
             return "Why what? Name an NPC (label or number — see 'npcs').".to_string();
@@ -9953,7 +10000,7 @@ impl<'w> Session<'w> {
         let Some(npc) = target else {
             return format!("No one here answers to '{who}' (see 'npcs').");
         };
-        self.recount(npc.entity)
+        self.recount(npc.entity, steps)
             .unwrap_or_else(|| format!("Nothing is yet recorded of {}.", npc.label))
     }
 
@@ -9962,7 +10009,7 @@ impl<'w> Session<'w> {
     /// — an NPC's `agent-at` facts live only in the session's evolved
     /// state), handed to the domain-agnostic historiography window exactly
     /// as the CLI repl's `why` hands it the genesis world.
-    fn recount(&self, entity: EntityId) -> Option<String> {
+    fn recount(&self, entity: EntityId, steps: bool) -> Option<String> {
         let evolved = World {
             seed: self.world.seed,
             registry: self.registry.clone(),
@@ -9972,7 +10019,11 @@ impl<'w> Session<'w> {
             // duration of one provenance read.
             derived_under: std::collections::BTreeMap::new(),
         };
-        hornvale_historiography::recount(&evolved, entity)
+        if steps {
+            hornvale_historiography::recount_steps(&evolved, entity)
+        } else {
+            hornvale_historiography::recount(&evolved, entity)
+        }
     }
 
     /// Every derived NPC sharing the possessed agent's current room — the
