@@ -174,12 +174,15 @@ this brainstorm's questions was visual — the design is a procedure and two
 tables. Nathan's standing preference ("don't ask, just set it up") governs
 *how* it opens when a visual question arises, not whether one has. ·
 **Alternatives discarded:** open it to an empty room (a browser tab nobody
-reads, at token cost). · **Ideonomy:** process, not design; the one-line
-negation is the alternative discarded.
+reads, at token cost). · **Ideonomy: 1 pass** — process, not design; the
+one-line negation is the alternative discarded.
 
 #6 [Q] — **Campaign name.** · **The Murrain** — a pestilence named from its
 host. Checked unused in chronicles, specs, decisions and branches. ·
-Trivial; no pass.
+**Ideonomy: 1 pass** — abstraction-lift + list, with cardinality and
+discovery-vs-invention axes; one existing term selected from the language
+rather than a new term invented for the campaign, with no material naming
+alternative surfaced. No overturn. · **Capture:** none.
 
 #7 [Q] — **What number does the derivable finding freeze against, and is
 it measured before the spec?** · **Decision: the connected metapopulation
