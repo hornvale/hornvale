@@ -13,10 +13,16 @@
 #
 # So the seam is the one `scripts/census-run.sh` already uses: an expensive,
 # host-pinned AUTHORING script produces evidence; the evidence is COMMITTED;
-# a cheap TEST (`windows/lab/tests/suite/anomaly_injection.rs`) reads it. Nothing
-# regenerates these fixtures automatically, and nothing should — see the
-# fixture directory's README for why they are deliberately absent from
-# `docs/generated-paths.txt`.
+# a cheap TEST (`windows/lab/tests/suite/anomaly_injection.rs`) reads it.
+#
+# THIS USED TO SAY "nothing regenerates these fixtures automatically, and
+# nothing should." Since The Spillway (decision 0836) that is false: the
+# queued census delivery (`scripts/sluice-census.sh`) IS the fixtures'
+# ordinary automatic author, running this script at the censused ref under
+# the box lock. What remains true, and is why the fixtures stay absent from
+# `docs/generated-paths.txt`, is narrower — the ARTIFACT SWEEP (`make
+# rebaseline` / `regenerate-artifacts.sh`) must never author them, because
+# that would mutate tracked source on its way past.
 #
 # USAGE
 #   scripts/gnomon-injection.sh                  # the whole battery
@@ -36,6 +42,10 @@
 # refusal for machinery validation and stamps the authoring host into the
 # manifest, which is what `anomaly_injection.rs` reads to decide whether the
 # battery is the preregistered one or a pilot.
+#
+# BY HAND, THE EXCEPTION NOW. Since The Spillway the ordinary caller is the
+# queued census delivery (above); running this by hand is for a pilot or a
+# recovery, not the everyday path:
 #
 #   ssh lefford 'cd ~/Projects/hornvale && git fetch --all && \
 #     git checkout <full-sha> && scripts/gnomon-injection.sh'
@@ -150,7 +160,7 @@ fi
 # already carried uncommitted edits to those files would silently discard
 # them; and the manifest's `sha` is a claim about the source that was built.
 #
-# THREE trees are excluded, and each exclusion is what makes this a guard
+# FOUR trees are excluded, and each exclusion is what makes this a guard
 # rather than a one-shot or a deadlock:
 #   - the fixture directory: this script's own output, wiped and rebuilt on
 #     every invocation, so an unconditional check refuses forever after the
@@ -158,10 +168,14 @@ fi
 #   - book/: the census's own output and the project book. A census delivery
 #     runs this script with its goldens STAGED there (The Spillway); the
 #     `hornvale` binary neither compiles nor reads book/ on a `lab run`;
-#   - docs/: prose, timings, audits. Same argument.
+#   - docs/: prose, timings, audits. Same argument;
+#   - clients/: outside the cargo workspace (root Cargo.toml excludes it) and
+#     no `lab run` reads it — but the census's own artifact sweep regenerates
+#     `clients/game/core/tests/fixtures/` (declared `artifacts` in
+#     `docs/generated-paths.txt`), so a delivery's dirt can include it too.
 # Anything else dirty — kernel/, domains/, windows/, cli/, studies/, scripts/,
 # Cargo.* — refuses, and is named.
-dirty="$(git status --porcelain -- . ":!$FIXTURES" ":!book" ":!docs")"
+dirty="$(git status --porcelain -- . ":!$FIXTURES" ":!book" ":!docs" ":!clients")"
 if [ -n "$dirty" ]; then
     echo "gnomon-injection: REFUSING to run with a dirty tree — this script rewrites" >&2
     echo "tracked source in place and restores it with 'git checkout --'; uncommitted" >&2
@@ -171,7 +185,7 @@ if [ -n "$dirty" ]; then
 fi
 
 if [ "$mode" = "check" ]; then
-    echo "gnomon-injection: check OK — host '$here', tree clean outside $FIXTURES, book/ and docs/" >&2
+    echo "gnomon-injection: check OK — host '$here', tree clean outside $FIXTURES, book/, docs/ and clients/" >&2
     exit 0
 fi
 

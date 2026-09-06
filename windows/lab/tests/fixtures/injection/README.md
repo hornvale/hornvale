@@ -45,9 +45,10 @@ a `make rebaseline` that mutates `domains/terrain/src/lithology.rs` on its way
 past is a far worse hazard than a stale fixture.
 
 So they are **authored evidence**, like a census's committed goldens:
-reproducible from `manifest.json` by a human running the script, never by the
-artifact sweep. Do not "fix" the omission by adding the directory to that
-list — the check would either be vacuous or actively dangerous.
+reproducible from `manifest.json` by the census delivery or by a human
+running the script, never by the artifact sweep. Do not "fix" the omission
+by adding the directory to that list — the check would either be vacuous or
+actively dangerous.
 
 What guards them instead is `anomaly_injection.rs::the_fixture_columns_match_the_census`,
 which fails loudly when the census's column set and a fixture's disagree — the

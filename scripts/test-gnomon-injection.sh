@@ -10,9 +10,12 @@
 # it protects SOURCE it mutates and restores, and the manifest's `sha` claim
 # about what was BUILT. book/ and docs/ are neither.
 #
-# DIRECTION THIS TEST ENFORCES: dirt under book/, docs/ and the fixture dir is
-# allowed; dirt anywhere else still refuses. Both halves are asserted, because
-# "book/ is allowed" alone would pass for a guard that had been deleted.
+# DIRECTION THIS TEST ENFORCES: dirt under book/, docs/, clients/ and the
+# fixture dir is allowed; dirt anywhere else still refuses. Both halves are
+# asserted, because "book/ is allowed" alone would pass for a guard that had
+# been deleted. clients/ joined the exclusion because the census's own
+# artifact sweep regenerates `clients/game/core/tests/fixtures/`, and no
+# `lab run` reads clients/ at all.
 set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pass=0; fail=0
@@ -26,6 +29,7 @@ g() { env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE -u GIT_COMMON_DIR git -C
 # A scratch repo carrying the script and the two files it sources. The script
 # `cd`s to its own ../, so it runs against THIS repo, never the real one.
 mkdir -p "$tmp/scripts" "$tmp/domains/terrain/src" "$tmp/book/src" "$tmp/docs" \
+         "$tmp/clients/game/core/tests/fixtures" \
          "$tmp/windows/lab/tests/fixtures/injection/baseline-a"
 cp "$root/scripts/gnomon-injection.sh" "$tmp/scripts/"
 cp "$root/scripts/census-canonical-host.sh" "$tmp/scripts/"
@@ -33,6 +37,7 @@ cp "$root/scripts/census-canonical-host.txt" "$tmp/scripts/"
 printf 'const X: f64 = 1.0;\n' > "$tmp/domains/terrain/src/strata.rs"
 printf 'chapter\n' > "$tmp/book/src/x.md"
 printf 'baseline\n' > "$tmp/docs/timings.md"
+printf '{}\n' > "$tmp/clients/game/core/tests/fixtures/x.json"
 printf 'readme\n' > "$tmp/windows/lab/tests/fixtures/injection/README.md"
 printf '{}\n' > "$tmp/windows/lab/tests/fixtures/injection/baseline-a/schema.json"
 g init -q 2>/dev/null
@@ -83,6 +88,12 @@ g add -A -- book docs
 out="$(check)"; rc=$?
 if [ "$rc" -eq 0 ]; then ok "STAGED book/ and docs/ dirt is allowed (a delivery stages before it re-authors)"
 else bad "staged book/docs dirt refused: $out"; fi
+reset_tree
+
+printf 'edited\n' >> "$tmp/clients/game/core/tests/fixtures/x.json"
+out="$(check)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "a MODIFIED clients/ file is allowed (the census's artifact sweep regenerates it)"
+else bad "modified clients/ refused — the delivery's own sweep dirt would deadlock: $out"; fi
 reset_tree
 
 printf 'dirt\n' > "$tmp/windows/lab/tests/fixtures/injection/baseline-a/rows.csv"

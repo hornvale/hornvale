@@ -213,7 +213,7 @@ reading the harness, from "degrade" to "refuse".
   it expires as branches absorb main.
 - `windows/lab/src/domesday/anomaly.rs` line ~867 says of the count witness
   "this test is not in the sub-floor tier a local gate runs"; the committed
-  roster (`docs/timings/subfloor-roster.tsv:1273`) selects it, and The Warp's
+  roster (`docs/timings/subfloor-roster.tsv:1279`) selects it, and The Warp's
   delivery log shows it failing INSIDE `make gate-commit`. Stale comment;
   corrected by this campaign's re-statement of that witness's comment.
 
@@ -319,7 +319,9 @@ was checked against the two real files it will run on before trusting it:
 the committed census and `baseline-a`'s fixture each report 285 `"name"`
 keys total and 284 at indent >= 4, the one exception in each being the
 study's own name line — confirming the split holds on real data, not just
-the brief's synthetic fixtures.
+the brief's synthetic fixtures. [Corrected at close — this measurement is
+impossible: at indent >= 4 both depths match, so the count is 285; see the
+Fix wave section. Left in place because the ledger is append-only.]
 
 **TDD evidence.** RED: `bash scripts/test-sluice-census.sh` before the
 functions existed — `FAIL: HV_CENSUS_LIB=1 did not expose
@@ -861,3 +863,87 @@ clean on this Mac (shellcheck 0.11.0). On lefford (shellcheck 0.9.0):
 commit, from `origin/campaign/the-spillway` on lefford: unchanged.
 `cargo nextest run -p hornvale --test suite -E 'test(docs_consistency)'`
 green over the close-prose edits.
+
+## Fix wave 2
+
+The final whole-branch review's findings: prose that still asserted claims
+this campaign's own close had disproven, plus one small guard widening.
+Nine changes, one commit:
+
+1. **`scripts/gnomon-injection.sh` header** — "nothing regenerates these
+   fixtures automatically, and nothing should" was true when written and is
+   false now: since this campaign (decision 0836) the queued census delivery
+   IS the fixtures' ordinary automatic author. Corrected loudly, in place;
+   the residual truth — the ARTIFACT SWEEP must never author them, because
+   that would mutate tracked source on its way past — is kept. The
+   "WHERE IT RUNS" `ssh lefford` line is marked as the by-hand path, now the
+   exception rather than the ordinary caller.
+2. **`scripts/gnomon-injection.sh` guard** — widened to
+   `":!$FIXTURES" ":!book" ":!docs" ":!clients"`; the comment gains a fourth
+   bullet (`clients/` is outside the cargo workspace and no `lab run` reads
+   it, but the census's own artifact sweep regenerates
+   `clients/game/core/tests/fixtures/`, declared `artifacts` in
+   `docs/generated-paths.txt`, so a delivery's dirt can include it). The
+   `check OK` message now names all four exclusions.
+   `scripts/test-gnomon-injection.sh` gained a scratch
+   `clients/game/core/tests/fixtures/x.json` and a new arm asserting a
+   MODIFIED `clients/` file is allowed, placed with the other allowed-dirt
+   arms; the two CONTROL arms are unchanged.
+3. **`scripts/sluice-census.sh`** — the pre-flight refusal message ("a ref
+   that predates The Spillway refuses the delivery's own staged goldens as
+   dirt") is softened to point at the refusal actually printed above it
+   first, naming the predates-the-merge case as the common one rather than
+   the only one. The `HV_CENSUS_DELIVERY=1` comment is corrected from "a
+   scoped, named opt-out of ONE check" to naming all three it stands down
+   (the golden-pins guard, the yellow-census alarm, the column-count
+   witness), matching `test-census-guard.sh`'s pinned count of 3.
+4. **`docs/superpowers/specs/2026-09-06-the-spillway-design.md`** — §3.2
+   step 1 gains a loud inline correction (not a silent rewrite): the
+   study's name sits at indent 4 under `"study"`, so `>= 4` kept it and read
+   every arm stale; the shipped rule is exactly six spaces, verified at
+   close on all nine real files (`"kind"` 290, name@indent6 290,
+   name@indent4 1, name@indent2 0); fixed in `81968faee`. §9's matching risk
+   row gets the same correction. §3.3's dirt enumeration gains
+   `clients/game/core/tests/fixtures/**` and the predicate now reads
+   `":!clients"` too. §5 gains a caveat: on a ref predating the merge,
+   `check` is parsed as an ARM NAME by the old script (clearing the fixture
+   directory before printing "unknown arm"), unreachable in production
+   because that ref's whole-tree guard refuses first, and self-healing on
+   the next `reset --hard`. The stale `subfloor-roster.tsv:1273` citation in
+   §1 is corrected to `:1279` (this tip's line for the count witness).
+5. **This ledger** — Task 2's impossible measurement sentence ("285 name
+   keys total and 284 at indent >= 4") gets a bracketed correction appended
+   in place (append-only), and the Follow-ups section's
+   `subfloor-roster.tsv:1273` citation is corrected to `:1279`. This section.
+6. **`windows/lab/tests/fixtures/injection/README.md`** — "reproducible from
+   `manifest.json` by a human running the script, never by the artifact
+   sweep" gains "by the census delivery or" before "by a human", since the
+   delivery is now the ordinary author.
+7. **`scripts/CLAUDE.md`** — the `subfloor-roster.sh` bullet gains one
+   sentence naming `HV_SUBFLOOR_EXCLUDE`'s one caller (`pre-commit` under
+   `HV_CENSUS_DELIVERY`, decision 0836) and restating that it omits rather
+   than wraps, so the chunker's flat split holds.
+8. **`docs/retrospectives/the-spillway.md`** — "Estimate deltas"' `tasks` row
+   now names the two fix waves instead of "no fix rounds"; the header's
+   ledger description gains the two fix-wave sections. One accepted item
+   added to the deferred-minors table: `test-sluice-census.sh`'s dependency
+   on `python3` (the fix wave's positive-control script), precedented in
+   `test-census-path.sh` and `test-pre-push.sh`. **A second item this task
+   was briefed to add — that commit `f22c7c083` carries no `Claude-Session`
+   trailer — was checked against the actual commit object
+   (`git cat-file -p f22c7c083`) and is false: the trailer is present. Not
+   added; flagged instead of propagated.**
+9. **`book/src/chronicle/the-spillway.md`** — the guard-exclusion paragraph
+   gains `clients/`, attributed to this review. Its indentation account
+   (already correct — indent 4 study, indent 6 columns, exactly-six rule)
+   was checked and needed no change.
+
+**Verification.** `bash scripts/test-gnomon-injection.sh`: 11 passed, 0
+failed (was 10; the new `clients/` arm). `bash scripts/test-sluice-census.sh`:
+19 passed, 0 failed (unchanged — this wave touches only comments and a
+message string in this file). `bash scripts/test-census-guard.sh`: 21
+passed, 0 failed (unchanged). `make shellcheck`: clean on this Mac
+(shellcheck 0.11.0). `cargo nextest run -p hornvale --test suite -E
+'test(docs_consistency)'`: 41 passed, 0 failed, 280 skipped. `docs/timings.md`
+picked up local mtime/duration churn from running these suites and is
+intentionally left unstaged.

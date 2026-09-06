@@ -95,10 +95,14 @@ The guard it must pass was narrowed rather than removed. Its stated reasons
 are both claims about *source* — mutated files restored by a checkout, and a
 manifest that stamps the commit it was built from — so the predicate now
 excludes the book and the documentation tree, where a census's output and the
-project's prose live, and still refuses an uncommitted edit anywhere a build
-or the mutation can see. Two controls in its test file assert that second
-half, because without them every "this dirt is allowed" assertion would pass
-equally well against a guard someone had deleted.
+project's prose live, and (added in the final review, once the census's own
+artifact sweep was traced end to end) the browser clients' committed session
+fixtures under `clients/`, which sit outside the cargo workspace entirely and
+which no `lab run` reads. It still refuses an uncommitted edit anywhere a
+build or the mutation can see. Controls in its test file assert that other
+half for each excluded tree, because without them every "this dirt is
+allowed" assertion would pass equally well against a guard someone had
+deleted.
 
 Any failure in that sequence — a missing script, a refused check, a lock that
 times out, an authoring run that returns non-zero — is a refusal with the

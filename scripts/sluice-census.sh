@@ -400,7 +400,7 @@ if [ "$n_goldens" -gt 0 ] || [ -n "$stale" ]; then
     # box is never taken for it.
     if ! (cd "$wt" && bash "$gnomon" check); then
         echo "sluice-census: ARMS NOT RE-AUTHORED — ${ref:0:12}'s gnomon-injection.sh refused its pre-flight (above)." >&2
-        echo "sluice-census: a ref that predates The Spillway refuses the delivery's own staged goldens as dirt." >&2
+        echo "sluice-census: read the refusal above for the path it named; commonly this is a ref that predates The Spillway, whose guard refuses the delivery's own staged goldens as dirt." >&2
         echo "sluice-census: the goldens stay staged in $wt; nothing was pushed. Recover by hand (The Warp, ledger #12)." >&2
         exit 4
     fi
@@ -434,8 +434,10 @@ else
 fi
 echo "sluice-census: $arms_note"
 
-# HV_CENSUS_DELIVERY=1 tells pre-commit's golden-pins guard to stand down for
-# THIS commit only. It is a scoped, named opt-out of ONE check; every other
+# HV_CENSUS_DELIVERY=1 tells pre-commit to stand down THREE checks for THIS
+# commit only: the golden-pins guard, the yellow-census alarm, and the census
+# column-count witness this campaign added (The Spillway, decision 0836).
+# Each is a scoped, named opt-out, one commit at a time; every other
 # hook check still runs, and the hooks themselves stay installed and armed.
 # The guard compares the census fixture against calibration.rs's pins, and a
 # census refresh moves the fixture BY DEFINITION while the pins can only be

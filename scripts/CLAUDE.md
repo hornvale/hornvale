@@ -119,7 +119,10 @@ exactly that reason: it names the claim, not the deleted machinery.
   account); the chamber then commits the rewritten roster with the merge
   product. Exit 3 means no roster exists for this host — a different thing
   from an empty roster, and `gate-commit-run` treats it as a hard failure
-  rather than silently gating nothing.
+  rather than silently gating nothing. `HV_SUBFLOOR_EXCLUDE` omits matching
+  roster terms for one caller, `pre-commit` under `HV_CENSUS_DELIVERY` (The
+  Spillway, decision 0836); removal not wrapping, so the chunker's flat split
+  holds.
 - **`lane-outboard.sh`** — the driver for the `outboard` set: three suites
   nothing ran before The Staff — `tools/board`, `tools/digest`, and
   `tools/type-audit`'s own suite (distinct from the `type-audit check` lint

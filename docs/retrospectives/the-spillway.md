@@ -2,7 +2,8 @@
 
 **Close:** 2026-09-06, awaiting G6 · **Ledger:**
 [`2026-09-06-the-spillway.md`](../superpowers/ledgers/2026-09-06-the-spillway.md)
-(entries #0–#3 plus five task sections and a close digest) · **Chronicle:**
+(entries #0–#3 plus five task sections, a close digest, and two fix-wave
+sections) · **Chronicle:**
 [the-spillway](../../book/src/chronicle/the-spillway.md) · **Decisions:** 0836
 
 ## The headline: the registry row named two legs and the delivery log had three
@@ -160,7 +161,7 @@ commit carries, not what the world is or what is known about it.
 
 | | planned | actual |
 | --- | --- | --- |
-| tasks | 6 | 6, no fix rounds; two absorptions of the trunk |
+| tasks | 6 | 6, plus two fix waves (the close-found column-extractor Critical, then the final whole-branch review's prose-truth findings); two absorptions of the trunk |
 | decisions | 0836–0845 reserved | **1 minted** (0836), three tasks earlier than planned |
 | checks stood down under `HV_CENSUS_DELIVERY` | 2 → 3 | 3, pinned by a test that fails on a fourth |
 | production proof of the growing-census path | out of scope (no ref registers a metric) | still out of scope; the stubbed harness is the whole evidence |
@@ -181,3 +182,4 @@ commit carries, not what the world is or what is known about it.
 | `windows/lab/CLAUDE.md:174` punctuation differs from the brief's text | accepted close minor; cosmetic |
 | timings-label additivity for the new `gnomon-injection` label | **discharged in review**: the attestation groups only `sluice:` rows and `census_duration` filters `\| census \|`, so an added label is additive |
 | `census_schema_columns` does not skip the study-name line on the real files, so the "arms unchanged" branch is unreachable and its test arm is vacuous | **NOT a minor — was the campaign's own live Critical defect, found at close and fixed before merge in the fix wave.** `census_schema_columns` now anchors on exactly six spaces (`^ {6}"name": "`); `write_schema` nests the study name where serde nests it, at indent four under a `"study"` object; a fixture-shape control, a real-tree control, and a positive control were added. A census of this tip is expected to report `Gnomon arms unchanged` on a null. |
+| `test-sluice-census.sh` depends on `python3` (the positive-control script added in the fix wave) | accepted; precedented in `test-census-path.sh` and `test-pre-push.sh`, both of which already shell out to `python3 scripts/mutate.py` |
