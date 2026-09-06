@@ -85,7 +85,11 @@
 //! or `nearer_to_home`.
 
 use crate::common;
+use hornvale_kernel::{Facet, Ledger, WorldTime};
+use hornvale_vessel::action::plan_to_room;
+use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness;
+use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
 use hornvale_vessel::{PossessOpts, Session};
 
 /// **Every predicate the drive stack COMMITS is one the roster REGISTERS —
@@ -449,5 +453,281 @@ fn the_culvert_water_belief_ledger_hash_is_pinned() {
         "the water-belief possession shape's committed ledger moved from the minted constant \
          ({first:#018x} against {CULVERT_WATER_LEDGER:#018x}) — re-record it main-first per the \
          module doc's dated-record discipline before trusting this witness again"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Task 4: the counting witness, red on the pre-memo tree. `believed_water`
+// calls `plan_to_room` once per room in `water_at(entity, t)`'s result, so a
+// roster-wide sweep makes exactly `Σ|water_at(entity, t)|` such calls — this
+// section counts those calls directly through `water_at`, without needing to
+// instrument `believed_water` itself (no production code changes this task).
+// ---------------------------------------------------------------------------
+
+/// What one roster-wide `believed_water`-shaped sweep counted: how many
+/// `plan_to_room` calls it implies, how many DISTINCT `(home, dest)` pairs
+/// those calls fall on, how many residents held a non-empty belief at all
+/// (the denominator under every ratio here), and the largest single
+/// resident's known-water set. Produced by [`culvert_sweep_counts`] and
+/// consumed by Tasks 5, 6, 7 and 9.
+struct SweepCounts {
+    /// Total `plan_to_room` calls a roster-wide sweep makes —
+    /// `Σ|water_at(entity, t)|` over every `npcs` member.
+    calls: usize,
+    /// Distinct `(home, dest)` pairs among those calls — the population the
+    /// memo (Task 6) actually needs to hold, always `<= calls`.
+    distinct_pairs: usize,
+    /// How many `npcs` members hold a non-empty `water_at(entity, t)` — the
+    /// denominator every ratio over this sweep must be asserted beneath.
+    non_empty: usize,
+    /// The largest single resident's `water_at(entity, t)` set size.
+    max_set: usize,
+}
+
+/// Count the `plan_to_room` calls, and the distinct `(home, dest)` pairs
+/// among them, that one roster-wide `believed_water` sweep over `npcs` at `t`
+/// implies — read straight off [`hornvale_vessel::resident::LatestVisit::
+/// water_at`], which is exactly what `believed_water` itself reads before
+/// planning to each room it returns (`liveness.rs`'s
+/// `seen.into_iter().filter_map(|r| plan_to_room(...))`). One shared
+/// `borrow_mut` for the whole sweep, the same shape
+/// `session_length_scaling.rs`'s own `water_belief_counts` and
+/// `resident_folds.rs`'s `kerf_fold_equals_scan` both use rather than
+/// re-borrowing the fold store per member.
+fn culvert_sweep_counts(
+    ledger: &Ledger,
+    folds: &OwnedFolds,
+    npcs: &[Body],
+    t: WorldTime,
+    terrain: &dyn liveness::Terrain,
+) -> SweepCounts {
+    let mut store = folds.borrow_mut();
+    let latest_visit = store.latest_visit(ledger);
+    let mut calls = 0usize;
+    let mut non_empty = 0usize;
+    let mut max_set = 0usize;
+    let mut pairs: std::collections::BTreeSet<(Facet, Facet)> = std::collections::BTreeSet::new();
+    for npc in npcs {
+        let seen = latest_visit.water_at(npc.entity, t, terrain);
+        if !seen.is_empty() {
+            non_empty += 1;
+        }
+        max_set = max_set.max(seen.len());
+        calls += seen.len();
+        for room in seen {
+            pairs.insert((npc.home.clone(), room));
+        }
+    }
+    SweepCounts {
+        calls,
+        distinct_pairs: pairs.len(),
+        non_empty,
+        max_set,
+    }
+}
+
+/// The possession shape's committed ledger, every body the session derived,
+/// and the instant the walk stopped at — everything [`culvert_sweep_counts`]
+/// and [`culvert_real_pairs`] need for [`Shape::Possession`].
+///
+/// The same walk [`culvert_water_ledger_hash`] hashes
+/// ([`CULVERT_WATER_SEED`], [`CULVERT_WATER_WAITS`]), reached independently
+/// here rather than through `resident_folds.rs`'s `kerf_possession_ledger`,
+/// for the reason [`culvert_water_ledger_hash`]'s own doc already gives: that
+/// function is private to its file, and this module has no reason to depend
+/// on `resident_folds.rs`.
+fn culvert_possession_shape() -> (Ledger, Vec<Body>, WorldTime, hornvale_locale::LocaleContext) {
+    let world = common::build(CULVERT_WATER_SEED).expect("the water-belief seed builds a world");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the water-belief seed starts a session");
+    for _ in 0..CULVERT_WATER_WAITS {
+        session.handle("wait");
+    }
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session's own ledger accessor round-trips");
+    let t = session.day();
+    let npcs = session.bodies().to_vec();
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("the locale context builds");
+    (ledger, npcs, t, ctx)
+}
+
+/// Which measured shape a pair population comes from. The two are NOT
+/// interchangeable and Task 6 needs both: the possession shape had ZERO
+/// budget-exhausted searches, and the lab shape had 55 of 83 at band 10. A
+/// test drawn from the possession shape alone never exercises the `None` arm,
+/// which is 95.1% of the real cost.
+enum Shape {
+    /// Seed 17, `Session::start` + 12 waits — 52 of 67 residents hold a
+    /// non-empty belief, max 23 rooms, no unreachable pair.
+    Possession,
+    /// Seed 42, 50 agents, band 10 of the lab shape — 11 of 50 non-empty,
+    /// max 46 rooms, 55 of 83 pairs unreachable within budget.
+    Lab,
+}
+
+/// `liveness::PLAN_BUDGET` is a private const an integration test cannot
+/// import, so it is mirrored here — the third such mirror, beside
+/// `session_length_scaling`'s `PROBE_BUDGET` and `nav_bench`'s `BUDGET`. All
+/// four are kept in sync BY HAND and nothing enforces it; a test asserting
+/// agreement is impossible without making `PLAN_BUDGET` public.
+const PLAN_BUDGET_MIRROR: usize = 1_000;
+
+/// Every distinct `(home, water room)` pair a roster-wide `believed_water`
+/// sweep implies on `shape`, in ascending `(from, dest)` order (a
+/// `BTreeSet<(Facet, Facet)>`'s own iteration order, since [`Facet`]
+/// derives `Ord`) so the population Task 6 draws from is reproducible.
+fn culvert_real_pairs(shape: Shape) -> Vec<(Facet, Facet)> {
+    fn pairs_from(
+        ledger: &Ledger,
+        folds: &OwnedFolds,
+        npcs: &[Body],
+        t: WorldTime,
+        terrain: &dyn liveness::Terrain,
+    ) -> Vec<(Facet, Facet)> {
+        let mut store = folds.borrow_mut();
+        let latest_visit = store.latest_visit(ledger);
+        let mut pairs: std::collections::BTreeSet<(Facet, Facet)> =
+            std::collections::BTreeSet::new();
+        for npc in npcs {
+            for room in latest_visit.water_at(npc.entity, t, terrain) {
+                pairs.insert((npc.home.clone(), room));
+            }
+        }
+        pairs.into_iter().collect()
+    }
+
+    match shape {
+        Shape::Possession => {
+            let (ledger, npcs, t, ctx) = culvert_possession_shape();
+            let terrain = liveness::LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+            let folds = OwnedFolds::new(ResidentFolds::new());
+            pairs_from(&ledger, &folds, &npcs, t, &terrain)
+        }
+        Shape::Lab => {
+            // Seed 42, 50 agents, 200 ticks — `session_length_scaling.rs`'s
+            // own shape at its final band (band 10 of 10, `BAND == 20`),
+            // reached through `the_detent::bench_shape`, which is that same
+            // construction counted (its own doc says so). NOT
+            // `resident_folds.rs`'s `KERF_LAB_SEED`/`KERF_LAB_TICKS`/
+            // `KERF_LAB_AGENTS` shape (seed 42 too, but only 10 ticks) — that
+            // shorter walk was measured for this task and found to reach
+            // only 27 distinct pairs with 4 unreachable, not the 83-pairs/
+            // 55-unreachable band-10 shape Task 2's report table measured.
+            // 200 ticks is `bench_shape`'s own most expensive call in this
+            // crate's test suite; both `bench_shape`/`session_length_scaling`
+            // parameters are literals here rather than shared constants
+            // (each test module keeps its own copy of a shape it did not
+            // author, the same convention this module's possession
+            // constants already follow).
+            let lab = crate::the_detent::bench_shape(42, 200, 50);
+            let mesh = lab.mesh_memo.clone();
+            let terrain =
+                liveness::LocaleTerrain::with_fields(&lab.ctx, None, None, None, None, Some(&mesh));
+            pairs_from(&lab.ledger, &lab.folds, &lab.npcs, lab.day, &terrain)
+        }
+    }
+}
+
+/// **THE SWEEP-COUNT WITNESS.** One roster-wide `believed_water` sweep over
+/// the possession shape (seed 17, 12 waits) must make exactly
+/// `Σ|water_at(entity, t)|` `plan_to_room` calls — measured at 529 calls over
+/// 83 distinct `(home, dest)` pairs on the pre-memo tree. This witness pins
+/// that count so a later change (The Culvert, Task 7) can assert the search
+/// count collapsed onto the pair count instead of paying it per resident.
+///
+/// **Must fail on the pre-memo tree, and does.** `SweepCounts` here has no
+/// idea whether a memo exists; it counts calls a *sweep* would make, which
+/// today is one call per `(home, dest)` occurrence rather than one per
+/// distinct pair — so `calls` (529) is far above `distinct_pairs` (83), and
+/// the assertion below, which requires them close together, fails until the
+/// memo lands.
+#[test]
+#[ignore = "red until The Culvert Task 7 wires RouteMemo into believed_water/nearer_to_home \
+            (docs/superpowers/plans/2026-09-05-the-culvert.md, Task 7); today's roster-wide \
+            sweep makes ~529 plan_to_room calls over 83 distinct pairs, one call per occurrence \
+            rather than one per distinct pair"]
+fn culvert_sweep_collapses_calls_onto_distinct_pairs() {
+    let (ledger, npcs, t, ctx) = culvert_possession_shape();
+    let terrain = liveness::LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+    let folds = OwnedFolds::new(ResidentFolds::new());
+    let counts = culvert_sweep_counts(&ledger, &folds, &npcs, t, &terrain);
+    println!(
+        "--- culvert sweep counts (possession shape, seed {CULVERT_WATER_SEED}, \
+         {CULVERT_WATER_WAITS} waits) ---"
+    );
+    println!(
+        "calls {}, distinct_pairs {}, non_empty {} of {} residents, max_set {}",
+        counts.calls,
+        counts.distinct_pairs,
+        counts.non_empty,
+        npcs.len(),
+        counts.max_set
+    );
+    assert!(
+        counts.non_empty > 0,
+        "denominator: no resident holds a water belief on this shape"
+    );
+    assert!(
+        counts.calls > 0,
+        "denominator: the sweep made no plan_to_room calls"
+    );
+    assert!(
+        counts.calls <= 100,
+        "one roster-wide believed_water sweep makes {} plan_to_room calls over {} \
+         distinct (home, dest) pairs. Before The Culvert this was 529 calls over 83 \
+         pairs at wait 12; the memo is meant to collapse the calls onto the pairs.",
+        counts.calls,
+        counts.distinct_pairs
+    );
+}
+
+/// **The three Task-6 helpers, exercised directly.** `culvert_real_pairs`
+/// must yield a non-empty population on both shapes, or Task 6's equivalence
+/// test has nothing to compare; and [`Shape::Lab`] specifically must yield at
+/// least one pair `plan_to_room` cannot reach within
+/// [`PLAN_BUDGET_MIRROR`] — the possession shape has ZERO such pairs (this
+/// campaign's own Task 3 measurement), so without this the memo's `None`
+/// arm, 95.1% of the real cost, would be untestable and nobody would find
+/// out until Task 6.
+#[test]
+fn culvert_real_pairs_span_both_shapes_and_lab_has_an_unreachable_pair() {
+    let possession = culvert_real_pairs(Shape::Possession);
+    assert!(
+        !possession.is_empty(),
+        "denominator: the possession shape implies no (home, dest) pairs"
+    );
+
+    let lab = culvert_real_pairs(Shape::Lab);
+    assert!(
+        !lab.is_empty(),
+        "denominator: the lab shape implies no (home, dest) pairs"
+    );
+
+    let unreachable = lab
+        .iter()
+        .filter(|(home, dest)| {
+            plan_to_room(
+                home,
+                dest,
+                PLAN_BUDGET_MIRROR,
+                &std::collections::BTreeSet::new(),
+            )
+            .is_none()
+        })
+        .count();
+    println!(
+        "culvert_real_pairs: possession {} pairs (0 expected unreachable), lab {} pairs \
+         ({unreachable} unreachable within PLAN_BUDGET_MIRROR={PLAN_BUDGET_MIRROR})",
+        possession.len(),
+        lab.len()
+    );
+    assert!(
+        unreachable > 0,
+        "Shape::Lab must yield at least one (home, dest) pair plan_to_room cannot reach \
+         within PLAN_BUDGET_MIRROR ({PLAN_BUDGET_MIRROR}), or Task 6's None arm — 95.1% of \
+         the real cost — is untestable; found {unreachable} of {} lab pairs unreachable. \
+         (The possession shape is expected to have zero; check band 10 is what's being read \
+         if this fires.)",
+        lab.len()
     );
 }
