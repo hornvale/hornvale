@@ -39,7 +39,7 @@
 - `book/src/laboratory/generated/`, `book/src/domesday/history.md`, `book/src/chronicle/the-murrain.md` — generated and authored closure artifacts.
 - `docs/superpowers/ledgers/2026-09-06-the-murrain.md` — task decisions, measurements, H-P results, and post-G3 follow-ups.
 
-## Stage 1: Population Substrate and Pure Epidemiology
+## Task 1: Population Substrate and Pure Epidemiology (Stage 1)
 
 **Goal:** Establish the authoritative population view and the kernel-only disease rules before wiring any epidemic into history.
 
@@ -55,7 +55,7 @@
 - [ ] **Step 6: Run Stage 1 tests and checks**: `cargo fmt --check`, `cargo nextest run -p hornvale-epidemiology -p hornvale-species`, and the relevant worldgen suite.
 - [ ] **Step 7: Commit** with `feat(the-murrain): add pathogen catalogue and epidemiology rules`.
 
-## Stage 2: Baked Epidemic and History Facts
+## Task 2: Baked Epidemic and History Facts (Stage 2)
 
 **Goal:** Add the deterministic epidemic phase to the history bake, including substrate population updates, relocation behavior, Plague endings, and paired facts.
 
@@ -71,7 +71,7 @@
 - [ ] **Step 6: Rebaseline declared goldens and fixtures** using the repository's artifact commands, read the diff, and commit the source/epoch change separately from generated artifacts.
 - [ ] **Step 7: Commit** with `feat(the-murrain): bake epidemic events and plague endings`.
 
-## Stage 3: Endemic Read and Lot Projection
+## Task 3: Endemic Read and Lot Projection (Stage 3)
 
 **Goal:** Make disease visible in the Lot without making the Lot the population authority, while adding composite/individual projection semantics and named causes.
 
@@ -87,7 +87,7 @@
 - [ ] **Step 6: Run focused Lot tests** including `cargo nextest run -p hornvale-lot` and `make lot-check`; verify the seed-42 byte-identity/refusal cases before accepting any fixture drift.
 - [ ] **Step 7: Commit** with `feat(the-murrain): attribute disease in Lot projections`.
 
-## Stage 4: Laboratory Instrumentation and Predictions
+## Task 4: Laboratory Instrumentation and Predictions (Stage 4)
 
 **Goal:** Add the six preregistered epidemic/Lot metrics, the H-P readout, and the measured census-cost record.
 
@@ -102,7 +102,7 @@
 - [ ] **Step 5: Run focused lab tests and the appropriate census fixture checks**; verify the six columns are declared in the generated-path roster.
 - [ ] **Step 6: Commit** with `feat(the-murrain): add disease laboratory metrics`.
 
-## Stage 5: Genesis Closure and Campaign Documentation
+## Task 5: Genesis Closure and Campaign Documentation (Stage 5)
 
 **Goal:** Finish the epoch transition, refresh generated artifacts on lefford, update the book and registry, and leave a reviewable campaign record.
 
