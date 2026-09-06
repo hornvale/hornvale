@@ -477,6 +477,7 @@
 - [The Warrant](./chronicle/the-warrant.md)
 - [The Ken](./chronicle/the-ken.md)
 - [The Spillway](./chronicle/the-spillway.md)
+- [The Newel](./chronicle/the-newel.md)
 
 # Appendix: The Frontier
 
