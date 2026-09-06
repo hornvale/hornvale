@@ -474,6 +474,7 @@
 - [The Culvert](./chronicle/the-culvert.md)
 - [The Warrant](./chronicle/the-warrant.md)
 - [The Ken](./chronicle/the-ken.md)
+- [The Spillway](./chronicle/the-spillway.md)
 
 # Appendix: The Frontier
 

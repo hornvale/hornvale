@@ -119,7 +119,10 @@ exactly that reason: it names the claim, not the deleted machinery.
   account); the chamber then commits the rewritten roster with the merge
   product. Exit 3 means no roster exists for this host — a different thing
   from an empty roster, and `gate-commit-run` treats it as a hard failure
-  rather than silently gating nothing.
+  rather than silently gating nothing. `HV_SUBFLOOR_EXCLUDE` omits matching
+  roster terms for one caller, `pre-commit` under `HV_CENSUS_DELIVERY` (The
+  Spillway, decision 0836); removal not wrapping, so the chunker's flat split
+  holds.
 - **`lane-outboard.sh`** — the driver for the `outboard` set: three suites
   nothing ran before The Staff — `tools/board`, `tools/digest`, and
   `tools/type-audit`'s own suite (distinct from the `type-audit check` lint
@@ -359,6 +362,18 @@ the exact SHA it tested.
   claim itself and deletes the claim file on exit, so nesting it clobbers the
   outer job's own claim). An unknown `kind` is gated and sent to the chamber —
   failing toward the check.
+- **`sluice-census.sh` re-authors the Gnomon injection arms before it commits
+  (The Spillway, decision 0836)** — with the ref's OWN `gnomon-injection.sh`
+  (its literals must match that source), under the shared flock, timed into
+  `docs/timings.md` as `gnomon-injection`, whenever a golden moved or an
+  arm's columns differ. It writes no claim file for those minutes, so
+  `census-run.sh status` reads idle while flock-takers wait. The rule that
+  places each census-shaped check: a delivery SATISFIES what a regeneration
+  remedies and DEFERS what needs a human re-statement — so `pre-commit`
+  stands down three checks under `HV_CENSUS_DELIVERY` (golden pins, the
+  yellow alarm, the column-count witness) and `test-census-guard.sh` pins
+  that count. A ref predating The Spillway is refused at the delivery's
+  pre-flight, goldens left staged, and The Warp's by-hand path applies.
 - **`test-sluice-drain.sh`** — tests those two rules, their negative controls,
   and that they AGREE about what a census is. The agreement test is the load-
   bearing one: the original defect was not either rule alone but the two
