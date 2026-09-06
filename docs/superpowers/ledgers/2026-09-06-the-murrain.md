@@ -268,6 +268,23 @@ negation + scale, with intentionality and animacy axes; the meaningful scale
 is aggregate → composite → materialized individual, and no overturn. ·
 **Capture:** spec §2.4; the projection boundary leads the next G3 review.
 
+#11 [G5] — **Task 1 review correction: what makes the population substrate
+authoritative?** · **Ruling:** the era/site view must reconstruct live
+population from committed trajectory information (`founded`, `ended`,
+`peak_population`, `person_years`, and the applicable opening value), sharing
+one lower-layer implementation with the Lot or moving that reconstruction to
+a domain-owned helper. Summed peaks remain the Task 0 upper bound and may not
+be published as the epidemiological authority. H-M1 must bind the authored
+catalogue rows rather than repeat their numbers as test literals, and H-M2
+must exercise both sides of the threshold for consumption, pest, and pox. ·
+**Why:** review found the first implementation labeled a peak sum
+authoritative, which contradicts spec §4.2 and can change persistence
+decisions; the same review found the mechanism tests under-pinned. · **Cost if
+wrong:** a shared reconstruction changes the substrate values and may move
+the preregistered endemicity predictions, but retaining the proxy would make
+the campaign's central population claim false. · **Capture:** fix round 1 of
+Task 1; update the plan only if the shared-helper boundary changes.
+
 ## Ideonomy — the G1 organon
 
 Tuple picked: operators *negation* + *abstraction-lift*; organon

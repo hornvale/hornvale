@@ -2,7 +2,7 @@
 **Goal**: Establish the authoritative population view, pathogen catalogue, and kernel-only rules.
 **Success Criteria**: Five kinds registered; H-M1, H-M2, and H-M6 pass; epidemiology depends only on kernel.
 **Tests**: CCS, persistence, wave, outbreak, and catalogue-count tests.
-**Status**: Not Started
+**Status**: Complete — `bdff16910`; review approved after fix round 1
 
 ## Stage 2: Baked epidemic and history facts
 **Goal**: Add deterministic epidemic phases, paired facts, Plague endings, and bake v4.
