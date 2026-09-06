@@ -34,7 +34,13 @@ export function thousands(value: number): string {
 /** The hero line: how many lives this world has held, and the invitation.
  *
  * `souls_ever` is a payload field, rounded for reading — this does not
- * integrate anything. */
+ * integrate anything. The rounding itself differs from the committed page's:
+ * this exhibit's `thousands` calls plain `Math.round`, while the committed
+ * page's opening line (`windows/lot/src/narrate.rs::curve_text`) rounds
+ * `souls_ever` to three SIGNIFICANT FIGURES first (`three_significant_
+ * figures`) and only then applies thousands separators — so the two numbers
+ * can differ in their last digit or two even though both read the same
+ * underlying field. */
 export function heroLine(curve: Curve, seed: string): string {
   return `${thousands(curve.souls_ever)} lives have been lived in seed ${seed}. Choose one.`;
 }

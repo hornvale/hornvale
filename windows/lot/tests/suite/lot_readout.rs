@@ -13,6 +13,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_lot::context::assemble;
 use hornvale_lot::draw::{Ending, curve, draw};
+use hornvale_lot::hazard::HUMAN_ANCHOR_YEARS;
+use hornvale_lot::shape::Shape;
 use hornvale_lot::slots::{SlotValue, tell};
 use hornvale_lot::{LotIndex, Pick};
 use hornvale_terrain::TerrainPins;
@@ -93,10 +95,16 @@ fn lot_readout() {
             .iter()
             .map(|(l, _)| {
                 let lifespan = ctx.occupations[l.occ].lifespan_years;
-                l.age_at_death * 60.0 / lifespan
+                l.age_at_death * HUMAN_ANCHOR_YEARS / lifespan
             })
             .collect();
         let median_scaled_age = median(&mut scaled);
+
+        let clamped_rectangles = ctx
+            .occupations
+            .iter()
+            .filter(|p| matches!(p.shape, Shape::Rectangle { clamped: true, .. }))
+            .count();
 
         let witnessing = lots
             .iter()
@@ -141,6 +149,10 @@ fn lot_readout() {
         println!("  witness-community-end share      {witness_share:.3}");
         println!("  silent-subsistence share         {silent_subsistence_share:.3}");
         println!("  mean filled slots (of 22)         {mean_filled:.2}");
+        println!(
+            "  clamped rectangles (of {})       {clamped_rectangles}",
+            ctx.occupations.len()
+        );
         println!("  souls_ever / (person-years/30)    {ratio:.3}");
 
         if seed_value == 100 {

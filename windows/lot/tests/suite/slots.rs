@@ -1,7 +1,7 @@
 //! Every slot of spec §5 is asked for every life; a silence is a value, and
 //! the by-design silences are exactly the spec's list.
 use hornvale_lot::context::assemble;
-use hornvale_lot::draw::draw;
+use hornvale_lot::draw::{Ending, draw};
 use hornvale_lot::slots::{Silence, SlotValue, Source, tell};
 use hornvale_lot::{LotIndex, Pick};
 
@@ -337,4 +337,103 @@ fn a_slot_that_prints_a_settlements_name_cites_the_name_fact() {
         "no lot rendered a settlement name — the check is vacuous"
     );
     println!("slots that rendered a settlement name: {named_renders}");
+}
+
+/// claim: structural(seed: 42) — one world, twenty lots.
+///
+/// The `when` sentence prints three integers — born, dead/present, aged —
+/// and the review found they disagreed because each was rounded from an
+/// independent float. `year()`/`rounded_span()` in `slots.rs` now derive
+/// the third from the other two's own rounding, so parsing the sentence
+/// back out and checking `D - B == A` is a direct test of that fix, not an
+/// indirect one over the underlying floats.
+#[test]
+fn the_when_sentences_triple_is_internally_consistent() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let mut dead_checked = 0;
+    for i in 0..20 {
+        let life = draw(&ctx, LotIndex(i), &Pick::default()).unwrap();
+        if life.ending == Ending::Alive {
+            continue;
+        }
+        let story = tell(&world, &ctx, &life);
+        let when = story.slot("when").expect("when is always asked");
+        let SlotValue::Filled(text) = &when.value else {
+            panic!("lot {i}: when is never silent");
+        };
+        // "born in year B, dead in year D, aged A"
+        let numbers: Vec<i64> = text
+            .split(|c: char| !c.is_ascii_digit() && c != '-')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse().unwrap())
+            .collect();
+        assert_eq!(
+            numbers.len(),
+            3,
+            "lot {i}: expected three integers in {text:?}, got {numbers:?}"
+        );
+        let (born, dead, aged) = (numbers[0], numbers[1], numbers[2]);
+        assert_eq!(
+            dead - born,
+            aged,
+            "lot {i}: {text:?} — dead ({dead}) - born ({born}) != aged ({aged})"
+        );
+        dead_checked += 1;
+    }
+    assert!(
+        dead_checked > 0,
+        "no dead lot among 0..20 on seed 42 — the check is vacuous"
+    );
+    println!("dead lots checked for when-triple consistency: {dead_checked}");
+}
+
+/// claim: structural(seed: 42) — one world, twenty lots.
+///
+/// The final review found two slots citing facts they never rendered:
+/// `community-fate` cited `occ-cause`/`occ-ended-by` on every arm, even the
+/// `Alive`/`Hazard` ones that never name a cause or an attacker; `climate`
+/// cited a `longitude` fact it never displays. Both are now conditioned on
+/// what the sentence actually says, and this test reads the sentence back
+/// to check the citation agrees with it.
+#[test]
+fn community_fate_and_climate_cite_only_what_they_render() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let mut cause_checked = 0;
+    let mut climate_checked = 0;
+    for i in 0..20 {
+        let life = draw(&ctx, LotIndex(i), &Pick::default()).unwrap();
+        let story = tell(&world, &ctx, &life);
+
+        let fate = story.slot("community-fate").expect("always asked");
+        let SlotValue::Filled(fate_text) = &fate.value else {
+            panic!("lot {i}: community-fate is never silent");
+        };
+        let names_cause = matches!(life.ending, Ending::CommunityFate(_));
+        let cites_cause = fate.sources.iter().any(
+            |s| matches!(s, Source::Fact { predicate, .. } if predicate == hornvale_history::OCC_CAUSE),
+        );
+        assert_eq!(
+            names_cause, cites_cause,
+            "lot {i}: community-fate text {fate_text:?} names a cause = {names_cause}, but \
+             cites occ-cause = {cites_cause}"
+        );
+        cause_checked += 1;
+
+        let climate = story.slot("climate").expect("always asked");
+        let SlotValue::Filled(climate_text) = &climate.value else {
+            panic!("lot {i}: climate is never silent");
+        };
+        let cites_longitude = climate.sources.iter().any(
+            |s| matches!(s, Source::Fact { predicate, .. } if predicate == hornvale_settlement::LONGITUDE),
+        );
+        assert!(
+            !cites_longitude,
+            "lot {i}: climate text {climate_text:?} cites a longitude fact it never displays"
+        );
+        climate_checked += 1;
+    }
+    assert!(cause_checked > 0 && climate_checked > 0, "vacuous check");
+    println!("community-fate/climate citation checks: {cause_checked} lots");
 }

@@ -32,10 +32,23 @@ fn a_community_that_died_before_plateau_is_a_triangle() {
 }
 
 /// claim: structural(seed: 42) — every occupation of the committed world.
+///
+/// H-M3, sharpened by the final review's item 2: a clamped `Rectangle`
+/// integrates to LESS than the committed `person_years` by construction
+/// (the clamp exists precisely because the raw fit would overshoot the
+/// committed peak), so the exact-integral assertion only holds where the
+/// shape is NOT clamped. Every shape, clamped or not, must still keep
+/// `population_at` within `peak + 0.5` everywhere in its span — that is the
+/// invariant the clamp exists to guarantee by construction rather than by
+/// measured luck. The clamped count is printed, not asserted: it is a
+/// property of the committed world's records, and the ledger's own
+/// prediction (0 on seed 42) is read here rather than pinned as a threshold.
 #[test]
 fn every_seed_42_occupation_reconstructs_to_its_committed_integral() {
     let world = hornvale_worldgen::seed_42_world();
     let now = hornvale_worldgen::present_year(&world);
+    let mut clamped_count = 0;
+    let mut total = 0;
     for o in hornvale_worldgen::occupation_records(&world) {
         let end = o.core.ended.unwrap_or(now);
         let p0 = match o.founded_from {
@@ -49,12 +62,43 @@ fn every_seed_42_occupation_reconstructs_to_its_committed_integral() {
             o.core.person_years,
             p0,
         );
+        total += 1;
+        let peak = f64::from(o.core.peak_population);
+        // The bound holds for every shape, clamped or not.
+        let mut year = end.min(o.core.founded);
+        while year <= end.max(o.core.founded) {
+            assert!(
+                population_at(&s, year) <= peak + 0.5 + 1e-9,
+                "occupation {} shape {s:?} at year {year} exceeds peak+0.5 ({})",
+                o.id.0,
+                peak + 0.5
+            );
+            year += ((end - o.core.founded).abs() / 8.0).max(1.0);
+        }
         let got = integral(&s);
-        assert!(
-            (got - o.core.person_years).abs() <= 1e-9 * o.core.person_years.max(1.0),
-            "occupation {} shape {s:?} integrates to {got}, committed {}",
-            o.id.0,
-            o.core.person_years
-        );
+        match s {
+            Shape::Rectangle { clamped: true, .. } => {
+                clamped_count += 1;
+                assert!(
+                    got <= o.core.person_years + 1e-6,
+                    "occupation {} clamped rectangle integrates to {got}, over committed {}",
+                    o.id.0,
+                    o.core.person_years
+                );
+            }
+            _ => {
+                assert!(
+                    (got - o.core.person_years).abs() <= 1e-9 * o.core.person_years.max(1.0),
+                    "occupation {} shape {s:?} integrates to {got}, committed {}",
+                    o.id.0,
+                    o.core.person_years
+                );
+            }
+        }
     }
+    println!("clamped rectangles: {clamped_count} of {total} seed-42 occupations");
+    assert_eq!(
+        clamped_count, 0,
+        "the ledger's own reading of seed 42 found 0 clamped occupations; if this moved, say so"
+    );
 }

@@ -1185,8 +1185,9 @@ fn person_years_matches_epochs_credited_at_their_end() {
     let now = hornvale_worldgen::present_year(&world);
     let occs = hornvale_worldgen::occupation_records(&world);
     assert!(!occs.is_empty());
-    let e = hornvale_worldgen::BakeConfig::default_millennia().epoch_years;
-    let start = 0.0;
+    let cfg = hornvale_worldgen::BakeConfig::default_millennia();
+    let e = cfg.epoch_years;
+    let start = cfg.start_year;
 
     let mut total_zero_tenure = 0usize;
     let mut total_sub_epoch = 0usize;

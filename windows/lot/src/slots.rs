@@ -193,6 +193,21 @@ fn year(value: f64) -> String {
     format!("{}", value.round() as i64)
 }
 
+/// A year, rounded to the whole number the story displays.
+fn year_i64(value: f64) -> i64 {
+    value.round() as i64
+}
+
+/// An age derived from two DISPLAYED years, never from a third float
+/// rounded on its own: `when`'s "born … dead … aged" triple and `sky`'s
+/// "the first at age N" both name a span between two years the sentence
+/// already prints, so the age must be their difference — rounding all
+/// three floats independently can disagree (the gallery's seed-42 page
+/// disagreed on 1 of 9 dead lives before this fix).
+fn rounded_span(start: f64, end: f64) -> i64 {
+    year_i64(end) - year_i64(start)
+}
+
 /// The settlement standing on `vertex` that this lot's `people` occupies,
 /// falling back to the first settlement there.
 ///
@@ -275,6 +290,34 @@ fn coordinates_of(
     )
 }
 
+/// The latitude of `vertex` in degrees, with the citation for JUST that
+/// value: the settlement's own committed `latitude` fact where it stands,
+/// otherwise the derivation off the rebuilt Geosphere. Unlike
+/// [`coordinates_of`], this never cites a `longitude` fact — `climate` is
+/// the caller, and it never displays the longitude, so citing it alongside
+/// would claim a read of a value the sentence does not show.
+fn latitude_of(
+    ctx: &LotContext,
+    world: &World,
+    vertex: Vertex,
+    settlement: Option<EntityId>,
+) -> (f64, Source) {
+    if let Some(id) = settlement
+        && let Some(Value::Number(latitude)) =
+            world.ledger.value_of(id, hornvale_settlement::LATITUDE)
+    {
+        return (*latitude, cite(world, id, hornvale_settlement::LATITUDE));
+    }
+    let (latitude, _longitude) = ctx.lat_lon(vertex);
+    (
+        latitude,
+        Source::Derived {
+            function: "lot::context::LotContext::lat_lon",
+            inputs: "the rebuilt Geosphere's position for the committed site".to_string(),
+        },
+    )
+}
+
 /// The birth occupation's people, as the record names it.
 fn people_of(ctx: &LotContext, life: &Life) -> &'static str {
     ctx.occupations[life.occ].record.core.people.0
@@ -305,13 +348,13 @@ fn when(world: &World, ctx: &LotContext, life: &Life) -> Answer {
             "born in year {}, and alive at the present, year {} — {} years old",
             year(life.birth_year),
             year(ctx.present_year),
-            year(life.age_at_death)
+            rounded_span(life.birth_year, ctx.present_year)
         ),
         _ => format!(
             "born in year {}, dead in year {}, aged {}",
             year(life.birth_year),
             year(life.death_year),
-            year(life.age_at_death)
+            rounded_span(life.birth_year, life.death_year)
         ),
     };
     (SlotValue::Filled(text), sources)
@@ -549,15 +592,14 @@ fn community_fate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     if record.core.ended.is_some() {
         sources.push(cite(world, record.id, hornvale_history::OCC_ENDED));
     }
-    if record.core.cause.is_some() {
-        sources.push(cite(world, record.id, hornvale_history::OCC_CAUSE));
-    }
-    if let Ended::By(hand) = record.ended_by {
-        sources.push(cite(world, record.id, hornvale_history::OCC_ENDED_BY));
-        let _ = hand;
-    }
+    // `OCC_CAUSE`/`OCC_ENDED_BY` are cited only inside the `CommunityFate`
+    // arm below, and only when the sentence actually names what they say —
+    // the final review found both pushed here unconditionally, citing a
+    // committed cause/attacker even on the `Alive`/`Hazard` arms that never
+    // mention either.
     let text = match &life.ending {
         Ending::CommunityFate(cause) => {
+            sources.push(cite(world, record.id, hornvale_history::OCC_CAUSE));
             let mut said = format!(
                 "the community {} in year {}, and the life ended with it",
                 cause_phrase(*cause),
@@ -566,6 +608,7 @@ fn community_fate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
             if let Ended::By(hand) = record.ended_by
                 && let Some(&index) = ctx.by_entity.get(&hand)
             {
+                sources.push(cite(world, record.id, hornvale_history::OCC_ENDED_BY));
                 let attacker = &ctx.occupations[index].record;
                 said.push_str(&format!(
                     " — at the hand of a {} community at site {}",
@@ -938,8 +981,11 @@ fn mine(world: &World, ctx: &LotContext, life: &Life) -> Answer {
 fn climate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     let settlement = settlement_on(ctx, world, life.site, people_of(ctx, life));
     // The same latitude `where` displays, from the same chooser, so the band
-    // and the number a reader sees beside it can never disagree.
-    let (latitude, _longitude, mut sources) = coordinates_of(ctx, world, life.site, settlement);
+    // and the number a reader sees beside it can never disagree. Only the
+    // latitude source: this slot never displays a longitude, so it must
+    // never cite one either.
+    let (latitude, lat_source) = latitude_of(ctx, world, life.site, settlement);
+    let mut sources = vec![lat_source];
     let band = if latitude.abs() < 23.5 {
         "tropical"
     } else if latitude.abs() < 66.5 {
@@ -995,12 +1041,12 @@ fn sky(ctx: &LotContext, life: &Life) -> Answer {
     let text = match seen.first() {
         None => "the sun was never wholly taken in this life".to_string(),
         Some(first) => {
-            let age = (first - life.birth_year).max(0.0);
+            let age = rounded_span(life.birth_year, *first).max(0);
             format!(
                 "the sun was wholly taken {} time{} over this life, the first at age {}",
                 seen.len(),
                 if seen.len() == 1 { "" } else { "s" },
-                year(age)
+                age
             )
         }
     };

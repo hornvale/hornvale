@@ -47,7 +47,7 @@ Most of these lives were born recently: the last five hundred years hold 48.8% o
 
 ## When
 
-They were born in year 1752, dead in year 1783, aged 32. [1] [2] [3]
+They were born in year 1752, dead in year 1783, aged 31. [1] [2] [3]
 
 ## Where
 
@@ -75,8 +75,8 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 They paid tribute to Rorora, a kobold community. [29] [17]
 They lived in 2 huts. [30]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [5] [6] [31] [9]
-The sun was wholly taken 2 times over this life, the first at age 20. [32]
+They lived in tropical latitudes, and temperate-forest country. [5] [31] [9]
+The sun was wholly taken 2 times over this life, the first at age 19. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
 The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
@@ -150,7 +150,7 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in one hut. [30]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in temperate latitudes, and taiga country. [5] [6] [31] [9]
+They lived in temperate latitudes, and taiga country. [5] [31] [9]
 The sun was wholly taken 5 times over this life, the first at age 18. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
@@ -225,7 +225,7 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and tropical-rainforest country. [5] [6] [30] [9]
+They lived in tropical latitudes, and tropical-rainforest country. [5] [30] [9]
 The sun was wholly taken 1 time over this life, the first at age 2. [31]
 The ground under them gave nothing — the ground held for the whole of this life. [32]
 They ate other living things — prey, detritus, or their remains. [33]
@@ -299,7 +299,7 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 2 huts. [24]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and upwelling country. [5] [6] [25] [9]
+They lived in tropical latitudes, and upwelling country. [5] [25] [9]
 The sun was wholly taken 12 times over this life, the first at age 15. [26]
 The ground under them gave nothing — the ground held for the whole of this life. [27]
 They ate other living things — prey, detritus, or their remains. [28]
@@ -368,8 +368,8 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 2 huts. [27]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [5] [6] [28] [9]
-The sun was wholly taken 2 times over this life, the first at age 16. [29]
+They lived in tropical latitudes, and temperate-forest country. [5] [28] [9]
+The sun was wholly taken 2 times over this life, the first at age 17. [29]
 The ground under them gave nothing — the ground held for the whole of this life. [30]
 They ate other living things — prey, detritus, or their remains. [31]
 The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
@@ -440,7 +440,7 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 2 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [5] [6] [30] [9]
+They lived in tropical latitudes, and temperate-forest country. [5] [30] [9]
 The sun was wholly taken 5 times over this life, the first at age 15. [31]
 The ground under them gave nothing — the ground held for the whole of this life. [32]
 They ate other living things — prey, detritus, or their remains. [33]
@@ -514,7 +514,7 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in temperate latitudes, and temperate-forest country. [5] [6] [30] [9]
+They lived in temperate latitudes, and temperate-forest country. [5] [30] [9]
 The sun was wholly taken 1 time over this life, the first at age 4. [31]
 The ground under them gave nothing — the ground held for the whole of this life. [32]
 They ate other living things — prey, detritus, or their remains. [33]
@@ -588,7 +588,7 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [6] [30] [9]
+They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [30] [9]
 The sun was wholly taken 5 times over this life, the first at age 1. [31]
 The ground under them gave nothing — the ground held for the whole of this life. [32]
 They ate other living things — prey, detritus, or their remains. [33]
@@ -662,7 +662,7 @@ Nothing in the record says what standing they were reckoned in: no `has-caste` f
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
 They lived in 3 huts. [29]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [6] [30] [9]
+They lived in tropical latitudes, and tropical-seasonal-forest country. [5] [30] [9]
 The sun was wholly taken 1 time over this life, the first at age 1. [31]
 The ground under them gave nothing — the ground held for the whole of this life. [32]
 They ate other living things — prey, detritus, or their remains. [33]
@@ -721,25 +721,25 @@ They were called Porara. [12]
 The community held about 32 people at the birth year, in a community that reached 32 at its height. [13] [14] [15]
 It had been founded at year 0, raised from nothing at its own site. [1] [16]
 Nothing in the record says how its founder stood to the mother community's founder: no forebear is derivable — either this community was raised at its own site, or its people has no generation length to reckon a remove by.
-The community outlived the life, ending only in year 750. [17] [3] [18] [19]
+The community outlived the life, ending only in year 750. [17] [3]
 
 ## Story
 
 Porara is not a real person, but this life is drawn from the statistical reality of Xoxa, a temperate-forest site, at 16.3°, 124.6° in year 483 of seed 42.
-They had bronze-working. [20]
-The community was for farming and herding. [21]
-They spoke the human tongue. [22]
-They held Pero Pero — the pantheon this people held, kept at Vakveepera, in organized cult. [23] [24] [25] [26]
-The community held that Xoxa came to its end in year 750 — first-hand. [3] [27] [9]
+They had bronze-working. [18]
+The community was for farming and herding. [19]
+They spoke the human tongue. [20]
+They held Pero Pero — the pantheon this people held, kept at Vakveepera, in organized cult. [21] [22] [23] [24]
+The community held that Xoxa came to its end in year 750 — first-hand. [3] [25] [9]
 Nothing in the record says how they fed themselves: culture facts attach to living settlements.
 Nothing in the record says what standing they were reckoned in: culture facts attach to living settlements.
 Nothing in the record says who they answered to: no `pays-tribute-to` fact stands on this occupation.
-They lived in 2 huts. [28]
+They lived in 2 huts. [26]
 Nothing in the record speaks of a working here: not a mining community.
-They lived in tropical latitudes, and temperate-forest country. [6] [7] [29] [10]
-The sun was wholly taken 5 times over this life, the first at age 21. [30]
-The ground under them gave nothing — the ground held for the whole of this life. [31]
-They ate other living things — prey, detritus, or their remains. [32]
+They lived in tropical latitudes, and temperate-forest country. [6] [27] [10]
+The sun was wholly taken 5 times over this life, the first at age 21. [28]
+The ground under them gave nothing — the ground held for the whole of this life. [29]
+They ate other living things — prey, detritus, or their remains. [30]
 The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
 
 ### Sources
@@ -761,19 +761,17 @@ The record keeps no sex, household, trade or letters for anyone; those four sile
 - [15] derived: lot::shape::population_at (the committed span, peak and person-years (§4.1))
 - [16] how the occupation began: genesis, or founded from another community (entity 10760661430244474909, occ-founded-from)
 - [17] derived: lot::draw::draw (the community's committed fate, spliced into the life course (§4.3))
-- [18] why the occupation ended, absent while alive (entity 10760661430244474909, occ-cause)
-- [19] how the occupation ended: nature, or another entity's hand (entity 10760661430244474909, occ-ended-by)
-- [20] the occupation's technological horizon (entity 10760661430244474909, occ-tech)
-- [21] what the occupation was for (entity 10760661430244474909, occ-function)
-- [22] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
-- [23] a belief's deity name (roman) (entity 17992185295009939456, deity-name)
-- [24] a belief's epithet (roman) (entity 17992185295009939456, deity-epithet)
-- [25] a community holding a belief (entity 17992185295009939456, held-by)
-- [26] the cult form of a belief (organized or folk) (entity 17992185295009939456, cult-form)
-- [27] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
-- [28] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
-- [29] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
-- [30] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
-- [31] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
-- [32] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+- [18] the occupation's technological horizon (entity 10760661430244474909, occ-tech)
+- [19] what the occupation was for (entity 10760661430244474909, occ-function)
+- [20] derived: worldgen::language_of_in (the people's authored articulation vector, drawn against the world's seed)
+- [21] a belief's deity name (roman) (entity 17992185295009939456, deity-name)
+- [22] a belief's epithet (roman) (entity 17992185295009939456, deity-epithet)
+- [23] a community holding a belief (entity 17992185295009939456, held-by)
+- [24] the cult form of a belief (organized or folk) (entity 17992185295009939456, cult-form)
+- [25] derived: hearsay::claims_about (the founding tree, walked from every witness of the ending)
+- [26] derived: history::flesh::structures_of (the committed peak population, tech horizon and function, under the occupation-scoped flesh seed)
+- [27] derived: lot::slots::climate (the site's own latitude, banded at 23.5° and 66.5°)
+- [28] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
+- [29] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
+- [30] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
 

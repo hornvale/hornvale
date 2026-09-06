@@ -14,7 +14,12 @@ statement about the world rather than four failures of its record.
 The sim draws; the page shows (decision 0022). Every number below is a field
 of a payload the WebAssembly module produced — `lot/life/v1`, `lot/curve/v1`
 and `lot/places/v1` — and the browser computes no demographic quantity of
-its own. What the browser *does* own is the theatre: the log/linear switch
+its own, with one narrow exception: the When stage's hint sentence sums
+payload shares over the span's last quarter, the same rule the committed
+page's own prose uses, but binned by *epoch* here against the committed
+page's binning by *century* there — so the two sentences can disagree by a
+fraction of a point even though both are reading the same underlying curve.
+What the browser *does* own is the theatre: the log/linear switch
 on the births graph, the year that spins before it settles, the crosshair
 hopping to the site, the timeline assembling itself. The permalink is the
 key, so two readers of one link see one life; a life is drawn by the module

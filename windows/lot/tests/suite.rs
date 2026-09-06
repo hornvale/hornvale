@@ -11,3 +11,5 @@ mod render;
 mod shape;
 #[path = "suite/slots.rs"]
 mod slots;
+#[path = "suite/streamless.rs"]
+mod streamless;

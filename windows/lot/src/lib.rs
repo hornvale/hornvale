@@ -1,10 +1,8 @@
 //! The lot window: one life drawn from everyone who ever lived in a world,
 //! told from the committed ledger alone. A lot is an OBSERVATION, never a
 //! fact (spec §3 of `docs/superpowers/specs/2026-09-05-the-lot-design.md`;
-//! the campaign's decision record for this follows at close, per the
-//! ledger's Task 12 entry): its randomness is the reader's `LotIndex`,
-//! expanded by pure hash arithmetic, and nothing here draws a `Stream` or
-//! commits.
+//! decision 0796): its randomness is the reader's `LotIndex`, expanded by
+//! pure hash arithmetic, and nothing here draws a `Stream` or commits.
 #![warn(missing_docs)]
 
 pub mod context;

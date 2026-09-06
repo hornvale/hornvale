@@ -58,23 +58,32 @@ pub struct LotContext {
     pub occupations: Vec<Prepared>,
     /// Entity id → index into `occupations`.
     pub by_entity: BTreeMap<EntityId, usize>,
-    /// The rebuilt terrain (coordinates; hazards).
-    pub terrain: hornvale_terrain::GeneratedTerrain,
+    /// The rebuilt terrain (coordinates; hazards). `pub(crate)`: nothing
+    /// outside this crate reads it (checked against `windows/lab`, `cli`
+    /// and `clients/lot/wasm` — the final review's item 6); every read is
+    /// through [`crate::slots`] or [`LotContext::lat_lon`].
+    pub(crate) terrain: hornvale_terrain::GeneratedTerrain,
     /// The composition root's registries (names, minds, societies).
-    pub components: hornvale_worldgen::WorldComponents,
+    /// `pub(crate)` for the same reason as [`LotContext::terrain`].
+    pub(crate) components: hornvale_worldgen::WorldComponents,
     /// Every settlement standing on each Geosphere vertex, in
     /// `all_settlements` (commit) order — the inversion of the settlements'
     /// own [`hornvale_settlement::VERTEX_ID`] facts. A vertex may hold more
     /// than one settlement (successive peoples at one site), so this is a
     /// `Vec`, never a single id; [`crate::slots`] picks the one whose people
-    /// matches the lot's.
+    /// matches the lot's. Stays `pub`, unlike its four siblings here: this
+    /// crate's own integration suite (`tests/suite/slots.rs`) reads it
+    /// directly, and an integration test is a separate crate as far as
+    /// visibility is concerned — `pub(crate)` would not compile there.
     pub settlements_by_vertex: BTreeMap<Vertex, Vec<EntityId>>,
     /// The founding tree, read once out of the ledger — what the
-    /// `held-true` slot's hearsay walk needs.
-    pub lineage: hornvale_hearsay::lineage::Lineage,
+    /// `held-true` slot's hearsay walk needs. `pub(crate)`, see
+    /// [`LotContext::terrain`].
+    pub(crate) lineage: hornvale_hearsay::lineage::Lineage,
     /// The world's generated star system and its derived calendar. Since
     /// The Zenith retired the tier-0 constant sun, every world carries one.
-    pub sky: (hornvale_astronomy::StarSystem, hornvale_astronomy::Calendar),
+    /// `pub(crate)`, see [`LotContext::terrain`].
+    pub(crate) sky: (hornvale_astronomy::StarSystem, hornvale_astronomy::Calendar),
     /// Births per whole year, summed over every occupation and sampled at
     /// each year's midpoint (`start_year + k + 0.5`). Precomputed once here
     /// so [`crate::draw::draw`]'s unpinned birth-year pick reads a table
@@ -176,6 +185,15 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
             .lifespan
             .map(|y| y.get())
             .ok_or_else(|| LotError::Build(format!("people {people} has no lifespan")))?;
+        // A non-positive lifespan would reach a census column as NaN (every
+        // `lot-*` scaled-age metric divides by it): refuse loudly here
+        // rather than letting a hazard/shape computation silently poison a
+        // committed number downstream.
+        if lifespan <= 0.0 {
+            return Err(LotError::Build(format!(
+                "people {people} has a non-positive lifespan ({lifespan})"
+            )));
+        }
         let maturity = lh
             .age_at_maturity
             .map(|y| y.get())

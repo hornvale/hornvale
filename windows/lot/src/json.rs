@@ -262,7 +262,8 @@ fn shape_name(shape: &Shape) -> &'static str {
     match shape {
         Shape::RisePlateau { .. } => "rise-plateau",
         Shape::Triangle { .. } => "triangle",
-        Shape::Rectangle { .. } => "rectangle",
+        Shape::Rectangle { clamped: true, .. } => "rectangle-clamped",
+        Shape::Rectangle { clamped: false, .. } => "rectangle",
     }
 }
 

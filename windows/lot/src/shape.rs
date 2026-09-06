@@ -12,7 +12,7 @@
 pub const EPOCH_YEARS: f64 = 25.0;
 
 /// The reconstructed curve over `[founded, end]`.
-/// type-audit: bare-ok(count: RisePlateau.founded), bare-ok(count: RisePlateau.end), bare-ok(count: RisePlateau.p0), bare-ok(count: RisePlateau.peak), bare-ok(count: RisePlateau.rise), bare-ok(count: Triangle.founded), bare-ok(count: Triangle.end), bare-ok(count: Triangle.p0), bare-ok(count: Triangle.apex), bare-ok(count: Rectangle.founded), bare-ok(count: Rectangle.end), bare-ok(count: Rectangle.level)
+/// type-audit: bare-ok(count: RisePlateau.founded), bare-ok(count: RisePlateau.end), bare-ok(count: RisePlateau.p0), bare-ok(count: RisePlateau.peak), bare-ok(count: RisePlateau.rise), bare-ok(count: Triangle.founded), bare-ok(count: Triangle.end), bare-ok(count: Triangle.p0), bare-ok(count: Triangle.apex), bare-ok(count: Rectangle.founded), bare-ok(count: Rectangle.end), bare-ok(count: Rectangle.level), bare-ok(flag: Rectangle.clamped)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shape {
     /// Linear rise from `p0` to `peak` over `rise` years, then flat.
@@ -43,13 +43,20 @@ pub enum Shape {
         apex: f64,
     },
     /// Flat at `level` — a zero-tenure occupation, or an area no rise fits.
+    /// `level <= peak + 0.5` by construction (see [`shape_of`]'s `rectangle`
+    /// helper): a raw `person_years / t` that would overshoot the committed
+    /// peak is clamped, and `clamped` says so — the caption downstream
+    /// (`json.rs`'s `shape_name`) reports `"rectangle-clamped"` rather than
+    /// silently narrating an exact integral it no longer has.
     Rectangle {
         /// The bake year the occupation began.
         founded: f64,
         /// The bake year the occupation ended.
         end: f64,
-        /// The constant population over the span.
+        /// The constant population over the span — `<= peak + 0.5`.
         level: f64,
+        /// Whether `level` is the clamp, not the raw `person_years / t`.
+        clamped: bool,
     },
 }
 
@@ -88,12 +95,9 @@ pub fn shape_of(founded: f64, end: f64, peak: u32, person_years: f64, p0: f64) -
         // level is the mean population over that credited epoch, and the
         // stored `end` is widened to `founded + EPOCH_YEARS` so `integral`
         // (which reads `end - founded` uniformly, no special case) recovers
-        // exactly `person_years` for this shape too.
-        return Shape::Rectangle {
-            founded,
-            end: founded + EPOCH_YEARS,
-            level: person_years / EPOCH_YEARS,
-        };
+        // exactly `person_years` for this shape too — unless the clamp below
+        // bites, in which case the recovered integral is honestly less.
+        return rectangle(founded, founded + EPOCH_YEARS, person_years, peak);
     }
     // Area of rise-then-plateau with rise r: p0 r + (peak - p0) r / 2 + peak (t - r)
     //   = peak t - r (peak - p0) / 2   =>   r = 2 (peak t - A) / (peak - p0)
@@ -124,10 +128,39 @@ pub fn shape_of(founded: f64, end: f64, peak: u32, person_years: f64, p0: f64) -
             apex,
         };
     }
+    rectangle(founded, end, person_years, peak)
+}
+
+/// Build a `Rectangle`, clamping its level to `peak + 0.5` (the same slack
+/// `Triangle`'s apex check above allows) and reporting whether the clamp
+/// fired.
+///
+/// **Why the accrual invariant alone does not bound this level.** A
+/// record's committed `person_years` can carry more credited epochs than
+/// the reconstructed span `end - founded` has room for — each epoch
+/// contributes up to `peak * EPOCH_YEARS` regardless of how much of that
+/// epoch the occupation actually held the site, so `credited epochs *
+/// EPOCH_YEARS` can exceed the record's own tenure (94 of seed 42's 1,212
+/// occupations do, the worst by 0.57% of the bound). Dividing the whole
+/// credited `person_years` by the shorter real `t` then overshoots `peak`.
+/// Clamping here is what makes [`population_at`] honour the committed peak
+/// BY CONSTRUCTION rather than by measured luck; [`integral`] of a clamped
+/// rectangle is `level * t`, honestly less than `person_years` rather than
+/// silently wrong.
+fn rectangle(founded: f64, end: f64, person_years: f64, peak: f64) -> Shape {
+    let t = end - founded;
+    let raw = person_years / t;
+    let bound = peak + 0.5;
+    let (level, clamped) = if raw > bound {
+        (bound, true)
+    } else {
+        (raw, false)
+    };
     Shape::Rectangle {
         founded,
         end,
-        level: person_years / t,
+        level,
+        clamped,
     }
 }
 
@@ -166,6 +199,7 @@ pub fn population_at(s: &Shape, year: f64) -> f64 {
             founded,
             end,
             level,
+            ..
         } => {
             if year < founded || year > end {
                 0.0
@@ -176,7 +210,10 @@ pub fn population_at(s: &Shape, year: f64) -> f64 {
     }
 }
 
-/// The exact integral of the shape over its span.
+/// The exact integral of the shape over its span — exact for
+/// `RisePlateau`/`Triangle`, and for an unclamped `Rectangle`; a clamped
+/// `Rectangle`'s integral is `level * t`, which is `< person_years` by
+/// however much the clamp bit (see [`rectangle`]).
 /// type-audit: bare-ok(count: return)
 pub fn integral(s: &Shape) -> f64 {
     match *s {
@@ -197,6 +234,7 @@ pub fn integral(s: &Shape) -> f64 {
             founded,
             end,
             level,
+            ..
         } => level * (end - founded),
     }
 }

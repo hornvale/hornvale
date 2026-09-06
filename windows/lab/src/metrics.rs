@@ -5784,7 +5784,7 @@ pub fn registry() -> Vec<Metric> {
                         .iter()
                         .map(|(life, _)| {
                             let lifespan = sample.ctx.occupations[life.occ].lifespan_years;
-                            life.age_at_death * 60.0 / lifespan
+                            life.age_at_death * hornvale_lot::hazard::HUMAN_ANCHOR_YEARS / lifespan
                         })
                         .collect();
                     // `scaled` always holds exactly 200 values here (a

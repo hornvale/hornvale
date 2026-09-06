@@ -2,9 +2,10 @@
 //! numbered `[n]` references that resolve, and byte-stable JSON that names
 //! its schema.
 use hornvale_lot::context::assemble;
-use hornvale_lot::draw::{curve, draw, odds, places};
+use hornvale_lot::draw::{Curve, curve, draw, odds, places};
 use hornvale_lot::json::{curve_json, life_json, odds_json, places_json};
 use hornvale_lot::narrate::{STAGES, curve_text, narrate};
+use hornvale_lot::shape::EPOCH_YEARS;
 use hornvale_lot::slots::{SlotValue, tell};
 use hornvale_lot::{LotIndex, Pick};
 
@@ -350,4 +351,42 @@ fn the_when_graph_names_its_total_and_bins_the_span_by_century() {
         "seed 42 takes the flat arm: {text}"
     );
     assert!(!text.contains("stopped growing"));
+}
+
+/// claim: structural — a hand-built flat curve, no world required beyond
+/// the `LotContext` `curve_text` reads `seed` from (any assembled world
+/// supplies that field; seed 42 is used only for convenience).
+///
+/// `the_when_graph_names_its_total_and_bins_the_span_by_century` above only
+/// ever exercises the "born recently" arm, because seed 42's own curve is
+/// growing. This test drives the OTHER arm directly: equal births in every
+/// epoch means the last quarter holds exactly a quarter of the total, well
+/// under `RECENT_SHARE`'s 33%, so `curve_text` must print the "stopped
+/// growing" sentence and never the "born recently" one.
+#[test]
+fn curve_texts_flat_arm_fires_on_a_uniform_curve() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let epochs = 80; // 2000 years / 25-year epochs
+    let per_epoch = 10.0;
+    let flat = Curve {
+        epoch_years: EPOCH_YEARS,
+        start_year: 0.0,
+        present_year: epochs as f64 * EPOCH_YEARS,
+        births_by_epoch: vec![per_epoch; epochs],
+        births_by_people_by_epoch: std::collections::BTreeMap::new(),
+        souls_ever: per_epoch * epochs as f64,
+    };
+    let text = curve_text(&ctx, &flat);
+    assert!(
+        text.contains(
+            "This world's population stopped growing: a birth is about as likely in any \
+             century.\n"
+        ),
+        "a uniform curve must take the flat arm: {text}"
+    );
+    assert!(
+        !text.contains("born recently"),
+        "a uniform curve must not also claim recent growth: {text}"
+    );
 }

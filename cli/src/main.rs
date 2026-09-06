@@ -468,6 +468,9 @@ fn cmd_lot(args: &[String]) -> Result<(), String> {
         Some(raw) => raw.parse().map_err(|_| format!("bad --count: {raw}"))?,
         None => 1,
     };
+    if count == 0 {
+        return Err("--count must be at least 1".to_string());
+    }
     let pick = hornvale_lot::Pick {
         year: match flag_value(args, "--year") {
             Some(raw) => Some(raw.parse().map_err(|_| format!("bad --year: {raw}"))?),
@@ -481,7 +484,7 @@ fn cmd_lot(args: &[String]) -> Result<(), String> {
         },
     };
     let json = args.iter().any(|a| a == "--json");
-    for key in index..index + count {
+    for key in index..index.saturating_add(count) {
         let life = hornvale_lot::draw::draw(&ctx, hornvale_lot::LotIndex(key), &pick)
             .map_err(|e| e.to_string())?;
         let story = hornvale_lot::slots::tell(&world, &ctx, &life);

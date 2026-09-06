@@ -123,6 +123,20 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
             }
             let u = uniform(seed, i, "birth-year") * total;
             let k = cdf.iter().position(|&c| c >= u).unwrap_or(cdf.len() - 1);
+            // `k` is the whole year the births-per-year curve says this
+            // birth falls in; the fractional offset below places it
+            // somewhere inside that year, uniformly. When exactly one
+            // occupation contributed to `births_by_year[k]` and its span
+            // does not cover the whole year (it opened or closed partway
+            // through), this offset can land the birth OUTSIDE that
+            // occupation's own tenure — the curve is binned by year, not by
+            // the finer span an occupation actually held. When that
+            // happens, `alive` below (step 2) comes back empty and the draw
+            // returns `LotError::NoOccupations` rather than a life: rare
+            // (it needs a single-contributor year AND an unlucky fractional
+            // draw), and a caller sees an ordinary refused draw, the same
+            // shape as every other `LotError` — never a panic or a
+            // silently wrong life.
             ctx.start_year + k as f64 + uniform(seed, i, "birth-year-frac")
         }
     };
@@ -166,12 +180,26 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
     //    overlaps, following daughters until either the life ends or the
     //    trail runs out.
     let p = &ctx.occupations[occ];
+    // `death_age` only tabulates survival out to `2 × lifespan_years`
+    // (`survival_table`'s own range): a draw whose `u` falls below `S(2L)`
+    // — the rare, long tail of a hazard this shallow — returns `2L` itself
+    // rather than extrapolating past the table, so this age is capped there
+    // even though the draw is otherwise continuous.
     let mut age = death_age(&p.hazard, 1.0 - uniform(seed, i, "death"));
     let mut ending = Ending::Hazard;
     let mut moved_to = None;
     let mut moved_year = None;
     let mut cur = occ;
-    loop {
+    // This walk terminates because `founded_from` is acyclic BY
+    // CONSTRUCTION: a daughter is always founded strictly after its mother
+    // (`daughter.core.founded == end`, and `end > mother.core.founded` for
+    // any occupation with a committed ending), so following `daughters`
+    // forward can never revisit an occupation already on the trail. Nothing
+    // in the type system proves that, though — it is a property of how the
+    // bake commits records, not of this loop — so a bound is added anyway:
+    // at most one hop per occupation in the whole context, which the trail
+    // could visit at most once each even in the worst case.
+    for _ in 0..ctx.occupations.len() {
         let r = &ctx.occupations[cur].record;
         let Some(end) = r.core.ended else { break };
         if end <= birth_year || end >= birth_year + age {
