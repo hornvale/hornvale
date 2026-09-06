@@ -12,7 +12,7 @@
 
 **Ledger:** `docs/superpowers/ledgers/2026-09-06-the-hidage.md` — rulings, deferred minors and follow-ups are written there AS THEY OCCUR, never batched to close, and never into `.superpowers/sdd/`.
 
-**Status:** Not started.
+**Status:** Complete — Tasks 0–3 implemented and reviewed 2026-09-06; verdict RESCALE (decision 0827); stage gate submitted at the Task 1 boundary.
 
 ## Global Constraints
 

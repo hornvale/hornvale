@@ -4,7 +4,8 @@
 worked land" — the probe that must precede the rung, standing rule 1) ·
 **Decision block:** 0826–0835 · **Ledger:**
 [`2026-09-06-the-hidage.md`](../ledgers/2026-09-06-the-hidage.md) ·
-**Status:** spec, awaiting G3 review.
+**Status:** implemented and closed 2026-09-06: verdict RESCALE, D1 struck
+(decision 0827).
 
 *The Tribal Hidage assessed each people's land in hides — the unit of worked
 land that feeds one household — before anyone ploughed it. This campaign

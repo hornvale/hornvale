@@ -472,6 +472,96 @@ acted on here):
   file-level) with a comment citing decision 0092 and the two sibling
   probes carrying the same line; the reviewer confirmed both. Accepted.
 
+## Task 3 — verdict and records
+
+**The verdict is RESCALE** (`20f48585e`), and D1 is struck.
+
+Applied mechanically against spec §4, over `A_s` (P2), on all five seeds:
+
+```
+  seed    c_s / N_s   ratio   c200_s / N_s   median a
+  ----    ---------   -----   ------------   --------
+  42      390 / 390   1.00    388 / 390      0.66
+  7       250 / 250   1.00    250 / 250      0.82
+  13      262 / 262   1.00    262 / 262      0.65
+  100      60 /  60   1.00     60 /  60      0.40
+  1234     44 /  44   1.00      44 /  44     0.11
+```
+
+Clause 1 (`c_s == 0` on every seed) is false everywhere; clause 3
+(`c_s / N_s <= 0.25`) is false everywhere; clause 2 (`c_s / N_s > 0.5` on
+every seed) holds on all five at the extreme value 1.00. So the printed
+`== VERDICT (spec §4, mechanical): Rescale` is the rule as frozen, not a
+reading of it.
+
+**The attainment caveat does not flip it** — worked in #9 and not re-derived
+here. Two seeds sit under the caveat's 0.5 trigger (100 at 0.40, 1234 at
+0.11), so the caveat is live; dividing the 150 bar by each seed's own median
+attainment gives corrected bars of 227 / 183 / 231 / 375 / 1364, and the
+count still clearing them is `>= 378/390`, `250/250`, `262/262`, `60/60`,
+`35/44` — a majority on every seed, tightest at 35 of 44 on seed 1234. The
+branch is RESCALE, not MIXED.
+
+**The §4.1 predictions** (from #9, unchanged): S1 >= 0.25 **held** (0.352,
+0.262, 0.446, 0.328, 0.320); attr/N < 0.5 **held** (0.13, 0.18, 0.17, 0.40,
+0.39); S3 >= 0.7 **failed** on 3 of 5 (0.398, 0.614, 0.542, 0.754, 0.813);
+median attainment in [0.5, 1.0] **failed** on 2 of 5 (0.40, 0.11).
+
+**The one qualification the records carry, per #9.** The catchment field does
+carry an apex — S4 is 2.9–11.2 and S1 is 0.26–0.45 — so §4's RESCALE response
+text ("it makes no apex") is wrong about the field. What dies is D1 *as
+specified*: wiring the catchment in as the growth ceiling at today's scale
+makes every settlement a town. Whether a rescaled catchment would make a
+differentiated apex is metaplan §6's open `SETTLERS_PER_CAPACITY` question,
+not a rung, and neither decision record decides it.
+
+### Records written
+
+- `docs/decisions/0826-a-dynamics-probe-falsifies-on-a-count-against-an-existing-ceiling.md`
+  — the criterion's form, which D2–D6's probes inherit (from #2's pass 3 and
+  spec §4).
+- `docs/decisions/0827-d1-is-struck-worked-land-is-a-uniform-rescale-on-the-growth-field.md`
+  — the verdict, with the per-seed table, the attainment arithmetic and the
+  four predictions.
+- `docs/superpowers/specs/2026-09-04-the-staple-metaplan.md` — §1.1's "genesis
+  uses it" corrected (#1), §4 D1's restatement corrected, a **Probe result**
+  paragraph appended to D1, and one bracketed struck-note each beside §2.1's
+  dependency diagram and §3 consequence 3.
+- `book/src/frontier/idea-registry.md` — `SOC-staple-ladder` status sentence
+  and Where.
+- `book/src/chronicle/the-hidage.md` (+ `book/src/SUMMARY.md`).
+- `docs/retrospectives/the-hidage.md` (+ `docs/retrospectives/README.md` row).
+- `docs/audits/campaign-reconciliation.tsv` — spec and plan rows flipped to
+  `shipped`, chronicle and retro rows added; spec and plan `**Status:**`
+  headers updated.
+
+### Confidence Gradient — no bet moved
+
+Grepped `book/src/open-questions.md` on the invariant (`hamlet`,
+`SETTLERS_PER_CAPACITY`, `catchment`, `every settlement`, `city`) and read
+every hit. Three regions are the near misses and none is moved: the
+carrying-capacity promotion and its partial rescore (~1328, ~3902) score the
+field's *existence and clock*, which this probe reads rather than changes;
+the entity-size passage (~4105) scores whether a heavy tail over *entities*
+is reachable without persistent per-entity multiplicative heterogeneity, and
+a uniform rescale of a ceiling is not that mechanism — the verdict corroborates
+that bet without moving it, and this campaign measured no entity sizes at all;
+and The Staple's own entry (~5466) is filed **unscored** by its own text. No
+re-score paragraph written, per decision 0030's condition (resolves or moves).
+
+### Deferred minors found in Task 3
+
+None new. The three in the table above stand as recorded; the Task 1 minor
+(`multi_people_attractor_sites` counting per P1 entry, not per distinct
+vertex) is reported in the chronicle in exactly those terms.
+
+### No census, no world moved
+
+`git status` before the records commit showed one modified tracked file,
+`docs/timings.md` (Task 0/1 gate-commit rows), and nothing under any
+generated path. The probe commits nothing and adds no `pub` item (spec §5),
+so no census is needed at this close.
+
 ## Follow-ups
 
 - **`scripts/worktree-take.sh` should refuse to recycle a member whose branch
@@ -500,3 +590,19 @@ acted on here):
 
 - This ledger; the spec; a `campaign-reconciliation.tsv` row for the spec.
 - Board: technique post on the worktree-take race (2026-09-05).
+- **Decisions** `0826` (the criterion's form, from #2) and `0827` (the RESCALE
+  verdict, from #9 and the Task 1 readout). The block 0826–0835 is otherwise
+  unused; 0828–0835 go unspent.
+- **Metaplan** `docs/superpowers/specs/2026-09-04-the-staple-metaplan.md`: §1.1
+  correction (#1), §4 D1 restatement plus the **Probe result** paragraph, and
+  one bracketed struck-note each in §2.1 and §3 consequence 3.
+- **Registry** `SOC-staple-ladder` (`book/src/frontier/idea-registry.md`):
+  status sentence and Where.
+- **Chronicle** `book/src/chronicle/the-hidage.md` + `book/src/SUMMARY.md`;
+  **retrospective** `docs/retrospectives/the-hidage.md` +
+  `docs/retrospectives/README.md`.
+- **Reconciliation** `docs/audits/campaign-reconciliation.tsv`: spec and plan
+  rows `shipped`, `chronicle-the-hidage` and `retro-the-hidage` added; the
+  spec's and the plan's `**Status:**` headers record closure.
+- **Confidence Gradient:** no bet moved; the hits read and the reason are in
+  `## Task 3 — verdict and records`.

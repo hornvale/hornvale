@@ -94,6 +94,15 @@ because the index has no values.
   its own vertex's K alone. That is why a genesis catchment averaging ~22
   people yields a bake peak of 86 and never a city.
 
+  **Corrected by The Hidage (2026-09-06):** nothing on the production path
+  reads it. Since The Living Community the bake is the settlement provider
+  (`lib.rs:8202-8210`), and `condense_tagged`'s one caller is the Lab's report
+  accessor. Both halves of the model are single-vertex reads; the watershed
+  exists only as an instrument. The ~22 figure is also not in headcount — it
+  is The Gathering's dimensionless suitability field at a threshold retuned
+  twice since, so it cannot be compared with a bake peak of 86 (The Hidage
+  design §2.4).
+
 ### 1.2 Corroboration nobody had to go looking for
 
 - **`domains/history/src/flesh.rs:601 structures_of` is already a
@@ -195,6 +204,9 @@ rungs. The honest dependencies:
   settlements that exist, and gets richer when cities arrive. This is the
   sequencing result worth having: the reading arc never has to wait.
 - **D1 does not need D2.** Land can be worked before anything is exchanged.
+  [D1 was **struck** on 2026-09-06 — see §4 D1's *Probe result*; the arc's
+  first dynamics rung is now D2, and the diagram above is left as drawn
+  because the dependency it states was never what failed.]
 
 ### 2.2 Why a wheel, and the half that was missing
 
@@ -277,7 +289,12 @@ Three consequences organize the dynamics arc:
    vertex's, so it cannot be starved by its hinterland failing. D1 is that
    link, and it is the same link the return flow needs. **One mechanism, two
    payoffs** — which is the argument for D1 preceding D2 rather than the
-   reverse.
+   reverse. [D1 was **struck** on 2026-09-06 — see §4 D1's *Probe result*. The
+   middle named here is still missing and the two payoffs are still wanted;
+   what the probe killed is the proposed link, the catchment as the growth
+   ceiling at today's scale, which lifts every settlement over the hamlet
+   ceiling at once. The sequencing argument therefore falls with it: D2 is
+   first.]
 
 ### 3.1 Prices, and the reason R3 is last rather than first
 
@@ -344,11 +361,13 @@ question... a later campaign's to ask."* That widening is D1, not R3.
 
 ### DYNAMICS arc
 
-**D1 — a settlement has worked land.** **Restated after §1.1's close-time
-finding: this rung is not "add a catchment", it is "make the two halves of the
-model agree about what feeds a settlement".** The catchment exists
-(`domains/demography/src/flow.rs`, `condense.rs`) and genesis uses it; the bake
-discards it. Reconciling them is a smaller and better-founded change than
+**D1 — a settlement has worked land.** **Restated twice: after §1.1's
+close-time finding to "make the two halves of the model agree about what feeds
+a settlement", and again by The Hidage (2026-09-06) to "wire the existing
+instrument into the bake" — there are not two live halves.** The catchment exists
+(`domains/demography/src/flow.rs`, `condense.rs`) as a Lab instrument that
+nothing on the production path reads (The Hidage, spec §2.3). Wiring it into
+the bake is a smaller and better-founded change than
 inventing a mechanism, and it inherits `flow`'s determinism properties for free
 — it draws nothing and is "integer-and-comparison only". `domains/topology/src/route.rs:166
 least_cost_from` remains available where a TRAVEL-cost catchment is wanted
@@ -358,6 +377,52 @@ spatially flat, every catchment sums alike and this is a uniform rescale in
 disguise, which is not a pathology and not a city either.** The genesis
 figures are the place to start — a mean catchment of ~22 with 182 settlements
 on seed 42 is a distribution somebody can already read the spread off.
+[The flatness criterion in that sentence was **replaced before the probe was
+written**, not applied: `flow` is the drainage algorithm and drainage-basin
+sizes are heavy-tailed on any field it is run over, so a flatness test could
+never have fired. Decision 0826 states the form that replaced it — a count
+with a denominator against a bar the code already has, naming both dead poles
+— and D2–D6's probes inherit that, not this sentence.]
+
+**Probe result (The Hidage, `20f48585e`) — D1 IS STRUCK.** The probe ran on
+the bake's own present-era growth field, over five worlds at default pins, and
+took each people's top-`N_p` attractors by accumulation. `c_s` counts those
+clearing `HAMLET_POPULATION_CEILING` (150):
+
+```
+  seed    c_s / N_s   ratio   c200_s / N_s   median attainment a
+  ----    ---------   -----   ------------   -------------------
+  42      390 / 390   1.00    388 / 390      0.66
+  7       250 / 250   1.00    250 / 250      0.82
+  13      262 / 262   1.00    262 / 262      0.65
+  100      60 /  60   1.00     60 /  60      0.40
+  1234     44 /  44   1.00      44 /  44     0.11
+```
+
+**Verdict: RESCALE.** Every top-N catchment on every seed clears the ceiling,
+so growing a community toward its catchment would make every settlement a
+town — the uniform rescale `SETTLERS_PER_CAPACITY` already performs. The
+probe's attainment caveat was worked, not waved: two seeds have median
+attainment below 0.5, and dividing the bar by each seed's own median gives
+corrected bars of 227 / 183 / 231 / 375 / 1364, still cleared by `>= 378/390`,
+`250/250`, `262/262`, `60/60` and `35/44` — a majority on every seed. The four
+preregistered characterizations: S1 (Gini of accumulation) ≥ 0.25 **held**;
+attr/N < 0.5 **held**; S3 (Spearman of accumulation against vertex capacity)
+≥ 0.7 **failed** on 3 of 5 (0.398 / 0.614 / 0.542 / 0.754 / 0.813), so D1
+would have RE-ORDERED settlements and not only resized them; median attainment
+in [0.5, 1.0] **failed** on 2 of 5, so on the small worlds the ceiling that
+binds today is not capacity — a D6 observation. Decision
+[0827](../../decisions/0827-d1-is-struck-worked-land-is-a-uniform-rescale-on-the-growth-field.md);
+the criterion's form is [0826](../../decisions/0826-a-dynamics-probe-falsifies-on-a-count-against-an-existing-ceiling.md).
+
+**The field does carry an apex, and the record does not overclaim.**
+Max-over-median accumulation is 2.9–11.2 and the Gini is 0.26–0.45, so what
+dies is D1 *as stated* — the catchment wired in as the growth ceiling at
+today's scale. Whether a RESCALED catchment would make a differentiated apex
+is §6's open `SETTLERS_PER_CAPACITY` question, not a rung. **Next step:** the
+dynamics arc re-plans from **D2**, whose probe (below) is the next campaign
+under rule 1, and the `SETTLERS_PER_CAPACITY` question moves out of §6 and
+into that probe's opening brief.
 
 **D2 — more than one thing flows, and some of it by exchange.** Split people
 from subsistence (§3, consequence 1); add a voluntary exchange beside the

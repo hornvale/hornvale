@@ -6113,3 +6113,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T15:13:09Z | gate-commit | 47.918 | 95.339 | 39.716 | 2.82 | 0 | 0eb166a75 | campaign/the-hidage | MacBookPro | 10 |
 | 2026-09-06T15:14:21Z | gate-commit | 35.694 | 69.005 | 16.043 | 2.38 | 0 | 0eb166a75 | campaign/the-hidage | MacBookPro | 10 |
 | 2026-09-06T15:29:28Z | gate-commit | 38.484 | 69.871 | 15.867 | 2.23 | 0 | 9b72518a1 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:30:19Z | gate-commit | 40.205 | 70.044 | 16.382 | 2.15 | 0 | 9b72518a1 | campaign/the-hidage | MacBookPro | 10 |
