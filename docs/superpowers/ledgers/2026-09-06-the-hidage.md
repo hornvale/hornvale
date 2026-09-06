@@ -443,6 +443,35 @@ acted on here):
   `SETTLERS_PER_CAPACITY` item, not this rung. Recorded so the record does
   not overclaim in either direction.
 
+## Task 1 — rulings (implemented at `12c7009de`, fixed at `20f48585e`)
+
+- **H3 narrowed, and accepted.** The brief's loop asserted `K > 0` at EVERY
+  alive surface site; seed 42 has two alive sites with zero present-era
+  capacity (the bake's last era carries its own `temp_offset`/`sea_level`,
+  spec §3.1's named approximation — traced by the implementer with a
+  reverted debug print, `git diff lib.rs` empty). The delivered H3 asserts
+  the spec's own wording, "at one alive site", keeps both realm counters
+  non-zero, and leaves the load-bearing wiring check — the tag-position
+  `assert_eq!` in `world_and_fields` — unconditional. Ruling: the spec's
+  claim is discharged and the wiring is guarded; the brief overstated the
+  spec. Cost if wrong: a swapped realm branch that zeroes every surface site
+  would still fail the witness, so the narrowing tolerates only the per-site
+  benign case. No ideonomy pass: a task-boundary factual ruling.
+- **A plan-text defect, again mine.** The plan's `hops_to_attractor` closed
+  with `assert_eq!(Some(cur), expected.or(Some(cur)))`, which is
+  `Some(cur) == Some(cur)` whenever flow has no attractor for `v` — exactly
+  the K==0 sites H3 had just surfaced. The reviewer caught it because the
+  dispatch asked, by name, whether the assert could pass vacuously. Fix
+  round 1: the call site filters on `k > 0.0` and the assert compares
+  against `expected` directly. **The re-taken readout moved no hops line**:
+  the spurious zeros sat among genuine zero-hop self-attractor sites and
+  never shifted a median or a max, so the defect was invisible in the
+  output it corrupted — which is the reason the assert had to be honest
+  rather than the numbers merely re-checked.
+- **A clippy allow was added** (`#![allow(clippy::disallowed_methods)]`,
+  file-level) with a comment citing decision 0092 and the two sibling
+  probes carrying the same line; the reviewer confirmed both. Accepted.
+
 ## Follow-ups
 
 - **`scripts/worktree-take.sh` should refuse to recycle a member whose branch
@@ -465,6 +494,7 @@ acted on here):
 | --- | --- | --- |
 | 0 | `median`'s even-length branch has no test (the brief's case is odd-length) | deferred to the final review |
 | 0 | `gini` guards `mean <= 0.0` where `== 0.0` is the stated case; unreachable on non-negative inputs | accepted as-is |
+| 1 | `multi_people_attractor_sites` counts per `(vertex, people)` P1 entry, not per distinct vertex; a vertex hosting two peoples' alive occupations counts twice | accepted as-is: consistent with every sibling P1 statistic; read it as "P1 entries whose vertex is a multi-people attractor" (Task 3) |
 
 ## Capture manifest
 
