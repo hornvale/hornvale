@@ -858,7 +858,6 @@ wasm-world: ## Build the world catalog wasm (external clients consume this; neve
 	else \
 	  echo "WARNING: wasm-opt not found (brew install binaryen) — shipping unoptimized; CI will optimize"; \
 	fi
-	cp clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm book/src/gallery/world.wasm
 
 world-check: ## The catalog's local gate: lint + golden byte-identity smoke + size gate
 	@bash scripts/timed.sh world-check -- make --no-print-directory world-check-run
@@ -974,15 +973,20 @@ lot-check: ## The Lot exhibit's local gate: deno checks + bundle drift + a wasm 
 	@bash scripts/timed.sh lot-check -- make --no-print-directory lot-check-run
 
 lot-check-run: wasm-lot
-	cd clients/lot && deno fmt --check && deno lint && deno task check && deno task test && deno task build
-	@git diff --exit-code -- book/src/gallery/lot.js book/src/gallery/lot-worker.js || { \
-	    echo "lot: book/src/gallery/lot.js or lot-worker.js is stale — commit the rebuilt bundles." >&2; exit 1; }
 	cargo fmt --check --manifest-path clients/lot/wasm/Cargo.toml
 	cargo clippy --manifest-path clients/lot/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 	cargo run -p hornvale -- new --seed 42 --out /tmp/hv-lc.json
 	cargo run -p hornvale -- lot --world /tmp/hv-lc.json --index 0 --json > /tmp/hv-lc-lot0.json
 	cargo run -p hornvale -- lot --world /tmp/hv-lc.json --index 3 --year 1500 --json > /tmp/hv-lc-lot3y1500.json
+	@# The smoke runs BEFORE the deno suite (Task 10b fix round 1, F3): it is
+	@# what writes /tmp/hv-lot-{life-0,curve,places}.json, which
+	@# clients/lot/src/payload_test.ts reads as its belt-and-braces witness
+	@# over the hand-reduced fixtures' fidelity — a witness `deno task test`
+	@# could otherwise run without ever seeing the real payload shapes.
 	node clients/lot/wasm/drive.mjs book/src/gallery/lot.wasm /tmp/hv-lc-lot0.json /tmp/hv-lc-lot3y1500.json
+	cd clients/lot && deno fmt --check && deno lint && deno task check && deno task test && deno task build
+	@git diff --exit-code -- book/src/gallery/lot.js book/src/gallery/lot-worker.js || { \
+	    echo "lot: book/src/gallery/lot.js or lot-worker.js is stale — commit the rebuilt bundles." >&2; exit 1; }
 	@# No size gate (see the note above): an exhibit wasm in an unpublished
 	@# book is not a released download. Printed so growth is still visible.
 	@raw=$$(wc -c < clients/lot/wasm/target/wasm32-unknown-unknown/release/hornvale_lot_wasm.wasm); \

@@ -3,7 +3,7 @@
 // out of the world catalog's own drive.mjs (Task 10b, ledger #17) along with
 // the four exports it drives.
 // Usage: node drive.mjs <wasm> <native-lot0.json> <native-lot3y1500.json>
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const [wasmPath, lotPath, lotPinnedPath] = process.argv.slice(2);
 if (!wasmPath || !lotPath || !lotPinnedPath) {
@@ -29,18 +29,27 @@ const golden = (got, path, what) => {
 // Default genesis, byte-identical to `hornvale lot --index 0 --json`.
 expect(e.hl_new(42n), 0, "hl_new(42)");
 expect(e.hl_lot(0n), 0, "hl_lot(0)");
-golden(out(), lotPath, "lot/life/v1 (seed 42, index 0)");
 const seed42Lot0 = out();
+golden(seed42Lot0, lotPath, "lot/life/v1 (seed 42, index 0)");
+// Left for `clients/lot/src/payload_test.ts`'s belt-and-braces witness over
+// the hand-reduced fixtures' fidelity against the real payload shapes —
+// that test FAILS (not skips) when this file is absent, so this smoke is
+// the thing standing between it and going permanently vacuous.
+writeFileSync("/tmp/hv-lot-life-0.json", seed42Lot0);
 
 // lot/curve/v1 — schema only (no native golden shipped for this shape).
 expect(e.hl_lot_curve(), 0, "hl_lot_curve");
-const curve = JSON.parse(out());
+const curveText = out();
+const curve = JSON.parse(curveText);
 if (curve.schema !== "lot/curve/v1") fail("hl_lot_curve", `schema is ${curve.schema}`);
+writeFileSync("/tmp/hv-lot-curve.json", curveText);
 
 // lot/places/v1 — schema only, at a year inside the world's span.
 expect(e.hl_lot_places(1500), 0, "hl_lot_places(1500)");
-const places = JSON.parse(out());
+const placesText = out();
+const places = JSON.parse(placesText);
 if (places.schema !== "lot/places/v1") fail("hl_lot_places", `schema is ${places.schema}`);
+writeFileSync("/tmp/hv-lot-places.json", placesText);
 
 // Pinned draw, byte-identical to `hornvale lot --index 3 --year 1500 --json`.
 // 4294967295 (u32::MAX) is the ABI's "no site pin" sentinel.

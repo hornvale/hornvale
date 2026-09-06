@@ -57,11 +57,21 @@ Deno.test("a degenerate curve is refused before it can divide by zero", () => {
   assertThrows(() => parseCurve(JSON.stringify(noEpoch)), Error, "epoch_years");
 });
 
-Deno.test("the real seed-42 payloads parse, when a build has left them here", async () => {
+Deno.test("the real seed-42 payloads parse, written by make lot-check's smoke", async () => {
   // A belt-and-braces witness over the FIXTURES' fidelity: the hand-reduced
   // payloads above are shaped after real ones, and this reads the real ones
-  // when `make lot-check`'s smoke has just written them. Skipped otherwise,
-  // so `deno task test` stands alone.
+  // that `clients/lot/wasm/drive.mjs` (run by `make lot-check`, BEFORE this
+  // suite) writes to these paths.
+  //
+  // A MISSING fixture is a FAILURE, not a skip. It used to `continue` past a
+  // read error so `deno task test` could "stand alone" without a prior smoke
+  // run — but a witness that cannot fail is not a witness: the smoke's own
+  // producer went dead for an entire campaign (Task 10b's original
+  // `lot-check-run` never wrote these three files at all) and this test
+  // stayed green throughout, silently checking nothing. `make lot-check`
+  // still runs the smoke first specifically so this test sees real fixtures
+  // in its ordinary gate; run `deno task test` on its own and this is the
+  // one test that is expected to fail, naming the fix.
   for (
     const [path, parse] of [
       ["/tmp/hv-lot-life-0.json", parseLife],
@@ -72,8 +82,10 @@ Deno.test("the real seed-42 payloads parse, when a build has left them here", as
     let text: string;
     try {
       text = await Deno.readTextFile(path);
-    } catch {
-      continue;
+    } catch (err) {
+      throw new Error(
+        `${path} is missing — run 'make lot-check' (its wasm smoke writes this fixture before this suite runs): ${err}`,
+      );
     }
     const parsed = parse(text) as { schema: string };
     assert(parsed.schema.startsWith("lot/"), `${path} parsed to ${parsed.schema}`);

@@ -469,16 +469,16 @@ from the same seed.
 `clients/lot/` (Deno, pinned to the same 2.9.2 as the other two clients)
 bundled to `book/src/gallery/lot.js` (committed, drift-checked) and mounted
 on `book/src/gallery/the-lot.md`, the way the Casement mounts on
-`possession-live.md`. It builds the world in a worker through
-`clients/world-wasm` (deploy-built wasm, never committed — decision 0052;
-since decision 0125 retired the book's deploy there is no builder but
-`make wasm-world`, which copies the catalog to `book/src/gallery/world.wasm`
-exactly as `make wasm-vessel` does for the Casement, and the page says it is
-dark until that has run — ledger #9) and reads four new ABI entry points from the lot's OWN wasm crate,
-`clients/lot/wasm` (ledger #17: the catalog could not carry the lot's weight
-under its size gate on the canonical box, so the exhibit takes the Casement's
-posture — its own crate, `make wasm-lot`, `book/src/gallery/lot.wasm`,
-gitignored, ungated), all `hl_*`, all returning the window's JSON into that
+`possession-live.md`. It builds the world in a worker through the lot's OWN
+wasm crate, `clients/lot/wasm` (deploy-built wasm, never committed —
+decision 0052; ledger #17 supersedes ledger #9's catalog placement: the
+catalog could not carry the lot's weight under its size gate on the
+canonical box, so the exhibit takes the Casement's posture instead — its own
+crate. Since decision 0125 retired the book's deploy there is no builder but
+`make wasm-lot`, which copies the crate to `book/src/gallery/lot.wasm`
+exactly as `make wasm-vessel` does for the Casement, gitignored, ungated,
+and the page says it is dark until that has run) and reads four new ABI
+entry points from it, all `hl_*`, all returning the window's JSON into that
 crate's out buffer:
 
 ```
@@ -496,7 +496,7 @@ the timeline that assembles the life's sentence event by event, the
 (`#<seed>/<index>` or the pinned form). Every number it shows is a field of a
 payload; it computes no demographic quantity of its own. Its gate is
 `make lot-check` — `deno fmt --check`, `lint`, `check`, `test`, a
-build-and-bundle-diff, and the **byte-identity smoke**: `hw_lot(0)` for seed
+build-and-bundle-diff, and the **byte-identity smoke**: `hl_lot(0)` for seed
 42 against `hornvale lot --seed 42 --index 0 --json`. It joins the
 `clients` lane set so the chamber runs it at every stage gate and merge.
 
@@ -521,7 +521,7 @@ life, which is only true if the wasm draws it.
 - **Quantize at emit only.** The four JSON payloads quantize through
   `hornvale_kernel::quantize`; `e₀`, the survival integral and the shape run
   at full precision.
-- **Byte-identity across the ABI.** The smoke test compares `hw_lot(0)` to
+- **Byte-identity across the ABI.** The smoke test compares `hl_lot(0)` to
   the CLI for seed 42, the same instrument `world-check` already runs for
   the scene payloads.
 - **No wall clock; no `HashMap`.** Unchanged.
