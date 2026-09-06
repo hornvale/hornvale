@@ -749,3 +749,23 @@ ledger as fact and told Nathan about it in the same breath. It was one probe
 away from being checked, and the implementer ran that probe. A reviewer's
 sentence can overstate its data, and mine inherited the overstatement without
 adding any. · ideonomy passes / overturns: 0.
+
+---
+
+#28 [G5] — **Task 5 complete; #27's correction independently confirmed.** ·
+All four findings ADDRESSED, each mutation reproduced by the re-reviewer rather
+than read: the provenance guard reds exactly one test (the new mid-errand one),
+and the `ERRAND_PRODUCER` ratchet reds on a `drank` fact given the producer
+token. The ratchet derives its predicate set from a **real session walk**, not
+a list of call sites, with two vacuity floors. · **Direction, stated because a
+check that does not state it reads as total:** the ratchet enforces `observed ⊆
+sanctioned` and is blind to a sanctioned key silently disappearing. Judged
+correct — the hazard is a *foreign* predicate arriving under `ERRAND_PRODUCER`
+and hijacking `group()`'s join rule; a sanctioned key going quiet does not
+create it, and the two floors already catch the walk going globally silent. ·
+**#27's correction re-measured independently at a wider sweep** — 249 errand
+lines across seeds 7/11/14/23, residents 1-3, at 120 waits: **zero** whose span
+brackets a `drank`. The seed-11 example reproduced verbatim, five sleeps and a
+graze inside `walking home (sated) — 5 steps, days 113.04798 to 116.05578`. The
+chronicle's stated limit now rests on two independent measurements rather than
+on a reviewer's sentence. · ideonomy passes / overturns: 0.
