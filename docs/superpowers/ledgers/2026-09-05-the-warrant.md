@@ -720,3 +720,32 @@ fixed in the fix round. · (c) `recount_steps`'s doc calls the stepless errand a
 case where "nothing is silently dropped", reading as if the walk emits them; it
 cannot — the errand fact and its first step are pushed in the same arm.
 Defensive handling is right, the prose is not. · ideonomy passes / overturns: 0.
+
+---
+
+#27 [G5] — **CORRECTION to #25: the misleading-span shape is real, but the
+mechanism I recorded for it does not occur.** · #25 said a creature that
+"walks for thirst, drinks, sleeps for a month, then walks for thirst again
+commits no new errand fact — the two runs fold into one line". **Measured:
+zero.** Scanning every errand line on seeds 7, 11, 14 and 23 for one whose span
+brackets a `drank` returns nothing, and the reason is mechanical: a drink flips
+the mode to sated, so the next step computes a different errand key and commits
+a new fact. The two-runs-fold-into-one story was plausible, was relayed by me
+from the review without being measured, and is false. · **The real shape is
+narrower and better named: an errand outlives its own activity.** Seed 11,
+resident 1: `walking home (sated) — 5 steps, days 113.04798 to 116.05578`,
+bracketing **five sleeps and a graze** — a step every ~14 hours where a walking
+step is ~4 hours apart. The errand is genuinely one errand; what the span hides
+is that the creature was mostly not walking during it. The widest *continuous*
+spans are ordinary: seed 7's 65 steps over 10.266 days, seed 14's 77 over
+9.816. · So the chronicle states the limit as **"an errand's span measures
+elapsed time, not time spent walking"**, not as "two episodes fold into one".
+The consequence for 7c is unchanged in force and changed in shape: a compaction
+that drops steps loses the *activity profile* inside an errand, which nothing
+marks — but it does not lose an episode boundary, because a drive discharge
+already creates one. · **The process point, which is the reason this entry
+exists rather than a silent edit:** I relayed a reviewer's example into the
+ledger as fact and told Nathan about it in the same breath. It was one probe
+away from being checked, and the implementer ran that probe. A reviewer's
+sentence can overstate its data, and mine inherited the overstatement without
+adding any. · ideonomy passes / overturns: 0.
