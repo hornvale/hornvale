@@ -134,26 +134,49 @@ and none at all about an eight-minute authoring run over twenty worlds. The
 proof is the next campaign whose close registers a metric; until that census
 delivers itself, this chronicle claims a mechanism rather than a result.
 
-## A defect the close found in its own trigger
+## A defect the close found in its own trigger, and fixed before merge
 
 Reading the arms at the campaign's own tip, to check a figure before writing
 it down, the staleness comparison reported all eight arms stale — by exactly
 one column on each side. Those two columns are the *study names*: the census
 schema calls itself `the-census`, an arm calls itself `gnomon-injection`. The
-extractor skips that line by its indentation, on a stated belief that a
-study's own name sits one level shallower than a column's. In the real files
-it does not; they sit at the same depth, and the rule catches both.
+extractor skipped that line by its indentation, on a stated belief that a
+study's own name sits one level shallower than a column's — and the belief
+itself was wrong. In the real files a column's `"name"` sits at exactly six
+spaces, one per `"kind"`, and the study's own `"name"` sits at four spaces,
+nested under a `"study"` object the drafting-time diagnosis never checked
+against a real file. The original extractor's rule, `^ {4,}"name": "`, is
+*greater-or-equal* four, so it caught both depths — not because they
+coincide, but because the rule was wide enough to swallow the shallower one
+too. This chronicle's own earlier draft repeated the "same depth" claim
+without measuring it, which is the same defect shape one level up: an
+assertion about the data, asserted rather than counted.
 
-So the second trigger fires on every run and the branch that says *arms
-unchanged* is unreachable. The failure is in the safe direction — the
-campaign's own note says a mis-parse here can only cause a needless
-re-authoring, never a missed one, and the arms are in fact current at this
-tip. But the null path is dead, every future null census pays minutes it does
-not owe, and the test arm meant to catch exactly this passes, because its
-synthetic fixture puts the study name at the shallower indent the belief
-predicted rather than where the pretty-printer actually puts it.
+So the second trigger fired on every run and the branch that says *arms
+unchanged* was unreachable. The failure was in the safe direction — a
+mis-parse here can only cause a needless re-authoring, never a missed one,
+and the arms were in fact current at every tip this campaign measured. But
+the null path was dead, every null census paid minutes it did not owe, and
+the test arm meant to catch exactly this passed, because its synthetic
+fixture put the study name at the shallower indent the belief predicted
+rather than where the pretty-printer actually puts it — the same shape as a
+defect this campaign had already found one file over, and the one recorded
+in the project's own census notes: a fixture that does not reproduce the
+case that actually occurs reads exactly like coverage.
 
-That is the same shape as a defect this campaign had already found one file
-over, and the same shape as the one recorded in the project's own census
-notes: a fixture that does not reproduce the case that actually occurs reads
-exactly like coverage.
+**This was found and fixed before merge, in the campaign's own fix wave.**
+`census_schema_columns` now anchors on exactly six spaces
+(`^ {6}"name": "`), verified against every committed schema.json at this tip:
+`grep -c '"kind":'` and `grep -c '^      "name":'` both read 290 on the
+census, and each of the eight injection arms; the study's own `"name"` is
+the sole indent-four hit, one, on every one of them.
+`scripts/test-sluice-census.sh`'s `write_schema` helper now emits the real
+shape (a `"study"` object at indent two, its `"name"` at indent four), and
+three controls were added: a fixture-shape control that pins the fixture to
+the real committed files, a real-tree control asserting
+`injection_arms_stale` over the actual checkout prints nothing (the same
+fact `anomaly_injection::the_fixture_columns_match_the_census` asserts in
+Rust), and a positive control that deletes one column from a copied real
+census schema and confirms the drift is caught. A census run of this tip is
+therefore expected to report `Gnomon arms unchanged` on a null, not to pay
+for a re-authoring it does not need.

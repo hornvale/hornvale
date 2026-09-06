@@ -702,22 +702,29 @@ commits, carried six campaigns and two census-schema changes).
   trigger became the first thing to depend on the count. Fixed by adding the
   file to the fixture, mirroring the real committed rows; every pre-existing
   arm's pass count was unchanged before and after.
-- **Close, unfixed and recorded.** `census_schema_columns` does **not** skip
-  the study-name line on the real files. The extractor's rule is `^ {4,}"name":`
-  on the stated belief that a study's own name sits at indent 2; in serde's
-  output it sits at indent 4, nested under `"study"`. Measured at this tip:
-  `injection_arms_stale` reports all eight arms stale, the difference on each
-  being exactly `the-census` versus `gnomon-injection`. Consequences: the
-  "arms unchanged" branch is unreachable, so every delivery re-authors; it
-  fails SAFE (a mis-parse can only cause a needless re-author, which is the
-  design's own stated safety argument) and the arms ARE current at this tip
+- **Close: found, and fixed in this campaign's own fix wave before merge.**
+  `census_schema_columns` did **not** skip the study-name line on the real
+  files. The extractor's rule was `^ {4,}"name":` on the stated belief that a
+  study's own name sits at indent 2; in serde's output it sits at indent 4,
+  nested under `"study"` — a distinct depth from a column's indent 6, but
+  `>= 4` catches both, which is the whole bug. Measured at this tip before the
+  fix: `injection_arms_stale` reported all eight arms stale, the difference on
+  each being exactly `the-census` versus `gnomon-injection`. Consequences: the
+  "arms unchanged" branch was unreachable, so every delivery re-authored; it
+  failed SAFE (a mis-parse can only cause a needless re-author, which is the
+  design's own stated safety argument) and the arms WERE current at this tip
   (`manifest.json sha=d2bd513f12072120d7f749f4d63a8da88b8fd3c9`, The Lot's
-  delivery); and the test arm written to catch it passes, because
-  `write_schema` in `scripts/test-sluice-census.sh` emits the study name at
+  delivery); and the test arm written to catch it passed, because
+  `write_schema` in `scripts/test-sluice-census.sh` emitted the study name at
   indent 2 — the shape the belief predicted rather than the shape the
-  pretty-printer produces. Owed a fix by the successor (`^ {6,}` plus a
-  `write_schema` that nests the study name where serde nests it). Recorded in
-  the retrospective and named in the chronicle.
+  pretty-printer produces. **Fixed in the fix-wave commit**: the extractor now
+  anchors on exactly six spaces (`^ {6}"name": "`), `write_schema` now nests
+  the study name where serde nests it (a `"study"` object at indent two, its
+  `"name"` at indent four), and a fixture-shape control, a real-tree control,
+  and a positive control were added — see `## Fix wave` below. A census of
+  this tip is now expected to report `Gnomon arms unchanged` on a null.
+  Recorded in the retrospective and named in the chronicle, both updated to
+  say found-and-fixed.
 - **Stage gate 1 (`req-1f13da1aff69`) went RED at `outboard`** on a single
   shellcheck style finding (SC2002, `scripts/test-gnomon-injection.sh:42`).
   This Mac's shellcheck 0.11 does not report SC2002; lefford's 0.9.0 does. So
@@ -747,11 +754,14 @@ from the tree:
 
 Every `minor (deferred)` line from the task ledger is listed in
 `docs/retrospectives/the-spillway.md`'s deferred-minors table with its
-disposition: the two closed in Task 3 (SC2329, `LC_ALL=C` on the sort), the
-one discharged in review (timings-label additivity), and the seven accepted
-as close minors (`comm` collation, same-second log collisions, the swallowed
-`git add` failure and unbounded `add -u`, the unguarded `exec 9>`, duplicated
-rationale prose, a ledger line's 38-versus-40, a punctuation difference).
+disposition: the two closed in Task 3 (SC2329, `LC_ALL=C` on the sort), two
+more closed in the fix wave below (`comm` collation, same-second log
+collisions), the one discharged in review (timings-label additivity), and
+the five still accepted as close minors (the swallowed `git add` failure and
+unbounded `add -u`, the unguarded `exec 9>`, duplicated rationale prose, a
+ledger line's 38-versus-40, a punctuation difference). The column-extractor
+Critical defect is tracked separately, as its own row, not among these
+minors — see `### Findings` above and `## Fix wave` below.
 
 ### Freshness sweep
 
@@ -784,11 +794,70 @@ known about it.
    clean **locally** — see the stage-gate finding above for what that did and
    did not prove.
 2. **Not yet demonstrated.** The census of this tip is the controller's Step 5
-   and had not run when this section was written. Note the close's own finding
-   changes what to expect: the "arms unchanged" line is unreachable, so a
-   delivery at this tip will re-author and emit a `gnomon-injection` timings
-   row rather than the null verdict.
+   and had not run when this section was written. The close's own finding was
+   fixed before merge in the fix wave (`## Fix wave` below), so the
+   expectation reverts to the design's original one: a delivery at this tip
+   with no golden movement and no stale arm should report `Gnomon arms
+   unchanged` and the null verdict, not an unconditional re-author.
 3. `HV_CENSUS_DELIVERY=1` stands down exactly three checks; pinned at 3 by
    `scripts/test-census-guard.sh` and re-derived above.
 4. The registry row reads `shipped`; decision 0836 is in force; the §3.5 prose
    no longer describes a by-hand re-authoring as the ordinary path.
+
+## Fix wave
+
+One Critical defect plus three deferred minors, closed together in one
+commit before merge (this commit), so the census-block prose above and in
+`book/src/chronicle/the-spillway.md` and `docs/retrospectives/the-spillway.md`
+now say found-and-fixed rather than open. Four changes:
+
+1. **`scripts/sluice-census.sh`, `census_schema_columns`** — anchors on
+   exactly six spaces (`^ {6}"name": "`) instead of `^ {4,}`. The comment
+   above the two functions is corrected: the study's own `"name"` sits at
+   indent 4, nested under `"study"`; column names sit at exactly indent 6,
+   one per `"kind"` — verified at this tip: `grep -c '"kind":'` and
+   `grep -c '^      "name":'` both read 290, on the census schema and every
+   one of the eight injection arms. The comment now says the earlier
+   `^ {4,}` rule kept the study name and read every arm stale, found at the
+   campaign's close by re-deriving these figures.
+2. **`scripts/sluice-census.sh`, `injection_arms_stale`** — both `comm`
+   calls now carry `LC_ALL=C`, matching the `sort` that already had it
+   (deferred minor, closed).
+3. **`scripts/test-sluice-census.sh`** — `write_schema` now emits the real
+   shape (a `"study"` object after the `columns` array, its `"description"`
+   and `"name"` nested inside), so the "ignores the study's own name" arm
+   can actually discriminate. Three controls added: a FIXTURE-SHAPE control
+   pinning the fixture to the real committed `book/src/laboratory/generated/
+   the-census/schema.json` (1 name@indent4, `grep -c '"kind":'` ==
+   `grep -c '^      "name":'`); a REAL-TREE control asserting
+   `injection_arms_stale` over the actual checkout (`$root`) prints nothing —
+   the same fact `anomaly_injection::the_fixture_columns_match_the_census`
+   asserts in Rust, so this cannot be vacuous; and its positive half, which
+   copies the real census schema and one real arm schema into a scratch
+   tree, deletes one column object from the copied census schema with a
+   small `python3` script (asserting the `"kind"` count dropped by exactly
+   one), and asserts `injection_arms_stale` reports that arm with
+   `0 column(s) the census has and the arm lacks, 1 the arm has and the
+   census lacks`.
+4. **`scripts/test-sluice.sh`, census block** — the stub schema files
+   written into the stub census tree (the two `printf` calls that used to
+   write `"name": "the-census"` / `"name": "gnomon-injection"` at indent 2,
+   plus the stale-arm schema further down) now use the real shape too.
+   `newest_census_log` finds the current newest `census-*.log`; the
+   failed-authoring and refused-check arms record its path and byte size
+   BEFORE calling `run_census`, then grep only `tail -c +$((off + 1))` of
+   that log for the corroborating `re-authoring the Gnomon injection arms`
+   line (two runs of the same ref inside one second share a log via
+   `exec >>`, so the old whole-file grep could match a neighbouring run's
+   bytes) — deferred minor, closed. The primary assertions (rc, branch
+   count, `git diff --cached`) are unchanged.
+
+**Verification.** `bash scripts/test-sluice-census.sh`: 19 passed, 0 failed
+(was 15). `bash scripts/test-gnomon-injection.sh`: 10 passed, 0 failed.
+`bash scripts/test-census-guard.sh`: 21 passed, 0 failed. `make shellcheck`:
+clean on this Mac (shellcheck 0.11.0). On lefford (shellcheck 0.9.0):
+`shellcheck scripts/*.sh scripts/hooks/*` clean, `bash scripts/test-sluice.sh`
+263 passed, 0 failed, every census-block arm `ok`. Re-run after pushing the
+commit, from `origin/campaign/the-spillway` on lefford: unchanged.
+`cargo nextest run -p hornvale --test suite -E 'test(docs_consistency)'`
+green over the close-prose edits.

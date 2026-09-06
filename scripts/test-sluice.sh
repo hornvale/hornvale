@@ -3031,12 +3031,17 @@ DECL
     printf 'baseline\n' > docs/timings.md
     # The Spillway: the delivery compares the census's column set with the
     # Gnomon arms' and re-authors the arms when the world moved or the sets
-    # differ. Both files in serde's pretty-print shape (study name at indent
-    # 2, column names at indent 6), matching, so the null arms below stay null.
+    # differ. Both files in serde's real pretty-print shape (the study's own
+    # "name" at indent 4, nested under "study" at indent 2; column names at
+    # exactly indent 6), matching, so the null arms below stay null. This
+    # fixture used to put the study's own "name" at indent 2 with no "study"
+    # wrapper — a shape the real files never have, found at the campaign's
+    # close alongside the ^ {4,} extractor bug this shape could never have
+    # caught.
     mkdir -p windows/lab/tests/fixtures/injection/baseline-a
-    printf '{\n  "columns": [\n    {\n      "name": "seed"\n    },\n    {\n      "name": "value"\n    }\n  ],\n  "name": "the-census"\n}\n' \
+    printf '{\n  "columns": [\n    {\n      "name": "seed"\n    },\n    {\n      "name": "value"\n    }\n  ],\n  "study": {\n    "description": "synthetic",\n    "name": "the-census"\n  }\n}\n' \
         > book/src/laboratory/generated/the-census/schema.json
-    printf '{\n  "columns": [\n    {\n      "name": "seed"\n    },\n    {\n      "name": "value"\n    }\n  ],\n  "name": "gnomon-injection"\n}\n' \
+    printf '{\n  "columns": [\n    {\n      "name": "seed"\n    },\n    {\n      "name": "value"\n    }\n  ],\n  "study": {\n    "description": "synthetic",\n    "name": "gnomon-injection"\n  }\n}\n' \
         > windows/lab/tests/fixtures/injection/baseline-a/schema.json
     printf 'seed,value\n0,1\n' > windows/lab/tests/fixtures/injection/baseline-a/rows.csv
     g add -A; g commit -qm root
@@ -3092,6 +3097,19 @@ run_census() {  # $1 = ref ; echoes rc
     HV_SLUICE_REPO_ROOT="$cen" HV_SLUICE_DIR="$tmp/cen-state" HV_CENSUS_LOCK="$tmp/census.lock" \
         bash "$repo_root/scripts/sluice-census.sh" "$1" >/dev/null 2>&1
     echo $?
+}
+
+# The job id sluice-census.sh derives is only second-resolution
+# (census-<ref12>-<stamp-to-the-second>), so two runs of the same ref inside
+# one second share a log file (`exec >>` appends). A grep over the whole file
+# after such a run can match bytes a NEIGHBOURING run wrote, not this one's
+# own output. newest_census_log finds the current newest log path; pairing it
+# with a byte offset taken BEFORE a run lets a caller grep only what that run
+# itself appended.
+newest_census_log() {
+    local f log=""
+    for f in "$tmp/cen-state"/census-*.log; do [ -e "$f" ] && log="$f"; done
+    printf '%s' "$log"
 }
 
 write_stub moves
@@ -3217,7 +3235,7 @@ else bad "null census: ran=$([ -f "$tmp/gnomon-ran" ] && echo yes || echo no), l
 # against a registry the census has since outgrown. Committed in the worktree
 # so the tree is clean when the delivery starts, exactly as a real ref is.
 pre_c="$(g -C "$cen_wt" rev-parse HEAD)"
-printf '{\n  "columns": [\n    {\n      "name": "seed"\n    }\n  ],\n  "name": "gnomon-injection"\n}\n' \
+printf '{\n  "columns": [\n    {\n      "name": "seed"\n    }\n  ],\n  "study": {\n    "description": "synthetic",\n    "name": "gnomon-injection"\n  }\n}\n' \
     > "$cen_wt/windows/lab/tests/fixtures/injection/baseline-a/schema.json"
 g -C "$cen_wt" add -A; g -C "$cen_wt" -c user.name=c -c user.email=c@c commit -qm "stale arm"
 rm -f "$tmp/gnomon-ran"
@@ -3239,12 +3257,17 @@ printf 'seed,value\n42,1\n' > "$cen_wt/book/src/laboratory/generated/the-census/
 g -C "$cen_wt" add -A; g -C "$cen_wt" -c user.name=c -c user.email=c@c commit -qm "golden back to 1"
 write_stub moves; write_gnomon fail
 before_af="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+pre_af_log="$(newest_census_log)"
+off_af="$(wc -c < "$pre_af_log" 2>/dev/null || echo 0)"
 rc_af=$(run_census "$cen_ref")
 after_af="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
-af_log=""
-for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && af_log="$_f"; done
-if [ "$rc_af" = "4" ] && [ "$before_af" = "$after_af" ] && grep -q 'ARMS NOT RE-AUTHORED' "$af_log" \
-   && grep -q 're-authoring the Gnomon injection arms' "$af_log" \
+af_log="$(newest_census_log)"
+# A run that opened a NEW log (the second rolled over) started at byte 0 of
+# it; only a run that reused the SAME path inherits the pre-run offset.
+[ "$af_log" = "$pre_af_log" ] || off_af=0
+if [ "$rc_af" = "4" ] && [ "$before_af" = "$after_af" ] && [ -n "$af_log" ] \
+   && tail -c "+$((off_af + 1))" "$af_log" | grep -q 'ARMS NOT RE-AUTHORED' \
+   && tail -c "+$((off_af + 1))" "$af_log" | grep -q 're-authoring the Gnomon injection arms' \
    && [ -n "$(g -C "$cen_wt" diff --cached --name-only)" ]; then
     ok "a failed re-authoring exits 4, pushes nothing, names itself, and leaves the goldens staged for recovery"
 else bad "failed authoring: rc=$rc_af branches $before_af -> $after_af staged=$(g -C "$cen_wt" diff --cached --name-only | wc -l) log=$af_log"; fi
@@ -3255,12 +3278,16 @@ g -C "$cen_wt" reset -q --hard; rm -f "$tmp/gnomon-ran" "$tmp/gnomon-lock"
 # (42,1), so `moves` (still baked from write_stub above) moves it again here too.
 write_gnomon refuse
 before_ar="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
+pre_ar_log="$(newest_census_log)"
+off_ar="$(wc -c < "$pre_ar_log" 2>/dev/null || echo 0)"
 rc_ar=$(run_census "$cen_ref")
 after_ar="$(g -C "$cen_origin" for-each-ref 'refs/heads/census/*' | wc -l)"
-ar_log=""
-for _f in "$tmp/cen-state"/census-*.log; do [ -e "$_f" ] && ar_log="$_f"; done
-if [ "$rc_ar" = "4" ] && [ "$before_ar" = "$after_ar" ] && grep -q 'refused its pre-flight' "$ar_log" \
-   && grep -q 're-authoring the Gnomon injection arms' "$ar_log" && [ ! -f "$tmp/gnomon-ran" ]; then
+ar_log="$(newest_census_log)"
+[ "$ar_log" = "$pre_ar_log" ] || off_ar=0
+if [ "$rc_ar" = "4" ] && [ "$before_ar" = "$after_ar" ] && [ -n "$ar_log" ] \
+   && tail -c "+$((off_ar + 1))" "$ar_log" | grep -q 'refused its pre-flight' \
+   && tail -c "+$((off_ar + 1))" "$ar_log" | grep -q 're-authoring the Gnomon injection arms' \
+   && [ ! -f "$tmp/gnomon-ran" ]; then
     ok "a refused check exits 4, pushes nothing, and authoring was never entered"
 else bad "refused check: rc=$rc_ar branches $before_ar -> $after_ar ran=$([ -f "$tmp/gnomon-ran" ] && echo yes || echo no) log=$ar_log"; fi
 g -C "$cen_wt" reset -q --hard; rm -f "$tmp/gnomon-ran" "$tmp/gnomon-lock"

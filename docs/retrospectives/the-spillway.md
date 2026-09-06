@@ -97,27 +97,27 @@ carried a *reason* at the site, not just a flag. A stand-down recorded as
    comparison against the two real files; every test of it ran against
    synthetic ones.
 
-## The defect the close found, and why five reviews missed it
+## The defect the close found, and fixed, and why five reviews missed it
 
-`injection_arms_stale` reports **all eight arms stale at this campaign's own
+`injection_arms_stale` reported **all eight arms stale at this campaign's own
 tip**, by exactly one column each way — and the two columns are the study
 names (`the-census` versus `gnomon-injection`), which the extractor was
 written to skip.
 
-The extractor skips the study-name line by indentation, on a stated belief
+The extractor skipped the study-name line by indentation, on a stated belief
 (in the spec, and repeated in the Task 2 ledger section) that the study's own
 name sits at indent 2 while column names sit at indent 6. In the real serde
 output the study name sits at indent **4**, nested under a `"study"` object,
-and the rule `^ {4,}` catches it. Consequences, in order of size:
+and the rule `^ {4,}` caught it too. Consequences, in order of size:
 
-- The "arms unchanged" branch is **unreachable**. Every census delivery
-  re-authors the arms, including a null one.
-- It fails in the safe direction — a mis-parse can only cause a needless
+- The "arms unchanged" branch was **unreachable**. Every census delivery
+  re-authored the arms, including a null one.
+- It failed in the safe direction — a mis-parse can only cause a needless
   re-authoring, never a missed one, which the ledger states as the design's
-  own safety argument — and the arms *are* current at this tip (manifest
+  own safety argument — and the arms *were* current at this tip (manifest
   `sha=d2bd513f1`, The Lot's delivery).
 - The test arm written to catch this (`the study-name line is ignored on both
-  sides`) **passes**, because `write_schema` in the test file emits the study
+  sides`) **passed**, because `write_schema` in the test file emitted the study
   name at indent 2 — the shape the belief predicted, not the shape the
   pretty-printer produces.
 
@@ -128,9 +128,27 @@ the failure, wrote the lesson down, and then shipped a second instance of it
 in a test that had been green from its first run.
 
 The verification that would have caught it is one command against the two
-real files, and it was never run: the spec's own drafting block ran
-`grep -c '"name":'` (no indent filter) on both files, saw a one-line
-difference, and *explained* it rather than testing the explanation.
+real files, and it was never run at drafting time: the spec's own drafting
+block ran `grep -c '"name":'` (no indent filter) on both files, saw a
+one-line difference, and *explained* it rather than testing the explanation.
+
+**Fixed before merge, in the campaign's own fix wave (one commit, four
+changes).** `census_schema_columns` now anchors on exactly six spaces
+(`^ {6}"name": "`) rather than `^ {4,}`, verified against every committed
+schema.json at this tip (`grep -c '"kind":'` and `grep -c '^      "name":'`
+both read 290, on the census and each of the eight arms; the study's own
+`"name"` is the sole indent-four hit, one, on every file). `write_schema` in
+`scripts/test-sluice-census.sh` now emits the real shape — a `"study"` object
+at indent two, its `"name"` at indent four — so the "ignores the study's own
+name" test arm can actually discriminate. Three controls were added: a
+fixture-shape control pinning `write_schema`'s assumption to the real
+committed files, a real-tree control asserting `injection_arms_stale` over
+the actual checkout prints nothing (the same fact
+`anomaly_injection::the_fixture_columns_match_the_census` asserts in Rust, so
+it cannot be vacuous), and a positive control that deletes one column from a
+copied real census schema and confirms the drift is caught, with the exact
+expected message. A census of this tip is now expected to report `Gnomon
+arms unchanged` on a null.
 
 ## Confidence Gradient
 
@@ -155,11 +173,11 @@ commit carries, not what the world is or what is known about it.
 | shellcheck SC2329 on `sluice-census.sh`'s `release_census_row` (local shellcheck newer than lefford's) | **closed in Task 3** by adding SC2329 to the existing SC2317 disable directive |
 | a Task 2 ledger sentence says 38 inserted lines where the diff shows 40 | accepted close minor; cosmetic, and the sentence is a narrative not a count anything reads |
 | `sort` without `LC_ALL=C` in `census_schema_columns` | **closed in Task 3**, pinned while editing the file |
-| `LC_ALL=C` is pinned on that `sort` but not on the paired `comm` calls in `injection_arms_stale` | accepted close minor; both inputs come from the same pinned sort, so the pair agrees today — a second producer would need it |
-| same-second log collisions can let the corroborating `re-authoring` grep in the failure arms match a previous run's bytes | accepted close minor; the fix is to grep only past a recorded byte offset, and both arms carry a second independent assertion (rc=4, no branch) |
+| `LC_ALL=C` is pinned on that `sort` but not on the paired `comm` calls in `injection_arms_stale` | **closed in the fix wave** — both `comm` invocations now carry `LC_ALL=C` alongside the sort |
+| same-second log collisions can let the corroborating `re-authoring` grep in the failure arms match a previous run's bytes | **closed in the fix wave** — `test-sluice.sh` now records each arm's log path and byte offset before its run and greps only the tail written past that offset; both arms still carry their second independent assertion (rc=4, no branch) too |
 | the post-authoring `git add` of the fixtures swallows failure (`\|\| true`) and the second `add -u` is unbounded | accepted close minor; the hardening is to assert the staged set stays within `book/`, `docs/` and the fixture directory |
 | `exec 9>"$arms_lock"` is unguarded — a redirection failure exits 1 with no `ARMS NOT RE-AUTHORED` message | accepted close minor; the message is the only loss, and a failure to open the lock path on the canonical box is not a case that has occurred |
 | rationale prose is duplicated between `subfloor-roster.sh` and `pre-commit` | accepted close minor; polish, and the two-way agreement test reads the pattern out of the hook so they cannot disagree on the thing that matters |
 | `windows/lab/CLAUDE.md:174` punctuation differs from the brief's text | accepted close minor; cosmetic |
 | timings-label additivity for the new `gnomon-injection` label | **discharged in review**: the attestation groups only `sluice:` rows and `census_duration` filters `\| census \|`, so an added label is additive |
-| `census_schema_columns` does not skip the study-name line on the real files, so the "arms unchanged" branch is unreachable and its test arm is vacuous | **NOT a minor — recorded above as the campaign's own live defect.** It fails safe and the arms are current, but it costs a re-authoring on every null census and its guard cannot fire. Owed a fix by the successor: `^ {6,}` on the extractor, plus a `write_schema` that nests the study name where serde nests it. |
+| `census_schema_columns` does not skip the study-name line on the real files, so the "arms unchanged" branch is unreachable and its test arm is vacuous | **NOT a minor — was the campaign's own live Critical defect, found at close and fixed before merge in the fix wave.** `census_schema_columns` now anchors on exactly six spaces (`^ {6}"name": "`); `write_schema` nests the study name where serde nests it, at indent four under a `"study"` object; a fixture-shape control, a real-tree control, and a positive control were added. A census of this tip is expected to report `Gnomon arms unchanged` on a null. |

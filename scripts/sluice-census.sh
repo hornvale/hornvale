@@ -118,18 +118,29 @@ EOF
 # same two files, without a build.
 #
 # A lab schema.json is serde's pretty print: the study's own "name" sits at
-# indent 2 and every column's "name" at indent 6 (verified against the
-# committed census and baseline-a: 285 "name" keys each, 284 columns each,
-# the odd one out being the study's). Names at indent >= 4 are columns.
+# indent 4, nested under "study" (itself at indent 2), and every column's
+# "name" sits at exactly indent 6, one per "kind" (verified against the
+# committed census and every injection fixture at this tip:
+# `grep -c '"kind":'` equals `grep -c '^      "name":'` at 290 each; the
+# study's own "name" is the sole indent-4 hit, 1, and indent-2 has none).
 # Both studies declare "metrics": "all", so at one ref the two sets are
 # identical by construction; a difference means the arms were authored at
-# another ref. A mis-parse here can only cause a NEEDLESS re-authoring,
-# never a missed one: a real column difference is always a "name" line
-# difference.
+# another ref.
+#
+# THIS WAS `^ {4,}"name": "` UNTIL FOUND WRONG AT THE CAMPAIGN'S CLOSE,
+# RE-DERIVING THESE FIGURES. `>= 4` also matches the indent-4 study name, so
+# `census_schema_columns` kept it as a "column", and since the study's own
+# name differs between "the-census" and every injection study (e.g.
+# "gnomon-injection"), EVERY arm compared unequal to the census at EVERY tip
+# — the extra/missing count was always >= 1, so `injection_arms_stale` never
+# once reported a healthy arm and the delivery's "arms unchanged" branch was
+# unreachable. The failure mode was safe, never unsafe: a real column
+# difference is always caught too, so the only cost was a needless
+# re-authoring on a run that did not need one.
 census_schema_columns() {
     local f="${1:?census_schema_columns <schema.json>}"
     [ -f "$f" ] || return 0
-    grep -E '^ {4,}"name": "' "$f" | sed -E 's/^ *"name": "([^"]*)".*/\1/' | LC_ALL=C sort
+    grep -E '^ {6}"name": "' "$f" | sed -E 's/^ *"name": "([^"]*)".*/\1/' | LC_ALL=C sort
 }
 injection_arms_stale() {
     local wt="${1:?injection_arms_stale <worktree>}"
@@ -140,8 +151,8 @@ injection_arms_stale() {
     for arm in "$wt"/windows/lab/tests/fixtures/injection/*/schema.json; do
         [ -f "$arm" ] || continue
         got="$(census_schema_columns "$arm")"
-        missing="$(comm -23 <(printf '%s\n' "$want") <(printf '%s\n' "$got") | grep -c . || true)"
-        extra="$(comm -13 <(printf '%s\n' "$want") <(printf '%s\n' "$got") | grep -c . || true)"
+        missing="$(LC_ALL=C comm -23 <(printf '%s\n' "$want") <(printf '%s\n' "$got") | grep -c . || true)"
+        extra="$(LC_ALL=C comm -13 <(printf '%s\n' "$want") <(printf '%s\n' "$got") | grep -c . || true)"
         if [ "${missing:-0}" -ne 0 ] || [ "${extra:-0}" -ne 0 ]; then
             name="$(basename "$(dirname "$arm")")"
             printf '%s: %s column(s) the census has and the arm lacks, %s the arm has and the census lacks\n' \
