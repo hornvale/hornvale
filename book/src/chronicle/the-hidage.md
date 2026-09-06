@@ -192,7 +192,7 @@ subsistence, and put a voluntary exchange beside the coercive one — whose own
 probe is the next campaign under the same standing rule.
 
 The record is careful not to overclaim in the other direction. The catchment
-field **does** carry an apex: its largest basin is three to eleven times its
+field **does** carry an apex: its largest basin is 2.9 to 11.2 times its
 median, and the distribution is genuinely uneven. What died is D1 as
 specified — the catchment wired in as the growth ceiling *at today's scale*,
 which lifts everything over the ceiling at once. Whether a rescaled catchment

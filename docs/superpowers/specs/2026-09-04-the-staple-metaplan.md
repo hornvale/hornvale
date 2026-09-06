@@ -377,6 +377,9 @@ spatially flat, every catchment sums alike and this is a uniform rescale in
 disguise, which is not a pathology and not a city either.** The genesis
 figures are the place to start — a mean catchment of ~22 with 182 settlements
 on seed 42 is a distribution somebody can already read the spread off.
+[Those figures are The Gathering's dimensionless field at a retuned threshold
+and are not comparable with headcount — The Hidage spec §2.4; the headcount
+distribution is in the *Probe result* below.]
 [The flatness criterion in that sentence was **replaced before the probe was
 written**, not applied: `flow` is the drainage algorithm and drainage-basin
 sizes are heavy-tailed on any field it is run over, so a flatness test could
@@ -421,8 +424,8 @@ dies is D1 *as stated* — the catchment wired in as the growth ceiling at
 today's scale. Whether a RESCALED catchment would make a differentiated apex
 is §6's open `SETTLERS_PER_CAPACITY` question, not a rung. **Next step:** the
 dynamics arc re-plans from **D2**, whose probe (below) is the next campaign
-under rule 1, and the `SETTLERS_PER_CAPACITY` question moves out of §6 and
-into that probe's opening brief.
+under rule 1, and the `SETTLERS_PER_CAPACITY` question carries into that
+probe's opening brief.
 
 **D2 — more than one thing flows, and some of it by exchange.** Split people
 from subsistence (§3, consequence 1); add a voluntary exchange beside the
@@ -478,9 +481,17 @@ majority case. Inherits The Plat's tense vocabulary (decision 0649).
   costs no epoch.
 - The catchment's shape — radius, discount, whether catchments partition
   (a watershed divide, Christaller's lattice) or overlap. D1's probe informs
-  it; nothing here chooses.
+  it [Informed, 2026-09-06: within one people the flow field is a tree, so
+  catchments partition by construction; across the bake's actual sites, 354 of
+  390 alive settlements on seed 42 share an attractor (211/250, 208/262,
+  28/60, 12/44 on the others), so a catchment per settlement needs a split
+  rule before it can be wired in. Chronicle: The Hidage.]; nothing here
+  chooses.
 - Any price mechanism. §3.1 argues the payoff and explicitly measures nothing.
 - Whether `SETTLERS_PER_CAPACITY` is raised, replaced, or left alone.
+  [The Hidage's readout bears on this — S4 2.9–11.2, the apex exists at a
+  scale where every catchment clears the ceiling; it opens D2's probe brief,
+  see §4 D1's *Probe result*.]
 - The chamber-band pattern inventory, the connectivity rule, whether a
   district is a `Role` or a new type, and how extent is represented. Those are
   R3's spec, and R3 is downstream.

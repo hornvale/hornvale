@@ -3,8 +3,8 @@
 *Process lessons. The chronicle carries the product story; decisions 0826 and
 0827 carry the verdict and the criterion it was read off.*
 
-A probe-only campaign, the second in a row: one committed measurement, one
-verdict, no mechanism. The rung it was opened to clear the way for is struck.
+The arc's first probe-only campaign since The Staple itself: one committed
+measurement, one verdict, no mechanism. The rung it was opened to clear the way for is struck.
 
 ## A metaplan lagged the code twice in the same arc, and the second time it was the correction that was stale
 
@@ -122,8 +122,10 @@ blocking.
   criterion's form, inherited by D2–D6's probes) and 0827 (the verdict).
   0828–0835 go unspent.
 - **No epoch, no census, no world state moved.** The probe commits nothing,
-  draws under no label and adds no `pub` item; the only tracked file modified
-  outside the records is `docs/timings.md`.
+  draws under no label and adds no `pub` item. Two tracked files moved outside
+  the records themselves: `docs/timings.md` (the campaign's gate-commit rows)
+  and `docs/digest/decisions-in-force.md`, which the records commit
+  regenerated because two decision records were added to it.
 - **No Confidence Gradient re-score.** The gradient was grepped on the
   invariant rather than the wording (hamlet, catchment, city, the capacity
   constant) and every hit read; the nearest is the entity-size-heaviness bet,
