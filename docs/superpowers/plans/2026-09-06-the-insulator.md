@@ -49,11 +49,11 @@
 - `manifest_for_attempt(...) -> dict`: returns a complete attempt record with source, graph, toolchain, target, command, timing, output, and failure fields.
 - `validate_attempt(record: dict) -> None`: raises `ValueError` for missing identity, unbounded output, incomplete cleanup, invalid status, or missing cost fields.
 
-- [ ] **Step 1: Write failing tests for workload and attempt validation.**
+- [x] **Step 1: Write failing tests for workload and attempt validation.**
 
   Add tests for a valid workload, a missing output declaration, a non-list command, an attempt with incomplete cleanup, an attempt whose stdout exceeds the byte cap, and an expected registration refusal represented as a completed command with non-zero status.
 
-- [ ] **Step 2: Run the focused tests and verify they fail.**
+- [x] **Step 2: Run the focused tests and verify they fail.**
 
   Run:
 
@@ -63,15 +63,15 @@
 
   Expected: import or validation failures because the recorder interfaces do not exist.
 
-- [ ] **Step 3: Implement the recorder and frozen workload loader.**
+- [x] **Step 3: Implement the recorder and frozen workload loader.**
 
   Reuse the Counterpart `sha256`, JSON persistence, subprocess deadline, and bounded-output patterns. Use `time.monotonic_ns()` for wall duration, write attempts to a temporary file before renaming, and keep preparation/build/test timings as separate fields. Resolve only named workload identifiers. Canonicalize the checkout, target, and evidence roots before constructing the macOS or Linux policy; make the checkout read-only, allow writes only to target/evidence, and refuse before launch when enforcement is unavailable. Do not run a live build from unit tests.
 
-- [ ] **Step 4: Run the focused tests and verify they pass.**
+- [x] **Step 4: Run the focused tests and verify they pass.**
 
   Run the same command. Expected: all validation and capture tests pass.
 
-- [ ] **Step 5: Commit the baseline recorder.**
+- [x] **Step 5: Commit the baseline recorder.**
 
   ```bash
   git add tools/digest/experiments/the-insulator
