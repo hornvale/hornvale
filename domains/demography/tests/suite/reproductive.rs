@@ -266,3 +266,14 @@ fn overflowing_generation_summary_is_rejected_before_the_social_handoff() {
         "expected independent offspring per generation must be finite after summary"
     );
 }
+
+#[test]
+fn overflowing_care_mean_is_rejected_before_the_social_handoff() {
+    let mut input = typical_input();
+    input.typicality.care_burden = CareBurdenDistribution::new(vec![(f64::MAX, 1.0); 11]).unwrap();
+
+    assert_eq!(
+        summarize_reproduction(&input).unwrap_err().to_string(),
+        "expected care burden must be finite after summary"
+    );
+}

@@ -488,11 +488,19 @@ pub fn summarize_reproduction(
     input: &ReproductivePopulationInput,
 ) -> Result<ReproductivePopulationSummary, ReproductiveInputError> {
     let expected_offspring = input.typicality.offspring.mean();
+    validate_derived("expected offspring", expected_offspring)?;
     let survival_to_independence = input
         .typicality
         .survival_to_independence
         .survival_probability();
+    validate_derived("survival to independence", survival_to_independence)?;
+    let expected_care_burden = input.typicality.care_burden.mean();
+    validate_derived("expected care burden", expected_care_burden)?;
     let expected_independent_offspring_per_event = expected_offspring * survival_to_independence;
+    validate_derived(
+        "expected independent offspring per event",
+        expected_independent_offspring_per_event,
+    )?;
     let expected_independent_offspring_per_generation = expected_independent_offspring_per_event
         * input.persistence.reproductive_events_per_generation;
     validate_derived(
@@ -510,7 +518,7 @@ pub fn summarize_reproduction(
         dependency_duration: input.typicality.dependency_duration,
         expected_offspring,
         survival_to_independence,
-        expected_care_burden: input.typicality.care_burden.mean(),
+        expected_care_burden,
         expected_independent_offspring_per_event,
         expected_independent_offspring_per_generation,
         persistence_balance,
