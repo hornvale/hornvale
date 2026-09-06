@@ -108,6 +108,32 @@ const NOTHING_HERE_YET: &str = "nothing here yet";
 /// than on a second copy of it.
 const RUNG_OPENING: &str = "rung";
 
+/// How many marquee ticks [`Driver::map_facts_text`] (the rung line, the
+/// tile count, the oversample disclosure, the clamp caption) stays on the
+/// strip after a gesture changes it, before decaying back to the tile's
+/// own standing content (Task 6, B4 half b). Counted in marquee ticks
+/// rather than a new clock, per this task's own constraint: `marquee_ticks`
+/// (`Driver::tick_marquee`) is the client's one clock, and
+/// `MARQUEE_TICK = 300 ms` (`main.rs`) is its only wall-clock value.
+///
+/// **Derived, not guessed.** Measured at the flagship on the 80x24 floor
+/// (`the_strip_describes_the_tile_under_the_cursor`'s own doc), the strip's
+/// full content is 188 characters against a 40-column plate — an overflow
+/// of `188 - 40 = 148` scroll positions, one per marquee tick, i.e. 148 *
+/// 300 ms = 44.4 s for the marquee to carry the whole string once past the
+/// viewport. Any shorter and a clause appended near the end of the string
+/// (the rung line is emitted first, deliberately — see
+/// [`Driver::world_view_caption`] — but the block as a whole still runs to
+/// the clamp caption and the resolution disclosure) could decay before a
+/// reader watching the marquee ever sees the tail of it scroll by. 148
+/// ticks guarantees at least one complete pass.
+///
+/// **In-rate by decision 0717.** A layer may never read data changing
+/// faster than its own rate; the strip is `Rate::Ornamental`, and a decay
+/// counted against the strip's own scroll clock can never outrun the
+/// strip's own redraw, so this stays in-rate by construction.
+const RUNG_LINE_TICKS: u32 = 148;
+
 /// The fixed, sim-authored prefix `windows/vessel/src/session.rs`'s
 /// `delve_at` prints on a SUCCESSFUL delve (`Session::delve`'s own
 /// `Surface -> Undercroft` transition, F9's cited arrival predicate for
@@ -321,6 +347,21 @@ pub struct Driver {
     /// ticks, so every test drives the marquee by calling
     /// [`Driver::tick_marquee`] and no test depends on real time.
     marquee_ticks: u32,
+    /// [`Self::map_facts_text`] as it read the last time [`Self::refresh_
+    /// strip`] ran, kept so the next refresh can tell whether a gesture
+    /// actually changed the rung, the frame, or the disclosure — not merely
+    /// moved the cursor — before deciding whether to restart the reading
+    /// window (Task 6, B4 half b). `None` before the first refresh.
+    last_map_facts: Option<String>,
+    /// The marquee tick at which the map-wide facts block currently on the
+    /// strip should decay back to the tile's own standing content, or
+    /// `None` while nothing is currently being freshly disclosed (before
+    /// the first gesture, or once decay has already run). Set by
+    /// [`Self::refresh_strip`] to `marquee_ticks + RUNG_LINE_TICKS`
+    /// whenever [`Self::last_map_facts`] shows the block actually changed;
+    /// cleared by [`Self::tick_marquee`] once that many ticks have
+    /// elapsed. See [`Self::map_facts_are_recent`].
+    map_facts_expire_at: Option<u32>,
     /// The world's landscape features, indexed by vertex, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
     /// world's lifetime (`VertexFeatureIndex`'s own doc).
@@ -1057,6 +1098,8 @@ impl Driver {
             strip: None,
             redraw_count: 0,
             marquee_ticks: 0,
+            last_map_facts: None,
+            map_facts_expire_at: None,
             index,
             nearest,
             geo,
@@ -2262,7 +2305,29 @@ impl Driver {
     /// the strip always also advances its scroll position by construction,
     /// rather than the two drifting out of step because some call site
     /// remembered one and not the other.
+    ///
+    /// **Also decides whether [`Self::map_facts_text`] gets a fresh
+    /// reading window (Task 6, B4 half b).** Every real redraw recomputes
+    /// the block and compares it against [`Self::last_map_facts`]; only a
+    /// redraw where it actually differs — a zoom, a recentre, a resize,
+    /// anything that moves the rung or the frame — restarts
+    /// [`Self::map_facts_expire_at`]. A redraw that leaves the block
+    /// unchanged (the common case: a plain cursor move) neither starts nor
+    /// extends a window, which is the whole point — these are facts about
+    /// the gesture just taken, not about wherever the cursor now sits.
     fn refresh_strip(&mut self) {
+        let facts = self.map_facts_text();
+        if self.last_map_facts.as_deref() != Some(facts.as_str()) {
+            // A GESTURE CHANGED THE MAP-WIDE FACTS. Restart the reading
+            // window at full length even if an earlier gesture's window
+            // was already mid-decay: each disclosure is fresh news about
+            // whatever was just done, not a shared queue slot, so a rung
+            // that changes twice in quick succession (zoom, zoom again)
+            // earns its own full `RUNG_LINE_TICKS` rather than inheriting
+            // whatever was left of the first change's clock.
+            self.map_facts_expire_at = Some(self.marquee_ticks.wrapping_add(RUNG_LINE_TICKS));
+        }
+        self.last_map_facts = Some(facts);
         self.strip = Some(self.resolve());
         self.redraw_count = self.redraw_count.wrapping_add(1);
     }
@@ -2270,8 +2335,26 @@ impl Driver {
     /// Advance the marquee by one tick. Called by the render loop when its
     /// input poll times out — never by an input handler, which is the
     /// whole point: the strip must scroll while the player does nothing.
+    ///
+    /// **Also the map-wide facts block's own decay clock (Task 6, B4 half
+    /// b).** Once [`Self::map_facts_expire_at`] is reached, the window
+    /// closes and the strip is recomputed immediately — not on the next
+    /// real redraw — so the block visibly decays with no player action at
+    /// all, the same "advances on ticks with no player action" guarantee
+    /// the marquee's own scroll is pinned to. This does not touch
+    /// [`Self::redraw_count`]: decay is driven by the clock, not a redraw,
+    /// exactly as that field's own doc distinguishes.
     pub fn tick_marquee(&mut self) {
         self.marquee_ticks = self.marquee_ticks.wrapping_add(1);
+        if self
+            .map_facts_expire_at
+            .is_some_and(|at| self.marquee_ticks >= at)
+        {
+            self.map_facts_expire_at = None;
+            if self.strip.is_some() {
+                self.strip = Some(self.resolve());
+            }
+        }
     }
 
     /// Whether the strip currently has more text than plate width, i.e.
@@ -2394,29 +2477,46 @@ impl Driver {
         }
     }
 
-    /// Append §3.3's clamp/central-line caption, and F5's resolution
-    /// disclosure when the active zoom covers more than one terrain vertex
-    /// per character, to `base` (the resolved containment chain plus B4's
-    /// terrain readout — see [`Self::resolve`]). Unlike the walk band's [`caption`], this runs
-    /// UNCONDITIONALLY — the world view carries no sight channel to gate on
-    /// ([`Self::resolve_world_view`]'s own doc), and both captions are true
-    /// of the picture itself, independent of whether the cursor happens to
-    /// sit on a named feature.
+    /// Append [`Self::map_facts_text`] to `base` (the resolved containment
+    /// chain plus B4's terrain readout — see [`Self::resolve`]) whenever
+    /// [`Self::map_facts_are_recent`] says the block is still within its
+    /// post-gesture reading window (Task 6, B4 half b). Unlike the walk
+    /// band's [`caption`], every clause in the block is true of the
+    /// picture itself, independent of whether the cursor happens to sit on
+    /// a named feature — what gates it here is not the cursor at all, but
+    /// how recently a gesture actually changed one of those facts.
     fn world_view_caption(&self, base: String) -> String {
         let mut text = base;
-        // THE RUNG LINE COMES FIRST, and the order is a measurement rather
-        // than a preference (fix round 1, Important 3). The strip MARQUEES:
-        // on the 80x24 floor the plate is 40 columns and a tick is 300 ms, so
-        // a clause's position in this string is a delay before the reader can
-        // read it. With the rung line emitted third it began at character 90
-        // — the word "rung" first scrolled into view after ~15 s and the
-        // clause was readable after ~44 s. That made the one disclosure that
-        // answers "criteria I have not identified" the SLOWEST thing on the
-        // strip to reach. `mercator::clamp_caption` is 69 characters, static,
-        // and says the same thing at every rung and every cursor position, so
-        // it is exactly what should be waited for instead.
-        text.push_str(" — ");
-        text.push_str(&self.rung_caption());
+        if self.map_facts_are_recent() {
+            text.push_str(" — ");
+            text.push_str(&self.map_facts_text());
+        }
+        text
+    }
+
+    /// The map-wide facts block itself: §3.3's clamp/central-line caption
+    /// and F5's resolution disclosure (when the active zoom covers more
+    /// than one terrain vertex per character), appended to
+    /// [`Self::rung_caption`] — never gated on the cursor, because all
+    /// three are true of the picture rather than of any one tile. See
+    /// [`Self::world_view_caption`] for when this actually reaches the
+    /// strip, and [`Self::refresh_strip`]/[`Self::map_facts_are_recent`]
+    /// for the decay this task adds on top of a block that used to run
+    /// unconditionally.
+    ///
+    /// **THE RUNG LINE COMES FIRST, and the order is a measurement rather
+    /// than a preference (fix round 1, Important 3).** The strip MARQUEES:
+    /// on the 80x24 floor the plate is 40 columns and a tick is 300 ms, so
+    /// a clause's position in this string is a delay before the reader can
+    /// read it. With the rung line emitted third it began at character 90
+    /// — the word "rung" first scrolled into view after ~15 s and the
+    /// clause was readable after ~44 s. That made the one disclosure that
+    /// answers "criteria I have not identified" the SLOWEST thing on the
+    /// strip to reach. `mercator::clamp_caption` is 69 characters, static,
+    /// and says the same thing at every rung and every cursor position, so
+    /// it is exactly what should be waited for instead.
+    fn map_facts_text(&self) -> String {
+        let mut text = self.rung_caption();
         text.push_str(" — ");
         text.push_str(&mercator::clamp_caption(&self.frame));
         if let Some(disclosure) = self.resolution_disclosure() {
@@ -2424,6 +2524,16 @@ impl Driver {
             text.push_str(&disclosure);
         }
         text
+    }
+
+    /// Whether [`Self::map_facts_text`] is still inside its post-gesture
+    /// reading window (Task 6, B4 half b): `true` from the marquee tick a
+    /// gesture actually changed the block until [`RUNG_LINE_TICKS`] ticks
+    /// later, `false` otherwise — including before the very first refresh,
+    /// when [`Self::map_facts_expire_at`] is still `None`.
+    fn map_facts_are_recent(&self) -> bool {
+        self.map_facts_expire_at
+            .is_some_and(|expire_at| self.marquee_ticks < expire_at)
     }
 
     /// **THE RUNG LINE**, and the half of Nathan's founding report that no
@@ -7035,6 +7145,76 @@ mod portolan_tests {
         assert!(
             after.contains("a cave mouth stands here"),
             "a discovered cave must be mentioned once encountered: {after:?}"
+        );
+    }
+
+    // -- Task 6, B4 half b: the map-wide facts appear on a gesture, decay -
+
+    /// A zoom is a gesture, so the rung line is news. It must appear when
+    /// the rung changes — see [`Driver::map_facts_are_recent`] and
+    /// [`Driver::refresh_strip`] for the mechanism, and
+    /// `the_rung_line_decays_off_the_strip_without_a_player_action` below
+    /// for the other half.
+    #[test]
+    fn zooming_puts_the_rung_line_back_on_the_strip() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::Zoom(1));
+        assert!(d.strip_text().unwrap().contains(RUNG_OPENING));
+    }
+
+    /// ...and must go away again on its own, so the standing line returns to
+    /// the cell. Decision 0196 is satisfied by disclosure, not by
+    /// permanence. Ticks the client's ONE clock
+    /// ([`Driver::tick_marquee`]) — never a real sleep — exactly
+    /// `RUNG_LINE_TICKS` times, which is [`Driver::map_facts_expire_at`]'s
+    /// own boundary: the block must survive every tick strictly before it
+    /// and be gone at it.
+    #[test]
+    fn the_rung_line_decays_off_the_strip_without_a_player_action() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::Zoom(1));
+        for _ in 0..RUNG_LINE_TICKS {
+            d.tick_marquee();
+        }
+        assert!(
+            !d.strip_text().unwrap().contains(RUNG_OPENING),
+            "the rung line outlived its decay"
+        );
+    }
+
+    /// **The mid-decay-gesture question the brief left open, answered:**
+    /// each qualifying gesture restarts the reading window at full length,
+    /// rather than the second gesture's disclosure inheriting whatever was
+    /// left of the first one's clock. Zoom once, let the window run down to
+    /// its last tick (still showing), zoom again, and confirm the window is
+    /// back to nearly its full length rather than about to expire.
+    #[test]
+    fn a_second_gesture_mid_decay_restarts_the_window_rather_than_inheriting_it() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::Zoom(1));
+        for _ in 0..(RUNG_LINE_TICKS - 1) {
+            d.tick_marquee();
+        }
+        assert!(
+            d.strip_text().unwrap().contains(RUNG_OPENING),
+            "sanity: one tick short of decay, the block must still be showing"
+        );
+        // A SECOND GESTURE, one tick before the first would have decayed.
+        d.apply(Action::Zoom(1));
+        // If the window had NOT restarted, the first gesture's clock would
+        // expire on the very next tick and take the second gesture's own
+        // news down with it. Confirm it does not: tick once (one short of
+        // where the FIRST window would have expired) and the block must
+        // still be showing, because the SECOND gesture's own full window
+        // has barely begun.
+        d.tick_marquee();
+        assert!(
+            d.strip_text().unwrap().contains(RUNG_OPENING),
+            "a second gesture's disclosure must not inherit the first gesture's \
+             almost-expired clock"
         );
     }
 }
