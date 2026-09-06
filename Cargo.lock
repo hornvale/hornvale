@@ -338,6 +338,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-epidemiology",
  "hornvale-explain",
  "hornvale-history",
  "hornvale-kernel",

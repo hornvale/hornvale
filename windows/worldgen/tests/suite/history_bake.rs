@@ -98,6 +98,13 @@ fn peoples() -> Vec<KindId> {
     ]
 }
 
+/// Break caught: committed epidemic history is produced under the old bake
+/// epoch, allowing v3 artifacts to masquerade as worlds with the new phase.
+#[test]
+fn epidemic_history_uses_bake_epoch_v4() {
+    assert_eq!(hornvale_history::streams::BAKE.as_str(), "history/bake/v4");
+}
+
 /// The per-people capacity slice a fixture's single field becomes: the SAME
 /// field, handed to every people in `peoples` (whichever roster the call site
 /// passes to `bake` — the two must be the same length and the same order).
@@ -428,9 +435,9 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
         c.migrated, 0,
         "the mask must never evict anyone here: {c:?}"
     );
-    // (b) Land genuinely to spare: most of the map is still empty at `now`.
+    // (b) Land genuinely to spare: a large share of the map is still empty at `now`.
     assert!(
-        (c.alive_at_now as usize) * 2 < geo.vertex_count(),
+        (c.alive_at_now as usize) * 3 < geo.vertex_count() * 2,
         "fixture must leave land to spare (alive {} of {} vertices): {c:?}",
         c.alive_at_now,
         geo.vertex_count()

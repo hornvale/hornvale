@@ -5,7 +5,39 @@
 //! crate only applies the disease rules to those plain values.
 #![warn(missing_docs)]
 
+use hornvale_kernel::{ConceptRegistry, RegistryError};
 use std::collections::BTreeSet;
+
+/// Dated event naming the pathogen that struck an occupation.
+/// type-audit: bare-ok(identifier-text)
+pub const STRUCK_BY: &str = "struck-by";
+/// Dated event recording deaths in the corresponding outbreak.
+/// type-audit: bare-ok(identifier-text)
+pub const OUTBREAK_DEATHS: &str = "outbreak-deaths";
+
+/// Register epidemiology's paired outbreak-event predicates.
+pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
+    registry.register_predicate(STRUCK_BY, false, "the pathogen in a dated outbreak event")?;
+    registry.register_predicate(
+        OUTBREAK_DEATHS,
+        false,
+        "the deaths in a dated outbreak event",
+    )?;
+    Ok(())
+}
+
+/// Epidemiology as a registrable domain unit.
+pub struct Epidemiology;
+
+impl hornvale_kernel::Domain for Epidemiology {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+
+    fn register_concepts(&self, registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
+        register_concepts(registry)
+    }
+}
 
 /// The trough constant calibrated from the measles-shaped anchor.
 /// type-audit: bare-ok(ratio)

@@ -541,7 +541,7 @@ mod tests {
                 // property exists to hold shut. See
                 // `windows/worldgen/src/hazard.rs`'s `event_key`.
                 "hazard/event v1",
-                "history/bake v3",
+                "history/bake v4",
                 // The Salt re-keys the flesh seed from the occupation's
                 // entity id onto its material core, so residue and
                 // structures stop moving when an id moves. Taking the

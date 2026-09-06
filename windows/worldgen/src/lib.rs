@@ -108,6 +108,7 @@ pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod placement;
+pub mod plague_bake;
 pub mod plat;
 pub mod plat_readout;
 pub mod render;
@@ -149,7 +150,7 @@ pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edific
 pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP,
     ExchangeCensus, ExchangeTreatment, GENESIS_POP, History, MIGRATE_SURVIVAL, ORE_CUT,
-    TributeRelation, WAR_LOSS, bake, cascade_sizes, census, defensibility_for_test,
+    OutbreakEvent, TributeRelation, WAR_LOSS, bake, cascade_sizes, census, defensibility_for_test,
     exchange_census, weakest_point_defensibility,
 };
 pub use history_emit::{
@@ -492,6 +493,7 @@ pub const DOMAINS: &[&dyn Domain] = &[
     // seed labels, so its predicates must be registered and its stream labels
     // published into the manifest before genesis emits them.
     &hornvale_history::History,
+    &hornvale_epidemiology::Epidemiology,
     // Order matters on this roster only for concept lenders and borrowers;
     // person is neither, so it sits last with no ordering constraint.
     //
@@ -8074,6 +8076,51 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.time_horizon)))
         .collect();
+    cfg.lifespans = peoples
+        .iter()
+        .zip(species_biosphere.iter())
+        .map(|(&kind, traits)| {
+            (
+                kind,
+                hornvale_species::lifespan(traits.mass, traits.thermal_strategy, traits.schedule)
+                    .get(),
+            )
+        })
+        .collect();
+    let era_substrates: Vec<_> = era_adjusts
+        .iter()
+        .map(|adjust| substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust))
+        .collect();
+    cfg.epidemics = hornvale_species::pathogen_registry()
+        .iter()
+        .filter(|(_, traits)| {
+            matches!(
+                traits.class,
+                hornvale_species::PathogenClass::Zoonotic | hornvale_species::PathogenClass::Crowd
+            )
+        })
+        .map(|(&kind, traits)| crate::plague_bake::EpidemicKind {
+            kind,
+            hosts: traits.hosts.iter().copied().collect(),
+            fit_by_era: era_substrates
+                .iter()
+                .map(|substrate| {
+                    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+                        tolerance_liebig(&traits.condition_niche, substrate.get(vertex), 0.0)
+                    })
+                })
+                .collect(),
+            attack_max: traits.attack_max.expect("epidemic attack fraction"),
+            fatality: traits.fatality.expect("epidemic fatality"),
+            spillover_weight: traits.spillover_weight.expect("epidemic spillover weight"),
+            immunizing: traits.immunizing,
+            ccs: hornvale_epidemiology::critical_community_size(
+                traits.r0.expect("epidemic R0"),
+                traits.infectious_years.expect("epidemic infectious period"),
+                1.0 / 30.0,
+            ),
+        })
+        .collect();
     let current = hornvale_kernel::VertexMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
@@ -14550,7 +14597,7 @@ mod tests {
     #[test]
     fn domains_roster_crate_names_are_unique_and_nonempty() {
         let mut names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
-        assert_eq!(names.len(), 12, "expected twelve domains in the roster");
+        assert_eq!(names.len(), 13, "expected thirteen domains in the roster");
         assert!(names.iter().all(|n| !n.is_empty()));
         let before = names.len();
         names.sort_unstable();

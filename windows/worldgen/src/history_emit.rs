@@ -386,6 +386,39 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         }
     }
 
+    // Epidemic events are paired by (occupation, day). Validate that join key
+    // before committing either half so malformed bake output cannot leave a
+    // plausible orphan fact in the ledger.
+    let mut outbreak_keys = BTreeSet::new();
+    for event in &h.outbreaks {
+        let subject = *bake_to_ledger
+            .get(&event.occupation)
+            .expect("an outbreak names an occupation minted in this history");
+        let day = ledger_day_of_bake_year(event.year);
+        assert!(
+            outbreak_keys.insert((subject, day.to_bits())),
+            "one outbreak event per occupation and day"
+        );
+        world.ledger.commit(
+            fact(
+                subject,
+                hornvale_epidemiology::STRUCK_BY,
+                Value::Text(event.pathogen.0.to_string()),
+                day,
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                hornvale_epidemiology::OUTBREAK_DEATHS,
+                Value::Number(event.deaths),
+                day,
+            ),
+            &world.registry,
+        )?;
+    }
+
     // The tribute relations still standing at `now` (spec §4.4). One fact per
     // relation, on the SUBORDINATE's subject, carrying its patron's minted
     // entity — the same `Value::Entity` shape `occ-ended-by` uses, dated by the
