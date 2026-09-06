@@ -72,6 +72,8 @@ pub enum SupportMode {
 ///
 /// Roles name causal contributions only. They carry no social gender,
 /// identity, presentation, kinship, or institutional meaning.
+/// placement: deliberate(BIO-3 population role weights are independent of
+/// species pathway requirements; domains cannot depend on siblings) shape(04a33f)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReproductiveRole {
     /// Produces reproductive material, a bud, a spore, or a template.
@@ -356,6 +358,8 @@ pub struct ReproductiveProfile<T> {
 }
 
 /// Evaluated outcome in one parental direction; never a social category.
+/// placement: deliberate(population outcome categories omit species compatibility
+/// assistance payloads; the composition root owns conversion) shape(c45575)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CompatibilityOutcome {
     /// Viable and fertile without required external assistance.

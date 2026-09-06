@@ -27,6 +27,74 @@ fn pairborn() -> ReproductiveAffordances {
     )
 }
 
+fn turning() -> ReproductiveAffordances {
+    use ReproductiveOperation::{Change, Grow, Join, Make, Release, Support};
+    let base = pairborn();
+    affordances(
+        vec![Make, Join, Grow, Support, Release, Change],
+        base.development_sites().to_vec(),
+        base.support_modes().to_vec(),
+        base.roles().to_vec(),
+        vec![TransitionCapability::SequentialRole],
+    )
+}
+
+fn broodweave() -> ReproductiveAffordances {
+    use ReproductiveOperation::{Grow, Join, Make, Release, Support};
+    affordances(
+        vec![Make, Join, Grow, Support, Release],
+        vec![DevelopmentSite::BroodStructure],
+        vec![SupportMode::Group],
+        vec![
+            ReproductiveRole::MaterialProducer,
+            ReproductiveRole::MaterialContributor,
+            ReproductiveRole::DevelopmentSupporter,
+        ],
+        vec![],
+    )
+}
+
+fn budded() -> ReproductiveAffordances {
+    use ReproductiveOperation::{Copy, Grow, Release, Support};
+    affordances(
+        vec![Copy, Grow, Support, Release],
+        vec![DevelopmentSite::Body],
+        vec![SupportMode::Individual],
+        vec![
+            ReproductiveRole::MaterialProducer,
+            ReproductiveRole::DevelopmentCarrier,
+            ReproductiveRole::DevelopmentSupporter,
+        ],
+        vec![],
+    )
+}
+
+fn forged() -> ReproductiveAffordances {
+    use ReproductiveOperation::{Build, Change};
+    affordances(
+        vec![Build, Change],
+        vec![DevelopmentSite::Workshop],
+        vec![],
+        vec![ReproductiveRole::Builder],
+        vec![TransitionCapability::Maturation],
+    )
+}
+
+fn guestborn() -> ReproductiveAffordances {
+    use ReproductiveOperation::{Convert, Grow, Make, Release};
+    affordances(
+        vec![Make, Convert, Grow, Release],
+        vec![DevelopmentSite::Host],
+        vec![],
+        vec![ReproductiveRole::MaterialProducer, ReproductiveRole::Host],
+        vec![],
+    )
+}
+
+fn non_reproducing() -> ReproductiveAffordances {
+    ReproductiveAffordances::empty()
+}
+
 fn ready_context() -> CompatibilityContext {
     CompatibilityContext {
         available_roles: vec![
@@ -67,6 +135,68 @@ fn ready_context() -> CompatibilityContext {
             required_assistance: vec![],
         },
     }
+}
+
+#[test]
+fn named_synthetic_probes_reach_each_intended_grammar_branch() {
+    use ReproductiveOperation::{Build, Change, Convert, Copy, Grow, Join, Make, Release, Support};
+
+    let pair = possible_pathways(&pairborn(), &ready_context());
+    assert_eq!(pair[0].operations, [Make, Join, Grow, Support, Release]);
+
+    let mut turning_context = ready_context();
+    turning_context.timing = DevelopmentalTiming::After(TransitionCapability::SequentialRole);
+    let turning_paths = possible_pathways(&turning(), &turning_context);
+    assert_eq!(
+        turning_paths[0].operations,
+        [Change, Make, Join, Grow, Support, Release]
+    );
+
+    let brood = possible_pathways(&broodweave(), &ready_context());
+    assert_eq!(brood[0].development_site, DevelopmentSite::BroodStructure);
+    assert_eq!(brood[0].support_mode, Some(SupportMode::Group));
+
+    let bud = possible_pathways(&budded(), &ready_context());
+    assert_eq!(bud[0].operations, [Copy, Grow, Support, Release]);
+
+    let mut forged_context = ready_context();
+    forged_context.timing = DevelopmentalTiming::After(TransitionCapability::Maturation);
+    let built = possible_pathways(&forged(), &forged_context);
+    assert_eq!(built[0].operations, [Change, Build]);
+
+    let guest = possible_pathways(&guestborn(), &ready_context());
+    assert_eq!(guest[0].operations, [Make, Convert, Grow, Release]);
+    assert_eq!(guest[0].development_site, DevelopmentSite::Host);
+}
+
+#[test]
+fn crossing_probe_uses_the_compatibility_relation_not_a_species_name() {
+    let relation = compatibility(&pairborn(), &broodweave(), &ready_context());
+
+    assert_eq!(
+        relation.first_to_second.outcome,
+        CompatibilityOutcome::Fertile
+    );
+    assert_eq!(
+        relation.second_to_first.outcome,
+        CompatibilityOutcome::Fertile
+    );
+    assert_eq!(
+        relation.first_to_second.pathways[0].development_site,
+        DevelopmentSite::BroodStructure
+    );
+    assert_eq!(
+        relation.second_to_first.pathways[0].development_site,
+        DevelopmentSite::Body
+    );
+}
+
+#[test]
+fn non_reproducing_probe_is_valid_and_composes_no_pathway() {
+    let control = non_reproducing();
+
+    assert_eq!(control.validate(), Ok(()));
+    assert!(possible_pathways(&control, &ready_context()).is_empty());
 }
 
 #[test]
