@@ -481,7 +481,7 @@ fn detect_d7(c: &Census) -> Vec<Finding> {
     out
 }
 
-/// Every crate under `domains/` — 15 as of The Chattel's `domains/thing`
+/// Every crate under `domains/` — 16 as of The Murrain's `domains/epidemiology`
 /// (spec §4.4a authored this list at 13; it had already drifted to 14 with
 /// `person` before this campaign touched it, undetected because this comment
 /// is prose the roster-vs-tree check below has no opinion about).
@@ -493,6 +493,10 @@ const DOMAIN_CRATES: &[&str] = &[
     "climate",
     "culture",
     "demography",
+    // The Murrain's pure rules crate. Deliberately absent from
+    // `MEASURED_CRATES`: the epidemiology census metrics arrive in a later
+    // stage, so D8 reports this as an unmeasured domain for now.
+    "epidemiology",
     "history",
     "language",
     "paleoclimate",
@@ -1326,12 +1330,12 @@ mod tests {
     }
 
     #[test]
-    fn d8_fires_on_exactly_alchemy_paleoclimate_person_and_thing() {
+    fn d8_fires_on_exactly_alchemy_epidemiology_paleoclimate_person_and_thing() {
         let f = detect_d8();
         let names: Vec<&str> = f.iter().map(|x| x.metric.as_str()).collect();
         assert_eq!(
             names,
-            vec!["alchemy", "paleoclimate", "person", "thing"],
+            vec!["alchemy", "epidemiology", "paleoclimate", "person", "thing"],
             "D8 must fire on exactly the crates no metric reaches. `person` \
              joined the roster with The Particular and no census metric reads \
              it yet; `thing` joined with The Chattel, same shape — a real gap \

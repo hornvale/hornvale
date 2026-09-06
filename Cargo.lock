@@ -107,6 +107,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-epidemiology"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-explain"
 version = "0.1.0"
 dependencies = [

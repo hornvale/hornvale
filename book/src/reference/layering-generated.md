@@ -12,6 +12,7 @@ kernel  →  domains/*  →  windows/*  →  cli
 | hornvale-climate | domains | hornvale-kernel | — |
 | hornvale-culture | domains | hornvale-kernel | — |
 | hornvale-demography | domains | hornvale-kernel | — |
+| hornvale-epidemiology | domains | hornvale-kernel | — |
 | hornvale-history | domains | hornvale-kernel | — |
 | hornvale-language | domains | hornvale-kernel | — |
 | hornvale-paleoclimate | domains | hornvale-kernel | — |

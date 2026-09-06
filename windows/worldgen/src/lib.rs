@@ -28,6 +28,7 @@ use hornvale_terrain::{
     Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, Horizon, TerrainPins,
 };
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 // The profiler measures wall-clock stage durations for a committed diagnostic
 // (`profile_build` example); it never reads `WorldTime` and never touches a
@@ -190,6 +191,80 @@ pub use weft::{
     WeftFeature, WeftKey, WeftKind, WeftWindow, all_features_at_cached, features_at_cached, occurs,
     prevalence, prevalence_with_weights,
 };
+
+/// The population substrate at one site and the beginning of one bake era.
+///
+/// This is a read-only projection of committed occupation peaks.  It is
+/// deliberately independent of `windows/lot`: epidemiology and other windows
+/// consume these plain numbers without reconstructing named lives.
+/// type-audit: bare-ok(count: era_start), bare-ok(count: population)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EraSitePopulation {
+    /// The bake year at which this era begins.
+    /// type-audit: bare-ok(count)
+    pub era_start: f64,
+    /// The occupied site.
+    pub site: hornvale_kernel::Vertex,
+    /// Sum of substrate population at this site during the era.
+    /// type-audit: bare-ok(count)
+    pub population: f64,
+}
+
+/// Read-only population-substrate view over all era/site pairs.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EraPopulationView {
+    rows: Vec<EraSitePopulation>,
+}
+
+impl EraPopulationView {
+    /// Iterate rows in era order, then site order.
+    pub fn rows(&self) -> impl Iterator<Item = &EraSitePopulation> {
+        self.rows.iter()
+    }
+
+    /// Read the population at an era/site pair, or zero when unoccupied.
+    /// type-audit: bare-ok(count: era_start), bare-ok(count: return)
+    pub fn population_at(&self, era_start: f64, site: hornvale_kernel::Vertex) -> f64 {
+        self.rows
+            .iter()
+            .find(|row| row.era_start == era_start && row.site == site)
+            .map_or(0.0, |row| row.population)
+    }
+}
+
+/// Build the authoritative, read-only era/site population substrate view.
+///
+/// Population is summed from the history bake's occupation peaks for the
+/// occupations alive in each era.  The Lot is a projection consumer and is
+/// intentionally not involved in this accessor.
+pub fn bake_era_population_view(world: &World) -> Result<EraPopulationView, BuildError> {
+    let eras = bake_era_graphs(world)?;
+    let now = present_year(world);
+    let occupations = occupation_records(world);
+    let mut rows = Vec::new();
+    for (index, (era_start, _)) in eras.iter().enumerate() {
+        let era_end = eras.get(index + 1).map_or(now, |(year, _)| *year);
+        let mut by_site: BTreeMap<hornvale_kernel::Vertex, f64> = BTreeMap::new();
+        for occupation in &occupations {
+            if occupation.core.founded < era_end
+                && occupation.core.ended.unwrap_or(now) > *era_start
+            {
+                *by_site.entry(occupation.core.site).or_default() +=
+                    f64::from(occupation.core.peak_population);
+            }
+        }
+        rows.extend(
+            by_site
+                .into_iter()
+                .map(|(site, population)| EraSitePopulation {
+                    era_start: *era_start,
+                    site,
+                    population,
+                }),
+        );
+    }
+    Ok(EraPopulationView { rows })
+}
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)

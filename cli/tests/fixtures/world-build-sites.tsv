@@ -201,6 +201,7 @@ windows/worldgen/tests/suite/kinship_facts.rs	1	unmigrated:1
 windows/worldgen/tests/suite/lot_probe.rs	1	identity:1
 windows/worldgen/tests/suite/mines_exist.rs	2	unmigrated:2
 windows/worldgen/tests/suite/murrain_probe.rs	1	identity:1
+windows/worldgen/tests/suite/murrain_population.rs	1	build-path:1
 windows/worldgen/tests/suite/niche_breadth_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/non_void_roster.rs	1	unmigrated:1
 windows/worldgen/tests/suite/occupancy_readout.rs	1	unmigrated:1

@@ -135,6 +135,8 @@ mod lantern_probe;
 mod lot_probe;
 #[path = "suite/mines_exist.rs"]
 mod mines_exist;
+#[path = "suite/murrain_population.rs"]
+mod murrain_population;
 #[path = "suite/murrain_probe.rs"]
 mod murrain_probe;
 #[path = "suite/name_pattern.rs"]
