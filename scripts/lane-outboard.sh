@@ -134,6 +134,11 @@ run "sluice vet"      bash scripts/test-sluice-vet.sh
 # for the life of sluice-census.sh precisely because nothing exercised it.
 run "sluice census"   bash scripts/test-sluice-census.sh
 run "absorb"          bash scripts/test-absorb.sh
+# The timing wrapper is in every phase's path, so a defect in it reds phases
+# that succeeded — campaign/the-warrant, 2026-09-06, rc=11 on an `artifacts`
+# phase whose last line was "regenerate-artifacts: done.". Cheap and belongs
+# here rather than nowhere.
+run "timing wrapper" bash scripts/test-timed.sh
 # The post-merge hook's own suite, added the same way pre-push's was:
 # nothing exercised this hook, so its own author (Task 3, The Attestation)
 # shipped a Critical that made it silent on every merge, for all ten

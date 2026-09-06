@@ -9,7 +9,7 @@ use crate::controller::{Controller, ImposedController, PlayerController};
 use crate::gate::{BodyState, Verdict, verdict};
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, Felt, HomeNavCache,
-    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE,
+    LocaleTerrain, Mode, Occupancy, PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SUSTENANCE,
     Terrain, act_span, affect_of_memo, agent_at_fact, agent_position, derive_npcs,
     derive_wild_herds, errand_predicates, renders_unconscious, settlement_room_index, slept_fact,
     slept_on_fact, species_activity, village_or_fallback,
@@ -978,9 +978,10 @@ pub struct Session<'w> {
     /// which also RETIRED `PASSAGE_CLEARED` from this list), and the
     /// drive/needs predicates beside
     /// them — every one registered per-session, never at genesis (spec §3).
-    /// The roster is `Session::start`'s own `register_predicate` block, which
-    /// is where a reader should look rather than trusting this list to stay
-    /// exhaustive; it has already gone stale three predicates in a row.
+    /// The drive-predicate roster is `liveness::DRIVE_PREDICATES`, which is
+    /// where a reader should look — it is the one published list
+    /// `Session::start` and both `examples/` benches all consume (The
+    /// Culvert), so it cannot go stale in exactly one of its readers again.
     registry: ConceptRegistry,
     /// Whose eyes the possession's chart is coloured through (The Beholding,
     /// Task 4), carried from `PossessOpts::eyes`.
@@ -1142,6 +1143,25 @@ pub struct Session<'w> {
     /// `wait` after its first, which requires the cache itself, not merely
     /// its backing memo, to outlive one tick. See `HomeNavCache`'s own doc.
     home_nav_cache: HomeNavCache,
+    /// The session-lived, CROSS-tick water-belief route memo (The Culvert,
+    /// Task 7): the home-anchored `plan_to_room` that `believed_water` and
+    /// `nearer_to_home` rank through, cached on `(home, dest, budget)`.
+    /// Session-scoped for the same reason `home_nav_cache` is — every `wait`
+    /// after the first pays nothing for a pair already asked — and SHARED
+    /// across creatures, unlike `home_nav_cache`, because the
+    /// duplicates this collapses are duplicates across the roster (see
+    /// `RouteMemo`'s own doc). Byte-identical by construction: it memoizes a
+    /// pure function of mesh geometry.
+    ///
+    /// **Held for the session because it is CHEAP, not because its population
+    /// was shown to stop growing.** This doc said "an NPC's `home` is fixed for
+    /// a possession, so its key population saturates". That is a non-sequitur —
+    /// a fixed `home` bounds the key's first component while `dest` keeps
+    /// accumulating — and the campaign's own Task 5 measured the home-anchored
+    /// population at 83 distinct pairs at wait 12 rising to **190 at wait 60**,
+    /// with no ceiling demonstrated. See The Culvert's spec §1.3(d), which is
+    /// the canonical statement, and its ledger #14.
+    route_memo: RouteMemo,
     // THE THREE SIDE-FIELDS ARE GONE (The Rack, Task 3). `driven_mode`,
     // `driven_affect` and `driven_suppressed` used to sit here: three
     // separately-declared copies of what is now one `Felt` in the roster's own
@@ -1665,11 +1685,16 @@ impl<'w> Session<'w> {
         check_species_known(world, &village)?;
         let mut ledger = world.ledger.clone();
         let mut registry = world.registry.clone();
-        // Idempotent (same def every session): never conflicts, since
-        // AGENT_AT is never registered at genesis (spec §3).
-        registry
-            .register_predicate(AGENT_AT, false, "an agent's position on a day")
-            .expect("AGENT_AT registers identically every session");
+        // Idempotent (same def every session): never conflicts, since the
+        // drive predicates are never registered at genesis (spec §3). The
+        // full roster — AGENT_AT plus the needs predicates registered further
+        // below — is `liveness::DRIVE_PREDICATES` (The Culvert), the one
+        // published list `Session::start` and both `examples/` benches share.
+        for (name, doc) in crate::liveness::DRIVE_PREDICATES {
+            registry
+                .register_predicate(name, false, doc)
+                .expect("every DRIVE_PREDICATES entry registers identically every session");
+        }
         // PASSAGE_CLEARED USED TO BE REGISTERED HERE, and its registration is
         // gone rather than kept as a compatibility stub (The Chattel, Task 8;
         // decision 0396 supersedes 0367). A cave mouth is a thing now, and the
@@ -1722,40 +1747,24 @@ impl<'w> Session<'w> {
                 crate::thing::LOCKEDNESS_DOC,
             )
             .expect("LOCKEDNESS registers identically every session");
-        // Idempotent (same def every session): never conflicts, since DRANK
-        // is never registered at genesis either (spec §3).
-        registry
-            .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
-            .expect("DRANK registers identically every session");
-        registry
-            .register_predicate(
-                RESTED,
-                false,
-                "an agent rested on a day, for this many ticks",
-            )
-            .expect("RESTED registers identically every session");
-        registry
-            .register_predicate(SLEPT, false, "an agent slept on a day, for this many ticks")
-            .expect("SLEPT registers identically every session");
-        // The site half (The Pallet, Task 3): which KIND of anchor a sleep
-        // landed on, in the room `SLEPT` above already dates. Registered on
-        // the same terms — by the session, not at genesis — for the same
-        // reason: `slept-on` did not exist before this campaign, so no
-        // committed world can already disagree with this definition.
-        registry
-            .register_predicate(
-                SLEPT_ON,
-                false,
-                "the kind of anchor an agent slept on, within the room it slept in",
-            )
-            .expect("SLEPT_ON registers identically every session");
-        registry
-            .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
-            .expect("EATEN registers identically every session");
         // The Warrant, Task 1: the eight errand predicates, from the one
         // table — registered beside `AGENT_AT` for the same reason `EATEN`
         // is, above. Idempotent (same defs every session), same as every
         // predicate registered on this clone.
+        //
+        // THE TWO LOOPS STAY SEPARATE, and that is the merge decision The
+        // Culvert made here rather than an accident of resolution. Both
+        // families are session-registered on identical terms, so folding
+        // `errand_predicates()` into `DRIVE_PREDICATES` would compile and
+        // pass — which is exactly why the choice is recorded. They are
+        // different families with different owners: the drive roster is
+        // the list `Session::start` and both `examples/` benches share (the
+        // thing The Culvert published so a new drive predicate cannot be
+        // added to one caller and not the others), while the errand table
+        // is The Warrant's own and is consumed by its own scans. The
+        // roster guard in `liveness.rs` is scoped to the drive family for
+        // the same reason, and the errand consts carry waivers naming this
+        // table rather than roster membership.
         for (key, doc) in errand_predicates() {
             registry
                 .register_predicate(key, false, doc)
@@ -2184,6 +2193,7 @@ impl<'w> Session<'w> {
             mesh_memo,
             weft_window: hornvale_worldgen::WeftWindow::new(),
             home_nav_cache: HomeNavCache::new(),
+            route_memo: RouteMemo::new(),
             folds,
             ground,
             driven_overrides: std::collections::BTreeMap::new(),
@@ -5886,6 +5896,24 @@ impl<'w> Session<'w> {
         turn
     }
 
+    /// How many real `plan_to_room` searches this session's water-belief
+    /// [`RouteMemo`] has run since the session opened — a CUMULATIVE count,
+    /// never reset, in the shape [`HomeNavCache::searches`] already has (The
+    /// Culvert, Task 7 fix round 1).
+    ///
+    /// **It is deliberately NOT folded into [`TurnWorkRead`], and that is not
+    /// an oversight.** `TurnWorkRead::plan_searches` is `home_nav_cache`'s
+    /// counter, and `turn_budget.rs` asserts it is `0` for a cold snapshot;
+    /// adding a second, differently-scoped counter to that struct would put
+    /// two unrelated quantities behind one published number with a live
+    /// assertion on it. A caller wanting this one takes deltas across calls,
+    /// which is exactly what the session-liveness witness
+    /// (`turn_budget.rs::the_route_memo_survives_between_waits`) does.
+    /// type-audit: bare-ok(count: return)
+    pub fn route_searches(&self) -> u64 {
+        self.route_memo.searches()
+    }
+
     /// This turn's work counters (The Rack, spec §3.5), read as of NOW.
     /// `Self::handle` is the only writer of a reset; this is read AFTER a
     /// `handle` or a `snapshot` to see what that call actually folded.
@@ -9197,8 +9225,12 @@ impl<'w> Session<'w> {
         // snapshot's present-entry read the way it always has (Important 4,
         // The Threshold whole-branch review); `facts` is now committed
         // directly below instead of being thrown away and recomputed.
-        let (facts, occupancy, written) =
-            sys.step_with_occupancy(&self.ledger, &mut self.mesh_memo, &mut self.home_nav_cache);
+        let (facts, occupancy, written) = sys.step_with_occupancy(
+            &self.ledger,
+            &mut self.mesh_memo,
+            &mut self.home_nav_cache,
+            &mut self.route_memo,
+        );
         // The driven body's OWN arbitration (The Hand, Task 5 fix round 1,
         // spec §2.3/§3.3): the SAME `advance_one` every other body's walk
         // just called, in a solo band-of-one walk (`step_one_with_controller`'s
@@ -9272,6 +9304,7 @@ impl<'w> Session<'w> {
             &driven_npc,
             &mut self.mesh_memo,
             &mut self.home_nav_cache,
+            &mut self.route_memo,
             driven_controller,
         );
         // The override RECORD accumulates across the whole possession, so it
@@ -11664,6 +11697,7 @@ fn parse_compass(s: &str) -> Option<Compass> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::liveness::SLEPT_ON;
 
     /// **[`COMPASS_ROSE`] and `Compass::all()` must agree, and nothing asserted
     /// it until the Task 11 fix round.** `describe_here` zips this constant
@@ -23058,6 +23092,7 @@ mod tests {
             &frozen,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
         );
         assert_eq!(
             written.len(),
@@ -23094,6 +23129,7 @@ mod tests {
             &driven_body,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut PlayerController::new(),
         );
         let driven = session.roster.driven();
@@ -23191,6 +23227,7 @@ mod tests {
             &driven_body,
             &mut hornvale_kernel::RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut ImposedController::new(),
         );
         let driven = session.roster.driven();
@@ -23293,6 +23330,7 @@ mod tests {
                     &body,
                     &mut hornvale_kernel::RoomMeshMemo::new(),
                     &mut HomeNavCache::new(),
+                    &mut RouteMemo::new(),
                     &mut PlayerController::new(),
                 );
                 assert!(
