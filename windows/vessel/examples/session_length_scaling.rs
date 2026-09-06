@@ -179,9 +179,9 @@ use hornvale_species::ThermalStrategy;
 // writing the probes below. Named directly rather than routed around.
 use hornvale_vessel::body::Body;
 use hornvale_vessel::liveness::{
-    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RestSites, SUSTENANCE,
-    SleepTraits, Terrain, believed_water, derive_npcs, drive_at, fatigue_at, hazard_memory_memo,
-    hunger_at, shared_believed_water,
+    DriveMovements, HomeNavCache, LocaleTerrain, PrimaryAfraidMemo, RestSites, RouteMemo,
+    SUSTENANCE, SleepTraits, Terrain, believed_water, derive_npcs, drive_at, fatigue_at,
+    hazard_memory_memo, hunger_at, shared_believed_water,
 };
 use hornvale_worldgen::{SettlementPins, build_world};
 // The measurement harness times each tick for a diagnostic (never sim logic,
@@ -456,7 +456,9 @@ fn probe_fatigue_us(ledger: &Ledger, npc: &Body, t: WorldTime, terrain: &dyn Ter
 
 /// Time one `believed_water` call, averaged over `FOLD_REPS` back-to-back
 /// calls — the water-belief fold over the probe agent's own `agent-at`
-/// history intersected with water-truth.
+/// history intersected with water-truth. Returns `(us, some_count)`:
+/// `some_count` is now a REPORTED column, never an assertion (Ruling R6) --
+/// see the doc on the panic condition below for why.
 fn probe_believed_water_us(
     ledger: &Ledger,
     folds: &hornvale_vessel::resident::OwnedFolds,
@@ -464,32 +466,67 @@ fn probe_believed_water_us(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
-) -> f64 {
+    set_len: usize,
+) -> (f64, u64) {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if believed_water(ledger, folds, npc, t, terrain, budget).is_some() {
+        // A FRESH memo per rep, deliberately (The Culvert, Task 7). This
+        // column means "what one `believed_water` call costs against a
+        // history of this length", and it is compared across bands and
+        // against pre-campaign runs; a memo hoisted out of this loop would
+        // make every rep after the first a `BTreeMap` lookup and turn the
+        // column into a measurement of memo warmth instead. Production owns
+        // a session-lived one; this probe deliberately measures the cold
+        // call the memo now spares it.
+        let mut route_memo = RouteMemo::new();
+        if believed_water(ledger, folds, npc, t, terrain, budget, &mut route_memo).is_some() {
             some_count += 1;
         }
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
-    // Consume `some_count` so the calls cannot be optimized away. Unlike the
-    // impossible-value guards above, `None` (an ignorant belief) is a
-    // legitimate outcome of this fold, so a zero count is reported as a
-    // plain note, not an alarm.
+    // Ruling R6: assert on the SET (this fold has work to do), never on the
+    // RESULT (whether that work finds a route). The original `println!`'s
+    // MESSAGE named the set ("probe agent has no known water") while its
+    // CONDITION tested the result (`some_count`) -- message and condition
+    // already disagreed, and promoting the condition to a panic carried the
+    // wrong half forward. `set_len == 0` means the belief probe was selected
+    // wrong (nothing to search); `some_count == 0` with `set_len > 0` means
+    // every search legitimately failed within budget, which is a real,
+    // expensive, and expected outcome for the roster's most-expensive
+    // subject -- never grounds for a panic.
+    assert!(
+        set_len > 0,
+        "believed_water: the belief probe's known-water SET is EMPTY across {FOLD_REPS} \
+         calls at this band, so this fold has no work to do. The belief probe is selected \
+         as the roster's max-known-water member (The Culvert, Task 2); an empty set here \
+         means that selection is wrong, not that the world has no water. The Kerf measured \
+         11 of 50 members holding a real set, the largest holding 46 rooms."
+    );
     if some_count == 0 {
+        // Distinct from the panic above on purpose (Ruling R6, item 3): an
+        // empty set means nothing to search; THIS is a non-empty set where
+        // every search still failed within budget -- unreachability, not
+        // vacuity. The same `println!` conflating these two is what hid the
+        // distinction for two campaigns (The Detent's `set_len == 0` subject
+        // vs this campaign's `set_len == 46`, `some_count == 0` subject).
         println!(
-            "believed_water: probe agent has no known water across {FOLD_REPS} calls at this band"
+            "believed_water: the belief probe's known-water set has {set_len} room(s), but all \
+             {FOLD_REPS} searches found NO route within budget to any of them -- this is \
+             UNREACHABILITY (home-anchoring cost), not an empty set (a selection defect). See \
+             Ruling R7."
         );
     }
-    us
+    (us, some_count)
 }
 
 /// Time one `shared_believed_water` call over the WHOLE roster, averaged over
 /// `FOLD_REPS` back-to-back calls. Threaded the full `band` slice deliberately
 /// — that is what `step_with_occupancy` passes in production, so this is
-/// production cost, not a cheaper single-agent proxy.
+/// production cost, not a cheaper single-agent proxy. Returns
+/// `(us, some_count)` — see [`probe_believed_water_us`]'s doc for why
+/// `some_count` is reported, never asserted (Ruling R6).
 #[allow(clippy::too_many_arguments)]
 fn probe_shared_believed_water_us(
     ledger: &Ledger,
@@ -499,22 +536,47 @@ fn probe_shared_believed_water_us(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
-) -> f64 {
+    set_len: usize,
+) -> (f64, u64) {
     #[allow(clippy::disallowed_types)] // benchmark harness
     let t0 = Instant::now();
     let mut some_count: u64 = 0;
     for _ in 0..FOLD_REPS {
-        if shared_believed_water(ledger, folds, npc, band, t, terrain, budget).is_some() {
+        // Fresh per rep, same reason as `probe_believed_water_us`'s.
+        let mut route_memo = RouteMemo::new();
+        if shared_believed_water(
+            ledger,
+            folds,
+            npc,
+            band,
+            t,
+            terrain,
+            budget,
+            &mut route_memo,
+        )
+        .is_some()
+        {
             some_count += 1;
         }
     }
     let us = t0.elapsed().as_secs_f64() * 1e6 / FOLD_REPS as f64;
+    assert!(
+        set_len > 0,
+        "shared_believed_water: the belief probe's known-water SET is EMPTY across {FOLD_REPS} \
+         calls at this band, so this fold has no work to do. The belief probe is selected \
+         as the roster's max-known-water member (The Culvert, Task 2); an empty set here \
+         means that selection is wrong, not that the world has no water. The Kerf measured \
+         11 of 50 members holding a real set, the largest holding 46 rooms."
+    );
     if some_count == 0 {
         println!(
-            "shared_believed_water: probe agent has no known water across {FOLD_REPS} calls at this band"
+            "shared_believed_water: the belief probe's known-water set has {set_len} room(s), \
+             but all {FOLD_REPS} searches found NO route within budget to any of them (of its \
+             own, and of any co-located peer's) -- this is UNREACHABILITY (home-anchoring \
+             cost), not an empty set (a selection defect). See Ruling R7."
         );
     }
-    us
+    (us, some_count)
 }
 
 /// Time one `hazard_memory_memo` call over the whole roster, averaged over
@@ -644,6 +706,32 @@ fn drank_counts(ledger: &Ledger, roster: &[EntityId]) -> Vec<usize> {
                 .facts_of(*e, hornvale_vessel::liveness::DRANK)
                 .count()
         })
+        .collect()
+}
+
+/// Each roster member's own known-water set size at `t` —
+/// `LatestVisit::water_at(entity, t, terrain).len()` applied across the
+/// whole roster, the population `believed_water`'s single-agent read is a
+/// POINT in (The Culvert, Task 2). The Kerf measured this distribution at 11
+/// of 50 non-empty at the final band, the largest holding 46 rooms, which is
+/// what the belief probe must be selected against instead of the `agent-at`
+/// history the other five folds use.
+///
+/// One shared `borrow_mut` for the whole sweep, same shape as
+/// `folded_counts`/`drank_counts` reading through `facts_of` once per member
+/// rather than re-borrowing the fold store per member.
+fn water_belief_counts(
+    folds: &hornvale_vessel::resident::OwnedFolds,
+    roster: &[EntityId],
+    ledger: &Ledger,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+) -> Vec<usize> {
+    let mut store = folds.borrow_mut();
+    let latest_visit = store.latest_visit(ledger);
+    roster
+        .iter()
+        .map(|e| latest_visit.water_at(*e, t, terrain).len())
         .collect()
 }
 
@@ -793,6 +881,51 @@ struct Band {
     drank_roster_max: usize,
     /// How many roster members have drunk zero times as of this band.
     drank_roster_zero_count: usize,
+
+    // ---- The Culvert, Task 2: the SELECTION EFFECT on the BELIEF probe.
+    // `believed_water_us`/`shared_believed_water_us` above are timed on a
+    // SEPARATE probe agent (`belief_probe`, selected by known-water set
+    // size, held fixed once chosen at band 1 -- see the selection site).
+    // These four report the whole roster's own known-water distribution at
+    // THIS band's instant, so the point measurement above can be read
+    // against the population it is a point in, the same discipline the
+    // `drank_roster_*` fields above give `DRANK`. ----
+    /// **The belief columns' denominator.** How many roster members hold a
+    /// NON-EMPTY known-water set at this band's instant. The single-agent
+    /// `believed_water_us` column above is a point measurement, and this is
+    /// the population it is a point in: The Kerf found 11 of 50 at the final
+    /// band, so a reader who takes the probe column as a roster statement is
+    /// wrong by construction. Reported for the same reason the `DRANK`
+    /// distribution is.
+    belief_roster_non_empty: usize,
+    /// The largest known-water set any roster member holds at this band's
+    /// instant -- the worst population the memo must serve, and the number
+    /// the belief probe is selected to match at band 1.
+    belief_roster_max_set: usize,
+    /// The total `(home, water room)` pairs implied across the whole roster:
+    /// exactly how many `plan_to_room` calls one roster-wide `believed_water`
+    /// sweep makes. 83 at Shape A band 10 before this campaign.
+    belief_roster_total_pairs: usize,
+    /// The belief probe's own known-water set size at this band's instant, so
+    /// a reader can see the point against the distribution without cross-
+    /// referencing another table. **Band 1's max-known-water member (about 12
+    /// rooms) need not be band 10's (about 46)**: the belief probe is
+    /// selected ONCE, at band 1, and held fixed for the whole run -- so this
+    /// column tracks *the same creature's* set size as it evolves, not the
+    /// roster-wide worst case at every band. This column means "a creature
+    /// that believes in water", not "the worst case at every band"; the
+    /// three roster-wide columns above are what report the worst case at
+    /// every band.
+    belief_probe_set_len: usize,
+    /// Of `FOLD_REPS` `believed_water` calls on the belief probe, how many
+    /// found a route within budget (Ruling R6: a REPORTED column, never an
+    /// assertion). `belief_probe_set_len > 0` with this at `0` is
+    /// UNREACHABILITY -- the probe's whole known-water set sits outside the
+    /// `PROBE_BUDGET`-node ball from its own home -- not vacuity; see Ruling
+    /// R7 and `believed_water`'s doc ("nearest-to-current is a followup").
+    believed_water_some_count: u64,
+    /// The same reading for `shared_believed_water` (Ruling R6).
+    shared_believed_water_some_count: u64,
 
     // ---- Task 8: M1 (spec §4) -- the bytes the room memo and the
     // per-creature verdict index hold at this band's end. No threshold: this
@@ -962,6 +1095,39 @@ fn main() {
                 b.index, b.trail_entries, b.latest_visit_entries
             );
         }
+    }
+
+    // The Culvert, Task 2 -- the BELIEF section: the belief probe's own
+    // known-water set size against the whole roster's own distribution at
+    // this band's instant. Its own small table, same precedent as the M1 and
+    // K1/K2 tables above: the existing columns stay untouched.
+    println!();
+    println!(
+        "{:>5} {:>8} {:>10} {:>10} {:>12} {:>8} {:>9}",
+        "band", "bp_set", "nonempty", "max_set", "total_pairs", "bw_some", "sbw_some"
+    );
+    println!(
+        "  (The Culvert, Task 2: `bp_set` is the belief probe's own known-water set size -- a \
+         POINT in the `nonempty`-of-{AGENTS} roster distribution. `max_set` is the worst \
+         population the memo must serve; `total_pairs` is exactly how many `plan_to_room` calls \
+         one roster-wide `believed_water` sweep makes. The probe is selected ONCE at band 1 as \
+         the roster's max-known-water member and held fixed, so `bp_set` tracks one creature's \
+         history, not the roster-wide worst case at every band -- `max_set` is that. `bw_some`/\
+         `sbw_some` (Ruling R6) are how many of {FOLD_REPS} `believed_water`/`shared_believed_water` \
+         calls found a route within budget -- `bp_set > 0` with `bw_some == 0` is UNREACHABILITY, \
+         a real cost finding (Ruling R7), not vacuity.)"
+    );
+    for b in &bands {
+        println!(
+            "{:>5} {:>8} {:>10} {:>10} {:>12} {:>8} {:>9}",
+            b.index,
+            b.belief_probe_set_len,
+            b.belief_roster_non_empty,
+            b.belief_roster_max_set,
+            b.belief_roster_total_pairs,
+            b.believed_water_some_count,
+            b.shared_believed_water_some_count
+        );
     }
 
     // Is the mean representative? Printed once rather than per row, and
@@ -1292,38 +1458,29 @@ fn run(
     // The world's real settlement-territory set, for the fatigue probe's own
     // terrain only (fix round 1, Important 4) — see `probe_fatigue_us`.
     let built_set = hornvale_vessel::liveness::built_rooms(world, ctx);
-    // The four predicates the NPC drive stack writes -- copied from
-    // `agent_scaling.rs`, which copied them from `Session::start`.
-    for (pred, doc) in [
-        (
-            hornvale_vessel::liveness::AGENT_AT,
-            "an agent's position on a day",
-        ),
-        (
-            hornvale_vessel::liveness::DRANK,
-            "an agent satisfied its sustenance goal",
-        ),
-        (
-            hornvale_vessel::liveness::RESTED,
-            "an agent rested on a day, for this many ticks",
-        ),
-        (
-            hornvale_vessel::liveness::SLEPT,
-            "an agent slept on a day, for this many ticks",
-        ),
-        (
-            hornvale_vessel::liveness::EATEN,
-            "an agent ate (eased its hunger) on a day",
-        ),
-    ] {
+    // The drive predicates the NPC stack writes -- the one published roster
+    // (The Culvert), consumed here rather than hand-copied, which is what let
+    // this bench go stale by one predicate (`slept-on`) for two days.
+    for (pred, doc) in hornvale_vessel::liveness::DRIVE_PREDICATES {
         registry
             .register_predicate(pred, false, doc)
-            .expect("these four predicates register identically every run");
+            .expect("every DRIVE_PREDICATES entry registers identically every run");
+    }
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside the four above for the same reason: this bench runs
+    // a real 60-tick walk, and an unregistered predicate a walk tries to
+    // commit fails the tick's commit outright.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
     }
 
     let npcs = derive_npcs(world, ctx, &mut ledger, AGENTS, home_settlement);
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), run-lived like the two
+    // above — this is the scope production gives it, so the tick walk's own
+    // reads see the same warmth a session's do.
+    let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
@@ -1365,6 +1522,21 @@ fn run(
     // below can read `&npcs[idx]` without a second search.
     let mut probe: Option<(EntityId, Facet, ThermalStrategy, usize)> = None;
 
+    // A SEPARATE probe for the two belief folds (The Culvert, Task 2).
+    // `probe` above is chosen by `agent-at` HISTORY and stays The Detent's
+    // and The Kerf's subject for `drive_at`/`hunger_at`/`fatigue_at`/
+    // `hazard_memory_memo` -- untouched by this campaign. The max-history
+    // member held an EMPTY known-water set at 10 of 10 bands (The Kerf), so
+    // `believed_water`/`shared_believed_water` need their OWN subject,
+    // chosen by known-water SET SIZE instead. Selected ONCE, at band 1, and
+    // held fixed for the rest of the run -- like `probe`, a subject that
+    // changed between bands would confound the history axis the fold columns
+    // are fitted against with a change of creature. Only the index is kept:
+    // `npcs` is set once before the loop and never reassigned, so `&npcs[i]`
+    // is stable for the whole run (unlike `probe`, which also stores home and
+    // thermal-strategy copies some call sites want directly).
+    let mut belief_probe_idx: Option<usize> = None;
+
     let mut bands: Vec<Band> = Vec::new();
     let mut band_facts_before = ledger.len();
     let mut band_searches_before = home_nav_cache.searches();
@@ -1398,8 +1570,12 @@ fn run(
         // must not fold a per-tick harness clone into the answer.
         #[allow(clippy::disallowed_types)] // benchmark harness
         let t0 = Instant::now();
-        let (facts, _occupancy, _written) =
-            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (facts, _occupancy, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut route_memo,
+        );
         for fact in facts {
             ledger
                 .commit(fact, &registry)
@@ -1440,6 +1616,34 @@ fn run(
             let probe_terrain =
                 LocaleTerrain::with_fields(ctx, None, None, None, None, Some(&mesh_for_probe))
                     .with_ground(&ground);
+
+            // The Culvert, Task 2: the whole roster's known-water set sizes at
+            // THIS band's instant -- read every band (the roster-wide columns
+            // need a fresh reading each time), and used ONLY at band 1 to
+            // select `belief_probe_idx`, which is then held fixed.
+            let belief_sets = water_belief_counts(&folds, &roster, &ledger, day, &probe_terrain);
+            if belief_probe_idx.is_none() {
+                // max-known-water member, ties broken by ASCENDING EntityId
+                // for a deterministic choice (controller ruling, Task 2).
+                let mut best: Option<(usize, usize)> = None; // (roster idx, set len)
+                for (i, &len) in belief_sets.iter().enumerate() {
+                    let take = match best {
+                        None => true,
+                        Some((bi, blen)) => len > blen || (len == blen && roster[i] < roster[bi]),
+                    };
+                    if take {
+                        best = Some((i, len));
+                    }
+                }
+                belief_probe_idx = Some(best.expect("the roster is non-empty").0);
+            }
+            let bp_idx = belief_probe_idx.expect("set on the first band and never cleared");
+            let belief_npc = &npcs[bp_idx];
+            let belief_probe_set_len = belief_sets[bp_idx];
+            let belief_roster_non_empty = belief_sets.iter().filter(|&&c| c > 0).count();
+            let belief_roster_max_set = belief_sets.iter().copied().max().unwrap_or(0);
+            let belief_roster_total_pairs: usize = belief_sets.iter().sum();
+
             let fold_us = probe_fold_us(
                 &ledger,
                 &folds,
@@ -1473,17 +1677,26 @@ fn run(
             )
             .with_ground(&ground);
             let fatigue_us = probe_fatigue_us(&ledger, npc, day, &fatigue_terrain);
-            let believed_water_us =
-                probe_believed_water_us(&ledger, &folds, npc, day, &probe_terrain, PROBE_BUDGET);
-            let shared_believed_water_us = probe_shared_believed_water_us(
+            let (believed_water_us, believed_water_some_count) = probe_believed_water_us(
                 &ledger,
                 &folds,
-                npc,
-                &npcs,
+                belief_npc,
                 day,
                 &probe_terrain,
                 PROBE_BUDGET,
+                belief_probe_set_len,
             );
+            let (shared_believed_water_us, shared_believed_water_some_count) =
+                probe_shared_believed_water_us(
+                    &ledger,
+                    &folds,
+                    belief_npc,
+                    &npcs,
+                    day,
+                    &probe_terrain,
+                    PROBE_BUDGET,
+                    belief_probe_set_len,
+                );
             let hazard_memory_memo_us =
                 probe_hazard_memory_memo_us(&ledger, &folds, npc, &npcs, day, &probe_terrain);
             // The Kerf, K1: what the two surviving `agent-at` tenants hold at this
@@ -1538,6 +1751,12 @@ fn run(
                 drank_roster_median,
                 drank_roster_max,
                 drank_roster_zero_count,
+                belief_roster_non_empty,
+                belief_roster_max_set,
+                belief_roster_total_pairs,
+                belief_probe_set_len,
+                believed_water_some_count,
+                shared_believed_water_some_count,
                 ground_len: ground.borrow().len(),
                 ground_bytes: ground.borrow().held_bytes(),
                 index_entries: folds.borrow().frightening_ground().entries(),

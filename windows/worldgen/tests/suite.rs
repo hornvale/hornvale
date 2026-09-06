@@ -131,6 +131,8 @@ mod keeping_probe;
 mod kinship_facts;
 #[path = "suite/lantern_probe.rs"]
 mod lantern_probe;
+#[path = "suite/lot_probe.rs"]
+mod lot_probe;
 #[path = "suite/mines_exist.rs"]
 mod mines_exist;
 #[path = "suite/name_pattern.rs"]

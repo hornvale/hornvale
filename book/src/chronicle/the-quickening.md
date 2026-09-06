@@ -139,7 +139,7 @@ What you actually see, on seed 42, `wait 1`:
 > wait 0.5
 Time passes. You watch hobgoblin of Feefaenoagoo go.
 > look
-[room 815726603, day 0.5]
+[room — …]
 ...
 > wait 0.5
 Time passes. You notice hobgoblin of Feefaenoagoo here now.

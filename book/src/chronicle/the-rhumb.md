@@ -153,10 +153,15 @@ The schema did not move; a sentence did.
 The sentence it moved to is the campaign in one line. The old refusal is gone
 entirely, because once every direction resolves there is nothing left to
 refuse — `go` never checked passability in the first place, so the compass was
-the only thing it had ever turned anyone away for. What the walker is told now
-is simply true:
+the only thing it had ever turned anyone away for. What the walker was told,
+once every direction resolved:
 
 > No direction here is closed; the nearest ground lies E, NW, SW.
+
+(The Ken later found that sentence had nothing left to earn on an ordinary
+turn — once every bearing resolves, saying so out loud asserts nothing new —
+and removed it from the common case; it survives today only where a bearing
+is genuinely refused, at the mesh's own corner facets.)
 
 ## The chart still points the way it always did
 

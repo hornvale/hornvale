@@ -239,7 +239,7 @@
 use hornvale_kernel::{EntityId, Fact, Ledger, RoomMeshMemo, Value, World, WorldTime};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
-    DriveMovements, HomeNavCache, LocaleTerrain, SUSTENANCE, derive_npcs,
+    DriveMovements, HomeNavCache, LocaleTerrain, RouteMemo, SUSTENANCE, derive_npcs,
 };
 use hornvale_worldgen::{SettlementPins, build_world};
 // The measurement harness times a single tick loop for a diagnostic (never
@@ -334,52 +334,38 @@ fn run_rung(
 ) -> Row {
     let mut ledger = world.ledger.clone();
     let mut registry = world.registry.clone();
-    // The four predicates the NPC drive stack actually writes — copied
-    // verbatim from `Session::start`'s own registration block (`session.rs`
-    // ~652-671). `DISPOSITION_SHIFT`/`TURNED_HOSTILE` are player-possession
-    // predicates with no NPC-drive writer, so this bench (no possessed
-    // player) never needs them.
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::AGENT_AT,
-            false,
-            "an agent's position on a day",
-        )
-        .expect("AGENT_AT registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::DRANK,
-            false,
-            "an agent satisfied its sustenance goal",
-        )
-        .expect("DRANK registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::RESTED,
-            false,
-            "an agent rested on a day, for this many ticks",
-        )
-        .expect("RESTED registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::SLEPT,
-            false,
-            "an agent slept on a day, for this many ticks",
-        )
-        .expect("SLEPT registers identically every run");
-    registry
-        .register_predicate(
-            hornvale_vessel::liveness::EATEN,
-            false,
-            "an agent ate (eased its hunger) on a day",
-        )
-        .expect("EATEN registers identically every run");
+    // The drive predicates the NPC stack actually writes — the one published
+    // roster (The Culvert), consumed here rather than hand-copied.
+    // `DISPOSITION_SHIFT`/`TURNED_HOSTILE` are player-possession predicates
+    // with no NPC-drive writer, so this bench (no possessed player) never
+    // needs them.
+    for (pred, doc) in hornvale_vessel::liveness::DRIVE_PREDICATES {
+        registry
+            .register_predicate(pred, false, doc)
+            .expect("every DRIVE_PREDICATES entry registers identically every run");
+    }
+    // The Warrant, Task 1: the eight errand predicates, from the one table —
+    // registered beside the drive roster above for the same reason it is.
+    // A SECOND table, not an extension of `DRIVE_PREDICATES`: see the merge
+    // note in `session.rs`'s matching pair of loops for why the two families
+    // stay apart even though folding them would compile.
+    for (key, doc) in hornvale_vessel::liveness::errand_predicates() {
+        let _ = registry.register_predicate(key, false, doc);
+    }
 
     let npcs = derive_npcs(world, ctx, &mut ledger, agents, home_settlement);
     let n = npcs.len();
 
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), run-lived for the same
+    // reason `home_nav_cache` is: a per-tick memo would throw every
+    // `(home, dest, budget)` entry away every tick. NOT because the key
+    // population saturates, which this comment used to claim — The Culvert's
+    // Task 5 measured it at 83 pairs at wait 12 rising to 190 at wait 60 with
+    // no ceiling demonstrated (spec §1.3(d), ledger #14). It is run-lived
+    // because it is cheap.
+    let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a
     // store rebuilt each tick would be the O(history) walk it exists to
@@ -431,8 +417,12 @@ fn run_rung(
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occupancy, _written) =
-            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (facts, _occupancy, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut route_memo,
+        );
         for fact in facts {
             ledger
                 .commit(fact, &registry)
