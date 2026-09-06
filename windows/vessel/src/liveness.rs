@@ -10358,6 +10358,138 @@ mod tests {
         );
     }
 
+    #[test]
+    fn believed_water_admits_currently_reachable_memory() {
+        // Mutation target: retaining `npc.home` as the route anchor rejects
+        // `here_water`, even though the committed current position reaches it.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = shared_belief_npc(entity, home, home_water.clone(), "current-admission");
+        commit_agent_at(&mut ledger, &reg, entity, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here_water, 2.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &npc,
+                td(3.0),
+                &terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(here_water),
+            "a remembered source reachable from the committed current room is admitted"
+        );
+    }
+
+    #[test]
+    fn believed_water_ranks_reachable_memory_from_current_position() {
+        // Mutation target: ranking from home makes `home_nearest` win its
+        // equal-home-hop tie instead of letting a zero-hop current source win.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let neighbors = home.neighbors();
+        let home_nearest = std::cmp::min(neighbors[0].clone(), neighbors[1].clone());
+        let current = std::cmp::max(neighbors[0].clone(), neighbors[1].clone());
+        let terrain = PlantedTerrain::fresh_only([home_nearest.clone(), current.clone()]);
+        let npc = shared_belief_npc(entity, home, home_nearest.clone(), "current-ranking");
+        commit_agent_at(&mut ledger, &reg, entity, &home_nearest, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &current, 2.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &npc,
+                td(3.0),
+                &terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(current.clone()),
+            "the current room is zero hops away and beats the other reachable memory"
+        );
+    }
+
+    #[test]
+    fn believed_water_breaks_current_position_ties_by_ascending_facet() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let tie_entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let tie_current = raddr(-1.0);
+        let tie_neighbors = tie_current.neighbors();
+        let smaller = std::cmp::min(tie_neighbors[0].clone(), tie_neighbors[1].clone());
+        let larger = std::cmp::max(tie_neighbors[0].clone(), tie_neighbors[1].clone());
+        let tie_terrain = PlantedTerrain::fresh_only([smaller.clone(), larger.clone()]);
+        let tie_npc = shared_belief_npc(tie_entity, raddr(1.0), smaller.clone(), "current-tie");
+        commit_agent_at(&mut ledger, &reg, tie_entity, &larger, 1.0);
+        commit_agent_at(&mut ledger, &reg, tie_entity, &smaller, 2.0);
+        commit_agent_at(&mut ledger, &reg, tie_entity, &tie_current, 3.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &tie_npc,
+                td(4.0),
+                &tie_terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(smaller),
+            "equal-hop current candidates resolve to ascending Facet, not visit order"
+        );
+    }
+
+    #[test]
+    fn incremental_water_belief_matches_fresh_fold_after_committed_position_change() {
+        // Mutation target: if either fold stays anchored at home, it disagrees
+        // after a committed walk from the home-side water to the current-side water.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = shared_belief_npc(entity, home, home_water.clone(), "incremental-alignment");
+        commit_agent_at(&mut ledger, &reg, entity, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here, 2.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here_water, 3.0);
+        let now = td(4.0);
+
+        let incremental = nearer_to_home(
+            &here_water,
+            Some(home_water),
+            here_water.clone(),
+            10_000,
+            &mut RouteMemo::new(),
+        );
+        let fresh = believed_water(
+            &ledger,
+            &test_folds(),
+            &npc,
+            now,
+            &terrain,
+            10_000,
+            &mut RouteMemo::new(),
+        );
+        assert_eq!(
+            incremental, fresh,
+            "the incremental update and re-derived belief share the committed current anchor"
+        );
+    }
+
     /// The Fetch orientation probe. Keep the remembered set fixed, then compare
     /// the current home-anchored fold with an independently computed
     /// current-position ranking. This is deliberately ignored: it measures the
