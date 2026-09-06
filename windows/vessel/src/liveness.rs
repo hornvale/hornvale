@@ -1287,10 +1287,21 @@ pub fn believed_water(
 /// [`HomeNavCache`].** [`crate::resident::LatestVisit::water_at`] returns each
 /// entity's DISTINCT rooms, so an entity never duplicates its own pair within
 /// one sweep; every duplicate is a duplicate ACROSS entities, and on the
-/// possession shape the same `(home, dest)` pair is asked 6.4x-9.1x per sweep
-/// by different entities. `HomeNavCache` is per-entity because `pos` and its
-/// avoid-epoch are per-entity; neither is in this key, so that half of the
-/// precedent does not transfer.
+/// possession shape a roster-wide sweep asks **3.9x-9.1x** as many route
+/// questions as there are distinct `(home, dest)` pairs seen so far, all of the
+/// excess coming from different entities. `HomeNavCache` is per-entity because
+/// `pos` and its avoid-epoch are per-entity; neither is in this key, so that
+/// half of the precedent does not transfer.
+///
+/// *That range read `6.4x-9.1x per sweep` until the campaign's final fix
+/// round, and both halves were off. It excluded **wait 1** (31 occurrences over
+/// 8 pairs = 3.9x, printed in The Culvert's ledger #5), being the min/max over
+/// waits 2-12 only; and the divisor is the CUMULATIVE distinct-pair count, not
+/// the count within that one sweep, so "per sweep" named a quantity the probe
+/// does not compute. Both errors are conservative — within-sweep distinct is at
+/// most cumulative distinct, so real within-sweep rates are at least these —
+/// and the argument for sharing needs only a rate above 1x, which every wait
+/// clears.*
 ///
 /// **It stores the hop count, not the plan**, because `p.len()` is all any
 /// consumer of these two folds reads — the same refinement The Waymark reached

@@ -1128,13 +1128,21 @@ pub struct Session<'w> {
     /// The session-lived, CROSS-tick water-belief route memo (The Culvert,
     /// Task 7): the home-anchored `plan_to_room` that `believed_water` and
     /// `nearer_to_home` rank through, cached on `(home, dest, budget)`.
-    /// Session-scoped for the same reason `home_nav_cache` is — an NPC's
-    /// `home` is fixed for a possession, so its key population saturates and
-    /// every `wait` after the first pays nothing for a pair already asked —
-    /// and SHARED across creatures, unlike `home_nav_cache`, because the
+    /// Session-scoped for the same reason `home_nav_cache` is — every `wait`
+    /// after the first pays nothing for a pair already asked — and SHARED
+    /// across creatures, unlike `home_nav_cache`, because the
     /// duplicates this collapses are duplicates across the roster (see
     /// `RouteMemo`'s own doc). Byte-identical by construction: it memoizes a
     /// pure function of mesh geometry.
+    ///
+    /// **Held for the session because it is CHEAP, not because its population
+    /// was shown to stop growing.** This doc said "an NPC's `home` is fixed for
+    /// a possession, so its key population saturates". That is a non-sequitur —
+    /// a fixed `home` bounds the key's first component while `dest` keeps
+    /// accumulating — and the campaign's own Task 5 measured the home-anchored
+    /// population at 83 distinct pairs at wait 12 rising to **190 at wait 60**,
+    /// with no ceiling demonstrated. See The Culvert's spec §1.3(d), which is
+    /// the canonical statement, and its ledger #14.
     route_memo: RouteMemo,
     // THE THREE SIDE-FIELDS ARE GONE (The Rack, Task 3). `driven_mode`,
     // `driven_affect` and `driven_suppressed` used to sit here: three

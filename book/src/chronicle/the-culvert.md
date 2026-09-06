@@ -64,8 +64,9 @@ stored only successes would re-pay 95.1% of the cost forever while reporting an
 no two agents ever share a `(home, water room)` pair — the within-sweep
 duplicate rate is exactly 1.00× at all ten bands — so a per-tick memo buys
 nothing and only a session-lived one helps. In the possession shape the
-residents are co-located and the same pair is re-planned 6.4 to 9.1 times inside
-a single sweep. A design fitted to either shape alone misjudges the other.
+residents are co-located, and a roster-wide sweep asks between 3.9 and 9.1 times
+as many route questions as there are distinct pairs seen so far. A design fitted
+to either shape alone misjudges the other.
 
 **Therefore the memo is shared, not per-entity.** A creature's remembered rooms
 are distinct, so it can never duplicate its own pair within a sweep; every
@@ -75,9 +76,28 @@ per-entity for reasons that do not transfer — two of its four key components a
 per-creature by construction — and copying it would have been copying the wrong
 half of a precedent.
 
-**And the population is small and it saturates.** Eighty-three distinct pairs in
-each shape, against 679 and 4,060 calls, with zero new pairs added in the
-laboratory shape's final band. A hundred entries, not a history.
+**And the population is small and decelerating.** Eighty-three distinct pairs in
+each shape at the counted horizon, against 679 and 4,060 calls, with zero new
+pairs added in the laboratory shape's final band.
+
+That was written as *"small and it saturates — a hundred entries, not a
+history"*, and the campaign's own later measurement declines to support it.
+Extending the possession session to sixty waits found the home-anchored
+population at 190, not 83, decelerating from about seven new pairs per wait over
+the first twelve to about one per wait over the last ten, and pausing for only
+three waits at the end. The stated reason was worse than the number: *a
+creature's home is fixed, so the population saturates* bounds the key's first
+component and says nothing about the second, which accumulates as the creature
+remembers more water — and this campaign separately measured one creature's
+remembered water rising from twelve rooms to forty-six. **The table is held for
+a session because 190 entries of two addresses and a hop count is trivially
+cheap, not because it was shown to stop growing.**
+
+The defect is sharper than a wrong adjective. The campaign **excluded** a third
+call site precisely for failing to demonstrate saturation, and **included** two
+while asserting a saturation its own data declines to show. Applying a standard
+to one site and not to its sibling is the error, whichever answer turns out to
+be right.
 
 ## What shipped
 
@@ -166,11 +186,12 @@ this path. It moved 4.6% and 6.3% in **opposite** directions. It is evidence the
 campaign broke nothing; it is not evidence the campaign worked, and it is
 reported as the former.
 
-## Three of six timed runs were set aside
+## Three of nine timed runs were set aside
 
 The preregistration required all three load averages at both ends of every timed
-run and set aside any run whose one-minute average exceeded ten. Three did, at
-50.74, 64.46 and 46.05, against valid runs taken between 1.42 and 6.58.
+run and set aside any run whose one-minute average exceeded ten. Three of the
+nine did, at 50.74, 64.46 and 46.05, against the six valid runs taken between
+1.42 and 6.58.
 
 Their readings scatter from **31.838 to 469.840** — an order of magnitude, in
 both directions around the valid runs' 313 to 318. The lowest of them was taken

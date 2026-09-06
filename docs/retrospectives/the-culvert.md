@@ -106,7 +106,12 @@ after it moves.
 
 ## The load rule earned its keep in one direction and not the other
 
-Three of six timed runs were set aside on a one-minute load average above ten.
+Three of **nine** timed runs were set aside on a one-minute load average above
+ten, leaving six valid. (This paragraph said "three of six" until the final fix
+round — six is the count that *survived*, not the population, so as a
+denominator it claimed half the runs were discarded when it was a third. The
+spec's own §11.5 table, which lists all nine, was three lines away from the
+sentence in every draft.)
 Their readings scatter over an order of magnitude in both directions around the
 valid runs, and the lowest — taken on a *before* tree — reads as a 9.8× rise in
 the measured slope: an apparent catastrophic regression the campaign did not

@@ -351,8 +351,12 @@ fn run_rung(
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
     // The water-belief route memo (The Culvert, Task 7), run-lived for the same
-    // reason `home_nav_cache` is: its `(home, dest, budget)` key population
-    // saturates over a run, and a per-tick memo would throw that away.
+    // reason `home_nav_cache` is: a per-tick memo would throw every
+    // `(home, dest, budget)` entry away every tick. NOT because the key
+    // population saturates, which this comment used to claim — The Culvert's
+    // Task 5 measured it at 83 pairs at wait 12 rising to 190 at wait 60 with
+    // no ceiling demonstrated (spec §1.3(d), ledger #14). It is run-lived
+    // because it is cheap.
     let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a

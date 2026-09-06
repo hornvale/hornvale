@@ -125,8 +125,15 @@ pub fn run_simulation(
     let mut home_nav_cache = HomeNavCache::new();
     // The water-belief route memo (The Culvert, Task 7), at exactly the scope
     // `home_nav_cache` is — one per run, never per tick. It keys on
-    // `(home, dest, budget)` and homes are fixed for a run, so its population
-    // saturates; a per-tick memo would throw that away every tick.
+    // `(home, dest, budget)`, and a per-tick memo would throw every entry away
+    // every tick.
+    //
+    // This comment said "homes are fixed for a run, so its population
+    // saturates". That is a non-sequitur — a fixed home bounds the key's first
+    // component while `dest` keeps accumulating — and The Culvert's own Task 5
+    // measured the population at 83 pairs at wait 12 rising to 190 at wait 60
+    // with no ceiling demonstrated (spec §1.3(d), ledger #14). The memo is run-
+    // lived because it is cheap, not because it was shown to stop growing.
     let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a
@@ -243,8 +250,15 @@ pub fn run_simulation_with_locale(
     let mut home_nav_cache = HomeNavCache::new();
     // The water-belief route memo (The Culvert, Task 7), at exactly the scope
     // `home_nav_cache` is — one per run, never per tick. It keys on
-    // `(home, dest, budget)` and homes are fixed for a run, so its population
-    // saturates; a per-tick memo would throw that away every tick.
+    // `(home, dest, budget)`, and a per-tick memo would throw every entry away
+    // every tick.
+    //
+    // This comment said "homes are fixed for a run, so its population
+    // saturates". That is a non-sequitur — a fixed home bounds the key's first
+    // component while `dest` keeps accumulating — and The Culvert's own Task 5
+    // measured the population at 83 pairs at wait 12 rising to 190 at wait 60
+    // with no ceiling demonstrated (spec §1.3(d), ledger #14). The memo is run-
+    // lived because it is cheap, not because it was shown to stop growing.
     let mut route_memo = RouteMemo::new();
     // The resident fold store (The Pawl, spec §2.1), owned at exactly the
     // scope `home_nav_cache` is — one per run, never per tick — because a

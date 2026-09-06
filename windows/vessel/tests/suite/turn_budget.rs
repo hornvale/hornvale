@@ -341,7 +341,15 @@ fn the_route_memo_survives_between_waits() {
         "{WARM_WAITS} further waits added {} route searches on top of the first wait's {cold}. \
          A session-lived RouteMemo answers an already-asked (home, dest) pair from its map; \
          a non-zero here means the memo is being rebuilt somewhere between waits (see this \
-         test's own doc for the 2,692-ask denominator it is measured against)",
+         test's own doc for the 2,692-ask denominator it is measured against). \
+         BEFORE CONCLUDING THE MEMO IS BROKEN, CHECK THE OTHER CAUSE: this asserts EXACT \
+         equality across the warm waits, so a change in main that makes a seed-42 creature \
+         PERCEIVE NEW WATER partway through this script adds a genuinely new (home, dest) \
+         pair, and the extra search is correct behaviour rather than a memo defect. The \
+         discriminator is whether the delta is a handful of new pairs (belief moved) or on \
+         the order of the cold wait's own {cold} (the memo is not surviving). If belief \
+         moved, re-pin this test's expectation; do not weaken it to an inequality, because \
+         the exactness is what catches a rebuilt memo at all.",
         session.route_searches() - cold
     );
 }

@@ -1131,4 +1131,31 @@ have had to. Recorded in the retrospective.
 
 ## Follow-ups
 
-*(none yet — entries above carry their own capture actions)*
+*(This section read "none yet — entries above carry their own capture actions"
+until the final fix round. "Yet" is meaningless at close, and "none" was wrong:
+one capture action above was never discharged, and the reconciliation belongs
+here rather than in a reader's head.)*
+
+**Reconciliation of #3's three owed registry rows.** #3's capture action owed
+rows for three observations. Two were minted:
+`TOOL-octile-heuristic-is-an-epoch-candidate` (the zero heuristic — `NavSpace`
+is Dijkstra, not A\*) and `TOOL-most-belief-searches-exhaust-plan-budget`. The
+third, **the `RoomMeshMemo`-not-threaded observation, was NOT minted, and that
+is deliberate rather than an oversight now that it is stated.** Spec §7 already
+carries the reason it is out of this campaign: threading `RoomMeshMemo` into
+the belief calls would accelerate the very searches the memo removes, so
+shipping both would make each one's contribution unattributable in the readout.
+And the general form of the observation is already held by the pre-existing
+`TOOL-ticksystem-step-no-cache-hook` — `TickSystem::step` has nowhere to hang a
+cache, so a caller-owned memo must be threaded by hand at every call site,
+which is exactly the shape of the un-threaded belief calls. A new row would
+have been a narrower restatement of an open one. **Recorded rather than
+silently dropped**, because an undischarged capture action is indistinguishable
+from a forgotten one.
+
+**Open at close, each with a registry row:** m3
+(`TOOL-route-memo-hit-path-clones-two-facets`), m4
+(`TOOL-route-memo-has-no-held-bytes-accessor` — and see spec §1.3(d): it is the
+instrument that would settle whether the home-anchored key population has a
+ceiling at all, the question this campaign resolved on a conservative default),
+and the one-to-many field (`TOOL-one-to-many-distance-field-for-belief-ranking`).

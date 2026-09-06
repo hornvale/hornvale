@@ -102,6 +102,14 @@ no loss of validity. Full tables are in ledger #5.
 Totals: Shape A **679 calls / 425,042 expansions / 83 distinct pairs**; Shape B
 **4,060 calls / 392,391 expansions / 83 distinct pairs**.
 
+**`distinct pairs` is CUMULATIVE — pairs seen up to and including that row, not
+within that one sweep.** Shape B's wait-1 row (8) is the same 8 that ledger
+#14's `home_dest_cum` reads at wait 1, and its wait-12 row (83) is the same 83.
+The two readings coincide at wait 12 and at Shape A's band 10 only because
+neither adds a new pair there. Anything divided by this column is therefore a
+LOWER bound on the within-sweep rate, which §1.3(b) states and which one
+sentence of this spec got wrong for the whole campaign.
+
 ### 1.3 The three things that are not in the brief
 
 **(a) The dominant cost is FAILURE, not distance.** In Shape A, 404 of 679
@@ -123,13 +131,30 @@ within-sweep duplicate rate is **exactly 1.00× at all ten bands**: no two
 agents ever share a `(home, water_room)` pair, so a per-tick memo buys
 literally nothing and only a session-lived one helps (87.8% hit, 100% by band
 10). Shape B's residents are co-located: the same pair is re-planned
-**6.4×–9.1× inside a single sweep**, so within-sweep dedup alone removes 86.2%
+**3.9×–9.1×**, so within-sweep dedup alone removes 86.2%
 of calls, and the session-lived memo reaches 98.0%. A design fitted to either
 shape alone misjudges the other; a session-lived memo collects both.
 
+*The range and its name were both wrong until the fix round, and the correction
+is recorded rather than applied silently.* It read **"6.4×–9.1× inside a single
+sweep"**. Two faults, neither of which changes a conclusion. **(i)** The range
+excluded wait 1, whose row is printed in ledger #5's own excerpt table: 31
+occurrences over 8 pairs = **3.9×**. 9.14× is wait 4 and 6.37× is wait 12, so
+6.4–9.1 was the min/max over waits 2–12 only. **(ii)** The divisor is the
+**cumulative** distinct-pair count up to and including that sweep, not the
+distinct count *within* that sweep, so "inside a single sweep" names a quantity
+the probe does not compute. The quantity actually divided is *occurrences in one
+roster-wide sweep ÷ distinct pairs seen so far*. Both faults are conservative —
+within-sweep distinct ≤ cumulative distinct, so the true within-sweep rates are
+**≥** these — and the design argument needs only a rate above 1×, which every
+wait clears. §11.6's separate 6.37× figure is unaffected: it is a genuine
+within-sweep measurement, taken by
+`culvert_sweep_collapses_calls_onto_distinct_pairs` at wait 12, where the two
+denominators happen to coincide at 83.
+
 **(c) Therefore the memo is SHARED, not per-entity — which the brief got
 backwards.** An entity never duplicates its own pair within a sweep, because
-`water_at` returns distinct rooms. So **every** one of Shape B's 6.4×–9.1×
+`water_at` returns distinct rooms. So **every** one of Shape B's 3.9×–9.1×
 duplicates is a duplicate ACROSS entities: two residents sharing a home, or
 sharing a water room reached from the same home. A per-entity memo cannot see
 them and would forfeit the whole 86.2%. `HomeNavCache` is per-entity for a
@@ -137,11 +162,44 @@ reason that does not transfer — it keys on `pos` and an avoid-epoch, both of
 which are per-entity — and copying its shape here would be copying the wrong
 half of the precedent.
 
-**(d) The distinct-pair population is tiny and it saturates.** 83 pairs in each
-shape, against 679 and 4,060 calls; Shape A adds **zero** new pairs at band 10.
-The memo is bounded by about a hundred entries, not by history length. That
-bound is what makes holding one for a whole session safe, and §2.3 states the
-one case where it would not hold.
+**(d) The distinct-pair population is small and DECELERATING. No ceiling has
+been demonstrated.** *This paragraph is the canonical statement of the bound;
+the five other places in this repository that state it defer to it rather than
+restate it, and every one of them said "saturates" until the fix round below.*
+
+At the horizon the counting probe reached: 83 pairs in each shape, against 679
+and 4,060 calls, and Shape A adds **zero** new pairs at band 10. **But Task 5
+went further and the counts do not support "saturates."** Extending the
+possession shape from 12 waits to 60 (ledger #14) reads **83 distinct
+home-anchored pairs at wait 12 rising to 190 at wait 60**, decelerating from
+~6.8 new pairs per wait over the first twelve (8 → 83) to ~1.0 per wait over the
+last ten (180 → 190), with a terminal plateau only **three** waits long. Ledger
+#14 rules explicitly, of both curves it measured and naming the home-anchored
+reference among them: *"Neither curve has demonstrated a true ceiling in 60
+waits — both have only been shown to pause."*
+
+**And the inference offered for the bound was a non-sequitur.** "`home` is fixed
+for a possession, so the key population saturates" bounds the key's FIRST
+component and says nothing about the second: `dest` accumulates as a creature
+remembers more water. This campaign's own registry row
+`KNOW-home-anchored-belief-strands-the-largest-memory` measures roster member
+40's remembered water rising **12 → 46 rooms** over ten bands. Half a key space
+held fixed is not a bounded key space.
+
+**So the memo is held for a session because it is CHEAP, not because the
+population was shown to stop growing.** 190 entries of two `Facet`s and a
+`usize` is trivially cheap at every horizon measured. §2.3 states the one case
+where holding it would not be safe, and that case is invalidation, not size.
+
+**The sharpest way to put what went wrong**, because it is the defect rather
+than its symptom: this campaign **EXCLUDED** `shared_believed_water` for failing
+to demonstrate saturation (Rule 3, ledger #14) and **INCLUDED** two sites while
+asserting a saturation its own data declines to show. Applying a standard to one
+site and not to its sibling is the error, independently of which answer turns
+out to be right for either. Deferred minor **m4** — `RouteMemo` has no
+`held_bytes()` accessor though `LatestVisit` and `GroundHazards` both carry one
+— is the natural instrument for settling the question, and it is **still open**
+(registry row `TOOL-route-memo-has-no-held-bytes-accessor`).
 
 ---
 
@@ -183,7 +241,11 @@ every step, so its key space is `positions × water rooms` rather than
 `homes × water rooms`. That is the one way the §1.3(d) bound fails: an
 unbounded memo in a long session. The probe measured the home-anchored fold and
 **did not measure this one**, and this spec will not assume the result
-transfers. Shape A has zero co-located peers (The Kerf), so `shared` collapses
+transfers. *(Read this alongside §1.3(d) as corrected. The bound the home
+anchor was supposed to give is weaker than this paragraph assumed — the
+home-anchored population was also still growing at wait 60 — which is why
+§1.3(d) now names applying the ceiling standard to one site and not the other
+as the campaign's own defect, rather than as a clean separation between them.)* Shape A has zero co-located peers (The Kerf), so `shared` collapses
 to its alone-path `return own` there and the question does not even arise;
 Shape B is where it would.
 
@@ -628,6 +690,17 @@ sweep, never re-derived analytically, and a campaign-time kernel counter on
 Shape A clears by 4.7%, Shape B by 3.5%. Both are real passes and neither has
 much room; a shape whose distinct-pair population grew would cross them.
 
+**Reconciled against the design-time projection.** Ledger #5 chose the memo over
+the one-to-many field partly on an estimated **"7.4× / 47× expansion
+reduction"**, derived by pricing the memo's misses at their per-call averages
+rather than measuring them. Shape A landed at **7.43×** — the estimate was
+exact. Shape B landed at **27.11×**, against a projected 47×: the estimate put
+the memo's 83 misses at ~8,300 expansions and they cost 14,474, ~1.74× more. The
+estimate was a dated design ruling and not an error, and the decision it
+supported is unaffected — 27.11× is still the larger of the two reductions and
+still clears its criterion — but a projection nothing reconciles against its own
+readout is how a plausible number outlives the measurement that replaced it.
+
 **Shape A's after figure is the memo's STRUCTURAL FLOOR, and that is checkable
 in one line.** 57,190 is exactly the control arm's band-10 cost — and band 10's
 sweep asks 83 occurrences over 83 distinct pairs, a within-sweep duplicate rate
@@ -733,7 +806,7 @@ Monotonicity 6/6 rises in both regimes on both trees.
 
 ### 11.5 Conditions, and the runs set aside
 
-**Three of six timed runs were set aside** under §4.4 for a 1-minute load
+**Three of NINE timed runs were set aside** under §4.4 for a 1-minute load
 average above 10 at one end: 50.74, 64.46 and 46.05, against valid runs taken
 between 1.42 and 6.58. Their `k` readings scatter from **31.838 to 469.840** —
 an order of magnitude, in both directions around the valid runs' 313–318 — and
@@ -752,6 +825,16 @@ campaign produced a real number, in the right units, beside a real measurement,
 attributed to the wrong thing; the arithmetic flags none of them, which is why
 §11's standing constraint exists and why this correction is left visible rather
 than quietly applied.)*
+
+*(The opening clause said **"Three of six"** until the final fix round — the
+same shape again, a real number attached to the wrong quantity. **Six is the
+count of runs that REMAINED VALID, not the population.** The table three
+paragraphs below lists **nine** timed runs — two C3 and seven C2 — of which
+three were set aside and six survived. Read as a denominator it said half the
+runs were discarded; it was a third. The phrase appears nowhere in
+`task-9-report.md`: it was introduced while writing the close artifacts. The
+check that would have caught it is counting the rows of the table sitting
+directly underneath the sentence.)*
 
 §4.4 is not boilerplate on this box: on the night
 these were taken the 1-minute average moved between 1.4 and 64.5 under other

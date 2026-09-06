@@ -5541,8 +5541,11 @@ search once per remembered water room, once per read.
 function of mesh geometry — the ranking passes an empty hazard set, and the
 search space consults no terrain, no ledger, and no tick — so a session-lived
 table of `(origin, destination, budget) → hop count` is byte-identical by
-construction. The whole distinct population is **83 pairs**, against 679 and
-4,060 calls on the two measured shapes, and it saturates. Searches per
+construction. The distinct population at the counted horizon is **83 pairs**,
+against 679 and 4,060 calls on the two measured shapes — small and
+decelerating, though **no ceiling was demonstrated**: extended to sixty waits it
+reads 190, and the campaign's own ledger rules that it has been shown to pause
+rather than to stop. Searches per
 roster-wide sweep fell 679 → 83 and 4,060 → 83; node expansions fell 425,042 →
 57,190 and 392,391 → 14,474. Across reads rather than within a sweep, 2,692
 route questions over eight waits now cost **one** real search.
