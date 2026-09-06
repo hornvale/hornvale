@@ -11389,10 +11389,17 @@ mod tests {
         // a planted terrain with no forage, no temperatures and one water room,
         // over 39 days — creatures here are under pressures a real world spaces
         // out. The seed-42 measurement is
-        // `tick_commit_budget::facts_committed_per_agent_per_tick_stays_bounded`,
-        // which reads 1.06 facts/agent/tick against its 1.5 ceiling (0.96
-        // before Task 7, 1.24 after it, 1.01 before this fix round). Read the
-        // rate there, not the fact count here.
+        // `tick_commit_budget::facts_committed_per_agent_per_tick_stays_bounded`.
+        // **It reads 1.785075 facts/agent/tick over 67 agents against a 2.5
+        // ceiling, measured 2026-09-06 at `27de2a7f1` (The Warrant's freshness
+        // sweep).** The figures this comment used to name — 1.06 against a 1.5
+        // ceiling, with 0.96/1.24/1.01 beside it — were true of a SIX-agent
+        // roster and were left standing when a sibling campaign made a
+        // session's roster the residents of the settlement you stand in. They
+        // are kept here only as history, because a reader who arrives at
+        // today's number should find the drift named rather than a plausible
+        // wrong explanation. Read the rate there, not the fact count here, and
+        // not this paragraph.
         //
         // THE TWO PARAGRAPHS ABOVE ARE INDEPENDENT AND THIS LITERAL IS THEIR
         // COMPOSITION (the absorption of `main` into The Wicket, 2026-09-01).

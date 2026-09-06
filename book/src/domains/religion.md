@@ -147,14 +147,24 @@ general way to read it back. `windows/historiography::recount(world,
 entity)` replays any entity's committed facts, their provenance strings,
 and the registry's predicate docs into a derivation sentence — for a belief,
 a chain naming its phenomenon kind, its cult form, and who asserted it; for
-any other entity (a settlement, a place), the same generic replay, because
-`recount` is domain-agnostic and interprets no predicate specially. The
+any other entity (a settlement, a place), the same generic replay. The
 REPL's `why <id>` verb, previously wired straight to religion's own belief
 lookup, now calls `recount` for any entity id — subsuming tier 0's `why`
 without changing what a player already knew to type. This is
 **historiography tier 0**: a flat, single-entity replay, deliberately not a
 causal chain across entities. It is the seam the Year-2 event ledger and
 fields-of-history will deepen, not a preview of them.
+
+*This paragraph used to end "because `recount` is domain-agnostic and
+interprets no predicate specially", and since
+[The Warrant](../chronicle/the-warrant.md) that is no longer exactly true.*
+`recount` keys on **one** thing: a predicate in the `errand/` namespace opens
+a group, and the positional steps committed under it roll up into that group's
+single line. Everything else renders exactly as it did before that pass
+existed, so the window still adds no domain dependency and a new domain still
+gets historiography for free. The window's constant is `ERRAND_PREFIX`;
+`windows/historiography` depends on `hornvale-kernel` and nothing else, as the
+layering test requires.
 
 **The exit demo.** Seed 42's flagship, spinning sky, tends a pantheon headed
 by **Neb the Ngobneb**, a cyclic deity whose absences are mourned

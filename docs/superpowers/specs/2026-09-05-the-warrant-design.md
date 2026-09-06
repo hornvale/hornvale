@@ -1,8 +1,10 @@
 # The Warrant: the typed, compositional intention — design
 
-**Status:** Draft for G3 review (2026-09-05) · **Author:** Claude
-(campaign-autopilot) · **Decider:** Nathan · **Stage:** Penstock **7b**
-· **Relates:** [decision 0238](../../decisions/0238-stage-7-is-three-stages-and-their-order-is-forced.md);
+**Status:** complete. Implemented, reviewed and closed at G6 2026-09-06;
+Task 4 struck before execution (§6, ledger #7 R2) · **Date:** 2026-09-05 ·
+**Branch:** `campaign/the-warrant` · **Decision block:** 0846-0855 ·
+**Author:** Claude (campaign-autopilot) · **Decider:** Nathan · **Stage:**
+Penstock **7b** · **Relates:** [decision 0238](../../decisions/0238-stage-7-is-three-stages-and-their-order-is-forced.md);
 [the Penstock metaplan](2026-08-22-the-penstock-metaplan.md) §5.6, §5.7, §6;
 [decision 0538](../../decisions/0538-the-trail-is-a-resident-index-not-a-cached-hub.md);
 `UNI-intention-is-structured`
@@ -550,6 +552,39 @@ the instrument; it is re-run unchanged.
   1.06. *Falsified if any seed exceeds the ceiling.*
 - **A null on H2 or H3 is a result and is reported as the headline**, not
   retuned away. H1 is not a null candidate: it is a correctness claim.
+
+> **RESULTS, 2026-09-06. The text above is frozen and is NOT edited; this note
+> is appended.**
+>
+> **H1 holds**, as exact equality: 252 entities, 1242 run-starts, both
+> directions, across seeds 7/14/23 (as frozen) plus the seed-11 fixture that
+> carried the campaign's before-image. **H3 holds**: last-half 1.785075
+> facts/agent/tick against a 2.5 ceiling, and seed 42's per-tick series is
+> byte-identical to the same probe run one commit before the errand fact
+> existed.
+>
+> **H2 IS FALSIFIED, and it stays falsified.** Measured against a real build of
+> the merge base `20c0cd375`: 49.04% / 55.35% / 22.18% on seeds 7 / 14 / 23
+> against a 50% floor, and exactly 0.00% on seed 42 (clause 2 holds to the
+> byte — 1407 facts, 58,893 provenance bytes, unchanged). Two of three walking
+> seeds miss the floor. Nothing was retuned.
+>
+> **The cause is a defect in THIS SECTION, and naming it is not a rescue.**
+> §1 argued about the **`agent-at` trail's** prose; this section then froze the
+> denominator as **all committed provenance**, a quantity §1 never discussed.
+> Only `agent-at`'s share can shrink, and errand facts add provenance back —
+> on seed 23 an errand commits every 2.7 steps, which is why it lands at 22%.
+> On the quantity the flip actually governs the reduction is **65.72% /
+> 65.82% / 54.56%**, past 50% on all three. **Both numbers are reported. The
+> second is context for why the first came out as it did, not a substitute
+> result**, and the threshold above is deliberately left as written: a
+> preregistration that can be re-scoped after unblinding is not one. See ledger
+> #17 and [decision 0847](../../decisions/0847-the-7b-before-7c-ordering-holds-on-the-why-not-the-per-step-prose.md).
+>
+> **H1 was very nearly discharged on the wrong population.** It was first
+> measured on seed 11 alone — the seed whose before-image fixture existed —
+> and recorded as holding. The remedy was to build the missing before-images
+> from the merge base rather than to narrow the hypothesis (ledger #20, #22).
 
 **Not preregistered, because it is a decision rule rather than a
 prediction:** on regenerating artifacts, if `book/src/gallery/` moves →

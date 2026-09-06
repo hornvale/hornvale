@@ -467,6 +467,7 @@
 - [The Charter](./chronicle/the-charter.md)
 - [The Warp](./chronicle/the-warp.md)
 - [The Cruck](./chronicle/the-cruck.md)
+- [The Warrant](./chronicle/the-warrant.md)
 
 # Appendix: The Frontier
 

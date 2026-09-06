@@ -22,6 +22,13 @@ predicate-blind for everything else.
 `serde_json`, `libm` — `cli/tests/suite/architecture.rs`'s `ALLOWED_EXTERNAL`).
 `cargo nextest` for tests; `hornvale possess --script` for renderings.
 
+**Status (2026-09-06):** COMPLETE. Tasks 1, 2, 3, 5 and 6 are closed, each
+review clean after at most one fix round. **Task 4 was struck before execution**
+— the `Errands` resident tenant has no consumer in this campaign and would have
+shipped unused (spec §6, ledger #7 ruling R2); it is owed by the first campaign
+with a real consumer. H1 and H3 hold; **H2 is falsified and reported unamended**
+(spec §10's appended results note). Decisions 0846 and 0847 minted.
+
 **Spec:** `docs/superpowers/specs/2026-09-05-the-warrant-design.md` — read it
 before Task 1. §1 (the measurement), §4/§4.0 (the representation and the
 origin correction) and §7.2 (the instrument that goes vacuous) are the three

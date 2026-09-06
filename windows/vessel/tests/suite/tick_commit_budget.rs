@@ -66,10 +66,23 @@
 //!
 //! ## Measured (seed 42, default `PossessOpts`, `--nocapture`)
 //!
-//! **The headline finding: the rate does NOT fall toward zero.** It holds
-//! roughly flat at ~0.92-0.96 facts/agent/tick — recorded below, and see
-//! [`STEADY_STATE_CEILING`]'s doc for the number this test actually gates on
-//! and why. A 100-tick exploratory run (not part of the committed battery,
+//! **CURRENT READING, 2026-09-06 at `27de2a7f1` (The Warrant):
+//! first-half 1.855970, last-half 1.785075 facts/agent/tick over 67 agents.**
+//! Every other rate in this file and in `liveness.rs` beside it is HISTORY —
+//! each was true of a smaller roster at the campaign that recorded it, and
+//! none was restated when the roster grew. Read the current number here or
+//! from the test's own `--nocapture` output, never from a doc paragraph
+//! further down. This correction is The Warrant's freshness sweep and not its
+//! doing: the identical figures, to six decimal places, were measured at
+//! `3aa975838`, the commit before this campaign committed its first errand
+//! fact.
+//!
+//! **The headline finding is unchanged and it is the reason this file
+//! exists: the rate does NOT fall toward zero.** It holds roughly flat —
+//! ~0.92-0.96 facts/agent/tick when this paragraph was first written, ~1.79
+//! today — and see [`STEADY_STATE_CEILING`]'s doc for the number this test
+//! actually gates on and why. A 100-tick exploratory run (not part of the
+//! committed battery,
 //! `TICKS` bumped by hand and reverted) confirmed this is a genuine
 //! steady-state plateau rather than a slow decay still in flight: first-half
 //! rate 0.950000, last-half rate 1.016667 over the full 100 ticks — noisier
