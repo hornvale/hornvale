@@ -3,8 +3,80 @@
 //!
 //! Spec: `docs/superpowers/specs/2026-09-05-the-culvert-design.md`.
 //!
+//! # THE CAMPAIGN-TIME CONSTANTS RETIRED AT THE CLOSE (2026-09-06)
+//!
+//! Decision 0541 mints a hash constant for the duration of a migration and
+//! retires it at the campaign's close, because a constant here equals "the
+//! whole possession shape's behaviour on one seed" and therefore reddens on
+//! ANY behaviour change by ANY campaign — a tax on work that has nothing to
+//! do with this fold, and an unwinnable race against a queue that gates
+//! main+branch rather than a branch tip. This campaign minted two, re-recorded
+//! them main-first once, and retires them here. Spec §4.1 and Rule 6.
+//!
+//! **What replaces them.** The two witnesses below run their fixed script
+//! TWICE, on two fresh sessions of one seed, and require the two runs to
+//! agree — the constant-free shape `ledger_hash_witness.rs` already carries,
+//! in the file this campaign's seed-42 script is borrowed from. Every
+//! non-vacuity floor is checked on BOTH runs:
+//!
+//! - **the walk reached this campaign's fold** — `Session::route_searches()`
+//!   must be non-zero, so neither hash is the hash of a walk in which the
+//!   route memo was never consulted. This floor is NEW at retirement and it
+//!   is the one that mattered: the seed-17 witness previously carried no
+//!   floor at all, so removing its constant would have left two agreeing
+//!   hashes of an empty ledger passing for free;
+//! - **the ledger is not empty** — bodies must have committed new facts over
+//!   the script. On seed 42 this is [`crate::ledger_hash_witness::run_fixed_script`]'s
+//!   own refusal (at least two of the seed's bodies), enforced by
+//!   construction on both runs; on seed 17 it is counted here.
+//!
+//! Both hashes are PRINTED on every run, so a future migration has the
+//! numbers without this file gating on them.
+//!
+//! **What retirement costs, said plainly.** A constant-free witness guarantees
+//! DETERMINISM (two fresh sessions on one seed produce the same bytes) plus
+//! its FLOORS (the fold was entered and the ledger is not empty). **It cannot
+//! detect a BEHAVIOUR CHANGE at all** — a fold that sent every creature to a
+//! different water room would move both runs together and be witnessed by
+//! neither. That is what the constants were for, and it is exactly what
+//! retiring them gives up. The campaign's surviving instruments against a
+//! behaviour change are the direct comparisons, not this file's hashes: the
+//! route-memo equivalence test below, `resident_folds.rs`'s FOLD-equals-SCAN
+//! sweeps, and `turn_budget::the_route_memo_survives_between_waits`.
+//!
+//! **The floor arm has been observed firing, on a rebuilt binary** (2026-09-06;
+//! taken before this record was written, because a witness never seen to fail
+//! is a witness nobody has checked). `RouteMemo::hops`'s `self.searches += 1`
+//! was neutralised with `scripts/mutate.py` — the one token that lets the memo
+//! say it searched — and both witnesses went RED on the floor:
+//!
+//! ```text
+//! witness        searches (green -> mutated)   ledger hash (green -> mutated)
+//! seed 42        1  -> 0                       0x9dd87f4cea554d28 -> UNMOVED
+//! seed 17        83 -> 0                       0xbde5058309750ca4 -> UNMOVED
+//! ```
+//!
+//! **That one experiment is both halves of this section.** The floor caught it;
+//! the hashes did not move at all, because the mutation changes no committed
+//! byte — which is the retirement cost above, demonstrated rather than
+//! asserted. Restored with a byte-for-byte `cp` from a pre-mutation copy (never
+//! `git checkout --`), `MUTATION APPLIED` re-grepped to zero occurrences,
+//! `git diff` on the file empty, and the GREEN re-taken on a binary that
+//! printed `Compiling hornvale-vessel` — the stale-binary trap, avoided
+//! deliberately.
+//!
+//! The seed-42 floor is tighter than it looks: that walk runs **exactly one**
+//! real search, which is `turn_budget::the_route_memo_survives_between_waits`'s
+//! own finding (2,692 route questions across eight waits against one search)
+//! seen from a second instrument. There is no slack in it to hide a
+//! regression to zero.
+//!
 //! # THE DATED RECORD (Task 3: the campaign-time hash constants and their
 //! positive control)
+//!
+//! Everything from here to the end of this doc is history, recorded between
+//! 2026-09-05 and 2026-09-06. Its numbers were correct when taken and nothing
+//! re-checks them; read them as a dated record, never as a current claim.
 //!
 //! Recorded 2026-09-05, minted at `c6edaa548f213a6619651c829e96e18ac768fa42`
 //! (`windows/vessel/src/liveness.rs` and `resident.rs` unchanged from that
@@ -49,10 +121,13 @@
 //! witness                    green (minted)          under the control
 //! CULVERT_SEED_42_LEDGER     0x9874b73557337f83      0x9874b73557337f83   (unmoved)
 //! CULVERT_WATER_LEDGER       0x1d03ec0fc13050fe      0xb09d0ac58c46025e   (MOVED)
+//! ```
 //!
-//! # RE-RECORDED MAIN-FIRST, 2026-09-06, at the close absorption
+//! ## RE-RECORDED MAIN-FIRST, 2026-09-06, at the close absorption
 //!
 //! Both constants MOVED when 54 commits of main were absorbed at `63ce3c5e2`:
+//!
+//! ```text
 //!
 //!   CULVERT_SEED_42_LEDGER   0x9874_b735_5733_7f83 -> 0x9dd8_7f4c_ea55_4d28
 //!   CULVERT_WATER_LEDGER     0x1d03_ec0f_c130_50fe -> 0xbde5_0583_0975_0ca4
@@ -71,10 +146,11 @@
 //! `windows/worldgen/src/{lib,person_promote,vestige}.rs` — world generation,
 //! upstream of every possession-shape ledger.
 //!
+//! ```
+//!
 //! The corroborating control the campaign already held: at `8acd377c5`, with
 //! the memo FULLY WIRED after a 99-commit absorption, both constants matched
 //! their minted values. The only delta since is main's.
-//! ```
 //!
 //! **`CULVERT_SEED_42_LEDGER` DID NOT MOVE, and that is recorded rather than
 //! hidden: it witnesses only the seed-42 walk's byte-identity, not the
@@ -102,12 +178,14 @@
 //! this record was written — a restored source with a stale binary is a
 //! known trap in this repository (The Axes, retrospective).
 //!
-//! **Retirement.** Per decision 0541 and the spec's Rule 6, these two
-//! constants retire at this campaign's close, with this record kept as
-//! history. Re-record main-first after every absorption that touches
-//! `windows/vessel/src/resident.rs`'s `LatestVisit`, or
-//! `windows/vessel/src/liveness.rs`'s `believed_water`, `shared_believed_water`
-//! or `nearer_to_home`.
+//! **The two values above are the LAST ones these constants held**, taken at
+//! `8acd377c5` and re-recorded at the close absorption. They no longer
+//! execute; the witnesses below print their live hashes instead, so a future
+//! migration of `LatestVisit`, `believed_water`, `shared_believed_water` or
+//! `nearer_to_home` can mint its own pair from this file's output and compare
+//! against this record without anything here gating on it. Mint the seed-17
+//! half first: the seed-42 half was BLIND to this campaign's path, for the
+//! reason the paragraph above gives, and its own control never moved it.
 
 use crate::common;
 use hornvale_kernel::{Facet, Ledger, WorldTime};
@@ -374,12 +452,47 @@ fn every_str_predicate_const_in_liveness_joins_the_roster_or_is_waived() {
 /// own script (30 waits, `look`, 30 waits) — reused directly per the brief's
 /// step 1 rather than re-implemented, so this witness and that one can never
 /// silently diverge on what "the seed-42 walk" means.
-fn culvert_seed_42_ledger_hash() -> u64 {
+fn culvert_seed_42_ledger_hash() -> WitnessRun {
     let world = common::build(42).expect("seed 42 always builds a world");
     let (mut session, _opening) =
         Session::start(&world, &PossessOpts::default()).expect("seed 42 always starts a session");
+    let bodies: Vec<_> = session.bodies().iter().map(|b| b.entity).collect();
+    let before: Vec<usize> = bodies
+        .iter()
+        .map(|&e| session.committed_fact_count_for(e))
+        .collect();
     crate::ledger_hash_witness::run_fixed_script(&mut session);
-    crate::ledger_hash_witness::fnv1a(session.session_ledger_json().as_bytes())
+    let grew = bodies
+        .iter()
+        .zip(before.iter())
+        .filter(|&(&e, &b)| session.committed_fact_count_for(e) > b)
+        .count();
+    WitnessRun {
+        hash: crate::ledger_hash_witness::fnv1a(session.session_ledger_json().as_bytes()),
+        searches: session.route_searches(),
+        bodies_that_committed: grew,
+    }
+}
+
+/// One fresh run of a retired hash witness: the ledger hash, and the two
+/// floors that keep two agreeing hashes from being two hashes of a walk in
+/// which nothing happened.
+///
+/// The floors exist because the constants do not. While
+/// `CULVERT_WATER_LEDGER` was asserted, a walk that committed nothing would
+/// have reddened on the constant; with the constant retired, two agreeing
+/// hashes of an empty ledger would pass for free. See the module doc's
+/// "# THE CAMPAIGN-TIME CONSTANTS RETIRED AT THE CLOSE".
+struct WitnessRun {
+    /// FNV-1a of the session's committed ledger JSON.
+    hash: u64,
+    /// Real `plan_to_room` searches this session's shared
+    /// [`liveness::RouteMemo`] ran, through `Session::route_searches()`. The
+    /// floor that says the walk REACHED the fold this witness is about.
+    searches: u64,
+    /// How many of the session's bodies committed at least one new fact over
+    /// the script. The floor that says the ledger is not empty.
+    bodies_that_committed: usize,
 }
 
 /// How many `wait`s the water-belief possession shape takes. A module-local
@@ -396,88 +509,186 @@ const CULVERT_WATER_WAITS: usize = 12;
 /// type-audit: bare-ok(index)
 const CULVERT_WATER_SEED: u64 = 17;
 
+/// The seed-42 script's non-empty-ledger floor: how many bodies must commit
+/// at least one new fact over its sixty ticks.
+///
+/// Two, because that is the number
+/// [`crate::ledger_hash_witness::run_fixed_script`] itself refuses to return
+/// under — this witness restates the same floor rather than inventing a
+/// second one, so the two can never disagree about what a non-vacuous
+/// seed-42 walk is.
+///
+/// **The name ends `_BODY_COUNT` and not `_BODIES` deliberately.**
+/// `cli/tests/suite/claim_shape.rs`'s `looks_like_seeds_const` flags any
+/// ALL-CAPS token that contains `SEED` and ends in `S` as a seed ROSTER, and
+/// a test holding one must declare a `claim:` shape (decision 0093). This is
+/// a body-count floor over one seed, not a roster, so the honest fix is a
+/// name that is not plural-shaped — declaring a quantified claim this test
+/// does not make would satisfy the guard with a falsehood.
+/// type-audit: bare-ok(count)
+const SEED_42_MIN_BODY_COUNT: usize = 2;
+
+/// The seed-17 script's non-empty-ledger floor.
+///
+/// Two, and it is a floor rather than the observed value: twelve waits over a
+/// roster of 67 commit far more than two bodies' worth of facts, and pinning
+/// the observed count would make this witness a golden of the walk it is
+/// supposed to have stopped pinning. The floor asserts the ledger is not
+/// empty; the equality below asserts determinism; nothing here asserts a
+/// behaviour.
+/// type-audit: bare-ok(count)
+const WATER_MIN_BODY_COUNT: usize = 2;
+
 /// The belief-rich possession shape: seed 17, twelve `wait`s, no `look` —
 /// `resident_folds.rs`'s `kerf_possession_ledger` walk, reached independently
 /// here (that function is private to its own file) rather than reused, since
 /// this module has no reason to depend on `resident_folds.rs`.
-fn culvert_water_ledger_hash() -> u64 {
+fn culvert_water_ledger_hash() -> WitnessRun {
     let world = common::build(CULVERT_WATER_SEED).expect("the water-belief seed builds a world");
     let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
         .expect("the water-belief seed starts a session");
+    let bodies: Vec<_> = session.bodies().iter().map(|b| b.entity).collect();
+    let before: Vec<usize> = bodies
+        .iter()
+        .map(|&e| session.committed_fact_count_for(e))
+        .collect();
     for _ in 0..CULVERT_WATER_WAITS {
         session.handle("wait");
     }
-    crate::ledger_hash_witness::fnv1a(session.session_ledger_json().as_bytes())
+    let grew = bodies
+        .iter()
+        .zip(before.iter())
+        .filter(|&(&e, &b)| session.committed_fact_count_for(e) > b)
+        .count();
+    WitnessRun {
+        hash: crate::ledger_hash_witness::fnv1a(session.session_ledger_json().as_bytes()),
+        searches: session.route_searches(),
+        bodies_that_committed: grew,
+    }
 }
 
-/// The seed-42 possession shape's committed ledger, hashed. Minted from two
-/// agreeing runs; see the module doc's dated record for the SHA and what the
-/// positive control below did and did not move it under.
+/// Every floor a retired witness carries, checked on ONE run. Called on BOTH
+/// runs of both witnesses, before either hash comparison, so a walk that
+/// reached nothing reddens on the floor rather than passing on two agreeing
+/// hashes of an empty ledger.
 ///
-/// **This constant is BLIND to the water-belief path it was minted alongside,
-/// and that is recorded rather than hidden** — the same finding
-/// `ledger_hash_witness.rs`'s "Seed 42 is not it" note and `the_detent.rs`'s
-/// own seed-42 constant both make for the fear path: seed 42's lab shape has
-/// a MEDIAN agent making zero water searches (this campaign's own Task 2
-/// measurement), so a green run here is a blast-radius check on the whole
-/// walk, never evidence that the water-belief route memo did anything.
-const CULVERT_SEED_42_LEDGER: u64 = 0x9dd8_7f4c_ea55_4d28;
+/// `min_bodies` differs between the two shapes because the scripts do: the
+/// seed-42 script is sixty ticks and
+/// [`crate::ledger_hash_witness::run_fixed_script`] already refuses to return
+/// under two, while the seed-17 script is twelve waits. Both numbers are the
+/// measured floor rounded DOWN to what the shape must always clear, never the
+/// observed value — an observed value standing in for a predicate is the
+/// defect this campaign produced three times (retrospective).
+fn assert_witness_floors(label: &str, run: &WitnessRun, min_bodies: usize) {
+    assert!(
+        run.searches > 0,
+        "{label}: this walk consulted the route memo {} times, so its ledger hash \
+         witnesses a walk that never reached the fold this file is about — with the \
+         campaign-time constants retired, that would be two agreeing hashes of a \
+         vacuous run. See the module doc's retirement section",
+        run.searches
+    );
+    assert!(
+        run.bodies_that_committed >= min_bodies,
+        "{label}: only {} bodies committed a new fact over this script (floor {min_bodies}), \
+         so the hash is close to the hash of an empty ledger and two runs would agree on \
+         nothing happening",
+        run.bodies_that_committed
+    );
+}
 
-/// The water-belief possession shape's (seed 17, 12 waits) committed ledger,
-/// hashed. Minted from two agreeing runs, and MOVED under the positive
-/// control the module doc records — see there for the mutation, the SHA and
-/// the before/after values. Unlike [`CULVERT_SEED_42_LEDGER`], this constant
-/// is the one that actually witnesses the campaign's path: seed 17 is the
-/// belief-rich shape (52 of 67 residents hold a non-empty belief, max 23
-/// rooms), so a fold that changed which known water an agent walks toward
-/// has somewhere to show up.
-const CULVERT_WATER_LEDGER: u64 = 0xbde5_0583_0975_0ca4;
-
-/// Two fresh seed-42 sessions must commit the same ledger bytes, and that
-/// hash must equal the minted constant. [`CULVERT_SEED_42_LEDGER`]'s own doc
-/// records what this witness does and does not see.
+/// The seed-42 possession shape is deterministic: two fresh sessions running
+/// one fixed script commit the same ledger bytes, over a walk that reached
+/// the route memo and committed facts.
+///
+/// **There is no committed constant here any more, and its absence is the
+/// campaign's ruling rather than an omission** — see the module doc's
+/// "# THE CAMPAIGN-TIME CONSTANTS RETIRED AT THE CLOSE", which records the
+/// value this witness held (`0x9dd8_7f4c_ea55_4d28`, main's at the close
+/// absorption) and the same-tree control that attributed its movement to
+/// main rather than to the memo.
+///
+/// **What this witness never saw, retired or not.** The seed-42 lab shape's
+/// MEDIAN agent makes zero water searches and only 11 of 50 roster members
+/// hold any water belief (this campaign's Task 2 measurement), so a ranking
+/// change inside `believed_water` had nowhere on this walk to show up — which
+/// is exactly what the campaign's own positive control found, moving the
+/// seed-17 hash and leaving this one unmoved. Read it as a blast-radius check
+/// on the whole possession shape, never as evidence about the route memo.
+/// The `route_searches() > 0` floor is a claim that the fold was ENTERED, not
+/// that a change to it would be seen.
 #[test]
-fn the_culvert_seed_42_ledger_hash_is_pinned() {
+fn the_culvert_seed_42_walk_is_deterministic() {
     let first = culvert_seed_42_ledger_hash();
     let second = culvert_seed_42_ledger_hash();
-    println!("--- the culvert seed-42 ledger hash ---");
-    println!("ledger hash {first:#018x} (second fresh session: {second:#018x})");
-    assert_eq!(
-        first, second,
-        "two fresh seed-42 sessions running the same fixed script committed DIFFERENT \
-         ledger bytes ({first:#018x} against {second:#018x}) — the walk is not \
-         deterministic"
+    println!("--- the culvert seed-42 possession shape ---");
+    println!(
+        "ledger hash {:#018x} (second fresh session: {:#018x}); \
+         searches {} / {}, bodies committing {} / {}",
+        first.hash,
+        second.hash,
+        first.searches,
+        second.searches,
+        first.bodies_that_committed,
+        second.bodies_that_committed
     );
+
+    assert_witness_floors("run 1", &first, SEED_42_MIN_BODY_COUNT);
+    assert_witness_floors("run 2", &second, SEED_42_MIN_BODY_COUNT);
+
     assert_eq!(
-        first, CULVERT_SEED_42_LEDGER,
-        "the seed-42 possession shape's committed ledger moved from the minted constant \
-         ({first:#018x} against {CULVERT_SEED_42_LEDGER:#018x}) — re-record it main-first \
-         per the module doc's dated-record discipline before trusting this witness again"
+        first.hash, second.hash,
+        "two fresh seed-42 sessions running the same fixed script committed DIFFERENT \
+         ledger bytes ({:#018x} against {:#018x}) — the walk is not deterministic, which \
+         is a constitutional failure and not a moved golden",
+        first.hash, second.hash
     );
 }
 
-/// Two fresh seed-17 (12-wait) sessions must commit the same ledger bytes,
-/// and that hash must equal the minted constant. [`CULVERT_WATER_LEDGER`]'s
-/// own doc records why this is the load-bearing half of the pair.
+/// The water-belief possession shape (seed 17, twelve waits) is
+/// deterministic, over a walk that reached the route memo and committed
+/// facts.
+///
+/// **This is the load-bearing half of the retired pair**, and the module doc
+/// records why: seed 17 is the belief-rich shape (52 of 67 residents hold a
+/// non-empty belief, max 23 rooms), so the campaign's positive control — a
+/// flipped hop-distance ordering inside `believed_water` — MOVED this hash
+/// (`0x1d03_ec0f_c130_50fe` to `0xb09d_0ac5_8c46_025e`) while leaving the
+/// seed-42 witness untouched.
+///
+/// **The constant that carried that reach is gone, and the floors are what
+/// replaced it.** This witness previously asserted a value and carried no
+/// floor at all; retiring the value without adding one would have left two
+/// agreeing hashes of an empty ledger passing for free. Even with the floors,
+/// the hash can no longer detect a behaviour change — only the direct
+/// comparisons can, and the module doc names them.
 #[test]
-fn the_culvert_water_belief_ledger_hash_is_pinned() {
+fn the_culvert_water_belief_walk_is_deterministic() {
     let first = culvert_water_ledger_hash();
     let second = culvert_water_ledger_hash();
     println!(
-        "--- the culvert water-belief (seed {CULVERT_WATER_SEED}, {CULVERT_WATER_WAITS} waits) ledger hash ---"
+        "--- the culvert water-belief (seed {CULVERT_WATER_SEED}, {CULVERT_WATER_WAITS} waits) ---"
     );
-    println!("ledger hash {first:#018x} (second fresh session: {second:#018x})");
-    assert_eq!(
-        first, second,
-        "two fresh seed-{CULVERT_WATER_SEED} sessions running the same {CULVERT_WATER_WAITS}-wait \
-         script committed DIFFERENT ledger bytes ({first:#018x} against {second:#018x}) — the \
-         walk is not deterministic"
+    println!(
+        "ledger hash {:#018x} (second fresh session: {:#018x}); \
+         searches {} / {}, bodies committing {} / {}",
+        first.hash,
+        second.hash,
+        first.searches,
+        second.searches,
+        first.bodies_that_committed,
+        second.bodies_that_committed
     );
+
+    assert_witness_floors("run 1", &first, WATER_MIN_BODY_COUNT);
+    assert_witness_floors("run 2", &second, WATER_MIN_BODY_COUNT);
+
     assert_eq!(
-        first, CULVERT_WATER_LEDGER,
-        "the water-belief possession shape's committed ledger moved from the minted constant \
-         ({first:#018x} against {CULVERT_WATER_LEDGER:#018x}) — re-record it main-first per the \
-         module doc's dated-record discipline before trusting this witness again"
+        first.hash, second.hash,
+        "two fresh seed-{CULVERT_WATER_SEED} sessions running the same \
+         {CULVERT_WATER_WAITS}-wait script committed DIFFERENT ledger bytes \
+         ({:#018x} against {:#018x}) — the walk is not deterministic",
+        first.hash, second.hash
     );
 }
 
