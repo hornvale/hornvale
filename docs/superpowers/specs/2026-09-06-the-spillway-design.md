@@ -366,6 +366,21 @@ run is a census of its own tip (columns unchanged, goldens possibly moved by
 nothing) to prove the null path and the timings row in production, and it
 does, at the pre-merge close.
 
+**CORRECTED AT CLOSE.** It does not, and the sentence above overstated what
+running the campaign's own tip through the queue can prove. The census that
+ran (queue row `req-81968faee96c-20260906T144636Z`, `census-run.sh` rc=0 in
+1272 s, NO GOLDENS MOVED, delivering `census/81968faee96c-20260906T155128Z`
+with the timings row only) proved **main's** null path — dead until this
+campaign, live now that the delivery ships — and the `docs/timings.md` row.
+It proved nothing about the arms step, because `scripts/sluice-drain.sh`
+dispatches `scripts/sluice-census.sh` relative to its own repo root (the
+queue operator's main checkout on lefford, which read `b71296a8a` at the
+time and had zero occurrences of "Gnomon" in that file), and only
+`scripts/gnomon-injection.sh` is read from the censused worktree (§3.2 step
+2). The delivery log carries no arms-verdict line at all. See §6 criterion 2
+for the corrected success criterion and the two-step production proof that
+replaces this paragraph's claim.
+
 ## 5. Migration and the refs it cannot help
 
 Nothing migrates. The first ref to benefit is any ref that carries this
@@ -400,6 +415,32 @@ worktree, since nothing was committed.
    delivers a branch whose log contains the arms verdict line and whose
    `docs/timings.md` gained a `gnomon-injection` row if the arms were
    re-authored, or the "arms unchanged" line if not.
+
+   **CORRECTED AT CLOSE: this criterion was unsatisfiable by construction,
+   and the census that ran (`81968faee`) did not satisfy it.**
+   `scripts/sluice-drain.sh` dispatches `scripts/sluice-census.sh` — and
+   through it `census-run.sh` and the whole delivery — relative to **its
+   own repo root**, the queue operator's main checkout on lefford; only
+   `scripts/gnomon-injection.sh` is taken from the censused ref (§3.2 step
+   2). A campaign that changes the delivery script can therefore never
+   exercise its own change through the queue before that change is on
+   `main` — the queue always runs main's copy of `sluice-census.sh`, never
+   the branch tip's. Queue row `req-81968faee96c-20260906T144636Z`,
+   `census-run.sh` rc=0 in 1272 s, NO GOLDENS MOVED, delivered
+   `census/81968faee96c-20260906T155128Z` (timings row only, merged into
+   this branch at `c4595ba81`); its log carries no Gnomon-arms line at
+   all, because the queue's checkout of `scripts/sluice-census.sh` at that
+   moment (`b71296a8a`) had zero occurrences of "Gnomon". That run proved
+   main's null path (dead until this campaign, live now that the delivery
+   ships) and the `docs/timings.md` row; it proved nothing about the arms
+   step. The real production proof is two-step, both necessarily after
+   this campaign merges: (a) the first census the queue runs once
+   lefford's main checkout has advanced past the merge, expected to report
+   `Gnomon arms unchanged` on a null; and (b) the first census by a
+   campaign that registers a metric, expected to report `re-authoring the
+   Gnomon injection arms` and a `gnomon-injection` timings row. Pre-merge,
+   the only evidence for the arms step is the harness on lefford
+   (`scripts/test-sluice.sh`, 263/263), which stubs the census.
 3. `HV_CENSUS_DELIVERY=1` stands down exactly three checks in `pre-commit`
    — the two it stood down before and the count witness — and
    `test-census-guard.sh` pins that count.

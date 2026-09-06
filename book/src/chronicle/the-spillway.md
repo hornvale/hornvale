@@ -129,14 +129,36 @@ the status readers report no run while every waiter still waits.
 delivery and compared at delivery; in the interval the only thing holding
 them to the census is that both were written at the same ref.
 
-**And the largest: this campaign registers no metric, so the growing census —
-the case the whole design exists for — has been exercised only by a stubbed
-harness.** Five arms of a shell test drive the delivery against a fake census
-and a fake authoring script and assert what it did, including that the lock
-was genuinely held while the stub ran. That is real evidence about the wiring
-and none at all about an eight-minute authoring run over twenty worlds. The
-proof is the next campaign whose close registers a metric; until that census
-delivers itself, this chronicle claims a mechanism rather than a result.
+**And the largest: this campaign could not exercise its own delivery script
+through the queue at all, before merging — not the growing-census arm, and
+not the null arm either.** The queue's drain dispatches the census script
+relative to *its own* repo root, the operator's main checkout on lefford,
+never the censused ref; only the arms-authoring script,
+`gnomon-injection.sh`, is read from the ref itself. A campaign that changes
+the delivery, as this one does, cannot therefore prove its own change in
+production before that change is on `main` — the queue always runs main's
+copy of the delivery script, never the branch tip's. The spec asserted the
+opposite (§6.2), and nothing caught it until the delivery log for the
+campaign's own pre-merge census was read and found to carry no Gnomon-arms
+line at all.
+
+That census (queue row `req-81968faee96c-20260906T144636Z`, 1272 s, NO
+GOLDENS MOVED, delivering a branch that carried only the timings row) is
+real evidence, just not the evidence the spec claimed: it proved main's own
+null path, dead until this campaign and live now that the delivery ships on
+main, and it proved the timings row lands. It proved nothing about the arms
+step, because main's checkout of the delivery script at that moment named
+no Gnomon arm at all. Five arms of a shell test drive the delivery against a
+fake census and a fake authoring script and assert what it did, including
+that the lock was genuinely held while the stub ran — real evidence about
+the wiring and none at all about an eight-minute authoring run over twenty
+worlds. The proof is now two-step and both steps sit after this merge: the
+first census the queue runs once lefford's checkout has advanced past it
+(expected to report `Gnomon arms unchanged` on a null), and the first
+census by a campaign that registers a metric (expected to report
+`re-authoring the Gnomon injection arms` and a new timings row). Until both
+have run, this chronicle claims a mechanism, corroborated by a harness and
+by one production run of half of it, and not a result.
 
 ## A defect the close found in its own trigger, and fixed before merge
 
@@ -181,6 +203,9 @@ the real committed files, a real-tree control asserting
 `injection_arms_stale` over the actual checkout prints nothing (the same
 fact `anomaly_injection::the_fixture_columns_match_the_census` asserts in
 Rust), and a positive control that deletes one column from a copied real
-census schema and confirms the drift is caught. A census run of this tip is
-therefore expected to report `Gnomon arms unchanged` on a null, not to pay
-for a re-authoring it does not need.
+census schema and confirms the drift is caught. A census run of this tip's
+own script — by hand, or once main's checkout carries it — is therefore
+expected to report `Gnomon arms unchanged` on a null, not to pay for a
+re-authoring it does not need. **What the campaign's own pre-merge census
+through the queue actually ran was not this tip's script at all** — see the
+honest-limits section above for why, and for what that run proved instead.

@@ -655,6 +655,16 @@ leads the G6 package:
 > A delivery satisfies every check whose remedy is a regeneration, and defers
 > only a check whose remedy is a human re-statement.
 
+[This digest was written after G3 and before the campaign's own pre-merge
+census ran. Three sections were appended after it, later in this
+append-only file: `## Fix wave` (the close-found column-extractor
+Critical), `## Fix wave 2` (the final whole-branch review's prose-truth
+findings), and `## Close — the census of the tip` (the finding that spec
+§6.2 was unsatisfiable by construction — the queue runs the delivery from
+its own checkout, never the censused ref's — and the correction of the
+four affected records). Read those three for what changed after this
+digest was written.]
+
 ### What shipped, in five commits plus two absorptions
 
 | commit | what |
@@ -947,3 +957,46 @@ passed, 0 failed (unchanged). `make shellcheck`: clean on this Mac
 'test(docs_consistency)'`: 41 passed, 0 failed, 280 skipped. `docs/timings.md`
 picked up local mtime/duration churn from running these suites and is
 intentionally left unstaged.
+
+## Close — the census of the tip
+
+**Finding (measured, not inferred).** Spec §6.2 promised: "A `make
+sluice-census` of this campaign's own tip at pre-merge close delivers a
+branch whose log contains the arms verdict line …". The census ran — queue
+row `req-81968faee96c-20260906T144636Z`, `census-run.sh` rc=0 in **1272 s**,
+**NO GOLDENS MOVED**, delivering `census/81968faee96c-20260906T155128Z`
+(carrying the timings row only), now merged into this branch at
+`c4595ba81`. Its delivery log carries **no Gnomon-arms line at all**.
+
+Reason, verified in the code: `scripts/sluice-drain.sh` dispatches
+`scripts/sluice-census.sh` relative to **its own repo root** — the queue
+operator's main checkout on lefford — and `sluice-census.sh` runs
+`census-run.sh` and the delivery from that same `$repo_root`. Only
+`gnomon-injection.sh` is taken from the censused ref (`$wt`, the worktree
+checked out at the ref). So a campaign that changes the delivery script
+cannot exercise its own change through the queue before it merges: the
+census proved main's null path (dead until this campaign's delivery ships
+on `main`, live now) and the timings row, and proved nothing about the arms
+step.
+The queue operator's main checkout on lefford read `b71296a8a` at the time,
+with zero occurrences of "Gnomon" in its `scripts/sluice-census.sh`.
+
+**Ruling.** Spec §6.2 and §4's "one command that would embarrass this
+campaign" paragraph are corrected in place (loud corrections, originals
+kept) rather than deleted, because the originals are what a reviewer
+approved and the record should show what was believed and what displaced
+it. The chronicle's honest-limits passage is rewritten to the same effect.
+The retrospective gets a new "Do differently" item (#8) and an Estimate
+deltas row recording the census figures above. The real production proof
+moves to two steps, both necessarily after this merge: (a) the first census
+the queue runs once lefford's main checkout has advanced past the merge
+(expect `Gnomon arms unchanged` on a null), and (b) the first census by a
+campaign that registers a metric (expect `re-authoring the Gnomon injection
+arms` and a `gnomon-injection` timings row). The harness on lefford
+(`scripts/test-sluice.sh`, 263/263) remains the only pre-merge evidence for
+the arms step, and it stubs the census.
+
+**Verification.** `cargo nextest run -p hornvale --test suite -E
+'test(docs_consistency)'` green over these four prose-only edits.
+`docs/timings.md` carries local mtime/duration churn from running that
+suite and is intentionally left unstaged.

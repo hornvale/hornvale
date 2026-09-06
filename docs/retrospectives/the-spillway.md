@@ -2,8 +2,8 @@
 
 **Close:** 2026-09-06, awaiting G6 · **Ledger:**
 [`2026-09-06-the-spillway.md`](../superpowers/ledgers/2026-09-06-the-spillway.md)
-(entries #0–#3 plus five task sections, a close digest, and two fix-wave
-sections) · **Chronicle:**
+(entries #0–#3 plus five task sections, a close digest, two fix-wave
+sections, and a census-of-the-tip close section) · **Chronicle:**
 [the-spillway](../../book/src/chronicle/the-spillway.md) · **Decisions:** 0836
 
 ## The headline: the registry row named two legs and the delivery log had three
@@ -97,6 +97,25 @@ carried a *reason* at the site, not just a flag. A stand-down recorded as
    defect (below). Nothing in five task reviews had run the staleness
    comparison against the two real files; every test of it ran against
    synthetic ones.
+8. **A success criterion that reads "run X through the queue" must first
+   check which checkout the queue actually runs X from.** Spec §6.2 claimed
+   that a `make sluice-census` of this campaign's own tip at pre-merge close
+   would deliver a branch whose log carries the Gnomon arms verdict. It was
+   unsatisfiable by construction: `scripts/sluice-drain.sh` dispatches
+   `scripts/sluice-census.sh` relative to *its own* repo root — the queue
+   operator's main checkout on lefford — and only `gnomon-injection.sh` is
+   read from the censused ref (spec §3.2 step 2). A campaign that changes
+   the delivery script can never production-prove its own change through the
+   queue before that change is on `main`; the proof is necessarily the first
+   census the queue runs *after* the campaign merges. No review caught this
+   — not the five task reviews, not the final whole-branch review that wrote
+   Fix wave 2 — until the delivery log for the campaign's own pre-merge
+   census was read at close and found to carry no Gnomon-arms line at all.
+   The census that ran (`81968faee`, queue row
+   `req-81968faee96c-20260906T144636Z`, 1272 s, NO GOLDENS MOVED) proved
+   main's own null path and the `docs/timings.md` row, and nothing about the
+   arms step. Both the spec and the chronicle are corrected in place at
+   close; see the ledger's `## Close — the census of the tip` section.
 
 ## The defect the close found, and fixed, and why five reviews missed it
 
@@ -164,8 +183,9 @@ commit carries, not what the world is or what is known about it.
 | tasks | 6 | 6, plus two fix waves (the close-found column-extractor Critical, then the final whole-branch review's prose-truth findings); two absorptions of the trunk |
 | decisions | 0836–0845 reserved | **1 minted** (0836), three tasks earlier than planned |
 | checks stood down under `HV_CENSUS_DELIVERY` | 2 → 3 | 3, pinned by a test that fails on a fourth |
-| production proof of the growing-census path | out of scope (no ref registers a metric) | still out of scope; the stubbed harness is the whole evidence |
-| defects found by running versus by reading | — | every one of them: three in Task 3's RED run, one at the close's figure re-derivation |
+| production proof of the growing-census path | out of scope (no ref registers a metric) | still out of scope; the stubbed harness remains the whole evidence for that arm |
+| production proof of the null path (spec §6.2) | **assumed in scope: "a census of its own tip … proves the null path and the timings row in production"** | **not delivered — found unsatisfiable by construction at close.** The queue runs the delivery from its own main checkout, never the censused ref, so a census of this branch's tip could not exercise this branch's script. The pre-merge census that ran (`81968faee`, queue row `req-81968faee96c-20260906T144636Z`, `census-run.sh` rc=0 in **1272 s**, **NO GOLDENS MOVED**, branch `census/81968faee96c-20260906T155128Z` carrying the timings row only) proved main's own null path and the timings row, not this branch's delivery script; its log carries no Gnomon-arms line. See Do differently #8. |
+| defects found by running versus by reading | — | every one of them: three in Task 3's RED run, one at the close's figure re-derivation, one at the close's log-reading (the census-of-the-tip finding, above) |
 
 ## Deferred minors
 
