@@ -10358,6 +10358,109 @@ mod tests {
         );
     }
 
+    /// The Fetch orientation probe. Keep the remembered set fixed, then compare
+    /// the current home-anchored fold with an independently computed
+    /// current-position ranking. This is deliberately ignored: it measures the
+    /// disagreement that the design must explain, rather than asserting a
+    /// production choice before the spec is written.
+    #[test]
+    #[ignore = "probe: The Fetch home/current admission and ranking comparison"]
+    fn fetch_probe_compares_home_and_current_water_decisions() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = Body {
+            entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "fetch-probe".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, e, &here_water, 2.0);
+        commit_agent_at(&mut ledger, &reg, e, &here, 3.0);
+        let t = WorldTime::from_std_days(5.0).expect("a day value is finite");
+        let folds = test_folds();
+        let remembered = {
+            let mut store = folds.borrow_mut();
+            store.latest_visit(&ledger).water_at(e, t, &terrain)
+        };
+        let home_ranked = believed_water(
+            &ledger,
+            &folds,
+            &npc,
+            t,
+            &terrain,
+            10_000,
+            &mut RouteMemo::new(),
+        );
+        let mut current_ranked = remembered
+            .iter()
+            .filter_map(|room| {
+                plan_to_room(&here, room, 10_000, &std::collections::BTreeSet::new())
+                    .map(|path| (path.len(), room.clone()))
+            })
+            .min_by(|(a_hops, a_room), (b_hops, b_room)| {
+                a_hops.cmp(b_hops).then_with(|| a_room.cmp(b_room))
+            })
+            .map(|(_, room)| room);
+        println!(
+            "fetch probe: remembered={} home_ranked={:?} current_ranked={:?} home_admitted={} current_admitted={}",
+            remembered.len(),
+            home_ranked,
+            current_ranked,
+            remembered
+                .iter()
+                .filter(|room| plan_to_room(
+                    &home,
+                    room,
+                    10_000,
+                    &std::collections::BTreeSet::new()
+                )
+                .is_some())
+                .count(),
+            remembered
+                .iter()
+                .filter(|room| plan_to_room(
+                    &here,
+                    room,
+                    10_000,
+                    &std::collections::BTreeSet::new()
+                )
+                .is_some())
+                .count(),
+        );
+        assert_eq!(
+            remembered.len(),
+            2,
+            "probe denominator: both water sightings must survive the raw fold"
+        );
+        assert!(
+            home_ranked.is_some(),
+            "probe denominator: home must rank at least one remembered source"
+        );
+        assert!(
+            current_ranked.take().is_some(),
+            "probe denominator: here must rank at least one remembered source"
+        );
+    }
+
     #[test]
     fn believed_water_only_counts_sightings_at_or_before_t() {
         let reg = agent_at_reg();
