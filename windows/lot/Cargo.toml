@@ -1,0 +1,52 @@
+[package]
+name = "hornvale-lot"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale lot window: one life drawn from everyone who ever lived in a world."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+# The context (`context.rs`) assembles every occupation's shape and hazard
+# once per world: it reads the composition root's registries and rebuilt
+# terrain (`hornvale-worldgen`), the committed occupation records
+# (`hornvale-history`), and a people's life history (`hornvale-species`).
+# Real runtime dependencies from Task 5 on — the window builds nothing new,
+# it only reads what the composition root already reconstructs.
+hornvale-worldgen = { path = "../worldgen" }
+hornvale-history = { path = "../../domains/history" }
+hornvale-species = { path = "../../domains/species" }
+# `hornvale_worldgen::terrain_of` returns `hornvale_terrain::GeneratedTerrain`
+# (imported privately inside worldgen, not re-exported: the composition
+# root's own comment on the re-exported `GeneratedClimate` says every current
+# consumer of `GeneratedTerrain` already depends on `hornvale-terrain`
+# directly), so this crate needs the same edge to NAME the type
+# `LotContext::terrain` stores.
+hornvale-terrain = { path = "../../domains/terrain" }
+# The story's slots (`slots.rs`) ask the ledger every question spec §5 lists,
+# so this window reads the domains that hold those answers directly rather
+# than through a re-derivation: settlements (the `where` slot's name,
+# coordinates and biome, and the vertex→settlement inversion the context
+# builds), religion (`belief`), culture (`subsistence`/`standing`), and
+# language (the `name` slot's `Namer`). A window depending on a domain is
+# what `cli/tests/suite/architecture.rs` permits; a window depending on
+# another window is permitted too, which is what the next two are.
+hornvale-settlement = { path = "../../domains/settlement" }
+hornvale-religion = { path = "../../domains/religion" }
+hornvale-culture = { path = "../../domains/culture" }
+hornvale-language = { path = "../../domains/language" }
+hornvale-astronomy = { path = "../../domains/astronomy" }
+# `held-true` is a hearsay read: what the community HELD, not what happened.
+hornvale-hearsay = { path = "../hearsay" }
+# `dwelling` needs the occupation-scoped flesh seed; `hornvale_history::flesh::
+# flesh_seed_for` is the one place the `history/flesh/v2` derivation is
+# spelled out (moved there from `windows/almanac`, campaign ledger finding
+# #16 — the stream belongs to the domain that owns it, not to a presenting
+# window this crate had no other reason to depend on). A second copy of a
+# save-format derivation is how two decoders drift apart, so this crate calls
+# the domain function rather than deriving its own.
+# The four `lot/*/v1` payloads (`json.rs`) are serde documents quantized at
+# emit — the `windows/scene` precedent, and the workspace's only two allowed
+# external crates (decision 0004).
+serde = { workspace = true }
+serde_json = { workspace = true }

@@ -18,6 +18,7 @@ dependencies = [
  "hornvale-lab",
  "hornvale-language",
  "hornvale-locale",
+ "hornvale-lot",
  "hornvale-paleoclimate",
  "hornvale-religion",
  "hornvale-scene",
@@ -164,6 +165,7 @@ dependencies = [
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-locale",
+ "hornvale-lot",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-species",
@@ -188,6 +190,25 @@ version = "0.1.0"
 dependencies = [
  "hornvale-climate",
  "hornvale-kernel",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "hornvale-lot"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-culture",
+ "hornvale-hearsay",
+ "hornvale-history",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-religion",
+ "hornvale-settlement",
+ "hornvale-species",
  "hornvale-terrain",
  "hornvale-worldgen",
  "serde",

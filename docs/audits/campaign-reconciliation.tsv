@@ -654,7 +654,9 @@ plan-2026-09-03-the-terrier	active	none		no terminal closure stated in record		d
 plan-2026-09-03-the-wash	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-03-the-wash.md			
 plan-2026-09-04-the-coda	active	none		no terminal closure stated in record		docs/superpowers/plans/2026-09-04-the-coda.md			
 plan-2026-09-04-the-housemark	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-housemark.md			
+plan-2026-09-04-the-cruck	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-cruck.md			
 plan-2026-09-05-the-sluicegate	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it		docs/superpowers/plans/2026-09-05-the-sluicegate.md			
+plan-2026-09-05-the-lot	shipped	none		merged via the queue 2026-09-05; all twelve tasks and the plan amendment executed		docs/superpowers/plans/2026-09-05-the-lot.md			
 plan-the-contour-baseline	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline.md			
 plan-the-contour-baseline-v2	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline-v2.md			
 plan-the-contour-readout	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-readout.md			
@@ -1322,9 +1324,11 @@ spec-2026-09-03-the-plat-design	active	none		no terminal closure stated in recor
 spec-2026-09-03-the-terrier-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-03-the-terrier-design.md				
 spec-2026-09-03-the-wash-design	active	none		no terminal closure stated in record	docs/superpowers/specs/2026-09-03-the-wash-design.md				
 spec-2026-09-04-the-coda-design	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-coda-design.md				
+spec-2026-09-04-the-cruck-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-04-the-cruck-design.md				
 spec-2026-09-04-the-housemark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-04-the-housemark-design.md				
 spec-2026-09-04-the-staple-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-staple-metaplan.md				
 spec-2026-09-05-the-sluicegate-design	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-05-the-sluicegate-design.md				
+spec-2026-09-05-the-lot-design	shipped	none		merged via the queue 2026-09-05; chronicle, retrospective and decisions 0796-0798 landed with it	docs/superpowers/specs/2026-09-05-the-lot-design.md				
 chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
 retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md
 the-weft	shipped	none		plan: COMPLETE/G6 approved; retrospective: Close G6 approved; chronicle: G6 accepted result	docs/superpowers/specs/2026-09-03-the-weft-design.md	docs/superpowers/plans/2026-09-03-the-weft.md		book/src/chronicle/the-weft.md	docs/retrospectives/the-weft.md
@@ -1338,4 +1342,8 @@ chronicle-the-charter	shipped	none		G6 approved; approved close for ordinary slu
 retrospective-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission					docs/retrospectives/the-charter.md
 the-tenon	shipped	none		plan: COMPLETE; Nathan authorized G6 close; retrospective and chronicle record accepted result	docs/superpowers/specs/2026-09-04-the-tenon-design.md	docs/superpowers/plans/2026-09-04-the-tenon.md		book/src/chronicle/the-tenon.md	docs/retrospectives/the-tenon.md
 the-zenith	shipped	none		plan and spec: IMPLEMENTED (2026-09-04) pending merge; chronicle and retrospective committed at close	docs/superpowers/specs/2026-09-04-the-zenith-design.md	docs/superpowers/plans/2026-09-04-the-zenith.md		book/src/chronicle/the-zenith.md	docs/retrospectives/the-zenith.md
+chronicle-the-cruck	shipped	none		published chronicle				book/src/chronicle/the-cruck.md	
+retro-the-cruck	shipped	none		committed retrospective					docs/retrospectives/the-cruck.md
+chronicle-the-lot	shipped	none		published chronicle				book/src/chronicle/the-lot.md	
+retrospective-the-lot	shipped	none		published retrospective					docs/retrospectives/the-lot.md
 the-ken	active	none		spec and plan committed; implementation in progress	docs/superpowers/specs/2026-09-05-the-ken-design.md	docs/superpowers/plans/2026-09-05-the-ken.md			

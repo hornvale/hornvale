@@ -4,7 +4,7 @@
 
 A generated survey of the committed census: what Hornvale's worlds actually produce, and where the instrument finds them wanting.
 
-1000 worlds, 281 metrics across 12 domains.
+1000 worlds, 287 metrics across 12 domains.
 
 ## Domains
 
@@ -21,7 +21,7 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 | Religion | 21 | 12 | [page](./religion.md) |
 | Language | 48 | 36 | [page](./language.md) |
 | Naming | 17 | 10 | [page](./naming.md) |
-| History | 25 | 25 | [page](./history.md) |
+| History | 31 | 25 | [page](./history.md) |
 
 ## Crate coverage (D8)
 

@@ -323,15 +323,16 @@ pub fn reachable_from(lattice: &Lattice, chamber: usize) -> BTreeSet<Cell> {
     out
 }
 
-/// How many independent choices the anchor graph LEAVES free for a chain
-/// embedding: one cut per interior boundary.
+/// `n - 1` cut positions for `n` chambers, for ANY rooted tree — a tree on `n`
+/// nodes has `n - 1` edges and the allocator spends exactly one cut per edge
+/// (Task 4).
 ///
 /// This is the number rule 7 compares `Lattice::dof` against. It is written as a
 /// function of the chamber count alone because that is all the graph determines —
 /// if a future method needs more freedom than this, the honest move is to widen
 /// this function and say why, never to stop comparing.
 /// type-audit: bare-ok(count: chambers), bare-ok(count: return)
-pub fn freedom_of_a_chain(chambers: usize) -> u32 {
+pub fn freedom_of_a_tree(chambers: usize) -> u32 {
     chambers.saturating_sub(1) as u32
 }
 
@@ -339,9 +340,11 @@ pub fn freedom_of_a_chain(chambers: usize) -> u32 {
 mod tests {
     use super::*;
     use crate::brief::Brief;
+    use crate::housemark::{AuthorityMark, Housemark, ThresholdPosture};
     use crate::lattice::{allocate, embed_with, extent_for, grow};
     use crate::site::{Site, SiteKind};
-    use crate::structure::structure_at;
+    use crate::structure::{Role, Structure, structure_at};
+    use hornvale_history::record::{Function, Notability};
     use hornvale_kernel::{Facet, Seed};
 
     const WALK: u32 = 13;
@@ -359,6 +362,10 @@ mod tests {
         }
     }
 
+    /// A built site with no business at all: the grammar's floor, two chambers,
+    /// `T{ H }`. Also the METHOD selector for the rectilinear arm of the tests
+    /// that hand-build their own trees ([`h4_every_tree_embeds_under_all_eight_rules_with_exact_freedom`]),
+    /// where only `built` is read.
     fn built() -> Brief {
         Brief::from_parts(
             None,
@@ -374,8 +381,65 @@ mod tests {
         )
     }
 
+    /// A living, warm, communal, plain-postured agrarian dwelling — the BUSH
+    /// shape, four chambers, `T{ H, W, S }`: a fork of three at the door.
+    fn bush() -> Brief {
+        Brief::from_parts(
+            Some(Function::Agrarian),
+            None,
+            Some(Notability::Common),
+            None,
+            Some(Housemark {
+                authority: AuthorityMark::Common,
+                threshold: ThresholdPosture::Plain,
+            }),
+            0,
+            true,
+            false,
+            Some(Site::placed(SiteKind::Settlement, None)),
+            None,
+        )
+    }
+
+    /// The same dwelling, cold: the DEEP shape, `T{ H{ W, S } }` — four
+    /// chambers with the fork one step in rather than at the door.
+    fn deep() -> Brief {
+        let mut b = bush();
+        b.cold = true;
+        b
+    }
+
+    /// A waypoint: `Trade`'s business IS keeping goods, so three chambers,
+    /// `T{ H, S }`.
+    fn trade() -> Brief {
+        let mut b = bush();
+        b.function = Some(Function::Trade);
+        b
+    }
+
+    /// A CAVE: a site nobody built. Both the shape source for the grown arm —
+    /// the wild draw still gives a chain of 1..=MAX_CHAMBERS (spec §3.5) — and
+    /// the method selector `embed_with` reads to send it to `grow`.
+    ///
+    /// It carries a SITE now, and must: `structure_at` gates on `brief.site`
+    /// (decision 0666), so the old site-less method selector derives no
+    /// structure at all and could only ever be passed to `embed_with`. Making
+    /// it a real cave brief is what lets the grown arm's structures come from
+    /// the same derivation production's caves take, rather than being borrowed
+    /// from a settlement.
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, None, 0, false, true, None, None)
+        Brief::from_parts(
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            false,
+            true,
+            Some(Site::placed(SiteKind::Cave, None)),
+            None,
+        )
     }
 
     /// Which method produced a lattice. Carried through the corpus because rule 7
@@ -388,19 +452,30 @@ mod tests {
         Grown,
     }
 
-    /// Every (structure, lattice, method) triple the rules are checked over: both
-    /// methods, many seeds, and therefore every chamber count `structure_at`
-    /// produces.
+    /// Every (structure, lattice, method) triple the rules are checked over.
+    ///
+    /// **Varied by BRIEF on the rectilinear arm, by SEED on the grown one, and
+    /// the asymmetry is the campaign's whole point** (The Cruck, Task 3). A
+    /// built structure's chamber count and shape are the grammar's, so
+    /// scanning seeds for a four-chamber settlement finds nothing a brief did
+    /// not already decide — the four shape briefs below are how this corpus
+    /// reaches four chambers, and how it reaches a FORK at all. A wild
+    /// structure's count is still drawn, so the grown arm varies by seed
+    /// exactly as it always did and its chains are byte-for-byte The Lintel's.
     fn corpus() -> Vec<(crate::structure::Structure, crate::lattice::Lattice, Method)> {
         let mut out = Vec::new();
         for s in SEEDS {
-            let st = structure_at(&locale(s), &built(), Seed(s), WALK).expect("built");
+            for shape in [built(), trade(), bush(), deep()] {
+                let st = structure_at(&locale(s), &shape, Seed(s), WALK).expect("a built site");
+                let e = extent_for(&st);
+                out.push((
+                    st.clone(),
+                    embed_with(&st, &shape, e, Seed(s)),
+                    Method::Rectilinear,
+                ));
+            }
+            let st = structure_at(&locale(s), &wild(), Seed(s), WALK).expect("a cave is a site");
             let e = extent_for(&st);
-            out.push((
-                st.clone(),
-                embed_with(&st, &built(), e, Seed(s)),
-                Method::Rectilinear,
-            ));
             out.push((
                 st.clone(),
                 embed_with(&st, &wild(), e, Seed(s)),
@@ -412,6 +487,11 @@ mod tests {
                 == crate::structure::MAX_CHAMBERS,
             "the corpus never reaches MAX_CHAMBERS, so the rules are unchecked at \
              the count most likely to break them"
+        );
+        assert!(
+            out.iter().any(|(s, _, _)| s.children(0).len() >= 2),
+            "the corpus never reaches a FORK, so every rule below is a claim \
+             about chains — which is exactly what it was before The Cruck"
         );
         out
     }
@@ -469,30 +549,142 @@ mod tests {
         }
     }
 
-    #[test]
-    fn rule_2_two_chambers_floors_are_never_adjacent() {
+    /// §7 rule 2, THE WALL LAW, as one callable statement.
+    ///
+    /// Extracted from `rule_2_two_chambers_floors_are_never_adjacent` so that H4
+    /// and the fork witness can assert it too, and stated exactly once so the
+    /// three callers cannot drift apart. `corpus()` builds its structures with
+    /// `structure_at`, which produces chains only, so before this extraction
+    /// rules 2, 3 and 4 had NEVER SEEN A FORK under either method — and rule 1
+    /// does not subsume rule 2: two LINKED chambers whose floors touch with no
+    /// fabric between them realize exactly the specified pair, so rule 1 stays
+    /// green while the plan is a lie.
+    ///
+    /// `s` is carried for the failure message only. On a fork the shape is what
+    /// a reader needs first, and a bare method name does not carry it.
+    fn check_rule_2(l: &Lattice, s: &Structure, m: &str) {
         // The wall law, in the form walls-as-cells gives it. Task 1 had to phrase
         // it over a separately-derived set of cell pairs — "every wall pair is a
         // non-adjacency" — which made it a claim about the derivation. This is a
         // claim about the world: if you can step from one chamber's floor straight
         // onto another's, there is no fabric between them and the plan is a lie
         // whatever the wall set says.
-        for (_, l, m) in corpus() {
-            for (p, q) in openings(&l) {
-                if let (Some(CellKind::Floor(i)), Some(CellKind::Floor(j))) =
-                    (kind_of(&l, p), kind_of(&l, q))
-                {
-                    assert_eq!(
-                        i, j,
-                        "{m:?}: {p:?} is chamber {i}'s floor and {q:?} is chamber \
-                         {j}'s, and they are adjacent — two rooms with no wall \
-                         between them are one room"
-                    );
-                }
+        for (p, q) in openings(l) {
+            if let (Some(CellKind::Floor(i)), Some(CellKind::Floor(j))) =
+                (kind_of(l, p), kind_of(l, q))
+            {
+                assert_eq!(
+                    i, j,
+                    "{m} links {:?}: {p:?} is chamber {i}'s floor and {q:?} is \
+                     chamber {j}'s, and they are adjacent — two rooms with no \
+                     wall between them are one room",
+                    s.links
+                );
             }
         }
     }
 
+    /// §7 rule 3 — all three clauses, as one callable statement.
+    ///
+    /// (i) `cells` is TOTAL over the extent; (ii) the outer ring is entirely
+    /// `Wall`; (iii) thresholds and doorways name each other, both ways. Same
+    /// extraction reason as [`check_rule_2`].
+    fn check_rule_3(l: &Lattice, s: &Structure, m: &str) {
+        let e = l.extent;
+        assert_eq!(
+            l.cells.len() as i32,
+            e.area(),
+            "{m} links {:?}: the kind map holds {} cells for a {}-cell extent, so \
+             `kind_of` returning None no longer means only 'outside'",
+            s.links,
+            l.cells.len(),
+            e.area()
+        );
+        for cx in e.x..(e.x + e.w) {
+            for cy in e.y..(e.y + e.h) {
+                let c = Cell(cx, cy);
+                let k = kind_of(l, c)
+                    .unwrap_or_else(|| panic!("{m}: no kind for {c:?} inside the extent"));
+                let on_ring = cx == e.x || cy == e.y || cx == e.x + e.w - 1 || cy == e.y + e.h - 1;
+                if on_ring {
+                    assert_eq!(
+                        k,
+                        CellKind::Wall,
+                        "{m} links {:?}: the outer ring is {k:?} at {c:?} — a plan \
+                         open to the outside is not a building",
+                        s.links
+                    );
+                }
+            }
+        }
+        let declared: BTreeSet<Cell> = l.doorways.iter().map(|&(_, _, c)| c).collect();
+        for (c, k) in &l.cells {
+            if matches!(k, CellKind::Threshold(_, _)) {
+                assert!(
+                    declared.contains(c),
+                    "{m} links {:?}: {c:?} is a threshold no doorway declares — an \
+                     undeclared way through is a hole in the plan",
+                    s.links
+                );
+            }
+        }
+        for &(a, b, c) in &l.doorways {
+            assert!(
+                matches!(kind_of(l, c), Some(CellKind::Threshold(_, _))),
+                "{m} links {:?}: the doorway ({a},{b}) is declared at {c:?}, which \
+                 is {:?} rather than a threshold",
+                s.links,
+                kind_of(l, c)
+            );
+        }
+    }
+
+    /// §7 rule 4 — one doorway per link, no more and no fewer. Same extraction
+    /// reason as [`check_rule_2`].
+    fn check_rule_4(l: &Lattice, s: &Structure, m: &str) {
+        // The doorway is ONE CELL now, not a pair of half-boundaries, so reading
+        // it from either side must give one answer. Asserted as uniqueness per
+        // unordered pair: two entries for one pair is exactly how two chambers
+        // come to disagree about which cell is the door.
+        let mut seen: BTreeSet<(usize, usize)> = BTreeSet::new();
+        for &(a, b, _) in &l.doorways {
+            let key = (a.min(b), a.max(b));
+            assert!(
+                seen.insert(key),
+                "{m} links {:?}: chambers {a} and {b} have two doorways between \
+                 them, so the two sides can disagree about which cell is the door",
+                s.links
+            );
+        }
+        assert_eq!(
+            seen.len(),
+            s.links.len(),
+            "{m} links {:?}: one doorway per link, no more and no fewer",
+            s.links
+        );
+    }
+
+    /// claim: invariant(seed: corpus SEEDS 0..192) — a forall-corpus-entry
+    /// invariant, like its rule_1/rule_4/rule_7/rule_8 siblings: `corpus()`
+    /// loops `for s in SEEDS` and builds 384 seed-derived structure/lattice
+    /// pairs (both methods) per call. The tag arrived with the fix-round-1
+    /// extraction, which bound the structure as `s` where the body previously
+    /// discarded it as `_` — the shape was always this; only the binding the
+    /// seed-loop detector reads is new.
+    #[test]
+    fn rule_2_two_chambers_floors_are_never_adjacent() {
+        for (s, l, m) in corpus() {
+            check_rule_2(&l, &s, &format!("{m:?}"));
+        }
+    }
+
+    /// claim: invariant(seed: corpus SEEDS 0..192) — a forall-corpus-entry
+    /// invariant, like its rule_1/rule_4/rule_7/rule_8 siblings: `corpus()`
+    /// loops `for s in SEEDS` and builds 384 seed-derived structure/lattice
+    /// pairs (both methods) per call. The tag arrived with the fix-round-1
+    /// extraction, which bound the structure as `s` where the body previously
+    /// discarded it as `_` — the shape was always this; only the binding the
+    /// seed-loop detector reads is new.
     #[test]
     fn rule_3_the_plan_is_enclosed_and_every_threshold_is_declared() {
         // **No longer tautological**, which is the reification's clearest single
@@ -505,51 +697,8 @@ mod tests {
         //   (i)   `cells` is TOTAL over the extent — the claim the type makes;
         //   (ii)  the outer ring is entirely `Wall` — the plan is ENCLOSED;
         //   (iii) thresholds and doorways name each other, both ways.
-        for (_, l, m) in corpus() {
-            let e = l.extent;
-            assert_eq!(
-                l.cells.len() as i32,
-                e.area(),
-                "{m:?}: the kind map holds {} cells for a {}-cell extent, so \
-                 `kind_of` returning None no longer means only 'outside'",
-                l.cells.len(),
-                e.area()
-            );
-            for cx in e.x..(e.x + e.w) {
-                for cy in e.y..(e.y + e.h) {
-                    let c = Cell(cx, cy);
-                    let k = kind_of(&l, c)
-                        .unwrap_or_else(|| panic!("{m:?}: no kind for {c:?} inside the extent"));
-                    let on_ring =
-                        cx == e.x || cy == e.y || cx == e.x + e.w - 1 || cy == e.y + e.h - 1;
-                    if on_ring {
-                        assert_eq!(
-                            k,
-                            CellKind::Wall,
-                            "{m:?}: the outer ring is {k:?} at {c:?} — a plan open \
-                             to the outside is not a building"
-                        );
-                    }
-                }
-            }
-            let declared: BTreeSet<Cell> = l.doorways.iter().map(|&(_, _, c)| c).collect();
-            for (c, k) in &l.cells {
-                if matches!(k, CellKind::Threshold(_, _)) {
-                    assert!(
-                        declared.contains(c),
-                        "{m:?}: {c:?} is a threshold no doorway declares — an \
-                         undeclared way through is a hole in the plan"
-                    );
-                }
-            }
-            for &(a, b, c) in &l.doorways {
-                assert!(
-                    matches!(kind_of(&l, c), Some(CellKind::Threshold(_, _))),
-                    "{m:?}: the doorway ({a},{b}) is declared at {c:?}, which is \
-                     {:?} rather than a threshold",
-                    kind_of(&l, c)
-                );
-            }
+        for (s, l, m) in corpus() {
+            check_rule_3(&l, &s, &format!("{m:?}"));
         }
     }
 
@@ -614,25 +763,8 @@ mod tests {
     /// forall-corpus-entry invariant, not a false-positive flag.
     #[test]
     fn rule_4_two_chambers_cannot_disagree_about_a_doorway() {
-        // The doorway is ONE CELL now, not a pair of half-boundaries, so reading
-        // it from either side must give one answer. Asserted as uniqueness per
-        // unordered pair: two entries for one pair is exactly how two chambers
-        // come to disagree about which cell is the door.
-        for (s, l, _) in corpus() {
-            let mut seen: BTreeSet<(usize, usize)> = BTreeSet::new();
-            for &(a, b, _) in &l.doorways {
-                let key = (a.min(b), a.max(b));
-                assert!(
-                    seen.insert(key),
-                    "chambers {a} and {b} have two doorways between them, so the \
-                     two sides can disagree about which cell is the door"
-                );
-            }
-            assert_eq!(
-                seen.len(),
-                s.links.len(),
-                "one doorway per link, no more and no fewer"
-            );
+        for (s, l, m) in corpus() {
+            check_rule_4(&l, &s, &format!("{m:?}"));
         }
     }
 
@@ -640,7 +772,7 @@ mod tests {
     fn rule_6_the_solve_carries_no_state() {
         // Same inputs, solved from scratch, in an order that would expose a
         // carried cache: A, then B, then A again.
-        let st = structure_at(&locale(1), &built(), Seed(1), WALK).expect("built");
+        let st = structure_at(&locale(1), &bush(), Seed(1), WALK).expect("built");
         let e = extent_for(&st);
         let a1 = allocate(&st, e, Seed(1));
         let _b = allocate(&st, e, Seed(2));
@@ -680,7 +812,7 @@ mod tests {
                 // One cut per interior boundary; the seed moves the cut and
                 // nothing else. A cut now consumes a cell for its wall line, but
                 // it is still ONE choice.
-                Method::Rectilinear => freedom_of_a_chain(n),
+                Method::Rectilinear => freedom_of_a_tree(n),
                 // A seed cell is a POINT, so two draws per chamber, not one.
                 Method::Grown => 2 * n as u32,
             };
@@ -932,5 +1064,278 @@ mod tests {
             }
             assert_eq!(l.doorways.len(), s.links.len());
         }
+    }
+
+    /// Every rooted labelled tree on `1..=MAX_CHAMBERS` nodes with `parent <
+    /// child` — the shape [`Structure`]'s invariant 2 admits, enumerated rather
+    /// than drawn. Parent pointers by mixed radix: `parents[i] ∈ 0..i` for
+    /// `i >= 1`, so the count is `1 + 1 + 2 + 6 = 10` on `1..=4` nodes.
+    ///
+    /// Enumerated because a corpus of DRAWN structures can only exercise the
+    /// shapes the current `structure_at` happens to produce. Task 3 has not run
+    /// yet, so today it produces chains only — and an embedder that can embed a
+    /// chain is exactly what this campaign found insufficient.
+    fn every_tree() -> Vec<Structure> {
+        let mut out = Vec::new();
+        for n in 1..=crate::structure::MAX_CHAMBERS {
+            let combos: usize = (1..n).product::<usize>().max(1);
+            for code in 0..combos {
+                let mut links = Vec::new();
+                let mut rest = code;
+                for i in 1..n {
+                    let p = rest % i;
+                    rest /= i;
+                    links.push((p, i));
+                }
+                let chambers: Vec<Facet> = (0..n).map(|i| locale(i as u64)).collect();
+                let roles = (0..n)
+                    .map(|i| {
+                        if i == 0 {
+                            Role::Threshold
+                        } else {
+                            [Role::Hearthroom, Role::Store, Role::Loomroom][i - 1]
+                        }
+                    })
+                    .collect();
+                out.push(Structure {
+                    threshold: chambers[0].clone(),
+                    chambers,
+                    links,
+                    roles,
+                });
+            }
+        }
+        out
+    }
+
+    /// Is this tree a PATH — no node with two children?
+    ///
+    /// The shape `structure_at` produces today and, after The Cruck, the shape a
+    /// WILD site still produces: built sites run the grammar and allocate, wild
+    /// sites draw a chain and grow (spec §3.5). So this predicate is what divides
+    /// H4's two arms, and it is a property of the tree rather than a list of
+    /// tree indices, which a widened `MAX_CHAMBERS` would silently invalidate.
+    fn is_a_chain(s: &crate::structure::Structure) -> bool {
+        (0..s.chambers.len()).all(|i| s.children(i).len() <= 1)
+    }
+
+    /// claim: invariant(forall-tree, seed: 0..256) — H4: every reachable tree
+    /// embeds faithfully under the RECTILINEAR method, and every chain under the
+    /// grown one.
+    ///
+    /// **The grown arm is narrower than the preregistered H4, deliberately**
+    /// (ledger #15, spec §7's H4 amendment of 2026-09-05). The grower realizes a
+    /// fork on 2,536 of 2,560 (tree, seed) pairs and drops one link on 24; every
+    /// structural remedy measured also moves GROWN bytes for chains, which spec
+    /// §6 marks STOP. The 24 are pinned by tree and seed in
+    /// [`the_grower_drops_a_link_on_exactly_these_fork_seeds`] rather than
+    /// quietly excluded here — this test says what holds, that one says exactly
+    /// what does not.
+    #[test]
+    fn h4_every_tree_embeds_under_all_eight_rules_with_exact_freedom() {
+        let trees = every_tree();
+        assert_eq!(
+            trees.len(),
+            10,
+            "the enumeration must stay exhaustive over 1..=MAX_CHAMBERS — a \
+             generator that silently shrinks turns this invariant into a \
+             narrower one with the same name"
+        );
+        assert_eq!(
+            trees.iter().filter(|s| is_a_chain(s)).count(),
+            4,
+            "the grown arm runs over chains only, so a `is_a_chain` that stopped \
+             recognising them would leave that arm asserting nothing while this \
+             test stayed green"
+        );
+        for s in trees {
+            let n = s.chambers.len();
+            let chain = is_a_chain(&s);
+            for seed in 0u64..256 {
+                let e = extent_for(&s);
+                let rect = embed_with(&s, &built(), e, Seed(seed));
+                // Built only for a chain. The grown arm does not run on a fork
+                // (see this test's doc), so embedding one there would be 1,536
+                // lattices constructed and dropped unexamined.
+                let grown = chain.then(|| embed_with(&s, &wild(), e, Seed(seed)));
+                let mut arms = vec![(&rect, "rectilinear", freedom_of_a_tree(n))];
+                if let Some(g) = &grown {
+                    arms.push((g, "grown", 2 * n as u32));
+                }
+                for (l, m, budget) in arms {
+                    let specified: BTreeSet<(usize, usize)> =
+                        s.links.iter().map(|&(a, b)| (a.min(b), a.max(b))).collect();
+                    assert_eq!(
+                        realized_links(l),
+                        specified,
+                        "{m} seed {seed} links {:?}: rule 1",
+                        s.links
+                    );
+                    // Rules 2, 3 and 4 through the shared helpers, so H4 asserts
+                    // all EIGHT rather than the four it named. They are what a
+                    // FORK most needs and what `corpus()` cannot reach: rule 1
+                    // passes on two linked chambers whose floors touch with no
+                    // fabric between them, and only rule 2 catches that.
+                    let where_ = format!("{m} seed {seed}");
+                    check_rule_2(l, &s, &where_);
+                    check_rule_3(l, &s, &where_);
+                    check_rule_4(l, &s, &where_);
+                    assert_eq!(
+                        l.dof, budget,
+                        "{m} seed {seed} links {:?}: rule 7 must be EXACT",
+                        s.links
+                    );
+                    for i in 0..n {
+                        let b = bounds_of(l, i).unwrap_or_else(|| {
+                            panic!("{m} seed {seed}: chamber {i} owns no floor")
+                        });
+                        if m == "rectilinear" {
+                            assert!(
+                                b.w >= crate::lattice::allocate::MIN_CHAMBER_SPAN
+                                    && b.h >= crate::lattice::allocate::MIN_CHAMBER_SPAN,
+                                "{m} seed {seed} links {:?}: chamber {i} is {b:?}",
+                                s.links
+                            );
+                        }
+                    }
+                    let floors = l.cells.iter().filter(|(_, k)| k.passable()).count();
+                    assert_eq!(
+                        reachable_from(l, 0).len(),
+                        floors,
+                        "{m} seed {seed} links {:?}: rule 8",
+                        s.links
+                    );
+                }
+            }
+        }
+    }
+
+    /// claim: invariant(forall-fork-tree, seed: 0..256) — a PINNED KNOWN LIMIT,
+    /// not a passing rule: the exact set of (tree, seed) pairs on which the
+    /// GROWER fails to realize a specified link.
+    ///
+    /// **Why this exists rather than a narrowed H4 and silence.** Ledger #15 and
+    /// spec §7's H4 amendment (2026-09-05) accept that the grower drops one link
+    /// on 24 of 1,536 fork (tree, seed) pairs (2,560 pairs over all ten
+    /// trees; the four chains cannot fail), because every structural remedy
+    /// measured also moves GROWN bytes for chains — a cave transcript moving is
+    /// a STOP row in spec §6 — and because production never routes a fork to
+    /// `grow` at all: wild sites draw chains (§3.5) and built sites `allocate`
+    /// (`embed_with` dispatches on `built`). Accepting a limit is not the same
+    /// as forgetting it, so the failures are written down to the pair.
+    ///
+    /// **It reddens in EITHER direction**, which is the whole point and the
+    /// reason this is an equality rather than a count or a bound. A count
+    /// ratchet has slack and a violation sits green inside it; an equality does
+    /// not. If someone fixes the grower, this test fails and says so — a fix
+    /// observed rather than inferred. If a change makes the grower drop a link
+    /// somewhere new, it fails too.
+    ///
+    /// **The three rules fail TOGETHER on exactly these pairs**, and that
+    /// coincidence is asserted rather than assumed. One dropped link is read by
+    /// rule 1 (the link is unrealized), by rule 3 (the doorway falls back to the
+    /// interior's origin, which is floor rather than a threshold — `grow`'s own
+    /// doorway read-back comment says it will), and by rule 8 (the chamber
+    /// behind the missing doorway is a sealed pocket). Asserting the three sets
+    /// are EQUAL is what says the fork failures corrupt nothing else: rule 2 and
+    /// the `dof` budget are asserted over all 1,536 fork pairs below (the
+    /// chains are covered by H4's grown arm), unconditionally.
+    #[test]
+    fn the_grower_drops_a_link_on_exactly_these_fork_seeds() {
+        let pinned: BTreeSet<(Vec<(usize, usize)>, u64)> = [
+            (
+                vec![(0, 1), (0, 2), (0, 3)],
+                vec![
+                    5, 26, 46, 62, 65, 70, 94, 121, 137, 167, 180, 203, 211, 235, 249,
+                ],
+            ),
+            (
+                vec![(0, 1), (1, 2), (1, 3)],
+                vec![34, 58, 60, 90, 110, 125, 184, 202, 218],
+            ),
+        ]
+        .into_iter()
+        .flat_map(|(links, seeds)| seeds.into_iter().map(move |s| (links.clone(), s)))
+        .collect();
+        assert_eq!(
+            pinned.len(),
+            24,
+            "the pinned set is 24 pairs, one per failure"
+        );
+
+        let mut dropped: BTreeSet<(Vec<(usize, usize)>, u64)> = BTreeSet::new();
+        let mut undeclared_doorway: BTreeSet<(Vec<(usize, usize)>, u64)> = BTreeSet::new();
+        let mut sealed: BTreeSet<(Vec<(usize, usize)>, u64)> = BTreeSet::new();
+        let mut forks = 0;
+        for s in every_tree() {
+            if is_a_chain(&s) {
+                continue;
+            }
+            forks += 1;
+            let n = s.chambers.len();
+            let specified: BTreeSet<(usize, usize)> =
+                s.links.iter().map(|&(a, b)| (a.min(b), a.max(b))).collect();
+            for seed in 0u64..256 {
+                let e = extent_for(&s);
+                let l = embed_with(&s, &wild(), e, Seed(seed));
+                let here = (s.links.clone(), seed);
+                if realized_links(&l) != specified {
+                    dropped.insert(here.clone());
+                }
+                // Rule 3's doorway half only: a declared doorway that is not a
+                // `Threshold`. The whole of rule 3 is stated once, in
+                // `rule_3_the_plan_is_enclosed_and_every_threshold_is_declared`;
+                // this is the single clause an unrealized link trips, named
+                // rather than restated.
+                if l.doorways
+                    .iter()
+                    .any(|&(_, _, c)| !matches!(kind_of(&l, c), Some(CellKind::Threshold(_, _))))
+                {
+                    undeclared_doorway.insert(here.clone());
+                }
+                let floors = l.cells.iter().filter(|(_, k)| k.passable()).count();
+                if reachable_from(&l, 0).len() != floors {
+                    sealed.insert(here.clone());
+                }
+                // Unconditional over every fork pair: a dropped link must not
+                // cost the wall law, the doorway count, or the freedom budget as
+                // well. Rule 3 is NOT here — it is one of the three the dropped
+                // link trips, pinned by the equality below. The same helpers H4
+                // calls, so a fork is judged by the same statement a chain is.
+                check_rule_2(&l, &s, &format!("grown seed {seed}"));
+                check_rule_4(&l, &s, &format!("grown seed {seed}"));
+                assert_eq!(
+                    l.dof,
+                    2 * n as u32,
+                    "grown seed {seed} links {:?}: rule 7 must be EXACT on a \
+                     fork too — the tunnel spends two draws per chamber whether \
+                     or not it finds somewhere to put the doorway",
+                    s.links
+                );
+            }
+        }
+        assert_eq!(
+            forks, 6,
+            "six of the ten trees fork; a sweep that found fewer would pin a \
+             smaller set and still read as green"
+        );
+        assert_eq!(
+            dropped, pinned,
+            "the grower's unrealized-link set MOVED. If it shrank, the limit \
+             ledger #15 records has been narrowed or fixed — say so and repin. \
+             If it grew, something regressed."
+        );
+        assert_eq!(
+            undeclared_doorway, dropped,
+            "rule 3's doorway clause and rule 1 no longer fail on the same \
+             pairs, so a fork is failing rule 3 for some reason OTHER than the \
+             dropped link this test accepts"
+        );
+        assert_eq!(
+            sealed, dropped,
+            "rule 8 and rule 1 no longer fail on the same pairs, so a fork is \
+             sealing a pocket for some reason OTHER than the dropped link this \
+             test accepts"
+        );
     }
 }

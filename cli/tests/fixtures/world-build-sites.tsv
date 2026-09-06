@@ -33,7 +33,7 @@
 # merits, so `unmigrated` did not move and UNMIGRATED_CEILING stayed 334.
 #
 cli/src/dictionary.rs	1	unmigrated:1
-cli/src/main.rs	9	unmigrated:8 production:1
+cli/src/main.rs	10	unmigrated:8 production:2
 cli/src/repl.rs	6	unmigrated:6
 cli/src/tropes.rs	1	unmigrated:1
 cli/tests/suite/branches_coverage.rs	1	unmigrated:1
@@ -92,6 +92,7 @@ windows/lab/tests/suite/the_fare_calibration.rs	1	unmigrated:1
 windows/lab/tests/suite/the_mire_calibration.rs	1	unmigrated:1
 windows/locale/src/budget.rs	1	identity:1
 windows/locale/tests/suite/surface_mixture.rs	1	unmigrated:1
+windows/lot/tests/suite/lot_readout.rs	1	identity:1
 windows/scene/src/lib.rs	6	unmigrated:6
 windows/scene/src/region.rs	2	unmigrated:2
 windows/scene/src/surrounds.rs	1	identity:1
@@ -109,6 +110,7 @@ windows/vessel/tests/common/mod.rs	1	unmigrated:1
 windows/vessel/tests/suite/act.rs	1	unmigrated:1
 windows/vessel/tests/suite/body_fields.rs	1	unmigrated:1
 windows/vessel/tests/suite/controller_swap.rs	1	unmigrated:1
+windows/vessel/tests/suite/cruck_readout.rs	1	identity:1
 windows/vessel/tests/suite/display_handle.rs	1	unmigrated:1
 windows/vessel/tests/suite/furnishing_marks.rs	1	unmigrated:1
 windows/vessel/tests/suite/housemark_readout.rs	1	identity:1
@@ -195,6 +197,7 @@ windows/worldgen/tests/suite/hollow_readout.rs	1	unmigrated:1
 windows/worldgen/tests/suite/insolation_probe.rs	2	unmigrated:2
 windows/worldgen/tests/suite/keeping_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/kinship_facts.rs	1	unmigrated:1
+windows/worldgen/tests/suite/lot_probe.rs	1	identity:1
 windows/worldgen/tests/suite/mines_exist.rs	2	unmigrated:2
 windows/worldgen/tests/suite/niche_breadth_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/non_void_roster.rs	1	unmigrated:1

@@ -665,3 +665,37 @@ two be attributed to the world, which is the wrong story told with real
 numbers. Ablate every family that changed since the pinned reading — the one
 that was added, and the ones whose values moved — and publish the ladder
 rather than one rung of it.
+
+## Postscript 8 — when the diff says additive, one ablation is the ladder (The Lot, 2026-09-06)
+
+The Lot added six numeric metrics to the canonical census, each read off two
+hundred lives drawn from a world. All six vary across the thousand worlds and
+enter the evaluable surface; none is excluded. The surface grew from 170
+columns to 176, the excluded roster stayed at 52, and the census as a whole
+went from 281 metric columns to 287. The eight injection arms were re-authored
+by their script on lefford against those goldens, under the same claim a
+census takes, twenty seeds each, zero refusals.
+
+On the full new surface the witness reads **65/120 = 0.5417**, with no void
+pairs. Arm for arm: geothermal 20/20, unconformity 2/20, aquifer 20/20, karst
+2/20, pantheon 5/20, phonology 16/20. The bar stays at 0.60.
+
+The previous postscript asked for the ablation to be run family by family,
+because a column can move a reading in two ways — by joining the surface, or
+by changing its values — and one ablation cannot tell them apart. This refresh
+lets the two be separated before any ablation is run. A value-by-value
+comparison of the census before and after it finds a thousand rows and 284
+shared columns with **no value moved**: the refresh is purely additive. That
+rules out the value mechanism outright. Removing the six new columns from the
+census held in memory then reproduces the previous surface exactly, 170
+evaluable and 52 excluded, and reads **66/120** — the previous pin to the
+integer, so the previous test passes unchanged on the ablated census. The six
+new columns displaced one hit, in the pantheon arm, and that is the whole
+move.
+
+So this is a ninth canonical reading and the third consecutive *incomparable*
+one. The six-epoch series stands where it stood, and the verdict remains
+"cannot tell." What this postscript adds to the last one is the order of
+operations: diff the census first, and when the diff says additive, the single
+ablation of the new family *is* the ladder, with nothing further to climb.
+
