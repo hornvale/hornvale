@@ -1280,7 +1280,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neit
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_clamps_a_value_outside_the_census_range
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_is_zero_at_the_extremes_and_half_at_the_median
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::the_log_guard_holds_for_a_real_extreme_holding_world
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::too_few_present_values_is_excluded_with_its_reason
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_count_panics_loudly_on_an_unknown_metric_rather_than_reporting_all_absent
 hornvale-lab::hornvale_lab$domesday::census::tests::absent_values_are_counted_not_skipped
@@ -1351,8 +1350,8 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
+hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
 hornvale-lab::hornvale_lab$domesday::render::tests::the_index_carries_the_generated_header_and_every_domain_link
 hornvale-lab::hornvale_lab$domesday::stats::tests::a_metric_with_no_present_values_yields_none
@@ -1596,6 +1595,8 @@ hornvale-lab::suite$the_fare_calibration::transform::dry_ground_pays_nothing
 hornvale-lab::suite$the_fare_calibration::transform::no_factor_in_the_unit_interval_yields_an_impassable_cost
 hornvale-lab::suite$the_fare_calibration::transform::surcharge_is_monotone_non_increasing_in_the_factor
 hornvale-lab::suite$the_fare_calibration::transform::the_floor_binds_and_weather_is_never_impassable
+hornvale-lab::suite$warp_calibration::this_file_builds_only_the_calibration_seed
+hornvale-lab::suite$warp_instrument::all_thirty_two_warp_metrics_are_registered
 hornvale-language::hornvale_language$accession::tests::a_listed_concept_reports_its_cohort_and_an_unlisted_one_reports_zero
 hornvale-language::hornvale_language$accession::tests::cohort_zero_stays_the_frozen_landing_roster
 hornvale-language::hornvale_language$accession::tests::later_cohorts_are_non_empty
@@ -3069,6 +3070,8 @@ hornvale-vessel::hornvale_vessel$underworld_level::tests::stairs_pair_by_coordin
 hornvale-vessel::hornvale_vessel$underworld_level::tests::two_rungs_with_the_same_origin_and_kind_still_differ
 hornvale-vessel::hornvale_vessel$underworld_level::tests::unlinked_neighbours_keep_their_wall
 hornvale-vessel::hornvale_vessel$underworld_level::tests::worked_fraction_has_inertia_across_rungs
+hornvale-vessel::hornvale_vessel$warp_prose::tests::clause_is_never_empty
+hornvale-vessel::hornvale_vessel$warp_prose::tests::every_steepness_renders_nonempty_prose
 hornvale-vessel::hornvale_vessel$weft_prose::tests::every_kind_renders_nonempty_prose
 hornvale-vessel::hornvale_vessel$weft_prose::tests::no_features_is_silent
 hornvale-vessel::hornvale_vessel$weft_prose::tests::two_features_both_render
@@ -3730,7 +3733,12 @@ hornvale-worldgen::suite$traversal::an_ocean_vertex_is_impassable
 hornvale-worldgen::suite$traversal::the_field_is_deterministic_across_rebuilds
 hornvale-worldgen::suite$underworld_separation::the_candidate_fit_tables_and_the_elevation_precondition
 hornvale-worldgen::suite$underworld_separation::the_lattice_band_is_the_ladder_position
+hornvale-worldgen::suite$warp_signs::every_rock_class_has_a_distinct_nonempty_word
+hornvale-worldgen::suite$warp_signs::steepness_is_monotone_in_slope_and_cuts_at_the_shared_thresholds
+hornvale-worldgen::suite$warp_signs::steepness_words_are_distinct_and_lowercase
+hornvale-worldgen::suite$warp_signs::wetness_sign_cuts_at_the_micro_word_threshold
 hornvale-worldgen::suite$weft_ledger_guard::the_seed_42_byte_golden_fact_count_is_unmoved
+hornvale-worldgen::suite$weft_prevalence::the_response_is_a_step_for_sign_kinds_and_identity_for_controls
 hornvale::hornvale$audio::tests::audio_filenames_are_eight_lowercase_hex_digits_dot_mp3
 hornvale::hornvale$audio::tests::crc32_matches_the_ieee_known_answer
 hornvale::hornvale$concepts::tests::manifest_render_derives_orphan_acts_from_the_action_roster
