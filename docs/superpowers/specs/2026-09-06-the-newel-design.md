@@ -22,9 +22,10 @@ where you are and how to move between levels.
 | B5 | Looks like we're still drawing terrain at the vertex level, not facet level. |
 | B6 | Open water doesn't look like it's getting a day/night/etc cycle appearance change. |
 
-They do not share a cause. B1 and B2 are the command surface; B3 is a
-disclosure gap; B4 is a content decision; B5 and B6 are both the map's
-colour resolution, one in space and one in time.
+They do not share a cause, and after the G3 stop they no longer share a
+campaign. **B3 and B5 are split out** — see 4.3 and 4.5. This campaign is
+**B1, B2, B4 and B6**: the command surface, the map's text furniture, and
+one line of colour.
 
 ## 2. What was reproduced before this spec was written
 
@@ -158,79 +159,15 @@ not). Completing an undiscovered settlement's name would leak exactly what
 discovery predicate the cursor readout already uses.** A task that adds
 the source without the gate is a defect even though nothing would go red.
 
-### 4.3 The picture must draw the graph (B3)
+### 4.3 SPLIT OUT — B3 is now The Sett
 
-**Rewritten twice. This is Nathan's framing, and it supersedes both
-earlier drafts** (disclosure, then cross-track correction):
-
-> the grid has very visible north, east, west, south. People press left
-> expecting to move to the spot immediately to the left. [...] So we might
-> want to consider movement as being a transition on a graph that usually
-> but not always agrees with the compass directions that we use as
-> shorthand to describe those movements.
-
-That inverts the question from *does west go west* to **does the key take
-me to the box I was looking at** — which is the contract a player actually
-has, and which is directly measurable.
-
-Measured over 3,448 facets at walk rung 13, projecting each neighbour
-through the shipped `mercator::project`:
-
-| | equatorial faces | polar caps |
-|---|---|---|
-| left-press lands in the box to the left | **87.3%** | **14.9%** |
-| lands up-left `(-1,-1)` | 6.60% | — |
-| lands down-left `(-1,+1)` | 6.08% | — |
-| any move landing on the observer's OWN box | 1.13% | — |
-
-**One left-press in eight does not go to the box on the left.** At seed
-42's flagship, `S` lands on the box the observer is already standing in —
-press down and the map does not move.
-
-**The raster is already trying to be the graph.** `virtual_dims` sets the
-chart width from `tiles_around_a_great_circle(depth)` — facet edges around
-a great circle — so at the equator it is 1 tile to 1 facet by
-construction. The height then follows the clamped Mercator's aspect, which
-makes a row ~8% taller than a facet at the equator and unboundedly taller
-poleward. The horizontal axis is exact; the vertical is not; and every
-miss is one box, never two.
-
-**So the change is: the walk rung draws the GRAPH, not a projection of
-it.** One facet, one character box, placed by walking the adjacency graph
-out from the observer. Then the box to the left IS the west neighbour, by
-construction, at 100% — and Mercator keeps the coarser rungs, where nobody
-is walking. Compass words become labels on edges: `look` may still name a
-bearing, but movement stops promising one.
-
-This **subsumes** the drift measurement rather than competing with it. The
-two are one phenomenon at two scales: 12.7% disagreement per step,
-accumulating to 0.1445 step-lengths per step over a walk (ledger R9). And
-it **explains the dead chart** (ledger R8): `chart::draw` *was* the graph
-view, placed in bearing space — the same mistake in another coordinate
-system — and it lost a third of its boxes to collisions.
-
-**Discarded, with reasons.** Cross-track correction is still correct, but
-it repairs a promise the game need not make, costs carried state, and
-would need a decision record superseding The Pavement's section 3.4.
-Binding keys to "whichever neighbour is drawn leftmost" makes the key
-agree with a picture that is itself wrong and leaves colliding neighbours
-unreachable. Disclosure alone does not help: a player who walks into a
-wall is irritated by the outcome, not consoled by an explanation.
-
-**What is NOT yet decided, and is why this is still a G3 item.** Drawing
-in lattice space means up is the lattice's up, not north — a few degrees
-out on the equatorial faces, but a rotation of up to 90 degrees across a
-cube seam, and a genuine graph defect at a cube corner (three quads, seven
-neighbours). Two candidate shapes, neither measured:
-
-1. **Lattice-space raster** — draw the face lattice directly; the frame
-   rotates at a seam.
-2. **Graph-neighbourhood raster** — each box is the facet `j` steps along
-   the observer's own east-chain and `k` along its north-chain, re-derived
-   per frame, so the neighbour relation handles seams itself.
-
-Neither is a determinism change: the plate is drawn, never committed.
-Seam behaviour must be measured before one is picked.
+`docs/superpowers/specs/2026-09-06-the-sett-design.md`. Approved by Nathan
+at the G3 stop, 2026-09-06: the walk rung draws the adjacency graph through
+a transported local frame rather than a Mercator projection of it, decided
+on the measurement in ledger R14. The reasoning, the falsified Pavement
+hypothesis and the raster comparison stay in this campaign's ledger (R9,
+R10, R13, R14, decisions #1, #7, #8), which The Sett's design cites rather
+than copies.
 
 ### 4.4 The marquee describes the cell, and the map's own facts decay (B4)
 
@@ -267,72 +204,19 @@ may break.** Note also that `driver.rs:5177` still carries a doc claiming
 the pre-2026-08-24 design; it passes only because it never ticks. Do not
 read it as pinning anything.
 
-### 4.5 Terrain colour becomes a facet-level answer (B5)
+### 4.5 SPLIT OUT — B5 is now The Stipple
 
-Two independent vertex reads, and they want different fixes.
+`docs/superpowers/specs/2026-09-06-the-stipple-design.md`. Approved at the
+same stop. Two halves: the land/water boundary reads the already-blended
+height in `windows/locale` (not the client, which would make the map
+contradict the prose), and the nominal fields take a finer partition rather
+than a blend. The fidelity call between a seeded draw and a noise-warped
+boundary is carried forward to that campaign, unmade.
 
-**(a) The land/water boundary should read a continuous cause — IN THE
-SIM, NOT THE CLIENT.** `tile.ocean` is `terrain.is_ocean(vertex)` and
-`tile.water` is `water_kind_at(vertex)` — categorical, per-vertex, and
-`color_for` branches on `water` before it ever reaches reflectance. So the
-coastline drawn at rung 13 is a 110 km Voronoi edge between icosphere
-vertices. `tile.height_asl` is **already blended** across the facet's four
-corners and the scene already carries `sea_level_m`, so comparing them is
-0687 exactly: a continuous cause at facet resolution, inside the convex
-hull of its samples (0676).
-
-**The first draft put that comparison in the client, and that is wrong.**
-The walk-band prose decides "open water" from
-`v.locale.biome_kind.is_marine()` (`windows/vessel/src/focalize.rs:228`),
-which is per-vertex. A client-only refinement means that near every
-coastline a player stands on a tile the map draws as ocean and is told
-they are in a forest — decision 0141's one-turn observable contradiction,
-and decision 0117 forbids the client re-deriving a decision the sim makes.
-So the refinement belongs in `windows/locale`, where the prose and the map
-both see it, or nowhere. That is sim-side, with walk-band prose fallout
-and committed-fixture fallout, and it is the strongest argument for
-splitting B5 into its own campaign.
-
-`plate_vocabulary.rs:153-157` asserts
-`terrain.is_ocean(tile.vertex) == tile.ocean` and therefore pins the
-current behaviour. That assertion moves with the change — it is the
-statement of the defect, not a guard against a regression.
-
-**(b) The nominal fields need a finer partition, not a blend.** Biome
-expression and lithology are categorical, and **decision 0121 forbids
-banding a blend for a nominal field** — it must take a partition,
-evaluated per room. So the fix is not "interpolate them": it is to make
-the partition finer. Decision **0667** is the ratified precedent for
-exactly this move (a placed site re-sited from vertex to facet by a
-seeded draw). A facet chooses among its four corner vertices by a seeded
-draw weighted by `corner_weights`, instead of always taking
-`dominant_corner`. That is deterministic, per-facet, still a partition,
-and every value it can return is one of the samples.
-
-**The seeded draw is honest per value and dishonest per pattern**, and
-this is the fidelity call. It satisfies 0676 (every value it returns is
-one of the samples) and 0121 (still a partition). But it manufactures
-high-frequency spatial structure the field does not have: a
-salt-and-pepper transition reads to a player as real patchiness, in a
-world holding one biome sample per 110 km. A better member of the same
-family: **warp the partition boundary with a smooth field rather than
-dicing it** — keep the hard per-facet partition, but let a low-frequency
-noise term decide which corner wins, so patches stay coherent and only
-the boundary path is invented. `domains/terrain` already warps with
-`Fbm`, and a per-facet `micro` term already exists on this path, so the
-instrument is precedented rather than new.
-
-Stated plainly because it is the crux: **the map already invents boundary
-shape.** Today's hard edge at 1.1 km is derived from 110 km data and is no
-more justified than any other curve. The question is not whether to
-invent but which invention misleads less — a fidelity tradeoff, and
-therefore Nathan's.
-
-**This touches `windows/locale`, which is inside the cargo workspace**,
-and `reflectance_at_facet` also feeds the sim's own chart colouring
-(`windows/scene/src/surrounds.rs:812`). So it moves the committed client
-fixtures under `clients/game/core/tests/fixtures/`, which carry per-cell
-colours. **Flagged for G3.**
+Note for this campaign: **4.6 touches the same function** (`color_for`'s
+water arms). The two changes are independent — 4.6 changes what the wet
+arms are made of, The Stipple changes when they are taken — but whichever
+lands second will meet the other's edit.
 
 ### 4.6 Open water takes the light (B6)
 
@@ -380,18 +264,6 @@ not `make gate-commit`: the workspace gate does not scan `clients/`.
   settlement's name is **not** offered (the 0670 gate). That last one is
   the test most likely to be written vacuously: it must be shown to go red
   when the gate is removed.
-- **B3** — a walk test reading `position()`/the window origin, never
-  prose. The reproduction is already a positive control: 40 west steps
-  from the flagship must produce a `(-1, +1)` window step, and the
-  disclosure must name the bearing that causes it.
-- **B4** — the two tick tests stay green (verify by running them, not by
-  reading them), the strip's standing content names the cursor cell, and
-  the map-wide clauses still reach the player when they change.
-- **B5** — a resolution test: distinct colours per distinct vertex must
-  rise above 1.0 at the shipped rung. The current measurement (12,000
-  facets, 5 vertices, **1** colour) is the pre-fix baseline and belongs in
-  the test's own doc. `wash.rs:701`'s `if t.water < 2 { continue; }` skip
-  and `plate_vocabulary.rs:153`'s vertex assertion both move.
 - **B6** — render the same ocean tile at two sun elevations and assert the
   inks differ. **No such test exists today for any tile**; `plate_at`
   deliberately uses a flat light.
@@ -402,43 +274,31 @@ before it passes.
 
 ## 6. Flagged for review
 
-**Revised twice.** Nathan's first challenge falsified The Pavement's H1;
-his second reframed what the fix is for.
+**G3 is closed.** Nathan approved the three-way split on 2026-09-06: B3
+became The Sett, B5 became The Stipple, and this campaign is B1, B2, B4 and
+B6. What remains flagged is carried to the G6 digest rather than held here:
 
-1. **B3 is the campaign's centre of gravity and needs one more decision
-   before it can be planned:** lattice-space raster or graph-neighbourhood
-   raster, and what happens at a cube seam and a cube corner. Both are
-   client-side and neither touches determinism.
-2. **The Pavement's H1 is falsified and appears never to have been run**
-   (ledger R9). That is worth a record of its own whatever B3's fix turns
-   out to be — a preregistered hypothesis that was never measured, whose
-   chosen direction could not fail, is a finding about process as well as
-   about movement. Under Nathan's framing the drift stops being a defect
-   to repair, but the *unrun hypothesis* does not stop being one.
-3. **B5's half (a) grew.** It cannot live in the client without making the
-   map contradict the prose, so it is a `windows/locale` change with prose
-   and fixture fallout.
-4. **B5's half (b) is a fidelity call** — a seeded draw invents
-   high-frequency structure; a noise-warped boundary invents only the
-   boundary's path; today's hard edge already invents a path. Unpacked
-   here, not decided.
-5. **Scope.** B3 is now a rendering change to the walk band, B5(a) is
-   sim-side. Six reports in one campaign is probably wrong; see the three
-   shapes offered at the first G3 round.
-6. **4.6 puts an invented spectrum in the client.** 0716 permits it (the
+1. **4.6 puts an invented spectrum in the client.** It moves no contract,
+   but the client would author a physical quantity. 0716 permits it (the
    view owns the observer); saying so out loud is the point.
-7. **4.4 changes a surface Nathan personally specified.** Tick behaviour
+2. **4.4 changes a surface Nathan personally specified.** Tick behaviour
    untouched and pinned; only the content moves.
+3. **4.2(b)'s discovery gate is the campaign's one silent-failure risk.**
+   Widening completion without it leaks what decision 0670 withholds, and
+   nothing would go red. Its test must be shown to fail with the gate
+   removed.
 
 ## 7. Non-goals
 
+- **B3 (The Sett) and B5 (The Stipple)**, both split out at G3 with their
+  own designs. Their analysis lives in this campaign's ledger and is cited,
+  not duplicated.
 - Campaign C's vocabulary rename (`Room` to `Facet`, `Chamber` to
   something). `[room]` and `[chamber]` will churn; this campaign neither
   invests in nor pre-empts it.
-- Reviving `chart::draw`, or fixing its projection defect (it loses a
-  third of its cells and three of the eight immediate neighbours at the
-  flagship). Real, measured, and off the player's path — a follow-up in
-  the ledger.
+- Reviving `chart::draw` or fixing its projection defect — that question
+  now belongs to The Sett, which either revives it in graph space or
+  deletes it.
 - The night-gradation and clock-blind-descriptor findings under 4.6.
 - Biome on the map-cursor path, and a settlement's name on `MapSite`.
   Both are real gaps 4.4 works around rather than closes.
