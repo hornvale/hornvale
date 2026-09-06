@@ -8149,6 +8149,19 @@ impl<'w> Session<'w> {
         }
     }
 
+    /// Drop a leading English article ("the "/"an "/"a ") from an already
+    /// trimmed, lowercased target. The one stripper this file keeps —
+    /// [`Self::named_neighbour`]'s aperture-name matching and [`Self::enter`]'s
+    /// out-of-doors site-name matching both call it rather than each growing
+    /// its own (The Newel, Task 3).
+    fn strip_article(target: &str) -> String {
+        ["the ", "an ", "a "]
+            .iter()
+            .find_map(|a| target.strip_prefix(a))
+            .map(str::to_string)
+            .unwrap_or_else(|| target.to_string())
+    }
+
     /// Resolve `target` to a chamber one aperture away.
     ///
     /// Two accepted forms, and the split between them is what makes every
@@ -8178,19 +8191,6 @@ impl<'w> Session<'w> {
     /// [`Self::strip_article`] is the one leading-article stripper this file
     /// keeps — the out-of-doors arm of [`Self::enter`] reuses it rather than
     /// growing a second.
-    /// Drop a leading English article ("the "/"an "/"a ") from an already
-    /// trimmed, lowercased target. The one stripper this file keeps —
-    /// [`Self::named_neighbour`]'s aperture-name matching and [`Self::enter`]'s
-    /// out-of-doors site-name matching both call it rather than each growing
-    /// its own (The Newel, Task 3).
-    fn strip_article(target: &str) -> String {
-        ["the ", "an ", "a "]
-            .iter()
-            .find_map(|a| target.strip_prefix(a))
-            .map(str::to_string)
-            .unwrap_or_else(|| target.to_string())
-    }
-
     fn named_neighbour(
         &self,
         structure: &crate::structure::Structure,
