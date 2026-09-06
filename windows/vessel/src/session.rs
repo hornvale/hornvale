@@ -183,10 +183,10 @@ const SESSION_CONTROL: [&str; 3] = ["release", "quit", "exit"];
 /// have shipped ungated — The Latch's `clear` failure arriving through the
 /// other door — so `carrying_is_refused_while_asleep` is the witness, exactly
 /// as it is for `open`/`close`/`take`/`drop`/`put`.
-const IN_CHARACTER_VERBS: [&str; 28] = [
-    "ask", "back", "carrying", "clear", "climb", "close", "consult", "delve", "dive", "down",
-    "drop", "enter", "examine", "go", "knows", "look", "map", "needs", "open", "out", "put",
-    "sleep", "surface", "take", "up", "wait", "warm", "write",
+const IN_CHARACTER_VERBS: [&str; 30] = [
+    "ascend", "ask", "back", "carrying", "clear", "climb", "close", "consult", "delve", "descend",
+    "dive", "down", "drop", "enter", "examine", "go", "knows", "look", "map", "needs", "open",
+    "out", "put", "sleep", "surface", "take", "up", "wait", "warm", "write",
 ];
 
 /// The provenance a walk-band step commits under (The Deed, Task 7).
@@ -633,6 +633,9 @@ verbs:
   down             descend a rung by the stairs underfoot, if there is one;
                    'up' comes back
   up               ascend a rung by the stairs underfoot, if there is one
+  descend          go down by whatever way this place offers; more than one
+                   way names them instead of guessing
+  ascend           go up by whatever way this place offers
   clear            clear the way down at a barred cave mouth; only a thin
                    fall of rubble gives, and once cleared it stays cleared
   enter [way]      step inside what is built here; once inside, 'enter further
@@ -5833,6 +5836,15 @@ impl<'w> Session<'w> {
                 // rather than the free ride the four above get.
                 "down" => self.take_stairs(true),
                 "up" => self.take_stairs(false),
+                // The Newel, Task 2 (B1, spec §4.1): `<`/`>` bind to these two
+                // in the client, and the dispatch is SIM-side (decision 0117)
+                // — only the session knows which of the four vertical band
+                // changes above applies to where the possession stands.
+                // Free, like the four they resolve to: neither mints a cost
+                // dial of its own, and each one's own doc carries the
+                // resolution table and the ambiguity rule.
+                "descend" => self.descend_band(),
+                "ascend" => self.ascend_band(),
                 // The Latch, Task 5: the act that clears a barred passage.
                 // Gated by the same band guards `delve` carries just above
                 // (`clear_passage`'s own doc explains why), so it is dispatched
@@ -6532,6 +6544,119 @@ impl<'w> Session<'w> {
             format!("You take the stairs {word}.")
         };
         Turn::Out(format!("{act}\n{}", self.describe_underground_here()))
+    }
+
+    /// `descend`: go down by whatever this band offers (The Newel, Task 2,
+    /// B1, spec §4.1). `<`/`>` used to reach only the stairs pair
+    /// ([`Self::take_stairs`]), which refuses everywhere except underground
+    /// — this is the sim-side dispatch (decision 0117) that resolves the
+    /// verb to whichever of the four vertical band changes actually applies
+    /// where the possession stands, so a client need only bind one key.
+    ///
+    /// **Named `descend_band` rather than `descend`**: [`Self::descend`]
+    /// already exists, one field over, as the private helper `enter` uses to
+    /// place a possession inside a structure's threshold — a different verb
+    /// entirely, and a real name collision if this took its name.
+    ///
+    /// Resolution, spec §4.1's table, checked band-first in the same order
+    /// the table lists (a possession is in at most one of these bands at
+    /// once):
+    ///
+    /// 1. **Inside a chamber** — the structure's own further-in, if
+    ///    unambiguous. [`Self::enter`]'s own fork/leaf handling already
+    ///    answers "if unambiguous": passing it a [`FURTHER_IN_WORDS`] token
+    ///    reuses [`Self::further_in`], which refuses by naming the ways at a
+    ///    fork rather than guessing — the same rule this verb owes the walk
+    ///    band below, so no second implementation is needed here.
+    /// 2. **Underground** — `down` (the stairs).
+    /// 3. **Submerged** — `dive`.
+    /// 4. **Walk band** — whichever of `enter`/`delve`/`dive` this facet
+    ///    offers; see [`Self::descend_walk_band`] for the ambiguity rule.
+    fn descend_band(&mut self) -> Turn {
+        if self.inside.is_some() {
+            return self.enter(FURTHER_IN);
+        }
+        if self.underground.is_some() {
+            return self.take_stairs(true);
+        }
+        if self.submerged.is_some() {
+            return self.dive();
+        }
+        self.descend_walk_band()
+    }
+
+    /// `ascend`'s mirror of [`Self::descend_band`] — spec §4.1's table read
+    /// down its second column.
+    ///
+    /// Underground carries the one asymmetry the table names: at the
+    /// entrance rung (`rung == 0`) there are no stairs UP — the way out is
+    /// [`Self::climb`] — and at any deeper rung `up` is the stairs, exactly
+    /// as `descend_band` always reaches `down`. The walk band has nothing to
+    /// ascend to at all; [`NOTHING_TO_ASCEND_REFUSAL`] says so rather than
+    /// reading as an unknown verb.
+    fn ascend_band(&mut self) -> Turn {
+        if self.inside.is_some() {
+            return self.leave();
+        }
+        if let Some(ug) = self.underground.as_ref() {
+            return if ug.rung == 0 {
+                self.climb()
+            } else {
+                self.take_stairs(false)
+            };
+        }
+        if self.submerged.is_some() {
+            return self.surface();
+        }
+        Turn::Out(NOTHING_TO_ASCEND_REFUSAL.to_string())
+    }
+
+    /// [`Self::descend_band`]'s walk-band arm: whichever of `enter`/
+    /// `delve`/`dive` this facet offers.
+    ///
+    /// **Availability is checked with the same three independent probes
+    /// production already reads, never a fourth derivation of "is there
+    /// something here"**: [`Self::brief_here`]'s `site` (what makes
+    /// [`crate::structure::structure_at`] answer `Some` for `enter` — every
+    /// [`crate::site::SiteKind`], not settlements alone, since `enter`'s own
+    /// gate is the site, never `built`), [`Self::chamber_column_here`] (what
+    /// `delve` descends into), and [`Self::column_here`] (what `dive`
+    /// descends into). The three are independent because `Brief::site` is
+    /// already reduced to a single winner by `Site::salience` — a settlement
+    /// and a cave can never both surface through `site` — so counting
+    /// ambiguity within it alone would be a structural zero. A cave and open
+    /// water, by contrast, cannot coexist either, for a reason terrain
+    /// states rather than salience: `GeneratedTerrain::cave_at` refuses
+    /// outright over ocean. What CAN coexist is a site standing over a cave
+    /// or over water; The Newel's Task 2 measured how often that happens on
+    /// seed 42 (2,000 sampled walk-depth facets, uniform over the facet
+    /// address space: 0 offered two or more, `site` alone matching 0/2000 —
+    /// consistent with site.rs's own placed-site coverage math, ~0.01% of
+    /// all facets). **A null is a finding, not a reason to skip the arm**
+    /// (spec §4.1): the shape is representable even though this seed's own
+    /// terrain never exercises it in practice.
+    fn descend_walk_band(&mut self) -> Turn {
+        let has_enter = matches!(self.brief_here(), Ok(brief) if brief.site.is_some());
+        let has_delve = self.chamber_column_here().is_some();
+        let has_dive = !self.column_here().is_empty();
+        let offered: Vec<&'static str> = [
+            (has_enter, "enter"),
+            (has_delve, "delve"),
+            (has_dive, "dive"),
+        ]
+        .into_iter()
+        .filter_map(|(has, name)| has.then_some(name))
+        .collect();
+        match offered.as_slice() {
+            [] => Turn::Out(NOTHING_TO_DESCEND_REFUSAL.to_string()),
+            [only] => match *only {
+                "enter" => self.enter(""),
+                "delve" => self.delve(),
+                "dive" => self.dive(),
+                _ => unreachable!("offered only ever holds enter/delve/dive"),
+            },
+            many => Turn::Out(ambiguous_descent_refusal(many)),
+        }
     }
 
     /// Clear the barred passage at the cave mouth here (The Latch, Task 5) —
@@ -11250,6 +11375,35 @@ const ALREADY_BELOW_DELVE_REFUSAL: &str =
 /// both are the same fact about the world from the player's side.
 /// type-audit: bare-ok(prose)
 const NO_CAVE_TO_DELVE_REFUSAL: &str = "There is no cave here to delve into.";
+
+/// `descend`'s refusal at the walk band when this facet offers none of
+/// `enter`/`delve`/`dive` — its own refusal (The Newel, Task 2), never one
+/// of the three per-verb refusals above: a player who types `>` on open
+/// ground must not be told about stairs, or a cave, or water, none of which
+/// they asked about.
+/// type-audit: bare-ok(prose)
+const NOTHING_TO_DESCEND_REFUSAL: &str = "There is nothing here to descend into.";
+
+/// `ascend`'s refusal at the walk band — there is no way up from ground
+/// level, so it says that rather than falling through to the unknown-verb
+/// reply.
+/// type-audit: bare-ok(prose)
+const NOTHING_TO_ASCEND_REFUSAL: &str =
+    "There is nowhere higher to go from here; you are already at ground level.";
+
+/// `descend`'s refusal at the walk band when more than one way down is
+/// available (The Newel, Task 2) — follows [`ambiguous_needle_refusal`]'s
+/// own wording shape rather than inventing a second refusal vocabulary for
+/// the same idea: name the typed word, list what it could mean, ask for
+/// more specificity. Here "more specific" means typing the named way
+/// (`enter`, `delve` or `dive`) directly instead of the ambiguous `descend`.
+fn ambiguous_descent_refusal(ways: &[&str]) -> String {
+    format!(
+        "'descend' could mean more than one thing here: {}. Be more specific.",
+        crate::chamber_prose::listed(ways)
+            .expect("an ambiguous descent always carries at least two candidates")
+    )
+}
 
 /// `clear`'s refusal for a body that is indoors — [`Session::clear_passage`]
 /// shares `delve`'s footing but not its prose, which is the thing the sweep
@@ -17242,6 +17396,130 @@ mod tests {
         );
     }
 
+    /// The Newel, Task 2 (B1, spec §4.1): underground, `descend` is `down`
+    /// (the stairs) and `ascend` is `climb` at the entrance rung — the
+    /// table's second row.
+    ///
+    /// **Lives here rather than in `windows/vessel/tests/suite/`, and for
+    /// the same reason [`find_open_cave_vertex`]'s own doc argues walking to
+    /// one particular outcome is impractical**: reaching a real underground
+    /// state through the public verb loop needs a walk to land on one of
+    /// seed 42's 874 cave-bearing vertices (235 of them open and unbarred),
+    /// which — same as `delve_at`'s own coverage — is not something a test
+    /// should depend on landing. [`Session::delve_at`] is the seam that
+    /// sidesteps it, already private to this module.
+    ///
+    /// `climb`/`ascend` at the entrance rung is a REAL action (rung 0 always
+    /// climbs out), so it is the test's own positive control: a bug that
+    /// broke both `climb` and `ascend` identically — the exact failure mode
+    /// a same-text comparison alone cannot catch — is caught by asserting
+    /// the climb text actually says so. `down`/`descend` at the entrance
+    /// rung has no equivalent guarantee (the entrance cell may or may not be
+    /// a stairway), so that half only asserts the two AGREE, whatever they
+    /// agree ON.
+    #[test]
+    fn descend_and_ascend_match_the_underground_bands_own_verbs() {
+        let world = seam_world();
+        let (a, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let terrain = a.wctx.terrain.clone().expect("seed 42 builds terrain");
+        let (vertex, cave) = find_open_cave_vertex(&terrain, world.seed);
+
+        // `down`/`descend` at the entrance rung: two independently-built
+        // sessions placed at the identical known-open vertex, so any
+        // difference between the two calls is `descend_band`'s own doing.
+        let (mut down_session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let (mut descend_session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        down_session.delve_at(vertex, cave);
+        descend_session.delve_at(vertex, cave);
+        assert!(
+            down_session.underground.is_some(),
+            "the control: delve_at must set the underground state"
+        );
+        assert!(descend_session.underground.is_some());
+        let down = match down_session.handle("down") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("down must not release"),
+        };
+        let descend = match descend_session.handle("descend") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("descend must not release"),
+        };
+        assert_eq!(
+            down, descend,
+            "`descend` did not reach where `down` reaches underground"
+        );
+
+        // `climb`/`ascend` at the entrance rung: a fresh pair, so the moves
+        // above (which may have taken real stairs) cannot leave either
+        // session anywhere but the entrance rung this half assumes.
+        let (mut climb_session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let (mut ascend_session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        climb_session.delve_at(vertex, cave);
+        ascend_session.delve_at(vertex, cave);
+        let climb = match climb_session.handle("climb") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("climb must not release"),
+        };
+        let ascend = match ascend_session.handle("ascend") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("ascend must not release"),
+        };
+        assert!(
+            climb.contains("You climb back into the light"),
+            "the control: `climb` must actually climb out at the entrance rung: {climb}"
+        );
+        assert_eq!(
+            climb, ascend,
+            "`ascend` did not reach where `climb` reaches at the entrance rung"
+        );
+        assert!(
+            climb_session.underground.is_none(),
+            "the control: climb must clear the underground state"
+        );
+        assert!(
+            ascend_session.underground.is_none(),
+            "ascend must clear the underground state exactly as climb does"
+        );
+    }
+
+    /// The Newel, Task 2 (B1, spec §4.1): more than one available descent at
+    /// the walk band is a refusal that names them, following
+    /// [`ambiguous_needle_refusal`]'s own wording shape.
+    ///
+    /// **Unit-tested against the pure formatter directly, not built from a
+    /// live ambiguous facet.** Task 2's own preregistered measurement (2,000
+    /// walk-depth facets sampled uniformly on seed 42) found 0 offering two
+    /// or more of `enter`/`delve`/`dive` — consistent with the arithmetic:
+    /// a site covers ~0.01% of facets (site.rs's own coverage math) and a
+    /// cave can never coexist with water at the same facet
+    /// (`GeneratedTerrain::cave_at` refuses over ocean outright), so the
+    /// only way two ways can ever coincide is a site standing over a cave or
+    /// over water — on the order of one in several hundred thousand facets.
+    /// Walking (or scanning) to find one is the same impracticality
+    /// [`find_open_cave_vertex`]'s own doc argues against, one order of
+    /// magnitude worse. [`ambiguous_descent_refusal`] is a pure function of
+    /// its `&[&str]` argument, so a synthetic list of ways is a faithful test
+    /// of the wording without needing the facet that would produce it.
+    #[test]
+    fn ambiguous_descent_names_every_way() {
+        let refusal = ambiguous_descent_refusal(&["enter", "delve"]);
+        assert!(
+            refusal.contains("could mean more than one thing here"),
+            "must follow ambiguous_needle_refusal's own wording shape: {refusal}"
+        );
+        assert!(refusal.contains("enter"), "{refusal}");
+        assert!(refusal.contains("delve"), "{refusal}");
+        assert!(
+            refusal.contains("Be more specific"),
+            "must follow ambiguous_needle_refusal's own wording shape: {refusal}"
+        );
+
+        let three = ambiguous_descent_refusal(&["enter", "delve", "dive"]);
+        assert!(three.contains("enter"), "{three}");
+        assert!(three.contains("delve"), "{three}");
+        assert!(three.contains("dive"), "{three}");
+    }
+
     /// The Gallery, Task 12 (spec §6 acceptance criterion 9): the campaign's
     /// constitutional property, stated once at the end rather than assumed
     /// throughout. Every prior task in this campaign asserted a behaviour
@@ -22617,14 +22895,15 @@ mod tests {
     ///
     /// The stated denominator (spec §7's own requirement): the full shipped
     /// verb roster this file itself classifies is the SUM of three groups —
-    /// [`IN_CHARACTER_VERBS`] (28, since The Offer's Task 5 added `warm`,
+    /// [`IN_CHARACTER_VERBS`] (30, since The Offer's Task 5 added `warm`,
     /// The Latch's fix wave added `clear`, The Gallery's Task 5 added
     /// `down`/`up`, The Chattel's Task 11 added `open`/`close` and its Task
-    /// 12 added `take`/`drop`/`put`/`carrying`),
+    /// 12 added `take`/`drop`/`put`/`carrying`, and The Newel's Task 2 added
+    /// `ascend`/`descend`),
     /// [`SESSION_CONTROL`] (3: `release`/`quit`/`exit`), and the nine
     /// out-of-character-ONLY operator instruments `handle_ooc`'s Group A
     /// dispatches (`why`/`npcs`/`help`/`eyes`/`whoami`/`provoke`/`soothe`/
-    /// `possess`/`unpossess`) — **40** total. Group B's six `!`-twins
+    /// `possess`/`unpossess`) — **42** total. Group B's six `!`-twins
     /// (`!map`/`!examine`/`!needs`/`!wait`/`!look`/`!knows`) are deliberately
     /// NOT counted a second time — [`HELP`]'s own text calls them "the
     /// out-of-character halves" of verbs already among the 24: the same verb
@@ -22641,7 +22920,7 @@ mod tests {
     /// argument to make it succeed: since no dispatch arm anywhere
     /// constructs the string `"died"` regardless of input, a bare
     /// invocation already covers the whole surface this loop can reach —
-    /// which, per the paragraph above, is the 12 ungated verbs, not the 40
+    /// which, per the paragraph above, is the 12 ungated verbs, not the 42
     /// the roster names.
     #[test]
     fn h2_no_shipped_verb_can_end_a_possession_by_death() {
@@ -22664,11 +22943,11 @@ mod tests {
             .collect();
         assert_eq!(
             roster.len(),
-            40,
-            "the stated denominator: 28 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
+            42,
+            "the stated denominator: 30 IN_CHARACTER_VERBS + 3 SESSION_CONTROL \
              + 9 Group-A operator instruments the OOC namespace alone \
              dispatches. This pins the ROSTER's size, NOT the exercised \
-             population: under a possessed body the gate refuses all 28 \
+             population: under a possessed body the gate refuses all 30 \
              in-character verbs, so 12 reach a dispatch arm — see this \
              test's doc comment"
         );

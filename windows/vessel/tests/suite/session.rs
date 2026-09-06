@@ -3,7 +3,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
-use hornvale_vessel::{PossessOpts, Session, Tableau, Turn, run};
+use hornvale_vessel::{PossessOpts, Session, SpatialChannel, Tableau, Turn, run};
 use hornvale_worldgen::{SettlementPins, build_world};
 
 /// Seed 42's world under default pins, read from the committed fixture rather
@@ -1037,6 +1037,252 @@ fn the_flagships_own_starting_vertex_refuses_a_delve_and_names_why() {
         up.contains("not underground"),
         "climb with nothing to climb out of must name that: {up}"
     );
+}
+
+/// The Newel, Task 2 (B1, spec §4.1): `>` must descend by whatever means
+/// this facet offers. At the flagship's own starting facet that is the
+/// settlement (`enter` succeeds there — Doaba stands on it), so `descend`
+/// must land where `enter` lands — discriminated on the BAND, never on the
+/// prose.
+#[test]
+fn descend_at_a_settlement_facet_enters_the_structure() {
+    let world = seam_world();
+    let (mut a, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let (mut b, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let _ = a.handle("enter");
+    let _ = b.handle("descend");
+    assert!(
+        matches!(
+            a.snapshot().unwrap().spatial,
+            SpatialChannel::Chamber { .. }
+        ),
+        "the control: `enter` must reach the chamber band"
+    );
+    assert_eq!(
+        std::mem::discriminant(&a.snapshot().unwrap().spatial),
+        std::mem::discriminant(&b.snapshot().unwrap().spatial),
+        "`descend` did not land in the band `enter` lands in"
+    );
+}
+
+/// `<` must leave the same way `out` does, from the same settlement facet.
+/// The mirror of the test above, over spec §4.1's `ascend` column.
+#[test]
+fn ascend_at_a_settlement_facet_leaves_the_structure() {
+    let world = seam_world();
+    let (mut a, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let (mut b, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let _ = a.handle("enter");
+    let _ = b.handle("enter");
+    assert!(
+        matches!(
+            a.snapshot().unwrap().spatial,
+            SpatialChannel::Chamber { .. }
+        ),
+        "the control: `enter` must reach the chamber band before `out`/`ascend` leave it"
+    );
+    let out = match a.handle("out") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("out must not release"),
+    };
+    let ascend = match b.handle("ascend") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("ascend must not release"),
+    };
+    assert_eq!(out, ascend, "`ascend` did not reach where `out` reaches");
+    assert!(
+        matches!(a.snapshot().unwrap().spatial, SpatialChannel::Walk { .. }),
+        "the control: `out` must return to the walk band"
+    );
+}
+
+/// Inside a chamber, `descend` is the structure's own further-in — spec
+/// §4.1's first table row. At the flagship's threshold this is a FORK (two
+/// ways: the hearth, the store), so the CONTROL itself is a refusal that
+/// names the ways rather than a successful move — `descend` must read
+/// identically, because [`Session::descend_band`]'s own chamber arm
+/// delegates to exactly the same call `enter further in` makes.
+#[test]
+fn descend_inside_a_chamber_matches_enter_further_in() {
+    let world = seam_world();
+    let (mut a, _) = Session::start(&world, &opts()).unwrap();
+    let (mut b, _) = Session::start(&world, &opts()).unwrap();
+    let entered_a = match a.handle("enter") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("enter must not release"),
+    };
+    let entered_b = match b.handle("enter") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("enter must not release"),
+    };
+    assert!(
+        entered_a.starts_with("[chamber"),
+        "the control: `enter` must reach a chamber: {entered_a}"
+    );
+    assert!(entered_b.starts_with("[chamber"), "{entered_b}");
+    let further = match a.handle("enter further in") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("enter must not release"),
+    };
+    let descend = match b.handle("descend") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("descend must not release"),
+    };
+    assert_eq!(
+        further, descend,
+        "`descend` did not reach where `enter further in` reaches inside a chamber"
+    );
+}
+
+/// Submerged, `descend` is `dive` and `ascend` is `surface` — spec §4.1's
+/// third table row. Neither verb consumes the seeded stream (both are pure
+/// reads of `column_here`/`submerged`), so diving, surfacing back to undo,
+/// then re-diving reaches byte-identically the same state `dive` reached the
+/// first time — which is what lets one session serve as its own positive
+/// control instead of needing two independently-walked ones.
+#[test]
+fn descend_and_ascend_match_dive_and_surface_when_submerged() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    // Walk toward the coast — the same biased search
+    // `the_water_column_is_a_place_you_can_be` uses, budget unchanged.
+    let mut afloat = String::new();
+    for _ in 0..3000 {
+        for d in ["w", "nw", "sw"] {
+            s.handle(d);
+        }
+        let Turn::Out(look) = s.handle("look") else {
+            continue;
+        };
+        if !look.contains("Open water") {
+            continue;
+        }
+        if let Turn::Out(probe) = s.handle("dive")
+            && !probe.contains("no water here")
+        {
+            s.handle("surface");
+            afloat = look;
+            break;
+        }
+    }
+    assert!(
+        !afloat.is_empty(),
+        "the walker never reached a divable water column; it cannot be tested"
+    );
+
+    // The control: a real dive, and undo it back to the surface.
+    let dive = match s.handle("dive") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("dive must not release"),
+    };
+    assert!(
+        !dive.contains("Open water —"),
+        "the control: diving must leave the surface: {dive}"
+    );
+    let surface = match s.handle("surface") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("surface must not release"),
+    };
+    assert!(
+        surface.contains("You break the surface"),
+        "the control: surfacing must actually surface: {surface}"
+    );
+
+    // The test: `descend` from the same afloat state `dive` was tried from.
+    let descend = match s.handle("descend") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("descend must not release"),
+    };
+    assert_eq!(
+        dive, descend,
+        "`descend` did not reach where `dive` reaches"
+    );
+
+    // The test: `ascend` from the submerged state `descend` just reached —
+    // the same state `surface`'s own control was tried from.
+    let ascend = match s.handle("ascend") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("ascend must not release"),
+    };
+    assert_eq!(
+        surface, ascend,
+        "`ascend` did not reach where `surface` reaches"
+    );
+}
+
+/// Walk band, offering none of `enter`/`delve`/`dive`: `descend` refuses
+/// with its own line, not one of the four the player never asked about —
+/// least of all `down`'s stairs refusal, which is B1's original bug
+/// ("You are not underground; there are no stairs to take.", the exact text
+/// `<`/`>` used to answer everywhere because they were bound to `up`/`down`).
+///
+/// The three moves below are a fixed, deterministic script against the
+/// committed seed 42 fixture (found by search, not asserted to generalize):
+/// one step west/northwest/southwest off the flagship's own settlement facet
+/// already lands somewhere with no site, no cave and no water.
+#[test]
+fn descend_refuses_its_own_way_where_the_facet_offers_nothing() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    s.handle("w");
+    s.handle("nw");
+    s.handle("sw");
+    let dive = match s.handle("dive") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("dive must not release"),
+    };
+    let delve = match s.handle("delve") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("delve must not release"),
+    };
+    let enter = match s.handle("enter") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("enter must not release"),
+    };
+    assert!(dive.contains("no water here"), "{dive}");
+    assert!(delve.contains("no cave"), "{delve}");
+    assert!(enter.contains("nothing here to enter"), "{enter}");
+
+    let descend = match s.handle("descend") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("descend must not release"),
+    };
+    assert_ne!(descend, dive, "descend's own refusal must not be dive's");
+    assert_ne!(descend, delve, "descend's own refusal must not be delve's");
+    assert_ne!(descend, enter, "descend's own refusal must not be enter's");
+    assert_ne!(
+        descend, "You are not underground; there are no stairs to take.",
+        "B1's original bug: descend must not answer with the stairs refusal \
+         `<`/`>` used to give everywhere out of doors"
+    );
+    assert!(
+        descend.contains("descend"),
+        "the refusal should say what the player asked for: {descend}"
+    );
+}
+
+/// Walk band, `ascend`: there is nothing to ascend to from ground level, so
+/// it says that rather than falling through to the unknown-verb reply — the
+/// fourth row of spec §4.1's table, and the only one with no available way
+/// at all.
+#[test]
+fn ascend_refuses_at_the_walk_band() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    assert!(
+        matches!(s.snapshot().unwrap().spatial, SpatialChannel::Walk { .. }),
+        "the control: the flagship starts at the walk band"
+    );
+    let ascend = match s.handle("ascend") {
+        Turn::Out(t) => t,
+        Turn::Released(_) => panic!("ascend must not release"),
+    };
+    assert!(
+        ascend.contains("nowhere higher") || ascend.contains("ascend"),
+        "the walk-band ascend refusal must say something, not read as an \
+         unknown verb: {ascend}"
+    );
+    assert!(!ascend.contains("No verb"), "{ascend}");
 }
 
 /// Bare `eyes` names whose eyes the chart is coloured through and the arity
