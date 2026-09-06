@@ -123,3 +123,15 @@ tree, silently, at a moment when three sessions are running.
   same sentence that it was not.
 - When a new crate is involved, budget the sub-floor roster rows as a step of
   the crate's first commit rather than discovering them at the gate.
+
+## Deferred minors, and where each landed
+
+Twelve minors were deferred by the per-task reviews (campaign ledger #19,
+backfilled at the close — they should have been ledgered as they occurred).
+Six were fixed in the final review's wave (the history test's hardcoded
+start year, the non-positive-lifespan guard, the undisplayed-longitude
+citation, the page's prose caveat, and the two Important-class citation and
+rounding defects the wave was for); five are accepted with a reason written
+beside each in the ledger; one is carried forward — the exhibit's axis and
+pick toggles carry no `aria-pressed`, a five-line fix for the next touch of
+`clients/lot/`.
