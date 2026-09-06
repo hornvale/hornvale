@@ -495,3 +495,71 @@ change), this ledger.
 **Concerns.** None outstanding. The controller's Step 6 (stage gate) is
 explicitly out of scope for this task per the dispatch brief and is left for
 the controller to submit after review.
+
+## Task 4 — complete
+
+**What shipped.** The census's column-count witness
+(`domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_<N>_column_census`)
+now stands down for a delivery commit, the third scoped opt-out under
+`HV_CENSUS_DELIVERY`. `scripts/subfloor-roster.sh`'s final `awk` line gained
+an `HV_SUBFLOOR_EXCLUDE` ERE parameter: a roster line whose test path (the
+part after `$`) matches is OMITTED from the flat filterset rather than
+wrapped in `and not (...)`, because `scripts/subfloor-run-chunked.sh` splits
+the filterset on a literal `' | '` and is lossless only while it stays flat.
+Empty or unset leaves the output byte-identical, which is the default for
+every caller but one. `scripts/hooks/pre-commit`'s final block now sets
+`subfloor_exclude='evaluable_columns_measured_surface_on_the_[0-9]+_column_census'`
+only inside its `HV_CENSUS_DELIVERY` branch and passes it through as
+`HV_SUBFLOOR_EXCLUDE` to `make gate-commit`. No machine may re-pin the
+witness — its name carries a count that does not exist in the tree until
+the census does, so the obligation is DEFERRED, not discharged: the merge of
+the delivery branch runs the full suite and demands the re-pin.
+
+**TDD evidence.** RED, `bash scripts/test-census-guard.sh` against the
+appended tests with neither script change made: `17 passed, 4 failed` —
+`could not read subfloor_exclude from scripts/hooks/pre-commit`, `the
+exclusion omitted 0 term(s), want 1`, `with the escape the witness is STILL
+selected`, `HV_CENSUS_DELIVERY stand-down branches: 2, want 3`; all other
+(pre-existing plus the two controls) arms green, exactly as the brief's Step
+2 predicted. GREEN, same command, after implementing the roster exclusion
+and the hook block: `21 passed, 0 failed` — `the exclusion omits EXACTLY one
+roster term (4093 -> 4092)`, `with the escape the witness is not selected`,
+`an exclusion matching nothing leaves the filterset byte-identical`, `the
+excluded filterset is still FLAT`, `HV_CENSUS_DELIVERY stands down exactly
+three checks`.
+
+**Shellcheck.** One deviation from the brief's verbatim test text: the
+appended `grep -cF 'if [ -n "${HV_CENSUS_DELIVERY:-}" ]' ...` line trips
+SC2016 (expressions don't expand in single quotes) even though the quoting
+is deliberate — it is a literal `grep -F` pattern, not a shell expansion.
+Added a `# shellcheck disable=SC2016` comment above it, matching the
+project's existing convention for the identical situation
+(`scripts/test-pre-push.sh:351,428`, `scripts/test-sluice.sh` in several
+places). `make shellcheck`: clean, exit 0.
+
+**Byte-identity control.** Per the controller's resolution, a bare `git
+stash` was refused by this repo's shared-stash-stack guard (its message
+recommends a scoped `git stash push -u -m '<tag>' -- <path>` plus `apply
+<sha>` rather than `pop`, independent of the unrelated `docs/timings.md`
+modification already in the working tree). Ran the scoped form instead:
+`git stash push -u -m "task4-spillway-byte-identity-control" -- \
+scripts/subfloor-roster.sh`, captured `bash scripts/subfloor-roster.sh` to a
+scratch file, `git stash apply <sha>` (not `pop`) to restore the change, then
+`git stash drop stash@{0}` to remove only that entry (never touching
+`docs/timings.md` or any other worktree's stash). Final comparison:
+`bash scripts/subfloor-roster.sh | cmp - "$sp/roster-before" &&
+echo IDENTICAL-BY-DEFAULT` printed `IDENTICAL-BY-DEFAULT` — the default
+filterset (4093 terms) is byte-for-byte unchanged by this task, the positive
+proof that nothing but the escape moved.
+
+**Ideonomy: none.** The brief specifies the roster `awk` line, the hook
+block, and the test text verbatim; the shellcheck directive and the stash
+workaround are mechanical fixes surfaced by actually running the commands,
+not design choices.
+
+**Files changed:** `scripts/subfloor-roster.sh` (the `awk` line and its
+header comment), `scripts/hooks/pre-commit` (the final `HV_CENSUS_DELIVERY`
+block), `scripts/test-census-guard.sh` (the appended arms plus one
+`shellcheck disable=SC2016` comment), this ledger.
+
+**Concerns.** None outstanding.
