@@ -769,3 +769,23 @@ brackets a `drank`. The seed-11 example reproduced verbatim, five sleeps and a
 graze inside `walking home (sated) — 5 steps, days 113.04798 to 116.05578`. The
 chronicle's stated limit now rests on two independent measurements rather than
 on a reviewer's sentence. · ideonomy passes / overturns: 0.
+
+---
+
+#29 [G5] — **CORRECTION: H1's preregistered population is THREE seeds, not
+four, and I said four twice.** · Spec §10 freezes H1 on "seeds 7, 14, 23" —
+three. Seed 11 is the *fixture* seed, added by Task 2 because a before-image
+can only exist for a seed captured while the prose was live, and it is
+additional to the preregistration rather than part of it. My ledger #22 and two
+statements to Nathan called it "all four preregistered seeds". · The result is
+unchanged and if anything stronger than I described: H1 holds on **all three
+preregistered seeds plus a fourth**. But "four preregistered" is a claim about
+what was frozen, and the whole point of #17's ruling — that a preregistration
+which can be re-scoped after unblinding is not one — is that the frozen text is
+the authority on its own scope. Miscounting it in the direction of "we tested
+more than we promised" is the same error as re-scoping it, wearing better
+clothes. · Found by the Task 6 implementer reading §10 while writing the
+chronicle, not by me re-reading my own summaries. · Second correction from the
+same read: the seed-7 before-image is **42** bullet lines, not the 41 I stated
+— 3 identity facts + 1 errand line + 38 steps. Counted, not estimated. ·
+ideonomy passes / overturns: 0.
