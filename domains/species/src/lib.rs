@@ -33,6 +33,11 @@ pub use allometry::{
     LifeHistory, age_at_maturity, basal_metabolic_rate_w, life_history, lifespan,
     reproductive_tempo,
 };
+mod reproduction;
+pub use reproduction::{
+    DevelopmentSite, ReproductiveAffordances, ReproductiveOperation, ReproductiveRole, SupportMode,
+    TransitionCapability,
+};
 
 /// Predicate: a species entity's name (functional, Text).
 /// type-audit: bare-ok(identifier-text)
