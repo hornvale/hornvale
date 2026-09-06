@@ -22,13 +22,19 @@ same discipline decision 0006 holds for seed-derivation labels — now across a
 repo boundary, where you cannot fix both sides in one commit. A client is
 always one release behind until it re-pins.
 
-## The three clients
+## The clients
 
 | | what it is | ABI | how it ships |
 |---|---|---|---|
 | `atlas/` | the map viewer (Deno/TS, canvas) | none — parses a committed scene JSON | bundle **committed** to `book/src/gallery/atlas.js`, drift-checked |
 | `vessel/` | the Casement: the live-possession exhibit | `hv_*` (`vessel/wasm/`) | JS bundles committed; the **wasm is deploy-built, never committed** (decision 0052) |
+| `lot/` | the Lot: the four-stage life-draw exhibit | `hw_lot*` (consumes `world-wasm`) | JS bundles committed to `book/src/gallery/lot.js` and `lot-worker.js`, drift-checked; loads the same deploy-built `world.wasm` |
 | `world-wasm/` | the world catalog external clients consume | `hw_*` | GitHub release asset on a `world-wasm-v*` tag — versioned by tag, not by git blob |
+
+This heading read **"The three clients"** until The Lot, and it was already
+wrong when that campaign arrived: `game/` — two Rust crates, its own
+`make game-check` — has never been in this table. A count in a heading rots
+the moment a directory is added, so it is gone rather than corrected to four.
 
 Both wasm crates are hand-rolled `extern "C"` — **no wasm-bindgen** (decision
 0023: clients carry their own toolchains, and the ABI stays legible). The
@@ -47,19 +53,23 @@ cross-repo migration.
 
 ## Deno is pinned to 2.9.2 exactly
 
-Both `deno.json` files say so, because **the bundle is drift-checked** — a
-different Deno emits different minified output and reddens the check for no
-semantic reason. If you bump it, bump it in `clients/atlas/deno.json` and
-`clients/vessel/deno.json` together, and regenerate the bundles in the same
-commit. (Until 0125 two GitHub Actions jobs pinned the version too, and were
-a third and fourth place to keep in sync; they are gone, so the two
-`deno.json` files are now the whole story.)
+All three `deno.json` files say so, because **every bundle is
+drift-checked** — a different Deno emits different minified output and reddens
+the check for no semantic reason. If you bump it, bump it in
+`clients/atlas/deno.json`, `clients/vessel/deno.json` and
+`clients/lot/deno.json` **together**, and regenerate every committed bundle
+(the five named under "Bundles are build output" below) in the same commit. (Until 0125 two GitHub Actions jobs pinned the version too, and
+were further places to keep in sync; they are gone, so the `deno.json` files
+are now the whole story. This paragraph said **two** files until The Lot added
+the third — the number is exactly the kind of thing that goes stale, so check
+the directory rather than trusting it.)
 
 ## Gates
 
 ```bash
 make vessel-check   # deno fmt/lint/check/test + wasm fmt/clippy + byte-identity smoke
 make world-check    # lint + golden byte-identity smoke + a ≤ 1 MiB size gate
+make lot-check      # the Lot exhibit: deno checks + bundle drift + a wasm smoke
 make wasm-vessel    # build the Casement wasm into book/src/gallery (deploy does this too)
 make wasm-world     # build the catalog wasm
 
@@ -74,7 +84,10 @@ part has not changed. What has: since 0125 retired GitHub Actions, this
 paragraph used to say nothing ran them for you at all, and that stopped
 being true this campaign. The `clients` phase
 (`make clients-check-run`) now runs `vessel-check`, `world-check`,
-`game-check`, **and** `atlas-check` together, and the canonical box's chamber
+`game-check`, `atlas-check` **and** `lot-check` together — in FOUR parallel
+arms, not five, because `world-check-run` and `lot-check-run` both build
+`wasm-world` into one path and so share an arm (see the Makefile note) — and
+the canonical box's chamber
 runs that phase in both the stage gate (`make sluice-stage`) and the merge
 queue (`make sluice`) — a real backstop, not a manual-discipline promise. A
 client change still needs to reach a pushed, queued request before anything
@@ -113,11 +126,13 @@ host and not the other is this, not a regression — check `binaryen
 
 ## Bundles are build output that happens to be committed
 
-`book/src/gallery/atlas.js`, `vessel.js`, `vessel-worker.js` are committed
-**and** drift-checked (decision 0018), so editing them by hand is always
-wrong — edit `src/` and rebuild. The `.wasm` files are the opposite
-(decision 0052): built at deploy, never committed, so they are absent from a
-fresh checkout until you run `make wasm-vessel`.
+`book/src/gallery/atlas.js`, `vessel.js`, `vessel-worker.js`, `lot.js` and
+`lot-worker.js` are committed **and** drift-checked (decision 0018), so editing
+them by hand is always wrong — edit `src/` and rebuild. The `.wasm` files are the opposite
+(decision 0052): built at deploy, never committed, so `vessel.wasm` and
+`world.wasm` are both absent from a fresh checkout until you run
+`make wasm-vessel` and `make wasm-world`. Two exhibits are dark without them
+now, not one.
 
 When testing a client in a browser, **rebuild the bundle first**. Serving a
 stale `dist`/gallery bundle against fresh source has burned this project more

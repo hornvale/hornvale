@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run game-check game-check-run atlas-check lot-check lot-check-run world-then-lot-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -929,9 +929,35 @@ atlas-check:
 	@git diff --exit-code -- book/src/gallery/atlas.js || { \
 	    echo "atlas: book/src/gallery/atlas.js is stale — commit the rebuilt bundle." >&2; exit 1; }
 
-# THE FOUR SUB-CHECKS RUN IN PARALLEL, and they used to be plain prerequisites
+# THE LOT EXHIBIT: the same shape as atlas-check, plus a wasm smoke, because
+# this client is the only one whose bundle typechecks against an INTERFACE it
+# declares for `hw_*` rather than against the binary it will load. `deno check`
+# cannot tell you the export is gone; the smoke can, and costs a wasm load.
+#
+# THIS CHECK IS BLIND TO COMMENT-ONLY EDITS, exactly as atlas-check is and for
+# the same reason: `deno task build` runs `deno bundle --minify`, which strips
+# comments, so a source change confined to comments produces a byte-identical
+# bundle and no diff. Probing whether this check can go RED needs a change with
+# real runtime effect (a new statement, an altered literal), never an appended
+# `//` line — that passes silently and reads as a vacuous check when it is only
+# a vacuous probe.
+#
+# It depends on wasm-world the way vessel-check-run depends on wasm-vessel: the
+# smoke needs the catalog the page loads, and that wasm is deploy-built and
+# never committed (decision 0052), so a fresh checkout has none.
+lot-check: ## The Lot exhibit's local gate: deno checks + bundle drift + a wasm smoke
+	@bash scripts/timed.sh lot-check -- make --no-print-directory lot-check-run
+
+lot-check-run: wasm-world
+	cd clients/lot && deno fmt --check && deno lint && deno task check && deno task test
+	cd clients/lot && deno task build
+	@git diff --exit-code -- book/src/gallery/lot.js book/src/gallery/lot-worker.js || { \
+	    echo "lot: book/src/gallery/lot.js or lot-worker.js is stale — commit the rebuilt bundles." >&2; exit 1; }
+	node clients/lot/drive.mjs book/src/gallery/world.wasm
+
+# THE FOUR ARMS RUN IN PARALLEL, and they used to be plain prerequisites
 # (i.e. serial). Measured on lefford 2026-08-23, alternating arms on an idle
-# box to cancel cache-warming drift:
+# box to cancel cache-warming drift, when the four arms were four checks:
 #
 #     serial    337, 337, 324 s   mean 330   <- matches the chamber's own
 #     parallel  239, 236, 250 s   mean 243      clients phase, 330.8 s
@@ -949,6 +975,19 @@ atlas-check:
 # Overlapping a latency-bound job with a throughput-bound one is the whole
 # saving, which is also why adding more parallelism beyond these four would buy
 # nothing.
+#
+# THERE ARE FIVE CHECKS AND FOUR ARMS, and the pairing is a CORRECTNESS
+# constraint rather than a scheduling preference (The Lot). `world-check-run`
+# and `lot-check-run` both depend on `wasm-world`, which is .PHONY and so
+# re-runs its recipe every time: two concurrent arms would each run `cargo
+# build`, `wasm-opt -Oz` (an in-place `mv` over its own output) and a `cp` onto
+# the SAME `book/src/gallery/world.wasm`, while the lot smoke reads that file.
+# Every one of those is a real writer of one path. So the two share one arm and
+# run in sequence — the second `wasm-world` is an incremental no-op plus a
+# wasm-opt pass, and `lot-check-run` itself is deno work measured in seconds,
+# so the arm the analysis above calls latency-bound absorbs it. This is the
+# first time two members wanted the same wasm; `vessel-check-run` builds
+# `wasm-vessel`, a different crate to a different path, and never contended.
 #
 # WHY SHELL BACKGROUNDING AND NOT `$(MAKE) -j4 -O`. The -j form works and
 # measured the same, but every cargo it spawns prints:
@@ -968,9 +1007,16 @@ atlas-check:
 # warning cannot arise. Each target's output is captured to its own file and
 # printed whole after the `wait`, which gives strictly better grouping than
 # -Otarget did, and every target's pass/fail is named before the logs.
+# One arm of clients-check-run's fan-out: the two checks that both build
+# `wasm-world`, run in sequence so they cannot write its output at once. See
+# the FIVE CHECKS AND FOUR ARMS note above.
+world-then-lot-run:
+	$(MAKE) --no-print-directory world-check-run
+	$(MAKE) --no-print-directory lot-check-run
+
 clients-check-run:
 	@set -u; pids=""; names=""; \
-	for t in vessel-check-run world-check-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-then-lot-run game-check-run atlas-check; do \
 	  $(MAKE) --no-print-directory $$t > /tmp/hv-clients-$$t.log 2>&1 & \
 	  pids="$$pids $$!"; names="$$names $$t"; \
 	done; \
@@ -979,7 +1025,7 @@ clients-check-run:
 	  n=$$(echo $$names | cut -d' ' -f$$i); i=$$((i+1)); \
 	  if wait $$p; then echo "clients: $$n OK"; else rc=1; echo "clients: $$n FAILED"; fi; \
 	done; \
-	for t in vessel-check-run world-check-run game-check-run atlas-check; do \
+	for t in vessel-check-run world-then-lot-run game-check-run atlas-check; do \
 	  echo "----- $$t -----"; cat /tmp/hv-clients-$$t.log; \
 	done; \
 	exit $$rc

@@ -59,6 +59,7 @@
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview of Seed 42](./gallery/surrounds-seed-42.md)
 - [Ten Lives of Seed 42](./gallery/generated/the-lot-seed-42.md)
+- [The Lot, Live](./gallery/the-lot.md)
 
 # The Laboratory
 
