@@ -5981,3 +5981,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T00:50:11Z | prewarm | 212.263 | 826.156 | 33.948 | 4.05 | 0 | 12701a27b | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T00:55:26Z | rebaseline | 332.727 | 460.387 | 18.882 | 1.44 | 0 | 12701a27b | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T00:57:27Z | gate-commit | 94.392 | 344.729 | 59.122 | 4.28 | 0 | 12701a27b | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T00:58:12Z | gate-commit | 36.419 | 69.447 | 15.770 | 2.34 | 0 | 12701a27b | campaign/the-ken | MacBookPro | 10 |
