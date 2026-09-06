@@ -356,6 +356,83 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 493 filtered out; fi
 
 Verdict line as printed: `== VERDICT (spec §4, mechanical): Rescale`
 
+#9 [Q] — **Spec §4's attainment caveat: does RESCALE stand?** ·
+**Decision: yes — the verdict is RESCALE under the rule as written AND under
+the caveat's own correction, on every seed.** · Why: the caveat says the bar
+is on capacity and RESCALE is "a rescale only if attainment is high", with
+MIXED applying "if RESCALE fires with median attainment below 0.5". Two seeds
+have a median below 0.5 (seed 100: 0.40; seed 1234: 0.11), so the caveat is
+live and must be worked, not waved. Worked from the readout (`12c7009de`):
+divide the bar by each seed's own median attainment and count the top-N
+catchments still clearing it, from the per-people min/median/max rows.
+
+```
+  seed   median a   bar / a    P2 rows below the corrected bar        c'/N   > 0.5
+  ----   --------   --------   -----------------------------------   -----   -----
+  42     0.66        227       drow only (min 183, med 289): <= 12    >= 378/390   yes
+  7      0.82        183       none (min 388)                          250/250   yes
+  13     0.65        231       none (min 275)                          262/262   yes
+  100    0.40        375       none (min 513)                           60/60    yes
+  1234   0.11       1364       drow (5, max 998) + sea-elf (4, max 483)  35/44   yes
+```
+
+The caveat's concern — that capacity overstates population enough to make a
+capacity-majority a population-minority — cannot bite at these margins:
+the median top-N catchment is 1,366–2,929 headcount against a 150 bar (9–20x),
+and the multiplier m over P2 has a median of 35–73. Ruling reading of the
+caveat: it asks whether the majority survives attainment, and it does, so
+the printed verdict stands and the chronicle reports `a` beside it, as §4
+requires. · Alternatives discarded: reading "median attainment" as pooled
+over all seeds (would also pass, but a per-seed reading is the stricter one
+and matches every other clause's "on every seed"); declaring MIXED because
+two seeds are under 0.5 (that reads the caveat as a fifth clause, which it
+is not — it is a correction to the bar, and the corrected bar still fires). ·
+ideonomy passes / overturns: 0 — a mechanical application of a frozen rule,
+with the arithmetic shown. · Capture: this entry; Task 3's verdict section;
+decision 0827.
+
+**The characterization predictions (§4.1), against the readout:**
+
+```
+  prediction                          42     7      13     100    1234   verdict
+  ----------------------------------  -----  -----  -----  -----  -----  -------
+  S1 gini(acc) >= 0.25 (heavy tail)   0.352  0.262  0.446  0.328  0.320  HELD
+  S3 spearman(acc, K) >= 0.7          0.398  0.614  0.542  0.754  0.813  FAILED (3 of 5)
+  median attainment in [0.5, 1.0]     0.66   0.82   0.65   0.40   0.11   FAILED (2 of 5)
+  attr / N < 0.5                      0.13   0.18   0.17   0.40   0.39   HELD
+```
+
+S3 failing means D1 would not only resize settlements but re-order them:
+the biggest vertex is not reliably the biggest basin. Attainment failing on
+the two small worlds (60 and 44 alive against 99 and 870 ended) says the
+binding ceiling there is not capacity — a D6 observation, recorded for the
+metaplan rather than acted on.
+
+**Secondary findings the metaplan should carry** (all from the readout, none
+acted on here):
+- **Bake sites cluster into few watersheds.** 354 of 390 alive sites on seed
+  42 share an attractor with another site of their people (211/250, 208/262,
+  28/60, 12/44 elsewhere); only 52 of 390 sites ARE attractors. A catchment
+  per settlement would need a split rule before it could be wired in — §6's
+  partition question, answered in the bake's own terms.
+- **Alive sites with zero present-era capacity exist**: 2, 3, 19, 1, 3 per
+  seed. The bake's last era is not the present (spec §3.1's approximation is
+  real), or those communities are on ground that no longer feeds them.
+  Counted and printed, never dropped from `m`.
+- **Attainment above 1.0 occurs** (max 2.05 on seed 42): communities above
+  their vertex's capacity, as `COLLAPSE_PRESSURE = 2.0` permits.
+- **Occupancy is low**: 21 of 390 top-N attractors on seed 42 carry an alive
+  settlement of that people (8/250, 17/262, 2/60, 3/44). The places the flow
+  field would rank first are mostly not where the bake put anyone.
+- **The catchment field DOES carry an apex** — S4 (max over median
+  accumulation) is 2.9–11.2 — which contradicts §4's RESCALE response text
+  "it makes no apex". What dies is D1 as "wire the catchment in as the
+  growth ceiling at today's scale": every settlement becomes a town. Whether
+  a RESCALED catchment (normalised so the walkable band holds) would make a
+  differentiated apex is a different question, and it is metaplan §6's open
+  `SETTLERS_PER_CAPACITY` item, not this rung. Recorded so the record does
+  not overclaim in either direction.
+
 ## Follow-ups
 
 - **`scripts/worktree-take.sh` should refuse to recycle a member whose branch
