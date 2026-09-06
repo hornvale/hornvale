@@ -979,6 +979,74 @@ without this call site.
 
 ---
 
+### #15 [G5] — the witness could never have gone GREEN, and I defined it that way
+
+**Question.** Task 7 un-ignored Task 4's sweep witness, expecting it to turn
+green. It could not. Why?
+
+**Decision.** **Because the witness never called `believed_water` at all.** It
+computed `calls += seen.len()` — the sum of `LatestVisit::water_at` set sizes —
+and nothing else. Task 7 does not touch `LatestVisit`, so un-ignoring it
+unchanged would have reported **529 forever**: a permanent red that reads
+exactly like "the memo did not work".
+
+**This is a defect in my plan text, and it is the deepest one this campaign has
+produced.** Task 4's brief said:
+
+> For each roster member, `n_i = latest_visit.water_at(entity, t, terrain).len()`
+> — this is exactly how many `plan_to_room` calls one `believed_water` call
+> makes for that member.
+
+That sentence was **true before the memo and false after it**. I wrote it as a
+definition, so the witness measured the definition instead of the behaviour.
+
+**The shape, stated generally, because it is not the usual one.** The
+repository's standing rule is that a check which can never fire is worse than
+an absent one. **This is its mirror image: a check whose GREEN is
+unreachable.** It could go red — it did, at 529, exactly as predicted — and the
+red was reproduced by the implementer, confirmed by the task review, and read
+by me. What nobody asked was whether the *green* was reachable.
+
+The mechanism is specific and worth naming: **I defined the observable by its
+PRE-FIX IDENTITY.** Before the memo, "candidate rooms" and "route searches" are
+the same number. The memo's entire purpose is to break that identity. So a
+witness defined on the identity cannot see the fix — by construction, not by
+accident.
+
+**How far it travelled.** Task 4's implementer wrote it as specified and
+described it accurately in its own report. Task 4's review verified the RED
+reproduced with the right counts. I read both. Three passes, and the question
+"can this test ever pass?" was asked by none of them — because a red witness
+before the fix is exactly what everyone was looking for.
+
+**The correction, which is better than what I specified.** `calls` is now
+`RouteMemo::searches()` taken over a REAL `believed_water` sweep. The old
+analytic quantity survives, honestly renamed `occurrences`. `distinct_pairs` is
+derived independently from the fold store. And a **non-vacuity guard runs
+first**: `occurrences > distinct_pairs`, so a shape with no duplication reddens
+rather than passing for free. Then `assert_eq!(calls, distinct_pairs)` — one
+real search per distinct pair, exactly. Three independent quantities,
+cross-checked, where I had specified one.
+
+**The result.** 529 occurrences → **83 real searches** on the possession shape.
+**6.37×**, and it is now measured through the function under change rather than
+beside it.
+
+**Alternatives discarded.** (a) Keeping the analytic count and relaxing the
+bound — it would have made a test that cannot observe its subject pass, which
+is worse than one that cannot pass. (b) Deleting the witness — the campaign's
+lead criterion (C1a) is a search count, so the witness IS the deliverable.
+
+**ideonomy passes / overturns.** None; this is a defect adjudication. The
+generalisable lesson is recorded to memory, not re-derived here.
+
+**Capture actions.** Registry row at close on the review-methodology gap: a
+red-before-fix witness needs its GREEN path checked too, and no reviewer in this
+campaign was asked to. Spec §4.1's C1a description is corrected to say the
+count is taken through `RouteMemo::searches()`.
+
+---
+
 ## Follow-ups
 
 *(none yet — entries above carry their own capture actions)*

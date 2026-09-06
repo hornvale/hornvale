@@ -318,8 +318,18 @@ at different costs and only one of them can be committed.**
 **C1a — SEARCHES per roster-wide `believed_water` sweep. Permanent, committed,
 and the criterion of record.** A search is a memo miss. Counting them needs
 nothing but a counter on the memo itself — the exact shape
-`HomeNavCache::searches` already has, `pub(crate)`, written by the memo and read
-by the instrument.
+`HomeNavCache::searches` already has, written by the memo and read by the
+instrument.
+
+**The count is taken THROUGH `RouteMemo::searches()`, over a real
+`believed_water` sweep — never re-derived analytically beside it.** This is not
+a stylistic preference. The witness as first specified summed
+`LatestVisit::water_at` set sizes and never called `believed_water` at all;
+since the memo does not touch `water_at`, that witness would have reported its
+pre-fix number forever and could never have gone green (ledger #15). The
+quantity that moves must be read from the code that moves it. A non-vacuity
+guard (`occurrences > distinct_pairs`) runs first, so a shape with nothing to
+collapse reddens rather than passing for free.
 
 | | before (measured) | criterion |
 |---|---|---|
