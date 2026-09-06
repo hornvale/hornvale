@@ -142,3 +142,51 @@ holds a cold one. The prediction's direction was right and its mechanism was
 not, and only a same-tree control arm separated them. A preregistered
 explanation is a claim like any other; being right about the outcome does not
 license the explanation.
+
+## Enumerating fix sites is the wrong method; sweeping on the invariant is the right one
+
+The campaign's signature defect — a real number attached to the wrong quantity —
+recurred **nine times**, and the last four instances were produced by the
+*corrections* of the earlier ones. That progression is the lesson, and it is
+about method rather than care.
+
+Each time a reviewer reported the defect, the controller wrote a fix brief
+**enumerating the sites the reviewer had listed**. Each time, the implementer
+found more by re-sweeping the invariant instead of working the list:
+
+| round | sites the controller enumerated | sites the sweep added |
+|---|---|---|
+| final-review fix wave | 6 (from the reviewer's list) | — |
+| residual wave | 1 (decision 0806) | **2** (`liveness.rs:1264`, `:1997` — the code twins of 0806's sentence) |
+
+Three of the nine were reachable only by sweeping. And the one the controller
+missed most expensively was **the decision record it had written itself, four
+hours earlier, after the review had already flagged the claim** — enumerating
+from the reviewer's list never asked "did I just author a tenth site?"
+
+**Why enumeration fails here specifically.** A reviewer's list is a report of
+what *that reviewer happened to read*. It is evidence that the sites exist, not
+evidence that they are all of them. Treating it as a work order converts a
+sample into a census. The invariant — *no document may claim the home-anchored
+population saturates* — is checkable by grep against the whole tree; the list
+is not checkable against anything.
+
+**The repository already knew this** (`sweep-on-the-invariant-not-the-wording`,
+and the standing rule to say RE-READ rather than "fix these sites"), and the
+controller applied it correctly to the book freshness sweep in the same close —
+where sweeping five invariants rather than the token `believed_water` produced
+a real argument about what a byte-identical campaign can and cannot stale — and
+then failed to apply it to its own fix briefs, twice, in the same hour.
+
+**What to do instead:** a fix brief for a class of defect names the
+**invariant** and the command that checks it, and lists the known sites only as
+a starting point explicitly labelled incomplete. "Fix these six" and "make this
+statement true everywhere, here are six known instances" produce different
+work, and only the second finds the seventh.
+
+**A corollary the campaign also demonstrated.** Every one of the three
+implementers who overrode a brief was right, and each said why with evidence:
+the unsupported `~0.5/wait` figure the controller invented, the fence that
+closed nineteen lines late rather than never, and a section reference that was
+`§1.3(d)` and not `§1.2(d)`. Implementers empowered to refuse an instruction and
+argue caught what another gate in front would not have.
