@@ -184,7 +184,7 @@ What is frozen:
 | spelling | where | why |
 |---|---|---|
 | `room/face`, `room/child` | kernel stream labels | seed derivation |
-| `room/furnishing/v1`, `room/chambers/v1`, `room/layout/v1/*` | vessel stream labels | seed derivation |
+| `room/furnishing/v1`, `room/chambers/v1`, `room/chambers/built/v1`, `room/layout/v1/*` | vessel stream labels | seed derivation |
 | `room/furnishing`, `room/layout/rectilinear` | epoch keys | save format |
 | `cell-id` | a predicate name | the ledger |
 | `room/` | the knowledge-key prefix | session snapshots clients read |

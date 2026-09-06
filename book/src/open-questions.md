@@ -2538,6 +2538,35 @@ closed question: a superseded decision does not merely stop being true, it keeps
 producing correct-looking answers from readers acting in good faith, and this
 ledger is one of the places those answers accumulate.
 
+**Re-scored by [The Cruck](./chronicle/the-cruck.md) (2026-09-05): the row's
+own defect shape turned up on one more surface, and the way it stayed hidden
+is the part worth keeping.** The Handle widened the parity check from the
+floor plan to every catalog surface after finding four of them denying nouns
+they had just printed. The Cruck found a fifth kind of catalog — not of nouns
+but of *ways*: the footer that lists what a player may type to leave a room.
+It advertised `the hearth`; the parser accepted only `hearth`, and refused the
+footer's own word.
+
+What kept it invisible was not an unchecked surface but an unreachable one.
+Production had only ever derived chain-shaped structures, where the footer
+says `further in` and names nothing, so no real session had ever printed a
+named way for a parser to refuse. The defect was fully written and fully
+latent, and it became reachable the moment a dwelling could fork. Neither the
+plan-parity contract nor the Handle's widening could have caught it, because
+neither had a case that produced the output.
+
+What is mechanized is exact and small: `the_ways_on_footers_own_words_are_accepted_as_typed`
+types the footer's own words back and requires them accepted; the refusal
+half is covered separately — a shared prose noun by
+`a_prose_noun_shared_by_two_ways_names_them_rather_than_guessing`, a chain's
+own refusal shapes by `a_chain_resolves_exactly_as_before` — so both
+directions are checked, since a one-directional form is blind to
+over-admission, which is the limit this row already carries. What is
+not mechanized is the general rule that any surface naming a thing must accept
+that name; that remains a per-surface regression test each time. The standing
+lesson gains a clause: a check is blind not only where it does not reach, but
+wherever the code it covers cannot yet produce the output that would fail it.
+
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than

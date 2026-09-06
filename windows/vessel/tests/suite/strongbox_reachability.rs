@@ -73,28 +73,31 @@ fn out(t: Turn) -> String {
     }
 }
 
-/// Walk a fresh possession in through the front door and then as far in as the
-/// place goes, returning each chamber's nouns in depth order.
+/// Walk a fresh possession in through the front door and then through EVERY
+/// chamber of the structure, returning each one's nouns in visit order.
+///
+/// **This was `nouns_by_depth`, and depth is no longer the traversal** (The
+/// Cruck, Task 3). It walked `enter further in` until the far-end reply, which
+/// visits a chain and stops at the first fork — so on a forking structure it
+/// would have reported the threshold's nouns alone, and every `any(...)` below
+/// would have failed with a premise message about the world rather than about
+/// the walk. `common::visit_every_chamber` reads the ways off the rendered
+/// footer and enters each by name, which is the same claim the old loop made
+/// (these rooms are reachable by typing) over the shape that now exists.
+///
+/// It leaves the possession back in the threshold chamber rather than in the
+/// deepest one; every caller re-navigates from `out` anyway.
 ///
 /// Panics rather than returning empty if the possession never gets indoors: a
 /// reachability test that silently tested nothing would be the same defect one
 /// layer up from the one it is here to witness.
-fn nouns_by_depth(session: &mut Session) -> Vec<Vec<String>> {
+fn nouns_per_chamber(session: &mut Session) -> Vec<Vec<String>> {
     let reply = out(session.handle("enter"));
     assert!(
         reply.starts_with("[chamber "),
         "the possession never got indoors, so nothing below is tested: {reply}"
     );
-    let mut per_chamber = vec![session.chamber_nouns_here()];
-    // `MAX_CHAMBERS` is 4, so four steps is one more than any structure has;
-    // the loop stops on the far-end reply rather than on the count.
-    for _ in 0..4 {
-        if !out(session.handle("enter further in")).starts_with("[chamber ") {
-            break;
-        }
-        per_chamber.push(session.chamber_nouns_here());
-    }
-    per_chamber
+    crate::common::visit_every_chamber(session)
 }
 
 /// **A player walks into a room and a strongbox is standing in it, with a key
@@ -166,7 +169,7 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
     let world = world_at(CHAMBERED_SEED);
     let (mut session, _) =
         Session::start(&world, &PossessOpts::default()).expect("the chambered seed possesses");
-    let per_chamber = nouns_by_depth(&mut session);
+    let per_chamber = nouns_per_chamber(&mut session);
     assert!(
         per_chamber.len() > 1,
         "the chambered seed's structure has one chamber, so nothing here walks \
@@ -194,9 +197,23 @@ fn a_possession_walks_to_a_strongbox_and_finds_it_locked() {
         "the strongbox and the key are in different rooms: {per_chamber:?}"
     );
 
-    // The session is standing in the deepest chamber, which is the one that
-    // holds them (asserted above by construction of the walk, and again here
-    // by the reply the verb gives).
+    // AND A PLAYER MUST BE ABLE TO GO AND STAND IN IT. `visit_every_chamber`
+    // returns the possession to the threshold, so the room is named — which is
+    // strictly more than the old walk asserted (it left the possession in the
+    // deepest chamber and trusted that that was the one). The strongbox stands
+    // in a `Role::Store` chamber, so `store` is what a player types.
+    assert!(
+        crate::common::walk_to_role_noun(&mut session, "store"),
+        "the strongbox's own room cannot be reached by naming it"
+    );
+    assert!(
+        session
+            .chamber_nouns_here()
+            .iter()
+            .any(|n| n == "a strongbox"),
+        "`enter store` did not land in the room the strongbox stands in: {:?}",
+        session.chamber_nouns_here()
+    );
     assert_eq!(
         out(session.handle("open a strongbox")),
         LOCKED,
@@ -279,31 +296,30 @@ fn the_snapshot_carries_what_the_body_holds() {
         "a possession that has typed nothing is carrying nothing"
     );
 
-    let per_chamber = nouns_by_depth(&mut session);
+    let per_chamber = nouns_per_chamber(&mut session);
     assert!(
         per_chamber.iter().any(|c| c.iter().any(|x| x == "a key")),
         "the chambered seed's structure no longer composes a key, so nothing below is \
          tested: {per_chamber:?}"
     );
-    // Back out to the LOOMROOM to pick one up. `nouns_by_depth` leaves the
-    // possession in the deepest room, whose key is inside a shut, locked
-    // strongbox — and since Task 13's fix round `take` refuses a lid rather
-    // than reaching through it. The key a player can actually lift is the one
-    // `the-key-by-the-loom` composes at chamber index 2.
+    // Back to the LOOMROOM to pick one up. The key in the store room is inside
+    // a shut, locked strongbox — and since Task 13's fix round `take` refuses
+    // a lid rather than reaching through it. The key a player can actually
+    // lift is the one `the-key-by-the-loom` composes in the loomroom.
     //
-    // `out` leaves the structure from any chamber, so the return trip is
-    // `enter` plus two `enter further in`. It was `enter` alone until The
-    // Custodian moved the pattern off `Role::Threshold`, the role every built
-    // structure has — the move that stopped a key standing in every
-    // dwelling's front room in every world.
+    // **NAMED, not counted** (The Cruck, Task 3). This was `enter` plus two
+    // `enter further in` — "the loomroom is index 2" — which reached it only
+    // in a chain. Index 2 is still the loomroom; a bush hangs it off the
+    // threshold rather than behind the hearthroom, so the room is named
+    // instead. It was `enter` alone until The Custodian moved the pattern off
+    // `Role::Threshold`, the role every built structure has — the move that
+    // stopped a key standing in every dwelling's front room in every world.
     assert!(out(session.handle("out")).starts_with("[room "));
     assert!(out(session.handle("enter")).starts_with("[chamber "));
-    for _ in 0..2 {
-        assert!(
-            out(session.handle("enter further in")).starts_with("[chamber "),
-            "the chambered seed's structure no longer reaches the loomroom"
-        );
-    }
+    assert!(
+        crate::common::walk_to_role_noun(&mut session, "loomroom"),
+        "the chambered seed's structure no longer reaches the loomroom"
+    );
     assert_eq!(
         out(session.handle("take a key")),
         "You take the key.",
@@ -323,16 +339,13 @@ fn the_snapshot_carries_what_the_body_holds() {
     );
     let key = held[0].entity;
 
-    // As far into the structure as the place goes, out of it entirely, and
-    // back in through the front door — the key crosses four chambers and one
-    // outdoors room, and the id it comes back with is the id it left with.
-    // That identity is the campaign's own headline, and nothing else on this
-    // wire would carry it.
-    for _ in 0..4 {
-        if !out(session.handle("enter further in")).starts_with("[chamber ") {
-            break;
-        }
-    }
+    // Through EVERY chamber of the structure, out of it entirely, and back in
+    // through the front door — the key crosses every room and one outdoors
+    // room, and the id it comes back with is the id it left with. That
+    // identity is the campaign's own headline, and nothing else on this wire
+    // would carry it. ("As far in as the place goes" was the chain version of
+    // the same claim; The Cruck, Task 3.)
+    crate::common::visit_every_chamber(&mut session);
     assert!(out(session.handle("out")).starts_with("[room "));
     assert!(out(session.handle("enter")).starts_with("[chamber "));
     let still_held = session.snapshot().expect("the snapshot builds").me.carrying;

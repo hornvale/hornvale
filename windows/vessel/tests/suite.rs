@@ -39,6 +39,8 @@ mod coercion_calibration;
 mod controller_swap;
 #[path = "suite/corner_rule.rs"]
 mod corner_rule;
+#[path = "suite/cruck_readout.rs"]
+mod cruck_readout;
 #[path = "suite/display_handle.rs"]
 mod display_handle;
 #[path = "suite/doctrine.rs"]

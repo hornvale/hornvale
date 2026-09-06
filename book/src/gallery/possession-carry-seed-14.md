@@ -2,9 +2,11 @@
 
 *(This transcript is frozen. It is the only gallery page that types the
 custody verbs — `take`, `drop`, `put`, `open`, `close`, `carrying` — and it
-is the campaign's thesis end to end: a key is picked up beside a loom two
-chambers into a village dwelling, carried one room further, refused by a shut
-lid, and then used to open that chest. Two refusals are the evidence, not
+is the campaign's thesis end to end: a fork off the threshold gives this
+dwelling three ways in, and the key is picked up beside a loom in the
+loomroom, one aperture from the door — then carried back through the
+threshold and into a sibling chamber, the store, refused by a shut lid, and
+then used to open that chest. Two refusals are the evidence, not
 the noise. `take a key` in the very first room answers "You see no a key
 here." — that room composes none, since The Custodian moved the key pattern
 off `Role::Threshold`, the one role every built structure has — which is
@@ -52,30 +54,30 @@ Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 1098173175083363, day 0.00985]
+[chamber 1098173182543299, day 0.00985]
 A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying nothing.
 > take a key
 You see no a key here.
-> enter further in
-[chamber 1098173178103715, day 0.0197]
-A small room in Vapatkapak, holding a doorway, an alcove and a stone ledge.
-Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
-> enter further in
-[chamber 1098173182570403, day 0.02955]
+> enter the loomroom
+[chamber 1098173182260419, day 0.0197]
 A small room in Vapatkapak, holding a doorway, a water jar, a loom, a key, a brazier and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out.
 > take a key
 You take the key.
 > carrying
 You are carrying a key.
-> enter further in
-[chamber 1098173179279043, day 0.04925]
+> enter the threshold
+[chamber 1098173182543299, day 0.0394]
+A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
+Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
+Ways on: out, the hearth, the loomroom, the store.
+> enter the store
+[chamber 1098173180704195, day 0.04925]
 A small room in Vapatkapak, holding a doorway, a water jar, a strongbox, a key and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 Ways on: out.
@@ -103,10 +105,10 @@ Temperate forest — old-growth timber, sun-warmed, in a hollow — in the lands
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
 No direction here is closed; the nearest ground lies N, NE, E, SE, S, SW, W, NW.
 > enter
-[chamber 1098173175083363, day 0.1182]
+[chamber 1098173182543299, day 0.1182]
 A small room in Vapatkapak, holding a doorway, a bench, a water jar and a stone ledge.
 Here: Mekgshak, Zloppzekmok, Moopsh'wotzh'lap and Zweekdzettshat, and 54 others.
-Ways on: out, further in.
+Ways on: out, the hearth, the loomroom, the store.
 > carrying
 You are carrying a key.
 > drop a key
