@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/census-tail","note":"sluice: queued req-0592c639042a-20260906T195104Z census for campaign/census-tail at 0592c639042a; condition tolerance cache measurement","paths":["scripts/sluice-queue.sh","windows/worldgen/src/lib.rs"]}
