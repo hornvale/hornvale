@@ -892,3 +892,23 @@ is a place the correction has to reach. That is precisely the argument spec §1
 makes about a provenance string repeated at every step, and it is why the
 remedy in both cases is to state the thing once, where it can be resolved,
 rather than to state it accurately more often. · ideonomy passes / overturns: 0.
+
+---
+
+#42 [G6] — **The census figure I certified at G6 was three campaigns stale, and
+the queue operator caught it.** · I told Nathan "the census did not move (252
+columns, none fact/tick/agent-shaped), verified at rebaseline" and repeated it
+to the operator. Main has not been 252 columns since 2026-09-05: The Warp took
+it to 284 and The Lot to 290, both landed overnight while this campaign ran. ·
+**Re-measured at close:** 290 columns; the grep — widened to `errand|provenance`
+as well — returns nothing; and this branch's census is byte-identical to
+`origin/main`'s. **No census refresh is owed, and now that is verified against
+the schema that exists rather than the one that did.** · The failure is
+`a-committed-baseline-is-a-claim-with-a-date` for the third time in one
+campaign, and the most instructive of the three because the *conclusion* was
+right: I carried a true finding forward across three weeks of main and restated
+its evidence as current at the moment it mattered most, in a G6 digest whose
+whole job is to be current. A stale number attached to a correct conclusion is
+harder to catch than a wrong one, because nothing downstream misbehaves. ·
+Spec §7.1 carries a dated re-verification note; the original 252 stays, because
+it was true when frozen. · ideonomy passes / overturns: 0.

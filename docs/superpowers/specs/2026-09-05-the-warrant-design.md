@@ -420,6 +420,17 @@ row. Seed 42 commits no `agent-at`, so:
   if the fact count moves**. Seed 42 commits no errand facts because it
   commits no steps. **To be confirmed by regeneration, not by this
   paragraph** — it is a prediction and Task 1 owns falsifying it.
+> **RE-VERIFIED AT CLOSE, 2026-09-06, against a schema this figure predates.**
+> The 252 below was true when measured at G3 and is not any more: The Warp took
+> the census to 284 and The Lot to 290, both landed overnight. Re-run against
+> the current **290** columns, the grep for `fact|tick|agent|drive|walk|ledger`
+> — widened to include `errand|provenance` — still returns **nothing**, and this
+> branch's census is byte-identical to `origin/main`'s. The conclusion stands;
+> the number it was taken over does not. Caught by the queue operator reading a
+> claim I restated at close as though it were current, which is the same
+> instrument-with-a-date failure this campaign recorded twice elsewhere
+> (ledger #11, #40).
+
 - `book/src/laboratory/generated/the-census/rows.csv` — **252 columns,
   measured; zero match `fact|tick|agent|drive|walk|ledger`.** The census
   builds to `BuildDepth` and never runs a session. No census refresh is owed
