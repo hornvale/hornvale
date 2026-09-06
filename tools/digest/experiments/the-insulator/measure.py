@@ -16,6 +16,7 @@ import tempfile
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
+WORKLOADS_PATH = HERE / "workloads.json"
 OUTPUT_LIMIT = 16 * 1024 * 1024
 DEFAULT_TIMEOUT = 3600
 
@@ -83,6 +84,16 @@ def command_for_workload(workload: dict, checkout: Path) -> list[str]:
         raise ValueError("workload checkout must be absolute")
     command = workload["command"]
     return [argument.replace("${CHECKOUT}", str(checkout)) for argument in command]
+
+
+def _workload(workload_id: str) -> dict:
+    if not isinstance(workload_id, str) or not workload_id:
+        raise ValueError("workload id must be a non-empty string")
+    workloads = load_workloads(WORKLOADS_PATH)["workloads"]
+    for workload in workloads:
+        if workload["id"] == workload_id:
+            return workload
+    raise ValueError(f"unknown workload id: {workload_id}")
 
 
 def _stream(raw: bytes) -> dict:
@@ -231,37 +242,40 @@ def _bounded_measure(command: list[str], cwd: Path, timeout_s: int,
     }
 
 
-def capture(command: list[str], cwd: Path, destination: Path, *,
-            owned_checkout: Path, owned_target: Path,
-            owned_evidence_root: Path,
+def capture(workload_id: str, checkout: Path, target: Path,
+            evidence_root: Path, destination: Path, *,
             timeout_s: int = DEFAULT_TIMEOUT) -> dict:
-    """Run one owned command and atomically retain its bounded result."""
-    if not isinstance(command, list) or not all(isinstance(arg, str) for arg in command):
-        raise ValueError("command must be a list of strings")
-    cwd = Path(cwd)
+    """Run one frozen workload in a bounded, owned measurement cell."""
+    workload = _workload(workload_id)
+    checkout = Path(checkout)
+    target = Path(target)
+    evidence_root = Path(evidence_root)
     destination = Path(destination)
-    owned_checkout = Path(owned_checkout)
-    owned_target = Path(owned_target)
-    owned_evidence_root = Path(owned_evidence_root)
-    if not owned_checkout.is_absolute() or not owned_checkout.is_dir():
-        raise ValueError("owned checkout must be an existing absolute directory")
-    if cwd.resolve() != owned_checkout.resolve():
-        raise ValueError("capture cwd must be the owned checkout")
-    if not owned_target.is_absolute() or not _owned_path(owned_target, owned_checkout):
+    if not checkout.is_absolute() or not checkout.is_dir():
+        raise ValueError("checkout must be an existing absolute directory")
+    checkout = checkout.resolve()
+    target = target.resolve()
+    evidence_root = evidence_root.resolve()
+    destination = destination.resolve()
+    if not target.is_absolute() or not _owned_path(target, checkout):
         raise ValueError("target must be owned by the checkout")
-    if not owned_evidence_root.is_absolute() or not _owned_path(destination, owned_evidence_root):
+    if not evidence_root.is_absolute():
+        raise ValueError("evidence root must be absolute")
+    if not _owned_path(destination, evidence_root):
         raise ValueError("evidence destination must be owned")
     if destination.exists():
         raise FileExistsError(destination)
-    owned_target.mkdir(parents=True, exist_ok=True)
+    target.mkdir(parents=True, exist_ok=True)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    command = command_for_workload(workload, checkout)
     result = _bounded_measure(
-        command, cwd, timeout_s,
-        [owned_checkout, owned_target, owned_evidence_root],
+        command, checkout, timeout_s,
+        [target, evidence_root],
     )
     record = {
+        "workload_id": workload_id,
         "command": command,
-        "cwd": str(cwd),
+        "cwd": str(checkout),
         "exit_code": result.get("exit_code"),
         "deadline_s": timeout_s,
         "elapsed_s": result.get("elapsed_seconds"),
@@ -277,9 +291,9 @@ def capture(command: list[str], cwd: Path, destination: Path, *,
         "launch_error": result.get("launch_error"),
         "retained_sample_directory": result.get("retained_sample_directory"),
         "ownership": {
-            "checkout": str(owned_checkout),
-            "target": str(owned_target),
-            "evidence_root": str(owned_evidence_root),
+            "checkout": str(checkout),
+            "target": str(target),
+            "evidence_root": str(evidence_root),
             "evidence_destination": str(destination),
         },
     }

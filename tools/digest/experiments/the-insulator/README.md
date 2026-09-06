@@ -13,6 +13,9 @@ integration.
 argv and expected output paths with an explicit comparison mode. Measurements
 run in immutable, owned checkouts and owned Cargo targets. A cold run owns a
 fresh target; a warm run reuses only the target named by its manifest.
+The recorder accepts a frozen workload ID, resolves its argv from
+`workloads.json`, and rejects unknown IDs; callers cannot supply the measured
+command.
 
 Every attempt retains source, graph, toolchain, target, command, timing, exact
 bounded stdout/stderr, output identities, cleanup status, and failure reason.
@@ -25,8 +28,9 @@ reads each stream through a hard 16 MiB retention cap. An oversized writer is
 terminated as soon as a read crosses the cap; the retained attempt is marked
 invalid. Capture also runs every workload inside a host filesystem sandbox:
 macOS requires `/usr/bin/sandbox-exec`, while Linux requires `bwrap`. The
-sandbox makes only the owned checkout, target, and evidence roots writable and
-capture refuses before launch when the host mechanism is unavailable. This is
+sandbox makes only the canonical target and evidence roots writable; the
+checkout remains read-only, and capture refuses before launch when the host
+mechanism is unavailable. This is
 prevention at the host boundary, not authentication against a hostile kernel
 or proof that a sandbox implementation is bug-free. Workload argv may contain
 `${CHECKOUT}`, which is replaced with the absolute owned checkout at execution

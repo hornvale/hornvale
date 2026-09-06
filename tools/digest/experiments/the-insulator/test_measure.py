@@ -9,11 +9,25 @@ import tempfile
 import unittest
 from unittest import mock
 
+import measure
 from measure import (EnforcementUnavailable, load_workloads, capture, command_for_workload,
                      manifest_for_attempt, validate_attempt)
 
 
 ROOT = Path(__file__).parent
+
+
+def capture_fixture(command, root, destination, *, target=None, evidence_root=None):
+    target = target or root / "target"
+    evidence_root = evidence_root or root / "evidence"
+    workload = {
+        "id": "fixture",
+        "command": command,
+        "expected_outputs": [{"path": "result.json", "compare": "bytes"}],
+    }
+    with mock.patch.object(measure, "load_workloads",
+                           return_value={"workloads": [workload]}):
+        return capture("fixture", root, target, evidence_root, destination)
 
 
 def stream(raw=b""):
@@ -154,14 +168,12 @@ class AttemptTests(unittest.TestCase):
 
     def test_capture_retains_bounded_fixture_attempt(self):
         with tempfile.TemporaryDirectory() as directory:
-            destination = Path(directory) / "attempt.json"
-            result = capture(
+            root = Path(directory)
+            destination = root / "evidence" / "attempt.json"
+            result = capture_fixture(
                 [sys.executable, "-c", "print('fixture')"],
-                Path(directory),
+                root,
                 destination,
-                owned_checkout=Path(directory),
-                owned_target=Path(directory) / "target",
-                owned_evidence_root=Path(directory),
             )
             self.assertEqual(result["exit_code"], 0)
             self.assertTrue(destination.exists())
@@ -170,14 +182,11 @@ class AttemptTests(unittest.TestCase):
     def test_capture_hard_stops_oversized_subprocess_output(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            destination = root / "attempt.json"
-            result = capture(
+            destination = root / "evidence" / "attempt.json"
+            result = capture_fixture(
                 [sys.executable, "-c", "import sys; sys.stdout.write('x' * (20 * 1024 * 1024))"],
                 root,
                 destination,
-                owned_checkout=root,
-                owned_target=root / "target",
-                owned_evidence_root=root,
             )
             self.assertTrue(result["output_limit_exceeded"])
             self.assertEqual(result["stdout"]["bytes"], 16 * 1024 * 1024)
@@ -189,16 +198,41 @@ class AttemptTests(unittest.TestCase):
             root.mkdir()
             external = Path(directory) / "external.txt"
             destination = root / "evidence" / "attempt.json"
-            result = capture(
+            result = capture_fixture(
                 [sys.executable, "-c", f"open({str(external)!r}, 'w').write('nope')"],
                 root,
                 destination,
-                owned_checkout=root,
-                owned_target=root / "target",
-                owned_evidence_root=root / "evidence",
             )
             self.assertNotEqual(result["exit_code"], 0)
             self.assertFalse(external.exists())
+
+    def test_capture_allows_target_and_evidence_writes_but_denies_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout_marker = root / "source.txt"
+            target = root / "target"
+            evidence = root / "evidence"
+            destination = evidence / "attempt.json"
+            script = (
+                "from pathlib import Path; "
+                f"Path({str(target / 'built.txt')!r}).write_text('target'); "
+                f"Path({str(evidence / 'observed.txt')!r}).write_text('evidence'); "
+                f"Path({str(checkout_marker)!r}).write_text('checkout')"
+            )
+            result = capture_fixture([sys.executable, "-c", script], root, destination)
+            self.assertNotEqual(result["exit_code"], 0)
+            self.assertTrue((target / "built.txt").exists())
+            self.assertTrue((evidence / "observed.txt").exists())
+            self.assertFalse(checkout_marker.exists())
+
+    def test_capture_rejects_unknown_workload_before_launch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch.object(measure.subprocess, "Popen") as launch:
+                with self.assertRaisesRegex(ValueError, "unknown workload id"):
+                    capture("not-frozen", root, root / "target", root / "evidence",
+                            root / "evidence" / "attempt.json")
+                launch.assert_not_called()
 
     def test_capture_refuses_when_enforcement_is_unavailable(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -206,13 +240,13 @@ class AttemptTests(unittest.TestCase):
             with mock.patch("measure.platform.system", return_value="Plan9"), self.assertRaisesRegex(
                 EnforcementUnavailable, "no supported filesystem sandbox"
             ):
-                capture(
-                    [sys.executable, "-c", "print('fixture')"],
-                    root,
-                    root / "evidence" / "attempt.json",
-                    owned_checkout=root,
-                    owned_target=root / "target",
-                    owned_evidence_root=root / "evidence",
+                with mock.patch.object(measure, "load_workloads", return_value={"workloads": [{
+                    "id": "fixture", "command": [sys.executable, "-c", "print('fixture')"],
+                    "expected_outputs": [{"path": "result.json", "compare": "bytes"}],
+                }]}):
+                    capture(
+                        "fixture", root, root / "target", root / "evidence",
+                        root / "evidence" / "attempt.json",
                 )
 
     @unittest.skipUnless(platform.system() == "Linux", "Linux-only enforcement prerequisite")
@@ -222,39 +256,27 @@ class AttemptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             with self.assertRaisesRegex(EnforcementUnavailable, "bubblewrap"):
-                capture(
-                    [sys.executable, "-c", "print('fixture')"],
-                    root,
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], root,
                     root / "evidence" / "attempt.json",
-                    owned_checkout=root,
-                    owned_target=root / "target",
-                    owned_evidence_root=root / "evidence",
                 )
 
     def test_capture_rejects_unowned_paths(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            checkout = root / "checkout"
+            checkout.mkdir()
             with self.assertRaisesRegex(ValueError, "owned"):
-                capture(
-                    [sys.executable, "-c", "print('fixture')"],
-                    root,
-                    root / "attempt.json",
-                    owned_checkout=root / "other-checkout",
-                    owned_target=root / "target",
-                    owned_evidence_root=root,
-                )
+                capture_fixture([sys.executable, "-c", "print('fixture')"], checkout,
+                                root / "attempt.json", target=root / "target")
 
     def test_capture_rejects_unowned_evidence_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             with self.assertRaisesRegex(ValueError, "evidence"):
-                capture(
-                    [sys.executable, "-c", "print('fixture')"],
-                    root,
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], root,
                     root / "attempt.json",
-                    owned_checkout=root,
-                    owned_target=root / "target",
-                    owned_evidence_root=root / "evidence",
                 )
 
 
