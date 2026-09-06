@@ -21,6 +21,7 @@
 # USAGE
 #   scripts/gnomon-injection.sh                  # the whole battery
 #   scripts/gnomon-injection.sh baseline-a karst # only these arms (a pilot)
+#   scripts/gnomon-injection.sh check            # run the guards, build nothing, exit 0/1
 #   HV_GNOMON_PILOT=1 scripts/gnomon-injection.sh ...   # allow an off-host run
 #
 # The fixture directory is REBUILT from scratch on every invocation, so the
@@ -38,6 +39,19 @@
 #
 #   ssh lefford 'cd ~/Projects/hornvale && git fetch --all && \
 #     git checkout <full-sha> && scripts/gnomon-injection.sh'
+#
+# WHAT THE TREE GUARD PROTECTS, EXACTLY (The Spillway). This script mutates
+# tracked SOURCE and restores it with `git checkout --`, and stamps the
+# manifest with `sha=$(git rev-parse HEAD)` as a claim about what was BUILT.
+# Both are claims about source. So the guard refuses dirt anywhere a build or
+# the mutation can see, and allows it under `book/` (the census's own output
+# and the project book) and `docs/` (prose and ledgers), which the `hornvale`
+# binary neither compiles nor reads on a `lab run`. It used to refuse the
+# whole tree, and that is what deadlocked a census delivery: the staged
+# goldens ARE dirt under book/, and the arms this script authors are what the
+# delivery's own gate compares against them (The Warp, ledger #12; spec §1).
+# `check` runs both guards and stops, so the delivery can ask before it waits
+# for the box lock, and so this guard has a test that needs no build.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -95,6 +109,16 @@ arm_field() { printf '%s' "$1" | cut -d'|' -f"$2"; }
 # ---------------------------------------------------------------------------
 # Guards
 # ---------------------------------------------------------------------------
+mode="run"
+if [ "${1:-}" = "check" ]; then
+    mode="check"
+    shift
+    if [ "$#" -ne 0 ]; then
+        echo "gnomon-injection: usage: gnomon-injection.sh check   (takes no arms)" >&2
+        exit 2
+    fi
+fi
+
 # shellcheck source=scripts/census-canonical-host.sh
 . "$(dirname "$0")/census-canonical-host.sh"
 here="$(hostname -s 2>/dev/null || hostname)"
@@ -121,21 +145,34 @@ EOF
     echo "gnomon-injection: PILOT run on '$here' (not '$CANONICAL_CENSUS_HOST') — these fixtures do not adjudicate H1." >&2
 fi
 
-# The tree must be clean before anything is rewritten: this script edits
-# TRACKED source in place, and a restore into a tree that already carried
-# uncommitted edits to those files would silently discard them.
+# The tree must be clean everywhere a build or the mutation can see: this
+# script edits TRACKED source in place, and a restore into a tree that
+# already carried uncommitted edits to those files would silently discard
+# them; and the manifest's `sha` is a claim about the source that was built.
 #
-# The fixture directory is EXCLUDED from that check, and the exclusion is
-# what makes this a guard rather than a one-shot: it is this script's own
-# output, wiped and rebuilt from scratch on every invocation, so after the
-# very first run an unconditional check refuses forever — the second run
-# reports the first run's evidence as the dirt it must not destroy.
-if [ -n "$(git status --porcelain -- ":!$FIXTURES")" ]; then
+# THREE trees are excluded, and each exclusion is what makes this a guard
+# rather than a one-shot or a deadlock:
+#   - the fixture directory: this script's own output, wiped and rebuilt on
+#     every invocation, so an unconditional check refuses forever after the
+#     first run;
+#   - book/: the census's own output and the project book. A census delivery
+#     runs this script with its goldens STAGED there (The Spillway); the
+#     `hornvale` binary neither compiles nor reads book/ on a `lab run`;
+#   - docs/: prose, timings, audits. Same argument.
+# Anything else dirty — kernel/, domains/, windows/, cli/, studies/, scripts/,
+# Cargo.* — refuses, and is named.
+dirty="$(git status --porcelain -- . ":!$FIXTURES" ":!book" ":!docs")"
+if [ -n "$dirty" ]; then
     echo "gnomon-injection: REFUSING to run with a dirty tree — this script rewrites" >&2
     echo "tracked source in place and restores it with 'git checkout --'; uncommitted" >&2
     echo "work in those files would be destroyed. Commit or stash first:" >&2
-    git status --short -- ":!$FIXTURES" >&2
+    printf '%s\n' "$dirty" >&2
     exit 1
+fi
+
+if [ "$mode" = "check" ]; then
+    echo "gnomon-injection: check OK — host '$here', tree clean outside $FIXTURES, book/ and docs/" >&2
+    exit 0
 fi
 
 # Restore whatever is currently substituted, on ANY exit including an

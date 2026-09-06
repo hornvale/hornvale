@@ -216,3 +216,74 @@ reading the harness, from "degrade" to "refuse".
   roster (`docs/timings/subfloor-roster.tsv:1273`) selects it, and The Warp's
   delivery log shows it failing INSIDE `make gate-commit`. Stale comment;
   corrected by this campaign's re-statement of that witness's comment.
+
+---
+
+## Task 1 — complete
+
+**What shipped.** `scripts/gnomon-injection.sh` gained a `check` subcommand
+(no arguments; runs the host guard and the tree guard, builds and mutates
+nothing, exits 0/1/2) and its tree guard was narrowed from "the whole tree
+outside the fixture directory must be clean" to "the tree must be clean
+everywhere a build or the source mutation can see" — `git status --porcelain
+-- . ":!$FIXTURES" ":!book" ":!docs"`, excluding `book/` and `docs/` in
+addition to the pre-existing fixture-directory exclusion. This is spec §3.3,
+task 1 of decision 0836's plan: the delivery (`scripts/sluice-census.sh`,
+later tasks) stages its regenerated census goldens under `book/` and needs to
+re-author the Gnomon injection arms afterward without the old guard reading
+its own staged dirt as a reason to refuse.
+
+**The test's arms** (`scripts/test-gnomon-injection.sh`, 10 assertions, run
+against a scratch repo carrying only the script and its two sourced files —
+never the real repo):
+- the host guard, exercised for real (passes clean on the canonical box
+  without `HV_GNOMON_PILOT`; refuses and names the host off it);
+- clean tree: `check` passes;
+- a MODIFIED `book/` file is allowed;
+- an UNTRACKED `book/` file is allowed;
+- STAGED `book/` and `docs/` dirt together is allowed;
+- dirt inside the fixture directory is allowed;
+- CONTROL: a modified tracked source file (`domains/terrain/src/strata.rs`)
+  still refuses and is named;
+- CONTROL: a staged new file outside `book/`/`docs/` (`scripts/new.sh`) still
+  refuses and is named;
+- `check` with extra arguments is a usage error (rc=2);
+- anti-vacuity: `check` never authors a manifest or builds a `target/`.
+
+The two CONTROL arms are load-bearing in the same sense the campaign's own
+ideonomy note (spec, and ledger entry #1's enrichment 1) makes explicit:
+without them every "book/docs dirt is allowed" arm above would pass equally
+well for a guard that had been deleted outright rather than narrowed.
+
+**A ruling made while implementing.** The brief's `check` wired the host
+guard's refusal path through `HV_GNOMON_PILOT` exactly as written, and this
+session is running off the canonical box (`lefford`), so the test's
+"off-canonical-box" branch is the one actually exercised here — confirmed by
+running the RED test first (see task-1-report.md) and observing the host
+guard's real, unmodified refusal text before any script change landed. No
+change to the brief's shape was needed; recorded because the controller's
+context block called this out as the expected reading and it is worth
+confirming it held rather than assuming it did.
+
+**Ideonomy.** None run for this task — the brief specifies the guard
+predicate, the subcommand's exit codes, and the test text verbatim, so there
+was no design fork for this task to explore; the design work (the rule for
+what a delivery may satisfy vs. defer, and the trigger for re-authoring) was
+already done in ledger entry #1's ideonomy pass for the campaign as a whole.
+
+**Files changed:** `scripts/gnomon-injection.sh` (USAGE block, guard-rationale
+paragraph, guards section), `scripts/test-gnomon-injection.sh` (new),
+`scripts/lane-outboard.sh` (registered the test in the `outboard` set), this
+ledger.
+
+**Concerns.** `make shellcheck` reports one PRE-EXISTING failure unrelated to
+this task: `scripts/sluice-census.sh:216`'s `release_census_row` trips
+SC2329 ("function is never invoked") under the shellcheck version installed
+in this worktree, even though it carries a `# shellcheck disable=SC2317`
+directive immediately above it (SC2317 and SC2329 are different checks for
+the same underlying shape, and this shellcheck version added SC2329 after
+that directive was written). Verified pre-existing by stashing this task's
+changes and re-running `make shellcheck` against unmodified HEAD: the same
+single failure appears, byte-identical. Not touched by this task; flagged
+for a later task or a separate fix, since `scripts/sluice-census.sh` is
+outside this task's file list.
