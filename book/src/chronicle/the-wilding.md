@@ -18,9 +18,17 @@ individuals. From the same demography stack The Quarry fit its predator field to
 mobile, non-autotrophic species, ranked by their realized mass, each pinned to the
 cell where it is densest: a herd here, a lair there. `vessel::derive_wild_npcs` mints
 those concentrations as agents and appends them to the peopled roster, in the
-possession session and in the population-health simulation alike. Where the world
-had five kinds of derived mind, it now has the fauna too: a wild rust-monster, a wild
-otyugh, a wild xorn, a wild giant-elk.
+population-health simulation and (at the time) in the possession session alike.
+Where the world had five kinds of derived mind, it now has the fauna too: a wild
+rust-monster, a wild otyugh, a wild xorn, a wild giant-elk.
+
+*(The Roll later gave the possession session its own sibling derivation,
+`derive_wild_herds`, keyed by attractor vertex rather than by a
+concentration's position in its input list — so an ordinary `possess` no
+longer reaches `derive_wild_npcs` at all; the health simulation and a
+staged session still do. The Ken (Task 4) found this while fixing a label
+defect shared by both: a completeness claim scoped to `derive_wild_npcs`
+alone silently missed the one site a player actually meets.)*
 
 A beast is not a person, and the derivation honors the difference. A wild species is,
 by construction, one absent from the psyche registry — it has no authored

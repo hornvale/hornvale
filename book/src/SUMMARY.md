@@ -472,6 +472,7 @@
 - [The Warp](./chronicle/the-warp.md)
 - [The Cruck](./chronicle/the-cruck.md)
 - [The Warrant](./chronicle/the-warrant.md)
+- [The Ken](./chronicle/the-ken.md)
 
 # Appendix: The Frontier
 

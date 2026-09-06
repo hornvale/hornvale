@@ -115,7 +115,7 @@ and its exits are unchanged:
 
 ```text
 > wait 90
-[room 634912876, day 90]
+[room — …]
 You stand in temperate rainforest — a fern-choked draw dry on a rise — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. …
 Ways on: NW, S, NE.
 ```

@@ -670,8 +670,12 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
     let w = world_at(WILD_SEED);
     let (mut wild_session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
 
-    // Wild agents enlarge the roster over the peoples-only session, and read as
-    // beasts ("a wild <species>").
+    // Wild agents enlarge the roster over the peoples-only session, and are
+    // genuinely wild (village-less) bodies — checked against `Body.village`
+    // rather than the label text: since The Ken, Task 4 (round two), a wild
+    // body's label is bare `species`, matching the settled convention
+    // (`derive_staged_npcs`'s doc: "the label carries NO article"), so a
+    // label no longer contains the word "wild" at all.
     let peopled_count = {
         let opts = PossessOpts {
             wild_agents: false,
@@ -691,8 +695,8 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
         labels.len()
     );
     assert!(
-        labels.iter().any(|l| l.contains("wild")),
-        "at least one appended agent reads as a wild beast: {labels:?}"
+        wild_session.bodies().iter().any(|b| b.village.is_none()),
+        "at least one appended agent reads as a wild (village-less) beast: {labels:?}"
     );
 
     // Cross the seek crossing (~5.667 days from day 0.5): the wild beasts,

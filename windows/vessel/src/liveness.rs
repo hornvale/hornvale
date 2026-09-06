@@ -9002,7 +9002,7 @@ pub fn derive_wild_npcs(
     concentrations: Vec<(String, [f64; 3])>,
 ) -> Vec<Body> {
     derive_bodies_at(world, ctx, ledger, concentrations, |species| {
-        format!("a wild {species}")
+        species.to_string()
     })
 }
 
@@ -9011,18 +9011,34 @@ pub fn derive_wild_npcs(
 /// [`derive_wild_npcs`]'s sibling, and deliberately the same derivation: a
 /// staged body and a wild one are the same shape — village-less, built from
 /// (species, position) — so they must not drift into two ways of making one
-/// thing. They differ in exactly one respect, which is the label: a staged
-/// goblin is labelled `goblin`, and calling it "a wild goblin" would assert
-/// something about the world that the caller never said.
+/// thing. **The Ken, Task 4: all three wild-shaped derivations —
+/// this one, [`derive_wild_npcs`], and [`derive_wild_herds`] — are now
+/// identical in labelling, fixed in two rounds.**
+///
+/// This doc used to record a difference here — a staged goblin was labelled
+/// `goblin`, a wild one `"a wild goblin"` — and named the WILD side a
+/// pre-existing defect (it rendered "The a wild carrion-crawler looks
+/// lost") left alone because its blast radius was committed goldens and
+/// book galleries. `presence_line` (`session.rs`) started rendering a wild
+/// GROUP's label rather than its species, which would have moved that
+/// defect into the presence line instead of fixing it, so this campaign
+/// paid the golden-blast-radius cost instead. Round one fixed
+/// `derive_wild_npcs`'s label to match this function's bare
+/// `species.to_string()` — the wrong target, reached only from
+/// `windows/lab` and tests, never from a live `possess` session. Round two
+/// (a controller correction) fixed `derive_wild_herds`'s label the same
+/// way: it is what an ordinary possession actually derives (`session.rs`
+/// calls it directly), and its own `"a wild {species}"` label was the one
+/// reproducing "The a wild carrion-crawler looks lost" in real play (seed
+/// 3, `wait` then `needs`). If labelling is now the whole difference
+/// between the three derivations, that is a real question for a future
+/// campaign to collapse them outright — this one does not, because a
+/// caller elsewhere may yet depend on them staying separately named.
 ///
 /// **The label carries NO article, and that is the settled convention rather
 /// than a style choice.** A settled NPC is "hobgoblin of Naabeena"; the prose
 /// that renders a creature prepends its own determiner ("The {label} looks
-/// lost"). `derive_wild_npcs` breaks that — its labels read "a wild
-/// carrion-crawler", which renders as "The a wild carrion-crawler looks
-/// lost" on `main` today. That is a pre-existing defect in the WILD labels,
-/// not in the prose, and it is left alone here only because its blast radius
-/// is committed goldens and book galleries.
+/// lost").
 /// type-audit: bare-ok(identifier-text: cast)
 pub fn derive_staged_npcs(
     world: &World,
@@ -9188,6 +9204,16 @@ fn wild_body(
 /// unchanged for the health battery and the benches. The two share
 /// `wild_body`; only the identity (the `Lineage` each mints) differs.
 ///
+/// **This is the wild-shaped derivation an ordinary possession actually
+/// walks through** (`session.rs` calls it directly for real herds), which
+/// is why its label — bare `species`, same as [`derive_wild_npcs`] and
+/// [`derive_staged_npcs`] since The Ken, Task 4 round two — is the one that
+/// mattered for closing "The a wild {species} …" in live play. It used to
+/// read `format!("a wild {}", herd.species)`, independently of the other two
+/// derivations' labelling, which is exactly how a first pass at this
+/// campaign fixed the two functions nobody plays through and missed the one
+/// everybody does.
+///
 /// type-audit: bare-ok(identifier-text: species)
 pub fn derive_wild_herds(
     world: &World,
@@ -9213,7 +9239,7 @@ pub fn derive_wild_herds(
                 role: &role,
                 ordinal: i,
             });
-            let label = format!("a wild {}", herd.species);
+            let label = herd.species.clone();
             ledger
                 .commit(
                     Fact {
@@ -12378,9 +12404,17 @@ mod tests {
         );
         let biosphere = hornvale_species::biosphere_registry();
         for n in &wild {
-            assert!(
-                n.label.starts_with("a wild "),
-                "a wild NPC reads as a beast: {}",
+            // The Ken, Task 4: a wild NPC's label is now bare `species`, not
+            // `"a wild {species}"` — labels carry no article, matching
+            // `derive_staged_npcs`'s settled convention (a displayed noun
+            // must be one `examine` can resolve, and `examine` matches the
+            // label). The assertion this loop actually needs — that the
+            // roster read here is wild, not settled — is the `social_form`
+            // check immediately below, which never depended on the label's
+            // spelling.
+            assert_eq!(
+                n.label, n.species,
+                "a wild NPC's label is its bare species: {}",
                 n.label
             );
             let social_form = biosphere

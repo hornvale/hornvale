@@ -2567,6 +2567,32 @@ that name; that remains a per-surface regression test each time. The standing
 lesson gains a clause: a check is blind not only where it does not reach, but
 wherever the code it covers cannot yet produce the output that would fail it.
 
+**Re-scored by [The Ken](./chronicle/the-ken.md) (2026-09-06): a sixth surface,
+found by a player rather than by any check, and a second failure shape the
+row had not yet named.** The presence line built a wild group's displayed
+noun from `species` while `examine` matched on `label` — the same
+denies-a-noun-it-just-printed shape The Handle and The Cruck had already
+found on four surfaces and a fifth, but this one escaped every mechanized
+form of the contract rather than an unreached one: the roster was reachable
+in ordinary play, the check simply never looked at it, because nothing had
+told the check this roster existed. It surfaced from report #12, a player
+saying a white dragon "said" it was a black one, not from the ledger's own
+instrument.
+
+Fixing the display half exposed a second shape this row had not yet
+distinguished from the first: **a noun can be printed, accepted, *and*
+answered wrong.** With three same-suffix labels in one room, `examine
+dragon` no longer denied the noun — it silently picked one, confidently and
+arbitrarily, which is a worse failure than a refusal because it gives the
+player no signal a choice was even made. The fix refuses instead of
+guessing, which converts this instance but establishes no general check for
+it: nothing yet asserts that an ambiguous needle is never silently resolved,
+anywhere else in the parser it could recur. The standing lesson holds
+without amendment — a surface escapes a check either by being unreached or
+by never having been told to look — and gains a worked example of the
+second: the check existed, the surface was live, and nobody had pointed the
+one at the other.
+
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
