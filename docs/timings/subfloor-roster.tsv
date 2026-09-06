@@ -1283,8 +1283,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_column
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_287_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -1360,7 +1358,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -3305,7 +3302,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3698,6 +3694,11 @@ hornvale-worldgen::suite$graph_derive::a_water_route_links_the_two_coasts
 hornvale-worldgen::suite$graph_derive::land_route_attempts_are_bounded_on_the_fixture
 hornvale-worldgen::suite$graph_derive::no_land_route_crosses_the_peak
 hornvale-worldgen::suite$graph_derive::the_graph_is_deterministic_across_rebuilds
+hornvale-worldgen::suite$hidage_probe::a_constructed_field_with_one_dominant_basin_reads_lives_no_city_and_rescale
+hornvale-worldgen::suite$hidage_probe::count_against_a_bar_returns_the_straddle_inclusively
+hornvale-worldgen::suite$hidage_probe::gini_is_zero_for_a_constant_vector_and_near_one_for_a_one_hot
+hornvale-worldgen::suite$hidage_probe::spearman_is_one_on_agreement_minus_one_on_reversal_and_zero_on_a_constant
+hornvale-worldgen::suite$hidage_probe::the_verdict_rule_is_spec_section_4_on_every_seed
 hornvale-worldgen::suite$history_bake::a_displaced_people_rolls_downhill_and_the_cascade_is_recorded
 hornvale-worldgen::suite$history_bake::a_hostile_vertex_in_a_full_world_starves_instead_of_cascading
 hornvale-worldgen::suite$history_bake::a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare
