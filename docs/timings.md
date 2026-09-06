@@ -6106,3 +6106,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T02:26:46Z | sluice:gate | 813.842 | 21015.216 | 552.838 | 26.50 | 0 | 2a4c08da8 |  | lefford | 40 |
 | 2026-09-06T02:29:28Z | sluice:clients | 161.677 | 2256.665 | 216.086 | 15.29 | 0 | 48547597e |  | lefford | 40 |
 | 2026-09-06T02:37:19Z | sluice:heavy | 470.955 | 10441.817 | 160.025 | 22.51 | 0 | 308c759bc |  | lefford | 40 |
+| 2026-09-06T14:33:47Z | gate-commit | 99.054 | 442.168 | 35.509 | 4.82 | 0 | 8acd48d29 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T14:44:32Z | gate-commit | 193.136 | 920.639 | 62.907 | 5.09 | 0 | 8acd48d29 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T14:45:36Z | gate-commit | 37.487 | 69.534 | 16.410 | 2.29 | 0 | 8acd48d29 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:12:07Z | rebaseline | 200.108 | 436.649 | 18.202 | 2.27 | 0 | 0eb166a75 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:13:09Z | gate-commit | 47.918 | 95.339 | 39.716 | 2.82 | 0 | 0eb166a75 | campaign/the-hidage | MacBookPro | 10 |

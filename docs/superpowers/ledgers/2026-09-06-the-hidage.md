@@ -186,6 +186,176 @@ overturns: 0 — a review gate, not a design choice. · Capture: this entry.
 - `docs/timings.md` gained gate-commit rows (uncommitted); they ride with
   Task 1's commit.
 
+## Task 1 — readout
+
+HEAD at run time: `0eb166a75043c02ac37be1fdda57c0cdf2c8cd9e` (the probe file
+lands in the next commit, on top of this SHA). Machine: `MacBookPro.local`.
+Wall time: 17.965 s real (16.978 s user, 0.794 s sys) for
+`cargo test -p hornvale-worldgen --test suite -- hidage_probe --ignored --nocapture`,
+five world builds plus one `flow` per settling people per world — well under
+the sub-two-minute bound that would have required hoisting `hops_to_attractor`
+(it already takes the people's `&Flow` rather than recomputing it per call,
+applied from the start rather than measured into afterward).
+
+**H3 correction, beyond a name fix.** The brief's H3 code, taken verbatim,
+loops over every alive occupation and asserts `K_p(v) > 0` at each one. Run
+as written, it fails deterministically on seed 42: an alive bugbear
+settlement (peak population 37) sits at vertex 22182, where the probe's
+present-era `K` is exactly `0.0`. This is not a wiring bug. Traced with a
+throwaway debug print in `bake_history_from` (reverted before commit): the
+bake's own last simulated era (`bake_eras`, `lib.rs:3924`) carries
+`temp_offset = -12.6`, `sea_level = -1856.29` for seed 42 — not
+`EraAdjust::present`'s `temp_offset = 0.0`, `sea_level = -1820.29` — so a
+community founded and grown against that colder, lower-sea-level era can
+outlive it once the probe's present-day reconstruction (spec §3.1's own
+named **known approximation**, and G3 flag 4) drops its site's capacity to
+zero. Spec §3.4 requires exactly this be "counted and printed separately,
+never dropped silently" (the probe's `k_zero_sites`), and spec §7 itself
+states H3 as a witness "at **one** alive site", not at every one. So H3 was
+narrowed to match §7 literally: it now asserts `surface_checked > 0`,
+`sub_checked > 0`, and a new `surface_positive_k_seen` (at least one alive
+surface site witnesses a positive present-era capacity), rather than
+asserting positivity at every alive site. The subterranean arm (`multiplier
+<= 1.0`) was left exactly as the brief has it — it held on first run and is
+a static bound, not an era-dependent one. RED was the original strict
+assertion failing on real seed-42 data (an assertion failure, not a compile
+error — the acceptable stopping point Step 2 names); GREEN is the
+spec-aligned version above.
+
+Probe output, verbatim:
+
+```text
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.02s
+     Running tests/suite.rs (target/debug/deps/suite-295e07b6625e1279)
+
+running 1 test
+HAMLET_POPULATION_CEILING = 150  LONGHOUSE_POPULATION_FLOOR = 200
+
+== seed 42 ==  alive N_s 390  ended 822  |A_s| 390 (shortfall 0)
+  c_s (acc >= 150) 390 / 390   c200_s 388 / 390   occupied-by-an-alive-site 21 / 390
+  S1 gini(acc) 0.352  S2 gini(m) 0.323  S3 spearman(acc,K) 0.398  S4 max/median(acc) 5.60
+  P2 acc: min 183.2 median 1504.1 max 8424.7   P2 m: median 34.57 max 138.66
+  P1 alive sites: attractors 52 / 390   sharing an attractor 354 / 390   K==0 2   multi-people attractor 86
+  P1 hops to attractor: median 2 max 9   m: median 2.95 max 93.57   attainment peak/K: median 0.66 min 0.07 max 2.05
+  P1 K median 51.7 acc median 136.0  |  P3 ended: n 822  K median 56.2 acc median 210.1 m median 4.78
+    bugbear        N_p   63  attractors   858  top-N acc min    771.8 med   1118.0 max   3869.6  c150  63  c200  63  occupied   4  K@top med   65.9
+    desert-dwarf   N_p   34  attractors   869  top-N acc min   2107.9 med   2853.3 max   5901.7  c150  34  c200  34  occupied   1  K@top med   55.6
+    desert-elf     N_p   13  attractors   876  top-N acc min    747.9 med    904.6 max   2069.2  c150  13  c200  13  occupied   1  K@top med   15.6
+    drow           N_p   24  attractors   147  top-N acc min    183.2 med    288.9 max   1136.4  c150  24  c200  22  occupied   2  K@top med   32.1
+    gnoll          N_p    5  attractors   832  top-N acc min   1254.8 med   1453.6 max   2245.4  c150   5  c200   5  occupied   1  K@top med   22.6
+    goblin         N_p    6  attractors   876  top-N acc min   3307.1 med   3635.3 max   4339.7  c150   6  c200   6  occupied   0  K@top med   40.9
+    gully-dwarf    N_p    3  attractors   829  top-N acc min   1341.9 med   1439.8 max   1491.5  c150   3  c200   3  occupied   0  K@top med   36.9
+    high-elf       N_p    2  attractors   832  top-N acc min   2629.4 med   3284.3 max   3939.2  c150   2  c200   2  occupied   0  K@top med   36.2
+    hill-dwarf     N_p   26  attractors   743  top-N acc min   1468.8 med   1973.1 max   3890.9  c150  26  c200  26  occupied   2  K@top med   36.3
+    hobgoblin      N_p   40  attractors   799  top-N acc min   2125.0 med   3008.6 max   8424.7  c150  40  c200  40  occupied   1  K@top med   83.0
+    human          N_p    7  attractors   923  top-N acc min   2403.9 med   2693.5 max   3361.4  c150   7  c200   7  occupied   2  K@top med   35.9
+    kobold         N_p  130  attractors   585  top-N acc min    638.4 med   1254.8 max   7530.8  c150 130  c200 130  occupied   7  K@top med   50.4
+    sea-elf        N_p    3  attractors  1469  top-N acc min    440.6 med    475.7 max    498.2  c150   3  c200   3  occupied   0  K@top med   33.3
+    snow-elf       N_p    5  attractors   998  top-N acc min   1012.5 med   1298.7 max   1853.0  c150   5  c200   5  occupied   0  K@top med   26.8
+    wood-elf       N_p   29  attractors   832  top-N acc min    938.3 med   1231.1 max   3939.2  c150  29  c200  29  occupied   0  K@top med   36.8
+
+== seed 7 ==  alive N_s 250  ended 406  |A_s| 250 (shortfall 0)
+  c_s (acc >= 150) 250 / 250   c200_s 250 / 250   occupied-by-an-alive-site 8 / 250
+  S1 gini(acc) 0.262  S2 gini(m) 0.218  S3 spearman(acc,K) 0.614  S4 max/median(acc) 3.13
+  P2 acc: min 387.6 median 2054.4 max 6421.6   P2 m: median 48.46 max 114.84
+  P1 alive sites: attractors 46 / 250   sharing an attractor 211 / 250   K==0 3   multi-people attractor 74
+  P1 hops to attractor: median 1 max 5   m: median 2.37 max 100.55   attainment peak/K: median 0.82 min 0.08 max 1.54
+  P1 K median 37.4 acc median 86.1  |  P3 ended: n 406  K median 38.4 acc median 76.7 m median 1.97
+    bugbear        N_p    8  attractors  1224  top-N acc min   1951.9 med   2242.3 max   3029.3  c150   8  c200   8  occupied   0  K@top med   68.4
+    desert-dwarf   N_p   12  attractors  1226  top-N acc min   4118.8 med   4884.2 max   6421.6  c150  12  c200  12  occupied   0  K@top med   55.8
+    desert-elf     N_p    7  attractors  1219  top-N acc min   1060.6 med   1302.7 max   1427.4  c150   7  c200   7  occupied   1  K@top med   22.0
+    drow           N_p    3  attractors   318  top-N acc min    387.6 med    399.7 max    514.9  c150   3  c200   3  occupied   1  K@top med   32.8
+    gnoll          N_p   13  attractors  1211  top-N acc min    825.0 med    979.2 max   1301.6  c150  13  c200  13  occupied   1  K@top med   31.5
+    goblin         N_p   36  attractors  1236  top-N acc min   1707.1 med   2254.7 max   4219.3  c150  36  c200  36  occupied   2  K@top med   39.6
+    gully-dwarf    N_p    3  attractors  1213  top-N acc min   1417.5 med   1417.8 max   1434.6  c150   3  c200   3  occupied   0  K@top med   34.0
+    high-elf       N_p   34  attractors  1273  top-N acc min   1064.5 med   1342.7 max   2420.8  c150  34  c200  34  occupied   0  K@top med   37.0
+    hill-dwarf     N_p   11  attractors  1139  top-N acc min   1796.5 med   2125.1 max   3322.4  c150  11  c200  11  occupied   0  K@top med   36.4
+    hobgoblin      N_p   39  attractors  1174  top-N acc min   2398.0 med   2909.3 max   6257.1  c150  39  c200  39  occupied   1  K@top med   84.9
+    human          N_p   12  attractors  1270  top-N acc min   2531.8 med   2903.9 max   4124.4  c150  12  c200  12  occupied   0  K@top med   35.6
+    kobold         N_p   52  attractors   987  top-N acc min   1282.6 med   1811.9 max   4481.1  c150  52  c200  52  occupied   2  K@top med   39.8
+    sea-elf        N_p    2  attractors  1417  top-N acc min    500.8 med    512.1 max    523.4  c150   2  c200   2  occupied   0  K@top med   40.4
+    snow-elf       N_p    6  attractors  1423  top-N acc min   1535.0 med   1907.0 max   1990.6  c150   6  c200   6  occupied   0  K@top med   30.3
+    wood-elf       N_p   12  attractors  1273  top-N acc min   1511.6 med   1575.8 max   2420.8  c150  12  c200  12  occupied   0  K@top med   37.1
+
+== seed 13 ==  alive N_s 262  ended 799  |A_s| 262 (shortfall 0)
+  c_s (acc >= 150) 262 / 262   c200_s 262 / 262   occupied-by-an-alive-site 17 / 262
+  S1 gini(acc) 0.446  S2 gini(m) 0.366  S3 spearman(acc,K) 0.542  S4 max/median(acc) 11.24
+  P2 acc: min 275.2 median 1365.7 max 15352.3   P2 m: median 39.37 max 218.53
+  P1 alive sites: attractors 44 / 262   sharing an attractor 208 / 262   K==0 19   multi-people attractor 51
+  P1 hops to attractor: median 1 max 7   m: median 4.97 max 156.91   attainment peak/K: median 0.65 min 0.05 max 1.02
+  P1 K median 50.9 acc median 201.2  |  P3 ended: n 799  K median 68.1 acc median 167.8 m median 3.45
+    bugbear        N_p   69  attractors  1085  top-N acc min    630.8 med   1164.7 max   4808.1  c150  69  c200  69  occupied   4  K@top med   64.3
+    desert-dwarf   N_p    3  attractors  1064  top-N acc min   6238.4 med   6961.6 max   7405.5  c150   3  c200   3  occupied   0  K@top med   59.6
+    desert-elf     N_p    3  attractors  1071  top-N acc min   1785.6 med   1873.9 max   1895.3  c150   3  c200   3  occupied   0  K@top med   15.0
+    drow           N_p    5  attractors   319  top-N acc min    275.2 med    310.8 max    418.7  c150   5  c200   5  occupied   0  K@top med   12.7
+    gnoll          N_p   28  attractors  1064  top-N acc min    792.8 med   1011.9 max   1927.6  c150  28  c200  28  occupied   1  K@top med   23.7
+    goblin         N_p    5  attractors  1097  top-N acc min   4211.4 med   4979.7 max   6385.5  c150   5  c200   5  occupied   0  K@top med   41.7
+    gully-dwarf    N_p    3  attractors  1084  top-N acc min   1826.0 med   1880.0 max   1886.0  c150   3  c200   3  occupied   0  K@top med   37.6
+    high-elf       N_p   25  attractors  1080  top-N acc min    846.5 med   1267.4 max   2806.2  c150  25  c200  25  occupied   1  K@top med   32.6
+    hill-dwarf     N_p    6  attractors  1045  top-N acc min   2787.5 med   3073.8 max   3479.7  c150   6  c200   6  occupied   0  K@top med   37.3
+    hobgoblin      N_p   39  attractors  1057  top-N acc min   2221.4 med   3276.0 max  10791.5  c150  39  c200  39  occupied   3  K@top med   84.3
+    human          N_p    3  attractors  1120  top-N acc min   4602.3 med   5592.8 max   6436.4  c150   3  c200   3  occupied   1  K@top med   36.2
+    kobold         N_p   39  attractors   836  top-N acc min    865.9 med   1843.8 max  15352.3  c150  39  c200  39  occupied   3  K@top med   60.4
+    sea-elf        N_p    4  attractors  1346  top-N acc min    537.7 med    645.1 max    709.7  c150   4  c200   4  occupied   0  K@top med   33.3
+    snow-elf       N_p   26  attractors  1197  top-N acc min    535.9 med    665.9 max   2322.4  c150  26  c200  26  occupied   4  K@top med   20.7
+    wood-elf       N_p    4  attractors  1080  top-N acc min   2382.3 med   2745.1 max   2806.2  c150   4  c200   4  occupied   0  K@top med   37.7
+
+== seed 100 ==  alive N_s 60  ended 99  |A_s| 60 (shortfall 0)
+  c_s (acc >= 150) 60 / 60   c200_s 60 / 60   occupied-by-an-alive-site 2 / 60
+  S1 gini(acc) 0.328  S2 gini(m) 0.265  S3 spearman(acc,K) 0.754  S4 max/median(acc) 2.93
+  P2 acc: min 513.1 median 2929.3 max 8571.4   P2 m: median 72.69 max 180.71
+  P1 alive sites: attractors 24 / 60   sharing an attractor 28 / 60   K==0 1   multi-people attractor 27
+  P1 hops to attractor: median 1 max 6   m: median 12.56 max 77.28   attainment peak/K: median 0.40 min 0.08 max 0.91
+  P1 K median 36.7 acc median 501.9  |  P3 ended: n 99  K median 28.5 acc median 377.5 m median 13.23
+    bugbear        N_p    4  attractors  1275  top-N acc min   2769.4 med   3435.8 max   5627.9  c150   4  c200   4  occupied   0  K@top med   67.1
+    desert-dwarf   N_p    9  attractors  1296  top-N acc min   4192.6 med   4804.9 max   6129.5  c150   9  c200   9  occupied   0  K@top med   56.3
+    desert-elf     N_p    2  attractors  1305  top-N acc min   1532.7 med   1807.7 max   2082.6  c150   2  c200   2  occupied   0  K@top med   27.9
+    drow           N_p    2  attractors   407  top-N acc min    610.8 med    690.1 max    769.4  c150   2  c200   2  occupied   1  K@top med   28.3
+    gnoll          N_p    4  attractors  1243  top-N acc min   1163.4 med   1285.5 max   2241.9  c150   4  c200   4  occupied   0  K@top med   25.7
+    goblin         N_p    4  attractors  1286  top-N acc min   3814.6 med   3835.8 max   7603.6  c150   4  c200   4  occupied   0  K@top med   41.8
+    gully-dwarf    N_p    5  attractors  1228  top-N acc min   1103.0 med   1458.5 max   2035.5  c150   5  c200   5  occupied   0  K@top med   36.2
+    high-elf       N_p    4  attractors  1409  top-N acc min   1626.5 med   1984.6 max   2518.2  c150   4  c200   4  occupied   0  K@top med   32.4
+    hill-dwarf     N_p    4  attractors  1202  top-N acc min   2490.1 med   3362.2 max   5060.5  c150   4  c200   4  occupied   0  K@top med   36.9
+    hobgoblin      N_p    3  attractors  1215  top-N acc min   4597.6 med   4797.9 max   8571.4  c150   3  c200   3  occupied   0  K@top med   84.4
+    human          N_p    5  attractors  1378  top-N acc min   3089.2 med   3450.6 max   6378.5  c150   5  c200   5  occupied   0  K@top med   36.0
+    kobold         N_p    4  attractors   962  top-N acc min   3913.7 med   4790.2 max   5262.3  c150   4  c200   4  occupied   0  K@top med   46.0
+    sea-elf        N_p    5  attractors  1458  top-N acc min    513.1 med    555.7 max   1017.6  c150   5  c200   5  occupied   0  K@top med   33.3
+    snow-elf       N_p    1  attractors  1472  top-N acc min   1901.4 med   1901.4 max   1901.4  c150   1  c200   1  occupied   0  K@top med   14.6
+    wood-elf       N_p    4  attractors  1409  top-N acc min   1626.5 med   1984.6 max   2518.2  c150   4  c200   4  occupied   1  K@top med   32.4
+
+== seed 1234 ==  alive N_s 44  ended 870  |A_s| 44 (shortfall 0)
+  c_s (acc >= 150) 44 / 44   c200_s 44 / 44   occupied-by-an-alive-site 3 / 44
+  S1 gini(acc) 0.320  S2 gini(m) 0.238  S3 spearman(acc,K) 0.813  S4 max/median(acc) 3.07
+  P2 acc: min 349.1 median 2297.2 max 7061.0   P2 m: median 65.03 max 109.97
+  P1 alive sites: attractors 17 / 44   sharing an attractor 12 / 44   K==0 3   multi-people attractor 26
+  P1 hops to attractor: median 1 max 5   m: median 12.13 max 91.96   attainment peak/K: median 0.11 min 0.05 max 1.13
+  P1 K median 33.3 acc median 338.0  |  P3 ended: n 870  K median 32.1 acc median 343.4 m median 12.04
+    bugbear        N_p    2  attractors   617  top-N acc min   2356.9 med   2835.2 max   3313.4  c150   2  c200   2  occupied   0  K@top med   61.9
+    desert-dwarf   N_p    5  attractors   603  top-N acc min   3776.8 med   4060.2 max   4673.1  c150   5  c200   5  occupied   0  K@top med   52.2
+    desert-elf     N_p    0  attractors   575  top-N acc min      0.0 med      0.0 max      0.0  c150   0  c200   0  occupied   0  K@top med    0.0
+    drow           N_p    5  attractors   239  top-N acc min    349.1 med    374.5 max    997.8  c150   5  c200   5  occupied   1  K@top med   26.2
+    gnoll          N_p    0  attractors   565  top-N acc min      0.0 med      0.0 max      0.0  c150   0  c200   0  occupied   0  K@top med    0.0
+    goblin         N_p    6  attractors   573  top-N acc min   2291.9 med   2966.2 max   3272.1  c150   6  c200   6  occupied   0  K@top med   35.9
+    gully-dwarf    N_p    2  attractors   638  top-N acc min   1766.8 med   1792.9 max   1818.9  c150   2  c200   2  occupied   0  K@top med   33.8
+    high-elf       N_p    2  attractors   593  top-N acc min   2133.0 med   2161.2 max   2189.4  c150   2  c200   2  occupied   0  K@top med   29.2
+    hill-dwarf     N_p    4  attractors   576  top-N acc min   2058.6 med   2252.6 max   3659.5  c150   4  c200   4  occupied   0  K@top med   34.0
+    hobgoblin      N_p    5  attractors   593  top-N acc min   4134.8 med   4506.8 max   7061.0  c150   5  c200   5  occupied   1  K@top med   79.4
+    human          N_p    3  attractors   581  top-N acc min   2656.6 med   2946.1 max   2978.8  c150   3  c200   3  occupied   1  K@top med   32.4
+    kobold         N_p    0  attractors   559  top-N acc min      0.0 med      0.0 max      0.0  c150   0  c200   0  occupied   0  K@top med    0.0
+    sea-elf        N_p    4  attractors  1311  top-N acc min    361.8 med    410.7 max    483.0  c150   4  c200   4  occupied   0  K@top med   33.3
+    snow-elf       N_p    4  attractors   602  top-N acc min   1682.2 med   1756.9 max   2169.8  c150   4  c200   4  occupied   0  K@top med   32.9
+    wood-elf       N_p    2  attractors   593  top-N acc min   2133.0 med   2161.2 max   2189.4  c150   2  c200   2  occupied   0  K@top med   29.2
+
+== per-seed (c_s, N_s) [(390, 390), (250, 250), (262, 262), (60, 60), (44, 44)]
+== VERDICT (spec §4, mechanical): Rescale
+test hidage_probe::hidage_probe ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 493 filtered out; finished in 17.88s
+
+```
+
+Verdict line as printed: `== VERDICT (spec §4, mechanical): Rescale`
+
 ## Follow-ups
 
 - **`scripts/worktree-take.sh` should refuse to recycle a member whose branch
