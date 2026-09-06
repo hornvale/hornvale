@@ -3832,6 +3832,43 @@ above therefore keeps its position on the gradient rather than being promoted
 by the density result: dense is settled, *found rather than extruded* is not,
 and the campaign's own instrument now says so with a number.
 
+**(2026-09-05) *Found rather than extruded* now has its first measured
+reading, and it was bought with density.** [The Warp](./chronicle/the-warp.md)
+answered the open fork the paragraph above left — the falsified ordering was a
+base-rate effect in the recipe, not an artefact of a coarse estimator: **333 of
+seed 42's 403 springs stood on a facet with no cause at all**, and a
+nineteen-class biome word ranks the thicket above the spring exactly as the
+four-bin cause did. So the two sign kinds' recipes were re-parameterised as a
+reliability against a soft step in the cause, with the floor authored to zero,
+and the bet's second half was measured on four seeds frozen in advance. The
+**found fraction** — the share of a kind's occurrences standing where its cause
+was there to be read — moved from 0.077 and 0.057 to a minimum of **0.68519**
+(spring) and **0.74348** (overhang), medians 0.77717 and 0.84622, against a bar
+of 0.60 set before any of those worlds existed. A walker's own held-out table
+over the rendered words beats guessing on every seed and every kind, and
+recovers most of the information the channel carries. **Seventy-one of
+seventy-two preregistered bar-instances held.** The one that did not is on the
+record at its measured value: on seed 13 the spring's best-class lift reads
+**4.759** against a bar of **5.253**, a ratio of 1.812 where 2.000 was frozen —
+the seed where the spring is rarest and the causeless control's lift is
+largest, both halves of the ratio moving against it at once. Nothing was
+retuned after the reading.
+
+**What it cost, stated plainly.** Frequency was not set by anything; it fell
+out. At seed 42 the spring's existence density went 0.0359 → 0.0134 and the
+overhang's 0.0751 → 0.0215 — 2.7× and 3.5× rarer — and the union of all four
+kinds fell from 0.2563 to 0.1952 of land-eligible facets — a fall of roughly a
+quarter, against a density result that clears its frozen claim by more than an
+order of magnitude, so nothing about that result is disturbed. *Dense* stays
+settled. What a walker now reads is two more words in the room sentence — the
+rock underfoot and the pitch of the ground — and they are the difference
+between a spring that could not be predicted and one that can: but on two of
+five worlds the spring is not met inside the walk band at all. So *found rather
+than extruded* is no longer unmeasured, and it is not yet promoted either. It
+has a number, on a distribution of seeds, with one failure named; the honest
+position is that the mechanism works and the frequency it leaves behind is the
+open question a successor inherits.
+
 **A partial rescore, now that population has a field to vary.** The
 carrying-capacity field promoted above (see the high-confidence tier) is an
 *equilibrium* snapshot — `population = f(carrying capacity)` in closed

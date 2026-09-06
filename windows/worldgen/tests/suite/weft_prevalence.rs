@@ -193,20 +193,121 @@ fn land_eligible_walks(kind: WeftKind) -> Vec<Walk> {
 /// theoretical amplitude ceiling, the exact shape that made the shipped
 /// `0.07` bound decorative.
 ///
-/// `min_pooled_spread`/`min_total_occurs` are set with margin BELOW the
+/// `min_pooled_spread`/`min_total_occurs` were set with margin BELOW the
 /// measured real values above (never above — a floor above the real
-/// measurement would fail on real data by construction): spring `0.05`/`50`,
-/// overhang `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`.
-/// **Overhang's and spring's floors both still hold against their corrected
-/// rows** (overhang: `0.08` is 1.67x under `0.13333`, `150` is 1.83x under
-/// `275`; spring: `0.05` is 2.25x under the corrected `0.11268`) — nothing
-/// broke either time; the committed TABLE was false, not the bounds.
+/// measurement would fail on real data by construction). **The Weft's
+/// values, superseded for spring and overhang by the Warp paragraph below
+/// and current only for thicket and erratic:** spring `0.05`/`50`, overhang
+/// `0.08`/`150`, thicket `0.20`/`400`, erratic `0.04`/`100`. Overhang's and
+/// spring's floors both still held against their corrected rows at the time
+/// (overhang: `0.08` was 1.67x under `0.13333`, `150` was 1.83x under `275`;
+/// spring: `0.05` was 2.25x under the corrected `0.11268`) — nothing broke
+/// either time; the committed TABLE was false, not the bounds. Read the LIVE
+/// values off the array itself, never off this paragraph.
+///
+/// ---
+///
+/// **THE WARP, Task 6 (2026-09-05) — re-measured at the frozen constants,
+/// and two of the four rows moved for two different reasons.** Same pool,
+/// same seed 42, same 78 walks / 4,680 facets / 4,602 adjacent pairs:
+///
+/// | kind | pooled spread | total occurs | lag-1 r |
+/// | --- | --- | --- | --- |
+/// | spring | **0.00000** (`[0.00000, 0.00000]`) | **0 / 4,680** | **undefined** |
+/// | overhang | 0.46817 (`[0.00000, 0.46817]`) | 91 / 4,680 | 0.99994 |
+/// | thicket | 0.39418 (`[0.00054, 0.39473]`) | 924 / 4,680 | 0.99994 |
+/// | erratic | 0.07594 (`[0.00203, 0.07796]`) | 233 / 4,680 | 0.86795 |
+///
+/// **Thicket's and erratic's rows are byte-identical to the pre-Warp table
+/// above** — they are the campaign's controls and their recipe is untouched
+/// (spec §6.1), so this is the non-regression evidence, not a coincidence.
+///
+/// **Spring's prevalence is now IDENTICALLY ZERO over the whole sample, and
+/// that is a property of the SAMPLE, not of the world.** Spring's soft step
+/// opens at a cause of `0.35` (`SPRING_STEP_LO`), and the largest spring
+/// cause anywhere in these 78 walks is about `0.244` — the pre-Warp figure
+/// was reachable only because the Weft's recipe gave every kind an
+/// unconditional noise floor, so spring's prevalence was nonzero on ground
+/// with no karst at all. It is not that a walker never meets a seep: the
+/// grid-band instrument (one facet per geosphere vertex, 11,218 land
+/// facets) reads `weft-existence-density-spring = 0.01337`, one facet in 75.
+/// This pool is 78 *locations* of 60 adjacent facets each, and a
+/// regionally-clustered kind present on ~1.3% of locations is missed by 78
+/// draws about a THIRD of the time (`(1 - 0.01337)^78 = 0.350`, as
+/// `windows/lab/tests/suite/weft_density.rs` already computes for the same
+/// pool). The grid band is where spring is
+/// measured now (`windows/lab`'s `warp-*` family and
+/// `weft-existence-density-spring`); this file's walk band has no power for
+/// it, and the two zero floors in spring's row below say so honestly rather
+/// than pretending to a coverage this instrument does not have. The WITNESS
+/// in [`the_walk_is_not_degenerate`] is what keeps those zeros from being a
+/// silent vacuous pass: it asserts the exact zero, so the moment spring
+/// reappears in the walk band the test goes red and this row is re-derived.
+///
+/// **Overhang's row was re-derived at three values of `OVERHANG_RATE` in one
+/// day, and the table above carries the FINAL one — take the numbers from
+/// it, not from this paragraph's history.** Its floors move `0.08` → `0.25`
+/// and `150` → `50`, each about 1.8x under the measured 0.46817 and 91,
+/// which is the headroom philosophy the rows above use. Its pooled spread
+/// more than trebled against the Weft's (0.13333 → 0.46817) while its
+/// occurrence count fell by two thirds (275 → 91), and both are the soft
+/// step's own signature: the response is exactly zero below `0.35` and
+/// climbs to `rate` above `0.65`, so the pooled series now spans `[0, rate]`
+/// rather than a lerp's narrow band, while far fewer facets carry any
+/// prevalence at all.
+///
+/// The three readings, kept rather than overwritten, because together they
+/// are the cleanest evidence available that this row tracks the RATE and
+/// nothing else — the step edges, the pool, the seed and the population were
+/// identical across all three, and spring's row is byte-identical across
+/// them:
+///
+/// | rate | pooled spread | total occurs | lag-1 r |
+/// | ---: | ---: | ---: | ---: |
+/// | 0.16 | 0.14981 | 36 | 0.99994 |
+/// | **0.50** (final) | **0.46817** | **91** | **0.99994** |
+/// | 0.75 | 0.70225 | 103 | 0.99994 |
+///
+/// The 0.16 rung existed to satisfy an H2 between-kind clause withdrawn from
+/// spec §7's gate the same day (ledger #11, 2026-09-05); 0.75 was the highest
+/// rung holding overhang's own bands; 0.50 is the middle of the passing
+/// range, chosen for H5 headroom and for the design reason in
+/// `OVERHANG_RATE`'s own doc. Note that the occurrence count is NOT linear in
+/// the rate — 36 → 91 → 103 across a 4.7x span — because the walk band's
+/// facets sit mostly on the step's lower shoulder, where a higher ceiling
+/// buys progressively less.
+///
+/// **One claim in the mutant table above no longer applies to spring or
+/// overhang, and it is worth stating rather than leaving to inference.** A
+/// sign kind's prevalence is `rate · smoothstep(cause) + floor · noise` with
+/// `floor = 0.0`, so the position-continuous noise term is multiplied out of
+/// it entirely — the address-hashing mutation the module doc describes
+/// perturbs a term those two kinds no longer read, and cannot move their
+/// numbers at all. What spring's and overhang's rows in [`AUTOCORR_BOUNDS`]
+/// and in this table still discriminate is the continuity of the MACRO
+/// STATE (the blended carbonate/drainage and induration/slope fields), which
+/// is a real property and a different one. Thicket and erratic keep the
+/// Weft's expression and keep the original guarantee unchanged.
 const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
-    (WeftKind::Spring, 0.010, 0.05, 50),
-    (WeftKind::Overhang, 0.045, 0.08, 150),
+    // Spring's two floors are NOT READ while `SILENT_IN_THE_WALK_BAND`'s
+    // exact-zero witness stands (that special case `continue`s before the
+    // generic asserts). They are `0.0, 0` so that deleting the witness
+    // cannot leave a live bound that is vacuously satisfied — re-derive both
+    // from a fresh measurement in the same edit that removes the case.
+    (WeftKind::Spring, 0.010, 0.0, 0),
+    (WeftKind::Overhang, 0.045, 0.25, 50),
     (WeftKind::Thicket, 0.015, 0.20, 400),
     (WeftKind::Erratic, 0.060, 0.04, 100),
 ];
+
+/// The Warp, Task 6 (2026-09-05): the kind whose two floors in
+/// [`KIND_BOUNDS`] are zero, and whose lag-1 autocorrelation is therefore
+/// undefined, because its prevalence is identically zero over this pool.
+/// Named once here so the two tests that special-case it cannot drift apart,
+/// and so that adding a second such kind is a deliberate edit rather than a
+/// second copy of the same `if`. See [`KIND_BOUNDS`]'s own doc for the
+/// measurement and why the walk band has no power for it.
+const SILENT_IN_THE_WALK_BAND: WeftKind = WeftKind::Spring;
 
 /// Per-kind `(kind, min_lag1_autocorrelation)` — the PRIMARY
 /// decorrelated-noise discriminator fix round 1 added (C1). Pearson
@@ -225,7 +326,25 @@ const KIND_BOUNDS: [(WeftKind, f64, f64, usize); 4] = [
 /// high too; erratic: real `0.868` / mutant `-0.025`, threshold `0.5` — the
 /// widest margin of the four, and not a coincidence: erratic's near-zero
 /// contextuality is exactly what makes this the right primary check for it).
+///
+/// **The Warp, Task 6 (2026-09-05).** Re-measured at the frozen constants:
+/// overhang `0.98238` → `0.99994`, thicket and erratic unchanged
+/// (`0.99994`, `0.86795`), and **spring is now undefined** — its prevalence
+/// is a constant zero over this pool, so the Pearson denominator is zero and
+/// the statistic reads `NaN`. Spring's threshold below is retained at `0.6`
+/// and is NOT read while that holds; the test asserts the constant-zero
+/// series directly instead, which is a stronger statement than a correlation
+/// bound and goes red the moment the series stops being constant. See
+/// [`KIND_BOUNDS`]'s Warp paragraph for the measurement, for why the walk
+/// band has no power for spring, and for the separate fact that a zero floor
+/// takes the address-hashable noise term out of both sign kinds' prevalence
+/// altogether.
 const AUTOCORR_BOUNDS: [(WeftKind, f64); 4] = [
+    // NOT READ while `SILENT_IN_THE_WALK_BAND`'s constant-zero arm stands:
+    // spring's series has no variance, so its correlation is `NaN` and this
+    // threshold is never compared against. Retained at the Weft's value so
+    // removing that arm restores a real bound rather than an invented one —
+    // but re-measure before trusting it.
     (WeftKind::Spring, 0.6),
     (WeftKind::Overhang, 0.5),
     (WeftKind::Thicket, 0.95),
@@ -314,8 +433,12 @@ fn prepared_weights_preserve_every_kinds_prevalence_bits() {
 /// over bound) — moving `SPRING_CONTEXTUALITY` bought no additional
 /// separation (42.6× at 0.85 vs 38.7× at 0.7, scale-invariant since lowering
 /// contextuality scales both sides identically); the defect was a bound set
-/// too loose, not the constant. `SPRING_CONTEXTUALITY` is restored to `0.85`
-/// (see `kinds.rs`).
+/// too loose, not the constant. `SPRING_CONTEXTUALITY` was restored to
+/// `0.85` — and The Warp has since deleted the constant outright, spring
+/// being a sign kind whose cause is read through a soft step rather than a
+/// contextuality lerp. The lesson (decision 0016's forbidden shape: a world
+/// parameter retuned to rescue a miscalibrated measurement) is what this
+/// paragraph is kept for; the constant it names no longer exists.
 ///
 /// **Round 1 also fixed F1: every noise sample is now passed through
 /// [`hornvale_terrain::features::uniformize`]** before use, which widens the
@@ -394,6 +517,31 @@ fn prevalence_autocorrelation_is_not_address_hashed() {
         let var_y: f64 = ys.iter().map(|y| (y - mean_y).powi(2)).sum::<f64>() / m;
         let r = cov / (var_x.sqrt() * var_y.sqrt());
 
+        // THE WARP, Task 6 (2026-09-05): spring's series is a constant zero
+        // over this pool, so the correlation's denominator is zero and `r`
+        // is `NaN`. Assert the constant directly rather than a bound that
+        // cannot be evaluated — a `NaN >= 0.6` comparison is `false`, so
+        // leaving the generic arm to run would report "autocorrelation too
+        // low" for a series that has no autocorrelation to be low. The
+        // relation that moved is named in `KIND_BOUNDS`'s own Warp
+        // paragraph: spring's step opens at a cause of 0.35 and this pool's
+        // largest spring cause is ~0.244.
+        if kind == SILENT_IN_THE_WALK_BAND {
+            assert_eq!(
+                (var_x, var_y),
+                (0.0, 0.0),
+                "{kind:?}: the walk band's prevalence series is no longer the constant zero \
+                 the Warp measured (r={r}) — re-derive this arm and KIND_BOUNDS' spring row \
+                 together, and delete the special case if the band can see the kind again"
+            );
+            assert!(
+                xs.iter().chain(ys.iter()).all(|v| *v == 0.0),
+                "{kind:?}: a constant, non-zero prevalence series is not what the Warp \
+                 measured — it measured an exact zero everywhere off the kind's own cause"
+            );
+            continue;
+        }
+
         assert!(
             r >= min_r,
             "{kind:?}: lag-1 autocorrelation must stay high — position-continuous noise \
@@ -434,6 +582,25 @@ fn the_walk_is_not_degenerate() {
             }
         }
         let spread = max - min;
+
+        // THE WARP, Task 6 (2026-09-05) — the witness that keeps spring's
+        // two ZERO floors in `KIND_BOUNDS` from being a vacuous pass. A
+        // floor of zero can only ever be satisfied; this asserts the exact
+        // measurement the zeros stand for, so the row goes red (and is
+        // re-derived, with the special case deleted) the moment the walk
+        // band can see the kind again.
+        if kind == SILENT_IN_THE_WALK_BAND {
+            assert_eq!(
+                (min, max, occurs_count),
+                (0.0, 0.0, 0),
+                "{kind:?}: the walk band now sees this kind ({occurs_count} occurrences over \
+                 {total} facets, prevalence in [{min}, {max}]) — the Warp measured an exact \
+                 zero. Re-derive KIND_BOUNDS' row from this measurement and remove the \
+                 special case; see that constant's Warp paragraph."
+            );
+            continue;
+        }
+
         assert!(
             spread >= min_pooled_spread,
             "{kind:?}: prevalence must actually vary over the sample, not sit near a constant \
@@ -553,4 +720,180 @@ fn spring_never_occurs_off_land() {
          got {causeless_occurs_n}/{occurs_n} = {:.4}% (bound 5%)",
         causeless_share * 100.0
     );
+}
+
+/// Per-kind non-vacuity floors for
+/// [`a_sign_kind_with_a_zero_floor_is_silent_below_its_lower_step_edge`] —
+/// the number of LAND-ELIGIBLE facets whose cause sits at or below the
+/// kind's own lower step edge, so the kind's response there is exactly zero
+/// (fix round 1).
+///
+/// **MEASURED on seed 42's full walk-depth grid, not assumed** (11,218
+/// land-eligible facets of 40,962 vertices, this tree, the provisional
+/// Task 4 step edges): **spring 10,600, overhang 6,044**. The floors below
+/// sit an order of magnitude under each measurement on purpose — this is a
+/// non-vacuity guard, not a ratchet on the number. Every member of the
+/// population is individually asserted, so the count's only job is to prove
+/// the kind HAS a population of its own; Task 6 moves the step edges, which
+/// will move both measurements, and a floor set near today's value would
+/// redden for a reason that has nothing to do with the property.
+const ZERO_RESPONSE_FLOORS: [(WeftKind, usize); 2] =
+    [(WeftKind::Spring, 1_000), (WeftKind::Overhang, 1_000)];
+
+/// The Warp, Task 4 — a sign kind with a zero floor is EXACTLY silent
+/// wherever its response is zero: the honest-silence half of spec §6,
+/// asserted on the MECHANISM (floor = 0 and response = 0 ⇒ prevalence = 0 ⇒
+/// occurs = false) rather than on any authored value. `floor()` and
+/// `step_edges()` are read here rather than assumed, so if Task 6's
+/// calibration lifts a sign kind's floor off zero this test skips that kind
+/// instead of failing on a number it never named.
+///
+/// **The population is LAND-ELIGIBLE facets only, and counted PER KIND**
+/// (fix round 1). Without the filter the guard was a count and not a
+/// membership: [`hornvale_worldgen::prevalence_with_weights`] returns `0.0`
+/// at its eligibility gate *before* any macro-state read, so every ocean
+/// facet satisfies both assertions through a completely different
+/// mechanism — the one [`spring_never_occurs_off_land`] already pins — and
+/// nothing established that a single land facet was in the sample.
+/// Per-kind counting closes the other half: a pooled count can be carried
+/// entirely by one kind while the other's claim goes untested.
+///
+/// **The population is "cause at or below the lower step edge", NOT "cause
+/// exactly zero", and the reason is a measurement.** The first version of
+/// this test asked for `macro_state == 0.0`, and on seed 42's land that set
+/// is **EMPTY for both sign kinds — 0 of 11,218 land-eligible facets, for
+/// spring and for overhang alike** (measured on this tree, fix round 1).
+/// Both causes are products of blended corner values
+/// (`carbonate × tanh(drainage/…)`, `induration × tanh(slope/…)`), and a
+/// bilinear blend of four real corners is essentially never exactly `0.0`
+/// on dry ground; the exact zeros all live in the ocean, which the
+/// eligibility filter above — correctly — removes. So the strict form is
+/// not merely weak, it is vacuous on the real subject, and a vacuous test
+/// that reads green is worse than an absent one. `cause ≤ lo` is the
+/// honest statement of the same mechanism: [`smoothstep`]'s clamp makes the
+/// response EXACTLY `0.0` there (not asymptotically small), which is
+/// precisely what a zero floor turns into literal silence, and `cause == 0`
+/// is a sub-case of it. See [`ZERO_RESPONSE_FLOORS`] for the measured
+/// populations.
+///
+/// The land test is spelled out here rather than calling
+/// `WeftKind::eligible`, which is `pub(crate)` and invisible to this
+/// external test crate — the same one-line replication
+/// [`land_eligible_walks`] and
+/// [`prepared_weights_preserve_every_kinds_prevalence_bits`] already make,
+/// chosen over widening a crate-private accessor for a test's convenience.
+///
+/// Walks every vertex, not every third: once ocean is excluded the sample
+/// is worth having whole, and the full grid costs under half a second here
+/// (the control golden walks the same one).
+///
+/// Builds its world inline, the same posture every other test in this file
+/// takes (decision 0092's sanctioned test fixture).
+#[test]
+fn a_sign_kind_with_a_zero_floor_is_silent_below_its_lower_step_edge() {
+    let world = hornvale_worldgen::seed_42_world();
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("seed 42 sculpts");
+    let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("climate reconstructs");
+    let pack = hornvale_worldgen::field_pack_from(&terrain, &climate);
+    let geo = terrain.geosphere();
+    let index = NearestVertexIndex::new(geo);
+    let walk_depth = geo.depth() + WALK_DEPTH_BELOW_GRID;
+
+    let mut silent = [0usize; 2];
+    let mut land_facets = 0usize;
+    for v in 0..geo.vertex_count() {
+        let facet = Facet::containing(geo.position(Vertex(v as u32)), walk_depth);
+        let Some(weights) = facet.corner_weights(geo, &index) else {
+            continue;
+        };
+        if blend_corner_weights(weights, &pack.land) < 0.5 {
+            continue;
+        }
+        land_facets += 1;
+        for (i, (kind, _)) in ZERO_RESPONSE_FLOORS.into_iter().enumerate() {
+            if kind.floor() != 0.0 {
+                continue;
+            }
+            let cause = kind.macro_state(weights, &pack);
+            let (lo, _) = kind.step_edges();
+            if cause > lo {
+                continue;
+            }
+            silent[i] += 1;
+            assert_eq!(
+                kind.response(cause),
+                0.0,
+                "{kind:?} at vertex {v}: cause {cause} is at or below the lower edge {lo}, \
+                 so the response must be exactly zero"
+            );
+            let p = hornvale_worldgen::prevalence_with_weights(
+                kind, &facet, weights, &pack, world.seed,
+            );
+            assert_eq!(
+                p, 0.0,
+                "{kind:?} at vertex {v}: zero response, zero floor, nonzero prevalence {p}"
+            );
+            assert!(
+                !hornvale_worldgen::occurs(kind, &facet, world.seed, p),
+                "{kind:?} at vertex {v}: occurred against a zero prevalence"
+            );
+        }
+    }
+
+    for (i, (kind, floor)) in ZERO_RESPONSE_FLOORS.into_iter().enumerate() {
+        assert!(
+            silent[i] >= floor,
+            "fixture check: {kind:?} had {} land-eligible facet(s) at or below its lower \
+             step edge, over {land_facets} land facets, wanted >= {floor} — without a \
+             population of its OWN this kind's honest-silence claim is untested (measured \
+             at fix time: spring 10,600, overhang 6,044). Counts this run: {:?}",
+            silent[i],
+            ZERO_RESPONSE_FLOORS
+                .iter()
+                .map(|(k, _)| *k)
+                .zip(silent)
+                .collect::<Vec<_>>(),
+        );
+    }
+}
+
+/// The response is a soft step on the cause: `0` below `lo`, `1` above
+/// `hi`, monotone between, and IDENTITY for the two control kinds — the
+/// shape of the step, never a calibrated edge value (Task 6 sets those).
+#[test]
+fn the_response_is_a_step_for_sign_kinds_and_identity_for_controls() {
+    for kind in [WeftKind::Spring, WeftKind::Overhang] {
+        let (lo, hi) = kind.step_edges();
+        assert!(
+            (0.0..1.0).contains(&lo) && lo < hi && hi <= 1.0,
+            "{kind:?} edges {lo} {hi} must satisfy 0 <= lo < hi <= 1"
+        );
+        assert_eq!(
+            kind.response(lo - 0.01),
+            0.0,
+            "{kind:?}: the response must be exactly zero below its lower edge"
+        );
+        assert_eq!(
+            kind.response(hi + 0.01),
+            1.0,
+            "{kind:?}: the response must saturate at one above its upper edge"
+        );
+        let mut last = 0.0;
+        for i in 0..=100 {
+            let r = kind.response(f64::from(i) / 100.0);
+            assert!(r >= last, "{kind:?}: response fell at {i}, {r} < {last}");
+            last = r;
+        }
+    }
+
+    for kind in [WeftKind::Thicket, WeftKind::Erratic] {
+        for i in 0..=100 {
+            let x = f64::from(i) / 100.0;
+            assert_eq!(
+                kind.response(x),
+                x,
+                "{kind:?} must be identity — it is a control"
+            );
+        }
+    }
 }

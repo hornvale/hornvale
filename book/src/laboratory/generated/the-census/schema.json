@@ -3499,7 +3499,7 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for spring/seep (spec §7, allowed to fail): discrete mutual information in bits between spring/seep's own blended macro-state signal (binned into 4 equal-width bins over its documented `[0,1]` range) and whether it occurred, over the land-eligible population (spec §7's amendment: restricting to land-eligible facets makes the shared eligibility gate a constant, so it contributes zero MI by construction and cannot flatter any kind — see the spec's own amendment paragraph for the whole-sphere confound this removes). The preregistered claim is the ORDERING `spring > thicket > overhang > erratic`, not a threshold on this reading alone: spring is H3's own sign case (\"diagnostic of what is underfoot\", contextuality 0.85), so it is predicted HIGHEST of the four.",
+      "doc": "H3's legibility readout for spring/seep (spec §7, allowed to fail): discrete mutual information in bits between spring/seep's own blended macro-state signal (binned into 4 equal-width bins over its documented `[0,1]` range) and whether it occurred, over the land-eligible population (spec §7's amendment: restricting to land-eligible facets makes the shared eligibility gate a constant, so it contributes zero MI by construction and cannot flatter any kind — see the spec's own amendment paragraph for the whole-sphere confound this removes). The preregistered claim WAS the ORDERING `spring > thicket > overhang > erratic`, not a threshold on this reading alone: spring is H3's own sign case (\"diagnostic of what is underfoot\"), so it was predicted HIGHEST of the four. The Weft measured this ordering FALSE (`thicket > spring`, 2026-09-04); The Warp's re-parameterisation of the sign kinds then moved spring's reading to 0.086464 and overhang's to 0.076536 at seed 42, while thicket (0.038604) and erratic (0.000000) are unchanged, falsifying the ordering again — now on `thicket > overhang`. This metric is a RECORD of that original prediction, not a live claim.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-spring",
@@ -3515,7 +3515,7 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted THIRD of the four (contextuality 0.6, gentler than spring/thicket).",
+      "doc": "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator and its falsification record. Overhang was predicted THIRD of the four, gentler than spring/thicket; it now reads 0.076536 at seed 42, ABOVE thicket's 0.038604.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-overhang",
@@ -3531,7 +3531,7 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted SECOND of the four.",
+      "doc": "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator and its falsification record. Thicket was predicted SECOND of the four; it now reads 0.038604 at seed 42, BELOW overhang's 0.076536.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-thicket",
@@ -3547,10 +3547,522 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for erratic/scatter (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Erratic is H3's own negative control (contextuality ~0, a CONSTANT `macro_state`) and is predicted LOWEST of the four, near zero: mutual information between any variable and a constant is algebraically zero, so this metric's own construction predicts the near-zero reading before any world is measured. If it does NOT read near zero, the instrument is measuring something other than legibility and that is the finding, per spec §7 and this task's own brief.",
+      "doc": "H3's legibility readout for erratic/scatter (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Erratic is H3's own negative control (contextuality ~0, a CONSTANT `macro_state`) and is predicted LOWEST of the four, near zero: mutual information between any variable and a constant is algebraically zero, so this metric's own construction predicts the near-zero reading before any world is measured. If it does NOT read near zero, the instrument is measuring something other than legibility and that is the finding, per spec §7 and this task's own brief. This piece of the ordering held: erratic's reading (0.000000 at seed 42) stayed lowest through The Warp's re-parameterisation of the sign kinds, even as the ordering elsewhere falsified again — see `weft-legibility-mi-spring`'s doc for the record.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The Warp's channel reading for spring/seep (spec §5.2): discrete mutual information in bits between the walker's SIGN TUPLE — the biome word, the rock word, the steepness word and the wetness word, exactly as `windows/locale`'s room sentence renders them — and whether the kind occurs, over the same land-eligible population the `weft-*` grid metrics read. Distinct from `weft-legibility-mi-spring`, which reads the kind's own HIDDEN macro-state scalar: that is what the world knows, this is what the walker is told. **Never read alone.** A tuple of several hundred classes over ~11,000 facets carries a finite-sample bias of the same order as the signal, so the reading is this number MINUS `warp-channel-null-spring`, and the null is registered beside it for exactly that reason. `Absent` only on a world with no land-eligible facet at all.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-mi-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The Warp's channel reading for overhang/hollow (spec §5.2) — see `warp-channel-mi-spring`'s doc for the shared estimator and why it is never read without its null.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-mi-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The Warp's channel reading for thicket/brake (spec §5.2) — see `warp-channel-mi-spring`'s doc for the shared estimator and why it is never read without its null.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-mi-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The Warp's channel reading for erratic/scatter (spec §5.2) — see `warp-channel-mi-spring`'s doc for the shared estimator and why it is never read without its null. The erratic is the instrument's own negative control (spec §5.3): its cause is a CONSTANT, so this reading net of its null must be ~0 on every world, and if it is not, the instrument is crediting noise and that is the finding.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-mi-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The permutation null for `warp-channel-mi-spring` (spec §5.2): the same statistic averaged over five cyclic shifts of the occurrence bit vector (1,000 to 5,000 places in vertex order, over the land-only reading vector). A cyclic shift is a permutation, so both marginals are held exactly and every bit of what survives is the estimator's own finite-sample bias at this tuple's cardinality. Subtract it from `warp-channel-mi-spring` to get the reading; a channel MI at its null is bias, not legibility. `Absent` only on a world with no land-eligible facet at all.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-null-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The Warp's channel null for overhang/hollow (spec §5.2) — see `warp-channel-null-spring`'s doc for the shared construction.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-null-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The Warp's channel null for thicket/brake (spec §5.2) — see `warp-channel-null-spring`'s doc for the shared construction.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-null-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3
+      ],
+      "doc": "The Warp's channel null for erratic/scatter (spec §5.2) — see `warp-channel-null-spring`'s doc for the shared construction. For the erratic — whose cause is a constant — this null is essentially the whole of `warp-channel-mi-erratic`, which is what makes the pair the instrument's own negative control (spec §5.3).",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-channel-null-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "doc": "The Warp's found fraction for spring/seep (spec §5.2, H1): the share of this kind's occurrences standing on a facet whose own `macro_state` reads at or above 0.5 — how much of what a walker meets was FOUND at a cause rather than extruded by the recipe's noise floor over the other 90-odd per cent of land. This is the number the campaign's premise measurement is about: before The Warp, 333 of seed 42's 403 springs stood on a facet with no cause at all. `Absent` when the kind never occurs on land.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-found-fraction-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "doc": "The Warp's found fraction for overhang/hollow (spec §5.2) — see `warp-found-fraction-spring`'s doc for the shared reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-found-fraction-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "doc": "The Warp's found fraction for thicket/brake (spec §5.2) — see `warp-found-fraction-spring`'s doc for the shared reading.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-found-fraction-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9
+      ],
+      "doc": "The Warp's found fraction for erratic/scatter (spec §5.2) — see `warp-found-fraction-spring`'s doc for the shared reading. **Always `Absent` for the erratic, by construction**: its `macro_state` is a constant, so \"the share of occurrences standing on a strong cause\" names no quantity. Absent here is the honest value, deliberately not 0.0 — a kind with no cause and a kind whose occurrences all miss their cause are different facts.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-found-fraction-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        5.0,
+        10.0
+      ],
+      "doc": "The Warp's best-class lift for spring/seep (spec §5.2, H2): the largest `P(Y | sign class) / P(Y)` over sign classes carrying at least 100 land facets — the walker-facing number, \"features of this kind are N times as likely where the ground reads like this\". **Compare it against `warp-best-lift-erratic` on the SAME seed, never against an absolute bar**: a lift above 1 arises from tuple cardinality alone, and the erratic — whose cause is a constant — is precisely a measurement of how much. `Absent` when the kind never occurs, or when no sign class clears the support floor.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-best-lift-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        5.0,
+        10.0
+      ],
+      "doc": "The Warp's best-class lift for overhang/hollow (spec §5.2) — see `warp-best-lift-spring`'s doc for the shared reading and the comparison it must be made against.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-best-lift-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        5.0,
+        10.0
+      ],
+      "doc": "The Warp's best-class lift for thicket/brake (spec §5.2) — see `warp-best-lift-spring`'s doc for the shared reading and the comparison it must be made against.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-best-lift-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        5.0,
+        10.0
+      ],
+      "doc": "The Warp's best-class lift for erratic/scatter (spec §5.2) — see `warp-best-lift-spring`'s doc for the shared reading and the comparison it must be made against. The erratic's reading IS the null lift for H2's comparison: whatever it reads is what tuple cardinality alone buys on this seed.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-best-lift-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's learner gain for spring/seep (spec §5.2, H3): the `P(Y | sign class)` table fitted on the EVEN-indexed land facets and scored on the ODD ones, as mean log-loss reduction against the base rate, in bits per facet. Positive means the words a walker is told genuinely help predict this kind on facets the table never saw; NEGATIVE means the table overfits, which is reported rather than clamped. The index is the facet's position in the land-only vector in vertex order, so the two halves interleave across the whole globe rather than splitting it by region. Smoothing is an EQUIVALENT-SAMPLE-SIZE PRIOR TOWARD THE BASE RATE: a class with `n` fit facets and `k` hits predicts `(k + a * p) / (n + a)`, for `a` ten facets and `p` the fit half's own base rate, so a thin or unseen class predicts the base rate and scores exactly zero, never below it. It was Laplace `(k + 1) / (n + 2)` in this metric's first implementation and that was a defect (controller ruling, ledger #10): Laplace is a prior toward 0.5, these kinds occur on 3-14% of land, and with 469 sign classes over ~11,000 facets most classes are thin enough for that prior to dominate — the table lost to the base rate in sample, which was a fact about the prior and not about the world. Read against `warp-oracle-gain-spring`, the same table's in-sample reading. `Absent` on a world with no land-eligible facet, and on one whose fit half carries no occurrence of this kind at all (or nothing but occurrences): there is no base rate to beat.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-learner-gain-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's learner gain for overhang/hollow (spec §5.2) — see `warp-learner-gain-spring`'s doc for the shared split, the smoothing and the fallback.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-learner-gain-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's learner gain for thicket/brake (spec §5.2) — see `warp-learner-gain-spring`'s doc for the shared split, the smoothing and the fallback.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-learner-gain-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's learner gain for erratic/scatter (spec §5.2) — see `warp-learner-gain-spring`'s doc for the shared split, the smoothing and the fallback. This is the negative control: nothing about the erratic's occurrence depends on any sign, so the table cannot BEAT the base rate out of sample, and a reading that did would mean the instrument was crediting noise. It can and does LOSE — seed 42 reads -0.0138 bits/facet, the price of fitting several hundred classes of pure noise on half the land and being scored on the other half. Spec §7's H3 therefore bars this ONE-SIDED at <= 0.001 bits/facet (amended 2026-09-05 from \"within +/- 0.001\", which no held-out table over ~469 classes could ever meet): the control is that the erratic never GAINS, not that its loss is small.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-learner-gain-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's false-sign control for spring/seep (spec §5.2/§5.3, H4): the channel reading NET OF ITS OWN NULL for a tuple of pure address noise — the room's `relief`, `aspect` and `openness` micro-habitat axes, each cut at the same threshold the wetness word is cut at. Those three are drawn from the facet's address seed and correlate with nothing the world knows, so the instrument must credit them nothing: spec §7's H4 bars this within +/- 0.002 bits — four standard deviations of this 27-class tuple's own null estimator, amended 2026-09-05 from +/- 0.001, which sat below the estimator's resolution — and a reading outside it is a finding about the INSTRUMENT, not about the world. **The descriptor noun is deliberately not in this tuple**, though spec §5.2's table names it: `windows/locale/src/grammar.rs` exposes no `pub fn`, so the noun's variety draw is unreachable from the lab without rendering a whole document per facet — and its pool is keyed on `(formation, stratum, substrate)`, so it is partly biome-correlated and would have been the weakest member of a control anyway. `Absent` only on a world with no land-eligible facet at all.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-false-sign-net-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's false-sign control for overhang/hollow (spec §5.2) — see `warp-false-sign-net-spring`'s doc for the shared control tuple and what a non-zero reading would mean.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-false-sign-net-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's false-sign control for thicket/brake (spec §5.2) — see `warp-false-sign-net-spring`'s doc for the shared control tuple and what a non-zero reading would mean.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-false-sign-net-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's false-sign control for erratic/scatter (spec §5.2) — see `warp-false-sign-net-spring`'s doc for the shared control tuple and what a non-zero reading would mean.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-false-sign-net-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's oracle gain for spring/seep (spec §5.2): the SAME `P(Y | sign class)` table as `warp-learner-gain-spring`, fitted and scored on ALL land facets with no split, under the same equivalent-sample-size prior toward the base rate. It is not a legibility reading on its own — an in-sample table always looks better than it is — and it is REPORTED, NEVER GATED. Spec §7's H3 originally asked the learner to reach at least half of this number, and that clause is WITHDRAWN (controller ruling, ledger #10; spec §7's H3 amendment): a ratio needs a denominator whose sign is fixed, and this one has none — under the withdrawn Laplace prior it read NEGATIVE for spring and erratic at seed 42, which would make \"at least half of it\" satisfiable by being worse. What it is good for is the difference a reader takes, how much of the in-sample reading survives the held-out half. `Absent` under the same conditions as `warp-learner-gain-spring`, over the whole land population rather than a half of it.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-oracle-gain-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's oracle gain for overhang/hollow (spec §5.2) — see `warp-oracle-gain-spring`'s doc for the shared reading and for why it is reported and never gated.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-oracle-gain-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's oracle gain for thicket/brake (spec §5.2) — see `warp-oracle-gain-spring`'s doc for the shared reading and for why it is reported and never gated.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-oracle-gain-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -0.01,
+        -0.001,
+        0.0,
+        0.001,
+        0.005,
+        0.02
+      ],
+      "doc": "The Warp's oracle gain for erratic/scatter (spec §5.2) — see `warp-oracle-gain-spring`'s doc for the shared reading and for why it is reported and never gated. The erratic's in-sample reading is the ceiling overfitting alone can reach on this population, which is why it is worth registering even though nothing predicts the erratic.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-oracle-gain-erratic",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "The Warp's wallpaper guard for spring/seep (spec §5.2, H5): the largest `P(Y | sign class)` over sign classes carrying at least 100 land facets — the absolute rate behind `warp-best-lift-spring`'s ratio. H5 asks that no class exceed 0.75 on any seed: above that the sign kind has stopped distinguishing a place and become wallpaper, and the reading is a finding about the recipe's high end, not a success. `Absent` when no sign class clears the support floor.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-max-class-rate-spring",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "The Warp's wallpaper guard for overhang/hollow (spec §5.2) — see `warp-max-class-rate-spring`'s doc for the shared reading and H5's 0.75 bar.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-max-class-rate-overhang",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "The Warp's wallpaper guard for thicket/brake (spec §5.2) — see `warp-max-class-rate-spring`'s doc for the shared reading and H5's 0.75 bar.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-max-class-rate-thicket",
+      "role": "descriptor",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "The Warp's wallpaper guard for erratic/scatter (spec §5.2) — see `warp-max-class-rate-spring`'s doc for the shared reading and H5's 0.75 bar. For the erratic this is the base rate plus sampling noise, since no sign class has any relationship to it.",
+      "domain": "terrain",
+      "kind": "numeric",
+      "name": "warp-max-class-rate-erratic",
       "role": "descriptor",
       "rung": "terrain"
     },
@@ -3564,7 +4076,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xcfcf3ef399798ae3"
+    "fnv1a64": "0x110595f7822d0a44"
   },
   "schema_version": 1,
   "study": {
