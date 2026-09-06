@@ -356,6 +356,18 @@ which the measurement instrument's own view already holds and does not hand
 over, which makes roughly a fifth of that cost recoverable by a seam that does
 not exist yet.
 
+**The refresh confirmed it, and the confirmation tripped a gate.** The
+thousand-seed census that followed cost 3,661 more processor-seconds on its
+main study than the run before it — the estimate above was within nine
+percent — and 136 more seconds of wall, 1,142 to 1,278, on a box no busier
+than before. That crossed the census's refusal ceiling of 1,200 seconds, a
+tripwire written for a single run that jumps by a third, not for a twelve
+percent step with a named cause. The ceiling and its alarm threshold were
+re-set together, to 1,650 and 1,320 seconds, following the method the last
+raise had recorded, and the refresh was run again. The ledger names what is
+recoverable: about a fifth of the six columns' cost, roughly two percent of
+the census, not a way back under the old number.
+
 ## What a life reads like
 
 Seed 42, lot 0. Born in year 1752 at Raaxora, a temperate-forest site at

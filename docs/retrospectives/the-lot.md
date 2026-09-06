@@ -124,6 +124,21 @@ tree, silently, at a moment when three sessions are running.
 - When a new crate is involved, budget the sub-floor roster rows as a step of
   the crate's first commit rather than discovering them at the gate.
 
+## The census ceiling refused the refresh, and the ledger had predicted it
+
+The refresh ran to completion, produced every golden, and was refused at
+`pre-commit` by the census-duration ceiling: 1,278 s against 1,200. The step
+was real and attributed — the six columns' pre-measured cost landed within 9%
+of the estimate — and the pair of thresholds was re-set together with the
+four things the constants' docs demand (ledger #20). None of that is the
+lesson. The lesson is that the arithmetic was available at submission and was
+not done: ledger #18 said +15%, the previous census row said 1,142 s, and
+1,142 × 1.15 = 1,313 > 1,200. One multiplication against the gate that
+enforces the number would have moved the re-set ahead of the run instead of
+costing a second one. **When a campaign pre-measures a cost, compare it to the
+gate's number in the same entry** — a cost recorded "so the next row is
+attributable" is only half of what the row is for.
+
 ## Deferred minors, and where each landed
 
 Twelve minors were deferred by the per-task reviews (campaign ledger #19,
