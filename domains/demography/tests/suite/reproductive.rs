@@ -227,12 +227,13 @@ fn identical_plain_inputs_produce_identical_summaries() {
     );
 }
 
-/// Selection seeds are deliberately metadata at this structural stage: the
-/// production summary API accepts no seed and performs no draw. A later
-/// realization layer may vary outcomes by seed without rewriting this panel.
-/// claim: structural(selection seeds 1, 7, 42, and 1234 leave the seedless handoff identical)
+/// Selection labels are deliberately metadata at this structural stage: the
+/// production summary API accepts no seed and performs no draw. This asserts
+/// seedless structural repeatability; a later realization layer may vary
+/// outcomes by seed without rewriting this panel.
+/// claim: structural(seedless handoff repeats for selection labels 1, 7, 42, and 1234)
 #[test]
-fn structural_handoff_is_stable_across_selection_seeds_without_realization_draws() {
+fn seedless_structural_handoff_repeats_without_realization_draws() {
     let expected = summarize_reproduction(&typical_input()).unwrap();
     let selections = [Seed(1), Seed(7), Seed(42), Seed(1_234)].map(|seed| {
         let structural = summarize_reproduction(&typical_input()).unwrap();
@@ -341,7 +342,7 @@ fn non_finite_and_negative_values_are_rejected_with_context() {
 }
 
 #[test]
-fn zero_and_no_reproduction_are_valid_inputs() {
+fn non_reproducing_control_accepts_inapplicable_missing_measurements() {
     let input = ReproductivePopulationInput {
         possibility: ReproductivePossibility {
             pathway_count: 0,
@@ -366,6 +367,54 @@ fn zero_and_no_reproduction_are_valid_inputs() {
     assert_eq!(summary.expected_care_burden, 0.0);
     assert_eq!(summary.expected_independent_offspring_per_generation, 0.0);
     assert_eq!(summary.persistence_balance, 0.0);
+}
+
+#[test]
+fn applicable_reproduction_rejects_missing_survival_and_care_measurements() {
+    let mut missing_survival = typical_input();
+    missing_survival.typicality.survival_to_independence =
+        SurvivalDistribution::new(vec![]).unwrap();
+    assert_eq!(
+        summarize_reproduction(&missing_survival)
+            .unwrap_err()
+            .to_string(),
+        "survival to independence distribution must contain a positive-weight measurement for applicable reproduction"
+    );
+
+    let mut missing_care = typical_input();
+    missing_care.typicality.care_burden = CareBurdenDistribution::new(vec![]).unwrap();
+    assert_eq!(
+        summarize_reproduction(&missing_care)
+            .unwrap_err()
+            .to_string(),
+        "care burden distribution must contain a positive-weight measurement for applicable reproduction"
+    );
+
+    let mut zero_weight_care = typical_input();
+    zero_weight_care.typicality.care_burden =
+        CareBurdenDistribution::new(vec![(0.0, 0.0)]).unwrap();
+    assert_eq!(
+        summarize_reproduction(&zero_weight_care)
+            .unwrap_err()
+            .to_string(),
+        "care burden distribution must contain a positive-weight measurement for applicable reproduction"
+    );
+}
+
+#[test]
+fn explicit_zero_outcomes_are_distinct_from_missing_measurements() {
+    let mut input = typical_input();
+    input.typicality.offspring = OffspringDistribution::new(vec![(0, 1.0)]).unwrap();
+    input.typicality.survival_to_independence =
+        SurvivalDistribution::new(vec![(IndependenceOutcome::DoesNotSurvive, 1.0)]).unwrap();
+    input.typicality.care_burden = CareBurdenDistribution::new(vec![(0.0, 1.0)]).unwrap();
+
+    let summary = summarize_reproduction(&input).unwrap();
+    assert_eq!(summary.expected_offspring, 0.0);
+    assert_eq!(summary.survival_to_independence, 0.0);
+    assert_eq!(summary.expected_care_burden, 0.0);
+    assert_eq!(summary.expected_independent_offspring_per_generation, 0.0);
+    assert_eq!(summary.persistence_balance, -1.5);
 }
 
 #[test]

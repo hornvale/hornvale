@@ -487,6 +487,38 @@ pub struct SocialSubstrateInput {
 pub fn summarize_reproduction(
     input: &ReproductivePopulationInput,
 ) -> Result<ReproductivePopulationSummary, ReproductiveInputError> {
+    let applicable = input.possibility.pathway_count > 0;
+    require_applicable_distribution(
+        "offspring",
+        input.typicality.offspring.len(),
+        input.typicality.offspring.total_weight(),
+        applicable,
+    )?;
+    require_applicable_distribution(
+        "survival to independence",
+        input.typicality.survival_to_independence.len(),
+        input.typicality.survival_to_independence.total_weight(),
+        applicable,
+    )?;
+    require_applicable_distribution(
+        "care burden",
+        input.typicality.care_burden.len(),
+        input.typicality.care_burden.total_weight(),
+        applicable,
+    )?;
+    require_applicable_distribution(
+        "reproductive roles",
+        input.typicality.reproductive_roles.len(),
+        input.typicality.reproductive_roles.total_weight(),
+        applicable,
+    )?;
+    require_applicable_distribution(
+        "hybrid outcomes",
+        input.typicality.hybrid_outcomes.len(),
+        input.typicality.hybrid_outcomes.total_weight(),
+        applicable,
+    )?;
+
     let expected_offspring = input.typicality.offspring.mean();
     validate_derived("expected offspring", expected_offspring)?;
     let survival_to_independence = input
@@ -534,6 +566,22 @@ fn validate_derived(field: &'static str, value: f64) -> Result<(), ReproductiveI
         Err(ReproductiveInputError::new(
             field.to_string(),
             "must be finite after summary",
+        ))
+    }
+}
+
+fn require_applicable_distribution(
+    field: &'static str,
+    authored_entries: usize,
+    total_weight: f64,
+    applicable: bool,
+) -> Result<(), ReproductiveInputError> {
+    if !applicable || (authored_entries > 0 && total_weight > 0.0) {
+        Ok(())
+    } else {
+        Err(ReproductiveInputError::new(
+            format!("{field} distribution"),
+            "must contain a positive-weight measurement for applicable reproduction",
         ))
     }
 }
