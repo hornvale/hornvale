@@ -840,3 +840,29 @@ against, and silent about the one it introduced. That is a note owed to
 `docs/CLAUDE.md` or a decision record, not just to this campaign's retro — it
 will recur in every campaign that lets implementers write rulings, which the
 autopilot skill instructs them to do. · ideonomy passes / overturns: 0.
+
+---
+
+#40 [G5] — **#39 contained two defects of the exact class it was recording, and
+a reviewer counting rather than reading found both.** · (a) I wrote that the
+retrospective "now cites #35". It cites **#18a**, which is what the
+implementer's own report said. I appear to have reached for a number in the
+range I had just renumbered rather than reading the one in front of me. An
+entry whose subject is *counts stated without being counted* asserted a
+citation without checking it. · (b) **#39 falsified the retrospective's
+freshly-corrected entry count by existing.** The retrospective said
+"thirty-four entries, numbered to #38"; true when written, false the instant
+#39 appended. · **The remedy is structural, not another correction.** A prose
+total over an append-only document that the prose lives inside is
+self-falsifying: every entry that states it is wrong by the next entry, and
+this is now the *third* value that sentence has held (28 → 34 → 35). So the
+retrospective stops stating a total at all and names the command that counts
+it — the same move the census-cost block in CLAUDE.md makes for a figure that
+moves faster than its prose ("read it from `docs/timings.md`, never from this
+block"), and for the identical reason. A pointer cannot go stale; a number in
+the wrong document always will. · **This is the campaign's own thesis closing
+on itself**, and it belongs in the retrospective in exactly those terms: I
+argued in §1 that per-step prose repeats a fact N times and should be stated
+once where it can be resolved, then spent four rounds restating a count in
+prose that had a command behind it the whole time. · ideonomy passes /
+overturns: 0.
