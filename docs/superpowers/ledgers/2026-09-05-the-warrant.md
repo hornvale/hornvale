@@ -649,3 +649,74 @@ Cost disclosed and accepted: H1 is ~150 s over four world builds, correctly
 outside the commit gate. · Correction to my own #19-era record: the seed-23
 fixture is **64,846 bytes (~65 KB)**, not the ~120 KB the fix report and my
 summary of it stated. · ideonomy passes / overturns: 0.
+
+---
+
+#23 [G5] — **Task 5 review: the grouping-rule departure is upheld, and the
+reason is better than the one the implementer gave.** · The implementer changed
+the rule because a measured rendering regressed. The reviewer ruled it correct
+from the *producer* instead, which is the stronger argument: **nothing anywhere
+assigns `st.errand = None`.** There is no close fact, no expiry, no end marker.
+An errand ends only implicitly, when the next `MoveTo` computes a different
+key. So "open until the next errand fact" is not a rendering choice at all — it
+is a readback of the model the ledger already implements, and it is the same
+words Task 2's own coverage test uses (`rfind(|e| e.day <= step.day)`). My
+brief's "any other predicate flushes the group" described a rule the ledger does
+not implement. · The mis-attribution I asked about — a step after one errand
+ended and before the next began — **cannot occur, because the premise cannot**:
+under the producer, such a step *is* covered by that errand. · ideonomy passes /
+overturns: 0.
+
+#24 [G5] — **Task 5 review, two Important findings, both upheld: correct code
+with no guard on it.** · (a) **`group()`'s provenance guard survives
+mutation.** Replacing `f.provenance == facts[e.opened].provenance` with `true`
+leaves all 13 tests green — yet that guard is exactly what stops a
+hand-planted `harness-placement` step being swallowed as a step of an errand it
+had nothing to do with. The existing uncovered-step test only plants the
+harness step *before* the errand, where the join rule never runs. Remedy: one
+test of the mid-errand shape (errand → step → harness step → step). · (b) **The
+implementer's own concern 2 is worse than it documented.** A second
+`vessel/liveness` predicate arriving first after an errand does not merely get
+*counted* as a step — it **fixes the group's step predicate**, so every genuine
+`agent-at` after it is orphaned and renders `(asserted by vessel/liveness, …)`.
+That is this campaign's own regression reappearing silently, and the roll-up
+line reads `ending at true`. Unreachable today (`ERRAND_PRODUCER` occurs in
+exactly two constructor positions) but nothing would redden the day a third is
+added. · **The reviewer's placement ruling is adopted and is the interesting
+part:** the renderer cannot express the constraint without naming `agent-at`,
+which layering forbids — so the ratchet goes where the invariant actually
+lives, in `windows/vessel`: the only predicates ever committed under
+`ERRAND_PRODUCER` are `AGENT_AT` and the eight `errand/*` keys. A guard belongs
+in the crate that can state it, not the crate that suffers it. · ideonomy
+passes / overturns: 0.
+
+#25 [G5] — **An errand is never closed, and that is a design property with a
+visible consequence 7c inherits.** · Because nothing emits an end marker, a
+creature that walks for thirst, drinks, sleeps for a month and then walks for
+thirst again commits **no new errand fact** — the two runs fold into one line
+reading `3 steps, days 5 to 40`. That is a faithful reading of the ledger, not
+a renderer bug, but it is the one shape where the roll-up's compression is
+**misleading rather than merely lossy**, and it is the mirror image of the
+campaign's headline: §1 measured that per-step commits carry one string's worth
+of content N times; this is the case where one errand fact carries two
+episodes' worth of walk. · Consequences: it goes in the chronicle as a stated
+limit rather than being discovered by a reader; and **7c inherits it** on top of
+the endpoint asymmetry already recorded in spec §8.1 — a compaction that drops
+steps cannot recover the gap between two folded runs, because nothing marks it.
+· An idea-registry row is owed for the unnamed option this surfaces: an errand
+*close* fact, which nobody has argued for and which would make abandonment
+(§3.3) and resumption distinguishable at the ledger rather than by inference. ·
+ideonomy passes / overturns: 0.
+
+#26 [G5] — **Three further Task 5 Minors.** · (a) The repl tolerates a typo'd
+flag (`why 12345 --step` silently renders the rolled-up view) where the session
+refuses loudly. Extra tokens were tolerated before this task, so tightening the
+repl is a behaviour change to pre-existing latitude and is **not** taken here;
+recorded so the divergence is deliberate rather than unnoticed. · (b) The repl's
+nested "Seen through {species} eyes" branch always calls `recount`, never
+`recount_steps`, so `--steps` does not reach it. Harmless today (species
+entities commit no errands) and inconsistent with the flag's stated meaning —
+fixed in the fix round. · (c) `recount_steps`'s doc calls the stepless errand a
+case where "nothing is silently dropped", reading as if the walk emits them; it
+cannot — the errand fact and its first step are pushed in the same arm.
+Defensive handling is right, the prose is not. · ideonomy passes / overturns: 0.
