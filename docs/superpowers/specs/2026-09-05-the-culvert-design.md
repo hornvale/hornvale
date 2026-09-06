@@ -562,7 +562,13 @@ Rows to correct or add at close:
 
 ## 11. What shipped, measured
 
-*(filled at close)*
+Taken at Task 9 against the criteria §4 froze, each reported separately.
+**C1a PASS. C1b PASS. C2 FAILED. C3 PASS.** Head `8acd377c5`; the before
+column re-taken on the Stage 2 boundary `d36a23bd7` with the same
+instrument. Full working, every load average and every set-aside run:
+`.superpowers/sdd/2026-09-05-the-culvert/task-9-report.md`. **Read the
+standing constraint immediately below before quoting any µs/call figure from
+this section.**
 
 ### A standing constraint on this section, set during execution
 
@@ -586,3 +592,149 @@ prevent, and it would be a plausible number, in the right units, next to a real
 measurement.
 
 (Controller ruling R8, taken at Task 2's review.)
+
+### 11.1 C1a — searches per sweep. The criterion of record. **PASS.**
+
+| | before | after | criterion | verdict |
+|---|---|---|---|---|
+| Shape A — whole 200-tick run | 679 | **83** | ≤ 100 | **PASS** (8.18×) |
+| Shape B — whole 12-wait run | 4,060 | **83** | ≤ 100 | **PASS** (48.92×) |
+| Shape A — memo at end | — | 83 entries | ≤ 200, `entries == searches` | **PASS** (83 == 83) |
+| Shape B — memo at end | — | 83 entries | ≤ 200, `entries == searches` | **PASS** (83 == 83) |
+
+Denominators: Shape A asked 679 route questions over 83 distinct
+`(home, dest)` pairs, Shape B 4,060 over 83. `occurrences > distinct_pairs`
+holds on both, so neither passes vacuously. Both after-columns were read
+through `RouteMemo::searches()` over a real roster-wide `believed_water`
+sweep, never re-derived analytically, and a campaign-time kernel counter on
+`AStarSolver::solve` agreed with each.
+
+### 11.2 C1b — node expansions per sweep. Campaign-time, retired here. **PASS.**
+
+| | before | after | criterion | verdict |
+|---|---|---|---|---|
+| Shape A — whole 200-tick run | 425,042 | **57,190** | ≤ 60,000 | **PASS** (7.43×) |
+| Shape B — whole 12-wait run | 392,391 | **14,474** | ≤ 15,000 | **PASS** (27.11×) |
+
+Shape A clears by 4.7%, Shape B by 3.5%. Both are real passes and neither has
+much room; a shape whose distinct-pair population grew would cross them.
+
+**THE DATED RECORD (§4.1's own discipline).** Recorded 2026-09-06. Before
+column at `d36a23bd7612a26e39bf6419213f6cd7c180c803`; after column at
+`8acd377c5`. Instrument: two `AtomicU64` statics beside `AStarSolver::solve`'s
+local `expansions` in `kernel/src/astar.rs`, with a read/reset pair —
+`AtomicU64` and never `std::cell::Cell`, because the lexicon guard counts the
+token `cell` per file and a `Cell` there reddens
+`lexicon_guard::no_vertex_sense_cell_comes_back`. Reverted before merge;
+`git diff --stat -- kernel/` is empty at the head above. After close nothing in
+the repository can reproduce these two rows without re-applying that patch,
+which is the cost §4.1 named and accepted.
+
+**The before column agrees with §4.1's `a8bde6769` figures digit for digit** —
+not only at the totals but at every band and every wait: Shape A 15,437 /
+41,174 / 57,190 expansions and 37 / 67 / 83 calls at bands 1 / 5 / 10; Shape B
+479 / 30,743 / 66,002 and 31 / 363 / 529 at waits 1 / 6 / 12. Twelve numbers,
+two trees, two independently written instruments. The 99 commits of `main`
+absorbed at the Stage 3 boundary did not move this quantity.
+
+### 11.3 C2 — the effect-size floor on `k`. **FAILED, and the reason is the instrument.**
+
+**Subject: roster member 40 of the seed-42 / 50-agent / 200-tick shape — the
+max-known-water member, 46 known rooms at band 10, none reachable within the
+1,000-node budget.** Every figure in this subsection is that creature.
+
+| run | tree | `k` (µs/call/fact) | r² (diagnostic only) | final-band µs/call |
+|---|---|---|---|---|
+| before, run 2 | `d36a23bd7` | 317.61954 | 0.975 | 112,996.01 |
+| before, run 4 | `d36a23bd7` | 313.53877 | 0.917 | 110,337.93 |
+| after, run 1 | `8acd377c5` | 244.70012 | 0.754 | 90,274.63 |
+| after, run 3 | `8acd377c5` | 312.98384 | 0.970 | 110,538.97 |
+
+The two before-tree final-band figures (112,996.01 and 110,337.93 µs/call,
+member 40) reproduce the 109,510.31 µs/call the constraint table above records
+for the same creature at Task 2, to within 3.2% — so the pre-memo column is
+stable across the Stage 3 absorption as well as across instruments.
+
+**before mean 315.58, after mean 278.84, ratio 1.13× against a criterion of
+10×. FAILED by a factor of 8.8.** The r² gates nothing, per §4.2, and would
+not have changed the verdict either way. The two after runs disagree with each
+other by 1.28×, more than the before/after difference, and the two before runs
+agree to 1.3% — so the honest statement is **`k` did not move**, not "`k` fell
+1.13×".
+
+**§4.2's preregistered reason was right in direction and wrong in mechanism,
+and the difference matters.** It predicted `k` would stay "strictly positive
+and small" because a residual O(|set|) map lookup remains. That assumed a WARM
+memo in the probe. `probe_believed_water_us` constructs a **fresh `RouteMemo`
+inside its own repetition loop**, deliberately — Task 7 landed it that way so
+the column would stay comparable to pre-campaign runs, and said so at the site.
+`LatestVisit::water_at` returns distinct rooms, so a fresh memo never hits
+within one call and every room runs a real search.
+
+**That is measured, not inferred.** A same-tree control arm on the campaign
+head — the identical sweep with a fresh memo per call — ran **679 searches /
+425,042 expansions (Shape A) and 4,060 / 392,391 (Shape B), digit-identical to
+the pre-memo tree at every band and every wait.** The C2 instrument's call path
+performs byte-identical search work before and after the campaign. A column
+whose work is unchanged cannot fall 10×; the residual 1.13× is noise. **C2 was
+unable to detect this mechanism, and a count established that where no clock
+could.** C1 leads, exactly as §4.1 said it would.
+
+**Context, not a criterion: the whole-tick column DID move.** Whole-tick `k`
+2.19468 / 2.14866 → 0.95896 / 1.31034 ms/tick per fact (1.91×); band-10
+normalised 465.92 / 477.46 → 230.88 / 280.80 ms/tick (1.84×). That column is
+the tick walk, which `session_length_scaling::run` threads the **run-lived**
+memo into. The separation between the two columns is the finding: the fold
+probe holds the memo cold on purpose and sees nothing; the tick that owns a
+warm one nearly halves. It is reported here so the next reader does not take it
+off the same output as a C2 result, because it is not one.
+
+**A determinism cross-check that came free.** Every deterministic column of
+`session_length_scaling` — facts per band, `HomeNavCache` searches per band,
+folded/agent, drank/tick, ledger length — is identical across all four runs and
+both trees, band for band.
+
+### 11.4 C3 — the control. **PASS: no regression, and it is a control.**
+
+`fold_depth_sweep` sweeps `drive_at` only, constructs no `RouteMemo`, and never
+calls `believed_water` or `nearer_to_home` — it **structurally cannot see this
+fold**. It is evidence the campaign broke nothing on the Sustenance reads, and
+it is not evidence the campaign worked.
+
+| regime | before `k` | after `k` |
+|---|---|---|
+| periodic resets (S bounded) | 0.00131 µs/call/fact (r² 0.999) | 0.00125 (r² 1.000) |
+| single early reset (S == H) | 0.00127 µs/call/fact (r² 1.000) | 0.00135 (r² 1.000) |
+
+The two moves are in opposite directions, 4.6% and 6.3% — run-to-run noise.
+Monotonicity 6/6 rises in both regimes on both trees.
+
+### 11.5 Conditions, and the runs set aside
+
+**Three of six timed runs were set aside** under §4.4 for a 1-minute load
+average above 10 at one end: 50.74, 64.46 and 46.05, against valid runs taken
+between 1.42 and 6.58. Their `k` readings scatter from **31.838 to 469.840** —
+an order of magnitude, in both directions around the valid runs' 313–318 — and
+the lowest of them, taken on a *before* tree, would have read as a 9.8× fall
+against a valid after run. §4.4 is not boilerplate on this box: on the night
+these were taken the 1-minute average moved between 1.4 and 64.5 under other
+campaigns' gates, and no run of this length could be scheduled around it. Every
+load average, before and after, for all nine runs is in the task report.
+
+**The counts were taken first and are exempt**, as §4.1 says: they were read at
+loads between 8.09 and 60.85 and every one of the twelve cross-checks in §11.2
+came out exact, which is the evidence the load did not reach them.
+
+### 11.6 The two collapse numbers, kept apart
+
+- **529 occurrences → 83 searches (6.37×)** is **within one sweep**, at wait 12
+  of the possession shape — cross-entity duplicate collapse, what a single
+  roster-wide read can see. Pinned by
+  `culvert_sweep_collapses_calls_onto_distinct_pairs`.
+- **4,060 → 83 across twelve waits (48.92×)**, and **2,692 asks → 1 search
+  across eight waits** on the seed-42 session, are **across reads** — the
+  session-lived property, which is the campaign's real lever. Pinned by
+  `turn_budget::the_route_memo_survives_between_waits`.
+
+Different claims about different things. They are never averaged, compared, or
+presented as one headline.
