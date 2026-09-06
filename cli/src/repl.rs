@@ -285,13 +285,12 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     .find(|t| **t != STEPS_FLAG)
                     .and_then(|t| t.parse::<u64>().ok());
                 match id {
+                    // ONE view chooser, used by the top-level recount and by
+                    // the nested species recount below. Two call sites reading
+                    // the same flag independently is how the nested one came
+                    // to ignore `--steps` in the first place.
                     Some(id) => match EntityId::new(id).and_then(|target| {
-                        let text = if steps {
-                            hornvale_historiography::recount_steps(world, target)
-                        } else {
-                            hornvale_historiography::recount(world, target)
-                        };
-                        text.map(|text| (target, text))
+                        recount_view(world, target, steps).map(|text| (target, text))
                     }) {
                         Some((target, text)) => {
                             write!(output, "{text}")?;
@@ -304,7 +303,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                                     hornvale_species::species_of(world, *community)
                                 && let Some(entity) =
                                     hornvale_species::species_entity(world, &species)
-                                && let Some(text) = hornvale_historiography::recount(world, entity)
+                                && let Some(text) = recount_view(world, entity, steps)
                             {
                                 writeln!(output, "Seen through {species} eyes:")?;
                                 write!(output, "{text}")?;
@@ -508,6 +507,24 @@ fn interpretations_of(names: &[&str], gloss: &str) -> Vec<String> {
         }
     }
     found
+}
+
+/// One entity's recount, in whichever view `steps` names: the rolled-up
+/// default, or one line per step (The Warrant, spec §5).
+///
+/// It exists so that `why`'s two recount call sites — the entity the reader
+/// asked for, and the species entity a belief recounts onward through — cannot
+/// disagree about which view the reader asked for. They did: the nested one
+/// called `recount` unconditionally, so `why <belief> --steps` rendered the
+/// belief per-step and the species rolled up. Harmless in practice, because a
+/// species entity commits no errands and its two views are identical today —
+/// which is exactly why nothing would have caught it.
+fn recount_view(world: &World, entity: EntityId, steps: bool) -> Option<String> {
+    if steps {
+        hornvale_historiography::recount_steps(world, entity)
+    } else {
+        hornvale_historiography::recount(world, entity)
+    }
 }
 
 fn render_value(value: &Value) -> String {

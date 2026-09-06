@@ -619,3 +619,115 @@ fn the_bare_why_form_still_resolves_and_an_unknown_name_still_refuses() {
         "`!why --steps` with no name is still an empty request, not a recount"
     );
 }
+
+/// THE PRODUCER'S PREDICATE ROSTER IS CLOSED: the only facts ever committed
+/// under [`ERRAND_PRODUCER`] are the eight `errand/*` keys and [`AGENT_AT`].
+///
+/// **This ratchet exists because the renderer cannot hold the invariant and
+/// the failure it prevents is this campaign's own regression, returning
+/// silently.** `hornvale_historiography::group` folds a walk by asking whether
+/// a fact shares the open errand's provenance and the predicate that errand's
+/// FIRST step established. If a third predicate is ever committed under this
+/// producer and happens to land first after an errand fact, it does not merely
+/// get miscounted as a step — it *fixes the group's step predicate*, so every
+/// genuine `agent-at` after it fails the join, falls out of the errand, and
+/// renders `(asserted by vessel/liveness, …)`: exactly the identical,
+/// reasonless line The Warrant exists to remove, with the roll-up above it
+/// reading `ending at true`.
+///
+/// The renderer cannot express "only `agent-at` joins" without naming
+/// `agent-at`, and `windows/historiography` depends on `hornvale-kernel` and
+/// nothing else — `cli/tests/suite/architecture.rs` refuses a vessel
+/// dependency there. So the guard goes where the invariant actually lives:
+/// beside the producer that would violate it.
+///
+/// **Derived from a real walk, not from a list of call sites.** A source scan
+/// for `ERRAND_PRODUCER` would assert over what the code *says*; this asserts
+/// over what a session actually *commits*, which is the thing the renderer
+/// reads. The two floors below are what keep it from passing vacuously: a walk
+/// that went silent, or a producer that stopped being used at all, would
+/// otherwise satisfy an emptiness-tolerant subset check trivially.
+///
+/// **Mutation-verified, and the two halves of the hazard were established in
+/// two different places — say which, because they are not equally
+/// demonstrated.** Re-pointing the `Action::Drink` arm's `drank_fact`
+/// provenance (`liveness.rs`) at [`ERRAND_PRODUCER`] — a one-word change that
+/// compiles, and precisely the hazard shape above — reds this test, and the
+/// live rendering it produces puts nine `(asserted by vessel/liveness, day …)`
+/// lines back into one seed-23 recount. That is the ORPHANING half, measured
+/// on a real walk.
+///
+/// The `ending at <that fact's value>` half did NOT reproduce on seeds 7, 11,
+/// 14 or 23 under that mutation, because a `drank` is always committed after
+/// the errand's first step rather than before it, so it never gets to fix the
+/// group's predicate. It was confirmed instead on a constructed ledger
+/// (errand, then the foreign fact, then two real steps), which renders
+/// `— 1 step, day 5.05, ending at true` with both genuine steps orphaned
+/// below it. A constructed demonstration is weaker evidence than a live one
+/// and is labelled as such; what it establishes is that the shape is
+/// reachable, not that any seed reaches it today.
+///
+/// claim: structural(one seed — [`WARRANT_WALK_SEED`] over
+/// [`WARRANT_WALK_WAITS`] waits — over every fact that walk commits: the set
+/// of predicates carrying [`ERRAND_PRODUCER`] as provenance is a subset of the
+/// nine this campaign registered, and is non-trivial in both directions. One
+/// seed is the right denominator because the claim is about which call sites
+/// name the producer constant, which is a property of the program rather than
+/// of a world; the walk is the instrument that exercises them)
+#[test]
+fn the_errand_producer_commits_only_agent_at_and_the_eight_errand_keys() {
+    let sanctioned: std::collections::BTreeSet<&str> = errand_predicates()
+        .into_iter()
+        .map(|(key, _)| key)
+        .chain(std::iter::once(AGENT_AT))
+        .collect();
+    assert_eq!(
+        sanctioned.len(),
+        9,
+        "eight errand keys plus agent-at — if this moved, the roster below moved with it"
+    );
+
+    let facts = walk_facts(WARRANT_WALK_SEED, WARRANT_WALK_WAITS);
+    let observed: std::collections::BTreeSet<&str> = facts
+        .iter()
+        .filter(|f| f.provenance == ERRAND_PRODUCER)
+        .map(|f| f.predicate.as_str())
+        .collect();
+
+    // Two floors, so a subset check cannot pass by observing nothing.
+    assert!(
+        observed.contains(AGENT_AT),
+        "the walk must commit at least one {AGENT_AT} under {ERRAND_PRODUCER}, \
+         or the subset assertion below is vacuous. Observed: {observed:?}"
+    );
+    assert!(
+        observed.iter().any(|p| p.starts_with("errand/")),
+        "the walk must commit at least one errand under {ERRAND_PRODUCER}, or \
+         the subset assertion below is vacuous. Observed: {observed:?}"
+    );
+
+    let strays: Vec<&str> = observed
+        .iter()
+        .filter(|p| !sanctioned.contains(*p))
+        .copied()
+        .collect();
+    assert!(
+        strays.is_empty(),
+        "a predicate outside the sanctioned roster is committed under \
+         {ERRAND_PRODUCER}: {strays:?}\n\
+         \n\
+         THIS IS NOT A NAMING NIT. `hornvale_historiography::group` establishes \
+         an errand's step predicate from the FIRST fact that joins it. A third \
+         predicate under this producer, arriving first after an errand, fixes \
+         the group on itself and orphans every real {AGENT_AT} that follows — \
+         each of which then renders `(asserted by {ERRAND_PRODUCER}, day …)`, \
+         the reasonless line The Warrant exists to remove, under a roll-up \
+         reading `ending at <that fact's value>`.\n\
+         \n\
+         Two remedies, and they are not interchangeable. If the new fact is \
+         genuinely part of a walk, it needs its own place in the renderer's \
+         grouping and a decision about how it reads — not a wider roster here. \
+         If it is not, give it its own provenance: {ERRAND_PRODUCER} names the \
+         producer of errands and the steps under them, and nothing else."
+    );
+}

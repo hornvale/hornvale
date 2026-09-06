@@ -231,13 +231,22 @@ pub fn recount(world: &World, entity: EntityId) -> Option<String> {
 /// which run of steps shared it.
 ///
 /// An errand's own fact contributes no line of its own here: its gloss is
-/// already on each step it covers. The exception is an errand with no steps at
-/// all, which renders its roll-up line so that nothing is silently dropped. A
-/// step with no covering errand — a hand-planted `harness-placement` position,
-/// or a position committed before the first errand — renders exactly as
-/// [`recount`] renders it, naming its own provenance; it is never attributed
-/// to an errand it did not come from. `None` if nothing is recorded about
-/// `entity`.
+/// already on each step it covers.
+///
+/// **A stepless errand renders its roll-up line instead, and that arm is
+/// DEFENSIVE rather than something the walk produces.** The drive tick pushes
+/// an errand fact and its first step in the same arm, so a live walk cannot
+/// emit an errand with no steps under it. But a recount runs over arbitrary
+/// committed history — a scenario harness plants facts directly, and a saved
+/// world may hold anything a past epoch wrote — so the arm exists to keep a
+/// hand-planted errand from vanishing silently. Do not read it as a case the
+/// sim reaches.
+///
+/// A step with no covering errand — a hand-planted `harness-placement`
+/// position, or a position committed before the first errand — renders exactly
+/// as [`recount`] renders it, naming its own provenance; it is never
+/// attributed to an errand it did not come from. `None` if nothing is recorded
+/// about `entity`.
 /// type-audit: bare-ok(artifact: return)
 pub fn recount_steps(world: &World, entity: EntityId) -> Option<String> {
     let facts: Vec<&hornvale_kernel::Fact> = world.ledger.facts_about(entity).collect();
@@ -691,8 +700,69 @@ mod tests {
         }
     }
 
+    /// A FOREIGN STEP *INSIDE* AN ERRAND IS NOT SWALLOWED BY IT, and this is
+    /// the case the sibling test above cannot reach.
+    /// `an_uncovered_step_renders_as_it_always_did` plants its
+    /// `harness-placement` position BEFORE the errand opens, where `group`'s
+    /// join rule never runs at all — so it exercises the "no open group"
+    /// arm, not the join. This one plants the position mid-errand, where the
+    /// join rule does run and where the ONLY thing separating the two facts is
+    /// their provenance: the planted step carries the same `agent-at`
+    /// predicate the group's first step established, and lands between two
+    /// genuine steps.
+    ///
+    /// **Mutation-verified, and it had to be:** replacing `group`'s
+    /// `f.provenance == facts[e.opened].provenance` with `true` left all
+    /// thirteen tests in this module green before this one existed. Under that
+    /// mutation the planted position is counted as a third step of an errand
+    /// it had nothing to do with, and its own `(asserted by harness-placement,
+    /// …)` line disappears — a `place_agent` scenario silently reads as part
+    /// of a walk the harness never took.
+    #[test]
+    fn a_foreign_step_mid_errand_is_not_counted_as_one_of_the_errands_steps() {
+        let mut w = errand_world();
+        let e = w
+            .ledger
+            .mint_entity(test_lineage(w.ledger.entity_count() as u16));
+        for f in [
+            dated(e, "errand/water-blind", "1000", "vessel/liveness", 5.0),
+            dated(e, "agent-at", "1001", "vessel/liveness", 5.1),
+            // The intruder: same predicate, different producer, mid-errand.
+            dated(e, "agent-at", "900", "harness-placement", 5.2),
+            dated(e, "agent-at", "1002", "vessel/liveness", 5.3),
+        ] {
+            w.ledger.commit(f, &w.registry.clone()).unwrap();
+        }
+        let text = recount(&w, e).expect("facts");
+        assert!(
+            text.contains("2 steps"),
+            "the errand covers its own producer's two steps, not the planted \
+             third:\n{text}"
+        );
+        assert!(
+            !text.contains("3 steps"),
+            "a position from another producer was swallowed as a step of this \
+             errand:\n{text}"
+        );
+        for view in [text, recount_steps(&w, e).expect("facts")] {
+            assert!(
+                view.contains(
+                    "- an agent's position on a day: 900 (asserted by harness-placement, day 5.2)\n"
+                ),
+                "the planted position keeps its own provenance line, in both \
+                 views:\n{view}"
+            );
+        }
+    }
+
     /// AN ERRAND WITH NO STEPS IS STILL NAMED, in both views: it is a real
     /// committed fact and dropping it would lose a reason the world recorded.
+    ///
+    /// **The shape is hand-planted here because the walk cannot produce it** —
+    /// `windows/vessel`'s drive tick pushes an errand fact and its first step
+    /// in the same arm. This pins the defensive arm, not a live case; a
+    /// recount runs over arbitrary committed history and a harness plants
+    /// facts directly.
     #[test]
     fn an_errand_with_no_steps_is_still_named() {
         let mut w = errand_world();
