@@ -89,8 +89,9 @@ use hornvale_vessel::body::Body;
 use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
     AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain, Occupancy,
-    PrimaryAfraidMemo, RESTED, SLEPT, SLEPT_ON, SUSTENANCE, Terrain, affect_of_memo_occupied,
-    alarm_field_memo, derive_npcs, errand_predicates, hazard_memory_memo, waking_offset,
+    PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SLEPT_ON, SUSTENANCE, Terrain,
+    affect_of_memo_occupied, alarm_field_memo, derive_npcs, errand_predicates, hazard_memory_memo,
+    waking_offset,
 };
 use hornvale_vessel::resident::{OwnedFolds, ResidentFolds};
 
@@ -186,6 +187,9 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
     );
     let mut mesh_memo = RoomMeshMemo::new();
     let mut home_nav_cache = HomeNavCache::new();
+    // The water-belief route memo (The Culvert, Task 7), run-lived like the two
+    // above — the scope production gives it.
+    let mut route_memo = RouteMemo::new();
     let folds = OwnedFolds::new(ResidentFolds::new());
     let ground: OwnedGround = OwnedGround::new(GroundHazards::new());
     let mut day = WorldTime::from_std_days(0.5).expect("0.5 is a finite day count");
@@ -216,8 +220,12 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         let copied_before = folds.borrow().witness().emitter_timeline_copied();
         // The third element is the roster write-back `Session::wait` needs
         // (The Rack, Task 3); this sampler owns no roster, so it is dropped.
-        let (facts, _occupancy, _written) =
-            sys.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (facts, _occupancy, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut route_memo,
+        );
         facts_per_tick.push(facts.len());
         for fact in facts {
             ledger
@@ -1152,6 +1160,7 @@ fn rule_five_witness_past_instant_reads_on_the_lab_shape() {
         let mut afraid = PrimaryAfraidMemo::new();
         let mut mesh_memo = shape.mesh_memo.clone();
         let mut nav = HomeNavCache::new();
+        let mut route = RouteMemo::new();
         let _ = affect_of_memo_occupied(
             &shape.ledger,
             npc,
@@ -1162,6 +1171,7 @@ fn rule_five_witness_past_instant_reads_on_the_lab_shape() {
             Some(&Occupancy::default()),
             &mut mesh_memo,
             &mut nav,
+            &mut route,
             &shape.folds,
         );
 

@@ -6091,6 +6091,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T20:02:21Z | sluice:gate | 750.759 | 20193.252 | 516.603 | 27.59 | 0 | f183bdf06 |  | lefford | 40 |
 | 2026-09-05T20:04:41Z | sluice:clients | 139.584 | 2103.771 | 152.760 | 16.17 | 0 | 8af37a4c4 |  | lefford | 40 |
 | 2026-09-05T20:12:27Z | sluice:heavy | 465.801 | 10174.053 | 154.601 | 22.17 | 0 | b7a9f5399 |  | lefford | 40 |
+| 2026-09-05T20:55:22Z | prewarm | 540.179 | 1138.497 | 51.063 | 2.20 | 0 | a8bde6769 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-05T19:44:15Z | gate-commit | 144.188 | 1443.007 | 162.509 | 11.13 | 0 | 1027e3a7b | tooling/mouth-cross-candidate | lefford | 40 |
 | 2026-09-05T20:26:25Z | gate-commit | 82.667 | 173.634 | 53.403 | 2.75 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
 | 2026-09-05T20:28:04Z | gate-commit | 74.245 | 154.117 | 44.269 | 2.67 | 0 | a8bde6769 | tooling/claim-refuses-running-sha | lefford | 40 |
@@ -6103,6 +6104,12 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T20:41:14Z | sluice:gate | 825.258 | 21787.432 | 612.169 | 27.14 | 0 | f89570edd |  | lefford | 40 |
 | 2026-09-05T20:43:58Z | sluice:clients | 163.755 | 2295.989 | 214.149 | 15.33 | 0 | fde6418d6 |  | lefford | 40 |
 | 2026-09-05T20:51:49Z | sluice:heavy | 470.334 | 10251.012 | 171.545 | 22.16 | 0 | 3af4fe0af |  | lefford | 40 |
+| 2026-09-05T22:01:04Z | rebaseline | 389.596 | 443.651 | 18.717 | 1.19 | 0 | 54a9daa60 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-05T23:30:23Z | gate-commit | 39.206 | 72.971 | 16.209 | 2.27 | 0 | 765aa9b8b | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-05T23:47:58Z | gate-commit | 54.096 | 79.768 | 16.842 | 1.79 | 0 | 765aa9b8b | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-05T23:48:53Z | gate-commit | 36.726 | 69.887 | 15.846 | 2.33 | 0 | 765aa9b8b | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T00:09:04Z | gate-commit | 49.574 | 108.936 | 34.101 | 2.89 | 0 | c6edaa548 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T00:09:56Z | gate-commit | 34.950 | 68.510 | 15.613 | 2.41 | 0 | c6edaa548 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-05T21:59:41Z | prewarm | 224.456 | 916.547 | 50.218 | 4.31 | 0 | 8c971261d | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-05T22:33:51Z | rebaseline | 302.828 | 444.262 | 21.649 | 1.54 | 0 | 8c971261d | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-05T22:36:29Z | gate-commit | 122.148 | 77.608 | 19.281 | 0.79 | 0 | 8c971261d | campaign/the-warrant | MacBookPro | 10 |
@@ -6154,6 +6161,16 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-05T22:38:14Z | sluice:gate | 740.593 | 20306.876 | 495.798 | 28.09 | 0 | e96893f4b |  | lefford | 40 |
 | 2026-09-05T22:40:38Z | sluice:clients | 143.341 | 2066.557 | 193.298 | 15.77 | 0 | 100d82ecc |  | lefford | 40 |
 | 2026-09-05T22:49:36Z | sluice:heavy | 537.985 | 10463.462 | 167.783 | 19.76 | 0 | 9977d3f49 |  | lefford | 40 |
+| 2026-09-06T00:20:19Z | rebaseline | 259.309 | 451.903 | 16.886 | 1.81 | 0 | 71a80065a | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T00:21:28Z | gate-commit | 42.791 | 71.733 | 15.636 | 2.04 | 0 | a239279fa | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T00:35:47Z | gate-commit | 40.849 | 72.029 | 16.215 | 2.16 | 0 | a239279fa | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T00:36:51Z | gate-commit | 36.033 | 69.147 | 15.614 | 2.35 | 0 | a239279fa | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T00:52:52Z | gate-commit | 65.387 | 77.645 | 16.370 | 1.44 | 0 | ec07325f6 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T00:54:26Z | gate-commit | 57.395 | 76.202 | 16.478 | 1.61 | 0 | ec07325f6 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T01:30:33Z | gate-commit | 101.461 | 81.479 | 17.632 | 0.98 | 0 | f50f7cf5f | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T01:33:18Z | gate-commit | 91.205 | 77.334 | 16.441 | 1.03 | 0 | f50f7cf5f | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T01:48:26Z | gate-commit | 49.329 | 73.857 | 16.185 | 1.83 | 0 | 79cc8ebc0 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T01:49:31Z | gate-commit | 42.508 | 70.804 | 15.667 | 2.03 | 0 | 79cc8ebc0 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T00:50:11Z | prewarm | 212.263 | 826.156 | 33.948 | 4.05 | 0 | 12701a27b | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T00:55:26Z | rebaseline | 332.727 | 460.387 | 18.882 | 1.44 | 0 | 12701a27b | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T00:57:27Z | gate-commit | 94.392 | 344.729 | 59.122 | 4.28 | 0 | 12701a27b | campaign/the-ken | MacBookPro | 10 |
@@ -6189,6 +6206,20 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T00:21:58Z | sluice:gate | 763.701 | 20454.957 | 586.685 | 27.55 | 0 | f6f581a71 |  | lefford | 40 |
 | 2026-09-06T00:24:27Z | sluice:clients | 148.525 | 2212.464 | 206.207 | 16.28 | 0 | 7ad689094 |  | lefford | 40 |
 | 2026-09-06T00:31:51Z | sluice:heavy | 443.505 | 10238.026 | 154.705 | 23.43 | 0 | ce65d0acc |  | lefford | 40 |
+| 2026-09-06T01:54:37Z | rebaseline | 150.529 | 432.598 | 16.800 | 2.99 | 0 | 97c39c331 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T01:55:14Z | gate-commit | 36.970 | 70.217 | 15.556 | 2.32 | 0 | 97c39c331 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:01:17Z | gate-commit | 49.675 | 47.524 | 8.116 | 1.12 | 0 | d36a23bd7 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:03:09Z | gate-commit | 96.223 | 204.608 | 29.975 | 2.44 | 0 | d36a23bd7 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:04:08Z | gate-commit | 45.885 | 72.991 | 15.596 | 1.93 | 0 | d36a23bd7 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:16:24Z | gate-commit | 61.572 | 187.019 | 35.541 | 3.61 | 0 | b73497220 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:17:14Z | gate-commit | 36.599 | 69.891 | 15.648 | 2.34 | 0 | b73497220 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:51:27Z | rebaseline | 196.057 | 466.257 | 17.887 | 2.47 | 0 | 5b63da7cd | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:52:35Z | gate-commit | 50.170 | 110.874 | 22.447 | 2.66 | 0 | 5b63da7cd | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T02:53:46Z | gate-commit | 52.933 | 71.631 | 15.377 | 1.64 | 0 | 5b63da7cd | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:13:03Z | gate-commit | 30.188 | 26.753 | 7.164 | 1.12 | 0 | 7e0e86e3c | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:20:57Z | rebaseline | 468.461 | 442.847 | 18.693 | 0.99 | 0 | 7e0e86e3c | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:22:32Z | gate-commit | 84.115 | 157.643 | 27.747 | 2.20 | 0 | 7e0e86e3c | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:23:27Z | gate-commit | 39.134 | 70.239 | 15.496 | 2.19 | 0 | 7e0e86e3c | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T01:47:22Z | rebaseline | 168.411 | 440.102 | 17.233 | 2.72 | 0 | ccc469e3b | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-06T01:48:34Z | gate-commit | 55.408 | 100.964 | 16.565 | 2.12 | 0 | ccc469e3b | campaign/the-lot | MacBookPro | 10 |
 | 2026-09-06T01:40:52Z | sluice:artifacts | 312.569 | 1975.099 | 76.786 | 6.56 | 0 | 048003a07 |  | lefford | 40 |
@@ -6228,6 +6259,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T02:26:46Z | sluice:gate | 813.842 | 21015.216 | 552.838 | 26.50 | 0 | 2a4c08da8 |  | lefford | 40 |
 | 2026-09-06T02:29:28Z | sluice:clients | 161.677 | 2256.665 | 216.086 | 15.29 | 0 | 48547597e |  | lefford | 40 |
 | 2026-09-06T02:37:19Z | sluice:heavy | 470.955 | 10441.817 | 160.025 | 22.51 | 0 | 308c759bc |  | lefford | 40 |
+| 2026-09-06T03:41:45Z | gate-commit | 61.727 | 52.729 | 17.963 | 1.15 | 0 | 591130fd6 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:51:11Z | gate-commit | 15.689 | 15.196 | 0.332 | 0.99 | 0 | 591130fd6 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:56:03Z | rebaseline | 281.316 | 478.395 | 18.902 | 1.77 | 0 | 591130fd6 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T04:06:04Z | gate-commit | 97.529 | 543.788 | 47.033 | 6.06 | 0 | 591130fd6 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T08:17:01Z | gate-commit | 75.402 | 129.757 | 114.778 | 3.24 | 0 | b47023156 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T05:13:55Z | gate-commit | 184.306 | 616.200 | 69.081 | 3.72 | 0 | 25f0ffe5f | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T05:35:44Z | rebaseline | 213.362 | 431.826 | 16.489 | 2.10 | 0 | 27de2a7f1 | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T05:36:59Z | gate-commit | 58.143 | 165.287 | 34.436 | 3.44 | 0 | 27de2a7f1 | campaign/the-warrant | MacBookPro | 10 |
@@ -6252,6 +6288,22 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T05:50:10Z | sluice:gate | 865.604 | 21936.415 | 632.494 | 26.07 | 0 | dadeae723 |  | lefford | 40 |
 | 2026-09-06T05:52:40Z | sluice:clients | 150.057 | 2404.189 | 178.158 | 17.21 | 0 | 3bd1b78ba |  | lefford | 40 |
 | 2026-09-06T06:00:48Z | sluice:heavy | 487.623 | 11472.542 | 147.466 | 23.83 | 0 | 914763dfd |  | lefford | 40 |
+| 2026-09-06T08:25:21Z | rebaseline | 206.955 | 477.617 | 18.458 | 2.40 | 0 | 273ec9972 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T08:34:08Z | gate-commit | 122.337 | 624.802 | 94.913 | 5.88 | 0 | 273ec9972 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T08:40:00Z | gate-commit | 46.265 | 86.126 | 35.031 | 2.62 | 0 | 63ce3c5e2 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:02:28Z | rebaseline | 207.187 | 433.037 | 17.353 | 2.17 | 0 | 4869d837a | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:03:17Z | gate-commit | 35.921 | 70.101 | 15.626 | 2.39 | 0 | 4869d837a | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:16:09Z | rebaseline | 155.932 | 427.944 | 18.595 | 2.86 | 0 | cdf01a5d1 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:17:05Z | gate-commit | 49.254 | 105.432 | 30.883 | 2.77 | 0 | cdf01a5d1 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:18:25Z | gate-commit | 41.698 | 97.591 | 16.865 | 2.74 | 0 | cdf01a5d1 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:26:44Z | gate-commit | 52.780 | 76.778 | 16.533 | 1.77 | 0 | cdf01a5d1 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:31:41Z | rebaseline | 171.800 | 437.211 | 17.303 | 2.65 | 0 | 1544c3e5d | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:52:37Z | rebaseline | 174.810 | 428.253 | 18.055 | 2.55 | 0 | a6c6cfa46 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:53:51Z | gate-commit | 67.441 | 246.067 | 37.782 | 4.21 | 0 | a6c6cfa46 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T13:55:26Z | gate-commit | 36.644 | 70.731 | 15.882 | 2.36 | 0 | a6c6cfa46 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T14:07:50Z | rebaseline | 188.425 | 430.613 | 18.904 | 2.39 | 0 | b11261b45 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T14:09:00Z | gate-commit | 67.319 | 228.898 | 39.287 | 3.98 | 0 | b11261b45 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T14:10:14Z | gate-commit | 36.582 | 70.438 | 16.443 | 2.37 | 0 | b11261b45 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T12:52:42Z | rebaseline | 208.662 | 478.277 | 19.582 | 2.39 | 0 | 8438a1a06 | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T13:02:07Z | gate-commit | 145.401 | 636.098 | 103.957 | 5.09 | 0 | 8438a1a06 | campaign/the-warrant | MacBookPro | 10 |
 | 2026-09-06T13:04:46Z | gate-commit | 35.319 | 69.985 | 15.445 | 2.42 | 0 | 3233bc1de | campaign/the-warrant | MacBookPro | 10 |
@@ -6284,3 +6336,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T14:47:43Z | sluice:gate | 790.051 | 21276.274 | 501.490 | 27.57 | 0 | 8507e6c52 |  | lefford | 40 |
 | 2026-09-06T14:50:05Z | sluice:clients | 141.600 | 2182.859 | 184.460 | 16.72 | 0 | a7da7402d |  | lefford | 40 |
 | 2026-09-06T14:58:06Z | sluice:heavy | 481.048 | 11456.405 | 155.464 | 24.14 | 0 | 641125d4b |  | lefford | 40 |
+| 2026-09-06T14:27:35Z | rebaseline | 203.712 | 452.453 | 19.464 | 2.32 | 0 | 39189fc32 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T14:29:37Z | gate-commit | 92.836 | 289.109 | 53.850 | 3.69 | 0 | 39189fc32 | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T14:32:10Z | gate-commit | 48.530 | 70.769 | 16.206 | 1.79 | 0 | 39189fc32 | campaign/the-culvert | MacBookPro | 10 |

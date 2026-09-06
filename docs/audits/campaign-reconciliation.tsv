@@ -657,6 +657,7 @@ plan-2026-09-04-the-coda	active	none		no terminal closure stated in record		docs
 plan-2026-09-04-the-housemark	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-housemark.md			
 plan-2026-09-04-the-cruck	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-cruck.md			
 plan-2026-09-05-the-sluicegate	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it		docs/superpowers/plans/2026-09-05-the-sluicegate.md			
+plan-2026-09-05-the-culvert	shipped	none		plan complete through Task 10; Task 8 excluded by measurement (ledger #14); readout in spec §11		docs/superpowers/plans/2026-09-05-the-culvert.md			
 plan-2026-09-05-the-lot	shipped	none		merged via the queue 2026-09-05; all twelve tasks and the plan amendment executed		docs/superpowers/plans/2026-09-05-the-lot.md			
 plan-2026-09-05-the-warrant	shipped	none		plan: COMPLETE through Task 6; Task 4 struck before execution (ledger #7 R2); G6 approved 2026-09-06		docs/superpowers/plans/2026-09-05-the-warrant.md			
 plan-the-contour-baseline	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline.md			
@@ -1330,6 +1331,7 @@ spec-2026-09-04-the-cruck-design	shipped	none		status header records closure	doc
 spec-2026-09-04-the-housemark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-04-the-housemark-design.md				
 spec-2026-09-04-the-staple-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-staple-metaplan.md				
 spec-2026-09-05-the-sluicegate-design	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-05-the-sluicegate-design.md				
+spec-2026-09-05-the-culvert-design	shipped	none		C1a/C1b PASS, C2 FAILED and reported as failed, C3 PASS as a control; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-05-the-culvert-design.md				
 spec-2026-09-05-the-lot-design	shipped	none		merged via the queue 2026-09-05; chronicle, retrospective and decisions 0796-0798 landed with it	docs/superpowers/specs/2026-09-05-the-lot-design.md				
 chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
 retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md
@@ -1351,3 +1353,5 @@ chronicle-the-lot	shipped	none		published chronicle				book/src/chronicle/the-lo
 retrospective-the-lot	shipped	none		published retrospective					docs/retrospectives/the-lot.md
 retrospective-the-warrant	shipped	none		published retrospective; G6 approved 2026-09-06					docs/retrospectives/the-warrant.md
 the-ken	active	none		plan complete through Task 6; chronicle and retrospective committed; awaiting G6 approval before sluice submission	docs/superpowers/specs/2026-09-05-the-ken-design.md	docs/superpowers/plans/2026-09-05-the-ken.md		book/src/chronicle/the-ken.md	docs/retrospectives/the-ken.md
+chronicle-the-culvert	shipped	none		published chronicle				book/src/chronicle/the-culvert.md	
+retrospective-the-culvert	shipped	none		published retrospective					docs/retrospectives/the-culvert.md
