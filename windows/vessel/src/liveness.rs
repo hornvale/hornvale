@@ -10410,7 +10410,7 @@ mod tests {
             10_000,
             &mut RouteMemo::new(),
         );
-        let mut current_ranked = remembered
+        let current_ranked = remembered
             .iter()
             .filter_map(|room| {
                 plan_to_room(&here, room, 10_000, &std::collections::BTreeSet::new())
@@ -10456,8 +10456,12 @@ mod tests {
             "probe denominator: home must rank at least one remembered source"
         );
         assert!(
-            current_ranked.take().is_some(),
+            current_ranked.is_some(),
             "probe denominator: here must rank at least one remembered source"
+        );
+        assert_ne!(
+            home_ranked, current_ranked,
+            "probe must retain a home-selected source distinct from the current-position source"
         );
     }
 
