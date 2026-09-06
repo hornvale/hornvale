@@ -69,11 +69,14 @@ way drainage breaks elevation ties), and a cell's accumulation is the sum
 of `K` over every cell whose climbing path passes through it. A cell with
 no higher-`K` neighbor is an *attractor* — a candidate settlement — and
 every other cell joins the catchment of the attractor its path leads to.
-An attractor becomes a committed settlement once its catchment accumulation
-clears a concentration threshold (frozen once, calibrated to a manageable
+An attractor *became* a committed settlement once its catchment accumulation
+cleared a concentration threshold (frozen once, calibrated to a manageable
 seed-42 count — 182 settlements, average catchment about 22 people, down
-from 998 at an untuned threshold); its population is that accumulation
-exactly, a readout of the field rather than a draw. Conservation is
+from 998 at an untuned threshold), its population was that accumulation exactly,
+a readout of the field rather than a draw — until [The Living
+Community](../chronicle/the-living-community.md) made the deep-history bake
+the settlement provider. The flow survives as the Lab's readout of the field;
+nothing on the production path reads a catchment. Conservation is
 structural, not tuned: summed over every attractor at no threshold at all,
 `Σ population == Σ K` holds exactly, per species, because settlements
 *partition* the carrying-capacity budget rather than each sampling a local
@@ -140,10 +143,10 @@ psychology-folded field from the same per-species machinery, so goblin's
 placement and population outcomes trace the same species substrate
 described fully in [Species](./species.md). The settlement noun itself is
 species-specific: a goblin settlement is a "village," a kobold one a
-"warren." One deliberate, documented step back rides along: because each
-species now condenses its field independently, two peoples may settle
-overlapping ground — the old 12° cross-species spacing rule is not rebuilt
-here. Restoring real multi-species exclusion, with footprint-scaled home
+"warren." One deliberate, documented step back rode along: because each
+species condensed its field independently — and the Lab's readout still
+does — two peoples may settle overlapping ground, and the old 12°
+cross-species spacing rule was not rebuilt here. Restoring real multi-species exclusion, with footprint-scaled home
 ranges and competitive sharing rather than a fixed separation distance, is
 the coexistence-stack campaign's job, building on this field rather than
 inside it.
@@ -225,10 +228,13 @@ under slack, founding a daughter into vacant favourable ground, retreating
 toward refugia when its cell turns against it, or ending. The **present world
 is the last frame** of that run. A living settlement is a community still alive
 at the final year; a ruin is one that died; the grassy clearing is one that
-died lifetimes ago. The condensation flow above still builds the capacity
-field the history reads, but it no longer emits the present map — history is
-the sole provider of both settlement and ruin facts, and each carries a
-provenance pointer to the skeleton event that produced it.
+died lifetimes ago. The carrying-capacity field above is what the history
+reads; its condensation — the flow accumulation and the attractors it names —
+is read by nothing on the production path any more, and survives as the Lab's
+readout of the field ([The Hidage](../chronicle/the-hidage.md) measured
+exactly that gap). History is the sole provider of both settlement and ruin
+facts, and each carries a provenance pointer to the skeleton event that
+produced it.
 
 The history lives as a **committed skeleton, locally-derived flesh**: a
 compact, dated event log (foundings, migrations, endings, each with
@@ -413,8 +419,9 @@ Tithe](../chronicle/the-tithe.md).
   envelope, and no new fact shape, cause of ending, or stream label.
 
 Seed 42 under a spinning sky now grows **230 settlements** as the present
-frame of its derived history (the field-condensation model above supplies the
-substrate the history plays out on; it no longer emits the map). Since [The
+frame of its derived history (the carrying-capacity field above supplies the
+substrate the history plays out on; the condensation of that field no longer
+emits the map, nor anything else the bake reads). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
 competitive niche-K stack, **fifteen peoples** share the landscape — the four
 goblinoids (goblin, hobgoblin, bugbear, and kobold, since [The

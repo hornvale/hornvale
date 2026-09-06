@@ -6260,6 +6260,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T02:29:28Z | sluice:clients | 161.677 | 2256.665 | 216.086 | 15.29 | 0 | 48547597e |  | lefford | 40 |
 | 2026-09-06T02:37:19Z | sluice:heavy | 470.955 | 10441.817 | 160.025 | 22.51 | 0 | 308c759bc |  | lefford | 40 |
 | 2026-09-06T13:10:43Z | prewarm | 113.270 | 796.921 | 52.122 | 7.50 | 0 | 51b838f09 | campaign/the-spillway | MacBookPro | 10 |
+| 2026-09-06T14:33:47Z | gate-commit | 99.054 | 442.168 | 35.509 | 4.82 | 0 | 8acd48d29 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T14:44:32Z | gate-commit | 193.136 | 920.639 | 62.907 | 5.09 | 0 | 8acd48d29 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T14:45:36Z | gate-commit | 37.487 | 69.534 | 16.410 | 2.29 | 0 | 8acd48d29 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:12:07Z | rebaseline | 200.108 | 436.649 | 18.202 | 2.27 | 0 | 0eb166a75 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:13:09Z | gate-commit | 47.918 | 95.339 | 39.716 | 2.82 | 0 | 0eb166a75 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:14:21Z | gate-commit | 35.694 | 69.005 | 16.043 | 2.38 | 0 | 0eb166a75 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:29:28Z | gate-commit | 38.484 | 69.871 | 15.867 | 2.23 | 0 | 9b72518a1 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T15:30:19Z | gate-commit | 40.205 | 70.044 | 16.382 | 2.15 | 0 | 9b72518a1 | campaign/the-hidage | MacBookPro | 10 |
 | 2026-09-06T03:41:45Z | gate-commit | 61.727 | 52.729 | 17.963 | 1.15 | 0 | 591130fd6 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T03:51:11Z | gate-commit | 15.689 | 15.196 | 0.332 | 0.99 | 0 | 591130fd6 | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T03:56:03Z | rebaseline | 281.316 | 478.395 | 18.902 | 1.77 | 0 | 591130fd6 | campaign/the-culvert | MacBookPro | 10 |
@@ -6364,3 +6372,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T17:58:38Z | sluice:gate | 832.135 | 21441.879 | 544.478 | 26.42 | 0 | 15e5a53e7 |  | lefford | 40 |
 | 2026-09-06T18:01:03Z | sluice:clients | 144.704 | 2245.954 | 168.422 | 16.68 | 0 | 677e7a2d2 |  | lefford | 40 |
 | 2026-09-06T18:09:05Z | sluice:heavy | 481.758 | 11470.396 | 152.601 | 24.13 | 0 | a307f3318 |  | lefford | 40 |
+| 2026-09-06T16:12:19Z | gate-commit | 276.812 | 950.077 | 77.938 | 3.71 | 0 | bed5ada34 | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T16:16:17Z | rebaseline | 219.985 | 445.368 | 18.691 | 2.11 | 0 | 30604a92f | campaign/the-hidage | MacBookPro | 10 |
+| 2026-09-06T16:56:16Z | gate-commit | 37.584 | 72.043 | 16.406 | 2.35 | 0 | f0c7a3e4f | campaign/the-hidage | MacBookPro | 10 |

@@ -97,6 +97,8 @@ mod generalist_distinctness;
 mod graph_byte_identity;
 #[path = "suite/graph_derive.rs"]
 mod graph_derive;
+#[path = "suite/hidage_probe.rs"]
+mod hidage_probe;
 #[path = "suite/history_bake.rs"]
 mod history_bake;
 #[path = "suite/history_byte_identity.rs"]
