@@ -443,8 +443,8 @@ Two new predicates, owned by `domains/epidemiology` and registered by it:
 ```
   predicate         subject      object          day        cardinality
   ----------------  -----------  --------------  ---------  -----------------------
-  struck-by         occupation   Text (kind)     the year   one per outbreak event
-  outbreak-deaths   occupation   Number          the year   one per outbreak event
+  struck-by         outbreak     Text (kind)     the year   one per outbreak event
+  outbreak-deaths   outbreak     Number          the year   one per outbreak event
 ```
 
 They carry no `occ-` prefix on purpose: that family is `domains/history`'s,
@@ -452,9 +452,11 @@ and these are `domains/epidemiology`'s own predicates on an entity another
 domain minted — the shape `has-caste` (culture, on a settlement) already
 has. They are **dated events**, the shape `occ-founded` and `occ-ended`
 already have, not a trajectory (decision 0797 is about integrals versus paths; an
-event is neither). The pair is joined on `(subject, day)`; a reader that
-finds one without the other has found a defect, and `history_emit`'s
-round-trip test pins that both are written together. Expected volume
+event is neither). Both facts use the minted outbreak event as `subject`; their
+`Fact.place`/location is the struck occupation. The pair is joined on the shared
+event subject plus matching occupation place and day; a reader that finds one
+without the other has found a defect, and `history_emit`'s round-trip test pins
+that both are written together. Expected volume
 (§8): ~120–150 events per world, ~300 facts, under 2% of the history facts
 a world already carries.
 
