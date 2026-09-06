@@ -151,6 +151,22 @@ steps, then touching this ledger immediately so the tree reads dirty. Posted
 to the board as a technique. · ideonomy passes / overturns: 0 — an incident,
 not a design choice. · Capture: `## Follow-ups`; board post.
 
+#8 [G4] — **Plan review before execution.** · **Decision: proceed with the
+plan at `cf67474a6`.** · Why: self-reviewed against the spec — every §3.4
+statistic has a print line, §4's rule is the `verdict` function with its own
+test, §7's H1–H3 are Task 0/1 tests, §5's branch table is Task 1 Step 7, §10's
+records are Task 3. Three defects found in the plan's own text and fixed
+before commit: `hornvale_worldgen::World` is not re-exported (kernel path
+used); a per-people minimum printed `f64::MAX` on an empty row (helper
+added); Task 3 said "add" a plan row the plan commit already carries
+("flip"). H3's surface arm asserts `K > 0` rather than bit-equality against
+a second `per_species_capacity` call, because the field IS that call's
+output times 1.0 and the equality that matters is the tag-position assert in
+`world_and_fields`; the spec's wording is discharged by construction and
+this entry says so. · Alternatives discarded: a pre-flight that runs every
+plan command (does not earn its cost — autopilot skill). · ideonomy passes /
+overturns: 0 — a review gate, not a design choice. · Capture: this entry.
+
 ## Follow-ups
 
 - **`scripts/worktree-take.sh` should refuse to recycle a member whose branch
