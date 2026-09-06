@@ -5769,6 +5769,24 @@ impl<'w> Session<'w> {
         turn
     }
 
+    /// How many real `plan_to_room` searches this session's water-belief
+    /// [`RouteMemo`] has run since the session opened — a CUMULATIVE count,
+    /// never reset, in the shape [`HomeNavCache::searches`] already has (The
+    /// Culvert, Task 7 fix round 1).
+    ///
+    /// **It is deliberately NOT folded into [`TurnWorkRead`], and that is not
+    /// an oversight.** `TurnWorkRead::plan_searches` is `home_nav_cache`'s
+    /// counter, and `turn_budget.rs` asserts it is `0` for a cold snapshot;
+    /// adding a second, differently-scoped counter to that struct would put
+    /// two unrelated quantities behind one published number with a live
+    /// assertion on it. A caller wanting this one takes deltas across calls,
+    /// which is exactly what the session-liveness witness
+    /// (`turn_budget.rs::the_route_memo_survives_between_waits`) does.
+    /// type-audit: bare-ok(count: return)
+    pub fn route_searches(&self) -> u64 {
+        self.route_memo.searches()
+    }
+
     /// This turn's work counters (The Rack, spec §3.5), read as of NOW.
     /// `Self::handle` is the only writer of a reset; this is read AFTER a
     /// `handle` or a `snapshot` to see what that call actually folded.

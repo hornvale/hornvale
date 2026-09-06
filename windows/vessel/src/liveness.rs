@@ -6363,9 +6363,12 @@ pub fn affect_of_memo(
     // for the same reason and with the same consequence: this function's
     // public signature stays as every existing caller expects it, and a
     // caller that HAS a session-lived scope to share (`run_simulation`) calls
-    // [`affect_of_memo_occupied`] directly instead. A throwaway costs exactly
-    // what this path already paid before The Culvert — one fresh search per
-    // known water room per call — never more.
+    // [`affect_of_memo_occupied`] directly instead. **The SEARCH count is
+    // what is exact**: a memo that starts empty and dies with the call misses
+    // every ask, so this path runs one `plan_to_room` per known water room
+    // per call, neither more nor fewer than before The Culvert. The
+    // instruction count is not exact — each miss additionally clones two
+    // `Facet`s and inserts into a map nothing will read.
     let mut route_memo = RouteMemo::new();
     affect_of_memo_occupied(
         frozen,
@@ -8023,8 +8026,12 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // pays a fresh `plan_to_room` per creature per pop, exactly what
         // EVERY call paid before this task. `throwaway_route` (The Culvert,
         // Task 7) is the third of the same shape, for the same kernel-trait
-        // reason: this path pays what every call paid before that task, never
-        // more.
+        // reason. **What is exact about it is the SEARCH count**: a cold memo
+        // misses every ask, so this path runs neither more nor fewer
+        // `plan_to_room` searches than it did before that task — which is the
+        // byte-identity-relevant claim. It is not exact to the instruction:
+        // each miss now also clones two `Facet`s and inserts into a
+        // `BTreeMap` that is dropped at the end of the call.
         //
         // THE RESIDENT FOLD STORE IS THE EXCEPTION, and it is why it lives on
         // the struct rather than beside these two (The Pawl, spec §2.1):

@@ -6013,3 +6013,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T02:51:27Z | rebaseline | 196.057 | 466.257 | 17.887 | 2.47 | 0 | 5b63da7cd | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T02:52:35Z | gate-commit | 50.170 | 110.874 | 22.447 | 2.66 | 0 | 5b63da7cd | campaign/the-culvert | MacBookPro | 10 |
 | 2026-09-06T02:53:46Z | gate-commit | 52.933 | 71.631 | 15.377 | 1.64 | 0 | 5b63da7cd | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:13:03Z | gate-commit | 30.188 | 26.753 | 7.164 | 1.12 | 0 | 7e0e86e3c | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:20:57Z | rebaseline | 468.461 | 442.847 | 18.693 | 0.99 | 0 | 7e0e86e3c | campaign/the-culvert | MacBookPro | 10 |
+| 2026-09-06T03:22:32Z | gate-commit | 84.115 | 157.643 | 27.747 | 2.20 | 0 | 7e0e86e3c | campaign/the-culvert | MacBookPro | 10 |
