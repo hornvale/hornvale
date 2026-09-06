@@ -338,9 +338,26 @@ before the campaign, and its full headroom restored for whatever needs it next.
 Six columns joined the census — the world's total lives ever, the median scaled
 age at death, the witness share, the silent-subsistence share, the mean filled
 slots, and the last-quarter birth share — so that the nine-seed readout above
-becomes a thousand-seed one at the next refresh. Until that refresh lands, the
-committed census fixture reads as predating those six columns, which is the
-additive case and is green by design.
+becomes a thousand-seed one at the next refresh.
+
+**The thousand-seed readout, from the refresh that closed the campaign.** The
+census was regenerated on the canonical box with the six columns in place,
+and it moved nothing else: a value-by-value comparison of the thousand rows
+found the 284 shared columns unchanged and only the six new ones added. On
+that instrument the two falsifications hold and sharpen. The median scaled age
+at death is under ten on 207 of the thousand worlds and inside the
+predicted band of ten to thirty-five on 793; the median across worlds is
+about twelve, with the tenth and ninetieth percentiles near nine and
+fifteen and a half — a representative life is a child's on a fifth of all
+worlds, not just three of nine seeds. The witness share sits below the
+predicted three-percent floor on 494 worlds, inside the three-to-twenty
+band on 497, and above it on 9; its median is three percent exactly, and only
+98 worlds reach ten. The passes hold too: the last-quarter birth share
+is at or above a third on 894 worlds, subsistence is silent for
+eighty-nine percent of lots at the median, and the filled-slot mean stays
+between seventeen and eighteen and a half everywhere. Souls ever ranges from
+about ten thousand to four hundred and forty thousand, median one hundred and
+eighty-five thousand.
 
 **What those six columns cost, measured rather than estimated.** On the
 authoring machine, with this branch's release binary, generating a world takes

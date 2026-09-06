@@ -1270,7 +1270,7 @@ hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_281_column_census
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_287_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
