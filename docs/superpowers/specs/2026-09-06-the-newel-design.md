@@ -158,80 +158,79 @@ not). Completing an undiscovered settlement's name would leak exactly what
 discovery predicate the cursor readout already uses.** A task that adds
 the source without the gate is a defect even though nothing would go red.
 
-### 4.3 A held heading must walk true (B3)
+### 4.3 The picture must draw the graph (B3)
 
-**This section was rewritten after G3.** Its first draft said nothing
-computes a wrong answer and that a held course had been deliberately
-closed. Both halves are withdrawn; see ledger R9-R10 for the measurement.
+**Rewritten twice. This is Nathan's framing, and it supersedes both
+earlier drafts** (disclosure, then cross-track correction):
 
-**The Pavement preregistered exactly this and its hypothesis is
-falsified.** Spec section 7, H1: *"From 200 distinct seed-42 start cells,
-walking `n` for 500 steps leaves the walker within 0.5 cell of the
-starting meridian at every step. This is the direct repair of The Rhumb's
-falsified H1 (unbounded drift, ~0.086 step-lengths per step)."*
+> the grid has very visible north, east, west, south. People press left
+> expecting to move to the spot immediately to the left. [...] So we might
+> want to consider movement as being a transition on a graph that usually
+> but not always agrees with the compass directions that we use as
+> shorthand to describe those movements.
 
-Re-run over 216 start cells at walk depth 13, cross-track in step-lengths,
-equatorial faces:
+That inverts the question from *does west go west* to **does the key take
+me to the box I was looking at** — which is the contract a player actually
+has, and which is directly measurable.
 
-| word | worst mean | fails 0.5 | vs the great circle |
-|---|---|---|---|
-| N | **0.00** | 0/144 | 0.00 |
-| S | **0.00** | 0/144 | 0.00 |
-| E | **69.85** | 144/144 | 69.85 |
-| W | **69.85** | 144/144 | 69.85 |
+Measured over 3,448 facets at walk rung 13, projecting each neighbour
+through the shipped `mercator::project`:
 
-North and south are exact — on a cube face the constant-`a` lines cut the
-sphere in meridians, which are great circles, so a held northward heading
-walks one. **East and west fail at every equatorial start cell**, drifting
-**0.1445 step-lengths per step** from both the parallel and the great
-circle — **1.68x The Rhumb's 0.086, the number The Pavement quotes as the
-defect it repairs.** In absolute terms: ~78 km off course over 563 km
-walked.
+| | equatorial faces | polar caps |
+|---|---|---|
+| left-press lands in the box to the left | **87.3%** | **14.9%** |
+| lands up-left `(-1,-1)` | 6.60% | — |
+| lands down-left `(-1,+1)` | 6.08% | — |
+| any move landing on the observer's OWN box | 1.13% | — |
 
-H1 chose the one direction that cannot fail: for `n` the meridian and the
-great circle are the same line. And it appears never to have been run —
-the plan's Step 1 names a probe file that does not exist, and neither the
-chronicle nor the retrospective reports an H1 result, though both report
-H2 and H3.
+**One left-press in eight does not go to the box on the left.** At seed
+42's flagship, `S` lands on the box the observer is already standing in —
+press down and the map does not move.
 
-**Why the current design cannot self-correct.** A greedy per-step
-nearest-bearing rule re-resolves the word at every room, which sounds
-self-correcting and is not: the move that would cancel accumulated drift
-is a diagonal 45 degrees off the word, and it always scores worse on the
-per-step metric than the ~8-degree-off cardinal that caused the drift. So
-the residual is systematic, never cancelled, and unbounded.
+**The raster is already trying to be the graph.** `virtual_dims` sets the
+chart width from `tiles_around_a_great_circle(depth)` — facet edges around
+a great circle — so at the equator it is 1 tile to 1 facet by
+construction. The height then follows the clamped Mercator's aspect, which
+makes a row ~8% taller than a facet at the equator and unboundedly taller
+poleward. The horizontal axis is exact; the vertical is not; and every
+miss is one box, never two.
 
-**And the argument that deleted `course.rs` is about one step, not a
-walk.** The Pavement's section 3.4: *"With eight real edges the mapping is
-the identity and the module's whole subject is gone."* True of a single
-bearing. False of a sequence, which still accumulates cross-track error
-and still needs the ideal line to correct against — which is what `Course`
-held.
+**So the change is: the walk rung draws the GRAPH, not a projection of
+it.** One facet, one character box, placed by walking the adjacency graph
+out from the observer. Then the box to the left IS the west neighbour, by
+construction, at 100% — and Mercator keeps the coarser rungs, where nobody
+is walking. Compass words become labels on edges: `look` may still name a
+bearing, but movement stops promising one.
 
-**So the change is a correction, not a disclosure**, and it needs a
-decision record superseding The Pavement's section 3.4 rather than a task
-under it. The shape is a cross-track-corrected heading: the walk carries
-the line it is meant to be on, and each step takes the neighbour that best
-serves it rather than the one that best matches the bearing in isolation.
+This **subsumes** the drift measurement rather than competing with it. The
+two are one phenomenon at two scales: 12.7% disagreement per step,
+accumulating to 0.1445 step-lengths per step over a walk (ledger R9). And
+it **explains the dead chart** (ledger R8): `chart::draw` *was* the graph
+view, placed in bearing space — the same mistake in another coordinate
+system — and it lost a third of its boxes to collisions.
 
-**Two things must be decided before any of that is built, and they are
-Nathan's:**
+**Discarded, with reasons.** Cross-track correction is still correct, but
+it repairs a promise the game need not make, costs carried state, and
+would need a decision record superseding The Pavement's section 3.4.
+Binding keys to "whichever neighbour is drawn leftmost" makes the key
+agree with a picture that is itself wrong and leaves colliding neighbours
+unreachable. Disclosure alone does not help: a player who walks into a
+wall is irritated by the outcome, not consoled by an explanation.
 
-1. **Which line does `west` name?** A parallel (constant bearing — what a
-   compass-holder walks) or a great circle (straight ahead, initially
-   west — what a body walks)? They differ, and **the project has never
-   decided.** The Rhumb chose the parallel by construction; The Pavement
-   chose neither, by deleting the choice; H1 chose the direction where
-   they coincide. Every number above is reported against both so the
-   choice is not prejudged.
-2. **Is 0.5 step-lengths still the right bar?** It is H1's, and H1 was
-   never run. A correction rule should be preregistered against a bar
-   chosen on purpose.
+**What is NOT yet decided, and is why this is still a G3 item.** Drawing
+in lattice space means up is the lattice's up, not north — a few degrees
+out on the equatorial faces, but a rotation of up to 90 degrees across a
+cube seam, and a genuine graph defect at a cube corner (three quads, seven
+neighbours). Two candidate shapes, neither measured:
 
-Disclosure — the bearing in the endpaper, the walked trail on the plate —
-survives as a **complement**, not a substitute. Even a corrected walk
-takes discrete edges and wobbles by a fraction of a cell; saying so is
-still worth doing, and it is what makes the correction checkable by eye.
+1. **Lattice-space raster** — draw the face lattice directly; the frame
+   rotates at a seam.
+2. **Graph-neighbourhood raster** — each box is the facet `j` steps along
+   the observer's own east-chain and `k` along its north-chain, re-derived
+   per frame, so the neighbour relation handles seams itself.
+
+Neither is a determinism change: the plate is drawn, never committed.
+Seam behaviour must be measured before one is picked.
 
 ### 4.4 The marquee describes the cell, and the map's own facts decay (B4)
 
@@ -403,35 +402,33 @@ before it passes.
 
 ## 6. Flagged for review
 
-**Revised after the first G3 round.** Nathan's challenge to B3 was correct
-and changed the campaign's centre of gravity.
+**Revised twice.** Nathan's first challenge falsified The Pavement's H1;
+his second reframed what the fix is for.
 
-1. **B3 is now the largest item, and it wants a decision record.** A
-   preregistered hypothesis is falsified; the fix is a correction rule,
-   not a disclosure; and it supersedes The Pavement's section 3.4. Two
-   sub-questions are Nathan's alone: which line `west` names (parallel or
-   great circle), and what the drift bar should be now that H1's 0.5 was
-   never tested.
-2. **B5's half (a) grew.** It cannot live in the client without making
-   the map contradict the prose, so it is a `windows/locale` change with
-   prose and fixture fallout.
-3. **B5's half (b) is a fidelity call** — a seeded draw invents
+1. **B3 is the campaign's centre of gravity and needs one more decision
+   before it can be planned:** lattice-space raster or graph-neighbourhood
+   raster, and what happens at a cube seam and a cube corner. Both are
+   client-side and neither touches determinism.
+2. **The Pavement's H1 is falsified and appears never to have been run**
+   (ledger R9). That is worth a record of its own whatever B3's fix turns
+   out to be — a preregistered hypothesis that was never measured, whose
+   chosen direction could not fail, is a finding about process as well as
+   about movement. Under Nathan's framing the drift stops being a defect
+   to repair, but the *unrun hypothesis* does not stop being one.
+3. **B5's half (a) grew.** It cannot live in the client without making the
+   map contradict the prose, so it is a `windows/locale` change with prose
+   and fixture fallout.
+4. **B5's half (b) is a fidelity call** — a seeded draw invents
    high-frequency structure; a noise-warped boundary invents only the
    boundary's path; today's hard edge already invents a path. Unpacked
    here, not decided.
-4. **Scope.** With B3 grown and B5(a) moved sim-side, six reports in one
-   campaign is probably wrong. Three shapes:
-   - **all six**, sequencing B3 first and accepting that it dominates;
-   - **split three ways** — B3 alone (it is a movement-correctness
-     campaign with a decision record), B5 alone (a resolution campaign),
-     and B1/B2/B4/B6 as the command-and-appearance campaign this one
-     started as;
-   - **split two ways** — B3 out, everything else here.
-5. **4.6 puts an invented spectrum in the client.** It moves no contract,
-   but the client would author a physical quantity. 0716 permits it (the
+5. **Scope.** B3 is now a rendering change to the walk band, B5(a) is
+   sim-side. Six reports in one campaign is probably wrong; see the three
+   shapes offered at the first G3 round.
+6. **4.6 puts an invented spectrum in the client.** 0716 permits it (the
    view owns the observer); saying so out loud is the point.
-6. **4.4 changes a surface Nathan personally specified.** The tick
-   behaviour is untouched and pinned; only the content moves.
+7. **4.4 changes a surface Nathan personally specified.** Tick behaviour
+   untouched and pinned; only the content moves.
 
 ## 7. Non-goals
 
