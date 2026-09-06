@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-spillway","note":"sluice: queued req-1a47fbd9b935 (MERGE) for campaign/the-spillway at 1a47fbd9b — G6 approved; decision 0836; the next census through the queue is the first to run the new delivery script","paths":["scripts/sluice-census.sh","scripts/gnomon-injection.sh"]}
