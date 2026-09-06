@@ -47,6 +47,7 @@ fn base_record(community: u64, people: &'static str, site: u32, founded: f64) ->
             cause: None,
             notability: Notability::Common,
             delve_depth_m: 0.0,
+            person_years: 0.0,
         },
         community: bid(community),
         lineage: bid(community),

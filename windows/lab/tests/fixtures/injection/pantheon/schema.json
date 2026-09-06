@@ -3498,7 +3498,7 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for spring/seep (spec §7, allowed to fail): discrete mutual information in bits between spring/seep's own blended macro-state signal (binned into 4 equal-width bins over its documented `[0,1]` range) and whether it occurred, over the land-eligible population (spec §7's amendment: restricting to land-eligible facets makes the shared eligibility gate a constant, so it contributes zero MI by construction and cannot flatter any kind — see the spec's own amendment paragraph for the whole-sphere confound this removes). The preregistered claim is the ORDERING `spring > thicket > overhang > erratic`, not a threshold on this reading alone: spring is H3's own sign case (\"diagnostic of what is underfoot\", contextuality 0.85), so it is predicted HIGHEST of the four.",
+      "doc": "H3's legibility readout for spring/seep (spec §7, allowed to fail): discrete mutual information in bits between spring/seep's own blended macro-state signal (binned into 4 equal-width bins over its documented `[0,1]` range) and whether it occurred, over the land-eligible population (spec §7's amendment: restricting to land-eligible facets makes the shared eligibility gate a constant, so it contributes zero MI by construction and cannot flatter any kind — see the spec's own amendment paragraph for the whole-sphere confound this removes). The preregistered claim WAS the ORDERING `spring > thicket > overhang > erratic`, not a threshold on this reading alone: spring is H3's own sign case (\"diagnostic of what is underfoot\"), so it was predicted HIGHEST of the four. The Weft measured this ordering FALSE (`thicket > spring`, 2026-09-04); The Warp's re-parameterisation of the sign kinds then moved spring's reading to 0.086464 and overhang's to 0.076536 at seed 42, while thicket (0.038604) and erratic (0.000000) are unchanged, falsifying the ordering again — now on `thicket > overhang`. This metric is a RECORD of that original prediction, not a live claim.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-spring",
@@ -3514,7 +3514,7 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted THIRD of the four (contextuality 0.6, gentler than spring/thicket).",
+      "doc": "H3's legibility readout for overhang/hollow (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator and its falsification record. Overhang was predicted THIRD of the four, gentler than spring/thicket; it now reads 0.076536 at seed 42, ABOVE thicket's 0.038604.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-overhang",
@@ -3530,7 +3530,7 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Predicted SECOND of the four.",
+      "doc": "H3's legibility readout for thicket/brake (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator and its falsification record. Thicket was predicted SECOND of the four; it now reads 0.038604 at seed 42, BELOW overhang's 0.076536.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-thicket",
@@ -3546,7 +3546,7 @@
         0.3,
         1.0
       ],
-      "doc": "H3's legibility readout for erratic/scatter (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Erratic is H3's own negative control (contextuality ~0, a CONSTANT `macro_state`) and is predicted LOWEST of the four, near zero: mutual information between any variable and a constant is algebraically zero, so this metric's own construction predicts the near-zero reading before any world is measured. If it does NOT read near zero, the instrument is measuring something other than legibility and that is the finding, per spec §7 and this task's own brief.",
+      "doc": "H3's legibility readout for erratic/scatter (spec §7, allowed to fail) — see `weft-legibility-mi-spring`'s doc for the shared estimator. Erratic is H3's own negative control (contextuality ~0, a CONSTANT `macro_state`) and is predicted LOWEST of the four, near zero: mutual information between any variable and a constant is algebraically zero, so this metric's own construction predicts the near-zero reading before any world is measured. If it does NOT read near zero, the instrument is measuring something other than legibility and that is the finding, per spec §7 and this task's own brief. This piece of the ordering held: erratic's reading (0.000000 at seed 42) stayed lowest through The Warp's re-parameterisation of the sign kinds, even as the ordering elsewhere falsified again — see `weft-legibility-mi-spring`'s doc for the record.",
       "domain": "terrain",
       "kind": "numeric",
       "name": "weft-legibility-mi-erratic",
@@ -4066,6 +4066,102 @@
       "rung": "terrain"
     },
     {
+      "buckets": [
+        10000.0,
+        30000.0,
+        100000.0,
+        300000.0,
+        1000000.0
+      ],
+      "doc": "Souls ever: the integral of the world's births curve, the number of lives the world has held; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-souls-ever",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        5.0,
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        60.0
+      ],
+      "doc": "Median age at death over lots 0-199, in scaled years (age x 60 / the people's lifespan); Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-median-scaled-death-age",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.75
+      ],
+      "doc": "Share of lots 0-199 whose life ended in, or moved at, its community's own committed ending; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-witness-community-end-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.75
+      ],
+      "doc": "Share of lots 0-199 whose subsistence slot is silent — culture facts attach to living settlements; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-silent-subsistence-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        8.0,
+        10.0,
+        12.0,
+        14.0,
+        16.0,
+        18.0,
+        20.0
+      ],
+      "doc": "Mean number of the 22 non-by-design story slots filled per lot over lots 0-199; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-slots-filled-mean",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.35,
+        0.5,
+        0.75
+      ],
+      "doc": "Share of lots 0-199 born in the last quarter of the bake span; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-born-last-quarter-share",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -4075,7 +4171,7 @@
   },
   "rows": {
     "count": 20,
-    "fnv1a64": "0x057378fb250dc2ba"
+    "fnv1a64": "0xc07688f62af4c67a"
   },
   "schema_version": 1,
   "study": {

@@ -321,6 +321,7 @@ chronicle-the-vigil	shipped	none		published chronicle				book/src/chronicle/the-
 chronicle-the-wakeful-sun	shipped	none		published chronicle				book/src/chronicle/the-wakeful-sun.md	
 chronicle-the-wandering-sun	shipped	none		published chronicle				book/src/chronicle/the-wandering-sun.md	
 chronicle-the-wanting	shipped	none		published chronicle				book/src/chronicle/the-wanting.md	
+chronicle-the-warrant	shipped	none		published chronicle; G6 approved 2026-09-06				book/src/chronicle/the-warrant.md	
 chronicle-the-warren	shipped	none		published chronicle				book/src/chronicle/the-warren.md	
 chronicle-the-wash	shipped	none		published chronicle				book/src/chronicle/the-wash.md	
 chronicle-the-waterline	shipped	none		published chronicle				book/src/chronicle/the-waterline.md	
@@ -656,6 +657,8 @@ plan-2026-09-04-the-coda	active	none		no terminal closure stated in record		docs
 plan-2026-09-04-the-housemark	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-housemark.md			
 plan-2026-09-04-the-cruck	shipped	none		status header records closure		docs/superpowers/plans/2026-09-04-the-cruck.md			
 plan-2026-09-05-the-sluicegate	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it		docs/superpowers/plans/2026-09-05-the-sluicegate.md			
+plan-2026-09-05-the-lot	shipped	none		merged via the queue 2026-09-05; all twelve tasks and the plan amendment executed		docs/superpowers/plans/2026-09-05-the-lot.md			
+plan-2026-09-05-the-warrant	shipped	none		plan: COMPLETE through Task 6; Task 4 struck before execution (ledger #7 R2); G6 approved 2026-09-06		docs/superpowers/plans/2026-09-05-the-warrant.md			
 plan-the-contour-baseline	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline.md			
 plan-the-contour-baseline-v2	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-baseline-v2.md			
 plan-the-contour-readout	active	none		no terminal closure stated in record		docs/superpowers/plans/the-contour-readout.md			
@@ -1327,16 +1330,16 @@ spec-2026-09-04-the-cruck-design	shipped	none		status header records closure	doc
 spec-2026-09-04-the-housemark-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-04-the-housemark-design.md				
 spec-2026-09-04-the-staple-metaplan	active	none		status header retains active work	docs/superpowers/specs/2026-09-04-the-staple-metaplan.md				
 spec-2026-09-05-the-sluicegate-design	shipped	none		merged via the queue 2026-09-05; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-05-the-sluicegate-design.md				
-spec-2026-09-05-the-warrant-design	shipped	none		status header records closure; H2 falsified and reported unamended in the appended results note	docs/superpowers/specs/2026-09-05-the-warrant-design.md				
+spec-2026-09-05-the-lot-design	shipped	none		merged via the queue 2026-09-05; chronicle, retrospective and decisions 0796-0798 landed with it	docs/superpowers/specs/2026-09-05-the-lot-design.md				
 chronicle-the-coda	active	none		awaiting G6 closure				book/src/chronicle/the-coda.md	
 retro-the-coda	active	none		awaiting G6 closure					docs/retrospectives/the-coda.md
 the-weft	shipped	none		plan: COMPLETE/G6 approved; retrospective: Close G6 approved; chronicle: G6 accepted result	docs/superpowers/specs/2026-09-03-the-weft-design.md	docs/superpowers/plans/2026-09-03-the-weft.md		book/src/chronicle/the-weft.md	docs/retrospectives/the-weft.md
 the-warp	shipped	none		plan: complete through Task 8; readout recorded; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-05-the-warp-design.md	docs/superpowers/plans/2026-09-05-the-warp.md		book/src/chronicle/the-warp.md	docs/retrospectives/the-warp.md
 the-kerf	shipped	none		spec: status header records closure; plan: COMPLETE through Task 5; G6 approved 2026-09-05	docs/superpowers/specs/2026-09-04-the-kerf-design.md	docs/superpowers/plans/2026-09-04-the-kerf.md		book/src/chronicle/the-kerf.md	docs/retrospectives/the-kerf.md
 plan-2026-09-04-the-charter	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission		docs/superpowers/plans/2026-09-04-the-charter.md			
-plan-2026-09-05-the-warrant	shipped	none		plan: COMPLETE through Task 6; Task 4 struck before execution (ledger #7 R2); G6 approved 2026-09-06		docs/superpowers/plans/2026-09-05-the-warrant.md			
 spec-2026-09-04-federated-development-program-metaplan-design	active	none		bounded Charter pilot qualified; broader federation program remains active	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
 spec-2026-09-04-the-charter-design	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission	docs/superpowers/specs/2026-09-04-the-charter-design.md				
+spec-2026-09-05-the-warrant-design	shipped	none		status header records closure; H2 falsified and reported unamended in the appended results note	docs/superpowers/specs/2026-09-05-the-warrant-design.md				
 retrospective-the-sluicegate	shipped	none		published retrospective					docs/retrospectives/the-sluicegate.md
 chronicle-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission				book/src/chronicle/the-charter.md	
 retrospective-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission					docs/retrospectives/the-charter.md
@@ -1344,5 +1347,6 @@ the-tenon	shipped	none		plan: COMPLETE; Nathan authorized G6 close; retrospectiv
 the-zenith	shipped	none		plan and spec: IMPLEMENTED (2026-09-04) pending merge; chronicle and retrospective committed at close	docs/superpowers/specs/2026-09-04-the-zenith-design.md	docs/superpowers/plans/2026-09-04-the-zenith.md		book/src/chronicle/the-zenith.md	docs/retrospectives/the-zenith.md
 chronicle-the-cruck	shipped	none		published chronicle				book/src/chronicle/the-cruck.md	
 retro-the-cruck	shipped	none		committed retrospective					docs/retrospectives/the-cruck.md
-chronicle-the-warrant	shipped	none		published chronicle; G6 approved 2026-09-06				book/src/chronicle/the-warrant.md	
+chronicle-the-lot	shipped	none		published chronicle				book/src/chronicle/the-lot.md	
+retrospective-the-lot	shipped	none		published retrospective					docs/retrospectives/the-lot.md
 retrospective-the-warrant	shipped	none		published retrospective; G6 approved 2026-09-06					docs/retrospectives/the-warrant.md

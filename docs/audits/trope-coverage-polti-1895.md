@@ -139,7 +139,7 @@ that is the difference.
 
 ## Supply
 
-356 served tokens no situation in this corpus requires.
+357 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -458,6 +458,7 @@ missing half before this list can serve it.
 - `predicate:occ-function`
 - `predicate:occ-notability`
 - `predicate:occ-peak`
+- `predicate:occ-person-years`
 - `predicate:occ-site`
 - `predicate:occ-tech`
 - `predicate:ocean-fraction`

@@ -157,6 +157,7 @@ fn dead_core() -> Occupation {
         cause: Some(CauseOfEnd::Famine),
         notability: Notability::Seat,
         delve_depth_m: 0.0,
+        person_years: 0.0,
     }
 }
 
