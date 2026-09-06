@@ -274,7 +274,7 @@ rows owed at close for both. · ideonomy passes / overturns: 0.
 
 ---
 
-#11 [G5] — **Task 2 complete: the errand-boundary commit, and a cross-tick
+#30 [G5] — **Task 2 complete: the errand-boundary commit, and a cross-tick
 continuity defect the brief's own test caught.** · Implemented exactly as the
 brief's Step 3 specified — `WalkState.errand: Option<&'static str>`,
 `errand_fact` beside `agent_at_fact`, the boundary check immediately before
@@ -298,7 +298,7 @@ is a deviation from the brief's literal Step 3 text, not from its intent —
 the brief's own two tests state the intent precisely, and the naive
 implementation fails the second one. · ideonomy passes / overturns: 0.
 
-#12 [G5] — **Fourteen liveness.rs unit tests moved, all legitimately.** ·
+#31 [G5] — **Fourteen liveness.rs unit tests moved, all legitimately.** ·
 Full-crate `cargo nextest run -p hornvale-vessel` after the boundary landed:
 14 failures, all self-contained in `liveness.rs`'s own `mod tests` (none in
 `tests/suite/`, none outside this crate). Three shapes, not one: (a) 11
@@ -323,7 +323,7 @@ addition rather than a re-recorded failure. · All 1169 `hornvale-vessel`
 tests, all 513 `hornvale-lab` tests, and all 460 `hornvale` (cli) tests pass
 after. · ideonomy passes / overturns: 0.
 
-#13 [G5] — **H3 (spec §10) measured; no STOP triggered.**
+#32 [G5] — **H3 (spec §10) measured; no STOP triggered.**
 `tick_commit_budget::facts_committed_per_agent_per_tick_stays_bounded`:
 last-half rate **1.785075** facts/agent/tick against `STEADY_STATE_CEILING`
 = 2.5 (first-half 1.855970 — non-growing, well inside `NON_GROWTH_MARGIN` =
@@ -337,7 +337,7 @@ file's own doc records — a pre-existing staleness in that file, unrelated to
 this campaign, left unfixed (widening this diff to a documentation sweep of
 an unrelated file was not this task). · ideonomy passes / overturns: 0.
 
-#14 [G5] — **Step 5 fixture: `tests/fixtures/the-warrant-glosses.json`,
+#33 [G5] — **Step 5 fixture: `tests/fixtures/the-warrant-glosses.json`,
 frozen and undeclared.** · Captured, by hand, the ordered `(day, provenance)`
 run-start pairs for every entity that committed at least one `agent-at` under
 the same harness the new tests use (seed 11, 12 waits) — 26 entities, empty
@@ -408,7 +408,7 @@ quietly). · ideonomy passes / overturns: 0.
 
 ---
 
-#13 [Task 3] — **H2 IS FALSIFIED, and the null is the headline.** Preregistered
+#34 [Task 3] — **H2 IS FALSIFIED, and the null is the headline.** Preregistered
 (spec §10): *provenance bytes committed per agent per tick fall by at least 50%
 in the walking regime, and by exactly 0% on seed 42.* The instrument is the §1
 probe's shape (`Session::start` + 12 `wait`s), measured as the provenance-byte
@@ -451,7 +451,7 @@ fact counts are identical on every seed (4035 / 3213 / 4870 / 1407), as are the
 
 ---
 
-#14 [Task 3] — **The brief's own suggested RED proof for the re-pointed
+#35 [Task 3] — **The brief's own suggested RED proof for the re-pointed
 fear/belonging witness is a no-op, and finding that out is the point of Step 1.**
 `tick_commit_budget`'s `FEAR_OR_BELONGING_CEILING` assertion counted facts whose
 provenance contained `"(fear)"`/`"(belonging)"`; after the flip that matches
@@ -470,7 +470,7 @@ after. · ideonomy passes / overturns: 0.
 
 ---
 
-#15 [Task 3] — **A fourth in-crate provenance reader the brief did not list,
+#36 [Task 3] — **A fourth in-crate provenance reader the brief did not list,
 and its dangerous half was the NEGATIVE control.**
 `the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle` reads
 `f.provenance.contains("fear")` twice: once as a positive floor (`b_fear_moves
@@ -493,7 +493,7 @@ passes / overturns: 0.
 
 ---
 
-#16 [Task 3] — **The two carried Minors, both closed.** (a) The H4 assertion
+#37 [Task 3] — **The two carried Minors, both closed.** (a) The H4 assertion
 message said "one of the five this file can ever commit" against a roster of 13;
 it now interpolates `known_predicates.len()`, so the denominator cannot go stale
 again rather than being corrected to a new literal that can. (b)
@@ -627,7 +627,7 @@ commit) so the guard does not become a trap. · ideonomy passes / overturns: 0.
 
 ---
 
-#22 [G5] — **Task 3 complete; H1 discharged as preregistered, on four seeds.**
+#22 [G5] — **Task 3 complete; H1 discharged as preregistered, on three preregistered seeds plus one.**
 · All four findings verified ADDRESSED by a re-review that reproduced the
 mutation itself rather than reading the report. The evidence worth keeping is
 what stayed GREEN under the swap: distinctness (both copies), the spelling
@@ -789,3 +789,28 @@ chronicle, not by me re-reading my own summaries. · Second correction from the
 same read: the seed-7 before-image is **42** bullet lines, not the 41 I stated
 — 3 identity facts + 1 errand line + 38 steps. Counted, not estimated. ·
 ideonomy passes / overturns: 0.
+
+---
+
+#38 [G5] — **This ledger had eight duplicate entry numbers, because it has
+more than one writer and nobody allocated the numbers.** · Task 2's and Task
+3's implementers each wrote their own rulings here — correctly; the
+`campaign-autopilot` skill says rulings go in the committed ledger as they
+occur — and each numbered from what it could see, while I was numbering from
+what I could see. Result: two `#11`s, two `#12`s, two `#13`s, two `#14`s, and a
+`#7` reused. Nothing cited the colliding numbers in any body, so the collision
+was invisible until a reviewer counted the entries and got 33 against my stated
+28. · Fixed by renumbering the implementers' blocks to **#30-#33** (Task 2) and
+**#34-#37** (Task 3), leaving physical order and every cross-reference intact.
+The numbers are therefore non-monotonic in file order, which is ugly and is the
+honest repair: renumbering to restore monotonicity would have broken the five
+in-body cites (`#2`, `#5`, `#6` ×2, `#8`, `#22`) that a reader actually
+follows. · **The process defect is mine, not the implementers'.** A shared
+append-only document with concurrent writers needs its numbers allocated, and I
+dispatched five implementers at that document without ever saying which range
+was theirs. It is the same failure shape as `.superpowers/sdd/followups.md`
+(decision 0493) at a smaller scale — one path, several writers, silent
+collision — and the remedy is the same: hand each writer a range, or key the
+entries by something that cannot collide. Recorded for the retrospective. ·
+Also corrected in passing: **#22's headline said "on four seeds"**, which #29
+already corrected in substance but not there. · ideonomy passes / overturns: 0.
