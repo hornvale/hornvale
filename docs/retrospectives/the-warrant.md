@@ -2,11 +2,30 @@
 
 Process, not product. The product is in
 [the chronicle](../../book/src/chronicle/the-warrant.md); every ruling is in
-[the campaign ledger](../superpowers/ledgers/2026-09-05-the-warrant.md) —
-**thirty-four entries**, numbered to #38 with a gap at #13-#16 left by the
-renumbering described below under *A shared append-only document with several
-writers*; the falsified hypothesis and its dated results note are in the spec's
-§10.
+[the campaign ledger](../superpowers/ledgers/2026-09-05-the-warrant.md), which
+carries this campaign's substance and is long. **How long is not stated here,
+deliberately** — count it:
+
+```
+grep -cE '^#[0-9]+ \[' docs/superpowers/ledgers/2026-09-05-the-warrant.md
+```
+
+The numbering has a gap at #13-#16. That is the scar left by the repair
+described below under *A shared append-only document with several writers*, not
+a loss: no entry is missing.
+
+**Why a command and not a number.** This sentence has already carried two
+stated totals — 28, then thirty-four — and each was falsified by the next entry
+appended to the very document the sentence lives inside; thirty-four was wrong
+before the commit that wrote it was reviewed. A prose total over an
+append-only file cannot be kept true by correcting it, only by not stating it.
+The precedent is `CLAUDE.md`'s census-cost block, which stopped quoting a figure
+and now says *read it from `docs/timings.md`, never from this block*, for the
+identical reason. (The command anchors on `#N [`, which is the entry-header
+shape; a bare `^#[0-9]+` also matches cross-references inside entry bodies and
+over-counts.)
+
+The falsified hypothesis and its dated results note are in the spec's §10.
 
 ## Seven defects originated in my own spec, plan and brief text
 
@@ -176,8 +195,11 @@ edit for that reason.
 The campaign's freshness sweep acted on this; the finding is a process lesson in
 its own right and belongs here rather than only in the sweep's diff.
 
-Task 2 reported H3 at 1.785075 facts/agent/tick. `tick_commit_budget.rs`'s
-module doc said the rate holds "roughly flat at ~0.92-0.96"; `liveness.rs`'s
+Task 2 reported H3 at **1.785075** facts/agent/tick over the run's last half,
+against **1.855970** over its first — the pair is the instrument's whole output,
+because the gate it feeds tests a ceiling on the one and non-growth across both.
+`tick_commit_budget.rs`'s module doc said the rate holds "roughly flat at
+~0.92-0.96"; `liveness.rs`'s
 hoist-golden comment said "1.06 … (0.96 before Task 7, 1.24 after it, 1.01
 before this fix round)" against "its 1.5 ceiling". Both were stale by roughly a
 factor of two, and the ceiling they referenced had since moved 1.5 to 2.5. **The
@@ -188,11 +210,14 @@ the spec's own §1 measurement and turned a green instrument into a false alarm.
 What settled it was measuring both sides rather than reasoning about either:
 two live probes on seed 42 found zero rendered `agent-at` lines and zero errand
 glosses, and then a checkout of the commit *immediately before* the errand
-commit landed reproduced the per-tick series byte-for-byte and the rates to six
-decimal places. The campaign moved nothing. The rate really is 1.79.
+commit landed reproduced the per-tick series byte-for-byte and **both** rates to
+six decimal places — 1.855970 and 1.785075, unmoved. That both halves matched is
+what made the result decisive rather than suggestive: one matching rate is
+consistent with two offsetting changes, and the per-tick series plus both
+summary statistics is not. The campaign moved nothing.
 
-**The defect is that a reader arriving at that number finds two committed
-explanations waiting for it and both are wrong.** Neither was written
+**The defect is that a reader arriving at those numbers finds two committed
+explanations waiting for them and both are wrong.** Neither was written
 carelessly: each was true of a six-agent roster on the day it was recorded, and
 a sibling campaign then made a session's roster the residents of the settlement
 you stand in. The campaigns that raised the ceiling 1.5 to 2.5 did not restate
@@ -233,7 +258,9 @@ problem, and nothing was added to handle it.**
 
 The smaller lesson rides along and is the one this campaign keeps re-learning:
 **a stated total is a claim, and it is checkable by counting the visible rows.**
-Nobody counted until a reviewer did.
+Nobody counted until a reviewer did. But counting only fixes it once — a total
+over a file still being appended to is falsified again by the next append, which
+is why this document's opening now names the command instead of the number.
 
 ## A method note that cost 533 seconds
 
