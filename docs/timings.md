@@ -6286,3 +6286,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T17:55:04Z | gate-commit | 41.135 | 70.291 | 16.645 | 2.11 | 0 | b0d08a674 | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T17:57:19Z | gate-commit | 41.008 | 70.862 | 16.466 | 2.13 | 0 | b0d08a674 | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T18:09:01Z | gate-commit | 53.370 | 90.776 | 26.107 | 2.19 | 0 | 1311141ce | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T18:10:50Z | gate-commit | 42.325 | 70.757 | 16.354 | 2.06 | 0 | 1311141ce | campaign/the-newel | MacBookPro | 10 |
