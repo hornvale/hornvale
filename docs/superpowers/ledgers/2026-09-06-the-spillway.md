@@ -287,3 +287,87 @@ changes and re-running `make shellcheck` against unmodified HEAD: the same
 single failure appears, byte-identical. Not touched by this task; flagged
 for a later task or a separate fix, since `scripts/sluice-census.sh` is
 outside this task's file list.
+
+---
+
+## Task 2 — complete
+
+**What shipped.** Two library functions under `scripts/sluice-census.sh`'s
+existing `HV_CENSUS_LIB=1` seam, inserted after `census_golden_count`'s
+closing `}` and before the `HV_CENSUS_LIB` early return: `census_schema_columns
+<schema.json>` (the sorted column names of a lab `schema.json`, printing
+nothing for a missing file) and `injection_arms_stale <worktree>` (one line
+per Gnomon injection arm whose column set differs from the census's,
+following spec §3.2 step 1's second trigger from ledger entry #1's enrichment
+4 — a census that moved goldens re-authors the arms, but so does a census
+whose columns drifted from an earlier epoch with no golden movement this
+run). `injection_arms_stale` always exits 0; its stdout is what Task 3
+reads.
+
+**The one judgement call: the indent rule.** A lab `schema.json` is serde's
+pretty print, and the function distinguishes a column's `"name"` from the
+study's own `"name"` (which sits at indent 2, one level shallower) purely by
+indent — `^ {4,}"name": "`, indent >= 4. This is a structural assumption
+about serde's pretty-printer output rather than a JSON parse, and it is safe
+in exactly one direction: **a mis-parse here can only cause a NEEDLESS
+re-authoring, never a missed one.** If the indent rule ever miscounts a real
+column as the study name (or vice versa), the two sides of the comparison
+(census vs. arm) both go through the same function, so a spurious extra or
+missing name shows up as a spurious diff and the arm is marked stale when it
+was not — costing an unneeded re-author, not skipping a needed one. The rule
+was checked against the two real files it will run on before trusting it:
+the committed census and `baseline-a`'s fixture each report 285 `"name"`
+keys total and 284 at indent >= 4, the one exception in each being the
+study's own name line — confirming the split holds on real data, not just
+the brief's synthetic fixtures.
+
+**TDD evidence.** RED: `bash scripts/test-sluice-census.sh` before the
+functions existed — `FAIL: HV_CENSUS_LIB=1 did not expose
+injection_arms_stale`, three `command not found` errors from the shell
+sourcing a function that did not exist yet, `11 passed, 4 failed`, exit 1 (see
+task-2-report.md for the full transcript). GREEN: the same command after
+implementation — `15 passed, 0 failed`, exit 0.
+
+**Ideonomy: none, no fork.** The brief specifies both functions' exact code,
+the test text verbatim, and the insertion point; there was no design
+question left open for this task to explore — the design work (the rule for
+when to re-author, stated as "any census golden moved, OR the column set
+differs") was already made in ledger entry #1's ideonomy pass for the
+campaign as a whole.
+
+**Files changed:** `scripts/sluice-census.sh` (the two functions),
+`scripts/test-sluice-census.sh` (the new test arms),
+`docs/decisions/0836-a-census-delivery-regenerates-the-evidence-its-gate-reads.md`
+(new — see ruling below), `docs/digest/decisions-in-force.md`
+(regenerated), this ledger.
+
+**Ruling: decision 0836 was minted here, in Task 2, not in Task 5 as the
+plan's Global Constraints originally staged it.** The brief's Step 3 code
+comment cites `decision 0836` verbatim, but the plan's own constraint ("A
+Rust comment may not cite a decision number until the record exists … Task 5
+mints 0836 before any comment cites it") assumed the citing gate only reads
+`.rs` files. It does not: `cli/tests/suite/docs_consistency.rs::
+decision_cites_in_sources_resolve` scans `scripts/` among its source
+directories, and `pre-commit` runs that suite (via `make docs-tests`) on
+THIS commit, because a commit touching only `scripts/` and docs is not
+Rust-relevant and takes the fast path — so the cite is checked at Task 2's
+own commit, not deferred to whenever a `.rs` file next cites it. Session
+flagged this as a blocker (NEEDS_CONTEXT); the controller's ruling was to
+mint 0836 now rather than strip the citation, using Task 5's exact record
+text (`docs/decisions/0836-a-census-delivery-regenerates-the-evidence-its-gate-reads.md`),
+confirming the four `Relates:` targets (0079/0133/0139/0514) exist first,
+regenerating `docs/digest/decisions-in-force.md` (moved by exactly one
+entry) and `docs/digest/intent-vs-reality.md` (unmoved, as expected — the
+registry row does not flip until Task 6), and re-running
+`decision_cites_in_sources_resolve` (and the rest of `docs_consistency`)
+green before committing. Task 5 will need to be read against this when its
+turn comes: minting is already done, so Task 5's remaining work is Step 2
+onward (the Rust comments in `anomaly.rs`/`anomaly_injection.rs` and the
+prose sweep) rather than Step 1.
+
+**Concerns.** `make shellcheck` reports the same single PRE-EXISTING failure
+Task 1 flagged and left untouched: `release_census_row`'s SC2329 finding,
+now at `scripts/sluice-census.sh:256` (shifted from line 216 by this task's
+38 inserted lines landing earlier in the file; confirmed the same function,
+same finding, by diffing against `HEAD`). Not touched here, per the
+controller's resolution — Task 3 owns it.

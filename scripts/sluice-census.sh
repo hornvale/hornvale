@@ -86,6 +86,46 @@ $(git -C "$wt" diff --cached --name-only 2>/dev/null)
 EOF
     printf '%s' "$n"
 }
+# THE ARMS' COLUMN SET (The Spillway, decision 0836). A census delivery
+# re-authors the Gnomon injection arms when the world moved (goldens > 0) OR
+# when an arm's column set differs from the census's — the second trigger
+# catches arms left stale by an earlier epoch. The comparison is the same one
+# `anomaly_injection::the_fixture_columns_match_the_census` makes, over the
+# same two files, without a build.
+#
+# A lab schema.json is serde's pretty print: the study's own "name" sits at
+# indent 2 and every column's "name" at indent 6 (verified against the
+# committed census and baseline-a: 285 "name" keys each, 284 columns each,
+# the odd one out being the study's). Names at indent >= 4 are columns.
+# Both studies declare "metrics": "all", so at one ref the two sets are
+# identical by construction; a difference means the arms were authored at
+# another ref. A mis-parse here can only cause a NEEDLESS re-authoring,
+# never a missed one: a real column difference is always a "name" line
+# difference.
+census_schema_columns() {
+    local f="${1:?census_schema_columns <schema.json>}"
+    [ -f "$f" ] || return 0
+    grep -E '^ {4,}"name": "' "$f" | sed -E 's/^ *"name": "([^"]*)".*/\1/' | sort
+}
+injection_arms_stale() {
+    local wt="${1:?injection_arms_stale <worktree>}"
+    local census="$wt/book/src/laboratory/generated/the-census/schema.json"
+    [ -f "$census" ] || return 0
+    local want arm got missing extra name
+    want="$(census_schema_columns "$census")"
+    for arm in "$wt"/windows/lab/tests/fixtures/injection/*/schema.json; do
+        [ -f "$arm" ] || continue
+        got="$(census_schema_columns "$arm")"
+        missing="$(comm -23 <(printf '%s\n' "$want") <(printf '%s\n' "$got") | grep -c . || true)"
+        extra="$(comm -13 <(printf '%s\n' "$want") <(printf '%s\n' "$got") | grep -c . || true)"
+        if [ "${missing:-0}" -ne 0 ] || [ "${extra:-0}" -ne 0 ]; then
+            name="$(basename "$(dirname "$arm")")"
+            printf '%s: %s column(s) the census has and the arm lacks, %s the arm has and the census lacks\n' \
+                "$name" "$missing" "$extra"
+        fi
+    done
+    return 0
+}
 # shellcheck disable=SC2317  # the exit is the fallback when this file is RUN, not sourced
 if [ -n "${HV_CENSUS_LIB:-}" ]; then return 0 2>/dev/null || exit 0; fi
 

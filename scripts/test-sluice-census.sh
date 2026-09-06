@@ -148,5 +148,74 @@ else
     bad "EMPTY ARM: the index was not actually reset"
 fi
 
+# --- THE ARMS' COLUMN SET (The Spillway) ------------------------------------
+# A census delivery re-authors the Gnomon arms when the world moved OR when an
+# arm's columns differ from the census's. The second trigger is this pair of
+# functions. Synthetic schemas in the serde pretty-print shape both real files
+# have: the study's own "name" at indent 2, column names at indent 6.
+if ! declare -f injection_arms_stale >/dev/null 2>&1; then
+    bad "HV_CENSUS_LIB=1 did not expose injection_arms_stale"
+else
+    ok "injection_arms_stale is exposed by the library"
+fi
+arms="$tmp/windows/lab/tests/fixtures/injection"
+mkdir -p "$arms/baseline-a" "$arms/karst"
+write_schema() {  # $1 = path, $2 = study name, $3.. = column names
+    local p="$1" study="$2"; shift 2
+    {
+        printf '{\n  "columns": [\n'
+        local sep=""
+        for c in "$@"; do
+            printf '%s    {\n      "kind": "numeric",\n      "name": "%s"\n    }' "$sep" "$c"
+            sep=$',\n'
+        done
+        printf '\n  ],\n  "name": "%s"\n}\n' "$study"
+    } > "$p"
+}
+census="$tmp/book/src/laboratory/generated/the-census/schema.json"
+write_schema "$census" the-census seed pin_set karst-fraction
+write_schema "$arms/baseline-a/schema.json" gnomon-injection seed pin_set karst-fraction
+write_schema "$arms/karst/schema.json"      gnomon-injection seed pin_set karst-fraction
+
+cols="$(census_schema_columns "$census" | tr '\n' ' ')"
+if [ "$cols" = "karst-fraction pin_set seed " ]; then
+    ok "census_schema_columns lists the columns sorted and IGNORES the study's own name"
+else
+    bad "census_schema_columns gave '$cols'"
+fi
+if [ -z "$(injection_arms_stale "$tmp")" ]; then
+    ok "matching arms whose STUDY NAME differs from the census's read as not stale"
+else
+    bad "arms with identical columns were called stale: $(injection_arms_stale "$tmp")"
+fi
+
+# The census gains a column (a campaign registered a metric).
+write_schema "$census" the-census seed pin_set karst-fraction warp-lift
+stale="$(injection_arms_stale "$tmp")"
+if printf '%s\n' "$stale" | grep -q '^baseline-a: 1 column' && printf '%s\n' "$stale" | grep -q '^karst: 1 column'; then
+    ok "a column the census has and the arms lack marks EVERY arm stale, by name"
+else
+    bad "census-gained-a-column: got '$stale'"
+fi
+
+# An arm carries a column the census lacks (authored against another registry).
+write_schema "$census" the-census seed pin_set karst-fraction
+write_schema "$arms/karst/schema.json" gnomon-injection seed pin_set karst-fraction ghost
+stale="$(injection_arms_stale "$tmp")"
+if [ "$(printf '%s\n' "$stale" | grep -c .)" -eq 1 ] && printf '%s\n' "$stale" | grep -q '^karst: 0 column(s) the census has and the arm lacks, 1 the arm has'; then
+    ok "a column only an arm has marks THAT arm stale and no other"
+else
+    bad "arm-has-extra-column: got '$stale'"
+fi
+
+# No census schema at all: nothing to compare, nothing printed, exit 0.
+rm -f "$census"
+if [ -z "$(injection_arms_stale "$tmp")" ]; then
+    ok "an absent census schema compares nothing (prints nothing, exits 0)"
+else
+    bad "absent census schema produced output: $(injection_arms_stale "$tmp")"
+fi
+rm -rf "$arms"
+
 printf '\ntest-sluice-census: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
