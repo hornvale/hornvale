@@ -240,6 +240,11 @@ The shared ancestral language desert-dwarf, gully-dwarf, and hill-dwarf all desc
 | `temperate-forest` | a biome class | *Nadash | /nadaʃ/ |
 | `temperate-grassland` | a biome class | *Qadaq | /qadaq/ |
 | `temperate-rainforest` | a biome class | *Qajang | /qajaŋ/ |
+| `the-consumption` | the consumption | *Tazag | /tazag/ |
+| `the-flux` | the flux | *Zanaj | /zanaj/ |
+| `the-marsh-fever` | the marsh fever | *Sagab | /sagab/ |
+| `the-pest` | the pest | *Jataj | /jataj/ |
+| `the-pox` | the pox | *Ngadang | /ŋadaŋ/ |
 | `think` | to hold an uncertain belief | *Gangav | /gaŋav/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Qatat | /qatat/ |
 | `threshold` | the sill marking where one place ends and another begins | *Shavaq | /ʃavaq/ |

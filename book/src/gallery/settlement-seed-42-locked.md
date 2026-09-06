@@ -1,29 +1,29 @@
 # The Peoples of Seed 42
 
-The land holds 291 settlement(s).
-The chief bugbear settlement, Daadoo, holds 48 souls amid savanna.
+The land holds 257 settlement(s).
+The chief bugbear settlement, Doaba, holds 70 souls amid tropical-rainforest.
 The chief desert-dwarf settlement, Shaxasqashax, holds 57 souls amid savanna.
 The chief desert-elf settlement, Zzoaṅgeṅṅoṅšzaṅ, holds 27 souls amid savanna.
 The chief drow settlement, Poogpaogogšra, holds 12 souls amid ice.
-The chief gnoll settlement, Sngaqsoxpshapzhazno, holds 30 souls amid savanna.
+The chief gnoll settlement, Psodzoxgzho, holds 27 souls amid savanna.
 The chief goblin settlement, Deota, holds 32 souls amid taiga.
-The chief gully-dwarf settlement, Katankanabnabag, holds 31 souls amid savanna.
+The chief gully-dwarf settlement, Katankanabnabag, holds 35 souls amid savanna.
 The chief high-elf settlement, Zromgo, holds 24 souls amid tropical-seasonal-forest.
 The chief hill-dwarf settlement, Shababkasas, holds 35 souls amid savanna.
-The chief hobgoblin settlement, Gaebaebobeqa, holds 78 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Noabano, holds 85 souls amid tropical-seasonal-forest.
 The chief human settlement, Vaerope, holds 34 souls amid savanna.
 The chief kobold settlement, Xooxa, holds 58 souls amid temperate-forest.
 The chief sea-elf settlement, Šreannaensraundunžreun, holds 33 souls amid coral-reef.
-The chief snow-elf settlement, Ṅoṅšraṅ, holds 25 souls amid taiga.
+The chief snow-elf settlement, Zroṅṅoṅ, holds 12 souls amid taiga.
 The chief wood-elf settlement, Zduuṅduteuṅtau, holds 24 souls amid tropical-seasonal-forest.
 
 ```text
                                                                         
                                                                         
                                                                         
-                                                                        
-                                                    oo                  
-                                   o                                    
+                                                     o                  
+                                                    ooo                 
+                                   o                o                   
                                                                         
                                                         o               
                                                                         
@@ -31,14 +31,14 @@ The chief wood-elf settlement, Zduuṅduteuṅtau, holds 24 souls amid tropical-
  o                                                          o           
   o                                                                     
                                                                         
-                     o  o               o                               
-                   ooo o @                 o                            
-                   o                                                    
+                        o               o                               
+                    oo o @                 o                            
+                    o                                                   
                   oooooo                                                
-                  o o o                          o                      
-                                       oo ooooooooo                     
-                                     oooo ooooooooo                     
-                                                                        
+                   ooo                           o                      
+                                       oo ooo oooo                      
+                                     oo   ooooooooo                     
+                                                o                       
                                                                         
                                                                         
                                                                         

@@ -35,10 +35,11 @@ comment.
   - `windows/lot/src/slots.rs:1027`
   - `windows/lot/src/slots.rs:1067`
   - `windows/lot/src/slots.rs:1068`
-  - `windows/worldgen/src/history_emit.rs:251`
-  - `windows/worldgen/src/history_emit.rs:414`
-  - `windows/worldgen/src/history_emit.rs:441`
-  - `windows/worldgen/src/history_emit.rs:512`
+  - `windows/worldgen/src/history_emit.rs:281`
+  - `windows/worldgen/src/history_emit.rs:428`
+  - `windows/worldgen/src/history_emit.rs:481`
+  - `windows/worldgen/src/history_emit.rs:508`
+  - `windows/worldgen/src/history_emit.rs:579`
   - `windows/worldgen/src/person_promote.rs:343`
   - `windows/worldgen/src/person_promote.rs:434`
   - `windows/worldgen/tests/suite/tolerance_draw.rs:99`

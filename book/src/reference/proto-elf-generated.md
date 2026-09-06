@@ -242,6 +242,11 @@ The shared ancestral language desert-elf, drow, high-elf, sea-elf, snow-elf, and
 | `temperate-forest` | a biome class | *Shrongdeeng | /ʃroŋdeeŋ/ |
 | `temperate-grassland` | a biome class | *Sruunggang | /sruuŋgaŋ/ |
 | `temperate-rainforest` | a biome class | *Zhrung | /ʒruŋ/ |
+| `the-consumption` | the consumption | *Ngongpeng | /ŋoŋpeŋ/ |
+| `the-flux` | the flux | *Nguongbeung | /ŋuoŋbeuŋ/ |
+| `the-marsh-fever` | the marsh fever | *Bunggung | /buŋguŋ/ |
+| `the-pest` | the pest | *Ngaang | /ŋaaŋ/ |
+| `the-pox` | the pox | *Zhreangshraeng | /ʒreaŋʃraeŋ/ |
 | `think` | to hold an uncertain belief | *Bungbaong | /buŋbaoŋ/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Tuongdeng | /tuoŋdeŋ/ |
 | `threshold` | the sill marking where one place ends and another begins | *Ngangzrung | /ŋaŋzruŋ/ |

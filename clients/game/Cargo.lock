@@ -101,6 +101,7 @@ dependencies = [
  "hornvale-chronicle",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-epidemiology",
  "hornvale-explain",
  "hornvale-historiography",
  "hornvale-kernel",
@@ -189,6 +190,13 @@ dependencies = [
 
 [[package]]
 name = "hornvale-demography"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-epidemiology"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",
@@ -444,6 +452,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-epidemiology",
  "hornvale-explain",
  "hornvale-history",
  "hornvale-kernel",
