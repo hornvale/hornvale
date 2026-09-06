@@ -343,6 +343,40 @@ class AttemptTests(unittest.TestCase):
                 capture_fixture([sys.executable, "-c", "print('fixture')"], checkout,
                                 root / "attempt.json", target=root / "target")
 
+    def test_capture_rejects_relative_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "checkout"
+            checkout.mkdir()
+            with self.assertRaisesRegex(ValueError, "target must be absolute"):
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], checkout,
+                    root / "evidence" / "attempt.json", target=Path("target"),
+                )
+
+    def test_capture_rejects_relative_evidence_root(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "checkout"
+            checkout.mkdir()
+            with self.assertRaisesRegex(ValueError, "evidence root must be absolute"):
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], checkout,
+                    root / "evidence" / "attempt.json",
+                    evidence_root=Path("evidence"),
+                )
+
+    def test_capture_rejects_relative_evidence_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            checkout = root / "checkout"
+            checkout.mkdir()
+            with self.assertRaisesRegex(ValueError, "evidence destination must be absolute"):
+                capture_fixture(
+                    [sys.executable, "-c", "print('fixture')"], checkout,
+                    Path("attempt.json"),
+                )
+
     def test_capture_rejects_target_equal_to_checkout(self):
         with tempfile.TemporaryDirectory() as directory:
             checkout = Path(directory) / "checkout"

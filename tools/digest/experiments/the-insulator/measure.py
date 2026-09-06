@@ -261,14 +261,18 @@ def capture(workload_id: str, checkout: Path, target: Path,
     destination = Path(destination)
     if not checkout.is_absolute() or not checkout.is_dir():
         raise ValueError("checkout must be an existing absolute directory")
+    if not target.is_absolute():
+        raise ValueError("target must be absolute")
+    if not evidence_root.is_absolute():
+        raise ValueError("evidence root must be absolute")
+    if not destination.is_absolute():
+        raise ValueError("evidence destination must be absolute")
     checkout = checkout.resolve()
     target = target.resolve()
     evidence_root = evidence_root.resolve()
     destination = destination.resolve()
-    if not target.is_absolute() or not _owned_path(target, checkout):
+    if not _owned_path(target, checkout):
         raise ValueError("target must be owned by the checkout")
-    if not evidence_root.is_absolute():
-        raise ValueError("evidence root must be absolute")
     if _covers_checkout(target, checkout):
         raise ValueError("target must not overlap the checkout root")
     if _covers_checkout(evidence_root, checkout):
