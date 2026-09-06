@@ -149,6 +149,32 @@ edges, and a relocating remnant carries what it has.
 - **Pathogen evolution.** Virulence differs at arrival and once endemic;
   it does not drift.
 
+### 2.4 Population substrate and projections
+
+The world has two population layers, not two competing population truths.
+The **population substrate** is the statistically calibrated, causally
+authoritative population: it may represent cohorts, distributions, and
+connected host populations without materializing every person. Domain views
+derive from it for epidemiology, economy, settlement, language, and other
+phenomena. The Lot is not the authority for whether a population exists; it
+is one consumer of the substrate.
+
+The **projection layer** materializes the substrate for observation and play.
+It has four forms: an aggregate readout, a composite case, a materialized
+individual, and a salient character selected for interest rather than
+statistical typicality. A composite may appear in-world — for example as a
+physician's "typical patient" or a historian's representative farmer — but
+it is not itself a causal entity. Only aggregate state and materialized
+individuals may create persistent world consequences. Every projection
+carries its source cohort, selection lens, materiality, sampling bias, and
+whether consequences write back to the substrate.
+
+This is a projection boundary, not a realism claim: the substrate is a
+deterministic model calibrated for the phenomena Hornvale represents, while
+the projection is weighted for salience, legibility, and play. For The
+Murrain, persistence and spread are substrate questions; the Lot may later
+materialize representative or salient lives affected by them.
+
 ## 3. The catalogue (data)
 
 Five pathogen kinds, authored in `domains/species` as a component registry
@@ -266,12 +292,15 @@ that exercises the yes branch constructs a metapopulation above the bar —
 the branch is real, tested, and unreachable on every seed, which is the
 finding.
 
-The metapopulation at a (site, era) is the summed **reconstructed live
-population** (`hornvale_lot::shape::population_at`, from the committed
-person-years integral) over the occupations alive at the era's sites in the
-site's connected component of the era's graph (`reachable_regions` at the
-bake's own `conductance > 0` rule). Task 0's summed-peaks proxy was the
-upper bound; the read uses the honest number.
+The metapopulation at a (site, era) is a population-substrate view: the
+summed live host population over the occupations alive at the era's sites in
+the site's connected component of the era's graph (`reachable_regions` at
+the bake's own `conductance > 0` rule). Task 0's summed-peaks proxy was the
+upper bound; the implementation must use the authoritative substrate view,
+not require the Lot to reconstruct named lives in order to decide whether a
+pathogen persists. The Lot's `population_at` reconstruction remains a
+projection/materialization input for individual draws and local narrative,
+not the epidemiological population authority.
 
 ### 4.3 The endemic burden (derived)
 

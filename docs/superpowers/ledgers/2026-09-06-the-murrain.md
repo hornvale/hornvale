@@ -250,6 +250,24 @@ is a FIDELITY CALL and leads the G3 flagged section** (carve-out: fidelity
 cuts always go to Nathan); decision 0858 is written so a later campaign
 knows what it must re-derive to lift it.
 
+#10 [Q] — **May composite population cases appear in-world, or only in
+analytical views?** · **Decision: both.** A composite may be an in-world
+physician's typical patient, historian's representative farmer, or similar
+account, while remaining non-causal. A materialized individual is the
+explicit boundary at which identity, interaction, and persistent
+consequences exist. The substrate remains the statistical authority; the
+projection records its source cohort, selection lens, materiality, sampling
+bias, and write-back permission. · **Why:** the project already separates
+abstract groups from materialized lives, and The Lot's person-years are a
+projection draw rather than a census. Allowing composites in both contexts
+keeps useful explanatory cases without falsely instantiating one average
+person. · **Alternatives discarded:** analytical-only composites (needlessly
+restricts in-world medicine, history, and sociology); composites as causal
+people (silently turns a summary into an entity). · **Ideonomy: 1 pass** —
+negation + scale, with intentionality and animacy axes; the meaningful scale
+is aggregate → composite → materialized individual, and no overturn. ·
+**Capture:** spec §2.4; the projection boundary leads the next G3 review.
+
 ## Ideonomy — the G1 organon
 
 Tuple picked: operators *negation* + *abstraction-lift*; organon
