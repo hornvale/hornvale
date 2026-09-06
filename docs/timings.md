@@ -6223,3 +6223,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T07:48:58Z | vessel-check | 39.460 | 46.205 | 1.380 | 1.21 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T07:51:05Z | game-check | 125.409 | 779.437 | 38.549 | 6.52 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
 | 2026-09-06T07:58:39Z | gate-commit | 36.231 | 70.545 | 15.623 | 2.38 | 0 | 6e9c2456d | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T08:12:55Z | rebaseline | 138.686 | 425.949 | 17.784 | 3.20 | 0 | 0261f03b8 | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T08:13:41Z | gate-commit | 35.459 | 70.102 | 15.305 | 2.41 | 0 | 0261f03b8 | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T08:14:00Z | vessel-check | 16.034 | 16.974 | 0.544 | 1.09 | 0 | 0261f03b8 | campaign/the-ken | MacBookPro | 10 |
+| 2026-09-06T08:15:45Z | game-check | 104.780 | 677.528 | 27.692 | 6.73 | 0 | 0261f03b8 | campaign/the-ken | MacBookPro | 10 |
