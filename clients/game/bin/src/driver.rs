@@ -6807,6 +6807,7 @@ mod caption_tests {
 mod completion_tests {
     use super::*;
     use crate::input::Action;
+    use hornvale_game_core::CandidateSource;
     use hornvale_game_core::schema::{Narration, NounEntry};
 
     /// A narration whose noun catalog names the completion fixtures: two
@@ -6837,16 +6838,57 @@ mod completion_tests {
     /// A live driver whose scope has been overwritten with the fixture
     /// catalog — the real refresh path (`Driver::refresh`, from a parsed
     /// snapshot) is exercised by the integration suite; these tests need a
-    /// KNOWN vocabulary. `chart_scope` is left at its `start`-time default
-    /// (empty), so the fold below contributes nothing beyond the fixture.
+    /// KNOWN vocabulary.
+    ///
+    /// **`chart_scope` is explicitly reset, not merely left alone (fix
+    /// round 1).** `Driver::start` already runs one `refresh()` before
+    /// returning, against the REAL seed-42 flagship position — so
+    /// `d.chart_scope` is genuinely non-empty at this point (see
+    /// `a_chart_only_agent_name_completes_from_a_fresh_driver` in
+    /// `tests/driver.rs`, which completes a live chart mark from a bare
+    /// `Driver::start` with no setup at all). A doc comment here once
+    /// claimed the opposite — that `start`-time default meant empty — which
+    /// was false the moment `chart_scope` stopped being a field nobody
+    /// wrote to. Resetting it is what makes "these tests need a KNOWN
+    /// vocabulary" true rather than aspirational; pinned by
+    /// `seeded_driver_offers_exactly_the_fixture_vocabulary`, immediately
+    /// below, so a future collision between a fixture prefix and a real
+    /// chart mark reddens here instead of silently passing by luck.
     pub(crate) fn seeded_driver() -> Driver {
         let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
         d.current_turn_scope.update(&fixture_narration());
+        d.chart_scope = hornvale_game_core::ChartMarks::default();
         d.scope = hornvale_game_core::Lexicon::new(vec![
             Box::new(d.current_turn_scope.clone()),
             Box::new(d.chart_scope.clone()),
         ]);
         d
+    }
+
+    /// Pins the guarantee `seeded_driver`'s own doc makes, rather than
+    /// leaving it to prose (fix round 1's own lesson: a comment is what
+    /// went stale here, so a second comment is not the fix). Without this,
+    /// a green suite proves nothing about whether `chart_scope` was
+    /// actually cleared — every prefix this file's tests complete against
+    /// (`"bram"`, `"gnar"`) simply happens not to collide with seed 42's
+    /// real chart, today.
+    #[test]
+    fn seeded_driver_offers_exactly_the_fixture_vocabulary() {
+        let d = seeded_driver();
+        assert!(
+            d.chart_scope.candidates().is_empty(),
+            "chart_scope must be reset, not inherited from Driver::start's own refresh"
+        );
+        let candidates = d.scope.candidates();
+        let mut names: Vec<&str> = candidates.iter().map(|c| c.name.as_str()).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            vec!["Gnarlash", "Gnarlwood", "bramble"],
+            "seeded_driver's fold must offer exactly the fixture vocabulary — anything \
+             else means a real chart candidate leaked in and every prefix test below is \
+             trusting collision-avoidance luck rather than a known catalog"
+        );
     }
 
     #[test]
