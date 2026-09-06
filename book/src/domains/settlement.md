@@ -72,7 +72,7 @@ every other cell joins the catchment of the attractor its path leads to.
 An attractor *became* a committed settlement once its catchment accumulation
 cleared a concentration threshold (frozen once, calibrated to a manageable
 seed-42 count — 182 settlements, average catchment about 22 people, down
-from 998 at an untuned threshold), its population that accumulation exactly,
+from 998 at an untuned threshold), its population was that accumulation exactly,
 a readout of the field rather than a draw — until [The Living
 Community](../chronicle/the-living-community.md) made the deep-history bake
 the settlement provider. The flow survives as the Lab's readout of the field;
