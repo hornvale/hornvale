@@ -563,3 +563,16 @@ the protected audit and timing files remain unstaged.
   15 to seed 18, and changed the staple witness to a fixed cross-seed check.
   All five held-stage failures now pass locally; canonical stage/census remain
   pending resubmission.
+
+### Stage hold after the performance repair
+
+The canonical stage for `140dc49b9` regenerated artifacts successfully and
+then held at the full gate with three expected substrate witnesses: Burr's
+assignment accuracy moved from `0.8004956629491945` to
+`0.8012779552715655`, Reticence's `(god, spirit)` arm count moved from
+`(8, 7)` to `(10, 5)`, and the census sentinel found the committed census
+predates the epidemic columns and the epidemic-driven world movement. The
+first two are re-pinned here as readouts. The census remains a fixture refresh,
+not a waiver or a weakened sentinel; the component-clone and per-era graph
+reuse repairs are now in the ref and the refresh must be run through the
+canonical sluice.
