@@ -31,8 +31,11 @@ searches and recorded their count instead of introducing a cache incidentally.
 Implementation landed in `dca20b44c`, the route-count probe in `7ceea074b`,
 and observer verification in `38ea7618d`. Ten belief tests passed, as did the
 errand, affect, and seed-42 snapshot observers. The implementation commit gate
-passed its audits and **1,298** sub-floor tests. No value fixture moved, and no
-`REBASELINE=1` run was needed.
+passed its audits and **1,298** sub-floor tests. The first canonical stage
+gate showed the expected value movement: 20 of 410 affect-trace lines changed,
+all in one creature's thirst/danger/social arbitration, with the same 27,985
+byte fixture size. The fixture was rebaselined deliberately and the recovery
+calibrations were updated to witness the new actor-relative result.
 
 The result is deliberately narrow: it changes the geometry used to choose among
 already remembered water, not the memory facts, public vessel types, or client

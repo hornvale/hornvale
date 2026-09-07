@@ -30,10 +30,12 @@ cache as a separately measurable follow-up.
 
 The verification record (`38ea7618d`) reports ten belief tests, errand and
 affect observers, and seed-42 snapshot observers passing after implementation
-`dca20b44c`. The commit gate reported 1,298 passing sub-floor tests. No value
-fixture moved, so this campaign did not run `REBASELINE=1`; the absence of a
-fixture diff is a result of the focused observers, not permission for a broad
-rewrite.
+`dca20b44c`. The commit gate reported 1,298 passing sub-floor tests. The
+canonical stage gate then exposed the intended value change that the local
+sub-floor did not exercise: 20 of 410 affect-trace lines moved, all within one
+creature's thirst/danger/social arbitration, while the fixture stayed 27,985
+bytes. Rebaselining that focused fixture and changing the stranded calibration
+to assert recovery made the semantic change explicit rather than hiding it.
 
 ## Close boundary
 

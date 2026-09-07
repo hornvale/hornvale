@@ -422,33 +422,33 @@ fn the_chronic_threshold_is_exact_at_chronic_ticks() {
 // artifact — irrelevant to distress).
 
 #[test]
-fn a_stranded_creature_is_scored_chronic_end_to_end() {
-    // THE BUG ALARM, now end to end: a creature that believes in a spring it
-    // drank from but is stranded past the plan budget from it Holds in thirst
-    // `Frustrated` for the rest of the run — a real sim producing a chronic
-    // distress run the metric scores, not a hand-typed `[Lost, Lost, …]`.
+fn a_current_relative_belief_recovers_a_creature_on_known_water_end_to_end() {
+    // The former bug alarm: a creature that believes in a spring it drank from
+    // but is stranded past the plan budget used to Hold in thirst for the rest
+    // of the run. Current-relative belief recognizes the fresh water at the
+    // creature's present position and must recover in the real sim.
     let r = health_report(&stranded_from_known_water().simulate(HARNESS_TICKS));
     assert_eq!(
-        r.chronicity, 1.0,
-        "the stranded creature is chronically stuck: {r:?}"
+        r.chronicity, 0.0,
+        "the current-relative belief must not remain chronic: {r:?}"
     );
     assert_eq!(
-        r.stuck, 1.0,
-        "and it never recovers, so the ALARM fires — splitting the measure must \
-         not silence the scenario the metric exists to catch: {r:?}"
+        r.stuck, 0.0,
+        "the creature must recover after recognizing current water: {r:?}"
     );
     assert_eq!(
-        r.recovery_ticks, None,
-        "a never-ending stranding has no recovery half-life"
+        r.recovery_ticks,
+        Some(4.0),
+        "current-relative water recognition should produce a recovery half-life"
     );
     assert!(
-        r.prevalence > 0.5,
-        "distress dominates the span: {}",
+        r.prevalence < 1.0,
+        "distress must not dominate the entire span: {}",
         r.prevalence
     );
     assert_eq!(
         r.by_cause["thirst"], 1.0,
-        "the distress is entirely thirst (unreachable water)"
+        "the observed distress is the former unreachable-water thirst case"
     );
     assert_eq!(r.by_cause["thermal"], 0.0);
 }
