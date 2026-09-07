@@ -1300,6 +1300,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -3851,6 +3852,7 @@ hornvale-worldgen::suite$warp_signs::steepness_words_are_distinct_and_lowercase
 hornvale-worldgen::suite$warp_signs::wetness_sign_cuts_at_the_micro_word_threshold
 hornvale-worldgen::suite$weft_ledger_guard::the_seed_42_byte_golden_fact_count_is_unmoved
 hornvale-worldgen::suite$weft_prevalence::the_response_is_a_step_for_sign_kinds_and_identity_for_controls
+hornvale-worldgen::suite$weft_window::window_survives_chaos_eviction
 hornvale::hornvale$audio::tests::audio_filenames_are_eight_lowercase_hex_digits_dot_mp3
 hornvale::hornvale$audio::tests::crc32_matches_the_ieee_known_answer
 hornvale::hornvale$concepts::tests::manifest_render_derives_orphan_acts_from_the_action_roster
