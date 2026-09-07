@@ -26,7 +26,7 @@ def graph_fixture():
             {"id": "digest", "name": "digest", "version": "1", "manifest_path": "/repo/tools/digest/Cargo.toml", "workspace_member": True},
             {"id": "serde", "name": "serde", "version": "1", "manifest_path": "/cargo/registry/src/serde/Cargo.toml", "workspace_member": False},
         ],
-        "edges": {"protocol": ["kernel", "digest"], "kernel": ["hornvale-lab"], "hornvale-lab": ["digest", "serde"], "digest": [], "serde": []},
+        "edges": {"protocol": [], "kernel": ["protocol"], "hornvale-lab": ["kernel"], "digest": ["hornvale-lab", "serde"], "serde": []},
         "package_count": 5, "workspace_member_count": 4,
     }
 
@@ -105,6 +105,22 @@ class BoundedCommandTests(unittest.TestCase):
 
 
 class ClosureTests(unittest.TestCase):
+    def test_traverses_reverse_dependents_from_package_dependency_edges(self):
+        graph = graph_fixture()
+        graph["packages"] = [
+            {"id": "protocol", "name": "protocol", "manifest_path": "/repo/protocol/Cargo.toml"},
+            {"id": "consumer", "name": "consumer", "manifest_path": "/repo/consumer/Cargo.toml"},
+            {"id": "publication", "name": "publication", "manifest_path": "/repo/publication/Cargo.toml"},
+        ]
+        graph["edges"] = {
+            "protocol": [],
+            "consumer": ["protocol"],
+            "publication": ["consumer"],
+        }
+        result = changed_closure(graph, ["protocol/src/lib.rs"])
+        self.assertEqual(result["directly_changed"], ["protocol"])
+        self.assertEqual(result["reverse_dependents"], ["consumer", "publication"])
+
     def test_maps_repository_paths_while_ignoring_registry_packages(self):
         result = changed_closure(graph_fixture(), ["windows/lab/src/lib.rs"])
         self.assertEqual(result["directly_changed"], ["hornvale-lab"])
@@ -156,6 +172,13 @@ class SummaryTests(unittest.TestCase):
             bad["costs"]["build_s"] = value
             with self.assertRaises(ValueError):
                 summarize_baseline([bad, attempt("warm")])
+
+    def test_excludes_malformed_attempt_before_aggregating_graph_counts(self):
+        malformed = attempt("cold", valid=False)
+        malformed["graph"]["package_count"] = {"would": "raise"}
+        result = summarize_baseline([malformed, attempt("cold"), attempt("warm")])
+        self.assertEqual(result["excluded_attempt_count"], 1)
+        self.assertEqual(result["graph_counts"]["package_count"], [5])
 
 
 class BaselineOrchestrationTests(unittest.TestCase):

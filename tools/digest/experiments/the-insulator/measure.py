@@ -277,10 +277,10 @@ def changed_closure(graph: dict, changed_paths: list[str]) -> dict:
             direct.add(package["name"])
     direct = sorted(direct)
     reverse = {name: set() for name in names}
-    for dependency, dependents in graph.get("edges", {}).items():
-        for dependent in dependents:
-            if dependency in names and dependent in names:
-                reverse[dependency].add(dependent)
+    for package, dependencies in graph.get("edges", {}).items():
+        for dependency in dependencies:
+            if package in names and dependency in names:
+                reverse[dependency].add(package)
     dependents = set()
     frontier = list(direct)
     while frontier:
@@ -333,9 +333,10 @@ def summarize_baseline(attempts: list[dict]) -> dict:
         by_class[classification].append(attempt)
     if not by_class["cold"] or not by_class["warm"]:
         raise ValueError("baseline attempts must be paired")
+    eligible = [attempt for records in by_class.values() for attempt in records]
     graph_counts = {}
     for field in ("package_count", "workspace_member_count"):
-        values = [attempt.get("graph", {}).get(field) for attempt in attempts]
+        values = [attempt.get("graph", {}).get(field) for attempt in eligible]
         if any(not isinstance(value, int) or value < 0 for value in values):
             raise ValueError("incomplete baseline graph")
         if len(set(values)) != 1:
