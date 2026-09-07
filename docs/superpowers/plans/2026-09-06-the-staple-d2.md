@@ -103,9 +103,17 @@
 - Consumes: the accepted Task 0 report and the live history fixture outputs.
 - Produces: committed rebaselined artifacts, invariants for every history-adjacent pin touched by D2, and a complete close package.
 
-- [ ] **Step 1: Run the sanctioned census on lefford** through `make sluice-census BRANCH=... REF=...`; do not run census generation locally.
-- [ ] **Step 2: Reconcile any moved census columns** as a union, regenerate `docs/digest/decisions-in-force.md` rather than merging it, run `make rebaseline`, and inspect `git status` before resubmitting.
-- [ ] **Step 3: Add invariants** for typed-unit conservation, control identity, phase order, and the exact treatment-only bar directions. Each invariant must state its direction and guard against vacuous success.
-- [ ] **Step 4: Write the chronicle and retrospective**, naming the outcome of every deferred minor in the ledger.
-- [ ] **Step 5: Run the stage/merge gates** through the sluice and stop at G6 for Nathan's review.
-- [ ] **Step 6: Commit documentation updates** with `git commit -m "docs: record The Staple D2 epoch"`.
+- [x] **Step 1: Run the sanctioned census on lefford** through `make sluice-census BRANCH=... REF=...`; do not run census generation locally.
+- [x] **Step 2: Reconcile any moved census columns** as a union, regenerate `docs/digest/decisions-in-force.md` rather than merging it, run `make rebaseline`, and inspect `git status` before resubmitting.
+- [x] **Step 3: Add invariants** for typed-unit conservation, control identity, phase order, and the exact treatment-only bar directions. Each invariant must state its direction and guard against vacuous success.
+- [x] **Step 4: Write the chronicle and retrospective**, naming the outcome of every deferred minor in the ledger.
+- [x] **Step 5: Run the stage/merge gates** through the sluice and stop at G6 for Nathan's review.
+- [x] **Step 6: Commit documentation updates** with `git commit -m "docs: record The Staple D2 epoch"`.
+
+Task 5 evidence: the canonical lefford census delivery at `34e66fcc2`
+reported `1282s`, no census columns moved, and matching columns. Main was
+absorbed with the required union/regeneration path in `b2df2308f` and
+`d12b54b3c`; the post-absorption and final gate reports are recorded by
+`2853629cd` and `eaab5fc14`. The invariant annotations and close documents
+landed in `3c9af5894`. The final merge remains pending Nathan's G6 approval;
+the checked steps record reported evidence, not a claim that main has moved.

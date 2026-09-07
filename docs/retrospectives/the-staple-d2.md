@@ -65,11 +65,13 @@ Every deferred minor is named here with its disposition:
   registry row is added until they stabilize beyond this probe.
 - Aggregate exchange metrics remain derived study output, not larger-census
   columns, pending demonstrated query durability and frequency.
-- Census re-baselining and history-adjacent pin conversion remain pending the
-  sanctioned close path; this documentation pass does not run a census.
+- Census re-baselining was reported by the sanctioned lefford delivery with
+  no moved columns; history-adjacent pins were converted to explicit test
+  invariants. Final merge remains pending, and this hygiene pass does not run
+  a census.
 
 ## Close state
 
 The close package is documented, the relevant invariants are explicit, and
-the Stage 5 tracker is in progress. The sanctioned census, stage gate, and G6
-review remain outside this documentation-only pass.
+the Stage 5 tracker is complete. The sanctioned census and stage gate have
+reported; final merge and Nathan's G6 approval remain pending.

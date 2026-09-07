@@ -1,7 +1,7 @@
 # The Staple — D2 design brief
 
-**Status:** Implementation and paired probe complete; close documentation
-prepared 2026-09-07. Census re-baseline and sluice gates remain pending.
+**Status:** Implementation, paired probe, census re-baseline, and stage gate
+reported complete 2026-09-07; final merge remains pending.
 
 **Campaign:** The Staple, D2: “more than one thing flows, and some of it by
 exchange”
@@ -145,9 +145,10 @@ surface, deterministic clearing tests, conservation tests, and paired
 intervention measurement.
 
 This epoch's implementation cost was a new typed stock surface, deterministic
-clearing, runtime phase-order guards, the bounded shortfall adapter, and one
-200-seed paired intervention. The census re-baseline remains a close step;
-the study trace remains derived rather than a permanent event ledger.
+clearing, runtime phase-order guards, the bounded shortfall adapter, one
+200-seed paired intervention, the sanctioned lefford census, and the reported
+stage gate. The final merge remains pending; the study trace remains derived
+rather than a permanent event ledger.
 
 D2 owns the first climate-to-city link: `climate → local production → typed
 stock composition → exchange access and dependence → settlement stability`.
