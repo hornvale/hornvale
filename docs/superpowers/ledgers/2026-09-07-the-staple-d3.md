@@ -187,6 +187,39 @@ history pays an epoch, a sanctioned census re-baseline through the sluice, and
 conversion of history-adjacent pins into invariants. The cost compounds with
 D2's changed populations and typed stocks; it is not a later cleanup task.
 
+## #5 [G4] — Task 1 witness-boundary ruling
+
+**Question:** did the fixed Task 1 scaffold produce Task 0 evidence? **Ruling:**
+no. The public integration-test boundary exposes standing relation endpoints
+and their count, but no per-relation downhill return, return magnitude, or
+conservation residual. The first scaffold briefly counted endpoint
+`Function` labels; review rejected that as a vacuous substitute for the
+approved causal criterion. The repair now reports `d3_function_relations` and
+`d3_ratio` as explicitly unavailable and prints the same for the ignored
+readout.
+
+**Evidence:** fixed roster `1..=200`, nonzero relation denominator guard, and
+the non-claiming focused test passed. `make gate-commit` passed with 1,429
+sub-floor tests and 60 report checks. The ignored 200-seed readout timed out at
+120 seconds while compiling and emitted no measurement; it is not evidence.
+Repair commit: `1a21a7ecfca3f0619150f7510c8943fc4c702c34`.
+
+**Decision:** Task 1 is complete as a boundary-finding scaffold, but Task 0 is
+not yet measured. Do not enter the `C=0`, `C=N`, or mixed branch, and do not
+implement production return flow. The current plan's phrase “first executable
+slice” is insufficient: a return witness must be approved and made observable
+before the falsifier can run. This is a plan/spec boundary, not a measured
+sink or uniform relabeling.
+
+**Rejected:** endpoint-label classification (review finding; it can pass from
+authored/derived labels without any return); treating the timeout as a census
+result; adding an unapproved public return field merely to satisfy the probe.
+
+**Follow-ups:** amend the plan with a bounded witness-design step that chooses
+between an internal bake test witness and an approved emitted diagnostic
+record, then rerun the preregistered Task 0 criterion. Preserve the same
+relation denominator, D3 function set, dead poles, and no-local-census rule.
+
 ## Follow-ups
 
 - Write the D3 brief/spec around this Task 0 criterion before proposing code.
