@@ -39,7 +39,7 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Band, Geosphere, KindId, Seed, Stream, Vertex, VertexMap};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// The conductance-positive graph neighbours of `vertex` (`conductance > 0.0` —
 /// ocean-touching adjacency edges are stored at exactly 0.0). Ascending and
@@ -1382,13 +1382,12 @@ fn local_exchange_adjacency(
         .collect()
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct DirectExchangeProposal {
-    a_supplier: usize,
-    b_supplier: usize,
+    a_supplier: BakeId,
+    b_supplier: BakeId,
     a_requested: f64,
     b_requested: f64,
-    settled: f64,
 }
 
 fn exchange_capacity(snapshot: &ExchangeCommunitySnapshot, offered: SubsistenceResource) -> f64 {
@@ -1440,12 +1439,132 @@ fn pro_rata_direct_requests(total: f64, counterparties: &[(usize, f64)]) -> Vec<
     requests
 }
 
-/// Snapshot-dependent stock-creation residual. Paired delivery debits and
-/// credits cancel globally; what cannot cancel is an outgoing quantity that
-/// exceeds the immutable opening surplus left after reserving the local
-/// basket. This is the algebraic residual of opening/final stock accounting
-/// with an inventory floor at zero. Zero means every emitted unit was funded;
-/// positive means clearing would otherwise have minted that quantity.
+#[derive(Clone, Copy, Debug)]
+struct ExchangeFlowEdge {
+    to: usize,
+    reverse: usize,
+    residual: f64,
+}
+
+fn add_exchange_flow_edge(graph: &mut [Vec<ExchangeFlowEdge>], from: usize, to: usize, cap: f64) {
+    let forward = graph[from].len();
+    let reverse = graph[to].len();
+    graph[from].push(ExchangeFlowEdge {
+        to,
+        reverse,
+        residual: cap,
+    });
+    graph[to].push(ExchangeFlowEdge {
+        to: from,
+        reverse: forward,
+        residual: 0.0,
+    });
+}
+
+/// Fund declared A-forward/B-backward bundle paths from immutable opening
+/// surplus at their endpoints. Each augmentation is a simple source-to-sink
+/// path over declared direct proposals: A propagates forward along the path
+/// and the matching B propagates backward. A proposal cycle without an
+/// opening-funded A source and B sink therefore has no augmenting path and
+/// settles nothing.
+fn fund_declared_exchange_paths(
+    snapshots: &[ExchangeCommunitySnapshot],
+    proposals: &[DirectExchangeProposal],
+) -> Vec<f64> {
+    let after_offset = snapshots.len();
+    let proposal_offset = snapshots.len() * 2;
+    let source = proposal_offset + proposals.len() * 2;
+    let sink = source + 1;
+    let mut graph = vec![Vec::new(); sink + 1];
+    let indices: BTreeMap<BakeId, usize> = snapshots
+        .iter()
+        .enumerate()
+        .map(|(index, snapshot)| (snapshot.id, index))
+        .collect();
+
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        let demand = subsistence_basket_demand(snapshot.projected_population);
+        let a_surplus = (snapshot.opening_stock.amount(SubsistenceResource::A)
+            - demand.amount(SubsistenceResource::A))
+        .max(0.0);
+        let b_surplus = (snapshot.opening_stock.amount(SubsistenceResource::B)
+            - demand.amount(SubsistenceResource::B))
+        .max(0.0);
+        add_exchange_flow_edge(&mut graph, source, index, a_surplus);
+        add_exchange_flow_edge(&mut graph, after_offset + index, sink, b_surplus);
+    }
+
+    let mut proposal_edges = Vec::with_capacity(proposals.len());
+    for (proposal_index, proposal) in proposals.iter().enumerate() {
+        let from = indices[&proposal.a_supplier];
+        let to = indices[&proposal.b_supplier];
+        let proposal_in = proposal_offset + proposal_index * 2;
+        let proposal_out = proposal_in + 1;
+        let capacity = proposal.a_requested.min(proposal.b_requested);
+        add_exchange_flow_edge(&mut graph, from, proposal_in, capacity);
+        add_exchange_flow_edge(&mut graph, after_offset + from, proposal_in, capacity);
+        let shared_edge = graph[proposal_in].len();
+        add_exchange_flow_edge(&mut graph, proposal_in, proposal_out, capacity);
+        add_exchange_flow_edge(&mut graph, proposal_out, after_offset + to, capacity);
+        proposal_edges.push((proposal_in, shared_edge));
+    }
+
+    loop {
+        let mut parent = vec![None; graph.len()];
+        let mut queue = VecDeque::from([source]);
+        parent[source] = Some((source, usize::MAX));
+        while let Some(from) = queue.pop_front() {
+            for (edge_index, edge) in graph[from].iter().enumerate() {
+                if edge.residual > 0.0 && parent[edge.to].is_none() {
+                    parent[edge.to] = Some((from, edge_index));
+                    if edge.to == sink {
+                        break;
+                    }
+                    queue.push_back(edge.to);
+                }
+            }
+            if parent[sink].is_some() {
+                break;
+            }
+        }
+        if parent[sink].is_none() {
+            break;
+        }
+
+        let mut quantity = f64::INFINITY;
+        let mut at = sink;
+        while at != source {
+            let (from, edge_index) = parent[at].expect("reached nodes have a parent");
+            quantity = quantity.min(graph[from][edge_index].residual);
+            at = from;
+        }
+        debug_assert!(quantity.is_finite() && quantity > 0.0);
+
+        at = sink;
+        while at != source {
+            let (from, edge_index) = parent[at].expect("reached nodes have a parent");
+            let reverse = graph[from][edge_index].reverse;
+            graph[from][edge_index].residual -= quantity;
+            graph[at][reverse].residual += quantity;
+            at = from;
+        }
+    }
+
+    proposal_edges
+        .into_iter()
+        .zip(proposals)
+        .map(|((from, edge), proposal)| {
+            proposal.a_requested.min(proposal.b_requested) - graph[from][edge].residual
+        })
+        .collect()
+}
+
+/// Snapshot-dependent stock-creation residual. For each community and typed
+/// resource, immutable opening surplus plus incoming receipts must cover all
+/// outgoing deliveries. This is opening/final stock accounting with an
+/// inventory floor at zero: unlike a global sent/received equality, it detects
+/// an overdraw while allowing an already-arrived unit to fund a downstream
+/// declared proposal.
 fn exchange_conservation_residuals(
     snapshots: &[ExchangeCommunitySnapshot],
     deliveries: &[SubsistenceDelivery],
@@ -1466,59 +1585,33 @@ fn exchange_conservation_residuals(
         );
     }
 
-    let mut outgoing: BTreeMap<BakeId, [f64; 2]> = BTreeMap::new();
+    let mut balances = opening_surplus.clone();
     let mut residuals = [0.0; 2];
     for delivery in deliveries {
         let index = subsistence_resource_index(delivery.resource);
-        if opening_surplus.contains_key(&delivery.from) {
-            outgoing.entry(delivery.from).or_insert([0.0; 2])[index] += delivery.quantity;
+        if let Some(balance) = balances.get_mut(&delivery.from) {
+            balance[index] -= delivery.quantity;
         } else {
             residuals[index] += delivery.quantity;
         }
-        if !opening_surplus.contains_key(&delivery.to) {
+        if let Some(balance) = balances.get_mut(&delivery.to) {
+            balance[index] += delivery.quantity;
+        } else {
             residuals[index] += delivery.quantity;
         }
     }
-    for (id, sent) in outgoing {
-        let available = opening_surplus[&id];
+    for balance in balances.values() {
         for resource_index in 0..2 {
-            residuals[resource_index] +=
-                (sent[resource_index] - available[resource_index]).max(0.0);
+            residuals[resource_index] += (-balance[resource_index]).max(0.0);
         }
     }
     residuals
 }
 
-/// Clear one immutable current-phase snapshot without touching stores,
-/// populations, inventories, or random streams.
-///
-/// A community first reserves its own fixed complementary basket. Its direct
-/// one-hop proposals may offer only the remaining stock, and only to a
-/// counterparty that offers the opposite typed surplus. Each party distributes
-/// its opening-funded bundle capacity among eligible counterparties in
-/// proportion to their capacities. The lesser of the two declared quantities
-/// settles atomically as equal A-for-B deliveries, so no one-way aid or
-/// undeclared relay can emerge from clearing.
-#[allow(dead_code)]
-fn clear_local_exchange(
-    graph: &ConnectionGraph,
+fn generated_direct_exchange_proposals(
     snapshots: &[ExchangeCommunitySnapshot],
-) -> ExchangeClearing {
-    let mut snapshots = snapshots.to_vec();
-    snapshots.sort_by_key(|snapshot| snapshot.id);
-    debug_assert!(snapshots.windows(2).all(|pair| pair[0].id != pair[1].id));
-    debug_assert!(snapshots.iter().all(|snapshot| {
-        snapshot.projected_population.is_finite()
-            && snapshot.projected_population >= 0.0
-            && [SubsistenceResource::A, SubsistenceResource::B]
-                .into_iter()
-                .all(|resource| {
-                    let amount = snapshot.opening_stock.amount(resource);
-                    amount.is_finite() && amount >= 0.0
-                })
-    }));
-
-    let adjacency = local_exchange_adjacency(graph, &snapshots);
+    adjacency: &[Vec<usize>],
+) -> Vec<DirectExchangeProposal> {
     let capacities: Vec<[f64; 2]> = snapshots
         .iter()
         .map(|snapshot| {
@@ -1565,57 +1658,109 @@ fn clear_local_exchange(
     for (&(a_supplier, b_supplier), &a_requested) in &a_requests {
         if let Some(&b_requested) = b_requests.get(&(a_supplier, b_supplier)) {
             proposals.push(DirectExchangeProposal {
-                a_supplier,
-                b_supplier,
+                a_supplier: snapshots[a_supplier].id,
+                b_supplier: snapshots[b_supplier].id,
                 a_requested,
                 b_requested,
-                settled: a_requested.min(b_requested),
             });
         }
     }
+    proposals
+}
 
-    let mut deliveries = Vec::with_capacity(proposals.len() * 2);
-    for proposal in &proposals {
-        if proposal.settled == 0.0 {
+/// Clear a sorted set of already-declared direct one-hop bundle proposals.
+/// Every settled proposal is one A-forward/B-backward edge. Funding can
+/// propagate over a chain of those declarations, but clearing never invents
+/// an undeclared relay edge and never treats a cycle of promises as stock.
+fn clear_declared_local_exchange(
+    graph: &ConnectionGraph,
+    snapshots: &[ExchangeCommunitySnapshot],
+    proposals: &[DirectExchangeProposal],
+) -> ExchangeClearing {
+    let mut snapshots = snapshots.to_vec();
+    snapshots.sort_by_key(|snapshot| snapshot.id);
+    let adjacency = local_exchange_adjacency(graph, &snapshots);
+    let indices: BTreeMap<BakeId, usize> = snapshots
+        .iter()
+        .enumerate()
+        .map(|(index, snapshot)| (snapshot.id, index))
+        .collect();
+    let mut proposals = proposals.to_vec();
+    proposals.sort_by_key(|proposal| (proposal.a_supplier, proposal.b_supplier));
+    debug_assert!(proposals.windows(2).all(|pair| {
+        (pair[0].a_supplier, pair[0].b_supplier) != (pair[1].a_supplier, pair[1].b_supplier)
+    }));
+
+    let (possible, impossible): (Vec<_>, Vec<_>) = proposals.into_iter().partition(|proposal| {
+        let Some(&a_supplier) = indices.get(&proposal.a_supplier) else {
+            return false;
+        };
+        let Some(&b_supplier) = indices.get(&proposal.b_supplier) else {
+            return false;
+        };
+        proposal.a_requested.is_finite()
+            && proposal.a_requested >= 0.0
+            && proposal.b_requested.is_finite()
+            && proposal.b_requested >= 0.0
+            && adjacency[a_supplier].binary_search(&b_supplier).is_ok()
+    });
+    let settled = fund_declared_exchange_paths(&snapshots, &possible);
+
+    let mut deliveries = Vec::with_capacity(possible.len() * 2);
+    for (proposal, &quantity) in possible.iter().zip(&settled) {
+        if quantity == 0.0 {
             continue;
         }
         deliveries.push(SubsistenceDelivery {
-            from: snapshots[proposal.a_supplier].id,
-            to: snapshots[proposal.b_supplier].id,
+            from: proposal.a_supplier,
+            to: proposal.b_supplier,
             resource: SubsistenceResource::A,
-            quantity: proposal.settled,
+            quantity,
         });
         deliveries.push(SubsistenceDelivery {
-            from: snapshots[proposal.b_supplier].id,
-            to: snapshots[proposal.a_supplier].id,
+            from: proposal.b_supplier,
+            to: proposal.a_supplier,
             resource: SubsistenceResource::B,
-            quantity: proposal.settled,
+            quantity,
         });
     }
     deliveries.sort_by_key(|delivery| (delivery.from, delivery.to, delivery.resource));
-    debug_assert!(
-        deliveries
-            .iter()
-            .all(|delivery| delivery.quantity.is_finite() && delivery.quantity > 0.0)
-    );
 
-    let mut attempts = Vec::with_capacity(proposals.len() * 2);
-    for proposal in &proposals {
+    let mut attempts = Vec::with_capacity((possible.len() + impossible.len()) * 2);
+    for (proposal, &delivered) in possible.iter().zip(&settled) {
         attempts.push(ExchangeAttempt {
-            requester: snapshots[proposal.b_supplier].id,
-            counterparty: Some(snapshots[proposal.a_supplier].id),
+            requester: proposal.b_supplier,
+            counterparty: Some(proposal.a_supplier),
             resource: SubsistenceResource::A,
             requested: proposal.a_requested,
-            delivered: proposal.settled,
-            statuses: exchange_statuses(proposal.a_requested, proposal.settled, true),
+            delivered,
+            statuses: exchange_statuses(proposal.a_requested, delivered, true),
         });
         attempts.push(ExchangeAttempt {
-            requester: snapshots[proposal.a_supplier].id,
-            counterparty: Some(snapshots[proposal.b_supplier].id),
+            requester: proposal.a_supplier,
+            counterparty: Some(proposal.b_supplier),
             resource: SubsistenceResource::B,
             requested: proposal.b_requested,
-            delivered: proposal.settled,
-            statuses: exchange_statuses(proposal.b_requested, proposal.settled, true),
+            delivered,
+            statuses: exchange_statuses(proposal.b_requested, delivered, true),
+        });
+    }
+    for proposal in impossible {
+        attempts.push(ExchangeAttempt {
+            requester: proposal.b_supplier,
+            counterparty: Some(proposal.a_supplier),
+            resource: SubsistenceResource::A,
+            requested: proposal.a_requested,
+            delivered: 0.0,
+            statuses: exchange_statuses(proposal.a_requested, 0.0, false),
+        });
+        attempts.push(ExchangeAttempt {
+            requester: proposal.a_supplier,
+            counterparty: Some(proposal.b_supplier),
+            resource: SubsistenceResource::B,
+            requested: proposal.b_requested,
+            delivered: 0.0,
+            statuses: exchange_statuses(proposal.b_requested, 0.0, false),
         });
     }
 
@@ -1645,12 +1790,44 @@ fn clear_local_exchange(
 
     let conservation_residuals = exchange_conservation_residuals(&snapshots, &deliveries);
     debug_assert_eq!(conservation_residuals, [0.0, 0.0]);
-
     ExchangeClearing {
         deliveries,
         attempts,
         conservation_residuals,
     }
+}
+
+/// Clear one immutable current-phase snapshot without touching stores,
+/// populations, inventories, or random streams.
+///
+/// A community first reserves its own fixed complementary basket. Its direct
+/// one-hop proposals may offer only the remaining stock, and only to a
+/// counterparty that offers the opposite typed surplus. Each party distributes
+/// its opening-funded bundle capacity among eligible counterparties in
+/// proportion to their capacities. The declarations are then settled as equal
+/// A-for-B deliveries by the same path-funding engine used for acyclic chains.
+#[allow(dead_code)]
+fn clear_local_exchange(
+    graph: &ConnectionGraph,
+    snapshots: &[ExchangeCommunitySnapshot],
+) -> ExchangeClearing {
+    let mut snapshots = snapshots.to_vec();
+    snapshots.sort_by_key(|snapshot| snapshot.id);
+    debug_assert!(snapshots.windows(2).all(|pair| pair[0].id != pair[1].id));
+    debug_assert!(snapshots.iter().all(|snapshot| {
+        snapshot.projected_population.is_finite()
+            && snapshot.projected_population >= 0.0
+            && [SubsistenceResource::A, SubsistenceResource::B]
+                .into_iter()
+                .all(|resource| {
+                    let amount = snapshot.opening_stock.amount(resource);
+                    amount.is_finite() && amount >= 0.0
+                })
+    }));
+
+    let adjacency = local_exchange_adjacency(graph, &snapshots);
+    let proposals = generated_direct_exchange_proposals(&snapshots, &adjacency);
+    clear_declared_local_exchange(graph, &snapshots, &proposals)
 }
 
 /// One alive (or lately-dead) community's live state during the bake. The
@@ -6496,29 +6673,83 @@ mod tests {
     }
 
     #[test]
-    fn funded_stock_can_cross_an_acyclic_chain() {
+    fn incoming_stock_funds_a_declared_acyclic_chain() {
         let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
         let snapshots = vec![
             exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
-            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
-            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 0.0, 2.0),
+        ];
+        let proposals = vec![
+            DirectExchangeProposal {
+                a_supplier: BakeId(1),
+                b_supplier: BakeId(2),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+            DirectExchangeProposal {
+                a_supplier: BakeId(2),
+                b_supplier: BakeId(3),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
         ];
 
-        let clearing = clear_local_exchange(&graph, &snapshots);
+        let clearing = clear_declared_local_exchange(&graph, &snapshots, &proposals);
 
         assert_eq!(delivered(&clearing, 1, 2, SubsistenceResource::A), 1.0);
         assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::B), 1.0);
-        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::A), 1.0);
-        assert_eq!(delivered(&clearing, 2, 3, SubsistenceResource::B), 1.0);
-        for counterparty in [1, 3] {
-            assert_eq!(
-                exchange_attempt(&clearing, 2, Some(counterparty), SubsistenceResource::A,)
-                    .statuses
-                    .last(),
-                Some(&ExchangeStatus::Settled),
-                "the middle request must name each direct opening-funded counterparty"
-            );
-        }
+        assert_eq!(
+            delivered(&clearing, 2, 3, SubsistenceResource::A),
+            1.0,
+            "the middle has no opening A surplus, so its downstream A delivery must be incoming-funded"
+        );
+        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::B), 1.0);
+        assert_eq!(
+            exchange_capacity(&snapshots[1], SubsistenceResource::A),
+            0.0,
+            "the fixture must not accidentally opening-fund the middle's downstream A leg"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 2, Some(1), SubsistenceResource::A)
+                .statuses
+                .last(),
+            Some(&ExchangeStatus::Settled),
+            "the upstream bundle must be an explicit direct proposal"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 3, Some(2), SubsistenceResource::A)
+                .statuses
+                .last(),
+            Some(&ExchangeStatus::Settled),
+            "the downstream bundle must be an explicit direct proposal"
+        );
+        assert_eq!(clearing.conservation_residuals, [0.0, 0.0]);
+
+        let mut reordered = snapshots.clone();
+        reordered.reverse();
+        assert_eq!(
+            clearing,
+            clear_declared_local_exchange(&graph, &reordered, &proposals),
+            "declared chain settlement must be keyed by BakeId rather than snapshot position"
+        );
+
+        let mut overdrawn = clearing.deliveries.clone();
+        let downstream = overdrawn
+            .iter_mut()
+            .find(|delivery| {
+                delivery.from == BakeId(2)
+                    && delivery.to == BakeId(3)
+                    && delivery.resource == SubsistenceResource::A
+            })
+            .expect("fixture must contain the incoming-funded downstream A delivery");
+        assert_eq!(downstream.quantity, 1.0, "mutation target must be live");
+        downstream.quantity = 2.0;
+        assert_eq!(
+            exchange_conservation_residuals(&snapshots, &overdrawn),
+            [1.0, 0.0],
+            "immutable opening stock plus the one-unit incoming receipt cannot fund two outgoing A units"
+        );
     }
 
     #[test]
@@ -6591,25 +6822,54 @@ mod tests {
 
     #[test]
     fn reserved_stock_cannot_fund_a_reciprocal_cycle() {
-        let graph = exchange_graph(2, &[(0, 1)]);
+        let graph = exchange_graph(3, &[(0, 1), (1, 2), (2, 0)]);
         let snapshots = vec![
-            exchange_snapshot(1, 0, 2.0, 1.0, 0.0),
-            exchange_snapshot(2, 1, 2.0, 0.0, 1.0),
+            exchange_snapshot(1, 0, 2.0, 1.0, 1.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 1.0, 1.0),
+        ];
+        let proposals = vec![
+            DirectExchangeProposal {
+                a_supplier: BakeId(1),
+                b_supplier: BakeId(2),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+            DirectExchangeProposal {
+                a_supplier: BakeId(2),
+                b_supplier: BakeId(3),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+            DirectExchangeProposal {
+                a_supplier: BakeId(3),
+                b_supplier: BakeId(1),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
         ];
 
-        let clearing = clear_local_exchange(&graph, &snapshots);
+        let clearing = clear_declared_local_exchange(&graph, &snapshots, &proposals);
 
         assert!(
             clearing.deliveries.is_empty(),
             "stock reserved for each community's own basket is not an exchange offer"
         );
-        for (requester, resource) in [(1, SubsistenceResource::B), (2, SubsistenceResource::A)] {
-            let attempt = exchange_attempt(&clearing, requester, None, resource);
+        assert_eq!(
+            clearing.attempts.len(),
+            6,
+            "all three declared bundles must report both typed attempts"
+        );
+        for attempt in &clearing.attempts {
+            assert!(
+                attempt.counterparty.is_some(),
+                "the refused cycle must retain its direct declarations"
+            );
             assert_eq!(attempt.delivered, 0.0);
             assert_eq!(
                 attempt.statuses,
                 vec![ExchangeStatus::Proposed, ExchangeStatus::Refused],
-                "reciprocal promises without opening surplus must be refused"
+                "a closed promise cycle with no opening surplus at any node must not manufacture stock"
             );
         }
     }
@@ -6629,9 +6889,15 @@ mod tests {
             exchange_snapshot(1, 0, 2.0, 0.0, 1.0),
             exchange_snapshot(2, 1, 0.0, 1.0, 0.0),
         ];
+        let proposals = vec![DirectExchangeProposal {
+            a_supplier: BakeId(2),
+            b_supplier: BakeId(1),
+            a_requested: 1.0,
+            b_requested: 1.0,
+        }];
 
-        let clearing = clear_local_exchange(&graph, &snapshots);
-        let attempt = exchange_attempt(&clearing, 1, None, SubsistenceResource::A);
+        let clearing = clear_declared_local_exchange(&graph, &snapshots, &proposals);
+        let attempt = exchange_attempt(&clearing, 1, Some(2), SubsistenceResource::A);
 
         assert!(
             clearing.deliveries.is_empty(),
