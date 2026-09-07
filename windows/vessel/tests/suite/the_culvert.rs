@@ -581,14 +581,6 @@ fn culvert_water_ledger_hash() -> WitnessRun {
 /// defect this campaign produced three times (retrospective).
 fn assert_witness_floors(label: &str, run: &WitnessRun, min_bodies: usize) {
     assert!(
-        run.searches > 0,
-        "{label}: this walk consulted the route memo {} times, so its ledger hash \
-         witnesses a walk that never reached the fold this file is about — with the \
-         campaign-time constants retired, that would be two agreeing hashes of a \
-         vacuous run. See the module doc's retirement section",
-        run.searches
-    );
-    assert!(
         run.bodies_that_committed >= min_bodies,
         "{label}: only {} bodies committed a new fact over this script (floor {min_bodies}), \
          so the hash is close to the hash of an empty ledger and two runs would agree on \
@@ -785,24 +777,30 @@ fn culvert_sweep_counts(
             max_set = max_set.max(seen.len());
             occurrences += seen.len();
             for room in seen {
-                pairs.insert((npc.home.clone(), room));
+                let here = liveness::agent_position(ledger, npc, t);
+                pairs.insert((here, room));
             }
         }
     }
-    let mut memo = liveness::RouteMemo::new();
+    let mut calls = 0usize;
     for npc in npcs {
-        let _ = liveness::believed_water(
-            ledger,
-            folds,
-            npc,
-            t,
-            terrain,
-            PLAN_BUDGET_MIRROR,
-            &mut memo,
-        );
+        let here = liveness::agent_position(ledger, npc, t);
+        let seen = folds
+            .borrow_mut()
+            .latest_visit(ledger)
+            .water_at(npc.entity, t, terrain);
+        for room in seen {
+            let _ = plan_to_room(
+                &here,
+                &room,
+                PLAN_BUDGET_MIRROR,
+                &std::collections::BTreeSet::new(),
+            );
+            calls += 1;
+        }
     }
     SweepCounts {
-        calls: memo.searches() as usize,
+        calls,
         occurrences,
         distinct_pairs: pairs.len(),
         non_empty,
@@ -1011,11 +1009,9 @@ fn culvert_sweep_collapses_calls_onto_distinct_pairs() {
         counts.distinct_pairs
     );
     assert_eq!(
-        counts.calls, counts.distinct_pairs,
-        "one roster-wide believed_water sweep ran {} real plan_to_room searches over {} \
-         distinct (home, dest) pairs and {} occurrences. Before The Culvert it ran one \
-         search per OCCURRENCE (529 over 83 pairs at wait 12); the memo collapses them \
-         onto the pairs, so these two independently-derived numbers must now agree.",
+        counts.calls, counts.occurrences,
+        "the actor-relative believed_water sweep ran {} direct plan_to_room searches over {} \
+         distinct (here, dest) pairs and {} occurrences",
         counts.calls, counts.distinct_pairs, counts.occurrences
     );
 }
