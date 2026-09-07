@@ -1,10 +1,11 @@
 //! Sky genesis assembly: world seed in, complete star system out.
 
-use crate::anchor::{Anchor, generate_anchor};
+use crate::anchor::{Anchor, generate_anchor_for_stellar};
 use crate::moons::{Moon, generate_moons};
 use crate::neighborhood::{Neighbor, generate_neighbors};
 use crate::pins::{GenesisError, SkyPins};
 use crate::star::{Star, generate_star};
+use crate::stellar::{StellarConfiguration, generate_stellar};
 use crate::streams;
 use crate::wanderers::{Wanderer, generate_wanderers};
 use hornvale_kernel::Seed;
@@ -14,6 +15,8 @@ use hornvale_kernel::Seed;
 pub struct StarSystem {
     /// The main-sequence host star.
     pub star: Star,
+    /// Stellar topology and binary metadata. `star` remains the primary view.
+    pub stellar: StellarConfiguration,
     /// The habitable anchor world.
     pub anchor: Anchor,
     /// Moons, nearest first.
@@ -38,7 +41,8 @@ pub fn generate(
 ) -> Result<GenesisOutcome<StarSystem>, GenesisError> {
     let astronomy_seed = world_seed.derive(streams::ROOT);
     let star = generate_star(astronomy_seed);
-    let anchor = generate_anchor(astronomy_seed, &star, pins)?;
+    let stellar = generate_stellar(astronomy_seed, &star, pins)?;
+    let anchor = generate_anchor_for_stellar(astronomy_seed, &star, &stellar, pins)?;
     let (moons, notes) = generate_moons(astronomy_seed, &star, &anchor, pins)?;
     let neighbors = generate_neighbors(astronomy_seed, pins);
     let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, &moons, pins);
@@ -46,6 +50,7 @@ pub fn generate(
     Ok(GenesisOutcome {
         value: StarSystem {
             star,
+            stellar,
             anchor,
             moons,
             neighbors,

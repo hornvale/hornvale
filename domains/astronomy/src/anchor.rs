@@ -3,6 +3,7 @@
 
 use crate::pins::{GenesisError, RotationPin, SkyPins, SpinPin};
 use crate::star::Star;
+use crate::stellar::StellarConfiguration;
 use crate::streams;
 use crate::units::{Au, Degrees, EarthMasses, SolarMasses, StdDays};
 use hornvale_kernel::Seed;
@@ -68,6 +69,40 @@ fn year_from_orbit(orbit: Au, star_mass: SolarMasses) -> StdDays {
 pub fn generate_anchor(
     astronomy_seed: Seed,
     star: &Star,
+    pins: &SkyPins,
+) -> Result<Anchor, GenesisError> {
+    generate_anchor_with_admission(
+        astronomy_seed,
+        star.habitable_zone,
+        star.mass,
+        None,
+        None,
+        pins,
+    )
+}
+
+pub(crate) fn generate_anchor_for_stellar(
+    astronomy_seed: Seed,
+    star: &Star,
+    stellar: &StellarConfiguration,
+    pins: &SkyPins,
+) -> Result<Anchor, GenesisError> {
+    generate_anchor_with_admission(
+        astronomy_seed,
+        stellar.anchor_habitable_zone,
+        stellar.gravity_mass(star),
+        stellar.circumbinary_inner_limit,
+        stellar.circumprimary_outer_limit,
+        pins,
+    )
+}
+
+fn generate_anchor_with_admission(
+    astronomy_seed: Seed,
+    habitable_zone: crate::units::HabitableZone,
+    gravity_mass: SolarMasses,
+    stability_inner: Option<Au>,
+    stability_outer: Option<Au>,
     pins: &SkyPins,
 ) -> Result<Anchor, GenesisError> {
     let mass = EarthMasses(
@@ -142,7 +177,7 @@ pub fn generate_anchor(
         },
     };
 
-    let (inner, outer) = (star.habitable_zone.inner(), star.habitable_zone.outer());
+    let (inner, outer) = (habitable_zone.inner(), habitable_zone.outer());
     let (orbit, year) = match pins.year_local_days {
         Some(local_days) => {
             let Rotation::Spinning { day, .. } = rotation else {
@@ -166,9 +201,31 @@ pub fn generate_anchor(
             }
             let year_std = StdDays(local_days.0 * day.as_std_days());
             let orbit = Au(math::powf(
-                star.mass.0 * (year_std.0 / 365.25).powi(2),
+                gravity_mass.0 * (year_std.0 / 365.25).powi(2),
                 1.0 / 3.0,
             ));
+            if stability_inner.is_some_and(|limit| orbit.0 < limit.0) {
+                return Err(GenesisError::UnsatisfiablePin {
+                    pin: "year-days".to_string(),
+                    reason: format!(
+                        "a {}-local-day year places the anchor at {:.2} AU, inside the circumbinary stability limit ({:.2} AU)",
+                        local_days.get(),
+                        orbit.0,
+                        stability_inner.expect("checked as some").0
+                    ),
+                });
+            }
+            if stability_outer.is_some_and(|limit| orbit.0 > limit.0) {
+                return Err(GenesisError::UnsatisfiablePin {
+                    pin: "year-days".to_string(),
+                    reason: format!(
+                        "a {}-local-day year places the anchor at {:.2} AU, outside the circumprimary stability limit ({:.2} AU)",
+                        local_days.get(),
+                        orbit.0,
+                        stability_outer.expect("checked as some").0
+                    ),
+                });
+            }
             if !(inner.0..=outer.0).contains(&orbit.0) {
                 return Err(GenesisError::UnsatisfiablePin {
                     pin: "year-days".to_string(),
@@ -185,9 +242,12 @@ pub fn generate_anchor(
             (orbit, year_std)
         }
         None => {
-            let orbit = Au(inner.0
-                + astronomy_seed.derive(streams::ORBIT).stream().next_f64() * (outer.0 - inner.0));
-            (orbit, year_from_orbit(orbit, star.mass))
+            let admitted_inner = stability_inner.map_or(inner.0, |limit| inner.0.max(limit.0));
+            let admitted_outer = stability_outer.map_or(outer.0, |limit| outer.0.min(limit.0));
+            let orbit = Au(admitted_inner
+                + astronomy_seed.derive(streams::ORBIT).stream().next_f64()
+                    * (admitted_outer - admitted_inner));
+            (orbit, year_from_orbit(orbit, gravity_mass))
         }
     };
 

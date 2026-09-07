@@ -3,9 +3,151 @@
 
 use hornvale_astronomy::{
     Degrees, ForcingPin, GenesisError, LocalDays, MoonsPin, NeighborClass, Rotation, RotationPin,
-    SkyPins, StdInstant, generate, hill_radius_mm,
+    SkyPins, StdInstant, StellarTopology, generate, generate_star, hill_radius_mm,
+    stellar_gravity_mass, stellar_luminosity_at,
 };
 use hornvale_kernel::Seed;
+
+#[test]
+fn seed_42_defaults_to_the_single_star_path() {
+    let system = generate(Seed(42), &SkyPins::default()).unwrap().value;
+    assert_eq!(system.stellar.topology, StellarTopology::Single);
+    assert!(system.stellar.companion.is_none());
+    assert_eq!(stellar_gravity_mass(&system), system.star.mass);
+    assert_eq!(
+        stellar_luminosity_at(&system, StdInstant::new(0.0).unwrap()),
+        system.star.luminosity
+    );
+}
+
+#[test]
+fn binary_pins_admit_the_anchor_in_the_requested_orbital_regime() {
+    let wide = generate(
+        Seed(42),
+        &SkyPins {
+            topology: Some(StellarTopology::WideBinary),
+            ..SkyPins::default()
+        },
+    )
+    .unwrap()
+    .value;
+    assert_eq!(wide.stellar.topology, StellarTopology::WideBinary);
+    assert!(wide.stellar.companion.is_some());
+    assert!(
+        wide.anchor.orbit.get()
+            <= wide
+                .stellar
+                .circumprimary_outer_limit
+                .expect("wide binaries carry a circumprimary limit")
+                .get()
+    );
+    assert_eq!(stellar_gravity_mass(&wide), wide.star.mass);
+
+    let close = generate(
+        Seed(42),
+        &SkyPins {
+            topology: Some(StellarTopology::CloseBinary),
+            ..SkyPins::default()
+        },
+    )
+    .unwrap()
+    .value;
+    assert_eq!(close.stellar.topology, StellarTopology::CloseBinary);
+    let companion = close
+        .stellar
+        .companion
+        .as_ref()
+        .expect("close binaries carry a companion");
+    assert!(
+        close.anchor.orbit.get()
+            >= close
+                .stellar
+                .circumbinary_inner_limit
+                .expect("close binaries carry a circumbinary limit")
+                .get()
+    );
+    assert_eq!(
+        stellar_gravity_mass(&close).get(),
+        close.star.mass.get() + companion.star.mass.get()
+    );
+}
+
+#[test]
+fn binary_parameters_are_deterministic_and_primary_star_draws_are_isolated() {
+    let astronomy_seed = Seed(73).derive(hornvale_astronomy::streams::ROOT);
+    let primary = generate_star(astronomy_seed);
+
+    for topology in [StellarTopology::WideBinary, StellarTopology::CloseBinary] {
+        let pins = SkyPins {
+            topology: Some(topology),
+            ..SkyPins::default()
+        };
+        let a = generate(Seed(73), &pins).unwrap().value;
+        let b = generate(Seed(73), &pins).unwrap().value;
+        assert_eq!(a.stellar, b.stellar);
+        assert_eq!(a.star, primary, "{topology:?} moved the primary draw");
+
+        let orbit = &a
+            .stellar
+            .companion
+            .as_ref()
+            .expect("a binary has a companion")
+            .orbit;
+        assert!(orbit.period.get() > 0.0);
+        assert!((0.0..1.0).contains(&orbit.phase));
+    }
+}
+
+#[test]
+fn topology_specific_orbit_violations_fail_with_the_constraint_named() {
+    for (topology, constraint) in [
+        (StellarTopology::WideBinary, "circumprimary stability"),
+        (StellarTopology::CloseBinary, "circumbinary stability"),
+    ] {
+        let baseline = generate(
+            Seed(91),
+            &SkyPins {
+                topology: Some(topology),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .value;
+        let zone = baseline.stellar.anchor_habitable_zone;
+        let orbit = match topology {
+            StellarTopology::WideBinary => {
+                let limit = baseline.stellar.circumprimary_outer_limit.unwrap();
+                hornvale_astronomy::Au::new((limit.get() + zone.outer().get()) / 2.0).unwrap()
+            }
+            StellarTopology::CloseBinary => {
+                let limit = baseline.stellar.circumbinary_inner_limit.unwrap();
+                hornvale_astronomy::Au::new((zone.inner().get() + limit.get()) / 2.0).unwrap()
+            }
+            StellarTopology::Single => unreachable!(),
+        };
+        let gravity = stellar_gravity_mass(&baseline).get();
+        let year = 365.25 * (orbit.get().powi(3) / gravity).sqrt();
+        let result = generate(
+            Seed(91),
+            &SkyPins {
+                topology: Some(topology),
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                year_local_days: Some(LocalDays::new(year).unwrap()),
+                ..SkyPins::default()
+            },
+        );
+        match result {
+            Err(GenesisError::UnsatisfiablePin { pin, reason }) => {
+                assert_eq!(pin, "year-days");
+                assert!(
+                    reason.contains(constraint),
+                    "{topology:?}: expected {constraint:?} in {reason:?}"
+                );
+            }
+            other => panic!("{topology:?}: expected a topology refusal, got {other:?}"),
+        }
+    }
+}
 
 /// claim: invariant(census: none yet — migration candidate, default/unpinned)
 #[test]
@@ -15,15 +157,15 @@ fn every_default_system_satisfies_every_invariant() {
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
         let system = &outcome.value;
         let (inner, outer) = (
-            system.star.habitable_zone.inner(),
-            system.star.habitable_zone.outer(),
+            system.stellar.anchor_habitable_zone.inner(),
+            system.stellar.anchor_habitable_zone.outer(),
         );
         assert!(
             (inner.get()..=outer.get()).contains(&system.anchor.orbit.get()),
             "seed {seed}: anchor out of zone"
         );
-        let expected_year =
-            365.25 * (system.anchor.orbit.get().powi(3) / system.star.mass.get()).sqrt();
+        let expected_year = 365.25
+            * (system.anchor.orbit.get().powi(3) / stellar_gravity_mass(system).get()).sqrt();
         assert!((system.anchor.year.get() - expected_year).abs() < 1e-9);
         let hill = hill_radius_mm(&system.star, &system.anchor);
         let mut total_tide = 0.0;
@@ -578,13 +720,14 @@ fn anchor_battery_orbit_kepler_and_rotation_invariants() {
     for seed in 0..256u64 {
         let outcome = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
         let s = &outcome.value;
-        let zone = s.star.habitable_zone;
+        let zone = s.stellar.anchor_habitable_zone;
         assert!(
             (zone.inner().get()..=zone.outer().get()).contains(&s.anchor.orbit.get()),
             "seed {seed}: orbit outside the zone"
         );
         // Kepler III in the model card's own units: Y = 365.25·√(a³/M).
-        let expected_year = 365.25 * (s.anchor.orbit.get().powi(3) / s.star.mass.get()).sqrt();
+        let expected_year =
+            365.25 * (s.anchor.orbit.get().powi(3) / stellar_gravity_mass(s).get()).sqrt();
         assert!(
             (s.anchor.year.get() - expected_year).abs() < 1e-6,
             "seed {seed}: year {} vs Kepler {expected_year}",

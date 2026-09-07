@@ -19,6 +19,7 @@ pub mod resonance;
 pub mod sky_position;
 pub mod star;
 pub mod starfield;
+pub mod stellar;
 pub mod streams;
 pub use streams::stream_labels;
 pub mod system;
@@ -58,6 +59,10 @@ pub use star::{
     planet_age,
 };
 pub use starfield::{FieldStar, starfield};
+pub use stellar::{
+    BinaryOrbit, CompanionStar, StellarConfiguration, StellarTopology, generate_stellar,
+    stellar_gravity_mass, stellar_luminosity_at,
+};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
     Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, Kelvin, LightYears, LocalDays,

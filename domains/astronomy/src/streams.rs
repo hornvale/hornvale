@@ -62,5 +62,9 @@ hornvale_kernel::stream_labels! {
         MOON_AGE = "moon-age" => "per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it)";
         /// Atmospheric greenhouse residual draw (The Glasshouse).
         GREENHOUSE = "greenhouse" => "atmospheric greenhouse residual draw";
+        /// Stellar-root topology draw (single, wide binary, or close binary).
+        STELLAR_TOPOLOGY = "stellar-topology" => "stellar-root topology draw";
+        /// Binary companion mass, stability boundary, and genesis phase draws.
+        BINARY_PARAMETERS = "binary-parameters" => "binary companion and orbit parameter draws";
     }
 }

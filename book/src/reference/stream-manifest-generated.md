@@ -29,6 +29,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/moon-density` | per-moon density draw (drawn only for captured moons; impact moons still consume it) |
 | `astronomy/moon-age` | per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it) |
 | `astronomy/greenhouse` | atmospheric greenhouse residual draw |
+| `astronomy/stellar-topology` | stellar-root topology draw |
+| `astronomy/binary-parameters` | binary companion and orbit parameter draws |
 
 ### hornvale-chronicle
 

@@ -373,16 +373,19 @@ mod tests {
             SolarLuminosities, SolarMasses, StdDays,
         };
 
+        let star = Star {
+            mass: SolarMasses::new(1.0).unwrap(),
+            luminosity: SolarLuminosities::new(1.0).unwrap(),
+            class_name: "yellow dwarf".to_string(),
+            habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
+                .unwrap(),
+            age: crate::units::Gyr::new(4.5).unwrap(),
+            t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
+        };
+        let stellar = crate::stellar::StellarConfiguration::single(&star);
         let system = StarSystem {
-            star: Star {
-                mass: SolarMasses::new(1.0).unwrap(),
-                luminosity: SolarLuminosities::new(1.0).unwrap(),
-                class_name: "yellow dwarf".to_string(),
-                habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
-                    .unwrap(),
-                age: crate::units::Gyr::new(4.5).unwrap(),
-                t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
-            },
+            star,
+            stellar,
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),
                 orbit: Au::new(1.0).unwrap(),
@@ -457,16 +460,19 @@ mod tests {
             Au, Degrees, EarthMasses, HabitableZone, SolarLuminosities, SolarMasses,
         };
         let moon_phase_offsets = vec![0.0; moons.len()];
+        let star = Star {
+            mass: SolarMasses::new(1.0).unwrap(),
+            luminosity: SolarLuminosities::new(1.0).unwrap(),
+            class_name: "yellow dwarf".to_string(),
+            habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
+                .unwrap(),
+            age: crate::units::Gyr::new(4.5).unwrap(),
+            t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
+        };
+        let stellar = crate::stellar::StellarConfiguration::single(&star);
         let system = StarSystem {
-            star: Star {
-                mass: SolarMasses::new(1.0).unwrap(),
-                luminosity: SolarLuminosities::new(1.0).unwrap(),
-                class_name: "yellow dwarf".to_string(),
-                habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
-                    .unwrap(),
-                age: crate::units::Gyr::new(4.5).unwrap(),
-                t_eff: crate::units::Kelvin::new(5772.0).unwrap(),
-            },
+            star,
+            stellar,
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),
                 orbit: Au::new(1.0).unwrap(),
