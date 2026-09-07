@@ -28,7 +28,6 @@ A generated survey of the committed census: what Hornvale's worlds actually prod
 A `domains/` crate no census metric measures at all is a gap in the world, not a per-metric finding, so it has no domain page of its own.
 
 - `alchemy`: no census metric measures any quantity the `alchemy` crate produces
-- `epidemiology`: no census metric measures any quantity the `epidemiology` crate produces
 - `paleoclimate`: no census metric measures any quantity the `paleoclimate` crate produces
 - `person`: no census metric measures any quantity the `person` crate produces
 - `thing`: no census metric measures any quantity the `thing` crate produces
@@ -48,4 +47,4 @@ Raw firing counts, not distinct metrics: D2's hits are a subset of D4's by const
 | D5 unmeasurable | 6 |
 | D6 | 1 |
 | D7 | 0 |
-| D8 | 5 |
+| D8 | 4 |

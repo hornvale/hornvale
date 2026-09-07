@@ -4139,7 +4139,7 @@
         18.0,
         20.0
       ],
-      "doc": "Mean number of the 22 non-by-design story slots filled per lot over lots 0-199; Absent if the world has no occupations or predates occ-person-years",
+      "doc": "Mean number of the 23 non-by-design story slots filled per lot over lots 0-199, counted from each told Story.slots roster; Absent if the world has no occupations or predates occ-person-years",
       "domain": "history",
       "kind": "numeric",
       "name": "lot-slots-filled-mean",

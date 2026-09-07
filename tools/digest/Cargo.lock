@@ -204,6 +204,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-epidemiology",
  "hornvale-hearsay",
  "hornvale-history",
  "hornvale-kernel",
@@ -246,6 +247,7 @@ version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
  "hornvale-culture",
+ "hornvale-epidemiology",
  "hornvale-hearsay",
  "hornvale-history",
  "hornvale-kernel",

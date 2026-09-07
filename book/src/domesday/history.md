@@ -260,7 +260,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `lot-slots-filled-mean`
 
-Mean number of the 22 non-by-design story slots filled per lot over lots 0-199; Absent if the world has no occupations or predates occ-person-years
+Mean number of the 23 non-by-design story slots filled per lot over lots 0-199, counted from each told Story.slots roster; Absent if the world has no occupations or predates occ-person-years
 
 n = 1000 present, 0 absent (of 1000 worlds)
 
