@@ -1,7 +1,7 @@
 use hornvale_history::record::CauseOfEnd;
 use hornvale_kernel::{KindId, Vertex};
 use hornvale_lot::context::assemble;
-use hornvale_lot::draw::{DeathCause, Ending, draw, odds_at};
+use hornvale_lot::draw::{CauseProvenance, DeathCause, Ending, draw, odds_at};
 use hornvale_lot::endemic::{HazardBand, cause_weights_for_band, endemic_burden_at};
 use hornvale_lot::json::{life_json, odds_json};
 use hornvale_lot::narrate::narrate;
@@ -118,17 +118,72 @@ fn every_dead_lot_has_a_sourced_cause_slot() {
         let cause = story.slot("cause").expect("the cause slot is always asked");
         assert!(matches!(cause.value, SlotValue::Filled(_)));
         assert!(!cause.sources.is_empty());
-        if matches!(life.cause, Some(DeathCause::Pathogen(_))) {
-            assert!(cause.sources.iter().any(|source| matches!(
-                source,
-                Source::Fact { predicate, .. }
-                    if predicate == hornvale_epidemiology::STRUCK_BY
-                        || predicate == hornvale_history::OCC_PERSON_YEARS
-            )));
+        match life.cause_provenance.as_ref() {
+            Some(CauseProvenance::Outbreak { event, .. }) => {
+                assert!(cause.sources.iter().any(|source| matches!(
+                    source,
+                    Source::Fact { entity, predicate, .. }
+                        if *entity == event.get()
+                            && (predicate == hornvale_epidemiology::STRUCK_BY
+                                || predicate == hornvale_epidemiology::OUTBREAK_DEATHS)
+                )))
+            }
+            Some(CauseProvenance::CommunityFate { occupation, .. }) => {
+                assert!(cause.sources.iter().any(|source| matches!(
+                    source,
+                    Source::Fact { entity, predicate, .. }
+                        if *entity == occupation.get()
+                            && predicate == hornvale_history::OCC_CAUSE
+                )))
+            }
+            Some(CauseProvenance::Hazard { .. }) => {
+                assert!(cause.sources.iter().any(|source| matches!(
+                    source,
+                    Source::Derived { function, .. } if *function == "lot::draw::hazard_cause"
+                )))
+            }
+            None => panic!("dead life has no typed cause provenance"),
         }
         dead += 1;
     }
     assert!(dead > 0, "the provenance check exercised no dead lots");
+}
+
+#[test]
+fn moved_life_cause_cites_the_ending_occupation() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let life = (0..200_000)
+        .filter_map(|index| draw(&ctx, LotIndex(index), &Pick::default()).ok())
+        .find(|life| {
+            let Some(moved) = life.moved_to else {
+                return false;
+            };
+            life.ending_occupation != life.occupation
+                && matches!(life.ending, Ending::CommunityFate(_))
+                && ctx.occupations[life.occ].record.core.cause
+                    != ctx.occupations[moved].record.core.cause
+        })
+        .expect("seed 42 yields a moved life with distinct birth and ending causes");
+    let story = tell(&world, &ctx, &life);
+    let cause = story.slot("cause").expect("cause slot exists");
+    let ending = ctx
+        .occupations
+        .iter()
+        .find(|prepared| prepared.record.id == life.ending_occupation)
+        .expect("ending occupation is retained");
+    assert!(matches!(
+        &life.cause_provenance,
+        Some(CauseProvenance::CommunityFate { occupation, .. })
+            if *occupation == life.ending_occupation
+    ));
+    assert!(cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Fact { entity, predicate, .. }
+            if *entity == ending.record.id.get()
+                && predicate == hornvale_history::OCC_CAUSE
+    )));
+    assert!(matches!(cause.value, SlotValue::Filled(_)));
 }
 
 #[test]
@@ -199,8 +254,21 @@ fn composite_projection_refuses_persistent_write_back() {
 
 #[test]
 fn same_seed_still_builds_byte_identical_worlds_and_lot_payloads() {
-    let first_world = hornvale_worldgen::seed_42_world();
-    let second_world = hornvale_worldgen::seed_42_world();
+    let seed = hornvale_kernel::Seed(42);
+    let sky = hornvale_astronomy::SkyPins::default();
+    let terrain = hornvale_terrain::TerrainPins::default();
+    let settlements = hornvale_worldgen::SettlementPins::default();
+    let components = hornvale_worldgen::WorldComponents::assemble().unwrap();
+    let first_world = hornvale_worldgen::build_world(seed, &sky, &terrain, &settlements).unwrap();
+    let second_world = hornvale_worldgen::build_world_to(
+        seed,
+        &sky,
+        &terrain,
+        &settlements,
+        &components,
+        hornvale_worldgen::BuildDepth::Full,
+    )
+    .unwrap();
     assert_eq!(
         serde_json::to_vec(&first_world).unwrap(),
         serde_json::to_vec(&second_world).unwrap()

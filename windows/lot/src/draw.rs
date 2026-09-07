@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use hornvale_history::record::CauseOfEnd;
 use hornvale_kernel::{EntityId, Vertex};
 
-use crate::context::LotContext;
+use crate::context::{LotContext, OutbreakEvent};
 use crate::endemic::{HazardBand, cause_weights_for_band};
 use crate::hazard::{death_age, hazard_shares, hazard_shares_at_age, q_before};
 use crate::shape::population_at;
@@ -56,6 +56,32 @@ pub enum DeathCause {
     Unnamed,
     /// A non-plague community ending.
     Community(CauseOfEnd),
+}
+
+/// The committed or derived evidence that supplied a life's cause.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CauseProvenance {
+    /// A community ending supplied the cause.
+    CommunityFate {
+        /// The occupation whose ending supplied the cause.
+        occupation: EntityId,
+        /// The committed ending cause.
+        cause: CauseOfEnd,
+    },
+    /// A paired outbreak fact supplied the cause.
+    Outbreak {
+        /// The occupation struck by the outbreak.
+        occupation: EntityId,
+        /// The outbreak event entity.
+        event: EntityId,
+        /// The pathogen named by the event.
+        pathogen: hornvale_kernel::KindId,
+    },
+    /// The continuous hazard attribution supplied the cause.
+    Hazard {
+        /// The occupation whose site supplied the hazard inputs.
+        occupation: EntityId,
+    },
 }
 
 impl DeathCause {
@@ -107,8 +133,11 @@ pub struct Life {
     pub ending: Ending,
     /// The named cause, absent only while the life is alive.
     pub cause: Option<DeathCause>,
-    /// Outbreak event supplying a pathogen cause, when one did.
-    pub(crate) cause_event: Option<EntityId>,
+    /// Typed evidence supplying the cause, when the life is dead.
+    pub cause_provenance: Option<CauseProvenance>,
+    /// The occupation whose segment supplied the ending, or the current
+    /// occupation when the life remains alive.
+    pub ending_occupation: EntityId,
     /// The projection boundary carried with this observation.
     pub projection: crate::projection::Projection,
     /// The occupation the life moved to when its birth community ended
@@ -237,10 +266,11 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
     let mut age = death_age(&p.hazard, 1.0 - uniform(seed, i, "death"));
     let mut ending = Ending::Hazard;
     let mut cause = None;
-    let mut cause_event = None;
+    let mut cause_provenance = None;
     let mut moved_to = None;
     let mut moved_year = None;
     let mut cur = occ;
+    let mut ending_occupation = p.record.id;
     // This walk terminates because `founded_from` is acyclic BY
     // CONSTRUCTION: a daughter is always founded strictly after its mother
     // (`daughter.core.founded == end`, and `end > mother.core.founded` for
@@ -278,7 +308,12 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
                 age = event.year - birth_year;
                 ending = Ending::Outbreak(event.pathogen);
                 cause = Some(DeathCause::Pathogen(event.pathogen));
-                cause_event = Some(event.event);
+                ending_occupation = r.id;
+                cause_provenance = Some(CauseProvenance::Outbreak {
+                    occupation: r.id,
+                    event: event.event,
+                    pathogen: event.pathogen,
+                });
                 break 'course;
             }
         }
@@ -290,8 +325,9 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
         if uniform(seed, i, &format!("fate-{}", r.id.0)) < loss_fraction(end_cause) {
             age = end - birth_year;
             ending = Ending::CommunityFate(end_cause);
-            let (named, event) = community_death_cause(ctx, r.id, end, end_cause)?;
-            cause_event = event;
+            let (named, provenance) = community_death_cause(ctx, r.id, end, end_cause)?;
+            ending_occupation = r.id;
+            cause_provenance = Some(provenance);
             cause = Some(named);
             break;
         }
@@ -307,12 +343,14 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
                 moved_to = Some(d);
                 moved_year = Some(end);
                 cur = d;
+                ending_occupation = ctx.occupations[d].record.id;
             }
             None => {
                 age = end - birth_year;
                 ending = Ending::CommunityFate(end_cause);
-                let (named, event) = community_death_cause(ctx, r.id, end, end_cause)?;
-                cause_event = event;
+                let (named, provenance) = community_death_cause(ctx, r.id, end, end_cause)?;
+                ending_occupation = r.id;
+                cause_provenance = Some(provenance);
                 cause = Some(named);
                 break;
             }
@@ -327,16 +365,21 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
         ending = Ending::Alive;
         age = ctx.present_year - birth_year;
         cause = None;
-        cause_event = None;
+        cause_provenance = None;
     } else if ending == Ending::Hazard {
+        let ending = &ctx.occupations[cur];
         cause = Some(hazard_cause(
             ctx,
-            p.record.core.site,
+            ending.record.core.site,
             death_year,
-            &p.hazard,
+            &ending.hazard,
             age,
             uniform(seed, i, "cause"),
         ));
+        ending_occupation = ending.record.id;
+        cause_provenance = Some(CauseProvenance::Hazard {
+            occupation: ending.record.id,
+        });
     }
     Ok(Life {
         index: i,
@@ -349,7 +392,8 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
         matured: age >= p.maturity_years,
         ending,
         cause,
-        cause_event,
+        cause_provenance,
+        ending_occupation,
         projection: crate::projection::Projection::composite(
             crate::projection::SourceCohort {
                 people: p.record.core.people,
@@ -375,23 +419,66 @@ fn community_death_cause(
     occupation: EntityId,
     year: f64,
     cause: CauseOfEnd,
-) -> Result<(DeathCause, Option<EntityId>), LotError> {
+) -> Result<(DeathCause, CauseProvenance), LotError> {
     if cause != CauseOfEnd::Plague {
-        return Ok((DeathCause::Community(cause), None));
+        return Ok((
+            DeathCause::Community(cause),
+            CauseProvenance::CommunityFate { occupation, cause },
+        ));
     }
     let event = ctx
         .outbreaks_by_occupation
         .get(&occupation)
-        .into_iter()
-        .flatten()
-        .find(|event| (event.year - year).abs() < 1e-9)
+        .and_then(|events| closing_outbreak(events, year))
         .ok_or_else(|| {
             LotError::Build(format!(
                 "Plague ending for occupation {} has no outbreak event at year {year}",
                 occupation.get()
             ))
         })?;
-    Ok((DeathCause::Pathogen(event.pathogen), Some(event.event)))
+    Ok((
+        DeathCause::Pathogen(event.pathogen),
+        CauseProvenance::Outbreak {
+            occupation,
+            event: event.event,
+            pathogen: event.pathogen,
+        },
+    ))
+}
+
+fn closing_outbreak(events: &[OutbreakEvent], year: f64) -> Option<&OutbreakEvent> {
+    events
+        .iter()
+        .rfind(|event| (event.year - year).abs() < 1e-9)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{OutbreakEvent, closing_outbreak};
+    use hornvale_kernel::{EntityId, KindId};
+    use std::num::NonZeroU64;
+
+    #[test]
+    fn closing_same_year_outbreak_is_the_second_pathogen_event() {
+        let events = [
+            OutbreakEvent {
+                event: EntityId(NonZeroU64::new(1).unwrap()),
+                year: 1200.0,
+                pathogen: KindId("the-pest"),
+                deaths: 1.0,
+            },
+            OutbreakEvent {
+                event: EntityId(NonZeroU64::new(2).unwrap()),
+                year: 1200.0,
+                pathogen: KindId("the-pox"),
+                deaths: 99.0,
+            },
+        ];
+        let closing = closing_outbreak(&events, 1200.0).expect("closing event");
+        assert_eq!(closing.event.get(), 2);
+        assert_eq!(closing.pathogen, KindId("the-pox"));
+        assert_eq!(closing.deaths, 99.0);
+    }
 }
 
 fn hazard_cause(

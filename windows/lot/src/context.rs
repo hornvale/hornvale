@@ -282,9 +282,9 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
             )));
         }
     }
-    for events in outbreaks_by_occupation.values_mut() {
-        events.sort_by(|a, b| a.year.total_cmp(&b.year).then(a.event.cmp(&b.event)));
-    }
+    // Ledger iteration is the bake's event order. Preserve it: when several
+    // pathogens strike in the closing year, the final event is the one whose
+    // facts supplied the community's Plague ending.
     let report = hornvale_worldgen::demography_report_from(world, &wc, &terrain, &climate)
         .map_err(|e| LotError::Build(e.to_string()))?;
     let present_year = hornvale_worldgen::present_year(world);

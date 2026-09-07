@@ -29,7 +29,7 @@ use hornvale_history::record::{CauseOfEnd, Ended, Founding, Function, TechHorizo
 use hornvale_kernel::{EntityId, Value, Vertex, World};
 
 use crate::context::LotContext;
-use crate::draw::{Ending, Life, uniform};
+use crate::draw::{CauseProvenance, Ending, Life, uniform};
 use crate::shape::population_at;
 
 /// Where an answer came from. Every [`SlotValue::Filled`] carries at least
@@ -667,9 +667,20 @@ fn death_cause(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     };
     let record = &ctx.occupations[life.occ].record;
     let mut sources = Vec::new();
-    if let Some(event) = life.cause_event {
+    // Cause provenance selects the exact committed subject or derived read.
+    if let Some(CauseProvenance::Outbreak { event, .. }) = life.cause_provenance.as_ref() {
+        let event = *event;
         sources.push(cite(world, event, hornvale_epidemiology::STRUCK_BY));
         sources.push(cite(world, event, hornvale_epidemiology::OUTBREAK_DEATHS));
+    } else if let Some(CauseProvenance::CommunityFate { occupation, .. }) =
+        life.cause_provenance.as_ref()
+    {
+        sources.push(cite(world, *occupation, hornvale_history::OCC_CAUSE));
+    } else if matches!(life.cause_provenance, Some(CauseProvenance::Hazard { .. })) {
+        sources.push(Source::Derived {
+            function: "lot::draw::hazard_cause",
+            inputs: "the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform".to_string(),
+        });
     } else {
         match cause {
             crate::draw::DeathCause::Pathogen(_) => {
