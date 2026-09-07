@@ -205,3 +205,21 @@ correctly failed again when the ledger path was placed in the TSV: ledgers are
 not part of that audit population. Removing only that citation fixed the
 contract; `make docs-tests` then passed 75/75. The ledger remains the committed
 campaign record, just not a reconciliation record.
+
+## #3 [G3] — Spec review
+
+Nathan reviewed `docs/superpowers/specs/2026-09-07-the-staple-d3-design.md` and
+approved it with “LGTM” on 2026-09-07. The G3 hard stop is cleared. The exact
+return conversion and function precedence remain intentionally deferred until
+Task 0 produces evidence; the implementation plan must not fill those gaps by
+assumption.
+
+## #4 [G4] — Plan review
+
+The implementation plan at `docs/superpowers/plans/2026-09-07-the-staple-d3.md`
+passes self-review. It covers the approved spec, makes Task 0 the first
+executable slice, branches explicitly on `N == 0`, `C == 0`, `C == N`, and
+`0 < C < N`, carries the epoch/census/history-pin cost, and contains no
+production implementation step before the measurement ruling. The plan's
+reconciliation row was added and `make docs-tests` passed 75/75. One ideonomy
+re-read of the plan against the prior G1 criterion produced no overturn.
