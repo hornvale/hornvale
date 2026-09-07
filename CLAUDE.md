@@ -397,6 +397,46 @@ make doctor        # the repo self-map — run this first in a fresh session
 # nextest is a dev tool, not a workspace dependency (decision 0040); install
 # with `cargo install cargo-nextest` or `brew install cargo-nextest`.
 #
+# RECLAIMING DISK: `make sweep` (decision 0848). cargo NEVER reclaims a
+# `target/`, and the growth is not the live build — `target/debug/deps` is keyed
+# by a metadata hash, so every STRUCTURAL configuration ever built keeps a
+# permanent copy of every artifact. Measured on main: 1,152 executables for 307
+# distinct test targets, so 845 (73%) dead, `hornvale` alone holding 40
+# generations at ~20 MB each. What multiplies them is a version bump, a
+# RUSTFLAGS change, a feature, or a different toolchain — measured 2 -> 10 one
+# knob at a time. EDITING A SOURCE FILE ADDS NONE (it overwrites in place), so
+# this accrues at campaign cadence, not per-commit, and six worktrees reached
+# 144 GB against a 183 GB checkout before anyone looked.
+#
+# cargo-sweep is a dev tool on the 0040 pattern (`cargo install cargo-sweep` /
+# `brew install cargo-sweep`); `make sweep-check` fails with an install hint.
+# Cargo cannot do it itself: `cargo clean` has no age or reachability option and
+# `-Z gc` is nightly-only and governs the GLOBAL REGISTRY cache, not `target/`.
+#   make sweep-dry              # what would go, deleting nothing
+#   make sweep [SWEEP_DAYS=30]  # reclaim generations older than N days, recursive
+#   make sweep-exact            # mark-and-sweep the workspace target (costs a full build)
+#
+# NOTHING RUNS IT FOR YOU, on the seam-guard arrangement (0148) — and unlike
+# seam-guard there is no committed artifact that even hints at the state, so a
+# 40 GB tree reads exactly like a 4 GB one until you run `sweep-dry`. Both
+# automatic homes were measured and REFUSED: age-based inside `worktree-take`
+# destroys a parked member's warm target/ (all its artifacts are old, so
+# `--time 7` proposes the working set too), and stamp-based needs a COMPLETE
+# mark — verified that stamp -> PARTIAL build -> `--file` proposes deleting the
+# live test binaries — which `worktree-take` cannot supply because it never
+# builds. `SWEEP_DAYS` is namespaced because bare `DAYS` is already
+# `board-digest`'s, defined nowhere so its tool applies its own 14-day default.
+#
+# AND DO NOT TRY TO SHARE OR CLONE A `target/` BETWEEN WORKTREES to avoid the
+# cost. It dedupes (cargo reports `Fresh` across two paths, one rlib) and it is
+# WRONG: `env!("CARGO_MANIFEST_DIR")`, `CARGO_TARGET_TMPDIR` and
+# `CARGO_BIN_EXE_*` are baked at compile time, so a shared or cloned target
+# hands one worktree ANOTHER's paths — see `scripts/worktree-take.sh`, which
+# carries the rename version of this bug and its grep+touch mitigation (84 files
+# read those macros today). The rename case at least fails LOUDLY, because the
+# old path is gone; a clone from a live checkout does not — verified: a test
+# asserting on its own fixture PASSED while reading the other worktree's.
+#
 # gate-commit's raw checks (every commit must pass all):
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings

@@ -984,3 +984,321 @@ def validate_attempt(record: dict) -> None:
         failure = record.get("failure")
         if not isinstance(failure, dict) or failure.get("valid_evidence") is not True or not failure.get("reason"):
             raise ValueError("nonzero command requires retained failure reason")
+
+
+_CANDIDATE_GENERATED_DIRS = frozenset({".git", "target", "build", "dist", "out"})
+
+
+def _candidate_source_files(candidate: Path) -> list[Path]:
+    """Return authored candidate files, excluding generated output trees."""
+    files = []
+    for directory, dirnames, filenames in os.walk(candidate):
+        dirnames[:] = sorted(name for name in dirnames
+                             if name not in _CANDIDATE_GENERATED_DIRS)
+        files.extend(Path(directory) / name for name in filenames)
+    return sorted(files)
+
+
+def _candidate_source_hash(candidate: Path) -> str:
+    digest = hashlib.sha256()
+    for path in _candidate_source_files(candidate):
+        digest.update(str(path.relative_to(candidate)).encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def candidate_manifest(baseline: dict, candidate: Path) -> dict:
+    """Describe an experiment candidate without granting it production authority."""
+    candidate = Path(candidate)
+    if not candidate.is_absolute() or not candidate.is_dir():
+        raise ValueError("candidate must be an existing absolute directory")
+    cargo_file = candidate / "Cargo.toml"
+    if not cargo_file.is_file():
+        raise ValueError("candidate Cargo.toml is required")
+    try:
+        import tomllib
+        cargo = tomllib.loads(cargo_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise ValueError(f"invalid candidate Cargo.toml: {error}") from error
+    package = cargo.get("package")
+    if not isinstance(package, dict) or not isinstance(package.get("name"), str):
+        raise ValueError("candidate package name is required")
+    dependencies = cargo.get("dependencies", {})
+    if not isinstance(dependencies, dict):
+        raise ValueError("candidate dependencies must be a table")
+    source_files = [str(path.relative_to(candidate))
+                    for path in _candidate_source_files(candidate)]
+    authority_tokens = ("hornvale_lab", "require_canonical_host_for", "census_guard", "publish.rs")
+    authority_files = []
+    for relative in source_files:
+        if relative == "Cargo.toml":
+            continue
+        text = (candidate / relative).read_text(encoding="utf-8", errors="replace")
+        if any(token in text for token in authority_tokens):
+            authority_files.append(relative)
+    source = baseline.get("source", {})
+    graph = baseline.get("graph", {})
+    if not _full_sha(source.get("commit")) or not _sha256(graph.get("sha256")):
+        raise ValueError("baseline provenance is incomplete")
+    return {
+        "schema": "insulator-candidate-v1",
+        "workspace": str(candidate),
+        "package": package["name"],
+        "dependencies": sorted(dependencies),
+        "path_dependencies": sorted(name for name, value in dependencies.items()
+                                     if isinstance(value, dict) and "path" in value),
+        "source_tree": _candidate_source_hash(candidate),
+        "source_files": source_files,
+        "authority_files": authority_files,
+        "provenance": {
+            "baseline_commit": source["commit"],
+            "baseline_tree": source.get("tree"),
+            "baseline_graph_sha256": graph["sha256"],
+        },
+        "workloads": list(baseline.get("workloads", [])),
+    }
+
+
+def declared_boundary(manifest: dict) -> set[str]:
+    """Return package and source declarations admitted by a candidate manifest."""
+    if not isinstance(manifest, dict) or manifest.get("schema") != "insulator-candidate-v1":
+        raise ValueError("invalid candidate manifest")
+    dependencies = manifest.get("dependencies")
+    files = manifest.get("source_files")
+    if not isinstance(dependencies, list) or not all(isinstance(x, str) for x in dependencies):
+        raise ValueError("invalid candidate dependency declarations")
+    if not isinstance(files, list) or not all(isinstance(x, str) for x in files):
+        raise ValueError("invalid candidate source declarations")
+    boundary = set(dependencies) | set(files)
+    if isinstance(manifest.get("package"), str):
+        boundary.add(manifest["package"])
+    if manifest.get("authority_files"):
+        boundary.add("__production_authority__")
+    return boundary
+
+
+def check_boundary(graph: dict, boundary: set[str]) -> None:
+    """Enforce declared-package ⊇ graph-edge direction and reject copied authority."""
+    if "__production_authority__" in boundary:
+        raise ValueError("candidate contains production authority")
+    packages = graph.get("packages", []) if isinstance(graph, dict) else []
+    names = {item.get("name") for item in packages if isinstance(item, dict)}
+    allowed = {name for name in boundary if name in names or name == "digest-protocol"}
+    edges = graph.get("edges", {}) if isinstance(graph, dict) else {}
+    if not isinstance(edges, dict):
+        raise ValueError("invalid candidate dependency graph")
+    for owner, dependencies in edges.items():
+        if owner not in boundary and owner not in names:
+            continue
+        for dependency in dependencies:
+            if dependency not in allowed and dependency not in {"serde", "serde_json"}:
+                raise ValueError(f"undeclared dependency edge: {owner} -> {dependency}")
+    for owner, dependencies in edges.items():
+        if owner not in boundary:
+            continue
+        for dependency in dependencies:
+            package = next((item for item in packages
+                            if isinstance(item, dict) and item.get("name") == dependency), None)
+            manifest_path = str(package.get("manifest_path", "")) if package else ""
+            if "windows/lab" in manifest_path or "/windows/lab/" in manifest_path:
+                raise ValueError(f"undeclared windows/lab dependency: {dependency}")
+
+
+def compare_outputs(authoritative: dict, candidate: dict) -> dict:
+    """Compare every authoritative output, retaining missing candidates as incomplete."""
+    if not isinstance(authoritative, dict) or not isinstance(candidate, dict):
+        raise ValueError("output records must be mappings")
+    result = {}
+    for workload, expected in authoritative.items():
+        actual_by_path = {item.get("path"): item for item in candidate.get(workload, [])
+                          if isinstance(item, dict)}
+        comparisons = []
+        for item in expected:
+            path = item.get("path")
+            actual = actual_by_path.get(path)
+            if actual is None:
+                comparisons.append({"path": path, "status": "incomplete", "complete": False,
+                                    "byte_equal": False})
+                continue
+            equal = (actual.get("bytes") == item.get("bytes") and
+                     actual.get("sha256") == item.get("sha256"))
+            comparisons.append({"path": path, "status": "match" if equal else "mismatch",
+                                "complete": True, "byte_equal": equal,
+                                "authoritative": item, "candidate": actual})
+        result[workload] = comparisons
+    return result
+
+
+def _qualification_attempt(dossier: dict, host: str, path: str) -> dict:
+    if not isinstance(dossier, dict):
+        raise ValueError(f"missing {path} qualification record for {host}")
+    attempts = dossier.get("attempts")
+    if not isinstance(attempts, list) or len(attempts) != 1:
+        raise ValueError(f"{host} {path} must contain exactly one attempt")
+    attempt = attempts[0]
+    if not isinstance(attempt, dict):
+        raise ValueError(f"{host} {path} attempt is invalid")
+    try:
+        validate_attempt(attempt)
+    except (KeyError, ValueError) as error:
+        raise ValueError(f"{host} {path} attempt evidence is incomplete: {error}") from error
+    if attempt.get("valid", True) is not True:
+        raise ValueError(f"{host} {path} attempt is invalid evidence")
+    return attempt
+
+
+def run_paired_qualification(baseline: dict, candidate: dict, hosts: list[str]) -> dict:
+    """Validate one authoritative/candidate pair for each requested host."""
+    if not isinstance(hosts, list) or not hosts or any(not isinstance(host, str) or not host for host in hosts):
+        raise ValueError("hosts must be a non-empty list of names")
+    if len(set(hosts)) != len(hosts):
+        raise ValueError("qualification hosts must be unique")
+    pairs = {}
+    for host in hosts:
+        baseline_attempt = _qualification_attempt(baseline.get(host), host, "baseline")
+        candidate_attempt = _qualification_attempt(candidate.get(host), host, "candidate")
+        if baseline_attempt["source"] != candidate_attempt["source"]:
+            raise ValueError(f"{host} source identities do not match")
+        pairs[host] = {
+            "complete": True,
+            "source": baseline_attempt["source"],
+            "baseline": baseline_attempt,
+            "candidate": candidate_attempt,
+        }
+    return {"schema": "insulator-paired-qualification-v1", "hosts": hosts,
+            "pairs": pairs}
+
+
+def invalidation_matrix(records: list[dict]) -> dict:
+    """Normalize representative edit records into an inspectable matrix."""
+    if not isinstance(records, list):
+        raise ValueError("invalidation records must be a list")
+    matrix = {}
+    for record in records:
+        if not isinstance(record, dict) or not isinstance(record.get("edit"), str) or not record["edit"]:
+            raise ValueError("invalidation record needs an edit")
+        edit = record["edit"]
+        if edit in matrix:
+            raise ValueError(f"duplicate invalidation edit: {edit}")
+        baseline_packages = record.get("baseline_packages", [])
+        candidate_packages = record.get("candidate_packages", [])
+        if (not isinstance(baseline_packages, list) or
+                not isinstance(candidate_packages, list) or
+                any(not isinstance(item, str) for item in baseline_packages + candidate_packages)):
+            raise ValueError(f"invalid package list for {edit}")
+        if not isinstance(record.get("output_identity"), str) or not record["output_identity"]:
+            raise ValueError(f"missing output identity for {edit}")
+        matrix[edit] = {
+            "baseline_packages": list(baseline_packages),
+            "candidate_packages": list(candidate_packages),
+            "output_identity": record["output_identity"],
+        }
+    return matrix
+
+
+def _nonnegative_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _valid_qualification_evidence(qualification: dict) -> bool:
+    if not isinstance(qualification, dict):
+        return False
+    requested = qualification.get("requested_hosts")
+    observed = qualification.get("observed_hosts")
+    hosts = qualification.get("hosts")
+    if (not isinstance(requested, list) or not requested or
+            not all(isinstance(host, str) and host for host in requested) or
+            not isinstance(observed, list) or not isinstance(hosts, dict) or
+            set(observed) - set(requested) or set(hosts) != set(requested)):
+        return False
+    for host in requested:
+        record = hosts[host]
+        if not isinstance(record, dict):
+            return False
+        if host in observed:
+            if (record.get("status") != "observed" or record.get("cleanup_complete") is not True
+                    or not isinstance(record.get("baseline"), list) or not record["baseline"]
+                    or any(not isinstance(path, str) or not path.endswith(".json") for path in record["baseline"])
+                    or not isinstance(record.get("candidate"), str)
+                    or not record["candidate"].endswith(".json")):
+                return False
+        elif (record.get("status") != "not_run" or record.get("required") is not False
+              or not isinstance(record.get("reason"), str) or not record["reason"]
+              or record.get("evidence") is not None):
+            return False
+    if set(observed) != set(requested):
+        early = qualification.get("early_rejection")
+        if (not isinstance(early, dict) or early.get("status") != "decisive_mac_output_mismatch"
+                or early.get("host") not in observed
+                or early.get("mac_evidence_complete") is not True
+                or early.get("linux_not_required") is not True
+                or not isinstance(early.get("reason"), str) or not early["reason"]):
+            return False
+    return True
+
+
+def decide(comparison: dict) -> str:
+    """Return the only product verdicts, failing closed on missing evidence."""
+    if not isinstance(comparison, dict) or comparison.get("complete") is not True:
+        return "reject"
+    if comparison.get("evidence_valid") is not True:
+        return "reject"
+    required = {"qualification", "source_identity", "authoritative_baseline", "candidate",
+                "output_comparison", "invalidation_matrix", "performance"}
+    if not required.issubset(comparison):
+        return "reject"
+    source = comparison["source_identity"]
+    if (not isinstance(source, dict)
+            or any(not _full_sha(source.get(key)) for key in ("commit", "tree", "merge_base"))
+            or not isinstance(source.get("comparison_ref"), str)
+            or not source["comparison_ref"]):
+        return "reject"
+    qualification = comparison["qualification"]
+    if "early_rejection" in comparison:
+        qualification = dict(qualification)
+        qualification["early_rejection"] = comparison["early_rejection"]
+    if not _valid_qualification_evidence(qualification):
+        return "reject"
+    authoritative = comparison["authoritative_baseline"]
+    graph = authoritative.get("graph") if isinstance(authoritative, dict) else None
+    if (not isinstance(authoritative, dict) or not isinstance(authoritative.get("dossier"), str)
+            or not authoritative["dossier"].endswith(".json")
+            or not isinstance(graph, dict) or not _sha256(graph.get("sha256"))
+            or not _nonnegative_int(graph.get("package_count"))
+            or not _nonnegative_int(graph.get("workspace_member_count"))):
+        return "reject"
+    candidate = comparison["candidate"]
+    if (not isinstance(candidate, dict) or not isinstance(candidate.get("dossier"), str)
+            or not candidate["dossier"].endswith(".json")):
+        return "reject"
+    boundary = candidate.get("boundary")
+    if (not isinstance(boundary, dict) or not isinstance(boundary.get("undeclared_dependencies"), list)
+            or boundary.get("duplicated_authority") not in {True, False}):
+        return "reject"
+    output_comparison = comparison["output_comparison"]
+    if (not isinstance(output_comparison, dict) or not output_comparison
+            or any(not isinstance(items, list) or not items for items in output_comparison.values())
+            or any(not isinstance(item, dict) or item.get("complete") is not True
+                   or item.get("status") not in {"match", "mismatch"}
+                   or not isinstance(item.get("authoritative"), dict)
+                   or not isinstance(item.get("candidate"), dict)
+                   for items in output_comparison.values() for item in items)):
+        return "reject"
+    invalidation = comparison["invalidation_matrix"]
+    if not isinstance(invalidation, dict) or not invalidation:
+        return "reject"
+    for record in invalidation.values():
+        if (not isinstance(record, dict) or not isinstance(record.get("authoritative_packages"), list)
+                or not isinstance(record.get("candidate_packages"), (list, str))
+                or not isinstance(record.get("output_identity"), str)
+                or not record["output_identity"]):
+            return "reject"
+    performance = comparison.get("performance")
+    if not isinstance(performance, dict):
+        return "reject"
+    if comparison.get("output_match") is not True:
+        return "reject"
+    if performance.get("repeatable_reduction") is not True:
+        return "reject"
+    return "admit"

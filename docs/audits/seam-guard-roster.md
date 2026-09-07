@@ -31,10 +31,12 @@ comment.
 - Test scope: `hornvale-worldgen`
 - No declaration: a survivor here fails the gate.
 - Call sites:
-  - `windows/lot/src/slots.rs:1026`
-  - `windows/lot/src/slots.rs:1027`
-  - `windows/lot/src/slots.rs:1067`
-  - `windows/lot/src/slots.rs:1068`
+  - `windows/lot/src/slots.rs:183`
+  - `windows/lot/src/slots.rs:184`
+  - `windows/lot/src/slots.rs:1443`
+  - `windows/lot/src/slots.rs:1444`
+  - `windows/lot/src/slots.rs:1484`
+  - `windows/lot/src/slots.rs:1485`
   - `windows/worldgen/src/history_emit.rs:310`
   - `windows/worldgen/src/history_emit.rs:473`
   - `windows/worldgen/src/history_emit.rs:500`

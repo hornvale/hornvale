@@ -1330,31 +1330,27 @@ pub fn drive_at(
 
 /// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
 /// `agent-at` history ∩ water-truth. Among the water rooms the agent has stood in
-/// at or before `t`, the one nearest to `npc.home` by planned hop-distance (ties
+/// at or before `t`, the one nearest to its committed current position by planned hop-distance (ties
 /// by ascending `Facet`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
 /// no stored belief — it re-derives from facts already committed (the matrix
-/// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
+/// verdict; UNI-20). Memory is allocentric; route choice is actor-relative.
 ///
 /// The candidate set comes off the caller-owned resident store (The Pawl):
 /// [`crate::resident::LatestVisit`] holds each entity's DISTINCT visited rooms
 /// with ascending visit lists, so this read is O(distinct rooms)
 /// where it was O(history). Nothing else moves — the `day <= t` admission, the
-/// `is_water` intersection, the home-anchored `plan_to_room` ranking and the
+/// `is_water` intersection, the current-position `plan_to_room` ranking and the
 /// `(hops, Facet)` tie-break are the same ones this function has always
 /// applied, in the same order over the same ascending-`Facet` candidates.
 ///
 /// The store guard is DROPPED before the ranking: `plan_to_room` is a budgeted
 /// A* over terrain and touches no fold, so holding the borrow across it would
 /// buy nothing and would make any future fold read inside the planner a
-/// runtime panic rather than a compile error. `route_memo` is taken by the
-/// ranking for the same reason it is safe to take there at all: it is read
-/// AFTER that guard is dropped, so the two borrows never overlap.
+/// runtime panic rather than a compile error.
 ///
-/// `route_memo` (The Culvert, Task 7) is the caller-owned [`RouteMemo`] the
-/// home-anchored ranking reads instead of re-running its budgeted search once
-/// per known water room per read. Byte-identical by construction — see the
-/// memo's own doc — and shared across entities on purpose: every duplicate
-/// `(home, dest)` pair in a roster-wide sweep is a duplicate ACROSS creatures.
+/// The public `route_memo` parameter remains for caller compatibility, but this
+/// position-varying fold deliberately uses direct empty-hazard searches rather
+/// than introducing unbounded current-position keys to [`RouteMemo`].
 /// type-audit: bare-ok(count: budget)
 pub fn believed_water(
     ledger: &Ledger,
@@ -1363,7 +1359,7 @@ pub fn believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
-    route_memo: &mut RouteMemo,
+    _route_memo: &mut RouteMemo,
 ) -> Option<Facet> {
     let seen: Vec<Facet> = {
         let mut store = folds.borrow_mut();
@@ -1380,8 +1376,12 @@ pub fn believed_water(
         );
         latest_visit.water_at(npc.entity, t, terrain)
     };
+    let current = agent_position(ledger, npc, t);
     seen.into_iter()
-        .filter_map(|r| route_memo.hops(&npc.home, &r, budget).map(|hops| (hops, r)))
+        .filter_map(|r| {
+            plan_to_room(&current, &r, budget, &std::collections::BTreeSet::new())
+                .map(|path| (path.len(), r))
+        })
         .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
         .map(|(_, r)| r)
 }
@@ -1400,21 +1400,16 @@ pub fn believed_water(
 /// (`the_memo_answers_exactly_what_a_fresh_search_answers`) confirms the
 /// construction; it is not the reason to believe it.
 ///
-/// **It takes no `avoid` parameter, and that is the point.** THREE belief
-/// folds plan a route with a freshly-allocated EMPTY set — [`believed_water`],
-/// `nearer_to_home`, and [`shared_believed_water`] — and only
+/// **It takes no `avoid` parameter, and that is the point.** Its home-keyed
+/// callers plan routes with a freshly-allocated EMPTY set, and only
 /// `HomeNavCache::home_nav` passes a real hazard set (`view.believed_hazard`).
 /// A future caller holding one cannot reach this memo, because there is
 /// nowhere to pass it — a compile error instead of a stale answer.
 ///
-/// **The third of those three is EXCLUDED, and the reason is its key space,
-/// not its avoid set.** [`shared_believed_water`]'s pooling search anchors at
-/// `here` — the agent's CURRENT position — where the other two anchor at
-/// `npc.home`, which is fixed for a session. So its key population is
-/// `positions x water rooms` rather than `homes x water rooms`, and this
-/// campaign's Task 5 measured it over 60 waits without finding it
-/// demonstrably saturate, so this one deliberately does not
-/// reach that site.
+/// **Current-position belief folds are excluded.** [`believed_water`], its
+/// incremental twin, and [`shared_believed_water`]'s pooling search all anchor
+/// at an actor's current room. Their `positions x water rooms` key population
+/// has no boundedness argument, so they deliberately do not reach this memo.
 ///
 /// **Read that exclusion for what it is, because the sentence that used to
 /// follow it here overstated it.** It said "a memo whose key space grows with
@@ -2145,26 +2140,19 @@ pub fn hazard_memory_memo(
 
 /// The BAND's water belief for `npc` (The Tidings; anchoring split per
 /// decision #8). With NO co-located peer, returns `believed_water(npc)`
-/// verbatim — the home-anchored nearest water it remembers — an exact no-op
+/// verbatim — the actor-relative nearest water it remembers — an exact no-op
 /// (this is what keeps the live one-per-settlement population byte-identical).
 /// With a co-located peer, pools `npc`'s and every co-located peer's
 /// `believed_water` and returns the one nearest to `npc`'s CURRENT position
 /// (ties: ascending `Facet`), `None` if the pool is empty. Current-position
 /// anchoring is the semantics of hearsay — "water near HERE" — and is what lets
-/// a stranded creature adopt a here-reachable water its home-anchored memory
+/// a stranded creature adopt a here-reachable water its own memory
 /// could never admit. Order-independent by construction (`BTreeSet` union +
 /// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
 ///
-/// `route_memo` is THREADED THROUGH TO [`believed_water`] AND NOWHERE ELSE
-/// (The Culvert, Task 7). This function's OWN pooling `plan_to_room` a few
-/// lines below still runs a fresh search every time, deliberately: it anchors
-/// at `here` — the agent's CURRENT position — where the memoized fold anchors
-/// at `npc.home`, so its key space is `positions x water rooms` and was not
-/// shown to stop growing over 60 waits. Neither was the home-anchored
-/// population, as it happens — the exclusion rests on spec Rule 3's
-/// conservative default, not on a measured separation. See [`RouteMemo`]'s own
-/// doc for the measurement and the reasoning; the memo has nowhere to be passed
-/// at that site precisely so a later reader cannot wire it there by reflex.
+/// `route_memo` remains threaded through the public solo-fold call shape, but
+/// neither this function nor [`believed_water`] reads it. Both route choices
+/// vary with current position and therefore run direct empty-hazard searches.
 /// type-audit: bare-ok(count: budget)
 #[allow(clippy::too_many_arguments)]
 pub fn shared_believed_water(
@@ -2190,7 +2178,7 @@ pub fn shared_believed_water(
             }
         }
     }
-    // ALONE: home-anchored memory, unchanged — the byte-identical no-op.
+    // ALONE: actor-relative memory, unchanged — the exact no-op.
     if !has_peer {
         return own;
     }
@@ -7461,11 +7449,10 @@ fn hold_step(
 /// the cache's own doc for why a stationary, unchanged-belief creature must
 /// reach zero searches across ticks, not merely within one).
 ///
-/// `route_memo` (The Culvert, Task 7) is the caller-owned [`RouteMemo`] the
-/// standing-in-water belief update below reads through [`nearer_to_home`] —
-/// session-lived and shared across creatures, the same scope `home_nav_cache`
-/// occupies, and the SAME memo [`believed_water`] ranks through, which is what
-/// makes the two folds' tie-break agreement structural.
+/// `route_memo` (The Culvert, Task 7) remains available to its unrelated
+/// home-anchored callers. The standing-in-water update and [`believed_water`]
+/// deliberately do not use it: their current-position route keys vary as the
+/// actor walks.
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
     day: WorldTime,
@@ -7486,19 +7473,14 @@ fn decide_step(
     out: &[Fact],
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
-    route_memo: &mut RouteMemo,
+    _route_memo: &mut RouteMemo,
     folds: &OwnedFolds,
 ) -> (Resolution, f64) {
-    // Standing in water forms/updates belief (nearest-to-home wins) — the
+    // Standing in water forms/updates belief from the committed current room — the
     // live walk's own first step of every iteration.
     if is_water(pos, terrain) {
-        *believed = nearer_to_home(
-            &npc.home,
-            believed.take(),
-            pos.clone(),
-            PLAN_BUDGET,
-            route_memo,
-        );
+        let current = agent_position(frozen, npc, day);
+        *believed = nearer_to_current(&current, believed.take(), pos.clone(), PLAN_BUDGET);
     }
     // THE ONE CROSSING IN THIS FUNCTION. The thirst and hunger path integrals
     // are CONTINUOUS quantities — a temperature-weighted rate integrated over
@@ -9029,29 +9011,33 @@ impl<'a> DriveMovements<'a> {
     }
 }
 
-/// The nearer-to-home of an existing belief and a newly-perceived water room.
+/// The nearer-to-current of an existing belief and a newly-perceived water room.
 /// The tick's incremental fold — and its tie-break MUST match `believed_water`'s
 /// (smaller `Facet` wins on an equal hop-distance), or a mid-walk incremental
 /// belief could disagree with the same belief re-derived from the committed
 /// history, making the chosen source faintly sensitive to `wait` granularity
 /// (the-surmise T3+T4 review). Aligned here so the two folds are identical.
 ///
-/// `route_memo` (The Culvert, Task 7) is the SAME caller-owned [`RouteMemo`]
-/// [`believed_water`] reads, and sharing it makes that alignment STRUCTURAL
-/// rather than maintained: the two folds now rank the same `(home, dest)` pair
-/// through one memo, so they cannot answer differently without the memo itself
-/// being wrong. Both `d()` calls below are memoized — a perception of water
-/// costs two searches on a cold memo and none on a warm one.
-fn nearer_to_home(
-    home: &Facet,
+/// `current_position` is the position committed in the frozen ledger at the
+/// same time as the belief read. Like `believed_water`, this position-varying
+/// fold uses direct empty-hazard searches rather than [`RouteMemo`].
+fn nearer_to_current(
+    current_position: &Facet,
     current: Option<Facet>,
     found: Facet,
     budget: usize,
-    route_memo: &mut RouteMemo,
 ) -> Option<Facet> {
-    let mut d = |r: &Facet| route_memo.hops(home, r, budget);
+    let d = |r: &Facet| {
+        plan_to_room(
+            current_position,
+            r,
+            budget,
+            &std::collections::BTreeSet::new(),
+        )
+        .map(|path| path.len())
+    };
     match current {
-        None => Some(found),
+        None => d(&found).map(|_| found),
         Some(c) => match (d(&c), d(&found)) {
             (Some(dc), Some(df)) => Some(match df.cmp(&dc) {
                 std::cmp::Ordering::Less => found,
@@ -9061,7 +9047,8 @@ fn nearer_to_home(
                 std::cmp::Ordering::Equal => std::cmp::min(c, found),
             }),
             (None, Some(_)) => Some(found),
-            _ => Some(c),
+            (Some(_), None) => Some(c),
+            (None, None) => None,
         },
     }
 }
@@ -10355,6 +10342,257 @@ mod tests {
             ),
             Some(near),
             "belief switches to the nearer known source"
+        );
+    }
+
+    #[test]
+    fn believed_water_admits_currently_reachable_memory() {
+        // Mutation target: retaining `npc.home` as the route anchor rejects
+        // `here_water`, even though the committed current position reaches it.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = shared_belief_npc(entity, home, home_water.clone(), "current-admission");
+        commit_agent_at(&mut ledger, &reg, entity, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here_water, 2.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &npc,
+                td(3.0),
+                &terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(here_water),
+            "a remembered source reachable from the committed current room is admitted"
+        );
+    }
+
+    #[test]
+    fn believed_water_ranks_reachable_memory_from_current_position() {
+        // Mutation target: ranking from home makes `home_nearest` win its
+        // equal-home-hop tie instead of letting a zero-hop current source win.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let neighbors = home.neighbors();
+        let home_nearest = std::cmp::min(neighbors[0].clone(), neighbors[1].clone());
+        let current = std::cmp::max(neighbors[0].clone(), neighbors[1].clone());
+        let terrain = PlantedTerrain::fresh_only([home_nearest.clone(), current.clone()]);
+        let npc = shared_belief_npc(entity, home, home_nearest.clone(), "current-ranking");
+        commit_agent_at(&mut ledger, &reg, entity, &home_nearest, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &current, 2.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &npc,
+                td(3.0),
+                &terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(current.clone()),
+            "the current room is zero hops away and beats the other reachable memory"
+        );
+    }
+
+    #[test]
+    fn believed_water_breaks_current_position_ties_by_ascending_facet() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let tie_entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let tie_current = raddr(-1.0);
+        let tie_neighbors = tie_current.neighbors();
+        let smaller = std::cmp::min(tie_neighbors[0].clone(), tie_neighbors[1].clone());
+        let larger = std::cmp::max(tie_neighbors[0].clone(), tie_neighbors[1].clone());
+        let tie_terrain = PlantedTerrain::fresh_only([smaller.clone(), larger.clone()]);
+        let tie_npc = shared_belief_npc(tie_entity, raddr(1.0), smaller.clone(), "current-tie");
+        commit_agent_at(&mut ledger, &reg, tie_entity, &larger, 1.0);
+        commit_agent_at(&mut ledger, &reg, tie_entity, &smaller, 2.0);
+        commit_agent_at(&mut ledger, &reg, tie_entity, &tie_current, 3.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &tie_npc,
+                td(4.0),
+                &tie_terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(smaller),
+            "equal-hop current candidates resolve to ascending Facet, not visit order"
+        );
+    }
+
+    #[test]
+    fn incremental_water_belief_matches_fresh_fold_after_committed_position_change() {
+        // Mutation target: if either fold stays anchored at home, it disagrees
+        // after a committed walk from the home-side water to the current-side water.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = shared_belief_npc(entity, home, home_water.clone(), "incremental-alignment");
+        commit_agent_at(&mut ledger, &reg, entity, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here, 2.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here_water, 3.0);
+        let now = td(4.0);
+
+        let incremental =
+            nearer_to_current(&here_water, Some(home_water), here_water.clone(), 10_000);
+        let fresh = believed_water(
+            &ledger,
+            &test_folds(),
+            &npc,
+            now,
+            &terrain,
+            10_000,
+            &mut RouteMemo::new(),
+        );
+        assert_eq!(
+            incremental, fresh,
+            "the incremental update and re-derived belief share the committed current anchor"
+        );
+    }
+
+    /// The Fetch orientation probe. Keep the remembered set fixed, then compare
+    /// the current home-anchored fold with an independently computed
+    /// current-position ranking. This is deliberately ignored: it measures the
+    /// disagreement that the design must explain, rather than asserting a
+    /// production choice before the spec is written.
+    ///
+    /// The seed-42 and seed-17 possession constructors live as private helpers
+    /// in integration-suite modules (`the_culvert.rs` and `resident_folds.rs`).
+    /// A library-unit probe cannot call them without exporting or duplicating
+    /// their session scaffolding, so this keeps the strongest existing direct
+    /// two-room shape and records its direct planner counts instead.
+    #[test]
+    #[ignore = "probe: The Fetch home/current admission and ranking comparison"]
+    fn fetch_probe_compares_home_and_current_water_decisions() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = Body {
+            entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "fetch-probe".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, e, &here_water, 2.0);
+        commit_agent_at(&mut ledger, &reg, e, &here, 3.0);
+        let t = WorldTime::from_std_days(5.0).expect("a day value is finite");
+        let folds = test_folds();
+        let remembered = {
+            let mut store = folds.borrow_mut();
+            store.latest_visit(&ledger).water_at(e, t, &terrain)
+        };
+        let home_ranked = believed_water(
+            &ledger,
+            &folds,
+            &npc,
+            t,
+            &terrain,
+            10_000,
+            &mut RouteMemo::new(),
+        );
+        // Count the direct searches, rather than timing them: each remembered
+        // room asks exactly one deterministic `plan_to_room` question from
+        // each anchor, whether or not that room is admitted.
+        let rank_from = |from: &Facet| {
+            let mut searches = 0usize;
+            let admitted: Vec<(usize, Facet)> = remembered
+                .iter()
+                .filter_map(|room| {
+                    searches += 1;
+                    plan_to_room(from, room, 10_000, &std::collections::BTreeSet::new())
+                        .map(|path| (path.len(), room.clone()))
+                })
+                .collect();
+            let ranked = admitted
+                .iter()
+                .min_by(|(a_hops, a_room), (b_hops, b_room)| {
+                    a_hops.cmp(b_hops).then_with(|| a_room.cmp(b_room))
+                })
+                .map(|(_, room)| room.clone());
+            (admitted.len(), ranked, searches)
+        };
+        let (home_admitted, home_direct_ranked, home_searches) = rank_from(&home);
+        let (current_admitted, current_ranked, current_searches) = rank_from(&here);
+        println!(
+            "fetch probe: remembered={} home_admitted={} current_admitted={} home_ranked={:?} current_ranked={:?} home_direct_searches={} current_direct_searches={}",
+            remembered.len(),
+            home_admitted,
+            current_admitted,
+            home_ranked,
+            current_ranked,
+            home_searches,
+            current_searches,
+        );
+        assert_eq!(
+            remembered.len(),
+            2,
+            "probe denominator: both water sightings must survive the raw fold"
+        );
+        assert!(
+            home_ranked.is_some(),
+            "probe denominator: home must rank at least one remembered source"
+        );
+        assert!(
+            current_ranked.is_some(),
+            "probe denominator: here must rank at least one remembered source"
+        );
+        assert_eq!(
+            home_ranked, home_direct_ranked,
+            "probe control: the direct home ranking must agree with believed_water"
+        );
+        assert_eq!(
+            home_searches,
+            remembered.len(),
+            "probe count: home must issue one direct route search per remembered room"
+        );
+        assert_eq!(
+            current_searches,
+            remembered.len(),
+            "probe count: current must issue one direct route search per remembered room"
+        );
+        assert_ne!(
+            home_ranked, current_ranked,
+            "probe must retain a home-selected source distinct from the current-position source"
         );
     }
 

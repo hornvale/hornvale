@@ -135,6 +135,8 @@
 | `sex-trait` | no | an observed sex trait over a life interval |
 | `sex-trait-ended` | no | the exclusive end of this sex-trait claim |
 | `sky-provider` | yes | the generated astronomy provider this world uses |
+| `social-role` | no | a realized social role over a life interval |
+| `social-role-ended` | no | the exclusive end of this social-role claim |
 | `species-activity-cycle` | yes | when a species is awake: diurnal, nocturnal, crepuscular |
 | `species-deliberation-latency` | yes | decision slowness, 0-1 |
 | `species-exotic-manner` | yes | exotic manner: none, trill, click, ejective |

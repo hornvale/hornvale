@@ -87,3 +87,28 @@ models concurrent authoring. It cannot authorize selective verification,
 portable verdict reuse, or a general federation protocol. A negative result is
 still a successful qualification of the hypothesis and must be retained with
 its evidence.
+
+## Task 4 qualification
+
+The final comparison is recorded in `results/comparison.json`. The Mac
+authoritative baseline is complete and retained in `results/mac-cold.json`,
+`results/mac-warm.json`, and `results/baseline.json`. The candidate boundary
+admits `digest-protocol` and contains no copied `windows/lab` authority, but
+its publication probe produced 31 bytes while the authoritative publication
+produced 7,493 bytes. Their SHA-256 identities differ, so the candidate is
+rejected as a production replacement.
+
+Canonical Linux qualification was not run and was not required after this
+authoritative Mac output mismatch. The comparison records that state rather
+than presenting Linux as a passing or failing observation. The rejection is a
+valid negative result: it closes this candidate while preserving the measured
+boundary and the evidence needed to revisit the question with a different
+candidate.
+
+The qualification helpers are deliberately fail closed.
+`run_paired_qualification` requires one complete, cleanup-complete
+baseline/candidate pair for each requested host and matching source
+identities. `invalidation_matrix` retains the rebuilt package and output
+identity for each representative edit. `decide` returns only `admit` or
+`reject`; missing evidence, output mismatch, undeclared dependencies, copied
+authority, or non-repeatable savings reject.

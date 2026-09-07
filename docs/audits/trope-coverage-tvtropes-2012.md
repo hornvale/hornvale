@@ -519,7 +519,7 @@ missing 1 bundles, so no single row makes anything stageable on its own.
 
 ## Supply
 
-399 served tokens no situation in this corpus requires.
+401 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -891,6 +891,8 @@ missing half before this list can serve it.
 - `predicate:sex-trait`
 - `predicate:sex-trait-ended`
 - `predicate:sky-provider`
+- `predicate:social-role`
+- `predicate:social-role-ended`
 - `predicate:species-activity-cycle`
 - `predicate:species-deliberation-latency`
 - `predicate:species-exotic-manner`

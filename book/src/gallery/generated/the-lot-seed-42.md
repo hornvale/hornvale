@@ -924,3 +924,4 @@ The record keeps no trade or letters for anyone; those two silences are the worl
 - [28] derived: astronomy::eclipse_events (the world's own star system and calendar, over the life's span, at the site's latitude and longitude)
 - [29] derived: worldgen::hazard::events_in (the site's recurrence, over the life's span alone)
 - [30] derived: species::BiosphereTraits::trophic_mode (the people's authored trophic mode)
+
