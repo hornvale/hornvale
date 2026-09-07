@@ -1,6 +1,9 @@
 //! Opt-in realization of aggregate social cohorts for synthetic probes.
 
-use hornvale_demography::{LifecycleTransitionKind, SocialCohortSummary};
+use hornvale_demography::{
+    BiologicalTransitionCapability, DescentMode, LifecycleTransitionKind, OffspringOrigin,
+    ReproductiveRole, SocialCohortSummary,
+};
 use hornvale_history::{
     AssociationForm, GroupMembershipEvent, LifecycleEvent, RelationEvent, RelationKind,
     SocialEvent, validate_social_events,
@@ -141,6 +144,62 @@ fn supports_transition(summary: &SocialCohortSummary, kind: LifecycleTransitionK
         .any(|transition| transition.kind() == kind && transition.events_per_person_year() > 0.0)
 }
 
+fn supports_capability(
+    summary: &SocialCohortSummary,
+    capability: BiologicalTransitionCapability,
+) -> bool {
+    summary.transition_capabilities.contains(&capability)
+}
+
+fn independent_origin_roles(
+    summary: &SocialCohortSummary,
+    descent_count: u32,
+) -> Result<Vec<ReproductiveRole>, SocialProjectionError> {
+    if summary.reproductive.possibility.pathway_count == 0
+        || !summary
+            .offspring_pathways
+            .iter()
+            .any(|pathway| pathway.origin == OffspringOrigin::JoinedInputs)
+    {
+        return Err(SocialProjectionError::new(
+            "independent-origin society requires an aggregate joined-input offspring pathway",
+        ));
+    }
+    if !summary.descent_relations.iter().any(|relation| {
+        relation.mode == DescentMode::CombinedSources
+            && relation.contributing_source_count == descent_count
+    }) {
+        return Err(SocialProjectionError::new(
+            "independent-origin society requires an aggregate descent relation matching its sampled origins",
+        ));
+    }
+
+    let mut roles = Vec::new();
+    for (role, weight) in summary.reproductive.reproductive_roles.entries() {
+        if *weight > 0.0 && !roles.contains(role) {
+            roles.push(*role);
+        }
+    }
+    if roles.len() < 2 {
+        return Err(SocialProjectionError::new(
+            "independent-origin society requires multiple aggregate reproductive roles",
+        ));
+    }
+    Ok(roles)
+}
+
+fn reproductive_role_entity(role: ReproductiveRole) -> EntityId {
+    let ordinal = match role {
+        ReproductiveRole::MaterialProducer => 0,
+        ReproductiveRole::MaterialContributor => 1,
+        ReproductiveRole::DevelopmentCarrier => 2,
+        ReproductiveRole::DevelopmentSupporter => 3,
+        ReproductiveRole::Host => 4,
+        ReproductiveRole::Builder => 5,
+    };
+    entity("synthetic-reproductive-role", ordinal)
+}
+
 fn entity(role: &'static str, ordinal: u16) -> EntityId {
     derive_entity_id(Lineage {
         parent: None,
@@ -237,30 +296,9 @@ pub fn project_social_cohort(
     let groups = vec![entity(GROUP_ROLE, 0), entity(GROUP_ROLE, 1)];
     let time = |step| at(pins.start, base_days, cadence_days, step);
 
-    let transitioned_person = if society == SyntheticSociety::LifecycleTransition {
-        Some(person(2))
-    } else {
-        None
-    };
-    let persons = person_ids
-        .iter()
-        .copied()
-        .map(|id| {
-            let facts = if Some(id) == transitioned_person {
-                vec![PersonSocialFact::transitioned(
-                    "life-stage-social-role",
-                    time(2)?,
-                    None,
-                    provenance(),
-                )?]
-            } else {
-                Vec::new()
-            };
-            PersonSocialSeed::new(id, facts).map_err(Into::into)
-        })
-        .collect::<Result<Vec<_>, SocialProjectionError>>()?;
-
     let participant_cap = pins.person_count.saturating_sub(1) as usize;
+    let person_index = |index: usize| (index + rotation) % person_ids.len();
+    let mut person_facts = vec![Vec::new(); person_ids.len()];
     let mut events = Vec::new();
     match society {
         SyntheticSociety::IndependentOrigin => {
@@ -269,6 +307,7 @@ pub fn project_social_cohort(
                     "independent-origin society requires multiple origins and communal care in the aggregate cohort",
                 ));
             }
+            let reproductive_roles = independent_origin_roles(summary, descent_count)?;
             let origins = usize::try_from(descent_count)
                 .unwrap_or(usize::MAX)
                 .min(participant_cap);
@@ -278,6 +317,12 @@ pub fn project_social_cohort(
             let child = person(participant_cap);
             events.push(membership(child, groups[0], time(0)?, None)?);
             for index in 0..origins {
+                person_facts[person_index(index)].push(PersonSocialFact::reproductive_role(
+                    reproductive_role_entity(reproductive_roles[index % reproductive_roles.len()]),
+                    time(0)?,
+                    None,
+                    provenance(),
+                )?);
                 events.push(relation(
                     RelationKind::Origin,
                     person(index),
@@ -475,12 +520,46 @@ pub fn project_social_cohort(
         SyntheticSociety::LifecycleTransition => {
             if descent_count == 0
                 || care_count == 0
+                || !summary
+                    .descent_relations
+                    .iter()
+                    .any(|relation| relation.contributing_source_count > 0)
                 || !supports_transition(summary, LifecycleTransitionKind::ParentalDeath)
             {
                 return Err(SocialProjectionError::new(
-                    "lifecycle-transition society requires descent, care, and parental-death support in the aggregate cohort",
+                    "lifecycle-transition society requires descent relation, care, and parental-death support in the aggregate cohort",
                 ));
             }
+            if !supports_capability(
+                summary,
+                BiologicalTransitionCapability::DevelopmentalMaturation,
+            ) || !supports_transition(summary, LifecycleTransitionKind::Independence)
+            {
+                return Err(SocialProjectionError::new(
+                    "lifecycle-transition society requires aggregate life-stage transition support",
+                ));
+            }
+            let transition = time(2)?;
+            person_facts[person_index(2)].extend([
+                PersonSocialFact::gender_recognition(
+                    "pre-independence",
+                    time(0)?,
+                    Some(transition),
+                    provenance(),
+                )?,
+                PersonSocialFact::gender_recognition(
+                    "post-independence",
+                    transition,
+                    None,
+                    provenance(),
+                )?,
+                PersonSocialFact::transitioned(
+                    "life-stage-social-role",
+                    transition,
+                    None,
+                    provenance(),
+                )?,
+            ]);
             let death = time(3)?;
             let child = person(2);
             events.extend([
@@ -533,6 +612,13 @@ pub fn project_social_cohort(
             ]);
         }
     }
+
+    let persons = person_ids
+        .iter()
+        .copied()
+        .zip(person_facts)
+        .map(|(id, facts)| PersonSocialSeed::new(id, facts).map_err(Into::into))
+        .collect::<Result<Vec<_>, SocialProjectionError>>()?;
 
     validate_social_events(&events)?;
     Ok(SocialProjection {

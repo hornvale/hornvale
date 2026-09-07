@@ -2,10 +2,13 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_demography::{
-    AssociationDistribution, CareTopology, DescentDistribution, HybridOutcomeDistribution,
-    InheritanceDistribution, LifecycleTransition, LifecycleTransitionKind, MigrationDistribution,
-    ReproductivePopulationSummary, ReproductivePossibility, RoleAvailabilityDistribution,
-    SocialCohortInput, SocialCohortSummary, SocialSubstrateInput, summarize_social_cohort,
+    AssociationDistribution, BiologicalCareTopology, BiologicalDevelopmentSite,
+    BiologicalTransitionCapability, CareTopology, DescentDistribution, DescentMode,
+    DescentRelation, HybridOutcomeDistribution, InheritanceDistribution, LifecycleTransition,
+    LifecycleTransitionKind, MigrationDistribution, OffspringOrigin, OffspringPathway,
+    ReproductivePopulationSummary, ReproductivePossibility, ReproductiveRole,
+    RoleAvailabilityDistribution, SocialCohortInput, SocialCohortSummary, SocialSubstrateInput,
+    summarize_social_cohort,
 };
 use hornvale_kernel::{Seed, Value, World, WorldTime, Years};
 use hornvale_terrain::TerrainPins;
@@ -19,7 +22,7 @@ fn summary() -> SocialCohortSummary {
         substrate: SocialSubstrateInput {
             reproductive: ReproductivePopulationSummary {
                 possibility: ReproductivePossibility {
-                    pathway_count: 0,
+                    pathway_count: 1,
                     hybrid_applicable: false,
                     hybrid_outcomes: vec![],
                 },
@@ -32,15 +35,28 @@ fn summary() -> SocialCohortSummary {
                 expected_independent_offspring_per_event: 0.0,
                 expected_independent_offspring_per_generation: 0.0,
                 persistence_balance: 0.0,
-                reproductive_roles: RoleAvailabilityDistribution::new(vec![]).unwrap(),
+                reproductive_roles: RoleAvailabilityDistribution::new(vec![
+                    (ReproductiveRole::MaterialProducer, 1.0),
+                    (ReproductiveRole::DevelopmentCarrier, 1.0),
+                ])
+                .unwrap(),
                 hybrid_outcomes: HybridOutcomeDistribution::new(vec![]).unwrap(),
             },
         },
-        offspring_pathways: vec![],
-        descent_relations: vec![],
+        offspring_pathways: vec![OffspringPathway {
+            origin: OffspringOrigin::JoinedInputs,
+            development_site: BiologicalDevelopmentSite::Body,
+            care_topology: Some(BiologicalCareTopology::BodyGroup),
+            prerequisite_transition: None,
+        }],
+        descent_relations: vec![DescentRelation {
+            mode: DescentMode::CombinedSources,
+            contributing_source_count: 2,
+        }],
         compatibility_relations: vec![],
-        transition_capabilities: vec![],
+        transition_capabilities: vec![BiologicalTransitionCapability::DevelopmentalMaturation],
         lifecycle_transitions: vec![
+            LifecycleTransition::new(LifecycleTransitionKind::Independence, 0.5).unwrap(),
             LifecycleTransition::new(LifecycleTransitionKind::AssociationFormation, 0.5).unwrap(),
             LifecycleTransition::new(LifecycleTransitionKind::AssociationDissolution, 0.25)
                 .unwrap(),
@@ -87,10 +103,78 @@ fn person_fact_count(projection: &SocialProjection, predicate: &str) -> usize {
 #[test]
 fn independent_origin_realizes_origin_and_communal_care_without_pair_bond() {
     let projection = project(SyntheticSociety::IndependentOrigin);
+    let reproductive_roles = projection
+        .persons()
+        .iter()
+        .flat_map(|person| person.social_facts())
+        .filter(|fact| fact.predicate() == hornvale_person::REPRODUCTIVE_ROLE)
+        .collect::<Vec<_>>();
 
     assert!(event_count(&projection, "origin") >= 2);
     assert!(event_count(&projection, "care") >= 2);
     assert_eq!(event_count(&projection, "association"), 0);
+    assert!(reproductive_roles.len() >= 2);
+    assert_ne!(
+        reproductive_roles[0].object(),
+        reproductive_roles[1].object()
+    );
+    assert_eq!(
+        person_fact_count(&projection, hornvale_person::GENDER_IDENTITY),
+        0
+    );
+    assert_eq!(
+        person_fact_count(&projection, hornvale_person::GENDER_RECOGNITION),
+        0
+    );
+}
+
+/// A sampled social descent count selects only among reproductive paths,
+/// descent shapes, and distinct roles that the aggregate explicitly admits.
+#[test]
+fn independent_origin_requires_explicit_aggregate_reproductive_support() {
+    let mut no_possible_pathway = summary();
+    no_possible_pathway.reproductive.possibility.pathway_count = 0;
+    let error = project_social_cohort(
+        &no_possible_pathway,
+        Seed(42),
+        &pins(),
+        SyntheticSociety::IndependentOrigin,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("offspring pathway"));
+
+    let mut no_authored_pathway = summary();
+    no_authored_pathway.offspring_pathways.clear();
+    let error = project_social_cohort(
+        &no_authored_pathway,
+        Seed(42),
+        &pins(),
+        SyntheticSociety::IndependentOrigin,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("offspring pathway"));
+
+    let mut no_descent_shape = summary();
+    no_descent_shape.descent_relations.clear();
+    let error = project_social_cohort(
+        &no_descent_shape,
+        Seed(42),
+        &pins(),
+        SyntheticSociety::IndependentOrigin,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("descent relation"));
+
+    let mut no_roles = summary();
+    no_roles.reproductive.reproductive_roles = RoleAvailabilityDistribution::new(vec![]).unwrap();
+    let error = project_social_cohort(
+        &no_roles,
+        Seed(42),
+        &pins(),
+        SyntheticSociety::IndependentOrigin,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("reproductive roles"));
 }
 
 /// Letting a synthetic configuration manufacture a path with zero aggregate
@@ -129,6 +213,24 @@ fn lifecycle_projection_requires_aggregate_parental_death_support() {
     .unwrap_err();
 
     assert!(error.to_string().contains("parental-death"));
+}
+
+/// Selecting the lifecycle probe cannot manufacture a life-stage transition
+/// when the aggregate substrate exposes no matching transition capability.
+#[test]
+fn lifecycle_projection_requires_aggregate_life_stage_transition_support() {
+    let mut aggregate = summary();
+    aggregate.transition_capabilities.clear();
+
+    let error = project_social_cohort(
+        &aggregate,
+        Seed(42),
+        &pins(),
+        SyntheticSociety::LifecycleTransition,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("life-stage transition"));
 }
 
 /// Flattening two descent lines to one or omitting their post-death transfer
@@ -190,8 +292,48 @@ fn institutional_recognition_follows_an_existing_association() {
 #[test]
 fn lifecycle_transition_preserves_history_and_reassigns_future_care() {
     let projection = project(SyntheticSociety::LifecycleTransition);
+    let transitioned = projection
+        .persons()
+        .iter()
+        .find(|person| {
+            person
+                .social_facts()
+                .iter()
+                .any(|fact| fact.predicate() == hornvale_person::TRANSITIONED)
+        })
+        .expect("life-stage transition path is exercised");
+    let categories = transitioned
+        .social_facts()
+        .iter()
+        .filter(|fact| fact.predicate() == hornvale_person::GENDER_RECOGNITION)
+        .collect::<Vec<_>>();
 
     assert!(person_fact_count(&projection, hornvale_person::TRANSITIONED) >= 1);
+    assert_eq!(categories.len(), 2);
+    assert_eq!(
+        categories[0].object(),
+        &Value::Text("pre-independence".to_string())
+    );
+    assert_eq!(
+        categories[1].object(),
+        &Value::Text("post-independence".to_string())
+    );
+    assert_eq!(categories[0].end(), Some(categories[1].start()));
+    assert_eq!(categories[1].end(), None);
+    let category_facts = transitioned
+        .facts()
+        .into_iter()
+        .filter(|fact| {
+            fact.predicate == hornvale_person::GENDER_RECOGNITION
+                || fact.predicate == hornvale_person::GENDER_RECOGNITION_ENDED
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(category_facts.len(), 3);
+    assert!(
+        category_facts
+            .iter()
+            .all(|fact| { fact.provenance == "social/projection/v1" && fact.day.is_some() })
+    );
     assert!(event_count(&projection, "descent") >= 1);
     assert!(event_count(&projection, "care") >= 2);
     assert!(event_count(&projection, "care-ended") >= 1);
