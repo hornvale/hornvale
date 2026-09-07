@@ -139,6 +139,31 @@ criterion materially.
 
 ## Rejected and deferred
 
+## #2 [G2] — Draft design section self-review
+
+**Question:** does the D3 draft preserve the falsifier's direction and avoid
+assertions that can pass vacuously? **Decision:** proceed to G3 with the draft
+spec at `docs/superpowers/specs/2026-09-07-the-staple-d3-design.md`.
+
+**Why:** the self-review verified that the draft keeps the unit as a standing
+relation edge, excludes the already-live `Mine` path, rejects an empty
+denominator, names both `0/N` and `N/N`, and makes simultaneous clearing and
+continuous-cause derivation proof obligations. It also includes the required
+epoch, sanctioned census re-baseline, and history-pin conversion cost.
+
+**Alternatives discarded:** adding implementation detail before Task 0;
+making the gradient/cliff description itself the success gate; and treating
+the missing browser visual companion as evidence for or against the mechanism.
+
+**Ideonomy passes / overturns:** the prior non-zero G1 pass was re-read
+against the complete criterion; no new overturn. Its cross-domain findings
+remain attached to Task 0. The browser companion was attempted and returned
+“No browser is available”, so the planned visual follow-up is deferred rather
+than fabricated.
+
+**Capture actions:** committed the draft spec and retained all unresolved
+conversion/precedence choices as explicit deferred scope.
+
 - **Rejected:** use catchment size as D3's falsifier. The Hidage measured the
   proposed D1 at `1.00` clearing the hamlet ceiling on every seed; it is a
   rescale question, not the return-flow question.
@@ -171,3 +196,12 @@ D2's changed populations and typed stocks; it is not a later cleanup task.
 - If the visual companion becomes available, render the relation-level
   `0/N -> mixed -> N/N` bar and the gradient/cliff distinction before G2.
 - Keep Nathan's review points at G3 (spec review) and G6 (merge/close).
+
+## Process capture
+
+The prose gate initially failed because the new spec was absent from
+`docs/audits/campaign-reconciliation.tsv`. After adding the spec row, it
+correctly failed again when the ledger path was placed in the TSV: ledgers are
+not part of that audit population. Removing only that citation fixed the
+contract; `make docs-tests` then passed 75/75. The ledger remains the committed
+campaign record, just not a reconciliation record.
