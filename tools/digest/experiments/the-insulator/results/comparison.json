@@ -17,7 +17,8 @@
           "results/mac-cold.json",
           "results/mac-warm.json"
         ],
-        "candidate": "candidate/README.md",
+        "candidate": "candidate/manifest.json",
+        "prose": "candidate/README.md",
         "cleanup_complete": true
       },
       "linux": {

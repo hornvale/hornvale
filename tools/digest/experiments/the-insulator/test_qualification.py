@@ -119,6 +119,12 @@ class DecisionTests(unittest.TestCase):
         comparison = json.loads(comparison_path.read_text())
         candidate_path = root / comparison["candidate"]["dossier"]
         self.assertTrue(candidate_path.is_file())
+        self.assertEqual(comparison["qualification"]["hosts"]["mac"]["candidate"],
+                         "candidate/manifest.json")
+        self.assertEqual(comparison["qualification"]["hosts"]["mac"]["prose"],
+                         "candidate/README.md")
+        self.assertEqual(candidate_path.suffix, ".json")
+        self.assertTrue((root / comparison["qualification"]["hosts"]["mac"]["prose"]).is_file())
         evidence = json.loads(candidate_path.read_text())
         self.assertEqual(evidence["schema"], "insulator-candidate-v1")
         self.assertEqual(evidence["provenance"]["baseline_commit"], comparison["source_identity"]["commit"])
