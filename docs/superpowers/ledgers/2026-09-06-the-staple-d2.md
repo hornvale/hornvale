@@ -3,7 +3,7 @@
 Campaign: **The Staple D2** — voluntary local exchange beside tribute.
 Branch: `campaign/the-staple-d2`. Decision block: **0886–0895**.
 Spec: `docs/superpowers/specs/2026-09-06-the-staple-d2-design.md`.
-Status: G3 approved; implementation planning active.
+Status: G3 approved; implementation active (Task 1 complete).
 
 ## Entries
 
@@ -55,11 +55,34 @@ with the verified `traversable_neighbors` helper and named the exact existing
 bars. Ideonomy: 0 passes — this is a review gate, not a design choice.
 Capture: `IMPLEMENTATION_PLAN.md`; the plan.
 
+## Task 1 — probe contract frozen
+
+The executable fixture now treats the 200 worlds and the attempt population as
+different denominators. An empty outcome set reports `NoExchangeAttempts`;
+failed attempts with no settlement produce a valid report with
+`activation_worlds == 0`. Every reported status carries its own non-zero
+attempt denominator, and only a bar passed by the paired control can count as
+a treatment-only breach. No ideonomy pass was run: this implements the
+G4-approved report contract and records measured behavior rather than making a
+new design choice.
+
+The fixed roster `1..=200` was built as 200 same-seed control/disabled-treatment
+pairs through separate fixture boundaries. The explicit probe passed
+`200 / 200` byte-identical ledger comparisons in `949.31s`; because production
+exchange does not exist yet, it then reached the separately represented zero-
+attempt result. Stock residual shape and finiteness checks execute before that
+result, so the empty outcome cannot bypass the conservation surface.
+
 ## Deferred minors and follow-ups
 
 - Verify the specialization input and shortfall insertion point against the
   live tree before dispatching any brief; every identifier in the brief must
   be grepped first.
+- Correct the bar-source citation during Task 5 documentation reconciliation:
+  `history_tumult.rs` carries the settlement band `40..=400` and alive floor
+  `50`, but the approved collapse ceiling `0.05` is defined and asserted in
+  `history_sundering.rs`. Task 1 kept the approved value and recorded the live
+  source instead of silently inventing a replacement identifier.
 - Add the two typed resource names to the idea registry if implementation
   makes them stable concepts rather than probe-local names.
 - Promote aggregate exchange metrics to the larger census only after paired

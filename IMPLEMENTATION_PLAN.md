@@ -8,7 +8,7 @@ stock conservation, and treatment-only breaches of the three existing history
 bars; control-disabled execution preserves the existing history output.
 **Tests**: Paired-seed control identity; zero-activation and instability dead
 poles; non-vacuous outcome denominators; conservation.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 2: Add typed subsistence state
 **Goal**: Add two typed, non-convertible subsistence inventories to live
