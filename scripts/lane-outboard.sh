@@ -143,6 +143,10 @@ run "timing wrapper" bash scripts/test-timed.sh
 # real git merges — two appends resolve, a same-row edit lands in the
 # duplicate-key guard — plus a control showing the attribute is what does it.
 run "reconciliation union" bash scripts/test-reconciliation-union.sh
+# The chamber's and heavy's scratch worktrees must anchor to the MAIN worktree.
+# Caller-relative resolution put them inside .claude/worktrees/ — the invariant
+# decision 0146 restored for the census, which was never applied here.
+run "scratch worktree anchor" bash scripts/test-scratch-worktree-anchor.sh
 # The post-merge hook's own suite, added the same way pre-push's was:
 # nothing exercised this hook, so its own author (Task 3, The Attestation)
 # shipped a Critical that made it silent on every merge, for all ten
