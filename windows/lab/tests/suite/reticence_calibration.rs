@@ -390,10 +390,13 @@ fn h4_does_the_prior_move_observable_testimony_at_all() {
         let Ok((mut s, _)) = Session::start(&world, &PossessOpts::default()) else {
             continue;
         };
-        let terrain = hornvale_worldgen::terrain_of(&world).expect("sculpts");
-        let climate = hornvale_worldgen::climate_from(&world, &terrain).expect("fits");
+        // Session::start has already built and cached this exact pair in its
+        // WorldContext. Reconstructing it here paid for six redundant terrain
+        // sculpts and climate fits before the measurement even began.
+        let terrain = s.context().terrain();
+        let climate = s.context().climate();
         let species = s.driven_body().species.clone();
-        let prior = prior_of(&world, &species, &terrain, &climate);
+        let prior = prior_of(&world, &species, terrain, climate);
 
         let mut this_session_observed = false;
         let mut topics_seen: std::collections::BTreeSet<DriveKind> =
