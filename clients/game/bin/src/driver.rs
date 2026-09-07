@@ -129,9 +129,14 @@ const RUNG_OPENING: &str = "rung";
 /// ticks guarantees at least one complete pass.
 ///
 /// **In-rate by decision 0717.** A layer may never read data changing
-/// faster than its own rate; the strip is `Rate::Ornamental`, and a decay
-/// counted against the strip's own scroll clock can never outrun the
-/// strip's own redraw, so this stays in-rate by construction.
+/// faster than its own rate. The strip's own rate is `Rate::Instantaneous`
+/// — [`Driver::refresh_strip`] runs on every cursor move — while this decay
+/// is counted in MARQUEE ticks, which are coarser; reading slower data is
+/// always in-rate, so this holds by construction. (The word here was
+/// `Rate::Ornamental` until this campaign's fix wave. The conclusion was
+/// never affected, but the wrong label would invite someone to register
+/// `strip: Ornamental` in `plate.rs`'s `LAYERS` and produce a spurious
+/// `violations()` red.)
 const RUNG_LINE_TICKS: u32 = 148;
 
 /// The fixed, sim-authored prefix `windows/vessel/src/session.rs`'s
@@ -2761,8 +2766,8 @@ impl Driver {
     ///
     /// **Deliberately blind to [`Self::sites`]**, and that is a pinned
     /// property, not an oversight: `site_drawing_never_depends_on_
-    /// discovery_and_the_cursor_never_leaks_a_name` proves the cursor
-    /// readout is a pure function of `self.index` and the cursor position,
+    /// discovery_and_resolve_world_view_never_leaks_a_name` proves this
+    /// method is a pure function of `self.index` and the cursor position,
     /// structurally unable to read `self.sites` at all. A placed site's
     /// mention belongs to [`Self::site_note`], called separately by
     /// [`Self::resolve`] — never folded in here, or that proof would stop
@@ -2803,19 +2808,31 @@ impl Driver {
         Some(self.resolve_world_view_at(&self.world_view_tile()))
     }
 
-    /// **Decision 0670's gate, applied to the world view's tile readout**
-    /// (Task 5, B4) — exactly the rule Task 4 applied to a chart mark's
-    /// proper name: a placed site's glyph draws whether or not it has been
-    /// discovered, but a mention of it in text does not. `MapSite` carries
-    /// no proper name at all (spec §7 non-goal), so there is no name for
-    /// this gate to redact; what it withholds is the MENTION itself — even
-    /// naming the site's KIND before encounter would tell a reader
-    /// something the glyph alone does not.
+    /// **The site's KIND, ungated; its NAME is what decision 0670 gates**
+    /// (Task 5, B4; corrected in this campaign's fix wave). Nathan's own
+    /// ruling, quoted in
+    /// `site_drawing_never_depends_on_discovery_and_the_cursor_never_leaks_
+    /// a_name`'s doc: *"We can say it's a cave, a village, etc, just don't
+    /// give its name."* `MapSite` carries no proper name at all (spec §7
+    /// non-goal), so there is nothing here for 0670 to withhold and this
+    /// method reports the kind whether or not the site has been encountered.
     ///
-    /// `None` when nothing placed stands on `facet`, or when something does
-    /// but has not yet been discovered — the two cases the strip must not
-    /// tell apart, or a reader could infer "something is here" from the
-    /// readout falling silent versus not.
+    /// **What the discovery gate used to be defending, and why it could not
+    /// defend it.** The gate's stated rationale was that silence-versus-not
+    /// would let a reader infer *something is here*. But
+    /// [`plate::draw_feature_layer`] draws the glyph at every rung
+    /// UNGATED (The Prospect, Gate A) — the reader is looking straight at a
+    /// `*` when they point the cursor at it — so the inference the gate was
+    /// protecting against is not available to protect. What it cost instead
+    /// was B4 itself: cursor on a visible cave glyph, strip says nothing.
+    ///
+    /// The name gate is unaffected and lives where a name actually exists:
+    /// [`hornvale_game_core::lexicon::ChartMarks::update`] withholds a
+    /// mark's proper name until discovery (Task 4), and
+    /// [`Self::resolve_world_view_at`] is structurally blind to
+    /// [`Self::sites`] entirely (a pinned property — see its own doc).
+    ///
+    /// `None` only when nothing placed stands on `facet`.
     ///
     /// **Structurally live only at band B's own rung — a known limitation
     /// of this call, not a deliberate precision choice, and fix round 1
@@ -2856,7 +2873,7 @@ impl Driver {
     fn site_note(&self, facet: &Facet) -> Option<String> {
         plate::sites_standing_in(&self.sites, facet)
             .into_iter()
-            .find(|id| self.discovered.contains(*id))
+            .next()
             .map(|id| match id {
                 FeatureId::Settlement(_) => "a settlement stands here".to_string(),
                 FeatureId::Cave(_) => "a cave mouth stands here".to_string(),
@@ -5788,14 +5805,26 @@ mod portolan_tests {
     /// **The pair, pinned together (The Prospect, Gate A/B — the coordinator's
     /// own correction to the campaign's premise): a placed site's glyph
     /// draws whether or not it has been discovered, and discovering it
-    /// changes NOTHING the cursor readout can say.** Nathan's ruling: "We
-    /// can say it's a cave, a village, etc, just don't give its name."
-    /// Nothing pinned this pairing as one invariant before this test — the
-    /// glyph half is covered piecemeal elsewhere (`plate.rs`'s
+    /// changes nothing [`Driver::resolve_world_view`] can say.** Nathan's
+    /// ruling: "We can say it's a cave, a village, etc, just don't give its
+    /// name." Nothing pinned this pairing as one invariant before this test
+    /// — the glyph half is covered piecemeal elsewhere (`plate.rs`'s
     /// `the_feature_layer_draws_every_site_whether_or_not_it_is_discovered`,
     /// this file's own `standing_in_a_placed_sites_room_discovers_it_and_
     /// the_map_keeps_drawing_it`) and the readout half was never covered at
     /// all.
+    ///
+    /// **SCOPED TO `resolve_world_view`, NOT TO THE STRIP A READER SEES,
+    /// and the name says so deliberately** (fix wave; the earlier name and
+    /// doc said "the cursor readout", which is broader than what this
+    /// asserts). [`Driver::resolve`] appends [`Driver::site_note`] on top of
+    /// this method's answer, and that note DOES mention a placed site's
+    /// KIND — ungated, since the glyph is drawn ungated too. Nothing here is
+    /// unasserted as a result; the wider claim was simply unsafe to read.
+    /// What survives, and is what actually matters, is the NAME half:
+    /// `resolve_world_view` is structurally blind to [`Driver::sites`]
+    /// (proved below by removing the site from the roster entirely), and
+    /// `site_note` has no name to leak — `MapSite` carries none.
     ///
     /// **Why "changes nothing" is provable rather than merely observed.**
     /// [`Driver::resolve_world_view`]/[`Driver::resolve_walk_band`] — the
@@ -5823,7 +5852,7 @@ mod portolan_tests {
     /// discovery. Centring removes that confound: the glyph's presence here
     /// is evidence about Gate A, not about window placement.
     #[test]
-    fn site_drawing_never_depends_on_discovery_and_the_cursor_never_leaks_a_name() {
+    fn site_drawing_never_depends_on_discovery_and_resolve_world_view_never_leaks_a_name() {
         use hornvale_vessel::site::SiteKind;
 
         let (w, h) = (104u16, 56u16);
@@ -7071,13 +7100,20 @@ mod portolan_tests {
         );
     }
 
-    /// **Decision 0670 gates a placed site's MENTION here, exactly as Task
-    /// 4 gated its NAME on the chart** (`Self::site_note`'s own doc):
-    /// `MapSite` carries no proper name at all (spec §7 non-goal), so what
-    /// is withheld before discovery is the fact that anything stands there
-    /// at all, not merely a name string.
+    /// **A placed site's KIND reaches the strip whether or not it has been
+    /// discovered, and discovering it changes nothing** — the ungated half
+    /// of B4, corrected in this campaign's fix wave (see
+    /// [`Driver::site_note`]'s own doc for the reasoning and Nathan's
+    /// ruling). The glyph is drawn ungated at every rung, so a reader
+    /// pointing the cursor at a visible `*` and being told nothing was the
+    /// defect, not the guarantee.
+    ///
+    /// **Both directions, because only one of them was ever at risk.** The
+    /// before/after equality is the invariant; the positive assertion is
+    /// what keeps it from holding vacuously, which a silent-in-both-states
+    /// regression would otherwise satisfy exactly.
     #[test]
-    fn an_undiscovered_site_is_not_mentioned_but_a_discovered_one_is() {
+    fn a_placed_sites_kind_is_mentioned_whether_or_not_it_is_discovered() {
         use hornvale_vessel::site::SiteKind;
 
         // AT BAND B'S OWN RUNG, deliberately, not a coarser world-view one:
@@ -7122,8 +7158,9 @@ mod portolan_tests {
             .expect("the world view has a strip")
             .to_string();
         assert!(
-            !before.contains("cave"),
-            "an undiscovered site's kind leaked into the standing line: {before:?}"
+            before.contains("a cave mouth stands here"),
+            "the cave's glyph is drawn here ungated, so its KIND must reach the \
+             standing line ungated too: {before:?}"
         );
 
         // Discover whichever site actually sits under the CURSOR's own
@@ -7144,7 +7181,13 @@ mod portolan_tests {
             .to_string();
         assert!(
             after.contains("a cave mouth stands here"),
-            "a discovered cave must be mentioned once encountered: {after:?}"
+            "a discovered cave must still be mentioned: {after:?}"
+        );
+        assert_eq!(
+            before, after,
+            "discovering a placed site must change nothing the strip says about \
+             its kind — the NAME is what decision 0670 gates, and a `MapSite` \
+             carries none"
         );
     }
 
@@ -7170,6 +7213,12 @@ mod portolan_tests {
     /// `RUNG_LINE_TICKS` times, which is [`Driver::map_facts_expire_at`]'s
     /// own boundary: the block must survive every tick strictly before it
     /// and be gone at it.
+    ///
+    /// **The decay must RETURN the standing line, not clear the strip**, and
+    /// asserting only the absence of `RUNG_OPENING` could not tell those
+    /// apart: a regression that decayed all the way to [`NOTHING_HERE_YET`]
+    /// — or to nothing at all — satisfies an absence check exactly as well
+    /// as the correct behaviour does. Hence the positive half below.
     #[test]
     fn the_rung_line_decays_off_the_strip_without_a_player_action() {
         let mut d = test_driver();
@@ -7178,9 +7227,22 @@ mod portolan_tests {
         for _ in 0..RUNG_LINE_TICKS {
             d.tick_marquee();
         }
+        let after = d
+            .strip_text()
+            .expect("the world view has a strip")
+            .to_string();
         assert!(
-            !d.strip_text().unwrap().contains(RUNG_OPENING),
-            "the rung line outlived its decay"
+            !after.contains(RUNG_OPENING),
+            "the rung line outlived its decay: {after:?}"
+        );
+        assert!(
+            after.contains("above sea level"),
+            "the block decayed off the strip and took the tile's own standing \
+             readout with it: {after:?}"
+        );
+        assert_ne!(
+            after, NOTHING_HERE_YET,
+            "the strip fell back to the no-resolver string rather than to the tile"
         );
     }
 

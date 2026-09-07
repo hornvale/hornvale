@@ -231,6 +231,63 @@ fn entering_the_site_by_its_own_name_works() {
     assert!(say(&mut s, "enter Doaba").contains("[chamber"));
 }
 
+/// Decision 0788's parity clause, taken MECHANICALLY off the game's own
+/// words rather than off a phrase this test hard-codes: the refusal ends
+/// with `Session::site_clause`'s invitation (`You can enter the settlement
+/// of Doaba.`), and that invitation used to be refused verbatim by the very
+/// parser that had just printed it —
+///
+/// ```text
+/// > enter the settlement of Doaba
+/// There is nothing here called 'the settlement of Doaba'.
+/// You can enter the settlement of Doaba.
+/// ```
+///
+/// Reading the offer out of the reply rather than restating it is what keeps
+/// this test honest when `site_clause`'s wording moves: a hard-coded phrase
+/// would go on passing against an invitation the game no longer prints.
+#[test]
+fn the_exact_phrase_the_refusal_offers_is_itself_enterable() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let refusal = say(&mut s, "enter banana");
+    let (_, after) = refusal
+        .split_once("You can enter ")
+        .expect("the refusal offers what CAN be entered: {refusal}");
+    let offer = after
+        .split_once('.')
+        .expect("the invitation is a sentence")
+        .0;
+    assert!(
+        offer.contains(" of "),
+        "this fixture must exercise the `<kind noun> of <name>` form: {offer:?}"
+    );
+    let out = say(&mut s, &format!("enter {offer}"));
+    assert!(
+        out.contains("[chamber"),
+        "the game offered `enter {offer}` and then refused it: {out}"
+    );
+}
+
+/// The exactness the parity fix must NOT cost: accepting `settlement of
+/// <name>` may not degrade into accepting any name at all after the noun.
+/// `banana` alone is already pinned above; this is the same refusal wearing
+/// the offered phrase's clothes.
+#[test]
+fn entering_a_kind_noun_with_the_wrong_name_is_still_refused() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let out = say(&mut s, "enter the settlement of Nenotata");
+    assert!(
+        !out.contains("[chamber"),
+        "a wrong name entered the structure anyway: {out}"
+    );
+    assert!(
+        out.contains("Nenotata"),
+        "the refusal must quote what was typed: {out}"
+    );
+}
+
 #[test]
 fn examine_honors_the_contract_and_release_ends() {
     let world = seam_world();
@@ -1306,8 +1363,12 @@ fn ascend_refuses_at_the_walk_band() {
         Turn::Out(t) => t,
         Turn::Released(_) => panic!("ascend must not release"),
     };
+    // ONE ARM, not two. The `|| ascend.contains("ascend")` disjunct this
+    // used to carry was dead: the refusal constant contains no such word,
+    // so it could never be the arm that passed, and a disjunction whose
+    // second arm can never fire is a first arm wearing a false safety net.
     assert!(
-        ascend.contains("nowhere higher") || ascend.contains("ascend"),
+        ascend.contains("nowhere higher"),
         "the walk-band ascend refusal must say something, not read as an \
          unknown verb: {ascend}"
     );

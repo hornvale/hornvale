@@ -7764,12 +7764,36 @@ impl<'w> Session<'w> {
                 .site
                 .as_ref()
                 .expect("structure_at returns Some only when brief.site is Some");
-            let wanted = Self::strip_article(&target.trim().to_lowercase());
             let kind_noun = match site.kind {
                 SiteKind::Settlement => "settlement",
                 SiteKind::Exotic => "site",
                 SiteKind::Cave => "cave",
             };
+            let mut wanted = Self::strip_article(&target.trim().to_lowercase());
+            // PARITY WITH THE PHRASE THE GAME ITSELF PRINTS (decision 0788).
+            // [`Self::site_clause`] offers `You can enter the settlement of
+            // Doaba.` and `You can enter the cave here.`, so the literal
+            // reply to a literal invitation is `enter the settlement of
+            // Doaba` / `enter the cave here` — and both were refused with
+            // the invitation repeated back in the same breath:
+            //
+            //   > enter the settlement of Doaba
+            //   There is nothing here called 'the settlement of Doaba'.
+            //   You can enter the settlement of Doaba.
+            //
+            // The article is already gone above; these two strips remove the
+            // rest of that sentence's furniture, leaving the bare name or the
+            // bare kind noun the comparison below already understood. This is
+            // The Cruck's defect one band up — see [`Self::named_neighbour`]'s
+            // own `the hearth` comment — and the remedy is the same shape:
+            // accept what was offered, without widening to a substring match
+            // that would let `enter banana` through.
+            if let Some(rest) = wanted.strip_suffix(" here") {
+                wanted = rest.trim().to_string();
+            }
+            if let Some(rest) = wanted.strip_prefix(&format!("{kind_noun} of ")) {
+                wanted = rest.trim().to_string();
+            }
             // A cave and an exotic site carry no name (`Site::name` is
             // `None`), so only the kind noun can ever match there — this is
             // the asymmetry the data forces, not a fallback that would

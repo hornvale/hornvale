@@ -133,13 +133,26 @@ impl ChartMarks {
     /// Replace the contents from `spatial`'s walk-band chart (a non-walk
     /// band clears to empty).
     ///
-    /// **Only a placed-site mark (`"settlement"`, `"cave"`) ever consults
-    /// `is_discovered`.** Decision 0670 covers a placed site's proper
-    /// name; an `"agent"` mark is a live creature, never a placed site, and
-    /// gating it would withhold something the decision never asked to
-    /// withhold — so `is_discovered` is not even called for one, the same
-    /// way `resolve_chain_at`'s own discovery closure is only ever asked
-    /// about a feature that participates in the chain at all.
+    /// **`"agent"` is the ONE exemption, and everything else consults
+    /// `is_discovered`.** Decision 0670 covers a placed site's proper name;
+    /// an `"agent"` mark is a live creature, never a placed site, and gating
+    /// it would withhold something the decision never asked to withhold — so
+    /// `is_discovered` is not called for one, the same way
+    /// `resolve_chain_at`'s own discovery closure is only ever asked about a
+    /// feature that participates in the chain at all.
+    ///
+    /// **DEFAULT-DENY, and it used to be the other way round** (fix wave).
+    /// The match named `"settlement" | "cave"` as the gated arms and let `_`
+    /// through ungated, which leaked nothing at the time — the producer
+    /// emits exactly those two kinds plus `"agent"` — but
+    /// `windows/scene/src/surrounds.rs` explicitly anticipates further
+    /// kinds, and a new placed-site kind added there would have reached
+    /// completion ungated with nothing objecting. A gate whose safe
+    /// behaviour depends on a producer one crate boundary away staying
+    /// still is not a gate. Inverted, this repo's own default-deny posture
+    /// (type-audit, placement-audit, plumb) now holds here too: an
+    /// unrecognised kind is withheld until discovered, and admitting a new
+    /// ungated kind is a deliberate edit to this list.
     pub fn update(&mut self, spatial: &Spatial, is_discovered: impl Fn(&str, u64) -> bool) {
         // A `&` reference is `Copy`, so the closure below can be re-borrowed
         // once per room (`flat_map`'s own `FnMut`) without requiring
@@ -153,8 +166,8 @@ impl ChartMarks {
                     let room = c.room;
                     c.marks.iter().filter_map(move |m| {
                         let discovered = match m.kind.as_str() {
-                            "settlement" | "cave" => is_discovered(&m.kind, room),
-                            _ => true,
+                            "agent" => true,
+                            _ => is_discovered(&m.kind, room),
                         };
                         discovered.then(|| Candidate {
                             name: m.noun.clone(),

@@ -251,6 +251,54 @@ mod chart_marks {
         );
     }
 
+    /// **The `_` arm: an UNRECOGNISED mark kind is withheld until
+    /// discovered.** The gate used to read `"settlement" | "cave" =>
+    /// is_discovered(...), _ => true` — default-OPEN — which leaked nothing
+    /// only because the producer emits exactly those two kinds plus
+    /// `"agent"`. `windows/scene/src/surrounds.rs` explicitly anticipates
+    /// further kinds, so that safety was a property of a crate one boundary
+    /// away rather than of this function. Nothing covered the `_` arm at
+    /// all, which is why the inversion was invisible: the two arms with
+    /// tests are the two arms that were already right.
+    ///
+    /// `"shrine"` is a stand-in for any kind this crate has not been taught
+    /// — deliberately not one the producer emits today, since the whole
+    /// claim is about kinds it does not yet emit.
+    #[test]
+    fn an_unrecognised_mark_kind_is_withheld_until_discovered() {
+        let unknown = |room: u64| Spatial::Walk {
+            chart: Chart {
+                radius: 1,
+                depth: 12,
+                biome_legend: vec![],
+                water_legend: vec![],
+                relief_legend: vec![],
+                cells: vec![room_with_mark(room, "Nenotata", "shrine")], // lexicon: `Chart::cells` is the wire's own frozen field name — an area, not a vertex
+                legend: vec![],
+                sight: None,
+            },
+        };
+
+        let mut scope = ChartMarks::default();
+        scope.update(&unknown(42), |_kind, _room| false);
+        let names: Vec<String> = scope.candidates().iter().map(|c| c.name.clone()).collect();
+        assert!(
+            !names.iter().any(|n| n == "Nenotata"),
+            "an unknown placed-site kind completed while undiscovered — the gate is \
+             default-open again: {names:?}"
+        );
+
+        // The positive control, without which the assertion above is
+        // satisfiable by dropping unknown kinds on the floor entirely.
+        let mut scope = ChartMarks::default();
+        scope.update(&unknown(42), |_kind, _room| true);
+        let names: Vec<String> = scope.candidates().iter().map(|c| c.name.clone()).collect();
+        assert!(
+            names.iter().any(|n| n == "Nenotata"),
+            "a DISCOVERED mark of an unknown kind must still complete: {names:?}"
+        );
+    }
+
     /// A non-walk band (chamber or underground) has no chart, so the scope
     /// clears to empty rather than holding a stale walk-band roster.
     #[test]
