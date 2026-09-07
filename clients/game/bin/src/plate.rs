@@ -2695,6 +2695,87 @@ pub const LAYERS: &[crate::rate::LayerDecl] = &[
 ///    vertices, memoized;
 /// 3. the tile's class is the nearest of those four corners.
 ///
+/// **Step 1 is all this function still does itself** (The Sett, Task 2).
+/// Steps 2 and 3 — and every reading after them — are [`terrain_at_facet`],
+/// which this calls with the facet AND the point that resolved it. There is
+/// one copy of the reading and it is that one; the separation exists so a
+/// graph-addressed raster (the walk band's compass rose) can reach the
+/// reading without a projection to unproject through.
+///
+/// **The doc that belongs to the reading moved with it.** The retired
+/// "same answer, not an approximation" premise, the four dot products, the
+/// deliberately-unused corner weights, the coarser-than-the-grid fallback,
+/// and the **`season`/`at` contract every caller of either function must
+/// satisfy** are all stated on [`terrain_at_facet`] now, because that is the
+/// item they describe. This one adds only the Mercator half: `row`/`col`
+/// name a box on `win`, and the point handed on is that box's own centre.
+#[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
+pub fn terrain_at_tile(
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    memo: &mut RoomMeshMemo,
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    row: u32,
+    col: u32,
+    ctx: Option<&hornvale_locale::LocaleContext>,
+    at: WorldTime,
+    season: u32,
+    reflectance_cache: Option<&mut ReflectanceCache>,
+) -> TileTerrain {
+    let plate_row = win.origin_row + row;
+    let plate_col = win.origin_col + col;
+    let (lat, lon) = mercator::unproject(f, plate_row, plate_col, virtual_w, virtual_h);
+    let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+    let facet = Facet::containing(pos, win.depth);
+    // THE POINT IS PASSED ON, NOT RE-DERIVED THERE. `terrain_at_facet` uses
+    // it twice more after the facet is known — as the grid-level fallback
+    // address, and in the dot products that pick the quad corner nearest it
+    // — and the tile's own centre is a strictly finer thing to compare
+    // against than the facet's centroid (see the weights paragraph on that
+    // function). Which point a caller means is the CALLER's choice; this one
+    // means the tile's centre.
+    terrain_at_facet(
+        terrain,
+        geo,
+        index,
+        memo,
+        &facet,
+        pos,
+        ctx,
+        at,
+        season,
+        reflectance_cache,
+    )
+}
+
+/// Everything [`terrain_at_tile`] reads once the facet is known — the
+/// reading, separated from the addressing (The Sett, Task 2).
+///
+/// `facet` is the address; `at_position` is the point INSIDE it the reading
+/// is taken at. The two are separate parameters because the reading uses the
+/// point twice more after the address is settled, and the two callers on the
+/// ladder do not want the same point:
+///
+/// - [`terrain_at_tile`] passes the point it already unprojected — the
+///   tile's own centre — because a projected raster HAS one and it is
+///   strictly finer than the facet's centre;
+/// - a graph-addressed raster has no such point and passes
+///   [`Facet::centroid`].
+///
+/// **Collapsing `at_position` to `facet.centroid()` here would be a silent
+/// behaviour change, not a simplification.** The point decides which of the
+/// grid-level quad's four corners is nearest (below), and at
+/// [`BAND_B_RUNG`] that quad spans 128 facets on a side, so the two
+/// candidates lie in the same quad but can fall either side of its diagonal
+/// midlines — where the resolved [`TileTerrain::vertex`], and with it
+/// `ocean`, `water` and the snapped elevation fallback, flips.
+/// `clients/game/bin/tests/facet_reading.rs` measures how often, and holds
+/// the two readers to an exact identity when they ARE handed the same point.
+///
 /// **THE "SAME ANSWER, NOT AN APPROXIMATION" CLAIM BELOW RESTS ON A PREMISE
 /// THE PAVEMENT RETIRED, and this paragraph is a pointer, not a verdict.** It
 /// argued that a point inside a grid-level TRIANGLE has its nearest mesh
@@ -2731,8 +2812,8 @@ pub const LAYERS: &[crate::rate::LayerDecl] = &[
 /// comparing against it costs four dot products rather than a memo key per
 /// tile.
 ///
-/// A rung COARSER than the grid has no ancestor at the grid level, so the
-/// tile's own centre is re-addressed at the grid level instead. Nothing on
+/// A rung COARSER than the grid has no ancestor at the grid level, so
+/// `at_position` is re-addressed at the grid level instead. Nothing on
 /// the shipped ladder reaches there ([`GLOBE_RUNG`] is the floor and is the
 /// grid level itself); `driver.rs`'s rung-5 disclosure test does.
 ///
@@ -2756,29 +2837,19 @@ pub const LAYERS: &[crate::rate::LayerDecl] = &[
 /// cache's own "never serves a stale season" guarantee cannot see, because
 /// nothing here can tell a correctly-derived bucket from a wrong one; both
 /// are just a `u32`.
-#[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
-pub fn terrain_at_tile(
+#[allow(clippy::too_many_arguments)] // mirrors `terrain_at_tile`'s own allow, one level up
+pub fn terrain_at_facet(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
     index: &NearestVertexIndex,
     memo: &mut RoomMeshMemo,
-    f: &Frame,
-    win: &Window,
-    virtual_w: u32,
-    virtual_h: u32,
-    row: u32,
-    col: u32,
+    facet: &Facet,
+    at_position: [f64; 3],
     ctx: Option<&hornvale_locale::LocaleContext>,
     at: WorldTime,
     season: u32,
     reflectance_cache: Option<&mut ReflectanceCache>,
 ) -> TileTerrain {
-    let plate_row = win.origin_row + row;
-    let plate_col = win.origin_col + col;
-    let (lat, lon) = mercator::unproject(f, plate_row, plate_col, virtual_w, virtual_h);
-    let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
-    let facet = Facet::containing(pos, win.depth);
-
     // The address terrain is actually defined on. `GeneratedTerrain` lives
     // on the vertices of the `Geosphere` it was generated against and has
     // nothing finer to disclose, so every rung at or below the grid resolves
@@ -2792,20 +2863,22 @@ pub fn terrain_at_tile(
     let grid_level = geo.depth();
     let addr = match facet.ancestor(grid_level) {
         Some(anc) => anc,
-        None => Facet::containing(pos, grid_level),
+        None => Facet::containing(at_position, grid_level),
     };
     let corners = addr
         .corner_weights_memo(geo, index, memo)
         .expect("a facet AT the grid's own level is never coarser than the grid");
 
-    // The nearest of the quad's four corners to the tile's own centre.
+    // The nearest of the quad's four corners to `at_position` — the
+    // tile's own centre when a projected raster asked, the facet's centroid
+    // when a graph-addressed one did.
     // Ties break to the lower `Vertex`, the same direction
     // `NearestVertexIndex`'s own scan breaks them.
     let mut vertex = corners[0].0;
     let mut best = f64::NEG_INFINITY;
     for &(candidate, _weight) in &corners {
         let q = geo.position(candidate);
-        let d = q[0] * pos[0] + q[1] * pos[1] + q[2] * pos[2];
+        let d = q[0] * at_position[0] + q[1] * at_position[1] + q[2] * at_position[2];
         // Exact-equality tie detection is intentional, exactly as
         // `NearestVertexIndex::scan_at` does it: it selects the vertex a
         // strict-`>` first hit in ascending order would have.
@@ -2909,7 +2982,7 @@ pub fn terrain_at_tile(
                 None => {
                     cache.misses += 1;
                     let r = ctx.and_then(|ctx| {
-                        ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()
+                        ctx.reflectance_at_facet_cached(facet, at, Some(memo)).ok()
                     });
                     if let Some(r) = r {
                         cache.store.insert(key, r);
@@ -2920,12 +2993,19 @@ pub fn terrain_at_tile(
         }
         // No cache supplied, or `pack()` refused: exactly the pre-Task-4
         // behaviour, always fresh.
-        _ => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()),
+        _ => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(facet, at, Some(memo)).ok()),
     };
 
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
-        facet,
+        // THE ONE COST THE EXTRACTION ADDS, named rather than left to be
+        // found: `terrain_at_tile` used to MOVE the facet it had just built
+        // into the return, and now clones a borrowed one — a `Vec<u8>` of
+        // `depth` bytes per tile. Taking it by value instead would only move
+        // the same clone to the graph-addressed caller, which holds its
+        // facets in a raster it must not consume. Nothing about the reading
+        // changes; `facet_reading.rs`'s identity is on the VALUE.
+        facet: facet.clone(),
         vertex,
         height_asl,
         band,
