@@ -181,6 +181,30 @@ control worlds were not the existing demographic control. The run is retained
 as an invalid measurement record, not as a verdict; the implementation is
 correcting the argument before one replacement probe is run.
 
+### Task 4 probe — valid authorized replacement
+
+After the disabled path was corrected to pass the identity shortfall `0.0`,
+the controller authorized exactly one replacement of the invalid measurement.
+That replacement completed in `1378.30s` over exactly `200` paired worlds and
+is the authoritative Task 4 result; it does not overwrite the invalid run
+above.
+
+- Control identity: `200/200` worlds.
+- Activation: `178/200` worlds.
+- Attempts: `3,239,066`; proposed `3,239,066/3,239,066`; accepted
+  `163,146/3,239,066`; settled `81,573/3,239,066`; partial
+  `81,573/3,239,066`; refused `1,905,072/3,239,066`; impossible
+  `1,170,848/3,239,066`.
+- Conservation residuals: nonzero in `0/200` treatment worlds.
+- Treatment-only bars, each against its own 200-world denominator:
+  settlement count `6/200`, collapse share `1/200`, alive at now `0/200`.
+- `zero_activation=false`; `crosses_instability_pole=false`.
+
+Verdict under the preregistered bars: D2 activates and does not cross the
+instability pole. Every treatment-only bar remains below its preregistered
+majority threshold (`>100/200`). The invalid first run remains solely the
+record of the control-identity defect and is not part of this verdict.
+
 ## Deferred minors and follow-ups
 
 - Verify the specialization input and shortfall insertion point against the

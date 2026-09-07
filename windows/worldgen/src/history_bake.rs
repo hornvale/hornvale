@@ -2322,6 +2322,66 @@ struct Bake<'a> {
     epoch_years: f64,
 }
 
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum D2EpochEvent {
+    Production {
+        phase: usize,
+        community: usize,
+        added: [f64; 2],
+    },
+    Clearing {
+        phase: usize,
+        deliveries: usize,
+    },
+    Consumption {
+        phase: usize,
+        community: usize,
+        removed: [f64; 2],
+        shortfall_ratio: f64,
+    },
+    Growth {
+        community: usize,
+        shortfall_ratio: f64,
+        population_delta: f64,
+    },
+    Tribute {
+        collected: f64,
+    },
+}
+
+#[cfg(test)]
+std::thread_local! {
+    static D2_EPOCH_TRACE: std::sync::Mutex<Option<Vec<D2EpochEvent>>> =
+        const { std::sync::Mutex::new(None) };
+}
+
+#[cfg(test)]
+fn record_d2_epoch_event(event: D2EpochEvent) {
+    D2_EPOCH_TRACE.with(|trace| {
+        if let Some(events) = trace.lock().expect("D2 epoch trace lock").as_mut() {
+            events.push(event);
+        }
+    });
+}
+
+#[cfg(test)]
+fn capture_d2_epoch_events(run: impl FnOnce()) -> Vec<D2EpochEvent> {
+    D2_EPOCH_TRACE.with(|trace| {
+        let mut trace = trace.lock().expect("D2 epoch trace lock");
+        assert!(trace.is_none(), "D2 epoch tracing must not nest");
+        *trace = Some(Vec::new());
+    });
+    run();
+    D2_EPOCH_TRACE.with(|trace| {
+        trace
+            .lock()
+            .expect("D2 epoch trace lock")
+            .take()
+            .expect("D2 epoch tracing was enabled")
+    })
+}
+
 /// The outcome of [`Bake::relocate`]ing a homeless people.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Relocation {
@@ -3673,6 +3733,61 @@ impl<'a> Bake<'a> {
         self.epoch_growth.resize(self.communities.len(), 0.0);
     }
 
+    /// Run the complete runtime epoch in its load-bearing order. Keeping this
+    /// sequence in one method lets focused fixtures exercise the same path as
+    /// [`bake`], including tribute and end-of-epoch accrual.
+    fn run_epoch(&mut self, year: f64, era: &EraClimate) {
+        // Last epoch's increments are spent: nothing may be taxed twice.
+        self.begin_epoch();
+        let snapshot: Vec<usize> = (0..self.communities.len())
+            .filter(|&i| self.communities[i].alive)
+            .collect();
+        if self.exchange_treatment == ExchangeTreatment::Enabled {
+            let shortfall_ratios = self.exchange_phases(&snapshot, era);
+            for &idx in &snapshot {
+                #[cfg(test)]
+                let before = self.communities[idx].population;
+                self.step_community_with_subsistence_shortfall(
+                    idx,
+                    era,
+                    year,
+                    shortfall_ratios[idx],
+                );
+                #[cfg(test)]
+                record_d2_epoch_event(D2EpochEvent::Growth {
+                    community: idx,
+                    shortfall_ratio: shortfall_ratios[idx],
+                    population_delta: self.communities[idx].population - before,
+                });
+            }
+        } else {
+            for &idx in &snapshot {
+                self.step_community(idx, era, year);
+            }
+        }
+        // The Granary T4: predation runs after every snapshot community has
+        // grown. Anything opened this epoch waits for the next snapshot.
+        self.raid_phases(&snapshot, era, year);
+        // Existing vassal answers bracket tribute: revolt before collection,
+        // flight after it. Typed exchange and consumption have already fed
+        // this epoch's pressure and growth above.
+        self.settle_revolts();
+        #[cfg(test)]
+        let collected_before = self.tally.tribute_collected;
+        let fleeing = self.collect_tribute(year, era);
+        #[cfg(test)]
+        record_d2_epoch_event(D2EpochEvent::Tribute {
+            collected: self.tally.tribute_collected - collected_before,
+        });
+        self.resolve_flights(fleeing, era, year);
+        // The Lot's draw weight is credited once, at epoch end.
+        for idx in 0..self.communities.len() {
+            if self.communities[idx].alive {
+                self.live_an_epoch(idx);
+            }
+        }
+    }
+
     /// Each patron collects from each of its subordinates: it demands what its
     /// assessment says (set from the vertex it can SEE) and receives what the
     /// subordinate hands over — paid from **that epoch's growth and, beyond it,
@@ -4356,53 +4471,105 @@ impl<'a> Bake<'a> {
         // point of this outer range.
         #[allow(clippy::needless_range_loop)]
         for phase in 0..PHASES_PER_YEAR {
-            for &idx in snapshot {
-                if !self.communities[idx].alive {
-                    continue;
-                }
-                let community = &self.communities[idx];
-                let total = self.eff_capacity(era, community.site, community.people_idx)
-                    * PHASES_PER_YEAR as f64
-                    * shares[idx][phase];
-                let production = partition_subsistence_production(total, community.curve);
-                self.communities[idx].subsistence =
-                    carry_subsistence_inventory(community.subsistence, production);
-            }
-
-            let exchange_snapshot: Vec<ExchangeCommunitySnapshot> = snapshot
-                .iter()
-                .copied()
-                .filter(|&idx| self.communities[idx].alive)
-                .map(|idx| {
-                    let community = &self.communities[idx];
-                    ExchangeCommunitySnapshot {
-                        id: community.id,
-                        site: community.site,
-                        projected_population: community.population,
-                        opening_stock: community.subsistence,
-                    }
-                })
-                .collect();
-            let clearing = clear_local_exchange(&self.graphs[self.cur_graph], &exchange_snapshot);
-            self.record_exchange_clearing(&clearing);
-            self.apply_subsistence_deliveries(&clearing.deliveries);
-
-            for &idx in snapshot {
-                if !self.communities[idx].alive {
-                    continue;
-                }
-                let demand = subsistence_basket_demand(self.communities[idx].population);
-                let (remaining, shortfall) =
-                    consume_subsistence(self.communities[idx].subsistence, demand);
-                self.communities[idx].subsistence = remaining;
-                shortfall_sum[idx] += subsistence_shortfall_ratio(shortfall, demand);
-            }
+            self.produce_subsistence_phase(snapshot, era, &shares, phase);
+            self.clear_subsistence_phase(snapshot, phase);
+            self.consume_subsistence_phase(snapshot, phase, &mut shortfall_sum);
         }
 
         shortfall_sum
             .into_iter()
             .map(|sum| sum / PHASES_PER_YEAR as f64)
             .collect()
+    }
+
+    fn produce_subsistence_phase(
+        &mut self,
+        snapshot: &[usize],
+        era: &EraClimate,
+        shares: &[[f64; PHASES_PER_YEAR]],
+        phase: usize,
+    ) {
+        for &idx in snapshot {
+            if !self.communities[idx].alive {
+                continue;
+            }
+            #[cfg(test)]
+            let before = self.communities[idx].subsistence.quantities;
+            let community = &self.communities[idx];
+            let total = self.eff_capacity(era, community.site, community.people_idx)
+                * PHASES_PER_YEAR as f64
+                * shares[idx][phase];
+            let production = partition_subsistence_production(total, community.curve);
+            self.communities[idx].subsistence =
+                carry_subsistence_inventory(community.subsistence, production);
+            #[cfg(test)]
+            {
+                let after = self.communities[idx].subsistence.quantities;
+                record_d2_epoch_event(D2EpochEvent::Production {
+                    phase,
+                    community: idx,
+                    added: [after[0] - before[0], after[1] - before[1]],
+                });
+            }
+        }
+    }
+
+    fn clear_subsistence_phase(&mut self, snapshot: &[usize], _phase: usize) {
+        let exchange_snapshot: Vec<ExchangeCommunitySnapshot> = snapshot
+            .iter()
+            .copied()
+            .filter(|&idx| self.communities[idx].alive)
+            .map(|idx| {
+                let community = &self.communities[idx];
+                ExchangeCommunitySnapshot {
+                    id: community.id,
+                    site: community.site,
+                    projected_population: community.population,
+                    opening_stock: community.subsistence,
+                }
+            })
+            .collect();
+        let clearing = clear_local_exchange(&self.graphs[self.cur_graph], &exchange_snapshot);
+        #[cfg(test)]
+        let delivery_count = clearing.deliveries.len();
+        self.record_exchange_clearing(&clearing);
+        self.apply_subsistence_deliveries(&clearing.deliveries);
+        #[cfg(test)]
+        record_d2_epoch_event(D2EpochEvent::Clearing {
+            phase: _phase,
+            deliveries: delivery_count,
+        });
+    }
+
+    fn consume_subsistence_phase(
+        &mut self,
+        snapshot: &[usize],
+        _phase: usize,
+        shortfall_sum: &mut [f64],
+    ) {
+        for &idx in snapshot {
+            if !self.communities[idx].alive {
+                continue;
+            }
+            let demand = subsistence_basket_demand(self.communities[idx].population);
+            #[cfg(test)]
+            let before = self.communities[idx].subsistence.quantities;
+            let (remaining, shortfall) =
+                consume_subsistence(self.communities[idx].subsistence, demand);
+            self.communities[idx].subsistence = remaining;
+            let shortfall_ratio = subsistence_shortfall_ratio(shortfall, demand);
+            shortfall_sum[idx] += shortfall_ratio;
+            #[cfg(test)]
+            record_d2_epoch_event(D2EpochEvent::Consumption {
+                phase: _phase,
+                community: idx,
+                removed: [
+                    before[0] - remaining.quantities[0],
+                    before[1] - remaining.quantities[1],
+                ],
+                shortfall_ratio,
+            });
+        }
     }
 
     fn record_exchange_clearing(&mut self, clearing: &ExchangeClearing) {
@@ -5378,51 +5545,7 @@ pub fn bake(
         let era_idx = bake.era_index_for(era_years, year);
         bake.cur_graph = era_idx;
         let era = eras[era_idx].clone();
-        // Last epoch's increments are spent: nothing may be taxed twice.
-        bake.begin_epoch();
-        let snapshot: Vec<usize> = (0..bake.communities.len())
-            .filter(|&i| bake.communities[i].alive)
-            .collect();
-        if bake.exchange_treatment == ExchangeTreatment::Enabled {
-            let shortfall_ratios = bake.exchange_phases(&snapshot, &era);
-            for &idx in &snapshot {
-                bake.step_community_with_subsistence_shortfall(
-                    idx,
-                    &era,
-                    year,
-                    shortfall_ratios[idx],
-                );
-            }
-        } else {
-            for idx in &snapshot {
-                bake.step_community(*idx, &era, year);
-            }
-        }
-        // The Granary T4: predation now runs as its own 12-phase pass over
-        // the same snapshot (re-borrowed), stamped within the year (see
-        // `raid_phases`). Snapshot indices only — anything opened this epoch
-        // waits, as before.
-        bake.raid_phases(&snapshot, &era, year);
-        // Tribute is collected once the whole world has stepped, so there is
-        // growth to tax and so no subordinate's remittance depends on whether
-        // its patron happened to be stepped before or after it. Spec §4.3d's
-        // two vassal answers bracket it, and the bracket IS the rule: a vassal
-        // strong enough to refuse refuses before it is milked, and one that
-        // pays a burden it could never regrow leaves after it has paid.
-        // `collect_tribute`'s own doc carries the argument for both positions.
-        bake.settle_revolts();
-        let fleeing = bake.collect_tribute(year, &era);
-        bake.resolve_flights(fleeing, &era, year);
-        // The Lot's draw weight (occ-person-years), accrued ONCE per epoch,
-        // here, at the end — not inside `grow` or beside any `open` call.
-        // See [`Bake::live_an_epoch`]'s doc for why a per-site accrual
-        // double-counted and under-counted at once across a same-epoch
-        // handoff, and why this single end-of-epoch pass is the fix.
-        for idx in 0..bake.communities.len() {
-            if bake.communities[idx].alive {
-                bake.live_an_epoch(idx);
-            }
-        }
+        bake.run_epoch(year, &era);
         year += cfg.epoch_years;
     }
 
@@ -6797,20 +6920,35 @@ mod tests {
         );
     }
 
+    /// Mutation target: deleting typed production, or moving clearing or
+    /// consumption across it, must remove the first funded delivery or invert
+    /// the observed event positions. Moving growth before consumption must
+    /// either invert those positions or hand growth a ratio other than the
+    /// average produced by the twelve real consumption steps.
     #[test]
-    fn treatment_phases_produce_then_clear_then_consume_before_growth() {
+    fn runtime_epoch_produces_then_clears_then_consumes_before_growth() {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = caps_from_fn(&geo, |_| 40.0);
-        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
-        let refugia = VertexMap::from_fn(&geo, |_| false);
-        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
-        bake.exchange_treatment = ExchangeTreatment::Enabled;
         let left_site = Vertex(0);
         let right_site = traversable_neighbors(&graphs[0], left_site)
             .first()
             .copied()
             .expect("the full-land fixture has a direct neighbor");
+        let growth_site = geo
+            .vertices()
+            .find(|site| *site != left_site && *site != right_site)
+            .expect("the fixture has a third site for the nonzero growth marker");
+        let capacity = caps_from_fn(&geo, |site| {
+            if site == left_site || site == right_site {
+                5.0
+            } else {
+                200.0
+            }
+        });
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
         let left = bake.open(
             KindId("goblin"),
             left_site,
@@ -6829,45 +6967,149 @@ mod tests {
             None,
             0.0,
         );
-        bake.communities[left].curve = Curve::new(LatDeg::new(0.0).unwrap(), BiomeClass::Arid);
+        let growth = bake.open(
+            KindId("goblin"),
+            growth_site,
+            0.0,
+            20.0,
+            Founding::Genesis(growth_site),
+            None,
+            0.0,
+        );
+        bake.communities[left].curve = Curve::new(LatDeg::new(-45.0).unwrap(), BiomeClass::Arid);
         bake.communities[right].curve =
-            Curve::new(LatDeg::new(0.0).unwrap(), BiomeClass::Grassland);
-        let before_population = [
-            bake.communities[left].population,
-            bake.communities[right].population,
-        ];
+            Curve::new(LatDeg::new(-45.0).unwrap(), BiomeClass::Grassland);
+        bake.communities[left].subsistence = SubsistenceInventory::new(0.0, 100.0);
+        bake.communities[right].subsistence = SubsistenceInventory::new(100.0, 0.0);
 
-        let shortfall = bake.exchange_phases(&[left, right], &era_at(0.0));
+        let events = capture_d2_epoch_events(|| bake.run_epoch(0.0, &era_at(0.0)));
+        let (clearing_position, funded_phase) = events
+            .iter()
+            .enumerate()
+            .find_map(|(position, event)| match event {
+                D2EpochEvent::Clearing { phase, deliveries } if *deliveries > 0 => {
+                    Some((position, *phase))
+                }
+                _ => None,
+            })
+            .unwrap_or_else(|| {
+                panic!("the complementary-stock fixture must execute a funded clearing: {events:?}")
+            });
 
+        for community in [left, right] {
+            let (production_position, added) = events
+                .iter()
+                .enumerate()
+                .find_map(|(position, event)| match event {
+                    D2EpochEvent::Production {
+                        phase,
+                        community: observed,
+                        added,
+                    } if *phase == funded_phase && *observed == community => {
+                        Some((position, *added))
+                    }
+                    _ => None,
+                })
+                .expect("the funded phase must observe production for both counterparties");
+            assert!(
+                added[0] + added[1] > 0.0,
+                "deleting production must leave an observable zero accrual for community {community}"
+            );
+            assert!(
+                production_position < clearing_position,
+                "production must precede the funded clearing in phase {funded_phase}: {events:?}"
+            );
+
+            let (consumption_position, removed) = events
+                .iter()
+                .enumerate()
+                .find_map(|(position, event)| match event {
+                    D2EpochEvent::Consumption {
+                        phase,
+                        community: observed,
+                        removed,
+                        ..
+                    } if *phase == funded_phase && *observed == community => {
+                        Some((position, *removed))
+                    }
+                    _ => None,
+                })
+                .expect("the funded phase must consume both counterparties' baskets");
+            assert!(
+                removed[0] + removed[1] > 0.0,
+                "consumption must remove real typed stock for community {community}"
+            );
+            assert!(
+                clearing_position < consumption_position,
+                "funded clearing must precede consumption in phase {funded_phase}: {events:?}"
+            );
+
+            let consumed_ratios: Vec<f64> = events
+                .iter()
+                .filter_map(|event| match event {
+                    D2EpochEvent::Consumption {
+                        community: observed,
+                        shortfall_ratio,
+                        ..
+                    } if *observed == community => Some(*shortfall_ratio),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                consumed_ratios.len(),
+                PHASES_PER_YEAR,
+                "every phase must consume exactly once for community {community}"
+            );
+            let average_shortfall = consumed_ratios.iter().sum::<f64>() / PHASES_PER_YEAR as f64;
+            let (growth_position, growth_shortfall) = events
+                .iter()
+                .enumerate()
+                .find_map(|(position, event)| match event {
+                    D2EpochEvent::Growth {
+                        community: observed,
+                        shortfall_ratio,
+                        ..
+                    } if *observed == community => Some((position, *shortfall_ratio)),
+                    _ => None,
+                })
+                .expect("the runtime epoch must pressure/grow every snapshot community");
+            let last_consumption = events
+                .iter()
+                .rposition(|event| {
+                    matches!(event, D2EpochEvent::Consumption { community: observed, .. } if *observed == community)
+                })
+                .expect("the community must carry a final consumption event");
+            assert!(
+                last_consumption < growth_position,
+                "all consumption must precede pressure/growth for community {community}: {events:?}"
+            );
+            assert_eq!(
+                growth_shortfall.to_bits(),
+                average_shortfall.to_bits(),
+                "growth must receive the exact average emitted by real typed consumption"
+            );
+        }
         assert!(
-            bake.exchange.attempts > 0,
-            "zero opening stock can propose only if typed production ran before direct clearing: {:?}",
-            bake.exchange
-        );
-        assert_eq!(
-            [
-                bake.communities[left].population,
-                bake.communities[right].population,
-            ],
-            before_population,
-            "typed production, clearing, and consumption must all finish before pressure/growth mutates population"
-        );
-        assert!(
-            shortfall[left].is_finite()
-                && shortfall[right].is_finite()
-                && shortfall[left] <= 1.0
-                && shortfall[right] <= 1.0,
-            "consumption must return bounded, non-vacuous pressure inputs: {shortfall:?}"
-        );
-        assert_eq!(
-            bake.exchange.conservation_residuals,
-            [0.0, 0.0],
-            "the integrated clearing must conserve both typed stocks"
+            events.iter().any(|event| {
+                matches!(
+                    event,
+                    D2EpochEvent::Growth {
+                        community,
+                        shortfall_ratio,
+                        population_delta,
+                    } if *community == growth && *shortfall_ratio > 0.0 && *population_delta != 0.0
+                )
+            }),
+            "the separate high-capacity community must exercise nonzero consumed shortfall and nonzero growth: {events:?}"
         );
     }
 
+    /// Mutation target: moving tribute collection before typed exchange,
+    /// consumption, or growth must invert the runtime trace; bypassing the
+    /// runtime loop cannot satisfy this fixture because only `run_epoch` is
+    /// invoked after the relation is installed.
     #[test]
-    fn treatment_growth_and_existing_tribute_follow_typed_consumption() {
+    fn runtime_epoch_collects_existing_tribute_after_exchange_and_growth() {
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
         let capacity = caps_from_fn(&geo, |_| 200.0);
@@ -6884,7 +7126,7 @@ mod tests {
             KindId("goblin"),
             patron_site,
             0.0,
-            30.0,
+            60.0,
             Founding::Genesis(patron_site),
             None,
             0.0,
@@ -6903,19 +7145,6 @@ mod tests {
             Curve::new(LatDeg::new(0.0).unwrap(), BiomeClass::Grassland);
         bake.communities[patron].subsistence = SubsistenceInventory::new(0.0, 100.0);
         bake.communities[subordinate].subsistence = SubsistenceInventory::new(100.0, 0.0);
-        bake.begin_epoch();
-        let shortfall = bake.exchange_phases(&[patron, subordinate], &era_at(0.0));
-        assert!(bake.exchange.settled > 0, "exchange marker must be nonzero");
-        bake.step_community_with_subsistence_shortfall(
-            subordinate,
-            &era_at(0.0),
-            0.0,
-            shortfall[subordinate],
-        );
-        assert!(
-            bake.epoch_growth[subordinate] > 0.0,
-            "the pressure/growth marker must follow consumption and be positive"
-        );
         bake.tribute.insert(
             subordinate,
             Tribute {
@@ -6925,11 +7154,38 @@ mod tests {
                 last_seen_population: 30.0,
             },
         );
-        assert_eq!(bake.tally.tribute_collected, 0.0);
-        bake.collect_tribute(0.0, &era_at(0.0));
+        let events = capture_d2_epoch_events(|| bake.run_epoch(0.0, &era_at(0.0)));
+
+        let funded_clearing = events
+            .iter()
+            .position(|event| matches!(event, D2EpochEvent::Clearing { deliveries, .. } if *deliveries > 0))
+            .expect("the tribute fixture must execute funded exchange");
+        let last_consumption = events
+            .iter()
+            .rposition(|event| matches!(event, D2EpochEvent::Consumption { removed, .. } if removed[0] + removed[1] > 0.0))
+            .expect("the tribute fixture must consume real typed stock");
+        let last_growth = events
+            .iter()
+            .rposition(|event| matches!(event, D2EpochEvent::Growth { population_delta, .. } if *population_delta != 0.0))
+            .expect("the tribute fixture must execute nonzero growth");
+        let (tribute_position, collected) = events
+            .iter()
+            .enumerate()
+            .find_map(|(position, event)| match event {
+                D2EpochEvent::Tribute { collected } => Some((position, *collected)),
+                _ => None,
+            })
+            .expect("the runtime epoch must reach existing tribute collection");
+
         assert!(
-            bake.tally.tribute_collected > 0.0,
-            "existing tribute must collect only after typed exchange, consumption, and growth"
+            collected > 0.0,
+            "the relation must remit a real positive quantity, not merely reach collection"
+        );
+        assert!(
+            funded_clearing < last_consumption
+                && last_consumption < last_growth
+                && last_growth < tribute_position,
+            "runtime order must be exchange -> consumption -> growth -> tribute: {events:?}"
         );
     }
 

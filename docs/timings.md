@@ -125,6 +125,16 @@ Below the table is no better a home, because `timed.sh` appends new rows with
 `>> "$LEDGER"` — anything at the file's end is overtaken by the next run. So
 the preamble is the only position that survives both Markdown and the writer.
 
+**The two Staple D2 integrated 200-seed probe rows are wall-only reconstructed
+records.** The probe command was not wrapped by `scripts/timed.sh`, so no
+verifiable `user_s`, `sys_s`, or `cpu_ratio` exists; those cells are `?` rather
+than invented values. The timestamps are the exact UTC modification times of
+the complete captured outputs, and the wall durations are the test-harness
+durations printed in those outputs. The first row is explicitly invalid
+because its disabled path used shortfall `1.0`; the authorized replacement row
+is the authoritative measurement after correcting that path to identity
+shortfall `0.0`.
+
 **The Granary T6 tail-less founder sweep (2026-08-24, `campaign/the-granary`,
 MacBookPro, ten threads) — wall 974 s**, run as the `#[ignore]`d harness
 `granary_tail_less_sweep_writes_its_counts` in
@@ -6418,9 +6428,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T03:44:17Z | gate-commit | 61.430 | 163.554 | 49.608 | 3.47 | 0 | cabfa6f67 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T04:02:13Z | gate-commit | 64.386 | 165.707 | 50.728 | 3.36 | 0 | 6ecd20306 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T04:03:30Z | gate-commit | 40.271 | 65.380 | 16.885 | 2.04 | 0 | 6ecd20306 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T04:51:18Z | probe:staple-d2-integrated-200-seed-invalid | 1416.48 | ? | ? | ? | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T04:56:42Z | quick | 22.961 | 40.544 | 12.395 | 2.31 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T04:57:31Z | quick | 23.631 | 22.988 | 0.507 | 0.99 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T04:59:15Z | gate-commit | 66.402 | 308.082 | 33.677 | 5.15 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T05:00:19Z | gate-commit | 35.122 | 57.455 | 14.521 | 2.05 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T05:01:51Z | gate-commit | 33.193 | 63.721 | 16.451 | 2.42 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T05:30:36Z | probe:staple-d2-integrated-200-seed-replacement | 1378.30 | ? | ? | ? | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T05:32:48Z | gate-commit | 46.936 | 93.138 | 49.639 | 3.04 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T05:34:00Z | gate-commit | 32.373 | 62.919 | 16.515 | 2.45 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T06:02:06Z | gate-commit (RED, lexicon ratchet — NOT a gate timing) | 53.608 | 134.178 | 47.892 | 3.40 | 0 | faa559e49 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T06:04:00Z | gate-commit | 49.602 | 99.223 | 51.554 | 3.04 | 0 | faa559e49 | campaign/the-staple-d2 | MacBookPro | 10 |
