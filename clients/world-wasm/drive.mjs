@@ -1,13 +1,14 @@
 // The catalog's golden smoke: wasm scene JSON must be byte-identical to
 // the native CLI's (the two-language golden contract at the wasm seam).
 // Usage: node drive.mjs <wasm> <native-system.json> <native-tiles.json> \
-//                       <tiles-width> <native-pinned-tiles.json> <native-region.json>
+//                       <tiles-width> <native-pinned-tiles.json> <native-region.json> \
+//                       <native-binary-system.json>
 import { readFileSync } from "node:fs";
 
-const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath, regionPath] = process.argv.slice(2);
-if (!pinnedTilesPath || !regionPath) {
+const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath, regionPath, binarySysPath] = process.argv.slice(2);
+if (!pinnedTilesPath || !regionPath || !binarySysPath) {
   console.error(
-    "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> <region.json>",
+    "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> <region.json> <binary-system.json>",
   );
   process.exit(2);
 }
@@ -43,6 +44,15 @@ new Uint8Array(e.memory.buffer, e.hw_in_ptr(), pins.length).set(pins);
 expect(e.hw_new_pinned(42n, pins.length), 0, "hw_new_pinned(42, plates=12)");
 expect(e.hw_scene_tiles(width), 0, "hw_scene_tiles (pinned)");
 golden(out(), pinnedTilesPath, "scene/tiles/v1 (seed 42, plates=12)");
+
+// Binary topology and wanderer elements use the same native scene producer.
+const binaryPins = new TextEncoder().encode(
+  JSON.stringify({ "stellar-topology": "close-binary", wanderers: 3 }),
+);
+new Uint8Array(e.memory.buffer, e.hw_in_ptr(), binaryPins.length).set(binaryPins);
+expect(e.hw_new_pinned(42n, binaryPins.length), 0, "hw_new_pinned(42, close-binary, wanderers=3)");
+expect(e.hw_scene_system(), 0, "hw_scene_system (close-binary)");
+golden(out(), binarySysPath, "scene/system/v1 (seed 42, close-binary, wanderers=3)");
 
 // Staleness: the catalog caches ONE SceneContext per world (The Cistern), so
 // every hw_new* must drop it with the world. The live context here is the
@@ -185,4 +195,4 @@ if (e.hw_scene_tiles_selected(width, writeIn(JSON.stringify(["elevation_m"]))) !
   fail("projected scene after cleared world", "expected -3");
 }
 
-console.log("world-wasm smoke OK (system + tiles + tiles-region + pinned byte-identical; projection omits what was not asked for and preserves what was, byte for byte; error envelopes sound; scene context reset)");
+console.log("world-wasm smoke OK (single and binary system scenes plus tiles and region are byte-identical; projection and error envelopes sound; scene context reset)");

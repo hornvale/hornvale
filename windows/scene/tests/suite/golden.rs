@@ -6,7 +6,7 @@
 
 use hornvale_scene::{
     TileFields, region_json, render_surrounds_ascii, scene_json, scene_json_selected,
-    surrounds_json, surrounds_scene, tiles_region_scene, tiles_scene,
+    surrounds_json, surrounds_scene, system_json, system_scene, tiles_region_scene, tiles_scene,
 };
 
 // Integration tests can't see #[cfg(test)] helpers, and the public API
@@ -22,8 +22,80 @@ fn world() -> hornvale_kernel::World {
     .expect("seed 1 builds")
 }
 
+fn system_world(
+    topology: hornvale_astronomy::StellarTopology,
+    wanderers: u32,
+) -> hornvale_kernel::World {
+    hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins {
+            topology: Some(topology),
+            wanderers: Some(wanderers),
+            ..Default::default()
+        },
+        &Default::default(),
+        &Default::default(),
+    )
+    .expect("pinned system builds")
+}
+
 fn seed_1_json() -> String {
     scene_json(&tiles_scene(&world(), 16).unwrap())
+}
+
+#[test]
+fn system_scene_appends_stellar_then_wanderers_after_legacy_fields() {
+    let scene = system_scene(&system_world(
+        hornvale_astronomy::StellarTopology::Single,
+        2,
+    ))
+    .expect("single system builds");
+    let json = system_json(&scene);
+    let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let positions = [
+        "schema",
+        "seed",
+        "star",
+        "world",
+        "moons",
+        "stellar",
+        "wanderers",
+    ]
+    .map(|key| json.find(&format!("\"{key}\":")).unwrap());
+    assert!(positions.windows(2).all(|pair| pair[0] < pair[1]));
+    assert_eq!(value["stellar"]["topology"], "single");
+    assert!(value["stellar"].get("companion").is_none());
+    assert_eq!(value["wanderers"].as_array().unwrap().len(), 2);
+    for wanderer in value["wanderers"].as_array().unwrap() {
+        for field in [
+            "orbit_au",
+            "period_days",
+            "phase_offset",
+            "class",
+            "albedo",
+            "synodic_period_days",
+        ] {
+            assert!(
+                wanderer.get(field).is_some(),
+                "missing wanderer field {field}"
+            );
+        }
+    }
+}
+
+#[test]
+fn pinned_close_binary_scene_contains_both_stars_and_wanderer_count() {
+    let scene = system_scene(&system_world(
+        hornvale_astronomy::StellarTopology::CloseBinary,
+        3,
+    ))
+    .expect("close binary system builds");
+    let value: serde_json::Value = serde_json::from_str(&system_json(&scene)).unwrap();
+    assert_eq!(value["stellar"]["topology"], "close-binary");
+    assert!(value["stellar"]["primary"].is_object());
+    assert!(value["stellar"]["companion"]["star"].is_object());
+    assert!(value["stellar"]["companion"]["orbit"].is_object());
+    assert_eq!(value["wanderers"].as_array().unwrap().len(), 3);
 }
 
 #[test]
