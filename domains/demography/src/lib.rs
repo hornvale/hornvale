@@ -17,6 +17,8 @@ pub mod condense;
 pub mod flow;
 pub mod footprint;
 pub mod founder;
+pub mod groups;
+pub mod kinship;
 pub mod niche;
 pub mod render;
 pub mod reproductive;
@@ -29,6 +31,14 @@ pub use condense::{Condensation, condense};
 pub use flow::{Flow, flow};
 pub use footprint::home_range;
 pub use founder::condense_tagged;
+pub use groups::{
+    ContextRule, GroupBasis, GroupKey, GroupMember, GroupProjection, SocialContext, derive_groups,
+};
+pub use kinship::{
+    CareKind, CareProjection, InheritanceClaim, KinshipKind, KinshipRelation, ProjectionBounds,
+    ProjectionError, ProjectionEvent, ProjectionRelationKind, derive_care, derive_inheritance,
+    derive_kinship,
+};
 pub use render::{density_ppm, refugia_ppm, stack_density_ppm, strife_ppm};
 pub use reproductive::{
     CareBurdenDistribution, HybridOutcome, HybridOutcomeDistribution, IndependenceOutcome,

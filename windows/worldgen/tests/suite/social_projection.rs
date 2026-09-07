@@ -76,7 +76,7 @@ fn pins() -> SocialProjectionPins {
     SocialProjectionPins::new(6, WorldTime::GENESIS).unwrap()
 }
 
-fn project(society: SyntheticSociety) -> SocialProjection {
+pub(super) fn project(society: SyntheticSociety) -> SocialProjection {
     project_social_cohort(&summary(), Seed(42), &pins(), society).unwrap()
 }
 

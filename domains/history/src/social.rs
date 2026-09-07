@@ -46,6 +46,10 @@ impl std::fmt::Display for SocialEventError {
 impl std::error::Error for SocialEventError {}
 
 /// Foundational relation kinds and their source-to-target direction.
+///
+/// placement: deliberate(history owns realized events while demography owns
+/// pure projection inputs; sibling domains stay independent and worldgen
+/// performs the lossless conversion) shape(11b622)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RelationKind {
     /// Originator or origin source → originated person.

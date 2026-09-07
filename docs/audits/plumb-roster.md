@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 336 |
+| Files parsed | 338 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -224,7 +224,7 @@ counts are already the Coverage table above. 41 finding(s).
 ## The contested middle
 
 368 of the 760 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 141 of the 336 files parsed —
+the kind-adjacency markers above, across 141 of the 338 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 368 of them are declared.
 

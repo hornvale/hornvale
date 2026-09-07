@@ -1,8 +1,10 @@
 //! Opt-in realization of aggregate social cohorts for synthetic probes.
 
 use hornvale_demography::{
-    BiologicalTransitionCapability, DescentMode, LifecycleTransitionKind, OffspringOrigin,
-    ReproductiveRole, SocialCohortSummary,
+    BiologicalTransitionCapability, CareProjection, DescentMode, GroupProjection, InheritanceClaim,
+    KinshipRelation, LifecycleTransitionKind, OffspringOrigin, ProjectionBounds, ProjectionError,
+    ProjectionEvent, ProjectionRelationKind, ReproductiveRole, SocialCohortSummary, SocialContext,
+    derive_care, derive_groups, derive_inheritance, derive_kinship,
 };
 use hornvale_history::{
     AssociationForm, GroupMembershipEvent, LifecycleEvent, RelationEvent, RelationKind,
@@ -91,6 +93,37 @@ impl SocialProjection {
     /// Realized group entities in deterministic mint order.
     pub fn groups(&self) -> &[EntityId] {
         &self.groups
+    }
+}
+
+/// Pure social readings derived at the composition root from realized events.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SocialReadout {
+    kinship: Vec<KinshipRelation>,
+    care: Vec<CareProjection>,
+    groups: Vec<GroupProjection>,
+    inheritance: Vec<InheritanceClaim>,
+}
+
+impl SocialReadout {
+    /// Ordered culture-neutral kinship readings.
+    pub fn kinship(&self) -> &[KinshipRelation] {
+        &self.kinship
+    }
+
+    /// Ordered care, custody, adoption, and recognition readings.
+    pub fn care(&self) -> &[CareProjection] {
+        &self.care
+    }
+
+    /// Ordered, time-bounded group projections.
+    pub fn groups(&self) -> &[GroupProjection] {
+        &self.groups
+    }
+
+    /// Ordered post-death inheritance claims.
+    pub fn inheritance(&self) -> &[InheritanceClaim] {
+        &self.inheritance
     }
 }
 
@@ -259,6 +292,84 @@ fn membership(
         end,
         provenance(),
     )?))
+}
+
+/// Translate realized history events once at the composition boundary, then
+/// run the kernel-only demography projections without changing source events.
+pub fn derive_social_readout(
+    events: &[SocialEvent],
+    context: &SocialContext,
+    bounds: ProjectionBounds,
+) -> Result<SocialReadout, ProjectionError> {
+    let observations = events
+        .iter()
+        .map(projection_event_from)
+        .collect::<Result<Vec<_>, ProjectionError>>()?;
+    Ok(SocialReadout {
+        kinship: derive_kinship(&observations, bounds)?,
+        care: derive_care(&observations, bounds)?,
+        groups: derive_groups(&observations, context, bounds)?,
+        inheritance: derive_inheritance(&observations, context, bounds)?,
+    })
+}
+
+fn projection_event_from(event: &SocialEvent) -> Result<ProjectionEvent, ProjectionError> {
+    let fact = event.fact();
+    match event {
+        SocialEvent::Relation(relation) => ProjectionEvent::relation(
+            match relation.kind() {
+                RelationKind::Origin => ProjectionRelationKind::Origin,
+                RelationKind::Descent => ProjectionRelationKind::Descent,
+                RelationKind::Care => ProjectionRelationKind::Care,
+                RelationKind::Dependency => ProjectionRelationKind::Dependency,
+                RelationKind::Association => ProjectionRelationKind::Association,
+                RelationKind::Residence => ProjectionRelationKind::Residence,
+                RelationKind::Custody => ProjectionRelationKind::Custody,
+                RelationKind::Transfer => ProjectionRelationKind::Transfer,
+                RelationKind::Recognition => ProjectionRelationKind::Recognition,
+            },
+            relation.source(),
+            relation.target(),
+            relation.start(),
+            relation.end(),
+            relation
+                .association_form()
+                .map(|form| form.as_str().to_string())
+                .or_else(|| relation.interpretation().map(str::to_string)),
+            &fact.provenance,
+        ),
+        SocialEvent::Membership(membership) => ProjectionEvent::membership(
+            membership.member(),
+            membership.group(),
+            membership.start(),
+            membership.end(),
+            &fact.provenance,
+        ),
+        SocialEvent::Lifecycle(_) => match fact.predicate.as_str() {
+            "separate" => {
+                let hornvale_kernel::Value::Entity(target) = fact.object else {
+                    unreachable!("validated separation facts carry an entity target")
+                };
+                ProjectionEvent::separation(
+                    fact.subject,
+                    target,
+                    fact.day.expect("validated lifecycle facts carry a time"),
+                    &fact.provenance,
+                )
+            }
+            "dissolve" => ProjectionEvent::dissolution(
+                fact.subject,
+                fact.day.expect("validated lifecycle facts carry a time"),
+                &fact.provenance,
+            ),
+            "die" => ProjectionEvent::death(
+                fact.subject,
+                fact.day.expect("validated lifecycle facts carry a time"),
+                &fact.provenance,
+            ),
+            _ => unreachable!("history exposes only the three validated lifecycle kinds"),
+        },
+    }
 }
 
 /// Realize one synthetic cohort on the dedicated social-projection stream.
