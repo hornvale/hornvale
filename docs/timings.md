@@ -6640,3 +6640,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T20:44:26Z | rebaseline | 156.244 | 434.746 | 17.556 | 2.89 | 0 | 4cd6052f6 | campaign/the-sett | MacBookPro | 10 |
 | 2026-09-07T20:52:22Z | game-check | 148.059 | 819.270 | 35.932 | 5.78 | 0 | 5553da774 | campaign/the-sett | MacBookPro | 10 |
 | 2026-09-07T21:07:19Z | gate-commit | 203.753 | 452.031 | 63.771 | 2.53 | 0 | 9c8dfa442 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T21:52:09Z | census-tail-chorus | 53.525 | 676.544 | 19.491 | 13.00 | 0 | b22b9766b |  | lefford | 40 |
+| 2026-09-07T21:52:11Z | census-tail-domesday | 1.178 | 1.049 | 0.129 | 1.00 | 0 | b22b9766b |  | lefford | 40 |
+| 2026-09-07T21:52:12Z | census-tail-anomalies | 0.878 | 0.747 | 0.132 | 1.00 | 0 | b22b9766b |  | lefford | 40 |
+| 2026-09-07T21:52:14Z | sluice:artifacts | 293.458 | 1708.175 | 70.238 | 6.06 | 0 | b22b9766b |  | lefford | 40 |
