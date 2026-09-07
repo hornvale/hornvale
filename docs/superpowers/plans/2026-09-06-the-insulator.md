@@ -109,11 +109,11 @@
 
   Measure the existing `tools/digest` workspace, including `digest-thing` and `digest-census-publication`. Include one cold target, one warm target, and invalidation probes for a protocol edit, an observer edit, a lab edit, and an unrelated workspace edit. Freeze the workload and source identities before collecting timing records.
 
-- [ ] **Step 4: Run the baseline on Mac and inspect the records.**
+- [x] **Step 4: Run the baseline on Mac and inspect the records.**
 
   Run the recorder with an owned output directory and verify every attempt has a source identity, graph identity, output hash, cleanup result, and separate preparation/build/test durations. Inspect the output diffs manually before committing the summary.
 
-- [ ] **Step 5: Commit the frozen baseline contract and local summary.**
+- [x] **Step 5: Commit the frozen baseline contract and local summary.**
 
   ```bash
   git add tools/digest/experiments/the-insulator
