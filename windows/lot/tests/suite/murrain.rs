@@ -1,4 +1,6 @@
-use hornvale_history::record::CauseOfEnd;
+use hornvale_history::record::{
+    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
+};
 use hornvale_kernel::{KindId, Vertex};
 use hornvale_lot::context::assemble;
 use hornvale_lot::draw::{CauseProvenance, DeathCause, Ending, draw, odds_at};
@@ -8,6 +10,7 @@ use hornvale_lot::narrate::narrate;
 use hornvale_lot::projection::{Projection, ProjectionMateriality, SourceCohort};
 use hornvale_lot::slots::{SlotValue, Source, tell};
 use hornvale_lot::{LotIndex, Pick};
+use hornvale_worldgen::{BakeId, BakeOccupation, History, OutbreakEvent, emit_history};
 
 #[test]
 fn endemic_flux_weight_reads_the_authoritative_population_substrate() {
@@ -178,6 +181,137 @@ fn plague_rendering_cites_the_closing_event_and_paired_facts() {
         .expect("closing event has outbreak-deaths fact");
     assert_eq!(struck.subject, deaths.subject);
     assert_eq!(struck.place, deaths.place);
+    assert_eq!(struck.day, deaths.day);
+}
+
+#[test]
+fn emitted_interleaved_rehit_keeps_the_closing_a_event_through_lot_rendering() {
+    let components = hornvale_worldgen::WorldComponents::assemble().unwrap();
+    let mut world = hornvale_worldgen::build_world_to(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+        &components,
+        hornvale_worldgen::BuildDepth::Terrain,
+    )
+    .unwrap();
+    let site = Vertex(7);
+    let community = BakeId(91_001);
+    let mut history = History::new(
+        vec![BakeOccupation {
+            core: Occupation {
+                people: KindId("goblin"),
+                site,
+                founded: 0.0,
+                ended: Some(50.0),
+                peak_population: 100,
+                tech: TechHorizon::Neolithic,
+                function: Function::Agrarian,
+                deity: None,
+                tongue: None,
+                cause: Some(CauseOfEnd::Plague),
+                notability: Notability::Common,
+                delve_depth_m: 0.0,
+                person_years: 20_000.0,
+            },
+            community,
+            lineage: community,
+            founded_from: Founding::Genesis(site),
+            ended_by: Ended::Nature,
+        }],
+        2500.0,
+    );
+    history.outbreaks = vec![
+        // The bake saw A (nonlethal), B (nonlethal), then A (closing). Its
+        // aggregate moves the closing A to the emitted position, so the
+        // history crossing is [B, A], with A's event identity last.
+        OutbreakEvent {
+            occupation: community,
+            pathogen: KindId("the-pox"),
+            year: 50.0,
+            deaths: 1.0,
+        },
+        OutbreakEvent {
+            occupation: community,
+            pathogen: KindId("the-pest"),
+            year: 50.0,
+            deaths: 1.0,
+        },
+    ];
+    emit_history(&mut world, &history).unwrap();
+    let world_entity = world
+        .ledger
+        .find("sky-provider")
+        .next()
+        .expect("terrain world has a scenario pin")
+        .subject;
+    hornvale_worldgen::emit_now(&mut world, world_entity, history.now).unwrap();
+
+    let ctx = assemble(&world).unwrap();
+    let pick = Pick {
+        year: Some(0.0),
+        site: Some(site),
+    };
+    let life = (0..200_000)
+        .map(|index| draw(&ctx, LotIndex(index), &pick).unwrap())
+        .find(|life| {
+            matches!(
+                (&life.ending, &life.cause, &life.cause_provenance),
+                (
+                    Ending::CommunityFate(CauseOfEnd::Plague),
+                    Some(DeathCause::Pathogen(KindId("the-pest"))),
+                    Some(CauseProvenance::Outbreak {
+                        pathogen: KindId("the-pest"),
+                        ..
+                    })
+                )
+            )
+        })
+        .expect("the emitted A/B/A fixture yields a closing A Plague life");
+    let story = tell(&world, &ctx, &life);
+    let cause = story.slot("cause").expect("cause slot exists");
+    let event = match life.cause_provenance {
+        Some(CauseProvenance::Outbreak { event, .. }) => event,
+        other => panic!("fixture has unexpected provenance: {other:?}"),
+    };
+    assert_eq!(cause.value, SlotValue::Filled("the pest".to_string()));
+    assert_eq!(
+        cause
+            .sources
+            .iter()
+            .filter(|source| matches!(
+                source,
+                Source::Derived { function, .. } if *function == "lot::draw::hazard_cause"
+            ))
+            .count(),
+        0,
+        "Outbreak/Plague provenance must not cite hazard_cause"
+    );
+    assert!(cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Fact { entity, predicate, .. }
+            if *entity == event.get() && predicate == hornvale_epidemiology::STRUCK_BY
+    )));
+    assert!(cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Fact { entity, predicate, .. }
+            if *entity == event.get() && predicate == hornvale_epidemiology::OUTBREAK_DEATHS
+    )));
+    let struck = world
+        .ledger
+        .facts_of(event, hornvale_epidemiology::STRUCK_BY)
+        .next()
+        .expect("closing A has struck-by fact");
+    let deaths = world
+        .ledger
+        .facts_of(event, hornvale_epidemiology::OUTBREAK_DEATHS)
+        .next()
+        .expect("closing A has outbreak-deaths fact");
+    assert_eq!(struck.subject, event);
+    assert_eq!(deaths.subject, event);
+    assert_eq!(struck.place, Some(life.ending_occupation));
+    assert_eq!(deaths.place, Some(life.ending_occupation));
     assert_eq!(struck.day, deaths.day);
 }
 
