@@ -298,6 +298,13 @@ class AttemptTests(unittest.TestCase):
             self.assertTrue((evidence / "observed.txt").exists())
             self.assertFalse(checkout_marker.exists())
 
+    def test_macos_profile_allows_rust_runtime_sysctl_reads(self):
+        if platform.system() != "Darwin":
+            self.skipTest("macOS sandbox profile only")
+        profile = measure._sandbox_profile([Path("/owned/target"), Path("/owned/evidence")])
+        self.assertIn("(allow sysctl-read)", profile)
+        self.assertNotIn('(allow file-write* (subpath "/"))', profile)
+
     def test_capture_rejects_unknown_workload_before_launch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

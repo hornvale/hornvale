@@ -491,7 +491,13 @@ def _covers_checkout(path: Path, checkout: Path) -> bool:
 
 
 def _sandbox_profile(roots: list[Path]) -> str:
-    lines = ["(version 1)", "(deny default)", "(allow process*)", "(allow file-read*)"]
+    # Rust's Unix runtime reads sysctl state while creating its stack guard
+    # page.  Without this narrow read permission sandbox-exec aborts before
+    # Cargo can start, reporting EINVAL from stack_overflow.rs.
+    lines = [
+        "(version 1)", "(deny default)", "(allow process*)",
+        "(allow file-read*)", "(allow sysctl-read)",
+    ]
     lines.extend(f'(allow file-write* (subpath "{root}"))' for root in roots)
     return "\n".join(lines) + "\n"
 
