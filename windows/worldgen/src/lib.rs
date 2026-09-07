@@ -178,7 +178,7 @@ pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
 pub use social_projection::{
     SocialProjection, SocialProjectionError, SocialProjectionPins, SocialReadout, SyntheticSociety,
-    derive_social_readout, project_social_cohort,
+    approved_lot_probe_projection, derive_social_readout, project_social_cohort,
 };
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{

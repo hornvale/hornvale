@@ -1,10 +1,15 @@
 //! Opt-in realization of aggregate social cohorts for synthetic probes.
 
 use hornvale_demography::{
-    BiologicalTransitionCapability, CareProjection, DescentMode, GroupProjection, InheritanceClaim,
-    KinshipRelation, LifecycleTransitionKind, OffspringOrigin, ProjectionBounds, ProjectionError,
-    ProjectionEvent, ProjectionRelationKind, ReproductiveRole, SocialCohortSummary, SocialContext,
-    derive_care, derive_groups, derive_inheritance, derive_kinship,
+    AssociationDistribution, BiologicalCareTopology, BiologicalDevelopmentSite,
+    BiologicalTransitionCapability, CareProjection, CareTopology, DescentDistribution, DescentMode,
+    DescentRelation, GroupProjection, HybridOutcomeDistribution, InheritanceClaim,
+    InheritanceDistribution, KinshipRelation, LifecycleTransition, LifecycleTransitionKind,
+    MigrationDistribution, OffspringOrigin, OffspringPathway, ProjectionBounds, ProjectionError,
+    ProjectionEvent, ProjectionRelationKind, ReproductivePopulationSummary,
+    ReproductivePossibility, ReproductiveRole, RoleAvailabilityDistribution, SocialCohortInput,
+    SocialCohortSummary, SocialContext, SocialSubstrateInput, derive_care, derive_groups,
+    derive_inheritance, derive_kinship, summarize_social_cohort,
 };
 use hornvale_history::{
     AssociationForm, GroupMembershipEvent, LifecycleEvent, RelationEvent, RelationKind,
@@ -35,6 +40,68 @@ pub enum SyntheticSociety {
     InstitutionalRecognition,
     /// Independent social transition plus parental death and care transfer.
     LifecycleTransition,
+}
+
+/// The bounded, non-canon projection used by cross-window Lot probes. Keeping
+/// this constructor beside the projection API makes the integration test use
+/// the same approved synthetic path as worldgen's own anti-vacuity suite.
+pub fn approved_lot_probe_projection(
+    seed: Seed,
+) -> Result<SocialProjection, SocialProjectionError> {
+    let summary = summarize_social_cohort(&SocialCohortInput {
+        substrate: SocialSubstrateInput {
+            reproductive: ReproductivePopulationSummary {
+                possibility: ReproductivePossibility {
+                    pathway_count: 1,
+                    hybrid_applicable: false,
+                    hybrid_outcomes: vec![],
+                },
+                maturity_age: hornvale_kernel::Years::new(0.0).unwrap(),
+                generation_length: hornvale_kernel::Years::new(0.0).unwrap(),
+                dependency_duration: hornvale_kernel::Years::new(0.0).unwrap(),
+                expected_offspring: 0.0,
+                survival_to_independence: 0.0,
+                expected_care_burden: 0.0,
+                expected_independent_offspring_per_event: 0.0,
+                expected_independent_offspring_per_generation: 0.0,
+                persistence_balance: 0.0,
+                reproductive_roles: RoleAvailabilityDistribution::new(vec![
+                    (ReproductiveRole::MaterialProducer, 1.0),
+                    (ReproductiveRole::DevelopmentCarrier, 1.0),
+                ])
+                .unwrap(),
+                hybrid_outcomes: HybridOutcomeDistribution::new(vec![]).unwrap(),
+            },
+        },
+        offspring_pathways: vec![OffspringPathway {
+            origin: OffspringOrigin::JoinedInputs,
+            development_site: BiologicalDevelopmentSite::Body,
+            care_topology: Some(BiologicalCareTopology::BodyGroup),
+            prerequisite_transition: None,
+        }],
+        descent_relations: vec![DescentRelation {
+            mode: DescentMode::CombinedSources,
+            contributing_source_count: 2,
+        }],
+        compatibility_relations: vec![],
+        transition_capabilities: vec![BiologicalTransitionCapability::DevelopmentalMaturation],
+        lifecycle_transitions: vec![
+            LifecycleTransition::new(LifecycleTransitionKind::Independence, 0.5).unwrap(),
+            LifecycleTransition::new(LifecycleTransitionKind::AssociationFormation, 0.5).unwrap(),
+            LifecycleTransition::new(LifecycleTransitionKind::AssociationDissolution, 0.25)
+                .unwrap(),
+            LifecycleTransition::new(LifecycleTransitionKind::Migration, 0.25).unwrap(),
+            LifecycleTransition::new(LifecycleTransitionKind::ParentalDeath, 0.125).unwrap(),
+        ],
+        associations: AssociationDistribution::new(vec![(3, 1.0)]).unwrap(),
+        descent: DescentDistribution::new(vec![(2, 1.0)]).unwrap(),
+        care_topology: CareTopology::new(vec![(2, 1.0)]).unwrap(),
+        migration: MigrationDistribution::new(vec![(2, 1.0)]).unwrap(),
+        inheritance: InheritanceDistribution::new(vec![(1, 1.0)]).unwrap(),
+    })
+    .map_err(|error| SocialProjectionError::new(error.to_string()))?;
+    let pins = SocialProjectionPins::new(6, WorldTime::GENESIS)?;
+    project_social_cohort(&summary, seed, &pins, SyntheticSociety::RecomposingMobility)
 }
 
 /// Bounded realization controls for a synthetic projection.

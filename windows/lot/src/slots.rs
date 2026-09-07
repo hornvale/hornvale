@@ -171,8 +171,54 @@ fn by_design(reason: &'static str) -> Answer {
     (SlotValue::Silent(Silence::ByDesign(reason)), Vec::new())
 }
 
-fn social_person(ctx: &LotContext, life: &Life) -> Option<EntityId> {
-    ctx.social_person(life.index)
+#[derive(Clone, Copy)]
+struct SocialBoundary {
+    person: EntityId,
+    from: f64,
+    until: f64,
+}
+
+fn social_boundary(world: &World, ctx: &LotContext, life: &Life) -> Option<SocialBoundary> {
+    let person = ctx.social_person_for_occupation(life.occupation)?;
+    let from = hornvale_worldgen::ledger_day_of_bake_year(life.birth_year);
+    let until = hornvale_worldgen::ledger_day_of_bake_year(life.death_year);
+    let founded = world
+        .ledger
+        .facts_of(person, hornvale_person::PERSON_FOUNDED)
+        .any(|fact| {
+            matches!(fact.object, Value::Entity(occupation) if occupation == life.occupation)
+                && fact
+                    .day
+                    .map(|day| day.as_std_days() < until)
+                    .unwrap_or(false)
+        });
+    if !founded {
+        return None;
+    }
+    let born_after_life = world
+        .ledger
+        .facts_of(person, hornvale_person::PERSON_BORN)
+        .any(|fact| {
+            fact.day
+                .map(|day| day.as_std_days() >= until)
+                .unwrap_or(false)
+        });
+    let died_before_life = world
+        .ledger
+        .facts_of(person, hornvale_person::PERSON_DIED)
+        .any(|fact| {
+            fact.day
+                .map(|day| day.as_std_days() <= from)
+                .unwrap_or(false)
+        });
+    if born_after_life || died_before_life {
+        return None;
+    }
+    Some(SocialBoundary {
+        person,
+        from,
+        until,
+    })
 }
 
 fn object_text(value: &Value) -> String {
@@ -184,72 +230,103 @@ fn object_text(value: &Value) -> String {
     }
 }
 
-fn person_axis(world: &World, ctx: &LotContext, life: &Life, predicate: &str) -> Answer {
-    let Some(person) = social_person(ctx, life) else {
-        return no_fact("no realized person is committed for this life");
-    };
-    let Some(fact) = world.ledger.facts_of(person, predicate).next() else {
-        return no_fact("no committed source answers this social question");
-    };
-    (
-        SlotValue::Filled(object_text(&fact.object)),
-        vec![cite(world, fact.subject, predicate)],
-    )
-}
-
-fn relation_slot(
+fn person_axis(
     world: &World,
     ctx: &LotContext,
     life: &Life,
     predicate: &str,
-    empty: &str,
+    ended: &str,
 ) -> Answer {
-    let Some(person) = social_person(ctx, life) else {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
         return no_fact("no realized person is committed for this life");
     };
     let facts: Vec<&hornvale_kernel::Fact> = world
         .ledger
-        .find(predicate)
-        .filter(|fact| {
-            fact.subject == person
-                || matches!(fact.object, Value::Entity(entity) if entity == person)
-        })
+        .facts_of(boundary.person, predicate)
+        .filter(|fact| active_fact_with_end(world, fact, &boundary, ended))
         .collect();
     if facts.is_empty() {
-        return no_fact(empty);
+        return no_fact("no committed source answers this social question");
     }
-    let mut sources = Vec::with_capacity(facts.len());
-    for fact in &facts {
-        sources.push(cite(world, fact.subject, predicate));
+    let text = facts
+        .iter()
+        .map(|fact| object_text(&fact.object))
+        .collect::<Vec<_>>()
+        .join(", ");
+    (
+        SlotValue::Filled(text),
+        facts
+            .iter()
+            .map(|fact| cite(world, fact.subject, predicate))
+            .collect(),
+    )
+}
+
+fn active_fact_with_end(
+    world: &World,
+    fact: &hornvale_kernel::Fact,
+    boundary: &SocialBoundary,
+    ended: &str,
+) -> bool {
+    let Some(day) = fact.day.map(|day| day.as_std_days()) else {
+        return false;
+    };
+    if day >= boundary.until {
+        return false;
     }
-    let text = format!("{} recorded relation(s)", facts.len());
-    (SlotValue::Filled(text), sources)
+    !world.ledger.facts_about(fact.subject).any(|candidate| {
+        candidate.predicate == ended
+            && candidate.object == fact.object
+            && candidate
+                .day
+                .map(|end| end.as_std_days() <= boundary.from)
+                .unwrap_or(false)
+    })
+}
+
+fn relation_facts<'a>(
+    world: &'a World,
+    boundary: &SocialBoundary,
+    predicate: &str,
+    source_is_person: bool,
+) -> Vec<&'a hornvale_kernel::Fact> {
+    world
+        .ledger
+        .find(predicate)
+        .filter(|fact| {
+            let directed = if source_is_person {
+                fact.subject == boundary.person
+            } else {
+                matches!(fact.object, Value::Entity(entity) if entity == boundary.person)
+            };
+            directed && active_fact_with_end(world, fact, boundary, &format!("{predicate}-ended"))
+        })
+        .collect()
 }
 
 fn siblings(world: &World, ctx: &LotContext, life: &Life) -> Answer {
-    let Some(person) = social_person(ctx, life) else {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
         return no_fact("no realized person is committed for this life");
     };
-    let parents: Vec<EntityId> = world
-        .ledger
-        .find("descent")
-        .filter_map(|fact| match fact.object {
-            Value::Entity(child) if child == person => Some(fact.subject),
-            _ => None,
-        })
-        .collect();
-    let mut sources = Vec::new();
+    let parents: Vec<&hornvale_kernel::Fact> = relation_facts(world, &boundary, "descent", false);
+    let mut sources = parents
+        .iter()
+        .map(|fact| cite(world, fact.subject, "descent"))
+        .collect::<Vec<_>>();
     let mut count = 0usize;
-    for parent in parents {
-        for fact in world.ledger.facts_about(parent) {
-            if fact.predicate == "descent" {
-                let Value::Entity(child) = fact.object else {
-                    continue;
-                };
-                if child != person {
-                    count += 1;
-                    sources.push(cite(world, fact.subject, "descent"));
-                }
+    for parent in parents.iter().map(|fact| fact.subject) {
+        for fact in relation_facts(
+            world,
+            &SocialBoundary {
+                person: parent,
+                ..boundary
+            },
+            "descent",
+            true,
+        ) {
+            if fact.object != Value::Entity(boundary.person) {
+                count += 1;
+                sources.push(cite(world, fact.subject, "descent"));
             }
         }
     }
@@ -265,21 +342,25 @@ fn siblings(world: &World, ctx: &LotContext, life: &Life) -> Answer {
 }
 
 fn parental_death(world: &World, ctx: &LotContext, life: &Life) -> Answer {
-    let Some(person) = social_person(ctx, life) else {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
         return no_fact("no realized person is committed for this life");
     };
-    let parents: Vec<EntityId> = world
-        .ledger
-        .find("descent")
-        .filter_map(|fact| match fact.object {
-            Value::Entity(child) if child == person => Some(fact.subject),
-            _ => None,
-        })
-        .collect();
+    let parents = relation_facts(world, &boundary, "descent", false);
     let mut sources = Vec::new();
     for parent in parents {
-        if let Some(fact) = world.ledger.facts_of(parent, "die").next() {
-            sources.push(cite(world, fact.subject, "die"));
+        if let Some(death) = world
+            .ledger
+            .facts_of(parent.subject, hornvale_person::PERSON_DIED)
+            .find(|fact| {
+                fact.day
+                    .map(|day| {
+                        day.as_std_days() >= boundary.from && day.as_std_days() < boundary.until
+                    })
+                    .unwrap_or(false)
+            })
+        {
+            sources.push(cite(world, parent.subject, "descent"));
+            sources.push(cite(world, death.subject, hornvale_person::PERSON_DIED));
         }
     }
     if sources.is_empty() {
@@ -287,6 +368,201 @@ fn parental_death(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     }
     (
         SlotValue::Filled("a parental death is recorded".to_string()),
+        sources,
+    )
+}
+
+fn directed_relation(
+    world: &World,
+    ctx: &LotContext,
+    life: &Life,
+    predicate: &str,
+    source: bool,
+    empty: &str,
+) -> Answer {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let facts = relation_facts(world, &boundary, predicate, source);
+    if facts.is_empty() {
+        return no_fact(empty);
+    }
+    (
+        SlotValue::Filled(format!("{} recorded {predicate} relation(s)", facts.len())),
+        facts
+            .iter()
+            .map(|fact| cite(world, fact.subject, predicate))
+            .collect(),
+    )
+}
+
+fn recognized_association(world: &World, ctx: &LotContext, life: &Life) -> Answer {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let associations = relation_facts(world, &boundary, "association", true);
+    let recognitions = relation_facts(world, &boundary, "recognition", false);
+    let pairs: Vec<(&hornvale_kernel::Fact, &hornvale_kernel::Fact)> = associations
+        .iter()
+        .flat_map(|association| {
+            recognitions.iter().filter_map(move |recognition| {
+                (association.day < recognition.day
+            && matches!(recognition.object, Value::Entity(entity) if entity == boundary.person))
+            .then_some((*association, *recognition))
+            })
+        })
+        .collect();
+    if pairs.is_empty() {
+        return no_fact("no explicit recognized association source answers this question");
+    }
+    let mut sources = Vec::new();
+    for (a, b) in pairs {
+        sources.push(cite(world, a.subject, "association"));
+        if world
+            .ledger
+            .facts_of(a.subject, hornvale_history::ASSOCIATION_FORM)
+            .any(|fact| {
+                fact.object != Value::Flag(false)
+                    && active_fact_with_end(world, fact, &boundary, "association-form-ended")
+            })
+        {
+            sources.push(cite(world, a.subject, hornvale_history::ASSOCIATION_FORM));
+        }
+        sources.push(cite(world, b.subject, "recognition"));
+        if world
+            .ledger
+            .facts_of(b.subject, hornvale_history::RECOGNITION_INTERPRETATION)
+            .any(|fact| {
+                active_fact_with_end(world, fact, &boundary, "recognition-interpretation-ended")
+            })
+        {
+            sources.push(cite(
+                world,
+                b.subject,
+                hornvale_history::RECOGNITION_INTERPRETATION,
+            ));
+        }
+    }
+    (
+        SlotValue::Filled("an explicitly recognized association is recorded".to_string()),
+        sources,
+    )
+}
+
+fn paired_relation(
+    world: &World,
+    ctx: &LotContext,
+    life: &Life,
+    first: &str,
+    second: &str,
+    empty: &str,
+) -> Answer {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let first_facts = relation_facts(world, &boundary, first, true);
+    let second_facts = relation_facts(world, &boundary, second, true);
+    let pairs: Vec<(&hornvale_kernel::Fact, &hornvale_kernel::Fact)> = first_facts
+        .iter()
+        .flat_map(|a| {
+            second_facts
+                .iter()
+                .filter_map(move |b| (a.object == b.object).then_some((*a, *b)))
+        })
+        .collect();
+    if pairs.is_empty() {
+        return no_fact(empty);
+    }
+    let mut sources = Vec::new();
+    for (a, b) in pairs {
+        sources.push(cite(world, a.subject, first));
+        sources.push(cite(world, b.subject, second));
+    }
+    (
+        SlotValue::Filled(format!("a {first}/{second} relation is recorded")),
+        sources,
+    )
+}
+
+fn inheritance(world: &World, ctx: &LotContext, life: &Life) -> Answer {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let transfers = relation_facts(world, &boundary, "transfer", false);
+    let mut sources = Vec::new();
+    for transfer in transfers {
+        if let Some(death) = world
+            .ledger
+            .facts_of(transfer.subject, hornvale_person::PERSON_DIED)
+            .find(|death| {
+                death
+                    .day
+                    .map(|day| {
+                        let day = day.as_std_days();
+                        day >= boundary.from && day < boundary.until
+                    })
+                    .unwrap_or(false)
+            })
+        {
+            sources.push(cite(world, transfer.subject, "transfer"));
+            sources.push(cite(world, death.subject, hornvale_person::PERSON_DIED));
+        }
+    }
+    if sources.is_empty() {
+        return no_fact("no deceased-source transfer answers inheritance");
+    }
+    (
+        SlotValue::Filled("an inheritance transfer is recorded".to_string()),
+        sources,
+    )
+}
+
+/// A residence fact is not migration by itself. The Lot recognizes migration
+/// only when the same person has a closed residence interval followed by a
+/// later residence at a different target within the life boundary.
+fn migration(world: &World, ctx: &LotContext, life: &Life) -> Answer {
+    let Some(boundary) = social_boundary(world, ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let residences = relation_facts(world, &boundary, "residence", true);
+    let mut sources = Vec::new();
+    let mut transitions = 0usize;
+    for prior in &residences {
+        let Some(prior_end) = world.ledger.facts_about(prior.subject).find(|fact| {
+            fact.predicate == "residence-ended"
+                && fact.object == prior.object
+                && fact
+                    .day
+                    .map(|day| {
+                        let day = day.as_std_days();
+                        day > boundary.from && day < boundary.until
+                    })
+                    .unwrap_or(false)
+        }) else {
+            continue;
+        };
+        let Some(prior_end_day) = prior_end.day.map(|day| day.as_std_days()) else {
+            continue;
+        };
+        if residences.iter().any(|later| {
+            later.object != prior.object
+                && later
+                    .day
+                    .map(|day| {
+                        day.as_std_days() >= prior_end_day && day.as_std_days() < boundary.until
+                    })
+                    .unwrap_or(false)
+        }) {
+            transitions += 1;
+            sources.push(cite(world, prior.subject, "residence"));
+            sources.push(cite(world, prior.subject, "residence-ended"));
+        }
+    }
+    if transitions == 0 {
+        return no_fact("no committed residence transition answers migration");
+    }
+    (
+        SlotValue::Filled(format!("{transitions} committed residence transition(s)")),
         sources,
     )
 }
@@ -1278,112 +1554,115 @@ pub fn tell(world: &World, ctx: &LotContext, life: &Life) -> Story {
         ("diet", diet(ctx, life)),
         (
             "sex",
-            person_axis(world, ctx, life, hornvale_person::SEX_TRAIT),
+            person_axis(
+                world,
+                ctx,
+                life,
+                hornvale_person::SEX_TRAIT,
+                hornvale_person::SEX_TRAIT_ENDED,
+            ),
         ),
         (
             "reproductive-role",
-            person_axis(world, ctx, life, hornvale_person::REPRODUCTIVE_ROLE),
+            person_axis(
+                world,
+                ctx,
+                life,
+                hornvale_person::REPRODUCTIVE_ROLE,
+                hornvale_person::REPRODUCTIVE_ROLE_ENDED,
+            ),
         ),
         (
             "gender-identity",
-            person_axis(world, ctx, life, hornvale_person::GENDER_IDENTITY),
+            person_axis(
+                world,
+                ctx,
+                life,
+                hornvale_person::GENDER_IDENTITY,
+                hornvale_person::GENDER_IDENTITY_ENDED,
+            ),
         ),
         (
             "gender-recognition",
-            person_axis(world, ctx, life, hornvale_person::GENDER_RECOGNITION),
+            person_axis(
+                world,
+                ctx,
+                life,
+                hornvale_person::GENDER_RECOGNITION,
+                hornvale_person::GENDER_RECOGNITION_ENDED,
+            ),
         ),
         (
             "family",
-            relation_slot(
+            directed_relation(
                 world,
                 ctx,
                 life,
                 "descent",
-                "no committed descent source answers family relation",
+                false,
+                "no committed parent relation answers family relation",
             ),
         ),
-        (
-            "associations",
-            relation_slot(
-                world,
-                ctx,
-                life,
-                "association",
-                "no committed association source answers this question",
-            ),
-        ),
+        ("associations", recognized_association(world, ctx, life)),
         (
             "children",
-            relation_slot(
+            directed_relation(
                 world,
                 ctx,
                 life,
                 "descent",
-                "no committed descent source answers child relation",
+                true,
+                "no committed child relation answers this question",
             ),
         ),
         ("siblings", siblings(world, ctx, life)),
         (
             "descent",
-            relation_slot(
+            directed_relation(
                 world,
                 ctx,
                 life,
                 "descent",
+                true,
                 "no committed descent source answers this question",
             ),
         ),
         (
             "adoption",
-            relation_slot(
-                world,
-                ctx,
-                life,
-                "custody",
-                "no committed adoption or custody source answers this question",
-            ),
-        ),
-        (
-            "care",
-            relation_slot(
+            paired_relation(
                 world,
                 ctx,
                 life,
                 "care",
-                "no committed care source answers this question",
+                "custody",
+                "no committed care-and-custody source answers adoption",
+            ),
+        ),
+        (
+            "care",
+            directed_relation(
+                world,
+                ctx,
+                life,
+                "care",
+                true,
+                "no committed directed care source answers this question",
             ),
         ),
         (
             "group-membership",
-            relation_slot(
+            directed_relation(
                 world,
                 ctx,
                 life,
                 "membership",
+                true,
                 "no committed group-membership source answers this question",
             ),
         ),
-        (
-            "migration",
-            relation_slot(
-                world,
-                ctx,
-                life,
-                "residence",
-                "no committed migration or residence source answers this question",
-            ),
-        ),
+        ("migration", migration(world, ctx, life)),
         ("parental-death", parental_death(world, ctx, life)),
-        (
-            "inheritance",
-            relation_slot(
-                world,
-                ctx,
-                life,
-                "transfer",
-                "no committed inheritance source answers this question",
-            ),
-        ),
+        ("inheritance", inheritance(world, ctx, life)),
         (
             "work",
             by_design(

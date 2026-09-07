@@ -11,6 +11,23 @@ Deno.test("a life payload parses every field the stages read", () => {
   assertEquals(parsed.sources[1].function, "lot::draw::draw");
 });
 
+Deno.test("lot/life/v1 accepts additive social slots and silence changes", () => {
+  const legacy = life();
+  const parsed = parseLife(JSON.stringify({
+    ...legacy,
+    slots: [...legacy.slots, {
+      key: "children",
+      value: "2 recorded descent relation(s)",
+      silence: null,
+      sources: [1],
+    }],
+    silences: { ...legacy.silences, by_design: 2 },
+  }));
+  assertEquals(parsed.schema, "lot/life/v1");
+  assertEquals(parsed.slots.at(-1)?.key, "children");
+  assertEquals(parsed.silences.by_design, 2);
+});
+
 Deno.test("the entity ids stay decimal text, never doubles", () => {
   // 10760661430244475331 does not fit in 53 bits; JSON.parse would round it
   // to 10760661430244475000. `json.rs` emits it as a string for exactly
