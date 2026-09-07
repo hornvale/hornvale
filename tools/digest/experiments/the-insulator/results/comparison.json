@@ -1,0 +1,151 @@
+{
+  "schema": "insulator-comparison-v1",
+  "decision": "reject",
+  "evidence_valid": true,
+  "qualification": {
+    "requested_hosts": [
+      "mac",
+      "linux"
+    ],
+    "observed_hosts": [
+      "mac"
+    ],
+    "hosts": {
+      "mac": {
+        "status": "observed",
+        "baseline": [
+          "results/mac-cold.json",
+          "results/mac-warm.json"
+        ],
+        "candidate": "candidate/README.md",
+        "cleanup_complete": true
+      },
+      "linux": {
+        "status": "not_run",
+        "required": false,
+        "reason": "Mac authoritative output mismatch already rejects the candidate",
+        "evidence": null
+      }
+    }
+  },
+  "source_identity": {
+    "commit": "7c85c397d52964b2c39571548bb0d7d7015a1cd6",
+    "comparison_ref": "origin/main",
+    "merge_base": "9b01b99aa1366358fb1ebd71368b2be78204123b",
+    "tree": "2d587cf6973b4525de6d42a0c65184c22fa3761b"
+  },
+  "authoritative_baseline": {
+    "dossier": "results/baseline.json",
+    "host": "mac",
+    "graph": {
+      "package_count": 54,
+      "workspace_member_count": 5,
+      "sha256": "1cf9be46743ffd40a22ff7381e45ddf3c14c07534af0c90a3ed62e320f1ea8d7"
+    },
+    "costs": {
+      "digest-census-publication": {
+        "cold": {
+          "build_s": 35.19048745883629,
+          "preparation_s": 0.11070970771834254,
+          "test_s": 0.6214542496018112,
+          "total_s": 35.92265141615644
+        },
+        "warm": {
+          "build_s": 0.11602079216390848,
+          "preparation_s": 0.11770125012844801,
+          "test_s": 0.1476408331654966,
+          "total_s": 0.3813628754578531
+        }
+      },
+      "digest-thing": {
+        "cold": {
+          "build_s": 0.7190970829688013,
+          "preparation_s": 0.12031804118305445,
+          "test_s": 0.584005624987185,
+          "total_s": 1.4234207491390407
+        },
+        "warm": {
+          "build_s": 0.11233720928430557,
+          "preparation_s": 0.0960069578140974,
+          "test_s": 0.15390062518417835,
+          "total_s": 0.36224479228258133
+        }
+      }
+    }
+  },
+  "candidate": {
+    "dossier": "candidate/README.md",
+    "boundary": {
+      "admissible_dependency": "digest-protocol",
+      "undeclared_dependencies": [],
+      "duplicated_authority": false
+    },
+    "output": {
+      "workload": "digest-census-publication",
+      "path": "stdout",
+      "bytes": 31,
+      "sha256": "188703470f44519be04f4e3f647af191ba4ae50a1e8f393477b0f3b8ccb4369d"
+    }
+  },
+  "output_comparison": {
+    "workload": "digest-census-publication",
+    "path": "stdout",
+    "authoritative": {
+      "bytes": 7493,
+      "sha256": "9571178d3943687ed348ad3f0f6fed783e967329286789ad58f0a2e595063306"
+    },
+    "candidate": {
+      "bytes": 31,
+      "sha256": "188703470f44519be04f4e3f647af191ba4ae50a1e8f393477b0f3b8ccb4369d"
+    },
+    "status": "mismatch",
+    "byte_equal": false
+  },
+  "invalidation_matrix": {
+    "observer": {
+      "authoritative_packages": [
+        "digest-census-publication"
+      ],
+      "candidate_packages": [
+        "candidate"
+      ],
+      "output_identity": "not_qualified"
+    },
+    "protocol": {
+      "authoritative_packages": [
+        "digest-protocol",
+        "digest",
+        "digest-census-publication",
+        "digest-counterpart",
+        "digest-thing"
+      ],
+      "candidate_packages": [
+        "digest-protocol"
+      ],
+      "output_identity": "not_qualified"
+    },
+    "lab": {
+      "authoritative_packages": [
+        "hornvale-lab",
+        "digest-census-publication"
+      ],
+      "candidate_packages": "not_run",
+      "output_identity": "not_qualified"
+    },
+    "unrelated": {
+      "authoritative_packages": [],
+      "candidate_packages": "not_run",
+      "output_identity": "not_qualified"
+    }
+  },
+  "performance": {
+    "repeatable_reduction": false,
+    "status": "not_qualified",
+    "reason": "candidate output mismatch precedes a valid product performance comparison"
+  },
+  "decision_reasons": [
+    "output mismatch",
+    "canonical Linux qualification not required after decisive Mac mismatch",
+    "candidate cannot import or duplicate windows/lab publication authority"
+  ]
+}

@@ -1128,3 +1128,90 @@ def compare_outputs(authoritative: dict, candidate: dict) -> dict:
                                 "authoritative": item, "candidate": actual})
         result[workload] = comparisons
     return result
+
+
+def _qualification_attempt(dossier: dict, host: str, path: str) -> dict:
+    if not isinstance(dossier, dict):
+        raise ValueError(f"missing {path} qualification record for {host}")
+    attempts = dossier.get("attempts")
+    if not isinstance(attempts, list) or len(attempts) != 1:
+        raise ValueError(f"{host} {path} must contain exactly one attempt")
+    attempt = attempts[0]
+    if not isinstance(attempt, dict):
+        raise ValueError(f"{host} {path} attempt is invalid")
+    source = attempt.get("source")
+    if not isinstance(source, dict) or not all(_full_sha(source.get(key)) for key in ("commit", "tree", "merge_base")):
+        raise ValueError(f"{host} {path} source identity is incomplete")
+    capture = attempt.get("capture")
+    cleanup = capture.get("cleanup") if isinstance(capture, dict) else None
+    if not isinstance(cleanup, dict) or cleanup.get("complete") is not True or cleanup.get("error") is not None:
+        raise ValueError(f"{host} {path} cleanup is incomplete")
+    if attempt.get("valid", True) is not True:
+        raise ValueError(f"{host} {path} attempt is invalid evidence")
+    return attempt
+
+
+def run_paired_qualification(baseline: dict, candidate: dict, hosts: list[str]) -> dict:
+    """Validate one authoritative/candidate pair for each requested host."""
+    if not isinstance(hosts, list) or not hosts or any(not isinstance(host, str) or not host for host in hosts):
+        raise ValueError("hosts must be a non-empty list of names")
+    if len(set(hosts)) != len(hosts):
+        raise ValueError("qualification hosts must be unique")
+    pairs = {}
+    for host in hosts:
+        baseline_attempt = _qualification_attempt(baseline.get(host), host, "baseline")
+        candidate_attempt = _qualification_attempt(candidate.get(host), host, "candidate")
+        if baseline_attempt["source"] != candidate_attempt["source"]:
+            raise ValueError(f"{host} source identities do not match")
+        pairs[host] = {
+            "complete": True,
+            "source": baseline_attempt["source"],
+            "baseline": baseline_attempt,
+            "candidate": candidate_attempt,
+        }
+    return {"schema": "insulator-paired-qualification-v1", "hosts": hosts,
+            "pairs": pairs}
+
+
+def invalidation_matrix(records: list[dict]) -> dict:
+    """Normalize representative edit records into an inspectable matrix."""
+    if not isinstance(records, list):
+        raise ValueError("invalidation records must be a list")
+    matrix = {}
+    for record in records:
+        if not isinstance(record, dict) or not isinstance(record.get("edit"), str) or not record["edit"]:
+            raise ValueError("invalidation record needs an edit")
+        edit = record["edit"]
+        if edit in matrix:
+            raise ValueError(f"duplicate invalidation edit: {edit}")
+        baseline_packages = record.get("baseline_packages", [])
+        candidate_packages = record.get("candidate_packages", [])
+        if (not isinstance(baseline_packages, list) or
+                not isinstance(candidate_packages, list) or
+                any(not isinstance(item, str) for item in baseline_packages + candidate_packages)):
+            raise ValueError(f"invalid package list for {edit}")
+        if not isinstance(record.get("output_identity"), str) or not record["output_identity"]:
+            raise ValueError(f"missing output identity for {edit}")
+        matrix[edit] = {
+            "baseline_packages": list(baseline_packages),
+            "candidate_packages": list(candidate_packages),
+            "output_identity": record["output_identity"],
+        }
+    return matrix
+
+
+def decide(comparison: dict) -> str:
+    """Return the only product verdicts, failing closed on missing evidence."""
+    if not isinstance(comparison, dict) or comparison.get("complete") is not True:
+        return "reject"
+    boundary = comparison.get("boundary")
+    performance = comparison.get("performance")
+    if not isinstance(boundary, dict) or not isinstance(performance, dict):
+        return "reject"
+    if comparison.get("output_match") is not True:
+        return "reject"
+    if boundary.get("undeclared_dependencies") != [] or boundary.get("duplicated_authority") is not False:
+        return "reject"
+    if performance.get("repeatable_reduction") is not True:
+        return "reject"
+    return "admit"
