@@ -163,3 +163,10 @@ explicit plan and execution checkpoints.
 - **Basis:** Commit `f47858a75` passed the focused astronomy, CLI, wasm-parser, clippy, formatting, artifact-freshness, and commit-gate checks. The task reviewer found no critical, important, or minor issues.
 - **Ideonomy passes / overturns:** one implementation-review pass / 0 overturns.
 - **Cost if wrong:** Task 2 may need to amend the topology interfaces before adding ephemerides; the approved deferred N-body boundary remains unchanged.
+
+## G5 Task 2 boundary
+
+- **Ruling:** Phase-aware ephemerides and observational events are accepted; continue automatically to the scene/catalog contract.
+- **Basis:** Commits `a2255bb47`, `36f3c2ccb`, and `b7a26347f` passed focused tests, the full commit gate, and two scoped review fix rounds. The final re-review approved visibility thresholds and companion periods.
+- **Ideonomy passes / overturns:** one implementation-review convergence pass plus two fix passes / 0 overturns.
+- **Cost if wrong:** scene serialization may expose a producer contract defect; the scene task remains independently reviewable.

@@ -19,7 +19,6 @@ Salient phenomena, most attention-demanding first:
 - [0.24] Doodoo Goo eclipse
 - [0.22] Bago Doodoo Goo eclipse
 - [0.20] Dogoo
-- [0.20] Boadoo
 - [0.19] Dadoo Goo
 - [0.18] heat
 - [0.14] Doodoo Goo
@@ -33,9 +32,9 @@ The warm yellow star returns before dawn at year-phase 0.12, after 21 days of ab
 
 The deep orange star returns before dawn at year-phase 0.96, after 20 days of absence.
 
-A giant wanderer rounds the sun every 4248 days.
+A giant wanderer rounds the sun every 4248 days. Wanderer 1 begins a retrograde loop, resuming forward motion at absolute day 197.20 at absolute day 76.25. Wanderer 1 stands at opposition at absolute day 136.73. Wanderer 1 is in conjunction at absolute day 338.21.
 
-A rock wanderer rounds the sun every 7527 days.
+A rock wanderer rounds the sun every 7527 days. Wanderer 2 begins a retrograde loop, resuming forward motion at absolute day 193.59 at absolute day 61.22. Wanderer 2 stands at opposition at absolute day 127.41. Wanderer 2 is in conjunction at absolute day 320.89.
 
 The sky holds 2 figures; 1 stands on the sun's road.
 
@@ -633,19 +632,7 @@ In the lair of **Doaba**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Dado the Gvoodado comes back every 386.98 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
->
-> — derived from the phenomenon *wandering-star*
-
-> Goo the Vngaadadogo comes back every 15.99 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Dooga the Vngodooga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
->
-> — derived from the phenomenon *tide*
-
-> Goo the Shngaodado comes back every 32.55 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
+> Goo the Tvoodado comes back every 15.99 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -653,11 +640,19 @@ In the lair of **Doaba**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-> Dado the Shngadadobago comes back every 0.88 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Goo the Vngogodado comes back every 32.55 days. That's how it's always been. That's how it's always been. Goo is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Dado the Bvadado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
+> Dooga the Vngoodooga is felt more than seen. That's how it's always been. That's how it's always been. Dooga is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
+
+> Dadobago the Shngodado comes back every 0.88 days. That's how it's always been. That's how it's always been. Dadobago is a great one among the gods.
+>
+> — derived from the phenomenon *celestial-body*
+
+> Dado the Tvaodado comes back every 71.04 days. That's how it's always been. That's how it's always been. Dado is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -675,11 +670,15 @@ The waterhold of **Shaxasxanapdavag** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *wandering-star*
 
-> Naxavvapad Naxav comes back every 15.99 days. That's how it's always been. That's how it's always been. Naxavvapad is a great one among the gods.
+> Naxav Naxav comes back every 402.96 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Vapadnaxav Naxavvapad comes back every 15.99 days. That's how it's always been. That's how it's always been. Vapadnaxav is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Qashaxnaxav Naxavqashax comes back every 0.88 days. That's how it's always been. That's how it's always been. Qashaxnaxav is a great one among the gods.
+> Qashaxnaxav Qashaxnaxav comes back every 0.88 days. That's how it's always been. That's how it's always been. Qashaxnaxav is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -687,7 +686,7 @@ The waterhold of **Shaxasxanapdavag** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Naxavvapad Naxav comes back every 32.55 days. That's how it's always been. That's how it's always been. Naxavvapad is a great one among the gods.
+> Naxav Naxavvapad comes back every 32.55 days. That's how it's always been. That's how it's always been. Naxav is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -713,11 +712,15 @@ The wellcamp of **Šzeaṅṅaeṅszaoṅ** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *wandering-star*
 
-> Paaṅzzoeṅpoṅpeṅ Poṅpeṅ comes back every 15.99 days. That's how it's always been. That's how it's always been. Paaṅzzoeṅpoṅpeṅ is a great one among the gods.
+> Poṅpeṅ Poṅpeṅ comes back every 402.96 days. That's how it's always been. That's how it's always been. Poṅpeṅ is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Poṅpeṅ Poṅpeṅpaaṅzzoeṅ comes back every 15.99 days. That's how it's always been. That's how it's always been. Poṅpeṅ is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Poṅpeṅ Poṅpeṅpoṅžzeṅ comes back every 0.88 days. That's how it's always been. That's how it's always been. Poṅpeṅ is a great one among the gods.
+> Poṅpeṅpoṅžzeṅ Poṅpeṅpoṅžzeṅ comes back every 0.88 days. That's how it's always been. That's how it's always been. Poṅpeṅpoṅžzeṅ is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -725,7 +728,7 @@ The wellcamp of **Šzeaṅṅaeṅszaoṅ** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Paaṅzzoeṅpoṅpeṅ Paaṅzzoeṅpoṅpeṅ comes back every 32.55 days. That's how it's always been. That's how it's always been. Paaṅzzoeṅpoṅpeṅ is a great one among the gods.
+> Paaṅzzoeṅ Poṅpeṅ comes back every 32.55 days. That's how it's always been. That's how it's always been. Paaṅzzoeṅ is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -751,23 +754,19 @@ In the hold of **Poogpao**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Bogpo the Žrabogpo returns every 386.98 days. So it was, so it is.
->
-> — derived from the phenomenon *wandering-star*
-
-> Paagdroobogpo the Praorbogpo returns every 15.99 days. So it was, so it is.
+> Bogpo the Qropaagdroo returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Pooggo the Qrapooggo is felt, not counted. So it was, so it is.
+> Pooggo the Šraorpooggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Bogpo the Krorbogpo returns every 32.55 days. So it was, so it is.
+> Bogpo the Srapaagdroo returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Pooggo the Prorpooggo is felt, not counted. So it was, so it is.
+> Pooggo the Ḳrarpooggo is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -785,7 +784,11 @@ The camp of **Psaxqsoxpshapzhaznoqzha** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *wandering-star*
 
-> Qzaagsaodzaap Dzaap comes back every 15.99 days. That's how it's always been.
+> Qzaagsa Qzaagsa comes back every 402.96 days. That's how it's always been.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Dzaapqzagsa Qzaagsa comes back every 15.99 days. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -793,7 +796,7 @@ The camp of **Psaxqsoxpshapzhaznoqzha** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *tide*
 
-> Qzaagsa Qzaagsazhmov comes back every 0.88 days. That's how it's always been.
+> Zhmovqzagsa Qzaagsazhmov comes back every 0.88 days. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -801,7 +804,7 @@ The camp of **Psaxqsoxpshapzhaznoqzha** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Dzaapqzagsa Qzaagsa comes back every 32.55 days. That's how it's always been.
+> Dzaap Qzaagsa comes back every 32.55 days. That's how it's always been.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -835,23 +838,19 @@ In the village of **Nenotata**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Safngeffnax the Xnaxnax returns every 386.98 days. So it was, so it is.
->
-> — derived from the phenomenon *wandering-star*
-
-> Koo the Sokoo returns every 15.99 days. So it was, so it is.
+> Koo the Fnovkoo returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neoka the Noneoka is felt, not counted. So it was, so it is.
+> Neoka the Zhoneoka is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Koo the Vngokoo returns every 32.55 days. So it was, so it is.
+> Koo the Fngexkoo returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neoka the Seneoka is felt, not counted. So it was, so it is.
+> Neoka the Naxneoka is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -873,11 +872,15 @@ In the midden of **Shakat**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *wandering-star*
 
+> Nakab Nakab comes back every 402.96 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
 > Babat Nakab comes back every 15.99 days. That's how it's always been. That's how it's always been. Babat is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Qashak Nakab comes back every 0.88 days. That's how it's always been. That's how it's always been. Qashak is a great one among the gods.
+> Nakab Nakabqashak comes back every 0.88 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -885,7 +888,7 @@ In the midden of **Shakat**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Babat Babat comes back every 32.55 days. That's how it's always been. That's how it's always been. Babat is a great one among the gods.
+> Nakab Nakabbabat comes back every 32.55 days. That's how it's always been. That's how it's always been. Nakab is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -919,11 +922,7 @@ In the citadel of **Šromdee**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Bomde Bomde returns every 386.98 days. So it was, so it is.
->
-> — derived from the phenomenon *wandering-star*
-
-> Bomdedaamzroe Daamzroe returns every 15.99 days. So it was, so it is.
+> Daamzroe Bomde returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -931,7 +930,7 @@ In the citadel of **Šromdee**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Bomde Bomde returns every 32.55 days. So it was, so it is.
+> Bomde Daamzroe returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -964,10 +963,6 @@ In the steading of **Mabash'sajat**, an organized priesthood tends its own panth
 > Jobmag Jab comes back every 1991.56 days. That's how it's always been.
 >
 > — derived from the phenomenon *eclipse*
-
-> Jatjab Jagngobngob comes back every 386.98 days. That's how it's always been.
->
-> — derived from the phenomenon *wandering-star*
 
 > Babat Babat comes back every 15.99 days. That's how it's always been.
 >
@@ -1007,23 +1002,19 @@ The legion of **Naabee** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Gengmlomqem the Vanvangvang returns every 386.98 days. So it was, so it is.
->
-> — derived from the phenomenon *wandering-star*
-
-> Koo the Nglongko returns every 15.99 days. So it was, so it is.
+> Koo the Xenko returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Koo the Bonko returns every 32.55 days. So it was, so it is.
+> Koo the Nglongko returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neoka the Teneoka is felt, not counted. So it was, so it is.
+> Neoka the Tomneoka is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Neoka the Xeneoka is felt, not counted. So it was, so it is.
+> Neoka the Teneoka is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -1048,10 +1039,6 @@ In the town of **Vakveepera**, an organized priesthood tends its own pantheon:
 > Kvaegxotve Geege comes back every 3111.86 days. That's how it's always been.
 >
 > — derived from the phenomenon *eclipse*
-
-> Para Kfaera comes back every 386.98 days. That's how it's always been.
->
-> — derived from the phenomenon *wandering-star*
 
 > Roera Roera comes back every 15.99 days. That's how it's always been.
 >
@@ -1083,15 +1070,11 @@ The warren of **Raaxora** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Xoora Xoora comes back every 386.98 days. That's how it's always been. That's how it's always been. Xoora is a great one among the gods.
->
-> — derived from the phenomenon *wandering-star*
-
-> Xo Xooraxo comes back every 32.55 days. That's how it's always been. That's how it's always been. Xo is a great one among the gods.
+> Xo Xoora comes back every 32.55 days. That's how it's always been. That's how it's always been. Xo is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xaoxora Xao comes back every 0.88 days. That's how it's always been. That's how it's always been. Xaoxora is a great one among the gods.
+> Xao Xooraxa comes back every 0.88 days. That's how it's always been. That's how it's always been. Xao is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -1125,11 +1108,7 @@ The haven of **Šreannaensraunduundun** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Bunden Bunden comes back every 386.98 days. That's how it's always been. That's how it's always been. Bunden is a great one among the gods.
->
-> — derived from the phenomenon *wandering-star*
-
-> Bundendaandruen Daandruenbunden comes back every 15.99 days. That's how it's always been. That's how it's always been. Bundendaandruen is a great one among the gods.
+> Daandruenbunden Bunden comes back every 15.99 days. That's how it's always been. That's how it's always been. Daandruenbunden is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -1137,7 +1116,7 @@ The haven of **Šreannaensraunduundun** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Bunden Daandruenbunden comes back every 32.55 days. That's how it's always been. That's how it's always been. Bunden is a great one among the gods.
+> Daandruen Bunden comes back every 32.55 days. That's how it's always been. That's how it's always been. Daandruen is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -1163,11 +1142,15 @@ The wintering of **Zroṅṅoṅ** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *wandering-star*
 
-> Boṅtoṅtaaṅzrooṅ Taaṅzrooṅboṅtoṅ comes back every 15.99 days. That's how it's always been. That's how it's always been. Boṅtoṅtaaṅzrooṅ is a great one among the gods.
+> Boṅtoṅ Boṅtoṅ comes back every 402.96 days. That's how it's always been. That's how it's always been. Boṅtoṅ is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Taaṅzrooṅ Taaṅzrooṅ comes back every 15.99 days. That's how it's always been. That's how it's always been. Taaṅzrooṅ is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Toṅzrooṅ Toṅzrooṅ comes back every 0.88 days. That's how it's always been. That's how it's always been. Toṅzrooṅ is a great one among the gods.
+> Toṅzrooṅboṅtoṅ Boṅtoṅtoṅzrooṅ comes back every 0.88 days. That's how it's always been. That's how it's always been. Toṅzrooṅboṅtoṅ is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -1175,7 +1158,7 @@ The wintering of **Zroṅṅoṅ** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Boṅtoṅtaaṅzrooṅ Taaṅzrooṅboṅtoṅ comes back every 32.55 days. That's how it's always been. That's how it's always been. Boṅtoṅtaaṅzrooṅ is a great one among the gods.
+> Boṅtoṅ Boṅtoṅ comes back every 32.55 days. That's how it's always been. That's how it's always been. Boṅtoṅ is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -1209,11 +1192,15 @@ In the grove of **Ṅuṅsda**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *wandering-star*
 
-> Duṅde Duṅdedaaṅzdue comes back every 15.99 days. That's how it's always been. That's how it's always been. Duṅde is a great one among the gods.
+> Duṅde Duṅde comes back every 402.96 days. That's how it's always been. That's how it's always been. Duṅde is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Daaṅzdueduṅde Daaṅzdueduṅde comes back every 15.99 days. That's how it's always been. That's how it's always been. Daaṅzdueduṅde is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Duṅzdeuduṅde Duṅzdeuduṅde comes back every 0.88 days. That's how it's always been. That's how it's always been. Duṅzdeuduṅde is a great one among the gods.
+> Duṅdeduṅzdeu Duṅzdeuduṅde comes back every 0.88 days. That's how it's always been. That's how it's always been. Duṅdeduṅzdeu is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -1221,7 +1208,7 @@ In the grove of **Ṅuṅsda**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Duṅde Daaṅzdue comes back every 32.55 days. That's how it's always been. That's how it's always been. Duṅde is a great one among the gods.
+> Daaṅzdueduṅde Duṅdedaaṅzdue comes back every 32.55 days. That's how it's always been. That's how it's always been. Daaṅzdueduṅde is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
