@@ -74,3 +74,38 @@ schema.
   client-only work, keeping the sim/client boundary explicit.
 - Determine whether a widened `scene/system` document is additive or an
   epoch-bearing contract change after measuring all consumers.
+
+## #3 [G2] — What is the first complete delivery?
+
+**Question.** Where should the campaign spend its first implementation
+surface now that sibling-body genesis already exists?
+
+**Decision.** Complete the producer-side solar-system instrument in three
+stages: phase-aware wanderer ephemerides; derived observational events and
+almanac vocabulary; then the additive scene/world-wasm contract and client
+handoff documentation. Positions remain evaluated from elements and time,
+never sampled into a trajectory artifact.
+
+**Why.** `StarSystem::wanderers` already owns the physical bodies and the
+Night Sky spec explicitly deferred orrery/scene rendering. `scene/system/v1`
+explicitly permits appended fields, while the client boundary requires the
+native scene and wasm paths to share one contract. This completes the missing
+layer without reopening genesis or inventing a second client-side physics
+source.
+
+**Alternatives discarded.** A client-first implementation is blocked by the
+external orrery checkout not being present and would invert the repository's
+producer-contract discipline. An orbit-physics-first rewrite would expand
+the campaign into eccentricity, inclination, and N-body fidelity before the
+existing bodies are even observable through the contract.
+
+**Ideonomy passes / overturns.** One convergence pass using combination and
+cycle with complexity and hierarchicalness; 0 overturns. It identified the
+useful cycle as genesis → ephemeris → observation → client lens, with the
+scene contract as the bridge rather than the endpoint.
+
+**Capture actions.** The spec records elliptical/inclined orbits,
+transits/occultations, full sibling-world promotion, and per-species sky
+catalogs as deferred branches. Existing registry rows `ORRERY-ellipse-truth`,
+`SKY-wanderer-calendar`, `SKY-transits`, and `SKY-figures-per-species` remain
+the durable capture points.
