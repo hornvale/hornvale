@@ -1815,3 +1815,158 @@ fn a_watercourse_paints_the_facets_it_runs_through() {
         adrift.join("\n  ")
     );
 }
+
+/// A redraw that has not moved costs no mesh searches at all (The Sett,
+/// Task 9).
+///
+/// `plate::terrain_at_facet` resolves corner weights at two addresses per
+/// box — the grid-level ancestor, and the box's own facet for The Hachure's
+/// bilinear height blend. The second was un-memoised until Task 9, and since
+/// the graph arm keeps no [`hornvale_game::tiles::TileCache`] to amortise it
+/// against, it ran four `NearestVertexIndex` scans per box on **every**
+/// frame: ledger S21 measured that one line at 6.821 ms of a 9.712 ms
+/// walk-band redraw, 65.3%.
+///
+/// Asserted on `Driver::rose_mesh_memo_counters`, never on a duration — a
+/// timing assertion in a suite is a flake on a loaded box.
+///
+/// **The first draw's own count is the non-vacuity half**, and it is the
+/// half that fails when the memoisation is removed: a cold walk plate must
+/// miss on the order of its own box count, because nearly every box of the
+/// rose raster addresses a distinct facet. A memo that never misses is a
+/// memo nothing is asking.
+#[test]
+fn a_stationary_walk_redraw_costs_no_new_mesh_searches() {
+    let (w, h) = (
+        hornvale_game_core::MIN_WIDTH,
+        hornvale_game_core::MIN_HEIGHT,
+    );
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+    // `Driver::start` opens on the walk band, so this is the graph arm with
+    // no gesture at all — `enter_band_b` would submit `map` and take the
+    // Mercator arm instead, which is the very path this is not about.
+    let plate = driver
+        .world_plate_for_redraw(w, h)
+        .expect("the flagship opens on the walk band");
+    let boxes = u64::from(plate.width()) * u64::from(plate.height());
+    let (_, cold_misses) = driver.rose_mesh_memo_counters();
+
+    assert!(
+        cold_misses * 2 > boxes,
+        "a cold {}x{} walk plate took {cold_misses} mesh searches over {boxes} boxes; \
+         the height blend is not consulting the memo at all",
+        plate.width(),
+        plate.height()
+    );
+
+    let _ = driver.world_plate_for_redraw(w, h);
+    let (warm_hits, warm_misses) = driver.rose_mesh_memo_counters();
+    assert_eq!(
+        warm_misses, cold_misses,
+        "redrawing without moving must take no further mesh searches"
+    );
+    assert!(
+        warm_hits > cold_misses,
+        "the second draw served {warm_hits} consults from a memo of {cold_misses} \
+         entries: it cannot have redrawn the whole plate"
+    );
+}
+
+/// The walk view's mesh memo is emptied once it outgrows the plate it is
+/// serving (The Sett, Task 9).
+///
+/// [`hornvale_kernel::RoomMeshMemo`] is the KERNEL's and is append-only by
+/// design — nothing ever invalidates an entry, because a key carries
+/// everything its derivation reads — and `Driver::rose_mesh_memo` is a
+/// field, so it would otherwise grow for the life of the process. Eviction
+/// belongs to this owner rather than to the kernel type: three other
+/// consumers hold one, all of them scoped to a tick or a session, and none
+/// of them has this problem.
+///
+/// **Both directions, because only one of them is the loud failure.** A
+/// bound that never fires leaks; a bound that fires every frame silently
+/// returns the client to the un-memoised cost, with no observable
+/// difference in any answer. So this drives a plate large enough to overrun
+/// a small plate's cap, asserts the next small redraw empties the memo, and
+/// then asserts the redraw AFTER that does not — which is the same
+/// stationary-reuse claim the test above makes, re-asserted on the far side
+/// of a clear.
+///
+/// **The second direction is asserted on HITS, and the reason is a mutation
+/// this test failed.** An entry count cannot see a clear-every-frame bug at
+/// all: the memo refills to the same number each time, so the obvious
+/// `settled == after_clear` holds under exactly the defect it was written
+/// against. `if true || ...` left this test green — the sibling above is
+/// what reddened. Hits reset with the memo and cannot be refilled by the
+/// draw that follows, so they can.
+#[test]
+fn the_walk_views_mesh_memo_is_emptied_once_it_outgrows_the_plate() {
+    let (small_w, small_h) = (
+        hornvale_game_core::MIN_WIDTH,
+        hornvale_game_core::MIN_HEIGHT,
+    );
+    let (big_w, big_h) = (240u16, 70u16);
+    let mut driver = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
+
+    let small = driver
+        .world_plate_for_redraw(small_w, small_h)
+        .expect("the flagship opens on the walk band");
+    let small_cap = Driver::rose_mesh_memo_cap(small.width(), small.height());
+    let big = driver
+        .world_plate_for_redraw(big_w, big_h)
+        .expect("a larger terminal draws a larger plate");
+    let (_, filled) = driver.rose_mesh_memo_counters();
+
+    // Non-vacuity: without this the clear below could never be reached and
+    // the test would pass by never exercising the branch it names.
+    assert!(
+        filled > small_cap,
+        "a {}x{} plate filled the memo to {filled} entries, which does not exceed the \
+         {}x{} plate's cap of {small_cap}: the clear below is unreachable",
+        big.width(),
+        big.height(),
+        small.width(),
+        small.height()
+    );
+
+    let _ = driver.world_plate_for_redraw(small_w, small_h);
+    let (hits_after_clear, after_clear) = driver.rose_mesh_memo_counters();
+    assert!(
+        after_clear <= small_cap,
+        "the memo held {after_clear} entries after a redraw at the smaller plate, past \
+         its own cap of {small_cap}"
+    );
+    assert!(
+        after_clear < filled,
+        "the memo was not emptied at all: {after_clear} entries against {filled}"
+    );
+
+    let _ = driver.world_plate_for_redraw(small_w, small_h);
+    let (hits_settled, settled) = driver.rose_mesh_memo_counters();
+    assert_eq!(
+        settled, after_clear,
+        "the bound fired on a redraw that was inside its own cap, which returns the \
+         walk view to the un-memoised cost while changing no answer anyone can see"
+    );
+    // The counts alone cannot say that, and this is the assertion that
+    // actually holds the other direction: a memo emptied before EVERY draw
+    // refills to the same number every time, so `settled == after_clear`
+    // is satisfied by the failure it was written to catch. What a clear
+    // cannot fake is the HITS, which reset with it — so the third redraw
+    // must serve its whole plate, two addresses per box, out of the second
+    // redraw's entries.
+    //
+    // Found by mutation, not by reading: `if true || ...` left this test
+    // green and reddened only its sibling above.
+    let small_boxes = u64::from(small.width()) * u64::from(small.height());
+    assert_eq!(
+        hits_settled - hits_after_clear,
+        2 * small_boxes,
+        "the third redraw served {} consults from the second's entries, not the \
+         {} a {}x{} plate asks for: the memo was emptied under it",
+        hits_settled - hits_after_clear,
+        2 * small_boxes,
+        small.width(),
+        small.height()
+    );
+}

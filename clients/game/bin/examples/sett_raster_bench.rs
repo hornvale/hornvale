@@ -76,14 +76,15 @@
 //!    Mercator arm is flat for the opposite reason: its cold fill happens
 //!    before the timer starts and never happens again.
 //! 2. **A per-tile cost the cache had been hiding.**
-//!    `terrain_at_facet` resolves corner weights TWICE — once at the
+//!    `terrain_at_facet` resolved corner weights TWICE — once at the
 //!    grid-level ancestor through the shared `RoomMeshMemo`
 //!    (`corner_weights_memo`), and once at the tile's OWN rung, un-memoised
 //!    (`facet.corner_weights(geo, index)`), for The Hachure's bilinear
-//!    height blend. At `BAND_B_RUNG` that second call is a fresh
-//!    nearest-vertex resolution per box per frame, and it alone is 65.3% of
+//!    height blend. At `BAND_B_RUNG` that second call was a fresh
+//!    nearest-vertex resolution per box per frame, and it alone was 65.3% of
 //!    the whole redraw. Removing the cache is what exposed it; it is not a
-//!    cost the rose raster introduced.
+//!    cost the rose raster introduced, and the Mercator arm paid it too —
+//!    once per tile fill, where the `TileCache` hid it.
 //!
 //! The two named candidates both measured small and are reported above by
 //! the bench itself: the memoised `heading_rose` chain (the raster build,
@@ -91,11 +92,33 @@
 //! `rose::RoseMemo`'s doc claims — every miss falls in the cold build, and
 //! a warm frame is 100% hits.
 //!
-//! **No fix is attempted here.** The preregistered branch table (plan Task
-//! 7) puts a figure above 5.0 ms in the "stop and report" band precisely
-//! because something other than addressing would have to be being paid per
-//! frame — which is what was found. Retuning after unblinding is what
-//! decision 0016 forbids.
+//! **No fix was attempted in Task 7.** The preregistered branch table (plan
+//! Task 7) puts a figure above 5.0 ms in the "stop and report" band
+//! precisely because something other than addressing would have to be being
+//! paid per frame — which is what was found. Retuning after unblinding is
+//! what decision 0016 forbids.
+//!
+//! # What Task 9 then changed, and what it did NOT
+//!
+//! Nathan ruled at that stop (ledger decision #7): fix cause 2 now. The
+//! height blend goes through `Facet::corner_weights_memo` like the ancestor
+//! lookup forty-six lines above it, and `Driver::rose_mesh_memo` — which
+//! now accumulates two addresses per box instead of a mesh's worth — is
+//! bounded by `Driver::bound_rose_mesh_memo`.
+//!
+//! **Every figure above is Task 7's and stays Task 7's.** The prediction
+//! (1.0-2.0 ms) remains **falsified at 9.712 ms**; the shares in the
+//! ablation table are the shipped tip's as measured then. Task 9's post-fix
+//! figure is a separately labelled remediation measurement in ledger S22 and
+//! **is not offered against the frozen prediction** — repairing a defect a
+//! measurement exposed is not the same act as retuning a constant to rescue
+//! a prediction, and decision 0016 forbids only the second. Re-running this
+//! bench today measures the repaired code; the table is kept as the record
+//! of what was found, not as a claim about what runs now.
+//!
+//! Cause 1 is untouched and still true: the graph arm has no `TileCache`,
+//! so it reads every box of the plate on every frame. What Task 9 removed
+//! is the expensive part of that read, not the read.
 
 use hornvale_game::driver::Driver;
 use hornvale_game::input::Action;
@@ -315,6 +338,25 @@ warm median {warm_med:.4} ms over {runs}"
         memo.entries()
     );
     println!("  {boxes} facet clones (terrain_at_facet's per-box allocation): {clones:.4} ms");
+
+    // THE MESH MEMO, AFTER TASK 9. The driver above has drawn one plate, so
+    // its corner-weight memo is cold-filled; three more stationary redraws
+    // must add no entries at all and serve two consults per box each. This
+    // is the same quantity `tests/driver.rs` asserts, printed rather than
+    // asserted, so the readout and the guard cannot drift apart silently.
+    let (cold_mesh_hits, cold_mesh_misses) = driver.rose_mesh_memo_counters();
+    for _ in 0..3 {
+        std::hint::black_box(driver.world_plate_for_redraw(W, H));
+    }
+    let (mesh_hits, mesh_misses) = driver.rose_mesh_memo_counters();
+    println!(
+        "  mesh memo (corner weights): cold fill {cold_mesh_misses} entries / \
+{cold_mesh_hits} hits over {boxes} boxes; three more redraws added \
+{} entries and {} hits (cap {} entries at this plate)",
+        mesh_misses - cold_mesh_misses,
+        mesh_hits - cold_mesh_hits,
+        Driver::rose_mesh_memo_cap(pw, ph)
+    );
     println!(
         "  so of the shipped {rose_med:.3} ms, the raster build is {:.1}% and the clones {:.1}%; \
 the rest is the uncached per-box terrain read (see this file's own doc)",

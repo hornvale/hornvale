@@ -189,6 +189,40 @@ const DELVE_SUCCESS_PREFIX: &str = "You worm down into the dark.";
 const FLOOR_PLATE_CONTENT_HEIGHT: u16 =
     hornvale_game_core::spread::content_height(hornvale_game_core::MIN_HEIGHT);
 
+/// Memo keys one drawn box can add to [`Driver::rose_mesh_memo`]: its own
+/// facet, and that facet's grid-level ancestor (The Sett, Task 9).
+///
+/// `plate::terrain_at_facet` consults
+/// [`hornvale_kernel::Facet::corner_weights_memo`] at exactly those two
+/// addresses per box and nowhere else, so a plate of `n` boxes can grow the
+/// memo by at most `2n` entries. Measured on the 12x6 window
+/// `facet_reading.rs` draws: 34 entries for 72 boxes — well under the
+/// bound, because neighbouring boxes share both addresses.
+const ROSE_MESH_KEYS_PER_BOX: u64 = 2;
+
+/// How many whole plates' worth of mesh entries [`Driver::rose_mesh_memo`]
+/// may hold before it is emptied (The Sett, Task 9).
+///
+/// **The cap is a MULTIPLE OF THE LIVE PLATE, not a fixed number of
+/// entries**, and that is the one design choice here worth an argument. A
+/// fixed cap has to be sized for some assumed terminal: pick it for the
+/// 104x56 reference (a 64x52 plate, **3,328** boxes) and a player on a
+/// 300x100 terminal overflows it inside a single frame, so the memo is
+/// emptied on every redraw and silently returns to the un-memoised cost
+/// Task 9 exists to remove — with nothing to say so, since the answers stay
+/// byte-identical either way. Scaling by the plate makes the memo able to
+/// hold the frame it is about to draw plus three more, at every terminal
+/// size, so a clear can never happen more often than once per four plates
+/// of genuinely new ground.
+///
+/// Four rather than one because the walker moves and the plate does not
+/// jump: Task 1 measured the raster's frame-to-frame stability at 100%, so
+/// a step exposes one column or row and reuses the rest. Four plates is a
+/// few hundred steps of headroom at the reference size, and 26,624 entries
+/// there — a `BTreeMap` of a few megabytes, against a `TileCache` that
+/// holds 320 tiles of 32x32 each.
+const ROSE_MESH_PLATES_KEPT: u64 = 4;
+
 /// Why a [`Driver`] could not start.
 ///
 /// Each variant wraps the real typed error from the layer that failed
@@ -595,6 +629,17 @@ pub struct Driver {
     /// draws no tiles. Long-lived for the same reason: it memoises
     /// nearest-vertex corner resolution per facet, which a fresh
     /// `RoomMeshMemo` per redraw would throw away every frame.
+    ///
+    /// **It carries TWO addresses per box since The Sett's Task 9** — the
+    /// grid-level ancestor and the box's own facet, the second for The
+    /// Hachure's bilinear height blend, which until that task recomputed
+    /// four nearest-vertex scans on every box of every frame (ledger S21:
+    /// 65.3% of a 9.712 ms walk-band redraw). That is what makes this field
+    /// accumulate a session's worth of entries rather than a mesh's worth,
+    /// and so what makes [`Driver::bound_rose_mesh_memo`] necessary:
+    /// [`hornvale_kernel::RoomMeshMemo`] is append-only and never evicts, so
+    /// an owner that keeps one for the life of the process has to bound it
+    /// itself.
     rose_mesh_memo: hornvale_kernel::RoomMeshMemo,
 }
 
@@ -1429,6 +1474,91 @@ impl Driver {
         )
     }
 
+    /// Empty [`Self::rose_mesh_memo`] once it holds more than
+    /// [`ROSE_MESH_PLATES_KEPT`] plates' worth of entries (The Sett, Task
+    /// 9).
+    ///
+    /// **Why the driver bounds it and the kernel does not.**
+    /// [`hornvale_kernel::RoomMeshMemo`] is append-only by design — its own
+    /// doc says nothing ever invalidates an entry, because a key already
+    /// carries everything its derivation reads — and it is the KERNEL's,
+    /// shared with `windows/locale`, `windows/worldgen` and `windows/lab`.
+    /// Giving it eviction would be a kernel-layer change with four
+    /// consumers, to solve a problem only this client has: every other
+    /// holder scopes a memo to a tick or a session and drops it, while this
+    /// one is a `Driver` field that lives as long as the process. The
+    /// unbounded growth is a property of THIS owner's lifetime, so the bound
+    /// belongs to this owner.
+    ///
+    /// **Why wholesale, and not [`crate::tiles::TileCache`]'s two radii.**
+    /// That precedent was read and does not transfer: `TileCache` owns its
+    /// own `BTreeMap` and evicts with a `retain` over keys it can measure a
+    /// distance on. `RoomMeshMemo` exposes no key iteration, no removal and
+    /// no length — [`hornvale_kernel::RoomMeshMemo::corner_weights_lookup`]
+    /// and the four counters are its whole read surface — so selective
+    /// eviction is not merely more complex out here, it is **not
+    /// expressible** without changing the kernel type. Replacing the whole
+    /// memo is the only bound available above that layer, and it is a
+    /// correct one: the memo is a pure cache, so emptying it costs one cold
+    /// frame (Task 7 measured a cold walk-band frame at 41-43 ms) and
+    /// changes no answer.
+    ///
+    /// **How the size is known without a `len()`.**
+    /// [`hornvale_kernel::RoomMeshMemo::corner_weights_misses`] counts the
+    /// calls that filled a fresh entry, and nothing ever removes one, so for
+    /// a memo this driver owns from empty the miss count **is** the entry
+    /// count. Replacing the memo resets both together, which is what makes
+    /// the reading stay true across a clear: the counters are per-generation
+    /// here, not per-process.
+    ///
+    /// A degenerate plate (zero boxes) gives a cap of zero and empties the
+    /// memo on every call. That is harmless rather than a special case:
+    /// a plate with no boxes fills nothing, so there is never anything to
+    /// throw away.
+    fn bound_rose_mesh_memo(&mut self, plate_width: u16, plate_height: u16) {
+        if self.rose_mesh_memo.corner_weights_misses()
+            > Self::rose_mesh_memo_cap(plate_width, plate_height)
+        {
+            self.rose_mesh_memo = hornvale_kernel::RoomMeshMemo::default();
+        }
+    }
+
+    /// `(hits, misses)` on [`Self::rose_mesh_memo`]'s corner-weight half
+    /// since it was last emptied (The Sett, Task 9).
+    ///
+    /// The `misses` half is also the memo's ENTRY COUNT — nothing ever
+    /// removes an entry, so every miss is one more key — which is what
+    /// [`Self::bound_rose_mesh_memo`] reads to decide whether to empty it,
+    /// and the reason both numbers reset together when it does. A reader
+    /// watching these across redraws therefore sees exactly two things: the
+    /// hit rate the memoised height blend buys, and the moment the bound
+    /// fires.
+    ///
+    /// Public for the cost readout (`examples/sett_raster_bench.rs`) and for
+    /// `tests/driver.rs`, which is the only way either can observe a private
+    /// field's behaviour without timing anything.
+    pub fn rose_mesh_memo_counters(&self) -> (u64, u64) {
+        (
+            self.rose_mesh_memo.corner_weights_hits(),
+            self.rose_mesh_memo.corner_weights_misses(),
+        )
+    }
+
+    /// The entry cap [`Self::bound_rose_mesh_memo`] applies to a
+    /// `plate_width` x `plate_height` plate (The Sett, Task 9) —
+    /// [`ROSE_MESH_PLATES_KEPT`] plates of [`ROSE_MESH_KEYS_PER_BOX`] keys
+    /// each.
+    ///
+    /// Public for the same reason as [`Self::rose_mesh_memo_counters`]: a
+    /// test that asserted against its own copy of this arithmetic would pass
+    /// while the driver used a different number.
+    pub fn rose_mesh_memo_cap(plate_width: u16, plate_height: u16) -> u64 {
+        u64::from(plate_width)
+            * u64::from(plate_height)
+            * ROSE_MESH_KEYS_PER_BOX
+            * ROSE_MESH_PLATES_KEPT
+    }
+
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
     /// `w`-by-`h` redraw — `Some` exactly when the band is one whose plate
     /// is the raster ([`Self::raster_is_drawn`]), `None` otherwise.
@@ -1499,6 +1629,14 @@ impl Driver {
             let anchor = self.session.position();
             crate::rose::RoseRaster::build(&anchor, plate_width, plate_height, &mut self.rose_memo)
         });
+        // BEFORE the draw, never after (The Sett, Task 9): a memo cleared
+        // after a redraw would throw away the very entries the NEXT redraw
+        // is about to ask for, which is the frame-to-frame reuse the whole
+        // change exists to buy. Cleared here, the cold frame is the one that
+        // was going to pay for new ground anyway.
+        if walk_raster.is_some() {
+            self.bound_rose_mesh_memo(plate_width, plate_height);
+        }
         // THE LIVE SESSION'S OWN PATH (The Wash, Task 6). `main.rs`'s
         // `redraw` calls this method and never `world_plate`, so this is the
         // call that decides what a player actually sees — it is threaded

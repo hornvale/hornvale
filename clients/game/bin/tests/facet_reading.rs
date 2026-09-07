@@ -358,3 +358,147 @@ fn the_centroid_and_the_tile_centre_can_resolve_different_vertices() {
         facets.len()
     );
 }
+
+/// The height blend consults the mesh once per facet, not once per frame
+/// (The Sett, Task 9).
+///
+/// [`plate::terrain_at_facet`] resolves corner weights at two addresses: the
+/// grid-level ancestor, for the vertex the nominal fields partition on, and
+/// the tile's OWN facet, for The Hachure's bilinear height blend. The first
+/// went through [`hornvale_kernel::Facet::corner_weights_memo`] from the
+/// start; the second was a bare `corner_weights` call forty-six lines below
+/// it, with the same `&mut RoomMeshMemo` already in scope. Ledger S21
+/// measured that one line at **6.821 ms of a 9.712 ms walk-band redraw,
+/// 65.3%**, because the graph arm draws no chart tiles and so has no
+/// [`crate::tiles::TileCache`] to amortise it against.
+///
+/// **This asserts the mechanism, never a duration.** `RoomMeshMemo` counts
+/// its own hits and misses, so the claim "the expensive path stops running"
+/// is directly observable; a timing assertion in a test suite is a flake on
+/// a loaded box, and this repository has already discarded one measurement
+/// pair taken at load average 50 as 3.3x wrong.
+///
+/// **The ANSWER cannot move, so there is nothing behaviour-side to assert
+/// here.** `corner_weights_memo` is a cache of a pure function of `(Facet,
+/// Geosphere::level())`, byte-identical to its recomputing sibling by
+/// construction and pinned by the kernel's own
+/// `corner_weights_memo_bit_equals_recomputation` and `hornvale-locale`'s
+/// `every_cached_reader_bit_equals_its_recomputing_sibling_with_a_partial_prefill`.
+/// [`terrain_at_facet_agrees_with_terrain_at_tile`] above is what would
+/// redden if that ever stopped being true.
+///
+/// **Non-vacuity, both directions, because only one of them is the usual
+/// mistake.** A memo that never misses is a memo nothing is asking, so the
+/// first draw must miss once for EVERY distinct facet it reads — its boxes'
+/// own facets as well as their grid ancestors. That is the bound the defect
+/// fails: before the height blend consulted the memo, a first draw over this
+/// window missed 6 times (the distinct grid ancestors) rather than 66, and
+/// every one of its 72 boxes recomputed four nearest-vertex scans it had
+/// just paid for. The second draw then supplies the other direction: over a
+/// window one step across, it must hit twice per box for every box whose
+/// facet the first draw already saw.
+///
+/// **No context and no reflectance cache**, the same call this file's
+/// second test already makes and for a sharper version of the same reason:
+/// `LocaleContext::reflectance_at_facet_cached` is threaded the very same
+/// memo, so a reflectance read per box would mix its own hits and misses
+/// into the counters this test is reading and the arithmetic below would
+/// stop being exact.
+#[test]
+fn a_second_draw_reuses_the_first_draws_corner_weights() {
+    let (_world, ctx) = seed_42();
+    let terrain = ctx.terrain();
+    let geo = terrain.geosphere();
+    let index = ctx.nearest_index();
+    let f = frame();
+    let (vw, vh) = plate::virtual_dims(BAND_B_RUNG);
+    let at = WorldTime::GENESIS;
+
+    // Two overlapping draws: the second is the first stepped one column
+    // east, which is what a keypress actually produces (Task 1 measured the
+    // raster's frame-to-frame stability at 100%).
+    let win_a = land_window(&f, terrain, W, H);
+    let win_b = Window {
+        origin_col: (win_a.origin_col + 1) % vw,
+        ..win_a
+    };
+
+    // Every memo key a draw over `win` touches: each box's own facet, and
+    // that facet's grid-level ancestor. Both go into the store under
+    // `geo.depth()`, so a bare `Facet` set counts the distinct keys exactly.
+    let keys_of = |win: &Window| -> BTreeSet<Facet> {
+        let mut keys = BTreeSet::new();
+        for (row, col) in boxes(W, H) {
+            let facet = Facet::containing(tile_centre(&f, win, vw, vh, row, col), win.depth);
+            let ancestor = facet
+                .ancestor(geo.depth())
+                .expect("BAND_B_RUNG (13) is finer than the grid level (6)");
+            keys.insert(facet);
+            keys.insert(ancestor);
+        }
+        keys
+    };
+    let keys_a = keys_of(&win_a);
+    let keys_b = keys_of(&win_b);
+    let fresh_in_b = keys_b.difference(&keys_a).count() as u64;
+
+    let mut memo = RoomMeshMemo::default();
+    let draw = |memo: &mut RoomMeshMemo, win: &Window| {
+        for (row, col) in boxes(W, H) {
+            let centre = tile_centre(&f, win, vw, vh, row, col);
+            let facet = Facet::containing(centre, win.depth);
+            let _ = plate::terrain_at_facet(
+                terrain, geo, index, memo, &facet, centre, None, at, 0, None,
+            );
+        }
+    };
+
+    draw(&mut memo, &win_a);
+    let (hits_a, misses_a) = (memo.corner_weights_hits(), memo.corner_weights_misses());
+    draw(&mut memo, &win_b);
+    let (hits_b, misses_b) = (
+        memo.corner_weights_hits() - hits_a,
+        memo.corner_weights_misses() - misses_a,
+    );
+
+    // Two consults per box — the ancestor's and the tile's own — is the
+    // mechanism itself, so it is stated once and both draws are checked
+    // against it.
+    let consults = 2 * u64::from(W) * u64::from(H);
+
+    println!(
+        "draw A: {hits_a} hits, {misses_a} misses over {} distinct keys; \
+         draw B: {hits_b} hits, {misses_b} misses, {fresh_in_b} keys fresh in B",
+        keys_a.len()
+    );
+
+    assert_eq!(
+        misses_a,
+        keys_a.len() as u64,
+        "the first draw must miss once for every distinct facet it reads \
+         ({} of them: each box's own facet AND its grid ancestor). A smaller \
+         count means the height blend is not consulting the memo at all",
+        keys_a.len()
+    );
+    assert_eq!(
+        hits_a,
+        consults - misses_a,
+        "the first draw consults the memo twice per box, once per address"
+    );
+
+    assert_eq!(
+        misses_b, fresh_in_b,
+        "the second draw may only miss on facets the first draw never saw"
+    );
+    assert_eq!(
+        hits_b,
+        consults - fresh_in_b,
+        "every other consult on the second draw must be served from the \
+         first draw's entries"
+    );
+    assert!(
+        fresh_in_b * 4 < consults,
+        "{fresh_in_b} of {consults} consults were fresh on a one-step draw: \
+         the two windows barely overlap, so the reuse bound above is weak"
+    );
+}

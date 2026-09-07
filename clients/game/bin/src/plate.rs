@@ -3444,7 +3444,26 @@ pub fn terrain_at_facet(
     // `virtual_dims` deliberately still honours; there the snapped reading is
     // the only one available and is the right answer, since the tile is
     // coarser than the sample.
-    let height_asl = match facet.corner_weights(geo, index) {
+    //
+    // **THROUGH THE MEMO, LIKE THE ANCESTOR LOOKUP FORTY-SIX LINES ABOVE
+    // (The Sett, Task 9).** This was a bare `facet.corner_weights(geo,
+    // index)` until Task 7 priced it: four `NearestVertexIndex` scans per
+    // box per frame, **6.821 ms of a 9.712 ms walk-band redraw — 65.3%**
+    // (ledger S21). The `TileCache` amortised it to once per tile fill on
+    // the Mercator arm, so the cost is not one the rose raster introduced —
+    // the graph arm keeps no tiles to hide it behind, and removing the cache
+    // is what made it visible.
+    //
+    // The ANSWER cannot move: `corner_weights_memo` is a cache of a pure
+    // function of `(Facet, Geosphere::level())`, byte-identical to its
+    // recomputing sibling by construction and pinned by the kernel's
+    // `corner_weights_memo_bit_equals_recomputation`. Only the number of
+    // expensive calls changes, which is what
+    // `facet_reading.rs`'s `a_second_draw_reuses_the_first_draws_corner_weights`
+    // counts. The memo is caller-owned and unbounded, so **whoever holds one
+    // across frames has to bound it** — `Driver::rose_mesh_memo` does, in
+    // `Driver::bound_rose_mesh_memo`.
+    let height_asl = match facet.corner_weights_memo(geo, index, memo) {
         Some(weights) => {
             let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
             let blended: f64 = weights
@@ -5257,8 +5276,9 @@ mod tests {
         );
         let before = memo.corner_weights_misses();
         assert_eq!(
-            before, 1,
-            "the first tile of a cold memo costs exactly one miss"
+            before, 2,
+            "the first tile of a cold memo costs exactly two misses: its \
+             grid-level ancestor, and its OWN facet for the height blend"
         );
         let _ = terrain_at_tile(
             &terrain,
@@ -5276,30 +5296,75 @@ mod tests {
             0,
             None,
         );
-        // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to
-        // share a grid-level ancestor, and a cold ancestor costs exactly one
-        // miss. An exact-zero assertion would flake on an ancestor boundary
-        // rather than fail on a real regression. One miss is three vertex
-        // scans; the OLD path ran 49 unmemoised ones per tile, so this still
-        // discriminates by more than an order of magnitude.
+        // BOUNDED, not zero: tile (0,1) has its own facet, which is cold,
+        // and it is not guaranteed to share tile (0,0)'s grid-level
+        // ancestor, which would then be cold too. An exact-zero assertion
+        // would flake on an ancestor boundary rather than fail on a real
+        // regression. One miss is four vertex scans; the OLD path ran 49
+        // unmemoised ones per tile, so this still discriminates by more than
+        // an order of magnitude.
+        //
+        // **The bound was 1 until The Sett's Task 9 and the second address
+        // is new to the COUNTER, not to the work** — see
+        // `a_band_b_plate_costs_far_fewer_searches_than_it_has_tiles` for
+        // the full finding.
         assert!(
-            memo.corner_weights_misses() - before <= 1,
+            memo.corner_weights_misses() - before <= 2,
             "the finest rung took {} memo misses for one tile; direct addressing costs \
-             at most 1",
+             at most 2",
             memo.corner_weights_misses() - before
         );
     }
 
-    /// **The whole plate's search count is bounded by the mesh, not by the
-    /// screen** — the H1 mechanism at plate scale rather than tile scale.
-    /// One 64x32 band-B plate covers a handful of grid-level facets, so it
-    /// costs a handful of misses; the path this replaces cost `64 * 32 * 49
-    /// = 100,352` unmemoised searches for the same picture.
+    /// **The whole plate's ANCESTOR search count is bounded by the mesh,
+    /// not by the screen, and every other search is paid once per facet
+    /// rather than once per draw** — the H1 mechanism at plate scale rather
+    /// than tile scale. One 64x32 band-B plate covers a handful of
+    /// grid-level facets, so the ancestor half costs a handful of misses;
+    /// the path this replaces cost `64 * 32 * 49 = 100,352` unmemoised
+    /// searches for the same picture.
     ///
-    /// Asserted against the plate's own tile count, never a hardcoded
-    /// number: a bound that says "fewer than one miss per hundred tiles" is
-    /// a claim about the MECHANISM, and it fails loudly if a future change
-    /// reintroduces a per-tile search.
+    /// # This test was WRONG for the whole of The Hachure, and green (The
+    /// # Sett, Task 9)
+    ///
+    /// It used to assert a single number — total `corner_weights` misses —
+    /// against `misses * 100 < tiles`, and read that as "the plate's search
+    /// count is bounded by the mesh". That was true of the searches it could
+    /// SEE. The Hachure then added a bilinear height blend at the tile's own
+    /// rung ([`terrain_at_facet`]'s `height_asl`), resolved through the bare
+    /// `Facet::corner_weights` rather than the memo — so from that campaign
+    /// onwards every tile ran four `NearestVertexIndex` scans that this
+    /// counter never counted. On this very fixture the number it reported
+    /// was **2 misses — 8 scans**; the plate was actually running
+    /// **8 + 4 x 2,048 = 8,200**, a factor of **1,025**. The assertion did
+    /// not fail, because the expensive path had stopped being counted, not
+    /// stopped happening. Ledger S21 priced the same line at 65.3% of a
+    /// walk-band redraw.
+    ///
+    /// (Four scans, not the three the sibling test's comment said until this
+    /// task: [`hornvale_kernel::Facet::corner_weights`] resolves a QUAD's
+    /// corners and has since The Pavement.)
+    ///
+    /// So the mechanism claim is now made in the three parts it always had,
+    /// and the two that were invisible are the ones that matter:
+    ///
+    /// 1. **The ancestor half is bounded by the mesh** — the original H1
+    ///    claim, unweakened, but now counted on its own rather than on a
+    ///    total that could hide a per-tile term inside it.
+    /// 2. **The blend half is one search per distinct FACET**, which at
+    ///    [`BAND_B_RUNG`] is about one per tile. That is The Hachure's
+    ///    design and not a regression: the blend is defined at the tile's
+    ///    own rung, so there is nothing coarser to amortise it against
+    ///    within a single draw.
+    /// 3. **A REDRAW of the same plate costs nothing at all.** This is the
+    ///    assertion that would have caught the defect, and the one Task 9
+    ///    buys: the second pass below must take zero misses. Before Task 9
+    ///    it would have taken zero misses too — and still run 8,192 scans —
+    ///    which is exactly why parts 1 and 2 are asserted against an
+    ///    independently enumerated key set rather than against each other.
+    ///
+    /// Every bound is asserted against the plate's own tile count or against
+    /// a set this test builds itself, never a hardcoded number.
     #[test]
     fn a_band_b_plate_costs_far_fewer_searches_than_it_has_tiles() {
         let (terrain, geo) = test_world();
@@ -5334,16 +5399,86 @@ mod tests {
             }
         }
         let misses = memo.corner_weights_misses();
+        let hits = memo.corner_weights_hits();
         let tiles = u64::from(w * h);
+
+        // The two addresses every tile resolves, enumerated here rather than
+        // read back off the memo — the memo cannot tell them apart, and a
+        // total that cannot be split is what hid the defect above.
+        let mut facets: BTreeSet<Facet> = BTreeSet::new();
+        let mut ancestors: BTreeSet<Facet> = BTreeSet::new();
+        for row in 0..h {
+            for col in 0..w {
+                let (lat, lon) =
+                    mercator::unproject(&f, win.origin_row + row, win.origin_col + col, vw, vh);
+                let facet = Facet::containing(
+                    hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
+                    win.depth,
+                );
+                let ancestor = facet
+                    .ancestor(geo.depth())
+                    .expect("BAND_B_RUNG is finer than the grid level");
+                facets.insert(facet);
+                ancestors.insert(ancestor);
+            }
+        }
+        let ancestors = ancestors.len() as u64;
+        let facets = facets.len() as u64;
+
+        // 1. The ancestor half: bounded by the mesh, not the screen.
         assert!(
-            misses * 100 < tiles,
-            "a {w}x{h} band-B plate took {misses} memo misses over {tiles} tiles; \
-             direct addressing must cost far fewer searches than it has tiles"
+            ancestors * 100 < tiles,
+            "a {w}x{h} band-B plate spans {ancestors} grid-level facets over {tiles} \
+             tiles; the ancestor address must cost far fewer searches than it has tiles"
+        );
+        // 2. The blend half: once per distinct facet, never once per tile
+        // read. Both halves together are the whole miss count, so a third,
+        // uncounted search reappearing anywhere in the reading fails here.
+        assert_eq!(
+            misses,
+            ancestors + facets,
+            "a {w}x{h} plate spanning {facets} facets in {ancestors} grid quads took \
+             {misses} misses; the reading resolves exactly those two addresses"
         );
         assert_eq!(
-            memo.corner_weights_hits() + misses,
-            tiles,
-            "every tile must consult the memo exactly once"
+            hits + misses,
+            2 * tiles,
+            "every tile must consult the memo exactly twice: its grid ancestor, and \
+             its own facet for the height blend"
+        );
+
+        // 3. The redraw costs nothing. This is Task 9's claim at plate
+        // scale, and the assertion the old single-number bound could not
+        // make.
+        for row in 0..h {
+            for col in 0..w {
+                let _ = terrain_at_tile(
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
+                    0,
+                    None,
+                );
+            }
+        }
+        assert_eq!(
+            memo.corner_weights_misses(),
+            misses,
+            "redrawing the same plate must take no further searches at all"
+        );
+        assert_eq!(
+            memo.corner_weights_hits() - hits,
+            2 * tiles,
+            "and every one of the redraw's consults must be a hit"
         );
     }
 
