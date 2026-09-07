@@ -95,18 +95,22 @@
     }
   },
   "output_comparison": {
-    "workload": "digest-census-publication",
-    "path": "stdout",
-    "authoritative": {
-      "bytes": 7493,
-      "sha256": "9571178d3943687ed348ad3f0f6fed783e967329286789ad58f0a2e595063306"
-    },
-    "candidate": {
-      "bytes": 31,
-      "sha256": "188703470f44519be04f4e3f647af191ba4ae50a1e8f393477b0f3b8ccb4369d"
-    },
-    "status": "mismatch",
-    "byte_equal": false
+    "digest-census-publication": [
+      {
+        "workload": "digest-census-publication",
+        "path": "stdout",
+        "authoritative": {
+          "bytes": 7493,
+          "sha256": "9571178d3943687ed348ad3f0f6fed783e967329286789ad58f0a2e595063306"
+        },
+        "candidate": {
+          "bytes": 31,
+          "sha256": "188703470f44519be04f4e3f647af191ba4ae50a1e8f393477b0f3b8ccb4369d"
+        },
+        "status": "mismatch",
+        "byte_equal": false
+      }
+    ]
   },
   "invalidation_matrix": {
     "observer": {
