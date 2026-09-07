@@ -67,6 +67,14 @@ def load_workloads(path: Path) -> dict:
         if (not isinstance(command, list) or not command or
                 any(not isinstance(arg, str) or not arg for arg in command)):
             raise ValueError(f"{identifier}: command must be a non-empty list of strings")
+        phases = workload.get("phases")
+        if not isinstance(phases, dict) or set(phases) != {"preparation", "test"}:
+            raise ValueError(f"{identifier}: preparation and test phases are required")
+        for phase_name in ("preparation", "test"):
+            phase_command = phases[phase_name].get("command") if isinstance(phases[phase_name], dict) else None
+            if (not isinstance(phase_command, list) or not phase_command or
+                    any(not isinstance(arg, str) or not arg for arg in phase_command)):
+                raise ValueError(f"{identifier}: {phase_name} command must be a non-empty list of strings")
         outputs = workload.get("expected_outputs")
         if not isinstance(outputs, list) or not outputs:
             raise ValueError(f"{identifier}: expected_outputs is required")
@@ -85,6 +93,13 @@ def command_for_workload(workload: dict, checkout: Path) -> list[str]:
         raise ValueError("workload checkout must be absolute")
     command = workload["command"]
     return [argument.replace("${CHECKOUT}", str(checkout)) for argument in command]
+
+
+def _phase_command(workload: dict, phase: str, checkout: Path) -> list[str]:
+    if phase not in {"preparation", "test"}:
+        raise ValueError(f"unknown workload phase: {phase}")
+    return [argument.replace("${CHECKOUT}", str(checkout))
+            for argument in workload["phases"][phase]["command"]]
 
 
 def _workload(workload_id: str) -> dict:
@@ -333,10 +348,16 @@ def summarize_baseline(attempts: list[dict]) -> dict:
         if classification in records:
             raise ValueError("duplicate baseline workload classification")
         records[classification] = attempt
-    if not by_workload or any(set(records) != {"cold", "warm"} for records in by_workload.values()):
+    frozen_ids = {workload["id"] for workload in load_workloads(WORKLOADS_PATH)["workloads"]}
+    if set(by_workload) != frozen_ids:
+        raise ValueError("baseline must contain complete frozen workload set")
+    if any(set(records) != {"cold", "warm"} for records in by_workload.values()):
         raise ValueError("baseline attempts must be paired")
     eligible = [attempt for records in by_workload.values() for attempt in records.values()]
     graph_counts = {}
+    graph_identities = [attempt.get("graph", {}).get("sha256") for attempt in eligible]
+    if any(not _sha256(value) for value in graph_identities) or len(set(graph_identities)) != 1:
+        raise ValueError("baseline graph identity differs")
     for field in ("package_count", "workspace_member_count"):
         values = [attempt.get("graph", {}).get(field) for attempt in eligible]
         if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in values):
@@ -354,7 +375,7 @@ def summarize_baseline(attempts: list[dict]) -> dict:
             }
             costs[workload_id][classification]["total_s"] = sum(costs[workload_id][classification].values())
     return {"pair_count": len(by_workload), "excluded_attempt_count": excluded,
-            "graph_counts": graph_counts, "costs": costs}
+            "graph_identity": graph_identities[0], "graph_counts": graph_counts, "costs": costs}
 
 
 def _git_text(root: Path, *args: str) -> str:
@@ -368,11 +389,20 @@ def _git_text(root: Path, *args: str) -> str:
     return completed.stdout.decode("utf-8").strip()
 
 
-def _source_identity(root: Path) -> dict:
+def _source_identity(root: Path, comparison_ref: str | None = None) -> dict:
+    if comparison_ref is None:
+        try:
+            _git_text(root, "rev-parse", "--verify", "origin/main")
+            comparison_ref = "origin/main"
+        except ValueError:
+            comparison_ref = "main"
+    if not isinstance(comparison_ref, str) or not comparison_ref or comparison_ref.startswith("-"):
+        raise ValueError("comparison ref must be a safe non-empty ref")
     return {
         "commit": _git_text(root, "rev-parse", "HEAD"),
         "tree": _git_text(root, "rev-parse", "HEAD^{tree}"),
-        "merge_base": _git_text(root, "merge-base", "HEAD", "HEAD"),
+        "merge_base": _git_text(root, "merge-base", "HEAD", comparison_ref),
+        "comparison_ref": comparison_ref,
     }
 
 
@@ -400,6 +430,26 @@ def _output_records(checkout: Path, workload: dict) -> list[dict]:
     return records
 
 
+def _measure_workload_phase(workload: dict, phase: str, checkout: Path,
+                            target: Path, evidence_root: Path) -> float:
+    """Measure a declared phase; its elapsed time is never inferred."""
+    result = _bounded_measure(
+        _phase_command(workload, phase, checkout), checkout, DEFAULT_TIMEOUT,
+        [target, evidence_root],
+    )
+    if result.get("launch_error"):
+        raise ValueError(f"{phase} phase could not start: {result['launch_error']}")
+    if result.get("harness_deadline_exceeded"):
+        raise ValueError(f"{phase} phase exceeded deadline")
+    if result.get("output_limit_exceeded"):
+        raise ValueError(f"{phase} phase exceeded output limit")
+    if result.get("cleanup_error"):
+        raise ValueError(f"{phase} phase cleanup failed: {result['cleanup_error']}")
+    if result.get("exit_code") != 0:
+        raise ValueError(f"{phase} phase failed with exit code {result.get('exit_code')}")
+    return float(result["elapsed_seconds"])
+
+
 def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
     """Capture every frozen workload for one cold or warm baseline class."""
     root, output = Path(root), Path(output)
@@ -423,9 +473,11 @@ def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
         destination = evidence / f"{workload['id']}.capture.json"
         captured = None
         try:
+            preparation_s = _measure_workload_phase(workload, "preparation", root, target, evidence)
             captured = capture(workload["id"], root, target, evidence, destination)
             raw_attempt = {"workload_id": workload["id"], "capture": captured, "status": "captured"}
-            costs = {"preparation_s": 0.0, "build_s": float(captured["elapsed_s"]), "test_s": 0.0}
+            test_s = _measure_workload_phase(workload, "test", root, target, evidence)
+            costs = {"preparation_s": preparation_s, "build_s": float(captured["elapsed_s"]), "test_s": test_s}
             failure = None if captured.get("exit_code") == 0 else {
                 "reason": "measurement command failed",
                 "valid_evidence": True,

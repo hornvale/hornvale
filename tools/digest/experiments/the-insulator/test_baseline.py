@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 from measure import (  # noqa: E402
     OUTPUT_LIMIT, _bounded_command, cargo_graph, changed_closure,
     invalidation_probes, run_baseline, sha256, summarize_baseline,
-    validate_attempt,
+    validate_attempt, _source_identity,
 )
 
 
@@ -169,6 +169,10 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(result["costs"]["digest-thing"]["cold"]["preparation_s"], 3.0)
         self.assertEqual(result["costs"]["digest-thing"]["warm"]["total_s"], 21.0)
 
+    def test_rejects_partial_frozen_workload_set(self):
+        with self.assertRaisesRegex(ValueError, "complete frozen workload set"):
+            summarize_baseline([attempt("cold"), attempt("warm")])
+
     def test_rejects_duplicate_or_missing_workload_classification_pair(self):
         pair = [attempt("cold"), attempt("warm")]
         with self.assertRaisesRegex(ValueError, "duplicate"):
@@ -182,9 +186,11 @@ class SummaryTests(unittest.TestCase):
         unknown["workload_id"] = "not-frozen"
         missing = attempt("warm")
         del missing["workload_id"]
-        result = summarize_baseline(valid_pair + [unknown, missing])
+        result = summarize_baseline(valid_pair + [unknown, missing,
+                                                  attempt("cold", workload_id="digest-census-publication"),
+                                                  attempt("warm", workload_id="digest-census-publication")])
         self.assertEqual(result["excluded_attempt_count"], 2)
-        with self.assertRaisesRegex(ValueError, "paired"):
+        with self.assertRaisesRegex(ValueError, "complete frozen workload set"):
             summarize_baseline([unknown, missing])
 
     def test_rejects_graph_count_mismatch_across_workload_pairs(self):
@@ -198,17 +204,33 @@ class SummaryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "graph counts"):
             summarize_baseline(records)
 
+    def test_rejects_graph_identity_mismatch_across_workload_pairs(self):
+        records = [
+            attempt("cold", workload_id="digest-census-publication"),
+            attempt("warm", workload_id="digest-census-publication"),
+            attempt("cold", workload_id="digest-thing"),
+            attempt("warm", workload_id="digest-thing"),
+        ]
+        records[-1]["graph"]["sha256"] = "e" * 64
+        with self.assertRaisesRegex(ValueError, "graph identity"):
+            summarize_baseline(records)
+
     def test_consumes_persisted_costs_separately(self):
-        result = summarize_baseline([attempt("cold"), attempt("warm")])
+        result = summarize_baseline([attempt("cold"), attempt("warm"),
+                                     attempt("cold", workload_id="digest-census-publication"),
+                                     attempt("warm", workload_id="digest-census-publication")])
         self.assertEqual(result["costs"]["digest-thing"]["cold"]["build_s"], 5.0)
         self.assertEqual(result["costs"]["digest-thing"]["cold"]["preparation_s"], 2.0)
         self.assertEqual(result["costs"]["digest-thing"]["warm"]["test_s"], 3.0)
 
     def test_rejects_incomplete_and_invalid_numeric_attempts(self):
-        result = summarize_baseline([attempt("cold"), attempt("warm"), attempt("cold", valid=False)])
-        self.assertEqual(result["pair_count"], 1)
+        result = summarize_baseline([attempt("cold"), attempt("warm"),
+                                     attempt("cold", workload_id="digest-census-publication"),
+                                     attempt("warm", workload_id="digest-census-publication"),
+                                     attempt("cold", valid=False)])
+        self.assertEqual(result["pair_count"], 2)
         self.assertEqual(result["excluded_attempt_count"], 1)
-        with self.assertRaisesRegex(ValueError, "paired"):
+        with self.assertRaisesRegex(ValueError, "complete frozen workload set"):
             summarize_baseline([attempt("cold")])
         for value in (True, float("nan"), float("inf")):
             bad = attempt("cold")
@@ -219,7 +241,9 @@ class SummaryTests(unittest.TestCase):
     def test_excludes_malformed_attempt_before_aggregating_graph_counts(self):
         malformed = attempt("cold", valid=False)
         malformed["graph"]["package_count"] = {"would": "raise"}
-        result = summarize_baseline([malformed, attempt("cold"), attempt("warm")])
+        result = summarize_baseline([malformed, attempt("cold"), attempt("warm"),
+                                     attempt("cold", workload_id="digest-census-publication"),
+                                     attempt("warm", workload_id="digest-census-publication")])
         self.assertEqual(result["excluded_attempt_count"], 1)
         self.assertEqual(result["graph_counts"]["package_count"], [5])
 
@@ -242,7 +266,7 @@ class BaselineOrchestrationTests(unittest.TestCase):
             value["workload_command_template"] = next(item["command"] for item in json.loads((ROOT / "workloads.json").read_text())['workloads'] if item['id'] == workload_id)
             value["command"] = [arg.replace("${CHECKOUT}", str(root)) for arg in value["workload_command_template"]]
             return value
-        with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=capture_cell), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
+        with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=capture_cell), mock.patch("measure._measure_workload_phase", side_effect=[2.0, 3.0, 4.0, 5.0]), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
             return run_baseline(root, output, "mac", cold=cold)
 
     def test_cold_recreates_only_owned_target_and_warm_preserves_it(self):
@@ -289,12 +313,37 @@ class BaselineOrchestrationTests(unittest.TestCase):
                 value["workload_command_template"] = next(item["command"] for item in json.loads((ROOT / "workloads.json").read_text())["workloads"] if item["id"] == workload_id)
                 value["command"] = [arg.replace("${CHECKOUT}", str(root)) for arg in value["workload_command_template"]]
                 return value
-            with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=fake_capture), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
+            with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=fake_capture), mock.patch("measure._measure_workload_phase", return_value=1.0), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
                 dossier = run_baseline(root, output, "mac", cold=True)
             self.assertEqual(dossier["schema"], "insulator-baseline-v1")
             self.assertEqual(dossier["classification"], "cold")
             self.assertEqual(len(dossier["attempts"]), 2)
             self.assertEqual(json.loads(output.read_text())["schema"], "insulator-baseline-v1")
+
+    def test_records_measured_phase_costs_separately(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, output = Path(directory) / "checkout", Path(directory) / "baseline.json"
+            root.mkdir()
+            dossier = self._run_with_mocks(root, output, True)
+            costs = dossier["attempts"][0]["costs"]
+            self.assertEqual(costs["preparation_s"], 2.0)
+            self.assertEqual(costs["test_s"], 3.0)
+            self.assertNotEqual(costs["build_s"], costs["preparation_s"])
+            self.assertTrue(all(value >= 0 for value in costs.values()))
+
+
+class SourceIdentityTests(unittest.TestCase):
+    def test_uses_origin_main_as_default_comparison_ref(self):
+        with mock.patch("measure._git_text", side_effect=["origin/main", "a" * 40, "b" * 40, "c" * 40]) as git:
+            result = _source_identity(Path("/repo"))
+        self.assertEqual(result["comparison_ref"], "origin/main")
+        self.assertEqual(git.call_args_list[-1].args, (Path("/repo"), "merge-base", "HEAD", "origin/main"))
+
+    def test_uses_explicit_comparison_ref_for_merge_base(self):
+        with mock.patch("measure._git_text", side_effect=["a" * 40, "b" * 40, "c" * 40]) as git:
+            result = _source_identity(Path("/repo"), comparison_ref="release")
+        self.assertEqual(result["comparison_ref"], "release")
+        self.assertEqual(git.call_args_list[-1].args, (Path("/repo"), "merge-base", "HEAD", "release"))
 
 
 if __name__ == "__main__":

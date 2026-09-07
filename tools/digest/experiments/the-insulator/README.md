@@ -63,10 +63,13 @@ invalidation probes, and writes a validated cold or warm dossier. Cold mode
 removes only the owned digest target; warm mode preserves it. Every capture is
 retained in `raw_attempts`, while only valid manifests enter `attempts`.
 Two such dossiers can be combined by `summarize_baseline`, which accepts one
-complete cold/warm pair and reports excluded incomplete attempts. The representative workloads are
-`digest-census-publication` and `digest-thing`; preparation, build, and test
-costs remain separate. Unit tests mock graph/capture boundaries and do not run
-a live build or create `results/baseline.json`.
+complete cold/warm pair for every frozen workload and reports excluded
+incomplete attempts. The representative workloads are
+`digest-census-publication` and `digest-thing`. Each workload freezes separate
+preparation and test commands alongside its build command; those declared
+commands are measured independently inside the same cell, so no unmeasured
+time is assigned to a phase. Unit tests mock graph/capture boundaries and do
+not run a live build or create `results/baseline.json`.
 
 ## Limits
 

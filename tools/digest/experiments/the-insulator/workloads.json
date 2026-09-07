@@ -17,6 +17,14 @@
         "--repo-root",
         "${CHECKOUT}"
       ],
+      "phases": {
+        "preparation": {
+          "command": ["cargo", "metadata", "--locked", "--offline", "--format-version", "1", "--manifest-path", "tools/digest/Cargo.toml"]
+        },
+        "test": {
+          "command": ["cargo", "test", "--locked", "--offline", "--manifest-path", "tools/digest/Cargo.toml", "-p", "digest-census-publication"]
+        }
+      },
       "expected_outputs": [
         {
           "path": "tools/digest/target/debug/digest-census-publication",
@@ -36,6 +44,14 @@
         "-p",
         "digest-thing"
       ],
+      "phases": {
+        "preparation": {
+          "command": ["cargo", "metadata", "--locked", "--offline", "--format-version", "1", "--manifest-path", "tools/digest/Cargo.toml"]
+        },
+        "test": {
+          "command": ["cargo", "test", "--locked", "--offline", "--manifest-path", "tools/digest/Cargo.toml", "-p", "digest-thing"]
+        }
+      },
       "expected_outputs": [
         {
           "path": "tools/digest/target/debug/digest-thing",
