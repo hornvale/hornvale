@@ -1354,7 +1354,8 @@ chronicle-the-cruck	shipped	none		published chronicle				book/src/chronicle/the-
 retro-the-cruck	shipped	none		committed retrospective					docs/retrospectives/the-cruck.md
 the-spillway	shipped	none		plan: complete through Task 6; chronicle and retrospective landed with it	docs/superpowers/specs/2026-09-06-the-spillway-design.md	docs/superpowers/plans/2026-09-06-the-spillway.md		book/src/chronicle/the-spillway.md	docs/retrospectives/the-spillway.md
 spec-2026-09-06-the-hidage-design	shipped	none		status header records closure	docs/superpowers/specs/2026-09-06-the-hidage-design.md				
-spec-2026-09-06-the-staple-d2-design	active	none		G3 package; implementation not started	docs/superpowers/specs/2026-09-06-the-staple-d2-design.md				
+spec-2026-09-06-the-staple-d2-design	active	none		G3 approved; implementation planning active	docs/superpowers/specs/2026-09-06-the-staple-d2-design.md				
+plan-2026-09-06-the-staple-d2	active	none		G3 approved; implementation planning active		docs/superpowers/plans/2026-09-06-the-staple-d2.md			
 plan-2026-09-06-the-hidage	shipped	none		status header records closure		docs/superpowers/plans/2026-09-06-the-hidage.md			
 chronicle-the-hidage	shipped	none		published chronicle				book/src/chronicle/the-hidage.md	
 retro-the-hidage	shipped	none		committed retrospective					docs/retrospectives/the-hidage.md

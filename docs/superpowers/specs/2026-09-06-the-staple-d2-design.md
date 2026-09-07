@@ -1,6 +1,6 @@
 # The Staple — D2 design brief
 
-**Status:** G3 package — awaiting Nathan's review before planning
+**Status:** G3 approved; implementation planning active (2026-09-06)
 
 **Campaign:** The Staple, D2: “more than one thing flows, and some of it by
 exchange”
@@ -92,15 +92,16 @@ Primary counts:
 
 1. **Activation:** seeds with at least one settled exchange / 200. The dead
    pole is `0 / 200`.
-2. **Demographic instability:** treatment seeds breaching each individually
-   named, pre-existing demographic calibration bar / 200. The dead pole is
-   `> 100 / 200`.
+2. **Demographic instability:** treatment seeds where the treatment breaches
+   an individually named bar while its paired control passes / 200. The dead
+   pole is `> 100 / 200`.
 
-The instability verdict must use existing code bars, not a post-hoc authored
-target. The exact bar set is a G3 review item because the tree currently
-exposes census descriptors (`settlement-count`, `mean-population`, and
-`total-population`) but no single direct population-stability band. No plan
-may proceed until the bar set and its direction are named from live code.
+The existing bar conjunction is the history gate's settlement-count sane band
+`40..=400`, the `MAX_COLLAPSE_SHARE` ceiling `0.05`, and the existing
+`MIN_ALIVE_AT_NOW` floor `50`. These are copied from live code in
+`windows/worldgen/tests/suite/history_tumult.rs`; they are calibration
+guardrails, not targets. A control that already breaches a bar is not counted
+as D2 instability, and each bar's breach count is reported separately.
 
 For every seed, print—but do not use as an additional verdict—the counts of
 attempted, settled, partial, refused, and impossible exchanges; stock
@@ -128,4 +129,3 @@ person-related, or access claims; currency and barter instruments; conversion
 rates; market quotes; negotiation; storage loss/capacity; transport and
 carriers; priority institutions; and multi-commodity production beyond the
 two D2 types.
-

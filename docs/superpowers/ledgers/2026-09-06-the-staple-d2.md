@@ -3,7 +3,7 @@
 Campaign: **The Staple D2** — voluntary local exchange beside tribute.
 Branch: `campaign/the-staple-d2`. Decision block: **0886–0895**.
 Spec: `docs/superpowers/specs/2026-09-06-the-staple-d2-design.md`.
-Status: G3 package; no implementation started.
+Status: G3 approved; implementation planning active.
 
 ## Entries
 
@@ -39,11 +39,24 @@ outcomes are derived study traces and aggregate census candidates; only
 irreducible stock inputs and pins become durable simulation state.** Ideonomy:
 1 pass, no overturn. Capture: spec §§3–4.
 
+#7 [G3] — **Which existing bars define instability?** · **Decision: use the
+history gate's settlement-count sane band `40..=400`, collapse-share ceiling
+`0.05`, and alive-at-now floor `50`; count only treatment-only breaches against
+the paired control.** These are existing guardrails, not new population
+targets. G3 approval received 2026-09-06. Ideonomy: 1 pass, no overturn.
+Capture: spec §4; `windows/worldgen/tests/suite/history_tumult.rs`.
+
+#8 [G4] — **Plan review before execution.** · **Decision: proceed with the
+five-stage plan at `docs/superpowers/plans/2026-09-06-the-staple-d2.md`.**
+Self-review found and corrected the Task 1 dependency inversion: the probe
+fixture freezes the report contract before production exchange code; Task 4
+is the integrated treatment. It also replaced the vague one-hop reference
+with the verified `traversable_neighbors` helper and named the exact existing
+bars. Ideonomy: 0 passes — this is a review gate, not a design choice.
+Capture: `IMPLEMENTATION_PLAN.md`; the plan.
+
 ## Deferred minors and follow-ups
 
-- Verify the exact existing demographic calibration bars and their direction
-  before writing the implementation plan. This is the only current G3 design
-  blocker.
 - Verify the specialization input and shortfall insertion point against the
   live tree before dispatching any brief; every identifier in the brief must
   be grepped first.
@@ -56,9 +69,7 @@ irreducible stock inputs and pins become durable simulation state.** Ideonomy:
 
 ## G3 review questions
 
-1. Which existing demographic bars form the instability conjunction?
-2. Is D2's two-commodity production split acceptable as the smallest genuine
-   exchange mechanism?
-3. Does the climate-to-city ownership sentence belong in the metaplan now,
+1. Is D2's two-commodity production split acceptable as the smallest genuine
+   exchange mechanism? **Approved at G3.**
+2. Does the climate-to-city ownership sentence belong in the metaplan now,
    or remain an open D2 design consequence until the probe is measured?
-
