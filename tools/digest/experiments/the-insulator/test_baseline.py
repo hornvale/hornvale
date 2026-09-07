@@ -8,6 +8,8 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
+import measure  # noqa: E402
+
 from measure import (  # noqa: E402
     OUTPUT_LIMIT, _bounded_command, cargo_graph, changed_closure,
     invalidation_probes, run_baseline, sha256, summarize_baseline,
@@ -92,6 +94,22 @@ class CargoGraphTests(unittest.TestCase):
 
 
 class BoundedCommandTests(unittest.TestCase):
+    def test_phase_environment_uses_owned_temp_roots(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "checkout" / "tools" / "digest" / "target"
+            evidence = root / "evidence"
+            environment = measure._phase_environment(target, evidence)
+
+            self.assertEqual(Path(environment["TMPDIR"]), evidence.resolve() / "tmp")
+            self.assertEqual(Path(environment["TEMP"]), evidence.resolve() / "tmp")
+            self.assertEqual(Path(environment["TMP"]), evidence.resolve() / "tmp")
+            self.assertEqual(Path(environment["CARGO_TARGET_TMPDIR"]), target.resolve() / "tmp")
+            if measure.platform.system() == "Darwin":
+                self.assertEqual(Path(environment["DARWIN_USER_TEMP_DIR"]), evidence.resolve() / "tmp")
+            self.assertTrue((evidence.resolve() / "tmp").is_dir())
+            self.assertTrue((target.resolve() / "tmp").is_dir())
+
     def test_timeout_terminates_and_cleans_process(self):
         result = _bounded_command([sys.executable, "-c", "import time; time.sleep(10)"], Path.cwd(), timeout_s=0.05)
         self.assertTrue(result["deadline_exceeded"])

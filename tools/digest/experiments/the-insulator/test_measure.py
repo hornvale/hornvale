@@ -311,6 +311,7 @@ class AttemptTests(unittest.TestCase):
             self.skipTest("macOS sandbox profile only")
         profile = measure._sandbox_profile([Path("/owned/target"), Path("/owned/evidence")])
         self.assertIn("(allow sysctl-read)", profile)
+        self.assertIn("(allow mach-lookup)", profile)
         self.assertNotIn('(allow file-write* (subpath "/"))', profile)
 
     def test_capture_rejects_unknown_workload_before_launch(self):

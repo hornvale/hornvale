@@ -102,6 +102,26 @@ def _phase_command(workload: dict, phase: str, checkout: Path) -> list[str]:
             for argument in workload["phases"][phase]["command"]]
 
 
+def _phase_environment(target: Path, evidence_root: Path) -> dict:
+    """Route phase temporary state into the measurement cell's write roots."""
+    target, evidence_root = Path(target), Path(evidence_root)
+    if not target.is_absolute() or not evidence_root.is_absolute():
+        raise ValueError("phase writable roots must be absolute")
+    target = target.resolve()
+    evidence_root = evidence_root.resolve()
+    temporary = evidence_root / "tmp"
+    cargo_temporary = target / "tmp"
+    temporary.mkdir(parents=True, exist_ok=True)
+    cargo_temporary.mkdir(parents=True, exist_ok=True)
+    environment = _measurement.controlled_env()
+    for key in ("TMPDIR", "TEMP", "TMP"):
+        environment[key] = str(temporary)
+    environment["CARGO_TARGET_TMPDIR"] = str(cargo_temporary)
+    if platform.system() == "Darwin":
+        environment["DARWIN_USER_TEMP_DIR"] = str(temporary)
+    return environment
+
+
 def _workload(workload_id: str) -> dict:
     if not isinstance(workload_id, str) or not workload_id:
         raise ValueError("workload id must be a non-empty string")
@@ -433,10 +453,12 @@ def _output_records(checkout: Path, workload: dict) -> list[dict]:
 def _measure_workload_phase(workload: dict, phase: str, checkout: Path,
                             target: Path, evidence_root: Path) -> dict:
     """Measure a declared phase and retain its bounded execution evidence."""
+    target = Path(target).resolve()
+    evidence_root = Path(evidence_root).resolve()
     command = _phase_command(workload, phase, checkout)
     result = _bounded_measure(
         command, checkout, DEFAULT_TIMEOUT,
-        [target, evidence_root],
+        [target, evidence_root], env=_phase_environment(target, evidence_root),
     )
     return {
         "phase": phase,
@@ -616,6 +638,10 @@ def _sandbox_profile(roots: list[Path]) -> str:
     lines = [
         "(version 1)", "(deny default)", "(allow process*)",
         "(allow file-read*)", "(allow sysctl-read)",
+        # xcrun obtains DARWIN_USER_TEMP_DIR through a system service. This
+        # lookup does not grant filesystem writes; those remain limited to the
+        # explicit roots below.
+        "(allow mach-lookup)",
     ]
     lines.extend(f'(allow file-write* (subpath "{root}"))' for root in roots)
     return "\n".join(lines) + "\n"
@@ -657,7 +683,7 @@ def _enforced_command(command: list[str], cwd: Path, writable_roots: list[Path])
 
 
 def _bounded_measure(command: list[str], cwd: Path, timeout_s: int,
-                     writable_roots: list[Path]) -> dict:
+                     writable_roots: list[Path], env: dict | None = None) -> dict:
     """Run a command with a hard per-stream retention cap."""
     started = time.monotonic()
     process = None
@@ -674,7 +700,7 @@ def _bounded_measure(command: list[str], cwd: Path, timeout_s: int,
         process = subprocess.Popen(
             command,
             cwd=cwd,
-            env=_measurement.controlled_env(),
+            env=env or _measurement.controlled_env(),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
