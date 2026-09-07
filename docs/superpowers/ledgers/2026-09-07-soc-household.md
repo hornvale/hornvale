@@ -84,3 +84,29 @@ arise after G3 review.
   implementation, since The Murrain currently defers its household lattice.
 - Keep all synthetic probe names test-only until a later campaign explicitly
   authors species or society canon.
+
+## #4 [G4] — How should the approved design become executable work?
+
+**Decision:** use five independently testable tasks: aggregate substrate,
+realized person/event contracts, synthetic cohort realization, derived kinship
+and group projections, and The Lot observation. Keep domain ownership split by
+existing layering: demography owns pure aggregate/projection logic, person
+owns person predicates, history owns append-only events, and worldgen composes
+them.
+
+**Why:** the repository already separates person predicates, history facts,
+demography summaries, worldgen composition, and Lot reads. The decomposition
+keeps sibling domains independent and makes each boundary reviewable before
+the next one is wired.
+
+**Alternatives discarded:** one large household task would hide boundary
+mistakes; a new cross-domain social crate would violate the current domain
+layering unless its vocabulary proved kernel-wide; implementing The Lot first
+would make the observation surface drive the simulation model.
+
+**Ideonomy passes / overturns:** three prior convergence passes; no new
+overturn. The plan preserves their result by making household projection a
+late task and anti-vacuity tests mandatory at every realization boundary.
+
+**Capture:** the complete task decomposition is in
+`docs/superpowers/plans/2026-09-07-soc-household.md`.
