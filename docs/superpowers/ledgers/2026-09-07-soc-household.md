@@ -110,3 +110,46 @@ late task and anti-vacuity tests mandatory at every realization boundary.
 
 **Capture:** the complete task decomposition is in
 `docs/superpowers/plans/2026-09-07-soc-household.md`.
+
+## #5 [G5] — Task 1 review findings and fix-round ruling
+
+**Ruling:** retain the full deferred BIO-3/SOC-2 aggregate handoff in the
+social cohort summary, reject missing or all-zero applicable measurements,
+and reject duplicate lifecycle kinds until an explicit context discriminator
+exists.
+
+**Why:** the first implementation preserved social caregiver-group counts but
+lost the structural biological pathway/care/descent/compatibility/transition
+dimensions that the successor contract must carry. It also treated absence of
+typicality as a measured zero and accepted ambiguous duplicate lifecycle
+rates. The reviewer found these defects while targeted tests, clippy, format,
+and layering checks were green.
+
+**Cost if wrong:** the aggregate contract becomes wider and requires later
+composition adapters, but the alternative would silently erase biological
+structure or turn missing data into biography. Fix round 1 is scoped to the
+demography contract and its tests; no downstream surface is changed.
+
+**Capture:** reviewer report and fix-round report live in the plan's ignored
+SDD workspace; the durable rule is recorded here.
+
+## #6 [G5] — Task 1 completion
+
+**Decision:** accept Task 1 after fix round 1. The aggregate substrate now
+retains the deferred biological/social handoff dimensions, distinguishes
+measured zero from missing typicality, and rejects ambiguous lifecycle kinds.
+
+**Evidence:** commits `e644e302f` and `1cd1e2cee`; targeted social tests 8/8,
+demography clippy, format, and `make gate-commit` passed; scoped re-review
+approved the result.
+
+## #7 [G5] — Task 2 completion
+
+**Decision:** accept Task 2 after three fix/review rounds. Realized person
+axes and append-only relation events now preserve provenance, bounded
+intervals, explicit association forms, recognition interpretations, and
+lifecycle closure semantics across the ledger boundary.
+
+**Evidence:** commits `f058c3e10`, `e3b3a4039`, and `8e2036a9e`; final scoped
+re-review approved; 52 focused tests passed; person/history clippy, format,
+audit freshness, and `make gate-commit` passed.

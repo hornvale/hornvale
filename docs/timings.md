@@ -6496,3 +6496,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T14:30:45Z | gate-commit | 141.452 | 834.638 | 50.482 | 6.26 | 0 | 52bfbb034 | campaign/soc-household | MacBookPro | 10 |
 | 2026-09-07T14:33:06Z | gate-commit | 36.118 | 66.356 | 17.441 | 2.32 | 0 | 52bfbb034 | campaign/soc-household | MacBookPro | 10 |
 | 2026-09-07T14:58:35Z | gate-commit | 54.479 | 142.965 | 38.568 | 3.33 | 0 | e644e302f | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T15:01:47Z | gate-commit | 33.920 | 65.088 | 17.367 | 2.43 | 0 | e644e302f | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T15:32:50Z | gate-commit | 15.839 | 37.033 | 4.417 | 2.62 | 0 | 1cd1e2cee | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T15:35:48Z | gate-commit | 99.808 | 493.828 | 46.858 | 5.42 | 0 | 1cd1e2cee | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T15:37:09Z | gate-commit | 34.442 | 65.632 | 17.491 | 2.41 | 0 | 1cd1e2cee | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T16:03:56Z | gate-commit | 83.206 | 371.039 | 43.245 | 4.98 | 0 | f058c3e10 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T16:05:08Z | gate-commit | 34.221 | 65.309 | 17.272 | 2.41 | 0 | f058c3e10 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T16:09:31Z | gate-commit | 35.371 | 66.484 | 17.425 | 2.37 | 0 | e3b3a4039 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T16:25:06Z | gate-commit | 58.294 | 105.255 | 38.627 | 2.47 | 0 | e3b3a4039 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T16:27:41Z | gate-commit | 48.247 | 72.488 | 17.874 | 1.87 | 0 | e3b3a4039 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T16:28:57Z | gate-commit | 36.832 | 67.252 | 17.504 | 2.30 | 0 | 8e2036a9e | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T16:40:32Z | rebaseline | 208.092 | 398.755 | 17.120 | 2.00 | 0 | 8e2036a9e | campaign/soc-household | MacBookPro | 10 |

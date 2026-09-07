@@ -43,13 +43,13 @@
 
 **Steps:**
 
-- [ ] Write failing tests for zero-reproduction, zero-care, non-pair association, overlapping care, migration, dissolution, and parental-death distributions; assert legitimate zeroes are accepted.
-- [ ] Write failing tests proving invalid negative/non-finite values identify the field and reject without partial normalization.
-- [ ] Write failing tests proving `SocialCohortSummary` carries possibility/typicality inputs but no `EntityId`, person identity, gender identity, or household object.
-- [ ] Implement ordered, species-independent value types and validation in `social.rs`; keep all scalar units explicit in names and doc comments.
-- [ ] Implement `summarize_social_cohort` as a pure transform that preserves care topology and does not flatten it into only a care-burden scalar.
-- [ ] Run `cargo nextest run -p hornvale-demography --test suite -E 'test(social::)'` and `cargo clippy -p hornvale-demography --all-targets -- -D warnings`.
-- [ ] Commit as `feat(demography): define aggregate social substrate`.
+- [x] Write failing tests for zero-reproduction, zero-care, non-pair association, overlapping care, migration, dissolution, and parental-death distributions; assert legitimate zeroes are accepted.
+- [x] Write failing tests proving invalid negative/non-finite values identify the field and reject without partial normalization.
+- [x] Write failing tests proving `SocialCohortSummary` carries possibility/typicality inputs but no `EntityId`, person identity, gender identity, or household object.
+- [x] Implement ordered, species-independent value types and validation in `social.rs`; keep all scalar units explicit in names and doc comments.
+- [x] Implement `summarize_social_cohort` as a pure transform that preserves care topology and does not flatten it into only a care-burden scalar.
+- [x] Run `cargo nextest run -p hornvale-demography --test suite -E 'test(social::)'` and `cargo clippy -p hornvale-demography --all-targets -- -D warnings`.
+- [x] Commit as `feat(demography): define aggregate social substrate`.
 
 ### Task 2: Add realized person axes and append-only social events
 
@@ -73,13 +73,13 @@
 
 **Steps:**
 
-- [ ] Write failing person tests showing sex traits, reproductive role, gender identity, social recognition, and transition history can coexist without one deriving another.
-- [ ] Write failing history tests for `origin`, `descent`, `care`, `dependency`, `association`, `residence`, `custody`, `transfer`, and `recognition` with explicit direction and time intervals.
-- [ ] Write failing tests proving `separate`, `dissolve`, and `die` close future activity while prior facts remain queryable.
-- [ ] Implement the smallest predicate/event set with descriptive validation for reversed participants, empty intervals, missing provenance, and illegal self-relations where the event requires distinct participants.
-- [ ] Keep cultural labels out of the foundational event types; store association form and interpretation as explicit values rather than treating `marriage` as the only association.
-- [ ] Run targeted person/history suites and both crate clippy checks.
-- [ ] Commit as `feat(social): add realized person and relation events`.
+- [x] Write failing person tests showing sex traits, reproductive role, gender identity, social recognition, and transition history can coexist without one deriving another.
+- [x] Write failing history tests for `origin`, `descent`, `care`, `dependency`, `association`, `residence`, `custody`, `transfer`, and `recognition` with explicit direction and time intervals.
+- [x] Write failing tests proving `separate`, `dissolve`, and `die` close future activity while prior facts remain queryable.
+- [x] Implement the smallest predicate/event set with descriptive validation for reversed participants, empty intervals, missing provenance, and illegal self-relations where the event requires distinct participants.
+- [x] Keep cultural labels out of the foundational event types; store association form and interpretation as explicit values rather than treating `marriage` as the only association.
+- [x] Run targeted person/history suites and both crate clippy checks.
+- [x] Commit as `feat(social): add realized person and relation events`.
 
 ### Task 3: Realize synthetic cohorts and emit deterministic history
 
