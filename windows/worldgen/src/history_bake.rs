@@ -6614,6 +6614,93 @@ mod tests {
         })
     }
 
+    #[test]
+    fn diagnostic_return_read_preserves_bake_state_and_is_deterministic() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let patron_site = geo
+            .neighbors(Vertex(0))
+            .iter()
+            .next()
+            .copied()
+            .expect("fixture globe has a patron site");
+        let subordinate = bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            12.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        let patron = bake.open(
+            KindId("goblin"),
+            patron_site,
+            0.0,
+            20.0,
+            Founding::Genesis(patron_site),
+            None,
+            0.0,
+        );
+        bake.communities[subordinate].stores = 7.5;
+        bake.communities[patron].stores = 23.0;
+        bake.records[subordinate].core.function = Function::Trade;
+        bake.records[patron].core.function = Function::Fort;
+        bake.tribute.insert(
+            subordinate,
+            Tribute {
+                patron,
+                assessment: 4.0,
+                since: 0.0,
+                last_seen_population: 10.0,
+            },
+        );
+        bake.tally.tribute_collected = 3.25;
+        bake.exchange.attempts = 2;
+        bake.epoch_growth[subordinate] = 1.5;
+
+        let snapshot = || {
+            (
+                bake.records.clone(),
+                bake.communities
+                    .iter()
+                    .map(|community| (community.population, community.stores))
+                    .collect::<Vec<_>>(),
+                bake.tribute
+                    .iter()
+                    .map(|(&subordinate, tribute)| {
+                        (
+                            subordinate,
+                            tribute.patron,
+                            tribute.assessment,
+                            tribute.since,
+                            tribute.last_seen_population,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+                bake.tally,
+                bake.exchange,
+                bake.epoch_growth.clone(),
+            )
+        };
+        let before = snapshot();
+        let first = bake.diagnostic_returns_at_now();
+        let after = snapshot();
+        let second = bake.diagnostic_returns_at_now();
+
+        assert_eq!(first, second, "diagnostic witness must be deterministic");
+        assert_eq!(before, after, "diagnostic read must not alter bake state");
+        assert_eq!(
+            first.len(),
+            1,
+            "fixture must exercise one standing relation"
+        );
+    }
+
     /// The northernmost and southernmost vertices of the fixture globe — the pair
     /// the hemisphere-phase and amplitude tests open their communities on.
     fn extreme_latitude_vertices() -> (Vertex, Vertex) {
