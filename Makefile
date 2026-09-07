@@ -33,7 +33,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
+.PHONY: context context-prepare absorb decision-block decision-blocks help quick quick-run gate-commit gate-commit-run style-run subfloor-run gate-stage gate-campaign gate-suite-run gate gate-run gate-fast gate-full ci seam-guard seam-guard-list heavy-remote heavy-status heavy-log lane lane-status lane-log lane-roster lane-wait sluice sluice-stage sluice-census sluice-status sluice-log nextest-check docs-tests prewarm prewarm-run worktree-take sweep sweep-dry sweep-exact sweep-check fmt fmt-check clippy type-audit type-audit-report placement-audit placement-audit-report plumb plumb-report test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor shapecheck install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check vessel-check-run wasm-world world-check world-check-run wasm-lot game-check game-check-run atlas-check lot-check lot-check-run clients-check-run board board-digest board-post board-redact board-sync
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -647,6 +647,67 @@ prewarm: ## Warm a fresh worktree's caches (start in the background right after 
 
 worktree-take: ## Claim a recycled campaign worktree (NAME=<campaign> [BASE=main])
 	@NAME="$(NAME)" BASE="$(BASE)" bash scripts/worktree-take.sh
+
+# THE TARGET DIRS ACCUMULATE DEAD BUILD GENERATIONS, AND CARGO NEVER RECLAIMS
+# THEM (decision 0848). `target/debug/deps` is keyed by a metadata hash, so
+# every STRUCTURAL configuration that has ever been built keeps its own
+# permanent copy of every artifact. Measured on this repo: 1,152 executables
+# for 307 distinct test targets -- 845 (73%) dead copies, `hornvale` alone
+# holding 40 generations at ~20 MB each.
+#
+# WHAT MULTIPLIES THEM IS STRUCTURAL CHURN, NOT EDITING. Measured, one knob at
+# a time on a scratch crate (2 -> 10 executables): a version bump, a RUSTFLAGS
+# change, a feature added, a different toolchain. Editing a source file
+# OVERWRITES in place and adds nothing -- so the accrual tracks toolchain
+# upgrades, Cargo.lock churn and `.cargo/config.toml` changes, at campaign
+# cadence rather than per-commit.
+#
+# NOTHING RUNS THIS FOR YOU, and that is the seam-guard arrangement on purpose
+# (decisions 0148, 0426): a reclamation pass is maintenance whose guarantee
+# moves at campaign cadence, so it is not a phase of any gate and not a step of
+# `worktree-take`. Both automatic homes were measured and REFUSED:
+#   * age-based inside `worktree-take` -- on a pool member idle longer than the
+#     threshold, EVERY artifact is old, so the sweep destroys the warm target/
+#     the pool exists to preserve.
+#   * stamp-based inside `worktree-take` -- `--file` deletes whatever the
+#     intervening build did not touch, and `worktree-take` deliberately does
+#     not build. Verified: stamp -> partial build -> `--file` proposes deleting
+#     the live test binaries.
+sweep-check: ## Fail with an install hint if cargo-sweep is missing
+	@command -v cargo-sweep >/dev/null 2>&1 || { \
+		echo "cargo-sweep not found — install it (decision 0848):"; \
+		echo "  cargo install cargo-sweep   # or: brew install cargo-sweep"; \
+		exit 1; }
+
+# TIME defaults to 30 days, not 7. A campaign worktree is rebuilt continuously
+# while it is live, so its working set is days old at most and 7 would be safe
+# for it -- but a PARKED worktree's live artifacts are as old as its last
+# build, and the threshold cannot tell "old but reachable" from "old and dead".
+# 30 keeps a month-idle worktree warm; lower it deliberately (`SWEEP_DAYS=7`) when
+# reclaiming a tree you accept rebuilding.
+SWEEP_DAYS ?= 30
+
+sweep-dry: sweep-check ## Report what a sweep would reclaim, deleting nothing (SWEEP_DAYS=<days>)
+	@cargo sweep --dry-run --time $(SWEEP_DAYS) -r .
+
+sweep: sweep-check ## Reclaim dead build generations older than SWEEP_DAYS days (default 30, recursive)
+	@cargo sweep --time $(SWEEP_DAYS) -r .
+
+# THE EXACT MODE, AND WHY IT IS NOT THE DEFAULT. `--stamp` then a build then
+# `--file` is mark-and-sweep: it reclaims precisely the generations the build
+# did not touch, at any age, so it preserves a warm working set that `--time`
+# would eat. The mark must be COMPLETE or it collects live objects, which is
+# why the build here is `--workspace --all-targets` and why this is a target of
+# its own rather than a flag on `sweep`: it costs a full workspace build.
+#
+# WORKSPACE-SCOPED, DELIBERATELY NOT RECURSIVE. The build below does not cover
+# `clients/*/target` or the `tools/*` crates, so a recursive `--file` here
+# would read their untouched artifacts as garbage and delete them. Use plain
+# `make sweep` for those.
+sweep-exact: sweep-check ## Mark-and-sweep the workspace target: exact, age-independent, costs a full build
+	@cargo sweep --stamp .
+	@cargo build --workspace --all-targets
+	@cargo sweep --file .
 
 # THE COLD-BUILD COST WAS INVISIBLE UNTIL THIS LANDED (The Sexton, Task 2).
 # docs/timings.md carried five labels and 73 branches went through this target

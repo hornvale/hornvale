@@ -772,10 +772,19 @@ _main_root="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" worktree list
 [ -n "$_main_root" ] || _main_root="$repo_root"
 wt="${HV_SLUICE_WORKTREE:-$_main_root/../hornvale-sluice-wt}"
 base_ref="${HV_SLUICE_BASE:-origin/main}"
-git -C "$repo_root" fetch --all --quiet
+# FETCH origin EXPLICITLY IF `--all` FAILS. A second remote was added to this
+# repository (tangled.org) on 2026-09-07, and `--all` contacts every remote:
+# an unreachable secondary now aborts this script under `set -e`, BEFORE the
+# merge, with rc=1 — a code outside this script's own vocabulary, which the
+# drain records as "attribution pending" and blames the candidate for. Found
+# by a test that added a deliberately-broken remote and watched a chamber run
+# die at rc=1 immediately after its queue-row line. Falling back to origin
+# keeps the failure fatal only when the remote the chamber actually needs is
+# unreachable.
+git -C "$repo_root" fetch --all --quiet || git -C "$repo_root" fetch origin --quiet
 base_sha="$(git -C "$repo_root" rev-parse "$base_ref")"
 if [ -e "$wt/.git" ]; then
-    git -C "$wt" fetch --all --quiet
+    git -C "$wt" fetch --all --quiet || git -C "$wt" fetch origin --quiet
     git -C "$wt" checkout --force --detach "$base_sha"
     git -C "$wt" reset --hard "$base_sha" --quiet
     # -fd, NEVER -fdx: target/ is gitignored, and -x would destroy this box's
@@ -1118,4 +1127,38 @@ fi
 printf '%s\n' "$final_sha" > "$HV_SLUICE_DIR/last-pushed"
 git push origin "HEAD:refs/heads/$branch" || \
     echo "sluice-run: warning — could not update $branch; main is already landed." >&2
+
+# THE MIRROR IS BEST-EFFORT AND MUST NEVER FAIL A MERGE THAT HAS LANDED.
+#
+# Nathan added a second remote (tangled.org) and asked that main be pushed
+# there as well as to origin. This is the only correct place for it: the
+# chamber is the sole route by which main advances (decision 0139), and
+# scripts/hooks/pre-push gates `refs/heads/main` BY REF rather than by remote,
+# so a mirror push needs the canonical box's live claim exactly as the origin
+# push does. The chamber holds that claim here; a human pushing by hand does
+# not, and would need HV_PUSH_OK=1. Putting the mirror anywhere else would
+# either bypass 0139 or require the escape hatch on every landing.
+#
+# IT RUNS AFTER THE ORIGIN PUSH AND CANNOT AFFECT rc, DELIBERATELY. By this
+# line main HAS MOVED on origin: the merge is landed, the queue's induction
+# record is written, and the campaign is done. If tangled is unreachable,
+# failing the job would report a landed merge as a failure and send someone
+# hunting a candidate that was fine — the same mistake scripts/timed.sh made
+# when a vanished tempfile turned a green `artifacts` phase into rc=11 and
+# cost campaign/the-warrant a serial-box slot. A measurement, or a mirror,
+# must not hold veto power over the thing it observes.
+#
+# The remote name is overridable so scripts/test-sluice.sh can point it at a
+# scratch bare repo; nothing in production sets it. An absent remote is
+# silence, not a warning — most checkouts do not have it configured.
+mirror_remote="${HV_SLUICE_MIRROR_REMOTE:-tangled}"
+if git remote get-url "$mirror_remote" >/dev/null 2>&1; then
+    if git push "$mirror_remote" "$final_sha:refs/heads/main" >/dev/null 2>&1; then
+        echo "sluice-run: mirrored $final_sha to $mirror_remote"
+    else
+        echo "sluice-run: warning — could not mirror $final_sha to $mirror_remote." >&2
+        echo "sluice-run:   MAIN IS LANDED ON origin; this is a mirror lag, not a failed merge." >&2
+        echo "sluice-run:   catch up by hand: HV_PUSH_OK=1 git push $mirror_remote $final_sha:refs/heads/main" >&2
+    fi
+fi
 echo "sluice-run: LANDED $final_sha on main"

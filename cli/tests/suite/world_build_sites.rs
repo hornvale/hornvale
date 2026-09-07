@@ -59,7 +59,7 @@ use std::path::{Path, PathBuf};
 /// The build entry points a roster row can name. Any call to one of these in
 /// workspace source is a world build.
 ///
-/// **Six, and `simulate_world` is deliberately not the seventh.**
+/// **Seven, and `simulate_world` is deliberately not the eighth.**
 /// `hornvale_lab::health::simulate_world(world: &World) -> Vec<AffectTrace>`
 /// takes an ALREADY-BUILT world and derives terrain and climate from it, so
 /// it is a decision-0092 weir site — already governed by clippy's
@@ -96,6 +96,7 @@ use std::path::{Path, PathBuf};
 /// textual-scan imprecision above is stated.
 const ENTRY_POINTS: &[&str] = &[
     "build_world_from_components",
+    "build_world_with_exchange_treatment",
     "build_world_to_with_artifacts",
     "build_world_observed",
     "build_world_to",
