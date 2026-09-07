@@ -288,7 +288,8 @@ fn institutional_recognition_follows_an_existing_association() {
 }
 
 /// Erasing historical care/descent on death, retaining the old dependency,
-/// or failing to assign future care makes a separate witness fail.
+/// failing to assign future care, or collapsing lifecycle categories and
+/// social roles makes a separate witness fail.
 #[test]
 fn lifecycle_transition_preserves_history_and_reassigns_future_care() {
     let projection = project(SyntheticSociety::LifecycleTransition);
@@ -307,9 +308,20 @@ fn lifecycle_transition_preserves_history_and_reassigns_future_care() {
         .iter()
         .filter(|fact| fact.predicate() == hornvale_person::GENDER_RECOGNITION)
         .collect::<Vec<_>>();
+    let roles = transitioned
+        .social_facts()
+        .iter()
+        .filter(|fact| fact.predicate() == hornvale_person::SOCIAL_ROLE)
+        .collect::<Vec<_>>();
+    let transition_markers = transitioned
+        .social_facts()
+        .iter()
+        .filter(|fact| fact.predicate() == hornvale_person::TRANSITIONED)
+        .collect::<Vec<_>>();
 
     assert!(person_fact_count(&projection, hornvale_person::TRANSITIONED) >= 1);
     assert_eq!(categories.len(), 2);
+    let transition = categories[1].start();
     assert_eq!(
         categories[0].object(),
         &Value::Text("pre-independence".to_string())
@@ -318,22 +330,53 @@ fn lifecycle_transition_preserves_history_and_reassigns_future_care() {
         categories[1].object(),
         &Value::Text("post-independence".to_string())
     );
-    assert_eq!(categories[0].end(), Some(categories[1].start()));
+    assert_eq!(categories[0].end(), Some(transition));
     assert_eq!(categories[1].end(), None);
-    let category_facts = transitioned
-        .facts()
-        .into_iter()
+    assert_eq!(roles.len(), 2);
+    assert_eq!(roles[0].object(), &Value::Text("dependent".to_string()));
+    assert_eq!(roles[1].object(), &Value::Text("independent".to_string()));
+    assert_eq!(roles[0].end(), Some(transition));
+    assert_eq!(roles[1].start(), transition);
+    assert_eq!(roles[1].end(), None);
+    assert_eq!(transition_markers.len(), 1);
+    assert_eq!(
+        transition_markers[0].object(),
+        &Value::Text("life-stage-social-role".to_string())
+    );
+    assert_eq!(transition_markers[0].start(), transition);
+    assert_eq!(transition_markers[0].end(), None);
+    let emitted_facts = transitioned.facts();
+    let lifecycle_facts = emitted_facts
+        .iter()
         .filter(|fact| {
             fact.predicate == hornvale_person::GENDER_RECOGNITION
                 || fact.predicate == hornvale_person::GENDER_RECOGNITION_ENDED
+                || fact.predicate == hornvale_person::SOCIAL_ROLE
+                || fact.predicate == hornvale_person::SOCIAL_ROLE_ENDED
+                || fact.predicate == hornvale_person::TRANSITIONED
         })
         .collect::<Vec<_>>();
-    assert_eq!(category_facts.len(), 3);
+    assert_eq!(lifecycle_facts.len(), 7);
     assert!(
-        category_facts
+        lifecycle_facts
             .iter()
             .all(|fact| { fact.provenance == "social/projection/v1" && fact.day.is_some() })
     );
+    let role_end = lifecycle_facts
+        .iter()
+        .find(|fact| fact.predicate == hornvale_person::SOCIAL_ROLE_ENDED)
+        .expect("the pre-transition role has an exclusive end companion");
+    assert_eq!(role_end.object, Value::Text("dependent".to_string()));
+    assert_eq!(role_end.day, Some(transition));
+    let provenance_facts = emitted_facts
+        .iter()
+        .filter(|fact| fact.predicate == hornvale_person::PERSON_SOCIAL_PROVENANCE)
+        .collect::<Vec<_>>();
+    assert_eq!(provenance_facts.len(), 5);
+    assert!(provenance_facts.iter().all(|fact| {
+        fact.object == Value::Text("social/projection/v1".to_string())
+            && fact.provenance == "social/projection/v1"
+    }));
     assert!(event_count(&projection, "descent") >= 1);
     assert!(event_count(&projection, "care") >= 2);
     assert!(event_count(&projection, "care-ended") >= 1);

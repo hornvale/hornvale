@@ -26,6 +26,10 @@ pub const GENDER_IDENTITY: &str = "gender-identity";
 /// the person's own identity claim.
 /// type-audit: bare-ok(identifier-text)
 pub const GENDER_RECOGNITION: &str = "gender-recognition";
+/// A person's realized social role over a life interval, distinct from
+/// reproductive role and gender recognition.
+/// type-audit: bare-ok(identifier-text)
+pub const SOCIAL_ROLE: &str = "social-role";
 /// A witnessed transition in a person's social or reproductive history.
 /// type-audit: bare-ok(identifier-text)
 pub const TRANSITIONED: &str = "transitioned";
@@ -41,6 +45,9 @@ pub const GENDER_IDENTITY_ENDED: &str = "gender-identity-ended";
 /// The exclusive end of a [`GENDER_RECOGNITION`] claim, repeating its value.
 /// type-audit: bare-ok(identifier-text)
 pub const GENDER_RECOGNITION_ENDED: &str = "gender-recognition-ended";
+/// The exclusive end of a [`SOCIAL_ROLE`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const SOCIAL_ROLE_ENDED: &str = "social-role-ended";
 /// The exclusive end of a [`TRANSITIONED`] claim, repeating its value.
 /// type-audit: bare-ok(identifier-text)
 pub const TRANSITIONED_ENDED: &str = "transitioned-ended";
@@ -199,6 +206,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "a social or institutional gender-recognition claim over a life interval",
     )?;
     registry.register_predicate(
+        SOCIAL_ROLE,
+        false,
+        "a realized social role over a life interval",
+    )?;
+    registry.register_predicate(
         TRANSITIONED,
         false,
         "a witnessed transition in this person's realized history",
@@ -216,6 +228,10 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         (
             GENDER_RECOGNITION_ENDED,
             "the exclusive end of this gender-recognition claim",
+        ),
+        (
+            SOCIAL_ROLE_ENDED,
+            "the exclusive end of this social-role claim",
         ),
         (
             TRANSITIONED_ENDED,
@@ -412,6 +428,23 @@ impl PersonSocialFact {
         )
     }
 
+    /// Build a realized social-role claim.
+    /// type-audit: bare-ok(identifier-text: role), bare-ok(prose: provenance)
+    pub fn social_role(
+        role: &str,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        Self::new(
+            SOCIAL_ROLE,
+            Value::Text(role.to_string()),
+            start,
+            end,
+            provenance,
+        )
+    }
+
     /// Build one witnessed transition-history claim.
     /// type-audit: bare-ok(identifier-text: transition), bare-ok(prose: provenance)
     pub fn transitioned(
@@ -478,6 +511,7 @@ impl PersonSocialFact {
             REPRODUCTIVE_ROLE => REPRODUCTIVE_ROLE_ENDED,
             GENDER_IDENTITY => GENDER_IDENTITY_ENDED,
             GENDER_RECOGNITION => GENDER_RECOGNITION_ENDED,
+            SOCIAL_ROLE => SOCIAL_ROLE_ENDED,
             TRANSITIONED => TRANSITIONED_ENDED,
             _ => unreachable!("typed person-social constructors own every predicate"),
         }
@@ -678,6 +712,7 @@ mod tests {
             crate::REPRODUCTIVE_ROLE,
             crate::GENDER_IDENTITY,
             crate::GENDER_RECOGNITION,
+            crate::SOCIAL_ROLE,
             crate::TRANSITIONED,
             crate::PERSON_SOCIAL_PROVENANCE,
         ] {

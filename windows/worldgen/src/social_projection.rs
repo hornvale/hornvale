@@ -559,6 +559,13 @@ pub fn project_social_cohort(
                     None,
                     provenance(),
                 )?,
+                PersonSocialFact::social_role(
+                    "dependent",
+                    time(0)?,
+                    Some(transition),
+                    provenance(),
+                )?,
+                PersonSocialFact::social_role("independent", transition, None, provenance())?,
             ]);
             let death = time(3)?;
             let child = person(2);
