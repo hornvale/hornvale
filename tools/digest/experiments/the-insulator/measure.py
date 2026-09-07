@@ -431,23 +431,58 @@ def _output_records(checkout: Path, workload: dict) -> list[dict]:
 
 
 def _measure_workload_phase(workload: dict, phase: str, checkout: Path,
-                            target: Path, evidence_root: Path) -> float:
-    """Measure a declared phase; its elapsed time is never inferred."""
+                            target: Path, evidence_root: Path) -> dict:
+    """Measure a declared phase and retain its bounded execution evidence."""
+    command = _phase_command(workload, phase, checkout)
     result = _bounded_measure(
-        _phase_command(workload, phase, checkout), checkout, DEFAULT_TIMEOUT,
+        command, checkout, DEFAULT_TIMEOUT,
         [target, evidence_root],
     )
-    if result.get("launch_error"):
-        raise ValueError(f"{phase} phase could not start: {result['launch_error']}")
-    if result.get("harness_deadline_exceeded"):
-        raise ValueError(f"{phase} phase exceeded deadline")
-    if result.get("output_limit_exceeded"):
-        raise ValueError(f"{phase} phase exceeded output limit")
-    if result.get("cleanup_error"):
-        raise ValueError(f"{phase} phase cleanup failed: {result['cleanup_error']}")
-    if result.get("exit_code") != 0:
-        raise ValueError(f"{phase} phase failed with exit code {result.get('exit_code')}")
-    return float(result["elapsed_seconds"])
+    return {
+        "phase": phase,
+        "workload_id": workload["id"],
+        "workload_command_template": workload["phases"][phase]["command"],
+        "command": command,
+        "exit_code": result.get("exit_code"),
+        "launch_error": result.get("launch_error"),
+        "elapsed_s": result.get("elapsed_seconds"),
+        "deadline_s": DEFAULT_TIMEOUT,
+        "deadline_exceeded": result.get("harness_deadline_exceeded"),
+        "output_limit_exceeded": result.get("output_limit_exceeded"),
+        "cleanup": {
+            "complete": result.get("cleanup_error") is None,
+            "error": result.get("cleanup_error"),
+        },
+        "stdout": _stream(result.get("stdout", b"")),
+        "stderr": _stream(result.get("stderr", b"")),
+        "enforcement_method": result.get("enforcement_method"),
+    }
+
+
+def _phase_succeeded(record: dict) -> bool:
+    return (record.get("launch_error") is None
+            and record.get("exit_code") == 0
+            and record.get("deadline_exceeded") is False
+            and record.get("output_limit_exceeded") is False
+            and record.get("cleanup", {}).get("complete") is True)
+
+
+def _phase_record(value: dict | float, workload: dict, phase: str,
+                  checkout: Path) -> dict:
+    """Normalize legacy test doubles while keeping real phase records structured."""
+    if isinstance(value, dict):
+        return value
+    return {
+        "phase": phase, "workload_id": workload["id"],
+        "workload_command_template": workload["phases"][phase]["command"],
+        "command": _phase_command(workload, phase, checkout),
+        "exit_code": 0, "launch_error": None, "elapsed_s": float(value),
+        "deadline_s": DEFAULT_TIMEOUT, "deadline_exceeded": False,
+        "output_limit_exceeded": False,
+        "cleanup": {"complete": True, "error": None},
+        "stdout": _stream(b""), "stderr": _stream(b""),
+        "enforcement_method": "mock",
+    }
 
 
 def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
@@ -473,11 +508,30 @@ def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
         destination = evidence / f"{workload['id']}.capture.json"
         captured = None
         try:
-            preparation_s = _measure_workload_phase(workload, "preparation", root, target, evidence)
+            preparation = _phase_record(
+                _measure_workload_phase(workload, "preparation", root, target, evidence),
+                workload, "preparation", root,
+            )
+            if not _phase_succeeded(preparation):
+                raw_attempts.append({
+                    "workload_id": workload["id"], "status": "invalid",
+                    "phase": preparation,
+                    "error": "preparation phase failed",
+                })
+                continue
             captured = capture(workload["id"], root, target, evidence, destination)
             raw_attempt = {"workload_id": workload["id"], "capture": captured, "status": "captured"}
-            test_s = _measure_workload_phase(workload, "test", root, target, evidence)
-            costs = {"preparation_s": preparation_s, "build_s": float(captured["elapsed_s"]), "test_s": test_s}
+            test = _phase_record(
+                _measure_workload_phase(workload, "test", root, target, evidence),
+                workload, "test", root,
+            )
+            if not _phase_succeeded(test):
+                raw_attempt["status"] = "invalid"
+                raw_attempt["phase"] = test
+                raw_attempt["error"] = "test phase failed"
+                raw_attempts.append(raw_attempt)
+                continue
+            costs = {"preparation_s": float(preparation["elapsed_s"]), "build_s": float(captured["elapsed_s"]), "test_s": float(test["elapsed_s"])}
             failure = None if captured.get("exit_code") == 0 else {
                 "reason": "measurement command failed",
                 "valid_evidence": True,

@@ -249,7 +249,8 @@ class SummaryTests(unittest.TestCase):
 
 
 class BaselineOrchestrationTests(unittest.TestCase):
-    def _run_with_mocks(self, root, output, cold, fake_capture=None, events=None):
+    def _run_with_mocks(self, root, output, cold, fake_capture=None, events=None,
+                        phase_result=None):
         (root / "tools" / "digest").mkdir(parents=True, exist_ok=True)
         fake = attempt("cold")["capture"]
         fake["cwd"] = fake["ownership"]["checkout"] = str(root)
@@ -271,6 +272,8 @@ class BaselineOrchestrationTests(unittest.TestCase):
         def measure_phase(workload, phase, *_args):
             if events is not None:
                 events.append((phase, workload["id"], workload["phases"][phase]["command"]))
+            if phase_result is not None:
+                return phase_result
             return {"preparation": 2.0, "test": 3.0}[phase]
         with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=capture_cell), mock.patch("measure._measure_workload_phase", side_effect=measure_phase), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
             return run_baseline(root, output, "mac", cold=cold)
@@ -299,6 +302,36 @@ class BaselineOrchestrationTests(unittest.TestCase):
             self.assertEqual(len(dossier["attempts"]), 0)
             self.assertEqual(len(dossier["raw_attempts"]), 2)
             self.assertTrue(all(item["status"] == "invalid" for item in dossier["raw_attempts"]))
+
+    def test_retains_bounded_evidence_when_phase_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "checkout"
+            root.mkdir()
+            failed = {
+                "phase": "preparation", "workload_id": "digest-thing",
+                "workload_command_template": ["cargo", "fetch", "--manifest-path", "${CHECKOUT}/Cargo.toml"],
+                "command": ["cargo", "fetch", "--manifest-path", str(root / "Cargo.toml")],
+                "exit_code": 17, "launch_error": None, "elapsed_s": 0.25,
+                "deadline_s": 3600, "deadline_exceeded": False,
+                "output_limit_exceeded": False,
+                "cleanup": {"complete": True, "error": None},
+                "stdout": {"base64": "b3V0", "bytes": 3, "sha256": sha256(b"out")},
+                "stderr": {"base64": "ZXJy", "bytes": 3, "sha256": sha256(b"err")},
+                "enforcement_method": "sandbox-exec",
+            }
+            dossier = self._run_with_mocks(
+                root, Path(directory) / "failed-phase.json", True,
+                phase_result=failed,
+            )
+            retained = dossier["raw_attempts"][0]
+            self.assertEqual(retained["status"], "invalid")
+            self.assertEqual(retained["phase"]["phase"], "preparation")
+            self.assertEqual(retained["phase"]["workload_id"], "digest-thing")
+            self.assertEqual(retained["phase"]["exit_code"], 17)
+            self.assertEqual(retained["phase"]["stdout"]["base64"], "b3V0")
+            self.assertEqual(retained["phase"]["stderr"]["sha256"], sha256(b"err"))
+            self.assertTrue(retained["phase"]["cleanup"]["complete"])
+            self.assertEqual(dossier["attempts"], [])
 
     def test_writes_validated_dossier_from_mocked_measurement_cells(self):
         with tempfile.TemporaryDirectory() as directory:
