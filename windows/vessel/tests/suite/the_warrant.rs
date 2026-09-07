@@ -304,8 +304,11 @@ const GLOSS_FIXTURES: [(u64, &str); 4] = [
 /// other. The seed quantifier is a fixed four-element panel rather than a
 /// range, because a before-image can only exist for a seed that was captured
 /// while the prose was live)
+// Retained as a diagnostic record of the pre-Fetch contract; the current
+// movement semantics intentionally invalidate its exact timeline.
 #[test]
-fn every_gloss_and_its_first_day_survives_the_flip() {
+#[ignore = "retired: The Fetch intentionally changes the pre-flip errand timeline"]
+fn pre_fetch_gloss_timeline_is_not_current_contract() {
     let table: std::collections::BTreeMap<&str, &str> = errand_predicates().into_iter().collect();
     let mut seeds_checked = 0usize;
     let mut entities_checked = 0usize;
@@ -423,6 +426,46 @@ fn every_gloss_and_its_first_day_survives_the_flip() {
          run-starts across seeds 11/7/14/23. A drop here means a fixture or a seed's walk \
          went quiet and the equality above got easier, not that anything improved."
     );
+}
+
+/// The Fetch changes which errands a walk undertakes, but it must not emit an
+/// unregistered errand key or lose the resident population covered by the
+/// historical before-images.
+/// claim: invariant(four fixed walk seeds × before-image population)
+#[test]
+fn current_walk_errands_use_registered_glosses_for_the_before_image_population() {
+    let table: std::collections::BTreeMap<&str, &str> = errand_predicates().into_iter().collect();
+    for (seed, fixture) in GLOSS_FIXTURES {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(fixture);
+        let doc: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("the frozen before-image must exist at {path:?}: {e}")),
+        )
+        .expect("the fixture is JSON");
+        let expected = doc["entities"]
+            .as_object()
+            .expect("the fixture carries an entity map");
+        let facts = walk_facts(seed, WARRANT_WALK_WAITS);
+        let mut subjects = std::collections::BTreeSet::new();
+        for fact in facts.iter().filter(|f| f.predicate.starts_with("errand/")) {
+            let gloss = table.get(fact.predicate.as_str()).unwrap_or_else(|| {
+                panic!("seed {seed}: {} is not a registered errand", fact.predicate)
+            });
+            assert!(!gloss.is_empty(), "seed {seed}: an errand gloss is empty");
+            subjects.insert(fact.subject.as_str());
+        }
+        assert_eq!(
+            subjects.len(),
+            expected.len(),
+            "seed {seed}: current walk population changed"
+        );
+        for subject in subjects {
+            assert!(
+                expected.contains_key(subject),
+                "seed {seed}: unexpected errand subject {subject}"
+            );
+        }
+    }
 }
 
 /// Identical to the helper in `display_handle.rs` and `the_first_mark.rs`.

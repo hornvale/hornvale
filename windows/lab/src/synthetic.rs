@@ -18,9 +18,9 @@
 //!   (stood in it once, so belief is folded from its history) but is now placed
 //!   past the plan budget from it: `plan_to_water` gives up (`None`), the thirst
 //!   affordance vanishes, and the creature Holds in sustained `Frustrated`. The
-//!   "known-but-unreachable source" the retrospective named. Belief anchors to
-//!   HOME's reachability, so home sits on the water and the creature is stranded
-//!   away from both — the one construction the geometry allows.
+//!   "known-but-unreachable source" the retrospective named. The scenario is
+//!   retained as a regression witness: actor-relative belief now lets the
+//!   creature recognize the water under its current position and recover.
 //! - **A heat wave that passes** — a creature ON its water (thirst stays
 //!   serviceable, so it never itself distresses) but gripped by a blistering
 //!   thermal room with no kinder neighbour: comfort is unservable and it Holds
@@ -302,12 +302,10 @@ fn water_and_a_far_exile() -> (Facet, Facet) {
     )
 }
 
-/// **Stranded from known water** → sustained `Frustrated` (chronic, by-cause
-/// thirst). The creature's home is a spring it has drunk from (belief anchors
-/// there), but it is placed on the far side of the world: thirst rises, the
-/// spring is past the plan budget, no affordance services it, and it Holds in
-/// distress for the rest of the run — the bug-alarm signature, produced by the
-/// sim rather than typed by hand.
+/// **Stranded from known water** is the former chronic-stranding witness. The
+/// creature's home is a spring it has drunk from, but it is placed on the far
+/// side of the world. Actor-relative belief must now recognize the water at
+/// the current position and recover rather than remain chronically thirsty.
 pub fn stranded_from_known_water() -> Scenario {
     let (spring, exile) = water_and_a_far_exile();
     let mut ledger = Ledger::default();
@@ -635,21 +633,15 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
 }
 
 /// A stranded pair (The Tidings; decision #8). The **stricken** creature is
-/// HOMED at `spring` (so its home-anchored `believed_water` genuinely holds
-/// `spring` — home is *always* the closest possible candidate to itself, so
-/// this belief can never be dislodged by anything else the stricken later
-/// stands in) but is marooned far away at `exile`, from which `spring` is
-/// unreachable — so alone it reads chronic `Frustrated` (it KNOWS water it
-/// cannot reach, and structurally can never "forget" it in favor of
-/// something closer at hand — see below).
+/// HOMED at `spring` and later marooned at `exile`. Under home anchoring this
+/// was a chronic-stranding witness; under actor-relative belief the current
+/// water is recognized directly, so sharing cannot make the co-located case
+/// worse than the apart case.
 ///
 /// `exile` is (deliberately) ALSO marked fresh water in this scenario's
-/// terrain — normally that would trivially rescue a stranded creature, but it
-/// doesn't here: the stricken's OWN `believed_water` ranks candidates by
-/// nearness to HOME, and home (`spring`) is unbeatable at zero hops from
-/// itself, so the stricken never adopts `exile` on its own, EVEN standing on
-/// it. This is exactly the review's point (decision #8): home-anchored
-/// belief can strand a creature on top of water it doesn't recognize.
+/// terrain. This is the positive control for The Fetch: current-relative
+/// belief must allow the stricken creature to recognize water it is standing
+/// on, even though that room is not its home.
 ///
 /// The **knower** is a stationary AMETABOLIC informant (no drives of its own
 /// — it never acts, so it never leaves wherever it's placed, and never lets
@@ -664,7 +656,8 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
 /// standing — wins outright: the stricken drinks in place, never needing to
 /// move, so co-location (and therefore relief) is stable for the entire run.
 /// When apart, the knower stands at a different room entirely, is never
-/// co-located with the stricken, and the stricken is never relieved.
+/// co-located with the stricken; current-relative belief still prevents the
+/// stricken from remaining chronically thirsty.
 ///
 /// Test-only: its sole callers are the tests below (the `a_band_that_shares_water`
 /// public wrapper that once re-exported it for non-test callers was removed as
@@ -679,8 +672,8 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
     let mut ledger = Ledger::default();
     let registry = harness_registry();
 
-    // The stricken: homed at spring, stood there, then marooned at exile. Its
-    // home-anchored belief = spring (unreachable from exile) → chronic Frustrated.
+    // The stricken: homed at spring, stood there, then marooned at exile. The
+    // current-relative belief should recognize the fresh water at exile.
     let stricken = ledger.mint_entity(synthetic_creature(0));
     ledger
         .commit(
@@ -750,15 +743,15 @@ mod tests {
     const HEALTH_TICKS: usize = 40;
 
     #[test]
-    fn a_colocated_band_is_healthier_than_the_same_band_apart() {
+    fn a_colocated_band_is_no_worse_than_the_same_band_apart() {
         // Matched pair: identical stricken + knower; the ONLY difference is
         // whether the knower stands with the stricken (sharing) or apart (no
         // sharing).
         let shared = health_report(&a_stranded_pair(true).simulate(HEALTH_TICKS)); // co-located
         let apart = health_report(&a_stranded_pair(false).simulate(HEALTH_TICKS)); // separated null
         assert!(
-            shared.prevalence < apart.prevalence,
-            "co-located sharing heals the stricken creature: {} < {}",
+            shared.prevalence <= apart.prevalence,
+            "co-located sharing never worsens the stricken creature: {} <= {}",
             shared.prevalence,
             apart.prevalence
         );
