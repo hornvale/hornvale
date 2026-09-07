@@ -1,15 +1,15 @@
-//! The Staple D2 paired Task 0 probe contract.
+//! The Staple D2 paired probe contract and integrated treatment report.
 //!
-//! Task 1 freezes the report shape before exchange exists. Production stock,
-//! clearing, and treatment behavior belong to later tasks; this module keeps
-//! the seed roster, verdict bars, and anti-vacuity rules local to the probe.
+//! Task 1 froze the report shape before exchange existed. Task 4 drives that
+//! contract from the integrated bake while keeping the seed roster, verdict
+//! bars, and anti-vacuity rules local to the probe.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World, test_lineage};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, WorldComponents, build_world_to, collapse_events,
-    occupation_records,
+    BuildDepth, ExchangeCensus, ExchangeTreatment, SettlementPins, WorldComponents, build_world_to,
+    build_world_with_exchange_treatment, collapse_events, occupation_records,
 };
 
 const PROBE_WORLD_DENOMINATOR: usize = 200;
@@ -83,9 +83,47 @@ struct PairObservation {
     seed: u64,
     control: DemographicReading,
     treatment: DemographicReading,
-    attempts: Vec<AttemptStatus>,
+    attempts: AttemptCounts,
     stock_conservation_residuals: [f64; 2],
     disabled_control_is_byte_identical: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct AttemptCounts {
+    attempted: usize,
+    proposed: usize,
+    accepted: usize,
+    settled: usize,
+    partial: usize,
+    refused: usize,
+    impossible: usize,
+}
+
+impl AttemptCounts {
+    fn from_statuses(statuses: &[AttemptStatus]) -> Self {
+        let count = |wanted| statuses.iter().filter(|&&status| status == wanted).count();
+        Self {
+            attempted: statuses.len(),
+            proposed: count(AttemptStatus::Proposed),
+            accepted: count(AttemptStatus::Accepted),
+            settled: count(AttemptStatus::Settled),
+            partial: count(AttemptStatus::Partial),
+            refused: count(AttemptStatus::Refused),
+            impossible: count(AttemptStatus::Impossible),
+        }
+    }
+
+    fn from_census(census: ExchangeCensus) -> Self {
+        Self {
+            attempted: census.attempts as usize,
+            proposed: census.proposed as usize,
+            accepted: census.accepted as usize,
+            settled: census.settled as usize,
+            partial: census.partial as usize,
+            refused: census.refused as usize,
+            impossible: census.impossible as usize,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -212,15 +250,17 @@ fn summarize_probe(pairs: &[PairObservation]) -> Result<ProbeReport, ProbeContra
         }
     }
 
-    let attempt_denominator = pairs.iter().map(|pair| pair.attempts.len()).sum::<usize>();
+    let attempt_denominator = pairs
+        .iter()
+        .map(|pair| pair.attempts.attempted)
+        .sum::<usize>();
     let attempt_denominator = std::num::NonZeroUsize::new(attempt_denominator)
         .ok_or(ProbeContractError::NoExchangeAttempts)?;
-    let count = |status| {
+    let count = |select: fn(AttemptCounts) -> usize| {
         pairs
             .iter()
-            .flat_map(|pair| pair.attempts.iter())
-            .filter(|&&outcome| outcome == status)
-            .count()
+            .map(|pair| select(pair.attempts))
+            .sum::<usize>()
     };
 
     let mut breaches = TreatmentOnlyBreaches::default();
@@ -240,15 +280,15 @@ fn summarize_probe(pairs: &[PairObservation]) -> Result<ProbeReport, ProbeContra
         world_denominator: pairs.len(),
         activation_worlds: pairs
             .iter()
-            .filter(|pair| pair.attempts.contains(&AttemptStatus::Settled))
+            .filter(|pair| pair.attempts.settled > 0)
             .count(),
         attempted: attempt_denominator.get(),
-        proposed: CountWithAttempts::new(count(AttemptStatus::Proposed), attempt_denominator),
-        accepted: CountWithAttempts::new(count(AttemptStatus::Accepted), attempt_denominator),
-        settled: CountWithAttempts::new(count(AttemptStatus::Settled), attempt_denominator),
-        partial: CountWithAttempts::new(count(AttemptStatus::Partial), attempt_denominator),
-        refused: CountWithAttempts::new(count(AttemptStatus::Refused), attempt_denominator),
-        impossible: CountWithAttempts::new(count(AttemptStatus::Impossible), attempt_denominator),
+        proposed: CountWithAttempts::new(count(|c| c.proposed), attempt_denominator),
+        accepted: CountWithAttempts::new(count(|c| c.accepted), attempt_denominator),
+        settled: CountWithAttempts::new(count(|c| c.settled), attempt_denominator),
+        partial: CountWithAttempts::new(count(|c| c.partial), attempt_denominator),
+        refused: CountWithAttempts::new(count(|c| c.refused), attempt_denominator),
+        impossible: CountWithAttempts::new(count(|c| c.impossible), attempt_denominator),
         stock_conservation_residuals: pairs
             .iter()
             .map(|pair| StockConservationResiduals {
@@ -279,9 +319,9 @@ fn fixture_with_attempts(attempts: Vec<AttemptStatus>) -> Vec<PairObservation> {
             control: passing_reading(),
             treatment: passing_reading(),
             attempts: if seed == 1 {
-                attempts.clone()
+                AttemptCounts::from_statuses(&attempts)
             } else {
-                Vec::new()
+                AttemptCounts::default()
             },
             stock_conservation_residuals: [0.0, 0.0],
             disabled_control_is_byte_identical: true,
@@ -302,19 +342,52 @@ fn build_control_world(seed: u64, components: &WorldComponents) -> World {
 }
 
 /// The disabled treatment deliberately owns a builder boundary distinct from
-/// control. Task 4 can route its off-switch here without changing how control
-/// is constructed; until then both boundaries invoke the unchanged history
-/// path and consume no exchange state.
+/// control. Both boundaries invoke the unchanged history path and consume no
+/// exchange state.
 fn build_disabled_treatment_world(seed: u64, components: &WorldComponents) -> World {
-    build_world_to(
+    build_world_with_exchange_treatment(
         Seed(seed),
         &SkyPins::default(),
         &TerrainPins::default(),
         &SettlementPins::default(),
         components,
-        BuildDepth::Settlements,
+        ExchangeTreatment::Disabled,
     )
     .expect("fixed disabled-treatment seed builds to settlements")
+    .world
+}
+
+fn integrated_pair(seed: u64, components: &WorldComponents) -> PairObservation {
+    let control = build_control_world(seed, components);
+    let disabled = build_world_with_exchange_treatment(
+        Seed(seed),
+        &SkyPins::default(),
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        components,
+        ExchangeTreatment::Disabled,
+    )
+    .expect("fixed disabled-treatment seed builds to settlements");
+    let treatment = build_world_with_exchange_treatment(
+        Seed(seed),
+        &SkyPins::default(),
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        components,
+        ExchangeTreatment::Enabled,
+    )
+    .expect("fixed enabled-treatment seed builds to settlements");
+    let control_bytes = serde_json::to_vec(&control.ledger).expect("control ledger serializes");
+    let disabled_bytes =
+        serde_json::to_vec(&disabled.world.ledger).expect("disabled ledger serializes");
+    PairObservation {
+        seed,
+        control: DemographicReading::from_world(&control),
+        treatment: DemographicReading::from_world(&treatment.world),
+        attempts: AttemptCounts::from_census(treatment.exchange),
+        stock_conservation_residuals: treatment.exchange.conservation_residuals,
+        disabled_control_is_byte_identical: control_bytes == disabled_bytes,
+    }
 }
 
 fn observe_disabled_pair(
@@ -329,7 +402,7 @@ fn observe_disabled_pair(
         seed,
         control: DemographicReading::from_world(control),
         treatment: DemographicReading::from_world(disabled_treatment),
-        attempts: Vec::new(),
+        attempts: AttemptCounts::default(),
         stock_conservation_residuals: [0.0, 0.0],
         disabled_control_is_byte_identical: control_bytes == disabled_bytes,
     }
@@ -494,6 +567,32 @@ fn a_disabled_treatment_difference_is_rejected_before_zero_attempts() {
 }
 
 #[test]
+fn explicit_disabled_exchange_treatment_is_control_identical() {
+    let components = WorldComponents::assemble().expect("canonical components assemble");
+    let control = build_control_world(11, &components);
+    let disabled = build_world_with_exchange_treatment(
+        Seed(11),
+        &SkyPins::default(),
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        &components,
+        ExchangeTreatment::Disabled,
+    )
+    .expect("focused disabled-treatment world builds");
+
+    assert_eq!(
+        serde_json::to_vec(&disabled.world.ledger).unwrap(),
+        serde_json::to_vec(&control.ledger).unwrap(),
+        "the explicit disabled boundary must preserve current build bytes"
+    );
+    assert_eq!(
+        disabled.exchange,
+        ExchangeCensus::default(),
+        "the disabled boundary must not fabricate an exchange trace"
+    );
+}
+
+#[test]
 fn non_finite_stock_residuals_are_rejected_before_outcome_reporting() {
     let mut pairs = fixture_with_attempts(Vec::new());
     pairs[17].stock_conservation_residuals[1] = f64::NAN;
@@ -521,7 +620,7 @@ fn finite_nonzero_stock_residuals_are_rejected_as_non_conserving() {
 }
 
 /// claim: invariant(forall-seed, off-gate, probe:) — for the fixed 200-seed
-/// Task 0 roster, constructing the disabled treatment through its separate
+/// preregistered roster, constructing the disabled treatment through its separate
 /// fixture boundary emits the same ledger bytes as the untouched control.
 #[test]
 #[ignore = "probe: 200 paired settlement builds for The Staple D2 disabled-control identity"]
@@ -540,5 +639,92 @@ fn fixed_200_seed_disabled_control_is_byte_identical() {
         summarize_probe(&pairs),
         Err(ProbeContractError::NoExchangeAttempts),
         "the pre-production 200-world fixture must validate identity and conservation before reporting zero attempts"
+    );
+}
+
+/// claim: readout(forall-seed in 1..=200, off-gate) — the integrated D2
+/// treatment activates on real worlds while conserving typed stock, and no
+/// individually named demographic bar crosses the preregistered >100/200
+/// instability pole. This test is intentionally run once per Task 4.
+#[test]
+#[ignore = "probe: one integrated 200-seed D2 control/treatment report; run exactly once"]
+fn integrated_200_seed_exchange_treatment_report() {
+    let components = WorldComponents::assemble().expect("canonical components assemble");
+    let pairs: Vec<_> = PROBE_SEEDS
+        .map(|seed| integrated_pair(seed, &components))
+        .collect();
+    let report = summarize_probe(&pairs).expect("integrated treatment has a real attempt set");
+
+    println!("D2 integrated paired report");
+    println!("worlds={}", report.world_denominator);
+    println!(
+        "disabled_control_identity={}",
+        report.byte_identical_disabled_controls
+    );
+    println!(
+        "activation={}/{}",
+        report.activation_worlds, report.world_denominator
+    );
+    println!("attempted={}", report.attempted);
+    println!(
+        "proposed={}/{}",
+        report.proposed.count, report.proposed.attempts
+    );
+    println!(
+        "accepted={}/{}",
+        report.accepted.count, report.accepted.attempts
+    );
+    println!(
+        "settled={}/{}",
+        report.settled.count, report.settled.attempts
+    );
+    println!(
+        "partial={}/{}",
+        report.partial.count, report.partial.attempts
+    );
+    println!(
+        "refused={}/{}",
+        report.refused.count, report.refused.attempts
+    );
+    println!(
+        "impossible={}/{}",
+        report.impossible.count, report.impossible.attempts
+    );
+    let nonzero_residual_worlds = report
+        .stock_conservation_residuals
+        .iter()
+        .filter(|residual| residual.by_resource != [0.0, 0.0])
+        .count();
+    println!(
+        "stock_conservation_residuals nonzero_worlds={}/{}",
+        nonzero_residual_worlds, report.world_denominator
+    );
+    println!(
+        "treatment_only_breaches settlement_count={}/{} collapse_share={}/{} alive_at_now={}/{}",
+        report.treatment_only_breaches.settlement_count,
+        report.world_denominator,
+        report.treatment_only_breaches.collapse_share,
+        report.world_denominator,
+        report.treatment_only_breaches.alive_at_now,
+        report.world_denominator,
+    );
+    println!("zero_activation={}", report.is_zero_activation());
+    println!(
+        "crosses_instability_pole={}",
+        report.treatment_only_breaches.crosses_instability_pole()
+    );
+
+    assert_eq!(report.world_denominator, PROBE_WORLD_DENOMINATOR);
+    assert_eq!(
+        report.byte_identical_disabled_controls,
+        PROBE_WORLD_DENOMINATOR
+    );
+    assert!(
+        report.attempted > 0,
+        "the treatment must exercise a real attempt denominator"
+    );
+    assert_eq!(
+        report.stock_conservation_residuals.len(),
+        PROBE_WORLD_DENOMINATOR
     );
 }

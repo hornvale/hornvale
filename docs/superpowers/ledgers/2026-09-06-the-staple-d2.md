@@ -171,6 +171,16 @@ funded and unfunded cycles, six statuses, reordered input, purity, and the
 mutation-sensitive conservation residual. Task 3 is complete at
 `e2ed8eaa9`; no 200-seed probe or census was run.
 
+### Task 4 probe — invalid first run
+
+The first integrated 200-seed run completed after `1416.48s` and reported
+activation `178/200`, but its paired demographic comparison is invalid: the
+disabled/control path passed a doubled-pressure factor (`1.0`) instead of the
+identity shortfall (`0.0`). Its control identity count was `200/200`, but the
+control worlds were not the existing demographic control. The run is retained
+as an invalid measurement record, not as a verdict; the implementation is
+correcting the argument before one replacement probe is run.
+
 ## Deferred minors and follow-ups
 
 - Verify the specialization input and shortfall insertion point against the

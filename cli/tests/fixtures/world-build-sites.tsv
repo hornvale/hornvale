@@ -145,7 +145,7 @@ windows/worldgen/src/circuit_readout.rs	1	artifacts:1
 windows/worldgen/src/graph_derive.rs	1	unmigrated:1
 windows/worldgen/src/herds.rs	1	unmigrated:1
 windows/worldgen/src/history_emit.rs	1	unmigrated:1
-windows/worldgen/src/lib.rs	47	unmigrated:42 build-path:2 production:2 identity:1
+windows/worldgen/src/lib.rs	48	unmigrated:42 build-path:2 production:3 identity:1
 windows/worldgen/src/render.rs	1	unmigrated:1
 windows/worldgen/src/residents.rs	1	unmigrated:1
 windows/worldgen/src/underworld_readout.rs	1	unmigrated:1
@@ -221,7 +221,7 @@ windows/worldgen/tests/suite/repose_exposure.rs	1	identity:1
 windows/worldgen/tests/suite/soil_attribution_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/solitary_tongue.rs	1	unmigrated:1
 windows/worldgen/tests/suite/species_worlds.rs	5	unmigrated:5
-windows/worldgen/tests/suite/staple_d2_probe.rs	2	identity:2
+windows/worldgen/tests/suite/staple_d2_probe.rs	5	identity:5
 windows/worldgen/tests/suite/stope_variety_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/subterranean_energy_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/survivorship_probe.rs	1	unmigrated:1
