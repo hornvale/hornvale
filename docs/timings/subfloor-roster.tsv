@@ -1300,7 +1300,6 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -2888,12 +2887,15 @@ hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_holds_the_visi
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_is_empty_when_never_frightened
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_is_hazard_memory_shunned
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_hazard_is_terrain_only_with_empty_roster
+hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_admits_currently_reachable_memory
+hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_breaks_current_position_ties_by_ascending_facet
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_breaks_equal_hop_ties_by_ascending_room_addr
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_ignores_dry_rooms_the_agent_stood_in
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_is_deterministic_reload_stable_and_per_agent
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_is_none_until_the_agent_has_stood_in_water
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_keeps_the_nearest_to_home_of_several_known_sources
 hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_only_counts_sightings_at_or_before_t
+hornvale-vessel::hornvale_vessel$liveness::tests::believed_water_ranks_reachable_memory_from_current_position
 hornvale-vessel::hornvale_vessel$liveness::tests::boldness_scales_the_felt_threat_across_the_mettle_axis
 hornvale-vessel::hornvale_vessel$liveness::tests::borrowed_alarm_is_scaled_by_boldness
 hornvale-vessel::hornvale_vessel$liveness::tests::catch_up_commits_nothing
@@ -2947,6 +2949,7 @@ hornvale-vessel::hornvale_vessel$liveness::tests::home_nav_pays_zero_searches_fo
 hornvale-vessel::hornvale_vessel$liveness::tests::hunger_folds_eaten_and_resets_on_a_meal
 hornvale-vessel::hornvale_vessel$liveness::tests::hunger_integrates_faster_over_a_hot_occupancy
 hornvale-vessel::hornvale_vessel$liveness::tests::hunger_proposal_eats_at_a_rich_cell_and_forages_from_a_barren_one
+hornvale-vessel::hornvale_vessel$liveness::tests::incremental_water_belief_matches_fresh_fold_after_committed_position_change
 hornvale-vessel::hornvale_vessel$liveness::tests::is_awake_follows_the_sun_and_the_activity_cycle
 hornvale-vessel::hornvale_vessel$liveness::tests::is_water_delegates_to_terrain_is_fresh_water
 hornvale-vessel::hornvale_vessel$liveness::tests::learned_helplessness_onsets_after_prolonged_thirst_and_probes_periodically
@@ -3679,7 +3682,6 @@ hornvale-worldgen::hornvale_worldgen$tests::pacing_elves_harder_than_dwarves_cha
 hornvale-worldgen::hornvale_worldgen$tests::placed_peoples_lists_flagship_holders_in_registry_order
 hornvale-worldgen::hornvale_worldgen$tests::referent_ord_discriminates_on_concept
 hornvale-worldgen::hornvale_worldgen$tests::register_all_via_roster_registers_name_gloss
-hornvale-worldgen::hornvale_worldgen$tests::settlement_lines_describe_the_people
 hornvale-worldgen::hornvale_worldgen$tests::settlement_populations_are_the_conserved_field_readout
 hornvale-worldgen::hornvale_worldgen$tests::settlements_and_deities_gain_name_gloss_facts_when_a_gloss_exists
 hornvale-worldgen::hornvale_worldgen$tests::sky_of_rejects_an_unparseable_scenario_pin
