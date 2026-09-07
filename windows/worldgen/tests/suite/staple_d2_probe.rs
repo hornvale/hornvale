@@ -5,7 +5,7 @@
 //! the seed roster, verdict bars, and anti-vacuity rules local to the probe.
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Seed, World};
+use hornvale_kernel::{Seed, World, test_lineage};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, WorldComponents, build_world_to, collapse_events,
@@ -161,6 +161,10 @@ enum ProbeContractError {
         seed: u64,
         resource_index: usize,
     },
+    NonZeroStockResidual {
+        seed: u64,
+        resource_index: usize,
+    },
     DisabledControlChanged {
         seed: u64,
     },
@@ -171,8 +175,9 @@ enum ProbeContractError {
 ///
 /// Validation is deliberately ordered before the zero-attempt result: an
 /// inert pre-production treatment must still prove the 200-world roster,
-/// finite conservation readings, and disabled-control identity. Only then is
-/// `NoExchangeAttempts` a meaningful result rather than a vacuous report.
+/// finite, exactly zero conservation readings, and disabled-control identity.
+/// Only then is `NoExchangeAttempts` a meaningful result rather than a
+/// vacuous report.
 fn summarize_probe(pairs: &[PairObservation]) -> Result<ProbeReport, ProbeContractError> {
     if pairs.len() != PROBE_WORLD_DENOMINATOR {
         return Err(ProbeContractError::WrongWorldDenominator {
@@ -191,6 +196,12 @@ fn summarize_probe(pairs: &[PairObservation]) -> Result<ProbeReport, ProbeContra
         for (resource_index, residual) in pair.stock_conservation_residuals.iter().enumerate() {
             if !residual.is_finite() {
                 return Err(ProbeContractError::NonFiniteStockResidual {
+                    seed: pair.seed,
+                    resource_index,
+                });
+            }
+            if *residual != 0.0 {
+                return Err(ProbeContractError::NonZeroStockResidual {
                     seed: pair.seed,
                     resource_index,
                 });
@@ -278,7 +289,7 @@ fn fixture_with_attempts(attempts: Vec<AttemptStatus>) -> Vec<PairObservation> {
         .collect()
 }
 
-fn build_probe_world(seed: u64, components: &WorldComponents) -> World {
+fn build_control_world(seed: u64, components: &WorldComponents) -> World {
     build_world_to(
         Seed(seed),
         &SkyPins::default(),
@@ -290,24 +301,44 @@ fn build_probe_world(seed: u64, components: &WorldComponents) -> World {
     .expect("fixed probe seed builds to settlements")
 }
 
-/// Until Task 4 supplies the integrated treatment switch, this is a second
-/// invocation of the current path. Keeping it as a separate fixture boundary
-/// gives Task 4 one place to route the disabled treatment without touching
-/// the control builder.
-fn disabled_pair(seed: u64, components: &WorldComponents) -> PairObservation {
-    let control = build_probe_world(seed, components);
-    let disabled_treatment = build_probe_world(seed, components);
+/// The disabled treatment deliberately owns a builder boundary distinct from
+/// control. Task 4 can route its off-switch here without changing how control
+/// is constructed; until then both boundaries invoke the unchanged history
+/// path and consume no exchange state.
+fn build_disabled_treatment_world(seed: u64, components: &WorldComponents) -> World {
+    build_world_to(
+        Seed(seed),
+        &SkyPins::default(),
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        components,
+        BuildDepth::Settlements,
+    )
+    .expect("fixed disabled-treatment seed builds to settlements")
+}
+
+fn observe_disabled_pair(
+    seed: u64,
+    control: &World,
+    disabled_treatment: &World,
+) -> PairObservation {
     let control_bytes = serde_json::to_vec(&control.ledger).expect("control ledger serializes");
-    let disabled_bytes =
-        serde_json::to_vec(&disabled_treatment.ledger).expect("disabled ledger serializes");
+    let disabled_bytes = serde_json::to_vec(&disabled_treatment.ledger)
+        .expect("disabled-treatment ledger serializes");
     PairObservation {
         seed,
-        control: DemographicReading::from_world(&control),
-        treatment: DemographicReading::from_world(&disabled_treatment),
+        control: DemographicReading::from_world(control),
+        treatment: DemographicReading::from_world(disabled_treatment),
         attempts: Vec::new(),
         stock_conservation_residuals: [0.0, 0.0],
         disabled_control_is_byte_identical: control_bytes == disabled_bytes,
     }
+}
+
+fn disabled_pair(seed: u64, components: &WorldComponents) -> PairObservation {
+    let control = build_control_world(seed, components);
+    let disabled_treatment = build_disabled_treatment_world(seed, components);
+    observe_disabled_pair(seed, &control, &disabled_treatment)
 }
 
 #[test]
@@ -446,9 +477,16 @@ fn instability_requires_more_than_half_the_fixed_world_denominator() {
 }
 
 #[test]
-fn disabled_control_mismatch_is_rejected_before_zero_attempts() {
+fn a_disabled_treatment_difference_is_rejected_before_zero_attempts() {
+    let components = WorldComponents::assemble().expect("canonical components assemble");
+    let control = build_control_world(11, &components);
+    let mut disabled_treatment = build_disabled_treatment_world(11, &components);
+    disabled_treatment
+        .ledger
+        .mint_entity(test_lineage(u16::MAX));
+
     let mut pairs = fixture_with_attempts(Vec::new());
-    pairs[10].disabled_control_is_byte_identical = false;
+    pairs[10] = observe_disabled_pair(11, &control, &disabled_treatment);
     assert_eq!(
         summarize_probe(&pairs),
         Err(ProbeContractError::DisabledControlChanged { seed: 11 })
@@ -465,6 +503,20 @@ fn non_finite_stock_residuals_are_rejected_before_outcome_reporting() {
             seed: 18,
             resource_index: 1,
         })
+    );
+}
+
+#[test]
+fn finite_nonzero_stock_residuals_are_rejected_as_non_conserving() {
+    let mut pairs = fixture_with_attempts(vec![AttemptStatus::Refused]);
+    pairs[22].stock_conservation_residuals[0] = 0.25;
+    assert_eq!(
+        summarize_probe(&pairs),
+        Err(ProbeContractError::NonZeroStockResidual {
+            seed: 23,
+            resource_index: 0,
+        }),
+        "a finite residual still represents stock creation or destruction"
     );
 }
 

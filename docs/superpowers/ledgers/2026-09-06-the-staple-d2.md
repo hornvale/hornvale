@@ -73,6 +73,24 @@ exchange does not exist yet, it then reached the separately represented zero-
 attempt result. Stock residual shape and finiteness checks execute before that
 result, so the empty outcome cannot bypass the conservation surface.
 
+### Task 1 review — fix round 1
+
+The reviewer found two high-severity defects: the conservation check rejected
+non-finite residuals but accepted finite nonzero residuals, and the disabled
+treatment arm called the same builder as control rather than exercising an
+explicit disabled-treatment boundary. Ruling: fix both before Task 1 can be
+marked complete. Cost if wrong: the probe could certify stock creation or a
+disconnected control switch while all assertions remained green.
+
+Fix result: the reducer now rejects every non-finite or finite nonzero
+per-resource residual before outcome reporting. Control and disabled treatment
+own separate world-builder boundaries, and the observation seam serializes and
+compares their ledger bytes. A focused test mutates only the disabled ledger
+and proves the mismatch reaches `DisabledControlChanged`; the fixed 200-seed
+test remains unchanged and was not rerun because its prior 949.31s evidence is
+already recorded above. Ideonomy: 0 passes — this fix executes the review's
+specified contract and introduces no design choice.
+
 ## Deferred minors and follow-ups
 
 - Verify the specialization input and shortfall insertion point against the
