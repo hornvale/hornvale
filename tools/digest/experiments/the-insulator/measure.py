@@ -309,10 +309,10 @@ def invalidation_probes(graph: dict) -> dict:
 
 
 def summarize_baseline(attempts: list[dict]) -> dict:
-    """Summarize one complete cold/warm pair without flattening nested timings."""
+    """Summarize one cold/warm pair for every represented frozen workload."""
     if not isinstance(attempts, list) or not attempts:
         raise ValueError("baseline attempts are required")
-    by_class = {"cold": [], "warm": []}
+    by_workload = {}
     excluded = 0
     for attempt in attempts:
         try:
@@ -321,33 +321,39 @@ def summarize_baseline(attempts: list[dict]) -> dict:
             excluded += 1
             continue
         classification = attempt.get("target", {}).get("classification")
-        if classification not in by_class:
+        workload_id = attempt.get("workload_id")
+        if classification not in {"cold", "warm"} or not isinstance(workload_id, str) or not workload_id:
             raise ValueError("baseline attempts must be cold or warm")
-        if by_class[classification]:
-            raise ValueError("duplicate baseline classification")
         costs = attempt.get("costs")
         if (not isinstance(costs, dict) or
                 any(not _finite_number(costs.get(field))
                     for field in ("preparation_s", "build_s", "test_s"))):
             raise ValueError("incomplete baseline attempt")
-        by_class[classification].append(attempt)
-    if not by_class["cold"] or not by_class["warm"]:
+        records = by_workload.setdefault(workload_id, {})
+        if classification in records:
+            raise ValueError("duplicate baseline workload classification")
+        records[classification] = attempt
+    if not by_workload or any(set(records) != {"cold", "warm"} for records in by_workload.values()):
         raise ValueError("baseline attempts must be paired")
-    eligible = [attempt for records in by_class.values() for attempt in records]
+    eligible = [attempt for records in by_workload.values() for attempt in records.values()]
     graph_counts = {}
     for field in ("package_count", "workspace_member_count"):
         values = [attempt.get("graph", {}).get(field) for attempt in eligible]
-        if any(not isinstance(value, int) or value < 0 for value in values):
+        if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in values):
             raise ValueError("incomplete baseline graph")
         if len(set(values)) != 1:
             raise ValueError("baseline graph counts differ")
         graph_counts[field] = values[:1]
     costs = {}
-    for classification, records in by_class.items():
-        timing = records[0]["costs"]
-        costs[classification] = {field: [float(timing[field])] for field in ("preparation_s", "build_s", "test_s")}
-        costs[classification]["total_s"] = [sum(costs[classification][field][0] for field in ("preparation_s", "build_s", "test_s"))]
-    return {"pair_count": 1, "excluded_attempt_count": excluded,
+    for workload_id, records in by_workload.items():
+        costs[workload_id] = {}
+        for classification, record in records.items():
+            timing = record["costs"]
+            costs[workload_id][classification] = {
+                field: float(timing[field]) for field in ("preparation_s", "build_s", "test_s")
+            }
+            costs[workload_id][classification]["total_s"] = sum(costs[workload_id][classification].values())
+    return {"pair_count": len(by_workload), "excluded_attempt_count": excluded,
             "graph_counts": graph_counts, "costs": costs}
 
 

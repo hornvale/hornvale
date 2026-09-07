@@ -31,11 +31,11 @@ def graph_fixture():
     }
 
 
-def attempt(kind, *, valid=True, preparation=2.0, build=5.0, test=3.0):
+def attempt(kind, *, workload_id="digest-thing", valid=True, preparation=2.0, build=5.0, test=3.0):
     checkout, target, evidence = "/repo/checkout", "/repo/checkout/target", "/repo/evidence"
-    template = ["cargo", "build", "--locked", "--offline", "--manifest-path", "tools/digest/Cargo.toml", "-p", "digest-thing"]
+    template = next(item["command"] for item in json.loads((ROOT / "workloads.json").read_text())["workloads"] if item["id"] == workload_id)
     capture = {
-        "workload_id": "digest-thing", "workload_command_template": template, "command": template,
+        "workload_id": workload_id, "workload_command_template": template, "command": template,
         "cwd": checkout, "exit_code": 0, "deadline_s": 3600, "elapsed_s": 1.0,
         "cleanup": {"complete": True, "error": None},
         "stdout": {"base64": "", "bytes": 0, "sha256": sha256(b"")},
@@ -49,8 +49,8 @@ def attempt(kind, *, valid=True, preparation=2.0, build=5.0, test=3.0):
         "source": {"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40},
         "graph": {"sha256": "d" * 64, "package_count": 5, "workspace_member_count": 4},
         "toolchain": {"rustc": "rustc 1.0", "host_class": "mac"},
-        "target": {"path": target, "classification": kind}, "workload_id": "digest-thing",
-        "workload_command_template": template, "command": template, "capture": capture,
+        "target": {"path": target, "classification": kind}, "workload_id": workload_id,
+        "workload_command_template": template, "command": [arg.replace("${CHECKOUT}", checkout) for arg in template], "capture": capture,
         "costs": {"preparation_s": preparation, "build_s": build, "test_s": test},
         "outputs": [{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}], "failure": None,
     }
@@ -155,11 +155,54 @@ class ClosureTests(unittest.TestCase):
 
 
 class SummaryTests(unittest.TestCase):
+    def test_pairs_each_frozen_workload_and_preserves_nested_costs(self):
+        attempts = [
+            attempt("cold", workload_id="digest-census-publication", preparation=1, build=4, test=7),
+            attempt("warm", workload_id="digest-census-publication", preparation=2, build=5, test=8),
+            attempt("cold", workload_id="digest-thing", preparation=3, build=6, test=9),
+            attempt("warm", workload_id="digest-thing", preparation=4, build=7, test=10),
+        ]
+        result = summarize_baseline(attempts)
+        self.assertEqual(result["pair_count"], 2)
+        self.assertEqual(result["costs"]["digest-census-publication"]["cold"]["build_s"], 4.0)
+        self.assertEqual(result["costs"]["digest-census-publication"]["warm"]["test_s"], 8.0)
+        self.assertEqual(result["costs"]["digest-thing"]["cold"]["preparation_s"], 3.0)
+        self.assertEqual(result["costs"]["digest-thing"]["warm"]["total_s"], 21.0)
+
+    def test_rejects_duplicate_or_missing_workload_classification_pair(self):
+        pair = [attempt("cold"), attempt("warm")]
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            summarize_baseline(pair + [attempt("cold")])
+        with self.assertRaisesRegex(ValueError, "paired"):
+            summarize_baseline([attempt("cold"), attempt("warm", workload_id="digest-census-publication")])
+
+    def test_rejects_unknown_or_missing_workload_identity(self):
+        valid_pair = [attempt("cold"), attempt("warm")]
+        unknown = attempt("cold")
+        unknown["workload_id"] = "not-frozen"
+        missing = attempt("warm")
+        del missing["workload_id"]
+        result = summarize_baseline(valid_pair + [unknown, missing])
+        self.assertEqual(result["excluded_attempt_count"], 2)
+        with self.assertRaisesRegex(ValueError, "paired"):
+            summarize_baseline([unknown, missing])
+
+    def test_rejects_graph_count_mismatch_across_workload_pairs(self):
+        records = [
+            attempt("cold", workload_id="digest-census-publication"),
+            attempt("warm", workload_id="digest-census-publication"),
+            attempt("cold", workload_id="digest-thing"),
+            attempt("warm", workload_id="digest-thing"),
+        ]
+        records[-1]["graph"]["package_count"] = 6
+        with self.assertRaisesRegex(ValueError, "graph counts"):
+            summarize_baseline(records)
+
     def test_consumes_persisted_costs_separately(self):
         result = summarize_baseline([attempt("cold"), attempt("warm")])
-        self.assertEqual(result["costs"]["cold"]["build_s"], [5.0])
-        self.assertEqual(result["costs"]["cold"]["preparation_s"], [2.0])
-        self.assertEqual(result["costs"]["warm"]["test_s"], [3.0])
+        self.assertEqual(result["costs"]["digest-thing"]["cold"]["build_s"], 5.0)
+        self.assertEqual(result["costs"]["digest-thing"]["cold"]["preparation_s"], 2.0)
+        self.assertEqual(result["costs"]["digest-thing"]["warm"]["test_s"], 3.0)
 
     def test_rejects_incomplete_and_invalid_numeric_attempts(self):
         result = summarize_baseline([attempt("cold"), attempt("warm"), attempt("cold", valid=False)])
