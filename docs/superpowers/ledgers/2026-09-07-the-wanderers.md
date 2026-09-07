@@ -109,3 +109,37 @@ transits/occultations, full sibling-world promotion, and per-species sky
 catalogs as deferred branches. Existing registry rows `ORRERY-ellipse-truth`,
 `SKY-wanderer-calendar`, `SKY-transits`, and `SKY-figures-per-species` remain
 the durable capture points.
+
+## #4 [Q] — Should the campaign generalize the stellar root first?
+
+**Question.** Should solar-system work begin from a singular host star, or
+should it establish the basic stellar architecture first, including close and
+wide binaries?
+
+**Decision.** Generalize the stellar root first. The campaign will model
+single-star systems, wide binaries with a circumprimary anchor, and bounded
+close binaries with a circumbinary anchor. Wanderers remain a planetary-layer
+feature beneath that topology. Arbitrary N-body systems and close
+circumsecondary planets are deferred.
+
+**Why.** A binary is not an extra ornament on `StarSystem::star`; it changes
+the gravitational center, insolation source, sky, calendar, and orbit
+admission. Treating it as a neighbor-star add-on would bake the wrong root
+abstraction into every downstream feature. Nathan approved making this
+topology stage part of the campaign.
+
+**Alternatives discarded.** Keeping the singular-star root and adding a
+companion later would make close binaries a retrofit. Supporting arbitrary
+multiple-star/N-body systems now would turn the campaign into a general
+orbital-dynamics project instead of a deterministic world-simulation layer.
+
+**Ideonomy passes / overturns.** One pass using organon-construction with a
+scale over system complexity and observability; 0 overturns. It exposed the
+missing scale between a visible companion and a true gravitationally coupled
+stellar architecture.
+
+**Capture actions.** Add binary topology, S-type/P-type orbit placement, and
+multi-source illumination to the spec. Record arbitrary N-body,
+close-circumsecondary systems, and full binary cultural consequences as
+deferred branches rather than allowing them to disappear into the first
+implementation plan.
