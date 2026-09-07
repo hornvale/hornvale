@@ -40,6 +40,7 @@ use hornvale_kernel::{Band, Geosphere, KindId, Seed, Stream, Vertex, VertexMap};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::rc::Rc;
 
 /// The conductance-positive graph neighbours of `vertex` (`conductance > 0.0` —
 /// ocean-touching adjacency edges are stored at exactly 0.0). Ascending and
@@ -2269,6 +2270,8 @@ struct Bake<'a> {
     lifespans: &'a BTreeMap<KindId, f64>,
     last_struck: BTreeMap<(BakeId, KindId), f64>,
     persistent: BTreeSet<(BakeId, KindId)>,
+    /// Lazily derived epidemic graph data, one entry per era graph.
+    epidemic_graphs: Vec<Option<Rc<EpidemicGraph>>>,
     /// Every occupation record, in commit order.
     records: Vec<BakeOccupation>,
     outbreaks: Vec<OutbreakEvent>,
@@ -2432,6 +2435,12 @@ fn capture_d2_epoch_events(run: impl FnOnce()) -> Vec<D2EpochEvent> {
 struct EpidemicComponents {
     by_vertex: BTreeMap<Vertex, usize>,
     members: Vec<Vec<Vertex>>,
+}
+
+/// The immutable graph data reused by every plague phase in one era.
+struct EpidemicGraph {
+    adjacency: Vec<(u32, Vec<u32>)>,
+    components: EpidemicComponents,
 }
 
 /// The two observable boundaries returned by the production epoch helper.
@@ -4823,16 +4832,17 @@ impl<'a> Bake<'a> {
     /// snapshot × epidemic catalogue, preserving one explicit draw order even
     /// when an earlier wave closes a later origin.
     fn plague_phase(&mut self, snapshot: &[usize], era: &EraClimate, year: f64) {
-        // The graph is immutable for this phase. Build its deterministic
-        // adjacency and reachability components once; rebuilding them for
-        // every origin made the seed-42 history path quadratic in the number
-        // of living communities.
-        let adjacency = self.epidemic_adjacency();
-        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+        // The graph is immutable for every phase in an era. Build its
+        // deterministic adjacency and reachability components once; rebuilding
+        // them for every origin and every phase made the seed-42 history path
+        // quadratic in the number of living communities.
+        let graph = self.epidemic_graph();
+        let adjacency_refs: Vec<(u32, &[u32])> = graph
+            .adjacency
             .iter()
             .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
             .collect();
-        let components = self.epidemic_components(&adjacency_refs);
+        let components = &graph.components;
         // Persistence is component-level, not lineage-level. Reconcile each
         // connected component once per kind, propagate its marker to every
         // host community while the host-weighted component clears CCS, and
@@ -4845,7 +4855,7 @@ impl<'a> Bake<'a> {
                     continue;
                 }
                 let members =
-                    self.epidemic_component(&components, self.communities[origin_idx].site);
+                    self.epidemic_component(components, self.communities[origin_idx].site);
                 let component_key = members
                     .iter()
                     .map(|&idx| self.communities[idx].site)
@@ -4945,7 +4955,7 @@ impl<'a> Bake<'a> {
                         },
                     );
                 }
-                self.record_persistence(&components, site, kind, &hosts);
+                self.record_persistence(components, site, kind, &hosts);
             }
         }
     }
@@ -4959,13 +4969,39 @@ impl<'a> Bake<'a> {
             .clamp(0.0, 1.0)
     }
 
+    fn epidemic_graph(&mut self) -> Rc<EpidemicGraph> {
+        let graph_index = self.cur_graph;
+        while self.epidemic_graphs.len() <= graph_index {
+            self.epidemic_graphs.push(None);
+        }
+        if self.epidemic_graphs[graph_index].is_none() {
+            let adjacency = Self::epidemic_adjacency_for(self.geo, &self.graphs[graph_index]);
+            let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+                .iter()
+                .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+                .collect();
+            let components =
+                Self::epidemic_components_for(self.geo.vertex_count(), &adjacency_refs);
+            self.epidemic_graphs[graph_index] = Some(Rc::new(EpidemicGraph {
+                adjacency,
+                components,
+            }));
+        }
+        Rc::clone(self.epidemic_graphs[graph_index].as_ref().unwrap())
+    }
+
+    #[cfg(test)]
     fn epidemic_adjacency(&self) -> Vec<(u32, Vec<u32>)> {
-        (0..self.geo.vertex_count())
+        Self::epidemic_adjacency_for(self.geo, self.cur())
+    }
+
+    fn epidemic_adjacency_for(geo: &Geosphere, graph: &ConnectionGraph) -> Vec<(u32, Vec<u32>)> {
+        (0..geo.vertex_count())
             .map(|raw| {
                 let vertex = Vertex(raw as u32);
                 (
                     vertex.0,
-                    traversable_neighbors(self.cur(), vertex)
+                    traversable_neighbors(graph, vertex)
                         .into_iter()
                         .map(|v| v.0)
                         .collect(),
@@ -4985,11 +5021,18 @@ impl<'a> Bake<'a> {
             .collect()
     }
 
+    #[cfg(test)]
     fn epidemic_components(&self, adjacency: &[(u32, &[u32])]) -> EpidemicComponents {
+        Self::epidemic_components_for(self.geo.vertex_count(), adjacency)
+    }
+
+    fn epidemic_components_for(
+        vertex_count: usize,
+        adjacency: &[(u32, &[u32])],
+    ) -> EpidemicComponents {
         let neighbours: BTreeMap<u32, &[u32]> = adjacency.iter().copied().collect();
-        let mut unassigned: BTreeSet<Vertex> = (0..self.geo.vertex_count())
-            .map(|raw| Vertex(raw as u32))
-            .collect();
+        let mut unassigned: BTreeSet<Vertex> =
+            (0..vertex_count).map(|raw| Vertex(raw as u32)).collect();
         let mut by_vertex = BTreeMap::new();
         let mut members = Vec::new();
         while let Some(&origin) = unassigned.first() {
@@ -5915,6 +5958,7 @@ pub fn bake(
         lifespans: &cfg.lifespans,
         last_struck: BTreeMap::new(),
         persistent: BTreeSet::new(),
+        epidemic_graphs: Vec::new(),
         records: Vec::new(),
         outbreaks: Vec::new(),
         communities: Vec::new(),
@@ -6119,6 +6163,7 @@ pub fn interleaved_rehit_history(site: Vertex) -> History {
         lifespans: &empty,
         last_struck: BTreeMap::new(),
         persistent: BTreeSet::new(),
+        epidemic_graphs: Vec::new(),
         seating: &seating,
         records: Vec::new(),
         outbreaks: Vec::new(),
@@ -6259,6 +6304,7 @@ mod tests {
                 lifespans: &BTreeMap::new(),
                 last_struck: BTreeMap::new(),
                 persistent: BTreeSet::new(),
+                epidemic_graphs: Vec::new(),
                 seating: surface_seating(),
                 records: Vec::new(),
                 outbreaks: Vec::new(),
@@ -6466,6 +6512,7 @@ mod tests {
             lifespans: &BTreeMap::new(),
             last_struck: BTreeMap::new(),
             persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
             outbreaks: Vec::new(),
@@ -6616,6 +6663,7 @@ mod tests {
             lifespans: &BTreeMap::new(),
             last_struck: BTreeMap::new(),
             persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
             outbreaks: Vec::new(),
@@ -6966,6 +7014,7 @@ mod tests {
             lifespans: no_radius(),
             last_struck: BTreeMap::new(),
             persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
             outbreaks: Vec::new(),
@@ -7069,6 +7118,11 @@ mod tests {
             }
         }
         bake.plague_phase(&snapshot, &era, 0.0);
+        let cached_graph = Rc::as_ptr(
+            bake.epidemic_graphs[0]
+                .as_ref()
+                .expect("the first plague phase caches the era graph"),
+        );
         assert_eq!(bake.stream.next_f64(), expected_stream.next_f64());
         for &idx in &indices[..4] {
             assert!(
@@ -7104,6 +7158,15 @@ mod tests {
             recurrence_stream.next_f64();
         }
         bake.plague_phase(&snapshot, &era, 25.0);
+        assert_eq!(
+            Rc::as_ptr(
+                bake.epidemic_graphs[0]
+                    .as_ref()
+                    .expect("the repeated plague phase keeps the era graph"),
+            ),
+            cached_graph,
+            "repeated plague phases reuse the immutable era graph",
+        );
         let expected_partial = partial_before
             * (1.0
                 - (25.0 / 30.0)
@@ -7658,6 +7721,7 @@ mod tests {
             lifespans: &BTreeMap::new(),
             last_struck: BTreeMap::new(),
             persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
             outbreaks: Vec::new(),
