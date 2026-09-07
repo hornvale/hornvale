@@ -475,15 +475,15 @@ HV_TEST_OK=1 cargo nextest run -p hornvale-lab --run-ignored ignored-only --succ
 Canonical output, verbatim:
 
 ```text
-seed   1: largest-now=4359.741 crowd-endemic=false consumption-endemic=true plague-endings=4 outbreak-events=69 named-disease-deaths=75/200 slots-filled-mean=18.805/23
-seed   2: largest-now=2839.272 crowd-endemic=false consumption-endemic=false plague-endings=4 outbreak-events=22 named-disease-deaths=72/200 slots-filled-mean=18.635/23
-seed   3: largest-now=7756.604 crowd-endemic=false consumption-endemic=true plague-endings=1 outbreak-events=16 named-disease-deaths=80/200 slots-filled-mean=18.955/23
-seed   7: largest-now=7882.994 crowd-endemic=false consumption-endemic=true plague-endings=3 outbreak-events=18 named-disease-deaths=66/200 slots-filled-mean=18.835/23
-seed  13: largest-now=8389.651 crowd-endemic=false consumption-endemic=true plague-endings=4 outbreak-events=16 named-disease-deaths=75/200 slots-filled-mean=18.745/23
-seed  42: largest-now=7465.401 crowd-endemic=false consumption-endemic=true plague-endings=3 outbreak-events=29 named-disease-deaths=76/200 slots-filled-mean=19.000/23
-seed 100: largest-now=1021.643 crowd-endemic=false consumption-endemic=false plague-endings=0 outbreak-events=0 named-disease-deaths=60/200 slots-filled-mean=18.270/23
-seed 256: largest-now=3307.765 crowd-endemic=false consumption-endemic=false plague-endings=8 outbreak-events=28 named-disease-deaths=71/200 slots-filled-mean=19.085/23
-seed 777: largest-now=4724.400 crowd-endemic=false consumption-endemic=true plague-endings=2 outbreak-events=4 named-disease-deaths=71/200 slots-filled-mean=18.790/23
+seed   1: largest-now=4359.741 crowd-endemic=false consumption-endemic=true plague-endings=4 first-day-occ-cause-plague=392643.750 outbreak-events=69 named-disease-deaths=75/200 slots-filled-mean=18.805/23
+seed   2: largest-now=2839.272 crowd-endemic=false consumption-endemic=false plague-endings=4 first-day-occ-cause-plague=54787.500 outbreak-events=22 named-disease-deaths=72/200 slots-filled-mean=18.635/23
+seed   3: largest-now=7756.604 crowd-endemic=false consumption-endemic=true plague-endings=1 first-day-occ-cause-plague=292200.000 outbreak-events=16 named-disease-deaths=80/200 slots-filled-mean=18.955/23
+seed   7: largest-now=7882.994 crowd-endemic=false consumption-endemic=true plague-endings=3 first-day-occ-cause-plague=438300.000 outbreak-events=18 named-disease-deaths=66/200 slots-filled-mean=18.835/23
+seed  13: largest-now=8389.651 crowd-endemic=false consumption-endemic=true plague-endings=4 first-day-occ-cause-plague=456562.500 outbreak-events=16 named-disease-deaths=75/200 slots-filled-mean=18.745/23
+seed  42: largest-now=7465.401 crowd-endemic=false consumption-endemic=true plague-endings=3 first-day-occ-cause-plague=100443.750 outbreak-events=29 named-disease-deaths=76/200 slots-filled-mean=19.000/23
+seed 100: largest-now=1021.643 crowd-endemic=false consumption-endemic=false plague-endings=0 first-day-occ-cause-plague=Absent outbreak-events=0 named-disease-deaths=60/200 slots-filled-mean=18.270/23
+seed 256: largest-now=3307.765 crowd-endemic=false consumption-endemic=false plague-endings=8 first-day-occ-cause-plague=420037.500 outbreak-events=28 named-disease-deaths=71/200 slots-filled-mean=19.085/23
+seed 777: largest-now=4724.400 crowd-endemic=false consumption-endemic=true plague-endings=2 first-day-occ-cause-plague=557006.250 outbreak-events=4 named-disease-deaths=71/200 slots-filled-mean=18.790/23
 H-P1: PASS
 H-P2: PASS
 H-P3: FAIL
@@ -522,3 +522,17 @@ Verification: focused Murrain Lab tests (5/5), authored/schema fixture tests
 tests (10/10), `make census-check`, and `make lot-check` (66/66 client tests)
 passed. `make gate-commit` passed all audits and three subfloor chunks (1,434 +
 1,389 + 1,297 tests). No census was run and no census fixture was changed.
+
+### Stage 4 review corrections
+
+The frozen H-P3 predicate now retains the per-seed Plague-ending bounds and
+also requires `first-day-occ-cause-plague` for every growing seed. The
+source-backed readings are recorded above; H-P3 remains FAIL because its
+unchanged ending-count bound is violated. No bound or model constant moved.
+
+The source-doc check is supplemented by a behavioral seed-42 extractor test
+covering all six metrics against committed occupation facts, the pathogen
+catalogue/CCS calculation, Lot draws, and Story slots. The recorded 0.944
+CPU-s/world projection is asserted against shared canonical 1,320 s alarm and
+1,650 s refusal constants used by the CLI duration guard. No census was run;
+the protected audit and timing files remain unstaged.

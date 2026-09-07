@@ -23,8 +23,8 @@ const METRICS: [&str; 6] = [
 const CENSUS_WORLDS: f64 = 1_000.0;
 const CENSUS_CPU_RATIO: f64 = 30.70;
 const CENSUS_BASELINE_SECONDS: f64 = 1_186.0;
-const CENSUS_ALARM_SECONDS: f64 = 1_320.0;
-const CENSUS_REFUSAL_SECONDS: f64 = 1_650.0;
+const RECORDED_CPU_SECONDS_PER_WORLD: f64 = 0.944;
+const RECORDED_PROJECTED_CENSUS_SECONDS: f64 = 1_216.749;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Reading {
@@ -33,6 +33,7 @@ struct Reading {
     crowd_endemic: bool,
     plague_endings: u64,
     outbreak_events: u64,
+    first_day_occ_cause_plague: Option<f64>,
     named_disease_deaths: u64,
     mean_filled_slots: f64,
 }
@@ -77,6 +78,11 @@ fn reading(seed: u64) -> Reading {
         },
         plague_endings: count(&view, METRICS[2]),
         outbreak_events: count(&view, METRICS[3]),
+        first_day_occ_cause_plague: match extract(&view, "first-day-occ-cause-plague") {
+            MetricValue::Number(value) => Some(value),
+            MetricValue::Absent => None,
+            other => panic!("first-day-occ-cause-plague must be numeric or absent, got {other:?}"),
+        },
         named_disease_deaths: count(&view, METRICS[4]),
         mean_filled_slots: number(&view, METRICS[5]),
     }
@@ -112,6 +118,9 @@ fn verdicts(rows: &[Reading]) -> [bool; 6] {
         growing
             .clone()
             .all(|row| (5..=60).contains(&row.plague_endings))
+            && growing
+                .clone()
+                .all(|row| row.first_day_occ_cause_plague.is_some())
             && rows
                 .iter()
                 .find(|row| row.seed == 100)
@@ -143,6 +152,7 @@ fn passing_rows() -> Vec<Reading> {
             crowd_endemic: false,
             plague_endings: if seed == 100 { 8 } else { 5 },
             outbreak_events: if seed == 100 { 60 } else { 40 },
+            first_day_occ_cause_plague: Some(1.0),
             named_disease_deaths: 40,
             mean_filled_slots: 15.0,
         })
@@ -154,17 +164,41 @@ fn projected_census_seconds(cpu_seconds_per_world: f64) -> f64 {
 }
 
 #[test]
+fn recorded_cost_projection_is_below_canonical_census_limits() {
+    let projected = projected_census_seconds(RECORDED_CPU_SECONDS_PER_WORLD);
+    assert!((projected - RECORDED_PROJECTED_CENSUS_SECONDS).abs() < 0.001);
+    assert!(projected < hornvale_lab::census_guard::CENSUS_ALARM_SECS);
+    assert!(projected < hornvale_lab::census_guard::CENSUS_REFUSAL_SECS);
+}
+
+#[test]
 fn isolated_cost_projection_is_compared_to_alarm_and_refusal_limits() {
-    let alarm_headroom_per_world =
-        (CENSUS_ALARM_SECONDS - CENSUS_BASELINE_SECONDS) * CENSUS_CPU_RATIO / CENSUS_WORLDS;
-    let refusal_headroom_per_world =
-        (CENSUS_REFUSAL_SECONDS - CENSUS_BASELINE_SECONDS) * CENSUS_CPU_RATIO / CENSUS_WORLDS;
+    let alarm_headroom_per_world = (hornvale_lab::census_guard::CENSUS_ALARM_SECS
+        - CENSUS_BASELINE_SECONDS)
+        * CENSUS_CPU_RATIO
+        / CENSUS_WORLDS;
+    let refusal_headroom_per_world = (hornvale_lab::census_guard::CENSUS_REFUSAL_SECS
+        - CENSUS_BASELINE_SECONDS)
+        * CENSUS_CPU_RATIO
+        / CENSUS_WORLDS;
 
     assert_eq!(projected_census_seconds(0.0), CENSUS_BASELINE_SECONDS);
-    assert!(projected_census_seconds(alarm_headroom_per_world - 1.0e-6) < CENSUS_ALARM_SECONDS);
-    assert!(projected_census_seconds(alarm_headroom_per_world + 1.0e-6) > CENSUS_ALARM_SECONDS);
-    assert!(projected_census_seconds(refusal_headroom_per_world - 1.0e-6) < CENSUS_REFUSAL_SECONDS);
-    assert!(projected_census_seconds(refusal_headroom_per_world + 1.0e-6) > CENSUS_REFUSAL_SECONDS);
+    assert!(
+        projected_census_seconds(alarm_headroom_per_world - 1.0e-6)
+            < hornvale_lab::census_guard::CENSUS_ALARM_SECS
+    );
+    assert!(
+        projected_census_seconds(alarm_headroom_per_world + 1.0e-6)
+            > hornvale_lab::census_guard::CENSUS_ALARM_SECS
+    );
+    assert!(
+        projected_census_seconds(refusal_headroom_per_world - 1.0e-6)
+            < hornvale_lab::census_guard::CENSUS_REFUSAL_SECS
+    );
+    assert!(
+        projected_census_seconds(refusal_headroom_per_world + 1.0e-6)
+            > hornvale_lab::census_guard::CENSUS_REFUSAL_SECS
+    );
 }
 
 #[test]
@@ -174,6 +208,7 @@ fn prediction_verdicts_use_preregistered_counts_not_ratios() {
 
     let mut below = rows.clone();
     below[0].plague_endings = 4;
+    below[4].first_day_occ_cause_plague = None;
     below[1].outbreak_events = 39;
     below[2].named_disease_deaths = 39;
     below[3].mean_filled_slots = 14.99;
@@ -182,6 +217,16 @@ fn prediction_verdicts_use_preregistered_counts_not_ratios() {
     assert!(!result[3], "H-P4 rejects 39 events, not a ratio");
     assert!(!result[4], "H-P5 rejects 39 named deaths, not a ratio");
     assert!(!result[5], "H-P6 rejects a mean count below 15 of 23");
+}
+
+#[test]
+fn h_p3_requires_first_plague_cause_on_every_growing_seed() {
+    let mut rows = passing_rows();
+    rows[0].first_day_occ_cause_plague = None;
+    assert!(
+        !verdicts(&rows)[2],
+        "H-P3 must not pass from Plague-ending counts alone"
+    );
 }
 
 #[test]
@@ -246,12 +291,14 @@ fn murrain_readout() {
     let ccs = consumption_ccs();
     for row in &rows {
         println!(
-            "seed {:>3}: largest-now={:>8.3} crowd-endemic={} consumption-endemic={} plague-endings={} outbreak-events={} named-disease-deaths={}/200 slots-filled-mean={:.3}/23",
+            "seed {:>3}: largest-now={:>8.3} crowd-endemic={} consumption-endemic={} plague-endings={} first-day-occ-cause-plague={} outbreak-events={} named-disease-deaths={}/200 slots-filled-mean={:.3}/23",
             row.seed,
             row.largest_metapopulation,
             row.crowd_endemic,
             row.largest_metapopulation >= ccs,
             row.plague_endings,
+            row.first_day_occ_cause_plague
+                .map_or_else(|| "Absent".to_string(), |day| format!("{day:.3}")),
             row.outbreak_events,
             row.named_disease_deaths,
             row.mean_filled_slots,

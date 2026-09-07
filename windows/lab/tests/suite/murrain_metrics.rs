@@ -6,8 +6,11 @@
 //! columns without making an older measurement false, while the live metric
 //! contract must name them exactly.
 
+use hornvale_astronomy::SkyPins;
+use hornvale_kernel::{Seed, Value};
 use hornvale_lab::{
-    MetricSelection, PinSet, RunResult, Seeds, Study, SummaryKind, registry, render_schema,
+    Extractor, FullView, MetricSelection, MetricValue, PinSet, RunResult, Seeds, Study,
+    SummaryKind, registry, render_schema,
 };
 
 struct ExpectedMetric {
@@ -85,6 +88,118 @@ fn six_murrain_metrics_have_stable_names_domains_kinds_and_sources() {
             );
         }
     }
+}
+
+#[test]
+fn murrain_extractors_bind_to_their_documented_source_facts_and_draws() {
+    let view = FullView::build(Seed(42), &SkyPins::default()).expect("seed 42 builds");
+    let extract = |name: &str| {
+        let metric = registry()
+            .into_iter()
+            .find(|metric| metric.name == name)
+            .unwrap();
+        match metric.extract {
+            Extractor::Full(f) => f(&view),
+            _ => panic!("{name} must use FullView"),
+        }
+    };
+    let number = |name: &str| match extract(name) {
+        MetricValue::Number(value) => value,
+        other => panic!("{name} must be numeric, got {other:?}"),
+    };
+
+    let ctx = hornvale_lot::context::assemble_from(view.world(), view.terrain(), view.climate())
+        .expect("Lot source context assembles");
+    assert_eq!(
+        number("epidemic-largest-metapopulation-now"),
+        ctx.largest_metapopulation_at(ctx.present_year)
+    );
+    let population = ctx.largest_metapopulation_at(ctx.present_year);
+    let crowd_endemic = hornvale_species::pathogen_registry()
+        .iter()
+        .any(|(_, traits)| {
+            traits.class == hornvale_species::PathogenClass::Crowd
+                && traits
+                    .r0
+                    .zip(traits.infectious_years)
+                    .is_some_and(|(r0, years)| {
+                        let ccs =
+                            hornvale_epidemiology::critical_community_size(r0, years, 1.0 / 30.0);
+                        hornvale_epidemiology::persists(population, ccs)
+                    })
+        });
+    assert_eq!(
+        extract("epidemic-crowd-endemic"),
+        MetricValue::Flag(crowd_endemic)
+    );
+
+    let records = hornvale_worldgen::occupation_records(view.world());
+    let plague_endings = records
+        .iter()
+        .filter(|record| record.core.cause == Some(hornvale_history::record::CauseOfEnd::Plague))
+        .count() as f64;
+    assert_eq!(number("epidemic-plague-endings"), plague_endings);
+    let first_plague = view
+        .world()
+        .ledger
+        .find("occ-cause")
+        .filter_map(|fact| match (&fact.object, fact.day) {
+            (Value::Text(cause), Some(day)) if cause == "plague" => Some(day.as_std_days()),
+            _ => None,
+        })
+        .min_by(f64::total_cmp);
+    assert_eq!(
+        extract("first-day-occ-cause-plague"),
+        first_plague.map_or(MetricValue::Absent, MetricValue::Number)
+    );
+    assert_eq!(
+        number("epidemic-outbreak-events"),
+        view.world()
+            .ledger
+            .find(hornvale_epidemiology::STRUCK_BY)
+            .count() as f64
+    );
+
+    let lots: Vec<_> = (0..200u64)
+        .map(|index| {
+            let life = hornvale_lot::draw::draw(
+                &ctx,
+                hornvale_lot::LotIndex(index),
+                &hornvale_lot::Pick::default(),
+            )
+            .unwrap();
+            let story = hornvale_lot::slots::tell(view.world(), &ctx, &life);
+            (life, story)
+        })
+        .collect();
+    let named_deaths = lots
+        .iter()
+        .filter(|(life, _)| {
+            matches!(
+                life.cause,
+                Some(hornvale_lot::draw::DeathCause::Pathogen(_))
+            )
+        })
+        .count() as f64;
+    assert_eq!(number("lot-named-disease-deaths"), named_deaths);
+    let excluded = ["sex", "family", "work", "literacy"];
+    let filled: usize = lots
+        .iter()
+        .map(|(_, story)| {
+            story
+                .slots
+                .iter()
+                .filter(|slot| {
+                    !excluded.contains(&slot.key)
+                        && matches!(slot.value, hornvale_lot::slots::SlotValue::Filled(_))
+                })
+                .count()
+        })
+        .sum();
+    assert_eq!(
+        number("lot-slots-filled-mean"),
+        filled as f64 / lots.len() as f64
+    );
 }
 
 #[test]
