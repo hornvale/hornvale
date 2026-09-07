@@ -11,7 +11,8 @@ from unittest import mock
 
 import measure
 from measure import (EnforcementUnavailable, load_workloads, capture, command_for_workload,
-                     manifest_for_attempt, validate_attempt)
+                     manifest_for_attempt, validate_attempt, candidate_manifest,
+                     declared_boundary, check_boundary, compare_outputs)
 
 
 ROOT = Path(__file__).parent
@@ -437,3 +438,64 @@ class AttemptTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CandidateTests(unittest.TestCase):
+    def _baseline(self):
+        return {
+            "source": {"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40},
+            "graph": {"sha256": "d" * 64, "package_count": 54, "workspace_member_count": 5},
+            "workloads": ["digest-census-publication"],
+        }
+
+    def _candidate(self, root, dependencies=("digest-protocol",), source="use digest_protocol::PROTOCOL_VERSION;\n"):
+        (root / "src").mkdir(parents=True)
+        (root / "src/main.rs").write_text('fn main() {}\n', encoding="utf-8")
+        deps = "\n".join(f'{name} = {{ path = "../../packages/protocol" }}' if name == "digest-protocol" else f'{name} = {{ path = "../../../../{name}" }}' for name in dependencies)
+        (root / "Cargo.toml").write_text(
+            '[package]\nname = "insulator-candidate"\nversion = "0.1.0"\nedition = "2024"\n\n[dependencies]\n' + deps + '\n',
+            encoding="utf-8",
+        )
+
+    def test_admits_protocol_dependency_and_records_safe_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory) / "candidate"
+            self._candidate(candidate)
+            manifest = candidate_manifest(self._baseline(), candidate)
+            self.assertIn("digest-protocol", declared_boundary(manifest))
+            self.assertIn("src/main.rs", declared_boundary(manifest))
+            check_boundary({"packages": [{"name": "digest-protocol", "manifest_path": "/repo/tools/digest/packages/protocol/Cargo.toml"}],
+                            "edges": {"insulator-candidate": ["digest-protocol"]}}, declared_boundary(manifest))
+            self.assertEqual(manifest["provenance"]["baseline_commit"], "a" * 40)
+            self.assertNotIn("command", manifest)
+
+    def test_rejects_undeclared_windows_lab_edge(self):
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory) / "candidate"
+            self._candidate(candidate)
+            boundary = declared_boundary(candidate_manifest(self._baseline(), candidate))
+            graph = {"packages": [{"name": "hornvale-lab", "manifest_path": "/repo/windows/lab/Cargo.toml"}], "edges": {"insulator-candidate": ["hornvale-lab"]}}
+            with self.assertRaisesRegex(ValueError, "undeclared"):
+                check_boundary(graph, boundary)
+
+    def test_rejects_candidate_that_copies_production_authority(self):
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory) / "candidate"
+            self._candidate(candidate)
+            (candidate / "src/main.rs").write_text('fn require_canonical_host_for() {}\n', encoding="utf-8")
+            manifest = candidate_manifest(self._baseline(), candidate)
+            with self.assertRaisesRegex(ValueError, "production authority"):
+                check_boundary({"packages": []}, declared_boundary(manifest))
+
+    def test_reports_output_hash_mismatch(self):
+        authoritative = {"digest-census-publication": [{"path": "out.bin", "bytes": 3, "sha256": "a" * 64}]}
+        candidate = {"digest-census-publication": [{"path": "out.bin", "bytes": 3, "sha256": "b" * 64}]}
+        result = compare_outputs(authoritative, candidate)
+        self.assertFalse(result["digest-census-publication"][0]["byte_equal"])
+        self.assertEqual(result["digest-census-publication"][0]["status"], "mismatch")
+
+    def test_marks_missing_expected_output_incomplete(self):
+        authoritative = {"digest-census-publication": [{"path": "out.bin", "bytes": 3, "sha256": "a" * 64}]}
+        result = compare_outputs(authoritative, {"digest-census-publication": []})
+        self.assertEqual(result["digest-census-publication"][0]["status"], "incomplete")
+        self.assertFalse(result["digest-census-publication"][0]["complete"])
