@@ -1016,6 +1016,55 @@ fn culvert_sweep_collapses_calls_onto_distinct_pairs() {
     );
 }
 
+/// Measure the key population that a cache for the current-relative
+/// `believed_water` fold would actually need. This is deliberately a
+/// diagnostic rather than a correctness guard: a cache decision must use the
+/// curve, not an endpoint or a guessed capacity.
+#[test]
+#[ignore = "probe: route-cache current-relative key curve"]
+fn route_cache_probe_reports_current_key_population_curve() {
+    let world = common::build(CULVERT_WATER_SEED).expect("the route-cache seed builds");
+    let (mut session, _opening) = Session::start(&world, &PossessOpts::default())
+        .expect("the route-cache seed starts a session");
+    let mut checkpoints = Vec::with_capacity(CULVERT_WATER_WAITS);
+    for _ in 0..CULVERT_WATER_WAITS {
+        session.handle("wait");
+        checkpoints.push(session.day());
+    }
+
+    let ledger: Ledger = serde_json::from_str(&session.session_ledger_json())
+        .expect("the session ledger round-trips");
+    let npcs = session.bodies().to_vec();
+    let ctx = hornvale_locale::LocaleContext::build(&world).expect("the locale context builds");
+    let terrain = liveness::LocaleTerrain::with_fields(&ctx, None, None, None, None, None);
+    let folds = OwnedFolds::new(ResidentFolds::new());
+    let mut cumulative = std::collections::BTreeSet::new();
+
+    println!(
+        "--- route-cache current-key curve (seed {CULVERT_WATER_SEED}, {CULVERT_WATER_WAITS} waits) ---"
+    );
+    println!("{:>4} {:>16} {:>16}", "wait", "asked", "current_dest_cum");
+    for (wait, &t) in checkpoints.iter().enumerate() {
+        let mut asked = 0usize;
+        let mut store = folds.borrow_mut();
+        let latest_visit = store.latest_visit(&ledger);
+        for npc in &npcs {
+            let here = liveness::agent_position(&ledger, npc, t);
+            for dest in latest_visit.water_at(npc.entity, t, &terrain) {
+                asked += 1;
+                cumulative.insert((here.clone(), dest));
+            }
+        }
+        drop(store);
+        println!("{:>4} {:>16} {:>16}", wait + 1, asked, cumulative.len());
+    }
+
+    assert!(
+        !cumulative.is_empty(),
+        "the diagnostic needs a non-empty key population"
+    );
+}
+
 /// **The three Task-6 helpers, exercised directly.** `culvert_real_pairs`
 /// must yield a non-empty population on both shapes, or Task 6's equivalence
 /// test has nothing to compare; and [`Shape::Lab`] (the cheap 10-tick shape,
