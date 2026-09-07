@@ -162,13 +162,32 @@ option 3 and false of option 2.
    the player types. Disclosure was discarded by The Newel as a substitute
    for the fix and is not needed as a complement either, because the picture
    now says it.
-4. **`chart::draw`** — deleted, with its bearing-space projection. Under
-   option 3 the plate is the graph view drawn correctly, so reviving
-   `chart.rs` would be a second implementation of it. Its unreachability is
-   re-confirmed independently: one non-test call site
+4. **`chart::draw`** — **CORRECTED DURING EXECUTION; this clause was
+   wrong.** It read: *"deleted, with its bearing-space projection … Its
+   unreachability is re-confirmed independently: one non-test call site
    (`clients/game/core/src/spread.rs`, the `Spatial::Walk` arm), in a branch
    that cannot be taken on the walk band because `world_plate` is `Some`
-   exactly when the band is `Walk`.
+   exactly when the band is `Walk`."*
+
+   Every clause of that is true and the conclusion does not follow. The
+   branch cannot be taken **by the driver**. `hornvale_game_core::render` is
+   a second public entry point that passes `world_plate: None`
+   unconditionally, and the core crate's own acceptance suite renders a walk
+   fixture through it — six core tests redden without `chart::draw`, two of
+   them anti-vacuity guards that cannot be rewritten without losing the
+   property they guard. **"One non-test call site" was never the same claim
+   as "dead".** See ledger S19, and S20 for the same paragraph protecting
+   `cell_at`, which really is dead.
+
+   `chart::draw` therefore **stays**, keeping its bearing-space projection;
+   `cell_at` is deleted. The repair is known and is not confined to the
+   client: `SurroundsCell` already carries `u`/`v` lattice offsets and a
+   `seam` flag, so both this render and the sim's own
+   `surrounds_ascii` — which carries the identical formula and feeds three
+   committed gallery artifacts — could place off the wire with no
+   trigonometry. That is a sim-window change with committed-artifact
+   fallout, so it is a followup with a measured blast radius rather than a
+   task here (ledger decision #6).
 
 ### A5. What this amendment does not change
 
