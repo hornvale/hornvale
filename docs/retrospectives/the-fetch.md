@@ -44,3 +44,24 @@ not at a stage boundary; its only conflict was the shared root
 `IMPLEMENTATION_PLAN.md`, resolved in favor of main's active Counterpart plan.
 The outstanding technical follow-up is a separately designed, bounded
 position-keyed route cache only if later measurement warrants one.
+
+## What the red stages clarified
+
+Five canonical rounds separated implementation failures from contract drift.
+The first three exposed intended movement changes and stale instrumentation:
+the current-position fold moved affect and health observations, while The
+Culvert's home-keyed memo counter no longer observed the live path. The final
+two exposed the same issue in two older witnesses: one asserted that water
+belief must consult the old memo, and one asserted the pre-Fetch errand
+timeline. Neither was a production regression. The current walk still emitted
+registered errand glosses for the same resident population; its thirst-to-
+belonging change was the visible consequence of choosing from the creature's
+current room.
+
+The health probes likewise did not establish that heat, sharing, or distress
+had disappeared from the simulation. They established that these particular
+fixtures no longer separate their arms after the actor-relative fold: hot and
+temperate reached distress together, co-located and apart both read zero, and
+the former stranding walk reached Helpless without the old Frustrated phase.
+The tests now say those observed contracts explicitly, while direct planner
+and RouteMemo tests retain coverage of the still-supported cache boundary.
