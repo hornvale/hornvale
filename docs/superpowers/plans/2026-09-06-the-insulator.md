@@ -139,11 +139,11 @@
 - `check_boundary(graph: dict, boundary: set[str]) -> None`: raises on an undeclared dependency or a production implementation copied into the candidate.
 - `compare_outputs(authoritative: dict, candidate: dict) -> dict`: returns path, size, hash, and byte-equality results for each workload output.
 
-- [ ] **Step 1: Write failing tests for boundary admission and output comparison.**
+- [x] **Step 1: Write failing tests for boundary admission and output comparison.**
 
   Test that an admitted protocol dependency passes, an undeclared `windows/lab` edge fails, a candidate output hash mismatch fails, and a candidate that omits an expected output is incomplete rather than green.
 
-- [ ] **Step 2: Run the focused tests and verify they fail.**
+- [x] **Step 2: Run the focused tests and verify they fail.**
 
   ```bash
   python3 -m unittest discover -s tools/digest/experiments/the-insulator -p 'test_measure.py' -v
@@ -151,15 +151,15 @@
 
   Expected: missing candidate boundary and comparison interfaces.
 
-- [ ] **Step 3: Build the smallest candidate around the baseline-selected observer.**
+- [x] **Step 3: Build the smallest candidate around the baseline-selected observer.**
 
   Start with `digest-census-publication` as the candidate because the existing graph shows it reaches `windows/lab`. Keep the candidate outside the root workspace. Expose the same workload protocol, depend only on the data and APIs actually required by the observer, and stop immediately if the prototype needs a duplicate production rule.
 
-- [ ] **Step 4: Run boundary, build, and output tests.**
+- [x] **Step 4: Run boundary, build, and output tests.**
 
   Use an owned candidate target and run the authoritative and candidate commands sequentially. Verify source identities, dependency graph, output hashes, and cleanup. Record any compile failure, missing input, or output difference as a retained failed attempt.
 
-- [ ] **Step 5: Commit the candidate prototype or a measured rejection.**
+- [x] **Step 5: Commit the candidate prototype or a measured rejection.**
 
   If the boundary is valid, commit the candidate files and manifest. If it is invalid, commit the failure report and do not add a second implementation.
 
