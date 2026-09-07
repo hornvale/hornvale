@@ -156,6 +156,49 @@ absorption is that it will not always be.
 | the strip cites `Rate::Ornamental` with no registered `LayerDecl` | accepted as informal rationale; not mechanically enforced |
 | no gate runs rustdoc | recorded above; known and unowned, predates this campaign |
 
+## The one I did myself, at the last step, after warning others about it
+
+Twice this campaign I recorded that concurrent agents in one worktree
+contaminate each other, and posted a board technique saying so. Then, at
+the final re-review, I ran `git add -A && git commit` while a reviewer had
+a **deliberate mutation** applied to `clients/game/bin/src/plate.rs` — the
+greyscale collapse it had been asked to reproduce, to prove I1's guard was
+no longer blind.
+
+The result was commit `78e9841b1`, whose message said *"route the two
+carried minors into the registry"* and whose tree contained three lines of
+registry and five lines of sabotage: `color_for`'s spectral arm silently
+desaturating every land colour to grey. **The commit message was a true
+statement about my intent and a false statement about the diff.**
+
+It was caught because the reviewer noticed its own mutation had been swept
+up, restored the file, and refused to commit the restoration itself —
+correctly, since it had been told it was a reviewer. It reported the
+breakage as blocking and left the fix uncommitted with a note that the next
+thing touching the worktree could lose it.
+
+Repaired by unstaging the accidental file and re-committing the registry
+change alone, then sweeping **every** commit on the branch for the mutation
+signature rather than trusting that the one I knew about was the only one.
+No commit on this branch carries it.
+
+Three things worth keeping:
+
+- **`git add -A` in a shared worktree is the hazard, not the agent.** Every
+  other commit this campaign made staged explicit paths. The one that used
+  `-A` is the one that went wrong, at the moment the branch was otherwise
+  finished and my attention was on the merge rather than the mechanics.
+- **A reviewer that mutates is a writer.** The review prompts told
+  reviewers to reproduce mutations — which is what caught the campaign's
+  best findings — while also telling them to change no source file. Those
+  two instructions are in tension, and the tension is resolvable
+  (mutate-verify-restore in a disposable worktree, which two reviewers did
+  unprompted) but it is nowhere written down.
+- **Knowing the hazard did not prevent it.** I had written the board post
+  hours earlier. The lesson that generalises is not "be careful with
+  concurrency" but that a warning I authored is not a control; only the
+  explicit-paths habit would have been.
+
 ## What went right, and is worth repeating
 
 Reproducing all six reports against real output **before** writing the spec
