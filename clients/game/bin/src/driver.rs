@@ -1514,6 +1514,20 @@ impl Driver {
             season,
             cache: Some(&mut self.reflectance_cache),
         };
+        // THE SEAM, CHOSEN ONCE (The Sett, Task 4). Every layer of this
+        // redraw — the terrain raster, the feature layer, the perception
+        // layer, and the watercourses inside the terrain layer — places
+        // through THIS value, so the plate and the marks on it cannot come
+        // from two different pictures. `Placement`'s own doc says why a
+        // layer choosing its own would be right in one focus and wrong in
+        // the other, with nothing to show it until someone opened the map.
+        let placement = match walk_raster.as_ref() {
+            Some(raster) => plate::Placement::Graph(raster),
+            None => plate::Placement::Mercator {
+                f: &self.frame,
+                win: &self.window,
+            },
+        };
         if let Some(raster) = walk_raster.as_ref() {
             let mut grid = plate::draw_terrain_layer_from_raster(
                 &self.terrain,
@@ -1524,27 +1538,25 @@ impl Driver {
                 plate::colour_allowed(),
                 &mut spectral,
             );
-            // THE TWO OVERLAYS STILL PROJECT, AND ON THIS PLATE THEY LAND IN
-            // THE WRONG BOXES. That is Task 4's subject (`Placement`), and
-            // they are called here rather than dropped because a walk view
-            // with no `@` and no discovered sites is a worse intermediate
-            // state than one whose marks are a few boxes off: `spread::
-            // compose`'s plate selection is either/or, so nothing else draws
-            // them. There are no rivers on this arm at all — `rasterize_
-            // rivers` lives inside `draw_terrain_layer`, which this arm does
-            // not call (see `draw_terrain_layer_from_raster`'s own doc).
+            // THE TWO OVERLAYS PLACE THROUGH THE RASTER NOW (The Sett,
+            // Task 4). Until this task they projected through Mercator onto
+            // a graph-addressed plate and landed in the wrong boxes —
+            // measured: one step south of the seed-42 flagship start, the
+            // settlement just left was drawn on top of the walker rather
+            // than one box north of them. The watercourses are back too,
+            // inside the terrain layer where they have always lived; see
+            // `draw_terrain_layer_from_raster`'s own doc.
             plate::draw_feature_layer(
                 &mut grid,
                 &self.geo,
-                &self.frame,
-                &self.window,
+                &placement,
                 plate::colour_allowed(),
                 &self.sites,
                 &self.volcanoes,
                 &self.waterfalls,
                 &self.discovered,
             );
-            self.compose_perception_layer(&mut grid);
+            self.compose_perception_layer(&mut grid, &placement);
             return Some(grid);
         }
         let mut grid = self.tiles.compose(
@@ -1564,8 +1576,7 @@ impl Driver {
         plate::draw_feature_layer(
             &mut grid,
             &self.geo,
-            &self.frame,
-            &self.window,
+            &placement,
             plate::colour_allowed(),
             &self.sites,
             &self.volcanoes,
@@ -1581,7 +1592,7 @@ impl Driver {
         // every frame like the feature layer and for the same reason: it is a
         // handful of projections, and giving it an invalidation key is the
         // defect `CLIENT-tiles-need-the-overlay-split` records.
-        self.compose_perception_layer(&mut grid);
+        self.compose_perception_layer(&mut grid, &placement);
         Some(grid)
     }
 
@@ -3111,7 +3122,11 @@ impl Driver {
     /// one of them would collapse onto the observer's single tile and the
     /// overlay would claim to place facets it had merged — and off the walk
     /// band because there is no packet to draw.
-    fn compose_perception_layer(&self, dst: &mut hornvale_game_core::Grid) {
+    fn compose_perception_layer(
+        &self,
+        dst: &mut hornvale_game_core::Grid,
+        placement: &plate::Placement<'_>,
+    ) {
         let Some(scene) = self.walk_band_scene() else {
             return;
         };
@@ -3135,13 +3150,7 @@ impl Driver {
         if !self.at_walk_band_rung() {
             perceived.retain(|p| p.here);
         }
-        plate::draw_perception_layer(
-            dst,
-            &self.frame,
-            &self.window,
-            plate::colour_allowed(),
-            &perceived,
-        );
+        plate::draw_perception_layer(dst, placement, plate::colour_allowed(), &perceived);
     }
 
     /// Scroll band B's window so the observer's own facet sits at the middle
@@ -6496,13 +6505,30 @@ mod portolan_tests {
     /// this stronger than it was: it shows the centring actually rescues a
     /// corner origin (the negative control below fails without it), instead
     /// of resting on `start` happening to leave one lying around.
+    ///
+    /// **THE NEGATIVE CONTROL MOVED INTO [`Focus::Map`] AT THE SETT'S TASK 4,
+    /// and the reason is a property gained rather than coverage lost.** It
+    /// used to take the corner draw in the default [`Focus::Walk`], where a
+    /// corner origin hid the observer. The walk view is the compass rose now
+    /// ([`crate::rose::RoseRaster`]) and the perception layer places through
+    /// it, so that plate does not read [`Self::window`] AT ALL: the observer
+    /// is at its centre by construction and the control could never fail
+    /// again, whatever the origin. Taking the corner draw with the map
+    /// focused restores exactly the state the control needs — the window is
+    /// what decides a Mercator plate, and only a Mercator plate — and leaves
+    /// the ruling this test is about (band B's origin is centred on arrival)
+    /// asserted on the raster the ruling is about.
     #[test]
     fn band_b_centres_on_the_observer_not_the_arctic_corner() {
         let mut d = test_driver();
         d.resize(120, 40);
+        // The map, so the WINDOW is what decides the picture — see this
+        // test's own doc on why the walk view no longer can be cornered.
+        d.enter_map();
         // The corner, put there on purpose. At `BAND_B_RUNG` this is some
         // eleven thousand rows and two thousand columns from seed 42's
         // observer.
+        d.window.depth = BAND_B_RUNG;
         d.window.origin_row = 0;
         d.window.origin_col = 0;
         let arctic = d

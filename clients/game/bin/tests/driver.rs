@@ -1077,6 +1077,17 @@ fn a_chart_only_agent_name_completes_from_a_fresh_driver() {
 // campaign about which facet is in which box cannot afford that ambiguity.
 // ---------------------------------------------------------------------------
 
+/// `plate`'s own `RIVER_GLYPH`, which is private to that module.
+///
+/// Restated here rather than exported, and it is safe to restate for one
+/// reason worth stating too: it is the ONE glyph on a walk plate that
+/// `plate::glyph_for` can never return, so a box drawn with it came off the
+/// line layer and off nothing else. If that ever stops being true these
+/// tests go red rather than quiet — the terrain comparison would start
+/// skipping boxes that carry a real terrain reading, and both counts below
+/// are asserted exactly.
+const WATERCOURSE_GLYPH: char = '"';
+
 /// The walk-band raster's own terrain reading of one facet, as a glyph — the
 /// SAME question `plate::draw_terrain_layer_from_raster` answers, asked
 /// through the two public functions rather than through the drawing code.
@@ -1203,6 +1214,8 @@ fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
     let mut memo = hornvale_kernel::RoomMeshMemo::default();
 
     let mut sampled: BTreeSet<char> = BTreeSet::new();
+    let mut compared = 0u32;
+    let mut watercourse = 0u32;
     for (start, target) in [
         ("the flagship", hornvale_vessel::PossessTarget::Flagship),
         (
@@ -1240,10 +1253,22 @@ fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
             let facet = rose[word].as_ref().unwrap_or_else(|| {
                 panic!("{start} is not a cube corner: all four arrows must exist")
             });
+            let drew = plate.get(col, row).and_then(|c| c.glyph);
+            if drew == Some(WATERCOURSE_GLYPH) {
+                // A box the line layer painted carries no terrain glyph left
+                // to compare, exactly as a box the perception layer painted
+                // does not. Counted rather than silently passed over, and
+                // WHERE those boxes may legitimately be is
+                // `a_watercourse_paints_the_facets_it_runs_through`'s
+                // assertion, not this one's.
+                watercourse += 1;
+                continue;
+            }
             let want = walk_glyph(&terrain, &geo, &nearest, &mut memo, facet);
             sampled.insert(want);
+            compared += 1;
             assert_eq!(
-                plate.get(col, row).and_then(|c| c.glyph),
+                drew,
                 Some(want),
                 "at {start}: the box at ({col}, {row}) — one step {key} of the \
                  mark at ({cc}, {cr}) — does not draw the facet the {key} arrow \
@@ -1256,6 +1281,14 @@ fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
         sampled.len() > 1,
         "vacuity guard: all eight sampled neighbour boxes expect the same glyph \
          ({sampled:?}), so this assertion is not discriminating between facets"
+    );
+    assert_eq!(
+        (compared, watercourse),
+        (7, 1),
+        "seven of the eight sampled cardinal boxes carry a terrain glyph to \
+         compare and one — the most populous settlement's own south box — is \
+         painted by the line layer. A count that has moved is evidence about \
+         the watercourses, not a fixture to update."
     );
 }
 
@@ -1297,6 +1330,7 @@ fn the_walk_plate_draws_the_rose_raster_box_for_box() {
 
     let mut compared = 0u32;
     let mut skipped = 0u32;
+    let mut watercourse = 0u32;
     let mut distinct: BTreeSet<char> = BTreeSet::new();
     let mut wrong: Vec<String> = Vec::new();
     for row in 0..plate.height() {
@@ -1316,6 +1350,19 @@ fn the_walk_plate_draws_the_rose_raster_box_for_box() {
             distinct.insert(want);
             if drawn.source == Source::Chart {
                 skipped += 1;
+                continue;
+            }
+            if drawn.glyph == Some(WATERCOURSE_GLYPH) {
+                // THE LINE LAYER, BACK ON THIS PLATE AT TASK 4. A box it
+                // painted carries no terrain glyph left to compare — the
+                // same reason a `Source::Chart` box is skipped above, one
+                // channel over. Both counts are asserted below so a layer
+                // that started covering half the plate could not quietly
+                // shrink what this compares, and WHERE a watercourse may
+                // legitimately land is
+                // `a_watercourse_paints_the_facets_it_runs_through`'s
+                // assertion rather than this one's.
+                watercourse += 1;
                 continue;
             }
             compared += 1;
@@ -1343,11 +1390,428 @@ fn the_walk_plate_draws_the_rose_raster_box_for_box() {
         compared > 700,
         "vacuity guard: only {compared} boxes were compared"
     );
+    assert_eq!(
+        watercourse, 41,
+        "the line layer paints 41 of this plate's 800 boxes at this start \
+         ({watercourse} were counted). A count that has moved is evidence about \
+         the watercourses, not a fixture to update."
+    );
     assert!(
         wrong.is_empty(),
         "{} of {compared} boxes of the walk view do not hold the facet the \
          compass chains reach:\n  {}",
         wrong.len(),
         wrong.join("\n  ")
+    );
+}
+
+// The Sett, Task 4: every overlay places through the same seam the terrain
+// raster was drawn with.
+//
+// **These are sited where the two rasters DISAGREE, and that siting was
+// measured rather than assumed** (ledger "Plan defect 7"). At the seed-42
+// flagship's opening position the Mercator window is re-centred on the
+// observer every turn, so the observer's own facet projects to the plate's
+// centre — which is also the rose raster's centre — and the packet carries
+// exactly one drawable facet, the observer's own. Every overlay therefore
+// agrees with the raster there for reasons that have nothing to do with
+// placement being correct (ledger S16).
+//
+// ONE STEP SOUTH is where it comes apart, and the disagreement was measured
+// before any of this was written: after `go s` the facet the walker just
+// left — the flagship settlement, carrying 68 agent marks and the roster's
+// own settlement site — sits at rose box (col 20, row 9) on a 40x20 plate,
+// and Mercator projects it to (row 10, col 20), the observer's own box. So
+// the mark and the site are drawn ON TOP OF the player, one box from where
+// the walker could reach them. The other three cardinals, and both
+// cardinals at the `MostPopulousSettlement` start, agree at one step; south
+// from the flagship is the one that discriminates.
+// ---------------------------------------------------------------------------
+
+/// The facet arc at `anchor`'s own depth, in radians — the centre-to-centre
+/// angle to its own north neighbour. Derived from `heading_rose` rather than
+/// from a mesh constant, so it is the same quantity the raster's boxes are
+/// spaced by.
+fn facet_arc(anchor: &hornvale_kernel::Facet) -> f64 {
+    let north = hornvale_locale::heading_rose(anchor)[0]
+        .clone()
+        .expect("the seed-42 starts are not cube corners");
+    let (a, b) = (anchor.centroid(), north.centroid());
+    hornvale_kernel::math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0))
+}
+
+/// Every box of a `w`x`h` plate anchored at `anchor`, paired with the facet
+/// the compass chains put there — [`rose_facet`] over the whole plate, keyed
+/// by packed [`hornvale_kernel::FacetId`] so a lookup is a map hit.
+///
+/// Built from `heading_rose` and NOT from `RoseRaster`'s own inverse, for
+/// the reason [`rose_facet`]'s doc gives: a test that asked the transport
+/// where a facet went would pass on any transport at all.
+fn boxes_by_facet(
+    anchor: &hornvale_kernel::Facet,
+    w: u16,
+    h: u16,
+) -> std::collections::BTreeMap<u64, (u16, u16)> {
+    let (cc, cr) = (w / 2, h / 2);
+    let mut map = std::collections::BTreeMap::new();
+    for row in 0..h {
+        for col in 0..w {
+            let Some(f) = rose_facet(anchor, cc, cr, col, row) else {
+                continue;
+            };
+            let Ok(id) = f.pack() else { continue };
+            map.entry(id.0).or_insert((col, row));
+        }
+    }
+    map
+}
+
+/// THE PERCEPTION OVERLAY PLACES BY FACET, NOT BY PROJECTION. A marked facet
+/// standing NEXT TO the observer draws in that facet's own box — the box the
+/// arrow key would take the walker to — and not in the observer's.
+///
+/// **`Source::Chart` is the instrument, and it is the layer's own
+/// provenance.** `draw_perception_layer` is the only thing on this plate
+/// that writes `Source::Chart` (the terrain and feature layers both write
+/// `Source::World`), so a box carrying it was painted by the perception
+/// packet and by nothing else. That makes "the mark landed here" assertable
+/// without reaching for a private glyph constant.
+///
+/// **What it looked like before the seam.** Mercator projected the departed
+/// facet onto the observer's own box, where `perception_boxes`' collision
+/// rule — the observer never loses their own box — dropped it outright. So
+/// the plate carried ONE `Source::Chart` box and the crowd the walker had
+/// just stepped away from was drawn nowhere at all.
+///
+/// **Non-vacuity, four guards**: the step must actually have moved the
+/// observer; the box under assertion must genuinely hold the facet that was
+/// left (`heading_rose` names it NORTH of where the walker now stands); the
+/// plate must not read as a single glyph; and the observer's own box must
+/// still be painted by this layer, so a layer that drew nothing at all could
+/// not satisfy the assertion by making its absence look like agreement.
+#[test]
+fn a_neighbouring_mark_draws_in_its_own_box() {
+    let mut d = Driver::start_from_world(
+        hornvale_worldgen::fixture::seed_42_world(),
+        hornvale_vessel::PossessTarget::Flagship,
+    )
+    .expect("the committed seed-42 world starts a possession");
+    d.resize(80, 24);
+    let left_behind = d.observer_facet();
+    d.handle("s");
+    let anchor = d.observer_facet();
+    assert_ne!(
+        anchor, left_behind,
+        "vacuity guard: `go s` did not move the observer, so there is no \
+         neighbouring facet for a mark to stand on"
+    );
+    assert_eq!(
+        hornvale_locale::heading_rose(&anchor)[0].as_ref(),
+        Some(&left_behind),
+        "vacuity guard: the facet the walker left must be the one `heading_rose` \
+         names NORTH of where they now stand, or the box asserted below is not \
+         the box that facet belongs in"
+    );
+
+    let plate = d
+        .world_plate_for_redraw(80, 24)
+        .expect("the walk band is handed a plate");
+    let (cc, cr) = (plate.width() / 2, plate.height() / 2);
+    let drawn: BTreeSet<Option<char>> = (0..plate.height())
+        .flat_map(|row| (0..plate.width()).map(move |col| (col, row)))
+        .map(|(col, row)| plate.get(col, row).and_then(|c| c.glyph))
+        .collect();
+    assert!(
+        drawn.len() > 1,
+        "vacuity guard: the whole plate reads as one glyph ({drawn:?})"
+    );
+    assert_eq!(
+        plate.get(cc, cr).map(|c| c.source),
+        Some(Source::Chart),
+        "vacuity guard: the observer's own box is not painted by the perception \
+         layer, so this plate cannot witness where that layer puts anything"
+    );
+
+    let chart: Vec<(u16, u16)> = (0..plate.height())
+        .flat_map(|row| (0..plate.width()).map(move |col| (col, row)))
+        .filter(|&(col, row)| plate.get(col, row).map(|c| c.source) == Some(Source::Chart))
+        .collect();
+    assert_eq!(
+        plate.get(cc, cr - 1).map(|c| c.source),
+        Some(Source::Chart),
+        "the settlement the walker just stepped out of carries the packet's marks, \
+         and it stands one box NORTH of the mark — the box the `up` arrow goes to. \
+         The perception layer drew nothing there; it drew at {chart:?}. A layer \
+         that places through a projection puts the crowd beside you on top of you."
+    );
+    assert_eq!(
+        chart,
+        vec![(cc, cr - 1), (cc, cr)],
+        "exactly two facets of the packet are drawable at this position — the \
+         observer's own and the settlement just left — so the perception layer \
+         must paint exactly those two boxes. A count that has moved is evidence \
+         about the packet, not a fixture to update."
+    );
+}
+
+/// THE FEATURE LAYER PLACES THROUGH THE SAME SEAM. A point site standing on
+/// a NEIGHBOUR of the observer draws in that neighbour's box.
+///
+/// **Drawn onto a bare `Grid`, not read off the composed plate, and that is
+/// forced rather than chosen.** At this position the site and the perception
+/// packet's marks stand on the SAME facet — the settlement just left — and
+/// the perception layer composes last, so the composed plate can only ever
+/// witness the upper of the two. Drawing this layer alone onto empty paper
+/// makes every painted box this layer's own, which is what lets the
+/// assertion be a set equality rather than a spot check.
+///
+/// **The roster is the world's own**, read through the same public builder
+/// `Driver::start_from_world` uses (`plate::settlements_of`), so this is not
+/// a fixture that could disagree with what the client actually draws.
+///
+/// **Non-vacuity, three guards**: exactly one settlement of the whole
+/// 389-vertex roster lands on this 40x20 plate at all, so the set equality
+/// below is asserted against a roster that really does have something to
+/// place; the box it belongs in must not be the plate's centre, where a
+/// re-centred Mercator window would put the observer's own facet and where
+/// any placement whatsoever would look right; and the SAME roster through
+/// `Placement::Mercator` must land somewhere else, which is what makes this
+/// test sited at a disagreement rather than at a coincidence.
+#[test]
+fn a_site_on_the_neighbour_draws_in_the_neighbours_box() {
+    let world = hornvale_worldgen::fixture::seed_42_world();
+    let (_terrain, geo, nearest) = seed_42_reading(&world);
+    let settlements = hornvale_game::plate::settlements_of(&world, &geo, &nearest);
+    let sites: Vec<hornvale_game::plate::MapSite> = settlements
+        .into_iter()
+        .map(|(vertex, population)| hornvale_game::plate::MapSite {
+            kind: hornvale_vessel::site::SiteKind::Settlement,
+            vertex,
+            placed: None,
+            population,
+        })
+        .collect();
+
+    let mut d = Driver::start_from_world(
+        hornvale_worldgen::fixture::seed_42_world(),
+        hornvale_vessel::PossessTarget::Flagship,
+    )
+    .expect("the committed seed-42 world starts a possession");
+    d.resize(80, 24);
+    d.handle("s");
+    let anchor = d.observer_facet();
+    let plate = d
+        .world_plate_for_redraw(80, 24)
+        .expect("the walk band is handed a plate");
+    let (w, h) = (plate.width(), plate.height());
+    let (cc, cr) = (w / 2, h / 2);
+
+    let depth = anchor.path.len() as u32;
+    let by_facet = boxes_by_facet(&anchor, w, h);
+    // Where each settlement BELONGS, derived from the compass chains alone:
+    // the facet containing its coordinate, looked up in the chain-walked
+    // picture. Nothing here consults `RoseRaster`.
+    let want: BTreeSet<(u16, u16)> = sites
+        .iter()
+        .filter_map(|site| {
+            let c = site.coord(&geo);
+            let p = hornvale_kernel::math::unit_sphere_from_lat_lon(c.latitude, c.longitude);
+            let f = hornvale_kernel::Facet::containing(p, depth);
+            by_facet.get(&f.pack().ok()?.0).copied()
+        })
+        .collect();
+    assert_eq!(
+        want.len(),
+        1,
+        "vacuity guard: {} of the roster's {} settlements land on this plate; the \
+         assertion below needs exactly one to place",
+        want.len(),
+        sites.len()
+    );
+    let &at = want.iter().next().expect("just asserted one");
+    assert_ne!(
+        at,
+        (cc, cr),
+        "vacuity guard: the settlement belongs in the observer's own box, where a \
+         re-centred Mercator window puts the observer too — every placement ever \
+         written would pass"
+    );
+
+    let mut memo = hornvale_game::rose::RoseMemo::new();
+    let raster = hornvale_game::rose::RoseRaster::build(&anchor, w, h, &mut memo);
+    let no_volcanoes = BTreeSet::new();
+    let mut mercator_paper = hornvale_game_core::Grid::new(w, h);
+    hornvale_game::plate::draw_feature_layer(
+        &mut mercator_paper,
+        &geo,
+        &hornvale_game::plate::Placement::Mercator {
+            f: d.frame(),
+            win: d.window(),
+        },
+        false,
+        &sites,
+        &no_volcanoes,
+        &[],
+        d.discovered(),
+    );
+    let mercator_painted: BTreeSet<(u16, u16)> = (0..h)
+        .flat_map(|row| (0..w).map(move |col| (col, row)))
+        .filter(|&(col, row)| mercator_paper.get(col, row).and_then(|c| c.glyph).is_some())
+        .collect();
+    assert_ne!(
+        mercator_painted, want,
+        "vacuity guard: the projection already puts this roster where the compass \
+         chains do, so this test is sited at an agreement and cannot witness the \
+         defect it exists for (ledger 'Plan defect 7')"
+    );
+    // THE POSITIVE CONTROL, and it is the whole reason the Mercator draw
+    // above is in this test rather than only in its history. This layer took
+    // a `Frame` and a `Window` before The Sett's Task 4 and could not be
+    // handed a placement at all, so no version of this test could run red
+    // against the old SIGNATURE. What can still be executed is the old
+    // PLACEMENT, and this is it: it puts the settlement on the walker's own
+    // box, where the perception layer's `@` then covers it entirely.
+    assert!(
+        mercator_painted.contains(&(cc, cr)),
+        "the projection is expected to put this roster on the observer's own box \
+         at ({cc}, {cr}) — that is the defect this test witnesses. It put it at \
+         {mercator_painted:?}, so the control no longer reproduces the old \
+         behaviour and the assertion below is no longer sited at a disagreement."
+    );
+
+    let mut paper = hornvale_game_core::Grid::new(w, h);
+    hornvale_game::plate::draw_feature_layer(
+        &mut paper,
+        &geo,
+        &hornvale_game::plate::Placement::Graph(&raster),
+        false,
+        &sites,
+        &no_volcanoes,
+        &[],
+        d.discovered(),
+    );
+    let painted: BTreeSet<(u16, u16)> = (0..h)
+        .flat_map(|row| (0..w).map(move |col| (col, row)))
+        .filter(|&(col, row)| paper.get(col, row).and_then(|c| c.glyph).is_some())
+        .collect();
+    assert_eq!(
+        painted, want,
+        "the feature layer must paint the box holding the facet the site stands \
+         on, and no other. It painted {painted:?}; the compass chains put the \
+         roster at {want:?}. The projection puts it at {mercator_painted:?} — on \
+         the walker's own box, one step from where they could reach it."
+    );
+}
+
+/// THE LINE LAYER PLACES THROUGH THE SAME SEAM. A watercourse paints the
+/// boxes holding the facets it actually runs through.
+///
+/// **The walk view drew no rivers at all between Task 3 and this one**, and
+/// that was deliberate rather than an oversight: `rasterize_rivers` places
+/// through `mercator::project`, so on a graph-addressed plate it would have
+/// painted watercourses into boxes that do not hold the facets they run
+/// through (`draw_terrain_layer_from_raster`'s own doc records the choice).
+/// This is the assertion that says the line layer is back and correct.
+///
+/// **Two assertions, and they answer different questions.** The first is
+/// PRESENCE, and it is the one that reddens on the unfixed code: exactly one
+/// point of the channel network's own polylines falls inside a facet this
+/// plate draws, and the box holding that facet must carry the watercourse
+/// glyph. The second is PLACEMENT: every box the line layer painted must
+/// hold a facet whose centre lies within one facet's width of the network,
+/// measured with `SphericalPolyline::signed_distance` — the kernel's own
+/// instrument, which knows nothing about either raster.
+///
+/// **Non-vacuity**: the count of network points inside the plate is asserted
+/// rather than assumed, the witnessed box must not be the observer's own
+/// (where the perception layer would cover it), and the painted set must not
+/// be empty.
+#[test]
+fn a_watercourse_paints_the_facets_it_runs_through() {
+    let world = hornvale_worldgen::fixture::seed_42_world();
+    let (terrain, _geo, _nearest) = seed_42_reading(&world);
+
+    let mut d = Driver::start_from_world(
+        hornvale_worldgen::fixture::seed_42_world(),
+        hornvale_vessel::PossessTarget::Flagship,
+    )
+    .expect("the committed seed-42 world starts a possession");
+    d.resize(80, 24);
+    let anchor = d.observer_facet();
+    let plate = d
+        .world_plate_for_redraw(80, 24)
+        .expect("the walk band is handed a plate");
+    let (w, h) = (plate.width(), plate.height());
+    let (cc, cr) = (w / 2, h / 2);
+    let depth = anchor.path.len() as u32;
+    let arc = facet_arc(&anchor);
+    let by_facet = boxes_by_facet(&anchor, w, h);
+
+    // The one point of the network that falls inside a facet this plate
+    // draws — found by addressing each polyline point and asking the
+    // chain-walked picture, never `RoseRaster`.
+    let net = terrain.channels();
+    let inside: BTreeSet<(u16, u16)> = net
+        .polylines
+        .iter()
+        .flat_map(|line| line.points.iter())
+        .filter_map(|&p| {
+            let f = hornvale_kernel::Facet::containing(p, depth);
+            by_facet.get(&f.pack().ok()?.0).copied()
+        })
+        .collect();
+    assert_eq!(
+        inside.len(),
+        1,
+        "vacuity guard: {} network points land in facets this plate draws; the \
+         presence assertion below needs exactly one witness",
+        inside.len()
+    );
+    let &witness = inside.iter().next().expect("just asserted one");
+    assert_ne!(
+        witness,
+        (cc, cr),
+        "vacuity guard: the witness is the observer's own box, which the \
+         perception layer paints over"
+    );
+
+    // RIVER_GLYPH is private to `plate`; it is the one glyph on this plate
+    // that `glyph_for` can never return, so a box drawn with it came off the
+    // line layer and off nothing else.
+    let river: BTreeSet<(u16, u16)> = (0..h)
+        .flat_map(|row| (0..w).map(move |col| (col, row)))
+        .filter(|&(col, row)| plate.get(col, row).and_then(|c| c.glyph) == Some('"'))
+        .collect();
+    assert!(
+        river.contains(&witness),
+        "a channel of the network runs through the facet drawn at {witness:?}, and \
+         the walk view drew no watercourse there. It drew watercourses at \
+         {river:?}."
+    );
+
+    assert!(
+        !river.is_empty(),
+        "vacuity guard: the line layer painted nothing at all"
+    );
+    let mut adrift: Vec<String> = Vec::new();
+    for &(col, row) in &river {
+        let facet = rose_facet(&anchor, cc, cr, col, row).expect("a painted box holds a facet");
+        let p = facet.centroid();
+        let d_rad = net
+            .polylines
+            .iter()
+            .map(|line| line.signed_distance(p).abs())
+            .fold(f64::INFINITY, f64::min);
+        if d_rad > arc {
+            adrift.push(format!("({col},{row}): {d_rad:.8} rad from any channel"));
+        }
+    }
+    assert!(
+        adrift.is_empty(),
+        "{} of {} watercourse boxes hold facets more than one facet's width \
+         ({arc:.8} rad) from any channel in the network:\n  {}",
+        adrift.len(),
+        river.len(),
+        adrift.join("\n  ")
     );
 }
