@@ -447,3 +447,10 @@ before `history-now`. The spec's §1 findings are read from this second run.
 - **Illness in possession** — a possessed body catching the flux in the
   standing present (`PLAY-deduction-deepens` names illness as playable).
   Row to mint.
+
+## Task 3: complete
+
+- Source and projection commits: `7d09bc989`, `b101e537a`, `d4772c1f5`, `d5cbd71d2`, `587bd4aa6`, `c84867799`, `291d6a4a`, `e6d9af7c5`, `d9420865`.
+- Added a draw-free endemic read over committed substrate facts; Lot causes, endings, payloads, JSON/WASM/client projections, and composite-case semantics remain additive and non-causal.
+- Closed review findings for moved-life ending occupation, overlapping pathogen provenance, the real Bake→History A/B/A conversion seam, hazard-cause exclusion, and endemic-input sourcing for hazard-pathogen causes.
+- Verification: focused Lot/worldgen tests passed; `make lot-check` (`66 passed, 0 failed`); `make gate-commit` (`1433 + 1297 passed`, all audits green). No census or generated artifact drift; only the two protected pre-existing documentation edits remain unstaged.

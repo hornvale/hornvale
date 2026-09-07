@@ -14,7 +14,7 @@
 **Goal**: Add substrate-based endemic burden, causes, composite cases, and materialized outbreak outcomes.
 **Success Criteria**: H-M4 passes; Lot payload is additive; composites remain non-causal.
 **Tests**: Lot attribution, endings, slots, payload, and byte-identity tests.
-**Status**: Complete — focused Lot and exhibit gates green
+**Status**: Complete — `7d09bc989`, `b101e537a`, `d4772c1f5`, `d5cbd71d2`, `587bd4aa6`, `c84867799`, `291d6a4a`, `e6d9af7c`, `d9420865`; final review approved
 
 ## Stage 4: Laboratory instrumentation
 **Goal**: Add six metrics, preregistered prediction readout, and cost measurement.
