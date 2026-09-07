@@ -753,3 +753,110 @@ fn the_anchor_sits_at_half_the_plate_and_the_halves_are_uneven() {
     assert_eq!(r.facet_at(W, 0), None);
     assert_eq!(r.facet_at(0, H), None);
 }
+
+/// Rose steps from the centre to box `(col, row)` — `|dcol| + |drow|`,
+/// which is exactly the number of chain steps [`RoseRaster::build`] walked
+/// to draw that box (down or up the centre column, then out along the row).
+fn steps_from_centre(centre: (u16, u16), at: (u16, u16)) -> u32 {
+    let d = |a: u16, b: u16| u32::from(a.max(b) - a.min(b));
+    d(centre.0, at.0) + d(centre.1, at.1)
+}
+
+/// A facet the picture repeats has more than one box, and the inverse map
+/// answers with the one **nearest the centre** — nearest in rose steps (see
+/// [`steps_from_centre`]), ties broken row-major so the answer stays
+/// deterministic (ledger decision #5).
+///
+/// **The pole is the fixture** (ledger S18). At the exact pole the meridian
+/// chain reverses: `north` steps off the pole and `north` again returns to
+/// it, so the pole is drawn in every other box of the centre column, top to
+/// bottom. The first-row-major inverse this replaces answered row 0 for the
+/// one facet everything else agrees sits at the centre — and
+/// `plate::Placement::box_of_facet` is how `perception_boxes` places the
+/// observer's own mark, so a polar observer's `@` drew near the top of the
+/// column rather than at the middle, while `facet_at(centre)` correctly
+/// held their facet.
+///
+/// **The `repeats > 1` guard is the point of the fixture, not decoration.**
+/// Asked about a facet with one box, every tie-break rule agrees and the
+/// assertion is about a scan order that cannot express itself.
+///
+/// Part (2) states the rule itself over the whole population rather than
+/// the pole alone: no box drawn with the named facet is nearer the centre
+/// than the one named, and an equally near one never precedes it row-major.
+/// It cannot constrain a facet drawn once, so it carries its own count of
+/// how many boxes were repeats.
+#[test]
+fn the_inverse_map_names_the_box_nearest_the_centre() {
+    let mut memo = RoseMemo::new();
+
+    // (1) the pole, where the chain reverses and the centre column repeats.
+    let scale: i64 = 1 << DEPTH;
+    let pole = lattice(4, scale / 2, scale / 2, DEPTH);
+    let r = RoseRaster::build(&pole, W, H, &mut memo);
+    let mut pole_boxes = Vec::new();
+    for row in 0..H {
+        for col in 0..W {
+            if r.facet_at(col, row) == Some(&pole) {
+                pole_boxes.push((col, row));
+            }
+        }
+    }
+    assert!(
+        pole_boxes.len() > 1,
+        "non-vacuity: the pole must be drawn in more than one box for a \
+         tie-break to have anything to decide; it was drawn in {:?}",
+        pole_boxes
+    );
+    assert_eq!(
+        r.box_of(&pole),
+        Some(r.centre()),
+        "the anchor's own box must be the centre; the raster draws it in \
+         {pole_boxes:?}"
+    );
+
+    // (2) the rule, over the whole population including both folds.
+    let mut repeated = 0u64;
+    let mut examined = 0u64;
+    for f in sweep(4) {
+        let r = RoseRaster::build(&f, W, H, &mut memo);
+        let centre = r.centre();
+        for row in 0..H {
+            for col in 0..W {
+                let Some(here) = r.facet_at(col, row) else {
+                    continue;
+                };
+                examined += 1;
+                let named = r.box_of(here).expect("a drawn facet must have a box");
+                if named == (col, row) {
+                    continue;
+                }
+                repeated += 1;
+                let (near, far) = (
+                    steps_from_centre(centre, named),
+                    steps_from_centre(centre, (col, row)),
+                );
+                assert!(
+                    near <= far,
+                    "box_of named {named:?} at {near} steps when {:?} sits at \
+                     {far}",
+                    (col, row)
+                );
+                if near == far {
+                    assert!(
+                        (named.1, named.0) < (row, col),
+                        "an equally near box must be broken row-major: \
+                         box_of named {named:?} over {:?}",
+                        (col, row)
+                    );
+                }
+            }
+        }
+    }
+    assert!(examined > 10_000, "vacuity guard: {examined} boxes");
+    assert!(
+        repeated > 0,
+        "non-vacuity: the population must contain a repeated box for the \
+         rule to bind; both folds are in `sweep`"
+    );
+}

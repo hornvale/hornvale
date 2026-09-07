@@ -6711,15 +6711,22 @@ mod portolan_tests {
         );
 
         // AND THE FOLD, STATED RATHER THAN GLOSSED. `box_of_facet` is the
-        // INVERSE, and at the pole the inverse is genuinely ambiguous: the
+        // INVERSE, and at the pole the picture is genuinely many-to-one: the
         // meridian chain reverses there, so stepping north from the pole and
         // north again returns to it, and the pole is drawn in every other box
         // of the centre column — 12 boxes of this 100x46 plate. That is
         // decision #4's ratified polar fold (ledger S10: it clears 16 facets
-        // out, 0.176 degrees), not a defect of this task, and `RoseRaster`'s
-        // own doc already rules that a repeated facet maps to the FIRST box
-        // in row-major order. So the column is what "centred" means here, and
-        // the row is the fold's to decide.
+        // out, 0.176 degrees), not a defect of this task.
+        //
+        // **The ROW is no longer the fold's to decide, and this assertion
+        // used to say it was.** `RoseRaster::box_of` resolved a repeated
+        // facet to the first box in row-major order, which named row 1 of
+        // this plate for the facet every other contract here puts at row 23,
+        // so a polar observer's own `@` drew near the top of their plate
+        // while `facet_at(centre)` correctly held them. Ledger decision #5
+        // replaced that scan order with a rule — nearest the centre, ties
+        // row-major — so the whole box is pinned below, not the column
+        // alone.
         let repeats = (0..plate_h)
             .flat_map(|row| (0..plate_w).map(move |col| (col, row)))
             .filter(|&(col, row)| raster.facet_at(col, row) == Some(&polar))
@@ -6730,14 +6737,14 @@ mod portolan_tests {
              {repeats} occurrence(s) this comment would be describing a fold that \
              is not there"
         );
-        let (_, placed_col) = graph
-            .box_of_facet(&polar, pw, ph)
-            .expect("the graph must place what the chart refuses");
         assert_eq!(
-            placed_col,
-            u32::from(plate_w / 2),
-            "the mark must at least be placed in the plate's centre COLUMN, which \
-             is the axis the polar fold does not touch"
+            graph
+                .box_of_facet(&polar, pw, ph)
+                .expect("the graph must place what the chart refuses"),
+            (u32::from(plate_h / 2), u32::from(plate_w / 2)),
+            "the mark must be placed in the plate's own middle box, the same box \
+             the raster DRAWS the observer in, however many other boxes the fold \
+             repeats them into"
         );
     }
 

@@ -28,6 +28,7 @@
 use hornvale_kernel::{Facet, FacetId};
 use hornvale_locale::heading_rose;
 use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
 
 /// Index of the north word in [`hornvale_locale::heading_rose`]'s return,
 /// which is `Compass::all()` order: `[N, Ne, E, Se, S, Sw, W, Nw]`.
@@ -149,11 +150,22 @@ pub struct RoseRaster {
     centre: (u16, u16),
     /// Row-major, `w * h` long. `None` is a box no chain reached.
     boxes: Vec<Option<Facet>>,
-    /// The inverse. A facet drawn in more than one box — which happens only
-    /// within ~20 steps of a cube corner (ledger S6) — maps to the first
-    /// box in row-major order, so the map is a right inverse of
-    /// [`RoseRaster::facet_at`] everywhere and a two-sided one wherever the
-    /// picture is duplicate-free.
+    /// The inverse. A facet drawn in more than one box — which happens
+    /// inside either fold, near a cube corner (ledger S6, S9) or at a pole
+    /// (S10) — maps to the box **nearest the centre**, measured in
+    /// [`RoseRaster::steps_from_centre`] and tie-broken row-major, so the
+    /// map is a right inverse of [`RoseRaster::facet_at`] everywhere and a
+    /// two-sided one wherever the picture is duplicate-free.
+    ///
+    /// **Nearest-the-centre is a rule; first-scanned was not** (ledger
+    /// decision #5). At the exact pole the meridian chain reverses — north
+    /// steps off the pole and north again returns to it — so the pole is
+    /// drawn in every other box of the centre column and a first-row-major
+    /// inverse named the top of that column for the one facet the anchor's
+    /// own contract puts at the centre. Since the observer's `@` is placed
+    /// through this map, a polar observer's mark drew near the top of the
+    /// plate. The rule also names, for any other repeated facet, the
+    /// instance the observer stands nearest.
     inverse: BTreeMap<FacetId, (u16, u16)>,
 }
 
@@ -210,14 +222,28 @@ impl RoseRaster {
             }
         }
 
-        let mut inverse = BTreeMap::new();
+        let mut inverse: BTreeMap<FacetId, (u16, u16)> = BTreeMap::new();
         if w > 0 {
             for (i, drawn) in boxes.iter().enumerate() {
                 let Some(f) = drawn else { continue };
                 let Ok(id) = f.pack() else { continue };
                 let col = (i % uw) as u16;
                 let row = (i / uw) as u16;
-                inverse.entry(id).or_insert((col, row));
+                // Nearest the centre wins; the scan is row-major, so
+                // keeping the incumbent on a tie IS the row-major
+                // tie-break.
+                match inverse.entry(id) {
+                    Entry::Vacant(slot) => {
+                        slot.insert((col, row));
+                    }
+                    Entry::Occupied(mut slot) => {
+                        if Self::steps_from_centre(centre, (col, row))
+                            < Self::steps_from_centre(centre, *slot.get())
+                        {
+                            slot.insert((col, row));
+                        }
+                    }
+                }
             }
         }
 
@@ -264,7 +290,24 @@ impl RoseRaster {
         self.boxes[usize::from(row) * usize::from(self.w) + usize::from(col)].as_ref()
     }
 
+    /// Rose steps from `centre` to box `at` — `|dcol| + |drow|`, which is
+    /// exactly the number of chain steps [`RoseRaster::build`] walked to
+    /// reach that box: down or up the centre column to the row, then out
+    /// along it. Chebyshev and Euclidean distance are equally defensible
+    /// and agree with this one at the pole; the step count is chosen
+    /// because it is the raster's own construction metric, so "nearest the
+    /// centre" reads as "fewest steps from the anchor" — which is the
+    /// distance an observer consulting the map would actually walk.
+    /// type-audit: bare-ok(count)
+    fn steps_from_centre(centre: (u16, u16), at: (u16, u16)) -> u32 {
+        let span = |a: u16, b: u16| u32::from(a.max(b) - a.min(b));
+        span(centre.0, at.0) + span(centre.1, at.1)
+    }
+
     /// Where `facet` is drawn, or `None` if this raster does not draw it.
+    ///
+    /// A facet the picture repeats — only ever inside a fold — answers with
+    /// its box nearest the centre; see [`RoseRaster::inverse`].
     pub fn box_of(&self, facet: &Facet) -> Option<(u16, u16)> {
         self.box_of_id(facet.pack().ok()?)
     }
