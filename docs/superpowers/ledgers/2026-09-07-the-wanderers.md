@@ -170,3 +170,17 @@ explicit plan and execution checkpoints.
 - **Basis:** Commits `a2255bb47`, `36f3c2ccb`, and `b7a26347f` passed focused tests, the full commit gate, and two scoped review fix rounds. The final re-review approved visibility thresholds and companion periods.
 - **Ideonomy passes / overturns:** one implementation-review convergence pass plus two fix passes / 0 overturns.
 - **Cost if wrong:** scene serialization may expose a producer contract defect; the scene task remains independently reviewable.
+
+## G5 Task 3 boundary
+
+- **Ruling:** The additive `scene/system/v1` and world-wasm contract is accepted; proceed to campaign closeout.
+- **Basis:** Commit `5ea761770` passed the scene suite, `make world-check`, and the native/wasm byte-identity smoke. The worker's worldgen baseline discrepancy was resolved in `5eb03bc48` as an explicit rebaseline, not by weakening the scene contract.
+- **Ideonomy passes / overturns:** one implementation-review convergence pass / 0 overturns.
+- **Cost if wrong:** client consumers would observe a contract defect; the byte-identity and field-order tests remain the durable guard.
+
+## G6 close
+
+- **Ruling:** The Wanderers is closed as a shipped additive astronomy and scene-contract campaign.
+- **Why:** Stellar topology, phase-aware wanderers, observational events, and the native/wasm scene handoff are committed; `make artifacts` regenerated the declared non-census artifacts with only the expected locked-world almanac changes. Stream-manifest and concept-registry reports were already fresh.
+- **Alternatives discarded:** No census or canonical sluice run was started from this worktree; those remain queue/canonical-box operations outside this closeout.
+- **Capture actions:** `ORRERY-ellipse-truth`, `SKY-transits`, and `SKY-figures-per-species` remain raw and now point at this campaign's close record; arbitrary multi-star/N-body dynamics is captured as `SKY-multi-star-nbody`; full binary-world promotion remains represented by `SKY-binary-planet`.

@@ -6502,3 +6502,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T21:10:17Z | gate-commit | 53.935 | 108.140 | 39.359 | 2.73 | 0 | d873664c5 | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-07T21:11:41Z | gate-commit | 65.316 | 77.160 | 19.650 | 1.48 | 0 | d873664c5 | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-07T21:12:41Z | gate-commit | 43.031 | 69.687 | 18.061 | 2.04 | 0 | d873664c5 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:13:27Z | gate-commit | 34.877 | 66.853 | 17.415 | 2.42 | 0 | 5eb03bc48 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:17:58Z | rebaseline | 190.802 | 394.121 | 16.503 | 2.15 | 0 | 5ea761770 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T21:22:43Z | world-check | 43.745 | 48.716 | 1.621 | 1.15 | 0 | 5ea761770 | campaign/the-wanderers | MacBookPro | 10 |
