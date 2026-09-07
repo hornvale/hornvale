@@ -6554,6 +6554,291 @@ mod portolan_tests {
         );
     }
 
+    /// **AN OBSERVER INSIDE THE POLAR CLAMP STILL GETS A CENTRED WALK VIEW**
+    /// (The Sett, Task 5; ledger S13, following S11).
+    ///
+    /// [`Self::centre_window_on`] resolves through [`mercator::project`],
+    /// which returns `None` past [`mercator::LAT_CLAMP_DEG`] (85.0), and
+    /// propagates it with `?`. So before this campaign an observer within 5
+    /// degrees of a pole could not have the walk view centred on them at
+    /// all — 512 of 51,200 sampled polar-cap facets, 1.00% of the caps
+    /// (ledger S11) — and the plate kept drawing wherever the window last
+    /// was. Under the rose raster the walk plate's anchor is the observer's
+    /// own facet and no projection is consulted, so the refusal cannot
+    /// reach it. The map keeps Mercator and keeps the refusal, which is
+    /// correct: a geographic chart genuinely cannot draw the pole.
+    ///
+    /// # WHY THIS IS ASSERTED ONE LEVEL BELOW `Driver`, AND WHAT THAT COSTS
+    ///
+    /// The plan specified an observer *at* the pole. **No possession
+    /// reaches one.** Measured on this world, both shipped
+    /// [`PossessTarget`] variants land within four degrees of the equator —
+    /// flagship at latitude -4.0028, most-populous-settlement at -3.9611 —
+    /// and a walk step is one rung-13 facet, about 1.1 km, so the clamp is
+    /// some eight thousand `go n`s away. A fixture that pretended otherwise
+    /// would be asserting about a driver state no seed produces.
+    ///
+    /// So the property is asserted where it is actually decided: at
+    /// [`plate::Placement`], the seam every overlay — the observer's own
+    /// mark included — places through, chosen once in
+    /// [`Self::world_plate_for_redraw`]. The same polar facet is asked the
+    /// same question of both variants. What this does NOT cover is the
+    /// composition above it; [`Self::world_plate_for_redraw`]'s choice of
+    /// variant is
+    /// [`twenty_steps_leave_the_mark_exactly_centred_despite_a_scrolled_window`]'s
+    /// subject, on a facet a driver really occupies.
+    ///
+    /// **Non-vacuity, asserted before anything else:** the clamp must really
+    /// refuse the chosen position, or a latitude it never rejected would
+    /// pass this test with nothing proved. Asserted twice over, at
+    /// `mercator::project` itself and at `centre_window_on`, whose refusal
+    /// is the one S13 is about — and the ordinary-latitude control beside it
+    /// is what stops "the window did not move" from being true of every
+    /// call.
+    #[test]
+    fn an_observer_inside_the_polar_clamp_still_gets_a_centred_walk_view() {
+        let mut d = test_driver();
+        let (w, h) = (200u16, 50u16);
+        d.resize(w, h);
+
+        // REACHABILITY, stated as an assertion rather than as prose: the
+        // shipped possession targets are nowhere near the clamp, which is
+        // why this test builds its polar facet instead of walking to one.
+        let here = d.observer_facet().coord();
+        assert!(
+            here.latitude.abs() < 10.0,
+            "seed 42's flagship is meant to be equatorial (measured -4.0028); at \
+             {:.4} degrees this test's account of why it cannot walk to the pole \
+             needs re-measuring",
+            here.latitude
+        );
+
+        // The north polar cap's own centre facet at the walk rung, built by
+        // descending the quadtree to the middle of face 4 — latitude
+        // 89.9922, inside the clamp by five degrees.
+        let depth = BAND_B_RUNG;
+        let middle = 1i64 << (depth - 1);
+        let mut path = Vec::with_capacity(depth as usize);
+        for level in (0..depth).rev() {
+            let hx = ((middle >> level) & 1) as u8;
+            let hy = ((middle >> level) & 1) as u8;
+            path.push((hx << 1) | hy);
+        }
+        let polar = Facet { face: 4, path };
+        let at_pole = polar.coord();
+        assert!(
+            at_pole.latitude > mercator::LAT_CLAMP_DEG,
+            "NON-VACUITY: this facet must sit past the clamp, or the refusal \
+             below is not a refusal — got {:.4} degrees against a clamp of {}",
+            at_pole.latitude,
+            mercator::LAT_CLAMP_DEG
+        );
+
+        // NON-VACUITY ONE: the projection itself refuses it.
+        let (virtual_w, virtual_h) = plate::virtual_dims(BAND_B_RUNG);
+        assert_eq!(
+            mercator::project(
+                d.frame(),
+                at_pole.latitude,
+                at_pole.longitude,
+                virtual_w,
+                virtual_h
+            ),
+            None,
+            "NON-VACUITY: mercator::project must refuse the chosen position"
+        );
+
+        // NON-VACUITY TWO — and the refusal S13 actually names. The window
+        // is put somewhere known; centring on the pole must leave it there,
+        // while centring on the observer's own ordinary latitude must move
+        // it. Without the second half, "the window did not move" would be
+        // satisfied by a `centre_window_on` that did nothing at all.
+        d.window.depth = BAND_B_RUNG;
+        d.window.origin_row = 1_000;
+        d.window.origin_col = 2_000;
+        let parked = (d.window.origin_row, d.window.origin_col);
+        assert_eq!(
+            d.centre_window_on(at_pole.latitude, at_pole.longitude, w, h),
+            None,
+            "centre_window_on must propagate the projection's refusal"
+        );
+        assert_eq!(
+            (d.window.origin_row, d.window.origin_col),
+            parked,
+            "a refused centring leaves the window exactly where it was — this is \
+             the state the walk view used to keep drawing from"
+        );
+        assert_eq!(
+            d.centre_window_on(here.latitude, here.longitude, w, h),
+            Some(()),
+            "CONTROL: an ordinary latitude must still centre"
+        );
+        assert_ne!(
+            (d.window.origin_row, d.window.origin_col),
+            parked,
+            "CONTROL: the ordinary centring must actually move the window, or \
+             the refusal above proves nothing about the pole in particular"
+        );
+
+        // THE DELIVERY. The same facet, the same question, of both
+        // placements: the chart cannot answer it and the rose raster puts it
+        // at the plate's own centre.
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let mut memo = crate::rose::RoseMemo::new();
+        let raster = crate::rose::RoseRaster::build(&polar, plate_w, plate_h, &mut memo);
+        let chart = plate::Placement::Mercator {
+            f: d.frame(),
+            win: d.window(),
+        };
+        let graph = plate::Placement::Graph(&raster);
+        let (pw, ph) = (u32::from(plate_w), u32::from(plate_h));
+        assert_eq!(
+            chart.box_of_facet(&polar, pw, ph),
+            None,
+            "the chart still refuses the pole, which is correct and is the map's \
+             own behaviour (G4 ruling 1)"
+        );
+        assert_eq!(
+            raster.centre(),
+            (plate_w / 2, plate_h / 2),
+            "the anchor's box is the plate's own middle"
+        );
+        assert_eq!(
+            raster.facet_at(plate_w / 2, plate_h / 2),
+            Some(&polar),
+            "the walk view must DRAW a polar observer at the middle of their own \
+             plate — the refusal cannot reach a raster that consults no projection"
+        );
+
+        // AND THE FOLD, STATED RATHER THAN GLOSSED. `box_of_facet` is the
+        // INVERSE, and at the pole the inverse is genuinely ambiguous: the
+        // meridian chain reverses there, so stepping north from the pole and
+        // north again returns to it, and the pole is drawn in every other box
+        // of the centre column — 12 boxes of this 100x46 plate. That is
+        // decision #4's ratified polar fold (ledger S10: it clears 16 facets
+        // out, 0.176 degrees), not a defect of this task, and `RoseRaster`'s
+        // own doc already rules that a repeated facet maps to the FIRST box
+        // in row-major order. So the column is what "centred" means here, and
+        // the row is the fold's to decide.
+        let repeats = (0..plate_h)
+            .flat_map(|row| (0..plate_w).map(move |col| (col, row)))
+            .filter(|&(col, row)| raster.facet_at(col, row) == Some(&polar))
+            .count();
+        assert!(
+            repeats > 1,
+            "NON-VACUITY: the row is only ambiguous because the pole repeats; at \
+             {repeats} occurrence(s) this comment would be describing a fold that \
+             is not there"
+        );
+        let (_, placed_col) = graph
+            .box_of_facet(&polar, pw, ph)
+            .expect("the graph must place what the chart refuses");
+        assert_eq!(
+            placed_col,
+            u32::from(plate_w / 2),
+            "the mark must at least be placed in the plate's centre COLUMN, which \
+             is the axis the polar fold does not touch"
+        );
+    }
+
+    /// **THE MARK IS CENTRED BY CONSTRUCTION** (The Sett, Task 5).
+    ///
+    /// [`Self::follow_the_walker`]'s own doc records the measurement that
+    /// made it exist: the observer drifted about one plate row per 1.6
+    /// steps, from row 23 to row 18 in eight `go n`s. That was a Mercator
+    /// plate read through a STORED [`Window`], so the mark's position was
+    /// only ever as good as the last re-centring. Under the rose raster the
+    /// anchor IS the observer, so the per-turn re-centring cannot be what
+    /// holds the mark in the middle — and this asserts the stronger thing,
+    /// that twenty steps leave it exactly centred **with the window
+    /// deliberately scrolled away between every one of them**.
+    ///
+    /// **The per-turn centring stays and this test must not be read as
+    /// licence to remove it.** It is what puts the MAP on the observer when
+    /// [`Self::enter_map`] opens it, and the map is still Mercator at every
+    /// rung. What changed is that the walk view no longer depends on it.
+    ///
+    /// # THE POSITIVE CONTROL IS THE OLD BEHAVIOUR, RUN IN-TEST
+    ///
+    /// This assertion passes on arrival: Task 3 put the walk plate on the
+    /// rose raster and Task 4 put every overlay on the same seam, so by the
+    /// time it was written the property was already delivered. An assertion
+    /// nobody has seen fail is an open question about whether it can, so the
+    /// old behaviour is executed on every iteration rather than described:
+    /// [`Focus::Map`] is the one focus [`Self::drawing_the_walk_view`]
+    /// exempts, so taking the same draw there — same rung, same scrolled
+    /// window, same session — is exactly the Mercator plate the walk view
+    /// used to be. It must place the mark SOMEWHERE, and somewhere that is
+    /// not the centre; the `assert_ne!` is what stops the control decaying
+    /// into a restatement of the assertion it is controlling.
+    ///
+    /// Non-vacuity: the scroll must actually move [`Window::origin_col`],
+    /// asserted before the mark is read, and the control's mark must
+    /// actually be drawn — a no-op scroll, or a control that drew no `@` at
+    /// all, would leave this passing against the behaviour it exists to
+    /// exclude.
+    #[test]
+    fn twenty_steps_leave_the_mark_exactly_centred_despite_a_scrolled_window() {
+        let mut d = test_driver();
+        let (w, h) = (200u16, 50u16);
+        d.resize(w, h);
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let centre = (plate_w / 2, plate_h / 2);
+
+        /// How far the window is shoved off the observer between steps.
+        /// Small enough that the Mercator control still draws the mark
+        /// (otherwise the control would prove only that the observer had
+        /// left the chart), large enough that it cannot land on the centre.
+        /// type-audit: bare-ok(count)
+        const SHOVE: u32 = 7;
+
+        let mark = |d: &mut Driver| -> Option<(u16, u16)> {
+            let p = d.world_plate_for_redraw(w, h)?;
+            (0..p.height())
+                .flat_map(|y| (0..p.width()).map(move |x| (x, y)))
+                .find(|&(x, y)| p.get(x, y).is_some_and(|c| c.glyph == Some('@')))
+        };
+
+        for step in 0..20 {
+            d.handle("go n");
+            // The shove, applied AFTER the step's own re-centring so the
+            // window really is somewhere the observer is not.
+            let before = d.window.origin_col;
+            d.window.origin_col = before.wrapping_add(SHOVE);
+            d.window.origin_row = d.window.origin_row.saturating_add(SHOVE);
+            assert_ne!(
+                d.window.origin_col, before,
+                "NON-VACUITY at step {step}: the shove must move the window, or a \
+                 plate that read it would look centred anyway"
+            );
+
+            // POSITIVE CONTROL: the same draw in the one focus that still
+            // projects. This IS the pre-Sett walk view.
+            d.focus = Focus::Map;
+            let projected = mark(&mut d);
+            d.focus = Focus::Walk;
+            assert!(
+                projected.is_some(),
+                "CONTROL at step {step}: the projected plate must draw the mark \
+                 somewhere, or it witnesses a departed observer rather than a \
+                 mis-centred one"
+            );
+            assert_ne!(
+                projected,
+                Some(centre),
+                "CONTROL at step {step}: the projected plate must put the mark off \
+                 centre, or this test cannot tell the two pictures apart"
+            );
+
+            assert_eq!(
+                mark(&mut d),
+                Some(centre),
+                "step {step}: the walk view must hold the mark at the plate's own \
+                 centre {centre:?} whatever the window says"
+            );
+        }
+    }
+
     /// A COARSE rung draws the OBSERVER and no marks — the coarsest rung's
     /// half of the same split
     /// [`off_band_b_the_overlay_paints_the_observer_and_no_marks`] asserts at
