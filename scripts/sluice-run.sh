@@ -752,7 +752,25 @@ trap 'code=$?; rm -f "$claim_path"; echo "sluice-run: finished $(date -Is) rc=$c
 # lane dispatch `checkout --force`s and `reset --hard`s. A dedicated tree
 # always builds main-plus-a-delta, so its warm target/ stays hot and the
 # measured 771 s cold build is paid once, ever.
-wt="${HV_SLUICE_WORKTREE:-$repo_root/../hornvale-sluice-wt}"
+# ANCHOR TO THE MAIN WORKTREE, NOT THE CALLER'S. `$repo_root` is wherever this
+# script was invoked from, so running it from a LINKED worktree put the chamber's
+# scratch worktree inside .claude/worktrees/ — untracked, un-ignored, and
+# destroyable by a `git clean -fdx` in the checkout it sits under. That is
+# exactly the invariant decision 0146 restored for the census after
+# `HV_CENSUS_WORKTREE=canonical` created one at ~/Projects/hornvale/canonical;
+# the fix went into census-run.sh alone and the same defect stayed here and in
+# heavy-run.sh. Three strays on disk prove it happened:
+# .claude/worktrees/hornvale-sluice-wt (4.5G),
+# .claude/worktrees/tooling/hornvale-sluice-wt, and a lane-era one beside them.
+# Since fix/worktree-pool-recycling the pool is recyclable again, which makes
+# this worse rather than cosmetic: `worktree-take.sh --list` now offers those
+# strays to campaigns as pool members.
+# `git worktree list --porcelain` lists the MAIN worktree first (git's own
+# ordering) — the same resolution census-run.sh and worktree-take.sh use.
+_main_root="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" worktree list --porcelain \
+    | awk '/^worktree /{print $2; exit}')"
+[ -n "$_main_root" ] || _main_root="$repo_root"
+wt="${HV_SLUICE_WORKTREE:-$_main_root/../hornvale-sluice-wt}"
 base_ref="${HV_SLUICE_BASE:-origin/main}"
 git -C "$repo_root" fetch --all --quiet
 base_sha="$(git -C "$repo_root" rev-parse "$base_ref")"

@@ -1029,3 +1029,40 @@ fn only_bare_map_enters_the_map() {
         );
     }
 }
+
+/// The Newel, Task 4: completion sees the map's names, not only the
+/// current turn's narration. This is the exact gap the task brief names —
+/// `examine Dvoashngashngo` resolved while `enter Dvoas[TAB]` completed
+/// nothing — reproduced end to end through the real driver, with no world
+/// change needed: `Dvoashngashngo` is a bugbear the walk-band chart marks
+/// from the flagship's own starting room (an `"agent"` mark, never gated
+/// by decision 0670 — see `hornvale_game_core::ChartMarks`'s own doc), but
+/// it is not part of the room's own `narration.nouns` catalog at all.
+#[test]
+fn a_chart_only_agent_name_completes_from_a_fresh_driver() {
+    let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("genesis");
+
+    // Sanity: the name really is chart-only at genesis, or this test would
+    // prove nothing about the widening — `CurrentTurnNouns` alone would
+    // already complete it.
+    let snap = hornvale_game_core::Snapshot::parse(&d.snapshot()).unwrap();
+    assert!(
+        !snap
+            .narration
+            .nouns
+            .iter()
+            .any(|n| n.noun == "Dvoashngashngo"),
+        "sanity: this name must not already be in the current turn's narration \
+         (seed 42's genesis roster moved)"
+    );
+
+    for c in "examine Dvoashngas".chars() {
+        d.apply(Action::Type(c));
+    }
+    d.apply(Action::Complete);
+    assert_eq!(
+        d.line_text(),
+        "examine Dvoashngashngo",
+        "a chart-only agent's name must complete once the chart scope is registered"
+    );
+}

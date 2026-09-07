@@ -185,6 +185,8 @@ mod range_readout;
 mod repose_exposure;
 #[path = "suite/repose_laws.rs"]
 mod repose_laws;
+#[path = "suite/reproductive.rs"]
+mod reproductive;
 #[path = "suite/soil_attribution_probe.rs"]
 mod soil_attribution_probe;
 #[path = "suite/solitary_tongue.rs"]

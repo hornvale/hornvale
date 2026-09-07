@@ -1,0 +1,53 @@
+{
+  "cleanup": {
+    "complete": true,
+    "error": null
+  },
+  "command": [
+    "cargo",
+    "build",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "tools/digest/Cargo.toml",
+    "-p",
+    "digest-thing"
+  ],
+  "cwd": "/Users/nathan/.config/superpowers/worktrees/hornvale/insulator",
+  "deadline_exceeded": false,
+  "deadline_s": 3600,
+  "elapsed_s": 0.7190970829688013,
+  "enforcement_method": "sandbox-exec",
+  "exit_code": 0,
+  "interrupted": false,
+  "launch_error": null,
+  "output_limit_exceeded": false,
+  "ownership": {
+    "checkout": "/Users/nathan/.config/superpowers/worktrees/hornvale/insulator",
+    "evidence_destination": "/Users/nathan/.config/superpowers/worktrees/hornvale/insulator/tools/digest/experiments/the-insulator/results/attempts/cold/digest-thing.capture.json",
+    "evidence_root": "/Users/nathan/.config/superpowers/worktrees/hornvale/insulator/tools/digest/experiments/the-insulator/results/attempts/cold",
+    "target": "/Users/nathan/.config/superpowers/worktrees/hornvale/insulator/tools/digest/target"
+  },
+  "retained_sample_directory": null,
+  "stderr": {
+    "base64": "ICAgQ29tcGlsaW5nIGRpZ2VzdC10aGluZyB2MC4xLjAgKC9Vc2Vycy9uYXRoYW4vLmNvbmZpZy9zdXBlcnBvd2Vycy93b3JrdHJlZXMvaG9ybnZhbGUvaW5zdWxhdG9yL3Rvb2xzL2RpZ2VzdC9wYWNrYWdlcy90aGluZykKICAgIEZpbmlzaGVkIGBkZXZgIHByb2ZpbGUgW3Vub3B0aW1pemVkICsgZGVidWdpbmZvXSB0YXJnZXQocykgaW4gMC42NHMK",
+    "bytes": 198,
+    "sha256": "1b26fe287851aa11fcde808437286f6a7687c693751f3f1a4c55f8decb7226d9"
+  },
+  "stdout": {
+    "base64": "",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "workload_command_template": [
+    "cargo",
+    "build",
+    "--locked",
+    "--offline",
+    "--manifest-path",
+    "tools/digest/Cargo.toml",
+    "-p",
+    "digest-thing"
+  ],
+  "workload_id": "digest-thing"
+}

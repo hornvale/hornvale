@@ -134,6 +134,21 @@ pub enum Spatial {
 /// actually puts it, per "read the producer, do not guess."
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChartCell {
+    /// The room's packed id (a `hornvale_kernel::FacetId`, opaque to this
+    /// crate), mirroring `SurroundsCell::room` (lexicon: `SurroundsCell` is
+    /// the wire's own frozen name for a FACET — an area, not a vertex) at
+    /// `windows/scene/src/surrounds.rs`. This crate carries no
+    /// `hornvale_kernel` dependency (module doc: "no hornvale dependency,
+    /// by design"), so it never unpacks this value itself —
+    /// [`crate::lexicon::ChartMarks`] hands it straight to its caller's own
+    /// discovery predicate, which does the unpacking with machinery only
+    /// the binary crate has (The Newel, Task 4). `#[serde(default)]` so a
+    /// producer that ever omits the field does not fail the parse; a
+    /// default of `0` unpacks to an error (`FacetId(0)` is not a legal
+    /// packed id), which reads as "gate everything on this room" rather
+    /// than panicking.
+    #[serde(default)]
+    pub room: u64,
     /// Lattice offset from the observer on axis 0; `null` on a seam cell.
     pub u: Option<i64>,
     /// Lattice offset on axis 1; `null` on a seam cell.

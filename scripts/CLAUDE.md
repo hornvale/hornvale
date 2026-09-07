@@ -419,6 +419,32 @@ confirmation-gated in the Makefile.
   mutation and makes the resulting absence read as a pass. Not part of any
   gate and not mandatory; whether an ad-hoc `sed` is ever acceptable for a
   mutation demo is an open call recorded in The Underworld's retrospective.
+- **`worktree-take.sh`** — claims a recycled pool member (root `CLAUDE.md`
+  carries the pool's rationale). Its recyclability predicate is *branch merged
+  into BASE, and tree clean* — with **two** machine-written files excluded from
+  "clean", on two different premises. `docs/timings/test-baseline-<host>.tsv`
+  is rewritten by the next green gate, so discarding it loses nothing.
+  `docs/timings.md` is append-only history, so discarding a row destroys a
+  measurement — it is excluded anyway, and the discard is printed to stderr
+  rather than silent, which is the whole difference between the two.
+  **Without the second exclusion the script was dead code**: `gate-run` appends
+  a row on every green gate including the last one a campaign runs after its
+  final commit, whose row nobody is left to commit, so a finished campaign's
+  worktree was dirty *by construction* and never recycled again. The
+  degradation is unusually quiet — "no recyclable member", a cold worktree, and
+  a success exit — so it shows up only as disk use nobody attributes to it.
+  Measured 2026-09-06: 33 live worktrees against a design that assumed ~3,
+  ~700 GB, 9 of the 11 stale merged members blocked by that one file.
+  `scripts/test-worktree-take.sh` pins all of it (in the `outboard` set), and
+  its fixture is the load-bearing part: it must **advance main's copy of both
+  files** after the pool member branches, because `git switch -c` only refuses
+  a local modification whose content differs at the target. A fixture where
+  main never moves takes a branch production never takes, and a mutation
+  deleting the discard outright survived it with every assertion green.
+  **Still open:** the just-taken race in `docs/retrospectives/the-hidage.md` —
+  a freshly-taken member sits at `origin/main` with a clean tree and is
+  indistinguishable from a finished one under this same predicate.
+
 - **`shapecheck.py`** — compares the key-path SHAPE of two JSON documents
   (dicts/lists/scalars, values ignored), so a drifted byte-golden's diff can
   be answered structurally rather than by eyeballing a large single-line

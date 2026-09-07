@@ -67,15 +67,22 @@ impl TerminalObserver {
     /// Put an ALREADY-sRGB colour through this terminal's own depth — the
     /// half of [`Self::render`] below the observer.
     ///
-    /// **Why this exists (The Wash, Task 6).** The plate's water classes
-    /// (`plate::OCEAN_COLOR`, `plate::SALT_BASIN_COLOR`) are invented
-    /// client-side palette claims, not spectra: there is no reflectance to
-    /// sense for the surface of an ocean, whose facet reflectance describes
-    /// the GROUND cover under it. Routing them through here rather than
-    /// emitting them raw keeps ONE rule — "the observer decides what colour
-    /// reaches this terminal" — instead of two, so a `ColorDepth::None`
-    /// terminal emits no colour on ANY terrain tile, which is what spec H5
-    /// actually claims.
+    /// **Its stated reason for existing is gone, and the method is not.**
+    /// The Wash (Task 6) split this out so the plate's two invented water
+    /// palettes (`plate::OCEAN_COLOR`, `plate::SALT_BASIN_COLOR`) — sRGB
+    /// claims, not spectra — could reach the terminal under the same rule
+    /// every sensed tile obeys. The Newel (B6) gave ocean and salt basin
+    /// real reflectance curves, deleted both constants, and routed both
+    /// classes through [`Self::observe`]; nothing in the client hands this
+    /// method an already-sRGB colour any more.
+    ///
+    /// What it is NOW is [`Self::render`]'s lower half, called from exactly
+    /// one place — `render` itself — and kept named for the reason it reads
+    /// better named: `render` is "observer, then terminal", and this is the
+    /// second clause. The rule it was built to preserve is unchanged and now
+    /// has no second entrance at all: the observer decides what colour
+    /// reaches this terminal, so a `ColorDepth::None` terminal emits no
+    /// colour on ANY terrain tile (spec H5).
     pub fn show(&self, rgb: [u8; 3]) -> Option<[u8; 3]> {
         match self.depth {
             ColorDepth::None => None,

@@ -21,5 +21,7 @@ mod life_history_golden;
 mod metabolic_pairs;
 #[path = "suite/potency_assay.rs"]
 mod potency_assay;
+#[path = "suite/reproduction.rs"]
+mod reproduction;
 #[path = "suite/social_form.rs"]
 mod social_form;
