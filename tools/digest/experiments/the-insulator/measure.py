@@ -496,7 +496,7 @@ def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
         raise ValueError("baseline host class is required")
     classification = "cold" if cold else "warm"
     workloads = load_workloads(WORKLOADS_PATH)["workloads"]
-    target = (root / "tools" / "digest" / "target").resolve()
+    target = root / "tools" / "digest" / "target"
     _prepare_baseline_target(root, target, cold)
     evidence = (output.parent / "attempts" / classification).resolve()
     graph = cargo_graph(root / "tools/digest/Cargo.toml", target)
@@ -571,7 +571,7 @@ def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
 
 def _prepare_baseline_target(root: Path, target: Path, cold: bool) -> None:
     """Establish exclusive ownership before changing the baseline target."""
-    expected = (Path(root) / "tools" / "digest" / "target").resolve()
+    expected = Path(root) / "tools" / "digest" / "target"
     if target != expected or target.is_symlink():
         raise ValueError("baseline target ownership cannot be established")
     if target.exists() and not target.is_dir():

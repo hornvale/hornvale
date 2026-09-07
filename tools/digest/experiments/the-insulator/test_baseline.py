@@ -292,6 +292,24 @@ class BaselineOrchestrationTests(unittest.TestCase):
             self._run_with_mocks(root, Path(directory) / "warm.json", False)
             self.assertEqual(marker.read_text(encoding="utf-8"), "warm")
 
+    def test_refuses_symlink_target_before_resolving_or_deleting_external_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "checkout"
+            root.mkdir()
+            external = Path(directory) / "external-target"
+            external.mkdir()
+            marker = external / "must-survive"
+            marker.write_text("keep", encoding="utf-8")
+            target = root / "tools" / "digest" / "target"
+            target.parent.mkdir(parents=True)
+            target.symlink_to(external, target_is_directory=True)
+
+            with self.assertRaisesRegex(ValueError, "target ownership"):
+                self._run_with_mocks(root, Path(directory) / "refused.json", True)
+
+            self.assertTrue(target.is_symlink())
+            self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
+
     def test_retains_incomplete_capture_without_summarizing_it(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "checkout"
