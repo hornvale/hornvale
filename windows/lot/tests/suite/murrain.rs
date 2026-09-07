@@ -105,6 +105,71 @@ fn real_seed_produces_named_outbreak_and_plague_endings() {
 }
 
 #[test]
+fn plague_rendering_cites_the_closing_event_and_paired_facts() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let life = (0..200_000)
+        .filter_map(|index| draw(&ctx, LotIndex(index), &Pick::default()).ok())
+        .find(|life| {
+            matches!(
+                (&life.ending, &life.cause, &life.cause_provenance),
+                (
+                    Ending::CommunityFate(CauseOfEnd::Plague),
+                    Some(DeathCause::Pathogen(_)),
+                    Some(CauseProvenance::Outbreak { .. })
+                )
+            )
+        })
+        .expect("seed 42 yields a named Plague death");
+    let story = tell(&world, &ctx, &life);
+    let cause = story.slot("cause").expect("cause slot exists");
+    let (event, pathogen) = match life.cause_provenance {
+        Some(CauseProvenance::Outbreak {
+            event, pathogen, ..
+        }) => (event, pathogen),
+        other => panic!("Plague death has unexpected provenance: {other:?}"),
+    };
+
+    assert_eq!(cause.value, SlotValue::Filled(pathogen.0.replace('-', " ")));
+    let fact_sources: Vec<_> = cause
+        .sources
+        .iter()
+        .filter_map(|source| match source {
+            Source::Fact {
+                entity, predicate, ..
+            } if *entity == event.get()
+                && (*predicate == hornvale_epidemiology::STRUCK_BY
+                    || *predicate == hornvale_epidemiology::OUTBREAK_DEATHS) =>
+            {
+                Some(predicate.clone())
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        fact_sources,
+        vec![
+            hornvale_epidemiology::STRUCK_BY,
+            hornvale_epidemiology::OUTBREAK_DEATHS
+        ]
+    );
+
+    let struck = world
+        .ledger
+        .facts_of(event, hornvale_epidemiology::STRUCK_BY)
+        .next()
+        .expect("closing event has struck-by fact");
+    let deaths = world
+        .ledger
+        .facts_of(event, hornvale_epidemiology::OUTBREAK_DEATHS)
+        .next()
+        .expect("closing event has outbreak-deaths fact");
+    assert_eq!(struck.subject, deaths.subject);
+    assert_eq!(struck.place, deaths.place);
+    assert_eq!(struck.day, deaths.day);
+}
+
+#[test]
 fn every_dead_lot_has_a_sourced_cause_slot() {
     let world = hornvale_worldgen::seed_42_world();
     let ctx = assemble(&world).unwrap();
