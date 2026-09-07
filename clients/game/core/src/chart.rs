@@ -1,5 +1,49 @@
 //! The walk-band chart (`scene/surrounds/v2`) drawn into the cell grid.
 //!
+//! ## What draws this, and what does not
+//!
+//! **This is the fallback plate**: the walk band's own picture, drawn by
+//! [`crate::spread::compose`] when a caller supplies no world plate. The
+//! shipped terminal client never takes that path — `bin`'s driver hands
+//! `compose` a rose-raster plate on the walk band and a plate is `Some`
+//! exactly when the band is `Walk` — but [`crate::render`] is a second
+//! public entry point that passes `world_plate: None` unconditionally, and
+//! rendering a `vessel/session/v2` document without a plate is a promise
+//! this crate makes. A walk document is entitled to it.
+//!
+//! **So do not re-derive "one call site, therefore dead" from that first
+//! sentence.** The Sett tried to delete [`draw`] on exactly that reading,
+//! twice confirmed by tracing the driver, and the reading is wrong: six of
+//! this crate's tests redden when the `Spatial::Walk` arm draws nothing,
+//! including acceptance test 3 (`provenance.rs`) and two whose subject is
+//! the world-plate substitution and which need the band's own plate to
+//! exist in order to discriminate at all. The call site has one caller; the
+//! FUNCTION that call site sits in has several. Those are different
+//! questions and only the second one settles reachability (ledger S19).
+//!
+//! ## The projection carries a measured defect, and the repair is a followup
+//!
+//! [`project`] loses boxes. The Newel's R8 measured **53 of 81 facets drawn
+//! at the seed-42 flagship, with three of the eight immediate neighbours
+//! missing**: `r = distance_rad / farthest * rings` rounds rings 1 and 2
+//! onto the same row in the cardinal directions, and the collision winner is
+//! then decided by [`box_rank`], so a farther facet routinely displaces a
+//! nearer one.
+//!
+//! The repair is known and cheap in code — `ChartCell` already carries `u`
+//! and `v`, the lattice offsets from the observer, plus a `seam` flag where
+//! no honest local coordinate exists, so this could place straight off the
+//! wire with no trigonometry and no collisions. **It is deferred because it
+//! cannot be confined to this client.**
+//! `tests/chart.rs::the_shape_matches_the_sims_own_ascii_render` pins this
+//! module against `windows/scene/src/surrounds_ascii.rs`, which carries the
+//! identical formula and is the sim's own `map` output, committed at
+//! `book/src/gallery/generated/surrounds-seed-42/`. So the choices are fix
+//! both (a sim-window change that moves committed gallery artifacts), fix
+//! neither, or fix one and let two pictures of one neighbourhood diverge —
+//! which is decision 0141's observable contradiction and is strictly worse
+//! than a shared defect. Ledger decision #6 rules fix-neither for now.
+//!
 //! ## The north-up projection
 //!
 //! Hornvale already has a canonical ASCII renderer for this exact schema:
@@ -239,11 +283,18 @@ fn box_rank(cell: &ChartCell, index: usize) -> BoxRank {
 
 /// Every occupied box in `chart`, keyed by its `(row, col)` offset from the
 /// observer's own box (before `draw`'s `origin`/centre translation is
-/// applied) — the one place [`project`] and [`box_rank`] run. Shared by
-/// [`draw`] (which paints the winner of each box) and [`cell_at`] (which
-/// looks one up for the cursor), so the two can never disagree about which
-/// cell a box belongs to — see this module's doc on why that agreement is
-/// exactly the thing this file has gotten wrong before.
+/// applied) — the one place [`project`] and [`box_rank`] run.
+///
+/// **It had a second caller until The Sett.** `cell_at` looked a box up for
+/// the map cursor, and this function existed so that the picture and the
+/// cursor could never disagree about which cell a box belongs to — the
+/// agreement this module's doc records getting wrong before. The Quadrat
+/// retargeted that resolver to the raster's own placement
+/// (`bin`'s `plate::perceived_at`), leaving `cell_at` with no caller
+/// anywhere in the repo, and The Sett deleted it. [`draw`] is the sole
+/// caller now; the sharing rationale is kept because it is the reason the
+/// projection lives here rather than inline, and a second consumer would
+/// have to come back through this function.
 fn boxes_of(chart: &Chart) -> BTreeMap<(i64, i64), (BoxRank, &ChartCell)> {
     let farthest = chart
         .cells
@@ -264,46 +315,6 @@ fn boxes_of(chart: &Chart) -> BTreeMap<(i64, i64), (BoxRank, &ChartCell)> {
         }
     }
     boxes
-}
-
-/// The chart cell whose box lands on screen position `(x, y)`, for a chart
-/// drawn at `origin` into a `width`-by-`height` plate — exactly the box
-/// [`draw`] would have painted there, via the SAME [`boxes_of`] rather than
-/// a second copy of the projection (see this module's doc: two copies of
-/// this geometry is how a chart and a cursor come to disagree about which
-/// cell is where, and that has already bitten this file once).
-///
-/// Returns the winning [`ChartCell`] together with its index into
-/// `chart.cells` — the caller (`bin`, which cannot depend on
-/// `hornvale-scene` any more than this crate can) needs the index to relate
-/// the wire cell back to the SAME position in a freshly-drawn
-/// `hornvale_scene::SurroundsScene::cells`: `chart.cells` is a
-/// field-for-field, order-preserving wire mirror of that real list (nothing
-/// in the snapshot pipeline reorders or filters it — `Session::snapshot`
-/// embeds the real `SurroundsScene` directly and this crate's `Chart`
-/// independently mirrors its wire shape), so `chart.cells[i]` and
-/// `scene.cells[i]` name the identical cell. Bearing/distance alone would
-/// need a float-equality match against a value that has round-tripped
-/// through quantized JSON; the index does not.
-///
-/// `None` when no cell's box lands on `(x, y)` — a real position (inside
-/// the plate) that simply has nothing projected onto it, distinct from a
-/// resolver-absent band.
-pub fn cell_at(
-    chart: &Chart,
-    origin: (u16, u16),
-    width: u16,
-    height: u16,
-    x: u16,
-    y: u16,
-) -> Option<(usize, &ChartCell)> {
-    let centre_x = origin.0 as i64 + width as i64 / 2;
-    let centre_y = origin.1 as i64 + height as i64 / 2;
-    let row = y as i64 - centre_y;
-    let col = x as i64 - centre_x;
-    boxes_of(chart)
-        .get(&(row, col))
-        .map(|(rank, cell)| (rank.3, *cell))
 }
 
 /// Draw `chart` into `into`, anchored so the observer lands at `origin`
@@ -624,62 +635,6 @@ mod tests {
             Weight::Normal,
             "the unknown arm falls back to Normal and the cell is still drawn"
         );
-    }
-
-    /// `cell_at` finds exactly the box `draw` paints there — checked by
-    /// screen position, on the identical chart
-    /// `a_seam_cell_is_drawn_under_north_up` draws: the seam cell (index 1,
-    /// bearing 90, distance 1.0) lands two columns right of centre
-    /// `(4, 2)` -> `(6, 2)`; the observer's own box (index 0) is centre
-    /// itself. This is the guard the cursor's resolution now depends on —
-    /// `cell_at` and `draw` sharing `boxes_of` is what keeps them from
-    /// disagreeing about which cell a box belongs to.
-    #[test]
-    fn cell_at_finds_the_same_box_draw_paints() {
-        let mut seam = chart_cell(90.0, 1.0, "sensed");
-        seam.seam = true;
-        seam.u = None;
-        seam.v = None;
-        seam.w = None;
-        seam.up = None;
-        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), seam]);
-
-        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 4, 2).expect("the observer's own box");
-        assert_eq!(idx, 0);
-        assert_eq!(cell.state, "here");
-
-        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 6, 2).expect("the seam cell's box");
-        assert_eq!(idx, 1);
-        assert_eq!(cell.state, "sensed");
-    }
-
-    /// A screen position no cell projects onto resolves to `None`, not a
-    /// panic and not the nearest cell — the caller (`Driver::resolve`)
-    /// depends on this to report an honest absence rather than a wrong
-    /// name.
-    #[test]
-    fn cell_at_of_an_unoccupied_box_is_none() {
-        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here")]);
-        assert!(cell_at(&chart, (0, 0), 9, 5, 0, 0).is_none());
-    }
-
-    /// `cell_at` obeys the same collision rule `draw` does: the more
-    /// salient of two cells sharing a box is the one `cell_at` reports —
-    /// mirroring `the_more_salient_of_two_colliding_cells_keeps_the_box`,
-    /// from the query side instead of the paint side.
-    #[test]
-    fn cell_at_obeys_box_rank_on_a_collision() {
-        let mut low = chart_cell(90.0, 1.0, "sensed");
-        low.marks = vec![mark(20)];
-        let mut high = chart_cell(90.0, 1.0, "remembered");
-        high.marks = vec![mark(5)];
-        let chart = minimal_chart(vec![chart_cell(0.0, 0.0, "here"), low, high]);
-        let (idx, cell) = cell_at(&chart, (0, 0), 9, 5, 6, 2).expect("the collided box");
-        assert_eq!(
-            idx, 2,
-            "the more salient cell (index 2) must win, not document order"
-        );
-        assert_eq!(cell.state, "remembered");
     }
 
     /// A cell that claims a colour draws [`Ink::Rgb`] — the chart pane

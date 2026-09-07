@@ -173,9 +173,16 @@ something: the direct problem asks for spherical trigonometry the consumer
 writes itself; `room` asks for a dependency on the simulation. A consumer with
 neither can still render this document faithfully in its **own** frame.
 Hornvale's own client takes the second route, because it already holds the mesh:
-it draws the overlay in the crate that can reach it, projecting through the same
-projection the raster uses
+it draws the overlay in the crate that can reach it, placing through the same
+placement the raster underneath it was drawn with
 ([decision 0290](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0290-the-perception-layer-is-drawn-where-the-mesh-is-reachable.md)).
+That placement is a projection only on the map band. At the walk band the
+raster is the compass rose iterated rather than a projection of it
+([decision 0906](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0906-the-walk-band-draws-the-compass-rose-not-a-projection-of-it.md)),
+so the overlay places by the raster's own inverse map — facet to box, no
+trigonometry. The invariant is the shared placement, not the projection: an
+overlay projecting through Mercator onto a graph-addressed plate lands in the
+wrong boxes, which is exactly what it did until that campaign.
 Its chart crate takes neither — that crate's parsed mirror of this document
 omits the `observer` block, so the direct problem is not available to it as
 written, and it has no mesh.

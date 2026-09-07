@@ -2593,6 +2593,57 @@ by never having been told to look — and gains a worked example of the
 second: the check existed, the surface was live, and nobody had pointed the
 one at the other.
 
+**Re-scored by [The Sett](./chronicle/the-sett.md) (2026-09-07): a seventh
+entry, and the first where the document, the picture and the movement were
+each correct and the disagreement was between two of them.** Every prior
+entry on this ledger is some form of *picture against document* — the render
+misstates a packet, or offers a noun the substrate declines, or draws a
+geometry the wire did not describe. The Sett's is *picture against movement
+rule*, and neither half was wrong. The walk band's plate was a clamped
+Mercator raster: each box a rectangle of latitude and longitude, filled with
+the facet containing its centre. Movement was an edge of the facet adjacency
+graph, a compass word naming the neighbour of least angular error. Both are
+correct, and they tessellate the sphere by different things — coordinates in
+one case, adjacency in the other — so they coincide only where the coordinate
+grid happens to run along the graph's own edges. Measured over 3,456 facets
+at the walk rung, `w` landed in the box drawn to the left **83.0%** of the
+time on the equatorial faces and **17.7%** on the polar caps, and **1.13%**
+of moves landed on the box the observer already occupied. The report was a
+player pressing an arrow key: *"I press the left arrow, sometimes I move
+southwest."*
+
+**What this entry adds to the ledger is a class the row's own converted
+instrument is structurally blind to.** The Quire turned "does the picture
+state the document's geometry" into a byte-comparison against a second
+renderer of the same document, and The Quadrat extended it to two pictures
+agreeing *by construction* rather than by comparison. Neither could have seen
+this: there is no document in the loop, and both renderers of any document
+would have agreed with each other while disagreeing with the keyboard. Any
+instrument for it has to hold the picture against the **input**, which is a
+third thing the row had not previously required. And once again it was found
+by a human in ordinary play, not by a check — which is now the rule this
+ledger states rather than the anecdote it once was.
+
+The repair is the same move The Quadrat made, aimed one layer further out:
+**agreement by construction beats agreement by comparison.** The walk band's
+picture is now the movement rule iterated outward from the observer — box
+`(j, k)` is the facet reached by `k` steps along the observer's own compass
+chain and `j` along that facet's — so the box to the left *is* what the left
+key does, by construction, and there is nothing left to compare. The map band
+keeps Mercator at every rung, because a map is a coordinate instrument and a
+map that cannot draw the pole is a map telling the truth about a projection.
+
+Two smaller corrections to the ledger's standing picture come with it. The
+old path did not merely misplace near the poles, it **refused**: Mercator
+returns nothing past 85 degrees and the walk view's centring propagated the
+refusal, so an observer within five degrees of a pole could not have the view
+centred on them at all. The replacement's own fold covers 0.176 degrees, some
+eight hundred times less area, and degrades — repeating ground — rather than
+declining to draw. And the campaign's cost prediction was **falsified at 25x**,
+which turned out to be the useful outcome: the frozen response to that band
+was *find what is being paid per frame before optimising anything*, and what
+was found was one line, unrelated to the change under test, that the path being
+replaced had been paying all along behind a cache.
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
