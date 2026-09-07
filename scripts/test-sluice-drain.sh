@@ -168,5 +168,53 @@ else
     bad "run_one's set-state argv was '$(tr '\n' ' ' < "$setstate_log")' — a finished job must not stay 'running'"
 fi
 
+
+echo "== announce: a terminal state reaches the board, and can never fail the drain"
+# The queue read the board on the way IN (sluice-request.sh's hold-off
+# advisory) and wrote nothing on the way OUT, so a campaign's only routes to
+# its own outcome were polling sluice-status or being told by the operator.
+# These pin the two properties that make announcing safe to add.
+# The drain is already sourced at the top of this file (line 19); sourcing it
+# a second time here made shellcheck FOLLOW it under the full-glob invocation
+# and then report the stub `dispatch_for` below as unreachable. One source is
+# enough and the warning was real about my redundancy, not about the stub.
+if type announce >/dev/null 2>&1; then
+    ok "announce is exposed at module scope (the HV_DRAIN_LIB seam can reach it)"
+else
+    bad "announce is not defined after sourcing with HV_DRAIN_LIB=1 — it is nested inside a function"
+fi
+# shellcheck disable=SC2034  # read by announce(), sourced from sluice-drain.sh
+BR="test/announce"
+# ASSERT THE OUTPUT, NOT THE EXIT CODE. announce returns 0 unconditionally by
+# design — the whole point is that it cannot fail a landed merge — so `if
+# announce ...` is true whatever happens inside and proves nothing. An earlier
+# draft of this test asserted exactly that and passed against a mutant with the
+# `-x` guard removed. The observable that actually differs is stderr: a missing
+# binary is SILENT, a present-but-failing one WARNS.
+_saved_root="$repo_root"; repo_root="$tmpl/no-such-repo"
+_out="$(announce "TEST" "no board binary here" 2>&1)"; _rc=$?
+if [ "$_rc" -eq 0 ] && [ -z "$_out" ]; then
+    ok "a checkout with no board binary is silent and returns 0"
+else
+    bad "missing-binary path: rc=$_rc output='$_out' (expected rc=0 and silence)"
+fi
+# A binary that EXISTS but cannot post must warn, and still return 0.
+mkdir -p "$tmpl/fakerepo/tools/board/target/release"
+printf '#!/bin/sh\nexit 3\n' > "$tmpl/fakerepo/tools/board/target/release/board"
+chmod +x "$tmpl/fakerepo/tools/board/target/release/board"
+repo_root="$tmpl/fakerepo"
+_out="$(announce "TEST" "board refuses" 2>&1)"; _rc=$?
+if [ "$_rc" -eq 0 ] && printf '%s' "$_out" | grep -q "could not announce"; then
+    ok "a failing board warns on stderr and still returns 0 (the row stays authoritative)"
+else
+    bad "failing-post path: rc=$_rc output='$_out' (expected rc=0 and a warning)"
+fi
+repo_root="$_saved_root"
+if HV_SLUICE_SKIP_BOARD=1 announce "TEST" "suppressed"; then
+    ok "HV_SLUICE_SKIP_BOARD=1 suppresses the post and still returns 0"
+else
+    bad "the skip path returned non-zero"
+fi
+
 printf '\ntest-sluice-drain: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
