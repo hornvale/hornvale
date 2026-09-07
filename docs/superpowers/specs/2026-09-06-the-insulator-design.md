@@ -2,9 +2,11 @@
 
 ## Status
 
-Draft approved in conversation on 2026-09-06. This specification defines a
-bounded experiment. It does not authorize a production dependency split or a
-change to the root correctness gates by itself.
+Closed on 2026-09-07 as a qualified rejection. The Mac comparison recorded a
+complete output mismatch (31 bytes versus 7,493), so the candidate was not
+admitted. This specification defines the completed bounded experiment; it does
+not authorize a production dependency split or a change to the root
+correctness gates.
 
 ## Question
 

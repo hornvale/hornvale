@@ -3360,7 +3360,6 @@ hornvale-worldgen::hornvale_worldgen$alchemy::tests::substrate_of_soil_matches_t
 hornvale-worldgen::hornvale_worldgen$alchemy::tests::the_carry_is_pure
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_chute_is_free_down_and_needs_flight_up_and_sits_on_a_stair
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_lava_tube_never_carries_a_sump_and_some_descent_carries_a_chute
-hornvale-worldgen::hornvale_worldgen$brattice::tests::a_made_rung_under_a_wild_character_hangs_a_door_there_and_nowhere_else
 hornvale-worldgen::hornvale_worldgen$brattice::tests::a_plan_with_no_gates_has_unit_detour_and_no_return_difference
 hornvale-worldgen::hornvale_worldgen$brattice::tests::an_all_found_wild_descent_hangs_no_door
 hornvale-worldgen::hornvale_worldgen$brattice::tests::every_key_row_places_a_key_and_no_natural_row_does
@@ -3650,7 +3649,6 @@ hornvale-worldgen::hornvale_worldgen$tests::name_gloss_predicate_is_registered_f
 hornvale-worldgen::hornvale_worldgen$tests::no_zero_population_settlements
 hornvale-worldgen::hornvale_worldgen$tests::occlusion_composes_with_species_perception
 hornvale-worldgen::hornvale_worldgen$tests::pacing_elves_harder_than_dwarves_changes_no_drift_regime
-hornvale-worldgen::hornvale_worldgen$tests::placed_peoples_lists_flagship_holders_in_registry_order
 hornvale-worldgen::hornvale_worldgen$tests::referent_ord_discriminates_on_concept
 hornvale-worldgen::hornvale_worldgen$tests::register_all_via_roster_registers_name_gloss
 hornvale-worldgen::hornvale_worldgen$tests::settlement_lines_describe_the_people
@@ -3852,7 +3850,6 @@ hornvale-worldgen::suite$warp_signs::steepness_words_are_distinct_and_lowercase
 hornvale-worldgen::suite$warp_signs::wetness_sign_cuts_at_the_micro_word_threshold
 hornvale-worldgen::suite$weft_ledger_guard::the_seed_42_byte_golden_fact_count_is_unmoved
 hornvale-worldgen::suite$weft_prevalence::the_response_is_a_step_for_sign_kinds_and_identity_for_controls
-hornvale-worldgen::suite$weft_window::window_survives_chaos_eviction
 hornvale::hornvale$audio::tests::audio_filenames_are_eight_lowercase_hex_digits_dot_mp3
 hornvale::hornvale$audio::tests::crc32_matches_the_ieee_known_answer
 hornvale::hornvale$concepts::tests::manifest_render_derives_orphan_acts_from_the_action_roster

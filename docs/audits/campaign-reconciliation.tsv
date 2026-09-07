@@ -1358,8 +1358,6 @@ spec-2026-09-06-the-staple-d2-design	shipped	none		implementation and paired pro
 plan-2026-09-06-the-staple-d2	shipped	none		Stage 5 close package prepared; census agrees with ref; final sluice gate pending		docs/superpowers/plans/2026-09-06-the-staple-d2.md			
 chronicle-the-staple-d2	shipped	none		close chronicle; census agrees with ref				book/src/chronicle/the-staple-d2.md	
 retrospective-the-staple-d2	shipped	none		close retrospective; census agrees with ref					docs/retrospectives/the-staple-d2.md
-spec-2026-09-06-the-insulator-design	active	none		approved design; baseline and build-island experiment not yet implemented	docs/superpowers/specs/2026-09-06-the-insulator-design.md				
-plan-2026-09-06-the-insulator	active	none		implementation plan approved; baseline measurement is next		docs/superpowers/plans/2026-09-06-the-insulator.md			
 plan-2026-09-06-the-hidage	shipped	none		status header records closure		docs/superpowers/plans/2026-09-06-the-hidage.md			
 chronicle-the-hidage	shipped	none		published chronicle				book/src/chronicle/the-hidage.md	
 retro-the-hidage	shipped	none		committed retrospective					docs/retrospectives/the-hidage.md
@@ -1373,3 +1371,4 @@ the-newel	active	none		B1/B2/B4/B6 shipped in six tasks; B3 and B5 split out at 
 the-sett	active	none		spun out of the-newel at G3; design written, not yet planned	docs/superpowers/specs/2026-09-06-the-sett-design.md				
 the-stipple	active	none		spun out of the-newel at G3; design written, not yet planned	docs/superpowers/specs/2026-09-06-the-stipple-design.md				
 the-grammar	active	none		BIO-3 substrate and SOC-2 successor contract complete; stage gate green; close artifacts committed; merge pending	docs/superpowers/specs/2026-09-06-the-grammar-design.md	docs/superpowers/plans/2026-09-06-the-grammar.md		book/src/chronicle/the-grammar.md	docs/retrospectives/the-grammar.md
+the-insulator	shipped	none		closed 2026-09-07; qualified rejection with committed measurement cell, baseline, candidate manifest, comparison, chronicle, and retrospective; Linux explicitly unrun after decisive Mac mismatch	docs/superpowers/specs/2026-09-06-the-insulator-design.md			book/src/chronicle/the-insulator.md	docs/retrospectives/the-insulator.md
