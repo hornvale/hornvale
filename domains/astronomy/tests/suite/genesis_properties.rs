@@ -9,6 +9,90 @@ use hornvale_astronomy::{
 use hornvale_kernel::Seed;
 
 #[test]
+fn wanderer_count_pin_preserves_phases_and_every_other_stream() {
+    let pins = SkyPins {
+        topology: Some(StellarTopology::Single),
+        wanderers: Some(4),
+        ..SkyPins::default()
+    };
+    let full = generate(Seed(42), &pins).unwrap().value;
+    let short = generate(
+        Seed(42),
+        &SkyPins {
+            wanderers: Some(3),
+            ..pins
+        },
+    )
+    .unwrap()
+    .value;
+    assert_eq!(full.star, short.star);
+    assert_eq!(full.stellar, short.stellar);
+    assert_eq!(full.anchor, short.anchor);
+    assert_eq!(full.moons, short.moons);
+    assert_eq!(full.neighbors, short.neighbors);
+    assert_eq!(full.forcing, short.forcing);
+    for w in &short.wanderers {
+        assert!((0.0..1.0).contains(&w.phase_offset));
+        assert!(
+            full.wanderers.contains(w),
+            "count pin moved an existing body's phase or old fields"
+        );
+    }
+    // The old parameter stream is still consumed in region/orbit/class/albedo order.
+    // Changing the phase label cannot displace a single one of those draws.
+    let s = Seed(42).derive(hornvale_astronomy::streams::ROOT);
+    let mut old = s.derive(hornvale_astronomy::streams::WANDERERS).stream();
+    let mut phases = s
+        .derive(hornvale_astronomy::streams::WANDERER_PHASES)
+        .stream();
+    for _ in 0..4 {
+        let inner = old.range_u32(1, 100) <= 40;
+        let f = old.next_f64();
+        let orbit = full.anchor.orbit.get()
+            * if inner {
+                0.25 + 0.5 * f
+            } else {
+                hornvale_kernel::math::exp(f * hornvale_kernel::math::ln(20.0 / 1.8)) * 1.8
+            };
+        let class_roll = old.range_u32(1, 100);
+        let albedo = 0.1 + 0.6 * old.next_f64();
+        let w = full
+            .wanderers
+            .iter()
+            .find(|w| (w.orbit.get() - orbit).abs() < 1e-12)
+            .unwrap();
+        assert_eq!(w.albedo, albedo);
+        assert_eq!(
+            w.class,
+            if inner || class_roll > 60 {
+                hornvale_astronomy::WandererClass::Rock
+            } else {
+                hornvale_astronomy::WandererClass::Giant
+            }
+        );
+        assert_eq!(w.phase_offset, phases.next_f64());
+    }
+}
+
+#[test]
+fn close_binary_wanderers_obey_the_same_kepler_mass_as_the_anchor() {
+    let s = generate(
+        Seed(42),
+        &SkyPins {
+            topology: Some(StellarTopology::CloseBinary),
+            wanderers: Some(4),
+            ..SkyPins::default()
+        },
+    )
+    .unwrap()
+    .value;
+    for w in &s.wanderers {
+        let expected = 365.25 * (w.orbit.get().powi(3) / stellar_gravity_mass(&s).get()).sqrt();
+        assert!((w.period.get() - expected).abs() < 1e-9);
+    }
+}
+
+#[test]
 fn seed_42_defaults_to_the_single_star_path() {
     let system = generate(Seed(42), &SkyPins::default()).unwrap().value;
     assert_eq!(system.stellar.topology, StellarTopology::Single);

@@ -7,7 +7,7 @@ use crate::pins::{GenesisError, SkyPins};
 use crate::star::{Star, generate_star};
 use crate::stellar::{StellarConfiguration, generate_stellar};
 use crate::streams;
-use crate::wanderers::{Wanderer, generate_wanderers};
+use crate::wanderers::{Wanderer, generate_wanderers_with_mass};
 use hornvale_kernel::Seed;
 
 /// A complete generated star system.
@@ -46,7 +46,8 @@ pub fn generate(
     let (moons, notes) = generate_moons(astronomy_seed, &star, &anchor, pins)?;
     let neighbors = generate_neighbors(astronomy_seed, pins);
     let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, &moons, pins);
-    let wanderers = generate_wanderers(astronomy_seed, &star, &anchor, pins);
+    let wanderers =
+        generate_wanderers_with_mass(astronomy_seed, stellar.gravity_mass(&star), &anchor, pins);
     Ok(GenesisOutcome {
         value: StarSystem {
             star,

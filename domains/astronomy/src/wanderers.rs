@@ -5,12 +5,12 @@ use crate::anchor::Anchor;
 use crate::pins::SkyPins;
 use crate::star::Star;
 use crate::streams;
-use crate::units::{Au, StdDays};
+use crate::units::{Au, SolarMasses, StdDays};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
 /// A wandering sibling planet.
-/// type-audit: bare-ok(ratio: albedo), bare-ok(ratio: apparent_brightness), pending(wave-1: max_elongation_deg)
+/// type-audit: bare-ok(ratio: albedo), bare-ok(ratio: apparent_brightness), bare-ok(ratio: phase_offset), pending(wave-1: max_elongation_deg)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Wanderer {
     /// Orbital semi-major axis in AU (drawn, region-dependent).
@@ -28,6 +28,8 @@ pub struct Wanderer {
     pub synodic_period: StdDays,
     /// Apparent brightness relative to the anchor at closest approach, arbitrary units.
     pub apparent_brightness: f64,
+    /// Circular orbital phase at absolute day zero, in turns in `[0, 1)`.
+    pub phase_offset: f64,
 }
 
 /// Planetary classification.
@@ -50,6 +52,15 @@ pub fn generate_wanderers(
     anchor: &Anchor,
     pins: &SkyPins,
 ) -> Vec<Wanderer> {
+    generate_wanderers_with_mass(astronomy_seed, star.mass, anchor, pins)
+}
+
+pub(crate) fn generate_wanderers_with_mass(
+    astronomy_seed: Seed,
+    gravity_mass: SolarMasses,
+    anchor: &Anchor,
+    pins: &SkyPins,
+) -> Vec<Wanderer> {
     let count_roll = astronomy_seed
         .derive(streams::WANDERER_COUNT)
         .stream()
@@ -65,6 +76,7 @@ pub fn generate_wanderers(
 
     let mut wanderers: Vec<Wanderer> = Vec::new();
     let mut stream = astronomy_seed.derive(streams::WANDERERS).stream();
+    let mut phases = astronomy_seed.derive(streams::WANDERER_PHASES).stream();
 
     for _ in 0..count {
         let region_roll = stream.range_u32(1, 100);
@@ -96,12 +108,12 @@ pub fn generate_wanderers(
         let albedo = 0.1 + 0.6 * stream.next_f64();
 
         // Period: Kepler III form (same as anchor)
-        let period_days = 365.25 * (orbit_au.powi(3) / star.mass.0).sqrt();
+        let period_days = 365.25 * (orbit_au.powi(3) / gravity_mass.get()).sqrt();
 
         // Synodic period: |1/(1/P_w - 1/P_anchor)|
         let anchor_period = anchor.year.0;
         let synodic_inv = 1.0 / period_days - 1.0 / anchor_period;
-        let synodic_days = if synodic_inv.abs() > 1e-12 {
+        let synodic_days = if synodic_inv != 0.0 && synodic_inv.is_finite() {
             (1.0 / synodic_inv).abs()
         } else {
             f64::INFINITY
@@ -136,6 +148,7 @@ pub fn generate_wanderers(
             max_elongation_deg,
             synodic_period: StdDays(synodic_days),
             apparent_brightness,
+            phase_offset: phases.next_f64(),
         });
     }
 

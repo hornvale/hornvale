@@ -31,6 +31,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/greenhouse` | atmospheric greenhouse residual draw |
 | `astronomy/stellar-topology` | stellar-root topology draw |
 | `astronomy/binary-parameters` | binary companion and orbit parameter draws |
+| `astronomy/wanderer-phases` | per-wanderer circular orbital phases at genesis |
 
 ### hornvale-chronicle
 

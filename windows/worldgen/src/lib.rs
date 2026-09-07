@@ -9720,25 +9720,50 @@ pub fn night_sky_lines(
             .collect()
     };
 
+    let wanderer_marks = sky.wanderer_almanac(
+        t,
+        hornvale_astronomy::StdInstant::new(2.0 * calendar.year_length().get()).unwrap(),
+    );
     let wanderers = system
         .wanderers
         .iter()
-        .map(|w| {
+        .enumerate()
+        .map(|(index, w)| {
             let class_word = match w.class {
                 hornvale_astronomy::WandererClass::Rock => "rock",
                 hornvale_astronomy::WandererClass::Giant => "giant",
             };
-            let morning_evening = if w.max_elongation_deg.is_some() {
-                " — a morning and evening star"
-            } else {
-                ""
-            };
-            format!(
-                "A {} wanderer rounds the sun every {:.0} days{}.",
+            let morning_evening =
+                if w.max_elongation_deg.is_some() && calendar.day_length().is_some() {
+                    " — a morning and evening star"
+                } else {
+                    ""
+                };
+            let center =
+                if system.stellar.topology == hornvale_astronomy::StellarTopology::CloseBinary {
+                    "stellar barycenter"
+                } else {
+                    "sun"
+                };
+            let mut line = format!(
+                "A {} wanderer rounds the {} every {:.0} days{}.",
                 class_word,
+                center,
                 w.period.get(),
                 morning_evening
-            )
+            );
+            for mark in wanderer_marks
+                .iter()
+                .filter(|m| m.event.wanderer == index)
+                .take(3)
+            {
+                line.push(' ');
+                line.push_str(&mark.description);
+            }
+            if hornvale_astronomy::wanderer_recurrence(system, index).is_none() {
+                line.push_str(" Its alignment has no finite recurrence.");
+            }
+            line
         })
         .collect();
 
@@ -13094,6 +13119,10 @@ mod tests {
         for line in &lines.wanderers {
             assert!(line.contains("wanderer rounds the sun every"));
             assert!(line.contains("days"));
+            assert!(
+                line.contains("absolute day"),
+                "the almanac must consume dated events: {line}"
+            );
         }
 
         let ctx = almanac_context(&world).unwrap();

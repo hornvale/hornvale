@@ -66,5 +66,7 @@ hornvale_kernel::stream_labels! {
         STELLAR_TOPOLOGY = "stellar-topology" => "stellar-root topology draw";
         /// Binary companion mass, stability boundary, and genesis phase draws.
         BINARY_PARAMETERS = "binary-parameters" => "binary companion and orbit parameter draws";
+        /// Per-wanderer genesis phases, isolated from orbit/class/albedo draws.
+        WANDERER_PHASES = "wanderer-phases" => "per-wanderer circular orbital phases at genesis";
     }
 }
