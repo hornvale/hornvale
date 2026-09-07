@@ -986,9 +986,22 @@ def validate_attempt(record: dict) -> None:
             raise ValueError("nonzero command requires retained failure reason")
 
 
+_CANDIDATE_GENERATED_DIRS = frozenset({".git", "target", "build", "dist", "out"})
+
+
+def _candidate_source_files(candidate: Path) -> list[Path]:
+    """Return authored candidate files, excluding generated output trees."""
+    files = []
+    for directory, dirnames, filenames in os.walk(candidate):
+        dirnames[:] = sorted(name for name in dirnames
+                             if name not in _CANDIDATE_GENERATED_DIRS)
+        files.extend(Path(directory) / name for name in filenames)
+    return sorted(files)
+
+
 def _candidate_source_hash(candidate: Path) -> str:
     digest = hashlib.sha256()
-    for path in sorted(p for p in candidate.rglob("*") if p.is_file() and ".git" not in p.parts):
+    for path in _candidate_source_files(candidate):
         digest.update(str(path.relative_to(candidate)).encode())
         digest.update(b"\0")
         digest.update(path.read_bytes())
@@ -1014,8 +1027,8 @@ def candidate_manifest(baseline: dict, candidate: Path) -> dict:
     dependencies = cargo.get("dependencies", {})
     if not isinstance(dependencies, dict):
         raise ValueError("candidate dependencies must be a table")
-    source_files = sorted(str(path.relative_to(candidate)) for path in candidate.rglob("*")
-                          if path.is_file() and ".git" not in path.parts)
+    source_files = [str(path.relative_to(candidate))
+                    for path in _candidate_source_files(candidate)]
     authority_tokens = ("hornvale_lab", "require_canonical_host_for", "census_guard", "publish.rs")
     authority_files = []
     for relative in source_files:

@@ -487,6 +487,23 @@ class CandidateTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "production authority"):
                 check_boundary({"packages": []}, declared_boundary(manifest))
 
+    def test_candidate_provenance_excludes_generated_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            candidate = Path(directory) / "candidate"
+            self._candidate(candidate)
+            before = candidate_manifest(self._baseline(), candidate)
+
+            generated = candidate / "target"
+            generated.mkdir()
+            (generated / ".rustc_info.json").write_text("generated\n", encoding="utf-8")
+            (generated / "fake-binary").write_bytes(b"generated binary")
+            after = candidate_manifest(self._baseline(), candidate)
+
+            self.assertEqual(after["source_tree"], before["source_tree"])
+            self.assertEqual(after["source_files"], before["source_files"])
+            self.assertTrue(all(not path.startswith("target/")
+                                for path in after["source_files"]))
+
     def test_reports_output_hash_mismatch(self):
         authoritative = {"digest-census-publication": [{"path": "out.bin", "bytes": 3, "sha256": "a" * 64}]}
         candidate = {"digest-census-publication": [{"path": "out.bin", "bytes": 3, "sha256": "b" * 64}]}
