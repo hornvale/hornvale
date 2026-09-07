@@ -91,6 +91,13 @@ test remains unchanged and was not rerun because its prior 949.31s evidence is
 already recorded above. Ideonomy: 0 passes — this fix executes the review's
 specified contract and introduces no design choice.
 
+Task 1 is complete at `3bf26e0dc`. The scoped reviewer re-ran the focused
+contract tests (9 passed, 0 failed, 1 ignored) and found no remaining
+findings. The expensive 200-seed fixture is covered by the earlier recorded
+949.31s run; it was deliberately not repeated during review. The probe is
+now an accepted executable contract for the production state and clearing
+tasks that follow.
+
 ## Deferred minors and follow-ups
 
 - Verify the specialization input and shortfall insertion point against the
