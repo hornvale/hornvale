@@ -39,7 +39,7 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Band, Geosphere, KindId, Seed, Stream, Vertex, VertexMap};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// The conductance-positive graph neighbours of `vertex` (`conductance > 0.0` —
 /// ocean-touching adjacency edges are stored at exactly 0.0). Ascending and
@@ -1176,7 +1176,7 @@ impl History {
 /// One of D2's two complementary subsistence resources. A quantity of one
 /// resource can satisfy demand only for that same variant.
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum SubsistenceResource {
     A,
     B,
@@ -1290,6 +1290,363 @@ fn consume_subsistence(
         (available.amount(SubsistenceResource::B) - demand.amount(SubsistenceResource::B)).max(0.0),
     );
     (remaining, shortfall)
+}
+
+/// One community's immutable inputs to a current-phase exchange clearing.
+/// Demand is derived inside the clearing from `projected_population`, keeping
+/// the fixed half-A, half-B basket ratio out of the caller's hands.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct ExchangeCommunitySnapshot {
+    id: BakeId,
+    site: Vertex,
+    projected_population: f64,
+    opening_stock: SubsistenceInventory,
+}
+
+/// A derived step or terminal outcome in one typed exchange attempt.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ExchangeStatus {
+    Proposed,
+    Accepted,
+    Settled,
+    Partial,
+    Refused,
+    Impossible,
+}
+
+/// One community's request for one typed resource and its clearing result.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct ExchangeAttempt {
+    requester: BakeId,
+    resource: SubsistenceResource,
+    requested: f64,
+    delivered: f64,
+    statuses: Vec<ExchangeStatus>,
+}
+
+/// One funded, atomic, typed movement across a traversable one-hop link.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct SubsistenceDelivery {
+    from: BakeId,
+    to: BakeId,
+    resource: SubsistenceResource,
+    quantity: f64,
+}
+
+/// The pure result of one simultaneous current-phase exchange clearing.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct ExchangeClearing {
+    deliveries: Vec<SubsistenceDelivery>,
+    attempts: Vec<ExchangeAttempt>,
+    conservation_residuals: [f64; 2],
+}
+
+fn subsistence_resource_index(resource: SubsistenceResource) -> usize {
+    match resource {
+        SubsistenceResource::A => 0,
+        SubsistenceResource::B => 1,
+    }
+}
+
+/// Community-to-community exchange links, ordered by [`BakeId`]. A delivery
+/// can cross only a conductance-positive one-hop graph edge; an empty vertex
+/// between two communities is not a carrier and therefore not a link.
+fn local_exchange_adjacency(
+    graph: &ConnectionGraph,
+    snapshots: &[ExchangeCommunitySnapshot],
+) -> Vec<Vec<usize>> {
+    let mut communities_at: BTreeMap<Vertex, Vec<usize>> = BTreeMap::new();
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        communities_at.entry(snapshot.site).or_default().push(index);
+    }
+
+    snapshots
+        .iter()
+        .map(|snapshot| {
+            let mut adjacent = Vec::new();
+            for site in traversable_neighbors(graph, snapshot.site) {
+                if let Some(indices) = communities_at.get(&site) {
+                    adjacent.extend(indices.iter().copied());
+                }
+            }
+            adjacent.sort_unstable();
+            adjacent.dedup();
+            adjacent
+        })
+        .collect()
+}
+
+fn local_exchange_components(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
+    let mut seen = vec![false; adjacency.len()];
+    let mut components = Vec::new();
+    for start in 0..adjacency.len() {
+        if seen[start] {
+            continue;
+        }
+        seen[start] = true;
+        let mut queue = VecDeque::from([start]);
+        let mut component = Vec::new();
+        while let Some(current) = queue.pop_front() {
+            component.push(current);
+            for &next in &adjacency[current] {
+                if !seen[next] {
+                    seen[next] = true;
+                    queue.push_back(next);
+                }
+            }
+        }
+        component.sort_unstable();
+        components.push(component);
+    }
+    components
+}
+
+/// The deterministic shortest community path between two members of one
+/// exchange component. Sorted adjacency makes equal-length choices resolve by
+/// ascending [`BakeId`], independent of input or edge insertion order.
+fn local_exchange_path(adjacency: &[Vec<usize>], from: usize, to: usize) -> Vec<usize> {
+    if from == to {
+        return vec![from];
+    }
+    let mut predecessor = vec![None; adjacency.len()];
+    predecessor[from] = Some(from);
+    let mut queue = VecDeque::from([from]);
+    while let Some(current) = queue.pop_front() {
+        for &next in &adjacency[current] {
+            if predecessor[next].is_some() {
+                continue;
+            }
+            predecessor[next] = Some(current);
+            if next == to {
+                queue.clear();
+                break;
+            }
+            queue.push_back(next);
+        }
+    }
+
+    debug_assert!(predecessor[to].is_some());
+    let mut path = vec![to];
+    let mut current = to;
+    while current != from {
+        current = predecessor[current].expect("component members must have a path");
+        path.push(current);
+    }
+    path.reverse();
+    path
+}
+
+/// Allocate scarce stock across positive requests in ascending [`BakeId`]
+/// order. Every step applies the same proportion to the remaining supply and
+/// remaining demand; the final requester receives the arithmetic remainder,
+/// making the allocation exhaustive without an order-dependent lost tail.
+fn pro_rata_exchange_allocations(
+    component: &[usize],
+    requests: &[f64],
+    total_supply: f64,
+    total_demand: f64,
+) -> Vec<(usize, f64)> {
+    if total_supply >= total_demand {
+        return component
+            .iter()
+            .copied()
+            .filter(|&index| requests[index] > 0.0)
+            .map(|index| (index, requests[index]))
+            .collect();
+    }
+
+    let requesters: Vec<usize> = component
+        .iter()
+        .copied()
+        .filter(|&index| requests[index] > 0.0)
+        .collect();
+    let mut remaining_supply = total_supply;
+    let mut remaining_demand = total_demand;
+    let mut allocations = Vec::with_capacity(requesters.len());
+    for (position, index) in requesters.iter().copied().enumerate() {
+        let requested = requests[index];
+        let allocated = if position + 1 == requesters.len() {
+            remaining_supply.min(requested)
+        } else {
+            (remaining_supply * requested / remaining_demand).min(requested)
+        };
+        allocations.push((index, allocated));
+        remaining_supply = if allocated == remaining_supply {
+            0.0
+        } else {
+            remaining_supply - allocated
+        };
+        remaining_demand -= requested;
+    }
+    allocations
+}
+
+/// Clear one immutable current-phase snapshot without touching stores,
+/// populations, inventories, or random streams.
+///
+/// Each resource clears independently because D2 has no conversion or price.
+/// A community first reserves its own fixed complementary basket. Only the
+/// typed remainder is source stock. Within each connected community component
+/// that opening surplus is allocated pro rata under scarcity, then routed as
+/// atomic one-hop deliveries. A relay may send stock it receives on the same
+/// clearing, but every routed quantity begins at an opening surplus, so an
+/// unfunded proposal cycle cannot manufacture stock.
+#[allow(dead_code)]
+fn clear_local_exchange(
+    graph: &ConnectionGraph,
+    snapshots: &[ExchangeCommunitySnapshot],
+) -> ExchangeClearing {
+    let mut snapshots = snapshots.to_vec();
+    snapshots.sort_by_key(|snapshot| snapshot.id);
+    debug_assert!(snapshots.windows(2).all(|pair| pair[0].id != pair[1].id));
+    debug_assert!(snapshots.iter().all(|snapshot| {
+        snapshot.projected_population.is_finite()
+            && snapshot.projected_population >= 0.0
+            && [SubsistenceResource::A, SubsistenceResource::B]
+                .into_iter()
+                .all(|resource| {
+                    let amount = snapshot.opening_stock.amount(resource);
+                    amount.is_finite() && amount >= 0.0
+                })
+    }));
+
+    let adjacency = local_exchange_adjacency(graph, &snapshots);
+    let components = local_exchange_components(&adjacency);
+    let mut delivered_by_requester = vec![[0.0; 2]; snapshots.len()];
+    let mut deliveries: BTreeMap<(BakeId, BakeId, SubsistenceResource), f64> = BTreeMap::new();
+
+    for resource in [SubsistenceResource::A, SubsistenceResource::B] {
+        let resource_index = subsistence_resource_index(resource);
+        let mut surplus = Vec::with_capacity(snapshots.len());
+        let mut requests = Vec::with_capacity(snapshots.len());
+        for snapshot in &snapshots {
+            let opening = snapshot.opening_stock.amount(resource);
+            let demand = subsistence_basket_demand(snapshot.projected_population).amount(resource);
+            surplus.push(if opening > demand {
+                opening - demand
+            } else {
+                0.0
+            });
+            requests.push(if demand > opening {
+                demand - opening
+            } else {
+                0.0
+            });
+        }
+
+        for component in &components {
+            let total_supply: f64 = component.iter().map(|&index| surplus[index]).sum();
+            let total_demand: f64 = component.iter().map(|&index| requests[index]).sum();
+            if total_supply == 0.0 || total_demand == 0.0 {
+                continue;
+            }
+
+            let allocations =
+                pro_rata_exchange_allocations(component, &requests, total_supply, total_demand);
+            let mut remaining_surplus = surplus.clone();
+            for (requester, allocated) in allocations {
+                let mut routed = 0.0;
+                for &supplier in component {
+                    let remaining_request = allocated - routed;
+                    if remaining_request <= 0.0 {
+                        break;
+                    }
+                    let available = remaining_surplus[supplier];
+                    if available == 0.0 {
+                        continue;
+                    }
+                    let quantity = available.min(remaining_request);
+                    let path = local_exchange_path(&adjacency, supplier, requester);
+                    for hop in path.windows(2) {
+                        *deliveries
+                            .entry((snapshots[hop[0]].id, snapshots[hop[1]].id, resource))
+                            .or_default() += quantity;
+                    }
+                    remaining_surplus[supplier] = if quantity == available {
+                        0.0
+                    } else {
+                        available - quantity
+                    };
+                    routed = if quantity == remaining_request {
+                        allocated
+                    } else {
+                        routed + quantity
+                    };
+                }
+                delivered_by_requester[requester][resource_index] = routed;
+            }
+        }
+    }
+
+    let deliveries: Vec<SubsistenceDelivery> = deliveries
+        .into_iter()
+        .map(|((from, to, resource), quantity)| SubsistenceDelivery {
+            from,
+            to,
+            resource,
+            quantity,
+        })
+        .collect();
+    debug_assert!(
+        deliveries
+            .iter()
+            .all(|delivery| delivery.quantity.is_finite() && delivery.quantity > 0.0)
+    );
+
+    let mut attempts = Vec::new();
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        let demand = subsistence_basket_demand(snapshot.projected_population);
+        for resource in [SubsistenceResource::A, SubsistenceResource::B] {
+            let resource_index = subsistence_resource_index(resource);
+            let requested =
+                (demand.amount(resource) - snapshot.opening_stock.amount(resource)).max(0.0);
+            if requested == 0.0 {
+                continue;
+            }
+            let delivered = delivered_by_requester[index][resource_index];
+            let mut statuses = vec![ExchangeStatus::Proposed];
+            if adjacency[index].is_empty() {
+                statuses.push(ExchangeStatus::Impossible);
+            } else if delivered == 0.0 {
+                statuses.push(ExchangeStatus::Refused);
+            } else {
+                statuses.push(ExchangeStatus::Accepted);
+                statuses.push(if delivered == requested {
+                    ExchangeStatus::Settled
+                } else {
+                    ExchangeStatus::Partial
+                });
+            }
+            attempts.push(ExchangeAttempt {
+                requester: snapshot.id,
+                resource,
+                requested,
+                delivered,
+                statuses,
+            });
+        }
+    }
+
+    let mut sent = [0.0; 2];
+    let mut received = [0.0; 2];
+    for delivery in &deliveries {
+        let index = subsistence_resource_index(delivery.resource);
+        sent[index] += delivery.quantity;
+        received[index] += delivery.quantity;
+    }
+    let conservation_residuals = [sent[0] - received[0], sent[1] - received[1]];
+    debug_assert_eq!(conservation_residuals, [0.0, 0.0]);
+
+    ExchangeClearing {
+        deliveries,
+        attempts,
+        conservation_residuals,
+    }
 }
 
 /// One alive (or lately-dead) community's live state during the bake. The
@@ -5912,6 +6269,379 @@ mod tests {
             bake.communities[0].stores.to_bits(),
             before_stores.to_bits(),
             "subsistence consumption must not touch accumulated non-edible wealth"
+        );
+    }
+
+    fn exchange_graph(node_count: usize, edges: &[(u32, u32)]) -> ConnectionGraph {
+        let mut graph = ConnectionGraph::new(node_count);
+        for &(from, to) in edges {
+            graph.add_edge(
+                Vertex(from),
+                Edge {
+                    to: Vertex(to),
+                    kind: EdgeKind::Adjacency,
+                    conductance: 1.0,
+                },
+            );
+        }
+        graph
+    }
+
+    fn exchange_snapshot(
+        id: u64,
+        site: u32,
+        projected_population: f64,
+        a: f64,
+        b: f64,
+    ) -> ExchangeCommunitySnapshot {
+        ExchangeCommunitySnapshot {
+            id: BakeId(id),
+            site: Vertex(site),
+            projected_population,
+            opening_stock: SubsistenceInventory::new(a, b),
+        }
+    }
+
+    fn exchange_attempt(
+        clearing: &ExchangeClearing,
+        requester: u64,
+        resource: SubsistenceResource,
+    ) -> &ExchangeAttempt {
+        clearing
+            .attempts
+            .iter()
+            .find(|attempt| attempt.requester == BakeId(requester) && attempt.resource == resource)
+            .unwrap_or_else(|| panic!("missing {resource:?} request for {requester}"))
+    }
+
+    fn delivered(
+        clearing: &ExchangeClearing,
+        from: u64,
+        to: u64,
+        resource: SubsistenceResource,
+    ) -> f64 {
+        clearing
+            .deliveries
+            .iter()
+            .filter(|delivery| {
+                delivery.from == BakeId(from)
+                    && delivery.to == BakeId(to)
+                    && delivery.resource == resource
+            })
+            .map(|delivery| delivery.quantity)
+            .sum()
+    }
+
+    #[test]
+    fn bilateral_exchange_delivers_the_fixed_complementary_bundle() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+            exchange_snapshot(1, 0, 4.0, 4.0, 0.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert_eq!(
+            delivered(&clearing, 1, 2, SubsistenceResource::A),
+            2.0,
+            "the A specialist must deliver its two-unit surplus"
+        );
+        assert_eq!(
+            delivered(&clearing, 2, 1, SubsistenceResource::B),
+            2.0,
+            "the B specialist must deliver its two-unit surplus"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 1, SubsistenceResource::B).statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Settled,
+            ],
+            "a fully funded proposal must expose its complete derived status path"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 2, SubsistenceResource::A).statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Settled,
+            ]
+        );
+    }
+
+    #[test]
+    fn competing_requests_share_scarce_stock_pro_rata() {
+        let graph = exchange_graph(3, &[(0, 1), (0, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(10, 0, 4.0, 5.0, 2.0),
+            exchange_snapshot(20, 1, 2.0, 0.0, 1.0),
+            exchange_snapshot(30, 2, 6.0, 0.0, 3.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        for (requester, requested, expected) in [(20, 1.0, 0.75), (30, 3.0, 2.25)] {
+            let attempt = exchange_attempt(&clearing, requester, SubsistenceResource::A);
+            assert_eq!(attempt.requested, requested);
+            assert_eq!(attempt.delivered, expected);
+            assert_eq!(
+                attempt.statuses,
+                vec![
+                    ExchangeStatus::Proposed,
+                    ExchangeStatus::Accepted,
+                    ExchangeStatus::Partial,
+                ]
+            );
+            assert_eq!(
+                delivered(&clearing, 10, requester, SubsistenceResource::A),
+                expected,
+                "unequal nonzero requests must receive proportional shares of scarce stock"
+            );
+        }
+    }
+
+    #[test]
+    fn fractional_source_stock_is_fully_routed_without_roundoff_loss() {
+        let graph = exchange_graph(3, &[(0, 2), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 0.0, 0.1, 0.0),
+            exchange_snapshot(2, 1, 0.0, 0.2, 0.0),
+            exchange_snapshot(3, 2, 2.0, 0.0, 1.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let attempt = exchange_attempt(&clearing, 3, SubsistenceResource::A);
+
+        assert_eq!(delivered(&clearing, 1, 3, SubsistenceResource::A), 0.1);
+        assert_eq!(delivered(&clearing, 2, 3, SubsistenceResource::A), 0.2);
+        assert_eq!(attempt.delivered.to_bits(), (0.1_f64 + 0.2).to_bits());
+        assert_eq!(
+            attempt.statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Partial,
+            ],
+            "all finite source stock must route even when repeated subtraction leaves a residue"
+        );
+    }
+
+    #[test]
+    fn a_nonzero_but_inadequate_delivery_is_partial() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 4.0, 3.0, 2.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 2.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let attempt = exchange_attempt(&clearing, 2, SubsistenceResource::A);
+
+        assert_eq!(attempt.requested, 2.0);
+        assert_eq!(attempt.delivered, 1.0);
+        assert_eq!(
+            attempt.statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Partial,
+            ]
+        );
+    }
+
+    #[test]
+    fn funded_stock_can_cross_an_acyclic_chain() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 0.0, 1.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 1.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::A), 1.0);
+        assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::A), 1.0);
+        assert_eq!(
+            exchange_attempt(&clearing, 1, SubsistenceResource::A)
+                .statuses
+                .last(),
+            Some(&ExchangeStatus::Settled),
+            "the downstream request must settle only from the source's opening surplus"
+        );
+    }
+
+    #[test]
+    fn opening_surpluses_fund_a_reciprocal_cycle() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 0.0, 2.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert_eq!(delivered(&clearing, 1, 2, SubsistenceResource::A), 1.0);
+        assert_eq!(delivered(&clearing, 2, 3, SubsistenceResource::A), 1.0);
+        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::B), 1.0);
+        assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::B), 1.0);
+        assert_eq!(
+            exchange_attempt(&clearing, 1, SubsistenceResource::B)
+                .statuses
+                .last(),
+            Some(&ExchangeStatus::Settled)
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 3, SubsistenceResource::A)
+                .statuses
+                .last(),
+            Some(&ExchangeStatus::Settled)
+        );
+    }
+
+    #[test]
+    fn reserved_stock_cannot_fund_a_reciprocal_cycle() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 1.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 0.0, 1.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "stock reserved for each community's own basket is not an exchange offer"
+        );
+        for (requester, resource) in [(1, SubsistenceResource::B), (2, SubsistenceResource::A)] {
+            let attempt = exchange_attempt(&clearing, requester, resource);
+            assert_eq!(attempt.delivered, 0.0);
+            assert_eq!(
+                attempt.statuses,
+                vec![ExchangeStatus::Proposed, ExchangeStatus::Refused],
+                "reciprocal promises without opening surplus must be refused"
+            );
+        }
+    }
+
+    #[test]
+    fn a_request_across_a_non_traversable_edge_is_impossible() {
+        let mut graph = ConnectionGraph::new(2);
+        graph.add_edge(
+            Vertex(0),
+            Edge {
+                to: Vertex(1),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.0,
+            },
+        );
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 0.0, 1.0),
+            exchange_snapshot(2, 1, 0.0, 1.0, 0.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let attempt = exchange_attempt(&clearing, 1, SubsistenceResource::A);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "zero-conductance adjacency must not carry stock"
+        );
+        assert_eq!(attempt.delivered, 0.0);
+        assert_eq!(
+            attempt.statuses,
+            vec![ExchangeStatus::Proposed, ExchangeStatus::Impossible]
+        );
+    }
+
+    #[test]
+    fn clearing_is_identical_under_snapshot_reordering() {
+        let graph = exchange_graph(4, &[(0, 1), (1, 2), (1, 3)]);
+        let snapshots = vec![
+            exchange_snapshot(40, 3, 4.0, 0.0, 2.0),
+            exchange_snapshot(10, 0, 4.0, 5.0, 2.0),
+            exchange_snapshot(30, 2, 4.0, 0.0, 2.0),
+            exchange_snapshot(20, 1, 4.0, 2.0, 2.0),
+        ];
+        let mut reordered = snapshots.clone();
+        reordered.reverse();
+
+        let canonical = clear_local_exchange(&graph, &snapshots);
+        let reversed = clear_local_exchange(&graph, &reordered);
+
+        assert!(
+            !canonical.deliveries.is_empty() && !canonical.attempts.is_empty(),
+            "the identity fixture must exercise real proposals and deliveries"
+        );
+        assert_eq!(canonical, reversed);
+    }
+
+    #[test]
+    fn every_typed_delivery_conserves_each_resource() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 4.0, 5.0, 0.0),
+            exchange_snapshot(2, 1, 4.0, 2.0, 2.0),
+            exchange_snapshot(3, 2, 4.0, 0.0, 5.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert!(
+            clearing
+                .deliveries
+                .iter()
+                .any(|delivery| delivery.resource == SubsistenceResource::A)
+                && clearing
+                    .deliveries
+                    .iter()
+                    .any(|delivery| delivery.resource == SubsistenceResource::B),
+            "the conservation fixture must move nonzero quantities of both resources"
+        );
+        for resource in [SubsistenceResource::A, SubsistenceResource::B] {
+            let mut balances: BTreeMap<BakeId, f64> = snapshots
+                .iter()
+                .map(|snapshot| (snapshot.id, snapshot.opening_stock.amount(resource)))
+                .collect();
+            let opening_total: f64 = balances.values().sum();
+            let mut moved = 0.0;
+            for delivery in clearing
+                .deliveries
+                .iter()
+                .filter(|delivery| delivery.resource == resource)
+            {
+                moved += delivery.quantity;
+                *balances.get_mut(&delivery.from).unwrap() -= delivery.quantity;
+                *balances.get_mut(&delivery.to).unwrap() += delivery.quantity;
+            }
+            let closing_total: f64 = balances.values().sum();
+            assert!(moved > 0.0, "fixture must move {resource:?}");
+            assert!(
+                balances.values().all(|balance| *balance >= 0.0),
+                "no hop may spend stock that neither opened nor arrived"
+            );
+            assert_eq!(
+                closing_total.to_bits(),
+                opening_total.to_bits(),
+                "applying every {resource:?} debit and credit must preserve total stock"
+            );
+            let expected = match resource {
+                SubsistenceResource::A => [(BakeId(1), 3.0), (BakeId(2), 2.0), (BakeId(3), 2.0)],
+                SubsistenceResource::B => [(BakeId(1), 2.0), (BakeId(2), 2.0), (BakeId(3), 3.0)],
+            };
+            assert_eq!(
+                balances,
+                BTreeMap::from(expected),
+                "funded relay hops must leave each community's reserved basket intact"
+            );
+        }
+        assert_eq!(
+            clearing.conservation_residuals,
+            [0.0, 0.0],
+            "the clearing trace must expose exact-zero residuals for both resources"
         );
     }
 
