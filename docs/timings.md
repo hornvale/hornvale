@@ -6619,3 +6619,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T21:07:04Z | sluice:heavy | 473.161 | 11387.808 | 161.678 | 24.41 | 0 | b38579539 |  | lefford | 40 |
 | 2026-09-07T22:09:23Z | gate-commit | 22.618 | 44.299 | 5.555 | 2.20 | 0 | 1258188c8 | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-07T22:12:14Z | gate-commit | 137.607 | 767.106 | 48.596 | 5.93 | 0 | 1258188c8 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T23:43:02Z | gate-commit | 37.695 | 68.436 | 18.583 | 2.31 | 0 | f44dea969 | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-07T23:43:44Z | gate-commit | 36.176 | 67.394 | 17.974 | 2.36 | 0 | f44dea969 | campaign/the-wanderers | MacBookPro | 10 |
