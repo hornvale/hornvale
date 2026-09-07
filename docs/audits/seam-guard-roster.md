@@ -26,7 +26,7 @@ comment.
 
 ## `ledger_day_of_bake_year`
 
-- Defined at `windows/worldgen/src/history_emit.rs:62`
+- Defined at `windows/worldgen/src/history_emit.rs:63`
 - Operator: `identity(0)`
 - Test scope: `hornvale-worldgen`
 - No declaration: a survivor here fails the gate.
@@ -35,10 +35,10 @@ comment.
   - `windows/lot/src/slots.rs:1027`
   - `windows/lot/src/slots.rs:1067`
   - `windows/lot/src/slots.rs:1068`
-  - `windows/worldgen/src/history_emit.rs:251`
-  - `windows/worldgen/src/history_emit.rs:414`
-  - `windows/worldgen/src/history_emit.rs:441`
-  - `windows/worldgen/src/history_emit.rs:512`
+  - `windows/worldgen/src/history_emit.rs:310`
+  - `windows/worldgen/src/history_emit.rs:473`
+  - `windows/worldgen/src/history_emit.rs:500`
+  - `windows/worldgen/src/history_emit.rs:571`
   - `windows/worldgen/src/person_promote.rs:343`
   - `windows/worldgen/src/person_promote.rs:434`
   - `windows/worldgen/tests/suite/tolerance_draw.rs:99`
