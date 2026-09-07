@@ -48,6 +48,16 @@ pub enum SyntheticSociety {
 pub fn approved_lot_probe_projection(
     seed: Seed,
 ) -> Result<SocialProjection, SocialProjectionError> {
+    approved_lot_probe_projection_for(seed, SyntheticSociety::RecomposingMobility)
+}
+
+/// The same bounded, approved synthetic input used by the Lot integration
+/// witness, with the society shape selected explicitly so each reader path is
+/// exercised without minting test-only participants.
+pub fn approved_lot_probe_projection_for(
+    seed: Seed,
+    society: SyntheticSociety,
+) -> Result<SocialProjection, SocialProjectionError> {
     let summary = summarize_social_cohort(&SocialCohortInput {
         substrate: SocialSubstrateInput {
             reproductive: ReproductivePopulationSummary {
@@ -101,7 +111,7 @@ pub fn approved_lot_probe_projection(
     })
     .map_err(|error| SocialProjectionError::new(error.to_string()))?;
     let pins = SocialProjectionPins::new(6, WorldTime::GENESIS)?;
-    project_social_cohort(&summary, seed, &pins, SyntheticSociety::RecomposingMobility)
+    project_social_cohort(&summary, seed, &pins, society)
 }
 
 /// Bounded realization controls for a synthetic projection.
@@ -552,11 +562,21 @@ pub fn project_social_cohort(
                 .unwrap_or(usize::MAX)
                 .min(participant_cap);
             let child = person(participant_cap);
+            let sibling = person(participant_cap - 1);
             for index in 0..lines {
                 events.push(relation(
                     RelationKind::Descent,
                     person(index),
                     child,
+                    time(0)?,
+                    None,
+                    None,
+                    None,
+                )?);
+                events.push(relation(
+                    RelationKind::Descent,
+                    person(index),
+                    sibling,
                     time(0)?,
                     None,
                     None,
@@ -608,6 +628,15 @@ pub fn project_social_cohort(
                     None,
                 )?);
             }
+            events.push(relation(
+                RelationKind::Custody,
+                person(0),
+                child,
+                time(2)?,
+                None,
+                None,
+                None,
+            )?);
         }
         SyntheticSociety::RecomposingMobility => {
             if association_count < 2

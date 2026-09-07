@@ -274,12 +274,15 @@ fn active_fact_with_end(
     if day >= boundary.until {
         return false;
     }
+    // Lot answers are a life-interval snapshot: an ending before the
+    // interval's exclusive end closes the fact for this reading, even when
+    // the fact began before the interval.
     !world.ledger.facts_about(fact.subject).any(|candidate| {
         candidate.predicate == ended
             && candidate.object == fact.object
             && candidate
                 .day
-                .map(|end| end.as_std_days() <= boundary.from)
+                .map(|end| end.as_std_days() < boundary.until)
                 .unwrap_or(false)
     })
 }
@@ -348,19 +351,17 @@ fn parental_death(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     let parents = relation_facts(world, &boundary, "descent", false);
     let mut sources = Vec::new();
     for parent in parents {
-        if let Some(death) = world
-            .ledger
-            .facts_of(parent.subject, hornvale_person::PERSON_DIED)
-            .find(|fact| {
-                fact.day
+        if let Some(death) = world.ledger.facts_about(parent.subject).find(|fact| {
+            (fact.predicate == hornvale_person::PERSON_DIED || fact.predicate == "die")
+                && fact
+                    .day
                     .map(|day| {
                         day.as_std_days() >= boundary.from && day.as_std_days() < boundary.until
                     })
                     .unwrap_or(false)
-            })
-        {
+        }) {
             sources.push(cite(world, parent.subject, "descent"));
-            sources.push(cite(world, death.subject, hornvale_person::PERSON_DIED));
+            sources.push(cite(world, death.subject, &death.predicate));
         }
     }
     if sources.is_empty() {
@@ -402,13 +403,32 @@ fn recognized_association(world: &World, ctx: &LotContext, life: &Life) -> Answe
     };
     let associations = relation_facts(world, &boundary, "association", true);
     let recognitions = relation_facts(world, &boundary, "recognition", false);
-    let pairs: Vec<(&hornvale_kernel::Fact, &hornvale_kernel::Fact)> = associations
+    let pairs: Vec<(
+        &hornvale_kernel::Fact,
+        &hornvale_kernel::Fact,
+        &hornvale_kernel::Fact,
+    )> = associations
         .iter()
         .flat_map(|association| {
             recognitions.iter().filter_map(move |recognition| {
-                (association.day < recognition.day
-            && matches!(recognition.object, Value::Entity(entity) if entity == boundary.person))
-            .then_some((*association, *recognition))
+                if !(association.day < recognition.day
+                    && matches!(recognition.object, Value::Entity(entity) if entity == boundary.person))
+                {
+                    return None;
+                }
+                world
+                    .ledger
+                    .facts_about(recognition.subject)
+                    .find(|fact| {
+                        fact.predicate == hornvale_history::RECOGNITION_INTERPRETATION
+                            && active_fact_with_end(
+                                world,
+                                fact,
+                                &boundary,
+                                "recognition-interpretation-ended",
+                            )
+                    })
+                    .map(|interpretation| (*association, *recognition, interpretation))
             })
         })
         .collect();
@@ -416,7 +436,7 @@ fn recognized_association(world: &World, ctx: &LotContext, life: &Life) -> Answe
         return no_fact("no explicit recognized association source answers this question");
     }
     let mut sources = Vec::new();
-    for (a, b) in pairs {
+    for (a, b, interpretation) in pairs {
         sources.push(cite(world, a.subject, "association"));
         if world
             .ledger
@@ -429,19 +449,11 @@ fn recognized_association(world: &World, ctx: &LotContext, life: &Life) -> Answe
             sources.push(cite(world, a.subject, hornvale_history::ASSOCIATION_FORM));
         }
         sources.push(cite(world, b.subject, "recognition"));
-        if world
-            .ledger
-            .facts_of(b.subject, hornvale_history::RECOGNITION_INTERPRETATION)
-            .any(|fact| {
-                active_fact_with_end(world, fact, &boundary, "recognition-interpretation-ended")
-            })
-        {
-            sources.push(cite(
-                world,
-                b.subject,
-                hornvale_history::RECOGNITION_INTERPRETATION,
-            ));
-        }
+        sources.push(cite(
+            world,
+            interpretation.subject,
+            hornvale_history::RECOGNITION_INTERPRETATION,
+        ));
     }
     (
         SlotValue::Filled("an explicitly recognized association is recorded".to_string()),
@@ -491,21 +503,18 @@ fn inheritance(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     let transfers = relation_facts(world, &boundary, "transfer", false);
     let mut sources = Vec::new();
     for transfer in transfers {
-        if let Some(death) = world
-            .ledger
-            .facts_of(transfer.subject, hornvale_person::PERSON_DIED)
-            .find(|death| {
-                death
+        if let Some(death) = world.ledger.facts_about(transfer.subject).find(|death| {
+            (death.predicate == hornvale_person::PERSON_DIED || death.predicate == "die")
+                && death
                     .day
                     .map(|day| {
                         let day = day.as_std_days();
                         day >= boundary.from && day < boundary.until
                     })
                     .unwrap_or(false)
-            })
-        {
+        }) {
             sources.push(cite(world, transfer.subject, "transfer"));
-            sources.push(cite(world, death.subject, hornvale_person::PERSON_DIED));
+            sources.push(cite(world, death.subject, &death.predicate));
         }
     }
     if sources.is_empty() {
@@ -524,7 +533,19 @@ fn migration(world: &World, ctx: &LotContext, life: &Life) -> Answer {
     let Some(boundary) = social_boundary(world, ctx, life) else {
         return no_fact("no realized person is committed for this life");
     };
-    let residences = relation_facts(world, &boundary, "residence", true);
+    // Ended residences are historical evidence for a migration, not active
+    // relations. Read their source edges separately from active relations.
+    let residences: Vec<&hornvale_kernel::Fact> = world
+        .ledger
+        .find("residence")
+        .filter(|fact| {
+            fact.subject == boundary.person
+                && fact
+                    .day
+                    .map(|day| day.as_std_days() < boundary.until)
+                    .unwrap_or(false)
+        })
+        .collect();
     let mut sources = Vec::new();
     let mut transitions = 0usize;
     for prior in &residences {
