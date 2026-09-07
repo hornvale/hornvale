@@ -93,11 +93,11 @@
 - `run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict`: executes the frozen workload on an owned checkout and target and returns a validated baseline dossier.
 - `summarize_baseline(attempts: list[dict]) -> dict`: returns paired cold/warm cost distributions and graph counts without combining nested timings.
 
-- [ ] **Step 1: Write failing tests for graph closure and summary rules.**
+- [x] **Step 1: Write failing tests for graph closure and summary rules.**
 
   Test a graph with protocol, digest, lab, and kernel packages; assert direct changes and reverse dependents are distinct, unrelated changes do not enter the closure, nested preparation is not added to compilation cost, and incomplete attempts are rejected from the summary.
 
-- [ ] **Step 2: Run the focused baseline tests and verify they fail.**
+- [x] **Step 2: Run the focused baseline tests and verify they fail.**
 
   ```bash
   python3 -m unittest discover -s tools/digest/experiments/the-insulator -p 'test_baseline.py' -v
@@ -105,7 +105,7 @@
 
   Expected: missing graph and summary functions.
 
-- [ ] **Step 3: Implement graph extraction and baseline orchestration.**
+- [x] **Step 3: Implement graph extraction and baseline orchestration.**
 
   Measure the existing `tools/digest` workspace, including `digest-thing` and `digest-census-publication`. Include one cold target, one warm target, and invalidation probes for a protocol edit, an observer edit, a lab edit, and an unrelated workspace edit. Freeze the workload and source identities before collecting timing records.
 
