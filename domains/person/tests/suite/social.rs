@@ -2,8 +2,9 @@
 
 use hornvale_kernel::{EntityId, Value, WorldTime};
 use hornvale_person::{
-    GENDER_IDENTITY, GENDER_RECOGNITION, PERSON_SOCIAL_PROVENANCE, PersonSocialFact,
-    PersonSocialSeed, REPRODUCTIVE_ROLE, SEX_TRAIT, TRANSITIONED,
+    GENDER_IDENTITY, GENDER_IDENTITY_ENDED, GENDER_RECOGNITION, GENDER_RECOGNITION_ENDED,
+    PERSON_SOCIAL_PROVENANCE, PersonSocialFact, PersonSocialSeed, REPRODUCTIVE_ROLE,
+    REPRODUCTIVE_ROLE_ENDED, SEX_TRAIT, SEX_TRAIT_ENDED, TRANSITIONED, TRANSITIONED_ENDED,
 };
 
 fn entity(raw: u64) -> EntityId {
@@ -72,25 +73,82 @@ fn ledger_helpers_preserve_person_direction_time_and_provenance() {
     let social = PersonSocialSeed::new(
         person,
         vec![
-            PersonSocialFact::gender_identity("river-self", day(7), None, "speaker:testimony-4")
-                .unwrap(),
+            PersonSocialFact::gender_identity(
+                "river-self",
+                day(7),
+                Some(day(12)),
+                "speaker:testimony-4",
+            )
+            .unwrap(),
         ],
     )
     .unwrap();
 
     let facts = social.facts();
 
-    assert_eq!(facts.len(), 2, "axis fact plus provenance fact");
+    assert_eq!(facts.len(), 3, "axis, interval-end, and provenance facts");
     assert_eq!(facts[0].subject, person);
     assert_eq!(facts[0].predicate, GENDER_IDENTITY);
     assert_eq!(facts[0].object, Value::Text("river-self".to_string()));
     assert_eq!(facts[0].day, Some(day(7)));
     assert_eq!(facts[0].provenance, "speaker:testimony-4");
     assert_eq!(facts[1].subject, person);
-    assert_eq!(facts[1].predicate, PERSON_SOCIAL_PROVENANCE);
+    assert_eq!(facts[1].predicate, GENDER_IDENTITY_ENDED);
+    assert_eq!(facts[1].object, Value::Text("river-self".to_string()));
+    assert_eq!(facts[1].day, Some(day(12)));
+    assert_eq!(facts[1].provenance, "speaker:testimony-4");
+    assert_eq!(facts[2].subject, person);
+    assert_eq!(facts[2].predicate, PERSON_SOCIAL_PROVENANCE);
     assert_eq!(
-        facts[1].object,
+        facts[2].object,
         Value::Text("speaker:testimony-4".to_string())
+    );
+}
+
+#[test]
+fn ledger_helpers_preserve_every_person_axis_end() {
+    let role = entity(2);
+    let social = PersonSocialSeed::new(
+        entity(1),
+        vec![
+            PersonSocialFact::sex_trait("morph", day(1), Some(day(10)), "observed").unwrap(),
+            PersonSocialFact::reproductive_role(role, day(2), Some(day(10)), "realized").unwrap(),
+            PersonSocialFact::gender_identity("self", day(3), Some(day(10)), "claimed").unwrap(),
+            PersonSocialFact::gender_recognition("recognized", day(4), Some(day(10)), "recorded")
+                .unwrap(),
+            PersonSocialFact::transitioned("changed", day(5), Some(day(10)), "witnessed").unwrap(),
+        ],
+    )
+    .unwrap();
+
+    let endings = social
+        .facts()
+        .into_iter()
+        .filter(|fact| fact.day == Some(day(10)))
+        .map(|fact| (fact.predicate, fact.object))
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        endings,
+        vec![
+            (
+                SEX_TRAIT_ENDED.to_string(),
+                Value::Text("morph".to_string())
+            ),
+            (REPRODUCTIVE_ROLE_ENDED.to_string(), Value::Entity(role)),
+            (
+                GENDER_IDENTITY_ENDED.to_string(),
+                Value::Text("self".to_string())
+            ),
+            (
+                GENDER_RECOGNITION_ENDED.to_string(),
+                Value::Text("recognized".to_string())
+            ),
+            (
+                TRANSITIONED_ENDED.to_string(),
+                Value::Text("changed".to_string())
+            ),
+        ]
     );
 }
 
@@ -109,5 +167,35 @@ fn person_social_facts_reject_empty_intervals_and_missing_provenance() {
             .unwrap_err()
             .to_string(),
         "person social provenance must not be empty"
+    );
+}
+
+/// Whitespace is absence, not an explicit realized claim, for every
+/// text-bearing person-social axis.
+#[test]
+fn person_social_text_claims_reject_trimmed_empty_values() {
+    assert_eq!(
+        PersonSocialFact::sex_trait("   ", day(1), None, "observed")
+            .unwrap_err()
+            .to_string(),
+        "person social text value must not be empty"
+    );
+    assert_eq!(
+        PersonSocialFact::gender_identity("", day(1), None, "claimed")
+            .unwrap_err()
+            .to_string(),
+        "person social text value must not be empty"
+    );
+    assert_eq!(
+        PersonSocialFact::gender_recognition("\t", day(1), None, "recorded")
+            .unwrap_err()
+            .to_string(),
+        "person social text value must not be empty"
+    );
+    assert_eq!(
+        PersonSocialFact::transitioned("\n", day(1), None, "witnessed")
+            .unwrap_err()
+            .to_string(),
+        "person social text value must not be empty"
     );
 }

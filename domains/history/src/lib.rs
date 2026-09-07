@@ -17,8 +17,9 @@ pub mod record;
 pub mod social;
 pub mod streams;
 pub use social::{
-    AssociationForm, GroupMembershipEvent, LifecycleEvent, RelationEvent, RelationKind,
-    SocialEvent, SocialEventError, validate_social_events,
+    ASSOCIATION_FORM, AssociationForm, GroupMembershipEvent, LifecycleEvent, MEMBERSHIP_ENDED,
+    RECOGNITION_INTERPRETATION, RelationEvent, RelationKind, SocialEvent, SocialEventError,
+    validate_social_events,
 };
 pub use streams::stream_labels;
 

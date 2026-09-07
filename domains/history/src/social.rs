@@ -8,6 +8,15 @@
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, RegistryError, Value, WorldTime};
 
 const MEMBERSHIP: &str = "membership";
+/// The exclusive end of a group-membership interval.
+/// type-audit: bare-ok(identifier-text)
+pub const MEMBERSHIP_ENDED: &str = "membership-ended";
+/// The declared culture-neutral form attached to an association edge.
+/// type-audit: bare-ok(identifier-text)
+pub const ASSOCIATION_FORM: &str = "association-form";
+/// The cultural or institutional interpretation attached to a recognition edge.
+/// type-audit: bare-ok(identifier-text)
+pub const RECOGNITION_INTERPRETATION: &str = "recognition-interpretation";
 const SEPARATE: &str = "separate";
 const DISSOLVE: &str = "dissolve";
 const DIE: &str = "die";
@@ -73,6 +82,23 @@ impl RelationKind {
             Self::Custody => "custody",
             Self::Transfer => "transfer",
             Self::Recognition => "recognition",
+        }
+    }
+
+    /// Ledger predicate that repeats this relation's participants at its
+    /// exclusive end.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub const fn ended_predicate(self) -> &'static str {
+        match self {
+            Self::Origin => "origin-ended",
+            Self::Descent => "descent-ended",
+            Self::Care => "care-ended",
+            Self::Dependency => "dependency-ended",
+            Self::Association => "association-ended",
+            Self::Residence => "residence-ended",
+            Self::Custody => "custody-ended",
+            Self::Transfer => "transfer-ended",
+            Self::Recognition => "recognition-ended",
         }
     }
 }
@@ -156,7 +182,11 @@ impl RelationEvent {
             _ => {}
         }
         match kind {
-            RelationKind::Recognition if interpretation.as_deref().is_none_or(str::is_empty) => {
+            RelationKind::Recognition
+                if interpretation
+                    .as_deref()
+                    .is_none_or(|value| value.trim().is_empty()) =>
+            {
                 return Err(SocialEventError::new(
                     "recognition relation requires an explicit interpretation",
                 ));
@@ -228,6 +258,42 @@ impl RelationEvent {
             provenance: self.provenance.clone(),
         }
     }
+
+    fn facts(&self) -> Vec<Fact> {
+        let mut facts = Vec::with_capacity(3);
+        facts.push(self.fact());
+        if let Some(form) = &self.association_form {
+            facts.push(Fact {
+                subject: self.source,
+                predicate: ASSOCIATION_FORM.to_string(),
+                object: Value::Text(form.as_str().to_string()),
+                place: None,
+                day: Some(self.start),
+                provenance: self.provenance.clone(),
+            });
+        }
+        if let Some(interpretation) = &self.interpretation {
+            facts.push(Fact {
+                subject: self.source,
+                predicate: RECOGNITION_INTERPRETATION.to_string(),
+                object: Value::Text(interpretation.clone()),
+                place: None,
+                day: Some(self.start),
+                provenance: self.provenance.clone(),
+            });
+        }
+        if let Some(end) = self.end {
+            facts.push(Fact {
+                subject: self.source,
+                predicate: self.kind.ended_predicate().to_string(),
+                object: Value::Entity(self.target),
+                place: None,
+                day: Some(end),
+                provenance: self.provenance.clone(),
+            });
+        }
+        facts
+    }
 }
 
 /// One person's time-bounded membership in a derived group.
@@ -295,6 +361,21 @@ impl GroupMembershipEvent {
             day: Some(self.start),
             provenance: self.provenance.clone(),
         }
+    }
+
+    fn facts(&self) -> Vec<Fact> {
+        let mut facts = vec![self.fact()];
+        if let Some(end) = self.end {
+            facts.push(Fact {
+                subject: self.member,
+                predicate: MEMBERSHIP_ENDED.to_string(),
+                object: Value::Entity(self.group),
+                place: None,
+                day: Some(end),
+                provenance: self.provenance.clone(),
+            });
+        }
+        facts
     }
 }
 
@@ -414,6 +495,20 @@ impl SocialEvent {
         }
     }
 
+    /// Convert this event to its complete ordered ledger-fact bundle.
+    ///
+    /// The primary edge is first. Cultural detail facts follow it, then an
+    /// optional exclusive-end fact. Lifecycle events contain only their
+    /// primary closure fact. Commit each returned bundle in order: a cultural
+    /// detail is the companion of the primary edge immediately before it.
+    pub fn facts(&self) -> Vec<Fact> {
+        match self {
+            Self::Relation(event) => event.facts(),
+            Self::Membership(event) => event.facts(),
+            Self::Lifecycle(event) => vec![event.fact()],
+        }
+    }
+
     fn time(&self) -> WorldTime {
         match self {
             Self::Relation(event) => event.start,
@@ -427,11 +522,12 @@ impl SocialEvent {
 ///
 /// The scan enforces nondecreasing time and the three closure rules in the
 /// approved substrate: separation closes that directed association,
-/// dissolution closes its group's memberships, and death closes the person's
-/// future relation and membership activity.
+/// dissolution closes its group's social participation, and death closes the
+/// person's future authored participation while preserving posthumous history
+/// and estate transfer.
 pub fn validate_social_events(events: &[SocialEvent]) -> Result<(), SocialEventError> {
     let mut previous_time = None;
-    let mut associations: Vec<(EntityId, EntityId, bool)> = Vec::new();
+    let mut associations: Vec<AssociationInterval> = Vec::new();
     let mut dissolved_groups = Vec::new();
     let mut dead_people = Vec::new();
 
@@ -446,21 +542,27 @@ pub fn validate_social_events(events: &[SocialEvent]) -> Result<(), SocialEventE
 
         match event {
             SocialEvent::Relation(relation) => {
-                if dead_people.contains(&relation.source) || dead_people.contains(&relation.target)
+                if dissolved_groups.contains(&relation.source)
+                    || dissolved_groups.contains(&relation.target)
                 {
                     return Err(SocialEventError::new(
-                        "relation activity involves a person after death",
+                        "relation activity involves a group after dissolution",
+                    ));
+                }
+                if relation.kind != RelationKind::Transfer && dead_people.contains(&relation.source)
+                {
+                    return Err(SocialEventError::new(
+                        "relation activity is performed by a person after death",
                     ));
                 }
                 if relation.kind == RelationKind::Association {
-                    if associations.iter().any(|&(source, target, closed)| {
-                        closed && source == relation.source && target == relation.target
-                    }) {
-                        return Err(SocialEventError::new(
-                            "association activity occurs after separation",
-                        ));
-                    }
-                    associations.push((relation.source, relation.target, false));
+                    associations.push(AssociationInterval {
+                        source: relation.source,
+                        target: relation.target,
+                        start: relation.start,
+                        end: relation.end,
+                        separated: false,
+                    });
                 }
             }
             SocialEvent::Membership(membership) => {
@@ -474,22 +576,46 @@ pub fn validate_social_events(events: &[SocialEvent]) -> Result<(), SocialEventE
                         "group membership activity occurs after dissolution",
                     ));
                 }
+                if dissolved_groups.contains(&membership.member) {
+                    return Err(SocialEventError::new(
+                        "group membership activity involves a group after dissolution",
+                    ));
+                }
             }
             SocialEvent::Lifecycle(lifecycle) => match lifecycle.kind {
                 LifecycleKind::Separate => {
                     let target = lifecycle.target.expect("separation has a target");
-                    if let Some(active) = associations.iter_mut().rev().find(|relation| {
-                        !relation.2 && relation.0 == lifecycle.subject && relation.1 == target
-                    }) {
-                        active.2 = true;
-                    } else if associations
-                        .iter()
-                        .any(|&(source, relation_target, closed)| {
-                            !closed && source == target && relation_target == lifecycle.subject
-                        })
+                    if dissolved_groups.contains(&lifecycle.subject)
+                        || dissolved_groups.contains(&target)
                     {
                         return Err(SocialEventError::new(
+                            "separation activity involves a group after dissolution",
+                        ));
+                    }
+                    if dead_people.contains(&lifecycle.subject) {
+                        return Err(SocialEventError::new(
+                            "separation is performed by a person after death",
+                        ));
+                    }
+                    if let Some(active) = associations.iter_mut().rev().find(|relation| {
+                        relation.source == lifecycle.subject
+                            && relation.target == target
+                            && relation.is_active_at(lifecycle.at)
+                    }) {
+                        active.separated = true;
+                    } else if associations.iter().any(|relation| {
+                        relation.source == target
+                            && relation.target == lifecycle.subject
+                            && relation.is_active_at(lifecycle.at)
+                    }) {
+                        return Err(SocialEventError::new(
                             "separate participants reverse the active association direction",
+                        ));
+                    } else if associations.iter().any(|relation| {
+                        relation.source == lifecycle.subject && relation.target == target
+                    }) {
+                        return Err(SocialEventError::new(
+                            "separate must occur strictly inside an active association interval",
                         ));
                     } else {
                         return Err(SocialEventError::new(
@@ -511,6 +637,21 @@ pub fn validate_social_events(events: &[SocialEvent]) -> Result<(), SocialEventE
         }
     }
     Ok(())
+}
+
+#[derive(Clone, Copy, Debug)]
+struct AssociationInterval {
+    source: EntityId,
+    target: EntityId,
+    start: WorldTime,
+    end: Option<WorldTime>,
+    separated: bool,
+}
+
+impl AssociationInterval {
+    fn is_active_at(&self, at: WorldTime) -> bool {
+        !self.separated && self.start < at && self.end.is_none_or(|end| at < end)
+    }
 }
 
 fn validate_interval(
@@ -562,14 +703,46 @@ pub(crate) fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), Re
         ("transfer", "the recipient of a transfer from the subject"),
         (
             "recognition",
-            "the subject interpreted by the recognizing entity",
+            "the recognized subject, directed from the recognizing person or institution",
+        ),
+        (
+            ASSOCIATION_FORM,
+            "the declared form of the subject's association beginning at this time",
+        ),
+        (
+            RECOGNITION_INTERPRETATION,
+            "the interpretation assigned by the recognizing subject at this time",
         ),
         (MEMBERSHIP, "the group in which the subject participates"),
+        (
+            MEMBERSHIP_ENDED,
+            "the group in which the subject's membership ended at this time",
+        ),
         (SEPARATE, "the participant from whom the subject separated"),
         (DISSOLVE, "the subject group ceased future activity"),
         (DIE, "the subject person ceased future lifecycle activity"),
     ] {
         registry.register_predicate(predicate, false, description)?;
+    }
+    for kind in [
+        RelationKind::Origin,
+        RelationKind::Descent,
+        RelationKind::Care,
+        RelationKind::Dependency,
+        RelationKind::Association,
+        RelationKind::Residence,
+        RelationKind::Custody,
+        RelationKind::Transfer,
+        RelationKind::Recognition,
+    ] {
+        registry.register_predicate(
+            kind.ended_predicate(),
+            false,
+            &format!(
+                "the {} target whose relation from the subject ended at this time",
+                kind.predicate()
+            ),
+        )?;
     }
     Ok(())
 }

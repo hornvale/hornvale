@@ -29,6 +29,21 @@ pub const GENDER_RECOGNITION: &str = "gender-recognition";
 /// A witnessed transition in a person's social or reproductive history.
 /// type-audit: bare-ok(identifier-text)
 pub const TRANSITIONED: &str = "transitioned";
+/// The exclusive end of a [`SEX_TRAIT`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const SEX_TRAIT_ENDED: &str = "sex-trait-ended";
+/// The exclusive end of a [`REPRODUCTIVE_ROLE`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const REPRODUCTIVE_ROLE_ENDED: &str = "reproductive-role-ended";
+/// The exclusive end of a [`GENDER_IDENTITY`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const GENDER_IDENTITY_ENDED: &str = "gender-identity-ended";
+/// The exclusive end of a [`GENDER_RECOGNITION`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const GENDER_RECOGNITION_ENDED: &str = "gender-recognition-ended";
+/// The exclusive end of a [`TRANSITIONED`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const TRANSITIONED_ENDED: &str = "transitioned-ended";
 /// The source that supports one realized person-social claim.
 /// type-audit: bare-ok(identifier-text)
 pub const PERSON_SOCIAL_PROVENANCE: &str = "person-social-provenance";
@@ -188,6 +203,27 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         false,
         "a witnessed transition in this person's realized history",
     )?;
+    for (predicate, description) in [
+        (SEX_TRAIT_ENDED, "the exclusive end of this sex-trait claim"),
+        (
+            REPRODUCTIVE_ROLE_ENDED,
+            "the exclusive end of this reproductive-role claim",
+        ),
+        (
+            GENDER_IDENTITY_ENDED,
+            "the exclusive end of this gender-identity claim",
+        ),
+        (
+            GENDER_RECOGNITION_ENDED,
+            "the exclusive end of this gender-recognition claim",
+        ),
+        (
+            TRANSITIONED_ENDED,
+            "the exclusive end of this transition-history claim",
+        ),
+    ] {
+        registry.register_predicate(predicate, false, description)?;
+    }
     registry.register_predicate(
         PERSON_SOCIAL_PROVENANCE,
         false,
@@ -265,9 +301,8 @@ impl std::error::Error for PersonSocialError {}
 ///
 /// The predicate and object stay paired behind typed constructors so a
 /// reproductive-role reference cannot silently become a gender identity.
-/// `end` is the exclusive end of the claim's applicability. The ledger fact
-/// records the start event; a later transition or claim carries the history
-/// forward without retracting this one.
+/// `end` is the exclusive end of the claim's applicability. Fact conversion
+/// records both boundaries without retracting the start fact.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PersonSocialFact {
     predicate: &'static str,
@@ -293,6 +328,11 @@ impl PersonSocialFact {
         if provenance.trim().is_empty() {
             return Err(PersonSocialError::new(
                 "person social provenance must not be empty",
+            ));
+        }
+        if matches!(&object, Value::Text(value) if value.trim().is_empty()) {
+            return Err(PersonSocialError::new(
+                "person social text value must not be empty",
             ));
         }
         Ok(Self {
@@ -421,6 +461,28 @@ impl PersonSocialFact {
         }
     }
 
+    fn end_fact(&self, person: EntityId) -> Option<Fact> {
+        self.end.map(|end| Fact {
+            subject: person,
+            predicate: self.end_predicate().to_string(),
+            object: self.object.clone(),
+            place: None,
+            day: Some(end),
+            provenance: self.provenance.clone(),
+        })
+    }
+
+    fn end_predicate(&self) -> &'static str {
+        match self.predicate {
+            SEX_TRAIT => SEX_TRAIT_ENDED,
+            REPRODUCTIVE_ROLE => REPRODUCTIVE_ROLE_ENDED,
+            GENDER_IDENTITY => GENDER_IDENTITY_ENDED,
+            GENDER_RECOGNITION => GENDER_RECOGNITION_ENDED,
+            TRANSITIONED => TRANSITIONED_ENDED,
+            _ => unreachable!("typed person-social constructors own every predicate"),
+        }
+    }
+
     fn provenance_fact(&self, person: EntityId) -> Fact {
         Fact {
             subject: person,
@@ -469,12 +531,15 @@ impl PersonSocialSeed {
         &self.facts
     }
 
-    /// Convert each claim into its axis fact followed by its explicit
-    /// provenance fact, preserving input order.
+    /// Convert each claim into its start fact, optional exclusive-end fact,
+    /// and explicit provenance fact, preserving claim order.
     pub fn facts(&self) -> Vec<Fact> {
-        let mut facts = Vec::with_capacity(self.facts.len() * 2);
+        let mut facts = Vec::with_capacity(self.facts.len() * 3);
         for social in &self.facts {
             facts.push(social.fact(self.person));
+            if let Some(end) = social.end_fact(self.person) {
+                facts.push(end);
+            }
             facts.push(social.provenance_fact(self.person));
         }
         facts
