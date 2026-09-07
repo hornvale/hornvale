@@ -6564,3 +6564,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T17:59:52Z | gate-commit | 55.214 | 75.532 | 19.060 | 1.71 | 0 | 14e9db583 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T18:00:31Z | gate-commit | 55.241 | 71.150 | 18.647 | 1.63 | 0 | 14e9db583 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T19:11:17Z | sluice:artifacts | 299.264 | 1909.585 | 77.250 | 6.64 | 0 | 50ee85815 |  | lefford | 40 |
+| 2026-09-07T19:13:16Z | sluice:outboard | 118.635 | 125.069 | 95.766 | 1.86 | 0 | 34ddef01a |  | lefford | 40 |
