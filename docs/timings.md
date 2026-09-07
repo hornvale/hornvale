@@ -6600,3 +6600,28 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T22:08:51Z | sluice:gate | 877.922 | 22823.167 | 645.134 | 26.73 | 0 | 2c45f7391 |  | lefford | 40 |
 | 2026-09-07T22:12:02Z | sluice:clients | 190.894 | 2979.834 | 294.079 | 17.15 | 0 | 9060a4bf9 |  | lefford | 40 |
 | 2026-09-07T22:20:18Z | sluice:heavy | 495.771 | 11520.314 | 174.128 | 23.59 | 0 | 139dc7e2f |  | lefford | 40 |
+| 2026-09-07T17:18:10Z | gate-commit | 40.049 | 68.308 | 17.886 | 2.15 | 0 | dc3da837d | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T17:18:14Z | gate-commit | 40.713 | 68.185 | 18.014 | 2.12 | 0 | 6f3d7bf62 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T17:51:54Z | gate-commit | 87.039 | 286.857 | 43.607 | 3.80 | 0 | 6f3d7bf62 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T17:53:26Z | gate-commit | 40.856 | 67.518 | 18.184 | 2.10 | 0 | 6f3d7bf62 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T18:10:17Z | gate-commit | 19.096 | 29.530 | 5.914 | 1.86 | 0 | 406138faa | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T18:11:17Z | gate-commit | 24.757 | 23.973 | 0.552 | 0.99 | 0 | 406138faa | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T18:12:56Z | gate-commit | 67.293 | 108.484 | 34.743 | 2.13 | 0 | 406138faa | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T18:15:45Z | gate-commit | 54.085 | 126.132 | 19.755 | 2.70 | 0 | 406138faa | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T18:59:27Z | gate-commit | 208.526 | 426.004 | 46.672 | 2.27 | 0 | b85260d94 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T19:01:52Z | gate-commit | 60.003 | 72.192 | 18.789 | 1.52 | 0 | b85260d94 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T19:38:00Z | gate-commit | 105.803 | 358.836 | 46.881 | 3.83 | 0 | b6a17b39d | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T19:39:50Z | gate-commit | 36.620 | 67.029 | 17.634 | 2.31 | 0 | b6a17b39d | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:00:30Z | gate-commit | 8.644 | 8.123 | 0.277 | 0.97 | 0 | d8f990e6a | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:00:54Z | gate-commit | 10.528 | 11.839 | 1.503 | 1.27 | 0 | d8f990e6a | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:01:25Z | gate-commit | 16.495 | 17.636 | 1.578 | 1.16 | 0 | d8f990e6a | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:02:39Z | gate-commit | 64.174 | 301.230 | 19.646 | 5.00 | 0 | d8f990e6a | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:03:24Z | gate-commit | 35.040 | 66.362 | 17.509 | 2.39 | 0 | d8f990e6a | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:04:14Z | gate-commit | 34.759 | 66.070 | 17.275 | 2.40 | 0 | d8f990e6a | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:21:40Z | gate-commit | 29.354 | 20.424 | 1.447 | 0.75 | 0 | 6280c3125 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:22:44Z | gate-commit | 25.519 | 24.588 | 0.613 | 0.99 | 0 | 6280c3125 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:24:08Z | gate-commit | 75.140 | 270.518 | 36.143 | 4.08 | 0 | 6280c3125 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:24:08Z | gate-commit | 62.611 | 69.914 | 17.937 | 1.40 | 0 | 4edba01f8 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:40:35Z | lot-check | 57.422 | 99.384 | 4.939 | 1.82 | 0 | 4edba01f8 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T20:45:43Z | gate-commit | 85.401 | 289.640 | 43.551 | 3.90 | 0 | 4edba01f8 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T21:12:13Z | gate-commit | 132.512 | 613.696 | 50.751 | 5.01 | 0 | 0117ecf8e | campaign/soc-household | MacBookPro | 10 |

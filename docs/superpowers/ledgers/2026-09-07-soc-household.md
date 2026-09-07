@@ -192,3 +192,17 @@ approved. Lot tests 39 passed with 1 skipped, the worldgen Lot probe passed,
 client tests 65 passed, native/WASM payload and gallery drift checks passed,
 and fmt, clippy, type/placement/plumb audits, and `make gate-commit` passed.
 No census was run.
+
+## #11 [G6] — Closure dispositions
+
+**Decision:** close the campaign with the minimal existing domain split: cohort
+and aggregate support remain in demography, while realized social facts and The
+Lot projection remain in the social/person boundary. Do not add a universal
+household class. Synthetic probe names remain test-only and add no canon to
+existing species.
+
+The Murrain coordination is deferred as a future interface between independent
+substrates. Institutions, economy, magic, anatomy, species taxonomy, and
+authored social canon remain outside this campaign. The chronicle and
+retrospective carry the durable product and process account; no scratch-only
+follow-up remains.

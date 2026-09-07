@@ -470,6 +470,7 @@
 - [The Charter](./chronicle/the-charter.md)
 - [The Counterpart](./chronicle/the-counterpart.md)
 - [The Lot](./chronicle/the-lot.md)
+- [The Social Household](./chronicle/the-soc-household.md)
 - [The Warp](./chronicle/the-warp.md)
 - [The Cruck](./chronicle/the-cruck.md)
 - [The Hidage](./chronicle/the-hidage.md)
