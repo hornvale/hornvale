@@ -344,7 +344,7 @@
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{KindId, Seed};
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, WorldComponents, history_for};
+use hornvale_worldgen::{SettlementPins, WorldComponents, history_for, seed_sweep};
 use std::collections::BTreeMap;
 
 /// Seeds `1..=SAMPLE`, the range every reading below is pooled over.
@@ -392,8 +392,11 @@ const MIN_RATE_SPAN: f64 = 0.05;
 /// carrying a people is its rank-0 draw, and the first *alive* record carrying
 /// it is its flagship.
 fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
-    let mut tally: BTreeMap<KindId, (u32, u32)> = BTreeMap::new();
-    for seed in 1..=SAMPLE {
+    // Each seed is independent, and `map_seeds` returns these contributions
+    // in seed order rather than completion order. Folding them on this thread
+    // therefore preserves the serial loop's exact tally and output. Set
+    // `HV_SEED_SWEEP_THREADS=1` to reproduce the old execution shape.
+    let per_seed: Vec<Vec<(KindId, bool)>> = seed_sweep::map_seeds(1..=SAMPLE, |seed| {
         let history = history_for(
             Seed(seed),
             &SkyPins::default(),
@@ -408,22 +411,27 @@ fn reselection_rates(wc: &WorldComponents) -> BTreeMap<KindId, (u32, u32)> {
             seen.dedup();
             seen
         };
-        for people in peoples {
-            let Some(genesis) = history.records.iter().find(|r| r.core.people == people) else {
-                continue;
-            };
-            let Some(flagship) = history
-                .records
-                .iter()
-                .find(|r| r.core.people == people && r.core.ended.is_none())
-            else {
+        peoples
+            .into_iter()
+            .filter_map(|people| {
+                let genesis = history.records.iter().find(|r| r.core.people == people)?;
+                let flagship = history
+                    .records
+                    .iter()
+                    .find(|r| r.core.people == people && r.core.ended.is_none())?;
                 // A people wholly extinguished by `now` has no flagship to
                 // re-seat; it is not a world this rate is defined on.
-                continue;
-            };
+                Some((people, flagship.core.site != genesis.core.site))
+            })
+            .collect()
+    });
+
+    let mut tally: BTreeMap<KindId, (u32, u32)> = BTreeMap::new();
+    for contributions in per_seed {
+        for (people, changed) in contributions {
             let entry = tally.entry(people).or_insert((0, 0));
             entry.1 += 1;
-            if flagship.core.site != genesis.core.site {
+            if changed {
                 entry.0 += 1;
             }
         }
