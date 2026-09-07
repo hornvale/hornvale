@@ -71,6 +71,12 @@ commands are measured independently inside the same cell, so no unmeasured
 time is assigned to a phase. Unit tests mock graph/capture boundaries and do
 not run a live build or create `results/baseline.json`.
 
+Source identity prefers `origin/main` as the comparison ref. When that ref is
+unavailable, it safely falls back to the local `main` ref so a checkout with no
+remote-tracking ref can still be measured. The fallback limits comparison
+provenance: the dossier records `main`, but it cannot establish that local
+`main` matches the intended remote baseline.
+
 ## Limits
 
 This experiment cannot establish that a smaller graph is always faster, that

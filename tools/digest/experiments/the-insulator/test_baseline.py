@@ -249,7 +249,7 @@ class SummaryTests(unittest.TestCase):
 
 
 class BaselineOrchestrationTests(unittest.TestCase):
-    def _run_with_mocks(self, root, output, cold, fake_capture=None):
+    def _run_with_mocks(self, root, output, cold, fake_capture=None, events=None):
         (root / "tools" / "digest").mkdir(parents=True, exist_ok=True)
         fake = attempt("cold")["capture"]
         fake["cwd"] = fake["ownership"]["checkout"] = str(root)
@@ -257,6 +257,8 @@ class BaselineOrchestrationTests(unittest.TestCase):
         fake["ownership"]["evidence_root"] = str(root / "evidence")
         fake["ownership"]["evidence_destination"] = str(root / "evidence/capture.json")
         def capture_cell(workload_id, _checkout, target, evidence, destination, **_kwargs):
+            if events is not None:
+                events.append(("build", workload_id))
             value = json.loads(json.dumps(fake if fake_capture is None else fake_capture))
             value["workload_id"] = workload_id
             value["cwd"] = value["ownership"]["checkout"] = str(root)
@@ -266,7 +268,11 @@ class BaselineOrchestrationTests(unittest.TestCase):
             value["workload_command_template"] = next(item["command"] for item in json.loads((ROOT / "workloads.json").read_text())['workloads'] if item['id'] == workload_id)
             value["command"] = [arg.replace("${CHECKOUT}", str(root)) for arg in value["workload_command_template"]]
             return value
-        with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=capture_cell), mock.patch("measure._measure_workload_phase", side_effect=[2.0, 3.0, 4.0, 5.0]), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
+        def measure_phase(workload, phase, *_args):
+            if events is not None:
+                events.append((phase, workload["id"], workload["phases"][phase]["command"]))
+            return {"preparation": 2.0, "test": 3.0}[phase]
+        with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=capture_cell), mock.patch("measure._measure_workload_phase", side_effect=measure_phase), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
             return run_baseline(root, output, "mac", cold=cold)
 
     def test_cold_recreates_only_owned_target_and_warm_preserves_it(self):
@@ -331,6 +337,22 @@ class BaselineOrchestrationTests(unittest.TestCase):
             self.assertNotEqual(costs["build_s"], costs["preparation_s"])
             self.assertTrue(all(value >= 0 for value in costs.values()))
 
+    def test_selects_each_frozen_workload_and_orders_phases_around_build(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "checkout"
+            root.mkdir()
+            events = []
+            self._run_with_mocks(root, Path(directory) / "baseline.json", True, events=events)
+            workloads = json.loads((ROOT / "workloads.json").read_text(encoding="utf-8"))["workloads"]
+            expected = []
+            for workload in workloads:
+                expected.extend([
+                    ("preparation", workload["id"], workload["phases"]["preparation"]["command"]),
+                    ("build", workload["id"]),
+                    ("test", workload["id"], workload["phases"]["test"]["command"]),
+                ])
+            self.assertEqual(events, expected)
+
 
 class SourceIdentityTests(unittest.TestCase):
     def test_uses_origin_main_as_default_comparison_ref(self):
@@ -344,6 +366,28 @@ class SourceIdentityTests(unittest.TestCase):
             result = _source_identity(Path("/repo"), comparison_ref="release")
         self.assertEqual(result["comparison_ref"], "release")
         self.assertEqual(git.call_args_list[-1].args, (Path("/repo"), "merge-base", "HEAD", "release"))
+
+    def test_falls_back_to_local_main_when_origin_main_is_unavailable(self):
+        calls = []
+
+        def git_text(root, *args):
+            calls.append(args)
+            if args == ("rev-parse", "--verify", "origin/main"):
+                raise ValueError("origin/main is unavailable")
+            if args == ("rev-parse", "HEAD"):
+                return "a" * 40
+            if args == ("rev-parse", "HEAD^{tree}"):
+                return "b" * 40
+            if args == ("merge-base", "HEAD", "main"):
+                return "c" * 40
+            raise AssertionError(args)
+
+        with mock.patch("measure._git_text", side_effect=git_text):
+            result = _source_identity(Path("/repo"))
+        self.assertEqual(result["comparison_ref"], "main")
+        self.assertEqual(result["merge_base"], "c" * 40)
+        self.assertEqual(calls[0], ("rev-parse", "--verify", "origin/main"))
+        self.assertEqual(calls[-1], ("merge-base", "HEAD", "main"))
 
 
 if __name__ == "__main__":
