@@ -6493,3 +6493,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T13:03:20Z | sluice:clients | 152.892 | 2430.480 | 227.215 | 17.38 | 0 | f74b0a6b7 |  | lefford | 40 |
 | 2026-09-07T13:11:28Z | sluice:heavy | 487.838 | 11439.838 | 162.537 | 23.78 | 0 | dad0feacb |  | lefford | 40 |
 | 2026-09-07T14:19:22Z | prewarm | 228.584 | 1183.528 | 52.976 | 5.41 | 0 | fff169c65 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T15:51:03Z | game-check | 10.022 | 13.908 | 7.384 | 2.12 | 0 | d8643f478 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T15:53:27Z | game-check | 129.576 | 813.062 | 30.543 | 6.51 | 0 | d8643f478 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T15:54:55Z | gate-commit | 58.142 | 130.767 | 50.903 | 3.12 | 0 | d8643f478 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:11:45Z | game-check | 122.585 | 746.409 | 25.969 | 6.30 | 0 | e0f4cc0c7 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:12:49Z | gate-commit | 37.623 | 72.041 | 16.609 | 2.36 | 0 | e0f4cc0c7 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:31:12Z | game-check | 121.561 | 752.606 | 27.306 | 6.42 | 0 | e2a137faf | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:34:04Z | game-check | 131.947 | 778.892 | 32.503 | 6.15 | 0 | e2a137faf | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:34:58Z | gate-commit | 37.433 | 72.402 | 16.909 | 2.39 | 0 | e2a137faf | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:54:35Z | game-check | 2.367 | 3.138 | 2.810 | 2.51 | 0 | 309fef94d | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:57:24Z | game-check | 139.105 | 809.173 | 29.532 | 6.03 | 0 | 309fef94d | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T16:58:34Z | gate-commit | 44.273 | 75.845 | 17.689 | 2.11 | 0 | 309fef94d | campaign/the-sett | MacBookPro | 10 |
