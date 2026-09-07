@@ -6504,3 +6504,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T16:54:35Z | game-check | 2.367 | 3.138 | 2.810 | 2.51 | 0 | 309fef94d | campaign/the-sett | MacBookPro | 10 |
 | 2026-09-07T16:57:24Z | game-check | 139.105 | 809.173 | 29.532 | 6.03 | 0 | 309fef94d | campaign/the-sett | MacBookPro | 10 |
 | 2026-09-07T16:58:34Z | gate-commit | 44.273 | 75.845 | 17.689 | 2.11 | 0 | 309fef94d | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T15:53:50Z | sluice:artifacts | 306.105 | 1561.573 | 66.129 | 5.32 | 0 | d2647d356 |  | lefford | 40 |
+| 2026-09-07T15:55:36Z | sluice:outboard | 105.418 | 95.893 | 84.167 | 1.71 | 0 | cba29975c |  | lefford | 40 |
+| 2026-09-07T16:09:56Z | sluice:gate | 860.344 | 22367.067 | 623.809 | 26.72 | 0 | 7d3aa1590 |  | lefford | 40 |
+| 2026-09-07T16:12:49Z | sluice:clients | 172.112 | 2632.783 | 233.604 | 16.65 | 0 | 5ecf8db18 |  | lefford | 40 |
+| 2026-09-07T16:20:54Z | sluice:heavy | 485.108 | 11471.048 | 148.212 | 23.95 | 0 | 5a118ac73 |  | lefford | 40 |
