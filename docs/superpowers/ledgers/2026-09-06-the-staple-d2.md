@@ -55,6 +55,13 @@ with the verified `traversable_neighbors` helper and named the exact existing
 bars. Ideonomy: 0 passes — this is a review gate, not a design choice.
 Capture: `IMPLEMENTATION_PLAN.md`; the plan.
 
+#9 [Q] — **What is the exchange bundle ratio?** · **Decision: D2 uses one
+fixed 1:1 typed bundle ratio, inherited from the complementary half-and-half
+basket. There is no ratio schedule, quote, or price discovery in this rung.**
+Ideonomy negation surfaced the deferred opposite (variable, negotiated or
+market-set ratio) as a later mechanism, not a reason to leave Task 3's
+interface undefined. Capture: spec §3; plan Task 3.
+
 ## Task 1 — probe contract frozen
 
 The executable fixture now treats the 200 worlds and the attempt population as

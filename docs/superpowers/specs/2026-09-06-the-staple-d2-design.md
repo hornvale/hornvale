@@ -66,7 +66,9 @@ The phase order is:
 
 Exchange uses existing one-hop local reachability. Communities may propose
 against projected current-phase demand; future promises are outside D2.
-Opening stock first reserves the community's projected basket. Only the
+Opening stock first reserves the community's projected basket. The basket is
+the pinned 1:1 typed bundle ratio: one unit of A paired with one unit of B at
+the fixed complementary share. Only the
 remainder is offered. Clearing is simultaneous, deterministic, and pro-rata
 under scarcity. Incoming stock may fund already-declared acyclic downstream
 requests. An unfunded cycle cannot settle, so promises cannot manufacture

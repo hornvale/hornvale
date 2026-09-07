@@ -62,7 +62,7 @@
 - Modify: `windows/worldgen/tests/suite/history_units.rs` with clearing tests.
 
 **Interfaces:**
-- Consumes: typed inventories, fixed complementary basket, `traversable_neighbors` in `history_bake.rs`, and a pinned deterministic bundle-ratio schedule.
+- Consumes: typed inventories, fixed complementary basket, `traversable_neighbors` in `history_bake.rs`, and the pinned 1:1 typed bundle ratio inherited from the half-and-half basket. No ratio schedule or price discovery exists in D2.
 - Produces: a pure clearing function that accepts a snapshot of communities and inventories and returns atomic typed deliveries plus explicit outcome statuses; it must not consume a random stream or mutate `stores`.
 
 - [ ] **Step 1: Write failing tests** for bilateral exchange, competing requests, partial delivery, funded acyclic chain, funded reciprocal cycle, unfunded cycle, and iteration-order identity.
