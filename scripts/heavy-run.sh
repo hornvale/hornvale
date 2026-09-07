@@ -108,12 +108,17 @@ if [ -n "${HV_HEAVY_REF:-}" ]; then
     # (and this canonical one) are left untouched. Path is outside the repo to
     # keep `git status` clean here.
     # Resolve the path: `git worktree list` prints REAL paths, so an
-    # unresolved `$repo_root/../hornvale-heavy-wt` never matches the grep
+    # unresolved `$_main_root/../hornvale-heavy-wt` never matches the grep
     # below. `pwd -P`, not plain `pwd`: the logical form still carries any
     # symlink in the path, which `git worktree list` will have resolved away.
     # The `if` keeps the unresolved form for the not-yet-created case — the
     # `cd` fails, the assignment never happens, and `$wt` is left alone.
-    wt="${HV_HEAVY_WORKTREE:-$repo_root/../hornvale-heavy-wt}"
+    # Anchored to the MAIN worktree, not the caller's — see the long note in
+    # scripts/sluice-run.sh for the incident and decision 0146's precedent.
+    _main_root="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" worktree list --porcelain \
+        | awk '/^worktree /{print $2; exit}')"
+    [ -n "$_main_root" ] || _main_root="$repo_root"
+    wt="${HV_HEAVY_WORKTREE:-$_main_root/../hornvale-heavy-wt}"
     if wt_resolved="$(cd "$wt" 2>/dev/null && pwd -P)"; then
         wt="$wt_resolved"
     fi
