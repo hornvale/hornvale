@@ -429,9 +429,17 @@ probe's opening brief.
 
 **D2 — more than one thing flows, and some of it by exchange.** Split people
 from subsistence (§3, consequence 1); add a voluntary exchange beside the
-coercive one. **Probe: does adding exchange destabilize a demography
-calibrated over a 200-seed census?** The existing coercion model is tuned to
-a coupling (`ASSESS_RATE` at `GROWTH_RATE/8`) that a second channel may break.
+coercive one. **Probe result (The Staple D2, 2026-09-07): ACTIVATES and does
+not cross the instability pole.** The authorized paired 200-seed treatment
+settled in `178/200` worlds, conserved typed stock in `200/200`, and produced
+treatment-only breaches of settlement count `6/200`, collapse share `1/200`,
+and alive-at-now `0/200`, all below the strict `>100/200` pole. D2 therefore
+owns the first measured climate-to-city link — climate/productivity shapes
+typed local stock, exchange access changes dependence, and the resulting
+shortfall reaches settlement stability — while it does not answer the open
+`SETTLERS_PER_CAPACITY` or catchment-ceiling questions. The existing coercion
+model remains coupled at `ASSESS_RATE = GROWTH_RATE/8`; D2's exchange channel
+was measured against that calibration rather than retuned.
 
 **D3 — the flow returns downhill.** `stores` gains an outflow. Protection,
 goods and legitimacy move down a relation; `Fort`, `Trade` and `Cult` become
@@ -492,6 +500,10 @@ majority case. Inherits The Plat's tense vocabulary (decision 0649).
   [The Hidage's readout bears on this — S4 2.9–11.2, the apex exists at a
   scale where every catchment clears the ceiling; it opens D2's probe brief,
   see §4 D1's *Probe result*.]
+- Whether D2's typed exchange trace should become a larger-census column. The
+  paired probe establishes the climate-to-city ownership and the stability
+  result, but not the durability or query frequency needed to promote a
+  derived study trace into the larger census.
 - The chamber-band pattern inventory, the connectivity rule, whether a
   district is a `Role` or a new type, and how extent is represented. Those are
   R3's spec, and R3 is downstream.

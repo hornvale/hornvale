@@ -144,9 +144,10 @@ pub use graph_derive::{
 };
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
-    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP, GENESIS_POP,
-    History, MIGRATE_SURVIVAL, ORE_CUT, TributeRelation, WAR_LOSS, bake, cascade_sizes, census,
-    defensibility_for_test, weakest_point_defensibility,
+    BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP,
+    ExchangeCensus, ExchangeTreatment, GENESIS_POP, History, MIGRATE_SURVIVAL, ORE_CUT,
+    TributeRelation, WAR_LOSS, bake, cascade_sizes, census, defensibility_for_test,
+    exchange_census, weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
@@ -275,6 +276,15 @@ pub struct BuildArtifacts {
     pub terrain: Option<GeneratedTerrain>,
     /// The derived climate, `Some` iff depth >= [`BuildDepth::Settlements`].
     pub climate: Option<GeneratedClimate>,
+}
+
+/// A settlement-depth world built through an explicit D2 treatment boundary,
+/// paired with the treatment's derived whole-bake exchange counts.
+pub struct ExchangeTreatmentBuild {
+    /// The built world.
+    pub world: World,
+    /// Derived exchange counts and stock-conservation residuals.
+    pub exchange: ExchangeCensus,
 }
 
 /// The derived artifacts a rung had already built when the observer fired,
@@ -7526,6 +7536,37 @@ pub fn build_world_to(
     build_to(seed, pins, terrain_pins, settlement_pins, wc, depth, None).map(|built| built.world)
 }
 
+/// Build the settlement rung through an explicit D2 exchange treatment
+/// boundary. `Disabled` runs the same configured path as [`build_world_to`];
+/// `Enabled` adds typed production, direct exchange, basket consumption, and
+/// the bounded pressure adapter without adding a random draw.
+#[allow(clippy::too_many_arguments)]
+pub fn build_world_with_exchange_treatment(
+    seed: Seed,
+    pins: &SkyPins,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+    treatment: ExchangeTreatment,
+) -> Result<ExchangeTreatmentBuild, BuildError> {
+    let mut exchange = ExchangeCensus::default();
+    let built = build_to_configured(
+        seed,
+        pins,
+        terrain_pins,
+        settlement_pins,
+        wc,
+        BuildDepth::Settlements,
+        treatment,
+        None,
+        Some(&mut exchange),
+    )?;
+    Ok(ExchangeTreatmentBuild {
+        world: built.world,
+        exchange,
+    })
+}
+
 /// Build a world to `depth` and hand back the artifacts the build already
 /// constructed (see [`BuildArtifacts`]). Prefer this over [`build_world_to`]
 /// followed by [`terrain_of`]/[`climate_from`] when you are the one building
@@ -7669,6 +7710,7 @@ fn bake_history_from(
     climate: &GeneratedClimate,
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
+    exchange_treatment: ExchangeTreatment,
 ) -> Result<History, BuildError> {
     let geo = terrain.geosphere();
 
@@ -7709,6 +7751,7 @@ fn bake_history_from(
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
     let mut cfg = history_bake::BakeConfig::default_millennia();
+    cfg.exchange_treatment = exchange_treatment;
     let (eras, era_adjusts, era_years) = bake_eras(world, terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
 
@@ -7983,7 +8026,15 @@ pub fn history_for(
         None => terrain_of(&built.world)?,
     };
     let climate = climate_from(&built.world, &terrain)?;
-    bake_history_from(seed, &built.world, &terrain, &climate, settlement_pins, wc)
+    bake_history_from(
+        seed,
+        &built.world,
+        &terrain,
+        &climate,
+        settlement_pins,
+        wc,
+        ExchangeTreatment::Disabled,
+    )
 }
 
 /// `build_to`'s optional observer callback: called with the rung just
@@ -8019,7 +8070,33 @@ fn build_to(
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
+    observer: Option<BuildObserver<'_>>,
+) -> Result<BuildArtifacts, BuildError> {
+    build_to_configured(
+        seed,
+        pins,
+        terrain_pins,
+        settlement_pins,
+        wc,
+        depth,
+        ExchangeTreatment::Disabled,
+        observer,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::disallowed_methods)]
+fn build_to_configured(
+    seed: Seed,
+    pins: &SkyPins,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+    depth: BuildDepth,
+    exchange_treatment: ExchangeTreatment,
     mut observer: Option<BuildObserver<'_>>,
+    exchange_out: Option<&mut ExchangeCensus>,
 ) -> Result<BuildArtifacts, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
@@ -8227,7 +8304,18 @@ fn build_to(
     // written exactly once. Same seed + pins ⇒ byte-identical `History` ⇒
     // byte-identical committed skeleton (the bake draws only under the
     // isolated `history/genesis/<people>` and `history/bake/v3` streams).
-    let history = bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)?;
+    let history = bake_history_from(
+        seed,
+        &world,
+        &terrain,
+        &climate,
+        settlement_pins,
+        wc,
+        exchange_treatment,
+    )?;
+    if let Some(out) = exchange_out {
+        *out = exchange_census(&history);
+    }
     emit_history(&mut world, &history)?;
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
     // present isn't the latest occupation event (a stochastic bake rarely
