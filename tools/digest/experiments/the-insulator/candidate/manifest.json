@@ -1,0 +1,33 @@
+{
+  "schema": "insulator-candidate-v1",
+  "workspace": "/Users/nathan/.config/superpowers/worktrees/hornvale/insulator/tools/digest/experiments/the-insulator/candidate",
+  "package": "insulator-candidate",
+  "dependencies": [
+    "digest-protocol"
+  ],
+  "path_dependencies": [
+    "digest-protocol"
+  ],
+  "source_tree": "478927e90e00da83ceee9c770a80f91c7c8e7f6b2ddbe185b886b6512a4ee606",
+  "source_files": [
+    "Cargo.toml",
+    "README.md",
+    "src/main.rs"
+  ],
+  "authority_files": [],
+  "provenance": {
+    "baseline_commit": "7c85c397d52964b2c39571548bb0d7d7015a1cd6",
+    "baseline_tree": "2d587cf6973b4525de6d42a0c65184c22fa3761b",
+    "baseline_graph_sha256": "1cf9be46743ffd40a22ff7381e45ddf3c14c07534af0c90a3ed62e320f1ea8d7"
+  },
+  "workloads": [
+    "digest-census-publication",
+    "digest-thing"
+  ],
+  "observed_output": {
+    "workload": "digest-census-publication",
+    "path": "stdout",
+    "bytes": 31,
+    "sha256": "188703470f44519be04f4e3f647af191ba4ae50a1e8f393477b0f3b8ccb4369d"
+  }
+}

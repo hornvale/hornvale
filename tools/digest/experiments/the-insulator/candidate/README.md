@@ -14,10 +14,11 @@ rules would violate the candidate boundary. `compare_outputs` must retain
 that result as an output mismatch or incomplete record rather than treating a
 smaller graph as equivalent.
 
-Provenance is recorded by `candidate_manifest` from the frozen baseline
-commit, tree, and graph identity. Candidate commands are intentionally absent
-from that manifest; execution continues to use the named workload contract
-and the existing measurement cell.
+Provenance is recorded in the committed machine-readable `manifest.json` from
+the frozen baseline commit, tree, and graph identity. The manifest also
+retains the observed 31-byte output identity used by the comparison. Candidate
+commands are intentionally absent from that manifest; execution continues to
+use the named workload contract and the existing measurement cell.
 
 ## Measured rejection
 

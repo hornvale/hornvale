@@ -1,3 +1,4 @@
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -10,14 +11,13 @@ from measure import decide, invalidation_matrix, run_paired_qualification  # noq
 
 def attempt(source="source-a", *, cleanup=True, output="same", build=10.0,
             valid=True):
-    return {
-        "source": {"commit": source if len(source) == 40 else "a" * 40,
-                    "tree": "b" * 40, "merge_base": "c" * 40},
-        "capture": {"cleanup": {"complete": cleanup, "error": None if cleanup else "lost"}},
-        "valid": valid,
-        "outputs": {"publication": output},
-        "costs": {"build_s": build},
-    }
+    root = Path(__file__).resolve().parent
+    record = json.loads((root / "results" / "mac-cold.json").read_text())["attempts"][0]
+    record["source"]["commit"] = source if len(source) == 40 else "a" * 40
+    record["capture"]["cleanup"] = {"complete": cleanup, "error": None if cleanup else "lost"}
+    record["costs"]["build_s"] = build
+    record["valid"] = valid
+    return record
 
 
 def qualification_fixture():
@@ -49,6 +49,18 @@ class PairedQualificationTests(unittest.TestCase):
         baseline, candidate = qualification_fixture()
         candidate["mac"]["attempts"][0]["capture"]["cleanup"]["complete"] = False
         with self.assertRaisesRegex(ValueError, "cleanup"):
+            run_paired_qualification(baseline, candidate, ["mac", "linux"])
+
+    def test_rejects_attempt_missing_graph_evidence(self):
+        baseline, candidate = qualification_fixture()
+        del candidate["mac"]["attempts"][0]["graph"]
+        with self.assertRaisesRegex(ValueError, "graph"):
+            run_paired_qualification(baseline, candidate, ["mac", "linux"])
+
+    def test_rejects_attempt_missing_bounded_capture_evidence(self):
+        baseline, candidate = qualification_fixture()
+        del candidate["mac"]["attempts"][0]["capture"]["stdout"]
+        with self.assertRaisesRegex(ValueError, "stdout"):
             run_paired_qualification(baseline, candidate, ["mac", "linux"])
 
     def test_returns_complete_pairs(self):
@@ -89,11 +101,33 @@ class DecisionTests(unittest.TestCase):
                       "performance": {"repeatable_reduction": True}}
         self.assertEqual(decide(comparison), "reject")
 
-    def test_accepts_stable_reduction(self):
+    def test_rejects_stable_reduction_without_evidence(self):
         comparison = {"complete": True, "output_match": True,
                       "boundary": {"undeclared_dependencies": [], "duplicated_authority": False},
                       "performance": {"repeatable_reduction": True}}
-        self.assertEqual(decide(comparison), "admit")
+        self.assertEqual(decide(comparison), "reject")
+
+    def test_rejects_skeletal_stable_reduction_for_missing_evidence(self):
+        comparison = {"complete": True, "output_match": True,
+                      "boundary": {"undeclared_dependencies": [], "duplicated_authority": False},
+                      "performance": {"repeatable_reduction": True}}
+        self.assertEqual(decide(comparison), "reject")
+
+    def test_real_mac_only_rejection_has_machine_readable_candidate_evidence(self):
+        root = Path(__file__).resolve().parent
+        comparison_path = root / "results" / "comparison.json"
+        comparison = json.loads(comparison_path.read_text())
+        candidate_path = root / comparison["candidate"]["dossier"]
+        self.assertTrue(candidate_path.is_file())
+        evidence = json.loads(candidate_path.read_text())
+        self.assertEqual(evidence["schema"], "insulator-candidate-v1")
+        self.assertEqual(evidence["provenance"]["baseline_commit"], comparison["source_identity"]["commit"])
+        self.assertEqual(evidence["observed_output"], {
+            "workload": "digest-census-publication", "path": "stdout", "bytes": 31,
+            "sha256": comparison["candidate"]["observed_output"]["sha256"]})
+        self.assertEqual(comparison["qualification"]["hosts"]["linux"]["status"], "not_run")
+        self.assertTrue(comparison["early_rejection"]["linux_not_required"])
+        self.assertEqual(decide(comparison), "reject")
 
     def test_rejects_noisy_non_reduction(self):
         comparison = {"complete": True, "output_match": True,

@@ -74,13 +74,20 @@
     }
   },
   "candidate": {
-    "dossier": "candidate/README.md",
+    "dossier": "candidate/manifest.json",
     "boundary": {
       "admissible_dependency": "digest-protocol",
       "undeclared_dependencies": [],
       "duplicated_authority": false
     },
     "output": {
+      "workload": "digest-census-publication",
+      "path": "stdout",
+      "bytes": 31,
+      "sha256": "188703470f44519be04f4e3f647af191ba4ae50a1e8f393477b0f3b8ccb4369d"
+    },
+    "manifest_schema": "insulator-candidate-v1",
+    "observed_output": {
       "workload": "digest-census-publication",
       "path": "stdout",
       "bytes": 31,
@@ -147,5 +154,14 @@
     "output mismatch",
     "canonical Linux qualification not required after decisive Mac mismatch",
     "candidate cannot import or duplicate windows/lab publication authority"
-  ]
+  ],
+  "complete": true,
+  "output_match": false,
+  "early_rejection": {
+    "status": "decisive_mac_output_mismatch",
+    "host": "mac",
+    "mac_evidence_complete": true,
+    "linux_not_required": true,
+    "reason": "The complete Mac output comparison already rejects the candidate before Linux execution."
+  }
 }

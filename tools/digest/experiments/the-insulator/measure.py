@@ -1139,13 +1139,10 @@ def _qualification_attempt(dossier: dict, host: str, path: str) -> dict:
     attempt = attempts[0]
     if not isinstance(attempt, dict):
         raise ValueError(f"{host} {path} attempt is invalid")
-    source = attempt.get("source")
-    if not isinstance(source, dict) or not all(_full_sha(source.get(key)) for key in ("commit", "tree", "merge_base")):
-        raise ValueError(f"{host} {path} source identity is incomplete")
-    capture = attempt.get("capture")
-    cleanup = capture.get("cleanup") if isinstance(capture, dict) else None
-    if not isinstance(cleanup, dict) or cleanup.get("complete") is not True or cleanup.get("error") is not None:
-        raise ValueError(f"{host} {path} cleanup is incomplete")
+    try:
+        validate_attempt(attempt)
+    except (KeyError, ValueError) as error:
+        raise ValueError(f"{host} {path} attempt evidence is incomplete: {error}") from error
     if attempt.get("valid", True) is not True:
         raise ValueError(f"{host} {path} attempt is invalid evidence")
     return attempt
@@ -1200,17 +1197,107 @@ def invalidation_matrix(records: list[dict]) -> dict:
     return matrix
 
 
+def _nonnegative_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _valid_qualification_evidence(qualification: dict) -> bool:
+    if not isinstance(qualification, dict):
+        return False
+    requested = qualification.get("requested_hosts")
+    observed = qualification.get("observed_hosts")
+    hosts = qualification.get("hosts")
+    if (not isinstance(requested, list) or not requested or
+            not all(isinstance(host, str) and host for host in requested) or
+            not isinstance(observed, list) or not isinstance(hosts, dict) or
+            set(observed) - set(requested) or set(hosts) != set(requested)):
+        return False
+    for host in requested:
+        record = hosts[host]
+        if not isinstance(record, dict):
+            return False
+        if host in observed:
+            if (record.get("status") != "observed" or record.get("cleanup_complete") is not True
+                    or not isinstance(record.get("baseline"), list) or not record["baseline"]
+                    or any(not isinstance(path, str) or not path.endswith(".json") for path in record["baseline"])
+                    or not isinstance(record.get("candidate"), str)
+                    or not record["candidate"].endswith(".json")):
+                return False
+        elif (record.get("status") != "not_run" or record.get("required") is not False
+              or not isinstance(record.get("reason"), str) or not record["reason"]
+              or record.get("evidence") is not None):
+            return False
+    if set(observed) != set(requested):
+        early = qualification.get("early_rejection")
+        if (not isinstance(early, dict) or early.get("status") != "decisive_mac_output_mismatch"
+                or early.get("host") not in observed
+                or early.get("mac_evidence_complete") is not True
+                or early.get("linux_not_required") is not True
+                or not isinstance(early.get("reason"), str) or not early["reason"]):
+            return False
+    return True
+
+
 def decide(comparison: dict) -> str:
     """Return the only product verdicts, failing closed on missing evidence."""
     if not isinstance(comparison, dict) or comparison.get("complete") is not True:
         return "reject"
-    boundary = comparison.get("boundary")
+    if comparison.get("evidence_valid") is not True:
+        return "reject"
+    required = {"qualification", "source_identity", "authoritative_baseline", "candidate",
+                "output_comparison", "invalidation_matrix", "performance"}
+    if not required.issubset(comparison):
+        return "reject"
+    source = comparison["source_identity"]
+    if (not isinstance(source, dict)
+            or any(not _full_sha(source.get(key)) for key in ("commit", "tree", "merge_base"))
+            or not isinstance(source.get("comparison_ref"), str)
+            or not source["comparison_ref"]):
+        return "reject"
+    qualification = comparison["qualification"]
+    if "early_rejection" in comparison:
+        qualification = dict(qualification)
+        qualification["early_rejection"] = comparison["early_rejection"]
+    if not _valid_qualification_evidence(qualification):
+        return "reject"
+    authoritative = comparison["authoritative_baseline"]
+    graph = authoritative.get("graph") if isinstance(authoritative, dict) else None
+    if (not isinstance(authoritative, dict) or not isinstance(authoritative.get("dossier"), str)
+            or not authoritative["dossier"].endswith(".json")
+            or not isinstance(graph, dict) or not _sha256(graph.get("sha256"))
+            or not _nonnegative_int(graph.get("package_count"))
+            or not _nonnegative_int(graph.get("workspace_member_count"))):
+        return "reject"
+    candidate = comparison["candidate"]
+    if (not isinstance(candidate, dict) or not isinstance(candidate.get("dossier"), str)
+            or not candidate["dossier"].endswith(".json")):
+        return "reject"
+    boundary = candidate.get("boundary")
+    if (not isinstance(boundary, dict) or not isinstance(boundary.get("undeclared_dependencies"), list)
+            or boundary.get("duplicated_authority") not in {True, False}):
+        return "reject"
+    output_comparison = comparison["output_comparison"]
+    if (not isinstance(output_comparison, dict) or not output_comparison
+            or any(not isinstance(items, list) or not items for items in output_comparison.values())
+            or any(not isinstance(item, dict) or item.get("complete") is not True
+                   or item.get("status") not in {"match", "mismatch"}
+                   or not isinstance(item.get("authoritative"), dict)
+                   or not isinstance(item.get("candidate"), dict)
+                   for items in output_comparison.values() for item in items)):
+        return "reject"
+    invalidation = comparison["invalidation_matrix"]
+    if not isinstance(invalidation, dict) or not invalidation:
+        return "reject"
+    for record in invalidation.values():
+        if (not isinstance(record, dict) or not isinstance(record.get("authoritative_packages"), list)
+                or not isinstance(record.get("candidate_packages"), (list, str))
+                or not isinstance(record.get("output_identity"), str)
+                or not record["output_identity"]):
+            return "reject"
     performance = comparison.get("performance")
-    if not isinstance(boundary, dict) or not isinstance(performance, dict):
+    if not isinstance(performance, dict):
         return "reject"
     if comparison.get("output_match") is not True:
-        return "reject"
-    if boundary.get("undeclared_dependencies") != [] or boundary.get("duplicated_authority") is not False:
         return "reject"
     if performance.get("repeatable_reduction") is not True:
         return "reject"
