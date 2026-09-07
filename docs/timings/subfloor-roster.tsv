@@ -3852,7 +3852,6 @@ hornvale-worldgen::suite$warp_signs::steepness_words_are_distinct_and_lowercase
 hornvale-worldgen::suite$warp_signs::wetness_sign_cuts_at_the_micro_word_threshold
 hornvale-worldgen::suite$weft_ledger_guard::the_seed_42_byte_golden_fact_count_is_unmoved
 hornvale-worldgen::suite$weft_prevalence::the_response_is_a_step_for_sign_kinds_and_identity_for_controls
-hornvale-worldgen::suite$weft_window::window_survives_chaos_eviction
 hornvale::hornvale$audio::tests::audio_filenames_are_eight_lowercase_hex_digits_dot_mp3
 hornvale::hornvale$audio::tests::crc32_matches_the_ieee_known_answer
 hornvale::hornvale$concepts::tests::manifest_render_derives_orphan_acts_from_the_action_roster

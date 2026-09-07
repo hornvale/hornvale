@@ -480,6 +480,7 @@
 - [The Fetch](./chronicle/the-fetch.md)
 - [The Newel](./chronicle/the-newel.md)
 - [The Grammar](./chronicle/the-grammar.md)
+- [The Insulator](./chronicle/the-insulator.md)
 
 # Appendix: The Frontier
 
