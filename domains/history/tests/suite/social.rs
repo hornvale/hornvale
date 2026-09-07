@@ -422,6 +422,43 @@ fn death_allows_inheritance_and_posthumous_recognition_but_not_dead_person_acts(
 }
 
 #[test]
+fn death_rejects_new_relations_requiring_the_dead_targets_participation() {
+    let death =
+        SocialEvent::Lifecycle(LifecycleEvent::die(entity(2), day(3), "death-record").unwrap());
+
+    for (kind, association_form) in [
+        (
+            RelationKind::Association,
+            Some(AssociationForm::new("companionship").unwrap()),
+        ),
+        (RelationKind::Care, None),
+        (RelationKind::Dependency, None),
+    ] {
+        let relation = SocialEvent::Relation(
+            RelationEvent::new(
+                kind,
+                entity(1),
+                entity(2),
+                day(4),
+                None,
+                association_form,
+                None,
+                "impossible",
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(
+            validate_social_events(&[death.clone(), relation])
+                .unwrap_err()
+                .to_string(),
+            "relation activity requires participation by a person after death",
+            "{kind:?} accepted a dead target"
+        );
+    }
+}
+
+#[test]
 fn dissolved_groups_cannot_participate_in_later_social_activity() {
     let dissolved =
         SocialEvent::Lifecycle(LifecycleEvent::dissolve(entity(9), day(3), "recorded").unwrap());

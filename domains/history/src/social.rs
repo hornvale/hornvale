@@ -101,6 +101,14 @@ impl RelationKind {
             Self::Recognition => "recognition-ended",
         }
     }
+
+    const fn allows_deceased_source(self) -> bool {
+        matches!(self, Self::Transfer)
+    }
+
+    const fn allows_deceased_target(self) -> bool {
+        matches!(self, Self::Recognition)
+    }
 }
 
 /// Explicit, culture-neutral form of an association.
@@ -523,8 +531,8 @@ impl SocialEvent {
 /// The scan enforces nondecreasing time and the three closure rules in the
 /// approved substrate: separation closes that directed association,
 /// dissolution closes its group's social participation, and death closes the
-/// person's future authored participation while preserving posthumous history
-/// and estate transfer.
+/// person's future participation according to the role each relation requires,
+/// while preserving posthumous recognition and estate transfer.
 pub fn validate_social_events(events: &[SocialEvent]) -> Result<(), SocialEventError> {
     let mut previous_time = None;
     let mut associations: Vec<AssociationInterval> = Vec::new();
@@ -549,10 +557,16 @@ pub fn validate_social_events(events: &[SocialEvent]) -> Result<(), SocialEventE
                         "relation activity involves a group after dissolution",
                     ));
                 }
-                if relation.kind != RelationKind::Transfer && dead_people.contains(&relation.source)
+                if !relation.kind.allows_deceased_source() && dead_people.contains(&relation.source)
                 {
                     return Err(SocialEventError::new(
                         "relation activity is performed by a person after death",
+                    ));
+                }
+                if !relation.kind.allows_deceased_target() && dead_people.contains(&relation.target)
+                {
+                    return Err(SocialEventError::new(
+                        "relation activity requires participation by a person after death",
                     ));
                 }
                 if relation.kind == RelationKind::Association {
