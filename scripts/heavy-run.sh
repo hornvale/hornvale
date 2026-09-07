@@ -122,7 +122,16 @@ if [ -n "${HV_HEAVY_REF:-}" ]; then
     if wt_resolved="$(cd "$wt" 2>/dev/null && pwd -P)"; then
         wt="$wt_resolved"
     fi
-    git -C "$repo_root" fetch --all --quiet
+    # FETCH origin EXPLICITLY IF `--all` FAILS. A second remote was added to this
+# repository (tangled.org) on 2026-09-07, and `--all` contacts every remote:
+# an unreachable secondary now aborts this script under `set -e`, BEFORE the
+# merge, with rc=1 — a code outside this script's own vocabulary, which the
+# drain records as "attribution pending" and blames the candidate for. Found
+# by a test that added a deliberately-broken remote and watched a chamber run
+# die at rc=1 immediately after its queue-row line. Falling back to origin
+# keeps the failure fatal only when the remote the chamber actually needs is
+# unreachable.
+git -C "$repo_root" fetch --all --quiet || git -C "$repo_root" fetch origin --quiet
     # `-e`, not `-d`: a linked worktree's `.git` is a FILE (a gitdir pointer),
     # never a directory. With `-d` this test is always false, and with the
     # unresolved path above the grep was always false too — so both guards
@@ -130,7 +139,7 @@ if [ -n "${HV_HEAVY_REF:-}" ]; then
     # worktree, which is fatal. Two exit-128 dispatches during The Tolerance
     # were this, and the fix was to delete the worktree by hand.
     if [ -e "$wt/.git" ] || git -C "$repo_root" worktree list --porcelain | grep -qF "$wt"; then
-        git -C "$wt" fetch --all --quiet
+        git -C "$wt" fetch --all --quiet || git -C "$wt" fetch origin --quiet
         git -C "$wt" checkout --force "$HV_HEAVY_REF"
         git -C "$wt" reset --hard "$HV_HEAVY_REF" --quiet
     else
