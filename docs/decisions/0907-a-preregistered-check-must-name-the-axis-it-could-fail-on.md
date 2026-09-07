@@ -1,12 +1,10 @@
 # 0907. A preregistered check must name the axis it could fail on
 
 **Status:** Accepted (2026-09-07) · **Decider:** Nathan ·
-**Relates:** [0016](0016-measurement-is-preregistered.md) (preregistration,
+**Relates:** [0016](0016-studies-preregister-hypotheses.md) (preregistration,
 which this sharpens rather than amends),
-[0109](0109-a-population-claim-is-asserted-in-the-gate-over-the-fixture.md)
-(a claim is asserted over its population),
-[0095](0095-a-corpus-is-an-instrument-never-a-standard.md) (an instrument
-declares its bias); `docs/superpowers/ledgers/2026-09-06-the-sett.md`
+[0117](0117-the-client-re-derives-nothing-the-sim-emits.md) (cited by the
+campaign this record comes from); `docs/superpowers/ledgers/2026-09-06-the-sett.md`
 (S4, plan defects 7 and 9)
 
 In the context of four separate preregistered checks — across three
