@@ -12710,15 +12710,12 @@ mod tests {
         // basis this test's own comment has stated every time. Post-
         // unblinding re-measure, declared per decision 0016.
         //
-        // THE ZENITH re-pin (2026-09-04): 1 -> 9. Not a reseating this time
-        // but a CHANGE OF SUBJECT — the world under this assertion is now
-        // seed 42's generated sky rather than the constant sun, and a
-        // generated sky affords far more phenomena for a vantage to observe
-        // and a faith to mythologize. Same "incidental count, the cascade
-        // running is what matters" basis.
+        // THE WANDERERS re-pin (2026-09-07): 9 -> 8. Dated wanderer event
+        // prose changes the phenomena visible from this seed-42 flagship;
+        // this remains the incidental count witness, not a worldgen target.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            9
+            8
         );
     }
 
