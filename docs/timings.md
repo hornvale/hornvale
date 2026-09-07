@@ -6475,3 +6475,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T23:40:49Z | gate-commit | 37.944 | 65.037 | 17.662 | 2.18 | 0 | 4828c7540 | campaign/the-grammar | MacBookPro | 10 |
 | 2026-09-06T23:55:45Z | gate-commit | 36.447 | 64.526 | 17.741 | 2.26 | 0 | 61401a616 | campaign/the-grammar | MacBookPro | 10 |
 | 2026-09-07T01:50:31Z | gate-commit | 35.751 | 65.097 | 17.485 | 2.31 | 0 | f3f4c7e1b | campaign/the-grammar | MacBookPro | 10 |
+| 2026-09-07T03:16:10Z | sluice:artifacts | 312.796 | 1977.567 | 75.534 | 6.56 | 0 | 61e5c7ec7 |  | lefford | 40 |
