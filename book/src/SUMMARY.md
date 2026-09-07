@@ -478,6 +478,7 @@
 - [The Ken](./chronicle/the-ken.md)
 - [The Spillway](./chronicle/the-spillway.md)
 - [The Newel](./chronicle/the-newel.md)
+- [The Grammar](./chronicle/the-grammar.md)
 
 # Appendix: The Frontier
 

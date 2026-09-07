@@ -6470,3 +6470,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T02:39:13Z | sluice:gate | 853.170 | 21872.277 | 577.253 | 26.31 | 0 | f5296eee5 |  | lefford | 40 |
 | 2026-09-07T02:41:45Z | sluice:clients | 152.427 | 2495.616 | 199.203 | 17.68 | 0 | 0a893f387 |  | lefford | 40 |
 | 2026-09-07T02:49:55Z | sluice:heavy | 489.028 | 11473.695 | 158.525 | 23.79 | 0 | 65b2cf5f3 |  | lefford | 40 |
+| 2026-09-06T23:36:21Z | gate-commit (RED, stale type-audit report — not a gate cost) | 31.415 | 28.563 | 6.276 | 1.11 | 0 | 4828c7540 | campaign/the-grammar | MacBookPro | 10 |
+| 2026-09-06T23:37:51Z | gate-commit | 46.562 | 85.039 | 39.343 | 2.67 | 0 | 4828c7540 | campaign/the-grammar | MacBookPro | 10 |
+| 2026-09-06T23:40:49Z | gate-commit | 37.944 | 65.037 | 17.662 | 2.18 | 0 | 4828c7540 | campaign/the-grammar | MacBookPro | 10 |
+| 2026-09-06T23:55:45Z | gate-commit | 36.447 | 64.526 | 17.741 | 2.26 | 0 | 61401a616 | campaign/the-grammar | MacBookPro | 10 |
+| 2026-09-07T01:50:31Z | gate-commit | 35.751 | 65.097 | 17.485 | 2.31 | 0 | f3f4c7e1b | campaign/the-grammar | MacBookPro | 10 |
