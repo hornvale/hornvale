@@ -20,6 +20,7 @@ pub mod founder;
 pub mod niche;
 pub mod render;
 pub mod reproductive;
+pub mod social;
 pub mod stack_condense;
 pub use byproducts::{Byproducts, byproducts};
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
@@ -35,6 +36,11 @@ pub use reproductive::{
     ReproductivePopulationInput, ReproductivePopulationSummary, ReproductivePossibility,
     ReproductiveRole, ReproductiveTypicality, RoleAvailabilityDistribution, SocialSubstrateInput,
     SurvivalDistribution, social_substrate_input, summarize_reproduction,
+};
+pub use social::{
+    AssociationDistribution, CareTopology, DescentDistribution, InheritanceDistribution,
+    LifecycleTransition, LifecycleTransitionKind, MigrationDistribution, SocialCohortInput,
+    SocialCohortSummary, SocialInputError, summarize_social_cohort, validate_social_cohort,
 };
 pub use stack_condense::StackSettlement;
 
