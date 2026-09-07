@@ -6602,3 +6602,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T15:29:02Z | gate-commit | 36.064 | 58.778 | 11.108 | 1.94 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
 | 2026-09-06T15:30:04Z | gate-commit | 36.596 | 62.201 | 13.797 | 2.08 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
 | 2026-09-06T15:30:48Z | gate-commit | 39.482 | 62.275 | 13.184 | 1.91 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-07T03:11:21Z | murrain-era-derivation-delta-10x | 3.831 | 7.730 | 1.710 | 2.46 | 0 | 66b0e9ce6 | campaign/the-murrain | MacBookPro | 10 |

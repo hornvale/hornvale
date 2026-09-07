@@ -493,9 +493,8 @@ const DOMAIN_CRATES: &[&str] = &[
     "climate",
     "culture",
     "demography",
-    // The Murrain's pure rules crate. Deliberately absent from
-    // `MEASURED_CRATES`: the epidemiology census metrics arrive in a later
-    // stage, so D8 reports this as an unmeasured domain for now.
+    // The Murrain's pure rules crate. Stage 4's crowd-endemic metric reads
+    // its CCS and persistence rules directly, so it is measured below.
     "epidemiology",
     "history",
     "language",
@@ -541,6 +540,7 @@ const MEASURED_CRATES: &[&str] = &[
     "climate",
     "culture",
     "demography",
+    "epidemiology",
     "history",
     "language",
     "religion",
@@ -1330,12 +1330,12 @@ mod tests {
     }
 
     #[test]
-    fn d8_fires_on_exactly_alchemy_epidemiology_paleoclimate_person_and_thing() {
+    fn d8_fires_on_exactly_alchemy_paleoclimate_person_and_thing() {
         let f = detect_d8();
         let names: Vec<&str> = f.iter().map(|x| x.metric.as_str()).collect();
         assert_eq!(
             names,
-            vec!["alchemy", "epidemiology", "paleoclimate", "person", "thing"],
+            vec!["alchemy", "paleoclimate", "person", "thing"],
             "D8 must fire on exactly the crates no metric reaches. `person` \
              joined the roster with The Particular and no census metric reads \
              it yet; `thing` joined with The Chattel, same shape — a real gap \

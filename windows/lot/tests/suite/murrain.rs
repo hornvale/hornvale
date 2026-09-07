@@ -11,6 +11,19 @@ use hornvale_lot::{LotIndex, Pick};
 use hornvale_worldgen::emit_history;
 
 #[test]
+fn present_metapopulation_uses_the_last_live_era_not_the_terminal_marker() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let before_terminal = ctx.largest_metapopulation_at(ctx.present_year - 1.0e-6);
+    assert!(before_terminal > 0.0, "seed 42 has a present population");
+    assert_eq!(
+        ctx.largest_metapopulation_at(ctx.present_year),
+        before_terminal,
+        "the terminal graph marker at present_year is not a new empty era"
+    );
+}
+
+#[test]
 fn endemic_flux_weight_reads_the_authoritative_population_substrate() {
     let world = hornvale_worldgen::seed_42_world();
     let ctx = assemble(&world).unwrap();

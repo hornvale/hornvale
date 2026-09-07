@@ -601,7 +601,7 @@ pub struct FullView {
     /// This view's own Lot sample (The Lot, Task 9): the assembled
     /// `hornvale_lot::context::LotContext` plus 200 drawn lots (indices
     /// 0-199, `Pick::default()`), computed on first demand by [`lot_sample`]
-    /// and then reused by all six `lot-*` metrics.
+    /// and then reused by the Lot and Murrain metric families.
     ///
     /// **Scoping is the whole safety argument, so it is stated here, the
     /// same way [`TerrainView::band_transects`] states it.** The cell is a  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
@@ -685,7 +685,7 @@ impl FullView {
 /// `hornvale_lot::context::LotContext` plus the world's souls-ever total
 /// (`hornvale_lot::draw::curve`'s own field) and 200 drawn lots (indices
 /// 0-199, `Pick::default()`) with their told stories, in draw order —
-/// built once per view by [`lot_sample`] and shared by all six `lot-*`
+/// built once per view by [`lot_sample`] and shared by all Lot and Murrain
 /// metrics. See [`FullView::lot`]'s own doc for the memo's scoping
 /// argument.
 struct LotSample {
@@ -707,7 +707,7 @@ const LOT_BY_DESIGN_SLOTS: [&str; 4] = ["sex", "family", "work", "literacy"];
 /// Build (once, memoised on `v.lot`) this world's Lot sample: `None` when
 /// `hornvale_lot::context::assemble` refuses this world (no occupations, or
 /// one saved before The Lot with no `occ-person-years` fact) — exactly the
-/// condition each `lot-*` metric's doc names as `Absent`. A drawn `Pick::
+/// condition each dependent metric's doc names as `Absent`. A drawn `Pick::
 /// default()` index never itself fails once `assemble` has succeeded (every
 /// index in `0..200` draws a birth year and site from the same context
 /// `assemble` just built), so a failure there would be a genuine bug rather
@@ -717,7 +717,8 @@ const LOT_BY_DESIGN_SLOTS: [&str; 4] = ["sex", "family", "work", "literacy"];
 fn lot_sample(v: &FullView) -> Option<&LotSample> {
     v.lot
         .get_or_init(|| {
-            let ctx = hornvale_lot::context::assemble(v.world()).ok()?;
+            let ctx =
+                hornvale_lot::context::assemble_from(v.world(), v.terrain(), v.climate()).ok()?;
             let souls_ever = hornvale_lot::draw::curve(&ctx).souls_ever;
             let mut lots = Vec::with_capacity(200);
             for i in 0..200u64 {
@@ -6255,6 +6256,138 @@ pub fn registry() -> Vec<Metric> {
             role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| warp_max_class_rate(v, 3)),
         },
+        // --- The Murrain (Task 4): epidemic population/history counts and
+        // named disease deaths. All five additions share `lot_sample` with
+        // the existing slot-fill metric below, so the already-built terrain,
+        // one era-graph derivation, the authoritative population substrate,
+        // and the 200 drawn lots are each paid once per census world. ---
+        Metric {
+            name: "epidemic-largest-metapopulation-now",
+            doc: "Largest connected host population in the era containing the present, \
+                  reconstructed from occ-founded, occ-ended, occ-peak and \
+                  occ-person-years over the bake's era graph; Absent if the world has \
+                  no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1_000.0, 3_000.0, 5_000.0, 10_000.0, 100_000.0],
+            },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(
+                    sample
+                        .ctx
+                        .largest_metapopulation_at(sample.ctx.present_year),
+                ),
+            }),
+        },
+        Metric {
+            name: "epidemic-crowd-endemic",
+            doc: "Whether any crowd-class kind in the pathogen catalogue persists in \
+                  the present largest component, comparing its authored CCS against \
+                  epidemic-largest-metapopulation-now; Absent if the world has no \
+                  occupations or predates occ-person-years",
+            summary: SummaryKind::Flag,
+            domain: Domain::Biology,
+            role: Role::Invariant,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let population = sample
+                        .ctx
+                        .largest_metapopulation_at(sample.ctx.present_year);
+                    let endemic =
+                        hornvale_species::pathogen_registry()
+                            .iter()
+                            .any(|(_, traits)| {
+                                traits.class == hornvale_species::PathogenClass::Crowd
+                                    && traits.r0.zip(traits.infectious_years).is_some_and(
+                                        |(r0, infectious_years)| {
+                                            let ccs =
+                                                hornvale_epidemiology::critical_community_size(
+                                                    r0,
+                                                    infectious_years,
+                                                    1.0 / 30.0,
+                                                );
+                                            hornvale_epidemiology::persists(population, ccs)
+                                        },
+                                    )
+                            });
+                    MetricValue::Flag(endemic)
+                }
+            }),
+        },
+        Metric {
+            name: "epidemic-plague-endings",
+            doc: "Count of occupation records whose committed occ-cause is plague; \
+                  Absent if the world has no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 5.0, 10.0, 20.0, 40.0, 60.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(
+                    sample
+                        .ctx
+                        .occupations
+                        .iter()
+                        .filter(|occupation| {
+                            occupation.record.core.cause
+                                == Some(hornvale_history::record::CauseOfEnd::Plague)
+                        })
+                        .count() as f64,
+                ),
+            }),
+        },
+        Metric {
+            name: "epidemic-outbreak-events",
+            doc: "Count of paired epidemic events, keyed by each struck-by fact after \
+                  Lot context assembly has verified its matching outbreak-deaths fact; \
+                  Absent if the world has no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 40.0, 100.0, 200.0, 400.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(_) => MetricValue::Number(
+                    v.world()
+                        .ledger
+                        .find(hornvale_epidemiology::STRUCK_BY)
+                        .count() as f64,
+                ),
+            }),
+        },
+        Metric {
+            name: "lot-named-disease-deaths",
+            doc: "Count among lots 0-199 whose Life.cause is a catalogue pathogen; \
+                  outbreak causes come from paired struck-by and outbreak-deaths facts \
+                  and endemic causes from the Lot context's committed inputs; Absent if \
+                  the world has no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 40.0, 80.0, 120.0, 160.0, 200.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(
+                    sample
+                        .lots
+                        .iter()
+                        .filter(|(life, _)| {
+                            matches!(
+                                life.cause,
+                                Some(hornvale_lot::draw::DeathCause::Pathogen(_))
+                            )
+                        })
+                        .count() as f64,
+                ),
+            }),
+        },
         // --- The Lot (Task 9): six census columns over 200 drawn lots
         // (indices 0-199, `Pick::default()`), one representative life per
         // index from everyone who ever lived in the world. `Absent` when
@@ -6363,8 +6496,8 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "lot-slots-filled-mean",
             doc: "Mean number of the 23 non-by-design story slots filled per lot \
-                  over lots 0-199; Absent if the world has no occupations or predates \
-                  occ-person-years",
+                  over lots 0-199, counted from each told Story.slots roster; Absent if \
+                  the world has no occupations or predates occ-person-years",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0],
             },
@@ -12887,7 +13020,11 @@ mod tests {
         // `lot-born-last-quarter-share` — over 200 lots drawn from
         // `hornvale_lot::context::assemble`, memoised per world on
         // `FullView::lot` and shared by all six (`lot_sample`'s own doc).
-        assert_eq!(registry().len(), 287);
+        // +5 for THE MURRAIN (Task 4): epidemic-largest-metapopulation-now,
+        // epidemic-crowd-endemic, epidemic-plague-endings,
+        // epidemic-outbreak-events and lot-named-disease-deaths. The sixth
+        // preregistered metric is the existing lot-slots-filled-mean column.
+        assert_eq!(registry().len(), 292);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -12925,7 +13062,7 @@ mod tests {
         // for the roster).
         // THE LOT (Task 9): 281 -> 287 (+6, see this test's first assertion
         // for the roster).
-        assert_eq!(registry().len(), 287);
+        assert_eq!(registry().len(), 292);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel

@@ -247,6 +247,18 @@ impl EraPopulationView {
 /// accessor.
 pub fn bake_era_population_view(world: &World) -> Result<EraPopulationView, BuildError> {
     let eras = bake_era_graphs(world)?;
+    Ok(bake_era_population_view_from(world, &eras))
+}
+
+/// [`bake_era_population_view`] over era graphs an observing window already
+/// derived. The graph values supply the bake's exact era boundaries; this
+/// function reads no terrain or climate and therefore lets one per-world
+/// derivation serve both connected-component and population questions.
+/// type-audit: bare-ok(count: eras)
+pub fn bake_era_population_view_from(
+    world: &World,
+    eras: &[(f64, hornvale_topology::ConnectionGraph)],
+) -> EraPopulationView {
     let now = present_year(world);
     let occupations = occupation_records(world);
     let mut rows = Vec::new();
@@ -283,7 +295,7 @@ pub fn bake_era_population_view(world: &World) -> Result<EraPopulationView, Buil
                 }),
         );
     }
-    Ok(EraPopulationView { rows })
+    EraPopulationView { rows }
 }
 
 /// Errors from building a world.

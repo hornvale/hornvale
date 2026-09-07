@@ -4,7 +4,8 @@ use hornvale_history::trajectory::{population_at, shape_of};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    DAUGHTER_POP, GENESIS_POP, SettlementPins, bake_era_population_view, build_world,
+    DAUGHTER_POP, GENESIS_POP, SettlementPins, bake_era_graphs, bake_era_population_view,
+    bake_era_population_view_from, build_world,
 };
 
 #[test]
@@ -54,4 +55,13 @@ fn population_substrate_is_a_read_only_era_site_view() {
         })
         .sum();
     assert!((first.population - expected).abs() < 1e-9 * expected.max(1.0));
+}
+
+#[test]
+fn population_substrate_reuses_prederived_era_boundaries_byte_for_byte() {
+    let world = hornvale_worldgen::seed_42_world();
+    let graphs = bake_era_graphs(&world).expect("era graphs derive");
+    let shared = bake_era_population_view_from(&world, &graphs);
+    let standalone = bake_era_population_view(&world).expect("population view derives");
+    assert_eq!(shared, standalone);
 }

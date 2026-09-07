@@ -133,6 +133,33 @@ impl LotContext {
         &self.births_cdf
     }
 
+    /// Largest connected host population in the era containing `year`.
+    /// Returns zero when the context has no connected occupied site in that
+    /// era. This is the population substrate, never a count of drawn lots.
+    /// type-audit: bare-ok(count: year), bare-ok(count: return)
+    pub fn largest_metapopulation_at(&self, year: f64) -> f64 {
+        // `bake_era_graphs_from` carries a terminal marker at exactly the
+        // present year. It closes the preceding interval; it does not begin
+        // a new observable era. Other exact era boundaries remain inclusive.
+        let at_or_before = |era_start: f64| {
+            if year >= self.present_year {
+                era_start < self.present_year
+            } else {
+                era_start <= year
+            }
+        };
+        let insertion = self
+            .metapopulation_by_era
+            .partition_point(|(era_start, _)| at_or_before(*era_start));
+        let Some(index) = insertion.checked_sub(1) else {
+            return 0.0;
+        };
+        self.metapopulation_by_era
+            .get(index)
+            .and_then(|(_, by_site)| by_site.values().copied().max_by(f64::total_cmp))
+            .unwrap_or(0.0)
+    }
+
     /// Latitude/longitude of a Geosphere vertex, in degrees — the formula
     /// `domains/terrain/src/channel.rs`'s `lat_lon` uses, applied to this
     /// context's own rebuilt terrain (no accessor on `Geosphere` gives it
@@ -155,29 +182,34 @@ impl LotContext {
 // context build, so every later draw reads the already-derived result.
 #[allow(clippy::disallowed_methods)]
 pub fn assemble(world: &World) -> Result<LotContext, LotError> {
-    let records = hornvale_worldgen::occupation_records(world);
-    if records.is_empty() {
-        return Err(LotError::NoOccupations);
-    }
-    if world
-        .ledger
-        .find(hornvale_history::OCC_PERSON_YEARS)
-        .next()
-        .is_none()
-    {
-        return Err(LotError::NoPersonYears);
-    }
-    let wc = hornvale_worldgen::WorldComponents::assemble()
-        .map_err(|e| LotError::Build(e.to_string()))?;
+    require_lot_history(world)?;
     let terrain =
         hornvale_worldgen::terrain_of(world).map_err(|e| LotError::Build(e.to_string()))?;
     let climate = hornvale_worldgen::climate_from(world, &terrain)
         .map_err(|e| LotError::Build(e.to_string()))?;
-    let era_population = hornvale_worldgen::bake_era_population_view(world)
+    assemble_from(world, &terrain, &climate)
+}
+
+/// Assemble a Lot context from terrain and climate already held by an
+/// observing window. This is the lab path: the per-world terrain, era graphs,
+/// and population substrate are each derived once and shared by every Lot and
+/// epidemic metric.
+// Named construction site (decision 0092): this function fits the coexistence
+// stack once for the complete context assembled below.
+#[allow(clippy::disallowed_methods)]
+pub fn assemble_from(
+    world: &World,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_worldgen::GeneratedClimate,
+) -> Result<LotContext, LotError> {
+    require_lot_history(world)?;
+    let records = hornvale_worldgen::occupation_records(world);
+    let wc = hornvale_worldgen::WorldComponents::assemble()
         .map_err(|e| LotError::Build(e.to_string()))?;
-    let era_graphs = hornvale_worldgen::bake_era_graphs_from(world, &terrain, &climate)
+    let era_graphs = hornvale_worldgen::bake_era_graphs_from(world, terrain, climate)
         .map_err(|e| LotError::Build(e.to_string()))?;
-    let era_substrates = hornvale_worldgen::bake_era_substrates_from(world, &terrain, &climate)
+    let era_population = hornvale_worldgen::bake_era_population_view_from(world, &era_graphs);
+    let era_substrates = hornvale_worldgen::bake_era_substrates_from(world, terrain, climate)
         .map_err(|e| LotError::Build(e.to_string()))?;
     if era_graphs.len() != era_substrates.len()
         || era_graphs
@@ -285,7 +317,7 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
     // Ledger iteration is the bake's event order. Preserve it: when several
     // pathogens strike in the closing year, the final event is the one whose
     // facts supplied the community's Plague ending.
-    let report = hornvale_worldgen::demography_report_from(world, &wc, &terrain, &climate)
+    let report = hornvale_worldgen::demography_report_from(world, &wc, terrain, climate)
         .map_err(|e| LotError::Build(e.to_string()))?;
     let present_year = hornvale_worldgen::present_year(world);
 
@@ -443,7 +475,7 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         epoch_years: EPOCH_YEARS,
         occupations,
         by_entity,
-        terrain,
+        terrain: terrain.clone(),
         components: wc,
         settlements_by_vertex,
         lineage,
@@ -455,4 +487,19 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         era_substrates,
         outbreaks_by_occupation,
     })
+}
+
+fn require_lot_history(world: &World) -> Result<(), LotError> {
+    if hornvale_worldgen::occupation_records(world).is_empty() {
+        return Err(LotError::NoOccupations);
+    }
+    if world
+        .ledger
+        .find(hornvale_history::OCC_PERSON_YEARS)
+        .next()
+        .is_none()
+    {
+        return Err(LotError::NoPersonYears);
+    }
+    Ok(())
 }

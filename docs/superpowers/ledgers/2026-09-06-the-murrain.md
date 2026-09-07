@@ -454,3 +454,71 @@ before `history-now`. The spec's §1 findings are read from this second run.
 - Added a draw-free endemic read over committed substrate facts; Lot causes, endings, payloads, JSON/WASM/client projections, and composite-case semantics remain additive and non-causal.
 - Closed review findings for moved-life ending occupation, overlapping pathogen provenance, the real Bake→History A/B/A conversion seam, hazard-cause exclusion, and endemic-input sourcing for hazard-pathogen causes.
 - Verification: focused Lot/worldgen tests passed; `make lot-check` (`66 passed, 0 failed`); `make gate-commit` (`1433 + 1297 passed`, all audits green). No census or generated artifact drift; only the two protected pre-existing documentation edits remain unstaged.
+
+## Task 4: laboratory instrumentation and predictions
+
+The first invocation of the H-P readout was an invalid instrument pilot, not
+a second prediction sample: `largest_metapopulation_at(present_year)` selected
+the terminal era marker that begins exactly at `present_year`, so all nine
+largest-present values printed `0.000`. The run printed H-P1 PASS, H-P2 FAIL,
+H-P3 FAIL, H-P4 FAIL, H-P5 PASS, H-P6 PASS. No model constant or prediction
+bound moved. A focused regression was written RED and fixed so the terminal
+marker closes the last live era rather than opening a new empty one; the one
+canonical valid readout then ran over the unchanged worlds and bounds.
+
+Canonical command:
+
+```text
+HV_TEST_OK=1 cargo nextest run -p hornvale-lab --run-ignored ignored-only --success-output immediate -E 'test(murrain_readout::murrain_readout)'
+```
+
+Canonical output, verbatim:
+
+```text
+seed   1: largest-now=4359.741 crowd-endemic=false consumption-endemic=true plague-endings=4 outbreak-events=69 named-disease-deaths=75/200 slots-filled-mean=18.805/23
+seed   2: largest-now=2839.272 crowd-endemic=false consumption-endemic=false plague-endings=4 outbreak-events=22 named-disease-deaths=72/200 slots-filled-mean=18.635/23
+seed   3: largest-now=7756.604 crowd-endemic=false consumption-endemic=true plague-endings=1 outbreak-events=16 named-disease-deaths=80/200 slots-filled-mean=18.955/23
+seed   7: largest-now=7882.994 crowd-endemic=false consumption-endemic=true plague-endings=3 outbreak-events=18 named-disease-deaths=66/200 slots-filled-mean=18.835/23
+seed  13: largest-now=8389.651 crowd-endemic=false consumption-endemic=true plague-endings=4 outbreak-events=16 named-disease-deaths=75/200 slots-filled-mean=18.745/23
+seed  42: largest-now=7465.401 crowd-endemic=false consumption-endemic=true plague-endings=3 outbreak-events=29 named-disease-deaths=76/200 slots-filled-mean=19.000/23
+seed 100: largest-now=1021.643 crowd-endemic=false consumption-endemic=false plague-endings=0 outbreak-events=0 named-disease-deaths=60/200 slots-filled-mean=18.270/23
+seed 256: largest-now=3307.765 crowd-endemic=false consumption-endemic=false plague-endings=8 outbreak-events=28 named-disease-deaths=71/200 slots-filled-mean=19.085/23
+seed 777: largest-now=4724.400 crowd-endemic=false consumption-endemic=true plague-endings=2 outbreak-events=4 named-disease-deaths=71/200 slots-filled-mean=18.790/23
+H-P1: PASS
+H-P2: PASS
+H-P3: FAIL
+H-P4: FAIL
+H-P5: PASS
+H-P6: PASS
+```
+
+H-P3 and H-P4 are falsified as preregistered: the plague-ending counts are
+below 5 on seven of the eight growing seeds, and outbreak-event counts are
+below 40 on seven of eight. They remain findings; no post-unblinding retuning
+was made.
+
+### Isolated era-derivation cost
+
+The paired process measurement built the same seed-42 `FullView` in both
+arms. The control touched its world/terrain/climate ten times. The measured
+arm additionally derived the 25 era graphs, authoritative era population,
+and era ecological substrates ten times. `/usr/bin/time -lp` output:
+
+```text
+control: real 5.57  user 4.17  sys 1.36
+paired:  real 9.55  user 11.90 sys 3.07
+internal measured loop: isolated-wall-seconds=3.830868 wall-seconds-per-world=0.383087
+```
+
+CPU delta is `((11.90 - 4.17) + (3.07 - 1.36)) / 10 = 0.944 CPU-s/world`.
+Against the last canonical 1,186 s census and its `cpu_ratio = 30.70`, the
+spec's projection is `1,186 + 0.944 × 1,000 / 30.70 = 1,216.749 s`. That is
+103.251 s below the 1,320 s alarm and 433.251 s below the 1,650 s refusal.
+The delta row is recorded in `docs/timings.md` as
+`murrain-era-derivation-delta-10x`.
+
+Verification: focused Murrain Lab tests (5/5), authored/schema fixture tests
+(20/20), worldgen substrate tests (2/2), the Lot suite (48/48), generated-path
+tests (10/10), `make census-check`, and `make lot-check` (66/66 client tests)
+passed. `make gate-commit` passed all audits and three subfloor chunks (1,434 +
+1,389 + 1,297 tests). No census was run and no census fixture was changed.
