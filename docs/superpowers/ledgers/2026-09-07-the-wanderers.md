@@ -156,3 +156,10 @@ explicit plan and execution checkpoints.
 - **Basis:** It covers stellar topology, phase-aware ephemerides, observational events, scene/wasm emission, and closeout artifacts from the approved specification; the self-review found no unresolved placeholder or interface mismatch.
 - **Ideonomy passes / overturns:** one plan-coverage pass / 0 overturns.
 - **Cost if wrong:** implementation rework at the first task boundary; the task-level review loop remains the correction point.
+
+## G5 Task 1 boundary
+
+- **Ruling:** Stellar topology is accepted; continue automatically to phase-aware ephemeris work.
+- **Basis:** Commit `f47858a75` passed the focused astronomy, CLI, wasm-parser, clippy, formatting, artifact-freshness, and commit-gate checks. The task reviewer found no critical, important, or minor issues.
+- **Ideonomy passes / overturns:** one implementation-review pass / 0 overturns.
+- **Cost if wrong:** Task 2 may need to amend the topology interfaces before adding ephemerides; the approved deferred N-body boundary remains unchanged.

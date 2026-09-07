@@ -6,7 +6,7 @@ Detailed plan: `docs/superpowers/plans/2026-09-07-the-wanderers.md`
 **Goal**: Add single, wide-binary, and bounded close-binary system roots.
 **Success Criteria**: Deterministic topology pins, stable single-star behavior, topology-specific anchor admission, loud invalid-pin failures.
 **Tests**: Astronomy genesis properties and pin-isolation tests.
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 2: Phase-aware ephemeris
 **Goal**: Add isolated wanderer phases and stellar/wanderer position evaluators.
