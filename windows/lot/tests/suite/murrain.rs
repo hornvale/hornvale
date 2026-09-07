@@ -153,6 +153,18 @@ fn plague_rendering_cites_the_closing_event_and_paired_facts() {
             hornvale_epidemiology::OUTBREAK_DEATHS
         ]
     );
+    assert_eq!(
+        cause
+            .sources
+            .iter()
+            .filter(|source| matches!(
+                source,
+                Source::Derived { function, .. } if *function == "lot::draw::hazard_cause"
+            ))
+            .count(),
+        0,
+        "Outbreak/Plague provenance must not cite hazard_cause"
+    );
 
     let struck = world
         .ledger
