@@ -98,6 +98,37 @@ findings. The expensive 200-seed fixture is covered by the earlier recorded
 now an accepted executable contract for the production state and clearing
 tasks that follow.
 
+### Task 2 review — fix round 1
+
+The scoped reviewer found one high-severity defect: computing resource B as
+`total - A` does not guarantee that `A + B` is bit-exactly `total` for every
+valid floating-point total and authored share. The existing single-case test
+was favorable and could not protect the exact-zero conservation contract that
+Task 4 will consume. Ruling: repair the partition or weaken the contract only
+with an explicit design decision; do not mark Task 2 complete while the
+reviewer's counterexample remains possible. Cost if wrong: the integrated
+probe could report stock creation from roundoff under the preregistered exact
+conservation criterion.
+
+Fix round 1 repaired the reviewer counterexample by multiplying the majority
+component first and using Sterbenz-exact subtraction for the remainder; the
+regression covers the original value, representative biomes, subnormal
+boundaries, `f64::MAX`, and a two-million-value finite sweep. Re-review found
+one medium edge: the debug contract admitted negative zero as non-negative,
+but bit-exact reconstruction canonicalized it to positive zero. Ruling: make
+the valid non-negative domain explicit by canonicalizing zero at the helper
+boundary and add a signed-zero regression; do not weaken the bit-exact
+conservation property. Cost if wrong: a future zero-valued production path
+could trip its own exact conservation assertion despite carrying no stock.
+
+Fix round 2 canonicalized signed zero at the partition boundary and added a
+non-vacuous `-0.0` regression. The final scoped reviewer reports CLEAN: the
+original counterexample, representative positive values, subnormal and large
+finite values, and signed zero all satisfy the exact-zero conservation
+property; no Task 2 requirement regressed. Task 2 is complete at
+`8da7001c8`. Implementer evidence: focused 8-test suite passed, clippy passed,
+and gate-commit passed 1300/1300 with no Task 1 probe or census rerun.
+
 ## Deferred minors and follow-ups
 
 - Verify the specialization input and shortfall insertion point against the

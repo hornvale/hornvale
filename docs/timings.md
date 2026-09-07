@@ -6409,3 +6409,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T02:23:19Z | gate-commit | 45.776 | 68.516 | 18.530 | 1.90 | 0 | df6f18daa | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T02:37:57Z | gate-commit | 34.205 | 50.836 | 10.727 | 1.80 | 0 | ec77f457e | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T02:40:13Z | gate-commit | 97.838 | 409.550 | 42.561 | 4.62 | 0 | ec77f457e | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T02:41:20Z | gate-commit | 34.126 | 64.056 | 16.677 | 2.37 | 0 | ec77f457e | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T02:51:26Z | gate-commit | 55.267 | 131.410 | 48.237 | 3.25 | 0 | b037b2170 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T02:54:05Z | gate-commit | 35.144 | 64.692 | 17.063 | 2.33 | 0 | b037b2170 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T03:00:37Z | gate-commit | 55.170 | 131.171 | 49.362 | 3.27 | 0 | e9ef8a7c0 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T03:02:03Z | gate-commit | 39.861 | 66.248 | 16.992 | 2.09 | 0 | e9ef8a7c0 | campaign/the-staple-d2 | MacBookPro | 10 |

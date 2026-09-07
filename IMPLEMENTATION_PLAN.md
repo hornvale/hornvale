@@ -18,7 +18,7 @@ fungible only within type, `stores` remains uneaten wealth, and the control
 path remains unchanged.
 **Tests**: Production partition; carry-over; no cross-type substitution;
 stores never enter consumption or pressure; deterministic output.
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 3: Implement local exchange clearing
 **Goal**: Implement projected-demand proposals, reserve-before-offer, local
