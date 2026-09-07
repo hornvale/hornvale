@@ -14108,9 +14108,13 @@ mod tests {
         // THE WINZE T2b re-pin: 2.391304347826087 -> 2.5. The ring scan changes
         // WHERE workings are founded, so seed 42's site pool moves and with it
         // which goblin names are drawn. Still inside the 2-3 target.
+        // THE MURRAIN re-pin (2026-09-07): 2.5 -> 2.4285714285714284.
+        // The epidemiology/history bake changes the seed-42 settlement and
+        // naming substrate; this remains the same metric claim, with the
+        // exact value re-measured on the new deterministic world.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.5)
+            MetricValue::Number(2.4285714285714284)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14340,9 +14344,14 @@ mod tests {
         // touches phonology, wear or the namer. NOT corroborated against a
         // census: this campaign's refresh happens once, at pre-merge close, and
         // has not been run.
+        //
+        // THE MURRAIN re-pin (2026-09-07): 2.5067567567567566 -> 2.8. The
+        // epidemiology/history bake changes the seed-42 settlement substrate
+        // and therefore the named-site sample; the metric remains inside its
+        // stated 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.5067567567567566)
+            MetricValue::Number(2.8)
         );
     }
 
@@ -14584,7 +14593,10 @@ mod tests {
         // pool, changing which names read as transparent. NOT corroborated
         // against a census: this campaign's refresh happens once, at pre-merge
         // close, and has not been run.
-        assert_eq!(share, 0.6102564102564103, "seed 42 transparency drifted");
+        // THE MURRAIN re-pin (2026-09-07): 0.6102564102564103 ->
+        // 0.6905537459283387, from the same deterministic settlement
+        // substrate change that moved the syllable pin above.
+        assert_eq!(share, 0.6905537459283387, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15230,7 +15242,14 @@ mod tests {
             // the seed, per the precedent this comment has now followed
             // through all ten. Coverage is the best it has ever been here:
             // river, elevation and karst/wetland gate classes all exercised.
-            vec!["river", "ford", "valley", "marsh", "spring", "island"],
+            // THE MURRAIN re-pin (2026-09-07): FIVE — "island" leaves while
+            // the other five remain. The epidemiology/history bake changes
+            // the committed settlement substrate, so this witness is
+            // re-pinned rather than treated as a regression in the
+            // independent exposure reading. The precondition remains
+            // nonempty and the mutation still exercises the river and
+            // karst/wetland gates.
+            vec!["river", "ford", "valley", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -16559,12 +16578,19 @@ mod tests {
     /// gap collapsed: `iron`-keyed occupations now begin at day `0.0`, the
     /// same as the unfiltered minimum, because a genesis settlement that used
     /// to be lost now survives to the iron horizon. Re-swept seeds 11-22:
-    /// 15, 18, 20 and 21 still show the gap. **Seed 15** is taken — unfiltered
+    /// 15, 18, 20 and 21 still show the gap. **Seed 15** was taken on the
+    /// pre-Murrain tree — unfiltered
     /// min `0.0`, iron min `100_443.75` (max `383_512.5`, 15 iron-keyed
     /// facts) — because its gap is the widest of the four and so the most
     /// likely to survive the next world change. Swapping the seed rather than
     /// re-pinning follows this doc's own precedent above: the seed is a
     /// technical witness for `first_day`'s object filter, not a subject world.
+    /// **THE MURRAIN re-witness (2026-09-07): seed 15 -> seed 18.** The
+    /// epidemiology/history bake changes the occupation-day substrate and
+    /// collapses seed 15's iron gap to genesis. Re-sweeping the nearby
+    /// technical witnesses leaves seed 18 as the earliest surviving gap in
+    /// this local range, so the witness moves rather than weakening its
+    /// two self-defence guards.
     ///
     /// Both self-defence guards from the sibling tests apply here together:
     /// `expected_min != expected_max` (catches `first_day` silently returning
@@ -16576,7 +16602,7 @@ mod tests {
     /// passing for the wrong reason.
     #[test]
     fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(15), &SkyPins::default()).expect("seed 15 builds");
+        let v = FullView::build(Seed(18), &SkyPins::default()).expect("seed 18 builds");
         let mut unfiltered_days: Vec<f64> = v
             .world()
             .ledger
@@ -17568,6 +17594,8 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — every staple has a live authoritative
+    /// witness, and the independent reading agrees wherever it is steeped.
     #[test]
     fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
         // The Contour epoch v2 re-witness (2026-08-02, history/bake/v2 regen
@@ -17939,31 +17967,43 @@ mod tests {
         // still load-bearing alone — no same-seed second species — and **THE
         // SUBJECT MOVED AGAIN**, species with it: kobold -> bugbear, onto the
         // flagship seed.
-        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "bugbear").expect("bugbears hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed");
-        for staple in STAPLE_CONCEPTS {
-            // The sweep's own criterion, asserted rather than assumed: this
-            // test bites only where WORLDGEN steeps the staple, and a lexicon
-            // `Root` is minted only from a `Steeped` classification. Without
-            // this line a moved witness is indistinguishable from a stale
-            // duplicate, and the test spent a whole campaign reporting the
-            // wrong one.
-            assert!(
-                matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
-                // The seed and species are named from the witness the sweep
-                // above selected, not from a literal — this message read
-                // "seed 26 hobgoblins" through two witness moves before The
-                // Winze, and a failure message that names the wrong world
-                // sends its reader to the wrong place.
-                "seed 42 bugbears must root {staple} for this test to bite"
-            );
-            assert!(
-                steeped.contains(staple),
-                "the lab's independent reading does not steep {staple}, which \
-                 worldgen does — the duplicate is stale again"
-            );
+        // THE MURRAIN reframe (2026-09-07): its population/history bake no
+        // longer leaves one stable seed/species pair spanning all six crop
+        // bands. Keep the invariant selection-free by witnessing each staple
+        // wherever the fixed cross-seed exposure sweep finds it, rather than
+        // weakening the claim or pinning a new arbitrary world.
+        let mut seen = std::collections::BTreeSet::new();
+        for seed in [1u64, 5, 7, 26, 42, 83, 100] {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+            for species in all_daughters(&view) {
+                let Ok(authoritative) =
+                    hornvale_worldgen::exposure_from(world, species, terrain, climate)
+                else {
+                    continue;
+                };
+                let Some(independent) = independently_steeped_concepts(&view, species) else {
+                    continue;
+                };
+                for staple in STAPLE_CONCEPTS {
+                    if matches!(
+                        authoritative.get(staple),
+                        Some(hornvale_language::ExposureClass::Steeped)
+                    ) {
+                        assert!(
+                            independent.contains(staple),
+                            "seed {seed} {species} authoritative exposure steeped {staple}, \
+                             but the independent reading did not"
+                        );
+                        seen.insert(staple);
+                    }
+                }
+            }
         }
+        let expected: std::collections::BTreeSet<&str> = STAPLE_CONCEPTS.into_iter().collect();
+        assert_eq!(seen, expected, "every staple needs a live steeped witness");
     }
 
     /// **The Confidant, the campaign `calibration.rs`'s

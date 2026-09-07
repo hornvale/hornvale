@@ -556,3 +556,10 @@ the protected audit and timing files remain unstaged.
 - Independent local review approved the preparation. The canonical census,
   anomaly/Gnomon witness procedures, and sluice stage/merge remain unrun by
   design; they require the canonical host/controller.
+- The first post-`main` stage gate exposed five stale laboratory witnesses,
+  all caused by the Murrain history/population bake changing deterministic
+  seed substrates rather than by a production assertion regression. Re-pinned
+  the three seed-42 readings, moved the technical first-day witness from seed
+  15 to seed 18, and changed the staple witness to a fixed cross-seed check.
+  All five held-stage failures now pass locally; canonical stage/census remain
+  pending resubmission.
