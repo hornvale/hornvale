@@ -50,14 +50,17 @@ comparison, and paired qualification. Those stages must keep Cargo's full
 workspace gate authoritative and must not treat a selector, smaller graph, or
 candidate output as production facts.
 
-Task 2 adds a deterministic graph and summary contract. `cargo_graph` invokes
-locked offline `cargo metadata` and retains bounded stdout/stderr evidence;
-`changed_closure` reports direct package edits separately from their reverse
-dependents; and `summarize_baseline` accepts exactly one complete cold/warm
-pair. The representative baseline workloads are `digest-census-publication`
-and `digest-thing`; their preparation, build, and test costs remain separate.
-This commit freezes the contract and its fixture tests only. It does not run a
-minutes-scale build or create `results/baseline.json`.
+Task 2 adds a deterministic graph and baseline contract. `cargo_graph` invokes
+locked offline `cargo metadata` through the bounded controller and retains
+bounded stdout/stderr evidence. `changed_closure` maps repository-relative
+paths against repository package manifests while excluding registry packages
+from the closure. `run_baseline` captures each frozen workload in an owned
+measurement cell and writes a validated cold or warm dossier; two such
+dossiers can be combined by `summarize_baseline`, which accepts exactly one
+complete cold/warm pair. The representative workloads are
+`digest-census-publication` and `digest-thing`; preparation, build, and test
+costs remain separate. Unit tests mock graph/capture boundaries and do not run
+a live build or create `results/baseline.json`.
 
 ## Limits
 

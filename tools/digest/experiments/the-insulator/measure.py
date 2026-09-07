@@ -103,6 +103,80 @@ def _bounded_evidence(raw: bytes, label: str) -> dict:
     return _stream(raw)
 
 
+def _bounded_command(command: list[str], cwd: Path, *, timeout_s: float,
+                     env: dict | None = None) -> dict:
+    """Run a controller command with bounded time and retained streams."""
+    started = time.monotonic()
+    stdout = bytearray()
+    stderr = bytearray()
+    process = None
+    deadline_exceeded = False
+    output_limit_exceeded = False
+    launch_error = None
+    cleanup_error = None
+    try:
+        process = subprocess.Popen(
+            command, cwd=cwd, env=env or _measurement.controlled_env(),
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            start_new_session=True,
+        )
+        streams = {process.stdout: stdout, process.stderr: stderr}
+        selector = selectors.DefaultSelector()
+        for stream in streams:
+            selector.register(stream, selectors.EVENT_READ)
+        while selector.get_map():
+            if time.monotonic() - started >= timeout_s:
+                deadline_exceeded = True
+                break
+            for key, _ in selector.select(timeout=0.05):
+                data = key.fileobj.read1(64 * 1024)
+                if not data:
+                    selector.unregister(key.fileobj)
+                    continue
+                retained = streams[key.fileobj]
+                remaining = OUTPUT_LIMIT - len(retained)
+                if len(data) > remaining:
+                    retained.extend(data[:remaining])
+                    output_limit_exceeded = True
+                    break
+                retained.extend(data)
+            if output_limit_exceeded:
+                break
+        if output_limit_exceeded:
+            deadline_exceeded = False
+    except OSError as exc:
+        launch_error = str(exc)
+    finally:
+        if process is not None:
+            if deadline_exceeded or output_limit_exceeded:
+                try:
+                    _measurement.finish_process(process)
+                except Exception as exc:  # retain the primary failure evidence
+                    cleanup_error = f"{type(exc).__name__}: {exc}"
+            else:
+                try:
+                    process.wait(timeout=2.0)
+                except Exception as exc:
+                    cleanup_error = f"{type(exc).__name__}: {exc}"
+            for stream, retained in ((process.stdout, stdout), (process.stderr, stderr)):
+                if stream is None:
+                    continue
+                remainder = stream.read()
+                remaining = OUTPUT_LIMIT - len(retained)
+                if len(remainder) > remaining:
+                    output_limit_exceeded = True
+                retained.extend(remainder[:remaining])
+                stream.close()
+    return {
+        "returncode": process.returncode if process is not None else None,
+        "stdout": bytes(stdout), "stderr": bytes(stderr),
+        "deadline_exceeded": deadline_exceeded,
+        "output_limit_exceeded": output_limit_exceeded,
+        "cleanup_complete": cleanup_error is None,
+        "cleanup_error": cleanup_error, "launch_error": launch_error,
+    }
+
+
 def cargo_graph(manifest: Path, target_dir: Path) -> dict:
     """Read a locked, offline Cargo graph and return its canonical identity."""
     manifest = Path(manifest)
@@ -110,19 +184,21 @@ def cargo_graph(manifest: Path, target_dir: Path) -> dict:
     if not manifest.is_absolute() or not target_dir.is_absolute():
         raise ValueError("cargo graph paths must be absolute")
     command = ["cargo", "metadata", "--locked", "--offline", "--format-version", "1", "--manifest-path", str(manifest)]
+    environment = _measurement.controlled_env()
+    environment["CARGO_TARGET_DIR"] = str(target_dir)
+    result = _bounded_command(command, manifest.parent, timeout_s=DEFAULT_TIMEOUT, env=environment)
+    stdout = _bounded_evidence(result["stdout"], "stdout")
+    stderr = _bounded_evidence(result["stderr"], "stderr")
+    if result["deadline_exceeded"]:
+        raise ValueError("cargo metadata exceeded deadline")
+    if result["output_limit_exceeded"]:
+        raise ValueError("cargo metadata exceeded output limit")
+    if result["launch_error"]:
+        raise ValueError(f"cargo metadata could not start: {result['launch_error']}")
+    if result["returncode"] != 0:
+        raise ValueError(f"cargo metadata failed with exit code {result['returncode']}")
     try:
-        completed = subprocess.run(command, cwd=manifest.parent,
-                                   env={**os.environ, "CARGO_TARGET_DIR": str(target_dir)},
-                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, check=False)
-    except OSError as exc:
-        raise ValueError(f"cargo metadata could not start: {exc}") from exc
-    stdout = _bounded_evidence(completed.stdout, "stdout")
-    stderr = _bounded_evidence(completed.stderr, "stderr")
-    if completed.returncode != 0:
-        raise ValueError(f"cargo metadata failed with exit code {completed.returncode}")
-    try:
-        metadata = json.loads(completed.stdout)
+        metadata = json.loads(result["stdout"])
     except json.JSONDecodeError as exc:
         raise ValueError("cargo metadata did not emit JSON") from exc
     packages_by_id = {package["id"]: package for package in metadata.get("packages", [])}
@@ -141,12 +217,22 @@ def cargo_graph(manifest: Path, target_dir: Path) -> dict:
         if name is not None:
             edges[name] = sorted({id_to_name[dependency] for dependency in node.get("dependencies", []) if dependency in id_to_name})
     edges = {name: edges.get(name, []) for name in sorted(edges)}
-    canonical = {"packages": packages, "workspace_members": sorted(members), "edges": edges}
+    repository_root = _repository_root(manifest)
+    canonical = {"packages": packages, "workspace_members": sorted(members), "edges": edges,
+                 "repository_root": str(repository_root)}
     identity = sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode())
     return {"identity": {"format": "cargo-metadata-v1", "sha256": identity},
             "package_count": len(packages), "workspace_member_count": len(members),
             "packages": packages, "edges": edges,
-            "command": {"argv": command, "returncode": completed.returncode, "stdout": stdout, "stderr": stderr}}
+            "command": {"argv": command, "returncode": result["returncode"], "stdout": stdout, "stderr": stderr},
+            "repository_root": str(repository_root)}
+
+
+def _repository_root(path: Path) -> Path:
+    for parent in (path.resolve().parent, *path.resolve().parents):
+        if (parent / ".git").exists():
+            return parent
+    return path.resolve().parent
 
 
 def _path_matches_package(changed: str, manifest_path: str, workspace_root: tuple[str, ...]) -> bool:
@@ -167,17 +253,19 @@ def changed_closure(graph: dict, changed_paths: list[str]) -> dict:
     packages = graph.get("packages")
     if not isinstance(packages, list):
         raise ValueError("graph packages are required")
-    names = {package["name"] for package in packages}
-    manifest_parts = [Path(package["manifest_path"]).parent.parts for package in packages]
-    workspace_root = tuple(manifest_parts[0]) if manifest_parts else ()
-    for parts in manifest_parts[1:]:
-        length = 0
-        while length < len(workspace_root) and length < len(parts) and workspace_root[length] == parts[length]:
-            length += 1
-        workspace_root = workspace_root[:length]
-    direct = sorted({package["name"] for package in packages
-                     if any(_path_matches_package(path, package["manifest_path"], workspace_root)
-                            for path in changed_paths)})
+    names = {package["name"] for package in packages if package.get("workspace_member", True)}
+    repository_root = Path(graph.get("repository_root", "/"))
+    direct = set()
+    for changed in changed_paths:
+        changed_path = Path(changed)
+        absolute = (repository_root / changed_path).resolve() if not changed_path.is_absolute() else changed_path.resolve()
+        for package in packages:
+            if package["name"] not in names:
+                continue
+            package_root = Path(package["manifest_path"]).resolve().parent
+            if _owned_path(absolute, package_root):
+                direct.add(package["name"])
+    direct = sorted(direct)
     reverse = {name: set() for name in names}
     for dependency, dependents in graph.get("edges", {}).items():
         for dependent in dependents:
@@ -202,17 +290,18 @@ def summarize_baseline(attempts: list[dict]) -> dict:
         raise ValueError("baseline attempts are required")
     by_class = {"cold": [], "warm": []}
     for attempt in attempts:
-        if not isinstance(attempt, dict) or attempt.get("valid") is not True:
-            raise ValueError("incomplete baseline attempt")
+        try:
+            validate_attempt(attempt)
+        except ValueError as exc:
+            raise ValueError(f"incomplete baseline attempt: {exc}") from exc
         classification = attempt.get("target", {}).get("classification")
         if classification not in by_class:
             raise ValueError("baseline attempts must be cold or warm")
         if by_class[classification]:
             raise ValueError("duplicate baseline classification")
-        timing = attempt.get("timing")
-        cleanup = attempt.get("cleanup", {})
-        if (not isinstance(timing, dict) or cleanup.get("complete") is not True or
-                any(not isinstance(timing.get(field), (int, float)) or timing[field] < 0
+        costs = attempt.get("costs")
+        if (not isinstance(costs, dict) or
+                any(not _finite_number(costs.get(field))
                     for field in ("preparation_s", "build_s", "test_s"))):
             raise ValueError("incomplete baseline attempt")
         by_class[classification].append(attempt)
@@ -228,10 +317,97 @@ def summarize_baseline(attempts: list[dict]) -> dict:
         graph_counts[field] = values[:1]
     costs = {}
     for classification, records in by_class.items():
-        timing = records[0]["timing"]
+        timing = records[0]["costs"]
         costs[classification] = {field: [float(timing[field])] for field in ("preparation_s", "build_s", "test_s")}
         costs[classification]["total_s"] = [sum(costs[classification][field][0] for field in ("preparation_s", "build_s", "test_s"))]
     return {"pair_count": 1, "graph_counts": graph_counts, "costs": costs}
+
+
+def _git_text(root: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", "-C", str(root), *args], cwd=root,
+        env=_measurement.controlled_env(), stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+    if completed.returncode != 0:
+        raise ValueError(f"git {' '.join(args)} failed: {completed.stderr.decode(errors='replace').strip()}")
+    return completed.stdout.decode("utf-8").strip()
+
+
+def _source_identity(root: Path) -> dict:
+    return {
+        "commit": _git_text(root, "rev-parse", "HEAD"),
+        "tree": _git_text(root, "rev-parse", "HEAD^{tree}"),
+        "merge_base": _git_text(root, "merge-base", "HEAD", "HEAD"),
+    }
+
+
+def _toolchain_identity(host_class: str) -> dict:
+    rustc = subprocess.run(
+        ["rustc", "--version"], stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+    )
+    if rustc.returncode != 0:
+        raise ValueError("rustc --version failed")
+    return {"rustc": rustc.stdout.decode("utf-8").strip(), "host_class": host_class}
+
+
+def _output_records(checkout: Path, workload: dict) -> list[dict]:
+    records = []
+    for expected in workload["expected_outputs"]:
+        path = Path(expected["path"])
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError("workload output path must be relative and safe")
+        absolute = (checkout / path).resolve()
+        if not _owned_path(absolute, checkout) or not absolute.is_file():
+            raise ValueError(f"expected workload output is missing: {path}")
+        raw = absolute.read_bytes()
+        records.append({"path": path.as_posix(), "bytes": len(raw), "sha256": sha256(raw)})
+    return records
+
+
+def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
+    """Capture every frozen workload for one cold or warm baseline class."""
+    root, output = Path(root), Path(output)
+    if not root.is_absolute() or not root.is_dir():
+        raise ValueError("baseline root must be an existing absolute directory")
+    if not output.is_absolute() or output.exists():
+        raise ValueError("baseline output must be a new absolute path")
+    if not isinstance(host_class, str) or not host_class:
+        raise ValueError("baseline host class is required")
+    classification = "cold" if cold else "warm"
+    workloads = load_workloads(WORKLOADS_PATH)["workloads"]
+    target = (root / "tools" / "digest" / "target").resolve()
+    evidence = (output.parent / "attempts" / classification).resolve()
+    graph = cargo_graph(root / "tools/digest/Cargo.toml", target)
+    source = _source_identity(root)
+    toolchain = _toolchain_identity(host_class)
+    attempts = []
+    for workload in workloads:
+        destination = evidence / f"{workload['id']}.capture.json"
+        captured = capture(workload["id"], root, target, evidence, destination)
+        costs = {"preparation_s": 0.0, "build_s": float(captured["elapsed_s"]), "test_s": 0.0}
+        attempt = manifest_for_attempt(
+            source=source,
+            graph={"sha256": graph["identity"]["sha256"], "package_count": graph["package_count"], "workspace_member_count": graph["workspace_member_count"]},
+            toolchain=toolchain,
+            target={"path": str(target), "classification": classification},
+            workload_id=workload["id"], capture=captured, costs=costs,
+            outputs=_output_records(root, workload),
+        )
+        attempts.append(attempt)
+    dossier = {
+        "schema": "insulator-baseline-v1", "classification": classification,
+        "host_class": host_class, "source": source, "graph": graph,
+        "attempts": attempts,
+    }
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output.with_name(f".{output.name}.tmp")
+    with temporary.open("x", encoding="utf-8") as stream:
+        json.dump(dossier, stream, indent=2, sort_keys=True)
+        stream.write("\n")
+    os.replace(temporary, output)
+    return dossier
 
 
 def _stream(raw: bytes) -> dict:

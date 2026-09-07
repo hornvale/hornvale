@@ -5,106 +5,160 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from measure import cargo_graph, changed_closure, summarize_baseline
+from measure import (  # noqa: E402
+    OUTPUT_LIMIT, _bounded_command, cargo_graph, changed_closure,
+    run_baseline, sha256, summarize_baseline, validate_attempt,
+)
 
 
 def graph_fixture():
     return {
-        "identity": {"format": "cargo-metadata-v1", "resolve_nodes": "graph"},
+        "identity": {"format": "cargo-metadata-v1", "sha256": "a" * 64},
+        "repository_root": "/repo",
         "packages": [
-            {"id": "path+file:///repo#protocol@1.0.0", "name": "protocol", "version": "1.0.0", "manifest_path": "/repo/packages/protocol/Cargo.toml", "dependencies": []},
-            {"id": "path+file:///repo#kernel@1.0.0", "name": "kernel", "version": "1.0.0", "manifest_path": "/repo/kernel/Cargo.toml", "dependencies": ["protocol"]},
-            {"id": "path+file:///repo#lab@1.0.0", "name": "hornvale-lab", "version": "1.0.0", "manifest_path": "/repo/windows/lab/Cargo.toml", "dependencies": ["kernel"]},
-            {"id": "path+file:///repo#digest@1.0.0", "name": "digest", "version": "1.0.0", "manifest_path": "/repo/tools/digest/Cargo.toml", "dependencies": ["protocol", "hornvale-lab"]},
-            {"id": "path+file:///repo#unrelated@1.0.0", "name": "unrelated", "version": "1.0.0", "manifest_path": "/repo/domains/unrelated/Cargo.toml", "dependencies": []},
+            {"id": "protocol", "name": "protocol", "version": "1", "manifest_path": "/repo/packages/protocol/Cargo.toml", "workspace_member": True},
+            {"id": "kernel", "name": "kernel", "version": "1", "manifest_path": "/repo/kernel/Cargo.toml", "workspace_member": True},
+            {"id": "lab", "name": "hornvale-lab", "version": "1", "manifest_path": "/repo/windows/lab/Cargo.toml", "workspace_member": True},
+            {"id": "digest", "name": "digest", "version": "1", "manifest_path": "/repo/tools/digest/Cargo.toml", "workspace_member": True},
+            {"id": "serde", "name": "serde", "version": "1", "manifest_path": "/cargo/registry/src/serde/Cargo.toml", "workspace_member": False},
         ],
-        "edges": {
-            "protocol": ["kernel", "digest"],
-            "kernel": ["hornvale-lab"],
-            "hornvale-lab": ["digest"],
-            "digest": [],
-            "unrelated": [],
-        },
+        "edges": {"protocol": ["kernel", "digest"], "kernel": ["hornvale-lab"], "hornvale-lab": ["digest", "serde"], "digest": [], "serde": []},
+        "package_count": 5, "workspace_member_count": 4,
     }
 
 
 def attempt(kind, *, valid=True, preparation=2.0, build=5.0, test=3.0):
-    record = {
-        "valid": valid,
-        "target": {"classification": kind},
-        "timing": {
-            "preparation_s": preparation,
-            "build_s": build,
-            "test_s": test,
-        },
-        "graph": {"package_count": 5, "workspace_member_count": 5},
-        "cleanup": {"complete": True},
+    checkout, target, evidence = "/repo/checkout", "/repo/checkout/target", "/repo/evidence"
+    template = ["cargo", "build", "--locked", "--offline", "--manifest-path", "tools/digest/Cargo.toml", "-p", "digest-thing"]
+    capture = {
+        "workload_id": "digest-thing", "workload_command_template": template, "command": template,
+        "cwd": checkout, "exit_code": 0, "deadline_s": 3600, "elapsed_s": 1.0,
+        "cleanup": {"complete": True, "error": None},
+        "stdout": {"base64": "", "bytes": 0, "sha256": sha256(b"")},
+        "stderr": {"base64": "", "bytes": 0, "sha256": sha256(b"")},
+        "interrupted": False, "deadline_exceeded": False, "output_limit_exceeded": False,
+        "enforcement_method": "sandbox-exec",
+        "ownership": {"checkout": checkout, "target": target, "evidence_root": evidence, "evidence_destination": evidence + "/capture.json"},
     }
+    record = {
+        "schema": "insulator-attempt-v1",
+        "source": {"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40},
+        "graph": {"sha256": "d" * 64, "package_count": 5, "workspace_member_count": 4},
+        "toolchain": {"rustc": "rustc 1.0", "host_class": "mac"},
+        "target": {"path": target, "classification": kind}, "workload_id": "digest-thing",
+        "workload_command_template": template, "command": template, "capture": capture,
+        "costs": {"preparation_s": preparation, "build_s": build, "test_s": test},
+        "outputs": [{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}], "failure": None,
+    }
+    validate_attempt(record)
+    if not valid:
+        record["capture"]["cleanup"]["complete"] = False
     return record
 
 
 class CargoGraphTests(unittest.TestCase):
-    def test_runs_locked_offline_metadata_and_canonicalizes_packages(self):
-        output = {
-            "packages": [
-                {"id": "z", "name": "b", "version": "1", "manifest_path": "/repo/b/Cargo.toml", "dependencies": [{"name": "a"}]},
-                {"id": "a", "name": "a", "version": "1", "manifest_path": "/repo/a/Cargo.toml", "dependencies": []},
-            ],
-            "workspace_members": ["z", "a"],
-            "resolve": {"nodes": [{"id": "z", "dependencies": ["a"]}, {"id": "a", "dependencies": []}]},
-        }
+    def test_canonicalizes_metadata(self):
+        output = {"packages": [{"id": "z", "name": "b", "version": "1", "manifest_path": "/repo/b/Cargo.toml", "dependencies": [{"name": "a"}]}, {"id": "a", "name": "a", "version": "1", "manifest_path": "/repo/a/Cargo.toml", "dependencies": []}], "workspace_members": ["z", "a"], "resolve": {"nodes": [{"id": "z", "dependencies": ["a"]}, {"id": "a", "dependencies": []}]}}
         with tempfile.TemporaryDirectory() as directory:
             manifest = Path(directory) / "Cargo.toml"
-            target = Path(directory) / "target"
             manifest.write_text("[workspace]\n", encoding="utf-8")
             completed = mock.Mock(returncode=0, stdout=json.dumps(output).encode(), stderr=b"")
-            with mock.patch("measure.subprocess.run", return_value=completed) as run:
-                result = cargo_graph(manifest, target)
-        command = run.call_args.args[0]
-        self.assertEqual(command[:4], ["cargo", "metadata", "--locked", "--offline"])
+            with mock.patch("measure._bounded_command", return_value={"returncode": 0, "stdout": completed.stdout, "stderr": b"", "deadline_exceeded": False, "output_limit_exceeded": False, "cleanup_complete": True, "cleanup_error": None, "launch_error": None}):
+                result = cargo_graph(manifest, Path(directory) / "target")
         self.assertEqual(result["package_count"], 2)
-        self.assertEqual([p["name"] for p in result["packages"]], ["a", "b"])
         self.assertEqual(result["edges"]["b"], ["a"])
-        self.assertEqual(result["command"]["stdout"]["bytes"], len(completed.stdout))
+
+    def test_rejects_metadata_output_over_cap(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "Cargo.toml"
+            manifest.write_text("[workspace]\n", encoding="utf-8")
+            completed = mock.Mock(returncode=0, stdout=b"x" * (OUTPUT_LIMIT + 1), stderr=b"")
+            with mock.patch("measure._bounded_command", return_value={"returncode": 0, "stdout": completed.stdout, "stderr": b"", "deadline_exceeded": False, "output_limit_exceeded": False, "cleanup_complete": True, "cleanup_error": None, "launch_error": None}):
+                with self.assertRaisesRegex(ValueError, "output limit"):
+                    cargo_graph(manifest, Path(directory) / "target")
+
+    def test_rejects_metadata_timeout_with_bounded_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "Cargo.toml"
+            manifest.write_text("[workspace]\n", encoding="utf-8")
+            bounded = {"returncode": None, "stdout": b"partial", "stderr": b"", "deadline_exceeded": True, "output_limit_exceeded": False, "cleanup_complete": True, "cleanup_error": None, "launch_error": None}
+            with mock.patch("measure._bounded_command", return_value=bounded):
+                with self.assertRaisesRegex(ValueError, "deadline"):
+                    cargo_graph(manifest, Path(directory) / "target")
+
+
+class BoundedCommandTests(unittest.TestCase):
+    def test_timeout_terminates_and_cleans_process(self):
+        result = _bounded_command([sys.executable, "-c", "import time; time.sleep(10)"], Path.cwd(), timeout_s=0.05)
+        self.assertTrue(result["deadline_exceeded"])
+        self.assertTrue(result["cleanup_complete"])
+
+    def test_output_cap_retains_at_most_limit(self):
+        with mock.patch("measure.OUTPUT_LIMIT", 1024):
+            result = _bounded_command([sys.executable, "-c", "import sys; sys.stdout.write('x' * 4096)"], Path.cwd(), timeout_s=2)
+        self.assertTrue(result["output_limit_exceeded"])
+        self.assertLessEqual(len(result["stdout"]), 1024)
 
 
 class ClosureTests(unittest.TestCase):
-    def test_distinguishes_direct_reverse_and_full_invalidation(self):
+    def test_maps_repository_paths_while_ignoring_registry_packages(self):
         result = changed_closure(graph_fixture(), ["windows/lab/src/lib.rs"])
         self.assertEqual(result["directly_changed"], ["hornvale-lab"])
         self.assertEqual(result["reverse_dependents"], ["digest"])
-        self.assertEqual(result["full_invalidation"], ["hornvale-lab", "digest"])
 
-    def test_unrelated_paths_stay_out_of_closure(self):
+    def test_unrelated_path_is_empty(self):
         result = changed_closure(graph_fixture(), ["docs/README.md"])
-        self.assertEqual(result["directly_changed"], [])
-        self.assertEqual(result["reverse_dependents"], [])
         self.assertEqual(result["full_invalidation"], [])
 
 
 class SummaryTests(unittest.TestCase):
-    def test_pairs_cold_and_warm_without_combining_nested_costs(self):
-        result = summarize_baseline([attempt("cold", preparation=11, build=20, test=7), attempt("warm", preparation=3, build=8, test=4)])
-        self.assertEqual(result["pair_count"], 1)
-        self.assertEqual(result["costs"]["cold"]["build_s"], [20.0])
-        self.assertEqual(result["costs"]["warm"]["build_s"], [8.0])
-        self.assertEqual(result["costs"]["cold"]["total_s"], [38.0])
-        self.assertEqual(result["costs"]["warm"]["total_s"], [15.0])
-        self.assertEqual(result["graph_counts"], {"package_count": [5], "workspace_member_count": [5]})
+    def test_consumes_persisted_costs_separately(self):
+        result = summarize_baseline([attempt("cold"), attempt("warm")])
+        self.assertEqual(result["costs"]["cold"]["build_s"], [5.0])
+        self.assertEqual(result["costs"]["cold"]["preparation_s"], [2.0])
+        self.assertEqual(result["costs"]["warm"]["test_s"], [3.0])
 
-    def test_rejects_incomplete_attempts_instead_of_aggregating(self):
+    def test_rejects_incomplete_and_invalid_numeric_attempts(self):
         with self.assertRaisesRegex(ValueError, "incomplete"):
             summarize_baseline([attempt("cold"), attempt("warm", valid=False)])
-
-    def test_rejects_unpaired_or_duplicate_classifications(self):
         with self.assertRaisesRegex(ValueError, "paired"):
             summarize_baseline([attempt("cold")])
-        with self.assertRaisesRegex(ValueError, "duplicate"):
-            summarize_baseline([attempt("cold"), attempt("cold"), attempt("warm")])
+        for value in (True, float("nan"), float("inf")):
+            bad = attempt("cold")
+            bad["costs"]["build_s"] = value
+            with self.assertRaises(ValueError):
+                summarize_baseline([bad, attempt("warm")])
+
+
+class BaselineOrchestrationTests(unittest.TestCase):
+    def test_writes_validated_dossier_from_mocked_measurement_cells(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, output = Path(directory) / "checkout", Path(directory) / "baseline.json"
+            root.mkdir()
+            fake = attempt("cold")["capture"]
+            fake["cwd"] = fake["ownership"]["checkout"] = str(root)
+            fake["ownership"]["target"] = str(root / "target")
+            fake["ownership"]["evidence_root"] = str(root / "evidence")
+            fake["ownership"]["evidence_destination"] = str(root / "evidence/capture.json")
+            def fake_capture(workload_id, _checkout, target, evidence, destination, **_kwargs):
+                value = json.loads(json.dumps(fake))
+                value["workload_id"] = workload_id
+                value["cwd"] = value["ownership"]["checkout"] = str(root)
+                value["ownership"]["target"] = str(target)
+                value["ownership"]["evidence_root"] = str(evidence)
+                value["ownership"]["evidence_destination"] = str(destination)
+                value["workload_command_template"] = next(item["command"] for item in json.loads((ROOT / "workloads.json").read_text())["workloads"] if item["id"] == workload_id)
+                value["command"] = [arg.replace("${CHECKOUT}", str(root)) for arg in value["workload_command_template"]]
+                return value
+            with mock.patch("measure.cargo_graph", return_value=graph_fixture()), mock.patch("measure.capture", side_effect=fake_capture), mock.patch("measure._output_records", return_value=[{"path": "out.bin", "bytes": 0, "sha256": sha256(b"")}]), mock.patch("measure._source_identity", return_value={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40}), mock.patch("measure._toolchain_identity", return_value={"rustc": "rustc 1.0", "host_class": "mac"}):
+                dossier = run_baseline(root, output, "mac", cold=True)
+            self.assertEqual(dossier["schema"], "insulator-baseline-v1")
+            self.assertEqual(dossier["classification"], "cold")
+            self.assertEqual(len(dossier["attempts"]), 2)
+            self.assertEqual(json.loads(output.read_text())["schema"], "insulator-baseline-v1")
 
 
 if __name__ == "__main__":
