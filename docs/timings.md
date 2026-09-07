@@ -102,6 +102,22 @@ mistaken for gate timings. **Adding an `rc` column to the table would fix this
 properly**; it is recorded here rather than done, because the schema is
 consumed by more than this file.
 
+**The same shape, three weeks later, on a client gate: the 2026-09-06
+`1.682` s `game-check` row at `2c0896a2b`** (The Newel, fix wave). Every
+other `game-check` on that branch reads 104–310 s, and 1.682 s cannot have
+executed the target's six cargo commands — two `fmt --check`, two
+`clippy --all-targets`, two `cargo test`. Its `user`+`sys` of 1.864 s is
+about what the two `cargo fmt --check` invocations alone cost (measured
+0.33 + 0.06 on this host, warm), and `game-check-run` runs those first, so
+the run aborted in its first phase on a formatting failure. The row 2 m 27 s
+later at the **same SHA** — 127.667 s, a healthy run — is the retry after
+`cargo fmt`. Relabelled, not deleted, following the 2026-08-09 precedent
+above: it is a real measurement of a real command, just not of a completed
+`game-check`. This is the second recorded instance of the same trap, which
+is the argument for the `rc` column that paragraph declined to add — CLAUDE.md
+tells every reader to take costs from this ledger, and a red row is
+indistinguishable from a cheap green one at a glance.
+
 **One `gate-commit` row is contamination, not a cost datum: the 2026-08-17
 `3857.559` s row at `37796ef1`** (The Underworld), against that gate's normal
 ~85 s on this host. It was measured during a runaway-`rg` storm — an extension
@@ -6382,7 +6398,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T20:18:04Z | gate-commit | 37.572 | 69.227 | 15.671 | 2.26 | 0 | 37cbbb68c | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T20:30:13Z | game-check | 214.927 | 747.112 | 26.105 | 3.60 | 0 | 2b10dfbd4 | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T20:32:10Z | gate-commit | 37.360 | 68.838 | 15.820 | 2.27 | 0 | 2b10dfbd4 | campaign/the-newel | MacBookPro | 10 |
-| 2026-09-06T20:50:59Z | game-check | 1.682 | 1.556 | 0.308 | 1.11 | 0 | 2c0896a2b | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:50:59Z | game-check (RED, aborted at `cargo fmt --check` — NOT a game-check timing) | 1.682 | 1.556 | 0.308 | 1.11 | 0 | 2c0896a2b | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T20:53:26Z | game-check | 127.667 | 784.163 | 30.670 | 6.38 | 0 | 2c0896a2b | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T20:57:15Z | gate-commit | 41.225 | 70.539 | 15.980 | 2.10 | 0 | 2c0896a2b | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T21:09:44Z | game-check | 141.611 | 740.964 | 32.243 | 5.46 | 0 | 82f1177c7 | campaign/the-newel | MacBookPro | 10 |
@@ -6436,3 +6452,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T23:41:37Z | gate-commit | 39.925 | 72.692 | 17.008 | 2.25 | 0 | 0108b438a | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T23:44:34Z | game-check | 177.608 | 812.684 | 34.876 | 4.77 | 0 | 0108b438a | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T23:45:30Z | vessel-check | 55.554 | 69.101 | 3.756 | 1.31 | 0 | 0108b438a | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:11:25Z | game-check | 216.967 | 832.657 | 47.019 | 4.05 | 0 | e64998bc4 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:13:14Z | gate-commit | 88.522 | 201.524 | 41.649 | 2.75 | 0 | e64998bc4 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:33:52Z | gate-commit | 92.110 | 77.212 | 17.361 | 1.03 | 0 | e64998bc4 | campaign/the-newel | MacBookPro | 10 |
