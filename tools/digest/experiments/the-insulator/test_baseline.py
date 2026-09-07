@@ -92,6 +92,15 @@ class CargoGraphTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "deadline"):
                     cargo_graph(manifest, Path(directory) / "target")
 
+    def test_rejects_metadata_with_incomplete_cleanup_before_parsing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "Cargo.toml"
+            manifest.write_text("[workspace]\n", encoding="utf-8")
+            bounded = {"returncode": 0, "stdout": b"valid JSON is not needed", "stderr": b"", "deadline_exceeded": False, "output_limit_exceeded": False, "cleanup_complete": False, "cleanup_error": "group did not terminate", "launch_error": None}
+            with mock.patch("measure._bounded_command", return_value=bounded):
+                with self.assertRaisesRegex(ValueError, "cleanup incomplete: group did not terminate"):
+                    cargo_graph(manifest, Path(directory) / "target")
+
 
 class BoundedCommandTests(unittest.TestCase):
     def test_phase_environment_uses_owned_temp_roots(self):

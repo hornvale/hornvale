@@ -230,6 +230,8 @@ def cargo_graph(manifest: Path, target_dir: Path) -> dict:
         raise ValueError("cargo metadata exceeded output limit")
     if result["launch_error"]:
         raise ValueError(f"cargo metadata could not start: {result['launch_error']}")
+    if not result["cleanup_complete"] or result["cleanup_error"]:
+        raise ValueError(f"cargo metadata cleanup incomplete: {result['cleanup_error'] or 'unknown error'}")
     if result["returncode"] != 0:
         raise ValueError(f"cargo metadata failed with exit code {result['returncode']}")
     try:
