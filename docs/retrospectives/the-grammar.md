@@ -79,6 +79,15 @@ point where behavior becomes live.
 Every item from the committed ledger and the campaign scratch has an explicit
 outcome:
 
+- The close sweep found six post-G3 rulings and deferred findings only in the
+  git-ignored campaign `progress.md`: the two G4 plan rulings, the Task 2/4/5
+  minors, and the final hybrid-applicability ruling. They should have been
+  ledgered contemporaneously instead of recovered at close; the ledger's
+  “Close backfill” section now records each ruling, outcome, and committed
+  location without rewriting its earlier entries.
+- The G4 demography-suite ruling is closed in the implementation plan and the
+  shipped `domains/demography/tests/suite.rs` layout. The G4 heading ruling is
+  closed by the plan's five `Task N` headings; neither changed product scope.
 - The ledger's probe-shape follow-up is closed. The eight named probes are
   frozen as test fixtures and are asserted absent from the canonical species
   registry; the spec's implemented-shape section and The Grammar chronicle are

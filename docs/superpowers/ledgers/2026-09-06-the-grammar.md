@@ -102,3 +102,84 @@ vocabulary may include `recognize`, `associate`, `bind`, `care`, `assign`,
 possibility into typicality, realized biography, prejudice, or social destiny.
 No deviation from the approved scope added household, institution, magic, or
 existing-species behavior.
+
+## Close backfill — post-G3 rulings and deferred findings
+
+The close sweep found the following six post-G3 rulings and findings only in
+the git-ignored campaign `progress.md`. They should have been written to this
+committed ledger when they occurred. That is a contemporaneous-ledger
+discipline miss; these entries backfill the durable record without erasing or
+rewriting the entries above. No separate ideonomy pass was run for these
+execution-time rulings.
+
+#3 [G4, backfill] — **Where should the demography handoff tests live?** ·
+**Decision:** create the repository's missing consolidated integration-test
+crate explicitly rather than treating it as optional. · **Why:** the plan
+named `domains/demography/tests/suite.rs`, but no such suite existed; making
+the layout explicit was a plan clarification, not a scope change. ·
+**Alternative discarded:** retain an optional test location and leave the
+implementer to invent the command shape. · **Outcome / location:** the
+corrected layout is recorded in
+`docs/superpowers/plans/2026-09-06-the-grammar.md`, and shipped as
+`domains/demography/tests/suite.rs` plus
+`domains/demography/tests/suite/reproductive.rs`.
+
+#4 [G4, backfill] — **How should the plan expose bounded work to the SDD
+extractor?** · **Decision:** rename all five `Stage N` headings to `Task N`. ·
+**Why:** the task-brief extractor keys on task headings; the change affects
+process labels only. · **Alternative discarded:** keep the stage labels and
+require manual brief boundaries. · **Outcome / location:** the five task
+headings are durable in
+`docs/superpowers/plans/2026-09-06-the-grammar.md`; no implementation scope
+changed.
+
+#5 [G5, backfill] — **Did Task 2's remaining coverage permutations block the
+grammar?** · **Decision:** defer independent missing-role guard cases and
+additional successful/assisted combinations for mixed assistance precedence;
+the required behavior was covered and the reviewer approved it. · **Why:** the
+remaining cases add coverage breadth without closing a known behavioral gap. ·
+**Alternative discarded:** expand the permutation matrix in this campaign. ·
+**Outcome / location:** accepted as-is at close. Existing coverage remains in
+`missing_body_roles_cannot_be_supplied_by_a_context_flag` and
+`assistance_is_required_observable_and_never_repairs_missing_body_operations`
+in `domains/species/tests/suite/reproduction.rs`; the outcome is recorded in
+`docs/retrospectives/the-grammar.md` under “Deferred minors and follow-up
+outcomes.”
+
+#6 [G5, backfill] — **How long does Task 4's zero-drift witness remain
+sufficient?** · **Decision:** accept the independent adapter/non-interference
+proof while the adapter is inert, and require a stronger witness when a future
+bake option consumes the substrate. · **Why:** today's test proves today's
+boundary but cannot prove non-interference after activation. · **Alternative
+discarded:** claim the inert-adapter test covers future live integration. ·
+**Outcome / location:** the present witness is
+`explicit_reproductive_resolution_is_inert_for_current_world_builds` in
+`windows/worldgen/tests/suite/reproductive.rs`; the activation condition is
+carried forward in the `BIO-3` row of
+`book/src/frontier/idea-registry.md` and recorded in the retrospective's
+deferred-outcomes section.
+
+#7 [G5, backfill] — **What does Task 5's repeatability test actually prove?**
+· **Decision:** name the result seedless structural repeatability and reserve
+real seed variation for the future realization boundary. · **Why:** the pure
+summary API consumes no seed and performs no draw. · **Alternative discarded:**
+retain the stronger “cross-seed” claim based on seed-like metadata around the
+call. · **Outcome / location:** the shipped test is
+`seedless_structural_handoff_repeats_without_realization_draws` in
+`domains/demography/tests/suite/reproductive.rs`; future seed variation remains
+in the `BIO-3` row of `book/src/frontier/idea-registry.md`, with the correction
+explained in `docs/retrospectives/the-grammar.md`.
+
+#8 [G5, backfill] — **May ordinary reproduction require a hybrid-outcome
+measurement?** · **Decision:** no; hybrid applicability is independent from
+ordinary reproductive possibility. The branch could not enter the stage gate
+or merge with the regression present. · **Why:** the whole-branch fix wave's
+universal hybrid-distribution requirement rejected an ordinary reproductive
+input with no hybrid partners. · **Alternative discarded:** infer hybrid
+applicability from any nonzero pathway count. · **Outcome / location:** fixed
+in `61401a616` by the explicit `hybrid_applicable` fact, with
+`ordinary_reproduction_without_hybrid_partners_summarizes_successfully` in
+`windows/worldgen/tests/suite/reproductive.rs` and the corresponding
+non-reproducing/inapplicable coverage in
+`domains/demography/tests/suite/reproductive.rs`; the retrospective records
+the defect and correction as its lead lesson.
