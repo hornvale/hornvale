@@ -5106,10 +5106,18 @@ impl<'a> Bake<'a> {
         );
         self.communities[idx].population = outcome.population_after;
         let occupation = self.records[record].community;
-        if let Some(event) = self.outbreaks.iter_mut().find(|event| {
+        if let Some(position) = self.outbreaks.iter().position(|event| {
             event.occupation == occupation && event.pathogen == input.kind && event.year == year
         }) {
-            event.deaths += outcome.deaths;
+            if outcome.ends_as_plague {
+                // The closing application owns the emitted event position;
+                // retain its identity through ledger emission.
+                let mut event = self.outbreaks.remove(position);
+                event.deaths += outcome.deaths;
+                self.outbreaks.push(event);
+            } else {
+                self.outbreaks[position].deaths += outcome.deaths;
+            }
         } else {
             self.outbreaks.push(OutbreakEvent {
                 occupation: self.records[record].community,
@@ -7149,6 +7157,52 @@ mod tests {
         assert!((target_event.deaths - expected_target_deaths).abs() < 1e-12);
         assert!((target_event.deaths - target_deaths).abs() < 1e-12);
         assert!(expected_deaths > target_deaths);
+    }
+
+    #[test]
+    fn an_interleaved_rehit_moves_the_closing_event_to_bake_order_end() {
+        let geo = fixture_geo();
+        let graphs = vec![ConnectionGraph::new(geo.vertex_count())];
+        let caps = caps_from_fn(geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
+        let occupation = bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            100.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        let era = era_at(0.0);
+        let apply = |bake: &mut Bake<'_>, kind, attack, fatality| {
+            bake.apply_outbreak(
+                occupation,
+                &era,
+                1200.0,
+                crate::plague_bake::OutbreakInput {
+                    kind,
+                    susceptible: 1.0,
+                    attack,
+                    fatality,
+                },
+            );
+        };
+        apply(&mut bake, KindId("the-pest"), 0.1, 1.0);
+        apply(&mut bake, KindId("the-pox"), 0.1, 1.0);
+        apply(&mut bake, KindId("the-pest"), 1.0, 0.5);
+
+        assert_eq!(bake.outbreaks.len(), 2);
+        assert_eq!(bake.outbreaks[0].pathogen, KindId("the-pox"));
+        assert_eq!(bake.outbreaks[1].pathogen, KindId("the-pest"));
+        assert!(
+            bake.records[bake.communities[occupation].record].core.cause
+                == Some(CauseOfEnd::Plague)
+        );
+        assert_eq!(bake.outbreaks[1].year, 1200.0);
+        assert!(bake.outbreaks[1].deaths > bake.outbreaks[0].deaths);
     }
 
     #[test]

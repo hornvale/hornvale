@@ -118,6 +118,25 @@ fn every_dead_lot_has_a_sourced_cause_slot() {
         let cause = story.slot("cause").expect("the cause slot is always asked");
         assert!(matches!(cause.value, SlotValue::Filled(_)));
         assert!(!cause.sources.is_empty());
+        let hazard_sources = cause
+            .sources
+            .iter()
+            .filter(|source| {
+                matches!(
+                    source,
+                    Source::Derived { function, .. } if *function == "lot::draw::hazard_cause"
+                )
+            })
+            .count();
+        assert_eq!(
+            hazard_sources,
+            if matches!(life.cause_provenance, Some(CauseProvenance::Hazard { .. })) {
+                1
+            } else {
+                0
+            },
+            "hazard_cause is exclusive to continuous hazard deaths"
+        );
         match life.cause_provenance.as_ref() {
             Some(CauseProvenance::Outbreak { event, .. }) => {
                 assert!(cause.sources.iter().any(|source| matches!(
@@ -174,9 +193,44 @@ fn moved_life_cause_cites_the_ending_occupation() {
         .expect("ending occupation is retained");
     assert!(matches!(
         &life.cause_provenance,
-        Some(CauseProvenance::CommunityFate { occupation, .. })
+        Some(CauseProvenance::CommunityFate { occupation, cause })
             if *occupation == life.ending_occupation
+                && Some(*cause) == ending.record.core.cause
     ));
+    let committed_cause = ending
+        .record
+        .core
+        .cause
+        .expect("the ending occupation has a committed cause");
+    let committed_object = world
+        .ledger
+        .facts_of(ending.record.id, hornvale_history::OCC_CAUSE)
+        .next()
+        .expect("ending occupation has an occ-cause fact")
+        .object
+        .clone();
+    let committed_label = match committed_object {
+        hornvale_kernel::Value::Text(label) => label,
+        other => panic!("occ-cause has non-text object: {other:?}"),
+    };
+    let expected_label = match committed_cause {
+        CauseOfEnd::Famine => "famine",
+        CauseOfEnd::Burned => "burned",
+        CauseOfEnd::Plague => "plague",
+        CauseOfEnd::Fled => "fled",
+        CauseOfEnd::Migrated => "migrated",
+        CauseOfEnd::Breached => "breached",
+    };
+    assert_eq!(committed_label, expected_label);
+    assert_eq!(life.cause, Some(DeathCause::Community(committed_cause)));
+    assert_eq!(
+        cause.value,
+        SlotValue::Filled(life.cause.as_ref().unwrap().label())
+    );
+    assert!(!cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Derived { function, .. } if *function == "lot::draw::hazard_cause"
+    )));
     assert!(cause.sources.iter().any(|source| matches!(
         source,
         Source::Fact { entity, predicate, .. }
