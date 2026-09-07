@@ -61,11 +61,18 @@ const WEST: usize = 6;
 /// [`crate::plate::ReflectanceKey`] states and for the same reason: a
 /// `Facet` is `{ face: u8, path: Vec<u8> }`, so keying on one costs a heap
 /// allocation on every consult, hits included, and makes the `BTreeMap`
-/// compare a `Vec<u8>` lexicographically instead of a single integer. At
-/// ~800 consults a redraw that is ~800 allocations a frame purely to ask a
-/// question. [`Facet::pack`] fails only past `MAX_DEPTH` (29) and the walk
-/// rung is 13, so the fall-through below is unreachable in practice and is
-/// written as a correct answer rather than a panic.
+/// compare a `Vec<u8>` lexicographically instead of a single integer. The
+/// consult count is one per step walked, so it is the plate's box count:
+/// **3,328 a redraw** on the 64x52 plate a 104x56 terminal draws (Task 7's
+/// bench reports it, and measured 16,738 hits over six builds). That would
+/// be 3,328 allocations a frame purely to ask a question. An earlier
+/// revision of this line said ~800, unscoped — a real figure for the 40x20
+/// plate `rasterize_rivers` names beside its own measurement, but not for
+/// the plate this client actually draws.
+///
+/// [`Facet::pack`] fails only past `MAX_DEPTH` (29) and the walk rung is 13,
+/// so the fall-through below is unreachable in practice and is written as a
+/// correct answer rather than a panic.
 #[derive(Debug, Default)]
 pub struct RoseMemo {
     /// The full eight-word rose for each facet consulted so far. The whole
