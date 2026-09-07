@@ -1284,6 +1284,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -2991,8 +2992,10 @@ hornvale-vessel::hornvale_vessel$session::tests::a_walk_sleep_already_over_sets_
 hornvale-vessel::hornvale_vessel$session::tests::a_walk_sleep_that_outlasts_the_tick_sets_the_wake
 hornvale-vessel::hornvale_vessel$session::tests::a_walks_wake_is_taken_when_none_is_set
 hornvale-vessel::hornvale_vessel$session::tests::advanced_by_checks_the_increment_and_the_sum_separately
+hornvale-vessel::hornvale_vessel$session::tests::ambiguous_descent_names_every_way
 hornvale-vessel::hornvale_vessel$session::tests::an_earlier_wake_gives_way_to_the_walks_own
 hornvale-vessel::hornvale_vessel$session::tests::an_equal_wake_agrees_with_the_walks_own
+hornvale-vessel::hornvale_vessel$session::tests::descend_walk_band_exhausts_every_availability_combination
 hornvale-vessel::hornvale_vessel$session::tests::every_bare_verb_help_lists_is_classified
 hornvale-vessel::hornvale_vessel$session::tests::every_bearing_has_a_delta_that_agrees_with_its_bearing
 hornvale-vessel::hornvale_vessel$session::tests::every_passage_outcome_reads_distinctly
