@@ -36,10 +36,17 @@ funded reciprocal exchange; unfunded cycle; iteration-order identity.
 preregistered paired 200-seed intervention study.
 **Success Criteria**: Full basket satisfaction is baseline-preserving; typed
 shortfall enters the existing pressure path monotonically; the report states
-each bar breach separately and applies the frozen two-pole verdict.
-**Tests**: Phase-order test; shortfall monotonicity and bound; 200-seed probe;
-control/treatment draw-stream identity.
-**Status**: Not Started
+each bar breach separately and applies the frozen two-pole verdict. The valid
+authorized replacement activated in `178/200` worlds, conserved both typed
+stocks in `200/200` worlds, and reported treatment-only bar counts of `6/200`
+settlement count, `1/200` collapse share, and `0/200` alive at now; neither
+frozen pole fired.
+**Tests**: Full-satisfaction identity, shortfall monotonicity and boundedness,
+disabled-control byte identity, and mutation-sensitive runtime epoch tests for
+production before clearing, clearing before consumption, consumption before
+pressure/growth, and tribute afterward. The valid replacement probe covered
+`3,239,066` attempts with separate outcome denominators.
+**Status**: Complete
 
 ## Stage 5: Rebaseline and close the epoch
 **Goal**: Rebaseline the history census, convert history-adjacent pins to

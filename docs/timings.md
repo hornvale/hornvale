@@ -6439,3 +6439,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T05:34:00Z | gate-commit | 32.373 | 62.919 | 16.515 | 2.45 | 0 | 9c95c5fa9 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T06:02:06Z | gate-commit (RED, lexicon ratchet — NOT a gate timing) | 53.608 | 134.178 | 47.892 | 3.40 | 0 | faa559e49 | campaign/the-staple-d2 | MacBookPro | 10 |
 | 2026-09-07T06:04:00Z | gate-commit | 49.602 | 99.223 | 51.554 | 3.04 | 0 | faa559e49 | campaign/the-staple-d2 | MacBookPro | 10 |
+| 2026-09-07T06:05:26Z | gate-commit | 32.810 | 63.356 | 16.269 | 2.43 | 0 | faa559e49 | campaign/the-staple-d2 | MacBookPro | 10 |
