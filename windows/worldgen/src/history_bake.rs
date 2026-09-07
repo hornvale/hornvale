@@ -4805,6 +4805,7 @@ impl<'a> Bake<'a> {
     /// epidemic, then raids. The same helper is used by the world bake and by
     /// the live H-M3 fixture, so the fixture cannot silently reproduce an
     /// ordering that production does not execute.
+    #[cfg(test)]
     fn resolve_epoch(&mut self, snapshot: &[usize], era: &EraClimate, year: f64) -> EpochTrace {
         for &idx in snapshot {
             self.step_community(idx, era, year);
@@ -6159,6 +6160,7 @@ pub fn interleaved_rehit_history(site: Vertex) -> History {
         disposition_spread: &empty,
         in_group_radius: &empty,
         time_horizon: &empty,
+        exchange_treatment: ExchangeTreatment::Disabled,
         epidemics: &[],
         lifespans: &empty,
         last_struck: BTreeMap::new(),
@@ -6174,6 +6176,7 @@ pub fn interleaved_rehit_history(site: Vertex) -> History {
         tribute: BTreeMap::new(),
         epoch_growth: Vec::new(),
         tally: BakeCensus::default(),
+        exchange: ExchangeCensus::default(),
         epoch_years: 25.0,
     };
     let occupation = bake.open(

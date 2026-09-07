@@ -1343,7 +1343,7 @@ spec-2026-09-04-federated-development-program-metaplan-design	active	none		bound
 spec-2026-09-04-the-charter-design	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission	docs/superpowers/specs/2026-09-04-the-charter-design.md				
 spec-2026-09-05-the-warrant-design	shipped	none		status header records closure; H2 falsified and reported unamended in the appended results note	docs/superpowers/specs/2026-09-05-the-warrant-design.md				
 spec-2026-09-06-the-murrain-design	active	none		status header records G3 (spec review); Task 0 measured, spec and ledger committed	docs/superpowers/specs/2026-09-06-the-murrain-design.md				
-plan-2026-09-06-the-murrain	active	none		implementation plan committed; execution not started	docs/superpowers/specs/2026-09-06-the-murrain-design.md	docs/superpowers/plans/2026-09-06-the-murrain.md			
+plan-2026-09-06-the-murrain	active	none		implementation plan committed; execution not started		docs/superpowers/plans/2026-09-06-the-murrain.md			
 retrospective-the-sluicegate	shipped	none		published retrospective					docs/retrospectives/the-sluicegate.md
 chronicle-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission				book/src/chronicle/the-charter.md	
 retrospective-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission					docs/retrospectives/the-charter.md
