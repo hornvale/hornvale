@@ -6628,3 +6628,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T20:02:46Z | sluice:clients | 155.232 | 2498.946 | 203.974 | 17.41 | 0 | 71a984b25 |  | lefford | 40 |
 | 2026-09-07T20:10:52Z | sluice:heavy | 485.935 | 11332.836 | 169.571 | 23.67 | 0 | 7d5828298 |  | lefford | 40 |
 | 2026-09-07T20:30:36Z | rebaseline | 232.920 | 487.206 | 20.553 | 2.18 | 0 | ca3ecf6da | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T20:44:26Z | rebaseline | 156.244 | 434.746 | 17.556 | 2.89 | 0 | 4cd6052f6 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T20:52:22Z | game-check | 148.059 | 819.270 | 35.932 | 5.78 | 0 | 5553da774 | campaign/the-sett | MacBookPro | 10 |
