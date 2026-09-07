@@ -547,3 +547,12 @@ the protected audit and timing files remain unstaged.
   checks 20/20, `make census-check`, `make lot-check`, and `make gate-commit`
   passed. The cost projection is 1,216.749 seconds, below both canonical
   thresholds. No census fixture changed.
+
+## Task 5: local preparation complete; canonical close pending
+
+- Local artifact refresh commit: `a01bd623d`.
+- Refreshed the Domesday history/index, Lot gallery, census schemas, seam-guard
+  roster, and lockfiles; local rebaseline produced no further drift.
+- Independent local review approved the preparation. The canonical census,
+  anomaly/Gnomon witness procedures, and sluice stage/merge remain unrun by
+  design; they require the canonical host/controller.
