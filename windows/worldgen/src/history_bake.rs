@@ -39,7 +39,7 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Band, Geosphere, KindId, Seed, Stream, Vertex, VertexMap};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The conductance-positive graph neighbours of `vertex` (`conductance > 0.0` —
 /// ocean-touching adjacency edges are stored at exactly 0.0). Ascending and
@@ -1321,6 +1321,7 @@ enum ExchangeStatus {
 #[derive(Clone, Debug, PartialEq)]
 struct ExchangeAttempt {
     requester: BakeId,
+    counterparty: Option<BakeId>,
     resource: SubsistenceResource,
     requested: f64,
     delivered: f64,
@@ -1381,121 +1382,123 @@ fn local_exchange_adjacency(
         .collect()
 }
 
-fn local_exchange_components(adjacency: &[Vec<usize>]) -> Vec<Vec<usize>> {
-    let mut seen = vec![false; adjacency.len()];
-    let mut components = Vec::new();
-    for start in 0..adjacency.len() {
-        if seen[start] {
-            continue;
-        }
-        seen[start] = true;
-        let mut queue = VecDeque::from([start]);
-        let mut component = Vec::new();
-        while let Some(current) = queue.pop_front() {
-            component.push(current);
-            for &next in &adjacency[current] {
-                if !seen[next] {
-                    seen[next] = true;
-                    queue.push_back(next);
-                }
-            }
-        }
-        component.sort_unstable();
-        components.push(component);
-    }
-    components
+#[derive(Clone, Copy, Debug)]
+struct DirectExchangeProposal {
+    a_supplier: usize,
+    b_supplier: usize,
+    a_requested: f64,
+    b_requested: f64,
+    settled: f64,
 }
 
-/// The deterministic shortest community path between two members of one
-/// exchange component. Sorted adjacency makes equal-length choices resolve by
-/// ascending [`BakeId`], independent of input or edge insertion order.
-fn local_exchange_path(adjacency: &[Vec<usize>], from: usize, to: usize) -> Vec<usize> {
-    if from == to {
-        return vec![from];
-    }
-    let mut predecessor = vec![None; adjacency.len()];
-    predecessor[from] = Some(from);
-    let mut queue = VecDeque::from([from]);
-    while let Some(current) = queue.pop_front() {
-        for &next in &adjacency[current] {
-            if predecessor[next].is_some() {
-                continue;
-            }
-            predecessor[next] = Some(current);
-            if next == to {
-                queue.clear();
-                break;
-            }
-            queue.push_back(next);
-        }
-    }
-
-    debug_assert!(predecessor[to].is_some());
-    let mut path = vec![to];
-    let mut current = to;
-    while current != from {
-        current = predecessor[current].expect("component members must have a path");
-        path.push(current);
-    }
-    path.reverse();
-    path
+fn exchange_capacity(snapshot: &ExchangeCommunitySnapshot, offered: SubsistenceResource) -> f64 {
+    let requested = match offered {
+        SubsistenceResource::A => SubsistenceResource::B,
+        SubsistenceResource::B => SubsistenceResource::A,
+    };
+    let demand = subsistence_basket_demand(snapshot.projected_population);
+    let surplus = (snapshot.opening_stock.amount(offered) - demand.amount(offered)).max(0.0);
+    let shortfall = (demand.amount(requested) - snapshot.opening_stock.amount(requested)).max(0.0);
+    surplus.min(shortfall)
 }
 
-/// Allocate scarce stock across positive requests in ascending [`BakeId`]
-/// order. Every step applies the same proportion to the remaining supply and
-/// remaining demand; the final requester receives the arithmetic remainder,
-/// making the allocation exhaustive without an order-dependent lost tail.
-fn pro_rata_exchange_allocations(
-    component: &[usize],
-    requests: &[f64],
-    total_supply: f64,
-    total_demand: f64,
-) -> Vec<(usize, f64)> {
-    if total_supply >= total_demand {
-        return component
-            .iter()
-            .copied()
-            .filter(|&index| requests[index] > 0.0)
-            .map(|index| (index, requests[index]))
-            .collect();
-    }
-
-    let requesters: Vec<usize> = component
-        .iter()
-        .copied()
-        .filter(|&index| requests[index] > 0.0)
-        .collect();
-    let mut remaining_supply = total_supply;
-    let mut remaining_demand = total_demand;
-    let mut allocations = Vec::with_capacity(requesters.len());
-    for (position, index) in requesters.iter().copied().enumerate() {
-        let requested = requests[index];
-        let allocated = if position + 1 == requesters.len() {
-            remaining_supply.min(requested)
+fn exchange_statuses(requested: f64, delivered: f64, possible: bool) -> Vec<ExchangeStatus> {
+    let mut statuses = vec![ExchangeStatus::Proposed];
+    if !possible {
+        statuses.push(ExchangeStatus::Impossible);
+    } else if delivered == 0.0 {
+        statuses.push(ExchangeStatus::Refused);
+    } else {
+        statuses.push(ExchangeStatus::Accepted);
+        statuses.push(if delivered == requested {
+            ExchangeStatus::Settled
         } else {
-            (remaining_supply * requested / remaining_demand).min(requested)
+            ExchangeStatus::Partial
+        });
+    }
+    statuses
+}
+
+fn pro_rata_direct_requests(total: f64, counterparties: &[(usize, f64)]) -> Vec<(usize, f64)> {
+    let mut remaining_total = total;
+    let mut remaining_weight: f64 = counterparties.iter().map(|(_, weight)| weight).sum();
+    let mut requests = Vec::with_capacity(counterparties.len());
+    for (position, &(counterparty, weight)) in counterparties.iter().enumerate() {
+        let requested = if position + 1 == counterparties.len() {
+            remaining_total
+        } else {
+            (remaining_total * weight / remaining_weight).min(remaining_total)
         };
-        allocations.push((index, allocated));
-        remaining_supply = if allocated == remaining_supply {
+        requests.push((counterparty, requested));
+        remaining_total = if requested == remaining_total {
             0.0
         } else {
-            remaining_supply - allocated
+            remaining_total - requested
         };
-        remaining_demand -= requested;
+        remaining_weight -= weight;
     }
-    allocations
+    requests
+}
+
+/// Snapshot-dependent stock-creation residual. Paired delivery debits and
+/// credits cancel globally; what cannot cancel is an outgoing quantity that
+/// exceeds the immutable opening surplus left after reserving the local
+/// basket. This is the algebraic residual of opening/final stock accounting
+/// with an inventory floor at zero. Zero means every emitted unit was funded;
+/// positive means clearing would otherwise have minted that quantity.
+fn exchange_conservation_residuals(
+    snapshots: &[ExchangeCommunitySnapshot],
+    deliveries: &[SubsistenceDelivery],
+) -> [f64; 2] {
+    let mut opening_surplus = BTreeMap::new();
+    for snapshot in snapshots {
+        let demand = subsistence_basket_demand(snapshot.projected_population);
+        opening_surplus.insert(
+            snapshot.id,
+            [
+                (snapshot.opening_stock.amount(SubsistenceResource::A)
+                    - demand.amount(SubsistenceResource::A))
+                .max(0.0),
+                (snapshot.opening_stock.amount(SubsistenceResource::B)
+                    - demand.amount(SubsistenceResource::B))
+                .max(0.0),
+            ],
+        );
+    }
+
+    let mut outgoing: BTreeMap<BakeId, [f64; 2]> = BTreeMap::new();
+    let mut residuals = [0.0; 2];
+    for delivery in deliveries {
+        let index = subsistence_resource_index(delivery.resource);
+        if opening_surplus.contains_key(&delivery.from) {
+            outgoing.entry(delivery.from).or_insert([0.0; 2])[index] += delivery.quantity;
+        } else {
+            residuals[index] += delivery.quantity;
+        }
+        if !opening_surplus.contains_key(&delivery.to) {
+            residuals[index] += delivery.quantity;
+        }
+    }
+    for (id, sent) in outgoing {
+        let available = opening_surplus[&id];
+        for resource_index in 0..2 {
+            residuals[resource_index] +=
+                (sent[resource_index] - available[resource_index]).max(0.0);
+        }
+    }
+    residuals
 }
 
 /// Clear one immutable current-phase snapshot without touching stores,
 /// populations, inventories, or random streams.
 ///
-/// Each resource clears independently because D2 has no conversion or price.
-/// A community first reserves its own fixed complementary basket. Only the
-/// typed remainder is source stock. Within each connected community component
-/// that opening surplus is allocated pro rata under scarcity, then routed as
-/// atomic one-hop deliveries. A relay may send stock it receives on the same
-/// clearing, but every routed quantity begins at an opening surplus, so an
-/// unfunded proposal cycle cannot manufacture stock.
+/// A community first reserves its own fixed complementary basket. Its direct
+/// one-hop proposals may offer only the remaining stock, and only to a
+/// counterparty that offers the opposite typed surplus. Each party distributes
+/// its opening-funded bundle capacity among eligible counterparties in
+/// proportion to their capacities. The lesser of the two declared quantities
+/// settles atomically as equal A-for-B deliveries, so no one-way aid or
+/// undeclared relay can emerge from clearing.
 #[allow(dead_code)]
 fn clear_local_exchange(
     graph: &ConnectionGraph,
@@ -1516,130 +1519,131 @@ fn clear_local_exchange(
     }));
 
     let adjacency = local_exchange_adjacency(graph, &snapshots);
-    let components = local_exchange_components(&adjacency);
-    let mut delivered_by_requester = vec![[0.0; 2]; snapshots.len()];
-    let mut deliveries: BTreeMap<(BakeId, BakeId, SubsistenceResource), f64> = BTreeMap::new();
-
-    for resource in [SubsistenceResource::A, SubsistenceResource::B] {
-        let resource_index = subsistence_resource_index(resource);
-        let mut surplus = Vec::with_capacity(snapshots.len());
-        let mut requests = Vec::with_capacity(snapshots.len());
-        for snapshot in &snapshots {
-            let opening = snapshot.opening_stock.amount(resource);
-            let demand = subsistence_basket_demand(snapshot.projected_population).amount(resource);
-            surplus.push(if opening > demand {
-                opening - demand
-            } else {
-                0.0
-            });
-            requests.push(if demand > opening {
-                demand - opening
-            } else {
-                0.0
-            });
-        }
-
-        for component in &components {
-            let total_supply: f64 = component.iter().map(|&index| surplus[index]).sum();
-            let total_demand: f64 = component.iter().map(|&index| requests[index]).sum();
-            if total_supply == 0.0 || total_demand == 0.0 {
-                continue;
+    let capacities: Vec<[f64; 2]> = snapshots
+        .iter()
+        .map(|snapshot| {
+            [
+                exchange_capacity(snapshot, SubsistenceResource::A),
+                exchange_capacity(snapshot, SubsistenceResource::B),
+            ]
+        })
+        .collect();
+    let mut a_requests: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    let mut b_requests: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    for (index, neighbors) in adjacency.iter().enumerate() {
+        if capacities[index][0] > 0.0 {
+            let counterparties: Vec<(usize, f64)> = neighbors
+                .iter()
+                .copied()
+                .filter_map(|neighbor| {
+                    (capacities[neighbor][1] > 0.0).then_some((neighbor, capacities[neighbor][1]))
+                })
+                .collect();
+            for (counterparty, requested) in
+                pro_rata_direct_requests(capacities[index][0], &counterparties)
+            {
+                b_requests.insert((index, counterparty), requested);
             }
-
-            let allocations =
-                pro_rata_exchange_allocations(component, &requests, total_supply, total_demand);
-            let mut remaining_surplus = surplus.clone();
-            for (requester, allocated) in allocations {
-                let mut routed = 0.0;
-                for &supplier in component {
-                    let remaining_request = allocated - routed;
-                    if remaining_request <= 0.0 {
-                        break;
-                    }
-                    let available = remaining_surplus[supplier];
-                    if available == 0.0 {
-                        continue;
-                    }
-                    let quantity = available.min(remaining_request);
-                    let path = local_exchange_path(&adjacency, supplier, requester);
-                    for hop in path.windows(2) {
-                        *deliveries
-                            .entry((snapshots[hop[0]].id, snapshots[hop[1]].id, resource))
-                            .or_default() += quantity;
-                    }
-                    remaining_surplus[supplier] = if quantity == available {
-                        0.0
-                    } else {
-                        available - quantity
-                    };
-                    routed = if quantity == remaining_request {
-                        allocated
-                    } else {
-                        routed + quantity
-                    };
-                }
-                delivered_by_requester[requester][resource_index] = routed;
+        }
+        if capacities[index][1] > 0.0 {
+            let counterparties: Vec<(usize, f64)> = neighbors
+                .iter()
+                .copied()
+                .filter_map(|neighbor| {
+                    (capacities[neighbor][0] > 0.0).then_some((neighbor, capacities[neighbor][0]))
+                })
+                .collect();
+            for (counterparty, requested) in
+                pro_rata_direct_requests(capacities[index][1], &counterparties)
+            {
+                a_requests.insert((counterparty, index), requested);
             }
         }
     }
 
-    let deliveries: Vec<SubsistenceDelivery> = deliveries
-        .into_iter()
-        .map(|((from, to, resource), quantity)| SubsistenceDelivery {
-            from,
-            to,
-            resource,
-            quantity,
-        })
-        .collect();
+    let mut proposals = Vec::new();
+    for (&(a_supplier, b_supplier), &a_requested) in &a_requests {
+        if let Some(&b_requested) = b_requests.get(&(a_supplier, b_supplier)) {
+            proposals.push(DirectExchangeProposal {
+                a_supplier,
+                b_supplier,
+                a_requested,
+                b_requested,
+                settled: a_requested.min(b_requested),
+            });
+        }
+    }
+
+    let mut deliveries = Vec::with_capacity(proposals.len() * 2);
+    for proposal in &proposals {
+        if proposal.settled == 0.0 {
+            continue;
+        }
+        deliveries.push(SubsistenceDelivery {
+            from: snapshots[proposal.a_supplier].id,
+            to: snapshots[proposal.b_supplier].id,
+            resource: SubsistenceResource::A,
+            quantity: proposal.settled,
+        });
+        deliveries.push(SubsistenceDelivery {
+            from: snapshots[proposal.b_supplier].id,
+            to: snapshots[proposal.a_supplier].id,
+            resource: SubsistenceResource::B,
+            quantity: proposal.settled,
+        });
+    }
+    deliveries.sort_by_key(|delivery| (delivery.from, delivery.to, delivery.resource));
     debug_assert!(
         deliveries
             .iter()
             .all(|delivery| delivery.quantity.is_finite() && delivery.quantity > 0.0)
     );
 
-    let mut attempts = Vec::new();
+    let mut attempts = Vec::with_capacity(proposals.len() * 2);
+    for proposal in &proposals {
+        attempts.push(ExchangeAttempt {
+            requester: snapshots[proposal.b_supplier].id,
+            counterparty: Some(snapshots[proposal.a_supplier].id),
+            resource: SubsistenceResource::A,
+            requested: proposal.a_requested,
+            delivered: proposal.settled,
+            statuses: exchange_statuses(proposal.a_requested, proposal.settled, true),
+        });
+        attempts.push(ExchangeAttempt {
+            requester: snapshots[proposal.a_supplier].id,
+            counterparty: Some(snapshots[proposal.b_supplier].id),
+            resource: SubsistenceResource::B,
+            requested: proposal.b_requested,
+            delivered: proposal.settled,
+            statuses: exchange_statuses(proposal.b_requested, proposal.settled, true),
+        });
+    }
+
     for (index, snapshot) in snapshots.iter().enumerate() {
         let demand = subsistence_basket_demand(snapshot.projected_population);
         for resource in [SubsistenceResource::A, SubsistenceResource::B] {
-            let resource_index = subsistence_resource_index(resource);
             let requested =
                 (demand.amount(resource) - snapshot.opening_stock.amount(resource)).max(0.0);
-            if requested == 0.0 {
+            if requested == 0.0
+                || attempts
+                    .iter()
+                    .any(|attempt| attempt.requester == snapshot.id && attempt.resource == resource)
+            {
                 continue;
-            }
-            let delivered = delivered_by_requester[index][resource_index];
-            let mut statuses = vec![ExchangeStatus::Proposed];
-            if adjacency[index].is_empty() {
-                statuses.push(ExchangeStatus::Impossible);
-            } else if delivered == 0.0 {
-                statuses.push(ExchangeStatus::Refused);
-            } else {
-                statuses.push(ExchangeStatus::Accepted);
-                statuses.push(if delivered == requested {
-                    ExchangeStatus::Settled
-                } else {
-                    ExchangeStatus::Partial
-                });
             }
             attempts.push(ExchangeAttempt {
                 requester: snapshot.id,
+                counterparty: None,
                 resource,
                 requested,
-                delivered,
-                statuses,
+                delivered: 0.0,
+                statuses: exchange_statuses(requested, 0.0, !adjacency[index].is_empty()),
             });
         }
     }
+    attempts.sort_by_key(|attempt| (attempt.requester, attempt.counterparty, attempt.resource));
 
-    let mut sent = [0.0; 2];
-    let mut received = [0.0; 2];
-    for delivery in &deliveries {
-        let index = subsistence_resource_index(delivery.resource);
-        sent[index] += delivery.quantity;
-        received[index] += delivery.quantity;
-    }
-    let conservation_residuals = [sent[0] - received[0], sent[1] - received[1]];
+    let conservation_residuals = exchange_conservation_residuals(&snapshots, &deliveries);
     debug_assert_eq!(conservation_residuals, [0.0, 0.0]);
 
     ExchangeClearing {
@@ -6305,13 +6309,20 @@ mod tests {
     fn exchange_attempt(
         clearing: &ExchangeClearing,
         requester: u64,
+        counterparty: Option<u64>,
         resource: SubsistenceResource,
     ) -> &ExchangeAttempt {
         clearing
             .attempts
             .iter()
-            .find(|attempt| attempt.requester == BakeId(requester) && attempt.resource == resource)
-            .unwrap_or_else(|| panic!("missing {resource:?} request for {requester}"))
+            .find(|attempt| {
+                attempt.requester == BakeId(requester)
+                    && attempt.counterparty == counterparty.map(BakeId)
+                    && attempt.resource == resource
+            })
+            .unwrap_or_else(|| {
+                panic!("missing {resource:?} request for {requester} against {counterparty:?}")
+            })
     }
 
     fn delivered(
@@ -6353,7 +6364,7 @@ mod tests {
             "the B specialist must deliver its two-unit surplus"
         );
         assert_eq!(
-            exchange_attempt(&clearing, 1, SubsistenceResource::B).statuses,
+            exchange_attempt(&clearing, 1, Some(2), SubsistenceResource::B).statuses,
             vec![
                 ExchangeStatus::Proposed,
                 ExchangeStatus::Accepted,
@@ -6362,7 +6373,7 @@ mod tests {
             "a fully funded proposal must expose its complete derived status path"
         );
         assert_eq!(
-            exchange_attempt(&clearing, 2, SubsistenceResource::A).statuses,
+            exchange_attempt(&clearing, 2, Some(1), SubsistenceResource::A).statuses,
             vec![
                 ExchangeStatus::Proposed,
                 ExchangeStatus::Accepted,
@@ -6375,15 +6386,15 @@ mod tests {
     fn competing_requests_share_scarce_stock_pro_rata() {
         let graph = exchange_graph(3, &[(0, 1), (0, 2)]);
         let snapshots = vec![
-            exchange_snapshot(10, 0, 4.0, 5.0, 2.0),
-            exchange_snapshot(20, 1, 2.0, 0.0, 1.0),
-            exchange_snapshot(30, 2, 6.0, 0.0, 3.0),
+            exchange_snapshot(10, 0, 4.0, 5.0, 0.0),
+            exchange_snapshot(20, 1, 2.0, 0.0, 2.0),
+            exchange_snapshot(30, 2, 6.0, 0.0, 6.0),
         ];
 
         let clearing = clear_local_exchange(&graph, &snapshots);
 
-        for (requester, requested, expected) in [(20, 1.0, 0.75), (30, 3.0, 2.25)] {
-            let attempt = exchange_attempt(&clearing, requester, SubsistenceResource::A);
+        for (requester, requested, expected) in [(20, 1.0, 0.5), (30, 3.0, 1.5)] {
+            let attempt = exchange_attempt(&clearing, requester, Some(10), SubsistenceResource::A);
             assert_eq!(attempt.requested, requested);
             assert_eq!(attempt.delivered, expected);
             assert_eq!(
@@ -6399,32 +6410,63 @@ mod tests {
                 expected,
                 "unequal nonzero requests must receive proportional shares of scarce stock"
             );
+            assert_eq!(
+                delivered(&clearing, requester, 10, SubsistenceResource::B),
+                expected,
+                "every allocated A unit must carry one matching B unit in the same direct exchange"
+            );
         }
     }
 
     #[test]
-    fn fractional_source_stock_is_fully_routed_without_roundoff_loss() {
-        let graph = exchange_graph(3, &[(0, 2), (1, 2)]);
+    fn surplus_without_matching_consideration_cannot_become_one_way_aid() {
+        let graph = exchange_graph(2, &[(0, 1)]);
         let snapshots = vec![
-            exchange_snapshot(1, 0, 0.0, 0.1, 0.0),
-            exchange_snapshot(2, 1, 0.0, 0.2, 0.0),
-            exchange_snapshot(3, 2, 2.0, 0.0, 1.0),
+            exchange_snapshot(1, 0, 0.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 0.0, 1.0),
         ];
 
         let clearing = clear_local_exchange(&graph, &snapshots);
-        let attempt = exchange_attempt(&clearing, 3, SubsistenceResource::A);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "A may move only when the same atomic attempt returns the matching quantity of B"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 2, None, SubsistenceResource::A).statuses,
+            vec![ExchangeStatus::Proposed, ExchangeStatus::Refused]
+        );
+    }
+
+    #[test]
+    fn fractional_bundle_quantities_clear_without_roundoff_loss() {
+        let graph = exchange_graph(3, &[(0, 2), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 0.2, 0.2, 0.0),
+            exchange_snapshot(2, 1, 0.4, 0.4, 0.0),
+            exchange_snapshot(3, 2, 2.0, 0.0, 2.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let first = exchange_attempt(&clearing, 3, Some(1), SubsistenceResource::A);
+        let second = exchange_attempt(&clearing, 3, Some(2), SubsistenceResource::A);
 
         assert_eq!(delivered(&clearing, 1, 3, SubsistenceResource::A), 0.1);
         assert_eq!(delivered(&clearing, 2, 3, SubsistenceResource::A), 0.2);
-        assert_eq!(attempt.delivered.to_bits(), (0.1_f64 + 0.2).to_bits());
+        assert_eq!(delivered(&clearing, 3, 1, SubsistenceResource::B), 0.1);
+        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::B), 0.2);
         assert_eq!(
-            attempt.statuses,
+            (first.delivered + second.delivered).to_bits(),
+            (0.1_f64 + 0.2).to_bits()
+        );
+        assert_eq!(
+            first.statuses,
             vec![
                 ExchangeStatus::Proposed,
                 ExchangeStatus::Accepted,
                 ExchangeStatus::Partial,
             ],
-            "all finite source stock must route even when repeated subtraction leaves a residue"
+            "fractional direct proposals must preserve the quantity actually exchanged"
         );
     }
 
@@ -6432,15 +6474,17 @@ mod tests {
     fn a_nonzero_but_inadequate_delivery_is_partial() {
         let graph = exchange_graph(2, &[(0, 1)]);
         let snapshots = vec![
-            exchange_snapshot(1, 0, 4.0, 3.0, 2.0),
-            exchange_snapshot(2, 1, 4.0, 0.0, 2.0),
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
         ];
 
         let clearing = clear_local_exchange(&graph, &snapshots);
-        let attempt = exchange_attempt(&clearing, 2, SubsistenceResource::A);
+        let attempt = exchange_attempt(&clearing, 2, Some(1), SubsistenceResource::A);
 
         assert_eq!(attempt.requested, 2.0);
         assert_eq!(attempt.delivered, 1.0);
+        assert_eq!(delivered(&clearing, 1, 2, SubsistenceResource::A), 1.0);
+        assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::B), 1.0);
         assert_eq!(
             attempt.statuses,
             vec![
@@ -6455,51 +6499,94 @@ mod tests {
     fn funded_stock_can_cross_an_acyclic_chain() {
         let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
         let snapshots = vec![
-            exchange_snapshot(1, 0, 2.0, 0.0, 1.0),
-            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
-            exchange_snapshot(3, 2, 2.0, 2.0, 1.0),
-        ];
-
-        let clearing = clear_local_exchange(&graph, &snapshots);
-
-        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::A), 1.0);
-        assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::A), 1.0);
-        assert_eq!(
-            exchange_attempt(&clearing, 1, SubsistenceResource::A)
-                .statuses
-                .last(),
-            Some(&ExchangeStatus::Settled),
-            "the downstream request must settle only from the source's opening surplus"
-        );
-    }
-
-    #[test]
-    fn opening_surpluses_fund_a_reciprocal_cycle() {
-        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
-        let snapshots = vec![
             exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
-            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
-            exchange_snapshot(3, 2, 2.0, 0.0, 2.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
         ];
 
         let clearing = clear_local_exchange(&graph, &snapshots);
 
         assert_eq!(delivered(&clearing, 1, 2, SubsistenceResource::A), 1.0);
-        assert_eq!(delivered(&clearing, 2, 3, SubsistenceResource::A), 1.0);
-        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::B), 1.0);
         assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::B), 1.0);
-        assert_eq!(
-            exchange_attempt(&clearing, 1, SubsistenceResource::B)
-                .statuses
-                .last(),
-            Some(&ExchangeStatus::Settled)
+        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::A), 1.0);
+        assert_eq!(delivered(&clearing, 2, 3, SubsistenceResource::B), 1.0);
+        for counterparty in [1, 3] {
+            assert_eq!(
+                exchange_attempt(&clearing, 2, Some(counterparty), SubsistenceResource::A,)
+                    .statuses
+                    .last(),
+                Some(&ExchangeStatus::Settled),
+                "the middle request must name each direct opening-funded counterparty"
+            );
+        }
+    }
+
+    #[test]
+    fn a_two_hop_source_cannot_deliver_through_a_non_proposing_relay() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 0.0, 2.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "a balanced middle settlement is not an implicit carrier or counterparty"
         );
         assert_eq!(
-            exchange_attempt(&clearing, 3, SubsistenceResource::A)
+            exchange_attempt(&clearing, 1, None, SubsistenceResource::A).statuses,
+            vec![ExchangeStatus::Proposed, ExchangeStatus::Refused]
+        );
+    }
+
+    #[test]
+    fn opening_surpluses_fund_a_reciprocal_cycle() {
+        let graph = exchange_graph(4, &[(0, 1), (1, 2), (2, 3), (3, 0)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 0.0, 2.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
+            exchange_snapshot(4, 3, 2.0, 0.0, 2.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        for (a_supplier, b_supplier) in [(1, 2), (3, 2), (3, 4), (1, 4)] {
+            assert_eq!(
+                delivered(&clearing, a_supplier, b_supplier, SubsistenceResource::A),
+                0.5
+            );
+            assert_eq!(
+                delivered(&clearing, b_supplier, a_supplier, SubsistenceResource::B),
+                0.5,
+                "each funded direct cycle edge must settle as an equal reciprocal bundle"
+            );
+            assert_eq!(
+                exchange_attempt(
+                    &clearing,
+                    b_supplier,
+                    Some(a_supplier),
+                    SubsistenceResource::A,
+                )
                 .statuses
                 .last(),
-            Some(&ExchangeStatus::Settled)
-        );
+                Some(&ExchangeStatus::Settled)
+            );
+            assert_eq!(
+                exchange_attempt(
+                    &clearing,
+                    a_supplier,
+                    Some(b_supplier),
+                    SubsistenceResource::B,
+                )
+                .statuses
+                .last(),
+                Some(&ExchangeStatus::Settled)
+            );
+        }
     }
 
     #[test]
@@ -6517,7 +6604,7 @@ mod tests {
             "stock reserved for each community's own basket is not an exchange offer"
         );
         for (requester, resource) in [(1, SubsistenceResource::B), (2, SubsistenceResource::A)] {
-            let attempt = exchange_attempt(&clearing, requester, resource);
+            let attempt = exchange_attempt(&clearing, requester, None, resource);
             assert_eq!(attempt.delivered, 0.0);
             assert_eq!(
                 attempt.statuses,
@@ -6544,7 +6631,7 @@ mod tests {
         ];
 
         let clearing = clear_local_exchange(&graph, &snapshots);
-        let attempt = exchange_attempt(&clearing, 1, SubsistenceResource::A);
+        let attempt = exchange_attempt(&clearing, 1, None, SubsistenceResource::A);
 
         assert!(
             clearing.deliveries.is_empty(),
@@ -6561,10 +6648,10 @@ mod tests {
     fn clearing_is_identical_under_snapshot_reordering() {
         let graph = exchange_graph(4, &[(0, 1), (1, 2), (1, 3)]);
         let snapshots = vec![
-            exchange_snapshot(40, 3, 4.0, 0.0, 2.0),
-            exchange_snapshot(10, 0, 4.0, 5.0, 2.0),
-            exchange_snapshot(30, 2, 4.0, 0.0, 2.0),
-            exchange_snapshot(20, 1, 4.0, 2.0, 2.0),
+            exchange_snapshot(40, 3, 2.0, 0.0, 2.0),
+            exchange_snapshot(10, 0, 4.0, 4.0, 0.0),
+            exchange_snapshot(30, 2, 2.0, 0.0, 2.0),
+            exchange_snapshot(20, 1, 2.0, 0.0, 2.0),
         ];
         let mut reordered = snapshots.clone();
         reordered.reverse();
@@ -6583,9 +6670,9 @@ mod tests {
     fn every_typed_delivery_conserves_each_resource() {
         let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
         let snapshots = vec![
-            exchange_snapshot(1, 0, 4.0, 5.0, 0.0),
-            exchange_snapshot(2, 1, 4.0, 2.0, 2.0),
-            exchange_snapshot(3, 2, 4.0, 0.0, 5.0),
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
         ];
 
         let clearing = clear_local_exchange(&graph, &snapshots);
@@ -6601,6 +6688,32 @@ mod tests {
                     .any(|delivery| delivery.resource == SubsistenceResource::B),
             "the conservation fixture must move nonzero quantities of both resources"
         );
+        for delivery in &clearing.deliveries {
+            let attempt = exchange_attempt(
+                &clearing,
+                delivery.to.0,
+                Some(delivery.from.0),
+                delivery.resource,
+            );
+            assert_eq!(
+                attempt.delivered, delivery.quantity,
+                "every delivery must be the funded result of its named direct proposal"
+            );
+            let reciprocal_resource = match delivery.resource {
+                SubsistenceResource::A => SubsistenceResource::B,
+                SubsistenceResource::B => SubsistenceResource::A,
+            };
+            assert_eq!(
+                delivered(
+                    &clearing,
+                    delivery.to.0,
+                    delivery.from.0,
+                    reciprocal_resource,
+                ),
+                delivery.quantity,
+                "every typed delivery must carry an equal reciprocal delivery in the same bundle"
+            );
+        }
         for resource in [SubsistenceResource::A, SubsistenceResource::B] {
             let mut balances: BTreeMap<BakeId, f64> = snapshots
                 .iter()
@@ -6629,19 +6742,46 @@ mod tests {
                 "applying every {resource:?} debit and credit must preserve total stock"
             );
             let expected = match resource {
-                SubsistenceResource::A => [(BakeId(1), 3.0), (BakeId(2), 2.0), (BakeId(3), 2.0)],
-                SubsistenceResource::B => [(BakeId(1), 2.0), (BakeId(2), 2.0), (BakeId(3), 3.0)],
+                SubsistenceResource::A => [(BakeId(1), 1.0), (BakeId(2), 2.0), (BakeId(3), 1.0)],
+                SubsistenceResource::B => [(BakeId(1), 1.0), (BakeId(2), 2.0), (BakeId(3), 1.0)],
             };
             assert_eq!(
                 balances,
                 BTreeMap::from(expected),
-                "funded relay hops must leave each community's reserved basket intact"
+                "funded direct exchanges must leave each community's reserved basket intact"
             );
         }
         assert_eq!(
             clearing.conservation_residuals,
             [0.0, 0.0],
             "the clearing trace must expose exact-zero residuals for both resources"
+        );
+    }
+
+    #[test]
+    fn snapshot_accounting_detects_a_delivery_that_overdraws_opening_surplus() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 4.0, 4.0, 0.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+        ];
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let mut mutated = clearing.deliveries.clone();
+        let target = mutated
+            .iter_mut()
+            .find(|delivery| {
+                delivery.from == BakeId(1)
+                    && delivery.to == BakeId(2)
+                    && delivery.resource == SubsistenceResource::A
+            })
+            .expect("fixture must contain the A half of its reciprocal exchange");
+        assert_eq!(target.quantity, 2.0, "mutation target must be live");
+        target.quantity = 3.0;
+
+        assert_eq!(
+            exchange_conservation_residuals(&snapshots, &mutated),
+            [1.0, 0.0],
+            "spending one unit beyond immutable opening surplus must surface as one created A unit"
         );
     }
 
