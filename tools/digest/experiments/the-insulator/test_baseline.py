@@ -310,6 +310,23 @@ class BaselineOrchestrationTests(unittest.TestCase):
             self.assertTrue(target.is_symlink())
             self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
 
+    def test_refuses_symlinked_target_ancestor_before_deleting_external_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "checkout"
+            root.mkdir()
+            external = Path(directory) / "external-tools"
+            target = external / "digest" / "target"
+            target.mkdir(parents=True)
+            marker = target / "must-survive"
+            marker.write_text("keep", encoding="utf-8")
+            (root / "tools").symlink_to(external, target_is_directory=True)
+
+            with self.assertRaisesRegex(ValueError, "target ownership"):
+                self._run_with_mocks(root, Path(directory) / "refused.json", True)
+
+            self.assertTrue((root / "tools").is_symlink())
+            self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
+
     def test_retains_incomplete_capture_without_summarizing_it(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "checkout"

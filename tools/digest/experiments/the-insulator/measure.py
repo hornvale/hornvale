@@ -572,10 +572,17 @@ def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
 def _prepare_baseline_target(root: Path, target: Path, cold: bool) -> None:
     """Establish exclusive ownership before changing the baseline target."""
     expected = Path(root) / "tools" / "digest" / "target"
-    if target != expected or target.is_symlink():
+    if target != expected:
         raise ValueError("baseline target ownership cannot be established")
-    if target.exists() and not target.is_dir():
-        raise ValueError("baseline target must be a directory")
+    current = Path(root)
+    for component in expected.relative_to(root).parts:
+        if current.is_symlink() or (current.exists() and not current.is_dir()):
+            raise ValueError("baseline target ownership cannot be established")
+        if not current.exists():
+            break
+        current /= component
+        if current.is_symlink() or (current.exists() and not current.is_dir()):
+            raise ValueError("baseline target ownership cannot be established")
     if cold and target.exists():
         shutil.rmtree(target)
     target.mkdir(parents=True, exist_ok=True)
