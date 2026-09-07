@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 
 use hornvale_history::record::Founding;
-use hornvale_kernel::{EntityId, Value, Vertex, World};
+use hornvale_kernel::{EntityId, KindId, Value, Vertex, World};
 
 use crate::LotError;
 use crate::hazard::{Hazard, e0};
@@ -41,6 +41,20 @@ pub struct Prepared {
     /// carries a name — spec §5's `where` slot: "name only for a living
     /// settlement").
     pub name: Option<String>,
+}
+
+/// One paired outbreak event prepared for Lot reads.
+/// type-audit: bare-ok(count: year), bare-ok(count: deaths)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct OutbreakEvent {
+    /// Minted event identity shared by both committed facts.
+    pub(crate) event: EntityId,
+    /// Bake year of the event.
+    pub(crate) year: f64,
+    /// Pathogen named by `struck-by`.
+    pub(crate) pathogen: KindId,
+    /// Deaths named by `outbreak-deaths`.
+    pub(crate) deaths: f64,
 }
 
 /// The assembled context.
@@ -91,6 +105,17 @@ pub struct LotContext {
     births_by_year: Vec<f64>,
     /// The cumulative sum of `births_by_year` — the birth-year draw's CDF.
     births_cdf: Vec<f64>,
+    /// Worldgen's authoritative era/site population substrate.
+    pub(crate) era_population: hornvale_worldgen::EraPopulationView,
+    /// Connected host population at each occupied site, per era.
+    pub(crate) metapopulation_by_era: Vec<(f64, BTreeMap<Vertex, f64>)>,
+    /// The exact era-adjusted substrate used by the bake's niche fits.
+    pub(crate) era_substrates: Vec<(
+        f64,
+        hornvale_kernel::VertexMap<hornvale_worldgen::Substrate>,
+    )>,
+    /// Paired outbreak facts, grouped by struck occupation.
+    pub(crate) outbreaks_by_occupation: BTreeMap<EntityId, Vec<OutbreakEvent>>,
 }
 
 impl LotContext {
@@ -148,6 +173,118 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         hornvale_worldgen::terrain_of(world).map_err(|e| LotError::Build(e.to_string()))?;
     let climate = hornvale_worldgen::climate_from(world, &terrain)
         .map_err(|e| LotError::Build(e.to_string()))?;
+    let era_population = hornvale_worldgen::bake_era_population_view(world)
+        .map_err(|e| LotError::Build(e.to_string()))?;
+    let era_graphs = hornvale_worldgen::bake_era_graphs_from(world, &terrain, &climate)
+        .map_err(|e| LotError::Build(e.to_string()))?;
+    let era_substrates = hornvale_worldgen::bake_era_substrates_from(world, &terrain, &climate)
+        .map_err(|e| LotError::Build(e.to_string()))?;
+    if era_graphs.len() != era_substrates.len()
+        || era_graphs
+            .iter()
+            .zip(&era_substrates)
+            .any(|((graph_year, _), (substrate_year, _))| graph_year != substrate_year)
+    {
+        return Err(LotError::Build(
+            "the bake's era graphs and ecological substrates disagree".to_string(),
+        ));
+    }
+    let mut metapopulation_by_era = Vec::with_capacity(era_graphs.len());
+    for (era_start, graph) in &era_graphs {
+        let regions = graph.reachable_regions(f64::MIN_POSITIVE);
+        let mut region_of = BTreeMap::new();
+        for (region, vertices) in regions.iter().enumerate() {
+            for &vertex in vertices {
+                region_of.insert(vertex, region);
+            }
+        }
+        let rows: Vec<_> = era_population
+            .rows()
+            .filter(|row| row.era_start == *era_start)
+            .collect();
+        let mut totals: BTreeMap<usize, f64> = BTreeMap::new();
+        for row in &rows {
+            if let Some(&region) = region_of.get(&row.site) {
+                *totals.entry(region).or_default() += row.population;
+            }
+        }
+        let by_site = rows
+            .into_iter()
+            .filter_map(|row| {
+                let region = region_of.get(&row.site)?;
+                Some((row.site, totals.get(region).copied().unwrap_or(0.0)))
+            })
+            .collect();
+        metapopulation_by_era.push((*era_start, by_site));
+    }
+
+    let pathogen_registry = hornvale_species::pathogen_registry();
+    let mut outbreaks_by_occupation: BTreeMap<EntityId, Vec<OutbreakEvent>> = BTreeMap::new();
+    let mut struck_subjects = std::collections::BTreeSet::new();
+    for struck in world.ledger.find(hornvale_epidemiology::STRUCK_BY) {
+        let Value::Text(label) = &struck.object else {
+            return Err(LotError::Build(format!(
+                "outbreak event {} has non-text struck-by",
+                struck.subject.get()
+            )));
+        };
+        let Some((&pathogen, _)) = pathogen_registry.iter().find(|(kind, _)| kind.0 == label)
+        else {
+            return Err(LotError::Build(format!(
+                "outbreak event {} names unknown pathogen {label}",
+                struck.subject.get()
+            )));
+        };
+        let occupation = struck.place.ok_or_else(|| {
+            LotError::Build(format!(
+                "outbreak event {} has no occupation place",
+                struck.subject.get()
+            ))
+        })?;
+        let day = struck.day.ok_or_else(|| {
+            LotError::Build(format!(
+                "outbreak event {} has no day",
+                struck.subject.get()
+            ))
+        })?;
+        let deaths_fact = world
+            .ledger
+            .facts_of(struck.subject, hornvale_epidemiology::OUTBREAK_DEATHS)
+            .find(|fact| fact.place == Some(occupation) && fact.day == Some(day))
+            .ok_or_else(|| {
+                LotError::Build(format!(
+                    "outbreak event {} has struck-by without matching outbreak-deaths",
+                    struck.subject.get()
+                ))
+            })?;
+        let Value::Number(deaths) = deaths_fact.object else {
+            return Err(LotError::Build(format!(
+                "outbreak event {} has non-numeric outbreak-deaths",
+                struck.subject.get()
+            )));
+        };
+        struck_subjects.insert(struck.subject);
+        outbreaks_by_occupation
+            .entry(occupation)
+            .or_default()
+            .push(OutbreakEvent {
+                event: struck.subject,
+                year: hornvale_worldgen::bake_year_of_ledger_day(day.as_std_days()),
+                pathogen,
+                deaths,
+            });
+    }
+    for deaths in world.ledger.find(hornvale_epidemiology::OUTBREAK_DEATHS) {
+        if !struck_subjects.contains(&deaths.subject) {
+            return Err(LotError::Build(format!(
+                "outbreak event {} has outbreak-deaths without struck-by",
+                deaths.subject.get()
+            )));
+        }
+    }
+    for events in outbreaks_by_occupation.values_mut() {
+        events.sort_by(|a, b| a.year.total_cmp(&b.year).then(a.event.cmp(&b.event)));
+    }
     let report = hornvale_worldgen::demography_report_from(world, &wc, &terrain, &climate)
         .map_err(|e| LotError::Build(e.to_string()))?;
     let present_year = hornvale_worldgen::present_year(world);
@@ -313,5 +450,9 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         sky,
         births_by_year,
         births_cdf,
+        era_population,
+        metapopulation_by_era,
+        era_substrates,
+        outbreaks_by_occupation,
     })
 }

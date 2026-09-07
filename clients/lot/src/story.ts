@@ -35,6 +35,7 @@ const LABELS: Record<string, string> = {
   "founded-from": "Founding",
   "founder-kinship": "Founder",
   "community-fate": "The community",
+  "cause": "Cause of death",
   "tech": "Technology",
   "function": "What it was for",
   "tongue": "Tongue",
@@ -109,8 +110,13 @@ function filled(life: Life, key: string): string | null {
 export function disclaimer(life: Life): string {
   const who = filled(life, "name") ?? "This";
   const place = filled(life, "where") ?? "a place the record does not name";
-  return `${who} is not a real person, but this life is drawn from the statistical reality of ` +
-    `${place} in year ${Math.round(life.birth_year)} of seed ${life.seed}.`;
+  if (life.projection.kind === "composite") {
+    return `${who} is a non-causal composite case, not a real person; it is drawn from the ` +
+      `statistical reality of ${place} in year ${Math.round(life.birth_year)} of seed ` +
+      `${life.seed}, and cannot write consequences back to that world.`;
+  }
+  return `${who} is drawn from the statistical reality of ${place} in year ` +
+    `${Math.round(life.birth_year)} of seed ${life.seed}.`;
 }
 
 /** One entry in the Sources list, resolved from the payload's own row. */

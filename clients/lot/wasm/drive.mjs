@@ -51,6 +51,17 @@ const places = JSON.parse(placesText);
 if (places.schema !== "lot/places/v1") fail("hl_lot_places", `schema is ${places.schema}`);
 writeFileSync("/tmp/hv-lot-places.json", placesText);
 
+// lot/odds/v1 — the additive cause table for lot 0's source occupation.
+const lot0 = JSON.parse(seed42Lot0);
+expect(e.hl_lot_odds(lot0.occ, lot0.birth_year), 0, "hl_lot_odds(lot 0 cohort)");
+const oddsText = out();
+const odds = JSON.parse(oddsText);
+if (odds.schema !== "lot/odds/v1") fail("hl_lot_odds", `schema is ${odds.schema}`);
+if (!Array.isArray(odds.causes) || odds.causes.length === 0) {
+  fail("hl_lot_odds", "causes is absent or empty");
+}
+writeFileSync("/tmp/hv-lot-odds.json", oddsText);
+
 // Pinned draw, byte-identical to `hornvale lot --index 3 --year 1500 --json`.
 // 4294967295 (u32::MAX) is the ABI's "no site pin" sentinel.
 expect(e.hl_lot_pinned(3n, 1500, 4294967295), 0, "hl_lot_pinned(3, 1500, no site)");
@@ -69,5 +80,5 @@ if (out() === seed42Lot0) {
 }
 
 console.log(
-  "lot-wasm smoke OK (lot/life/v1 + lot/curve/v1 + lot/places/v1 byte-identical/well-formed; pinned golden; out-of-span refusal; context reset across hl_new)",
+  "lot-wasm smoke OK (lot/life/v1 + lot/curve/v1 + lot/places/v1 + lot/odds/v1 byte-identical/well-formed; pinned golden; out-of-span refusal; context reset across hl_new)",
 );

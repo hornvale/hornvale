@@ -5,7 +5,7 @@ use hornvale_lot::draw::{Ending, draw};
 use hornvale_lot::slots::{Silence, SlotValue, Source, tell};
 use hornvale_lot::{LotIndex, Pick};
 
-const KEYS: [&str; 26] = [
+const KEYS: [&str; 27] = [
     "when",
     "where",
     "people",
@@ -14,6 +14,7 @@ const KEYS: [&str; 26] = [
     "founded-from",
     "founder-kinship",
     "community-fate",
+    "cause",
     "tech",
     "function",
     "tongue",

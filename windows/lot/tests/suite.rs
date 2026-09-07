@@ -5,6 +5,8 @@ mod draw;
 mod hazard;
 #[path = "suite/lot_readout.rs"]
 mod lot_readout;
+#[path = "suite/murrain.rs"]
+mod murrain;
 #[path = "suite/render.rs"]
 mod render;
 #[path = "suite/shape.rs"]

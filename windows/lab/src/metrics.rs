@@ -6362,7 +6362,7 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "lot-slots-filled-mean",
-            doc: "Mean number of the 22 non-by-design story slots filled per lot \
+            doc: "Mean number of the 23 non-by-design story slots filled per lot \
                   over lots 0-199; Absent if the world has no occupations or predates \
                   occ-person-years",
             summary: SummaryKind::Numeric {

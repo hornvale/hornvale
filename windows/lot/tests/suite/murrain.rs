@@ -1,0 +1,218 @@
+use hornvale_history::record::CauseOfEnd;
+use hornvale_kernel::{KindId, Vertex};
+use hornvale_lot::context::assemble;
+use hornvale_lot::draw::{DeathCause, Ending, draw, odds_at};
+use hornvale_lot::endemic::{HazardBand, cause_weights_for_band, endemic_burden_at};
+use hornvale_lot::json::{life_json, odds_json};
+use hornvale_lot::narrate::narrate;
+use hornvale_lot::projection::{Projection, ProjectionMateriality, SourceCohort};
+use hornvale_lot::slots::{SlotValue, Source, tell};
+use hornvale_lot::{LotIndex, Pick};
+
+#[test]
+fn endemic_flux_weight_reads_the_authoritative_population_substrate() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let year = ctx.present_year - 1.0;
+    let site = ctx
+        .occupations
+        .iter()
+        .find(|prepared| prepared.record.core.is_alive())
+        .expect("seed 42 has a living occupation")
+        .record
+        .core
+        .site;
+    let substrate = hornvale_worldgen::bake_era_population_view(&world).unwrap();
+    let era = substrate
+        .rows()
+        .filter(|row| row.era_start <= year)
+        .map(|row| row.era_start)
+        .fold(None, |_, era| Some(era))
+        .expect("the picked year has an era");
+    let population = substrate.population_at(era, site);
+    let expected = 0.35 * (0.5 + 0.5 * (population / 50.0).min(1.0));
+
+    let burden = endemic_burden_at(&ctx, site, year);
+    let flux = burden
+        .iter()
+        .find(|(kind, _)| *kind == KindId("the-flux"))
+        .expect("the flux is present everywhere");
+    assert_eq!(flux.1.background_weight.to_bits(), expected.to_bits());
+    assert_eq!(flux.1.infant_weight, 0.55);
+}
+
+#[test]
+fn every_band_has_a_normalized_cause_distribution() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    for &site in ctx.settlements_by_vertex.keys() {
+        for year in [ctx.start_year, ctx.present_year - 1.0] {
+            for strife in [0.0, 0.25, 0.5, 1.0] {
+                for band in [
+                    HazardBand::Infant,
+                    HazardBand::Background,
+                    HazardBand::Senescent,
+                ] {
+                    let weights = cause_weights_for_band(&ctx, site, year, strife, band);
+                    let sum: f64 = weights.iter().map(|weight| weight.weight).sum();
+                    assert!(
+                        (sum - 1.0).abs() < 1e-12,
+                        "site {site:?}, year {year}, strife {strife}, {band:?} sums to {sum}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn outbreak_probability_is_spliced_into_the_life_course() {
+    assert!(!hornvale_lot::draw::outbreak_kills(20.0, 100.0, 0.20));
+    assert!(hornvale_lot::draw::outbreak_kills(20.0, 100.0, 0.199_999));
+}
+
+#[test]
+fn real_seed_produces_named_outbreak_and_plague_endings() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let mut outbreak = None;
+    let mut plague = None;
+    for index in 0..200_000 {
+        let life = draw(&ctx, LotIndex(index), &Pick::default()).unwrap();
+        match (&life.ending, &life.cause) {
+            (Ending::Outbreak(kind), Some(DeathCause::Pathogen(cause))) => {
+                assert_eq!(kind, cause);
+                outbreak.get_or_insert(index);
+            }
+            (Ending::CommunityFate(CauseOfEnd::Plague), Some(DeathCause::Pathogen(kind))) => {
+                assert!(matches!(kind.0, "the-pest" | "the-pox"));
+                plague.get_or_insert(index);
+            }
+            _ => {}
+        }
+        if outbreak.is_some() && plague.is_some() {
+            break;
+        }
+    }
+    assert!(
+        outbreak.is_some(),
+        "no outbreak death in 200,000 deterministic lots"
+    );
+    assert!(
+        plague.is_some(),
+        "no named Plague death in 200,000 deterministic lots"
+    );
+}
+
+#[test]
+fn every_dead_lot_has_a_sourced_cause_slot() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let mut dead = 0;
+    for index in 0..200 {
+        let life = draw(&ctx, LotIndex(index), &Pick::default()).unwrap();
+        if life.ending == Ending::Alive {
+            continue;
+        }
+        let story = tell(&world, &ctx, &life);
+        let cause = story.slot("cause").expect("the cause slot is always asked");
+        assert!(matches!(cause.value, SlotValue::Filled(_)));
+        assert!(!cause.sources.is_empty());
+        if matches!(life.cause, Some(DeathCause::Pathogen(_))) {
+            assert!(cause.sources.iter().any(|source| matches!(
+                source,
+                Source::Fact { predicate, .. }
+                    if predicate == hornvale_epidemiology::STRUCK_BY
+                        || predicate == hornvale_history::OCC_PERSON_YEARS
+            )));
+        }
+        dead += 1;
+    }
+    assert!(dead > 0, "the provenance check exercised no dead lots");
+}
+
+#[test]
+fn payload_adds_cause_projection_and_cause_odds() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let life = (0..200)
+        .find_map(|index| {
+            let life = draw(&ctx, LotIndex(index), &Pick::default()).ok()?;
+            (life.ending != Ending::Alive).then_some(life)
+        })
+        .expect("seed 42 yields a dead lot");
+    let story = tell(&world, &ctx, &life);
+    let life_doc: serde_json::Value =
+        serde_json::from_str(&life_json(&ctx, &life, &story)).unwrap();
+    assert!(life_doc["ending"]["cause"].is_string());
+    assert_eq!(life_doc["projection"]["kind"], "composite");
+    assert_eq!(life_doc["projection"]["consequences_write_back"], false);
+
+    let odds_doc: serde_json::Value =
+        serde_json::from_str(&odds_json(&odds_at(&ctx, life.occ, life.birth_year))).unwrap();
+    let causes = odds_doc["causes"]
+        .as_array()
+        .expect("odds.causes is additive");
+    assert!(!causes.is_empty());
+    let sum: f64 = causes
+        .iter()
+        .map(|row| row["share"].as_f64().unwrap())
+        .sum();
+    assert!(
+        (sum - 1.0).abs() < 1e-6,
+        "emitted cause shares sum to {sum}"
+    );
+}
+
+#[test]
+fn composite_life_is_narrated_as_non_causal() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let life = draw(&ctx, LotIndex(0), &Pick::default()).unwrap();
+    let story = tell(&world, &ctx, &life);
+    let prose = narrate(&ctx, &life, &story);
+    assert!(prose.contains("a non-causal composite case"));
+    assert!(prose.contains("cannot write consequences back"));
+}
+
+#[test]
+fn composite_projection_refuses_persistent_write_back() {
+    let cohort = SourceCohort {
+        people: KindId("human"),
+        site: Vertex(7),
+        year: 1200.0,
+    };
+    let composite = Projection::composite(cohort, true);
+    assert_eq!(composite.materiality, ProjectionMateriality::InWorld);
+    assert!(!composite.consequences_write_back());
+    let mut wrote = false;
+    let refused = composite.write_persistent_consequence(|| wrote = true);
+    assert!(refused.is_err());
+    assert!(!wrote, "a composite projection executed a persistent write");
+
+    let materialized = Projection::materialized_individual(cohort);
+    materialized
+        .write_persistent_consequence(|| wrote = true)
+        .expect("a materialized individual may persist consequences");
+    assert!(wrote);
+}
+
+#[test]
+fn same_seed_still_builds_byte_identical_worlds_and_lot_payloads() {
+    let first_world = hornvale_worldgen::seed_42_world();
+    let second_world = hornvale_worldgen::seed_42_world();
+    assert_eq!(
+        serde_json::to_vec(&first_world).unwrap(),
+        serde_json::to_vec(&second_world).unwrap()
+    );
+    let first_ctx = assemble(&first_world).unwrap();
+    let second_ctx = assemble(&second_world).unwrap();
+    let first_life = draw(&first_ctx, LotIndex(0), &Pick::default()).unwrap();
+    let second_life = draw(&second_ctx, LotIndex(0), &Pick::default()).unwrap();
+    let first_story = tell(&first_world, &first_ctx, &first_life);
+    let second_story = tell(&second_world, &second_ctx, &second_life);
+    assert_eq!(
+        life_json(&first_ctx, &first_life, &first_story),
+        life_json(&second_ctx, &second_life, &second_story)
+    );
+}

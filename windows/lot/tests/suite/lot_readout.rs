@@ -66,7 +66,7 @@ fn lot_readout() {
     let mut h_p3_growing_max = f64::NEG_INFINITY;
     let mut h_p3_seed_100: Option<f64> = None;
     let mut h_p4_all_above_half = true;
-    let mut h_p5_all_at_least_14 = true;
+    let mut h_p5_all_at_least_15 = true;
     let mut h_p6_seed_42: Option<f64> = None;
 
     for seed_value in SEEDS {
@@ -148,7 +148,7 @@ fn lot_readout() {
         println!("  median scaled age at death        {median_scaled_age:.2}");
         println!("  witness-community-end share      {witness_share:.3}");
         println!("  silent-subsistence share         {silent_subsistence_share:.3}");
-        println!("  mean filled slots (of 22)         {mean_filled:.2}");
+        println!("  mean filled slots (of 23)         {mean_filled:.2}");
         println!(
             "  clamped rectangles (of {})       {clamped_rectangles}",
             ctx.occupations.len()
@@ -169,8 +169,8 @@ fn lot_readout() {
         if silent_subsistence_share <= 0.5 {
             h_p4_all_above_half = false;
         }
-        if mean_filled < 14.0 {
-            h_p5_all_at_least_14 = false;
+        if mean_filled < 15.0 {
+            h_p5_all_at_least_15 = false;
         }
         if seed_value == 42 {
             h_p6_seed_42 = Some(ratio);
@@ -202,8 +202,8 @@ fn lot_readout() {
         if h_p4_all_above_half { "PASS" } else { "FAIL" }
     );
     println!(
-        "H-P5 mean filled slots (of 22) >= 14 on every seed: {}",
-        if h_p5_all_at_least_14 { "PASS" } else { "FAIL" }
+        "H-P5 mean filled slots (of 23) >= 15 on every seed: {}",
+        if h_p5_all_at_least_15 { "PASS" } else { "FAIL" }
     );
     println!(
         "H-P6 souls_ever / (person-years / 30) in [0.5,2.0] on seed 42: {}",

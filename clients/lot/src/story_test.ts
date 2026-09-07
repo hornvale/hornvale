@@ -21,7 +21,7 @@ Deno.test("a filled tile carries the payload's own value and its sources", () =>
 Deno.test("the by-design silences leave the tiles and become exactly one note", () => {
   const subject = life();
   const rendered = tiles(subject);
-  assertEquals(rendered.map((tile) => tile.key), ["when", "where", "name", "subsistence"]);
+  assertEquals(rendered.map((tile) => tile.key), ["when", "where", "name", "cause", "subsistence"]);
   const note = byDesignNote(subject);
   assertEquals(
     note,
@@ -52,8 +52,9 @@ Deno.test("the note names a single by-design silence without a stray 'or'", () =
 Deno.test("the disclaimer is the narrator's sentence, from the payload's own slots", () => {
   assertEquals(
     disclaimer(life()),
-    "Xaararo is not a real person, but this life is drawn from the statistical reality of " +
-      "Raaxora, a temperate-forest site, at 16.0°, 122.6° in year 1752 of seed 42.",
+    "Xaararo is a non-causal composite case, not a real person; it is drawn from the " +
+      "statistical reality of Raaxora, a temperate-forest site, at 16.0°, 122.6° in year " +
+      "1752 of seed 42, and cannot write consequences back to that world.",
   );
 });
 
@@ -64,7 +65,7 @@ Deno.test("an unnamed life keeps the disclaimer honest rather than inventing a n
       ? { ...slot, value: null, silence: { kind: "no-fact", reason: "no name survives" } }
       : slot
   );
-  assert(disclaimer(anonymous).startsWith("This is not a real person,"));
+  assert(disclaimer(anonymous).startsWith("This is a non-causal composite case,"));
 });
 
 Deno.test("a life with no where-slot names no place rather than guessing", () => {
@@ -88,7 +89,7 @@ Deno.test("a source resolves to its caption or its derivation", () => {
 Deno.test("the silence line reads the payload's tally, not a recount", () => {
   assertEquals(
     silenceLine(life()),
-    "3 of 4 answerable slots are filled; 1 went unanswered because this world's ledger is " +
+    "4 of 5 answerable slots are filled; 1 went unanswered because this world's ledger is " +
       "quiet on them, and 4 more are not modelled at all.",
   );
 });

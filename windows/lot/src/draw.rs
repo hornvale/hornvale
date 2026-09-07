@@ -8,7 +8,8 @@ use hornvale_history::record::CauseOfEnd;
 use hornvale_kernel::{EntityId, Vertex};
 
 use crate::context::LotContext;
-use crate::hazard::{death_age, hazard_shares, q_before};
+use crate::endemic::{HazardBand, cause_weights_for_band};
+use crate::hazard::{death_age, hazard_shares, hazard_shares_at_age, q_before};
 use crate::shape::population_at;
 use crate::{LotError, LotIndex, Pick};
 
@@ -36,8 +37,50 @@ pub enum Ending {
     Alive,
     /// Died under the continuous hazard (infant / background / senescent by age band).
     Hazard,
+    /// Died in a committed outbreak that did not end the community.
+    Outbreak(hornvale_kernel::KindId),
     /// Died in the community's own committed ending.
     CommunityFate(CauseOfEnd),
+}
+
+/// The named cause of a dead projected life.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DeathCause {
+    /// A catalogue pathogen.
+    Pathogen(hornvale_kernel::KindId),
+    /// Violence within the background hazard.
+    Violence,
+    /// Senescence.
+    Age,
+    /// The record's unnamed residual.
+    Unnamed,
+    /// A non-plague community ending.
+    Community(CauseOfEnd),
+}
+
+impl DeathCause {
+    /// Reader-facing cause label.
+    /// type-audit: bare-ok(prose: return)
+    pub fn label(&self) -> String {
+        match self {
+            DeathCause::Pathogen(kind) => kind.0.replace('-', " "),
+            DeathCause::Violence => "violence".to_string(),
+            DeathCause::Age => "age".to_string(),
+            DeathCause::Unnamed => "an unnamed cause".to_string(),
+            DeathCause::Community(cause) => cause_name(*cause).to_string(),
+        }
+    }
+}
+
+fn cause_name(cause: CauseOfEnd) -> &'static str {
+    match cause {
+        CauseOfEnd::Famine => "famine",
+        CauseOfEnd::Burned => "burning",
+        CauseOfEnd::Plague => "plague",
+        CauseOfEnd::Fled => "flight",
+        CauseOfEnd::Migrated => "migration",
+        CauseOfEnd::Breached => "a breach",
+    }
 }
 
 /// One drawn life.
@@ -62,6 +105,12 @@ pub struct Life {
     pub matured: bool,
     /// How it ended.
     pub ending: Ending,
+    /// The named cause, absent only while the life is alive.
+    pub cause: Option<DeathCause>,
+    /// Outbreak event supplying a pathogen cause, when one did.
+    pub(crate) cause_event: Option<EntityId>,
+    /// The projection boundary carried with this observation.
+    pub projection: crate::projection::Projection,
     /// The occupation the life moved to when its birth community ended
     /// inside its span and a daughter took the survivors, if any.
     pub moved_to: Option<usize>,
@@ -187,6 +236,8 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
     // even though the draw is otherwise continuous.
     let mut age = death_age(&p.hazard, 1.0 - uniform(seed, i, "death"));
     let mut ending = Ending::Hazard;
+    let mut cause = None;
+    let mut cause_event = None;
     let mut moved_to = None;
     let mut moved_year = None;
     let mut cur = occ;
@@ -199,16 +250,49 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
     // bake commits records, not of this loop — so a bound is added anyway:
     // at most one hop per occupation in the whole context, which the trail
     // could visit at most once each even in the worst case.
-    for _ in 0..ctx.occupations.len() {
+    'course: for _ in 0..ctx.occupations.len() {
         let r = &ctx.occupations[cur].record;
+        let segment_start = moved_year.unwrap_or(birth_year);
+        let natural_end = birth_year + age;
+        for event in ctx
+            .outbreaks_by_occupation
+            .get(&r.id)
+            .into_iter()
+            .flatten()
+            .filter(|event| {
+                event.year >= segment_start
+                    && event.year < natural_end
+                    && r.core.ended.is_none_or(|end| event.year <= end)
+            })
+        {
+            let is_plague_ending = r.core.cause == Some(CauseOfEnd::Plague)
+                && r.core
+                    .ended
+                    .is_some_and(|end| (end - event.year).abs() < 1e-9);
+            if is_plague_ending {
+                continue;
+            }
+            let population = population_at(&ctx.occupations[cur].shape, event.year);
+            let event_draw = uniform(seed, i, &format!("outbreak-{}", event.event.get()));
+            if outbreak_kills(event.deaths, population, event_draw) {
+                age = event.year - birth_year;
+                ending = Ending::Outbreak(event.pathogen);
+                cause = Some(DeathCause::Pathogen(event.pathogen));
+                cause_event = Some(event.event);
+                break 'course;
+            }
+        }
         let Some(end) = r.core.ended else { break };
         if end <= birth_year || end >= birth_year + age {
             break;
         }
-        let cause = r.core.cause.unwrap_or(CauseOfEnd::Fled);
-        if uniform(seed, i, &format!("fate-{}", r.id.0)) < loss_fraction(cause) {
+        let end_cause = r.core.cause.unwrap_or(CauseOfEnd::Fled);
+        if uniform(seed, i, &format!("fate-{}", r.id.0)) < loss_fraction(end_cause) {
             age = end - birth_year;
-            ending = Ending::CommunityFate(cause);
+            ending = Ending::CommunityFate(end_cause);
+            let (named, event) = community_death_cause(ctx, r.id, end, end_cause)?;
+            cause_event = event;
+            cause = Some(named);
             break;
         }
         // Survivors: the daughter founded on the ending year, if any (the
@@ -226,7 +310,10 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
             }
             None => {
                 age = end - birth_year;
-                ending = Ending::CommunityFate(cause);
+                ending = Ending::CommunityFate(end_cause);
+                let (named, event) = community_death_cause(ctx, r.id, end, end_cause)?;
+                cause_event = event;
+                cause = Some(named);
                 break;
             }
         }
@@ -239,6 +326,17 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
     if alive_now {
         ending = Ending::Alive;
         age = ctx.present_year - birth_year;
+        cause = None;
+        cause_event = None;
+    } else if ending == Ending::Hazard {
+        cause = Some(hazard_cause(
+            ctx,
+            p.record.core.site,
+            death_year,
+            &p.hazard,
+            age,
+            uniform(seed, i, "cause"),
+        ));
     }
     Ok(Life {
         index: i,
@@ -250,10 +348,88 @@ pub fn draw(ctx: &LotContext, index: LotIndex, pick: &Pick) -> Result<Life, LotE
         age_at_death: age,
         matured: age >= p.maturity_years,
         ending,
+        cause,
+        cause_event,
+        projection: crate::projection::Projection::composite(
+            crate::projection::SourceCohort {
+                people: p.record.core.people,
+                site: p.record.core.site,
+                year: birth_year,
+            },
+            false,
+        ),
         moved_to,
         moved_year,
         pick: *pick,
     })
+}
+
+/// Whether one outbreak draw kills a host.
+/// type-audit: bare-ok(count: deaths), bare-ok(count: population), bare-ok(ratio: draw), bare-ok(flag: return)
+pub fn outbreak_kills(deaths: f64, population: f64, draw: f64) -> bool {
+    population > 0.0 && draw < (deaths.max(0.0) / population).clamp(0.0, 1.0)
+}
+
+fn community_death_cause(
+    ctx: &LotContext,
+    occupation: EntityId,
+    year: f64,
+    cause: CauseOfEnd,
+) -> Result<(DeathCause, Option<EntityId>), LotError> {
+    if cause != CauseOfEnd::Plague {
+        return Ok((DeathCause::Community(cause), None));
+    }
+    let event = ctx
+        .outbreaks_by_occupation
+        .get(&occupation)
+        .into_iter()
+        .flatten()
+        .find(|event| (event.year - year).abs() < 1e-9)
+        .ok_or_else(|| {
+            LotError::Build(format!(
+                "Plague ending for occupation {} has no outbreak event at year {year}",
+                occupation.get()
+            ))
+        })?;
+    Ok((DeathCause::Pathogen(event.pathogen), Some(event.event)))
+}
+
+fn hazard_cause(
+    ctx: &LotContext,
+    site: Vertex,
+    year: f64,
+    hazard: &crate::hazard::Hazard,
+    age: f64,
+    mut draw: f64,
+) -> DeathCause {
+    let shares = hazard_shares_at_age(hazard, age);
+    let bands = [
+        (HazardBand::Infant, shares.infant),
+        (HazardBand::Background, shares.background),
+        (HazardBand::Senescent, shares.senescent),
+    ];
+    let mut weighted = Vec::<(DeathCause, f64)>::new();
+    for (band, band_weight) in bands {
+        for cause in cause_weights_for_band(ctx, site, year, hazard.strife, band) {
+            if let Some((_, weight)) = weighted.iter_mut().find(|(named, _)| *named == cause.cause)
+            {
+                *weight += band_weight * cause.weight;
+            } else {
+                weighted.push((cause.cause, band_weight * cause.weight));
+            }
+        }
+    }
+    let fallback = weighted
+        .last()
+        .map(|(cause, _)| cause.clone())
+        .unwrap_or(DeathCause::Unnamed);
+    for (cause, weight) in weighted {
+        if draw < weight {
+            return cause;
+        }
+        draw -= weight;
+    }
+    fallback
 }
 
 /// The births-per-epoch curve, total and per people, and the world's
@@ -397,7 +573,7 @@ pub fn places(ctx: &LotContext, year: f64) -> Vec<Place> {
 /// One occupation's mortality profile: the mechanism-half numbers of spec
 /// §4.3, for the exhibit and the readout.
 /// type-audit: bare-ok(count: e0), bare-ok(ratio: q_maturity), bare-ok(count: maturity_years), bare-ok(count: lifespan_years), bare-ok(ratio: strife), bare-ok(ratio: infant_share), bare-ok(ratio: background_share), bare-ok(ratio: senescent_share)
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Odds {
     /// Life expectancy at birth.
     pub e0: f64,
@@ -415,13 +591,65 @@ pub struct Odds {
     pub background_share: f64,
     /// The senescent term's share of total deaths.
     pub senescent_share: f64,
+    /// Cause-attributed mortality shares.
+    pub causes: Vec<CauseOdds>,
+}
+
+/// One cause's share of mortality.
+/// type-audit: bare-ok(ratio: share)
+#[derive(Clone, Debug, PartialEq)]
+pub struct CauseOdds {
+    /// Cause category.
+    pub cause: DeathCause,
+    /// Share of all mortality.
+    pub share: f64,
 }
 
 /// The mortality odds for occupation `occ`.
 /// type-audit: bare-ok(index: occ)
 pub fn odds(ctx: &LotContext, occ: usize) -> Odds {
+    odds_at(ctx, occ, ctx.present_year)
+}
+
+/// The mortality odds for occupation `occ` at `year`.
+/// type-audit: bare-ok(index: occ), bare-ok(count: year)
+pub fn odds_at(ctx: &LotContext, occ: usize, year: f64) -> Odds {
     let p = &ctx.occupations[occ];
     let shares = hazard_shares(&p.hazard);
+    let mut causes = Vec::new();
+    for (band, band_share) in [
+        (HazardBand::Infant, shares.infant),
+        (HazardBand::Background, shares.background),
+        (HazardBand::Senescent, shares.senescent),
+    ] {
+        for weight in cause_weights_for_band(ctx, p.record.core.site, year, p.hazard.strife, band) {
+            add_cause(&mut causes, weight.cause, band_share * weight.weight);
+        }
+    }
+
+    let outbreaks = ctx
+        .outbreaks_by_occupation
+        .get(&p.record.id)
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
+    let outbreak_deaths: f64 = outbreaks.iter().map(|event| event.deaths).sum();
+    let outbreak_share = if p.record.core.person_years > 0.0 {
+        (outbreak_deaths / p.record.core.person_years * p.e0).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    for cause in &mut causes {
+        cause.share *= 1.0 - outbreak_share;
+    }
+    if outbreak_deaths > 0.0 {
+        for event in outbreaks {
+            add_cause(
+                &mut causes,
+                DeathCause::Pathogen(event.pathogen),
+                outbreak_share * event.deaths / outbreak_deaths,
+            );
+        }
+    }
     Odds {
         e0: p.e0,
         q_maturity: q_before(&p.hazard, p.maturity_years),
@@ -431,5 +659,14 @@ pub fn odds(ctx: &LotContext, occ: usize) -> Odds {
         infant_share: shares.infant,
         background_share: shares.background,
         senescent_share: shares.senescent,
+        causes,
+    }
+}
+
+fn add_cause(causes: &mut Vec<CauseOdds>, cause: DeathCause, share: f64) {
+    if let Some(existing) = causes.iter_mut().find(|row| row.cause == cause) {
+        existing.share += share;
+    } else {
+        causes.push(CauseOdds { cause, share });
     }
 }

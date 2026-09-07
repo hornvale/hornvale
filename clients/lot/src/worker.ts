@@ -17,6 +17,7 @@ interface LotWasmExports {
   hl_lot_pinned(index: bigint, year: number, site: number): number;
   hl_lot_curve(): number;
   hl_lot_places(year: number): number;
+  hl_lot_odds(occ: number, year: number): number;
   hl_out_ptr(): number;
   hl_out_len(): number;
 }
@@ -75,6 +76,8 @@ function dispatch(c: LotWasmExports, request: WorkerRequest): number {
       return c.hl_lot_curve();
     case "places":
       return c.hl_lot_places(request.year);
+    case "odds":
+      return c.hl_lot_odds(request.occ, request.year);
   }
 }
 

@@ -636,6 +636,10 @@ fn community_fate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
             ),
             None => "the community was still standing when the life ended".to_string(),
         },
+        Ending::Outbreak(kind) => format!(
+            "the life ended in an outbreak of {} while the community endured",
+            kind.0.replace('-', " ")
+        ),
     };
     let text = match (life.moved_to, life.moved_year) {
         (Some(moved), Some(when_moved)) => {
@@ -651,6 +655,52 @@ fn community_fate(world: &World, ctx: &LotContext, life: &Life) -> Answer {
         _ => text,
     };
     (SlotValue::Filled(text), sources)
+}
+
+/// `cause` — the named cause of this life's death. Alive lives are honestly
+/// silent; every dead life is filled and cites either the paired outbreak
+/// facts, the committed community cause, or the substrate inputs and authored
+/// hazard attribution that produced a background cause.
+fn death_cause(world: &World, ctx: &LotContext, life: &Life) -> Answer {
+    let Some(cause) = &life.cause else {
+        return no_fact("the life is still running at the present, so it has no cause of death");
+    };
+    let record = &ctx.occupations[life.occ].record;
+    let mut sources = Vec::new();
+    if let Some(event) = life.cause_event {
+        sources.push(cite(world, event, hornvale_epidemiology::STRUCK_BY));
+        sources.push(cite(world, event, hornvale_epidemiology::OUTBREAK_DEATHS));
+    } else {
+        match cause {
+            crate::draw::DeathCause::Pathogen(_) => {
+                sources.push(cite(world, record.id, hornvale_history::OCC_PEAK));
+                sources.push(cite(world, record.id, hornvale_history::OCC_PERSON_YEARS));
+                if let Some(place) = settlement_on(ctx, world, life.site, record.core.people.0)
+                    && world
+                        .ledger
+                        .value_of(place, hornvale_settlement::BIOME)
+                        .is_some()
+                {
+                    sources.push(cite(world, place, hornvale_settlement::BIOME));
+                }
+                sources.push(Source::Derived {
+                    function: "lot::endemic::endemic_burden_at",
+                    inputs: "the worldgen population substrate, era graph, pathogen catalogue, and era-adjusted site substrate".to_string(),
+                });
+            }
+            crate::draw::DeathCause::Community(_) => {
+                sources.push(cite(world, record.id, hornvale_history::OCC_CAUSE));
+            }
+            crate::draw::DeathCause::Violence
+            | crate::draw::DeathCause::Age
+            | crate::draw::DeathCause::Unnamed => {}
+        }
+        sources.push(Source::Derived {
+            function: "lot::draw::hazard_cause",
+            inputs: "the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform".to_string(),
+        });
+    }
+    (SlotValue::Filled(cause.label()), sources)
 }
 
 /// The committed cause of an ending, as a clause.
@@ -1142,6 +1192,7 @@ pub fn tell(world: &World, ctx: &LotContext, life: &Life) -> Story {
         ("founded-from", founded_from(world, ctx, life)),
         ("founder-kinship", founder_kinship(world, ctx, life)),
         ("community-fate", community_fate(world, ctx, life)),
+        ("cause", death_cause(world, ctx, life)),
         ("tech", tech(world, ctx, life)),
         ("function", function(world, ctx, life)),
         ("tongue", tongue(ctx, life)),

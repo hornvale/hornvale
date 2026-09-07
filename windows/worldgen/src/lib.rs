@@ -4107,6 +4107,38 @@ pub fn bake_era_graphs_from(
         .collect())
 }
 
+/// The bake's era-adjusted ecological substrates over already-built terrain
+/// and climate. This is the substrate the history bake uses for pathogen
+/// niche fit; observational windows consume it without becoming a second
+/// population or climate authority.
+/// type-audit: bare-ok(count: return)
+pub fn bake_era_substrates_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<Vec<(f64, hornvale_kernel::VertexMap<Substrate>)>, BuildError> {
+    let cfg = history_bake::BakeConfig::default_millennia();
+    let (_eras, adjusts, years) = bake_eras(world, terrain, &cfg)?;
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+        stellar_inputs(&sky_of(world)?);
+    let insolation = insolation_field(
+        terrain.geosphere(),
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+    );
+    Ok(years
+        .into_iter()
+        .zip(adjusts.iter())
+        .map(|(year, adjust)| {
+            (
+                year,
+                substrate_field_at(terrain.geosphere(), terrain, climate, &insolation, adjust),
+            )
+        })
+        .collect())
+}
+
 /// Headline biome/habitability lines for the almanac's Land section.
 /// type-audit: bare-ok(prose: return)
 pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
