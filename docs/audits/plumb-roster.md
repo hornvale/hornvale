@@ -32,8 +32,8 @@ naming them explicitly (`plumb report kernel cli`).
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 34 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
-| Excluded: declared non-quantity type | 524 |
-| **Every `const` the walk touched** | **1457** |
+| Excluded: declared non-quantity type | 526 |
+| **Every `const` the walk touched** | **1459** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
@@ -98,7 +98,7 @@ bare count would hide a quantity someone had wrongly denied.
 | `&[PronounRow]` | 1 |
 | `&[Role]` | 2 |
 | `&[VerbRow]` | 1 |
-| `&str` | 270 |
+| `&str` | 272 |
 | `()` | 6 |
 | `(…)` | 10 |
 | `AffectLabel` | 1 |

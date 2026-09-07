@@ -1363,3 +1363,6 @@ retrospective-the-warrant	shipped	none		published retrospective; G6 approved 202
 the-ken	active	none		plan complete through Task 6; chronicle and retrospective committed; awaiting G6 approval before sluice submission	docs/superpowers/specs/2026-09-05-the-ken-design.md	docs/superpowers/plans/2026-09-05-the-ken.md		book/src/chronicle/the-ken.md	docs/retrospectives/the-ken.md
 chronicle-the-culvert	shipped	none		published chronicle				book/src/chronicle/the-culvert.md	
 retrospective-the-culvert	shipped	none		published retrospective					docs/retrospectives/the-culvert.md
+the-newel	active	none		B1/B2/B4/B6 shipped in six tasks; B3 and B5 split out at G3 as the-sett and the-stipple; chronicle and retrospective committed; awaiting G6 approval before sluice submission	docs/superpowers/specs/2026-09-06-the-newel-design.md	docs/superpowers/plans/2026-09-06-the-newel.md		book/src/chronicle/the-newel.md	docs/retrospectives/the-newel.md
+the-sett	active	none		spun out of the-newel at G3; design written, not yet planned	docs/superpowers/specs/2026-09-06-the-sett-design.md				
+the-stipple	active	none		spun out of the-newel at G3; design written, not yet planned	docs/superpowers/specs/2026-09-06-the-stipple-design.md				

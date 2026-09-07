@@ -102,6 +102,22 @@ mistaken for gate timings. **Adding an `rc` column to the table would fix this
 properly**; it is recorded here rather than done, because the schema is
 consumed by more than this file.
 
+**The same shape, three weeks later, on a client gate: the 2026-09-06
+`1.682` s `game-check` row at `2c0896a2b`** (The Newel, fix wave). Every
+other `game-check` on that branch reads 104–310 s, and 1.682 s cannot have
+executed the target's six cargo commands — two `fmt --check`, two
+`clippy --all-targets`, two `cargo test`. Its `user`+`sys` of 1.864 s is
+about what the two `cargo fmt --check` invocations alone cost (measured
+0.33 + 0.06 on this host, warm), and `game-check-run` runs those first, so
+the run aborted in its first phase on a formatting failure. The row 2 m 27 s
+later at the **same SHA** — 127.667 s, a healthy run — is the retry after
+`cargo fmt`. Relabelled, not deleted, following the 2026-08-09 precedent
+above: it is a real measurement of a real command, just not of a completed
+`game-check`. This is the second recorded instance of the same trap, which
+is the argument for the `rc` column that paragraph declined to add — CLAUDE.md
+tells every reader to take costs from this ledger, and a red row is
+indistinguishable from a cheap green one at a glance.
+
 **One `gate-commit` row is contamination, not a cost datum: the 2026-08-17
 `3857.559` s row at `37796ef1`** (The Underworld), against that gate's normal
 ~85 s on this host. It was measured during a runaway-`rg` storm — an extension
@@ -6356,6 +6372,36 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T14:06:06Z | sluice:gate | 906.942 | 22101.065 | 584.204 | 25.01 | 0 | 3dc564763 |  | lefford | 40 |
 | 2026-09-06T14:08:38Z | sluice:clients | 152.097 | 2324.336 | 179.653 | 16.46 | 0 | a93da4e45 |  | lefford | 40 |
 | 2026-09-06T14:16:42Z | sluice:heavy | 483.564 | 11409.246 | 144.191 | 23.89 | 0 | 8db2ffe74 |  | lefford | 40 |
+| 2026-09-06T17:09:39Z | game-check | 135.665 | 761.516 | 33.608 | 5.86 | 0 | bafaa6179 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T17:11:35Z | game-check | 113.485 | 672.386 | 20.147 | 6.10 | 0 | bafaa6179 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T17:15:22Z | gate-commit | 209.581 | 821.679 | 82.941 | 4.32 | 0 | bafaa6179 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T17:52:15Z | game-check | 138.295 | 734.046 | 32.034 | 5.54 | 0 | b0d08a674 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T17:53:04Z | gate-commit | 34.092 | 35.141 | 6.539 | 1.22 | 0 | b0d08a674 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T17:54:02Z | gate-commit | 41.181 | 63.967 | 18.211 | 2.00 | 0 | b0d08a674 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T17:55:04Z | gate-commit | 41.135 | 70.291 | 16.645 | 2.11 | 0 | b0d08a674 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T17:57:19Z | gate-commit | 41.008 | 70.862 | 16.466 | 2.13 | 0 | b0d08a674 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T18:09:01Z | gate-commit | 53.370 | 90.776 | 26.107 | 2.19 | 0 | 1311141ce | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T18:10:50Z | gate-commit | 42.325 | 70.757 | 16.354 | 2.06 | 0 | 1311141ce | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T18:26:59Z | gate-commit | 76.651 | 194.635 | 34.051 | 2.98 | 0 | c29cdee5f | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T18:28:07Z | gate-commit | 37.648 | 69.475 | 15.867 | 2.27 | 0 | c29cdee5f | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T18:37:11Z | gate-commit | 53.636 | 112.051 | 30.783 | 2.66 | 0 | b73e63703 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T18:39:17Z | gate-commit | 52.871 | 74.182 | 17.846 | 1.74 | 0 | b73e63703 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T19:06:53Z | game-check | 123.030 | 736.402 | 32.733 | 6.25 | 0 | f9d8bd204 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T19:08:58Z | gate-commit | 36.146 | 59.715 | 13.456 | 2.02 | 0 | f9d8bd204 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T19:17:21Z | game-check | 144.755 | 760.727 | 31.605 | 5.47 | 0 | f9d8bd204 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T19:18:08Z | gate-commit | 37.860 | 69.503 | 15.840 | 2.25 | 0 | f9d8bd204 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T19:31:17Z | game-check | 140.383 | 728.358 | 25.575 | 5.37 | 0 | 5a5c6bc9d | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T19:32:38Z | gate-commit | 38.875 | 70.016 | 15.984 | 2.21 | 0 | 5a5c6bc9d | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:12:21Z | game-check | 170.605 | 721.977 | 32.065 | 4.42 | 0 | 37cbbb68c | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:14:25Z | gate-commit | 44.755 | 63.189 | 14.579 | 1.74 | 0 | 37cbbb68c | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:15:16Z | gate-commit | 37.439 | 61.624 | 13.987 | 2.02 | 0 | 37cbbb68c | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:18:04Z | gate-commit | 37.572 | 69.227 | 15.671 | 2.26 | 0 | 37cbbb68c | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:30:13Z | game-check | 214.927 | 747.112 | 26.105 | 3.60 | 0 | 2b10dfbd4 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:32:10Z | gate-commit | 37.360 | 68.838 | 15.820 | 2.27 | 0 | 2b10dfbd4 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:50:59Z | game-check (RED, aborted at `cargo fmt --check` — NOT a game-check timing) | 1.682 | 1.556 | 0.308 | 1.11 | 0 | 2c0896a2b | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:53:26Z | game-check | 127.667 | 784.163 | 30.670 | 6.38 | 0 | 2c0896a2b | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T20:57:15Z | gate-commit | 41.225 | 70.539 | 15.980 | 2.10 | 0 | 2c0896a2b | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T21:09:44Z | game-check | 141.611 | 740.964 | 32.243 | 5.46 | 0 | 82f1177c7 | campaign/the-newel | MacBookPro | 10 |
 | 2026-09-06T14:22:55Z | gate-commit | 119.625 | 433.680 | 60.728 | 4.13 | 0 | 1a45ee730 | campaign/the-spillway | MacBookPro | 10 |
 | 2026-09-06T14:27:24Z | gate-commit | 120.970 | 770.613 | 110.341 | 7.28 | 0 | c7cb40a33 | tooling/timing-must-not-veto-the-phase | lefford | 40 |
 | 2026-09-06T14:33:16Z | sluice:artifacts | 224.288 | 963.097 | 28.328 | 4.42 | 0 | 8afc236de |  | lefford | 40 |
@@ -6401,3 +6447,15 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T19:18:57Z | sluice:gate | 791.575 | 21357.078 | 512.683 | 27.63 | 0 | d6ca14cae |  | lefford | 40 |
 | 2026-09-06T19:21:16Z | sluice:clients | 138.528 | 2187.140 | 198.389 | 17.22 | 0 | 406ce7076 |  | lefford | 40 |
 | 2026-09-06T19:29:12Z | sluice:heavy | 476.068 | 11285.058 | 155.642 | 24.03 | 0 | 1061f2d6b |  | lefford | 40 |
+| 2026-09-06T23:31:30Z | gate-commit | 180.360 | 720.740 | 82.631 | 4.45 | 0 | f13943b57 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T23:36:15Z | rebaseline | 278.195 | 435.332 | 19.245 | 1.63 | 0 | 11a56c4dc | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T23:41:37Z | gate-commit | 39.925 | 72.692 | 17.008 | 2.25 | 0 | 0108b438a | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T23:44:34Z | game-check | 177.608 | 812.684 | 34.876 | 4.77 | 0 | 0108b438a | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-06T23:45:30Z | vessel-check | 55.554 | 69.101 | 3.756 | 1.31 | 0 | 0108b438a | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:11:25Z | game-check | 216.967 | 832.657 | 47.019 | 4.05 | 0 | e64998bc4 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:13:14Z | gate-commit | 88.522 | 201.524 | 41.649 | 2.75 | 0 | e64998bc4 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:33:52Z | gate-commit | 92.110 | 77.212 | 17.361 | 1.03 | 0 | e64998bc4 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:37:36Z | gate-commit | 43.011 | 73.917 | 16.626 | 2.11 | 0 | b1bd260d8 | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:45:55Z | gate-commit | 38.658 | 72.316 | 16.222 | 2.29 | 0 | 2bc03f9bd | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T00:48:13Z | game-check | 138.069 | 782.062 | 32.889 | 5.90 | 0 | 2bc03f9bd | campaign/the-newel | MacBookPro | 10 |
+| 2026-09-07T01:27:07Z | gate-commit | 74.243 | 76.691 | 17.480 | 1.27 | 0 | e1bef76da | campaign/the-newel | MacBookPro | 10 |
