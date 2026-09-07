@@ -12,6 +12,38 @@ those are the records read here.
 
 ## Task 0 — preregistered falsifier
 
+## #1 [G1] — Where should D3's derived function live?
+
+**Question:** should the return flow classify each standing relation, its
+patron after aggregation, or the world from a stores snapshot? **Decision:**
+adopt the edge-local return as the design direction. A standing relation is
+the unit named by D3, and the derived function is the consequence of that
+relation's downhill return; patron aggregation is a later readout, not the
+primary witness.
+
+**Why:** the live tree confirms `History::tribute` exposes only subordinate,
+patron, and `since`, while the bake's private `Tribute` carries the patron,
+assessment, and health state. The current public history therefore cannot be
+used to claim that a return magnitude already exists. The probe must observe
+the private relation state during the bake or a deliberately designed emitted
+return record. This keeps the witness causal and prevents D2's existing
+`stores` inflow from masquerading as D3's outflow.
+
+**Alternatives discarded:** patron aggregation can let one high-degree hub
+make every edge look successful, collapsing the gradient into `N/N`; a global
+stores snapshot passes whenever old tribute accumulates and does not prove any
+return. Neither is an adequate Task 0 falsifier.
+
+**Ideonomy passes / overturns:** one randomized pass (seed 90703), using
+abstraction-lift, cross-domain re-instantiation, and lattice/graph
+organons; no overturn. Drainage, traffic, and accounting re-instantiations
+all reinforced edge-level measurement and added the nonempty denominator,
+relation-count rather than patron-count, and conservation companion checks.
+
+**Capture actions:** criterion and vacuity checks are recorded above;
+`History::tribute`'s limited public shape is recorded in Verified premises;
+the public-emission choice is deferred to the D3 design brief.
+
 ### Criterion
 
 For the baked world's standing tribute relations at `now`, let `N` be the
@@ -137,4 +169,3 @@ D2's changed populations and typed stocks; it is not a later cleanup task.
 - If the visual companion becomes available, render the relation-level
   `0/N -> mixed -> N/N` bar and the gradient/cliff distinction before G2.
 - Keep Nathan's review points at G3 (spec review) and G6 (merge/close).
-
