@@ -1,24 +1,27 @@
-# The Counterpart — stage tracker
+# The Wanderers — Implementation Status
 
-Detailed plan: [implementation plan](docs/superpowers/plans/2026-09-05-the-counterpart.md).
+Detailed plan: `docs/superpowers/plans/2026-09-07-the-wanderers.md`
 
-## Stage 1: Freeze observations and independent questions
-**Goal**: Reviewed raw probe, reused measurement machinery and independent checker.
-**Success Criteria**: Frozen four-question roster; complete raw output retention; checker independently derives expected ownership; stage gate green.
-**Tests**: Focused Rust probe, existing/new Python process tests, hand-derived checker cases, canonical stage gate.
-**Status**: Complete
+## Stage 1: Stellar topology
+**Goal**: Add single, wide-binary, and bounded close-binary system roots.
+**Success Criteria**: Deterministic topology pins, stable single-star behavior, topology-specific anchor admission, loud invalid-pin failures.
+**Tests**: Astronomy genesis properties and pin-isolation tests.
+**Status**: Not Started
 
-## Stage 2: Compose independent specimens and compare suggestions
-**Goal**: Independent owner records, source bundle, complete runner and honest three-way shadow comparison.
-**Success Criteria**: Real non-no-op safe pair and qualified interaction or explicit feasibility failure; all questions run; replay inputs and failures retained; stage gate green.
-**Tests**: Comparator fallback/scoring, real Git reconstruction, incomplete/tampered attempt rejection, unreserved real-source panel, canonical stage gate.
-**Status**: Complete
+## Stage 2: Phase-aware ephemeris
+**Goal**: Add isolated wanderer phases and stellar/wanderer position evaluators.
+**Success Criteria**: Stable phases, correct circular ephemerides, visibility and regime behavior.
+**Tests**: Astronomy ephemeris, provider, and night-sky tests.
+**Status**: Not Started
 
-## Stage 3: Challenge, replay and prepare G6
-**Goal**: Frozen reserved challenge, supported-host evidence, independent replay and reviewable findings.
-**Success Criteria**: Original misses retained; primary/comparative results separated; reviewed final stage/census receipts and G6 package ready.
-**Tests**: Reserved real-source challenge, Mac/Linux CLI qualification, independent replay, focused final checks and canonical stage gate.
-**Status**: In Progress
-Independent reserved authorship, full12 primary/independent replay, comparison
-and narrative package are complete. Stage3 gate, whole-branch review, census
-and G6 remain pending.
+## Stage 3: Observational events
+**Goal**: Derive conjunctions, opposition, retrograde loops, and morning/evening-star observations.
+**Success Criteria**: Complete/truncated event windows and honest recurrence behavior.
+**Tests**: Event and almanac/provider tests.
+**Status**: Not Started
+
+## Stage 4: Scene and catalog contract
+**Goal**: Append stellar topology and wanderer elements to `scene/system/v1` and wasm output.
+**Success Criteria**: Native/wasm byte identity and current single-star field stability.
+**Tests**: Scene shape tests, native CLI golden, world-wasm smoke.
+**Status**: Not Started

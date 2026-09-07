@@ -143,3 +143,16 @@ multi-source illumination to the spec. Record arbitrary N-body,
 close-circumsecondary systems, and full binary cultural consequences as
 deferred branches rather than allowing them to disappear into the first
 implementation plan.
+
+## G3 review
+
+Nathan approved the revised spec after the binary-topology expansion. The
+campaign may proceed to implementation planning; the four flagged items remain
+explicit plan and execution checkpoints.
+
+## G4 plan boundary
+
+- **Ruling:** The four-stage plan is ready for execution.
+- **Basis:** It covers stellar topology, phase-aware ephemerides, observational events, scene/wasm emission, and closeout artifacts from the approved specification; the self-review found no unresolved placeholder or interface mismatch.
+- **Ideonomy passes / overturns:** one plan-coverage pass / 0 overturns.
+- **Cost if wrong:** implementation rework at the first task boundary; the task-level review loop remains the correction point.

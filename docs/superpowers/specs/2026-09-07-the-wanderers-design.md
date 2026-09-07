@@ -1,7 +1,7 @@
 # The Wanderers Instrument — Design
 
 **Date:** 2026-09-07  
-**Status:** Draft for G3 review  
+**Status:** Approved at G3  
 **Parent contracts:** Campaign 2 — The Sky; The Night Sky Instrument;
 `scene/system/v1`; the world-wasm catalog contract.
 
