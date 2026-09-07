@@ -165,3 +165,30 @@ relation, lifecycle, and group facts without changing default world bytes.
 re-review approved; 13 worldgen focused tests, 8 person tests, and 5
 world-build-site tests passed; clippy, fmt, audits, rosters, and
 `make gate-commit` passed.
+
+## #9 [G5] — Task 4 completion
+
+**Decision:** accept Task 4 after one fix/review round. Kinship, care,
+inheritance, and group projections remain pure, ordered, provenance-bearing,
+time-bounded, and context-sensitive without introducing a universal household
+container.
+
+**Evidence:** commits `b6a17b39d` and `d8f990e6a`; final scoped re-review
+approved; 54 focused tests passed; demography/worldgen clippy, format, audit,
+and `make gate-commit` passed.
+
+## #10 [G5] — Task 5 completion
+
+**Decision:** accept Task 5 after three implementation/review rounds. The Lot
+now reads realized social facts only through explicit identity and life-time
+boundaries, preserves directed relation semantics and complete provenance,
+requires explicit recognition interpretation, and returns sourced values or
+honest silence without proxy inference. Synthetic worldgen-to-Lot coverage is
+running and includes negative cases; the additive `lot/life/v1` policy is
+backed by refreshed client and gallery artifacts.
+
+**Evidence:** commits `6280c3125`, `4edba01f8`, and `5026bcccd`; final review
+approved. Lot tests 39 passed with 1 skipped, the worldgen Lot probe passed,
+client tests 65 passed, native/WASM payload and gallery drift checks passed,
+and fmt, clippy, type/placement/plumb audits, and `make gate-commit` passed.
+No census was run.

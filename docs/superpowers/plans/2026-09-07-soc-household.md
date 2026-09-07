@@ -131,14 +131,14 @@
 
 **Steps:**
 
-- [ ] Write failing tests showing siblings are derived from shared descent context rather than stored as an independent universal edge.
-- [ ] Write failing tests distinguishing origin/descent, adoption, care, custody, and institutional recognition; no one relation may satisfy all five meanings.
-- [ ] Write failing tests for overlapping care groups, migration between groups, association separation, group dissolution, and inheritance after death.
-- [ ] Write failing tests proving the same realized relations produce different recognized labels under different external social contexts without changing the underlying events.
-- [ ] Implement deterministic projections with explicit traversal bounds and stable ordering; preserve event provenance on every derived relation.
-- [ ] Ensure groups are time-bounded projections with declared bases; no `Household` constructor may require marriage, parents, children, or co-residence.
-- [ ] Run targeted demography/worldgen tests and the architecture/layering checks.
-- [ ] Commit as `feat(social): derive kinship care and group projections`.
+- [x] Write failing tests showing siblings are derived from shared descent context rather than stored as an independent universal edge.
+- [x] Write failing tests distinguishing origin/descent, adoption, care, custody, and institutional recognition; no one relation may satisfy all five meanings.
+- [x] Write failing tests for overlapping care groups, migration between groups, association separation, group dissolution, and inheritance after death.
+- [x] Write failing tests proving the same realized relations produce different recognized labels under different external social contexts without changing the underlying events.
+- [x] Implement deterministic projections with explicit traversal bounds and stable ordering; preserve event provenance on every derived relation.
+- [x] Ensure groups are time-bounded projections with declared bases; no `Household` constructor may require marriage, parents, children, or co-residence.
+- [x] Run targeted demography/worldgen tests and the architecture/layering checks.
+- [x] Commit as `feat(social): derive kinship care and group projections`.
 
 ### Task 5: Expose sourced social observations through The Lot
 
@@ -161,20 +161,20 @@
 
 **Steps:**
 
-- [ ] Write failing tests for a synthetic Lot whose sex traits and reproductive role are present but whose gender identity is silent.
-- [ ] Write failing tests for recognized and unrecognized associations, non-residential parentage, siblings, adoption, care, migration, recomposition, and parental death.
-- [ ] Write failing tests proving co-residence does not produce marriage, care does not produce parentage, and reproductive role does not produce gender.
-- [ ] Write failing JSON/prose tests that every filled clause cites source facts and every unfilled clause carries a reason rather than an invented value.
-- [ ] Implement slot readers as pure ledger reads or derived reads over committed facts; keep The Lot a consumer and never write social facts from the draw.
-- [ ] Add the synthetic Lot probe and report its filled/silent slot counts without assigning canon to existing peoples.
-- [ ] Run `cargo nextest run -p hornvale-lot --test suite`, targeted worldgen Lot tests, and the Lot client/local check if the payload schema changes.
-- [ ] Commit as `feat(lot): observe sourced social biographies`.
+- [x] Write failing tests for a synthetic Lot whose sex traits and reproductive role are present but whose gender identity is silent.
+- [x] Write failing tests for recognized and unrecognized associations, non-residential parentage, siblings, adoption, care, migration, recomposition, and parental death.
+- [x] Write failing tests proving co-residence does not produce marriage, care does not produce parentage, and reproductive role does not produce gender.
+- [x] Write failing JSON/prose tests that every filled clause cites source facts and every unfilled clause carries a reason rather than an invented value.
+- [x] Implement slot readers as pure ledger reads or derived reads over committed facts; keep The Lot a consumer and never write social facts from the draw.
+- [x] Add the synthetic Lot probe and report its filled/silent slot counts without assigning canon to existing peoples.
+- [x] Run `cargo nextest run -p hornvale-lot --test suite`, targeted worldgen Lot tests, and the Lot client/local check if the payload schema changes.
+- [x] Commit as `feat(lot): observe sourced social biographies`.
 
 ## Final verification and handoff
 
-- [ ] Run `cargo fmt --check`.
-- [ ] Run targeted nextest for demography, person, history, worldgen, and Lot suites.
-- [ ] Run `cargo clippy --workspace --all-targets -- -D warnings`.
-- [ ] Run `make gate-commit` and review its complete output.
-- [ ] Review the diff for accidental existing-species canon, biological/social conflation, unordered collections, and unstated generated-artifact claims.
+- [x] Run `cargo fmt --check`.
+- [x] Run targeted nextest for demography, person, history, worldgen, and Lot suites.
+- [x] Run `cargo clippy --workspace --all-targets -- -D warnings`.
+- [x] Run `make gate-commit` and review its complete output.
+- [x] Review the diff for accidental existing-species canon, biological/social conflation, unordered collections, and unstated generated-artifact claims.
 - [ ] Submit a stage gate through the Sluice with the full campaign SHA; do not run censuses locally or merge manually.
