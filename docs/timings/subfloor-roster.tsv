@@ -1300,6 +1300,7 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -3682,6 +3683,7 @@ hornvale-worldgen::hornvale_worldgen$tests::pacing_elves_harder_than_dwarves_cha
 hornvale-worldgen::hornvale_worldgen$tests::placed_peoples_lists_flagship_holders_in_registry_order
 hornvale-worldgen::hornvale_worldgen$tests::referent_ord_discriminates_on_concept
 hornvale-worldgen::hornvale_worldgen$tests::register_all_via_roster_registers_name_gloss
+hornvale-worldgen::hornvale_worldgen$tests::settlement_lines_describe_the_people
 hornvale-worldgen::hornvale_worldgen$tests::settlement_populations_are_the_conserved_field_readout
 hornvale-worldgen::hornvale_worldgen$tests::settlements_and_deities_gain_name_gloss_facts_when_a_gloss_exists
 hornvale-worldgen::hornvale_worldgen$tests::sky_of_rejects_an_unparseable_scenario_pin
@@ -4118,7 +4120,6 @@ hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lane_sets::the_phase_lists_and_the_roster_rungs_agree_both_ways
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
-hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$no_entity_id_values_in_prose::derived_prose_never_reads_an_entity_id_for_its_value
