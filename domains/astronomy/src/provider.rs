@@ -45,6 +45,52 @@ mod tests {
     }
 
     #[test]
+    fn hidden_binary_sky_does_not_name_the_companion_source() {
+        let s = sky(SkyPins {
+            topology: Some(crate::StellarTopology::CloseBinary),
+            ..SkyPins::default()
+        });
+        let report = s.sky_at_visibility(WorldTime::GENESIS, Visibility::new(0.0).unwrap());
+        assert!(!report.description.contains("two suns"));
+        assert!(
+            !report
+                .body_phrases
+                .iter()
+                .any(|(noun, _)| noun == "two suns")
+        );
+        assert!(!report.bodies.iter().any(|body| body == "the companion sun"));
+    }
+
+    #[test]
+    fn companion_sun_period_matches_the_anchor_rotation() {
+        let spinning = sky(SkyPins {
+            topology: Some(crate::StellarTopology::CloseBinary),
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            ..SkyPins::default()
+        });
+        let spinning_suns: Vec<_> = spinning
+            .phenomena(&ctx(0.0))
+            .into_iter()
+            .filter(|p| p.kind == CELESTIAL_BODY && p.referent.concept == "sun")
+            .collect();
+        assert_eq!(spinning_suns.len(), 2);
+        assert_eq!(spinning_suns[1].period_days, Some(1.0));
+
+        let locked = sky(SkyPins {
+            topology: Some(crate::StellarTopology::CloseBinary),
+            rotation: Some(RotationPin::Locked),
+            ..SkyPins::default()
+        });
+        let locked_suns: Vec<_> = locked
+            .phenomena(&ctx(0.0))
+            .into_iter()
+            .filter(|p| p.kind == CELESTIAL_BODY && p.referent.concept == "sun")
+            .collect();
+        assert_eq!(locked_suns.len(), 2);
+        assert_eq!(locked_suns[1].period_days, None);
+    }
+
+    #[test]
     fn wanderer_almanac_carries_absolute_marks_even_without_a_local_day() {
         let s = sky(SkyPins {
             rotation: Some(RotationPin::Locked),
@@ -1757,12 +1803,14 @@ impl GeneratedSky {
                 );
                 report.body_phrases.clear();
             }
-            report.description.push(' ');
-            report.description.push_str(&description);
-            report
-                .body_phrases
-                .push(("two suns".to_string(), description));
-            report.bodies.push("the companion sun".to_string());
+            if vis.get() >= MOON_VISIBILITY {
+                report.description.push(' ');
+                report.description.push_str(&description);
+                report
+                    .body_phrases
+                    .push(("two suns".to_string(), description));
+                report.bodies.push("the companion sun".to_string());
+            }
         }
         report
     }
@@ -1951,10 +1999,14 @@ impl PhenomenaSource for GeneratedSky {
             if self.system.stellar.companion.is_some() {
                 let light = crate::stellar_illumination_at(&self.system, t);
                 let companion = &light.sources[1];
+                let period_days = match &self.system.anchor.rotation {
+                    Rotation::Spinning { day, .. } => Some(round2(day.as_std_days())),
+                    Rotation::Locked => None,
+                };
                 out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     referent: Referent::of("sun"),
-                    period_days: None,
+                    period_days,
                     salience: round2(
                         (companion.flux_rel / light.combined_flux_rel).clamp(0.0, 1.0),
                     ),
