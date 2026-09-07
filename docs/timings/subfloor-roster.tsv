@@ -1376,7 +1376,6 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
-hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -4120,6 +4119,7 @@ hornvale::suite$lane_sets::every_rostered_set_is_well_formed
 hornvale::suite$lane_sets::the_commit_gate_is_local_and_everything_else_is_the_lane
 hornvale::suite$lane_sets::the_phase_lists_and_the_roster_rungs_agree_both_ways
 hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
+hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
 hornvale::suite$no_entity_id_values_in_prose::derived_prose_never_reads_an_entity_id_for_its_value
