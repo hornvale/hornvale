@@ -59,6 +59,10 @@ mod tests {
                 .any(|(noun, _)| noun == "two suns")
         );
         assert!(!report.bodies.iter().any(|body| body == "the companion sun"));
+
+        let dimmed = s.sky_at_visibility(WorldTime::GENESIS, Visibility::new(0.4).unwrap());
+        assert!(!dimmed.description.contains("two suns"));
+        assert!(!dimmed.bodies.iter().any(|body| body == "the companion sun"));
     }
 
     #[test]
@@ -1803,7 +1807,7 @@ impl GeneratedSky {
                 );
                 report.body_phrases.clear();
             }
-            if vis.get() >= MOON_VISIBILITY {
+            if vis.get() >= STAR_VISIBILITY {
                 report.description.push(' ');
                 report.description.push_str(&description);
                 report
