@@ -1173,6 +1173,110 @@ impl History {
     }
 }
 
+/// One of D2's two complementary subsistence resources. A quantity of one
+/// resource can satisfy demand only for that same variant.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SubsistenceResource {
+    A,
+    B,
+}
+
+/// A community's two typed subsistence stocks. Each quantity is measured in
+/// one-person-phase units: one unit supplies one person's baseline
+/// subsistence for one phase when matched to the same resource type.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct SubsistenceInventory {
+    quantities: [f64; 2],
+}
+
+impl SubsistenceInventory {
+    fn new(a: f64, b: f64) -> Self {
+        Self { quantities: [a, b] }
+    }
+
+    fn amount(self, resource: SubsistenceResource) -> f64 {
+        match resource {
+            SubsistenceResource::A => self.quantities[0],
+            SubsistenceResource::B => self.quantities[1],
+        }
+    }
+}
+
+/// The resource-A share of every fixed complementary demand basket. Resource
+/// B receives the exact complement, so one full basket totals one
+/// person-phase unit.
+/// plumb: pending(wave-1)
+const SUBSISTENCE_A_BASKET_SHARE: f64 = 0.5;
+
+/// Split existing non-negative total production, measured in person-phase
+/// units, into typed stock from a community's already-derived seasonal curve.
+/// The curve amplitude is an existing deterministic biome/climate input in
+/// `[0, 1]`; bounding it here
+/// keeps the partition valid even if a future authored curve violates that
+/// documented range. Resource B is calculated as the exact remainder so the
+/// partition neither creates nor destroys production. Reserved for Task 4
+/// phase integration.
+#[allow(dead_code)]
+fn partition_subsistence_production(total: f64, curve: Curve) -> SubsistenceInventory {
+    debug_assert!(total.is_finite() && total >= 0.0);
+    let a_share = curve.amplitude().clamp(0.0, 1.0);
+    let a = total * a_share;
+    SubsistenceInventory::new(a, total - a)
+}
+
+/// The fixed complementary basket required by `population` for one phase.
+/// Its two components sum to `population`: one person therefore demands one
+/// person-phase unit in total, and both types are required. Reserved for Task
+/// 4 phase integration.
+#[allow(dead_code)]
+fn subsistence_basket_demand(population: f64) -> SubsistenceInventory {
+    debug_assert!(population.is_finite() && population >= 0.0);
+    let a = population * SUBSISTENCE_A_BASKET_SHARE;
+    SubsistenceInventory::new(a, population - a)
+}
+
+/// Carry opening stock and current production forward component by component.
+/// Reserved for Task 4 phase integration.
+#[allow(dead_code)]
+fn carry_subsistence_inventory(
+    opening: SubsistenceInventory,
+    production: SubsistenceInventory,
+) -> SubsistenceInventory {
+    SubsistenceInventory::new(
+        opening.amount(SubsistenceResource::A) + production.amount(SubsistenceResource::A),
+        opening.amount(SubsistenceResource::B) + production.amount(SubsistenceResource::B),
+    )
+}
+
+/// Demand not covered by same-typed stock, component by component. Reserved
+/// for Task 4 phase integration.
+#[allow(dead_code)]
+fn typed_subsistence_shortfall(
+    available: SubsistenceInventory,
+    demand: SubsistenceInventory,
+) -> SubsistenceInventory {
+    SubsistenceInventory::new(
+        (demand.amount(SubsistenceResource::A) - available.amount(SubsistenceResource::A)).max(0.0),
+        (demand.amount(SubsistenceResource::B) - available.amount(SubsistenceResource::B)).max(0.0),
+    )
+}
+
+/// Consume a demand basket without allowing either resource to substitute for
+/// the other. Returns `(remaining_inventory, shortfall)`.
+#[allow(dead_code)]
+fn consume_subsistence(
+    available: SubsistenceInventory,
+    demand: SubsistenceInventory,
+) -> (SubsistenceInventory, SubsistenceInventory) {
+    let shortfall = typed_subsistence_shortfall(available, demand);
+    let remaining = SubsistenceInventory::new(
+        (available.amount(SubsistenceResource::A) - demand.amount(SubsistenceResource::A)).max(0.0),
+        (available.amount(SubsistenceResource::B) - demand.amount(SubsistenceResource::B)).max(0.0),
+    );
+    (remaining, shortfall)
+}
+
 /// One alive (or lately-dead) community's live state during the bake. The
 /// `record` index ties it to its `BakeOccupation`; population is carried in
 /// full `f64` precision.
@@ -1236,6 +1340,11 @@ struct Community {
     /// successful extractor does not starve itself on its own tribute (spec
     /// §4.2a). Lost with the community when it closes.
     stores: f64,
+    /// Live typed subsistence stock, separate from non-edible [`Self::stores`].
+    /// Quantities carry losslessly between phases until Task 4 wires production
+    /// and consumption into the phase walk.
+    #[allow(dead_code)]
+    subsistence: SubsistenceInventory,
     /// The community's seasonal harvest curve (The Granary T2): a pure
     /// multiplier over day-of-year keyed on its SITE's latitude and biome
     /// class, computed once at [`Bake::open`] and never recomputed — a
@@ -2740,6 +2849,7 @@ impl<'a> Bake<'a> {
             tech_offset,
             disposition: self.drawn_disposition(people, site, year),
             stores: 0.0,
+            subsistence: SubsistenceInventory::default(),
             curve,
         });
         // Keep the growth buffer exactly parallel to `communities`: a community
@@ -5613,6 +5723,148 @@ mod tests {
             before_pressure.to_bits(),
             after_pressure.to_bits(),
             "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
+    }
+
+    #[test]
+    fn subsistence_partition_preserves_existing_total_production_exactly() {
+        let total = 37.5;
+        let curve = Curve::new(LatDeg::new(45.0).unwrap(), BiomeClass::Grassland);
+
+        let production = partition_subsistence_production(total, curve);
+        let a = production.amount(SubsistenceResource::A);
+        let b = production.amount(SubsistenceResource::B);
+
+        assert!(a > 0.0 && b > 0.0, "fixture must exercise both resources");
+        assert_ne!(
+            a.to_bits(),
+            b.to_bits(),
+            "non-uniform climate input must produce a non-uniform split"
+        );
+        assert_eq!(
+            (a + b).to_bits(),
+            total.to_bits(),
+            "typed partition must neither create nor destroy existing production"
+        );
+    }
+
+    #[test]
+    fn subsistence_resources_cannot_cover_each_others_demand() {
+        let available = SubsistenceInventory::new(9.0, 0.0);
+        let demand = SubsistenceInventory::new(0.0, 3.0);
+
+        let (remaining, shortfall) = consume_subsistence(available, demand);
+
+        assert!(
+            available.amount(SubsistenceResource::A) > demand.amount(SubsistenceResource::B),
+            "fixture must hold more aggregate stock than aggregate demand"
+        );
+        assert_eq!(
+            remaining.amount(SubsistenceResource::A).to_bits(),
+            9.0_f64.to_bits(),
+            "resource A must not be consumed to satisfy resource B demand"
+        );
+        assert_eq!(
+            shortfall.amount(SubsistenceResource::B).to_bits(),
+            3.0_f64.to_bits(),
+            "resource B demand must remain short despite surplus resource A"
+        );
+    }
+
+    #[test]
+    fn unconsumed_subsistence_inventory_carries_losslessly() {
+        let opening = SubsistenceInventory::new(4.25, 7.5);
+        let production = SubsistenceInventory::new(1.75, 0.0);
+
+        let after_production = carry_subsistence_inventory(opening, production);
+        let carried =
+            carry_subsistence_inventory(after_production, SubsistenceInventory::default());
+
+        assert!(
+            opening.amount(SubsistenceResource::A) > 0.0
+                && opening.amount(SubsistenceResource::B) > 0.0,
+            "fixture must carry nonzero quantities of both resources"
+        );
+        assert_eq!(
+            after_production.amount(SubsistenceResource::A).to_bits(),
+            6.0_f64.to_bits(),
+            "resource A production must accrue to resource A"
+        );
+        assert_eq!(
+            after_production.amount(SubsistenceResource::B).to_bits(),
+            opening.amount(SubsistenceResource::B).to_bits(),
+            "resource A production must not alter resource B stock"
+        );
+        assert_eq!(
+            carried, after_production,
+            "a phase with no production or consumption must preserve both stocks exactly"
+        );
+    }
+
+    #[test]
+    fn a_full_subsistence_basket_has_zero_typed_shortfall() {
+        let demand = subsistence_basket_demand(8.0);
+        let shortfall = typed_subsistence_shortfall(demand, demand);
+
+        assert!(
+            demand.amount(SubsistenceResource::A) > 0.0
+                && demand.amount(SubsistenceResource::B) > 0.0,
+            "a complementary basket must demand nonzero quantities of both resources"
+        );
+        assert_eq!(
+            (demand.amount(SubsistenceResource::A) + demand.amount(SubsistenceResource::B))
+                .to_bits(),
+            8.0_f64.to_bits(),
+            "one person must demand exactly one person-phase unit per phase"
+        );
+        assert_eq!(
+            shortfall,
+            SubsistenceInventory::default(),
+            "same-typed stock equal to the full basket must leave no shortfall"
+        );
+    }
+
+    #[test]
+    fn subsistence_consumption_never_spends_non_edible_stores() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            10.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        bake.communities[0].stores = 23.75;
+        bake.communities[0].subsistence = SubsistenceInventory::new(6.0, 5.0);
+        let before_inventory = bake.communities[0].subsistence;
+        let before_stores = bake.communities[0].stores;
+
+        let (remaining, shortfall) = consume_subsistence(
+            bake.communities[0].subsistence,
+            SubsistenceInventory::new(2.0, 3.0),
+        );
+        bake.communities[0].subsistence = remaining;
+
+        assert_ne!(
+            bake.communities[0].subsistence, before_inventory,
+            "fixture must actually consume typed inventory"
+        );
+        assert_eq!(
+            shortfall,
+            SubsistenceInventory::default(),
+            "fixture starts with enough same-typed stock to consume fully"
+        );
+        assert_eq!(
+            bake.communities[0].stores.to_bits(),
+            before_stores.to_bits(),
+            "subsistence consumption must not touch accumulated non-edible wealth"
         );
     }
 
