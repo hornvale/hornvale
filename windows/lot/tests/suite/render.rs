@@ -49,13 +49,13 @@ fn the_payload_is_byte_stable_and_names_its_schema() {
     assert_eq!(doc["schema"], "lot/life/v1");
     assert_eq!(doc["seed"], 42);
     assert_eq!(doc["index"], 0);
-    assert_eq!(doc["slots"].as_array().unwrap().len(), 26);
-    assert_eq!(doc["silences"]["by_design"].as_u64().unwrap(), 4);
+    assert_eq!(doc["slots"].as_array().unwrap().len(), 39);
+    assert_eq!(doc["silences"]["by_design"].as_u64().unwrap(), 2);
     let filled = doc["silences"]["filled"].as_u64().unwrap();
     let no_fact = doc["silences"]["no_fact"].as_u64().unwrap();
     assert_eq!(
-        filled + no_fact + 4,
-        26,
+        filled + no_fact + 2,
+        39,
         "every slot is counted exactly once"
     );
     // A filled slot carries at least one source number, and every number in
@@ -112,9 +112,9 @@ fn the_prose_has_four_stages_and_a_sources_list_numbered_from_one() {
         opening.contains("not a real person"),
         "the Story stage opens with {opening:?}"
     );
-    // The four by-design silences are folded into exactly one closing line.
+    // The two remaining by-design silences are folded into exactly one closing line.
     assert_eq!(
-        text.matches("those four silences are the world's").count(),
+        text.matches("those two silences are the world's").count(),
         1,
         "the by-design silences are said once"
     );

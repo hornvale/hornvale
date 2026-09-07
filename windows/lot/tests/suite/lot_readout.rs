@@ -33,7 +33,7 @@ const LOTS: u64 = 200;
 /// imported: a test binary in one crate cannot reach a private const in
 /// another crate's lib, the same reason `solitary_tongue.rs` mirrors
 /// `GOBLINOID_DAUGHTERS` instead of importing it.
-const BY_DESIGN_SLOTS: [&str; 4] = ["sex", "family", "work", "literacy"];
+const BY_DESIGN_SLOTS: [&str; 2] = ["work", "literacy"];
 
 /// The median of `xs` (sorted in place by `total_cmp`). This file always
 /// calls it on exactly 200 values, so the empty case never fires.

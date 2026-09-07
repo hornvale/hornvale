@@ -58,6 +58,9 @@ pub struct LotContext {
     pub occupations: Vec<Prepared>,
     /// Entity id → index into `occupations`.
     pub by_entity: BTreeMap<EntityId, usize>,
+    /// Realized social people, in ledger commit order. Ordinary worlds have
+    /// none; synthetic social probes opt in by committing `is-person` facts.
+    pub social_people: Vec<EntityId>,
     /// The rebuilt terrain (coordinates; hazards). `pub(crate)`: nothing
     /// outside this crate reads it (checked against `windows/lab`, `cli`
     /// and `clients/lot/wasm` — the final review's item 6); every read is
@@ -106,6 +109,14 @@ impl LotContext {
     /// type-audit: bare-ok(count: return)
     pub fn births_cdf(&self) -> &[f64] {
         &self.births_cdf
+    }
+
+    /// Select the deterministic synthetic person observed by a lot index.
+    /// type-audit: bare-ok(index: index)
+    pub fn social_person(&self, index: u64) -> Option<EntityId> {
+        self.social_people
+            .get((index as usize) % self.social_people.len().max(1))
+            .copied()
     }
 
     /// Latitude/longitude of a Geosphere vertex, in degrees — the formula
@@ -168,6 +179,20 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
 
     let by_entity: BTreeMap<EntityId, usize> =
         records.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
+    let social_people = world
+        .ledger
+        .find(hornvale_person::IS_PERSON)
+        .filter_map(|fact| match fact.object {
+            Value::Flag(true)
+                if world.ledger.facts_about(fact.subject).any(|candidate| {
+                    candidate.predicate == hornvale_person::PERSON_SOCIAL_PROVENANCE
+                }) =>
+            {
+                Some(fact.subject)
+            }
+            _ => None,
+        })
+        .collect();
 
     // Per-people life history, resolved once.
     let mut life: BTreeMap<&str, (f64, f64)> = BTreeMap::new();
@@ -306,6 +331,7 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         epoch_years: EPOCH_YEARS,
         occupations,
         by_entity,
+        social_people,
         terrain,
         components: wc,
         settlements_by_vertex,

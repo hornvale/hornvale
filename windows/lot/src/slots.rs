@@ -171,6 +171,126 @@ fn by_design(reason: &'static str) -> Answer {
     (SlotValue::Silent(Silence::ByDesign(reason)), Vec::new())
 }
 
+fn social_person(ctx: &LotContext, life: &Life) -> Option<EntityId> {
+    ctx.social_person(life.index)
+}
+
+fn object_text(value: &Value) -> String {
+    match value {
+        Value::Text(text) => text.clone(),
+        Value::Entity(entity) => format!("entity {}", entity.get()),
+        Value::Number(number) => number.to_string(),
+        Value::Flag(flag) => flag.to_string(),
+    }
+}
+
+fn person_axis(world: &World, ctx: &LotContext, life: &Life, predicate: &str) -> Answer {
+    let Some(person) = social_person(ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let Some(fact) = world.ledger.facts_of(person, predicate).next() else {
+        return no_fact("no committed source answers this social question");
+    };
+    (
+        SlotValue::Filled(object_text(&fact.object)),
+        vec![cite(world, fact.subject, predicate)],
+    )
+}
+
+fn relation_slot(
+    world: &World,
+    ctx: &LotContext,
+    life: &Life,
+    predicate: &str,
+    empty: &str,
+) -> Answer {
+    let Some(person) = social_person(ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let facts: Vec<&hornvale_kernel::Fact> = world
+        .ledger
+        .find(predicate)
+        .filter(|fact| {
+            fact.subject == person
+                || matches!(fact.object, Value::Entity(entity) if entity == person)
+        })
+        .collect();
+    if facts.is_empty() {
+        return no_fact(empty);
+    }
+    let mut sources = Vec::with_capacity(facts.len());
+    for fact in &facts {
+        sources.push(cite(world, fact.subject, predicate));
+    }
+    let text = format!("{} recorded relation(s)", facts.len());
+    (SlotValue::Filled(text), sources)
+}
+
+fn siblings(world: &World, ctx: &LotContext, life: &Life) -> Answer {
+    let Some(person) = social_person(ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let parents: Vec<EntityId> = world
+        .ledger
+        .find("descent")
+        .filter_map(|fact| match fact.object {
+            Value::Entity(child) if child == person => Some(fact.subject),
+            _ => None,
+        })
+        .collect();
+    let mut sources = Vec::new();
+    let mut count = 0usize;
+    for parent in parents {
+        for fact in world.ledger.facts_about(parent) {
+            if fact.predicate == "descent" {
+                let Value::Entity(child) = fact.object else {
+                    continue;
+                };
+                if child != person {
+                    count += 1;
+                    sources.push(cite(world, fact.subject, "descent"));
+                }
+            }
+        }
+    }
+    if count == 0 {
+        return no_fact("no committed shared-descent source answers siblinghood");
+    }
+    (
+        SlotValue::Filled(format!(
+            "{count} sibling relation(s) derived from shared descent"
+        )),
+        sources,
+    )
+}
+
+fn parental_death(world: &World, ctx: &LotContext, life: &Life) -> Answer {
+    let Some(person) = social_person(ctx, life) else {
+        return no_fact("no realized person is committed for this life");
+    };
+    let parents: Vec<EntityId> = world
+        .ledger
+        .find("descent")
+        .filter_map(|fact| match fact.object {
+            Value::Entity(child) if child == person => Some(fact.subject),
+            _ => None,
+        })
+        .collect();
+    let mut sources = Vec::new();
+    for parent in parents {
+        if let Some(fact) = world.ledger.facts_of(parent, "die").next() {
+            sources.push(cite(world, fact.subject, "die"));
+        }
+    }
+    if sources.is_empty() {
+        return no_fact("no committed parental-death source answers this question");
+    }
+    (
+        SlotValue::Filled("a parental death is recorded".to_string()),
+        sources,
+    )
+}
+
 /// One `(entity, predicate)` citation, captioned with that predicate's own
 /// registry doc — the `windows/historiography::recount` idiom, resolved
 /// here so [`Story`] never needs the `World` again.
@@ -1158,14 +1278,110 @@ pub fn tell(world: &World, ctx: &LotContext, life: &Life) -> Story {
         ("diet", diet(ctx, life)),
         (
             "sex",
-            by_design(
-                "no species in this world carries a sex model (spec §4.4; BIO-3/SOC-2 are the prerequisite)",
-            ),
+            person_axis(world, ctx, life, hornvale_person::SEX_TRAIT),
+        ),
+        (
+            "reproductive-role",
+            person_axis(world, ctx, life, hornvale_person::REPRODUCTIVE_ROLE),
+        ),
+        (
+            "gender-identity",
+            person_axis(world, ctx, life, hornvale_person::GENDER_IDENTITY),
+        ),
+        (
+            "gender-recognition",
+            person_axis(world, ctx, life, hornvale_person::GENDER_RECOGNITION),
         ),
         (
             "family",
-            by_design(
-                "no fertility or household model exists, so marriage and children cannot be answered (spec §4.4)",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "descent",
+                "no committed descent source answers family relation",
+            ),
+        ),
+        (
+            "associations",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "association",
+                "no committed association source answers this question",
+            ),
+        ),
+        (
+            "children",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "descent",
+                "no committed descent source answers child relation",
+            ),
+        ),
+        ("siblings", siblings(world, ctx, life)),
+        (
+            "descent",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "descent",
+                "no committed descent source answers this question",
+            ),
+        ),
+        (
+            "adoption",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "custody",
+                "no committed adoption or custody source answers this question",
+            ),
+        ),
+        (
+            "care",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "care",
+                "no committed care source answers this question",
+            ),
+        ),
+        (
+            "group-membership",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "membership",
+                "no committed group-membership source answers this question",
+            ),
+        ),
+        (
+            "migration",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "residence",
+                "no committed migration or residence source answers this question",
+            ),
+        ),
+        ("parental-death", parental_death(world, ctx, life)),
+        (
+            "inheritance",
+            relation_slot(
+                world,
+                ctx,
+                life,
+                "transfer",
+                "no committed inheritance source answers this question",
             ),
         ),
         (
