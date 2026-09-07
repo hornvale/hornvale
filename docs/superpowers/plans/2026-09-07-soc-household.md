@@ -101,14 +101,14 @@
 
 **Steps:**
 
-- [ ] Write failing tests for the six synthetic societies in the design: independent-origin, dual-descent, care-cluster, recomposing mobility, institutional-recognition, and lifecycle-transition.
-- [ ] Add anti-vacuity counters proving each test reaches its intended formation, care, descent, migration, dissolution, recognition, or transition path.
-- [ ] Add byte-identity tests for identical `(seed, pins, synthetic society)` and a control showing distinct seeds change realized events only at this projection boundary.
-- [ ] Implement ordered person realization and event emission using one named stream with documented consumption order; do not use `HashMap`/`HashSet` or wall-clock values.
-- [ ] Implement lifecycle operations so parental death leaves prior descent/care facts readable while changing dependency and future-care projections.
-- [ ] Add a test proving no synthetic society changes existing authored species registries or current default world bytes when the projection is disabled.
-- [ ] Run targeted worldgen tests, `cargo fmt --check`, and `cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`.
-- [ ] Commit as `feat(worldgen): realize synthetic social cohorts`.
+- [x] Write failing tests for the six synthetic societies in the design: independent-origin, dual-descent, care-cluster, recomposing mobility, institutional-recognition, and lifecycle-transition.
+- [x] Add anti-vacuity counters proving each test reaches its intended formation, care, descent, migration, dissolution, recognition, or transition path.
+- [x] Add byte-identity tests for identical `(seed, pins, synthetic society)` and a control showing distinct seeds change realized events only at this projection boundary.
+- [x] Implement ordered person realization and event emission using one named stream with documented consumption order; do not use `HashMap`/`HashSet` or wall-clock values.
+- [x] Implement lifecycle operations so parental death leaves prior descent/care facts readable while changing dependency and future-care projections.
+- [x] Add a test proving no synthetic society changes existing authored species registries or current default world bytes when the projection is disabled.
+- [x] Run targeted worldgen tests, `cargo fmt --check`, and `cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`.
+- [x] Commit as `feat(worldgen): realize synthetic social cohorts`.
 
 ### Task 4: Derive kinship, care, inheritance, and group projections
 

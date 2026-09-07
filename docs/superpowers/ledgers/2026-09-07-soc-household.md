@@ -153,3 +153,15 @@ lifecycle closure semantics across the ledger boundary.
 **Evidence:** commits `f058c3e10`, `e3b3a4039`, and `8e2036a9e`; final scoped
 re-review approved; 52 focused tests passed; person/history clippy, format,
 audit freshness, and `make gate-commit` passed.
+
+## #8 [G5] — Task 3 completion
+
+**Decision:** accept Task 3 after three fix/review rounds. Synthetic cohort
+realization is opt-in at worldgen, aggregate support is causally authoritative,
+and all six probe societies emit deterministic, provenance-bearing person,
+relation, lifecycle, and group facts without changing default world bytes.
+
+**Evidence:** commits `6f3d7bf62`, `406138faa`, and `3162a6687`; final scoped
+re-review approved; 13 worldgen focused tests, 8 person tests, and 5
+world-build-site tests passed; clippy, fmt, audits, rosters, and
+`make gate-commit` passed.

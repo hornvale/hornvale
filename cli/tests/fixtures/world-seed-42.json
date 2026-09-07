@@ -657,6 +657,16 @@
         "functional": true,
         "doc": "the generated astronomy provider this world uses"
       },
+      "social-role": {
+        "name": "social-role",
+        "functional": false,
+        "doc": "a realized social role over a life interval"
+      },
+      "social-role-ended": {
+        "name": "social-role-ended",
+        "functional": false,
+        "doc": "the exclusive end of this social-role claim"
+      },
       "species-activity-cycle": {
         "name": "species-activity-cycle",
         "functional": true,
