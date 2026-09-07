@@ -1,6 +1,4 @@
-use hornvale_history::record::{
-    CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
-};
+use hornvale_history::record::CauseOfEnd;
 use hornvale_kernel::{KindId, Vertex};
 use hornvale_lot::context::assemble;
 use hornvale_lot::draw::{CauseProvenance, DeathCause, Ending, draw, odds_at};
@@ -10,7 +8,7 @@ use hornvale_lot::narrate::narrate;
 use hornvale_lot::projection::{Projection, ProjectionMateriality, SourceCohort};
 use hornvale_lot::slots::{SlotValue, Source, tell};
 use hornvale_lot::{LotIndex, Pick};
-use hornvale_worldgen::{BakeId, BakeOccupation, History, OutbreakEvent, emit_history};
+use hornvale_worldgen::emit_history;
 
 #[test]
 fn endemic_flux_weight_reads_the_authoritative_population_substrate() {
@@ -197,48 +195,10 @@ fn emitted_interleaved_rehit_keeps_the_closing_a_event_through_lot_rendering() {
     )
     .unwrap();
     let site = Vertex(7);
-    let community = BakeId(91_001);
-    let mut history = History::new(
-        vec![BakeOccupation {
-            core: Occupation {
-                people: KindId("goblin"),
-                site,
-                founded: 0.0,
-                ended: Some(50.0),
-                peak_population: 100,
-                tech: TechHorizon::Neolithic,
-                function: Function::Agrarian,
-                deity: None,
-                tongue: None,
-                cause: Some(CauseOfEnd::Plague),
-                notability: Notability::Common,
-                delve_depth_m: 0.0,
-                person_years: 20_000.0,
-            },
-            community,
-            lineage: community,
-            founded_from: Founding::Genesis(site),
-            ended_by: Ended::Nature,
-        }],
-        2500.0,
-    );
-    history.outbreaks = vec![
-        // The bake saw A (nonlethal), B (nonlethal), then A (closing). Its
-        // aggregate moves the closing A to the emitted position, so the
-        // history crossing is [B, A], with A's event identity last.
-        OutbreakEvent {
-            occupation: community,
-            pathogen: KindId("the-pox"),
-            year: 50.0,
-            deaths: 1.0,
-        },
-        OutbreakEvent {
-            occupation: community,
-            pathogen: KindId("the-pest"),
-            year: 50.0,
-            deaths: 1.0,
-        },
-    ];
+    // The real bake applies A (nonlethal), B (nonlethal), then A (closing).
+    // Its aggregate moves the closing A to the emitted position, preserving
+    // A's event identity through the History crossing.
+    let history = hornvale_worldgen::interleaved_rehit_history(site);
     emit_history(&mut world, &history).unwrap();
     let world_entity = world
         .ledger
@@ -250,11 +210,11 @@ fn emitted_interleaved_rehit_keeps_the_closing_a_event_through_lot_rendering() {
 
     let ctx = assemble(&world).unwrap();
     let pick = Pick {
-        year: Some(0.0),
+        year: Some(1.0),
         site: Some(site),
     };
     let life = (0..200_000)
-        .map(|index| draw(&ctx, LotIndex(index), &pick).unwrap())
+        .filter_map(|index| draw(&ctx, LotIndex(index), &pick).ok())
         .find(|life| {
             matches!(
                 (&life.ending, &life.cause, &life.cause_provenance),

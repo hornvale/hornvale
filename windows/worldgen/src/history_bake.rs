@@ -6054,6 +6054,103 @@ pub fn bake(
     }
 }
 
+/// Build the interleaved epidemic fixture through the real bake-to-history
+/// crossing: pathogen A is nonlethal, pathogen B is nonlethal, and pathogen A
+/// closes the occupation. The returned history carries the bake's moved
+/// aggregate event order for end-to-end consumer tests.
+pub fn interleaved_rehit_history(site: Vertex) -> History {
+    let geo = Geosphere::new(1);
+    let biomes = VertexMap::from_fn(&geo, |_| hornvale_culture::BiomeClass::Grassland);
+    let graphs = vec![ConnectionGraph::new(geo.vertex_count())];
+    let capacities = vec![vec![
+        hornvale_kernel::ecology::CapacityMap::new(VertexMap::from_fn(&geo, |_| 100.0))
+            .expect("fixture capacity is non-negative"),
+    ]];
+    let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+    let prospectivity = VertexMap::from_fn(&geo, |_| 0.0);
+    let refugia = VertexMap::from_fn(&geo, |_| false);
+    let peoples = vec![KindId("goblin")];
+    let seating = vec![VertexMap::from_fn(&geo, |_| Band::Surface)];
+    let empty = BTreeMap::new();
+    let era = EraClimate {
+        day: hornvale_kernel::WorldTime::GENESIS,
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
+        sea_level: hornvale_kernel::ReferenceElevation::new(0.0)
+            .expect("zero is a valid reference elevation"),
+        ice_fraction: 0.0,
+    };
+    let mut bake = Bake {
+        geo: &geo,
+        biomes: &biomes,
+        graphs: &graphs,
+        cur_graph: 0,
+        caps_by_era: &capacities,
+        peoples: &peoples,
+        river_prox: &river_prox,
+        prospectivity: &prospectivity,
+        refugia: &refugia,
+        seed: Seed(1),
+        disposition: &empty,
+        disposition_spread: &empty,
+        in_group_radius: &empty,
+        time_horizon: &empty,
+        epidemics: &[],
+        lifespans: &empty,
+        last_struck: BTreeMap::new(),
+        persistent: BTreeSet::new(),
+        seating: &seating,
+        records: Vec::new(),
+        outbreaks: Vec::new(),
+        communities: Vec::new(),
+        node_index: BTreeMap::new(),
+        next_id: 1,
+        stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+        tribute: BTreeMap::new(),
+        epoch_growth: Vec::new(),
+        tally: BakeCensus::default(),
+        epoch_years: 25.0,
+    };
+    let occupation = bake.open(
+        KindId("goblin"),
+        site,
+        0.0,
+        100.0,
+        Founding::Genesis(site),
+        None,
+        0.0,
+    );
+    // Give the constructed occupation the same nonzero person-year substrate
+    // a stepped bake would accrue, so the downstream Lot draw can place lives
+    // in this exact fixture without replacing the bake's event path.
+    for _ in 0..800 {
+        bake.live_an_epoch(occupation);
+    }
+    let apply = |bake: &mut Bake<'_>, kind, attack, fatality| {
+        bake.apply_outbreak(
+            occupation,
+            &era,
+            50.0,
+            crate::plague_bake::OutbreakInput {
+                kind,
+                susceptible: 1.0,
+                attack,
+                fatality,
+            },
+        );
+    };
+    apply(&mut bake, KindId("the-pest"), 0.1, 1.0);
+    apply(&mut bake, KindId("the-pox"), 0.1, 1.0);
+    apply(&mut bake, KindId("the-pest"), 1.0, 0.5);
+    History {
+        records: bake.records,
+        now: 2500.0,
+        tribute: Vec::new(),
+        outbreaks: bake.outbreaks,
+        tally: bake.tally,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
