@@ -149,6 +149,15 @@ run "reconciliation union" bash scripts/test-reconciliation-union.sh
 # declared paths, forever. See scripts/test-post-merge.sh's own header for
 # the mechanism.
 run "post-merge hook" bash scripts/test-post-merge.sh
+# The pool's recyclability predicate, registered in the same commit that fixed
+# it, for the reason this comment block has now given five times. The failure
+# mode here is unusually quiet: a pool member that stops being recyclable emits
+# nothing at all — `worktree-take` prints "no recyclable member", creates a cold
+# worktree, and reports success — so the degradation is visible only as disk
+# use and cold-build time nobody attributes to it. Measured 2026-09-06: 33 live
+# worktrees against a design that assumed ~3, ~700 GB. Runs entirely against
+# throwaway repos under `mktemp -d`; it never touches the real pool.
+run "worktree take"   bash scripts/test-worktree-take.sh
 run "shellcheck"       make --no-print-directory shellcheck
 
 if [ "$fails" -ne 0 ]; then
