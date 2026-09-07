@@ -2425,6 +2425,15 @@ fn capture_d2_epoch_events(run: impl FnOnce()) -> Vec<D2EpochEvent> {
     })
 }
 
+/// Reachability components for the current epidemic graph. Each vertex maps
+/// to a component ID, while the member vertices are stored exactly once.
+/// Keeping the reverse index separate avoids cloning a large connected
+/// component once per vertex.
+struct EpidemicComponents {
+    by_vertex: BTreeMap<Vertex, usize>,
+    members: Vec<Vec<Vertex>>,
+}
+
 /// The two observable boundaries returned by the production epoch helper.
 /// Keeping these here lets H-M3 compare the epidemic result before raids while
 /// still driving the same helper the real bake uses.
@@ -4976,12 +4985,13 @@ impl<'a> Bake<'a> {
             .collect()
     }
 
-    fn epidemic_components(&self, adjacency: &[(u32, &[u32])]) -> BTreeMap<Vertex, Vec<Vertex>> {
+    fn epidemic_components(&self, adjacency: &[(u32, &[u32])]) -> EpidemicComponents {
         let neighbours: BTreeMap<u32, &[u32]> = adjacency.iter().copied().collect();
         let mut unassigned: BTreeSet<Vertex> = (0..self.geo.vertex_count())
             .map(|raw| Vertex(raw as u32))
             .collect();
-        let mut components = BTreeMap::new();
+        let mut by_vertex = BTreeMap::new();
+        let mut members = Vec::new();
         while let Some(&origin) = unassigned.first() {
             let mut reached = BTreeSet::from([origin]);
             let mut frontier = vec![origin.0];
@@ -4999,20 +5009,23 @@ impl<'a> Bake<'a> {
             for &vertex in &reached {
                 unassigned.remove(&vertex);
             }
-            let members: Vec<Vertex> = reached.into_iter().collect();
-            for &vertex in &members {
-                components.insert(vertex, members.clone());
+            let component_members: Vec<Vertex> = reached.into_iter().collect();
+            let component_id = members.len();
+            for &vertex in &component_members {
+                by_vertex.insert(vertex, component_id);
             }
+            members.push(component_members);
         }
-        components
+        EpidemicComponents { by_vertex, members }
     }
 
-    fn epidemic_component(
-        &self,
-        components: &BTreeMap<Vertex, Vec<Vertex>>,
-        origin: Vertex,
-    ) -> Vec<usize> {
-        let reached = components.get(&origin).cloned().unwrap_or_default();
+    fn epidemic_component(&self, components: &EpidemicComponents, origin: Vertex) -> Vec<usize> {
+        let reached = components
+            .by_vertex
+            .get(&origin)
+            .and_then(|&component| components.members.get(component))
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
         let mut members: Vec<usize> = self
             .communities
             .iter()
@@ -5063,7 +5076,7 @@ impl<'a> Bake<'a> {
 
     fn record_persistence(
         &mut self,
-        components: &BTreeMap<Vertex, Vec<Vertex>>,
+        components: &EpidemicComponents,
         origin: Vertex,
         kind: KindId,
         hosts: &BTreeMap<KindId, f64>,
@@ -7167,6 +7180,31 @@ mod tests {
             },
         );
         assert_eq!(bake.outbreaks.len(), before + 2);
+    }
+
+    #[test]
+    fn epidemic_component_cache_stores_members_once_per_component() {
+        let geo = fixture_geo();
+        let graphs = vec![full_land_graph(geo)];
+        let capacity = caps_from_fn(geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let adjacency = bake.epidemic_adjacency();
+        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+
+        let components = bake.epidemic_components(&adjacency_refs);
+
+        assert_eq!(
+            components.members.len(),
+            1,
+            "the all-land globe is connected"
+        );
+        assert_eq!(components.by_vertex.len(), geo.vertex_count());
+        assert_eq!(components.members[0].len(), geo.vertex_count());
     }
 
     #[test]
