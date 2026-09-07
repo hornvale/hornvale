@@ -239,6 +239,102 @@ production return flow.
 the old Task 2/3/4 names shift by one. This approval does not approve a
 production outflow, a public save-format expansion, or a census.
 
+## #7 [G5] — Diagnostic witness calibration before implementation
+
+**Question:** what explicit, relation-local continuous readout can make Task
+0 observable without implying a production return flow? **Ruling:** each
+standing relation emits three dimensionless diagnostic components from its
+closing bake state. Let `S` be the patron's stores, `H` its number of standing
+relations, `P` the subordinate population, `A` the relation assessment, and
+`L` its last-seen subordinate population. The witness records
+`share = S / H`, `protection = share / max(P, 1)`,
+`goods = share / max(A, 1)`, and `legitimacy = P / max(L, 1)`. The `1` floors
+only make an otherwise-defined ratio total for an empty or newborn measure;
+they are named constants in code and do not convert or move stock.
+
+Classification is purely diagnostic and reads that vector only:
+
+```text
+Fort  if protection >= 0.25
+Trade if not Fort and goods >= 1.00
+Cult  if neither above and legitimacy >= 1.00
+None  otherwise
+```
+
+The precedence is `Fort`, then `Trade`, then `Cult`: protection is the most
+specific return (per-person cover), goods demonstrates an entire assessment's
+cover, and legitimacy is the residual health signal. This gives every
+simultaneous qualification one deterministic result while keeping categorical
+`Function` values entirely outside the inputs. The diagnostic magnitude band
+is the maximum component: `Low < 0.25`, `Medium < 1.00`, `High >= 1.00`.
+Every numeric cutoff is named beside this evaluation and in its test fixtures.
+
+**Why:** portfolio-normalized patron stock avoids giving each edge a hub's
+entire hoard; normalizing it against the subordinate and assessment makes the
+two material causes comparable ratios; the health ratio preserves the
+relation's observed state without reading an endpoint label. The only emitted
+identity is the same durable subordinate/patron pair already emitted by
+`History::tribute`.
+
+**Alternatives discarded:** raw stores (hub-size confound), endpoint
+`Function` labels (vacuous output-as-input), and a production outflow (beyond
+Task 0). A sum of heterogeneous raw quantities was also rejected; `max` of
+the three normalized components makes the band name the strongest continuous
+cause without inventing a conversion rate.
+
+**Ideonomy passes / overturns:** one `ideonomy-plain --more --seed 90707`
+pass using cross-domain re-instantiation, negation, and dimension
+identification; no overturn. Portfolio share survives the financial and
+traffic analogies, while the negated global-hub / categorical-label variants
+confirmed that both would erase the required relation-level gradient. The
+component vector remains decomposable and diagnostic-only, so its lifetime is
+the emitted history result rather than an epoch state.
+
+**Capture actions:** implement the named constants, direct vector-to-class
+tests, relation coverage/determinism tests, and an unchanged-history
+comparison; record the fixed-200 result below before any production decision.
+
+## #8 [G5] — Task 0 fixed-roster result: failed denominator
+
+**Ruling:** the Task 0 readout is blocked, not a sink, uniform relabeling, or
+mixed result. The once-run fixed roster test preserved its `N > 0` guard and
+failed before it could aggregate a report:
+
+```text
+HV_TEST_OK=1 timeout 1200s cargo test -p hornvale-worldgen --test suite \
+  staple_d3_probe::fixed_200_seed_d3_relation_return_report \
+  -- --ignored --exact --nocapture
+
+FAILED: D3 ratio requires a non-zero relation denominator
+finished in 493.47s; explicit 1200s timeout did not fire
+```
+
+The test's failure path intentionally emits no aggregate `N`, `C`, `C/N`,
+band totals, residual aggregate, `dead_pole_sink`, or `dead_pole_uniform`.
+Those values are therefore **unavailable**, not zero: treating any of them as
+evidence would convert the required vacuity guard into a false negative. The
+focused seed-42 coverage fixture did have standing relations, so this result
+also establishes that the fixed roster has a seed-level denominator failure
+rather than that the witness cannot emit at all.
+
+**Why:** Task 0's denominator is every fixed-roster seed's standing
+`History::tribute` population. One empty member invalidates the prescribed
+relation-level population; omitting it or changing the denominator would be a
+post-hoc selection.
+
+**Alternatives rejected:** inferring `C=0` from the early assertion, treating
+the failure as a timeout, rerunning or narrowing the preregistered fixed-200
+readout, and starting production return flow. None supplies the required
+valid denominator.
+
+**Ideonomy passes / overturns:** one prior calibration pass (#7) applies; no
+new conversion decision is licensed by a failed measurement. No overturn.
+
+**Capture actions:** retain the zero-impact diagnostic sidecar and its focused
+tests; stop before Task 3/4 production work. A future denominator-fixture
+repair needs its own approved task and a fresh probe run with a seed-naming
+failure message before it may classify the roster.
+
 ## Follow-ups
 
 - Write the D3 brief/spec around this Task 0 criterion before proposing code.
