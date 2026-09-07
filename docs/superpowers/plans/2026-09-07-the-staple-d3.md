@@ -4,7 +4,7 @@
 
 **Goal:** Determine whether a relation-local return flow produces a differentiated D3 function, and only then implement the approved mechanism if the Task 0 bar survives.
 
-**Architecture:** Keep the first executable slice inside the worldgen bake’s existing relation machinery so the probe can observe private `Tribute` state without prematurely expanding the public save-facing `History::tribute` shape. If the probe is mixed, add a pure continuous return evaluation, clear all edges from a snapshot, and derive `Trade`, `Cult`, and `Fort` from that evaluation; if either dead pole fires, close D3 as a measured null or uniform rescale.
+**Architecture:** Add a zero-impact emitted diagnostic sidecar to the existing worldgen `History` result so the probe can observe a relation-local continuous return witness without expanding the save-facing `History::tribute` shape. The sidecar must not mutate stores, functions, population, epoch output, or D2 exchange behavior. If the probe is mixed, add the approved pure production return evaluation, clear all edges from a snapshot, and derive `Trade`, `Cult`, and `Fort` from that evaluation; if either dead pole fires, close D3 as a measured null or uniform rescale.
 
 **Tech Stack:** Rust workspace; existing `windows/worldgen` tests; `cargo nextest`; deterministic `BTreeMap` ordering; sanctioned sluice census path only.
 
@@ -19,15 +19,17 @@
 - Same-epoch relation clearing uses a snapshot and is order-independent.
 - Any committed-history change costs an epoch, a sanctioned census re-baseline, and conversion of history-adjacent pins into invariants.
 - Do not run censuses locally; submit the sanctioned sluice path when authorized.
-- No implementation begins before Task 0's measurement and its ledger ruling.
+- No production return flow or function conversion begins before Task 0's
+  measurement and its ledger ruling. The approved diagnostic sidecar is the
+  exception: it exists solely to make Task 0 observable and must be zero-impact.
 
 ---
 
-## Stage 1: Reconfirm the live witness boundary
+## Stage 1: Establish and run the diagnostic witness
 
-**Goal:** Ensure the probe is attached to the current D2 relation implementation and cannot pass from D2 exchange or mining.
+**Goal:** Emit a zero-impact, relation-local diagnostic return witness and run Task 0 against it without changing D2 behavior or save-facing tribute records.
 
-**Success Criteria:** The probe names the private `Tribute` fields it reads, uses standing relations only, excludes `Function::Mine`, and fails closed on an empty denominator.
+**Success Criteria:** The sidecar is deterministic, relation-local, emitted from the bake, excluded from save-facing tribute records, and proven not to mutate stores, functions, population, epoch output, or D2 exchange. The probe uses standing relations only, excludes `Function::Mine`, and fails closed on an empty denominator.
 
 **Tests:** Existing `staple_d2_probe` remains green; a new ignored D3 probe test compiles against the current worldgen test harness.
 
@@ -49,6 +51,31 @@
 - [ ] Run the focused test once and capture the compile/test result in the ledger. If the current public API cannot expose the needed return witness, stop this task and record the boundary rather than adding an unapproved public field.
 - [ ] Commit the scaffold and its ledger evidence.
 
+### Task 2: Emit the diagnostic return witness and run Task 0
+
+**Files:**
+- Modify: `windows/worldgen/src/history_bake.rs` and the emitted `History`
+  diagnostic type, keeping `History::tribute` save-facing shape unchanged
+- Modify: `windows/worldgen/tests/suite/staple_d3_probe.rs`
+- Test: focused worldgen bake tests for zero-impact and deterministic witness
+
+**Interfaces:**
+- Consumes: standing tribute relation state and continuous bake causes.
+- Produces: one diagnostic record per standing relation at `now`, carrying the
+  relation identity, protection/goods/legitimacy vector, magnitude bands, and
+  explicit diagnostic classification.
+
+- [ ] Define and record witness thresholds and precedence before coding; no
+  silent conversion constants.
+- [ ] Write failing tests proving the sidecar does not alter stores, function,
+  population, epoch output, or D2 exchange results.
+- [ ] Emit the sidecar without exposing endpoint labels as inputs and without
+  adding it to the save-facing tribute relation records.
+- [ ] Run the fixed 200-seed Task 0 probe once, inspect the report once, and
+  record exact `N`, `C`, bands, and both dead-pole checks in the ledger.
+- [ ] Commit the witness, probe result, and ledger evidence before deciding
+  whether the mixed branch exists.
+
 ## Stage 2: Resolve the return model from the evidence
 
 **Goal:** Turn the probe’s observed relation-level continuous causes into a precise, approved D3 mechanism without inventing conversion constants silently.
@@ -57,7 +84,7 @@
 
 **Tests:** The probe has a mutation that changes a continuous return cause and changes classification; a categorical-label mutation does not manufacture activation.
 
-### Task 2: Adjudicate the probe result
+### Task 3: Adjudicate the probe result
 
 **Files:**
 - Modify: `docs/superpowers/ledgers/2026-09-07-the-staple-d3.md`
@@ -82,7 +109,7 @@
 
 **Tests:** Focused unit tests for return evaluation, snapshot clearing, conservation, order reversal, null `Agrarian`, and precedence; the integrated D3 probe; existing D2 probe and worldgen tests.
 
-### Task 3: Implement return evaluation and clearing
+### Task 4: Implement return evaluation and clearing
 
 **Files:**
 - Modify: `windows/worldgen/src/history_bake.rs` near `Tribute`, `Community`, and `collect_tribute`
@@ -108,7 +135,7 @@
 
 **Tests:** Full local commit gate; sanctioned stage/merge gate through the sluice; census only through its queued canonical path.
 
-### Task 4: Rebaseline and prepare canonical verification
+### Task 5: Rebaseline and prepare canonical verification
 
 **Files:**
 - Modify: committed generated artifacts identified by the stage gate

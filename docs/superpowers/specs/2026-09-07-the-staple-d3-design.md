@@ -1,6 +1,6 @@
 # The Staple D3 — the flow returns downhill
 
-**Status:** Draft for G3 review  
+**Status:** Diagnostic-witness amendment approved; production mechanism pending Task 0
 **Campaign:** `campaign/the-staple-d3`  
 **Predecessor:** The Staple D2, merged 2026-09-06  
 **Decision block:** 0916–0925
@@ -14,9 +14,11 @@ the relation as protection, goods, or legitimacy. The settlement function must
 then be a derived consequence of that relation, not a label authored at
 founding.
 
-D3 is a dynamics rung. It is not implementation-ready until Task 0 has been
-run and the mechanism chosen against its result. No code, epoch, or census is
-part of this draft.
+D3 is a dynamics rung. The first executable change is an emitted diagnostic
+return witness only: it makes the proposed continuous return visible through
+the existing `History` result without changing stores, functions, or the
+save-facing relation shape. Task 0 runs against that witness. No production
+outflow, epoch, or census is part of the witness stage.
 
 ## 2. Task 0 falsifier (preregistered)
 
@@ -62,6 +64,14 @@ already derived when a working daughter is founded. `Trade`, `Cult`, and
 `Fort` already exist in the function enum and in the history structure
 composer, so D3 supplies a missing cause rather than inventing a vocabulary.
 
+The approved witness is an emitted diagnostic sidecar on `History`, populated
+by the bake for each standing relation at `now`. Each record carries the
+relation identity and continuous `protection`, `goods`, and `legitimacy`
+components plus the deterministic diagnostic classification derived from that
+vector. It is explicitly diagnostic and is not included in the save-facing
+`History::tribute` relation shape. The witness must be zero-impact: it cannot
+mutate stores, population, functions, epoch output, or D2 exchange behavior.
+
 ## 4. Design direction
 
 The primary unit is the relation edge. Each standing edge receives a pure,
@@ -96,6 +106,13 @@ continuous return vector
         +--> Task 0 count: C / N and magnitude distribution
 ```
 
+The diagnostic sidecar is the observation seam for this diagram. Its
+classification uses the same explicit component thresholds and precedence
+that Task 0 records; it does not read or emit categorical endpoint labels.
+Those thresholds are calibration parameters for the witness, not a license to
+ship the production flow. If the witness is mixed, the approved mapping is
+copied into the production design before Task 3.
+
 The exact precedence when multiple return components qualify, and whether one
 edge may yield more than one D3 function, are intentionally unresolved until
 the probe and the design's component calibration are visible.
@@ -114,6 +131,9 @@ the probe and the design's component calibration are visible.
 
 - Task 0 has `N > 0` and reports `0 < C < N`, or the campaign closes as a
   measured null/rescale with no mechanism shipped.
+- The Task 0 witness is an emitted, zero-impact diagnostic sidecar on
+  `History`; it is relation-local, deterministic, and separate from the
+  save-facing `History::tribute` records.
 - The relation-level witness mutates a continuous return cause and observes a
   changed edge classification; mutating an unrelated categorical label must
   not make the witness pass.
@@ -143,4 +163,3 @@ discovery, negotiation, storage loss, transport, and priority institutions
 remain D2-deferred. D4 specialization, D5 cities/notability, rent gradients,
 and R3 districts remain downstream. D3 also does not choose the exact
 catchment shape or revisit `SETTLERS_PER_CAPACITY`.
-

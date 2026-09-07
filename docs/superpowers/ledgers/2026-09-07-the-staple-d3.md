@@ -220,6 +220,25 @@ between an internal bake test witness and an approved emitted diagnostic
 record, then rerun the preregistered Task 0 criterion. Preserve the same
 relation denominator, D3 function set, dead poles, and no-local-census rule.
 
+## #6 [G3] — Emitted diagnostic witness approved
+
+**Ruling:** Nathan approved the emitted diagnostic return witness on
+2026-09-07. The plan and design now permit a zero-impact diagnostic sidecar on
+the emitted `History` result, separate from save-facing `History::tribute`
+records. It may carry relation identity, continuous protection/goods/legitimacy
+components, magnitude bands, and an explicit diagnostic classification.
+
+The sidecar must not mutate stores, population, functions, epoch output, or D2
+exchange behavior. Its thresholds and precedence must be written into the
+ledger before implementation, and its classification must read the continuous
+vector rather than endpoint labels. Task 0 remains the first production
+mechanism gate: only a measured mixed `0 < C < N` result can authorize the
+production return flow.
+
+**Sequencing change:** the plan adds a bounded witness task before adjudication;
+the old Task 2/3/4 names shift by one. This approval does not approve a
+production outflow, a public save-format expansion, or a census.
+
 ## Follow-ups
 
 - Write the D3 brief/spec around this Task 0 criterion before proposing code.
