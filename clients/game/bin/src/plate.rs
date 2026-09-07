@@ -1551,25 +1551,13 @@ pub(crate) fn draw_terrain_layer(
                 spectral.season,
                 spectral.cache.as_deref_mut(),
             );
-            // TERRAIN ONLY. Sites are PROJECTED by `draw_feature_layer` —
-            // see its doc for why asking each screen cell "is your
-            // representative a site?" dropped 37.8% of caves.
-            //
-            // TWO CHANNELS, TWO QUANTITIES: the glyph is elevation order
-            // (0389), the ink is the ground's own substance under the
-            // plate's light. `color_for` answering `None` is a legal,
-            // modelled outcome and the tile still draws — see its doc.
-            let glyph = glyph_for(tile.water, tile.band);
-            let color = color_for(&tile, spectral.illuminant, spectral.observer);
+            // Both channels, and the "terrain only" rule, are stated once on
+            // [`terrain_box`] now (The Sett, Task 3) — the two arms of this
+            // layer share that construction rather than spelling it twice.
             grid.set(
                 col as u16,
                 row as u16,
-                Cell {
-                    glyph: Some(glyph),
-                    weight: Weight::Normal,
-                    ink: Ink::resolve(color, colour_allowed),
-                    source: Source::World,
-                },
+                terrain_box(&tile, colour_allowed, spectral),
             );
         }
     }
@@ -1590,6 +1578,112 @@ pub(crate) fn draw_terrain_layer(
         spectral.illuminant,
     );
     grid
+}
+
+/// The terrain layer for a GRAPH-addressed plate: box `(col, row)` is drawn
+/// from whatever facet [`crate::rose::RoseRaster`] put there, read at that
+/// facet's own [`Facet::centroid`] (The Sett, Task 3).
+///
+/// **A SIBLING of [`draw_terrain_layer`], deliberately, and not a branch
+/// inside it.** That function has two callers — [`draw_with`] and
+/// [`crate::tiles::TileCache`]'s per-tile painter — and its parameter list is
+/// an interface statement rather than an accident: it reads only `(frame,
+/// win.depth, win.origin_col, win.origin_row, w, h, colour_allowed)` plus the
+/// fixed terrain, which is exactly what makes a tile keyed on `(frame, rung,
+/// tile)` sound. Its own doc records the measured defect that key protects
+/// (`CLIENT-tiles-need-the-overlay-split`: one shared pass invalidated the
+/// whole tile pyramid on every discovery). Threading a raster through it
+/// would weaken that for a caller that can never use one — a chart tile has
+/// no anchor facet and no rose chain.
+///
+/// **The grid's size is the raster's own**, never a second pair of
+/// dimensions: the raster was built at [`crate::driver::Driver`]'s plate
+/// dims, so asking it is the one-copy discipline `Driver::world_plate_dims`
+/// already states for the Mercator half.
+///
+/// **A box no chain reached stays unmarked paper.** `RoseRaster::facet_at`
+/// answers `None` past a refused bearing — one word at the 24 cube-corner
+/// facets — and nothing fills it: not a repeat, not a seeded draw, not a
+/// substitute glyph (ledger decision #4). [`Grid::new`] already gives every
+/// box `glyph: None`, so the blank is the absence of a write rather than a
+/// drawn space.
+///
+/// **NO RIVERS (The Sett, Task 3; Task 4's subject).** [`rasterize_rivers`]
+/// is called from [`draw_terrain_layer`] and there is deliberately no call
+/// here: it places through [`mercator::project`], so on this raster it would
+/// paint watercourses into boxes that do not hold the facets they run
+/// through. The same is true of every other overlay — the feature layer and
+/// the perception layer still project — and Task 4's `Placement` seam is
+/// where all three stop. Until then this plate has correct ground and
+/// misplaced marks, which is a smaller wrong than correct marks over
+/// misplaced ground.
+///
+/// The `season`/`at` contract [`terrain_at_facet`] states binds this caller
+/// exactly as it binds [`terrain_at_tile`]; `spectral` carries both.
+pub(crate) fn draw_terrain_layer_from_raster(
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    memo: &mut RoomMeshMemo,
+    raster: &crate::rose::RoseRaster,
+    colour_allowed: bool,
+    spectral: &mut Spectral<'_>,
+) -> Grid {
+    let mut grid = Grid::new(raster.width(), raster.height());
+    for row in 0..raster.height() {
+        for col in 0..raster.width() {
+            let Some(facet) = raster.facet_at(col, row) else {
+                continue;
+            };
+            // THE CENTROID IS THE READING POINT, and the choice is named
+            // rather than defaulted: `terrain_at_facet`'s own doc records
+            // that a graph-addressed raster has no finer point to offer,
+            // where a projected one hands over the tile's own centre.
+            let tile = terrain_at_facet(
+                terrain,
+                geo,
+                index,
+                memo,
+                facet,
+                facet.centroid(),
+                spectral.ctx,
+                spectral.at,
+                spectral.season,
+                spectral.cache.as_deref_mut(),
+            );
+            grid.set(col, row, terrain_box(&tile, colour_allowed, spectral));
+        }
+    }
+    grid
+}
+
+/// One drawn box of ground, from a reading — the ONE place a `TileTerrain`
+/// becomes a painted box, shared by [`draw_terrain_layer`] (Mercator) and
+/// [`draw_terrain_layer_from_raster`] (the walk view's rose).
+///
+/// **Two channels, two quantities**: the glyph is elevation order (decision
+/// 0389), the ink is the ground's own substance under the plate's light.
+/// [`color_for`] answering `None` is a legal, modelled outcome and the box
+/// still draws — see its own doc.
+///
+/// **TERRAIN ONLY.** Sites are placed by [`draw_feature_layer`], never by
+/// asking each drawn box "is your representative a site?" — see that
+/// function's doc for the 37.8% of caves that question dropped.
+///
+/// Extracted at The Sett's Task 3 rather than copied: the graph arm paints
+/// exactly the two channels the Mercator arm does, off exactly the same
+/// reading, and two spellings of that would be two places for the elevation
+/// glyph and the observed ink to drift apart.
+fn terrain_box(tile: &TileTerrain, colour_allowed: bool, spectral: &Spectral<'_>) -> Cell {
+    Cell {
+        glyph: Some(glyph_for(tile.water, tile.band)),
+        weight: Weight::Normal,
+        ink: Ink::resolve(
+            color_for(tile, spectral.illuminant, spectral.observer),
+            colour_allowed,
+        ),
+        source: Source::World,
+    }
 }
 
 /// Where a VIRTUAL chart tile lands on a `win`-scrolled plate, as

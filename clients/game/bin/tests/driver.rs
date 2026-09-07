@@ -1066,3 +1066,288 @@ fn a_chart_only_agent_name_completes_from_a_fresh_driver() {
         "a chart-only agent's name must complete once the chart scope is registered"
     );
 }
+
+// ---------------------------------------------------------------------------
+// The Sett, Task 3: the walk view draws the rose raster.
+//
+// Everything below reads ONE world — the committed seed-42 fixture, taken
+// twice from disk so the driver can own its copy while the assertions keep a
+// terrain of their own. `Driver::start(42, ..)` would derive a second world
+// from scratch and there would be nothing holding the two to each other; a
+// campaign about which facet is in which box cannot afford that ambiguity.
+// ---------------------------------------------------------------------------
+
+/// The walk-band raster's own terrain reading of one facet, as a glyph — the
+/// SAME question `plate::draw_terrain_layer_from_raster` answers, asked
+/// through the two public functions rather than through the drawing code.
+///
+/// `ctx: None`, `WorldTime::GENESIS`, `season: 0` and `cache: None` are inert
+/// for this comparison and are not a shortcut: `TileTerrain::water` and
+/// `::band` — the only two fields `plate::glyph_for` reads — are functions of
+/// the terrain, the geosphere and the address alone. The light, the season
+/// and the reflectance cache move the INK, which these assertions
+/// deliberately do not read.
+/// The terrain, geosphere and nearest-vertex index the assertions below take
+/// a facet's own reading through — the reading side, held apart from the
+/// driver's own copy of the same three so that neither can be mistaken for
+/// evidence about the other.
+// Named construction site (decision 0092): `terrain_of` re-derives the
+// tectonic globe once here, for the same reason `Driver::start_from_world`
+// and `wash.rs`'s own fixture each carry this allow at their `terrain_of`
+// call. Once per test, never per box.
+#[allow(clippy::disallowed_methods)]
+fn seed_42_reading(
+    world: &hornvale_kernel::World,
+) -> (
+    hornvale_terrain::GeneratedTerrain,
+    hornvale_kernel::Geosphere,
+    hornvale_kernel::NearestVertexIndex,
+) {
+    let terrain =
+        hornvale_worldgen::terrain_of(world).expect("the committed seed-42 world sculpts");
+    let geo = terrain.geosphere().clone();
+    let nearest = hornvale_kernel::NearestVertexIndex::new(&geo);
+    (terrain, geo, nearest)
+}
+
+fn walk_glyph(
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    geo: &hornvale_kernel::Geosphere,
+    nearest: &hornvale_kernel::NearestVertexIndex,
+    memo: &mut hornvale_kernel::RoomMeshMemo,
+    facet: &hornvale_kernel::Facet,
+) -> char {
+    let t = hornvale_game::plate::terrain_at_facet(
+        terrain,
+        geo,
+        nearest,
+        memo,
+        facet,
+        facet.centroid(),
+        None,
+        hornvale_kernel::WorldTime::GENESIS,
+        0,
+        None,
+    );
+    hornvale_game::plate::glyph_for(t.water, t.band)
+}
+
+/// The facet the rose raster's DEFINITION puts in box `(col, row)` of a plate
+/// anchored at `anchor` with its centre at `(cc, cr)`: north or south to the
+/// row, then east or west along it.
+///
+/// **Walked here from `rose.rs`'s module doc rather than by calling
+/// `RoseRaster`.** A test that asked the transport where a facet went and
+/// then checked the plate against that answer would pass on any transport at
+/// all, including a broken one — the two would be the same object. This
+/// re-derives the picture from `heading_rose` directly, so it agrees with the
+/// plate only if the plate really is addressed by compass chain.
+fn rose_facet(
+    anchor: &hornvale_kernel::Facet,
+    cc: u16,
+    cr: u16,
+    col: u16,
+    row: u16,
+) -> Option<hornvale_kernel::Facet> {
+    // `Compass::all()` order: [N, Ne, E, Se, S, Sw, W, Nw].
+    let step =
+        |f: &hornvale_kernel::Facet, word: usize| hornvale_locale::heading_rose(f)[word].clone();
+    let mut here = Some(anchor.clone());
+    let (down, vertical) = if row >= cr {
+        (4, row - cr)
+    } else {
+        (0, cr - row)
+    };
+    for _ in 0..vertical {
+        here = here.as_ref().and_then(|f| step(f, down));
+    }
+    let (across, lateral) = if col >= cc {
+        (2, col - cc)
+    } else {
+        (6, cc - col)
+    };
+    for _ in 0..lateral {
+        here = here.as_ref().and_then(|f| step(f, across));
+    }
+    here
+}
+
+/// NATHAN'S REPORT, AS AN ASSERTION. The box one step from the mark must
+/// hold the terrain of the facet `heading_rose` names for that direction —
+/// the facet the arrow key actually moves to.
+///
+/// **All four cardinals, and both seed-42 starts, and neither widening is a
+/// garnish.** The plan asks for the west box at the flagship start. Measured
+/// against the Mercator plate this task replaced, ALL FOUR of the flagship
+/// start's cardinal boxes were already right — the observer stands at
+/// latitude −4.00°, near enough the equator that a compass step and a
+/// Mercator column agree in the immediate neighbourhood of the mark — so the
+/// single-box test the plan sketches passes on the very projection it was
+/// written to reject, and so does a four-box one at that start alone. The
+/// `MostPopulousSettlement` start is where the same four boxes discriminate:
+/// its SOUTH box drew `'"'` where `','` was wanted. Both starts are kept,
+/// because the flagship one is the report's own subject and its agreement is
+/// a fact worth pinning rather than hiding.
+///
+/// The plate-wide statement of the same property — which is what reddens
+/// most loudly, 29 boxes of 799 — is
+/// `the_walk_plate_draws_the_rose_raster_box_for_box`.
+///
+/// **Non-vacuity, two guards.** Each start's plate must carry more than one
+/// distinct glyph, or it is uniform ocean and any raster would pass; and the
+/// eight sampled boxes together must not all expect the same glyph, or the
+/// assertion is not discriminating between facets at all.
+#[test]
+fn the_box_left_of_the_mark_is_where_the_left_arrow_goes() {
+    let (terrain, geo, nearest) = seed_42_reading(&hornvale_worldgen::fixture::seed_42_world());
+    let mut memo = hornvale_kernel::RoomMeshMemo::default();
+
+    let mut sampled: BTreeSet<char> = BTreeSet::new();
+    for (start, target) in [
+        ("the flagship", hornvale_vessel::PossessTarget::Flagship),
+        (
+            "the most populous settlement",
+            hornvale_vessel::PossessTarget::MostPopulousSettlement,
+        ),
+    ] {
+        let mut d = Driver::start_from_world(hornvale_worldgen::fixture::seed_42_world(), target)
+            .expect("the committed seed-42 world starts a possession");
+        d.resize(80, 24);
+        let anchor = d.observer_facet();
+        let plate = d
+            .world_plate_for_redraw(80, 24)
+            .expect("the walk band is handed a plate");
+        let (cc, cr) = (plate.width() / 2, plate.height() / 2);
+
+        let drawn: BTreeSet<Option<char>> = (0..plate.height())
+            .flat_map(|row| (0..plate.width()).map(move |col| (col, row)))
+            .map(|(col, row)| plate.get(col, row).and_then(|c| c.glyph))
+            .collect();
+        assert!(
+            drawn.len() > 1,
+            "vacuity guard: {start}'s whole plate reads as one glyph ({drawn:?}), \
+             so every raster ever written would pass this"
+        );
+
+        let rose = hornvale_locale::heading_rose(&anchor);
+        // (compass word, the box it must be drawn in, the arrow key that goes there)
+        for (word, (col, row), key) in [
+            (0usize, (cc, cr - 1), "up"),
+            (2, (cc + 1, cr), "right"),
+            (4, (cc, cr + 1), "down"),
+            (6, (cc - 1, cr), "left"),
+        ] {
+            let facet = rose[word].as_ref().unwrap_or_else(|| {
+                panic!("{start} is not a cube corner: all four arrows must exist")
+            });
+            let want = walk_glyph(&terrain, &geo, &nearest, &mut memo, facet);
+            sampled.insert(want);
+            assert_eq!(
+                plate.get(col, row).and_then(|c| c.glyph),
+                Some(want),
+                "at {start}: the box at ({col}, {row}) — one step {key} of the \
+                 mark at ({cc}, {cr}) — does not draw the facet the {key} arrow \
+                 moves to. That is the whole of The Sett: a plate addressed by \
+                 projection puts a place beside you that you cannot walk to."
+            );
+        }
+    }
+    assert!(
+        sampled.len() > 1,
+        "vacuity guard: all eight sampled neighbour boxes expect the same glyph \
+         ({sampled:?}), so this assertion is not discriminating between facets"
+    );
+}
+
+/// THE WHOLE PLATE, box for box: every drawn box of the walk view holds the
+/// terrain of the facet the compass chains reach, not of whatever facet a
+/// Mercator column happened to unproject onto.
+///
+/// **This is the assertion the four-cardinal test above cannot make.** Near
+/// the equator the two rasters agree in the neighbourhood of the mark and
+/// diverge as you move away from it: measured against the Mercator plate this
+/// task replaced, 29 of 799 comparable boxes disagreed at the seed-42
+/// flagship start — a shoreline drawn as a diagonal by the projection and as
+/// a near-vertical coast by the rose.
+///
+/// **`Source::Chart` boxes are skipped, and nothing else is.** The perception
+/// overlay (the `@`, and any marks) is `scene/surrounds/v2` data rather than
+/// world terrain and paints over the ground; the count of skipped boxes is
+/// asserted so a future overlay that started covering half the plate could
+/// not quietly shrink what this compares. The FEATURE layer paints
+/// `Source::World` and is not skipped — at this start it draws nothing, and
+/// the assertion would redden loudly if that changed, which is the honest
+/// behaviour while that layer still projects (Task 4).
+#[test]
+fn the_walk_plate_draws_the_rose_raster_box_for_box() {
+    let (terrain, geo, nearest) = seed_42_reading(&hornvale_worldgen::fixture::seed_42_world());
+    let mut memo = hornvale_kernel::RoomMeshMemo::default();
+
+    let mut d = Driver::start_from_world(
+        hornvale_worldgen::fixture::seed_42_world(),
+        hornvale_vessel::PossessTarget::Flagship,
+    )
+    .expect("the committed seed-42 world starts a possession");
+    d.resize(80, 24);
+    let anchor = d.observer_facet();
+    let plate = d
+        .world_plate_for_redraw(80, 24)
+        .expect("the walk band is handed a plate");
+    let (cc, cr) = (plate.width() / 2, plate.height() / 2);
+
+    let mut compared = 0u32;
+    let mut skipped = 0u32;
+    let mut distinct: BTreeSet<char> = BTreeSet::new();
+    let mut wrong: Vec<String> = Vec::new();
+    for row in 0..plate.height() {
+        for col in 0..plate.width() {
+            let drawn = plate
+                .get(col, row)
+                .expect("every box of the plate is in bounds");
+            let Some(facet) = rose_facet(&anchor, cc, cr, col, row) else {
+                // A refused bearing ends its chain and nothing fills the
+                // boxes past it (ledger decision #4). None exist at this
+                // start; the arm is here because the raster's contract has
+                // one, not because this plate exercises it.
+                skipped += 1;
+                continue;
+            };
+            let want = walk_glyph(&terrain, &geo, &nearest, &mut memo, &facet);
+            distinct.insert(want);
+            if drawn.source == Source::Chart {
+                skipped += 1;
+                continue;
+            }
+            compared += 1;
+            if drawn.glyph != Some(want) {
+                wrong.push(format!(
+                    "({col},{row}): drew {:?}, want {want:?}",
+                    drawn.glyph
+                ));
+            }
+        }
+    }
+
+    assert!(
+        distinct.len() > 1,
+        "vacuity guard: the whole plate reads as one glyph ({distinct:?}), so \
+         every raster ever written would pass this"
+    );
+    assert_eq!(
+        skipped, 1,
+        "exactly one box — the observer's own mark — is expected to be covered \
+         by the perception overlay at this start; {skipped} were. A count that \
+         has moved is evidence about the overlays, not a fixture to update."
+    );
+    assert!(
+        compared > 700,
+        "vacuity guard: only {compared} boxes were compared"
+    );
+    assert!(
+        wrong.is_empty(),
+        "{} of {compared} boxes of the walk view do not hold the facet the \
+         compass chains reach:\n  {}",
+        wrong.len(),
+        wrong.join("\n  ")
+    );
+}

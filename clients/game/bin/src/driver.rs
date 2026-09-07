@@ -577,6 +577,25 @@ pub struct Driver {
     // here, so making three read-only queries advertise mutation to reach
     // it would buy nothing.
     reflectance_cache: plate::ReflectanceCache,
+    /// The walk view's memo over [`hornvale_locale::heading_rose`], carried
+    /// across redraws (The Sett, Task 3) — beside [`Self::reflectance_cache`]
+    /// for the same reason that one is here: the raster is rebuilt every
+    /// redraw and the rose is a pure function of its facet, so a memo that
+    /// died with the frame would pay the whole chain again for a picture that
+    /// mostly did not move. Measured (ledger S7/S8): 114.16 ms unmemoised per
+    /// redraw, 11.31 ms cold and 1.04 ms warm with this.
+    ///
+    /// It is a cost instrument and never a correctness one —
+    /// [`crate::rose::RoseMemo`]'s own doc, and `tests/rose.rs`'s
+    /// `the_raster_is_deterministic_and_the_memo_changes_nothing`.
+    rose_memo: crate::rose::RoseMemo,
+    /// The walk view's mesh memo — the graph arm's equivalent of the one
+    /// [`crate::tiles::TileCache`] owns for the Mercator arm, and a separate
+    /// field because that one is private to the tile cache and the graph arm
+    /// draws no tiles. Long-lived for the same reason: it memoises
+    /// nearest-vertex corner resolution per facet, which a fresh
+    /// `RoomMeshMemo` per redraw would throw away every frame.
+    rose_mesh_memo: hornvale_kernel::RoomMeshMemo,
 }
 
 /// What [`Driver::noun_prompt`] saves for `Esc` to restore.
@@ -1136,6 +1155,8 @@ impl Driver {
             walk_scene: None,
             calendar,
             reflectance_cache: plate::ReflectanceCache::new(),
+            rose_memo: crate::rose::RoseMemo::new(),
+            rose_mesh_memo: hornvale_kernel::RoomMeshMemo::default(),
         };
         driver.refresh();
         Ok(driver)
@@ -1469,6 +1490,15 @@ impl Driver {
             return None;
         }
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        // THE WALKER'S OWN VIEW IS A GRAPH, NOT A PROJECTION (The Sett, Task
+        // 3). Built BEFORE `plate_light` and the `Spectral` below, because
+        // this borrows `self.rose_memo` mutably and those borrow the session
+        // and the reflectance cache; taking them in this order keeps all
+        // three disjoint without a clone of anything but the anchor facet.
+        let walk_raster = self.drawing_the_walk_view().then(|| {
+            let anchor = self.session.position();
+            crate::rose::RoseRaster::build(&anchor, plate_width, plate_height, &mut self.rose_memo)
+        });
         // THE LIVE SESSION'S OWN PATH (The Wash, Task 6). `main.rs`'s
         // `redraw` calls this method and never `world_plate`, so this is the
         // call that decides what a player actually sees — it is threaded
@@ -1484,6 +1514,39 @@ impl Driver {
             season,
             cache: Some(&mut self.reflectance_cache),
         };
+        if let Some(raster) = walk_raster.as_ref() {
+            let mut grid = plate::draw_terrain_layer_from_raster(
+                &self.terrain,
+                &self.geo,
+                &self.nearest,
+                &mut self.rose_mesh_memo,
+                raster,
+                plate::colour_allowed(),
+                &mut spectral,
+            );
+            // THE TWO OVERLAYS STILL PROJECT, AND ON THIS PLATE THEY LAND IN
+            // THE WRONG BOXES. That is Task 4's subject (`Placement`), and
+            // they are called here rather than dropped because a walk view
+            // with no `@` and no discovered sites is a worse intermediate
+            // state than one whose marks are a few boxes off: `spread::
+            // compose`'s plate selection is either/or, so nothing else draws
+            // them. There are no rivers on this arm at all — `rasterize_
+            // rivers` lives inside `draw_terrain_layer`, which this arm does
+            // not call (see `draw_terrain_layer_from_raster`'s own doc).
+            plate::draw_feature_layer(
+                &mut grid,
+                &self.geo,
+                &self.frame,
+                &self.window,
+                plate::colour_allowed(),
+                &self.sites,
+                &self.volcanoes,
+                &self.waterfalls,
+                &self.discovered,
+            );
+            self.compose_perception_layer(&mut grid);
+            return Some(grid);
+        }
         let mut grid = self.tiles.compose(
             &self.terrain,
             &self.geo,
@@ -1944,6 +2007,35 @@ impl Driver {
         self.on_walk_band
     }
 
+    /// Whether the plate about to be drawn is **the walker's own view** —
+    /// the walk band, at the walk rung, and not the map (The Sett, Task 3).
+    /// That plate is the compass rose iterated outward
+    /// ([`crate::rose::RoseRaster`]); every other plate this client draws is
+    /// still Mercator.
+    ///
+    /// **The band gate is not here, and moving it here would be F5 again.**
+    /// [`Self::raster_is_drawn`] answers whether a plate is drawn at all, and
+    /// its own doc records what happened when that question was asked of the
+    /// FOCUS instead: typing `map` inside a chamber replaced the floor plan
+    /// with the world raster, and [`Self::compose_perception_layer`]
+    /// correctly refuses off the walk band, so nothing marked the player's
+    /// position. This method chooses WHICH raster and never WHETHER one; the
+    /// caller asks `raster_is_drawn` first and this second.
+    ///
+    /// **[`Focus::Cli`] gets the rose raster too**, because a player typing
+    /// into the command line is still walking and is still looking at the
+    /// walk view (ledger, "Ruling 1 [G4]"). Only [`Focus::Map`] is exempt,
+    /// and the exemption is about state rather than taste: the map is a
+    /// geographic instrument with a cursor, a pan and a zoom, all expressed
+    /// as [`Window`] origin moves on a chart the rose raster does not have,
+    /// so making it a graph view would mean giving panning an anchor facet
+    /// this campaign has no need of. The map opens at
+    /// [`plate::map_entry_rung`], which is coarser than the walk rung, so
+    /// this clause bites only on a map zoomed all the way back in.
+    fn drawing_the_walk_view(&self) -> bool {
+        self.at_walk_band_rung() && self.focus != Focus::Map
+    }
+
     /// The active plate's own width and height, in grid columns and rows —
     /// the chamber band's fixed
     /// [`hornvale_game_core::spread::PLATE_WIDTH`] and `self.plate_height`
@@ -2296,6 +2388,21 @@ impl Driver {
     /// [`Self::recentre`] on command thereafter.
     pub fn frame(&self) -> &Frame {
         &self.frame
+    }
+
+    /// The facet the possessed body is standing on right now — the walk
+    /// view's raster anchor ([`crate::rose::RoseRaster::build`]), and the
+    /// facet [`hornvale_locale::heading_rose`] is asked about when an arrow
+    /// key moves.
+    ///
+    /// **`pub` for the same reason [`Self::window`] is** (The Sett, Task 3):
+    /// the campaign's headline assertion — the box left of the mark is where
+    /// the left arrow goes — has to name the observer's own facet to say
+    /// anything, and a test that reconstructed it from a coordinate would be
+    /// asserting against a projection rather than against the address. The
+    /// session already owns this; nothing here derives it.
+    pub fn observer_facet(&self) -> hornvale_kernel::Facet {
+        self.session.position()
     }
 
     /// Recompute `self.strip` for the current band and cursor position. See
