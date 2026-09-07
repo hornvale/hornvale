@@ -1212,17 +1212,29 @@ const SUBSISTENCE_A_BASKET_SHARE: f64 = 0.5;
 /// Split existing non-negative total production, measured in person-phase
 /// units, into typed stock from a community's already-derived seasonal curve.
 /// The curve amplitude is an existing deterministic biome/climate input in
-/// `[0, 1]`; bounding it here
-/// keeps the partition valid even if a future authored curve violates that
-/// documented range. Resource B is calculated as the exact remainder so the
-/// partition neither creates nor destroys production. Reserved for Task 4
-/// phase integration.
+/// `[0, 1]`; bounding it here keeps the partition valid even if a future
+/// authored curve violates that documented range. The majority component is
+/// multiplied first and the minority is its remainder from `total`: because
+/// the majority lies between `total / 2` and `total`, Sterbenz subtraction is
+/// exact, and adding the two stored `f64` components reconstructs `total`
+/// bit-for-bit. Reserved for Task 4 phase integration.
 #[allow(dead_code)]
 fn partition_subsistence_production(total: f64, curve: Curve) -> SubsistenceInventory {
     debug_assert!(total.is_finite() && total >= 0.0);
     let a_share = curve.amplitude().clamp(0.0, 1.0);
-    let a = total * a_share;
-    SubsistenceInventory::new(a, total - a)
+    let inventory = if a_share <= 0.5 {
+        let b = total * (1.0 - a_share);
+        SubsistenceInventory::new(total - b, b)
+    } else {
+        let a = total * a_share;
+        SubsistenceInventory::new(a, total - a)
+    };
+    debug_assert_eq!(
+        (inventory.amount(SubsistenceResource::A) + inventory.amount(SubsistenceResource::B))
+            .to_bits(),
+        total.to_bits(),
+    );
+    inventory
 }
 
 /// The fixed complementary basket required by `population` for one phase.
@@ -5728,24 +5740,41 @@ mod tests {
 
     #[test]
     fn subsistence_partition_preserves_existing_total_production_exactly() {
-        let total = 37.5;
-        let curve = Curve::new(LatDeg::new(45.0).unwrap(), BiomeClass::Grassland);
-
-        let production = partition_subsistence_production(total, curve);
-        let a = production.amount(SubsistenceResource::A);
-        let b = production.amount(SubsistenceResource::B);
-
-        assert!(a > 0.0 && b > 0.0, "fixture must exercise both resources");
+        let reviewer_total: f64 = 510.827605197663;
+        let naive_a = reviewer_total * 0.35;
+        let naive_b = reviewer_total - naive_a;
         assert_ne!(
-            a.to_bits(),
-            b.to_bits(),
-            "non-uniform climate input must produce a non-uniform split"
+            (naive_a + naive_b).to_bits(),
+            reviewer_total.to_bits(),
+            "reviewer fixture must expose the rounded-complement defect"
         );
-        assert_eq!(
-            (a + b).to_bits(),
-            total.to_bits(),
-            "typed partition must neither create nor destroy existing production"
-        );
+
+        for (total, biome) in [
+            (37.5, BiomeClass::Grassland),
+            (reviewer_total, BiomeClass::Cold),
+            (0.125, BiomeClass::Forest),
+            (1.0e12, BiomeClass::Arid),
+        ] {
+            let curve = Curve::new(LatDeg::new(45.0).unwrap(), biome);
+            let production = partition_subsistence_production(total, curve);
+            let a = production.amount(SubsistenceResource::A);
+            let b = production.amount(SubsistenceResource::B);
+
+            assert!(
+                a > 0.0 && b > 0.0,
+                "fixture must exercise both resources for {total} at {biome:?}"
+            );
+            assert_ne!(
+                a.to_bits(),
+                b.to_bits(),
+                "non-uniform climate input must produce a non-uniform split"
+            );
+            assert_eq!(
+                (a + b).to_bits(),
+                total.to_bits(),
+                "typed partition must exactly conserve {total} at {biome:?}"
+            );
+        }
     }
 
     #[test]
