@@ -16,7 +16,7 @@ document is the design that follows from it.
 verbatim beneath it, unedited, because the reasoning they record is sound
 on the evidence it had and the correction is only legible against it.**
 
-The evidence is `docs/superpowers/ledgers/2026-09-07-the-sett.md`, entries
+The evidence is `docs/superpowers/ledgers/2026-09-06-the-sett.md`, entries
 S1-S8 and decisions #1-#4. Nothing in that ledger is restated here beyond
 the figures a reader needs to follow the argument.
 
