@@ -454,7 +454,7 @@ fn the_heavy_roster_is_exactly_this_fixture() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 38] = [
+const EXPECTED_UNTOKENISED: [&str; 40] = [
     "...",
     "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5417 over 120 pairs; ninth canonical reading, incomparable like the seventh and eighth: The Lot grew the evaluable surface 170 -> 176 columns (excluded unchanged at 52) with six lot-* metrics and moved no shared column on any of 1,000 rows; ablating the lot family reproduces The Warp's exact 170-column surface and its 66/120 - the six new columns displaced ONE hit (pantheon 6 -> 5) and nothing else moved, the first re-read since The Winze whose ablation is non-null in exactly one direction. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
@@ -485,6 +485,8 @@ const EXPECTED_UNTOKENISED: [&str; 38] = [
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
     "regenerates the committed repose exposure fixture; run by hand - the drift check above is the gate",
+    "retired: The Fetch intentionally changes the pre-flip errand timeline",
+    "retired: current-relative water belief bypasses the home-keyed RouteMemo",
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",
