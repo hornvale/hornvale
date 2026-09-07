@@ -38,9 +38,12 @@ pub use reproductive::{
     SurvivalDistribution, social_substrate_input, summarize_reproduction,
 };
 pub use social::{
-    AssociationDistribution, CareTopology, DescentDistribution, InheritanceDistribution,
-    LifecycleTransition, LifecycleTransitionKind, MigrationDistribution, SocialCohortInput,
-    SocialCohortSummary, SocialInputError, summarize_social_cohort, validate_social_cohort,
+    AssociationDistribution, BiologicalCareTopology, BiologicalDevelopmentSite,
+    BiologicalTransitionCapability, CareTopology, CompatibilityRelation, DescentDistribution,
+    DescentMode, DescentRelation, InheritanceDistribution, LifecycleTransition,
+    LifecycleTransitionKind, MigrationDistribution, OffspringOrigin, OffspringPathway,
+    SocialCohortInput, SocialCohortSummary, SocialInputError, summarize_social_cohort,
+    validate_social_cohort,
 };
 pub use stack_condense::StackSettlement;
 

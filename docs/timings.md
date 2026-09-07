@@ -6494,3 +6494,5 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T13:11:28Z | sluice:heavy | 487.838 | 11439.838 | 162.537 | 23.78 | 0 | dad0feacb |  | lefford | 40 |
 | 2026-09-07T14:27:53Z | gate-commit | 42.290 | 75.684 | 6.106 | 1.93 | 0 | 52bfbb034 | campaign/soc-household | MacBookPro | 10 |
 | 2026-09-07T14:30:45Z | gate-commit | 141.452 | 834.638 | 50.482 | 6.26 | 0 | 52bfbb034 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T14:33:06Z | gate-commit | 36.118 | 66.356 | 17.441 | 2.32 | 0 | 52bfbb034 | campaign/soc-household | MacBookPro | 10 |
+| 2026-09-07T14:58:35Z | gate-commit | 54.479 | 142.965 | 38.568 | 3.33 | 0 | e644e302f | campaign/soc-household | MacBookPro | 10 |

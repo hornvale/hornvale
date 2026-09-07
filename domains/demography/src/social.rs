@@ -1,13 +1,13 @@
 //! Species-independent aggregate social inputs and summaries.
 
-use crate::reproductive::{ReproductivePopulationSummary, SocialSubstrateInput};
+use crate::reproductive::{HybridOutcome, ReproductivePopulationSummary, SocialSubstrateInput};
 use std::fmt;
 
 /// A descriptive refusal from an aggregate social input.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SocialInputError {
     field: String,
-    requirement: &'static str,
+    requirement: String,
 }
 
 impl fmt::Display for SocialInputError {
@@ -19,8 +19,11 @@ impl fmt::Display for SocialInputError {
 impl std::error::Error for SocialInputError {}
 
 impl SocialInputError {
-    fn new(field: String, requirement: &'static str) -> Self {
-        Self { field, requirement }
+    fn new(field: String, requirement: impl Into<String>) -> Self {
+        Self {
+            field,
+            requirement: requirement.into(),
+        }
     }
 }
 
@@ -42,15 +45,17 @@ impl CountDistribution {
                 "must be finite",
             ));
         }
+        if total_weight == 0.0 {
+            return Err(SocialInputError::new(
+                field.to_string(),
+                "must contain a positive-weight measurement",
+            ));
+        }
 
-        let entries = if total_weight > 0.0 {
-            entries
-                .into_iter()
-                .map(|(count, weight)| (count, weight / total_weight))
-                .collect()
-        } else {
-            entries
-        };
+        let entries = entries
+            .into_iter()
+            .map(|(count, weight)| (count, weight / total_weight))
+            .collect();
         Ok(Self { entries })
     }
 
@@ -77,7 +82,16 @@ impl CountDistribution {
         for (index, (_, weight)) in self.entries.iter().enumerate() {
             validate_non_negative_finite(&format!("{field} weight at index {index}"), *weight)?;
         }
-        validate_non_negative_finite(&format!("{field} total weight"), self.total_weight())
+        let total_weight = self.total_weight();
+        validate_non_negative_finite(&format!("{field} total weight"), total_weight)?;
+        if total_weight == 0.0 {
+            Err(SocialInputError::new(
+                field.to_string(),
+                "must contain a positive-weight measurement",
+            ))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -99,6 +113,116 @@ fn validate_non_negative_finite(field: &str, value: f64) -> Result<(), SocialInp
     } else {
         Ok(())
     }
+}
+
+/// Species-independent origin of an offspring pathway.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OffspringOrigin {
+    /// Distinct inherited inputs are combined.
+    JoinedInputs,
+    /// One inherited input is copied.
+    CopiedInput,
+    /// A host or substrate is converted into a new organism.
+    ConvertedHost,
+    /// A body is constructed without biological descent.
+    ConstructedBody,
+}
+
+/// Species-independent site at which offspring develops.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BiologicalDevelopmentSite {
+    /// Within or on a supporting body.
+    Body,
+    /// Within a released capsule such as an egg or spore case.
+    Capsule,
+    /// Within a nest, brood chamber, or equivalent structure.
+    BroodStructure,
+    /// Within a shared colony or matrix.
+    Colony,
+    /// Within or on another organism used as a host.
+    Host,
+    /// Directly in a suitable environment.
+    Environment,
+    /// Within an artificial manufacturing site.
+    Workshop,
+}
+
+/// Structural source of biological support during development.
+///
+/// This is deliberately distinct from [`CareTopology`], which counts social
+/// caregiver groups per dependent after reproduction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BiologicalCareTopology {
+    /// Support supplied by one body.
+    SingleBody,
+    /// Support jointly supplied by a pair.
+    BodyPair,
+    /// Support supplied by a group or colony.
+    BodyGroup,
+    /// Support supplied by a host organism.
+    HostOrganism,
+    /// Support supplied by ambient environmental conditions.
+    AmbientEnvironment,
+    /// Support supplied by an artificial process or apparatus.
+    ArtificialProcess,
+}
+
+/// Natural biological transition a pathway may require or permit.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BiologicalTransitionCapability {
+    /// Mature from one developmental state into another.
+    DevelopmentalMaturation,
+    /// Undergo a body-plan metamorphosis.
+    BodyMetamorphosis,
+    /// Change state in response to a recurring environment.
+    SeasonalChange,
+    /// Move naturally between reproductive roles over a lifetime.
+    SequentialReproductiveRole,
+}
+
+/// One complete aggregate offspring possibility, not a realized birth.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OffspringPathway {
+    /// How the pathway originates inherited or constructed material.
+    pub origin: OffspringOrigin,
+    /// Site at which development occurs.
+    pub development_site: BiologicalDevelopmentSite,
+    /// Structural biological support, explicitly absent when not required.
+    pub care_topology: Option<BiologicalCareTopology>,
+    /// Natural transition required before the pathway, when any.
+    pub prerequisite_transition: Option<BiologicalTransitionCapability>,
+}
+
+/// Species-independent mechanism by which biological descent is established.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DescentMode {
+    /// Inherited material combines multiple sources.
+    CombinedSources,
+    /// Inherited material copies one source.
+    CopiedSource,
+    /// A host or substrate supplies transformed inherited material.
+    ConvertedSource,
+    /// No biological source contributes inherited material.
+    Constructed,
+}
+
+/// Aggregate biological descent shape with no person identity.
+/// type-audit: bare-ok(count: contributing_source_count)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DescentRelation {
+    /// Structural descent mechanism.
+    pub mode: DescentMode,
+    /// Number of inherited-material sources contributing to the relation.
+    pub contributing_source_count: u32,
+}
+
+/// Directional aggregate compatibility without species or participant IDs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CompatibilityRelation {
+    /// Outcome when the first population contributes material to the second.
+    pub first_material_second_development: HybridOutcome,
+    /// Outcome when the second population contributes material to the first.
+    pub second_material_first_development: HybridOutcome,
 }
 
 /// A species-independent category of aggregate lifecycle transition.
@@ -337,13 +461,22 @@ impl InheritanceDistribution {
 pub struct SocialCohortInput {
     /// Landed BIO-3 to SOC-2 population handoff.
     pub substrate: SocialSubstrateInput,
+    /// Ordered complete offspring possibilities from the biological grammar.
+    pub offspring_pathways: Vec<OffspringPathway>,
+    /// Ordered aggregate biological descent shapes.
+    pub descent_relations: Vec<DescentRelation>,
+    /// Ordered directional compatibility relations, with no species IDs.
+    pub compatibility_relations: Vec<CompatibilityRelation>,
+    /// Ordered natural transition capabilities; realized history comes later.
+    pub transition_capabilities: Vec<BiologicalTransitionCapability>,
     /// Ordered lifecycle rates in events per person-year.
     pub lifecycle_transitions: Vec<LifecycleTransition>,
     /// Participant-count support and typicality for associations.
     pub associations: AssociationDistribution,
     /// Descent-line-count support and typicality.
     pub descent: DescentDistribution,
-    /// Full caregiver-group topology, including zero and overlap.
+    /// Social caregiver-group-count topology, including zero and overlap.
+    /// Biological developmental support remains on [`OffspringPathway`].
     pub care_topology: CareTopology,
     /// Migration-count support and typicality per person-lifetime.
     pub migration: MigrationDistribution,
@@ -357,13 +490,22 @@ pub struct SocialCohortInput {
 pub struct SocialCohortSummary {
     /// Biological possibility and typicality, unchanged by social context.
     pub reproductive: ReproductivePopulationSummary,
+    /// Ordered complete offspring possibilities, unchanged from input.
+    pub offspring_pathways: Vec<OffspringPathway>,
+    /// Ordered biological descent shapes, unchanged from input.
+    pub descent_relations: Vec<DescentRelation>,
+    /// Ordered directional compatibility relations, unchanged from input.
+    pub compatibility_relations: Vec<CompatibilityRelation>,
+    /// Ordered natural transition capabilities, unchanged from input.
+    pub transition_capabilities: Vec<BiologicalTransitionCapability>,
     /// Ordered lifecycle rates in events per person-year.
     pub lifecycle_transitions: Vec<LifecycleTransition>,
     /// Association participant support and typicality.
     pub associations: AssociationDistribution,
     /// Descent-line support and typicality.
     pub descent: DescentDistribution,
-    /// Full caregiver-group topology, retained rather than flattened.
+    /// Social caregiver-group-count topology, retained rather than flattened.
+    /// Biological developmental support remains on [`OffspringPathway`].
     pub care_topology: CareTopology,
     /// Migration support and typicality.
     pub migration: MigrationDistribution,
@@ -414,7 +556,16 @@ pub fn validate_social_cohort(input: &SocialCohortInput) -> Result<(), SocialInp
         "reproductive persistence balance",
         reproductive.persistence_balance,
     )?;
-    for transition in &input.lifecycle_transitions {
+    for (index, transition) in input.lifecycle_transitions.iter().enumerate() {
+        if let Some(previous_index) = input.lifecycle_transitions[..index]
+            .iter()
+            .position(|previous| previous.kind == transition.kind)
+        {
+            return Err(SocialInputError::new(
+                format!("lifecycle transition kind at index {index}"),
+                format!("duplicates index {previous_index}"),
+            ));
+        }
         validate_non_negative_finite(
             "lifecycle transition events per person-year",
             transition.events_per_person_year,
@@ -435,6 +586,10 @@ pub fn summarize_social_cohort(
     validate_social_cohort(input)?;
     Ok(SocialCohortSummary {
         reproductive: input.substrate.reproductive.clone(),
+        offspring_pathways: input.offspring_pathways.clone(),
+        descent_relations: input.descent_relations.clone(),
+        compatibility_relations: input.compatibility_relations.clone(),
+        transition_capabilities: input.transition_capabilities.clone(),
         lifecycle_transitions: input.lifecycle_transitions.clone(),
         associations: input.associations.clone(),
         descent: input.descent.clone(),
