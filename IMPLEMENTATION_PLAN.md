@@ -29,7 +29,7 @@ settle; unfunded cycles do not; partial and failed outcomes are explicit and
 deterministic.
 **Tests**: bilateral trade; scarcity split; partial delivery; acyclic chain;
 funded reciprocal exchange; unfunded cycle; iteration-order identity.
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 4: Couple exchange to the bake and run Task 0
 **Goal**: Insert the phase order and bounded shortfall adapter, then run the

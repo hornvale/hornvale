@@ -136,6 +136,41 @@ property; no Task 2 requirement regressed. Task 2 is complete at
 `8da7001c8`. Implementer evidence: focused 8-test suite passed, clippy passed,
 and gate-commit passed 1300/1300 with no Task 1 probe or census rerun.
 
+### Task 3 review — fix round 1
+
+The reviewer found three high/medium defects. First, clearing A and B
+independently allowed one-way redistribution, violating the pinned 1:1
+reciprocal bundle. Second, pooling an entire connected component and inventing
+shortest relay paths bypassed the declared conductance-positive one-hop
+counterparty rule and created relay deliveries without attempts. Third, the
+reported conservation residual was tautological: every delivery was added
+once to both `sent` and `received`, so it could never detect creation,
+double-spending, or unfunded forwarding. Ruling: replace component pooling
+with explicit declared counterparty matching, enforce bundle funding in the
+same atomic settlement, and calculate residuals from opening surpluses versus
+outgoing deliveries and requester receipts. Cost if wrong: the study would
+measure aid and invented routing while reporting a false conservation proof.
+
+Fix round 1 repaired those three contracts and made the direct reciprocal
+matching and mutation-sensitive accounting explicit. Re-review found one
+remaining high defect: the purported acyclic-chain test still used two
+independent opening-funded swaps, while the implementation freezes capacity
+from opening stock and cannot let an already-declared incoming delivery fund a
+downstream direct request. Ruling: add genuine incoming-funded chain
+propagation over direct declared one-hop proposals, with deterministic
+topological settlement and cycle handling, and replace the vacuous chain
+fixture. Cost if wrong: D2 would reject the exact non-local dependence the
+metaplan names while passing a same-phase pair test.
+
+Fix round 2 added genuine incoming-funded acyclic propagation: the middle
+community has zero opening capacity for the forwarded resource, receives it
+through one declared direct bundle, and then forwards it through a separate
+declared direct bundle. The final reviewer reports CLEAN. The 85-test focused
+suite covers reciprocal bundles, direct one-hop eligibility, funded chains,
+funded and unfunded cycles, six statuses, reordered input, purity, and the
+mutation-sensitive conservation residual. Task 3 is complete at
+`e2ed8eaa9`; no 200-seed probe or census was run.
+
 ## Deferred minors and follow-ups
 
 - Verify the specialization input and shortfall insertion point against the
