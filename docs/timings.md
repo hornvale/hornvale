@@ -6509,3 +6509,23 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T16:09:56Z | sluice:gate | 860.344 | 22367.067 | 623.809 | 26.72 | 0 | 7d3aa1590 |  | lefford | 40 |
 | 2026-09-07T16:12:49Z | sluice:clients | 172.112 | 2632.783 | 233.604 | 16.65 | 0 | 5ecf8db18 |  | lefford | 40 |
 | 2026-09-07T16:20:54Z | sluice:heavy | 485.108 | 11471.048 | 148.212 | 23.95 | 0 | 5a118ac73 |  | lefford | 40 |
+| 2026-09-07T17:03:31Z | rebaseline | 170.557 | 448.188 | 19.367 | 2.74 | 0 | ddf9522c1 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T17:36:52Z | game-check | 139.125 | 823.405 | 35.193 | 6.17 | 0 | ddf9522c1 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T17:39:06Z | gate-commit | 37.314 | 71.790 | 16.713 | 2.37 | 0 | ddf9522c1 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T17:46:05Z | game-check | 134.511 | 813.182 | 32.027 | 6.28 | 0 | ddf9522c1 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T17:46:45Z | gate-commit | 37.034 | 71.712 | 16.468 | 2.38 | 0 | ddf9522c1 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T17:47:57Z | gate-commit | 41.656 | 73.215 | 17.409 | 2.18 | 0 | ddf9522c1 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:05:49Z | game-check | 129.339 | 772.790 | 27.430 | 6.19 | 0 | 6b1c409f0 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:06:57Z | gate-commit | 37.219 | 71.503 | 16.724 | 2.37 | 0 | 6b1c409f0 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:18:14Z | game-check | 125.400 | 772.790 | 25.142 | 6.36 | 0 | 41c12f63b | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:19:08Z | gate-commit | 37.291 | 71.706 | 16.760 | 2.37 | 0 | 41c12f63b | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:32:11Z | game-check | 126.219 | 783.300 | 29.801 | 6.44 | 0 | 7bd8c9a93 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:33:04Z | gate-commit | 37.031 | 71.614 | 16.635 | 2.38 | 0 | 7bd8c9a93 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:53:34Z | game-check | 148.829 | 792.093 | 34.288 | 5.55 | 0 | bdf69c3ad | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T18:55:27Z | gate-commit | 42.653 | 74.670 | 18.159 | 2.18 | 0 | bdf69c3ad | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T19:01:44Z | game-check | 328.393 | 808.036 | 29.189 | 2.55 | 0 | 76328fc47 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T19:04:42Z | game-check | 161.504 | 790.255 | 31.945 | 5.09 | 0 | 76328fc47 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T19:05:30Z | gate-commit | 40.382 | 72.770 | 17.277 | 2.23 | 0 | 76328fc47 | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T20:18:34Z | game-check | 0.622 | 0.421 | 0.092 | 0.82 | 0 | 427554c8d | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T20:22:05Z | game-check | 207.167 | 832.186 | 28.732 | 4.16 | 0 | 427554c8d | campaign/the-sett | MacBookPro | 10 |
+| 2026-09-07T20:24:54Z | gate-commit | 40.920 | 73.211 | 17.004 | 2.20 | 0 | 427554c8d | campaign/the-sett | MacBookPro | 10 |
