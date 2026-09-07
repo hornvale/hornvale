@@ -253,18 +253,28 @@ def changed_closure(graph: dict, changed_paths: list[str]) -> dict:
     packages = graph.get("packages")
     if not isinstance(packages, list):
         raise ValueError("graph packages are required")
-    names = {package["name"] for package in packages if package.get("workspace_member", True)}
-    repository_root = Path(graph.get("repository_root", "/"))
+    repository_root = Path(graph.get("repository_root", "/")).resolve()
+    in_repository = []
+    for package in packages:
+        manifest = package.get("manifest_path")
+        if not isinstance(manifest, str) or not isinstance(package.get("name"), str):
+            raise ValueError("invalid graph package")
+        package_root = Path(manifest).resolve().parent
+        if _owned_path(package_root, repository_root):
+            in_repository.append((package, package_root))
+    names = {package["name"] for package, _ in in_repository}
     direct = set()
     for changed in changed_paths:
         changed_path = Path(changed)
         absolute = (repository_root / changed_path).resolve() if not changed_path.is_absolute() else changed_path.resolve()
-        for package in packages:
-            if package["name"] not in names:
-                continue
-            package_root = Path(package["manifest_path"]).resolve().parent
-            if _owned_path(absolute, package_root):
-                direct.add(package["name"])
+        candidates = [(package, package_root) for package, package_root in in_repository
+                      if _owned_path(absolute, package_root)]
+        if candidates:
+            package, _ = sorted(
+                candidates,
+                key=lambda item: (-len(item[1].parts), item[0]["name"], item[0].get("id", "")),
+            )[0]
+            direct.add(package["name"])
     direct = sorted(direct)
     reverse = {name: set() for name in names}
     for dependency, dependents in graph.get("edges", {}).items():
@@ -284,16 +294,32 @@ def changed_closure(graph: dict, changed_paths: list[str]) -> dict:
             "full_invalidation": direct + [name for name in reverse_dependents if name not in direct]}
 
 
+def invalidation_probes(graph: dict) -> dict:
+    """Return the frozen edit probes used by every baseline dossier."""
+    paths = {
+        "protocol": ["tools/digest/packages/protocol/src/lib.rs"],
+        "observer": ["tools/digest/packages/census-publication/src/main.rs"],
+        "lab": ["windows/lab/src/lib.rs"],
+        "unrelated": ["book/src/frontier/idea-registry.md"],
+    }
+    return {
+        name: {"changed_paths": changed, "closure": changed_closure(graph, changed)}
+        for name, changed in paths.items()
+    }
+
+
 def summarize_baseline(attempts: list[dict]) -> dict:
     """Summarize one complete cold/warm pair without flattening nested timings."""
     if not isinstance(attempts, list) or not attempts:
         raise ValueError("baseline attempts are required")
     by_class = {"cold": [], "warm": []}
+    excluded = 0
     for attempt in attempts:
         try:
             validate_attempt(attempt)
-        except ValueError as exc:
-            raise ValueError(f"incomplete baseline attempt: {exc}") from exc
+        except (TypeError, ValueError):
+            excluded += 1
+            continue
         classification = attempt.get("target", {}).get("classification")
         if classification not in by_class:
             raise ValueError("baseline attempts must be cold or warm")
@@ -320,7 +346,8 @@ def summarize_baseline(attempts: list[dict]) -> dict:
         timing = records[0]["costs"]
         costs[classification] = {field: [float(timing[field])] for field in ("preparation_s", "build_s", "test_s")}
         costs[classification]["total_s"] = [sum(costs[classification][field][0] for field in ("preparation_s", "build_s", "test_s"))]
-    return {"pair_count": 1, "graph_counts": graph_counts, "costs": costs}
+    return {"pair_count": 1, "excluded_attempt_count": excluded,
+            "graph_counts": graph_counts, "costs": costs}
 
 
 def _git_text(root: Path, *args: str) -> str:
@@ -378,28 +405,47 @@ def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
     classification = "cold" if cold else "warm"
     workloads = load_workloads(WORKLOADS_PATH)["workloads"]
     target = (root / "tools" / "digest" / "target").resolve()
+    _prepare_baseline_target(root, target, cold)
     evidence = (output.parent / "attempts" / classification).resolve()
     graph = cargo_graph(root / "tools/digest/Cargo.toml", target)
     source = _source_identity(root)
     toolchain = _toolchain_identity(host_class)
     attempts = []
+    raw_attempts = []
     for workload in workloads:
         destination = evidence / f"{workload['id']}.capture.json"
-        captured = capture(workload["id"], root, target, evidence, destination)
-        costs = {"preparation_s": 0.0, "build_s": float(captured["elapsed_s"]), "test_s": 0.0}
-        attempt = manifest_for_attempt(
-            source=source,
-            graph={"sha256": graph["identity"]["sha256"], "package_count": graph["package_count"], "workspace_member_count": graph["workspace_member_count"]},
-            toolchain=toolchain,
-            target={"path": str(target), "classification": classification},
-            workload_id=workload["id"], capture=captured, costs=costs,
-            outputs=_output_records(root, workload),
-        )
-        attempts.append(attempt)
+        captured = None
+        try:
+            captured = capture(workload["id"], root, target, evidence, destination)
+            raw_attempt = {"workload_id": workload["id"], "capture": captured, "status": "captured"}
+            costs = {"preparation_s": 0.0, "build_s": float(captured["elapsed_s"]), "test_s": 0.0}
+            failure = None if captured.get("exit_code") == 0 else {
+                "reason": "measurement command failed",
+                "valid_evidence": True,
+            }
+            attempt = manifest_for_attempt(
+                source=source,
+                graph={"sha256": graph["identity"]["sha256"], "package_count": graph["package_count"], "workspace_member_count": graph["workspace_member_count"]},
+                toolchain=toolchain,
+                target={"path": str(target), "classification": classification},
+                workload_id=workload["id"], capture=captured, costs=costs,
+                outputs=_output_records(root, workload), failure=failure,
+            )
+            raw_attempt["status"] = "valid"
+            raw_attempts.append(raw_attempt)
+            attempts.append(attempt)
+        except Exception as error:
+            raw_attempts.append({
+                "workload_id": workload["id"], "status": "invalid",
+                "error": f"{type(error).__name__}: {error}"[:2048],
+                "capture": captured,
+            })
     dossier = {
         "schema": "insulator-baseline-v1", "classification": classification,
         "host_class": host_class, "source": source, "graph": graph,
         "attempts": attempts,
+        "raw_attempts": raw_attempts,
+        "invalidation_probes": invalidation_probes(graph),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_name(f".{output.name}.tmp")
@@ -408,6 +454,18 @@ def run_baseline(root: Path, output: Path, host_class: str, cold: bool) -> dict:
         stream.write("\n")
     os.replace(temporary, output)
     return dossier
+
+
+def _prepare_baseline_target(root: Path, target: Path, cold: bool) -> None:
+    """Establish exclusive ownership before changing the baseline target."""
+    expected = (Path(root) / "tools" / "digest" / "target").resolve()
+    if target != expected or target.is_symlink():
+        raise ValueError("baseline target ownership cannot be established")
+    if target.exists() and not target.is_dir():
+        raise ValueError("baseline target must be a directory")
+    if cold and target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True, exist_ok=True)
 
 
 def _stream(raw: bytes) -> dict:

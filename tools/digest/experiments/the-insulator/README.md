@@ -53,11 +53,15 @@ candidate output as production facts.
 Task 2 adds a deterministic graph and baseline contract. `cargo_graph` invokes
 locked offline `cargo metadata` through the bounded controller and retains
 bounded stdout/stderr evidence. `changed_closure` maps repository-relative
-paths against repository package manifests while excluding registry packages
-from the closure. `run_baseline` captures each frozen workload in an owned
-measurement cell and writes a validated cold or warm dossier; two such
-dossiers can be combined by `summarize_baseline`, which accepts exactly one
-complete cold/warm pair. The representative workloads are
+paths against every repository package manifest, including path dependencies
+outside the `tools/digest` workspace, while excluding registry packages and
+assigning overlaps to the most specific package root. `run_baseline` captures
+each frozen workload in an owned measurement cell, records four fixed
+invalidation probes, and writes a validated cold or warm dossier. Cold mode
+removes only the owned digest target; warm mode preserves it. Every capture is
+retained in `raw_attempts`, while only valid manifests enter `attempts`.
+Two such dossiers can be combined by `summarize_baseline`, which accepts one
+complete cold/warm pair and reports excluded incomplete attempts. The representative workloads are
 `digest-census-publication` and `digest-thing`; preparation, build, and test
 costs remain separate. Unit tests mock graph/capture boundaries and do not run
 a live build or create `results/baseline.json`.
