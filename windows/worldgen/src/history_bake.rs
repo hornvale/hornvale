@@ -1217,10 +1217,13 @@ const SUBSISTENCE_A_BASKET_SHARE: f64 = 0.5;
 /// multiplied first and the minority is its remainder from `total`: because
 /// the majority lies between `total / 2` and `total`, Sterbenz subtraction is
 /// exact, and adding the two stored `f64` components reconstructs `total`
-/// bit-for-bit. Reserved for Task 4 phase integration.
+/// bit-for-bit. Signed zero is canonicalized at the boundary so the finite
+/// non-negative domain has one zero representation. Reserved for Task 4 phase
+/// integration.
 #[allow(dead_code)]
 fn partition_subsistence_production(total: f64, curve: Curve) -> SubsistenceInventory {
     debug_assert!(total.is_finite() && total >= 0.0);
+    let total = if total == 0.0 { 0.0 } else { total };
     let a_share = curve.amplitude().clamp(0.0, 1.0);
     let inventory = if a_share <= 0.5 {
         let b = total * (1.0 - a_share);
@@ -5775,6 +5778,21 @@ mod tests {
                 "typed partition must exactly conserve {total} at {biome:?}"
             );
         }
+    }
+
+    #[test]
+    fn subsistence_partition_canonicalizes_negative_zero() {
+        let curve = Curve::new(LatDeg::new(45.0).unwrap(), BiomeClass::Cold);
+
+        let production = partition_subsistence_production(-0.0, curve);
+        let total =
+            production.amount(SubsistenceResource::A) + production.amount(SubsistenceResource::B);
+
+        assert_eq!(
+            total.to_bits(),
+            0.0_f64.to_bits(),
+            "the finite non-negative domain must expose one canonical zero"
+        );
     }
 
     #[test]
