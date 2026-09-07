@@ -614,52 +614,48 @@ pub fn derive_inheritance(
     validate_events(events, bounds)?;
     let descent = relation_edges(events, ProjectionRelationKind::Descent);
     validate_descent_depth(&descent, bounds.max_depth)?;
-    let deaths = events
-        .iter()
-        .filter_map(|event| match event {
+    let mut deaths = Vec::new();
+    let mut claims = Vec::new();
+
+    for event in events {
+        match event {
             ProjectionEvent::Death {
                 person,
                 at,
                 provenance,
-            } => Some((*person, *at, provenance)),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-    let mut claims = Vec::new();
+            } => deaths.push((*person, *at, provenance)),
+            ProjectionEvent::Relation {
+                kind: ProjectionRelationKind::Transfer,
+                source,
+                target,
+                start,
+                provenance,
+                ..
+            } => {
+                let Some((_, _, death_provenance)) = deaths
+                    .iter()
+                    .rev()
+                    .find(|(person, at, _)| person == source && *at <= *start)
+                else {
+                    continue;
+                };
 
-    for event in events {
-        let ProjectionEvent::Relation {
-            kind: ProjectionRelationKind::Transfer,
-            source,
-            target,
-            start,
-            provenance,
-            ..
-        } = event
-        else {
-            continue;
-        };
-        let Some((_, _, death_provenance)) = deaths
-            .iter()
-            .rev()
-            .find(|(person, at, _)| person == source && *at <= *start)
-        else {
-            continue;
-        };
-
-        let path = first_descent_path(*source, *target, &descent)?;
-        let mut sources = vec![(*death_provenance).clone(), provenance.clone()];
-        if let Some(path) = &path {
-            sources.extend(path.iter().map(|edge| edge.provenance.clone()));
+                let path = first_descent_path(*source, *target, &descent)?;
+                let mut sources = vec![(*death_provenance).clone(), provenance.clone()];
+                if let Some(path) = &path {
+                    sources.extend(path.iter().map(|edge| edge.provenance.clone()));
+                }
+                claims.push(InheritanceClaim {
+                    deceased: *source,
+                    claimant: *target,
+                    at: *start,
+                    descendant: path.is_some(),
+                    recognized_label: context.property.recognized_label.clone(),
+                    provenance: sources,
+                });
+            }
+            _ => {}
         }
-        claims.push(InheritanceClaim {
-            deceased: *source,
-            claimant: *target,
-            at: *start,
-            descendant: path.is_some(),
-            recognized_label: context.property.recognized_label.clone(),
-            provenance: sources,
-        });
     }
 
     Ok(claims)

@@ -225,6 +225,56 @@ fn inheritance_requires_post_death_transfer_and_keeps_all_provenance() {
     );
 }
 
+/// Looking ahead to deaths later in the ordered stream turns an equal-time
+/// lifetime transfer into inheritance; only death-before-transfer may qualify.
+#[test]
+fn equal_time_inheritance_respects_event_order() {
+    let transfer_before_death = vec![
+        relation(
+            ProjectionRelationKind::Transfer,
+            1,
+            2,
+            4,
+            None,
+            None,
+            "lifetime-transfer",
+        ),
+        ProjectionEvent::death(entity(1), day(4), "later-death").unwrap(),
+    ];
+    let death_before_transfer = vec![
+        ProjectionEvent::death(entity(1), day(4), "earlier-death").unwrap(),
+        relation(
+            ProjectionRelationKind::Transfer,
+            1,
+            2,
+            4,
+            None,
+            None,
+            "estate-transfer",
+        ),
+    ];
+
+    let lifetime_claims = derive_inheritance(
+        &transfer_before_death,
+        &SocialContext::uninterpreted(),
+        bounds(),
+    )
+    .unwrap();
+    let estate_claims = derive_inheritance(
+        &death_before_transfer,
+        &SocialContext::uninterpreted(),
+        bounds(),
+    )
+    .unwrap();
+
+    assert!(lifetime_claims.is_empty());
+    assert_eq!(estate_claims.len(), 1);
+    assert_eq!(
+        estate_claims[0].provenance(),
+        ["earlier-death", "estate-transfer"]
+    );
+}
+
 /// Removing the explicit depth refusal lets a chain beyond the caller's
 /// declared traversal budget silently produce a partial ancestry answer.
 #[test]

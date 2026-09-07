@@ -1,6 +1,8 @@
 //! Composition-root bridge from realized history events to pure projections.
 
 use hornvale_demography::{GroupBasis, GroupKey, KinshipKind, ProjectionBounds, SocialContext};
+use hornvale_history::{LifecycleEvent, SocialEvent};
+use hornvale_kernel::{EntityId, WorldTime};
 use hornvale_worldgen::{SyntheticSociety, derive_social_readout};
 
 use super::social_projection::project;
@@ -88,5 +90,30 @@ fn recomposing_mobility_events_keep_distinct_time_bounded_groups() {
             .iter()
             .any(|group| matches!(group.key(), GroupKey::Association { .. })
                 && group.end().is_some())
+    );
+}
+
+/// Converting events before validating their ordered-history contract lets an
+/// unmatched separation pass through the public bridge as an empty readout.
+#[test]
+fn sequence_invalid_history_is_refused_at_the_readout_bridge() {
+    let source = EntityId::new(1).unwrap();
+    let target = EntityId::new(2).unwrap();
+    let events = vec![SocialEvent::Lifecycle(
+        LifecycleEvent::separate(
+            source,
+            target,
+            WorldTime::from_ticks(WorldTime::TICKS_PER_STD_DAY),
+            "unmatched-separation",
+        )
+        .unwrap(),
+    )];
+
+    let error =
+        derive_social_readout(&events, &SocialContext::uninterpreted(), bounds()).unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "separate has no matching active association"
     );
 }

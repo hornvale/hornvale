@@ -127,7 +127,7 @@ impl SocialReadout {
     }
 }
 
-/// Descriptive refusal from synthetic social realization.
+/// Descriptive refusal from social realization or readout projection.
 /// type-audit: bare-ok(prose: SocialProjectionError.0)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SocialProjectionError(String);
@@ -154,6 +154,12 @@ impl From<hornvale_person::PersonSocialError> for SocialProjectionError {
 
 impl From<hornvale_history::SocialEventError> for SocialProjectionError {
     fn from(error: hornvale_history::SocialEventError) -> Self {
+        Self::new(error.to_string())
+    }
+}
+
+impl From<ProjectionError> for SocialProjectionError {
+    fn from(error: ProjectionError) -> Self {
         Self::new(error.to_string())
     }
 }
@@ -300,7 +306,8 @@ pub fn derive_social_readout(
     events: &[SocialEvent],
     context: &SocialContext,
     bounds: ProjectionBounds,
-) -> Result<SocialReadout, ProjectionError> {
+) -> Result<SocialReadout, SocialProjectionError> {
+    validate_social_events(events)?;
     let observations = events
         .iter()
         .map(projection_event_from)

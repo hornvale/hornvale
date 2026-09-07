@@ -376,6 +376,9 @@ fn add_group_evidence(
         else {
             continue;
         };
+        if !group_active(group, *start, *end) {
+            continue;
+        }
         match kind {
             ProjectionRelationKind::Residence
                 if *target == group_id && member_active(group, *source, *start, *end) =>
@@ -394,8 +397,7 @@ fn add_group_evidence(
                 group.provenance.push(provenance.clone());
             }
             ProjectionRelationKind::Recognition
-                if *target == group_id
-                    || group.members.iter().any(|member| member.person == *target) =>
+                if *target == group_id || member_active(group, *target, *start, *end) =>
             {
                 add_basis(group, GroupBasis::InstitutionalRecognition);
                 group.provenance.push(provenance.clone());
@@ -405,8 +407,7 @@ fn add_group_evidence(
             }
             ProjectionRelationKind::Association => {
                 if let Some(form) = detail.as_deref()
-                    && group.members.iter().any(|member| member.person == *source)
-                    && group.members.iter().any(|member| member.person == *target)
+                    && members_share_relation(group, *source, *target, *start, *end)
                 {
                     apply_form_context(group, form, context);
                     group.provenance.push(provenance.clone());
@@ -471,6 +472,10 @@ fn member_active(
         member.person == person
             && intersect_intervals(member.start, member.end, start, end).is_some()
     })
+}
+
+fn group_active(group: &GroupProjection, start: WorldTime, end: Option<WorldTime>) -> bool {
+    intersect_intervals(group.start, group.end, start, end).is_some()
 }
 
 fn members_share_relation(

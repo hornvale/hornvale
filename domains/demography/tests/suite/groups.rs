@@ -239,3 +239,77 @@ fn external_context_changes_recognition_without_changing_events() {
     assert_eq!(second_groups[0].recognized_labels(), ["treaty-band"]);
     assert_eq!(events, original);
 }
+
+/// Treating former members as permanently associated with a declared group
+/// lets later unrelated association evidence add a basis and label to it.
+#[test]
+fn association_after_shared_membership_does_not_enrich_the_declared_group() {
+    let events = vec![
+        membership(1, 10, 0, Some(3)),
+        membership(2, 10, 0, Some(3)),
+        membership(3, 10, 0, None),
+        relation(
+            ProjectionRelationKind::Association,
+            1,
+            2,
+            4,
+            None,
+            Some("later-work"),
+            "post-membership-association",
+        ),
+    ];
+    let mut context = SocialContext::uninterpreted();
+    context.subsistence =
+        ContextRule::recognized("work-band", vec!["later-work".to_string()]).unwrap();
+
+    let groups = derive_groups(&events, &context, bounds()).unwrap();
+    let declared = groups
+        .iter()
+        .find(|group| group.key() == GroupKey::Declared(entity(10)))
+        .unwrap();
+
+    assert_eq!(declared.bases(), [GroupBasis::Membership]);
+    assert!(declared.recognized_labels().is_empty());
+    assert!(
+        !declared
+            .provenance()
+            .contains(&"post-membership-association".to_string())
+    );
+}
+
+/// Treating the declared group identity as permanently active lets later
+/// recognition retroactively relabel the dissolved group.
+#[test]
+fn recognition_after_dissolution_does_not_enrich_the_ended_group() {
+    let events = vec![
+        membership(1, 10, 0, None),
+        ProjectionEvent::dissolution(entity(10), day(3), "dissolution-record").unwrap(),
+        relation(
+            ProjectionRelationKind::Recognition,
+            9,
+            10,
+            4,
+            None,
+            Some("later-status"),
+            "post-dissolution-recognition",
+        ),
+    ];
+
+    let groups = derive_groups(&events, &SocialContext::uninterpreted(), bounds()).unwrap();
+    let declared = groups
+        .iter()
+        .find(|group| group.key() == GroupKey::Declared(entity(10)))
+        .unwrap();
+
+    assert!(
+        !declared
+            .bases()
+            .contains(&GroupBasis::InstitutionalRecognition)
+    );
+    assert!(declared.recognized_labels().is_empty());
+    assert!(
+        !declared
+            .provenance()
+            .contains(&"post-dissolution-recognition".to_string())
+    );
+}
