@@ -22,6 +22,10 @@ pub mod observer;
 pub mod overture;
 pub mod plate;
 pub mod rate;
+// The Sett, Task 1: the walk band's compass-rose transport and its inverse.
+// Named `rose` and not `raster` because it owns the ADDRESSING only — which
+// facet is in which box — and nothing about how a box is read or drawn.
+pub mod rose;
 pub mod state_dir;
 pub mod term;
 pub mod tiles;
