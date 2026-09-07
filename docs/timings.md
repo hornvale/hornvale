@@ -6603,3 +6603,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-06T15:30:04Z | gate-commit | 36.596 | 62.201 | 13.797 | 2.08 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
 | 2026-09-06T15:30:48Z | gate-commit | 39.482 | 62.275 | 13.184 | 1.91 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
 | 2026-09-07T03:11:21Z | murrain-era-derivation-delta-10x | 3.831 | 7.730 | 1.710 | 2.46 | 0 | 66b0e9ce6 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-07T23:09:24Z | census-study-the-census | 704.402 | 26614.010 | 147.129 | 37.99 | 0 | 85ef1edd3 |  | lefford | 40 |
+| 2026-09-07T23:15:02Z | census-study-the-meeting | 338.090 | 12205.363 | 135.797 | 36.50 | 0 | 85ef1edd3 |  | lefford | 40 |
+| 2026-09-07T23:15:07Z | census | 1398.403 | 41030.111 | 379.520 | 29.61 | 0 | 85ef1edd3 |  | lefford | 40 |
+| 2026-09-07T23:34:56Z | gnomon-injection | 421.056 | 4813.993 | 154.458 | 11.80 | 761 | 85ef1edd3 |  | lefford | 40 |
