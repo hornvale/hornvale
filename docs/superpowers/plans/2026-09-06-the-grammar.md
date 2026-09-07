@@ -10,6 +10,13 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-06-the-grammar-design.md`
 
+**Status (2026-09-06):** IMPLEMENTATION COMPLETE. Tasks 1–5 are implemented
+and reviewed; stage request `req-e2ab208faf5d-20260906T235645Z` reported all
+stage phases green at `e2ab208faf5d2142283ac35cbdf81fbf10b9f1fc`. Chronicle,
+retrospective, registry routing and completion wording are prepared for the
+merge candidate. Full SOC-2 households/institutions and the merge remain
+pending, so this plan is retained until campaign close.
+
 ## Global Constraints
 
 - Preserve the Murrain boundary: the population substrate is causally authoritative; projections never become biological truth.
@@ -167,7 +174,7 @@
 
 ## Task 5: Freeze the probe panel and handoff documentation
 
-**Status:** Complete locally; stage submission pending.
+**Status:** Complete; stage gate passed, merge pending.
 
 **Goal:** Make the new model measurable and leave SOC-2 with a stable, explicit contract for the successor campaign.
 
@@ -200,7 +207,7 @@
 - [x] Run `make docs-tests` and `git diff --check`, resolving any real formatting issue while preserving required empty TSV fields.
 - [x] Review the complete diff for accidental changes to The Murrain, existing species canon, magic, household behavior, or committed census artifacts.
 - [x] Commit as `test(grammar): freeze BIO-3 probe and handoff panel`.
-- [ ] Submit the branch at the stage boundary through the project’s sluice process; do not declare the campaign complete until the required stage/merge verification has run.
+- [x] Submit the branch at the stage boundary through the project’s sluice process. Request `req-e2ab208faf5d-20260906T235645Z` reported all stage phases green at `e2ab208faf5d2142283ac35cbdf81fbf10b9f1fc`; merge verification remains pending.
 
 ## Success Criteria
 

@@ -3,7 +3,9 @@
 **Campaign:** The Grammar — BIO-3 reproductive architecture and the SOC-2
 social derivations it enables. **Branch:** `campaign/the-grammar`.
 **Decision block:** 0876–0885. **Status:** BIO-3 implementation complete
-through Task 5; local verification passed and the stage gate is pending.
+through Task 5; stage request `req-e2ab208faf5d-20260906T235645Z` passed all
+phases at `e2ab208faf5d2142283ac35cbdf81fbf10b9f1fc`. The SOC-2 successor
+contract is test-backed; full households/institutions and merge remain pending.
 
 The Grammar asks whether biology and society can be represented as small,
 composable grammars rather than as a catalogue of species exceptions. A body
