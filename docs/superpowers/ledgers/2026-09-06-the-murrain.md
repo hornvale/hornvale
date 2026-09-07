@@ -536,3 +536,14 @@ catalogue/CCS calculation, Lot draws, and Story slots. The recorded 0.944
 CPU-s/world projection is asserted against shared canonical 1,320 s alarm and
 1,650 s refusal constants used by the CLI duration guard. No census was run;
 the protected audit and timing files remain unstaged.
+
+## Task 4: complete
+
+- Implementation commits: `040feff08`, `ef382d3b7`.
+- H-P1, H-P2, H-P5, and H-P6 pass; H-P3 and H-P4 are recorded as falsified
+  without retuning. The complete H-P3 predicate includes both Plague-ending
+  bounds and first-day occupation-cause evidence.
+- Verification: Murrain Lab 8/8, live nine-seed readout 1/1, authored/schema
+  checks 20/20, `make census-check`, `make lot-check`, and `make gate-commit`
+  passed. The cost projection is 1,216.749 seconds, below both canonical
+  thresholds. No census fixture changed.

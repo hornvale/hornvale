@@ -20,10 +20,10 @@
 **Goal**: Add six metrics, preregistered prediction readout, and cost measurement.
 **Success Criteria**: H-P1–H-P6 recorded; census columns and provenance are current.
 **Tests**: Metric registry, readout, schema, and timing checks.
-**Status**: Complete — H-P1/H-P2/H-P5/H-P6 passed; H-P3/H-P4 falsified and recorded without retuning
+**Status**: Complete — `040feff08`, `ef382d3b7`; final review approved. H-P1/H-P2/H-P5/H-P6 passed; H-P3/H-P4 falsified and recorded without retuning
 
 ## Stage 5: Genesis closure
 **Goal**: Refresh artifacts, census, anomaly/Gnomon witnesses, book, registry, and campaign record.
 **Success Criteria**: Canonical stage/merge gates pass and all documentation is fresh.
 **Tests**: Local commit gate plus canonical sluice verification.
-**Status**: Not Started
+**Status**: In Progress
