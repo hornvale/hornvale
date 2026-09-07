@@ -40,9 +40,11 @@ fn lattice(face: u8, x: i64, y: i64, depth: u32) -> Facet {
 /// competing option blanks half the screen. A test that swept only the
 /// interior would pass on a raster that fell apart at every face edge.
 ///
-/// The last three entries of the targeted roster are cube corners rather
-/// than plain seams, and the two are not interchangeable — see
-/// [`near_a_cube_corner`].
+/// The roster's last seven entries are not plain seams. Three sit at or
+/// beside a **cube corner**, two probe the **polar corner** and the **pole**
+/// — the two folds S9 and S10 measured — and two sit deliberately just
+/// OUTSIDE each fold, so the boundary is exercised from the clean side as
+/// well as the dirty one. See [`inside_a_fold`].
 fn sweep(side: i64) -> Vec<Facet> {
     let scale: i64 = 1 << DEPTH;
     let mut out = Vec::new();
@@ -57,10 +59,9 @@ fn sweep(side: i64) -> Vec<Facet> {
                 ));
             }
         }
-        // Facets whose 40x20 window runs off the face's own lattice. The
-        // first seven cross a plain seam; the last three sit at or beside a
-        // cube corner.
+        // Facets whose 40x20 window runs off the face's own lattice.
         for &(x, y) in &[
+            // Seven plain seam crossings — no corner, no pole.
             (0, scale / 2),
             (scale - 1, scale / 2),
             (scale / 2, 0),
@@ -68,9 +69,27 @@ fn sweep(side: i64) -> Vec<Facet> {
             (3, scale / 3),
             (scale - 4, 2 * scale / 3),
             (2 * scale / 5, 1),
+            // Three at or beside a cube corner (S6, S9).
             (0, 0),
             (scale - 1, scale - 1),
             (2, 2),
+            // Corner distance 24: INSIDE the polar corner fold (28) and
+            // outside the equatorial one (10), so the same lattice position
+            // is excluded on a cap and asserted on an equatorial face. This
+            // is the entry that would have found the hole S9 names — the old
+            // half-width predicate excluded neither.
+            (24, 24),
+            // Corner distance 30: outside BOTH corner folds, so it is
+            // asserted on every face and witnesses the clean side of the
+            // wider boundary.
+            (30, 30),
+            // The face centre. On faces 4 and 5 that is the geographic pole
+            // and the raster folds there (S10); on faces 0-3 it is ordinary
+            // deep interior and must draw clean.
+            (scale / 2, scale / 2),
+            // Eighteen facets off the face centre: outside the pole fold
+            // (16) on a cap, ordinary interior everywhere else.
+            (scale / 2 + 18, scale / 2),
         ] {
             out.push(lattice(face, x, y, DEPTH));
         }
@@ -93,60 +112,127 @@ fn crossing_a_seam(facets: &[Facet]) -> usize {
         .count()
 }
 
-/// Is a cube corner close enough to sit inside this facet's own `W`x`H`
-/// window — within the plate's half-width on **both** lattice axes?
+/// Where the rose raster folds, and how wide each fold is.
 ///
 /// **THE PLAN ASSERTED TWO PROPERTIES UNIVERSALLY THAT THIS CAMPAIGN HAD
 /// ALREADY RATIFIED AS FAILING HERE, and this predicate is the correction.**
 /// Ledger decision #4 rules that a refused bearing ends its chain and
-/// nothing fills the boxes past it, and ledger S6 measures what that costs
-/// at a corner: 39 blanks and 243 repeats of an 861-box plate, decaying to
-/// 0/0 twenty steps out. A picture with repeats has no box-for-box inverse,
-/// and a picture with blanks that appear and vanish as the observer moves is
-/// not the old picture shifted. So `the_inverse_map_...` and
-/// `one_step_shifts_...` hold **off** this region and are asserted there;
-/// `a_chain_through_a_cube_corner_ends_and_nothing_fills_it` asserts the
-/// degradation itself, so the exclusion has a witness rather than being a
-/// place the suite simply stops looking.
+/// nothing fills the boxes past it. Two regions carry the consequence, and
+/// they are different phenomena at different places:
 ///
-/// Measured before the exclusion was written, over the full `sweep(4)` and
-/// `sweep(6)` populations: **every** facet that failed either property was
-/// at lattice corner-distance `(0, 0)` or `(2, 2)`, and **no** plain
-/// seam-crossing facet failed either one — 0 blanks, 0 repeats and 0
-/// shift mismatches at `(0, scale/2)`, `(scale/2, 0)`, `(3, scale/3)`,
-/// `(2*scale/5, 1)`, `(scale-4, 2*scale/3)`, `(scale-1, scale/2)` and
-/// `(scale/2, scale-1)` on all six faces. The seam is clean; only the
-/// corner is not.
+/// - **A cube corner** (S6, S9). The anchor's own chain terminates, so the
+///   plate blanks and repeats. Blanks clear ten steps in on every face, but
+///   *repeats* persist to 28 on a polar cap against 10 on an equatorial
+///   face — a single figure is true of one band and false of the other.
+/// - **The pole** (S10). Faces 4 and 5 are centred on the geographic poles,
+///   where the meridians the N/S chains follow converge. It is not a cube
+///   corner, it *never blanks*, and it repeats out to 16 facets — 0.176
+///   degrees. Any raster built on meridian chains folds where the meridians
+///   meet; this one degrades rather than refusing, which S11 shows is the
+///   gentler half of a comparison `mercator::project` loses ~800x on area.
 ///
-/// The bound is the plate's own half-width on both axes, so it is derived
-/// from the window rather than fitted to the observed failures — it is a
-/// superset of them, which is the safe direction for an exclusion to err.
-fn near_a_cube_corner(f: &Facet) -> bool {
-    let l = f.face_lattice();
-    let half = i64::from(W / 2);
-    let dx = l.x.min(l.scale - 1 - l.x);
-    let dy = l.y.min(l.scale - 1 - l.y);
-    dx < half && dy < half
+/// **The first version of this predicate was a single plate-half-width, 20,
+/// and it was narrower than the polar corner it had to cover.** It did not
+/// fail only because the roster happened to contain no facet at corner
+/// distance 24 on a cap — one now exists, deliberately, and it is excluded
+/// here and asserted on an equatorial face. Nothing about the half-width was
+/// ever a measurement; these three constants are.
+///
+/// **The radii are exactly the measured clearing distances, not a margin
+/// above them**, so the exclusion is minimal: a facet at distance
+/// `FOLD` is kept and is clean, and a facet at `FOLD - 1` is excluded and is
+/// dirty. `the_folds_are_where_the_measurement_says_and_no_wider` holds both
+/// halves of that against a fresh walk, two-sided.
+/// type-audit: bare-ok(count)
+const EQUATORIAL_CORNER_FOLD: i64 = 10;
+/// The same radius on a polar cap, where repeats persist far further —
+/// see [`EQUATORIAL_CORNER_FOLD`]. Covers both caps: face 5 is the wider of
+/// the two at 28, face 4 clears at 27.
+/// type-audit: bare-ok(count)
+const POLAR_CORNER_FOLD: i64 = 28;
+/// The pole fold's radius on a polar cap, in lattice steps from the face
+/// centre — see [`EQUATORIAL_CORNER_FOLD`].
+/// type-audit: bare-ok(count)
+const POLE_FOLD: i64 = 16;
+/// How far under a fold radius the measured clearing distance may sit before
+/// the extent test calls it a change of kind rather than of sample. The
+/// floor arm a `<=` ceiling cannot give: an improvement nobody banks leaves a
+/// bound that has stopped meaning anything. Same instrument as
+/// `hornvale_locale`'s `ROSE_WORST_FLOOR_DEG`.
+/// type-audit: bare-ok(count)
+const FOLD_FLOOR_SLACK: i64 = 4;
+
+/// Faces 4 and 5 are the polar caps. Asserted rather than assumed —
+/// `the_folds_are_where_the_measurement_says_and_no_wider` checks each
+/// face's centre latitude, so a change to the cube's face order reddens
+/// there instead of silently re-banding every exclusion below.
+fn is_a_polar_face(face: u8) -> bool {
+    face >= 4
 }
 
-/// `sweep(side)` minus the corner neighbourhood, with both halves of the
-/// population guarded: the survivors must still cross face seams in force,
-/// and exactly the three corner entries per face must have been removed.
-/// A future edit that dropped seam samples, or that widened the corner
-/// exclusion into a blanket, reddens here rather than quietly narrowing
-/// what the two strict properties are asserted over.
-fn sweep_off_the_corners(side: i64) -> Vec<Facet> {
+/// Chebyshev distance to the nearest corner of the facet's own face. A
+/// corner is near only when **both** axes are near an edge, so the scalar is
+/// the larger of the two per-axis distances: `(0, scale/2)` is a plain seam
+/// crossing at distance `scale/2`, not a corner.
+fn corner_distance(f: &Facet) -> i64 {
+    let l = f.face_lattice();
+    let dx = l.x.min(l.scale - 1 - l.x);
+    let dy = l.y.min(l.scale - 1 - l.y);
+    dx.max(dy)
+}
+
+/// Chebyshev distance to the face centre — the pole, on a cap. Measured in
+/// half-steps (`|2x + 1 - scale| / 2`) because the centre is a lattice
+/// *vertex* between facets `scale/2 - 1` and `scale/2`, not a facet: the
+/// naive `|x - scale/2|` is asymmetric by one and the fold is not.
+fn pole_distance(f: &Facet) -> i64 {
+    let l = f.face_lattice();
+    let dx = (2 * l.x + 1 - l.scale).abs() / 2;
+    let dy = (2 * l.y + 1 - l.scale).abs() / 2;
+    dx.max(dy)
+}
+
+/// Does this facet's own plate carry a fold — a blank or a repeated box?
+/// See [`EQUATORIAL_CORNER_FOLD`] for the two regions and their measured
+/// extents.
+fn inside_a_fold(f: &Facet) -> bool {
+    let polar = is_a_polar_face(f.face);
+    let corner = if polar {
+        POLAR_CORNER_FOLD
+    } else {
+        EQUATORIAL_CORNER_FOLD
+    };
+    corner_distance(f) < corner || (polar && pole_distance(f) < POLE_FOLD)
+}
+
+/// `sweep(side)` minus the two folds, with both halves of the population
+/// guarded: the survivors must still cross face seams in force, and exactly
+/// the expected facets must have been removed — three corner entries on each
+/// of the four equatorial faces, and five on each cap (the same three, plus
+/// the corner-distance-24 entry the wider polar radius catches, plus the
+/// pole).
+///
+/// **The count is the anti-blanket guard.** Widening any of the three radii
+/// to make a failure go away changes it, which is the failure mode a bare
+/// "exclude the folds" predicate would hide. It is deliberately stated as a
+/// total and a per-band split rather than a single number, so a change that
+/// moved one facet from one band to the other cannot cancel out.
+fn sweep_off_the_folds(side: i64) -> Vec<Facet> {
     let all = sweep(side);
-    let kept: Vec<Facet> = all
+    let kept: Vec<Facet> = all.iter().filter(|f| !inside_a_fold(f)).cloned().collect();
+    let dropped_equatorial = all
         .iter()
-        .filter(|f| !near_a_cube_corner(f))
-        .cloned()
-        .collect();
+        .filter(|f| !is_a_polar_face(f.face) && inside_a_fold(f))
+        .count();
+    let dropped_polar = all
+        .iter()
+        .filter(|f| is_a_polar_face(f.face) && inside_a_fold(f))
+        .count();
     assert_eq!(
-        all.len() - kept.len(),
-        18,
-        "the corner exclusion must remove exactly the three corner entries \
-         on each of the six faces, and nothing else"
+        (dropped_equatorial, dropped_polar, all.len() - kept.len()),
+        (12, 10, 22),
+        "the fold exclusion must remove three entries on each of the four \
+         equatorial faces and five on each of the two caps, and nothing else"
     );
     assert!(
         crossing_a_seam(&kept) >= 40,
@@ -157,6 +243,227 @@ fn sweep_off_the_corners(side: i64) -> Vec<Facet> {
         kept.len()
     );
     kept
+}
+
+/// Blanks and repeats on the plate anchored at `f` — the two defects the
+/// folds consist of, counted separately because they differ in kind: a cube
+/// corner produces both, the pole produces only repeats.
+fn fold_shape(f: &Facet, memo: &mut RoseMemo) -> (u32, u32) {
+    let r = RoseRaster::build(f, W, H, memo);
+    let mut blanks = 0u32;
+    let mut drawn = 0u32;
+    let mut distinct = std::collections::BTreeSet::new();
+    for row in 0..H {
+        for col in 0..W {
+            match r.facet_at(col, row) {
+                None => blanks += 1,
+                Some(g) => {
+                    drawn += 1;
+                    distinct.insert(g.pack().ok());
+                }
+            }
+        }
+    }
+    (blanks, drawn - distinct.len() as u32)
+}
+
+/// The smallest distance at which `anchor_at` stops folding and stays
+/// stopped. "Stays stopped" is load-bearing and not pedantry: the decay is
+/// **not monotone** — a polar cube corner's repeat count rises from 260 at
+/// distance 0 to 324 at distance 8 before falling — so the first clean
+/// reading is not necessarily the last dirty one plus one.
+fn clears_at(memo: &mut RoseMemo, anchor_at: impl Fn(i64) -> Facet) -> i64 {
+    const RUN: i64 = 8;
+    const CEILING: i64 = 80;
+    let mut d = 0;
+    while d <= CEILING {
+        if (d..=d + RUN).all(|k| fold_shape(&anchor_at(k), memo) == (0, 0)) {
+            return d;
+        }
+        d += 1;
+    }
+    panic!("the fold did not clear within {CEILING} steps — it has grown enormously");
+}
+
+/// The two folds are exactly as wide as the measurement says, and no wider.
+///
+/// **This converts S9's and S10's tables from three numbers in a ledger into
+/// a guard.** The exclusion the two strict properties take is only honest if
+/// something independent pins how far it has to reach; without this test a
+/// future change that widened either fold would be absorbed silently by the
+/// exclusion, and a future change that widened the *exclusion* would narrow
+/// what those properties are asserted over with nothing to object.
+///
+/// Four things are held, and the first is the one that makes the rest mean
+/// anything:
+///
+/// 1. **Sufficiency, exactly.** Walking outward from each fold, every anchor
+///    whose plate actually folds is excluded by [`inside_a_fold`]. This is
+///    the load-bearing direction and it is asserted per step, not in
+///    aggregate: an exclusion that missed a dirty facet would leave a strict
+///    property asserted somewhere it cannot hold.
+/// 2. **A two-sided pin on the extent**, the shape `hornvale_locale`'s
+///    `ROSE_WORST_DEG` / `ROSE_WORST_FLOOR_DEG` pair uses. The ceiling fails
+///    if a fold GREW past its radius; the floor fails if it shrank by more
+///    than [`FOLD_FLOOR_SLACK`], which is good news that must be banked into
+///    the radius rather than absorbed. Neither pins an exact number, so an
+///    ordinary change of one facet does not redden it and a change of kind
+///    does.
+/// 3. **S9's actual finding**: the polar corner fold is strictly wider than
+///    the equatorial one. Robust to the exact figures, and it fails if the
+///    asymmetry vanishes or inverts — either of which is a real behavioural
+///    change that should be looked at rather than absorbed.
+/// 4. **The two folds differ in KIND**, which is why they need separate
+///    radii: a cube corner blanks and repeats, the pole only ever repeats.
+///    A pole that started blanking would be a chain terminating where no
+///    bearing is refused.
+///
+/// The band split is measured here too rather than assumed, so a change to
+/// the cube's face order reddens at a named latitude instead of silently
+/// applying the wrong radius to every face.
+#[test]
+fn the_folds_are_where_the_measurement_says_and_no_wider() {
+    let mut memo = RoseMemo::new();
+    let scale: i64 = 1 << DEPTH;
+
+    // (0) the band split, from the world rather than from a comment.
+    for face in 0..6u8 {
+        let centre = lattice(face, scale / 2, scale / 2, DEPTH).coord();
+        let polar = centre.latitude.abs() > 80.0;
+        assert_eq!(
+            polar,
+            is_a_polar_face(face),
+            "face {face}'s centre is at latitude {:.3}, which disagrees with \
+             is_a_polar_face — the cube's face order moved and every fold \
+             radius below is now applied to the wrong band",
+            centre.latitude
+        );
+    }
+
+    // (1) + (2), corner folds, on EVERY face. Not one face per band: each
+    // band's radius is set by whichever of its faces folds widest, so a
+    // sample of one leaves the other free to grow unwatched. Measured, the
+    // two caps do not agree — face 5 clears at 28 and face 4 at 27 — and it
+    // was walking face 4 alone that hid the face setting the constant.
+    let mut widest = [0i64; 2];
+    for face in 0..6u8 {
+        let polar = is_a_polar_face(face);
+        let radius = if polar {
+            POLAR_CORNER_FOLD
+        } else {
+            EQUATORIAL_CORNER_FOLD
+        };
+        let label = if polar { "polar" } else { "equatorial" };
+        let at = |d: i64| lattice(face, d, d, DEPTH);
+        for d in 0..=radius + FOLD_FLOOR_SLACK {
+            let (blanks, repeats) = fold_shape(&at(d), &mut memo);
+            if blanks + repeats > 0 {
+                assert!(
+                    inside_a_fold(&at(d)),
+                    "face {face}'s {label} corner still folds {d} steps in \
+                     ({blanks} blanks, {repeats} repeats) and inside_a_fold does \
+                     not exclude it, so a strict property is being asserted \
+                     where it cannot hold"
+                );
+            }
+        }
+        let clearing = clears_at(&mut memo, at);
+        assert!(
+            clearing <= radius,
+            "face {face}'s {label} cube-corner fold now clears at {clearing}, \
+             past its radius of {radius} — it has GROWN. Widen the radius \
+             deliberately and say in its doc what moved."
+        );
+        let slot = usize::from(polar);
+        widest[slot] = widest[slot].max(clearing);
+    }
+    // The floor arm is taken against each band's WIDEST face, since that is
+    // the face the radius is set from; a narrower sibling is not an
+    // improvement to bank.
+    for (slot, (radius, label)) in [
+        (EQUATORIAL_CORNER_FOLD, "equatorial"),
+        (POLAR_CORNER_FOLD, "polar"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert!(
+            widest[slot] >= radius - FOLD_FLOOR_SLACK,
+            "the widest {label} cube-corner fold clears at {}, more than \
+             {FOLD_FLOOR_SLACK} under its radius of {radius} — the raster \
+             improved, which is good news that must be banked: lower the \
+             radius toward {} and say in its doc what moved.",
+            widest[slot],
+            widest[slot]
+        );
+    }
+
+    // (1) + (2), the pole fold, on both caps. Walked along +x;
+    // `pole_distance` is the half-step Chebyshev, so distance and step index
+    // agree exactly, and that agreement is itself asserted.
+    let mut widest_pole = 0i64;
+    for face in [4u8, 5u8] {
+        let at_pole = |d: i64| lattice(face, scale / 2 + d, scale / 2, DEPTH);
+        for d in 0..=POLE_FOLD + FOLD_FLOOR_SLACK {
+            let (blanks, repeats) = fold_shape(&at_pole(d), &mut memo);
+            assert_eq!(
+                pole_distance(&at_pole(d)),
+                d,
+                "the pole distance and the walk index have come apart"
+            );
+            if blanks + repeats > 0 {
+                assert!(
+                    inside_a_fold(&at_pole(d)),
+                    "face {face}'s pole still folds {d} facets out ({repeats} \
+                     repeats) and inside_a_fold does not exclude it"
+                );
+            }
+        }
+        let clearing = clears_at(&mut memo, at_pole);
+        assert!(
+            clearing <= POLE_FOLD,
+            "face {face}'s pole fold now clears at {clearing}, past its radius \
+             of {POLE_FOLD} — it has GROWN"
+        );
+        widest_pole = widest_pole.max(clearing);
+    }
+    assert!(
+        widest_pole >= POLE_FOLD - FOLD_FLOOR_SLACK,
+        "the widest pole fold clears at {widest_pole}, more than \
+         {FOLD_FLOOR_SLACK} under its radius of {POLE_FOLD} — bank it into the \
+         radius"
+    );
+
+    // (3) S9's finding: the bands are not the same width.
+    assert!(
+        widest[1] > widest[0],
+        "the polar cube-corner fold ({}) is no longer wider than the \
+         equatorial one ({}) — S9's asymmetry has gone, which is a change of \
+         behaviour, not of sample",
+        widest[1],
+        widest[0]
+    );
+
+    // (4) the two folds differ in kind, and each is non-vacuously present.
+    let (corner_blanks, corner_repeats) = fold_shape(&lattice(4, 0, 0, DEPTH), &mut memo);
+    assert!(
+        corner_blanks > 0 && corner_repeats > 0,
+        "non-vacuity: a plate anchored ON a polar cube corner must both blank \
+         and repeat; got {corner_blanks} blanks, {corner_repeats} repeats"
+    );
+    let at_the_pole = lattice(4, scale / 2, scale / 2, DEPTH);
+    assert_eq!(pole_distance(&at_the_pole), 0);
+    let (pole_blanks, pole_repeats) = fold_shape(&at_the_pole, &mut memo);
+    assert!(
+        pole_repeats > 0,
+        "non-vacuity: a plate anchored at the pole must repeat"
+    );
+    assert_eq!(
+        pole_blanks, 0,
+        "the pole BLANKED. No bearing is refused there — the meridians only \
+         converge — so a blank means a chain terminated where nothing should \
+         end it"
+    );
 }
 
 /// THE CAMPAIGN'S WHOLE CLAIM. Nathan's report is about the arrow keys, and
@@ -218,13 +525,14 @@ fn every_cardinal_lands_in_its_own_box() {
 /// The raster The Newel chose holds this on the equatorial faces and at
 /// 66.7% on the caps.
 ///
-/// Off the corner neighbourhood — see [`near_a_cube_corner`] for why, and
-/// for the measurement showing no plain seam crossing needs the exemption.
+/// Off the two folds — the cube corner and, on a cap, the pole. See
+/// [`inside_a_fold`] for both, and for the measurement showing no plain seam
+/// crossing needs the exemption on any face.
 #[test]
 fn one_step_shifts_the_picture_and_changes_nothing_else() {
     let mut memo = RoseMemo::new();
     let mut compared = 0u64;
-    for f in sweep_off_the_corners(6) {
+    for f in sweep_off_the_folds(6) {
         let before = RoseRaster::build(&f, W, H, &mut memo);
         let rose = heading_rose(&f);
         // East: the new picture's column j is the old picture's column j+1.
@@ -272,10 +580,11 @@ fn one_step_shifts_the_picture_and_changes_nothing_else() {
 ///    `box_of` names really does hold that facet. This is the property an
 ///    overlay depends on: place a river at `box_of(f)` and the terrain under
 ///    it is `f`. It must hold even where the picture repeats.
-/// 2. **It is two-sided off the corner neighbourhood** — the box a facet was
-///    drawn in is the box `box_of` returns. This cannot hold at a corner,
-///    where ledger S6 measures 243 repeated boxes, so it is asserted where
-///    the picture is duplicate-free. See [`near_a_cube_corner`].
+/// 2. **It is two-sided off the two folds** — the box a facet was drawn in
+///    is the box `box_of` returns. This cannot hold where the picture
+///    repeats, which is a cube corner (S6, S9) and, on a cap, the pole
+///    (S10), so it is asserted where the picture is duplicate-free. See
+///    [`inside_a_fold`].
 /// 3. **It answers for nothing else** — a facet the raster does not draw
 ///    gets `None`. The plan's doc comment claimed this and its body never
 ///    checked it; an inverse that answered for undrawn facets would place
@@ -310,7 +619,7 @@ fn the_inverse_map_agrees_with_the_raster_box_for_box() {
 
     // (2) two-sided where the picture is duplicate-free.
     let mut round_tripped = 0u64;
-    for f in sweep_off_the_corners(4) {
+    for f in sweep_off_the_folds(4) {
         let r = RoseRaster::build(&f, W, H, &mut memo);
         for row in 0..H {
             for col in 0..W {
@@ -359,11 +668,12 @@ fn the_inverse_map_agrees_with_the_raster_box_for_box() {
 /// facet really does produce blanks, so a future change that quietly filled
 /// them would fail here rather than pass by never reaching the branch.
 ///
-/// **It is also the witness for [`near_a_cube_corner`]'s exclusion.** The
-/// two strict properties above are asserted off the corner neighbourhood;
-/// the reason they must be is that the picture there carries both blanks
-/// and repeats, and this test asserts both, so the exclusion cites a
-/// measured fact rather than an absence of evidence.
+/// **It witnesses the CORNER half of [`inside_a_fold`]'s exclusion**, in
+/// kind: the picture there carries both blanks and repeats, and this test
+/// asserts both, so the exclusion cites a measured fact rather than an
+/// absence of evidence. The EXTENT of both folds — and the pole's, which
+/// repeats without ever blanking — is
+/// `the_folds_are_where_the_measurement_says_and_no_wider`'s job.
 #[test]
 fn a_chain_through_a_cube_corner_ends_and_nothing_fills_it() {
     let mut memo = RoseMemo::new();
@@ -386,11 +696,11 @@ fn a_chain_through_a_cube_corner_ends_and_nothing_fills_it() {
     );
     assert!(
         repeats > 0,
-        "the corner exclusion the two strict properties take is justified by \
-         repeated boxes here (ledger S6); this raster shows none, so either \
-         the corner no longer degrades or this facet is not one"
+        "the corner half of the fold exclusion is justified by repeated boxes \
+         here (ledger S6/S9); this raster shows none, so either the corner no \
+         longer degrades or this facet is not one"
     );
-    // Twenty steps in from the corner, the picture is whole again.
+    // Well past the equatorial corner fold, the picture is whole again.
     let inland = lattice(0, 24, 24, DEPTH);
     let clean = RoseRaster::build(&inland, W, H, &mut memo);
     for row in 0..H {
