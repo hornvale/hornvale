@@ -1,6 +1,7 @@
 # The Staple — D2 design brief
 
-**Status:** G3 approved; implementation planning active (2026-09-06)
+**Status:** Implementation and paired probe complete; close documentation
+prepared 2026-09-07. Census re-baseline and sluice gates remain pending.
 
 **Campaign:** The Staple, D2: “more than one thing flows, and some of it by
 exchange”
@@ -83,6 +84,11 @@ The demographic adapter is baseline-preserving, monotone, and bounded: full
 basket satisfaction leaves the current path unchanged, while typed shortfall
 feeds the existing pressure pathway through an explicit D2 coefficient.
 
+The implemented runtime preserves the ordered boundary
+`produce → propose/clear exchange → consume → existing pressure/growth →
+tribute`. The disabled treatment supplies the exact zero-shortfall identity,
+and the typed partition conserves the existing production total bit-for-bit.
+
 ## 4. Task 0 probe
 
 Run a separate paired 200-seed intervention study. For every seed, build a
@@ -114,6 +120,23 @@ The probe must also show that a constructed control preserves the property
 that the current history path is bit-identical when exchange is disabled. A
 reviewer must explicitly ask whether each assertion can pass vacuously.
 
+### Measured result
+
+The authorized replacement probe ran once after correcting the disabled arm's
+shortfall argument from the invalid doubled-pressure value `1.0` to the
+identity `0.0`. Across 200 paired worlds, control identity was `200/200` and
+typed-stock conservation had zero nonzero worlds (`0/200`). Exchange settled
+in `178/200` worlds, with `3,239,066` attempts: proposed `3,239,066`, accepted
+`163,146`, settled `81,573`, partial `81,573`, refused `1,905,072`, and
+impossible `1,170,848`. Treatment-only breaches were settlement count `6/200`,
+collapse share `1/200`, and alive-at-now `0/200`.
+
+The preregistered verdict is **ACTIVATES; DOES NOT CROSS THE INSTABILITY
+POLE**. Activation is nonzero, and each treatment-only breach count is below
+the strict `>100/200` instability direction. The earlier `1416.48s` run is
+retained as an invalid measurement record because its control used doubled
+pressure; it contributes no verdict.
+
 ## 5. Cost and open ownership
 
 Every dynamics rung costs an epoch, a census re-baseline, and conversion of
@@ -121,8 +144,16 @@ history-adjacent pins to invariants. D2 also costs a new stock accounting
 surface, deterministic clearing tests, conservation tests, and paired
 intervention measurement.
 
+This epoch's implementation cost was a new typed stock surface, deterministic
+clearing, runtime phase-order guards, the bounded shortfall adapter, and one
+200-seed paired intervention. The census re-baseline remains a close step;
+the study trace remains derived rather than a permanent event ledger.
+
 D2 owns the first climate-to-city link: `climate → local production → typed
 stock composition → exchange access and dependence → settlement stability`.
+The probe establishes this as D2's accepted ownership consequence: exchange
+is now the measured bridge from local climate/productivity to demographic
+stability. It does not establish a city or a catchment growth ceiling.
 The direct hinterland-capacity growth ceiling and comparative city/notability
 remain open for D4/D5; D1's struck catchment does not own them.
 

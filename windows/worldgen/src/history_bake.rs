@@ -6638,6 +6638,10 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-valid-production) — typed A plus typed B is
+    /// bit-identical to the pre-D2 total; neither resource may be created or
+    /// lost by partitioning. The fixture includes the rounded-complement
+    /// counterexample, so this cannot pass on a favorable value alone.
     #[test]
     fn subsistence_partition_preserves_existing_total_production_exactly() {
         let reviewer_total: f64 = 510.827605197663;
@@ -6812,6 +6816,11 @@ mod tests {
         );
     }
 
+    /// claim: invariant(forall-demand) — a typed shortfall is monotone in
+    /// each same-typed deficit, full satisfaction is the pressure identity,
+    /// and the adapter is bounded above by its named multiplier. The tests
+    /// include nonzero and over-range fixtures, so the assertions cannot pass
+    /// vacuously on an empty basket.
     #[test]
     fn full_subsistence_satisfaction_is_pressure_identity() {
         let demand = SubsistenceInventory::new(40.0, 40.0);
@@ -6870,6 +6879,9 @@ mod tests {
         );
     }
 
+    /// claim: invariant(disabled-control) — the disabled wrapper supplies
+    /// exactly zero shortfall and therefore preserves the legacy growth
+    /// result bit-for-bit. Both arms exercise positive growth.
     #[test]
     fn disabled_step_uses_the_zero_shortfall_identity() {
         let geo = Geosphere::new(1);
@@ -6925,6 +6937,11 @@ mod tests {
     /// the observed event positions. Moving growth before consumption must
     /// either invert those positions or hand growth a ratio other than the
     /// average produced by the twelve real consumption steps.
+    /// claim: invariant(runtime-phase-order) — for a funded phase, production
+    /// precedes clearing, clearing precedes consumption, every real
+    /// consumption precedes pressure/growth, and all consumption precedes the
+    /// existing tribute collection. Preconditions require nonzero events in
+    /// every asserted edge, preventing a vacuous ordering pass.
     #[test]
     fn runtime_epoch_produces_then_clears_then_consumes_before_growth() {
         let geo = Geosphere::new(1);
@@ -7104,6 +7121,11 @@ mod tests {
         );
     }
 
+    /// claim: invariant(runtime-tribute-order) — existing tribute collection
+    /// occurs after funded exchange, typed consumption, and growth. The
+    /// fixture requires positive clearing, consumption, growth, and tribute,
+    /// so an empty trace cannot satisfy the ordering assertion.
+    ///
     /// Mutation target: moving tribute collection before typed exchange,
     /// consumption, or growth must invert the runtime trace; bypassing the
     /// runtime loop cannot satisfy this fixture because only `run_epoch` is

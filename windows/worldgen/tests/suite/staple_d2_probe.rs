@@ -501,6 +501,10 @@ fn the_three_existing_bar_boundaries_are_inclusive_in_the_passing_direction() {
     }
 }
 
+/// claim: invariant(forall-seed, preregistered-bars) — treatment-only
+/// instability counts only treatment breaches when the paired control passes;
+/// settlement count passes inclusively inside `40..=400`, collapse passes at
+/// or below `0.05`, and alive-at-now passes at or above `50`.
 #[test]
 fn demographic_instability_counts_only_treatment_only_bar_breaches() {
     let mut pairs = fixture_with_attempts(vec![AttemptStatus::Refused]);
@@ -529,6 +533,9 @@ fn demographic_instability_counts_only_treatment_only_bar_breaches() {
     );
 }
 
+/// claim: invariant(fixed-world-denominator, preregistered-direction) — the
+/// instability pole is strictly more than half of the fixed 200-world
+/// denominator, so 100 does not fire and 101 does.
 #[test]
 fn instability_requires_more_than_half_the_fixed_world_denominator() {
     let mut pairs = fixture_with_attempts(vec![AttemptStatus::Refused]);
@@ -566,6 +573,10 @@ fn a_disabled_treatment_difference_is_rejected_before_zero_attempts() {
     );
 }
 
+/// claim: invariant(forall-seed, disabled-control) — the explicit disabled
+/// treatment emits the same ledger bytes as the untouched control and emits
+/// no exchange census. The assertion compares two independently constructed
+/// boundaries, not a value with itself.
 #[test]
 fn explicit_disabled_exchange_treatment_is_control_identical() {
     let components = WorldComponents::assemble().expect("canonical components assemble");

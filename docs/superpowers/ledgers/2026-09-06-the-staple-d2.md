@@ -207,20 +207,28 @@ record of the control-identity defect and is not part of this verdict.
 
 ## Deferred minors and follow-ups
 
-- Verify the specialization input and shortfall insertion point against the
-  live tree before dispatching any brief; every identifier in the brief must
-  be grepped first.
-- Correct the bar-source citation during Task 5 documentation reconciliation:
-  `history_tumult.rs` carries the settlement band `40..=400` and alive floor
-  `50`, but the approved collapse ceiling `0.05` is defined and asserted in
-  `history_sundering.rs`. Task 1 kept the approved value and recorded the live
-  source instead of silently inventing a replacement identifier.
-- Add the two typed resource names to the idea registry if implementation
-  makes them stable concepts rather than probe-local names.
-- Promote aggregate exchange metrics to the larger census only after paired
-  results show they are durable query needs.
-- Re-baseline the census after the D2 epoch and convert history-adjacent pins
-  to invariants; do not treat the D2 study trace as a permanent ledger.
+- The specialization input and shortfall insertion point were verified against
+  the live tree before dispatch; no stale identifier remained.
+- The bar-source citation is corrected: `history_tumult.rs` carries the
+  settlement band `40..=400` and alive floor `50`, while
+  `history_sundering.rs` owns the approved collapse ceiling `0.05`.
+- The two typed resource names remain implementation concepts, not registry
+  rows, until they stabilize beyond this rung.
+- Aggregate exchange metrics remain derived study output; promotion to the
+  larger census is deferred until query durability and frequency are shown.
+- Census re-baselining and conversion of history-adjacent pins to invariants
+  remain pending the sanctioned close path. This documentation pass does not
+  run a census or alter its fixtures.
+
+### Task 5 documentation close
+
+The close pass converted the typed partition, disabled-control identity,
+runtime phase ordering, and exact treatment-only bar directions into explicit
+invariant claims in the executable tests. Each ordering fixture requires the
+events it orders to be nonzero, and the control compares independently built
+boundaries, so the guards cannot pass vacuously. The chronicle and
+retrospective name the outcome of every deferred minor; no deferred item was
+silently dropped.
 
 ## G3 review questions
 

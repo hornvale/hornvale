@@ -56,4 +56,5 @@ campaign through the sluice after review.
 all deferred minors have outcomes, and the campaign close package is complete.
 **Tests**: Full stage gate, census drift checks, invariant suite, and final
 artifact verification.
-**Status**: Not Started
+**Status**: In Progress — close documentation and invariant conversion prepared;
+sanctioned census, stage gate, and G6 remain pending.
