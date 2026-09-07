@@ -32,6 +32,19 @@ decision helper treats a negative result as valid evidence while keeping
 `admit` and `reject` as the only product verdicts. This keeps a rejected
 hypothesis useful without letting a smaller graph become a product claim.
 
+The repair history is part of the result. Early recorder versions accepted
+declarative ownership without enforcing it, so the design was recast as a
+named-workload measurement cell. The cell then required canonical roots,
+read-only checkout handling, permitted-write tests, bounded timeout cleanup,
+and platform-specific enforcement. macOS needed a narrow `sysctl-read` rule
+for Rust and a constrained `mach-lookup` rule for `com.apple.bsd.dirhelper`;
+the broad lookup permission was removed. The baseline work also repaired
+reverse Cargo dependency traversal, path dependency discovery, cold-target
+symlink handling, graph identity, and separate preparation/build/test costs.
+Qualification repairs made persisted manifests carry workload and enforcement
+provenance, retain failed phase evidence, require complete paired evidence, and
+point the comparison at the committed candidate manifest.
+
 The campaign also exposed limits that remain open. The candidate was not
 qualified on Linux, repeated candidate savings were not measured, and the
 invalidation matrix contains authoritative observations rather than a
@@ -40,6 +53,15 @@ preserves the publication authority through an explicit accepted API, then
 must repeat the frozen Mac/Linux qualification. This campaign does not
 authorize selective verification, a semantic selector, a verdict cache, or
 production restructuring.
+
+Deferred work has a defined outcome. Linux candidate execution and repeatable
+candidate performance were unnecessary after the decisive Mac output mismatch
+and remain open only for a future candidate that preserves publication
+authority. A future candidate must expose that authority through an explicit
+API, repeat the two-host qualification, and retain machine-readable attempt
+evidence. No other minor or parked review finding remains open; the sandbox,
+schema, graph, path, timeout, provenance, and evidence findings were repaired
+and re-reviewed during Tasks 1–4.
 
 The full evidence is in `tools/digest/experiments/the-insulator/results/`:
 `baseline.json` is the combined Mac dossier, `mac-cold.json` and `mac-warm.json`

@@ -479,6 +479,7 @@
 - [The Spillway](./chronicle/the-spillway.md)
 - [The Newel](./chronicle/the-newel.md)
 - [The Grammar](./chronicle/the-grammar.md)
+- [The Insulator](./chronicle/the-insulator.md)
 
 # Appendix: The Frontier
 
