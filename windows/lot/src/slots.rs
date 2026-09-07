@@ -676,7 +676,32 @@ fn death_cause(world: &World, ctx: &LotContext, life: &Life) -> Answer {
         life.cause_provenance.as_ref()
     {
         sources.push(cite(world, *occupation, hornvale_history::OCC_CAUSE));
-    } else if matches!(life.cause_provenance, Some(CauseProvenance::Hazard { .. })) {
+    } else if let Some(CauseProvenance::Hazard { occupation }) = life.cause_provenance.as_ref() {
+        if let crate::draw::DeathCause::Pathogen(_) = cause
+            && let Some(prepared) = ctx
+                .occupations
+                .iter()
+                .find(|prepared| prepared.record.id == *occupation)
+        {
+            sources.push(cite(world, *occupation, hornvale_history::OCC_PEAK));
+            sources.push(cite(world, *occupation, hornvale_history::OCC_PERSON_YEARS));
+            if let Some(place) = settlement_on(
+                ctx,
+                world,
+                prepared.record.core.site,
+                prepared.record.core.people.0,
+            ) && world
+                .ledger
+                .value_of(place, hornvale_settlement::BIOME)
+                .is_some()
+            {
+                sources.push(cite(world, place, hornvale_settlement::BIOME));
+            }
+            sources.push(Source::Derived {
+                    function: "lot::endemic::endemic_burden_at",
+                    inputs: "the worldgen population substrate, era graph, pathogen catalogue, and era-adjusted site substrate".to_string(),
+                });
+        }
         sources.push(Source::Derived {
             function: "lot::draw::hazard_cause",
             inputs: "the unchanged Siler terms at the drawn death age, the authored per-band attribution constants, the site's strife, and the hash-expanded `cause` uniform".to_string(),

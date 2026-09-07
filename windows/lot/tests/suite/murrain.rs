@@ -106,6 +106,53 @@ fn real_seed_produces_named_outbreak_and_plague_endings() {
 }
 
 #[test]
+fn hazard_pathogen_cause_cites_ending_occupation_and_endemic_inputs() {
+    let world = hornvale_worldgen::seed_42_world();
+    let ctx = assemble(&world).unwrap();
+    let life = draw(&ctx, LotIndex(8), &Pick::default()).unwrap();
+    let pathogen = match &life.cause {
+        Some(DeathCause::Pathogen(pathogen)) => pathogen,
+        other => panic!("seed 42 Lot 8 is not a named hazard pathogen: {other:?}"),
+    };
+    assert_eq!(pathogen.0, "the-flux");
+    let ending_occupation = match life.cause_provenance {
+        Some(CauseProvenance::Hazard { occupation }) => occupation,
+        other => panic!("Lot 8 does not retain hazard provenance: {other:?}"),
+    };
+    assert_eq!(life.ending_occupation, ending_occupation);
+    let ending = ctx
+        .occupations
+        .iter()
+        .find(|prepared| prepared.record.id == ending_occupation)
+        .expect("hazard provenance names an ending occupation");
+    let story = tell(&world, &ctx, &life);
+    let cause = story.slot("cause").expect("cause slot exists");
+    assert_eq!(
+        cause.value,
+        SlotValue::Filled(life.cause.as_ref().unwrap().label())
+    );
+    assert!(cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Fact { entity, predicate, .. }
+            if *entity == ending.record.id.get() && predicate == hornvale_history::OCC_PEAK
+    )));
+    assert!(cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Fact { entity, predicate, .. }
+            if *entity == ending.record.id.get()
+                && predicate == hornvale_history::OCC_PERSON_YEARS
+    )));
+    assert!(cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Derived { function, .. } if *function == "lot::endemic::endemic_burden_at"
+    )));
+    assert!(cause.sources.iter().any(|source| matches!(
+        source,
+        Source::Derived { function, .. } if *function == "lot::draw::hazard_cause"
+    )));
+}
+
+#[test]
 fn plague_rendering_cites_the_closing_event_and_paired_facts() {
     let world = hornvale_worldgen::seed_42_world();
     let ctx = assemble(&world).unwrap();
