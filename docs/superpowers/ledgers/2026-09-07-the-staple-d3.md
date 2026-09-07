@@ -335,6 +335,32 @@ tests; stop before Task 3/4 production work. A future denominator-fixture
 repair needs its own approved task and a fresh probe run with a seed-naming
 failure message before it may classify the roster.
 
+## #9 [G4] — Denominator repair proposal
+
+**Finding:** the fixed-roster probe added a stronger per-seed assertion than
+the preregistered criterion requires. The criterion's `N` is the count of
+standing relations in the measured baked result; `1..=200` is the fixed
+measurement roster, not a requirement that every seed independently contain a
+standing relation. Seed 1 has no relation, while the seed-42 fixture and the
+sidecar coverage prove the witness can emit.
+
+**Proposed repair:** pool all emitted standing relation witnesses across the
+unchanged fixed roster, assert only the aggregate `N > 0`, and report each
+seed's relation count in the diagnostic readout. Do not omit seed 1, replace
+its result, or change the 200-seed roster. The aggregate remains relation-local
+and the denominator remains the existing standing-relation stock; an empty
+individual seed contributes zero relations rather than invalidating the pooled
+measurement.
+
+**Rejected:** narrowing the roster, selecting only seeds with relations,
+turning seed 1 into `C=0`, or rerunning the failed probe without changing the
+over-strong per-seed guard. Each would either post-select the denominator or
+misstate unavailable evidence.
+
+**Status:** this is a bounded probe-fixture repair only. It does not authorize
+production return flow or function conversion. A fresh fixed-roster run is
+required after the repair before Task 0 can enter any dead-pole branch.
+
 ## Follow-ups
 
 - Write the D3 brief/spec around this Task 0 criterion before proposing code.
