@@ -654,15 +654,71 @@ const RIVER_GLYPH: char = '"';
 /// rather than mint a second glyph for the same idea.
 const RELIEF_GLYPHS: [char; 6] = [' ', '`', ',', ';', '^', '%'];
 
-/// The colour claim for open ocean, when colour is allowed. An invented
-/// client-side palette, not a wire value: the world plate has no snapshot
-/// channel to carry a colour off (see
-/// [`hornvale_game_core::Source::World`]'s own doc).
-const OCEAN_COLOR: [u8; 3] = [20, 60, 160];
-/// The colour claim for a salt basin. See [`OCEAN_COLOR`].
-const SALT_BASIN_COLOR: [u8; 3] = [230, 230, 200];
-/// The colour claim for a river. See [`OCEAN_COLOR`].
-const RIVER_COLOR: [u8; 3] = [90, 180, 220];
+/// The reflectance claim for open ocean, when colour is allowed (The
+/// Newel, B6). An invented client-side spectrum, not a wire value: the
+/// world plate has no snapshot channel to carry a colour off (see
+/// [`hornvale_game_core::Source::World`]'s own doc), and there is no
+/// spectrum in the SIM for "open water seen from orbit" — see
+/// [`color_for`]'s own doc for what that does and does not mean.
+///
+/// **Authored, not measured** (bands at
+/// [`hornvale_kernel::color::BAND_CENTERS_NM`], 360-720 nm): blue-dominant,
+/// peaking at 440 nm and falling monotonically through green to near-zero
+/// by 680-720 nm, the shape of clear open water seen from above. The
+/// magnitude (peak 0.14, well under the `[0, 1]` ceiling
+/// [`hornvale_kernel::color::Reflectance::new`] enforces) was raised once
+/// from an initial peak of 0.08 — the first pass rendered legibly at
+/// [`hornvale_astronomy::illuminant::at_elevation`]'s dimmer angles but read
+/// as near-black at a high noon sun against the spectral land bands beside
+/// it (measured on the seed-42 window `Driver::world_plate_for_redraw`
+/// draws, not reasoned about) — so this is the raised curve, not the first
+/// guess.
+fn ocean_reflectance() -> hornvale_kernel::color::Reflectance {
+    hornvale_kernel::color::Reflectance::new([
+        0.05, 0.09, 0.14, 0.13, 0.09, 0.06, 0.035, 0.02, 0.01, 0.005,
+    ])
+    .expect("OCEAN_REFLECTANCE's bands are finite and in [0, 1]")
+}
+
+/// The reflectance claim for a salt basin. See [`ocean_reflectance`].
+///
+/// **Authored, not measured**: high and nearly flat (0.75-0.88 across all
+/// ten bands) with a slight warm lift toward 720 nm — a bright evaporite
+/// pan, not a mirror.
+fn salt_basin_reflectance() -> hornvale_kernel::color::Reflectance {
+    hornvale_kernel::color::Reflectance::new([
+        0.75, 0.78, 0.80, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88,
+    ])
+    .expect("SALT_BASIN_REFLECTANCE's bands are finite and in [0, 1]")
+}
+
+/// The reflectance claim for a river (The Newel, B6, Step 4's own
+/// decision). See [`ocean_reflectance`] for why this is a function and not
+/// a literal `const` array: [`hornvale_kernel::color::Reflectance::new`]
+/// validates at construction and is not a `const fn`.
+///
+/// **Given the same treatment as ocean and salt basin, deliberately.**
+/// `rasterize_rivers` used to paint a fixed `RIVER_COLOR` through
+/// `obs.show`, which would have made the river line the only surface left
+/// on the map ignoring the plate's illuminant once the two wet arms above
+/// were fixed — every other visible ink would answer to the clock and the
+/// river alone would not. `rasterize_rivers` already receives the observer
+/// it needs for the rest of this fix, and its own caller
+/// (`draw_terrain_layer`) already holds `spectral.illuminant`, so the fix
+/// costs one added parameter rather than a new plumbing path.
+///
+/// **Authored, not measured**: brighter than ocean (peak 0.26 against
+/// 0.14) and shifted slightly toward cyan (peak at 480-520 nm rather than
+/// 440), matching the old palette's own relative brightness and hue
+/// against [`ocean_reflectance`]'s `[20, 60, 160]`-vs-`[90, 180, 220]`
+/// predecessor without copying its numbers.
+fn river_reflectance() -> hornvale_kernel::color::Reflectance {
+    hornvale_kernel::color::Reflectance::new([
+        0.10, 0.16, 0.22, 0.26, 0.24, 0.18, 0.10, 0.05, 0.02, 0.01,
+    ])
+    .expect("RIVER_REFLECTANCE's bands are finite and in [0, 1]")
+}
+
 // THE RELIEF LADDER'S COLOURS ARE GONE (The Wash, Task 6). `RELIEF_COLORS`
 // was a six-entry `[[u8; 3]; 6]` index-matched to [`RELIEF_GLYPHS`], so the
 // glyph and the ink carried the SAME quantity — the elevation band — and
@@ -751,29 +807,39 @@ pub fn glyph_for(water: u8, band: u32) -> char {
 /// lives only in colour, so a colourless plate is a degraded plate and never
 /// an unreadable one (spec H5).
 ///
-/// **The two WET classes keep an invented client-side palette, and that is
+/// **The two WET classes keep an invented client-side spectrum, and that is
 /// not a leftover of the ladder.** `reflectance_at_facet` integrates the
 /// GROUND's cover mixture — lithology, biome expression, wetness — which is
 /// what lies *under* an ocean, not what its surface looks like from above;
-/// there is no spectrum in the sim for "open water seen from orbit". So
-/// ocean and salt basin claim [`OCEAN_COLOR`]/[`SALT_BASIN_COLOR`] exactly
-/// as [`RIVER_COLOR`] is claimed one layer up in [`rasterize_rivers`]. They
-/// are routed through [`crate::observer::TerminalObserver::show`] rather
-/// than emitted raw, so the observer decides what reaches the terminal for
-/// EVERY tile — which is what makes H5's "no colour at all" a claim about
-/// the plate and not just about its land.
+/// there is still no spectrum in the SIM for "open water seen from orbit",
+/// and there never will be one there — the sim models the ground, not a
+/// view of it from space. **That absence is now filled by the client
+/// instead of by a fixed sRGB triple**, because decision 0716 gives the
+/// view its own observer: [`ocean_reflectance`] and
+/// [`salt_basin_reflectance`] are spectra this module authors and owns,
+/// exactly as [`river_reflectance`] is claimed one layer up in
+/// [`rasterize_rivers`]. Before The Newel (B6) the two wet arms below
+/// called [`crate::observer::TerminalObserver::show`] on a bare `[u8; 3]`,
+/// which has no illuminant parameter at all — so open water rendered
+/// byte-identical from a sun 80 degrees up to one 60 degrees below the
+/// horizon. They are routed through [`crate::observer::TerminalObserver::
+/// observe`] now, the same call the spectral arm below already made, so the
+/// observer decides what reaches the terminal for EVERY tile under the
+/// SAME illuminant — which is what makes H5's "no colour at all" a claim
+/// about the plate and not just about its land, and what makes B6's fix a
+/// claim about the whole plate rather than only its land.
 ///
-/// Only `WaterKind::DryLand` (index 3 and up) reads the spectrum, which is
-/// exactly the branch that used to index [`RELIEF_GLYPHS`]'s deleted colour
-/// twin.
+/// Only `WaterKind::DryLand` (index 3 and up) reads the SIM's own spectrum,
+/// which is exactly the branch that used to index [`RELIEF_GLYPHS`]'s
+/// deleted colour twin.
 pub fn color_for(
     tile: &TileTerrain,
     illum: &hornvale_kernel::color::Illuminant,
     obs: &crate::observer::TerminalObserver,
 ) -> Option<[u8; 3]> {
     match tile.water {
-        0 => obs.show(OCEAN_COLOR),
-        1 => obs.show(SALT_BASIN_COLOR),
+        0 => obs.observe(&ocean_reflectance(), illum),
+        1 => obs.observe(&salt_basin_reflectance(), illum),
         _ => obs.observe(tile.reflectance.as_ref()?, illum),
     }
 }
@@ -885,8 +951,9 @@ const EXOTIC_COLOR: [u8; 3] = [170, 110, 220];
 /// intense alpine band.
 const VOLCANO_COLOR: [u8; 3] = [220, 70, 30];
 /// The colour claim for a waterfall — brighter and cooler than
-/// [`RIVER_COLOR`], so a knickpoint reads as a distinct substance on the
-/// same channel rather than a re-tinted river cell.
+/// [`river_reflectance`]'s rendered ink, so a knickpoint reads as a
+/// distinct substance on the same channel rather than a re-tinted river
+/// cell.
 const WATERFALL_COLOR: [u8; 3] = [190, 230, 245];
 
 /// The top fraction of settlements IN FRAME, by population, that draw
@@ -1240,6 +1307,10 @@ fn river_threshold(depth: u32) -> f64 {
 /// so a river has exactly the terrain layer's cache key and its
 /// never-invalidated lifetime (decision 0289). Drawing it inside
 /// [`draw_terrain_layer`] makes it free on redraw instead of merely cheap.
+#[allow(clippy::too_many_arguments)]
+// `illum` (The Newel, B6) pushes this to 8 — the river line now answers to
+// the same illuminant the terrain layer around it already does; see
+// `draw_terrain_layer`'s own allow for the identical shape of growth.
 fn rasterize_rivers(
     dst: &mut Grid,
     terrain: &GeneratedTerrain,
@@ -1248,6 +1319,7 @@ fn rasterize_rivers(
     win: &Window,
     colour_allowed: bool,
     obs: &crate::observer::TerminalObserver,
+    illum: &hornvale_kernel::color::Illuminant,
 ) {
     let net = terrain.channels();
     let (virtual_w, virtual_h) = virtual_dims(win.depth);
@@ -1309,7 +1381,7 @@ fn rasterize_rivers(
             } else if ax - bx > half {
                 bx += i64::from(virtual_w);
             }
-            draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed, obs);
+            draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed, obs, illum);
         }
     }
 }
@@ -1364,6 +1436,9 @@ fn plate_position(
 /// Clipped by SKIPPING out-of-bounds writes rather than by a parametric clip.
 /// The bound that makes that affordable is the early reject above it: a
 /// segment whose bounding box misses the plate is never stepped at all.
+#[allow(clippy::too_many_arguments)]
+// `illum` (The Newel, B6) pushes this to 8 — see `rasterize_rivers`'s own
+// allow, whose call this is the tail of.
 fn draw_segment(
     dst: &mut Grid,
     a: (i64, i64),
@@ -1372,6 +1447,7 @@ fn draw_segment(
     h: i64,
     colour_allowed: bool,
     obs: &crate::observer::TerminalObserver,
+    illum: &hornvale_kernel::color::Illuminant,
 ) {
     // EARLY REJECT: neither end near the plate, and the box between them
     // missing it entirely. Without this a rung-13 segment spanning thousands
@@ -1407,18 +1483,21 @@ fn draw_segment(
                 glyph: Some(RIVER_GLYPH),
                 weight: Weight::Normal,
                 // Through the OBSERVER, like every other colour this layer
-                // claims (`color_for`'s own doc). [`RIVER_COLOR`] is an
-                // invented palette entry, not a spectrum — a river has no
-                // reflectance to sense any more than an ocean does — but
-                // "the observer decides what reaches this terminal" is one
-                // rule or it is none, and it was none until spec H5's second
-                // arm found 54 of 1,920 tiles still coloured under a
-                // `ColorDepth::None` observer. On every shipped path this
-                // changes nothing: `NO_COLOR` sets `colour_allowed` false
-                // AND the depth to `None`, and `Ink::resolve` already
-                // forced `Plain` there; a truecolor terminal gets the
-                // identical triple back.
-                ink: Ink::resolve(obs.show(RIVER_COLOR), colour_allowed),
+                // claims (`color_for`'s own doc). `river_reflectance` is an
+                // invented client-side spectrum, not a sim reading — a
+                // river has no reflectance to sense any more than an ocean
+                // does — but "the observer decides what reaches this
+                // terminal, under the plate's own light" is one rule or it
+                // is none. It was none of the way to `NO_COLOR` until spec
+                // H5's second arm found 54 of 1,920 tiles still coloured
+                // under a `ColorDepth::None` observer, and it was none of
+                // the way to the CLOCK until The Newel's B6 found the whole
+                // wet channel byte-identical from a sun 80 degrees up to
+                // one 60 degrees below the horizon. On every shipped
+                // NO_COLOR path this changes nothing: `NO_COLOR` sets
+                // `colour_allowed` false AND the depth to `None`, and
+                // `Ink::resolve` already forced `Plain` there.
+                ink: Ink::resolve(obs.observe(&river_reflectance(), illum), colour_allowed),
                 // Terrain, not chart: a river is the world's own fixed
                 // geometry, the same channel the relief underneath it came off.
                 source: Source::World,
@@ -1508,6 +1587,7 @@ pub(crate) fn draw_terrain_layer(
         win,
         colour_allowed,
         spectral.observer,
+        spectral.illuminant,
     );
     grid
 }

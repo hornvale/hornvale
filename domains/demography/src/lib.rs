@@ -19,6 +19,7 @@ pub mod footprint;
 pub mod founder;
 pub mod niche;
 pub mod render;
+pub mod reproductive;
 pub mod stack_condense;
 pub use byproducts::{Byproducts, byproducts};
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
@@ -28,6 +29,13 @@ pub use flow::{Flow, flow};
 pub use footprint::home_range;
 pub use founder::condense_tagged;
 pub use render::{density_ppm, refugia_ppm, stack_density_ppm, strife_ppm};
+pub use reproductive::{
+    CareBurdenDistribution, HybridOutcome, HybridOutcomeDistribution, IndependenceOutcome,
+    OffspringDistribution, PopulationPersistenceInputs, ReproductiveInputError,
+    ReproductivePopulationInput, ReproductivePopulationSummary, ReproductivePossibility,
+    ReproductiveRole, ReproductiveTypicality, RoleAvailabilityDistribution, SocialSubstrateInput,
+    SurvivalDistribution, social_substrate_input, summarize_reproduction,
+};
 pub use stack_condense::StackSettlement;
 
 use hornvale_kernel::{Geosphere, Mass, ResourceVector, VertexMap};

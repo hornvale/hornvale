@@ -35,7 +35,7 @@
 //! Nathan's explicit instruction, and restoring it reopens the per-frame-slot
 //! defect this doc section exists to document.
 
-use crate::schema::Narration;
+use crate::schema::{Narration, Spatial};
 
 /// What a candidate is — mirrors the wire tags on session NounEntry.kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,6 +101,101 @@ fn category_of(kind: &str) -> Category {
 impl CandidateSource for CurrentTurnNouns {
     fn candidates(&self) -> Vec<Candidate> {
         self.nouns.clone()
+    }
+}
+
+/// v2's second scope (The Newel, Task 4): settlement and cave marks drawn
+/// on the walk-band chart, so completion sees names the map shows and the
+/// current turn's narration does not (a distant settlement, or an agent
+/// several rooms away).
+///
+/// **Gated by discovery, and the gate lives outside this crate.** Decision
+/// 0670: a placed site's glyph draws whether or not it has been
+/// discovered, but its proper NAME is withheld until then, and completion
+/// is a name surface, so it must take the same gate. This crate carries no
+/// `hornvale_kernel` dependency and no discovery ledger at all — `lib.rs`'s
+/// own doc: "no hornvale dependency, by design" — so it cannot itself turn
+/// a mark's packed room id into a `Vertex` or ask whether that vertex's
+/// site has been discovered. [`ChartMarks::update`] asks its caller
+/// instead: `is_discovered(kind, room)` is handed each mark's own `kind`
+/// string and the packed id of the room it stands on, and the caller
+/// (the driver, which owns `NearestVertexIndex`/`Geosphere` and the
+/// discovery ledger) answers with whatever machinery it has. This scope
+/// only asks and filters.
+#[derive(Debug, Default, Clone)]
+pub struct ChartMarks {
+    /// The candidates drawn from the latest walk-band chart; empty until
+    /// updated, and cleared on any non-walk band.
+    marks: Vec<Candidate>,
+}
+
+impl ChartMarks {
+    /// Replace the contents from `spatial`'s walk-band chart (a non-walk
+    /// band clears to empty).
+    ///
+    /// **`"agent"` is the ONE exemption, and everything else consults
+    /// `is_discovered`.** Decision 0670 covers a placed site's proper name;
+    /// an `"agent"` mark is a live creature, never a placed site, and gating
+    /// it would withhold something the decision never asked to withhold — so
+    /// `is_discovered` is not called for one, the same way
+    /// `resolve_chain_at`'s own discovery closure is only ever asked about a
+    /// feature that participates in the chain at all.
+    ///
+    /// **DEFAULT-DENY, and it used to be the other way round** (fix wave).
+    /// The match named `"settlement" | "cave"` as the gated arms and let `_`
+    /// through ungated, which leaked nothing at the time — the producer
+    /// emits exactly those two kinds plus `"agent"` — but
+    /// `windows/scene/src/surrounds.rs` explicitly anticipates further
+    /// kinds, and a new placed-site kind added there would have reached
+    /// completion ungated with nothing objecting. A gate whose safe
+    /// behaviour depends on a producer one crate boundary away staying
+    /// still is not a gate. Inverted, this repo's own default-deny posture
+    /// (type-audit, placement-audit, plumb) now holds here too: an
+    /// unrecognised kind is withheld until discovered, and admitting a new
+    /// ungated kind is a deliberate edit to this list.
+    pub fn update(&mut self, spatial: &Spatial, is_discovered: impl Fn(&str, u64) -> bool) {
+        // A `&` reference is `Copy`, so the closure below can be re-borrowed
+        // once per room (`flat_map`'s own `FnMut`) without requiring
+        // `is_discovered` itself to implement `Clone`.
+        let is_discovered = &is_discovered;
+        self.marks = match spatial {
+            Spatial::Walk { chart } => chart
+                .cells // lexicon: `Chart::cells` is the wire's own frozen field name for the chart's rooms — an area, not a vertex
+                .iter()
+                .flat_map(|c| {
+                    let room = c.room;
+                    c.marks.iter().filter_map(move |m| {
+                        let discovered = match m.kind.as_str() {
+                            "agent" => true,
+                            _ => is_discovered(&m.kind, room),
+                        };
+                        discovered.then(|| Candidate {
+                            name: m.noun.clone(),
+                            category: category_of_mark(&m.kind),
+                        })
+                    })
+                })
+                .collect(),
+            Spatial::Chamber { .. } | Spatial::Underground { .. } => Vec::new(),
+        };
+    }
+}
+
+/// Lenient mapping from a chart mark's `kind` string to [`Category`].
+/// `"settlement"` and `"cave"` are both places; `"agent"` (a session-owning
+/// consumer's own addition — see `schema.rs`'s own doc on [`crate::Mark`])
+/// is a creature.
+fn category_of_mark(kind: &str) -> Category {
+    match kind {
+        "settlement" | "cave" => Category::Place,
+        "agent" => Category::Creature,
+        _ => Category::Unknown,
+    }
+}
+
+impl CandidateSource for ChartMarks {
+    fn candidates(&self) -> Vec<Candidate> {
+        self.marks.clone()
     }
 }
 

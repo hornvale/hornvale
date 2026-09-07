@@ -86,14 +86,36 @@ while IFS= read -r wt; do
     # same as an idle worktree: a session mid-cleanup after its own merge has
     # a merged branch and live uncommitted work.
     #
-    # ONE EXCLUSION, and without it this whole script is dead code.
-    # `docs/timings/test-baseline-<host>.tsv` is rewritten by every green gate
-    # (The Sexton folded ci-record into gate-run), so "has run a gate" — the
-    # normal end state of a finished campaign — would otherwise make every pool
-    # member permanently unrecyclable and silently degrade the pool to cold
-    # creation, defeating the point. It is machine-written and regenerable;
-    # genuine work is never only in this file.
-    dirty="$(git -C "$wt" status --porcelain 2>/dev/null | grep -v 'docs/timings/test-baseline-' || true)"
+    # TWO EXCLUSIONS, and without them this whole script is dead code. Both
+    # files are written by `gate-run` on every green local gate, so "has run a
+    # gate" — the normal end state of a finished campaign — would otherwise
+    # make every pool member permanently unrecyclable and silently degrade the
+    # pool to cold creation, defeating the point. Genuine work is never only in
+    # either file.
+    #
+    # `docs/timings/test-baseline-<host>.tsv` is REWRITTEN by the next green
+    # gate (The Sexton folded ci-record into gate-run), so discarding it loses
+    # nothing at all.
+    #
+    # `docs/timings.md` is a different premise and is excluded on a weaker one.
+    # It is APPEND-ONLY history, so discarding a row destroys a measurement
+    # permanently — it is machine-written but NOT regenerable. It is excluded
+    # anyway because the alternative is worse and was live for a month:
+    # gate-run appends a row on every green gate INCLUDING the last one a
+    # campaign runs after its final commit, whose row no one is left to commit,
+    # so a finished campaign's worktree ended dirty by construction and never
+    # recycled. Measured 2026-09-06: 33 live worktrees against a design that
+    # assumed ~3, ~700 GB, and 9 of the 11 stale merged members were blocked by
+    # this file and nothing else. The rows were already being lost — just
+    # slowly, whenever someone eventually deleted the worktree.
+    #
+    # BECAUSE IT IS NOT REGENERABLE, THE DISCARD IS LOUD (below). That is the
+    # whole difference between the two exclusions, and
+    # `scripts/test-worktree-take.sh` pins it: without that test this change
+    # reads as a silent widening of the exclusion.
+    dirty="$(git -C "$wt" status --porcelain 2>/dev/null \
+        | grep -v 'docs/timings/test-baseline-' \
+        | grep -v 'docs/timings\.md' || true)"
     if [ -n "$dirty" ]; then
         echo "worktree-take: skipping $wt — working tree is dirty" >&2
         continue
@@ -127,6 +149,36 @@ if [ -n "$recycled" ]; then
     # the other half of one decision, not a separate judgement about someone's
     # work.
     git -C "$recycled" checkout --quiet -- 'docs/timings/test-baseline-*.tsv' 2>/dev/null || true
+    # THE APPEND-ONLY HALF, DISCARDED LOUDLY. Same mechanical reason as the
+    # line above — main's docs/timings.md moves constantly, so `git switch -c`
+    # would refuse to overwrite the local modification and `set -e` would abort
+    # AFTER "recycling" had already printed — but a different justification, so
+    # the rows are printed before they go. A measurement is being destroyed
+    # here; small, already-doomed, and worth one line of stderr rather than
+    # silence. Unstaged only, which is how gate-run writes it.
+    # ALL added lines, not just markdown table rows. A row-shaped grep
+    # (`^+|`) matches every row gate-run actually writes and is therefore
+    # green on the common case — but it goes SILENT on any other edit to the
+    # file, which is precisely the edit a human made and would most want to
+    # hear about before it is destroyed. A discard that is loud only for the
+    # machine-written case is not the guarantee this is claiming.
+    lost="$(git -C "$recycled" diff -- docs/timings.md | grep '^+' | grep -v '^+++' || true)"
+    if [ -n "$lost" ]; then
+        echo "worktree-take: discarding uncommitted docs/timings.md rows from $recycled:" >&2
+        # A read loop rather than `sed 's/^+/  /'`, which trips SC2001. The
+        # lint target runs at default severity, so a mere style finding is a
+        # hard failure here rather than advice.
+        #
+        # And do not begin a wrapped comment line with the linter's own name:
+        # a line starting `# shellcheck` is parsed as a DIRECTIVE, and an
+        # unparseable one is SC1073/SC1072 — two errors, reported against the
+        # `if` above, for a sentence that was only ever prose. Cost one round
+        # here.
+        printf '%s\n' "$lost" | while IFS= read -r line; do
+            echo "  ${line#+}" >&2
+        done
+    fi
+    git -C "$recycled" checkout --quiet -- docs/timings.md 2>/dev/null || true
     git -C "$recycled" switch -c "campaign/$NAME" "origin/$BASE"
     rm -rf "$recycled/.superpowers/sdd"
     mv "$recycled" "$DEST"
