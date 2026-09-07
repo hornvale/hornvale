@@ -249,7 +249,7 @@ class AttemptTests(unittest.TestCase):
             late = target / "late"
             child_script = (
                 "import time; "
-                f"time.sleep(0.5); open({str(late)!r}, 'w').write('late')"
+                f"time.sleep(2.0); open({str(late)!r}, 'w').write('late')"
             )
             script = (
                 "import subprocess, sys, time; "
