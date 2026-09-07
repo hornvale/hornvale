@@ -49,16 +49,18 @@ the public-emission choice is deferred to the D3 design brief.
 For the baked world's standing tribute relations at `now`, let `N` be the
 count of relations in `History::tribute` (the existing
 `tribute_relations_at_now` stock), and let `C` be the count of those same
-relations whose downhill return produces a derived `Function` other than the
-existing default `Function::Agrarian`. The probe must assert `N > 0` before
-reporting a ratio. The D3 activation bar is `C/N` strictly between the two
-dead poles:
+relations whose downhill return produces one of D3's three derived functions:
+`Function::Trade`, `Function::Cult`, or `Function::Fort`. The probe must
+assert `N > 0` before reporting a ratio. `Function::Mine` is excluded: it is
+already the separate, existing working-daughter path and would let mining
+alone make D3 appear active. The D3 activation bar is `C/N` strictly between
+the two dead poles:
 
 ```text
 0/N  = no relation returns enough protection, goods, or legitimacy to
-       produce a non-Agrarian function (the flow is still a sink)
-N/N  = every relation produces a non-Agrarian function (uniform relabeling,
-       not a gradient)
+       produce a D3 function (the flow is still a sink)
+N/N  = every relation produces a D3 function (uniform relabeling, not a
+       gradient)
 0 < C < N = the relation graph differentiates at least two outcomes
 ```
 
