@@ -30,9 +30,11 @@ invalid. Capture also runs every workload inside a host filesystem sandbox:
 macOS requires `/usr/bin/sandbox-exec`, while Linux requires `bwrap`. On
 macOS, the profile also permits the narrow `sysctl-read` operation required by
 Rust's runtime to allocate its stack guard page; without it, Rust aborts before
-Cargo starts with `EINVAL`. The sandbox makes only the canonical target and
-evidence roots writable; the checkout remains read-only, and capture refuses
-before launch when the host mechanism is unavailable. This is
+Cargo starts with `EINVAL`. `xcrun` additionally requires lookup of the exact
+global Mach service `com.apple.bsd.dirhelper` to obtain `DARWIN_USER_TEMP_DIR`;
+unrestricted Mach lookup is deliberately refused. The sandbox makes only the
+canonical target and evidence roots writable; the checkout remains read-only,
+and capture refuses before launch when the host mechanism is unavailable. This is
 prevention at the host boundary, not authentication against a hostile kernel
 or proof that a sandbox implementation is bug-free. Workload argv may contain
 `${CHECKOUT}`, which is replaced with the absolute owned checkout at execution

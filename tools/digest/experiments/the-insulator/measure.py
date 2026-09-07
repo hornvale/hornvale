@@ -638,10 +638,10 @@ def _sandbox_profile(roots: list[Path]) -> str:
     lines = [
         "(version 1)", "(deny default)", "(allow process*)",
         "(allow file-read*)", "(allow sysctl-read)",
-        # xcrun obtains DARWIN_USER_TEMP_DIR through a system service. This
-        # lookup does not grant filesystem writes; those remain limited to the
-        # explicit roots below.
-        "(allow mach-lookup)",
+        # xcrun obtains DARWIN_USER_TEMP_DIR through dirhelper. Keep the IPC
+        # exception at the exact service name; filesystem writes remain
+        # limited to the explicit roots below.
+        '(allow mach-lookup (global-name "com.apple.bsd.dirhelper"))',
     ]
     lines.extend(f'(allow file-write* (subpath "{root}"))' for root in roots)
     return "\n".join(lines) + "\n"
