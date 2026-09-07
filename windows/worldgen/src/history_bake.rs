@@ -1928,6 +1928,20 @@ fn clear_local_exchange(
     clear_declared_local_exchange(graph, &snapshots, &proposals)
 }
 
+/// Convert the completed bake into its durable history, preserving the exact
+/// production crossing used by [`bake`]. The test fixture below calls this
+/// seam after exercising the real outbreak application sequence.
+fn history_from_bake(bake: Bake<'_>, now: f64, tribute: Vec<TributeRelation>) -> History {
+    History {
+        records: bake.records,
+        now,
+        tribute,
+        outbreaks: bake.outbreaks,
+        tally: bake.tally,
+        exchange: bake.exchange,
+    }
+}
+
 /// One alive (or lately-dead) community's live state during the bake. The
 /// `record` index ties it to its `BakeOccupation`; population is carried in
 /// full `f64` precision.
@@ -6044,14 +6058,7 @@ pub fn bake(
     // `while year < end_year`, so its last iteration's own end-of-epoch
     // accrual pass already credits every community still alive at
     // `end_year`. A sweep here would double-credit that epoch.
-    History {
-        records: bake.records,
-        now,
-        tribute,
-        outbreaks: bake.outbreaks,
-        tally: bake.tally,
-        exchange: bake.exchange,
-    }
+    history_from_bake(bake, now, tribute)
 }
 
 /// Build the interleaved epidemic fixture through the real bake-to-history
@@ -6142,13 +6149,7 @@ pub fn interleaved_rehit_history(site: Vertex) -> History {
     apply(&mut bake, KindId("the-pest"), 0.1, 1.0);
     apply(&mut bake, KindId("the-pox"), 0.1, 1.0);
     apply(&mut bake, KindId("the-pest"), 1.0, 0.5);
-    History {
-        records: bake.records,
-        now: 2500.0,
-        tribute: Vec::new(),
-        outbreaks: bake.outbreaks,
-        tally: bake.tally,
-    }
+    history_from_bake(bake, 2500.0, Vec::new())
 }
 
 #[cfg(test)]
