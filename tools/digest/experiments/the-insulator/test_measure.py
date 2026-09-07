@@ -47,7 +47,7 @@ def valid_attempt():
     command = command_for_workload(workload, Path(checkout))
     return manifest_for_attempt(
         source={"commit": "a" * 40, "tree": "b" * 40, "merge_base": "c" * 40},
-        graph={"sha256": "d" * 64, "package_count": 1},
+        graph={"sha256": "d" * 64, "package_count": 1, "workspace_member_count": 1},
         toolchain={"rustc": "rustc 1.80.0", "host_class": "mac"},
         target={"path": "/owned/checkout/target", "classification": "cold"},
         workload_id=workload["id"],
@@ -136,6 +136,8 @@ class AttemptTests(unittest.TestCase):
     def test_malformed_numeric_and_status_fields_are_rejected(self):
         cases = [
             ("graph", "package_count", -1),
+            ("graph", "workspace_member_count", -1),
+            ("graph", "workspace_member_count", True),
             ("graph", "sha256", "short"),
             ("capture", "exit_code", "0"),
             ("capture", "elapsed_s", float("nan")),
@@ -150,6 +152,12 @@ class AttemptTests(unittest.TestCase):
                 attempt[section][key] = value
                 with self.assertRaises(ValueError):
                     validate_attempt(attempt)
+
+    def test_missing_workspace_member_count_is_rejected(self):
+        attempt = valid_attempt()
+        del attempt["graph"]["workspace_member_count"]
+        with self.assertRaisesRegex(ValueError, "graph identity"):
+            validate_attempt(attempt)
 
     def test_unowned_capture_paths_are_rejected(self):
         attempt = valid_attempt()

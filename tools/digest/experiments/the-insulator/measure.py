@@ -868,7 +868,10 @@ def validate_attempt(record: dict) -> None:
     graph = record.get("graph")
     if (not isinstance(graph, dict) or not _sha256(graph.get("sha256"))
             or not isinstance(graph.get("package_count"), int)
-            or isinstance(graph.get("package_count"), bool) or graph["package_count"] < 0):
+            or isinstance(graph.get("package_count"), bool) or graph["package_count"] < 0
+            or not isinstance(graph.get("workspace_member_count"), int)
+            or isinstance(graph.get("workspace_member_count"), bool)
+            or graph["workspace_member_count"] < 0):
         raise ValueError("missing graph identity")
     toolchain = record.get("toolchain")
     if not isinstance(toolchain, dict) or not toolchain.get("rustc") or not toolchain.get("host_class"):
