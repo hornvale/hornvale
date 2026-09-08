@@ -6690,3 +6690,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T04:42:25Z | census-tail-anomalies | 0.269 | 0.230 | 0.024 | 0.94 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-08T04:42:26Z | rebaseline | 148.664 | 429.006 | 17.185 | 3.00 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-08T04:43:31Z | gate-commit | 53.042 | 75.225 | 17.676 | 1.75 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:44:21Z | gate-commit | 36.459 | 72.093 | 16.707 | 2.44 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
