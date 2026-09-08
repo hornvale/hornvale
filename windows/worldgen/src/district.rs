@@ -130,6 +130,80 @@ pub struct DistrictProjectionSet {
     overlap_limit: usize,
 }
 
+/// A resolved district readout suitable for downstream pattern composition.
+///
+/// This is deliberately an aggregate projection: members remain opaque
+/// relation references and are never promoted to persons, households, or
+/// biographies here.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PatternComposition {
+    /// Basis represented by every composed district.
+    pub basis: DistrictBasis,
+    /// Interval represented by every composed district.
+    pub interval: DistrictInterval,
+    /// Aggregate district readouts in deterministic identity order.
+    pub districts: Vec<PatternDistrict>,
+    /// Refused source assertions retained from the basis view.
+    pub refusals: Vec<RelationRefusal>,
+}
+
+/// Aggregate district data handed to pattern consumers.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PatternDistrict {
+    /// Projection-local district identity.
+    pub id: DistrictId,
+    /// Opaque aggregate members; no person expansion occurs here.
+    pub members: BTreeSet<RelationReference>,
+    /// Bounded parent relation preserved from the projection.
+    pub parent: Option<DistrictId>,
+    /// Bounded partial-overlap relations preserved from the projection.
+    pub overlaps: BTreeSet<DistrictId>,
+    /// Structural bridge members preserved as aggregate references.
+    pub bridge_members: BTreeSet<RelationReference>,
+}
+
+/// Compose only a fully resolved district projection into an aggregate readout.
+pub fn compose_district_patterns(
+    projections: &DistrictProjectionSet,
+    config: &DistrictConfig,
+) -> Result<PatternComposition, DistrictStatus> {
+    if projections.status != DistrictStatus::Resolved {
+        return Err(projections.status);
+    }
+    if projections.districts.is_empty() {
+        return Err(DistrictStatus::Disconnected);
+    }
+    if projections.districts.iter().any(|district| {
+        district.status != DistrictStatus::Resolved
+            || district.members.len() < config.minimum_members
+            || district.evidence.len() < config.minimum_evidence
+    }) {
+        return Err(projections
+            .districts
+            .iter()
+            .map(|district| district.status)
+            .find(|status| *status != DistrictStatus::Resolved)
+            .unwrap_or(DistrictStatus::InsufficientEvidence));
+    }
+
+    Ok(PatternComposition {
+        basis: projections.basis,
+        interval: projections.interval,
+        districts: projections
+            .districts
+            .iter()
+            .map(|district| PatternDistrict {
+                id: district.id.clone(),
+                members: district.members.clone(),
+                parent: district.parent.clone(),
+                overlaps: district.overlaps.clone(),
+                bridge_members: district.bridge_members.clone(),
+            })
+            .collect(),
+        refusals: projections.refusals.clone(),
+    })
+}
+
 /// Why two district projection sets cannot be compared for continuity.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum DistrictContinuityIncomparability {

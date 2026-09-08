@@ -1,7 +1,8 @@
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_worldgen::district::{
     DistrictBasis, DistrictConfig, DistrictContinuityIncomparability, DistrictContinuityState,
-    DistrictId, DistrictInterval, DistrictStatus, compare_districts, project_districts,
+    DistrictId, DistrictInterval, DistrictStatus, PatternComposition, compare_districts,
+    compose_district_patterns, project_districts,
 };
 use hornvale_worldgen::relation::{
     RelationAssertion, RelationDirection, RelationDirectionPolicy, RelationInterval, RelationKind,
@@ -1146,4 +1147,118 @@ fn intersection(
     right: &BTreeSet<RelationReference>,
 ) -> BTreeSet<RelationReference> {
     left.intersection(right).cloned().collect()
+}
+
+#[test]
+fn resolved_cohort_projection_composes_without_person_expansion() {
+    let view = RelationView::new(vec![assertion(
+        RelationKind::Presence,
+        "cohort:a",
+        "cohort:b",
+        RelationDirection::Symmetric,
+        1.0,
+    )])
+    .unwrap();
+    let interval = district_interval(0, 10);
+    let cfg = config(RelationDirectionPolicy::Symmetric);
+    let projection = project_districts(&view, DistrictBasis::Presence, interval, &cfg);
+
+    let composition = compose_district_patterns(&projection, &cfg).unwrap();
+
+    assert_eq!(composition.basis, DistrictBasis::Presence);
+    assert_eq!(composition.interval, interval);
+    assert_eq!(composition.districts.len(), 1);
+    assert_eq!(
+        composition.districts[0].members,
+        refs(&["cohort:a", "cohort:b"])
+    );
+    assert!(
+        composition.districts[0]
+            .members
+            .iter()
+            .all(|member| member.as_str().starts_with("cohort:"))
+    );
+    let _: PatternComposition = composition;
+}
+
+#[test]
+fn pattern_composition_refuses_nonresolved_projection_statuses() {
+    let interval = district_interval(0, 10);
+    let cfg = config(RelationDirectionPolicy::Symmetric);
+    let empty = project_districts(
+        &RelationView::new(Vec::new()).unwrap(),
+        DistrictBasis::Spatial,
+        interval,
+        &cfg,
+    );
+    assert_eq!(
+        compose_district_patterns(&empty, &cfg),
+        Err(DistrictStatus::Disconnected)
+    );
+
+    let transient_view = RelationView::new(vec![assertion_during(
+        RelationKind::SpatialAdjacency,
+        "locus:a",
+        "locus:b",
+        RelationDirection::Symmetric,
+        1.0,
+        4,
+        5,
+    )])
+    .unwrap();
+    let mut transient_cfg = cfg.clone();
+    transient_cfg.minimum_duration_ticks = 5;
+    let transient = project_districts(
+        &transient_view,
+        DistrictBasis::Spatial,
+        interval,
+        &transient_cfg,
+    );
+    assert_eq!(
+        compose_district_patterns(&transient, &transient_cfg),
+        Err(DistrictStatus::TransientOnly)
+    );
+}
+
+#[test]
+fn pattern_composition_preserves_structure_and_basis_refusals() {
+    let view = RelationView::new(vec![
+        assertion(
+            RelationKind::Access,
+            "cohort:a",
+            "cohort:b",
+            RelationDirection::Directed,
+            1.0,
+        ),
+        assertion(
+            RelationKind::SpatialAdjacency,
+            "locus:a",
+            "locus:b",
+            RelationDirection::Symmetric,
+            1.0,
+        ),
+    ])
+    .unwrap();
+    let interval = district_interval(0, 10);
+    let cfg = config(RelationDirectionPolicy::SourceReachable(reference(
+        "cohort:a",
+    )));
+    let projection = project_districts(&view, DistrictBasis::Access, interval, &cfg);
+    let composition = compose_district_patterns(&projection, &cfg).unwrap();
+    assert_eq!(composition.refusals.len(), 1);
+    assert_eq!(composition.districts[0].parent, None);
+    assert_eq!(composition.districts[0].overlaps, BTreeSet::new());
+
+    let unsupported = project_districts(
+        &view,
+        DistrictBasis::Presence,
+        interval,
+        &config(RelationDirectionPolicy::Symmetric),
+    );
+    assert_eq!(unsupported.status, DistrictStatus::Disconnected);
+    assert_eq!(unsupported.refusals.len(), 2);
+    assert_eq!(
+        compose_district_patterns(&unsupported, &config(RelationDirectionPolicy::Symmetric)),
+        Err(DistrictStatus::Disconnected)
+    );
 }
