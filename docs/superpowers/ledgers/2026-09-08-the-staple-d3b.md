@@ -772,6 +772,17 @@ follow-up was regenerated and committed with the gate evidence.
 
 **Evidence:** implementation `78f9ecad6`; timing follow-up `3df3c02e7`.
 
+## #12 [Implementation] — Task 2 signatures accepted after provenance correction
+
+Task 2 added pure source-band and typed projection-signature helpers. The
+first review found one important semantic-drift risk: capacity thresholds were
+retyped instead of anchored to the existing hamlet bar. The correction now
+uses `HAMLET_POPULATION_CEILING` and a documented Hidage-style mirror for the
+private longhouse floor. The re-review approved the correction with no
+remaining findings.
+
+**Evidence:** implementation `f18ff7cf6`; correction `3b790782f`.
+
 - Verify the current ecology, stock, need, capability, movement, relation, and
   exchange identifiers and denominators before drafting Task 0.
 - Build a candidate-measure comparison covering opportunity contrast,
