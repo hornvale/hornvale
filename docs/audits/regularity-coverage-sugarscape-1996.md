@@ -82,15 +82,25 @@ The corpus proposes 4 measurable item(s), and they make 3 independent
 claim(s) — see the pairs below. Of those items, 2 carry a two-sided
 criterion and 2 carry a one-sided one.
 
-THE SURVIVING CRITERIA ARE CONSERVATIVE FLOORS AUTHORED BLIND, and this
+THE SURVIVING CRITERIA ARE MOSTLY CONSERVATIVE ONE-SIDED BOUNDS, and this
 report must not be read as though they were calibrated targets. A one-sided
-criterion is cleared by every world above its bound, including worlds far
-past anything the source describes; it separates a world that does the thing
-at all from one that does not, and it says nothing about magnitude. So a
+criterion says nothing on its unconstrained side: a floor is met by every
+world above it and a ceiling by every world below it, however far past
+anything the source describes. It separates a world that does the thing at
+all from one that does not, and it says nothing about magnitude. So a
 near-uniform `grown` sweep across these items is NOT evidence of reach. It
 is evidence that the world clears a small number of low bars that a
 plausibly-flat world would fail — which is the most this instrument was
 built to claim, and less than a reader scanning a tally will assume.
+
+The bands were authored ahead of measurement, with the exceptions the Frozen
+declaration above discloses by name — this report does not restate the
+blanket claim, because the corpus itself does not make one. A two-sided band
+is the only shape here that can fail at BOTH poles, and it is
+correspondingly the shape with real discriminating power; the count above
+says how many of these items carry one. Read the individual notes for which
+bound is at risk on which item: several say so about themselves, in both
+directions.
 
 The claim count is the item count with near-collinear statistics merged: two
 items reading statistics correlated at |r| >= 0.95 over the same population
@@ -131,24 +141,36 @@ totals add up, and again by name below.
 ## `absent` splits two ways
 
 An `absent` verdict says only that the statistic cannot be computed and
-nobody has registered it. That covers two very different situations, and the
-notes — not the verdict — are what separate them. An item whose note NAMES
-the instrument that would settle it is ROADMAP: the work is identified and
-small. An item whose note reports that the mechanism itself is missing is a
-GAP. The classification below reads each note for the phrases `instrument
-is` or `criterion is known` and lists every roadmap item by name, so it can
-be re-run by eye.
+nobody has registered it. That covers two very different situations. An item
+that DECLARES the instrument which would settle it — in the corpus's own
+`roadmap_instrument` field, not in its prose — is ROADMAP: the work is
+identified. An item declaring none is a GAP: the mechanism itself is
+missing, and there is nothing to point a column at.
 
-- roadmap (the note names the instrument): 5
-- gap (the mechanism is missing): 19
+IDENTIFICATION IS NOT SIZING, and this split must not be read as an
+estimate. Naming the right instrument says only that somebody knows what to
+build; several of the items below need a new census metric or a new
+criterion kind, which is a code change, a review and a test. Each roadmap
+item's declared instrument is printed with it, so the size can be judged
+rather than assumed.
 
-The roadmap items:
+- roadmap (the item declares the instrument): 6
+- gap (the mechanism is missing): 18
+
+The roadmap items, each with the instrument it declares:
 
 - `sug-heterogeneous-landscape` — The skew is characteristic of heterogeneous agents extracting resources from a landscape of fixed, unevenly distributed capacity
+  - instrument: a Gini or coefficient of variation over habitable capacity per site -- the quantity settlement actually competes for, at the site grain the claim is about
+- `sug-spatial-segregation` — Purposeful local movement toward the best available site produces spatially segregated population pools rather than one homogeneous spread
+  - instrument: a clustering or dispersion statistic over settlement positions: a nearest-neighbour distance, a join-count, or a Moran's I over an explicit weights matrix
 - `sug-seasonal-phase-lock` — A seasonal environment does not merely move agents; it locks collective behaviour to the phase of the year
+  - instrument: a Rayleigh test statistic (n*R^2, or its p-value), or a mean resultant length corrected for n -- a new criterion KIND, not a new band on the existing column
 - `sug-culture-is-generative` — Local cultural transmission is sufficient to generate culture; the rule K produces cultural formations rather than inert copies
+  - instrument: a measure of cultural divergence driven by contact: a distance between two peoples' lexica that moves with their history, rather than a per-species liveness count
 - `sug-social-speciation` — Separated subpopulations differentiate: each converges on its own culture, and cultural distance is what marks the boundary between them
+  - instrument: a cross-species lexical or phonological distance between separated peoples -- a distance, which no per-species liveness reading is at any bound
 - `sug-externality-displaces` — Environmental change is a live driver of relocation, not a decorative backdrop: degraded or depleted ground moves the people standing on it
+  - instrument: median-at-least: 1.0 on the climate-displacement count this item's note names -- a criterion kind this schema already offers, one line long, authorable only by a session that has not read that column's distribution
 
 ## Emergence type
 

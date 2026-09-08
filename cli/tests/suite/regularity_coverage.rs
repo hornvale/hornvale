@@ -6,6 +6,7 @@
 
 use hornvale::regularities::{self, Verdict};
 use std::path::PathBuf;
+use std::process::Command;
 
 fn workspace_root() -> PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -133,26 +134,20 @@ fn the_collinearity_is_measured_on_the_scored_population() {
 }
 
 /// Requirement 3: `absent` splits into roadmap and gap, both halves non-empty,
-/// and every roadmap item named. A degenerate split (all one side) would read
-/// as a distinction while carrying none.
+/// and every roadmap item named with the instrument it declares. A degenerate
+/// split (all one side) would read as a distinction while carrying none.
 #[test]
 fn the_absent_verdict_is_split_into_roadmap_and_gap() {
     let corpus = load_sugarscape();
     let report = regularities::render(&corpus, &census(), regularities::CORPORA[0]);
-    let absent: Vec<&str> = corpus
+    let absent: Vec<&regularities::Item> = corpus
         .items
         .iter()
         .filter(|i| i.verdict == Verdict::Absent)
-        .map(|i| i.id.as_str())
         .collect();
-    let roadmap: Vec<&str> = corpus
-        .items
+    let roadmap: Vec<&&regularities::Item> = absent
         .iter()
-        .filter(|i| {
-            i.verdict == Verdict::Absent
-                && (i.note.contains("instrument is") || i.note.contains("criterion is known"))
-        })
-        .map(|i| i.id.as_str())
+        .filter(|i| i.roadmap_instrument.is_some())
         .collect();
     assert!(
         !roadmap.is_empty() && roadmap.len() < absent.len(),
@@ -161,29 +156,142 @@ fn the_absent_verdict_is_split_into_roadmap_and_gap() {
         absent.len()
     );
     assert!(report.contains(&format!(
-        "- roadmap (the note names the instrument): {}\n",
+        "- roadmap (the item declares the instrument): {}\n",
         roadmap.len()
     )));
     assert!(report.contains(&format!(
         "- gap (the mechanism is missing): {}\n",
         absent.len() - roadmap.len()
     )));
-    for id in &roadmap {
+    for item in &roadmap {
         assert!(
-            report.contains(&format!("- `{id}` —")),
-            "roadmap item {id} must be named in the report"
+            report.contains(&format!("- `{}` —", item.id)),
+            "roadmap item {} must be named in the report",
+            item.id
+        );
+        let instrument = item.roadmap_instrument.as_deref().expect("declared");
+        assert!(
+            report.contains(&format!("  - instrument: {instrument}\n")),
+            "roadmap item {} must print the instrument it declares",
+            item.id
         );
     }
-    // The three the campaign spec names by hand must be on the roadmap side —
-    // the classifier is read off prose, so this pins that it still reaches
-    // them.
+    // The three the campaign spec names by hand must be on the roadmap side.
     for id in [
         "sug-seasonal-phase-lock",
         "sug-externality-displaces",
         "sug-heterogeneous-landscape",
     ] {
-        assert!(roadmap.contains(&id), "{id} must classify as roadmap");
+        assert!(
+            roadmap.iter().any(|i| i.id == id),
+            "{id} must classify as roadmap"
+        );
     }
+}
+
+/// The classification is DECLARED DATA, not inferred wording. A note may say
+/// "the discriminating instrument is …" and still be a gap, or say nothing of
+/// the sort and still be roadmap — because the field decides. Pinning that
+/// independence is what stops the prose classifier from creeping back.
+#[test]
+fn the_roadmap_split_is_not_a_function_of_note_wording() {
+    let corpus = load_sugarscape();
+    let phrase_bearing: Vec<&str> = corpus
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Absent)
+        .filter(|i| i.note.contains("instrument is") || i.note.contains("criterion is known"))
+        .map(|i| i.id.as_str())
+        .collect();
+    let declared: Vec<&str> = corpus
+        .items
+        .iter()
+        .filter(|i| i.roadmap_instrument.is_some())
+        .map(|i| i.id.as_str())
+        .collect();
+    // `sug-spatial-segregation` is the live witness: it names three concrete
+    // instruments and carries neither marker phrase, so the two sets differ.
+    // If they ever coincide, the test below is the only thing left saying the
+    // classification is not prose-derived.
+    assert_ne!(
+        phrase_bearing, declared,
+        "the declared set must not be reproducible from note phrases alone — if it \
+         becomes so, the independence of the field from the prose stops being observable"
+    );
+    assert!(
+        declared.contains(&"sug-spatial-segregation"),
+        "the item that names instruments without the marker phrase must be roadmap"
+    );
+}
+
+/// The freeze extends to the new field, in both directions: every `absent`
+/// item DECLARES it (explicitly, as a string or a `null`), and no other
+/// verdict carries it at all. Presence is read from the raw JSON, because
+/// `Option<String>` cannot tell an authored `null` from an omitted key — and
+/// an omission is exactly the way an item would slip past the declaration.
+#[test]
+fn every_absent_item_declares_the_field_and_no_other_item_carries_it() {
+    let path = workspace_root().join(regularities::CORPORA[0]);
+    let raw: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).expect("corpus file"))
+            .expect("corpus is JSON");
+    let items = raw["items"].as_array().expect("items is an array");
+    let mut missing = Vec::new();
+    let mut stray = Vec::new();
+    for item in items {
+        let id = item["id"].as_str().expect("an id");
+        let absent = item["verdict"] == serde_json::json!("absent");
+        let declared = item.get("roadmap_instrument").is_some();
+        if absent && !declared {
+            missing.push(id.to_string());
+        }
+        if !absent && declared {
+            stray.push(id.to_string());
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "every `absent` item must declare `roadmap_instrument` explicitly (a string, or \
+         `null` where no instrument is known): {missing:?}"
+    );
+    assert!(
+        stray.is_empty(),
+        "`roadmap_instrument` is meaningful for `absent` only — a `deferred` item's \
+         blocker is its registry row, and `refused`/`inapplicable` ask no instrument \
+         question: {stray:?}"
+    );
+}
+
+/// `note` is unparsed again, and this pins it. Rewording any note must not
+/// move the roadmap/gap split — the defect the structured field was added to
+/// close, where a committed artifact's headline was a function of prose.
+#[test]
+fn rewording_a_note_cannot_move_the_split() {
+    let path = workspace_root().join(regularities::CORPORA[0]);
+    let json = std::fs::read_to_string(&path).expect("corpus file");
+    let before = regularities::load(&json).expect("parses");
+    let split = |c: &regularities::Corpus| {
+        c.items
+            .iter()
+            .filter(|i| i.verdict == Verdict::Absent && i.roadmap_instrument.is_some())
+            .count()
+    };
+    // Strip every marker phrase the retired prose classifier looked for. Under
+    // that classifier this collapses the roadmap half to the one item whose
+    // note never carried a phrase; under the field it must not move at all.
+    let reworded = json
+        .replace("instrument is", "thing to build is")
+        .replace("criterion is known", "criterion has been worked out");
+    let after = regularities::load(&reworded).expect("reworded corpus still parses");
+    assert_eq!(
+        split(&before),
+        split(&after),
+        "the roadmap split must not depend on note wording"
+    );
+    assert!(
+        split(&before) > 1,
+        "the fixture must be able to detect a collapse"
+    );
 }
 
 /// Requirement 4: the power caveat is in the report's own text, and it sits
@@ -311,5 +419,188 @@ fn the_regeneration_is_wired_into_the_artifacts_script() {
             regularities::artifact_path(&corpus)
         )),
         "the redirect must be in the script, not in the command"
+    );
+}
+
+// --- The CLI verb, end to end -----------------------------------------------
+//
+// Everything above exercises `render` as a library call. These run the real
+// binary, because the parts most likely to be silently wrong live in
+// `cmd_regularities` and nowhere else: the flag-then-mode scan, `check`'s two
+// failure arms, `load_census`, and the unknown-mode error. Modelled on
+// `cli/tests/suite/system_coverage.rs`, which does the same for the sibling
+// verb.
+
+/// A scratch corpus derived from the real one, written to a unique path.
+///
+/// Named by process id like `system_coverage`'s, so parallel test binaries
+/// cannot collide, and removed by its caller after the run.
+fn scratch_corpus(tag: &str, edit: impl FnOnce(&mut serde_json::Value)) -> PathBuf {
+    let json = std::fs::read_to_string(workspace_root().join(regularities::CORPORA[0]))
+        .expect("reads the real corpus");
+    let mut corpus: serde_json::Value = serde_json::from_str(&json).expect("parses as JSON");
+    edit(&mut corpus);
+    let path = std::env::temp_dir().join(format!(
+        "hv-regularity-{tag}-{}.regularity.json",
+        std::process::id()
+    ));
+    std::fs::write(&path, serde_json::to_string(&corpus).expect("serializes"))
+        .expect("writes the scratch corpus");
+    path
+}
+
+fn run(args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(args)
+        .current_dir(workspace_root())
+        .output()
+        .expect("runs the binary")
+}
+
+/// The committed artifact against the real binary's stdout — the same ratchet
+/// the library-level drift test makes, taken through the path `make
+/// rebaseline` actually uses. A library test cannot see a broken dispatch arm,
+/// a wrong default corpus, or a `load_census` that reads the wrong directory.
+#[test]
+fn the_binary_report_matches_the_committed_artifact() {
+    let out = run(&["regularities", "report"]);
+    assert!(out.status.success(), "regularities report failed: {out:?}");
+    let live = String::from_utf8(out.stdout).expect("utf-8");
+    let corpus = load_sugarscape();
+    let committed =
+        std::fs::read_to_string(workspace_root().join(regularities::artifact_path(&corpus)))
+            .expect("the committed report is readable");
+    assert_eq!(
+        live, committed,
+        "the binary's report drifted from the committed artifact — regenerate with \
+         `make rebaseline` and read the diff"
+    );
+}
+
+/// `check` against the real corpus and the committed artifact: green.
+#[test]
+fn the_binary_check_passes_against_the_committed_state() {
+    let out = run(&["regularities", "check"]);
+    assert!(
+        out.status.success(),
+        "regularities check must pass on a clean tree: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+/// **The flag-then-mode scan, which is the one this test exists for.** A
+/// naive `args.get(1)` reads `--corpus` as the mode, falls into the
+/// `report` arm, prints and exits 0 — so `regularities --corpus X check`
+/// would be a FALSE PASS for anything gating on `check`. The corpus here is
+/// deliberately broken (an `absent` item carrying an anchor, which the audit
+/// refuses), so a `check` that really ran must fail.
+#[test]
+fn a_flag_before_the_mode_still_reaches_check() {
+    let scratch = scratch_corpus("flagscan", |c| {
+        let items = c["items"].as_array_mut().expect("items is an array");
+        for item in items.iter_mut() {
+            if item["verdict"] == serde_json::json!("absent") {
+                item["anchor"] = serde_json::json!("decision:0135");
+                break;
+            }
+        }
+    });
+    let out = run(&[
+        "regularities",
+        "--corpus",
+        scratch.to_str().expect("utf-8 path"),
+        "check",
+    ]);
+    let _ = std::fs::remove_file(&scratch);
+    assert!(
+        !out.status.success(),
+        "a `--corpus X check` that silently reported instead would exit 0 — the \
+         false-pass shape this scan exists to prevent"
+    );
+    let stderr = String::from_utf8(out.stderr).expect("utf-8");
+    assert!(
+        stderr.contains("regularity coverage audit found"),
+        "expected the audit-findings arm, got: {stderr}"
+    );
+}
+
+/// `check`'s OTHER failure arm: the audit is clean but the rendered report no
+/// longer matches the committed artifact. Exercised by moving an item's title,
+/// which changes the rendered bytes and nothing the audit inspects.
+#[test]
+fn the_binary_check_fails_on_drift_with_a_clean_audit() {
+    let scratch = scratch_corpus("drift", |c| {
+        c["items"][0]["title"] = serde_json::json!("A title nobody committed");
+    });
+    let out = run(&[
+        "regularities",
+        "--corpus",
+        scratch.to_str().expect("utf-8 path"),
+        "check",
+    ]);
+    let _ = std::fs::remove_file(&scratch);
+    assert!(!out.status.success(), "check must fail on drift");
+    let stderr = String::from_utf8(out.stderr).expect("utf-8");
+    assert!(
+        stderr.contains("drifted") && stderr.contains("make rebaseline"),
+        "expected the drift arm naming its repair, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("audit found"),
+        "a title change must not raise an audit finding: {stderr}"
+    );
+}
+
+/// An unknown mode is refused by name rather than silently reporting.
+#[test]
+fn an_unknown_mode_is_refused() {
+    let out = run(&["regularities", "matrix"]);
+    assert!(
+        !out.status.success(),
+        "an unimplemented mode must not fall through to `report`"
+    );
+    let stderr = String::from_utf8(out.stderr).expect("utf-8");
+    assert!(
+        stderr.contains("unknown mode 'matrix'") && stderr.contains("report|check"),
+        "the refusal must name the mode and the alternatives: {stderr}"
+    );
+}
+
+/// A corpus path that does not exist fails with the path in the message,
+/// rather than falling back to the default corpus.
+#[test]
+fn a_missing_corpus_is_refused_by_name() {
+    let out = run(&[
+        "regularities",
+        "--corpus",
+        "regularities/nope.json",
+        "report",
+    ]);
+    assert!(!out.status.success(), "a missing corpus must not succeed");
+    let stderr = String::from_utf8(out.stderr).expect("utf-8");
+    assert!(
+        stderr.contains("regularities/nope.json"),
+        "the refusal must name the path it could not read: {stderr}"
+    );
+}
+
+/// `load_census` resolves the study the CORPUS names, not a hard-coded one.
+/// A corpus naming a study with no committed goldens must fail rather than
+/// silently scoring against `the-census`.
+#[test]
+fn the_population_comes_from_the_corpus_not_a_hard_coded_study() {
+    let scratch = scratch_corpus("population", |c| {
+        c["population"] = serde_json::json!("a-study-that-does-not-exist");
+    });
+    let out = run(&[
+        "regularities",
+        "--corpus",
+        scratch.to_str().expect("utf-8 path"),
+        "report",
+    ]);
+    let _ = std::fs::remove_file(&scratch);
+    assert!(
+        !out.status.success(),
+        "a corpus naming an absent population must fail, not fall back to `the-census`"
     );
 }

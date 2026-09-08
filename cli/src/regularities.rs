@@ -91,7 +91,7 @@ pub enum Criterion {
 }
 
 /// One imported regularity as authored in the corpus.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(prose: source), bare-ok(count: emergence_type), bare-ok(identifier-text: statistic), bare-ok(identifier-text: anchor), bare-ok(prose: note)
+/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(prose: source), bare-ok(count: emergence_type), bare-ok(identifier-text: statistic), bare-ok(identifier-text: anchor), bare-ok(prose: roadmap_instrument), bare-ok(prose: note)
 #[derive(Debug, Clone, Deserialize)]
 pub struct Item {
     /// Corpus-local identifier, e.g. `sug-wealth-skew`.
@@ -130,7 +130,51 @@ pub struct Item {
     /// `unmeasured`.
     #[serde(default)]
     pub anchor: Option<String>,
-    /// One line of human context. Never parsed.
+    /// The instrument that would settle this item, where one is known.
+    ///
+    /// Meaningful for `absent` only, and it is what splits that verdict's two
+    /// very different populations: an item nobody can measure because the
+    /// mechanism is missing (no economy, no disease model) and an item nobody
+    /// has measured because the column has not been written yet. `absent` is
+    /// one value and cannot carry that distinction, so it is DECLARED here.
+    ///
+    /// **A structured field rather than a phrase in `note`, and the reason is
+    /// worth stating.** The first draft read this off the note's prose, and
+    /// two items with the same content in different words landed in different
+    /// buckets — `sug-spatial-segregation` names three concrete instruments
+    /// ("nearest-neighbour distance, a join-count, a Moran's I over an
+    /// explicit weights matrix") and scored `gap`, while
+    /// `sug-heterogeneous-landscape` scored `roadmap` for the same shape of
+    /// sentence. Worse, the corpus is FROZEN, so the repair could not be a
+    /// re-wording: fixing a classification by editing a note is exactly the
+    /// data edit the freeze forbids, and it would have let any future
+    /// re-wording move a committed artifact with nothing objecting.
+    ///
+    /// **What qualifies.** The value names the statistic or criterion that
+    /// would DISCRIMINATE this regularity from its negation, at the item's
+    /// own grain, over the population `Corpus::population` names. `None`
+    /// where no such instrument is known — including two cases that look like
+    /// candidates and are not: an instrument that exists but reads the WRONG
+    /// GRAIN (a lineage graph between communities cannot settle a claim about
+    /// individual genealogy), and a claim that would need a different
+    /// POPULATION or a second generator rather than a new column (an
+    /// attribution needs an ablation, and a census is a population of worlds
+    /// under one physics).
+    ///
+    /// **It names the instrument; it does not size the work.** Three of the
+    /// six declared today need a new census metric or a new criterion kind —
+    /// a code change, a review and a test. Identification is not sizing, and
+    /// the report says so rather than calling this half "small".
+    #[serde(default)]
+    pub roadmap_instrument: Option<String>,
+    /// One line of human context.
+    ///
+    /// **Never parsed, and that is now true again.** Task 6's first draft
+    /// classified the `absent` split by scanning this text, which made a
+    /// committed artifact's headline a function of prose wording with no
+    /// freeze test over it; `roadmap_instrument` above took that job. Nothing
+    /// in this module reads this field except to reproduce it verbatim in the
+    /// report's item table.
     #[serde(default)]
     pub note: String,
 }
@@ -965,19 +1009,14 @@ fn is_two_sided(c: &Criterion) -> bool {
     )
 }
 
-/// Phrases by which an `absent` item's note NAMES the instrument that would
-/// settle it.
+/// Whether this item declares the instrument that would settle it.
 ///
-/// The verdict cannot carry this distinction — `absent` is one value — so the
-/// split is read off the notes, and the markers are printed in the report so a
-/// reader can re-run the classification by eye. Both are stated as the corpus
-/// states them: "the discriminating instrument is …", "the right instrument is
-/// …", "the discriminating criterion is known …".
-const INSTRUMENT_MARKERS: &[&str] = &["instrument is", "criterion is known"];
-
-/// Whether an `absent` item's note names the instrument that would settle it.
+/// Reads the structured [`Item::roadmap_instrument`] field, never the note.
+/// The first draft scanned note prose and mis-sorted two items whose notes say
+/// the same thing in different words; see that field's doc for why a re-wording
+/// could not be the repair.
 fn names_an_instrument(item: &Item) -> bool {
-    INSTRUMENT_MARKERS.iter().any(|m| item.note.contains(m))
+    item.roadmap_instrument.is_some()
 }
 
 /// A correlation formatted for a committed artifact.
@@ -1071,15 +1110,26 @@ pub fn render(
     )));
     s.push_str("\n\n");
     s.push_str(&wrap(
-        "THE SURVIVING CRITERIA ARE CONSERVATIVE FLOORS AUTHORED BLIND, and this report \
-         must not be read as though they were calibrated targets. A one-sided criterion is \
-         cleared by every world above its bound, including worlds far past anything the \
-         source describes; it separates a world that does the thing at all from one that \
-         does not, and it says nothing about magnitude. So a near-uniform `grown` sweep \
-         across these items is NOT evidence of reach. It is evidence that the world clears \
-         a small number of low bars that a plausibly-flat world would fail — which is the \
+        "THE SURVIVING CRITERIA ARE MOSTLY CONSERVATIVE ONE-SIDED BOUNDS, and this report \
+         must not be read as though they were calibrated targets. A one-sided criterion \
+         says nothing on its unconstrained side: a floor is met by every world above it \
+         and a ceiling by every world below it, however far past anything the source \
+         describes. It separates a world that does the thing at all from one that does \
+         not, and it says nothing about magnitude. So a near-uniform `grown` sweep across \
+         these items is NOT evidence of reach. It is evidence that the world clears a \
+         small number of low bars that a plausibly-flat world would fail — which is the \
          most this instrument was built to claim, and less than a reader scanning a tally \
          will assume.",
+    ));
+    s.push_str("\n\n");
+    s.push_str(&wrap(
+        "The bands were authored ahead of measurement, with the exceptions the Frozen \
+         declaration above discloses by name — this report does not restate the blanket \
+         claim, because the corpus itself does not make one. A two-sided band is the only \
+         shape here that can fail at BOTH poles, and it is correspondingly the shape with \
+         real discriminating power; the count above says how many of these items carry \
+         one. Read the individual notes for which bound is at risk on which item: several \
+         say so about themselves, in both directions.",
     ));
     s.push_str("\n\n");
     s.push_str(&wrap(&format!(
@@ -1144,20 +1194,22 @@ pub fn render(
 
     // `absent` is two different things, and no verdict value separates them.
     s.push_str("\n## `absent` splits two ways\n\n");
-    s.push_str(&wrap(&format!(
+    s.push_str(&wrap(
         "An `absent` verdict says only that the statistic cannot be computed and nobody \
-         has registered it. That covers two very different situations, and the notes — not \
-         the verdict — are what separate them. An item whose note NAMES the instrument \
-         that would settle it is ROADMAP: the work is identified and small. An item whose \
-         note reports that the mechanism itself is missing is a GAP. The classification \
-         below reads each note for the phrases {} and lists every roadmap item by name, so \
-         it can be re-run by eye.",
-        INSTRUMENT_MARKERS
-            .iter()
-            .map(|m| format!("`{m}`"))
-            .collect::<Vec<_>>()
-            .join(" or ")
-    )));
+         has registered it. That covers two very different situations. An item that \
+         DECLARES the instrument which would settle it — in the corpus's own \
+         `roadmap_instrument` field, not in its prose — is ROADMAP: the work is \
+         identified. An item declaring none is a GAP: the mechanism itself is missing, and \
+         there is nothing to point a column at.",
+    ));
+    s.push_str("\n\n");
+    s.push_str(&wrap(
+        "IDENTIFICATION IS NOT SIZING, and this split must not be read as an estimate. \
+         Naming the right instrument says only that somebody knows what to build; several \
+         of the items below need a new census metric or a new criterion kind, which is a \
+         code change, a review and a test. Each roadmap item's declared instrument is \
+         printed with it, so the size can be judged rather than assumed.",
+    ));
     s.push_str("\n\n");
     let absent: Vec<&Item> = corpus
         .items
@@ -1166,7 +1218,7 @@ pub fn render(
         .collect();
     let roadmap: Vec<&&Item> = absent.iter().filter(|i| names_an_instrument(i)).collect();
     s.push_str(&format!(
-        "- roadmap (the note names the instrument): {}\n",
+        "- roadmap (the item declares the instrument): {}\n",
         roadmap.len()
     ));
     s.push_str(&format!(
@@ -1174,9 +1226,13 @@ pub fn render(
         absent.len() - roadmap.len()
     ));
     if !roadmap.is_empty() {
-        s.push_str("\nThe roadmap items:\n\n");
+        s.push_str("\nThe roadmap items, each with the instrument it declares:\n\n");
         for item in &roadmap {
             s.push_str(&format!("- `{}` — {}\n", item.id, table_text(&item.title)));
+            s.push_str(&format!(
+                "  - instrument: {}\n",
+                table_text(item.roadmap_instrument.as_deref().unwrap_or(""))
+            ));
         }
     }
 
