@@ -939,3 +939,23 @@ coverage value is consumed. Disabled treatment remains an empty sidecar.
 missing projections; no census run. **Cost if wrong:** rerun the full roster;
 if zero-phase units are scientifically ineligible rather than incomplete, the
 denominator contract must be revisited at the next design gate.
+
+## #19 [Implementation] — Enabled zero-phase witnesses retain incompleteness
+
+Task 5 implements #18 by separating treatment selection from observation
+completeness. `diagnostic_subsistence_at_now` now returns no witnesses when
+the treatment is disabled and translates every live accumulator when it is
+enabled, preserving the existing `BakeId` sort. A zero-phase accumulator
+translates to `phase_count == 0` with `[0.0, 0.0]` non-evidentiary sentinels
+for both coverage and shortfall; positive-phase averaging is unchanged. The
+probe already rejects the zero-phase branch before consuming either vector.
+
+The regression first failed with `left: []` against the required explicit
+zero-phase witness, while its disabled-path assertion passed. After the
+bounded correction, the regression passed; the full `history_bake` unit
+module passed 101/101, and the non-ignored Staple D2/D3B suite passed 25/25.
+Workspace clippy with warnings denied passed, as did all four `gate-commit`
+subfloor chunks before this ledger update. No probe denominator, join
+severity, role/portfolio/dynamic/epoch, save/emission path, or census fixture
+changed. The ignored 200-seed report and every census command remained
+unrun, per the Task 5 implementation boundary.

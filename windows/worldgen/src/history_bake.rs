@@ -1029,6 +1029,9 @@ pub struct ExchangeCensus {
 /// Coverage and shortfall are typed `[A, B]` component averages. Exchange
 /// counters use the same ordering and count requester-side outcomes; status
 /// counts may overlap because a settled attempt is also proposed and accepted.
+/// When `phase_count == 0`, both ratio vectors are non-evidentiary zero
+/// sentinels; consumers must reject the incomplete observation before reading
+/// them.
 /// This diagnostic sidecar is never emitted into the history ledger.
 /// type-audit: bare-ok(count: phase_count), bare-ok(ratio: coverage), bare-ok(ratio: shortfall), bare-ok(count: attempts), bare-ok(count: proposed), bare-ok(count: accepted), bare-ok(count: settled), bare-ok(count: partial), bare-ok(count: refused), bare-ok(count: impossible)
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -1105,14 +1108,18 @@ impl DiagnosticSubsistenceAccumulator {
     }
 
     fn witness(&self, community: BakeId, site: Vertex) -> DiagnosticSubsistenceWitness {
-        debug_assert!(self.phase_count > 0);
-        let denominator = f64::from(self.phase_count);
-        let shortfall = self.shortfall_sum.map(|sum| sum / denominator);
+        let (coverage, shortfall) = if self.phase_count == 0 {
+            ([0.0; 2], [0.0; 2])
+        } else {
+            let denominator = f64::from(self.phase_count);
+            let shortfall = self.shortfall_sum.map(|sum| sum / denominator);
+            (shortfall.map(|ratio| 1.0 - ratio), shortfall)
+        };
         DiagnosticSubsistenceWitness {
             community,
             site,
             phase_count: self.phase_count,
-            coverage: shortfall.map(|ratio| 1.0 - ratio),
+            coverage,
             shortfall,
             attempts: self.attempts,
             proposed: self.proposed,
@@ -4332,15 +4339,18 @@ impl<'a> Bake<'a> {
     }
 
     /// Translate treatment observations for communities still alive at
-    /// `now`. A community with no observed phase is omitted so disabled
-    /// treatment remains distinguishable from measured full coverage.
+    /// `now`. Enabled communities with no observed phase remain explicit
+    /// incomplete witnesses; disabled treatment has no sidecar at all.
     fn diagnostic_subsistence_at_now(&self) -> Vec<DiagnosticSubsistenceWitness> {
         debug_assert_eq!(self.communities.len(), self.subsistence_diagnostics.len());
+        if self.exchange_treatment != ExchangeTreatment::Enabled {
+            return Vec::new();
+        }
         let mut witnesses: Vec<_> = self
             .communities
             .iter()
             .zip(&self.subsistence_diagnostics)
-            .filter(|(community, diagnostic)| community.alive && diagnostic.phase_count > 0)
+            .filter(|(community, _)| community.alive)
             .map(|(community, diagnostic)| diagnostic.witness(community.id, community.site))
             .collect();
         witnesses.sort_by_key(|witness| witness.community);
@@ -7250,6 +7260,7 @@ mod tests {
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
         let left_site = Vertex(0);
         let right_site = traversable_neighbors(&graph, left_site)[0];
         let left = bake.open(
@@ -7361,6 +7372,7 @@ mod tests {
         let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
         let refugia = VertexMap::from_fn(&geo, |_| false);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
         for site in [Vertex(0), Vertex(1), Vertex(2)] {
             let idx = bake.open(
                 KindId("goblin"),
@@ -7389,6 +7401,53 @@ mod tests {
         assert_eq!(
             first.iter().map(|witness| witness.site).collect::<Vec<_>>(),
             vec![Vertex(0), Vertex(2)]
+        );
+    }
+
+    /// Mutation target: filtering zero-phase accumulators recreates the live
+    /// projection join failure; translating them without the treatment guard
+    /// makes disabled treatment look like an enabled incomplete observation.
+    #[test]
+    fn enabled_zero_phase_live_community_is_an_explicit_incomplete_witness() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            20.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+
+        assert!(
+            bake.diagnostic_subsistence_at_now().is_empty(),
+            "disabled treatment must not expose unobserved accumulators"
+        );
+
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
+
+        assert_eq!(
+            bake.diagnostic_subsistence_at_now(),
+            vec![DiagnosticSubsistenceWitness {
+                community: BakeId(1),
+                site: Vertex(0),
+                phase_count: 0,
+                coverage: [0.0, 0.0],
+                shortfall: [0.0, 0.0],
+                attempts: [0, 0],
+                proposed: [0, 0],
+                accepted: [0, 0],
+                settled: [0, 0],
+                partial: [0, 0],
+                refused: [0, 0],
+                impossible: [0, 0],
+            }]
         );
     }
 
