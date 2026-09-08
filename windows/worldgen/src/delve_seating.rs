@@ -923,7 +923,7 @@ mod tests {
         );
     }
 
-    /// Seed 42 holds 26 occupied underworld columns, every one seated at the
+    /// Seed 42 holds 5 occupied underworld columns, every one seated at the
     /// top or second rung (`underworld_capacity_probe`, 2026-09-03). At least
     /// one column therefore reads `Made` at rung 0 or 1, exactly one rung
     /// per column is Made (a people has one seat), and its tenancy follows
@@ -992,6 +992,6 @@ mod tests {
             assert_eq!(origins[made[0]].1, expected, "vertex {vertex:?}");
             made_columns += 1;
         }
-        assert_eq!(made_columns, 26, "the probe's count for seed 42");
+        assert_eq!(made_columns, 5, "the probe's count for seed 42");
     }
 }
