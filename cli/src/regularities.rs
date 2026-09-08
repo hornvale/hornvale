@@ -347,14 +347,14 @@ pub fn values_of(census: &hornvale_lab::domesday::census::Census, statistic: &st
 
 /// Something wrong with an item, found by re-checking it against live state.
 ///
-/// Three variants, and the third is why this family exists as more than a
+/// Four variants, and the third is why this family exists as more than a
 /// report. The sibling corpora (`tropes/`, `systems/`, `sentences/`) all
 /// ratchet — a built capability stays built — so they need only notice
 /// evidence that stopped resolving. A *grown* regularity is emergent, and any
 /// retune of the history bake can destroy it while every other gate stays
 /// green, so this family also compares the authored verdict against the
 /// measured one, in BOTH directions.
-/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: Regressed.id), bare-ok(prose: Regressed.why)
+/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: Regressed.id), bare-ok(prose: Regressed.why), bare-ok(identifier-text: StaleDeferred.id), bare-ok(identifier-text: StaleDeferred.row), bare-ok(prose: StaleDeferred.why)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Finding {
     /// A verdict with no anchor, the wrong kind of anchor, or an anchor into
@@ -386,6 +386,30 @@ pub enum Finding {
         /// What the census says today.
         computed: Verdict,
         /// The measured summary that settles it.
+        why: String,
+    },
+    /// A `deferred` verdict whose registry row now reads a status that
+    /// falsifies "planned, not built" (see
+    /// [`crate::systems::DEFERRAL_FALSIFYING_STATUSES`]).
+    ///
+    /// **The consequence is heavier here than in the sibling `systems`
+    /// family, which is why this family carries the check despite the cost
+    /// of a fourth variant.** There, a stale deferral misreports a
+    /// capability. Here it WITHHOLDS AN ITEM FROM MEASUREMENT: the corpus
+    /// goes on asserting it cannot measure something it now can, so the item
+    /// never re-enters the measurement queue and its verdict is frozen
+    /// wrong. A family whose whole premise is that verdicts rot cannot ship
+    /// without the rot-detector its sibling already has.
+    ///
+    /// The exposure is concentrated, not diffuse: every `deferred` item in
+    /// the founding corpus cites the SAME registry row, so one row flipping
+    /// to `shipped` mis-verdicts a fifth of the corpus in a single move.
+    StaleDeferred {
+        /// The item's corpus-local id.
+        id: String,
+        /// The registry row whose question has been settled.
+        row: String,
+        /// What to do about it.
         why: String,
     },
 }
@@ -581,23 +605,41 @@ fn resolve_anchor(
                 })
             }
         }
-        Anchor::Registry(r) => {
-            if facts.registry_status(r).is_some() {
-                None
-            } else {
-                Some(Finding::Dangling {
+        Anchor::Registry(r) => match facts.registry_status(r) {
+            // Status is NORMALIZED by `RepoFacts` at gather time, so
+            // `**shipped (C1)**` matches while `elaborated (slice-2 shipped)`
+            // correctly does not.
+            Some(status) if crate::systems::DEFERRAL_FALSIFYING_STATUSES.contains(&status) => {
+                Some(Finding::StaleDeferred {
                     id: item.id.clone(),
-                    anchor: anchor_str.to_string(),
+                    row: r.clone(),
                     why: format!(
-                        "{} cites registry:{r}, which does not appear in \
-                         book/src/frontier/idea-registry.md. Either the row ID changed \
-                         (fix the anchor) or the row was removed (re-verdict this item \
-                         against whatever replaced it).",
+                        "{} defers to registry:{r}, which now reads `{status}` in \
+                         book/src/frontier/idea-registry.md. A `deferred` verdict here \
+                         claims the statistic CANNOT YET BE COMPUTED; that claim stopped \
+                         being true once this row's question was settled. The repair is \
+                         not a hand-written re-verdict: move this item back to \
+                         `unmeasured` (dropping its anchor) so the next measurement run \
+                         computes it and assigns `grown` or `flat` from the census. \
+                         Re-verdict to `refused` or `absent` only if the settled row \
+                         means the statistic will never be computed after all.",
                         item.id
                     ),
                 })
             }
-        }
+            Some(_) => None,
+            None => Some(Finding::Dangling {
+                id: item.id.clone(),
+                anchor: anchor_str.to_string(),
+                why: format!(
+                    "{} cites registry:{r}, which does not appear in \
+                         book/src/frontier/idea-registry.md. Either the row ID changed \
+                         (fix the anchor) or the row was removed (re-verdict this item \
+                         against whatever replaced it).",
+                    item.id
+                ),
+            }),
+        },
         Anchor::Reason(reason) => {
             if reason.trim().is_empty() {
                 Some(Finding::Unjustified {

@@ -878,7 +878,14 @@ fn audit_item(item: &Item, facts: &RepoFacts) -> Option<Finding> {
 /// registry already names an enforced or tested capability, not an
 /// aspiration (`SOC-dense-settlement`: "`Bake::vacant_habitable` enforces
 /// it"; `CLIENT-two-tier-position`: "Now tested, not argued").
-const DEFERRAL_FALSIFYING_STATUSES: [&str; 4] = ["shipped", "ratified", "rejected", "refuted"];
+///
+/// **Public, rather than mirrored.** `crate::regularities` needs the same
+/// set, and a second copy of it is the drift shape this repository keeps
+/// paying for: the two would agree on the day they were written and silently
+/// diverge the first time this reasoning is revisited. One set, in the module
+/// that reasons about it.
+/// type-audit: bare-ok(identifier-text)
+pub const DEFERRAL_FALSIFYING_STATUSES: [&str; 4] = ["shipped", "ratified", "rejected", "refuted"];
 
 /// The repair a `StaleDeferred` finding should suggest, keyed by the
 /// registry row's actual (normalized) status — the repairs genuinely

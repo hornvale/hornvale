@@ -443,3 +443,86 @@ fn the_committed_corpus_audits_clean_against_live_state() {
         "committed corpus has findings: {findings:#?}"
     );
 }
+
+/// A `deferred` item citing an arbitrary registry row, for the stale-deferral
+/// guard. Non-measurable verdicts carry no statistic and no criterion.
+fn deferred_item_corpus(row: &str) -> hornvale::regularities::Corpus {
+    let json = format!(
+        r#"{{"corpus":"t","unit":"regularity","ordered":false,
+             "population":"the-census","provenance":"p",
+             "frozen":"before first measurement, t",
+             "items":[{{"id":"i","title":"T","source":"S","emergence_type":2,
+               "verdict":"deferred","anchor":"registry:{row}","note":""}}]}}"#
+    );
+    hornvale::regularities::load(&json).expect("fixture parses")
+}
+
+/// A registry row that reads `shipped` in `book/src/frontier/idea-registry.md`
+/// today. Cited by the live-wiring test below; see that test for why a real
+/// row is named rather than a fixture status.
+const A_SHIPPED_REGISTRY_ROW: &str = "MAP-10";
+
+#[test]
+fn a_deferred_item_whose_registry_row_settled_is_stale() {
+    // Whichever falsifying status is cited, the claim `deferred` makes —
+    // "the statistic cannot be computed yet" — has stopped being true.
+    for status in hornvale::systems::DEFERRAL_FALSIFYING_STATUSES {
+        let row = live_registry_row_reading(status);
+        let findings = audit(
+            &deferred_item_corpus(&row),
+            &census(),
+            &generated_paths(),
+            &facts(),
+        );
+        assert!(
+            findings
+                .iter()
+                .any(|f| matches!(f, Finding::StaleDeferred { .. })),
+            "a `deferred` item citing `{row}` (status `{status}`) must be RED: {findings:?}"
+        );
+    }
+}
+
+/// The live-wiring test, and the one that matters. A fixture proves the code
+/// path; it does not prove the resolver reaches live state. This cites a row
+/// that genuinely reads `shipped` in the committed registry today.
+#[test]
+fn the_stale_deferral_check_fires_against_the_real_registry() {
+    // Asserted separately so a future failure reads as "the cited row moved"
+    // rather than as a mysterious guard failure. If `MAP-10`'s status ever
+    // changes, repoint `A_SHIPPED_REGISTRY_ROW` at another shipped row —
+    // that is a maintenance step, not a finding about this guard.
+    assert_eq!(
+        facts().registry_status(A_SHIPPED_REGISTRY_ROW),
+        Some("shipped"),
+        "{A_SHIPPED_REGISTRY_ROW} no longer reads `shipped` in the live registry"
+    );
+    let findings = audit(
+        &deferred_item_corpus(A_SHIPPED_REGISTRY_ROW),
+        &census(),
+        &generated_paths(),
+        &facts(),
+    );
+    assert!(
+        findings.iter().any(|f| matches!(
+            f,
+            Finding::StaleDeferred { row, .. } if row == A_SHIPPED_REGISTRY_ROW
+        )),
+        "the guard must fire against a genuinely shipped registry row: {findings:?}"
+    );
+}
+
+/// A row whose live, normalized status is exactly `status`. Panics when the
+/// registry has none — which is a finding about the registry, not a reason to
+/// weaken the guard's test.
+fn live_registry_row_reading(status: &str) -> String {
+    let f = facts();
+    let text = std::fs::read_to_string(workspace_root().join("book/src/frontier/idea-registry.md"))
+        .expect("idea registry");
+    text.lines()
+        .filter(|l| l.starts_with("| "))
+        .filter_map(|l| l.split('|').nth(1).map(str::trim))
+        .find(|id| f.registry_status(id) == Some(status))
+        .unwrap_or_else(|| panic!("no live registry row reads `{status}`"))
+        .to_string()
+}
