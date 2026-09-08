@@ -12,6 +12,21 @@
         "functional": true,
         "doc": "anchor orbital distance in AU"
       },
+      "association": {
+        "name": "association",
+        "functional": false,
+        "doc": "the second participant in an explicitly formed association"
+      },
+      "association-ended": {
+        "name": "association-ended",
+        "functional": false,
+        "doc": "the association target whose relation from the subject ended at this time"
+      },
+      "association-form": {
+        "name": "association-form",
+        "functional": false,
+        "doc": "the declared form of the subject's association beginning at this time"
+      },
       "biome": {
         "name": "biome",
         "functional": true,
@@ -27,6 +42,16 @@
         "functional": true,
         "doc": "the star's fractional main-sequence brightening per gigayear"
       },
+      "care": {
+        "name": "care",
+        "functional": false,
+        "doc": "the care recipient, directed from their caregiver"
+      },
+      "care-ended": {
+        "name": "care-ended",
+        "functional": false,
+        "doc": "the care target whose relation from the subject ended at this time"
+      },
       "cell-id": {
         "name": "cell-id",
         "functional": true,
@@ -36,6 +61,16 @@
         "name": "cult-form",
         "functional": true,
         "doc": "the cult form of a belief (organized or folk)"
+      },
+      "custody": {
+        "name": "custody",
+        "functional": false,
+        "doc": "the person or thing for which the subject has custody"
+      },
+      "custody-ended": {
+        "name": "custody-ended",
+        "functional": false,
+        "doc": "the custody target whose relation from the subject ended at this time"
       },
       "day-length-std": {
         "name": "day-length-std",
@@ -62,10 +97,40 @@
         "functional": true,
         "doc": "a belief's deity name (IPA transcription)"
       },
+      "dependency": {
+        "name": "dependency",
+        "functional": false,
+        "doc": "the provider, directed from the dependent"
+      },
+      "dependency-ended": {
+        "name": "dependency-ended",
+        "functional": false,
+        "doc": "the dependency target whose relation from the subject ended at this time"
+      },
       "derived-from-phenomenon": {
         "name": "derived-from-phenomenon",
         "functional": true,
         "doc": "phenomenon kind a belief mythologizes"
+      },
+      "descent": {
+        "name": "descent",
+        "functional": false,
+        "doc": "the descendant, directed from an earlier contributor"
+      },
+      "descent-ended": {
+        "name": "descent-ended",
+        "functional": false,
+        "doc": "the descent target whose relation from the subject ended at this time"
+      },
+      "die": {
+        "name": "die",
+        "functional": false,
+        "doc": "the subject person ceased future lifecycle activity"
+      },
+      "dissolve": {
+        "name": "dissolve",
+        "functional": false,
+        "doc": "the subject group ceased future activity"
       },
       "eccentricity-mean": {
         "name": "eccentricity-mean",
@@ -106,6 +171,26 @@
         "name": "frost-retreat",
         "functional": false,
         "doc": "the deep-time record of deglaciation"
+      },
+      "gender-identity": {
+        "name": "gender-identity",
+        "functional": false,
+        "doc": "a person's own gender-identity claim over a life interval"
+      },
+      "gender-identity-ended": {
+        "name": "gender-identity-ended",
+        "functional": false,
+        "doc": "the exclusive end of this gender-identity claim"
+      },
+      "gender-recognition": {
+        "name": "gender-recognition",
+        "functional": false,
+        "doc": "a social or institutional gender-recognition claim over a life interval"
+      },
+      "gender-recognition-ended": {
+        "name": "gender-recognition-ended",
+        "functional": false,
+        "doc": "the exclusive end of this gender-recognition claim"
       },
       "genesis-note": {
         "name": "genesis-note",
@@ -226,6 +311,16 @@
         "name": "max-ice-fraction",
         "functional": true,
         "doc": "land fraction under ice at the glacial maximum"
+      },
+      "membership": {
+        "name": "membership",
+        "functional": false,
+        "doc": "the group in which the subject participates"
+      },
+      "membership-ended": {
+        "name": "membership-ended",
+        "functional": false,
+        "doc": "the group in which the subject's membership ended at this time"
       },
       "moon-age-gyr": {
         "name": "moon-age-gyr",
@@ -407,6 +502,16 @@
         "functional": true,
         "doc": "fraction of globe cells below sea level"
       },
+      "origin": {
+        "name": "origin",
+        "functional": false,
+        "doc": "the originated person, directed from their origin source"
+      },
+      "origin-ended": {
+        "name": "origin-ended",
+        "functional": false,
+        "doc": "the origin target whose relation from the subject ended at this time"
+      },
       "outbreak-deaths": {
         "name": "outbreak-deaths",
         "functional": false,
@@ -442,6 +547,11 @@
         "functional": true,
         "doc": "the community whose occupation this person founded"
       },
+      "person-social-provenance": {
+        "name": "person-social-provenance",
+        "functional": false,
+        "doc": "the source supporting a realized person-social claim"
+      },
       "plate-count": {
         "name": "plate-count",
         "functional": true,
@@ -462,10 +572,45 @@
         "functional": true,
         "doc": "population of a settlement"
       },
+      "recognition": {
+        "name": "recognition",
+        "functional": false,
+        "doc": "the recognized subject, directed from the recognizing person or institution"
+      },
+      "recognition-ended": {
+        "name": "recognition-ended",
+        "functional": false,
+        "doc": "the recognition target whose relation from the subject ended at this time"
+      },
+      "recognition-interpretation": {
+        "name": "recognition-interpretation",
+        "functional": false,
+        "doc": "the interpretation assigned by the recognizing subject at this time"
+      },
       "refugium": {
         "name": "refugium",
         "functional": false,
         "doc": "a place habitable through the glacial maximum"
+      },
+      "reproductive-role": {
+        "name": "reproductive-role",
+        "functional": false,
+        "doc": "a realized reproductive-role reference over a life interval"
+      },
+      "reproductive-role-ended": {
+        "name": "reproductive-role-ended",
+        "functional": false,
+        "doc": "the exclusive end of this reproductive-role claim"
+      },
+      "residence": {
+        "name": "residence",
+        "functional": false,
+        "doc": "the place or group in which the subject resides"
+      },
+      "residence-ended": {
+        "name": "residence-ended",
+        "functional": false,
+        "doc": "the residence target whose relation from the subject ended at this time"
       },
       "retrograde-spin": {
         "name": "retrograde-spin",
@@ -492,15 +637,40 @@
         "functional": true,
         "doc": "a belief's sentiment (eternal, cyclic, or ambient)"
       },
+      "separate": {
+        "name": "separate",
+        "functional": false,
+        "doc": "the participant from whom the subject separated"
+      },
       "settlement-pin": {
         "name": "settlement-pin",
         "functional": false,
         "doc": "a settlement scenario pin, round-trippable"
       },
+      "sex-trait": {
+        "name": "sex-trait",
+        "functional": false,
+        "doc": "an observed sex trait over a life interval"
+      },
+      "sex-trait-ended": {
+        "name": "sex-trait-ended",
+        "functional": false,
+        "doc": "the exclusive end of this sex-trait claim"
+      },
       "sky-provider": {
         "name": "sky-provider",
         "functional": true,
         "doc": "the generated astronomy provider this world uses"
+      },
+      "social-role": {
+        "name": "social-role",
+        "functional": false,
+        "doc": "a realized social role over a life interval"
+      },
+      "social-role-ended": {
+        "name": "social-role-ended",
+        "functional": false,
+        "doc": "the exclusive end of this social-role claim"
       },
       "species-activity-cycle": {
         "name": "species-activity-cycle",
@@ -651,6 +821,26 @@
         "name": "tidally-locked",
         "functional": true,
         "doc": "the anchor world is tidally locked (no local day)"
+      },
+      "transfer": {
+        "name": "transfer",
+        "functional": false,
+        "doc": "the recipient of a transfer from the subject"
+      },
+      "transfer-ended": {
+        "name": "transfer-ended",
+        "functional": false,
+        "doc": "the transfer target whose relation from the subject ended at this time"
+      },
+      "transitioned": {
+        "name": "transitioned",
+        "functional": false,
+        "doc": "a witnessed transition in this person's realized history"
+      },
+      "transitioned-ended": {
+        "name": "transitioned-ended",
+        "functional": false,
+        "doc": "the exclusive end of this transition-history claim"
       },
       "wanderer-class": {
         "name": "wanderer-class",
