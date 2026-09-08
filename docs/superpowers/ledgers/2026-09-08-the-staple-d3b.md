@@ -800,6 +800,14 @@ the sidecar.
 whole-bake totals. Rejected because it loses typed local identity and repeats
 D3's diagnostic saturation risk.
 
+## #14 [Ruling] — Gate roster is part of the probe boundary
+
+Task 3's focused tests and clippy passed, but `gate-commit` refused the new
+probe because its one real world build was absent from
+`cli/tests/fixtures/world-build-sites.tsv`. Add the required `identity:1`
+roster row as mechanical gate accounting. This is not a census fixture and
+does not authorize running the ignored fixed-roster report.
+
 - Verify the current ecology, stock, need, capability, movement, relation, and
   exchange identifiers and denominators before drafting Task 0.
 - Build a candidate-measure comparison covering opportunity contrast,
@@ -809,3 +817,82 @@ D3's diagnostic saturation risk.
   Task 0 measure is selected.
 - Do not author `Function` labels or a specialization implementation until
   D3B clears gradient sufficiency.
+
+## #14 [G5] — Task 3 fixes the probe as two deterministic live-unit joins
+
+**Question:** How should the fixed-roster probe recover source support and D2
+realization without reconstructing either from emitted role labels or allowing
+pooled activity to rescue a flat seed?
+
+**Decision:** For each seed, sort the live `BakeOccupation` population by
+`BakeId`, require its count to equal `census(history).alive_at_now`, and make
+two independent one-to-one joins on `(community, site)`:
+
+```text
+L_s = sorted live BakeOccupation records
+S_s : BakeId -> (site, raw surplus, raw river access, raw present capacity)
+P_s : BakeId -> (site, phase count, raw A/B coverage and shortfall,
+                 typed attempts/proposed/accepted/settled/partial/refused/impossible)
+
+valid unit c iff c occurs exactly once in L_s, S_s, and P_s; sites agree;
+                demand is positive; phases are complete; vectors are finite
+                and non-negative; access statuses cohere.
+```
+
+`S_s` reads fertility-times-moisture and `river_proximity` directly, before
+any `Subsistence`, `Function`, `Notability`, or portfolio derivation. Its
+capacity field follows the existing Hidage public reproduction of the bake's
+present-era per-people capacity, including the same settling-kind order,
+biome affinity, habitat realm, and delve-seating multiplier. The Hidage-known
+temporal shadow remains visible: a living site whose present capacity is zero
+occupies the below-hamlet band; it is not dropped or replaced by its last
+historical era. `P_s` consumes the same-run enabled `History` seam approved in
+#13. The fixed complementary demand is positive on both typed components, and
+an absent witness remains a missing join rather than fabricated zero coverage.
+
+The reducer retains every joined raw source and projection vector beside its
+structural signatures and typed access counters. Equality of projection
+vectors is tested only at the existing eight-significant-digit committed
+boundary; raw values never feed back into the simulation. A positive source
+guard requires two varied axes and at least two source signatures occupied by
+more than one unit each, so a singleton outlier cannot establish sufficiency.
+Verdicts are computed seed by seed. Pooled signatures, raw spread, and access
+totals are descriptive only; a mixed roster remains mixed even when its pooled
+surface varies.
+
+**Why:** This is the smallest observation that preserves the approved
+source-before-realization separation and uses the same live denominator on
+both sides. Missing, duplicate, orphan, site-mismatched, disabled,
+zero-demand, phase-incomplete, non-finite/non-negative, incoherent-access, and
+non-conserving states each remain visible branches. Uniform committed vectors
+and hidden within-signature raw spread therefore cannot collapse into the same
+scientific result.
+
+**Alternatives discarded:** Reconstructing realization from emitted
+subsistence or `Function` labels was rejected as circular; using the whole-bake
+`ExchangeCensus` as the projection was rejected because it loses community
+identity; using only a closing stock was rejected because it erases the
+twelve-step seasonal cycle; evaluating pooled totals was rejected because it
+weights large seeds and hubs into the verdict; treating a singleton source
+signature as sufficient was rejected because one outlier would carry the
+entire contrast.
+
+**Ideonomy passes / overturns:** one pass (seed 4104), no overturn. The pass
+used abstraction-lift and negation in a notation organon, stressing cyclicity,
+visibility, and homogeneity. The lifted form was “node-local opportunity joined
+to periodically integrated realization through an explicit transmission
+path.” Its negations exposed three invalid probes: hidden source values
+replaced by visible labels, a periodic process reduced to a one-shot closing
+snapshot, and heterogeneous nodes reduced to one homogeneous pooled total.
+
+Cross-domain re-instantiation preserved the same notation in all three
+required readings: ecology maps `S_s` to habitat opportunity and `P_s` to
+realized two-nutrient intake; a local market maps them to production
+possibility and the post-trade typed basket; routing maps them to node capacity
+and delivered typed flow. In each reading transmission/access explains what
+can move but never becomes source value, and one large habitat, market, or hub
+cannot rescue a locally flat sample.
+
+**Capture actions:** encoded the notation and all negated branches in
+`staple_d3b_probe`; kept the 200-seed report ignored; added no role vocabulary,
+dynamics, epoch, specialization behavior, or census action.
