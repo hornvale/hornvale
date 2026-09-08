@@ -923,13 +923,15 @@ mod tests {
         );
     }
 
-    /// Seed 42's historical settlement layer holds 5 cave-bearing columns
-    /// with an occupation record for an underworld people, including records
-    /// whose occupations have ended. Every one is seated at the top or second
-    /// rung (`underworld_capacity_probe`, 2026-09-03), so at least one column
-    /// reads `Made` at rung 0 or 1 and exactly one rung per column is Made (a
-    /// people has one seat). This historical column witness is distinct from
-    /// the present living-occupation layer: only tenancy follows `is_alive()`.
+    /// Seed 42's Murrain world holds 5 historical cave-bearing columns with an
+    /// occupation record for an underworld people, including records whose
+    /// occupations have ended. The pre-Murrain `underworld_capacity_probe`
+    /// measured 26 on 2026-09-03; the difference is real history movement,
+    /// not a reclassification between population layers. Every current column
+    /// is seated at the top or second rung, so at least one column reads
+    /// `Made` at rung 0 or 1 and exactly one rung per column is Made (a people
+    /// has one seat). This historical column witness is distinct from the
+    /// present living-occupation layer: only tenancy follows `is_alive()`.
     ///
     /// **Grouped by vertex once, rather than calling [`crate::history_emit::
     /// occupations_at`] per vertex of the globe.** That function's

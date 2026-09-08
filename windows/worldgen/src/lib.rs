@@ -11623,10 +11623,12 @@ mod tests {
         // (vertex, band, year), so a world moves where a working is founded and
         // nowhere else.
         //
-        // The Murrain re-pin: the epidemic/history bake changes the
-        // historical settlement substrate, so the corroborating name count
-        // is 432 here. The three occlusion counts above remain the invariant;
-        // this exact count records the population-driven naming consequence.
+        // The Murrain re-pin: the epidemic/history bake changes the actual
+        // historical settlement substrate, not the population-layer read. On
+        // the committed seed-42 fixtures, alive occupations move 390 -> 307,
+        // exactly matching this name-gloss count's 515 -> 432. The three
+        // occlusion counts above remain the invariant; this exact count records
+        // the population-driven naming consequence.
         assert_eq!(count("name-gloss"), 432);
     }
 

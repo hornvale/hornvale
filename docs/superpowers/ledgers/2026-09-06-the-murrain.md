@@ -581,11 +581,17 @@ canonical sluice.
 
 The seed-42 delve witness's settled-column count is now named precisely rather
 than silently treated as a present population count. The observed `26 -> 5`
-change is a historical occupied-underworld-column witness: an ended occupation
-still records that a people made a chamber, while tenancy separately reads the
-present `is_alive()` layer. Worldgen now exposes a read-only `PopulationCensus`
-with historical and present occupation and column sets. Lot projections retain
-their `SourceCohort` and explicitly remain views of that substrate; composite
-projections cannot write persistent consequences, while aggregate state and
-materialized individuals can. No epidemic constant was changed and no census
-fixture was re-pinned in this follow-up.
+change is a historical occupied-underworld-column witness, but the layer split
+does not explain the movement: the five current columns have zero abandoned
+columns. Lefford's committed-fixture comparison settled the remaining
+instrument-vs-world question: seed 42 moves from 1,212 to 1,061 occupation
+records, 822 to 754 ended records, 390 to 307 alive records, and 452 to 377
+historical columns (main -> Murrain). The world changed; the reader did not
+merely reinterpret it. The 515 -> 432 name-gloss re-pin is consequently
+explained by the exact 83-record alive-population delta, and the five-column
+readout records the same real history movement. Worldgen now exposes a
+read-only `PopulationCensus` with historical and present occupation and column
+sets. Lot projections retain their `SourceCohort` and explicitly remain views
+of that substrate; composite projections cannot write persistent consequences,
+while aggregate state and materialized individuals can. No epidemic constant
+was changed and no census fixture was re-pinned in this follow-up.
