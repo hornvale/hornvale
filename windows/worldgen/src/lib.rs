@@ -11622,7 +11622,12 @@ mod tests {
         // property holding: the draw is still keyed on the parent's
         // (vertex, band, year), so a world moves where a working is founded and
         // nowhere else.
-        assert_eq!(count("name-gloss"), 515);
+        //
+        // The Murrain re-pin: the epidemic/history bake changes the
+        // historical settlement substrate, so the corroborating name count
+        // is 432 here. The three occlusion counts above remain the invariant;
+        // this exact count records the population-driven naming consequence.
+        assert_eq!(count("name-gloss"), 432);
     }
 
     #[test]
