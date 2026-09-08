@@ -86,6 +86,57 @@ that settlements can currently exploit it. D3B must distinguish “the world
 contains a differentiated source” from “a community can access, transform,
 need, and exchange that source.”
 
+## #2 [G2] — What unit and denominator should Task 0 count?
+
+**Question:** Should gradient sufficiency be counted over standing tribute
+relations, settlements, or another existing population?
+
+**Decision:** Count one **live `BakeOccupation` record at `History::now`** as
+the Task 0 unit. Pool those units over the fixed seed roster, with the
+denominator supplied by the existing `census(h).alive_at_now` count. Use the
+occupation's existing site and people fields to join source and community
+evidence. Do not use `tribute_relations_at_now` as the denominator.
+
+**Why:** Gradient sufficiency is a property of a community's local
+opportunity/capability position, so it is node-local. A tribute relation is an
+edge and can be absent precisely where a site still has a meaningful value
+gradient. `History` already exposes live occupation records, and the existing
+census already names their live population; choosing that surface adds no new
+identity or relation denominator. The first falsifier can therefore be
+read-only and can measure source variation even before D3's return flow or D4
+specialization exists.
+
+**Vacuity checks:** assert the pooled denominator is non-zero; assert every
+counted unit is live at `History::now`; assert the fixed-roster aggregation
+reports empty seeds explicitly rather than silently dropping them; and assert
+that the live-record identity/site join is total. If the production surface
+ever permits two live records to carry one community identity, report that as
+an integrity branch rather than silently treating the duplicate as a second
+community.
+
+**Alternatives discarded:**
+
+- **Standing tribute relations:** rejected as edge-biased and unable to see
+  un-subordinated or relation-free communities.
+- **Emitted settlement entities alone:** rejected because they omit live bake
+  state and do not carry the full node-local dynamics identity needed for a
+  source/capability join.
+- **All historical occupation records:** rejected because ended occupations
+  would mix past opportunity regimes with the standing world D3B is meant to
+  test.
+
+**Ideonomy passes / overturns:** one focused measure-design pass, no overturn.
+Dimension identification separated source variation, capability variation,
+need variation, connectivity, and side effects; the map/scale organons made
+the node-versus-edge and local-versus-pooled distinction visible; cross-domain
+re-instantiation in ecology and network flow confirmed that niche contrast is
+node-local while exchange access is an edge-derived secondary measure.
+
+**Capture actions:** the candidate-measure comparison now uses live occupation
+records as its common unit and `alive_at_now` as its denominator. Any future
+fantasy source must first prove a total join onto that unit before it can count
+as D3B evidence.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
