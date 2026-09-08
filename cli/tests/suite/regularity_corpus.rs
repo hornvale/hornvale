@@ -1,4 +1,4 @@
-use hornvale::regularities::{self, Anchor, Criterion, GeneratedPaths, Verdict};
+use hornvale::regularities::{self, Anchor, Criterion, GeneratedPaths, Verdict, meets};
 use std::path::PathBuf;
 
 const FIXTURE: &str = r#"{
@@ -195,4 +195,76 @@ fn anchor_parses_the_five_kinds_and_rejects_the_unknown() {
         "path: is not admitted by this family"
     );
     assert_eq!(Anchor::parse("nonsense"), None);
+}
+
+#[test]
+fn median_in_band_is_inclusive_at_both_edges() {
+    let v = [-1.2, -1.0, -0.8];
+    assert!(meets(
+        &Criterion::MedianInBand { lo: -1.2, hi: -0.8 },
+        &v,
+        3
+    ));
+    assert!(meets(
+        &Criterion::MedianInBand { lo: -1.0, hi: -1.0 },
+        &v,
+        3
+    ));
+    assert!(!meets(
+        &Criterion::MedianInBand { lo: -0.5, hi: 0.0 },
+        &v,
+        3
+    ));
+}
+
+#[test]
+fn fraction_in_band_counts_only_values_inside_it() {
+    let v = [-1.0, -1.0, -0.5, -0.5];
+    let c = Criterion::FractionInBandAtLeast {
+        lo: -1.2,
+        hi: -0.8,
+        min_fraction: 0.5,
+    };
+    assert!(meets(&c, &v, 4), "exactly half is at least half");
+    let c = Criterion::FractionInBandAtLeast {
+        lo: -1.2,
+        hi: -0.8,
+        min_fraction: 0.75,
+    };
+    assert!(!meets(&c, &v, 4));
+}
+
+#[test]
+fn present_on_fraction_measures_against_the_world_count_not_the_value_count() {
+    // The distinction that matters: 2 present values out of 10 worlds is 20%,
+    // not 100%. A criterion reading only the present slice would be vacuous.
+    let v = [1.0, 2.0];
+    assert!(!meets(
+        &Criterion::PresentOnFraction { min_fraction: 0.5 },
+        &v,
+        10
+    ));
+    assert!(meets(
+        &Criterion::PresentOnFraction { min_fraction: 0.5 },
+        &v,
+        4
+    ));
+}
+
+#[test]
+fn an_empty_population_never_meets_a_criterion() {
+    assert!(!meets(
+        &Criterion::MedianInBand { lo: -1.0, hi: 1.0 },
+        &[],
+        0
+    ));
+    assert!(!meets(&Criterion::MedianAtLeast { bound: 0.0 }, &[], 0));
+}
+
+#[test]
+fn one_sided_bounds_are_inclusive() {
+    let v = [1.0, 2.0, 3.0];
+    assert!(meets(&Criterion::MedianAtLeast { bound: 2.0 }, &v, 3));
+    assert!(meets(&Criterion::MedianAtMost { bound: 2.0 }, &v, 3));
+    assert!(!meets(&Criterion::MedianAtLeast { bound: 2.5 }, &v, 3));
 }

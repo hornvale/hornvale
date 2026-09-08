@@ -245,3 +245,58 @@ impl GeneratedPaths {
             .unwrap_or(false)
     }
 }
+
+/// Whether a frozen criterion is met by the present values of a statistic.
+///
+/// `present` is the statistic's values over worlds that have one; `worlds` is
+/// the population size including worlds where the statistic is absent. The
+/// two differ, and `PresentOnFraction` is the criterion that cares — a world
+/// can be *present with value 0.0*, which is not the same as absent, so this
+/// function never reads absence off the length of `present` alone.
+/// type-audit: bare-ok(ratio: present), bare-ok(count: worlds), bare-ok(flag: return)
+pub fn meets(criterion: &Criterion, present: &[f64], worlds: usize) -> bool {
+    if let Criterion::PresentOnFraction { min_fraction } = criterion {
+        if worlds == 0 {
+            return false;
+        }
+        return present.len() as f64 / worlds as f64 >= *min_fraction;
+    }
+    if present.is_empty() {
+        return false;
+    }
+    let mut sorted = present.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    let mid = sorted.len() / 2;
+    let median = if sorted.len().is_multiple_of(2) {
+        (sorted[mid - 1] + sorted[mid]) / 2.0
+    } else {
+        sorted[mid]
+    };
+    match criterion {
+        Criterion::MedianInBand { lo, hi } => median >= *lo && median <= *hi,
+        Criterion::MedianAtLeast { bound } => median >= *bound,
+        Criterion::MedianAtMost { bound } => median <= *bound,
+        Criterion::FractionInBandAtLeast {
+            lo,
+            hi,
+            min_fraction,
+        } => {
+            let inside = present.iter().filter(|v| **v >= *lo && **v <= *hi).count();
+            inside as f64 / present.len() as f64 >= *min_fraction
+        }
+        Criterion::PresentOnFraction { .. } => unreachable!("handled above"),
+    }
+}
+
+/// The present numeric values of a statistic, in census row order.
+///
+/// Absent, empty and unparseable readings are skipped — the same treatment
+/// `windows/lab/src/domesday/stats.rs` gives them.
+/// type-audit: bare-ok(identifier-text: statistic), bare-ok(ratio: return)
+pub fn values_of(census: &hornvale_lab::domesday::census::Census, statistic: &str) -> Vec<f64> {
+    census
+        .values(statistic)
+        .into_iter()
+        .filter_map(|reading| reading.parse::<f64>().ok())
+        .collect()
+}

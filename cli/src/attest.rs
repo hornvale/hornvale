@@ -314,8 +314,8 @@ pub const CONDITIONALLY_DROPPABLE: &[&str] = &["seam-guard", "clients", "heavy"]
 /// Attestation): either a roster set name, or a declared absence carrying
 /// its reason.
 ///
-/// Public since `regularities::GeneratedPaths` (decision 0261's discipline
-/// against a third parser of this file — see [`parse_declared`]).
+/// Public since `regularities::GeneratedPaths` reuses this reader instead
+/// of writing a second parser for the same file — see [`parse_declared`].
 /// type-audit: bare-ok(identifier-text: Roster.0)
 pub enum DeclaredAuthor {
     /// A roster set name (`artifacts`, `census`, `heavy`).
@@ -336,7 +336,7 @@ pub enum DeclaredAuthor {
 ///
 /// Public so `regularities::GeneratedPaths` can build its directory-
 /// inheritance map from this reader's output rather than re-parsing the
-/// file a third time (decision 0261).
+/// file a third time: one semantics for this format, in one place.
 /// type-audit: bare-ok(artifact: text), bare-ok(identifier-text: return)
 pub fn parse_declared(text: &str) -> Vec<(String, DeclaredAuthor)> {
     text.lines()
