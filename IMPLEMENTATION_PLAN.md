@@ -8,16 +8,16 @@
 **Goal**: Make the delve-seating regression assert the historical or present quantity it actually intends to protect, with provenance tied to the new readout.
 **Success Criteria**: The anti-vacuity and seating assertions remain intact, and the test message identifies the measured layer.
 **Tests**: Seed-42 delve seating test; focused worldgen suite.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 3: Connect projections explicitly
 **Goal**: Document and test the boundary between the authoritative population substrate and Lot projections, including composite and materialized individuals.
 **Success Criteria**: Projection metadata names its source cohort and causal status; population readouts do not treat projected people as substrate counts.
 **Tests**: Existing Lot projection tests plus one cross-layer contract test.
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 4: Verification and handoff
 **Goal**: Run focused tests, local commit gate, and prepare a stage resubmission only after the semantics are green.
 **Success Criteria**: Tests and audits pass; held request is superseded by a commit whose fixture changes are explained by the layer contract.
 **Tests**: Focused worldgen/Lot tests, `make gate-commit`.
-**Status**: Not Started
+**Status**: In Progress

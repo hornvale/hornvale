@@ -35,7 +35,7 @@
 - [ ] Run the focused test and confirm it passes.
 - [ ] Add unit-level assertions for the layer invariant: every present occupation is historical, and every present column is historical.
 - [ ] Run `cargo test -p hornvale-worldgen --test suite -- population_layers`.
-- [ ] Commit as `feat(worldgen): name historical and present population layers`.
+- [x] Commit as `feat(worldgen): name historical and present population layers` (`262e80e51`).
 
 ### Task 2: Reconcile the delve witness
 
@@ -51,7 +51,7 @@
 - [ ] Run the focused delve test and verify the failure, if any, identifies the layer rather than a generic stale number.
 - [ ] Replace only the ambiguous terminology/provenance; preserve the one-seat-per-column and tenancy assertions.
 - [ ] Run the focused delve test and confirm it passes with the measured layer name.
-- [ ] Commit as `test(the-murrain): label delve population witness layer`.
+- [x] Commit as `test(the-murrain): label delve population witness layer` (`783d7b5a4`).
 
 ### Task 3: Lock the substrate/projection boundary
 
@@ -68,7 +68,7 @@
 - [ ] Implement the minimal missing assertion-supporting change, if any.
 - [ ] Run the focused Lot test and confirm it passes.
 - [ ] Add a short module-level documentation note that projections are views of a substrate, not substitute population counts.
-- [ ] Commit as `test(lot): pin population substrate and projection boundary`.
+- [x] Commit as `test(lot): pin population substrate and projection boundary` (`25fbf8817`).
 
 ### Task 4: Verification and handoff
 
@@ -76,8 +76,8 @@
 - Modify: `IMPLEMENTATION_PLAN.md` statuses
 - Modify: `docs/superpowers/ledgers/2026-09-06-the-murrain.md` with the layer finding and follow-up
 
-- [ ] Run focused worldgen and Lot tests once, inspecting the complete output.
-- [ ] Run `cargo fmt --check`, the affected package clippy/tests, and `make gate-commit`.
-- [ ] Update the plan statuses and record that 26→5 is now named as a layer-specific observation rather than silently re-pinned.
+- [x] Run focused worldgen and Lot tests once, inspecting the complete output.
+- [x] Run `cargo fmt --check`, the affected package clippy/tests, and `make gate-commit`.
+- [x] Update the plan statuses and record that 26→5 is now named as a layer-specific observation rather than silently re-pinned.
 - [ ] Remove `IMPLEMENTATION_PLAN.md` only after every stage is complete, per repository guidance.
 - [ ] Do not submit a new stage request until the local evidence and commit contents are reviewed.

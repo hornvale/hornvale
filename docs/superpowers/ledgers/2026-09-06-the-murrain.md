@@ -576,3 +576,16 @@ first two are re-pinned here as readouts. The census remains a fixture refresh,
 not a waiver or a weakened sentinel; the component-clone and per-era graph
 reuse repairs are now in the ref and the refresh must be run through the
 canonical sluice.
+
+### Population-layer follow-up
+
+The seed-42 delve witness's settled-column count is now named precisely rather
+than silently treated as a present population count. The observed `26 -> 5`
+change is a historical occupied-underworld-column witness: an ended occupation
+still records that a people made a chamber, while tenancy separately reads the
+present `is_alive()` layer. Worldgen now exposes a read-only `PopulationCensus`
+with historical and present occupation and column sets. Lot projections retain
+their `SourceCohort` and explicitly remain views of that substrate; composite
+projections cannot write persistent consequences, while aggregate state and
+materialized individuals can. No epidemic constant was changed and no census
+fixture was re-pinned in this follow-up.
