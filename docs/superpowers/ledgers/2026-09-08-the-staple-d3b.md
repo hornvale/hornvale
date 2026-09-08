@@ -991,6 +991,26 @@ branch. A nonzero count that is not divisible by the epoch phase count remains
 **Evidence:** scoped review of `c90c440fa`; no roster or census run after the
 finding.
 
+## #22 [Task 6 complete] — Fixed roster reports gradient variation without clearing the roster
+
+After the severity correction, the local ignored fixed-roster diagnostic
+completed 200/200 seeds in 573.56 seconds. The producer join defect remained
+absent: no seed had missing projections, invalid projections, incoherent
+access, invalid sources, zero demand, or conservation residuals. The verdict
+distribution was 12 `Cleared` and 188 `IncompleteMeasurement`; the latter is
+the explicit zero-phase live-unit branch and is non-clearing.
+
+The descriptive aggregate is materially varied before any role assignment:
+52,676 live denominator units, 49,578 joined units, 9 source signatures, 6
+projection signatures, 13,565 committed projection vectors, and raw coverage
+spread of approximately `[0.104, 0.497]` to `[1.0, 1.0]`, with nonzero
+shortfall spread. The roster therefore does not support a dead-pole claim of
+no usable gradient, but it also does not authorize specialization dynamics:
+zero-phase incompleteness keeps the overall result `MixedOrUnderpowered`.
+
+**Evidence:** `/tmp/hv-d3b-fixed-roster-task6.txt`; focused probe 17/17,
+independent blocker re-review with no findings, gate-commit green, no census.
+
 ## #21 [Implementation] — Explicit incompleteness remains reportable
 
 Task 6 implements #20 with a distinct `IncompleteMeasurement` seed verdict.

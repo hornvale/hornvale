@@ -163,8 +163,8 @@ fatal `InvalidMeasurement`. Give that branch its own non-clearing verdict;
 the roster may remain mixed/underpowered, but it must report rather than
 panic. Other malformed measurements remain fatal integrity failures.
 
-- [ ] Step 1: Add a failing reducer test for the distinct incomplete verdict.
-- [ ] Step 2: Implement the smallest verdict/assertion correction.
-- [ ] Step 3: Run focused non-ignored tests and the commit gate.
-- [ ] Step 4: Rerun the local ignored fixed-roster report and inspect the
+- [x] Step 1: Add a failing reducer test for the distinct incomplete verdict.
+- [x] Step 2: Implement the smallest verdict/assertion correction.
+- [x] Step 3: Run focused non-ignored tests and the commit gate.
+- [x] Step 4: Rerun the local ignored fixed-roster report and inspect the
   per-seed verdict distribution; do not run a census.
