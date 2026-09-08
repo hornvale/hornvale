@@ -1249,6 +1249,122 @@ fn pattern_composition_preserves_structure_and_basis_refusals() {
     assert_eq!(composition.districts[0].parent, None);
     assert_eq!(composition.districts[0].overlaps, BTreeSet::new());
 
+    let row = project_districts(
+        &RelationView::new(vec![
+            assertion(
+                RelationKind::SpatialAdjacency,
+                "locus:left",
+                "locus:hub",
+                RelationDirection::Symmetric,
+                1.0,
+            ),
+            assertion(
+                RelationKind::SpatialAdjacency,
+                "locus:hub",
+                "locus:right",
+                RelationDirection::Symmetric,
+                1.0,
+            ),
+        ])
+        .unwrap(),
+        DistrictBasis::Spatial,
+        interval,
+        &config(RelationDirectionPolicy::Symmetric),
+    );
+    let row_composition =
+        compose_district_patterns(&row, &config(RelationDirectionPolicy::Symmetric)).unwrap();
+    assert_eq!(
+        row_composition.districts[0].bridge_members,
+        refs(&["locus:hub"])
+    );
+
+    let nested_cfg = config(RelationDirectionPolicy::SourceReachable(reference(
+        "cohort:a",
+    )));
+    let nested = project_districts(
+        &RelationView::new(vec![
+            assertion(
+                RelationKind::Access,
+                "cohort:a",
+                "cohort:b",
+                RelationDirection::Directed,
+                1.0,
+            ),
+            assertion(
+                RelationKind::Access,
+                "cohort:b",
+                "cohort:c",
+                RelationDirection::Directed,
+                1.0,
+            ),
+            assertion(
+                RelationKind::Access,
+                "cohort:c",
+                "cohort:d",
+                RelationDirection::Directed,
+                1.0,
+            ),
+        ])
+        .unwrap(),
+        DistrictBasis::Access,
+        interval,
+        &nested_cfg,
+    );
+    let nested_composition = compose_district_patterns(&nested, &nested_cfg).unwrap();
+    assert!(
+        nested_composition
+            .districts
+            .iter()
+            .any(|district| district.parent.is_some())
+    );
+
+    let overlap_cfg = config(RelationDirectionPolicy::SourceReachable(reference(
+        "cohort:a",
+    )));
+    let overlap = project_districts(
+        &RelationView::new(vec![
+            assertion(
+                RelationKind::Access,
+                "cohort:a",
+                "cohort:b",
+                RelationDirection::Directed,
+                1.0,
+            ),
+            assertion(
+                RelationKind::Access,
+                "cohort:a",
+                "cohort:c",
+                RelationDirection::Directed,
+                1.0,
+            ),
+            assertion(
+                RelationKind::Access,
+                "cohort:b",
+                "cohort:d",
+                RelationDirection::Directed,
+                1.0,
+            ),
+            assertion(
+                RelationKind::Access,
+                "cohort:c",
+                "cohort:d",
+                RelationDirection::Directed,
+                1.0,
+            ),
+        ])
+        .unwrap(),
+        DistrictBasis::Access,
+        interval,
+        &overlap_cfg,
+    );
+    let overlap_composition = compose_district_patterns(&overlap, &overlap_cfg).unwrap();
+    assert!(
+        overlap_composition
+            .districts
+            .iter()
+            .any(|district| !district.overlaps.is_empty())
+    );
+
     let unsupported = project_districts(
         &view,
         DistrictBasis::Presence,
