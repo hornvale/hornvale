@@ -208,6 +208,62 @@ projection axes from current code, freeze their bands and thresholds, and
 retain the four-way branch table. No role, function, or portfolio label is
 permitted in the instrument.
 
+## Verified axis roster for Task 0
+
+The current code audit classifies candidate axes as follows:
+
+### Eligible source-support axes
+
+- **Per-people local capacity:** `Bake::eff_capacity` is the existing
+  settlement-affecting value of a vertex to a particular people and era. It is
+  a real source axis, not a categorical label, and already controls founding,
+  relocation, and growth.
+- **Water and fertility opportunity:** river proximity, biome class/fertility,
+  moisture, coast, and the seasonal harvest curve already feed settlement
+  production or carrying capacity. These must be retained only where the
+  readout follows the actual consuming path rather than a decorative
+  re-derivation.
+- **Local connectivity:** the connection graph and the one-hop adjacency used
+  by D2 exchange can measure whether a source is locally reachable. It is a
+  transmission axis, not evidence of source value by itself.
+- **Occupied site and people:** `Occupation::site` and `Occupation::people`
+  are the stable join fields for all source/projection observations.
+
+### Projection axes eligible with an observation seam
+
+- **Typed subsistence stock:** `SubsistenceInventory` A/B, same-typed demand,
+  and shortfall are real live values, but are not part of emitted occupation
+  records. A later Task 0 implementation may need a zero-impact diagnostic
+  seam; the design must not pretend the values are available through the
+  ledger today.
+- **Exchange realization:** local exchange adjacency, proposals, deliveries,
+  refusals, and conservation are eligible as a projection of source/need
+  mismatch. They do not replace the source-support readout.
+- **Stores and relation structure:** stores, assessment, patronage, and local
+  relation connectivity are eligible as downstream transmission/context
+  axes, not as the source gradient itself.
+
+### Deferred until a total settlement join is proven
+
+- **Alchemy:** commodity/rock/soil/life substrates, quality vectors, and
+  reachable productions already provide rich material gradients, but the
+  current path is a material study and does not automatically make those
+  values available to surface settlement stocks or exchange.
+- **Underworld energy:** the seven `EnergySource` mechanisms are genuine
+  fantasy-relevant opportunity axes, but they currently feed subterranean
+  habitat/species fit rather than surface settlement economics.
+
+### Rejected as Task 0 evidence
+
+- `Function` and `Notability`, because the current production path hardcodes or
+  saturates them.
+- Categorical subsistence labels, because they are exact biome/coast labels
+  and can differ without comparative advantage.
+- Textual `settlement_site_concepts`, because lexical variation is a reading
+  surface, not an economic value gradient.
+- Population alone, because magnitude without opportunity composition cannot
+  distinguish specialization from carrying-capacity scale.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
