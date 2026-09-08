@@ -5,7 +5,7 @@ use hornvale_lot::draw::{Ending, draw};
 use hornvale_lot::slots::{Silence, SlotValue, Source, tell};
 use hornvale_lot::{LotIndex, Pick};
 
-const KEYS: [&str; 26] = [
+const KEYS: [&str; 39] = [
     "when",
     "where",
     "people",
@@ -29,7 +29,20 @@ const KEYS: [&str; 26] = [
     "ground",
     "diet",
     "sex",
+    "reproductive-role",
+    "gender-identity",
+    "gender-recognition",
     "family",
+    "associations",
+    "children",
+    "siblings",
+    "descent",
+    "adoption",
+    "care",
+    "group-membership",
+    "migration",
+    "parental-death",
+    "inheritance",
     "work",
     "literacy",
 ];
@@ -52,7 +65,7 @@ fn every_slot_is_asked_and_by_design_silences_are_declared() {
                     slot.key
                 ),
                 SlotValue::Silent(Silence::ByDesign(_)) => {
-                    assert!(matches!(slot.key, "sex" | "family" | "work" | "literacy"))
+                    assert!(matches!(slot.key, "work" | "literacy"))
                 }
                 SlotValue::Silent(Silence::NoFact(_)) => {}
             }
@@ -106,8 +119,8 @@ fn every_cited_fact_names_a_registered_predicate() {
 
 /// claim: structural(seed: 42) — one world.
 ///
-/// The four by-design silences of spec §4.4 are exactly `sex`, `family`,
-/// `work` and `literacy`, and nothing else may claim that verdict: a
+/// The two remaining by-design silences of spec §4.4 are exactly `work` and
+/// `literacy`, and nothing else may claim that verdict: a
 /// resolver that could not answer must say `NoFact`, which the coverage
 /// readout counts as a silence the WORLD has.
 #[test]
@@ -122,7 +135,7 @@ fn the_by_design_silences_are_exactly_the_specs_four() {
         .filter(|slot| matches!(slot.value, SlotValue::Silent(Silence::ByDesign(_))))
         .map(|slot| slot.key)
         .collect();
-    assert_eq!(by_design, vec!["sex", "family", "work", "literacy"]);
+    assert_eq!(by_design, vec!["work", "literacy"]);
 }
 
 /// claim: structural(seed: 42) — one world, two hundred lots.
