@@ -133,6 +133,7 @@ enum SeedVerdict {
     JoinFailure,
     ConservationFailure,
     InvalidMeasurement,
+    IncompleteMeasurement,
     NoUsableSourceGradient,
     ProjectionCollapse,
     MeasurementSaturation,
@@ -178,9 +179,12 @@ impl IntegrityBranches {
     fn has_invalid_measurement(&self) -> bool {
         !self.invalid_sources.is_empty()
             || !self.zero_demand_units.is_empty()
-            || !self.phase_incomplete_units.is_empty()
             || !self.invalid_projection_units.is_empty()
             || !self.incoherent_access_units.is_empty()
+    }
+
+    fn has_incomplete_measurement(&self) -> bool {
+        !self.phase_incomplete_units.is_empty()
     }
 
     fn has_conservation_failure(&self) -> bool {
@@ -474,6 +478,8 @@ fn summarize_seed(input: &SeedInput) -> SeedReport {
         SeedVerdict::ConservationFailure
     } else if branches.has_invalid_measurement() {
         SeedVerdict::InvalidMeasurement
+    } else if branches.has_incomplete_measurement() {
+        SeedVerdict::IncompleteMeasurement
     } else if input.denominator == 0 {
         SeedVerdict::Underpowered(UnderpoweredReason::Empty)
     } else if input.denominator < 2 || joined_units.len() < 2 {
@@ -1078,21 +1084,12 @@ fn missing_duplicate_and_disabled_joins_are_not_flat_projection_evidence() {
 }
 
 #[test]
-fn zero_demand_incomplete_phases_and_invalid_access_are_visible_exclusions() {
+fn zero_demand_and_invalid_access_are_visible_exclusions() {
     let mut zero_demand = varied_source_input([[0.0, 1.0], [1.0, 0.0]]);
     zero_demand.projections[0].demand[0] = 0.0;
     let zero_report = summarize_seed(&zero_demand);
     assert_eq!(zero_report.verdict, SeedVerdict::InvalidMeasurement);
     assert_eq!(zero_report.branches.zero_demand_units, vec![BakeId(1)]);
-
-    let mut incomplete = varied_source_input([[0.0, 1.0], [1.0, 0.0]]);
-    incomplete.projections[1].witness.phase_count = D2_PHASES_PER_EPOCH - 1;
-    let incomplete_report = summarize_seed(&incomplete);
-    assert_eq!(incomplete_report.verdict, SeedVerdict::InvalidMeasurement);
-    assert_eq!(
-        incomplete_report.branches.phase_incomplete_units,
-        vec![BakeId(2)]
-    );
 
     let mut incoherent = varied_source_input([[0.0, 1.0], [1.0, 0.0]]);
     incoherent.projections[0].witness.proposed[0] = 0;
@@ -1101,6 +1098,24 @@ fn zero_demand_incomplete_phases_and_invalid_access_are_visible_exclusions() {
     assert_eq!(
         incoherent_report.branches.incoherent_access_units,
         vec![BakeId(1)]
+    );
+}
+
+#[test]
+fn explicit_zero_phase_incompleteness_is_non_clearing_without_being_malformed() {
+    let mut input = varied_source_input([[0.0, 1.0], [1.0, 0.0]]);
+    input.projections[1].witness.phase_count = 0;
+    input.projections[1].witness.coverage = [0.0; 2];
+    input.projections[1].witness.shortfall = [0.0; 2];
+    let report = summarize_seed(&input);
+
+    assert_eq!(report.verdict, SeedVerdict::IncompleteMeasurement);
+    assert_eq!(
+        report.branches,
+        IntegrityBranches {
+            phase_incomplete_units: vec![BakeId(2)],
+            ..IntegrityBranches::default()
+        }
     );
 }
 

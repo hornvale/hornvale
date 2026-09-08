@@ -976,3 +976,22 @@ fixed roster must report this state rather than panic.
 
 **Evidence:** post-Task-5 local fixed-roster run, seed 1; `missing_projections`
 empty and `phase_incomplete_units` populated. No census run.
+
+## #21 [Implementation] — Explicit incompleteness remains reportable
+
+Task 6 implements #20 with a distinct `IncompleteMeasurement` seed verdict.
+Fatal malformed measurements retain priority: invalid source or projection
+values, zero demand, and incoherent access still resolve to
+`InvalidMeasurement`; join and conservation failures retain their existing
+higher-severity branches. A seed whose only exclusion is explicit phase
+incompleteness now resolves to `IncompleteMeasurement` before any underpowered
+or scientific verdict can clear it. The fixed-roster reducer therefore remains
+`MixedOrUnderpowered`, and its final integrity assertion can print the seed and
+pooled report without treating expected incompleteness as a fatal panic.
+
+The focused zero-phase regression first failed behaviorally with `left:
+InvalidMeasurement` and `right: IncompleteMeasurement`, then passed against
+the new verdict. The complete non-ignored D3B probe module passed 16/16; the
+ignored 200-seed report was listed as ignored and was not run. No producer,
+denominator, source band, role, specialization, save/emission path, or census
+behavior changed, and no census command ran.
