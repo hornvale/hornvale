@@ -67,7 +67,8 @@ fn a_corpus_parses_its_items_criteria_and_verdicts() {
     assert_eq!(c.items[0].emergence_type, 2);
     assert_eq!(
         c.items[0].criterion,
-        Criterion::MedianInBand { lo: -1.2, hi: -0.8 }
+        Some(Criterion::MedianInBand { lo: -1.2, hi: -0.8 }),
+        "`Item.criterion` is `Option<Criterion>` — compare against `Some(..)`"
     );
 }
 
@@ -235,7 +236,16 @@ pub fn load(json: &str) -> Result<Corpus, String> {
 }
 ```
 
-Add `pub mod regularities;` to `cli/src/lib.rs` beside `pub mod systems;`, and `mod regularity_corpus;` to `cli/tests/suite.rs` in alphabetical position.
+Add `pub mod regularities;` to `cli/src/lib.rs` between `pub mod provision;` and `pub mod repl;`.
+
+Register the test module in `cli/tests/suite.rs`. **Every entry there is a two-line pair — an attribute then the `mod` — with no blank line between entries** (measured: 53 `mod` lines, 2 blank lines in the whole file):
+
+```rust
+#[path = "suite/regularity_corpus.rs"]
+mod regularity_corpus;
+```
+
+It sorts between the `provision` pair and the `release_determinism` pair.
 
 - [ ] **Step 4: Run the tests**
 
@@ -842,7 +852,7 @@ git commit -m "feat(regularities): the two-way regression guard"
 **Files:**
 - Modify: `cli/src/regularities.rs`, `cli/src/main.rs`, `scripts/regenerate-artifacts.sh`, `docs/generated-paths.txt`
 - Create: `docs/audits/regularity-coverage-sugarscape-1996.md`
-- Test: `cli/tests/suite/regularity_coverage.rs`, `cli/tests/suite.rs`
+- Test: `cli/tests/suite/regularity_coverage.rs`, `cli/tests/suite.rs` (register as a two-line `#[path = "suite/regularity_coverage.rs"]` + `mod regularity_coverage;` pair, no blank line — see Task 1)
 
 **Interfaces:**
 - Consumes: everything above.
