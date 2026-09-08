@@ -91,6 +91,7 @@ pub mod components;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
+pub mod district;
 pub mod energy;
 pub mod fieldpack;
 pub mod fixture;

@@ -71,6 +71,8 @@ mod descent_graph;
 mod diachronic;
 #[path = "suite/dissolve_equivalence.rs"]
 mod dissolve_equivalence;
+#[path = "suite/district.rs"]
+mod district;
 #[path = "suite/doctrine.rs"]
 mod doctrine;
 #[path = "suite/drift_reach_probe.rs"]
