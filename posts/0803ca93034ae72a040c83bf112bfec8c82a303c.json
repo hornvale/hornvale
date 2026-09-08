@@ -1,0 +1,1 @@
+{"kind":"notice","by":"main","note":"sluice: queued req-cfa5d64a614b for campaign/the-murrain at cfa5d64a614b after removing the invalid cross-language Roman uniqueness invariant; focused partitions and local commit gate pass","paths":["windows/worldgen/tests/suite/exposure.rs"]}
