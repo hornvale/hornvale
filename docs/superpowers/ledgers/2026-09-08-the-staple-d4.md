@@ -423,6 +423,94 @@ aggregate census; next compare phase-integrated shortfall, typed-coverage
 vectors, and exchange-access asymmetry as candidate signatures; any eventual
 sidecar must remain diagnostic-only until Nathan's G3 spec review.
 
+## #6 [G2] — Which projection measure survives the candidate comparison?
+
+**Question:** Among realized shortfall, typed stock coverage, and exchange
+access, which measure can expose projection saturation without simply copying
+the source field?
+
+**Decision:** Make the primary projection signature the **phase-integrated,
+typed coverage/shortfall vector**, with exchange-access asymmetry as a required
+companion readout rather than folding it into one scalar.
+
+The primary vector is two-dimensional by construction: A and B are compared
+against the same community's fixed complementary demand, whose existing share
+is `0.5`/`0.5`. Report both coverage and shortfall (or their exact complement)
+per typed resource, averaged over the existing twelve phase steps. This keeps
+three distinctions visible:
+
+- balanced adequacy (`A` and `B` both covered);
+- typed comparative imbalance (one covered, the other short); and
+- persistent deprivation (both short).
+
+The values are normalized by that unit's demand, not by total world stock,
+population share, or patron degree. The existing D2 pressure adapter's
+`[1, 2]` shortfall multiplier is a useful boundedness check, but it is not a
+new D3B threshold and does not become a specialization score.
+
+The companion access readout records the same unit's local request and delivery
+outcomes by type: proposed, accepted, settled, partial, refused, and
+impossible. It answers a different question—whether a deficit can be reached
+through the one-hop conductance-positive network. Keeping it separate avoids
+calling an isolated community's zero deliveries a production specialty, or a
+hub's many deliveries a universal comparative advantage.
+
+| candidate | useful signal | failure mode | ruling |
+| --- | --- | --- | --- |
+| phase-integrated typed shortfall | persistent realized need mismatch, including seasonal recovery | can hide whether A/B imbalance or total scarcity caused it if scalarized | retain as primary vector |
+| typed coverage vector | preserves A/B balance and magnitude relative to demand | closing snapshot is transient; must be phase-integrated | retain with shortfall as the same primary vector |
+| exchange-access asymmetry | shows whether local network can transmit a missing type | zero demand, isolation, or hub degree can masquerade as specialization | retain as companion, never alone |
+| whole-bake exchange totals | confirms treatment conservation and overall activity | no community identity; cannot detect local saturation | reject as projection measure |
+| population/stores/tribute totals | shows scale or extraction | magnitude and power are not typed opportunity | reject as projection measure |
+
+**Why no scalar:** A scalar shortfall would merge the two typed deficiencies;
+a scalar coverage would turn a balanced half-basket into the same reading as a
+single-resource windfall. D3B needs to know whether the current projection
+preserves a local portfolio difference, so the vector remains the observation
+unit. Any later distance or ranking is a secondary analysis over the emitted
+vector, with its dead-pole comparison preregistered before results are seen.
+
+**Source/projection separation:** production inputs may contribute to the
+source-support vector, but the projection vector is read after production,
+exchange, and consumption from the live typed state. Recomputing it from
+biome, coast, or the harvest curve alone is invalid. Conversely, the access
+companion is not source value: it measures the path by which a deficit can be
+relieved.
+
+**Vacuity and saturation guards:**
+
+- disabled exchange treatment must be reported as an uninstantiated
+  projection, not as universal equality;
+- a unit with zero demand cannot contribute a coverage ranking;
+- every live unit must have a phase-complete A/B observation or be counted in
+  an explicit missing-observation branch;
+- conservation and non-negativity remain companion invariants;
+- projection equality must be evaluated over the vector and its occupied
+  signatures, never over a downstream `Function`, `Subsistence`, or role label.
+
+**Alternatives discarded:**
+
+- **Shortfall scalar alone:** rejected because it destroys typed portfolio
+  shape.
+- **Coverage at `now` only:** rejected because the existing twelve-phase
+  seasonal loop makes a transient store snapshot non-representative.
+- **Access asymmetry alone:** rejected because topology can explain the result
+  without any local opportunity contrast, while high-degree hubs can dominate.
+- **A derived portfolio label:** deferred until D3B succeeds; naming the
+  vector now would turn the falsifier into D4 implementation.
+
+**Ideonomy passes / overturns:** one pass (seed 4101), using
+dimension-identification, tree-finding, and substitution with state-machine
+and atlas organons. The lifecycle reading rejected the closing-snapshot
+shortcut; the atlas separated material adequacy, economic realization, and
+network access; no overturn. It reinforced keeping typed coverage and
+shortfall together while leaving exchange access as a companion axis.
+
+**Capture actions:** the next pass must specify how vector signatures are
+compared without quantile tuning, and must test the source/projection join
+across domains. No implementation, census, epoch, or `Function` conversion is
+licensed by this ruling.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
