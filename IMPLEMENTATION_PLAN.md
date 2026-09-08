@@ -1,29 +1,23 @@
-## Stage 1: Population substrate and pure epidemiology
-**Goal**: Establish the authoritative population view, pathogen catalogue, and kernel-only rules.
-**Success Criteria**: Five kinds registered; H-M1, H-M2, and H-M6 pass; epidemiology depends only on kernel.
-**Tests**: CCS, persistence, wave, outbreak, and catalogue-count tests.
-**Status**: Complete — `bdff16910`; review approved after fix round 1
+## Stage 1: Name the population layers
+**Goal**: Add a worldgen readout that distinguishes historical occupation records, present living occupations, and their occupied settlement columns.
+**Success Criteria**: A deterministic seed-42 test reports each quantity separately; no caller uses an ambiguous `settled_columns` label.
+**Tests**: Historical records include plague-ended occupations; present counts include only living occupations; column counts are derived from the corresponding occupation set.
+**Status**: Complete
 
-## Stage 2: Baked epidemic and history facts
-**Goal**: Add deterministic epidemic phases, paired facts, Plague endings, and bake v4.
-**Success Criteria**: H-M3/H-M5 pass; paired facts round-trip; expected genesis artifacts regenerate.
-**Tests**: History phase, stream, graph boundary, emission, and byte-identity tests.
-**Status**: Complete — `39087f079`, `0d37f1ef0`, `7619761e3`; final review approved
-
-## Stage 3: Endemic read and Lot projection
-**Goal**: Add substrate-based endemic burden, causes, composite cases, and materialized outbreak outcomes.
-**Success Criteria**: H-M4 passes; Lot payload is additive; composites remain non-causal.
-**Tests**: Lot attribution, endings, slots, payload, and byte-identity tests.
-**Status**: Complete — `7d09bc989`, `b101e537a`, `d4772c1f5`, `d5cbd71d2`, `587bd4aa6`, `c84867799`, `291d6a4a`, `e6d9af7c`, `d9420865`; final review approved
-
-## Stage 4: Laboratory instrumentation
-**Goal**: Add six metrics, preregistered prediction readout, and cost measurement.
-**Success Criteria**: H-P1–H-P6 recorded; census columns and provenance are current.
-**Tests**: Metric registry, readout, schema, and timing checks.
-**Status**: Complete — `040feff08`, `ef382d3b7`; final review approved. H-P1/H-P2/H-P5/H-P6 passed; H-P3/H-P4 falsified and recorded without retuning
-
-## Stage 5: Genesis closure
-**Goal**: Refresh artifacts, census, anomaly/Gnomon witnesses, book, registry, and campaign record.
-**Success Criteria**: Canonical stage/merge gates pass and all documentation is fresh.
-**Tests**: Local commit gate plus canonical sluice verification.
+## Stage 2: Reconcile the delve witness
+**Goal**: Make the delve-seating regression assert the historical or present quantity it actually intends to protect, with provenance tied to the new readout.
+**Success Criteria**: The anti-vacuity and seating assertions remain intact, and the test message identifies the measured layer.
+**Tests**: Seed-42 delve seating test; focused worldgen suite.
 **Status**: In Progress
+
+## Stage 3: Connect projections explicitly
+**Goal**: Document and test the boundary between the authoritative population substrate and Lot projections, including composite and materialized individuals.
+**Success Criteria**: Projection metadata names its source cohort and causal status; population readouts do not treat projected people as substrate counts.
+**Tests**: Existing Lot projection tests plus one cross-layer contract test.
+**Status**: Not Started
+
+## Stage 4: Verification and handoff
+**Goal**: Run focused tests, local commit gate, and prepare a stage resubmission only after the semantics are green.
+**Success Criteria**: Tests and audits pass; held request is superseded by a commit whose fixture changes are explained by the layer contract.
+**Tests**: Focused worldgen/Lot tests, `make gate-commit`.
+**Status**: Not Started

@@ -111,6 +111,7 @@ pub mod placement;
 pub mod plague_bake;
 pub mod plat;
 pub mod plat_readout;
+pub mod population;
 pub mod render;
 mod reproductive;
 pub mod residents;
@@ -177,6 +178,7 @@ pub use hornvale_climate::GeneratedClimate;
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
 pub use placement::{SiteReason, site_facet_for};
+pub use population::{PopulationCensus, population_census};
 pub use reproductive::{
     HybridPartnerConfig, ReproductiveAdapterError, ReproductivePopulationConfig,
     ReproductiveSubstrate, reproductive_substrate_from,

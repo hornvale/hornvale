@@ -161,6 +161,8 @@ mod person_promotion;
 mod pin_enumeration;
 #[path = "suite/plat_reading_probe.rs"]
 mod plat_reading_probe;
+#[path = "suite/population_layers.rs"]
+mod population_layers;
 #[path = "suite/portolan_resolution.rs"]
 mod portolan_resolution;
 #[path = "suite/profile.rs"]
