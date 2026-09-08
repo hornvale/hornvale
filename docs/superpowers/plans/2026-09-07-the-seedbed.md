@@ -858,7 +858,14 @@ git commit -m "feat(regularities): the two-way regression guard"
 - Consumes: everything above.
 - Produces: `render(&Corpus, &Census, &str) -> String`, `artifact_path(&Corpus) -> String`, `regenerate_command(&str) -> String`, and `hornvale regularities [report|check] [--corpus <PATH>]`.
 
-The report opens with the same instrument disclaimer `docs/audits/trope-matrix.md` carries (decision 0095: a reading through one biased ruler, never a grade), tallies the six verdicts, lists `unmeasured` items separately, and reports the **emergence-type split** — how many type-1 versus type-2 items the corpus holds and how many of each are grown.
+The report opens with the same instrument disclaimer `docs/audits/trope-matrix.md` carries (decision 0095: a reading through one biased ruler, never a grade), tallies the six verdicts, lists `unmeasured` items separately, and reports the **emergence-type split** — how many type-1 versus type-2 items the corpus holds and how many of each are grown. `emergence_type` is `Option<u8>`: items where the taxonomy does not apply are `null` and must be excluded from the split, never counted as either type.
+
+**Four reporting requirements Task 2's review established. The report is wrong without them:**
+
+1. **Four measurable items, three independent claims.** `sug-retaliation-deters` and `sug-predation-is-bounded` both read raid rates off the same `raid_attribution` fold over the same population and differ only in numerator. Report the independent-claim count beside the item count.
+2. **Re-measure that collinearity; do not quote it.** The 1.00–1.03 initiator/victim ratio in the metric's rustdoc comes from a 12-world scratch probe, explicitly *not* the census. It is an inherited diagnosis, so compute the correlation on the population actually being scored and print what you measure.
+3. **`absent` is two different things and the report must split them.** The economics and disease items are a real absence of mechanism. But `sug-seasonal-phase-lock`, `sug-externality-displaces` and `sug-heterogeneous-landscape` each have a *named, small, known* right instrument in their notes (a Rayleigh criterion kind; `median-at-least: 1.0`; a Gini over habitable capacity). Those are roadmap, not gap. No verdict value distinguishes them — the notes do.
+4. **Report power, not just verdicts.** The surviving criteria are conservative floors authored blind. A near-uniform `grown` sweep across four items is *not* evidence of reach, and the report must say so in its own text rather than leaving a reader to infer it.
 
 - [ ] **Step 1: Write the failing drift test**
 
