@@ -264,6 +264,94 @@ The current code audit classifies candidate axes as follows:
 - Population alone, because magnitude without opportunity composition cannot
   distinguish specialization from carrying-capacity scale.
 
+## #4 [G2] — What counts as an occupied source regime?
+
+**Question:** Should D3B invent distribution cuts from the probe output, use
+one global diversity statistic, or reuse semantic bars already present in the
+world?
+
+**Decision:** Use a preregistered **source-regime readout** made from existing
+field semantics. Do not derive cuts from the observed distribution, and do not
+let a nonzero value, a changed label, or a single exceptional site establish a
+regime.
+
+The first diagnostic comparison uses these candidate bands:
+
+| source axis | occupied bands | code meaning |
+| --- | --- | --- |
+| local surplus | `<= 0.4`, `(0.4, 0.6]`, `> 0.6` | existing culture structure gates for shaman/artisan and the high-surplus gate |
+| river access | `0`, `(0, 1)`, `1` | existing `river_proximity` endpoint/interior semantics, with `RIVER_REACH = 3` defining the field |
+| local capacity | `< 150`, `[150, 200)`, `>= 200` | existing hamlet ceiling and longhouse floor, applied to capacity rather than realized population |
+
+These are measurement bands, not new domain constants. A field remains
+continuous inside a band; the bands only make the preregistered readout
+auditable. The categorical biome/coast subsistence function remains excluded:
+it is a label-producing lookup, not a comparative-value surface.
+
+**Materiality guard:** source support is not sufficient merely because one
+axis has two occupied bands. The positive branch requires at least two
+independent eligible axes to occupy at least two bands each, and at least two
+joint source signatures to be occupied by live units. The readout reports the
+per-axis counts and joint signatures rather than collapsing them into one
+diversity scalar. Each live occupation contributes one unit, so a large hub
+cannot gain extra weight from population or degree. A singleton signature is
+reported but cannot by itself carry the positive interpretation; the per-band
+counts remain visible for the G3 review rather than being hidden by an
+aggregate.
+
+This is intentionally a conservative **sufficiency guard**, not a claim that
+two axes are the complete ecology of a fantasy world. It tests whether the
+current world has enough joined, occupied contrast to justify asking how
+specialization emerges. Future anomaly, material-transformation, subterranean,
+hazard, knowledge, or access axes must first prove a total join to the live
+occupation unit and pass the same nonzero/label/hub checks.
+
+**Dead-pole separation:**
+
+- If no eligible axis has more than one occupied semantic band, the result is
+  **dead pole 1: no materially usable gradient exists**.
+- If source regimes pass the guard but the projected settlement/economic
+  observation gives every live unit the same effective ranking or portfolio,
+  the result is **dead pole 2: projection/measurement saturation**.
+- If source regimes pass but the current world has no joined capability, need,
+  access, or exchange path that can act on them, report a **capability gap**;
+  this is not saturation and does not license role labels.
+- Only varied source regimes plus varied, causally joined projected positions
+  clear D3B and open D4's emergence question.
+
+The projection-side signature is not frozen by this ruling. Current typed
+stocks and exchange are live dynamics but are not fully present on the emitted
+occupation record, so the next design pass must choose an observation seam
+before claiming that projection is uniform. That seam must be zero-impact and
+must be tested by cross-domain re-instantiation, just as D3's return witness
+was.
+
+**Alternatives discarded:**
+
+- **Quantile bands:** rejected because every sufficiently populated world could
+  manufacture occupied bands even when the absolute field is saturated.
+- **Entropy or one scalar distance:** rejected because it hides which source
+  axis varied, permits a dominant hub to decide the result, and cannot separate
+  source absence from projection collapse.
+- **Biome/coast diversity:** rejected as label diversity and exact lookup
+  variation, not materially distinct opportunity.
+- **Existing role thresholds as a specialization test:** rejected because
+  `Function`/role gates are downstream projections; reusing them would measure
+  the answer rather than its prerequisite.
+
+**Ideonomy passes / overturns:** one pass (seed 4099), using abstraction-lift,
+cross-domain re-instantiation, and tree-finding with spectrum/cycle organons.
+The lift treated D3B as a distributed regime-detection problem rather than an
+occupation classifier; ecology, network flow, and temporal-cycle readings all
+supported separate source and projection layers. No overturn. The pass added
+the explicit singleton/hub guard and the requirement that a positive result
+span more than one source axis.
+
+**Capture actions:** retain existing semantic bars as the only initial band
+anchors; add no fantasy source to the current evidence set without a total
+occupation join; next choose and test the projection-side signature; keep the
+Task 0 falsifier read-only and pre-role.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
