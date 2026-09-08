@@ -111,3 +111,56 @@ to a decision record of its own.
 ## Follow-ups
 
 *(populated as they occur)*
+
+---
+
+## #3 [G2] — Design self-review
+
+**Naming.** `regularities/`, not `growths/`. The three existing directories name
+their *unit* — a trope, a system, a sentence — and the unit here is a
+regularity; "a growth" is not idiomatic for the thing an item is. File suffix
+`.regularity.json`, matching `.trope.json` / `.system.json`.
+
+**Verdict vocabulary is six-valued, not five.** `grown` / `flat` / `refused` /
+`deferred` / `absent` / `inapplicable`. 0135 grants each family its own
+vocabulary; 0136's refused/deferred/absent triple is preserved intact. The
+addition is `flat` — measured, criterion unmet — which the other three families
+have no way to express, because a grammar either parses or does not. A
+generative test's most valuable output is the measured miss, and folding it into
+`absent` would discard the finding.
+
+**External-claim verification, run at drafting time rather than asserted**
+(autopilot's standing check, and its imperative-mood corollary):
+
+| claim in the spec | command that settled it |
+| --- | --- |
+| wave one needs no new metrics | `head -1 .../the-census/rows.csv \| tr , '\n' \| grep -E "settle\|raid\|tribute\|..."` — returns `rank-size-slope`, `settlement-count`, `mean-population`, `total-population`, `raid-victim-rate`, `raid-initiator-rate`, `climate-displacement-events`, `tribute-relations-standing`, `granary-raid-phase-concentration`, `cascade-rules-fired-*` |
+| the census is 1,000 worlds, terminal state | `wc -l` = 1001; `studies/the-census.study.json` keys are `seeds`/`pin_sets`/`metrics`, no time axis |
+| the Domesday is generated prose | `head book/src/domesday/demography.md` → "GENERATED FILE — do not edit. Regenerate with `hornvale lab domesday`" |
+| `generated-paths.txt`'s 2nd column names an author | read the file: values `artifacts`, `census`, `heavy`, `none(...)` |
+| existing anchor kinds | `cli/src/systems.rs` parse arm: decision / registry / test / path / reason. No `doc:` — it is genuinely new |
+| population never degrades capacity | `eff_capacity` = `caps_now()[pidx].at(vertex) * factor(era, vertex)`; no occupation term |
+| Sugarscape's rule roster | `pdftotext` of the source, Appendix B read in full |
+
+**Not verified, and deliberately left as a branch table rather than a
+prediction:** the regression guard's runtime, and therefore whether it belongs
+in `gate-commit` or the stage gate. Spec §6 enumerates both responses instead of
+guessing one.
+
+**Ideonomy: no separate pass.** This entry records self-review of decisions
+already taken under passes in #1 and #2; no new option space was opened.
+
+---
+
+## Follow-ups
+
+- **F1 — `docs/audits/campaign-reconciliation.tsv`'s `ledgers` column cannot be
+  populated by any row.** `campaign_reconciliation_covers_every_campaign_record`
+  requires every path the TSV names to lie in `CAMPAIGN_RECORD_DIRECTORIES`,
+  which deliberately excludes `docs/superpowers/ledgers/`; a sibling test
+  asserts ledgers are evidence columns, not population; a third test guards the
+  column's existence in the parser. So two guards disagree about whether the
+  column may hold anything, and the answer today is no. Found the hard way: this
+  campaign is the first row in the file's history to populate it, which reds the
+  prose gate. Row left blank, like every other. Registered as
+  `TOOL-reconciliation-ledgers-column-is-unusable`.
