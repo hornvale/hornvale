@@ -908,3 +908,14 @@ comparison remains non-clearing. The fixed roster remains ignored locally.
 
 **Evidence:** probe `37493b324`; anti-saturation correction `937d169969`;
 timing follow-up `83c9f2c6d`.
+
+## #17 [G6-ready] — Verification complete; hold for merge/close review
+
+Final verification found no remaining issue after reconciling the approved
+G3 status in the spec and campaign reconciliation. The branch is clean, the
+focused D3B/D2/runtime checks and documentation checks are green, the ignored
+fixed-roster report was only listed and not run, and no census was run.
+
+**Evidence:** final verification on `27ca6767f`; docs-consistency 41/41;
+focused D3B 15/15; D2 10/10; history-bake 100/100; commit gate and all
+4,280 subfloor tests passed.
