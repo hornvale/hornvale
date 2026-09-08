@@ -702,28 +702,56 @@ Reuse `systems::RepoFacts` for `decision:` and `registry:` resolution rather tha
 
 - [ ] **Step 1: Write the failing tests**
 
-```rust
-use hornvale::regularities::{audit, Finding};
+**These tests must not depend on a census VALUE.** A guard test whose premise
+is "the median is currently -0.578" silently changes meaning the next time the
+census is refreshed — and the census is refreshed once per campaign. Drive the
+computed verdict with criteria that are satisfied or unsatisfied for *any*
+possible median instead: `median-at-least { bound: 1e308 }` can never be met by
+a real statistic, and `median-at-most { bound: 1e308 }` is met by every one.
+Both are ordinary one-sided criteria, not degenerate ones, and neither reads a
+census value.
 
-// Build a one-item corpus with a chosen authored verdict over a chosen
-// value set, so both guard directions can be driven deliberately.
-fn one_item_corpus(verdict: &str, anchor: &str) -> hornvale::regularities::Corpus {
+The tests do retain one much weaker dependency — that `rank-size-slope` is
+present on at least one world, since an empty population meets nothing. Assert
+that precondition explicitly so a future failure reads as "the statistic went
+absent" rather than as a mysterious guard failure.
+
+```rust
+use hornvale::regularities::{audit, values_of, Finding};
+
+/// A one-item corpus with a chosen authored verdict and a criterion whose
+/// computed verdict is fixed by arithmetic rather than by census data.
+/// `bound: 1e308` is unreachable from below and unavoidable from above, so
+/// `median-at-least` never holds and `median-at-most` always does.
+fn one_item_corpus(verdict: &str, kind: &str, anchor: &str) -> hornvale::regularities::Corpus {
     let json = format!(
         r#"{{"corpus":"t","unit":"regularity","ordered":false,
              "population":"the-census","provenance":"p",
              "frozen":"before first measurement, t",
              "items":[{{"id":"i","title":"T","source":"S","emergence_type":2,
                "statistic":"rank-size-slope",
-               "criterion":{{"kind":"median-in-band","lo":-1.2,"hi":-0.8}},
-               "verdict":"{verdict}","anchor":"{anchor}","note":""}}]}}"#
+               "criterion":{{"kind":"{kind}","bound":1e308}},
+               "verdict":"{verdict}","anchor":"{anchor}","note":
+               "FALSIFYING WORLD: a fixture, not a real item"}}]}}"#
     );
     hornvale::regularities::load(&json).expect("fixture parses")
 }
 
 #[test]
+fn the_guard_fixtures_have_a_population_to_measure() {
+    // The only census dependency these guard tests retain. If this fails, the
+    // statistic went absent — not the guard broke.
+    assert!(
+        !values_of(&census(), "rank-size-slope").is_empty(),
+        "guard fixtures need at least one present value to measure"
+    );
+}
+
+#[test]
 fn a_lost_regularity_is_red() {
-    // Authored `grown`; the live census median is -0.578, outside the band.
-    let c = one_item_corpus("grown", "doc:book/src/domesday/demography.md");
+    // Authored `grown` against a criterion no median can satisfy, so the
+    // computed verdict is `flat` whatever the census says.
+    let c = one_item_corpus("grown", "median-at-least", "doc:book/src/domesday/demography.md");
     let findings = audit(&c, &census(), &generated_paths(), &facts());
     assert!(
         findings.iter().any(|f| matches!(f, Finding::Regressed { .. })),
@@ -733,17 +761,9 @@ fn a_lost_regularity_is_red() {
 
 #[test]
 fn stale_pessimism_is_also_red() {
-    // Authored `flat` against a criterion the census DOES meet. A real gain
+    // Authored `flat` against a criterion every median satisfies. A real gain
     // must be claimed deliberately, in a commit that says so.
-    let json = r#"{"corpus":"t","unit":"regularity","ordered":false,
-      "population":"the-census","provenance":"p",
-      "frozen":"before first measurement, t",
-      "items":[{"id":"i","title":"T","source":"S","emergence_type":2,
-        "statistic":"rank-size-slope",
-        "criterion":{"kind":"median-in-band","lo":-1.0,"hi":0.0},
-        "verdict":"flat","anchor":"doc:book/src/domesday/demography.md",
-        "note":""}]}"#;
-    let c = hornvale::regularities::load(json).expect("parses");
+    let c = one_item_corpus("flat", "median-at-most", "doc:book/src/domesday/demography.md");
     let findings = audit(&c, &census(), &generated_paths(), &facts());
     assert!(
         findings.iter().any(|f| matches!(f, Finding::Regressed { .. })),
@@ -753,7 +773,7 @@ fn stale_pessimism_is_also_red() {
 
 #[test]
 fn agreement_raises_nothing() {
-    let c = one_item_corpus("flat", "doc:book/src/domesday/demography.md");
+    let c = one_item_corpus("flat", "median-at-least", "doc:book/src/domesday/demography.md");
     let findings = audit(&c, &census(), &generated_paths(), &facts());
     assert!(findings.is_empty(), "authored flat, measures flat: {findings:?}");
 }
@@ -822,6 +842,8 @@ pub enum Finding {
     },
 }
 ```
+
+**Failure-message decision, flagged by Task 3's review so it is not discovered mid-task.** `attest::DeclaredAuthor::None` **discards** the `none(<reason>)` text — its own doc says so — so by the time a path reaches `GeneratedPaths` the reason a page is hand-written no longer exists. A `doc:` anchor rejection therefore cannot quote *why* without widening that variant to carry the reason. Decide one of the two and say which in the report: widen `DeclaredAuthor::None` to hold the reason (a small `attest.rs` change), or emit a generic "declared non-generated" message. Prefer widening only if the message is materially better for it; a rejection that names the path and says "declared non-generated" may be repair enough.
 
 `audit` walks the items: skip `Unmeasured` entirely; for `Grown`/`Flat`, compute the verdict with `meets` and raise `Regressed` on disagreement, and require a `Doc` anchor whose path `has_generator`; for `Refused`/`Deferred`/`Inapplicable`, check the anchor kind matches and resolves, exactly as `systems::audit_item` does; for `Absent`, require no anchor.
 
