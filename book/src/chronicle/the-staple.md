@@ -135,3 +135,28 @@ how the predecessor plan's own cost figures went stale.
 Nothing else moved. No mechanism was built, no epoch was taken, and the rung
 this campaign was opened to build now has a document explaining what must be
 true before it has a subject.
+
+## R3: the district becomes a reading
+
+R3 supplied the missing boundary without pretending the world already has
+cities. Typed relation assertions now retain opaque participants, roles,
+intervals, recurrence, direction, measures, and provenance. Basis-specific
+views keep spatial neighborhood, presence, access, and exchange apart. A pure
+district projection can expose connected components, directed reach,
+boundaries, articulation members, bounded containment, explicit overlaps, and
+honest refusal statuses.
+
+The projection is cohort-first. Its members can be aggregate cohorts or loci;
+the downstream pattern readout preserves those references and never expands
+them into persons, households, or biographies. Temporal comparison distinguishes
+continuity, recurrence, transient evidence, dissolution, recomposition, and
+incomparable inputs. The Row, Fork, Reach, Gate, Weave, Hollow, Flicker, and
+Higher-Arity Relation are synthetic tests, not new Hornvale canon.
+
+The result is a substrate, not a city generator. Subsistence, property,
+mobility, authority, religion, contact, and population pressure remain inputs
+for future producers and cultural interpretation; none is smuggled into the
+district class. The Lot can eventually observe aggregate districts, their
+bases, evidence, temporal transitions, and refusal reasons. It still cannot
+observe households, kinship, gender, marriage, inheritance, or biographies from
+this campaign.
