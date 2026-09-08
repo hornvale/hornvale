@@ -166,14 +166,16 @@ fn diagnostic_sidecar_does_not_change_save_facing_history_or_endpoint_label_read
 #[ignore = "probe: one fixed 200-seed Staple D3 diagnostic return report; run exactly once"]
 fn fixed_200_seed_d3_relation_return_report() {
     let components = WorldComponents::assemble().expect("components assemble");
+    let mut empty_seeds = Vec::new();
     let reports: Vec<_> = PROBE_SEEDS
-        .map(|seed| {
+        .filter_map(|seed| {
             let history = history(seed, &components);
-            assert!(
-                !history.tribute.is_empty(),
-                "seed {seed} has no D3 relation denominator"
-            );
-            ProbeReport::from_history(&history)
+            if history.tribute.is_empty() {
+                empty_seeds.push(seed);
+                None
+            } else {
+                Some(ProbeReport::from_history(&history))
+            }
         })
         .collect();
 
@@ -216,6 +218,7 @@ fn fixed_200_seed_d3_relation_return_report() {
         .fold(0.0f64, f64::max);
 
     println!("D3 diagnostic return report");
+    println!("empty_seeds={empty_seeds:?}");
     println!("N={relations_total}");
     println!("C={d3_function_relations}");
     println!("C/N={d3_function_relations}/{relations_total}");

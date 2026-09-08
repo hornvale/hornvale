@@ -1,6 +1,6 @@
 # The Staple D3 — the flow returns downhill
 
-**Status:** Diagnostic-witness amendment approved; production mechanism pending Task 0
+**Status:** Task 0 measured uniform relabeling; D3 production mechanism closed
 **Campaign:** `campaign/the-staple-d3`  
 **Predecessor:** The Staple D2, merged 2026-09-06  
 **Decision block:** 0916–0925
@@ -163,3 +163,13 @@ discovery, negotiation, storage loss, transport, and priority institutions
 remain D2-deferred. D4 specialization, D5 cities/notability, rent gradients,
 and R3 districts remain downstream. D3 also does not choose the exact
 catchment shape or revisit `SETTLERS_PER_CAPACITY`.
+
+## 9. Task 0 result
+
+The fixed roster `1..=200` was pooled without seed selection. Seed 195 had no
+standing relation and was reported explicitly. The remaining standing
+relations produced `N=17,740`, `C=17,740`, `C/N=1.0`, with all 17,740 magnitude
+bands high and zero diagnostic residuals. This is the preregistered `C=N`
+uniform-relabeling dead pole, not D3 activation. The diagnostic sidecar is
+retained as evidence; no production return flow, function conversion, epoch,
+or census work follows from this result.

@@ -33,7 +33,7 @@
 
 **Tests:** Existing `staple_d2_probe` remains green; a new ignored D3 probe test compiles against the current worldgen test harness.
 
-**Status:** Not Started
+**Status:** Complete — diagnostic witness emitted and Task 0 measured
 
 ### Task 1: Add the D3 probe scaffold
 
@@ -84,6 +84,8 @@
 
 **Tests:** The probe has a mutation that changes a continuous return cause and changes classification; a categorical-label mutation does not manufacture activation.
 
+**Status:** Complete — `C=N` uniform-relabeling dead pole; no production branch
+
 ### Task 3: Adjudicate the probe result
 
 **Files:**
@@ -106,6 +108,8 @@
 **Goal:** Add a deterministic, relation-local return flow only if Stage 2 proves the mixed branch.
 
 **Success Criteria:** Same-epoch clearing is conserved and order-independent; functions are derived from continuous return causes; D2 behavior remains intact when the D3 treatment is disabled.
+
+**Status:** Not applicable — Task 0 measured the uniform-relabeling dead pole.
 
 **Tests:** Focused unit tests for return evaluation, snapshot clearing, conservation, order reversal, null `Agrarian`, and precedence; the integrated D3 probe; existing D2 probe and worldgen tests.
 
@@ -130,6 +134,8 @@
 ## Stage 4: Epoch and campaign close preparation
 
 **Goal:** Recalibrate every committed-history consequence before asking the sluice to test or merge the campaign.
+
+**Status:** Not applicable — no production history change was authorized.
 
 **Success Criteria:** Epoch artifacts, census fixtures, and history-adjacent pins are explicitly re-baselined; no local census is run; the campaign is ready for G6 only after canonical verification.
 

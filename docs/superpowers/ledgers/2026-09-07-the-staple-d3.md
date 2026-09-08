@@ -374,6 +374,44 @@ The repair is probe-fixture scope only. It authorizes one fresh fixed-roster
 diagnostic run, not production return flow, function conversion, epoch work,
 or a census.
 
+## #11 [G5] — Task 0 result: uniform relabeling dead pole
+
+**Ruling:** the repaired fixed-roster diagnostic run produced a valid pooled
+denominator and crossed the uniform-relabeling dead pole. Exact output from
+the single foreground run:
+
+```text
+empty_seeds=[195]
+N=17740
+C=17740
+C/N=17740/17740
+d3_ratio=1.00000000000000000
+return_bands low=0 medium=0 high=17740
+conservation_residuals nonzero=0/17740 max_abs=0.00000000000000000
+dead_pole_sink=false
+dead_pole_uniform=true
+finished in 450.96s
+```
+
+The fixed roster remains all seeds `1..=200`; seed 195 contributes zero
+standing relations and is named rather than omitted. The pooled relation
+denominator is therefore `N=17,740`, not a seed-selected subset. All observed
+relations classify as D3 under the diagnostic vector, and every observed
+magnitude is high, so this is `C=N`, not a differentiated gradient.
+
+**Decision:** D3 is a measured uniform relabeling and closes without a
+production return flow, function conversion, epoch change, census refresh, or
+history-pin migration. Do not dispatch the mixed-branch implementation.
+
+**Rejected:** calling `C=N` activation, using the zero residual as evidence of
+production conservation, discarding the empty seed, or rerunning with a
+narrowed roster. The diagnostic sidecar is a readout only; its zero residual
+means no outflow was applied.
+
+**Process note:** the pooled-denominator probe edit was performed locally after
+the dispatcher reported its thread limit; the approved repair and this exact
+measurement are captured here for review. No census was run.
+
 ## Follow-ups
 
 - Write the D3 brief/spec around this Task 0 criterion before proposing code.
