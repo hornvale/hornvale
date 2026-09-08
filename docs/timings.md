@@ -6492,3 +6492,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T13:00:46Z | sluice:gate | 808.004 | 21478.867 | 513.871 | 27.22 | 0 | 6d9b07430 |  | lefford | 40 |
 | 2026-09-07T13:03:20Z | sluice:clients | 152.892 | 2430.480 | 227.215 | 17.38 | 0 | f74b0a6b7 |  | lefford | 40 |
 | 2026-09-07T13:11:28Z | sluice:heavy | 487.838 | 11439.838 | 162.537 | 23.78 | 0 | dad0feacb |  | lefford | 40 |
+| 2026-09-08T15:18:36Z | gate-commit | 17.357 | 42.932 | 3.897 | 2.70 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
+| 2026-09-08T15:20:10Z | gate-commit | 16.959 | 24.408 | 2.603 | 1.59 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
+| 2026-09-08T15:20:57Z | gate-commit | 30.008 | 23.992 | 0.617 | 0.82 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
+| 2026-09-08T15:23:47Z | gate-commit | 157.332 | 1043.980 | 50.617 | 6.96 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
+| 2026-09-08T15:25:33Z | gate-commit | 50.939 | 58.412 | 13.564 | 1.41 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
+| 2026-09-08T15:26:38Z | gate-commit | 40.001 | 54.745 | 12.650 | 1.68 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |
+| 2026-09-08T15:27:41Z | gate-commit | 39.045 | 67.986 | 18.532 | 2.22 | 0 | fff169c65 | campaign/the-staple-r3 | MacBookPro | 10 |

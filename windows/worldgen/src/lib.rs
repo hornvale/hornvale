@@ -107,6 +107,7 @@ pub mod person_promote;
 pub mod placement;
 pub mod plat;
 pub mod plat_readout;
+pub mod relation;
 pub mod render;
 mod reproductive;
 pub mod residents;

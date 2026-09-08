@@ -181,6 +181,8 @@ mod range_affinity;
 mod range_identity;
 #[path = "suite/range_readout.rs"]
 mod range_readout;
+#[path = "suite/relation.rs"]
+mod relation;
 #[path = "suite/repose_exposure.rs"]
 mod repose_exposure;
 #[path = "suite/repose_laws.rs"]
