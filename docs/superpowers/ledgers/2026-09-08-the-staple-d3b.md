@@ -896,3 +896,15 @@ cannot rescue a locally flat sample.
 **Capture actions:** encoded the notation and all negated branches in
 `staple_d3b_probe`; kept the 200-seed report ignored; added no role vocabulary,
 dynamics, epoch, specialization behavior, or census action.
+
+## #16 [Implementation] — Task 3 falsifier accepted after anti-saturation correction
+
+The fixed-roster probe and its same-run History seam are accepted after
+independent review. The review found and the correction closed a sub-quantum
+escape: equal committed projection vectors now force `ProjectionCollapse`
+before exact structural ordering can produce a false `Cleared` verdict. The
+regression retains distinct raw vectors/signatures while proving the emitted
+comparison remains non-clearing. The fixed roster remains ignored locally.
+
+**Evidence:** probe `37493b324`; anti-saturation correction `937d169969`;
+timing follow-up `83c9f2c6d`.
