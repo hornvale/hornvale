@@ -812,7 +812,22 @@ pub enum Finding {
 
 Expected: 5 passed, and the two `Regressed` tests were observed red on the assertion first.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Measure the guard's cost and place it (spec §6)**
+
+Run: `cargo nextest run -p hornvale --test suite -- regularity_corpus 2>&1 | tail -5`
+
+Read the per-test durations. **Branch table, not a prediction:**
+
+- every test under the sub-floor roster's threshold → add rows to
+  `docs/timings/subfloor-roster.tsv`'s successor mechanism by letting a green
+  chamber run write them. **Never hand-author a roster row and never mark one
+  `DECLARED_ABSENT`** — only a green run may write the roster.
+- any test over the threshold → leave it out of the commit gate; it runs in the
+  stage gate with the rest of the workspace suite. Say which in the task report.
+
+Do not assume the first branch: the resolver loads a 1,001-row, 290-column CSV.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 cargo fmt && cargo clippy --workspace --all-targets -- -D warnings
@@ -971,15 +986,103 @@ sugarscape-1996 `sug-wealth-skew`: predicted median in [-1.2, -0.8]
 (Zipf/Auerbach rank-size); measured -0.578, 1.7% of worlds in band. FLAT.
 ```
 
-**Layering:** `windows/lab` may not depend on `cli`. Read the corpus JSON in `windows/lab` with its own minimal `serde` structs, or move the shared schema down — the implementer decides after reading, and says which in the task report. Do not add a `cli` dependency to a window.
+**Layering — decided here, not deferred to the implementer.** `windows/lab` may not depend on `cli`, and the corpus schema does not belong in the kernel (that crate is the determinism substrate). The resolver stays in `cli/` for family consistency with `tropes`/`systems`, and `windows/lab` reads the corpus with its own minimal structs — reading only the four fields it renders. That is a **deliberate duplication**, so under decision 0261 it carries a two-way agreement test (Step 4 below). Do not add a `cli` dependency to a window.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing tests**
 
-Assert that rendering the demography page with the frozen corpus in hand produces a line containing the item id, the criterion in prose, the measured median, and the uppercase verdict; and that a metric no corpus scores gains no such line.
+```rust
+use hornvale_lab::domesday::render::claim_line;
+use hornvale_lab::domesday::corpus::{ScoredItem, Verdict};
 
-- [ ] **Step 2: Run and watch it fail**
+#[test]
+fn a_scored_metric_renders_its_criterion_verdict_and_measurement() {
+    let item = ScoredItem {
+        corpus: "sugarscape-1996".into(),
+        id: "sug-wealth-skew".into(),
+        statistic: "rank-size-slope".into(),
+        criterion_prose: "median in [-1.2, -0.8]".into(),
+        verdict: Verdict::Flat,
+    };
+    let line = claim_line(&item, -0.578);
+    assert!(line.contains("sug-wealth-skew"), "{line}");
+    assert!(line.contains("median in [-1.2, -0.8]"), "{line}");
+    assert!(line.contains("-0.578"), "{line}");
+    assert!(line.contains("FLAT"), "the verdict is shouted, not buried: {line}");
+}
+
+#[test]
+fn an_unscored_metric_gains_no_claim_line() {
+    // The load-bearing negative: the Domesday must not sprout a claim for a
+    // metric no frozen corpus scores.
+    let page = render_demography_with(&[]);
+    assert!(!page.contains("predicted"), "no corpus scores it, no claim");
+}
+
+#[test]
+fn the_two_readers_of_the_corpus_agree() {
+    // Decision 0261: this schema is duplicated on purpose (cli owns the
+    // resolver, lab owns the renderer's minimal view), so the duplication
+    // carries a two-way agreement test. Every id and verdict lab reads must
+    // match what the cli resolver reads from the same file.
+    let via_lab = hornvale_lab::domesday::corpus::read(&corpus_path())
+        .expect("lab reads the corpus");
+    let json = std::fs::read_to_string(corpus_path()).expect("corpus file");
+    let via_cli = hornvale::regularities::load(&json).expect("cli reads the corpus");
+    let lab_ids: Vec<&str> = via_lab.iter().map(|i| i.id.as_str()).collect();
+    let cli_ids: Vec<&str> = via_cli.items.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(lab_ids, cli_ids, "the two readers disagree about the corpus");
+}
+```
+
+The third test needs `hornvale` as a `dev-dependency` of `hornvale-lab`. **If that
+inverts the layering** (`cli` already depends on `hornvale-lab`, so a dev-dep the
+other way is a dev-only cycle cargo permits but `cli/tests/suite/architecture.rs`
+may refuse): put this one test in `cli/tests/suite/regularity_coverage.rs`
+instead, where both crates are already in scope, and say so in the task report.
+Check `architecture.rs` before choosing.
+
+- [ ] **Step 2: Run and watch them fail**
+
+Run: `cargo nextest run -p hornvale-lab --test suite -- domesday`
+Expected: FAIL to compile — `claim_line` and `domesday::corpus` do not exist.
 
 - [ ] **Step 3: Implement**
+
+```rust
+// windows/lab/src/domesday/corpus.rs — the minimal view, four fields.
+/// One scored item, as the Domesday needs to render it.
+/// type-audit: bare-ok(identifier-text: corpus), bare-ok(identifier-text: id), bare-ok(identifier-text: statistic), bare-ok(prose: criterion_prose)
+pub struct ScoredItem {
+    /// Which corpus scored it.
+    pub corpus: String,
+    /// The item's corpus-local id.
+    pub id: String,
+    /// The census column it is measured through.
+    pub statistic: String,
+    /// The frozen criterion, already rendered to prose.
+    pub criterion_prose: String,
+    /// What measuring found.
+    pub verdict: Verdict,
+}
+
+/// The claim line printed under a scored metric's stats table.
+///
+/// The whole point of spec §5: the stats table alone is a number nobody can
+/// be wrong about; this is a sentence a reader can catch us on.
+/// type-audit: bare-ok(ratio: measured), bare-ok(prose: return)
+pub fn claim_line(item: &ScoredItem, measured: f64) -> String {
+    format!(
+        "{} `{}`: predicted {}; measured {measured}. {}.",
+        item.corpus,
+        item.id,
+        item.criterion_prose,
+        match item.verdict {
+            Verdict::Grown => "GROWN",
+            Verdict::Flat => "FLAT",
+        }
+    )
+}
+```
 
 - [ ] **Step 4: Regenerate and check the branch table**
 

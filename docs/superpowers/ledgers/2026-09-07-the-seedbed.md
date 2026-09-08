@@ -177,3 +177,45 @@ teeth on future bake work, and the unmeasured guard-placement branch table.
 
 No revisions. Proceeding to the implementation plan (G4: self-review against
 this spec, then execute).
+
+---
+
+## #5 [G4] — Plan self-review, and one amendment to an approved spec
+
+**Amendment.** The spec's six-valued vocabulary could not express a frozen-but-
+unmeasured item, and authoring both the criterion and the verdict at freeze time
+makes one of them a guess. Added `unmeasured` as an explicit **lifecycle state**
+— tallied separately, never a coverage verdict, and cleared by a ratchet test
+after the first run. This is what lets plan Task 2 freeze the corpus *before any
+evaluation code exists*, making the 0016 freeze structural rather than a
+promise. Spec §4.1 records it, marked as post-G3.
+
+Flagged for G6 rather than re-opening G3: it strengthens the approved discipline
+rather than changing what is built, and an amendment that strands its plan
+executing the superseded design is the failure mode being avoided — the plan was
+written against the amended spec, not the original.
+
+**Self-review found three gaps, all fixed inline:**
+
+1. Spec §6's guard-placement branch table had **no task step**. Added as Task 5
+   Step 5, with the roster rule stated: only a green chamber run may write a
+   sub-floor row; never hand-author one.
+2. Task 8 **deferred a layering decision to its implementer** and carried no
+   code — the plan-skill's own placeholder prohibition. Decided it instead:
+   `windows/lab` reads the corpus with its own minimal four-field view (it may
+   not depend on `cli`, and the kernel is not a corpus home), which is a
+   deliberate duplication and therefore carries a two-way agreement test under
+   decision 0261. Concrete code and three tests now in place, including the
+   negative — an unscored metric must gain no claim line.
+3. Task 8's agreement test may invert the dev-dependency direction. Rather than
+   predict what `architecture.rs` permits, the step names both placements and
+   tells the implementer to check the enforcement test before choosing.
+
+**Spec coverage:** every section maps to a task; all six success criteria have a
+task that discharges them. The one design rule with no mechanical enforcement is
+§5's arity rule (within-world claims anchor per-world, cross-world claims anchor
+to the Domesday) — wave one's items are all cross-world, so there is nothing to
+enforce yet. Recorded rather than silently skipped.
+
+**Ideonomy:** no separate pass; this is self-review of an approved design, and
+the amendment narrows rather than opens the option space.

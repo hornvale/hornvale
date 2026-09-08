@@ -136,6 +136,21 @@ distinction that is this family's entire reason for existing:
 | `absent` | cannot be computed and nobody has registered it — the honest red | none |
 | `inapplicable` | about Sugarscape's own abstraction, not a world regularity | `reason:` |
 
+### 4.1 `unmeasured` — a lifecycle state, not a verdict
+
+**Amended after G3, during planning.** The criterion is the *prediction* and is
+frozen before measurement (0016); the verdict is the *record* of what measuring
+found. Those cannot both be authored at freeze time without one of them being a
+guess. So a measurable item is authored `"verdict": "unmeasured"`, and the first
+run records what the census says.
+
+`unmeasured` is **not a coverage verdict**: the report tallies the six above and
+lists unmeasured items separately, and a ratchet test refuses any that survive
+the first measurement. The value of the distinction is that it makes the freeze
+*structural* — the corpus is authored and committed in a task that runs before
+any evaluation code exists (plan Task 2), so items cannot be authored while
+their answers are visible.
+
 `flat` is the addition. The other three families have no way to say **"we do
 this, and we get the wrong answer"** — their vocabulary distinguishes only
 degrees of absence, because a grammar either parses a sentence or does not.
