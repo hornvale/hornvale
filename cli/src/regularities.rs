@@ -6,6 +6,8 @@
 //! `systems`, this resolver reads a dataset; unlike `tropes`, it builds no
 //! world.
 use serde::Deserialize;
+use std::collections::BTreeMap;
+use std::path::Path;
 
 /// The declared corpora, in matrix-column order.
 /// type-audit: bare-ok(artifact)
@@ -151,4 +153,95 @@ pub struct Corpus {
 /// type-audit: bare-ok(artifact: json), bare-ok(prose: return)
 pub fn load(json: &str) -> Result<Corpus, String> {
     serde_json::from_str(json).map_err(|e| format!("corpus parse: {e}"))
+}
+
+/// A verdict's backing evidence, parsed from its `anchor` string.
+///
+/// Deliberately NARROWER than `systems::Anchor`: there is no `test:` and no
+/// `path:` kind. A regularity is not demonstrated by code existing — it is
+/// demonstrated by generated documentation stating the measured claim, which
+/// is the only surface a reader outside the program can falsify.
+/// type-audit: bare-ok(artifact: Doc.0), bare-ok(identifier-text: Decision.0), bare-ok(identifier-text: Registry.0), bare-ok(prose: Reason.0)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Anchor {
+    /// `doc:<path>` — a generated, drift-checked page. The terminal anchor.
+    Doc(String),
+    /// `decision:0135` — must be in force.
+    Decision(String),
+    /// `registry:TOOL-…` — must exist and not read `shipped`.
+    Registry(String),
+    /// `reason:<prose>` — for `inapplicable` only.
+    Reason(String),
+}
+
+impl Anchor {
+    /// Parse an anchor string. `None` when the prefix is unknown.
+    /// type-audit: bare-ok(identifier-text: s)
+    pub fn parse(s: &str) -> Option<Anchor> {
+        let (kind, rest) = s.split_once(':')?;
+        match kind {
+            "doc" => Some(Anchor::Doc(rest.to_string())),
+            "decision" => Some(Anchor::Decision(rest.to_string())),
+            "registry" => Some(Anchor::Registry(rest.to_string())),
+            "reason" => Some(Anchor::Reason(rest.to_string())),
+            _ => None,
+        }
+    }
+}
+
+/// The declared generated paths and their authors, read from
+/// `docs/generated-paths.txt` — the single source of truth for which paths
+/// are regenerated and by what.
+#[derive(Debug, Clone)]
+pub struct GeneratedPaths {
+    /// Declared path to whether its author is a real generator (`true`) or a
+    /// declared `none(<reason>)` absence (`false`).
+    authors: BTreeMap<String, bool>,
+}
+
+impl GeneratedPaths {
+    /// Read the declarations from a repository root.
+    ///
+    /// Parsing is delegated to [`crate::attest::parse_declared`] — the
+    /// repository's existing reader of this file and of its `none(<reason>)`
+    /// convention. This type adds only directory inheritance.
+    /// type-audit: bare-ok(prose: return)
+    pub fn read(root: &Path) -> Result<GeneratedPaths, String> {
+        let path = root.join("docs/generated-paths.txt");
+        let text = std::fs::read_to_string(&path)
+            .map_err(|e| format!("reading {}: {e}", path.display()))?;
+        let authors: BTreeMap<String, bool> = crate::attest::parse_declared(&text)
+            .into_iter()
+            .map(|(p, author)| {
+                (
+                    p,
+                    matches!(author, crate::attest::DeclaredAuthor::Roster(_)),
+                )
+            })
+            .collect();
+        if authors.is_empty() {
+            return Err("no declared generated paths".to_string());
+        }
+        Ok(GeneratedPaths { authors })
+    }
+
+    /// Whether this path has a real generator.
+    ///
+    /// **Direction this enforces:** declared-and-generated ⇒ admissible. It
+    /// is blind to a path that is generated but undeclared, which is
+    /// `cli/tests/suite/generated_paths.rs`'s job, not this one.
+    /// type-audit: bare-ok(artifact: path), bare-ok(flag: return)
+    pub fn has_generator(&self, path: &str) -> bool {
+        if let Some(generated) = self.authors.get(path) {
+            return *generated;
+        }
+        // A file inherits the LONGEST declared directory prefix's author
+        // unless it overrides with a row of its own (handled above).
+        self.authors
+            .iter()
+            .filter(|(decl, _)| decl.ends_with('/') && path.starts_with(decl.as_str()))
+            .max_by_key(|(decl, _)| decl.len())
+            .map(|(_, generated)| *generated)
+            .unwrap_or(false)
+    }
 }

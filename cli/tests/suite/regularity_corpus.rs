@@ -1,4 +1,4 @@
-use hornvale::regularities::{self, Criterion, Verdict};
+use hornvale::regularities::{self, Anchor, Criterion, GeneratedPaths, Verdict};
 use std::path::PathBuf;
 
 const FIXTURE: &str = r#"{
@@ -141,4 +141,58 @@ fn workspace_root() -> PathBuf {
         .parent()
         .expect("workspace root")
         .to_path_buf()
+}
+
+#[test]
+fn a_doc_anchor_into_generated_prose_resolves() {
+    let g = GeneratedPaths::read(&workspace_root()).expect("read declarations");
+    assert!(
+        g.has_generator("book/src/domesday/demography.md"),
+        "the Domesday is generated (author `artifacts`) and must anchor"
+    );
+}
+
+#[test]
+fn a_doc_anchor_into_hand_written_prose_is_refused() {
+    // This is the load-bearing direction. `book/src/laboratory/overview.md`
+    // is declared `none(hand-written prose, never regenerated)`; anchoring a
+    // verdict to it would be decision 0330's failure — a declaration that
+    // moves the score without moving the world.
+    let g = GeneratedPaths::read(&workspace_root()).expect("read declarations");
+    assert!(
+        !g.has_generator("book/src/laboratory/overview.md"),
+        "hand-written prose must never back a verdict"
+    );
+}
+
+#[test]
+fn an_undeclared_path_is_refused() {
+    let g = GeneratedPaths::read(&workspace_root()).expect("read declarations");
+    assert!(!g.has_generator("book/src/nothing-here.md"));
+}
+
+#[test]
+fn anchor_parses_the_five_kinds_and_rejects_the_unknown() {
+    assert_eq!(
+        Anchor::parse("doc:book/src/domesday/demography.md"),
+        Some(Anchor::Doc("book/src/domesday/demography.md".to_string()))
+    );
+    assert_eq!(
+        Anchor::parse("decision:0135"),
+        Some(Anchor::Decision("0135".into()))
+    );
+    assert_eq!(
+        Anchor::parse("registry:TOOL-x"),
+        Some(Anchor::Registry("TOOL-x".into()))
+    );
+    assert_eq!(
+        Anchor::parse("reason:because"),
+        Some(Anchor::Reason("because".into()))
+    );
+    assert_eq!(
+        Anchor::parse("path:src/x.rs"),
+        None,
+        "path: is not admitted by this family"
+    );
+    assert_eq!(Anchor::parse("nonsense"), None);
 }
