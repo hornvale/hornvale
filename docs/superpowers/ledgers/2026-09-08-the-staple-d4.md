@@ -352,6 +352,77 @@ anchors; add no fantasy source to the current evidence set without a total
 occupation join; next choose and test the projection-side signature; keep the
 Task 0 falsifier read-only and pre-role.
 
+## #5 [G2] — What can show projection saturation?
+
+**Question:** Can the existing emitted history and whole-bake exchange census
+show whether source variation survives into local economic positions?
+
+**Decision:** Not by themselves. The current public `History` surface carries
+live occupation records, tribute relations, and the D3 return sidecar. D2's
+`ExchangeCensus` is explicitly a whole-bake aggregate, while the typed
+`SubsistenceInventory`, per-community shortfalls, delivery attempts, and
+exchange outcomes remain private bake state. The emitted occupation record has
+peak population, but not the typed stock or local exchange state. A global
+exchange count would therefore be unable to distinguish varied communities
+from one dominant hub or a uniform population-wide treatment.
+
+The valid projection seam is consequently a **zero-impact, per-live-unit
+diagnostic witness**, analogous to D3's return witness, captured from the
+existing D2 path rather than reconstructed from labels. Its candidate
+components are:
+
+- typed stock coverage for A and B against that unit's typed demand;
+- typed shortfall exposure over the exchange phases;
+- local delivery/attempt outcomes, including impossible, refused, partial, and
+  settled requests; and
+- the unit's actual one-hop exchange access, kept separate from source value.
+
+The witness should be phase-integrated or explicitly phase-indexed. A single
+closing stock is not enough: the Granary's seasonal curve makes transient
+surplus and persistent access different phenomena. The projection signature
+must be derived from these continuous realized quantities before any category
+or portfolio name is considered.
+
+**Saturation test candidate:** compare the source-regime signature and the
+per-unit projection signature on the same live occupation denominator. The
+measurement must report both the number of distinct projected signatures and
+the per-signature counts. The dead-pole-2 claim is permitted only when the
+source guard passes but the projection readout collapses to one effective
+signature/ranking under the preregistered comparison. If the source varies and
+the projection varies, but the variation is not aligned with capability,
+need, or reachable exchange, report the capability-gap branch instead.
+
+**Vacuity checks:** a diagnostic witness must prove total one-to-one joining
+from live `BakeOccupation.community` to the per-community D2 snapshot; report
+missing and duplicate joins; reject an all-zero witness caused by disabled
+exchange treatment as “no projection” rather than “uniform projection”; and
+retain conservation and non-negativity checks. Aggregate `ExchangeCensus`
+values may accompany the witness as a checksum, but cannot be its denominator
+or verdict.
+
+**Alternatives discarded:**
+
+- **`History::exchange` alone:** rejected as an aggregate that loses local
+  identity and can be dominated by a hub.
+- **Peak population or stores alone:** rejected because both are magnitude
+  summaries and do not identify typed opportunity or exchange direction.
+- **D3 return classes/bands:** rejected as an already-saturated downstream
+  diagnostic; reusing its labels would make D3B circular.
+- **Recomputing stocks from biome labels:** rejected because it would measure
+  a source proxy, not the realized projection, and would erase exchange and
+  seasonal effects.
+
+**Ideonomy passes / overturns:** one pass (seed 4100), using dimension
+identification, negation, and abstraction-lift with state-machine/notation
+organons. It identified the anti-seam—one closing snapshot that falsely says
+“uniform”—and the required lifecycle of phase production, exchange, consume,
+and carry-forward. No overturn.
+
+**Capture actions:** do not draft a projection metric from the current
+aggregate census; next compare phase-integrated shortfall, typed-coverage
+vectors, and exchange-access asymmetry as candidate signatures; any eventual
+sidecar must remain diagnostic-only until Nathan's G3 spec review.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
