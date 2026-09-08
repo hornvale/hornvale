@@ -335,7 +335,7 @@ fn two_independent_baseline_runs_rank_identically() {
 /// claim: readout(preregistered) — recall@10 over the committed (injection x
 /// seed) pairs, against the frozen 0.60 bar; the seed loop enumerates the
 /// battery's own arms rather than sampling a population.
-#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; tenth canonical reading, incomparable like the seventh, eighth, and ninth: The Murrain changed committed world facts without moving the report surface or census columns; injection arms and scorer are unchanged, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
+#[ignore = "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; tenth canonical reading, incomparable like the seventh, eighth, and ninth: The Murrain added five census columns and re-authored all six scored arms and both baselines; the scorer is unchanged, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)"]
 #[test]
 fn h1_recall_at_10() {
     let t = tally_recall();
@@ -683,10 +683,12 @@ fn h1_recall_at_10() {
 ///
 /// **RE-READ A TENTH TIME AT THE MURRAIN'S CLOSE (2026-09-08).** The Murrain
 /// changed committed world facts by absorbing the social-household layer. The
-/// anomaly report's evaluable surface and census columns did not move, and the
-/// injection arms and scorer were unchanged.
+/// census surface grew by five columns — four epidemic metrics and
+/// `lot-named-disease-deaths` — and 17 injection fixture files were re-authored
+/// (+752/-192) across all six scored arms and both baselines. The scorer itself
+/// was unchanged.
 ///
-/// On the unchanged surface the witness reads **64/120 = 0.5333**, zero void
+/// On that changed surface the witness reads **64/120 = 0.5333**, zero void
 /// pairs. Arm for arm: geothermal 20/20, unconformity 2/20, aquifer 20/20,
 /// karst 2/20, pantheon 6/20, phonology 14/20. The bar is still 0.60 and this
 /// re-read does not move it.
@@ -694,8 +696,8 @@ fn h1_recall_at_10() {
 /// So 64/120 is the tenth canonical reading and the fourth consecutive
 /// **incomparable** one. The six-epoch series stays 0.5667 / 0.6083 / 0.6000 /
 /// 0.6083 / 0.6083 / 0.6000, and the verdict stays "cannot tell". This is not
-/// a new point in that comparable series: a census can keep its columns while
-/// changed world facts still move the witness.
+/// a new point in that comparable series: both the census surface and fixture
+/// inputs changed along with the committed world facts.
 ///
 /// claim: invariant(the committed battery scores exactly 64 hits over 120
 /// evaluable (injection x seed) pairs, with no void pairs) — an identity over
