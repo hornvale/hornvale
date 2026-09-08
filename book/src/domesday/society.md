@@ -56,7 +56,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0 | 0.19325153 | 0.27430863 | 0.32581736 | 0.4228546 | 0.24639027 |
 
-**Frozen claim** — sugarscape-1996 `sug-retaliation-deters`: predicted median at most 0.5; measured 0.274309. GROWN.
+**Frozen claim** — *The prospect of retaliation deters attack, so most agents in a mixed population never initiate combat* (`sugarscape-1996` `sug-retaliation-deters`; Ch. III, 'Effect of Rule Changes on Emergent Structures' ('agents are deterred from racing forward to attack smaller agents ... by the presence of larger opposing agents within their vision')). Predicted median at most 0.5; measured 0.274309. GROWN. ([what this is](#frozen-claims))
 
 ### `raid-victim-rate`
 
@@ -68,7 +68,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0 | 0.19631902 | 0.27931485 | 0.33676232 | 0.45331616 | 0.2539182 |
 
-**Frozen claim** — sugarscape-1996 `sug-predation-is-bounded`: predicted at least 0.5 of worlds in [0.02, 0.5]; measured 0.968000. GROWN.
+**Frozen claim** — *Combat between groups claims a real but minority share of the population; predation does not consume the society that practises it* (`sugarscape-1996` `sug-predation-is-bounded`; Appendix B, agent combat rule C(alpha); Ch. III, 'Combat'). Predicted at least 0.5 of worlds in [0.02, 0.5]; measured 0.968000. GROWN. ([what this is](#frozen-claims))
 
 ### `tribute-relations-standing`
 
@@ -80,7 +80,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0 | 56 | 88 | 120 | 272 | 88.268 |
 
-**Frozen claim** — sugarscape-1996 `sug-credit-makes-hierarchy`: predicted median at least 1; measured 88.000000. GROWN.
+**Frozen claim** — *Persistent asymmetric obligation is what makes a flat society hierarchical; without it no agent is subordinate to another* (`sugarscape-1996` `sug-credit-makes-hierarchy`; Appendix B, agent credit rule L(d,r); Ch. IV, 'Credit Networks and the Emergence of Hierarchy'). Predicted median at least 1; measured 88.000000. GROWN. ([what this is](#frozen-claims))
 
 ## Weaknesses found here
 
@@ -92,4 +92,14 @@ n = 1000 present, 0 absent (of 1000 worlds)
 ### `tribute-relations-standing`
 
 - **D5 strength**: declared moderate tracking settlement-count, but observed r = +0.943 (1000 pairs) is dominant (positive)
+
+## Frozen claims
+
+Some metrics above carry a **frozen claim**: a prediction an imported corpus made about this population *before* any of it was measured, printed beside what the committed census says today. The corpus is data this survey only reads — the corpus supplies the regularity, its source and the criterion, and the survey supplies the measurement and re-states the recorded verdict. Every part of a claim line is derived from one of those two, so a corpus that changes moves the line.
+
+### `sugarscape-1996`
+
+Frozen corpus: `regularities/sugarscape-1996.regularity.json`
+
+Joshua M. Epstein and Robert Axtell, *Growing Artificial Societies: Social Science From the Bottom Up* (Brookings Institution Press / MIT Press, 1996). Items are drawn from Appendix B's complete rule roster (growback, movement, replacement, seasonal growback, pollution formation and diffusion, mating, inheritance, cultural transmission, group membership, combat, trade, credit, immune response, disease transmission) and from the emergence claims the chapters attach to those rules. The taxonomy in `emergence_type` is the book's own, from Chapter II footnote 24: type 1 is a property meaningful for an individual but exhibited only by the collective (the diagonal migration wave — "the group adopts a heading unavailable to any individual"); type 2 is a property meaningful only for a collective (a wealth distribution). AN INSTRUMENT WITH KNOWN BIAS, NEVER A STANDARD (decision 0095). Sugarscape is one 1996 lattice model of agents harvesting a renewable resource, and roughly half of its roster is economic — trade, prices, credit, inheritance of holdings — because its authors were economists building toward generative social science. Hornvale has no economy, no per-individual wealth, and no disease model, so a large block of this corpus can only ever score `absent`; that is a property of the source's coverage, not a defect Hornvale is being charged with. Conversely Sugarscape has no terrain, no astronomy, no language and no deep time, so nothing here scores Hornvale's strongest ground. Coverage measures reach against this catalogue only. THE MAPPING FROM A SUGARSCAPE CLAIM TO A CENSUS COLUMN IS AN ANALOGY, AND EACH ITEM'S `note` STATES WHERE THE ANALOGY IS LOAD-BEARING. A Sugarscape agent is an individual; a Hornvale settlement is a community. Where an item reads a per-community statistic against a per-agent claim, the item says so, and a `flat` verdict on such an item may be about the analogy rather than about the world.
 

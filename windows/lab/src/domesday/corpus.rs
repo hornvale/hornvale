@@ -14,13 +14,27 @@
 //! they diverge.
 //!
 //! The agreement test lives in `cli/tests/suite/regularity_coverage.rs`
-//! (`the_two_readers_of_the_corpus_agree`), where both crates are already
-//! in scope. It is deliberately NOT here: a `hornvale` dev-dependency on
-//! `hornvale-lab`'s test target would run the dependency edge backwards,
-//! and `cli/tests/suite/architecture.rs` does not examine dev-dependencies
-//! at all — so such an edge would *escape* the layering guard rather than
-//! be permitted by it, which is a worse outcome than putting the test where
-//! nothing has to look away.
+//! (`the_two_readers_of_the_corpus_agree`), and it CANNOT live here: the
+//! layering guard refuses the dev-dependency it would need. Putting it in
+//! `windows/lab/tests/` means `hornvale-lab` declaring a dev-dependency on
+//! `hornvale`, and `cli/tests/suite/architecture.rs` reads
+//! `all_deps` — every dependency kind, unfiltered — for the window layer
+//! check, so it sees a dev-dependency exactly as it sees a normal one.
+//! Verified by adding the edge and running the check:
+//! `architecture.rs:146` panicked with *"window hornvale-lab depends on
+//! hornvale, which sits above the window layer"*. The edge was then
+//! removed.
+//!
+//! **An earlier draft of this paragraph said the opposite** — that
+//! `architecture.rs` "does not examine dev-dependencies at all", so the
+//! edge would *escape* the guard rather than be refused by it. That claim
+//! came from grepping for the literal string `dev-dependencies` and finding
+//! none; the behaviour lives in an unfiltered `deps.iter().map(dep_name)`
+//! that never spells the word. Only `normal_deps` filters on
+//! `kind.is_null()`. The correction is recorded rather than quietly edited
+//! because the wrong version told a reader that dev-dependencies are an
+//! unpoliced hole in the layering, which would invite exactly the edge the
+//! guard refuses.
 //!
 //! **Nothing here evaluates a criterion.** The verdict this module reads is
 //! the one the corpus RECORDS; whether the census still agrees with it is
@@ -178,13 +192,32 @@ impl Criterion {
 /// Storing prose beside them would be a second authored copy of the frozen
 /// claim, free to drift from the numbers the verdict was actually taken on
 /// — the transcription failure this whole line exists to avoid.
-/// type-audit: bare-ok(identifier-text: corpus), bare-ok(identifier-text: id), bare-ok(identifier-text: statistic)
+/// type-audit: bare-ok(identifier-text: corpus), bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(prose: source), bare-ok(identifier-text: statistic)
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScoredItem {
     /// Which corpus scored it, e.g. `sugarscape-1996`.
     pub corpus: String,
     /// The item's corpus-local id, e.g. `sug-wealth-skew`.
     pub id: String,
+    /// The regularity itself, stated as the source states it.
+    ///
+    /// Without this a claim line is two unglossed slugs and a number: a
+    /// reader can check the arithmetic but cannot learn WHAT was predicted,
+    /// which is half of what makes a claim falsifiable by someone outside
+    /// this repository.
+    pub title: String,
+    /// Where in the source the regularity appears, e.g.
+    /// `Ch. II, 'Emergence'; Animation II-3`.
+    ///
+    /// **Never passed through
+    /// [`crate::domesday::render::redact_registry_citations`]**, unlike a
+    /// metric's `doc`. That redactor matches on SHAPE — two to eight
+    /// upper-case letters, a hyphen, digits — with no prefix allowlist, so
+    /// it would silently delete `II-3` from this very string. The Book's own
+    /// guard (`docs_consistency::the_book_carries_no_registry_ids_or_
+    /// process_vocabulary`) filters by ACTUAL registry prefixes and is
+    /// therefore untroubled by a chapter-and-plate citation.
+    pub source: String,
     /// The census column it is measured through.
     pub statistic: String,
     /// The frozen criterion, as parameters.
@@ -247,8 +280,43 @@ fn median(present: &[f64]) -> Option<f64> {
 struct RawCorpus {
     /// The corpus identifier.
     corpus: String,
+    /// Where this catalogue comes from and what bias it carries.
+    provenance: String,
     /// Every item, measured or not.
     items: Vec<RawItem>,
+}
+
+/// One frozen corpus, reduced to what a survey page shows: where it came
+/// from, and the items it actually scores.
+///
+/// The provenance is carried because a claim line's `source` names a
+/// chapter but not a BOOK. A reader outside this repository needs the
+/// bibliographic origin to reach Epstein & Axtell at all — and the same
+/// paragraph carries the corpus's own statement of its bias ("an instrument
+/// with known bias, never a standard"), which is what stops a `FLAT` being
+/// read as a verdict on Hornvale rather than on the analogy the item drew.
+/// It is reproduced VERBATIM rather than summarised or sliced: any rule for
+/// extracting "just the citation" is a heuristic over authored prose, and
+/// the obvious one — take the first sentence — cuts this corpus's
+/// provenance at `Joshua M.` and would degrade silently on the next.
+/// type-audit: bare-ok(identifier-text: corpus), bare-ok(artifact: path), bare-ok(prose: provenance)
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScoredCorpus {
+    /// The corpus identifier, e.g. `sugarscape-1996`.
+    pub corpus: String,
+    /// Where the corpus file lives, as the caller named it.
+    ///
+    /// **Must be repository-relative.** It is printed onto a committed,
+    /// drift-checked Book page, so an absolute path would make the artifact
+    /// machine-dependent. `cli`'s `lab domesday` passes the entries of
+    /// `hornvale::regularities::CORPORA`, which are relative, and
+    /// `regularity_coverage::the_rendered_corpus_pointer_is_the_relative_path`
+    /// holds the rendered page to exactly that string.
+    pub path: String,
+    /// The corpus's own provenance statement, verbatim.
+    pub provenance: String,
+    /// The items this corpus scores, in corpus order.
+    pub items: Vec<ScoredItem>,
 }
 
 /// One item, as much of it as this module reads.
@@ -256,6 +324,10 @@ struct RawCorpus {
 struct RawItem {
     /// Corpus-local identifier.
     id: String,
+    /// The regularity as the source states it.
+    title: String,
+    /// Where in the source it appears.
+    source: String,
     /// The census column, empty for a non-measured verdict.
     #[serde(default)]
     statistic: String,
@@ -277,11 +349,14 @@ struct RawItem {
 /// A parse failure is an `Err`, never an empty reading — a reader that
 /// failed open to the empty set would strip every claim line from the
 /// survey and leave a healthy-looking page behind.
-/// type-audit: bare-ok(artifact: json), bare-ok(prose: return)
-pub fn load(json: &str) -> Result<Vec<ScoredItem>, String> {
+/// `path` is recorded on the result as [`ScoredCorpus::path`] and reaches a
+/// committed page, so it must be repository-relative.
+/// type-audit: bare-ok(artifact: json), bare-ok(artifact: path), bare-ok(prose: return)
+pub fn load(json: &str, path: &str) -> Result<ScoredCorpus, String> {
     let raw: RawCorpus =
         serde_json::from_str(json).map_err(|e| format!("regularity corpus parse: {e}"))?;
-    Ok(raw
+    let corpus = raw.corpus;
+    let items = raw
         .items
         .into_iter()
         .filter_map(|item| {
@@ -292,22 +367,33 @@ pub fn load(json: &str) -> Result<Vec<ScoredItem>, String> {
             };
             let criterion = item.criterion?;
             Some(ScoredItem {
-                corpus: raw.corpus.clone(),
+                corpus: corpus.clone(),
                 id: item.id,
+                title: item.title,
+                source: item.source,
                 statistic: item.statistic,
                 criterion,
                 verdict,
             })
         })
-        .collect())
+        .collect();
+    Ok(ScoredCorpus {
+        corpus,
+        path: path.to_string(),
+        provenance: raw.provenance,
+        items,
+    })
 }
 
 /// Read a corpus from disk and keep the items it scores.
-/// type-audit: bare-ok(prose: return)
-pub fn read(path: &Path) -> Result<Vec<ScoredItem>, String> {
+///
+/// The path is used both to open the file and, verbatim, as the pointer the
+/// survey prints — so pass a repository-relative one.
+/// type-audit: bare-ok(artifact: path), bare-ok(prose: return)
+pub fn read(path: &str) -> Result<ScoredCorpus, String> {
     let json =
-        std::fs::read_to_string(path).map_err(|e| format!("reading {}: {e}", path.display()))?;
-    load(&json)
+        std::fs::read_to_string(Path::new(path)).map_err(|e| format!("reading {path}: {e}"))?;
+    load(&json, path)
 }
 
 #[cfg(test)]
@@ -338,13 +424,15 @@ mod tests {
 
     #[test]
     fn a_measured_verdict_without_a_criterion_is_not_scored() {
-        let json = r#"{"corpus":"c","items":[
-          {"id":"a","verdict":"flat","statistic":"x"},
-          {"id":"b","verdict":"grown","statistic":"x",
+        let json = r#"{"corpus":"c","provenance":"p","items":[
+          {"id":"a","title":"t","source":"s","verdict":"flat","statistic":"x"},
+          {"id":"b","title":"t","source":"s","verdict":"grown","statistic":"x",
            "criterion":{"kind":"median-at-most","bound":1.0}}
         ]}"#;
-        let scored = load(json).expect("parses");
-        assert_eq!(scored.len(), 1);
-        assert_eq!(scored[0].id, "b");
+        let scored = load(json, "regularities/c.regularity.json").expect("parses");
+        assert_eq!(scored.items.len(), 1);
+        assert_eq!(scored.items[0].id, "b");
+        assert_eq!(scored.path, "regularities/c.regularity.json");
+        assert_eq!(scored.provenance, "p");
     }
 }

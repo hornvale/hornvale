@@ -2012,11 +2012,11 @@ fn cmd_lab_domesday() -> Result<(), String> {
     // `windows/lab`'s own minimal view: a window may not depend on `cli`, so
     // the two readers are held in agreement by a test rather than by a shared
     // type (decision 0261; see `windows/lab/src/domesday/corpus.rs`).
-    let mut scored = Vec::new();
+    // The paths are passed VERBATIM from `CORPORA` — repository-relative —
+    // because each one reaches the rendered page as that corpus's pointer.
+    let mut corpora = Vec::new();
     for path in crate::regularities::CORPORA {
-        scored.extend(hornvale_lab::domesday::corpus::read(std::path::Path::new(
-            path,
-        ))?);
+        corpora.push(hornvale_lab::domesday::corpus::read(path)?);
     }
 
     let out_dir = std::path::Path::new("book/src/domesday");
@@ -2032,7 +2032,7 @@ fn cmd_lab_domesday() -> Result<(), String> {
     let domains = hornvale_lab::domesday::render::domains();
     for domain in &domains {
         let page =
-            hornvale_lab::domesday::render::render_domain(&census, domain, &findings, &scored);
+            hornvale_lab::domesday::render::render_domain(&census, domain, &findings, &corpora);
         let path = out_dir.join(format!("{domain}.md"));
         std::fs::write(&path, page).map_err(|e| format!("writing {}: {e}", path.display()))?;
     }
@@ -2042,7 +2042,7 @@ fn cmd_lab_domesday() -> Result<(), String> {
         census.rows.len(),
         domains.len(),
         findings.len(),
-        scored.len(),
+        corpora.iter().map(|c| c.items.len()).sum::<usize>(),
         out_dir.display()
     );
     Ok(())

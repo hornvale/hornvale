@@ -5,6 +5,18 @@
 //! basis — measurement over the committed census (decision 0135). Unlike
 //! `systems`, this resolver reads a dataset; unlike `tropes`, it builds no
 //! world.
+//!
+//! **This is not the only reader of a `regularities/` corpus.**
+//! `windows/lab/src/domesday/corpus.rs` parses the same files with a
+//! minimal view — the fields a Domesday page prints — because a window may
+//! not depend on `cli` and the corpus schema does not belong in the kernel.
+//! That is a duplication kept on purpose (decision 0261), so both copies
+//! name each other and both are held by
+//! `cli/tests/suite/regularity_coverage.rs`'s
+//! `the_two_readers_of_the_corpus_agree` and
+//! `the_two_readers_agree_on_the_measured_number`. Change [`Criterion`],
+//! [`Verdict`] or the fields [`Item`] deserializes, and that module needs
+//! the same change.
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -19,6 +31,12 @@ pub const CORPORA: &[&str] = &["regularities/sugarscape-1996.regularity.json"];
 /// refused/deferred/absent triple is preserved intact; `Flat` is this
 /// family's addition — *measured, criterion unmet* — which no sibling family
 /// can express, because a grammar either parses a sentence or does not.
+///
+/// `windows/lab/src/domesday/corpus.rs` carries a two-valued companion
+/// (`Grown`/`Flat` only — the measured pair), for the reason its module doc
+/// gives. A new MEASURED verdict added here has to be added there too or it
+/// will be dropped from every survey page without a word; the five
+/// non-measured values are dropped there deliberately.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Verdict {
@@ -46,6 +64,15 @@ pub enum Verdict {
 /// the resolver owns the computation. A fifth kind is a code change, a
 /// review and a test — deliberately, so "add a criterion shape" is never a
 /// data edit.
+///
+/// **Duplicated on purpose in `windows/lab/src/domesday/corpus.rs`**
+/// (decision 0261) — the Domesday renders a criterion in prose and cannot
+/// reach this crate, since a window may not depend on `cli`. A kind added
+/// here and not there makes the survey silently omit a claim, so the two
+/// are held by `the_two_readers_of_the_corpus_agree` in
+/// `cli/tests/suite/regularity_coverage.rs`, whose reductions of both enums
+/// are exhaustive matches and therefore fail to COMPILE on a one-sided
+/// addition. Add the kind in both places, in the same commit.
 /// type-audit: bare-ok(ratio: MedianInBand.lo), bare-ok(ratio: MedianInBand.hi), bare-ok(ratio: FractionInBandAtLeast.lo), bare-ok(ratio: FractionInBandAtLeast.hi), bare-ok(ratio: FractionInBandAtLeast.min_fraction), bare-ok(ratio: MedianAtLeast.bound), bare-ok(ratio: MedianAtMost.bound), bare-ok(ratio: PresentOnFraction.min_fraction)
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]

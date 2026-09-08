@@ -914,13 +914,22 @@ fn the_population_comes_from_the_corpus_not_a_hard_coded_study() {
 // the kernel. That is a duplication kept ON PURPOSE, so decision 0261's
 // condition applies: the two readers are held together by an agreement test.
 //
-// **The test lives here, not in `windows/lab/tests/`, and that is a decision
-// rather than a convenience.** Putting it there would need a `hornvale`
-// dev-dependency on `hornvale-lab` — the dependency edge run backwards.
-// `cli/tests/suite/architecture.rs` enforces the layer graph over
-// `[dependencies]` and does not examine dev-dependencies at all, so such an
-// edge would ESCAPE the guard rather than be permitted by it. Both crates are
-// already in scope here, and nothing has to look away.
+// **The test lives here because it CANNOT live in `windows/lab/tests/`.**
+// Putting it there means `hornvale-lab` declaring a dev-dependency on
+// `hornvale`, and `architecture.rs`'s window check reads `all_deps` — built
+// by an unfiltered `deps.iter().map(dep_name)`, every dependency kind — so it
+// sees a dev-dependency exactly as it sees a normal one. Only `normal_deps`
+// filters on `kind.is_null()`. VERIFIED by adding the edge and running the
+// check: `architecture.rs:146` panicked with "window hornvale-lab depends on
+// hornvale, which sits above the window layer"; the edge was then removed.
+//
+// An earlier version of this comment said the opposite — that dev-deps are
+// not examined "at all", so the edge would ESCAPE the guard. That came from
+// grepping for the literal string `dev-dependencies`, which appears nowhere,
+// and concluding the behaviour was absent; it lives in a `collect` that never
+// spells the word. The correction is recorded rather than quietly swapped,
+// because the wrong version told a reader that dev-dependencies are an
+// unpoliced hole in the constitutional layering.
 // ---------------------------------------------------------------------------
 
 /// A criterion reduced to its kind name and its frozen parameters, so the
@@ -984,10 +993,34 @@ fn cli_scored() -> Vec<ScoredShape> {
         .collect()
 }
 
-/// What the Domesday's own reader considers a scored item of the same file.
+/// The founding corpus as the Domesday's own reader sees it.
+///
+/// The file is opened through an absolute path (a test's working directory
+/// is its crate, not the workspace root) while `load` is handed the
+/// RELATIVE one, because that string is what the reader records and the
+/// page prints — see `the_rendered_corpus_pointer_is_the_relative_path`.
+fn lab_corpus() -> hornvale_lab::domesday::corpus::ScoredCorpus {
+    let rel = regularities::CORPORA[0];
+    let json = std::fs::read_to_string(workspace_root().join(rel)).expect("corpus file");
+    hornvale_lab::domesday::corpus::load(&json, rel).expect("the Domesday reader reads the corpus")
+}
+
+/// Just its scored items.
 fn lab_scored() -> Vec<hornvale_lab::domesday::corpus::ScoredItem> {
-    let path = workspace_root().join(regularities::CORPORA[0]);
-    hornvale_lab::domesday::corpus::read(&path).expect("the Domesday reader reads the corpus")
+    lab_corpus().items
+}
+
+/// A scratch corpus read through the Domesday's reader and then deleted.
+///
+/// The pointer it records is the SCRATCH path, which is exactly right: a
+/// page rendered from a scratch corpus should say so. Only the real run
+/// records `CORPORA[0]`.
+fn read_scratch(path: &std::path::Path) -> Vec<hornvale_lab::domesday::corpus::ScoredCorpus> {
+    let json = std::fs::read_to_string(path).expect("scratch corpus file");
+    let corpus = hornvale_lab::domesday::corpus::load(&json, &path.display().to_string())
+        .expect("scratch corpus reads");
+    let _ = std::fs::remove_file(path);
+    vec![corpus]
 }
 
 /// Decision 0261: the corpus schema is duplicated on purpose, so the
@@ -1086,7 +1119,7 @@ fn the_two_readers_agree_on_the_measured_number() {
 #[test]
 fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
     let census = census();
-    let real = lab_scored();
+    let real = vec![lab_corpus()];
     let settlement =
         hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &real);
     assert!(
@@ -1094,10 +1127,11 @@ fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
         "the settlement page must carry a claim for this test to say anything"
     );
     assert!(
-        settlement.contains(
-            "`sug-wealth-skew`: predicted median in [-1.2, -0.8]; measured \
-                             -0.577645. FLAT."
-        ),
+        settlement.contains("`sug-wealth-skew`"),
+        "the item must be named: {settlement}"
+    );
+    assert!(
+        settlement.contains("Predicted median in [-1.2, -0.8]; measured -0.577645. FLAT."),
         "the committed reading moved; see the page: {settlement}"
     );
 
@@ -1112,14 +1146,10 @@ fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
             }
         }
     });
-    let flipped = hornvale_lab::domesday::corpus::read(&scratch).expect("scratch corpus reads");
-    let _ = std::fs::remove_file(&scratch);
+    let flipped = read_scratch(&scratch);
     let after = hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &flipped);
     assert!(
-        after.contains(
-            "`sug-wealth-skew`: predicted median in [-1.2, -0.8]; measured \
-                        -0.577645. GROWN."
-        ),
+        after.contains("Predicted median in [-1.2, -0.8]; measured -0.577645. GROWN."),
         "the verdict is transcribed, not derived — flipping the corpus record left the \
          page saying the same thing: {after}"
     );
@@ -1143,12 +1173,76 @@ fn tightening_a_band_moves_the_criterion_but_not_the_measurement() {
             }
         }
     });
-    let tightened = hornvale_lab::domesday::corpus::read(&scratch).expect("scratch corpus reads");
-    let _ = std::fs::remove_file(&scratch);
+    let tightened = read_scratch(&scratch);
     let page =
         hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &tightened);
     assert!(
-        page.contains("predicted median in [-0.6, -0.5]; measured -0.577645."),
+        page.contains("Predicted median in [-0.6, -0.5]; measured -0.577645."),
         "the criterion prose is assembled from the frozen parameters: {page}"
     );
+}
+
+/// The corpus pointer on the COMMITTED page is the repository-relative path,
+/// not an absolute one.
+///
+/// `ScoredCorpus::path` is whatever the caller passed, and it is printed
+/// verbatim onto a drift-checked artifact — so a caller that handed the
+/// reader an absolute path would commit a machine-dependent page that then
+/// drifts for everyone else. This asserts against the committed file rather
+/// than a fresh render, because the failure mode is about what the BINARY
+/// passes.
+#[test]
+fn the_rendered_corpus_pointer_is_the_relative_path() {
+    let page = std::fs::read_to_string(workspace_root().join("book/src/domesday/settlement.md"))
+        .expect("the settlement page");
+    assert!(
+        page.contains(&format!("`{}`", regularities::CORPORA[0])),
+        "the page must point at the corpus by its repository-relative path"
+    );
+    assert!(
+        !page.contains("/Users/") && !page.contains("/home/"),
+        "an absolute path reached a committed page"
+    );
+}
+
+/// The committed pages carry the traceability the claim line promises: what
+/// the regularity is, where the source states it, and the corpus behind it.
+///
+/// Asserted over the real artifact, not a render, so it also holds that the
+/// regeneration actually ran.
+#[test]
+fn the_committed_pages_carry_the_regularity_and_its_provenance() {
+    let corpus = lab_corpus();
+    let root = workspace_root();
+    for item in &corpus.items {
+        let domain = census()
+            .columns
+            .iter()
+            .find(|col| col.name == item.statistic)
+            .map(|col| col.domain.clone())
+            .expect("a scored statistic is a census column");
+        let page = std::fs::read_to_string(root.join(format!("book/src/domesday/{domain}.md")))
+            .expect("the domain page");
+        assert!(
+            page.contains(&item.title),
+            "{}: the regularity itself is missing from {domain}.md",
+            item.id
+        );
+        assert!(
+            page.contains(&item.source),
+            "{}: the source citation is missing from {domain}.md",
+            item.id
+        );
+        assert!(
+            page.contains(&format!(
+                "## {}",
+                hornvale_lab::domesday::render::CLAIMS_SECTION_TITLE
+            )),
+            "{domain}.md carries a claim but no gloss saying what one is"
+        );
+        assert!(
+            page.contains(&corpus.provenance),
+            "{domain}.md carries a claim but not the corpus provenance behind it"
+        );
+    }
 }
