@@ -388,6 +388,12 @@ git commit -m "data(regularities): freeze the sugarscape-1996 corpus before meas
 
 The rule from spec §5: a `doc:` anchor resolves **only** if `docs/generated-paths.txt` gives that path a generator. That file is TSV; column 1 is the path, column 2 names the author. An author of the form `none(...)` means hand-written — refused.
 
+**DO NOT WRITE A NEW PARSER FOR THAT FILE. Controller correction, made after reading the code:** `cli/src/attest.rs:332` already has `parse_declared(text) -> Vec<(String, DeclaredAuthor)>`, which skips comments and blank lines, splits on the tab, and classifies `none` / `none(<reason>)` against a real roster author — exactly this rule. It is stricter than a hand-rolled version: it **panics** on a row with no author column rather than silently skipping it. Its own doc comment records that it already "mirrors `cli/tests/suite/generated_paths.rs`'s `declared()`", so a third copy would be the second duplication of one rule, which is what decision 0261 exists to prevent.
+
+**What to do instead:** make `parse_declared` and `DeclaredAuthor` `pub` in `attest.rs` (adding the doc comments `#![warn(missing_docs)]` will then demand on the enum's variants), and have `regularities` call it. `GeneratedPaths` keeps only the part attest does not do — **directory inheritance**, where a file inherits the author of the longest declared directory prefix ending in `/`. Build the map from `parse_declared`'s output; do not re-read or re-split the file.
+
+The 252 comment lines in that file are why comment-skipping is load-bearing rather than defensive.
+
 - [ ] **Step 1: Write the failing tests**
 
 ```rust
@@ -485,27 +491,26 @@ impl Anchor {
 /// are regenerated and by what.
 #[derive(Debug, Clone)]
 pub struct GeneratedPaths {
-    /// Declared path to its author cell, verbatim.
-    authors: BTreeMap<String, String>,
+    /// Declared path to whether its author is a real generator (`true`) or a
+    /// declared `none(<reason>)` absence (`false`).
+    authors: BTreeMap<String, bool>,
 }
 
 impl GeneratedPaths {
     /// Read the declarations from a repository root.
+    ///
+    /// Parsing is delegated to [`crate::attest::parse_declared`] — the
+    /// repository's existing reader of this file and of its `none(<reason>)`
+    /// convention. This type adds only directory inheritance.
     /// type-audit: bare-ok(artifact: root), bare-ok(prose: return)
     pub fn read(root: &Path) -> Result<GeneratedPaths, String> {
         let path = root.join("docs/generated-paths.txt");
         let text = std::fs::read_to_string(&path)
             .map_err(|e| format!("reading {}: {e}", path.display()))?;
-        let mut authors = BTreeMap::new();
-        for line in text.lines() {
-            let line = line.trim_end();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            if let Some((p, author)) = line.split_once('\t') {
-                authors.insert(p.to_string(), author.to_string());
-            }
-        }
+        let authors: BTreeMap<String, bool> = crate::attest::parse_declared(&text)
+            .into_iter()
+            .map(|(p, author)| (p, matches!(author, crate::attest::DeclaredAuthor::Roster(_))))
+            .collect();
         if authors.is_empty() {
             return Err("no declared generated paths".to_string());
         }
@@ -519,16 +524,16 @@ impl GeneratedPaths {
     /// `cli/tests/suite/generated_paths.rs`'s job, not this one.
     /// type-audit: bare-ok(artifact: path), bare-ok(flag: return)
     pub fn has_generator(&self, path: &str) -> bool {
-        let direct = self.authors.get(path).map(|a| !a.starts_with("none("));
-        if let Some(v) = direct {
-            return v;
+        if let Some(generated) = self.authors.get(path) {
+            return *generated;
         }
-        // A file inherits a declared DIRECTORY's author unless it overrides.
+        // A file inherits the LONGEST declared directory prefix's author
+        // unless it overrides with a row of its own (handled above).
         self.authors
             .iter()
             .filter(|(decl, _)| decl.ends_with('/') && path.starts_with(decl.as_str()))
             .max_by_key(|(decl, _)| decl.len())
-            .map(|(_, author)| !author.starts_with("none("))
+            .map(|(_, generated)| *generated)
             .unwrap_or(false)
     }
 }
