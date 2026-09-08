@@ -754,6 +754,13 @@ denominator table, the source/projection witness contract, SugarScape's
 heterogeneity-and-exchange rationale, and the fantasy-axis deferral. Stop
 before authoring the spec until Nathan reviews the G3 package.
 
+## #10 [G3] — Design approval
+
+Nathan approved the D3B design draft on 2026-09-08. Proceed to implementation
+planning and execution under the approved scope: diagnostic witness and Task 0
+falsifier only; no specialization labels, persistent portfolios, dynamics rung,
+epoch, or census work.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
