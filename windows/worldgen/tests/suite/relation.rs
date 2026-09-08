@@ -1,8 +1,9 @@
 use hornvale_kernel::WorldTime;
 use hornvale_worldgen::relation::{
-    RelationAssertion, RelationDirection, RelationError, RelationInterval, RelationKind,
-    RelationMeasure, RelationParticipant, RelationProvenance, RelationRecurrence,
-    RelationReference, RelationRole, RelationView,
+    RelationAssertion, RelationBasis, RelationDirection, RelationDirectionPolicy, RelationError,
+    RelationInterval, RelationKind, RelationMeasure, RelationMeasureFilter, RelationParticipant,
+    RelationProvenance, RelationRecurrence, RelationReference, RelationRefusalReason, RelationRole,
+    RelationView,
 };
 
 fn reference(name: &str) -> RelationReference {
@@ -42,6 +43,17 @@ fn assertion(
         measure: RelationMeasure::new(measure),
         provenance: RelationProvenance::new("fixture"),
     }
+}
+
+fn references(assertions: impl Iterator<Item = RelationAssertion>) -> Vec<(String, String)> {
+    assertions
+        .map(|assertion| {
+            (
+                assertion.participants[0].reference.as_str().to_owned(),
+                assertion.participants[1].reference.as_str().to_owned(),
+            )
+        })
+        .collect()
 }
 
 #[test]
@@ -236,4 +248,276 @@ fn symmetric_view_canonicalizes_reversed_participants() {
     let forward_view = RelationView::new(vec![forward]).unwrap();
     let reverse_view = RelationView::new(vec![reverse]).unwrap();
     assert_eq!(forward_view, reverse_view);
+}
+
+#[test]
+fn basis_views_default_spatial_to_symmetric_and_preserve_directed_bases() {
+    let spatial = assertion(
+        RelationKind::SpatialAdjacency,
+        vec![
+            participant("locus:z", "site"),
+            participant("locus:a", "site"),
+        ],
+        RelationDirection::Symmetric,
+        1.0,
+    );
+    let access = assertion(
+        RelationKind::Access,
+        vec![participant("locus:z", "from"), participant("locus:a", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let exchange = assertion(
+        RelationKind::Exchange,
+        vec![
+            participant("cohort:z", "source"),
+            participant("cohort:a", "destination"),
+        ],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let view = RelationView::new(vec![exchange, access, spatial]).unwrap();
+
+    assert_eq!(
+        references(view.spatial(RelationMeasureFilter::all()).iter().cloned()),
+        vec![("locus:a".to_owned(), "locus:z".to_owned())]
+    );
+    assert_eq!(
+        references(
+            view.access(
+                RelationDirectionPolicy::WeaklyConnected,
+                RelationMeasureFilter::all(),
+            )
+            .iter()
+            .cloned()
+        ),
+        vec![("locus:z".to_owned(), "locus:a".to_owned())]
+    );
+    assert_eq!(
+        references(
+            view.exchange(
+                RelationDirectionPolicy::WeaklyConnected,
+                RelationMeasureFilter::all(),
+            )
+            .iter()
+            .cloned()
+        ),
+        vec![("cohort:z".to_owned(), "cohort:a".to_owned())]
+    );
+}
+
+#[test]
+fn weak_and_strong_policies_select_different_directed_evidence() {
+    let one_way = assertion(
+        RelationKind::Access,
+        vec![participant("locus:a", "from"), participant("locus:b", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let outward = assertion(
+        RelationKind::Access,
+        vec![participant("locus:b", "from"), participant("locus:c", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let return_path = assertion(
+        RelationKind::Access,
+        vec![participant("locus:c", "from"), participant("locus:b", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let view = RelationView::new(vec![return_path, one_way, outward]).unwrap();
+
+    let weak = view.access(
+        RelationDirectionPolicy::WeaklyConnected,
+        RelationMeasureFilter::all(),
+    );
+    let strong = view.access(
+        RelationDirectionPolicy::StronglyConnected,
+        RelationMeasureFilter::all(),
+    );
+
+    assert_eq!(weak.len(), 3);
+    assert_eq!(
+        references(strong.iter().cloned()),
+        vec![
+            ("locus:b".to_owned(), "locus:c".to_owned()),
+            ("locus:c".to_owned(), "locus:b".to_owned()),
+        ]
+    );
+}
+
+#[test]
+fn strong_policy_admits_a_directed_cycle_without_direct_reverse_edges() {
+    let a_to_b = assertion(
+        RelationKind::Access,
+        vec![participant("locus:a", "from"), participant("locus:b", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let b_to_c = assertion(
+        RelationKind::Access,
+        vec![participant("locus:b", "from"), participant("locus:c", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let c_to_a = assertion(
+        RelationKind::Access,
+        vec![participant("locus:c", "from"), participant("locus:a", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let view = RelationView::new(vec![c_to_a, b_to_c, a_to_b]).unwrap();
+
+    let strong = view.access(
+        RelationDirectionPolicy::StronglyConnected,
+        RelationMeasureFilter::all(),
+    );
+
+    assert_eq!(strong.len(), 3);
+}
+
+#[test]
+fn source_reachable_and_reciprocal_policies_are_explicit() {
+    let from_a = assertion(
+        RelationKind::Access,
+        vec![participant("locus:a", "from"), participant("locus:b", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let from_b = assertion(
+        RelationKind::Access,
+        vec![participant("locus:b", "from"), participant("locus:c", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let toward_a = assertion(
+        RelationKind::Access,
+        vec![participant("locus:d", "from"), participant("locus:a", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    let reciprocal = assertion(
+        RelationKind::Access,
+        vec![
+            participant("locus:c", "site"),
+            participant("locus:e", "site"),
+        ],
+        RelationDirection::Reciprocal,
+        1.0,
+    );
+    let view = RelationView::new(vec![toward_a, reciprocal, from_b, from_a]).unwrap();
+
+    let reachable = view.access(
+        RelationDirectionPolicy::SourceReachable(reference("locus:a")),
+        RelationMeasureFilter::all(),
+    );
+    let reciprocal_only = view.access(
+        RelationDirectionPolicy::Reciprocal,
+        RelationMeasureFilter::all(),
+    );
+
+    assert_eq!(
+        references(reachable.iter().cloned()),
+        vec![
+            ("locus:a".to_owned(), "locus:b".to_owned()),
+            ("locus:b".to_owned(), "locus:c".to_owned()),
+            ("locus:c".to_owned(), "locus:e".to_owned()),
+        ]
+    );
+    assert_eq!(
+        references(reciprocal_only.iter().cloned()),
+        vec![("locus:c".to_owned(), "locus:e".to_owned())]
+    );
+}
+
+#[test]
+fn distant_exchange_does_not_fabricate_spatial_adjacency() {
+    let exchange = assertion(
+        RelationKind::Exchange,
+        vec![
+            participant("locus:distant-a", "source"),
+            participant("locus:distant-b", "destination"),
+        ],
+        RelationDirection::Directed,
+        12.0,
+    );
+    let view = RelationView::new(vec![exchange.clone()]).unwrap();
+
+    let exchange_view = view.exchange(
+        RelationDirectionPolicy::WeaklyConnected,
+        RelationMeasureFilter::all(),
+    );
+    let spatial_view = view.spatial(RelationMeasureFilter::all());
+
+    assert_eq!(exchange_view.iter().collect::<Vec<_>>(), vec![&exchange]);
+    assert!(spatial_view.is_empty());
+    assert_eq!(spatial_view.refusals().len(), 1);
+    assert_eq!(spatial_view.refusals()[0].assertion, exchange);
+    assert_eq!(
+        spatial_view.refusals()[0].reason,
+        RelationRefusalReason::UnsupportedKind {
+            basis: RelationBasis::Spatial,
+            kind: RelationKind::Exchange,
+        }
+    );
+}
+
+#[test]
+fn higher_arity_refusal_retains_the_original_assertion_and_provenance() {
+    let ternary = assertion(
+        RelationKind::Exchange,
+        vec![
+            participant("cohort:a", "source"),
+            participant("locus:market", "venue"),
+            participant("cohort:b", "destination"),
+        ],
+        RelationDirection::Directed,
+        3.0,
+    );
+    let expected = ternary.clone();
+
+    let error = RelationView::new(vec![ternary]).unwrap_err();
+
+    assert_eq!(
+        error,
+        RelationError::UnsupportedParticipantCount {
+            kind: RelationKind::Exchange,
+            count: 3,
+            assertion: expected,
+        }
+    );
+}
+
+#[test]
+fn measure_filter_is_applied_only_inside_its_basis() {
+    let nearby = assertion(
+        RelationKind::SpatialAdjacency,
+        vec![
+            participant("locus:a", "site"),
+            participant("locus:b", "site"),
+        ],
+        RelationDirection::Symmetric,
+        2.0,
+    );
+    let frequent_exchange = assertion(
+        RelationKind::Exchange,
+        vec![participant("locus:a", "from"), participant("locus:b", "to")],
+        RelationDirection::Directed,
+        9.0,
+    );
+    let view = RelationView::new(vec![frequent_exchange, nearby]).unwrap();
+
+    assert!(
+        view.spatial(RelationMeasureFilter::at_least(5.0))
+            .is_empty()
+    );
+    assert_eq!(
+        view.exchange(
+            RelationDirectionPolicy::WeaklyConnected,
+            RelationMeasureFilter::at_least(5.0),
+        )
+        .len(),
+        1
+    );
 }
