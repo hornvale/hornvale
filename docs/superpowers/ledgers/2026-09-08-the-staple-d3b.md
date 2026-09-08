@@ -959,3 +959,20 @@ subfloor chunks before this ledger update. No probe denominator, join
 severity, role/portfolio/dynamic/epoch, save/emission path, or census fixture
 changed. The ignored 200-seed report and every census command remained
 unrun, per the Task 5 implementation boundary.
+
+## #20 [Post-run ruling] — Explicit incompleteness is non-clearing, not malformed
+
+The required post-Task-5 fixed-roster rerun confirmed that the producer-side
+join defect is gone: the previously missing projection witnesses are present
+and `missing_projections` is empty. The probe then stopped at its own final
+assertion because live zero-phase units populated `phase_incomplete_units`,
+which was still included in `InvalidMeasurement`.
+
+**Decision:** classify phase incompleteness separately as a non-clearing
+`IncompleteMeasurement` verdict. Malformed numeric values, incoherent access,
+conservation failures, duplicate/missing joins, and other integrity failures
+remain fatal. The explicit zero sentinel is never consumed as evidence. The
+fixed roster must report this state rather than panic.
+
+**Evidence:** post-Task-5 local fixed-roster run, seed 1; `missing_projections`
+empty and `phase_incomplete_units` populated. No census run.

@@ -147,3 +147,24 @@ continues to produce no sidecar witnesses.
 - [ ] Step 3: Run focused history/D3B tests and the commit gate.
 - [ ] Step 4: Rerun the local ignored fixed-roster report and inspect the
   per-seed verdicts; do not run a census.
+
+### Task 6: Classify explicit incomplete observations
+
+**Files:**
+- Modify: windows/worldgen/tests/suite/staple_d3b_probe.rs — distinguish
+  expected zero-phase incompleteness from malformed measurements, and keep the
+  fixed-roster report non-panicking and scientifically conservative.
+- Modify: docs/superpowers/ledgers/2026-09-08-the-staple-d3b.md — record the
+  post-fix report ruling.
+
+The post-Task-5 report confirms that missing joins are gone, but the probe's
+final assertion still treats its explicit `phase_incomplete_units` branch as
+fatal `InvalidMeasurement`. Give that branch its own non-clearing verdict;
+the roster may remain mixed/underpowered, but it must report rather than
+panic. Other malformed measurements remain fatal integrity failures.
+
+- [ ] Step 1: Add a failing reducer test for the distinct incomplete verdict.
+- [ ] Step 2: Implement the smallest verdict/assertion correction.
+- [ ] Step 3: Run focused non-ignored tests and the commit gate.
+- [ ] Step 4: Rerun the local ignored fixed-roster report and inspect the
+  per-seed verdict distribution; do not run a census.
