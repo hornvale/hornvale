@@ -833,15 +833,9 @@ fn culvert_possession_shape() -> (Ledger, Vec<Body>, WorldTime, hornvale_locale:
     (ledger, npcs, t, ctx)
 }
 
-/// Which measured shape a pair population comes from. The two seed-42
-/// variants below are NOT the same shape and it cost this task a wasted
-/// round trip to learn that, so it is written down here rather than left to
-/// be rediscovered: `resident_folds.rs`'s `bench_shape(KERF_LAB_SEED,
-/// KERF_LAB_TICKS, KERF_LAB_AGENTS)` = `bench_shape(42, 10, 50)` is The
-/// Kerf's own SHORT lab shape (10 ticks); `session_length_scaling.rs`'s own
-/// construction runs the SAME seed and roster size for 200 ticks and reads
-/// its state at band 10 of 10 (`BAND == 20`) — a much larger, much more
-/// expensive walk that happens to share a seed with the first.
+/// Which measured shape a pair population comes from. The short lab shape is
+/// a ten-tick, fifty-agent run on seed 17. The 200-tick fallback below remains
+/// the older seed-42 construction and is retained only as a cost record.
 ///
 /// Task 6 needs BOTH ARMS of `plan_to_room` to fire (a reachable pair and an
 /// unreachable one) and nothing more specific than that — the possession
@@ -856,17 +850,13 @@ enum Shape {
     /// Seed 17, `Session::start` + 12 waits — 52 of 67 residents hold a
     /// non-empty belief, max 23 rooms, no unreachable pair.
     Possession,
-    /// The Kerf's own lab shape — `resident_folds.rs`'s
-    /// `bench_shape(KERF_LAB_SEED, KERF_LAB_TICKS, KERF_LAB_AGENTS)` =
-    /// `bench_shape(42, 10, 50)`, ten ticks, not two hundred. Measured: 9 of
-    /// 50 residents hold a non-empty belief (largest 4 rooms), 27 distinct
-    /// `(home, dest)` pairs, of which 4 are unreachable within
+    /// The short seed-17 lab shape, ten ticks and fifty agents. It yields 16
+    /// distinct `(home, dest)` pairs, 15 reachable and 1 unreachable within
     /// `PLAN_BUDGET_MIRROR` — enough to exercise both of `plan_to_room`'s
     /// arms at a small fraction of [`Shape::LabAt200Ticks`]'s cost. This is
     /// the variant every correctness test (Task 6 included) should use.
     Lab,
-    /// The SAME seed-42, 50-agent construction as [`Shape::Lab`] (both go
-    /// through `the_detent::bench_shape`), run the FULL 200 ticks
+    /// The older seed-42, 50-agent construction, run the FULL 200 ticks
     /// `session_length_scaling.rs` itself runs before reading its own band
     /// 10 (`BAND == 20`, the 10th and final band) — not `resident_folds.rs`'s
     /// cheaper 10-tick shape [`Shape::Lab`] reads. Measured: 11 of 50
@@ -925,14 +915,13 @@ fn culvert_real_pairs(shape: Shape) -> Vec<(Facet, Facet)> {
             pairs_from(&ledger, &folds, &npcs, t, &terrain)
         }
         Shape::Lab => {
-            // The Kerf's own 10-tick lab shape (`resident_folds.rs`'s
-            // KERF_LAB_SEED/KERF_LAB_TICKS/KERF_LAB_AGENTS = 42, 10, 50),
-            // repeated here as literals rather than shared constants (each
-            // test module keeps its own copy of a shape it did not author,
-            // the same convention this module's possession constants already
-            // follow) — see [`Shape::Lab`]'s own doc for why this, and not
-            // [`Shape::LabAt200Ticks`], is the correctness-testing default.
-            let lab = crate::the_detent::bench_shape(42, 10, 50);
+            // The short lab shape is repeated here as literals rather than
+            // shared constants (each test module keeps its own copy of a
+            // shape it did not author, the same convention this module's
+            // possession constants already follow) — see [`Shape::Lab`]'s
+            // own doc for why this, and not [`Shape::LabAt200Ticks`], is the
+            // correctness-testing default.
+            let lab = crate::the_detent::bench_shape(17, 10, 50);
             let mesh = lab.mesh_memo.clone();
             let terrain =
                 liveness::LocaleTerrain::with_fields(&lab.ctx, None, None, None, None, Some(&mesh));
@@ -1461,16 +1450,14 @@ fn culvert_here_anchored_key_population_curve() {
 /// **THE STRONGEST THING THIS TEST DEMONSTRATES IS NOT IN ITS ASSERTIONS, so
 /// it is written here** (Task 6, fix round 1 — the reviewer's finding, and
 /// neither the implementer nor the controller had noticed it). The population
-/// unions pairs from TWO DIFFERENT WORLDS — [`Shape::Possession`] is seed 17
-/// and [`Shape::Lab`] is seed 42 — into ONE memo, and every answer still
-/// matches a fresh search. That would be UNSOUND if `plan_to_room` had any
-/// world input at all: a memo shared across two worlds would hand seed 42's
-/// answer to a seed 17 question the moment their key spaces met. It passes
-/// because the search is pure over mesh geometry, which is exactly the
-/// campaign's byte-identity premise. Read this test as evidence for that
-/// premise and not only for the memo's bookkeeping — the union is load-bearing
-/// twice over (both arms of `plan_to_room`, AND cross-world purity), and
-/// collapsing it back to one shape would silently discard the second.
+/// unions pairs from TWO DIFFERENT WORLD CONSTRUCTIONS — [`Shape::Possession`]
+/// is a twelve-wait session on seed 17 and [`Shape::Lab`] is a ten-tick lab
+/// run on that seed — into ONE memo, and every answer still matches a fresh
+/// search. The two constructions have independent ledgers and room
+/// populations, while `plan_to_room` remains pure over mesh geometry. Read
+/// this test as evidence for that byte-identity premise and not only for the
+/// memo's bookkeeping: both route arms and both production populations remain
+/// load-bearing.
 #[test]
 fn the_memo_answers_exactly_what_a_fresh_search_answers() {
     // Real (home, water room) pairs from the two measured shapes — NOT
