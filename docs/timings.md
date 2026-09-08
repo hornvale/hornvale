@@ -6687,3 +6687,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T17:30:10Z | gate-commit | 38.306 | 68.459 | 17.935 | 2.26 | 0 | 1feb5ced7 | campaign/the-staple-d4 | MacBookPro | 10 |
 | 2026-09-08T17:31:21Z | gate-commit | 36.109 | 66.488 | 16.808 | 2.31 | 0 | 1feb5ced7 | campaign/the-staple-d4 | MacBookPro | 10 |
 | 2026-09-08T17:50:03Z | gate-commit | 46.621 | 108.650 | 18.604 | 2.73 | 0 | d9be68942 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T17:50:52Z | gate-commit | 36.773 | 67.580 | 18.036 | 2.33 | 0 | d9be68942 | campaign/the-staple-d4 | MacBookPro | 10 |
