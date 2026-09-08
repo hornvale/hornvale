@@ -511,6 +511,102 @@ compared without quantile tuning, and must test the source/projection join
 across domains. No implementation, census, epoch, or `Function` conversion is
 licensed by this ruling.
 
+## #7 [G2] — How are projection vectors compared without invented bands?
+
+**Question:** How can D3B distinguish genuine projected regimes from tiny
+floating-point differences, while preserving variation that a coarse banding
+would hide?
+
+**Decision:** Keep two layers in the diagnostic:
+
+1. the **raw continuous A/B vector**, retained for the readout and any later
+   review; and
+2. a small **structural signature** derived only from existing endpoint and
+   ordering semantics, used for the dead-pole branch.
+
+For each typed coverage component, the structural band is `0`, `(0, 1)`, or
+`1`, using the same clamped coverage domain already established by D2's
+shortfall calculation. The signature also records whether A is below, equal
+to, or above B after phase integration. This distinguishes balanced adequacy,
+typed imbalance, and persistent absence without assigning names such as
+farmer, fisher, or trader.
+
+The raw vector remains authoritative for seeing within-band spread. Where a
+committed artifact needs a stable equality comparison, it uses the repository's
+existing eight-significant-digit `quantize` boundary; quantization is never
+introduced into the compute path or used as a new world threshold.
+
+The branch table is therefore:
+
+```text
+source support has no occupied multi-band contrast
+    -> dead pole 1: no usable source gradient
+
+source support varies, projection vectors are equal at the committed
+observation precision, and every structural signature is the same
+    -> dead pole 2: realized projection collapse
+
+source support varies, structural signatures are all the same, but raw
+projection vectors vary at committed precision
+    -> measurement saturation: report the hidden spread; D3B does not pass
+       until a finer defensible signature is chosen
+
+source support varies and multiple structurally or materially distinct
+projection vectors occur across joined units
+    -> projection variation exists; test capability/need/access alignment
+```
+
+This explicitly distinguishes a uniform world from an observation instrument
+whose bands are too coarse. It also prevents “every value is nonzero” from
+passing: nonzero interior values share a structural band until their raw
+variation is independently shown to be material at the committed boundary.
+
+**Cross-domain re-instantiation:**
+
+- In ecology, source regime is habitat opportunity; projection is realized
+  intake of two required nutrients. Identical intake portfolios despite varied
+  habitats are projection collapse; varied intake with no movement path is a
+  capability/access gap.
+- In a local market, source regime is local production possibility; projection
+  is the typed basket actually covered after bilateral trade. A high-volume
+  market cannot erase the per-community vector by being counted once per edge.
+- In network routing, source regime is local capacity; projection is delivered
+  flow by type over the reachable neighborhood. A route that is merely
+  connected but never delivers remains access failure, not specialization.
+
+All three translations preserve the same invariant: source variation is
+measured before realization, realization is measured per node, and topology
+explains transmission rather than value. No cross-domain translation
+overturned the paired instrument.
+
+**Alternatives discarded:**
+
+- **Quantile or equal-width output bins:** rejected because their occupancy is
+  distribution-dependent and can manufacture variation or hide it.
+- **Raw `f64` equality only:** rejected because libm/last-bit noise could create
+  false regimes; emitted equality must use the existing quantization boundary.
+- **Quantize during computation:** rejected by the kernel's emit-only contract.
+- **Typed-order signature alone:** rejected because it loses magnitude and
+  confuses a tiny imbalance with persistent deprivation.
+- **A new tolerance constant:** rejected until a domain-specific semantic bar
+  exists; D3B should not smuggle a specialization threshold into a diagnostic.
+
+**Vacuity checks:** require a nonempty, phase-complete joined denominator;
+report missing and duplicate communities; exclude zero-demand units; retain
+the raw vector alongside every structural signature; and make the
+measurement-saturation branch observable rather than silently promoting it to
+success.
+
+**Ideonomy passes / overturns:** one pass (seed 4102), using negation,
+abstraction-lift, and organon-construction with tree/map organons. The
+negation exposed “same signature, hidden raw spread” as a separate anti-pole;
+ecology, market, and routing re-instantiations preserved the node-local
+invariant. No overturn.
+
+**Capture actions:** the Task 0 design can now state a non-quantile comparison
+rule; next freeze the full falsifier branch table and its cross-seed pooling
+unit before G3 packaging.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
