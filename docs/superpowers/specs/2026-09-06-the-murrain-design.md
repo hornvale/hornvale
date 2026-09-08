@@ -1,6 +1,9 @@
 # The Murrain — design
 
 **Campaign:** The Murrain (follows The Lot, decisions 0796–0798).
+
+**Status:** implemented; canonical stage gate passed, campaign close artifacts
+are being prepared for the merge queue.
 **Branch:** `campaign/the-murrain`. **Decision block:** 0856–0865.
 **Ledger:** `docs/superpowers/ledgers/2026-09-06-the-murrain.md`.
 **Status:** at G3 (spec review).

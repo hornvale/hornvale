@@ -622,3 +622,25 @@ declared site kinds, placed sites carry facets, settlements do not, and the F5
 resolved terrain class agrees with every non-site glyph. Both values were
 re-measured on the post-Murrain world and their linked prose/pins were updated;
 no renderer behavior or population authority was changed.
+
+## G6 close preparation
+
+The post-G3 entries were read end to end. The material rulings and measured
+outcomes are carried into `book/src/chronicle/the-murrain.md` and
+`docs/retrospectives/the-murrain.md`: the population substrate/projection
+boundary, trajectory reconstruction, outbreak-event identity, the two
+falsified H-P bounds, the 0.944 CPU-s/world cost, the increased founder
+contention rate, and the generated-bundle drift lesson.
+
+Deferred minors have homes. The `shape.rs` relocation remains a follow-up in
+the retrospective; the household lattice is the deferred half of
+`BIO-pathogen-as-species`; miasma and illness-in-possession are minted as
+registry rows. No item remains only in `.superpowers/sdd/`.
+
+The Definition-of-Done authored surfaces are now present: the Murrain
+chronicle is wired into `book/src/SUMMARY.md`, the retrospective exists, the
+Lot and windows guidance describe the population boundary, the Domesday
+history page already documents the epidemic metrics, and the registry flips
+and cross-links are recorded. The stage request
+`req-f4483c982321-20260908T213841Z` passed on commit `f4483c982321`; merge
+submission remains the next gate.
