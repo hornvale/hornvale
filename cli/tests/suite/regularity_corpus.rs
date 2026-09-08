@@ -24,7 +24,7 @@ fn a_corpus_parses_its_items_criteria_and_verdicts() {
     assert!(!c.ordered);
     assert_eq!(c.items.len(), 1);
     assert_eq!(c.items[0].verdict, Verdict::Unmeasured);
-    assert_eq!(c.items[0].emergence_type, 2);
+    assert_eq!(c.items[0].emergence_type, Some(2));
     assert_eq!(
         c.items[0].criterion,
         Some(Criterion::MedianInBand { lo: -1.2, hi: -0.8 })
@@ -90,6 +90,27 @@ fn every_item_id_is_unique_and_every_measurable_item_carries_a_criterion() {
              a non-measurable one must carry neither",
             item.id
         );
+        // `emergence_type` is nullable so that a model abstraction or a bare
+        // micro-rule can decline the source's taxonomy instead of defaulting
+        // into it. An item this corpus proposes to MEASURE is asserting a
+        // regularity by construction, so it may not decline: without this,
+        // nulling the field is a way to smuggle a filler item into the
+        // measurable half.
+        if measurable {
+            assert!(
+                item.emergence_type.is_some(),
+                "{}: a measurable item asserts a regularity, so it carries an \
+                 emergence type",
+                item.id
+            );
+        }
+        if let Some(t) = item.emergence_type {
+            assert!(
+                t == 1 || t == 2,
+                "{}: emergence type {t} is outside the source's taxonomy",
+                item.id
+            );
+        }
     }
 }
 

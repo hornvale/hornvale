@@ -91,9 +91,23 @@ pub struct Item {
     pub title: String,
     /// Where in the source it appears.
     pub source: String,
-    /// 1 = the individual property is meaningful but only the collective
-    /// exhibits it; 2 = only the collective property is meaningful.
-    pub emergence_type: u8,
+    /// The source's own emergence taxonomy (Epstein & Axtell, Ch. II
+    /// footnote 24): 1 = the individual property is meaningful but only the
+    /// collective exhibits it; 2 = only the collective property is
+    /// meaningful.
+    ///
+    /// `None` where the taxonomy does not apply, and that is a third
+    /// answer rather than a missing one: a model abstraction (a lattice
+    /// geometry, an experimental control) and a bare micro-rule assert no
+    /// regularity, so they are neither type. Nullable at the schema rather
+    /// than filtered downstream, so that no consumer can count filler into
+    /// an emergence tally — a report that summed a defaulted `1` would
+    /// publish a plausible number that is a category error.
+    ///
+    /// An item that DOES assert a regularity carries a 1 or a 2; the
+    /// corpus's freeze tests hold that for every measurable item.
+    #[serde(default)]
+    pub emergence_type: Option<u8>,
     /// The census column this item is measured through. Empty when the
     /// verdict is not a measured one.
     #[serde(default)]

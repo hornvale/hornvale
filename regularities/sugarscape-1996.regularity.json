@@ -32,10 +32,8 @@
       "title": "Purposeful local movement toward the best available site produces spatially segregated population pools rather than one homogeneous spread",
       "source": "Ch. III, 'The Proto-History'; Ch. I, 'Sex, Culture, and Conflict'",
       "emergence_type": 2,
-      "statistic": "settlement-count",
-      "criterion": { "kind": "median-at-least", "bound": 2.0 },
-      "verdict": "unmeasured",
-      "note": "The proto-history's first move: agents converge on the twin sugar peaks and split into two pools that then differentiate. Two is the source's own minimum — one pool per peak — so the bound is taken from the model, not from Hornvale's expected scale."
+      "verdict": "absent",
+      "note": "DEMOTED FOR THE SAME DEFECT AS `sug-social-speciation`, and recorded rather than quietly deleted. The first draft read `settlement-count >= 2`, with the bound taken honestly from the source (one pool per sugar peak) rather than from Hornvale's scale. It still cannot fail on this item's negation: the alternative the source contrasts with — ONE homogeneous spread over the whole landscape — is not a world with fewer settlements in Hornvale, it is a world with the same settlements differently arranged. A count is blind to arrangement. Segregation is a spatial-clustering claim and needs a clustering or dispersion statistic (nearest-neighbour distance, a join-count, a Moran's I over an explicit weights matrix); the census carries none, and no registry row asks for one."
     },
     {
       "id": "sug-predation-is-bounded",
@@ -92,10 +90,8 @@
       "title": "Separated subpopulations differentiate: each converges on its own culture, and cultural distance is what marks the boundary between them",
       "source": "Ch. III, 'Cultural Dynamics'; Ch. II, 'Seasonal Migration' ('in evolutionary time, speciation would occur')",
       "emergence_type": 2,
-      "statistic": "cascade-rules-fired-bugbear",
-      "criterion": { "kind": "median-at-least", "bound": 1.0 },
-      "verdict": "unmeasured",
-      "note": "The companion to the item above and deliberately a SECOND people, because the source's claim is about differentiation between pools, not about one pool having a culture. This is the corpus's weakest analogy and it is stated plainly: the column measures that bugbear's cascade is independently live, not that bugbear and goblin diverged from a common ancestor. A better instrument is a cross-species distance the census does not carry."
+      "verdict": "absent",
+      "note": "AUTHORED MEASURABLE AND DEMOTED IN THE SAME CAMPAIGN, BEFORE ANY MEASUREMENT, AND THE REASON IS WORTH KEEPING. The first draft read `cascade-rules-fired-bugbear >= 1` — the same statistic `sug-culture-is-generative` reads of goblin, applied to a second people. That criterion CANNOT FAIL ON THIS ITEM'S NEGATION: two pools that converged on one identical culture each have a live cascade and would score `grown` on an item about speciation. The source's claim is about the DISTANCE between pools, and a per-species liveness reading is not a distance at any bound. The right instrument is a cross-species lexical or phonological distance, which the census does not carry and no registry row asks for — hence `absent` rather than `deferred`: the trajectory row covers series-blindness, and this is not that."
     },
     {
       "id": "sug-externality-displaces",
@@ -194,7 +190,7 @@
       "id": "sug-tribe-is-an-input-to-violence",
       "title": "Group membership is a primitive input to conduct: the combat rule discards every site held by the agent's own tribe before considering any material fact about the target",
       "source": "Appendix B, agent combat rule C(alpha); Ch. III, 'Combat'",
-      "emergence_type": 1,
+      "emergence_type": null,
       "verdict": "refused",
       "anchor": "decision:0021",
       "note": "0021 forecloses exactly this shape: 'a people's conduct is a situation derived from material conditions, and any ideology ranking species is a generated output, never an input'. Hornvale's raid gate reads strength against a margin, not identity, and an in-group/out-group ranking is required to be derived rather than declared. Note what is NOT refused: Sugarscape's tags are themselves endogenous, so tribe FORMATION is fine and is scored at `sug-culture-is-generative`. What 0021 refuses is letting the resulting label enter the conduct rule as a term."
@@ -357,16 +353,17 @@
       "id": "sug-multiple-microrules-one-macrostructure",
       "title": "The mapping from micro-rules to macrostructure may be many-to-one: several different rule sets can generate the same aggregate pattern",
       "source": "Ch. I, 'Toward Generative Social Science', footnote 25",
-      "emergence_type": 2,
-      "verdict": "absent",
-      "note": "A claim about the space of models, testable only by varying the rules and comparing outcomes. A corpus scoring one world generator against a fixed physics cannot reach it, and no registry row asks for it."
+      "emergence_type": null,
+      "verdict": "inapplicable",
+      "anchor": "reason:a claim about the space of models -- that several rule sets may generate one macrostructure -- and not a regularity any world can exhibit",
+      "note": "BUCKETED WITH ITS SIBLING `sug-generative-explanation`, from the same section of Ch. I, after a first draft split the two: this was `absent` and that was `inapplicable`, on reasons that were in fact the same reason. `absent` means Hornvale lacks a mechanism; nothing here is missing from Hornvale, because a many-to-one mapping is a property of the space of possible models and no single world can be measured for it. Testing it would mean varying the RULES and comparing outcomes, which is a second generator, not a second world."
     },
 
     {
       "id": "sug-growback-parameterization",
       "title": "Sugarscape growback rule G(alpha): at each lattice position the resource grows back at alpha units per time interval, up to that position's capacity",
       "source": "Appendix B, sugarscape growback rule G(alpha); Ch. II, 'Simple Local Rules for the Environment'",
-      "emergence_type": 1,
+      "emergence_type": null,
       "verdict": "inapplicable",
       "anchor": "reason:a per-site regrowth constant on the source model's own resource lattice -- the knob its experiments turn, not a claim about how any world behaves",
       "note": "Included because it heads Appendix B's roster and because the corpus should show where the source stops describing worlds and starts describing itself. Hornvale's harvest curve is a different abstraction serving a different purpose and the two are not commensurable."
@@ -375,7 +372,7 @@
       "id": "sug-lattice-geometry",
       "title": "Space is a fifty-by-fifty toroidal lattice on which vision extends in the four von Neumann directions and movement is one of those four",
       "source": "Ch. II, 'In the Beginning There Was Sugar'; Appendix B, agent movement rule M",
-      "emergence_type": 1,
+      "emergence_type": null,
       "verdict": "inapplicable",
       "anchor": "reason:the source's own spatial representation; the four-direction restriction is the premise that makes its diagonal-wave result surprising, not a property of physical space",
       "note": "Worth keeping visible rather than dropping, because `sug-migration-wave` is only interesting relative to it: the wave is emergent BECAUSE the lattice forbids the heading. On a sphere with continuous bearings the same finding has no content."
@@ -384,7 +381,7 @@
       "id": "sug-agent-replacement-device",
       "title": "Replacement rule R[a,b]: when an agent dies it is replaced by a new agent of age zero with random attributes, random position, random endowment and a maximum age drawn from [a,b]",
       "source": "Appendix B, agent replacement rule R[a,b]; Ch. II, 'Emergence'",
-      "emergence_type": 1,
+      "emergence_type": null,
       "verdict": "inapplicable",
       "anchor": "reason:an experimental control that holds the population stationary so a distribution can be studied at all -- the source introduces it to study wealth rather than demography, and turns it off once sex arrives",
       "note": "Not scored as refused despite resembling an authored floor under decision 0096: R is applied uniformly and takes no input from any agent's rank or weakness, so 0096's forbidden shape is not what this is. It is a scaffold, and calling it a world claim would be a category error."
@@ -393,7 +390,7 @@
       "id": "sug-tag-string-encoding",
       "title": "Culture is an eleven-bit binary string, transmission is a single bit flip toward a neighbour, and group membership is the majority bit",
       "source": "Appendix B, agent cultural transmission and group membership rules; Ch. III, 'Cultural Groups' and footnote 20",
-      "emergence_type": 1,
+      "emergence_type": null,
       "verdict": "inapplicable",
       "anchor": "reason:the source's chosen representation of culture, and it says so -- footnote 20 lists several alternative membership rules and notes that longer strings with tag ordering give far more refined schemes",
       "note": "The SUFFICIENCY claim this encoding supports is scored at `sug-culture-is-generative`; only the encoding itself is inapplicable. Keeping the two apart is what stops a Hornvale verdict from turning on whether its cultures happen to be binary."
@@ -402,7 +399,7 @@
       "id": "sug-generative-explanation",
       "title": "To explain a macro-structure is to grow it: exhibiting micro-specifications sufficient to generate the pattern is what constitutes an explanation",
       "source": "Ch. I, 'Toward Generative Social Science: Can You Grow It?'; Ch. VI, 'Generative Social Science'",
-      "emergence_type": 2,
+      "emergence_type": null,
       "verdict": "inapplicable",
       "anchor": "reason:the book's methodological thesis -- a claim about what explanation is, not a regularity a world can exhibit",
       "note": "It is nonetheless the reason this corpus exists, and the sense in which the whole file is one instrument: every measurable item above asks the book's own question of Hornvale rather than of Sugarscape. Recorded as an item so the thesis travels with the catalogue instead of only with the spec."
