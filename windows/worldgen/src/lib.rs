@@ -293,12 +293,15 @@ pub struct BuildArtifacts {
 }
 
 /// A settlement-depth world built through an explicit D2 treatment boundary,
-/// paired with the treatment's derived whole-bake exchange counts.
+/// paired with the treatment's same-run history and derived whole-bake
+/// exchange counts.
 pub struct ExchangeTreatmentBuild {
     /// The built world.
     pub world: World,
     /// Derived exchange counts and stock-conservation residuals.
     pub exchange: ExchangeCensus,
+    /// The already-computed history used to emit [`Self::world`].
+    pub history: History,
 }
 
 /// The derived artifacts a rung had already built when the observer fired,
@@ -7564,6 +7567,7 @@ pub fn build_world_with_exchange_treatment(
     treatment: ExchangeTreatment,
 ) -> Result<ExchangeTreatmentBuild, BuildError> {
     let mut exchange = ExchangeCensus::default();
+    let mut history = None;
     let built = build_to_configured(
         seed,
         pins,
@@ -7574,10 +7578,12 @@ pub fn build_world_with_exchange_treatment(
         treatment,
         None,
         Some(&mut exchange),
+        Some(&mut history),
     )?;
     Ok(ExchangeTreatmentBuild {
         world: built.world,
         exchange,
+        history: history.expect("the settlement rung always bakes a history"),
     })
 }
 
@@ -8096,6 +8102,7 @@ fn build_to(
         ExchangeTreatment::Disabled,
         observer,
         None,
+        None,
     )
 }
 
@@ -8111,6 +8118,7 @@ fn build_to_configured(
     exchange_treatment: ExchangeTreatment,
     mut observer: Option<BuildObserver<'_>>,
     exchange_out: Option<&mut ExchangeCensus>,
+    history_out: Option<&mut Option<History>>,
 ) -> Result<BuildArtifacts, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
@@ -8331,6 +8339,12 @@ fn build_to_configured(
         *out = exchange_census(&history);
     }
     emit_history(&mut world, &history)?;
+    if let Some(out) = history_out {
+        // The explicit treatment boundary is the sole owner of this clone:
+        // its caller needs the exact enabled/disabled bake used above for
+        // emission, not a reconstruction after the build has discarded it.
+        *out = Some(history.clone());
+    }
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
     // present isn't the latest occupation event (a stochastic bake rarely
     // lands its last draw exactly on the boundary) — it's this fixed
