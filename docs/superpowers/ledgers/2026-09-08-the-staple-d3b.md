@@ -818,7 +818,7 @@ does not authorize running the ignored fixed-roster report.
 - Do not author `Function` labels or a specialization implementation until
   D3B clears gradient sufficiency.
 
-## #14 [G5] — Task 3 fixes the probe as two deterministic live-unit joins
+## #15 [G5] — Task 3 fixes the probe as two deterministic live-unit joins
 
 **Question:** How should the fixed-roster probe recover source support and D2
 realization without reconstructing either from emitted role labels or allowing

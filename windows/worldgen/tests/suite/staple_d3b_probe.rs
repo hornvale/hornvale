@@ -480,9 +480,7 @@ fn summarize_seed(input: &SeedInput) -> SeedReport {
         SeedVerdict::Underpowered(UnderpoweredReason::FewerThanTwoJoinedUnits)
     } else if !source_occupancy.passes_guard() {
         SeedVerdict::NoUsableSourceGradient
-    } else if projection_occupancy.signatures.len() == 1
-        && projection_occupancy.committed_vectors.len() == 1
-    {
+    } else if projection_occupancy.committed_vectors.len() == 1 {
         SeedVerdict::ProjectionCollapse
     } else if projection_occupancy.signatures.len() == 1 {
         SeedVerdict::MeasurementSaturation
@@ -967,6 +965,18 @@ fn equal_committed_projection_vectors_are_projection_collapse() {
 
     assert_eq!(report.verdict, SeedVerdict::ProjectionCollapse);
     assert_eq!(report.projection.signatures.len(), 1);
+    assert_eq!(report.projection.committed_vectors.len(), 1);
+    assert_eq!(report.projection.raw_vectors.len(), 4);
+}
+
+#[test]
+fn subquantum_ordering_differences_cannot_clear_equal_committed_vectors() {
+    let next_up = f64::from_bits(0.5_f64.to_bits() + 1);
+    let input = varied_source_input([[0.5, next_up], [next_up, 0.5]]);
+    let report = summarize_seed(&input);
+
+    assert_eq!(report.verdict, SeedVerdict::ProjectionCollapse);
+    assert_eq!(report.projection.signatures.len(), 2);
     assert_eq!(report.projection.committed_vectors.len(), 1);
     assert_eq!(report.projection.raw_vectors.len(), 4);
 }
