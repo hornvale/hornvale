@@ -1051,6 +1051,12 @@ spawn run -p hornvale -- tropes --corpus tropes/tvtropes-2012.trope.json report 
 spawn run -p hornvale -- tropes matrix > docs/audits/trope-matrix.md
 spawn run -p hornvale -- systems report > docs/audits/system-coverage-wolverson-2021.md
 spawn run -p hornvale -- systems matrix > docs/audits/system-matrix.md
+# The Seedbed: does the world GROW the imported macro-regularities? Reads the
+# COMMITTED census off disk and never re-runs a study, so it belongs here in
+# the ordinary `artifacts` run rather than behind HV_CENSUS. Like every
+# `report` verb, the command prints to stdout and the `>` redirect below is
+# what writes the file.
+spawn run -p hornvale -- regularities report > docs/audits/regularity-coverage-sugarscape-1996.md
 spawn gen_sentence_coverage
 # The Confidant, Task 7 reshape: world-invariant (builds its own internal
 # Seed(42), like `first_light` above), so it belongs in Group C alongside

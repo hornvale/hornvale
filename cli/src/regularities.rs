@@ -742,3 +742,493 @@ fn measure(item: &Item, census: &hornvale_lab::domesday::census::Census) -> Opti
         ),
     })
 }
+
+// --- The report -------------------------------------------------------------
+
+/// Wrap prose at 76 columns, preserving word order.
+///
+/// Duplicated from [`crate::systems::wrap`]'s shape rather than shared: these
+/// two renderers author different byte-frozen artifacts, and a shared helper
+/// would let a whitespace change in one family silently re-baseline the
+/// other's committed report.
+fn wrap(text: &str) -> String {
+    let mut out = String::new();
+    let mut col = 0;
+    for word in text.split_whitespace() {
+        let w = word.chars().count();
+        if col > 0 && col + 1 + w > 76 && !word.starts_with('-') {
+            out.push('\n');
+            col = 0;
+        } else if col > 0 {
+            out.push(' ');
+            col += 1;
+        }
+        out.push_str(word);
+        col += w;
+    }
+    out
+}
+
+/// `n` of `total` as a whole percent, rounded half up. Integer arithmetic on
+/// purpose — this figure lands in a byte-ratcheted artifact, and decision 0033
+/// keeps floats away from serialization boundaries.
+fn percent(n: usize, total: usize) -> usize {
+    if total == 0 {
+        0
+    } else {
+        (n * 200 + total) / (total * 2)
+    }
+}
+
+/// Where a corpus's committed report lives, derived from the corpus's own
+/// identifier so a caller cannot pair the wrong corpus with the wrong
+/// artifact.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn artifact_path(corpus: &Corpus) -> String {
+    format!("docs/audits/regularity-coverage-{}.md", corpus.corpus)
+}
+
+/// The command that regenerates a report, for the header.
+///
+/// Takes the **corpus source path** the caller actually resolved, exactly as
+/// [`crate::systems::regenerate_command`] does and for the same reason: a
+/// derived stem could print a command naming a file that does not exist. It is
+/// never the artifact path — passing that would print a command asking the
+/// resolver to parse its own output as a corpus.
+/// type-audit: bare-ok(identifier-text: path), bare-ok(identifier-text: return)
+pub fn regenerate_command(path: &str) -> String {
+    format!("hornvale regularities --corpus {path} report")
+}
+
+/// Verdict counts across `corpus`, in this family's own verdict order — six
+/// coverage verdicts, then `unmeasured`, which is a lifecycle state and is
+/// tallied apart from them.
+fn tally(corpus: &Corpus) -> [(Verdict, usize); 7] {
+    let count = |v: Verdict| corpus.items.iter().filter(|i| i.verdict == v).count();
+    [
+        (Verdict::Grown, count(Verdict::Grown)),
+        (Verdict::Flat, count(Verdict::Flat)),
+        (Verdict::Refused, count(Verdict::Refused)),
+        (Verdict::Deferred, count(Verdict::Deferred)),
+        (Verdict::Absent, count(Verdict::Absent)),
+        (Verdict::Inapplicable, count(Verdict::Inapplicable)),
+        (Verdict::Unmeasured, count(Verdict::Unmeasured)),
+    ]
+}
+
+/// The items this corpus proposes to measure: every item carrying both a
+/// statistic and a criterion, whatever its verdict.
+///
+/// Deliberately not "every `grown` item": an `unmeasured` item is measurable
+/// and a measured one does not stop being measurable when its criterion fails,
+/// so the denominator this report divides by does not move when Task 7's
+/// verdicts land.
+fn measurable(corpus: &Corpus) -> Vec<&Item> {
+    corpus
+        .items
+        .iter()
+        .filter(|i| i.criterion.is_some() && !i.statistic.is_empty())
+        .collect()
+}
+
+/// The threshold above which two statistics are treated as ONE claim.
+///
+/// A declared convention, not a tuned value: 0.95 is the ordinary
+/// near-collinearity bar. The report prints every measured pair beside it, so
+/// a reader can see how far the partition sits from the threshold rather than
+/// taking the merge on trust.
+const COLLINEARITY_THRESHOLD: f64 = 0.95;
+
+/// Pearson correlation of two census columns over the worlds where BOTH are
+/// present, with the pairing done row by row.
+///
+/// Returns the coefficient and the paired count. `None` when fewer than two
+/// worlds pair, or when either column has no variance — in both cases a
+/// correlation is undefined rather than zero, and reporting zero would read as
+/// "measured, independent" for a pair that was never measured at all.
+///
+/// [`values_of`] cannot be used here: it drops absent rows independently per
+/// column, so two columns with different absence patterns would be paired by
+/// position against worlds they do not share.
+fn correlation(
+    census: &hornvale_lab::domesday::census::Census,
+    a: &str,
+    b: &str,
+) -> Option<(f64, usize)> {
+    let mut xs: Vec<f64> = Vec::new();
+    let mut ys: Vec<f64> = Vec::new();
+    for row in &census.rows {
+        let (Some(va), Some(vb)) = (row.get(a), row.get(b)) else {
+            continue;
+        };
+        let (Ok(x), Ok(y)) = (va.parse::<f64>(), vb.parse::<f64>()) else {
+            continue;
+        };
+        xs.push(x);
+        ys.push(y);
+    }
+    let n = xs.len();
+    if n < 2 {
+        return None;
+    }
+    let nf = n as f64;
+    let mx = xs.iter().sum::<f64>() / nf;
+    let my = ys.iter().sum::<f64>() / nf;
+    let mut sxy = 0.0;
+    let mut sxx = 0.0;
+    let mut syy = 0.0;
+    for (x, y) in xs.iter().zip(ys.iter()) {
+        sxy += (x - mx) * (y - my);
+        sxx += (x - mx) * (x - mx);
+        syy += (y - my) * (y - my);
+    }
+    if sxx <= 0.0 || syy <= 0.0 {
+        return None;
+    }
+    Some((sxy / (sxx * syy).sqrt(), n))
+}
+
+/// One measured pair of measurable statistics.
+struct Pair<'a> {
+    /// The first item's id.
+    left: &'a str,
+    /// The second item's id.
+    right: &'a str,
+    /// The correlation, when it is defined.
+    r: Option<(f64, usize)>,
+}
+
+/// Every unordered pair of measurable items, with its measured correlation.
+fn pairs<'a>(items: &[&'a Item], census: &hornvale_lab::domesday::census::Census) -> Vec<Pair<'a>> {
+    let mut out = Vec::new();
+    for (i, a) in items.iter().enumerate() {
+        for b in items.iter().skip(i + 1) {
+            let r = if census.has(&a.statistic) && census.has(&b.statistic) {
+                correlation(census, &a.statistic, &b.statistic)
+            } else {
+                None
+            };
+            out.push(Pair {
+                left: &a.id,
+                right: &b.id,
+                r,
+            });
+        }
+    }
+    out
+}
+
+/// How many INDEPENDENT claims the measurable items make.
+///
+/// Two items that read near-collinear statistics off the same population are
+/// one claim measured twice, not two corroborations — so this merges them and
+/// counts the groups. Union by repeated relaxation over the measured pairs;
+/// the item count is tiny and this needs no disjoint-set structure.
+fn independent_claims(items: &[&Item], pairs: &[Pair<'_>]) -> usize {
+    let mut group: Vec<usize> = (0..items.len()).collect();
+    let index = |id: &str| items.iter().position(|i| i.id == id);
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for p in pairs {
+            let Some((r, _)) = p.r else { continue };
+            if r.abs() < COLLINEARITY_THRESHOLD {
+                continue;
+            }
+            let (Some(a), Some(b)) = (index(p.left), index(p.right)) else {
+                continue;
+            };
+            let lo = group[a].min(group[b]);
+            if group[a] != lo || group[b] != lo {
+                group[a] = lo;
+                group[b] = lo;
+                changed = true;
+            }
+        }
+    }
+    let mut seen: Vec<usize> = group.clone();
+    seen.sort_unstable();
+    seen.dedup();
+    seen.len()
+}
+
+/// Whether a criterion constrains the statistic from both sides.
+///
+/// The power reading turns on this: a one-sided floor is cleared by every
+/// world above it, including worlds far past anything the source describes, so
+/// a `grown` on a one-sided criterion is a weaker statement than a `grown` on
+/// a band.
+fn is_two_sided(c: &Criterion) -> bool {
+    matches!(
+        c,
+        Criterion::MedianInBand { .. } | Criterion::FractionInBandAtLeast { .. }
+    )
+}
+
+/// Phrases by which an `absent` item's note NAMES the instrument that would
+/// settle it.
+///
+/// The verdict cannot carry this distinction — `absent` is one value — so the
+/// split is read off the notes, and the markers are printed in the report so a
+/// reader can re-run the classification by eye. Both are stated as the corpus
+/// states them: "the discriminating instrument is …", "the right instrument is
+/// …", "the discriminating criterion is known …".
+const INSTRUMENT_MARKERS: &[&str] = &["instrument is", "criterion is known"];
+
+/// Whether an `absent` item's note names the instrument that would settle it.
+fn names_an_instrument(item: &Item) -> bool {
+    INSTRUMENT_MARKERS.iter().any(|m| item.note.contains(m))
+}
+
+/// A correlation formatted for a committed artifact.
+///
+/// Quantized before formatting, per decision 0033's quantize-at-emit rule:
+/// the coefficient is computed at full precision and rounded once, here, at
+/// the only boundary where it becomes bytes.
+fn r_text(r: Option<(f64, usize)>) -> String {
+    match r {
+        Some((r, n)) => format!("{:.3} (n = {n})", hornvale_kernel::quantize(r)),
+        None => "undefined".to_string(),
+    }
+}
+
+/// Escape a free-text corpus field for a markdown table.
+fn table_text(s: &str) -> String {
+    s.replace('|', "\\|")
+}
+
+/// Render the coverage report.
+///
+/// Order follows decision 0095 — provenance and the instrument's own bias
+/// before any number — with this family's two additions ahead of the tally:
+/// the independent-claim count, because four measurable items are not four
+/// claims, and the power reading, because every surviving criterion is a
+/// conservative floor and a reader must pass that sentence before reaching a
+/// score.
+///
+/// `path` is the corpus source path the caller actually resolved, so the
+/// regenerate command in the banner names a file that really exists.
+/// type-audit: bare-ok(identifier-text: path), bare-ok(prose: return)
+pub fn render(
+    corpus: &Corpus,
+    census: &hornvale_lab::domesday::census::Census,
+    path: &str,
+) -> String {
+    let mut s = String::new();
+    s.push_str(&format!(
+        "<!-- GENERATED FILE — do not edit. Regenerate with `{}`. -->\n\n",
+        regenerate_command(path)
+    ));
+    s.push_str("# Regularity coverage\n\n## Provenance\n\n");
+    s.push_str(&format!("- **Corpus:** `{}`\n", corpus.corpus));
+    s.push_str(&format!(
+        "- **Population:** `{}`, {} world(s)\n",
+        corpus.population,
+        census.rows.len()
+    ));
+    s.push_str(&format!("- **Source:** {}\n", wrap(&corpus.provenance)));
+    s.push_str(&format!("- **Frozen:** {}\n", wrap(&corpus.frozen)));
+
+    s.push_str("\n## Reading this report\n\n");
+    s.push_str(&wrap(
+        "This measures reach against ONE catalogue. It is a reading taken through that \
+         catalogue's declared bias (decision 0095), never a grade and never a verdict on \
+         the world. Sugarscape is a 1996 lattice model whose roster is roughly half \
+         economic, so a large block of this corpus can only ever score `absent` — that is \
+         a property of the source's coverage, not a charge against Hornvale. Conversely \
+         the source has no terrain, no astronomy, no language and no deep time, so nothing \
+         here scores Hornvale's strongest ground.",
+    ));
+    s.push_str("\n\n");
+    s.push_str(&wrap(
+        "Every mapping from a source claim to a census column is an ANALOGY: a Sugarscape \
+         agent is an individual and a Hornvale settlement is a community. Each item's note \
+         states where that analogy is load-bearing, and a `flat` verdict on such an item \
+         may be about the analogy rather than about the world.",
+    ));
+    s.push_str("\n\n");
+
+    let items = measurable(corpus);
+    let pairs = pairs(&items, census);
+    let claims = independent_claims(&items, &pairs);
+    let two_sided = items
+        .iter()
+        .filter(|i| i.criterion.as_ref().is_some_and(is_two_sided))
+        .count();
+
+    // The power reading sits ABOVE the tally deliberately. A tally read first
+    // and qualified afterwards is a score; the qualification has to be on the
+    // way in.
+    s.push_str("## Power\n\n");
+    s.push_str(&wrap(&format!(
+        "The corpus proposes {} measurable item(s), and they make {} independent claim(s) \
+         — see the pairs below. Of those items, {} carry a two-sided criterion and {} \
+         carry a one-sided one.",
+        items.len(),
+        claims,
+        two_sided,
+        items.len() - two_sided
+    )));
+    s.push_str("\n\n");
+    s.push_str(&wrap(
+        "THE SURVIVING CRITERIA ARE CONSERVATIVE FLOORS AUTHORED BLIND, and this report \
+         must not be read as though they were calibrated targets. A one-sided criterion is \
+         cleared by every world above its bound, including worlds far past anything the \
+         source describes; it separates a world that does the thing at all from one that \
+         does not, and it says nothing about magnitude. So a near-uniform `grown` sweep \
+         across these items is NOT evidence of reach. It is evidence that the world clears \
+         a small number of low bars that a plausibly-flat world would fail — which is the \
+         most this instrument was built to claim, and less than a reader scanning a tally \
+         will assume.",
+    ));
+    s.push_str("\n\n");
+    s.push_str(&wrap(&format!(
+        "The claim count is the item count with near-collinear statistics merged: two \
+         items reading statistics correlated at |r| >= {COLLINEARITY_THRESHOLD:.2} over \
+         the same population are one claim measured twice, not two corroborations. The \
+         coefficients below are measured on THIS census, not quoted from any earlier \
+         probe."
+    )));
+    s.push_str("\n\n");
+
+    if pairs.is_empty() {
+        s.push_str("No pair of measurable items to compare.\n\n");
+    } else {
+        s.push_str("| item | item | correlation | merged |\n|---|---|---|---|\n");
+        for p in &pairs {
+            let merged = match p.r {
+                Some((r, _)) if r.abs() >= COLLINEARITY_THRESHOLD => "yes",
+                _ => "no",
+            };
+            s.push_str(&format!(
+                "| {} | {} | {} | {merged} |\n",
+                p.left,
+                p.right,
+                r_text(p.r)
+            ));
+        }
+        s.push('\n');
+    }
+
+    let counts = tally(corpus);
+    let total = corpus.items.len();
+    s.push_str("## Tally\n\n");
+    s.push_str(&wrap(
+        "Six coverage verdicts, then `unmeasured` — which is a lifecycle state, not a \
+         coverage verdict: an item frozen but not yet run. It is listed here so the totals \
+         add up, and again by name below.",
+    ));
+    s.push_str("\n\n");
+    for (v, n) in counts {
+        s.push_str(&format!(
+            "- {}: {n} ({}%)\n",
+            verdict_name(v),
+            percent(n, total)
+        ));
+    }
+    s.push_str(&format!("- **total:** {total}\n"));
+
+    s.push_str("\n## Unmeasured\n\n");
+    let pending: Vec<&Item> = corpus
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Unmeasured)
+        .collect();
+    if pending.is_empty() {
+        s.push_str("None — every item carries a coverage verdict.\n");
+    } else {
+        for item in pending {
+            s.push_str(&format!("- `{}` — {}\n", item.id, table_text(&item.title)));
+        }
+    }
+
+    // `absent` is two different things, and no verdict value separates them.
+    s.push_str("\n## `absent` splits two ways\n\n");
+    s.push_str(&wrap(&format!(
+        "An `absent` verdict says only that the statistic cannot be computed and nobody \
+         has registered it. That covers two very different situations, and the notes — not \
+         the verdict — are what separate them. An item whose note NAMES the instrument \
+         that would settle it is ROADMAP: the work is identified and small. An item whose \
+         note reports that the mechanism itself is missing is a GAP. The classification \
+         below reads each note for the phrases {} and lists every roadmap item by name, so \
+         it can be re-run by eye.",
+        INSTRUMENT_MARKERS
+            .iter()
+            .map(|m| format!("`{m}`"))
+            .collect::<Vec<_>>()
+            .join(" or ")
+    )));
+    s.push_str("\n\n");
+    let absent: Vec<&Item> = corpus
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Absent)
+        .collect();
+    let roadmap: Vec<&&Item> = absent.iter().filter(|i| names_an_instrument(i)).collect();
+    s.push_str(&format!(
+        "- roadmap (the note names the instrument): {}\n",
+        roadmap.len()
+    ));
+    s.push_str(&format!(
+        "- gap (the mechanism is missing): {}\n",
+        absent.len() - roadmap.len()
+    ));
+    if !roadmap.is_empty() {
+        s.push_str("\nThe roadmap items:\n\n");
+        for item in &roadmap {
+            s.push_str(&format!("- `{}` — {}\n", item.id, table_text(&item.title)));
+        }
+    }
+
+    // The source's own taxonomy, and the third answer it admits.
+    s.push_str("\n## Emergence type\n\n");
+    s.push_str(&wrap(
+        "The source's taxonomy (Epstein & Axtell, Ch. II footnote 24): type 1 is a \
+         property meaningful for an individual but exhibited only by the collective; type \
+         2 is a property meaningful only for a collective. An item where the taxonomy does \
+         not apply carries neither — a model abstraction and a bare micro-rule assert no \
+         regularity — and is EXCLUDED from the split rather than defaulted into a type.",
+    ));
+    s.push_str("\n\n");
+    for t in [1u8, 2u8] {
+        let held = corpus
+            .items
+            .iter()
+            .filter(|i| i.emergence_type == Some(t))
+            .count();
+        let grown = corpus
+            .items
+            .iter()
+            .filter(|i| i.emergence_type == Some(t) && i.verdict == Verdict::Grown)
+            .count();
+        s.push_str(&format!("- type {t}: {held} held, {grown} grown\n"));
+    }
+    let untyped = corpus
+        .items
+        .iter()
+        .filter(|i| i.emergence_type.is_none())
+        .count();
+    s.push_str(&format!(
+        "- taxonomy does not apply: {untyped} (excluded from the split above)\n"
+    ));
+
+    s.push_str(
+        "\n## Items\n\n| id | title | type | verdict | statistic | anchor | note |\n\
+         |---|---|---|---|---|---|---|\n",
+    );
+    for item in &corpus.items {
+        s.push_str(&format!(
+            "| {} | {} | {} | {} | {} | {} | {} |\n",
+            item.id,
+            table_text(&item.title),
+            item.emergence_type
+                .map(|t| t.to_string())
+                .unwrap_or_else(|| "—".to_string()),
+            verdict_name(item.verdict),
+            item.statistic,
+            table_text(item.anchor.as_deref().unwrap_or("")),
+            table_text(&item.note)
+        ));
+    }
+    s
+}

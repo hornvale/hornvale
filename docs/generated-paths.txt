@@ -201,7 +201,13 @@ book/src/laboratory/census-of-coasts-ii.md	none(hand-written prose, never regene
 book/src/laboratory/census-of-coasts-iii.md	none(hand-written prose, never regenerated)
 book/src/laboratory/census-of-coasts-iv.md	none(hand-written prose, never regenerated)
 
-# --- docs/audits/ — 21 tracked, 13 `artifacts`-written by name; 5 exceptions ---
+# --- docs/audits/ — 25 tracked, 8 `artifacts`-written by name; 8 exceptions ---
+# The three numbers above were 21/13/5 and every one of them was stale — a
+# count stated inside its own document goes wrong the moment a row lands and
+# nothing enforces it. Re-derive, do not transcribe:
+#   git ls-files docs/audits/ | wc -l
+#   grep -v '^#' docs/generated-paths.txt | awk -F'\t' '$1 ~ /^docs\/audits\/.+/ && $2=="artifacts"' | wc -l
+#   grep -v '^#' docs/generated-paths.txt | awk -F'\t' '$1 ~ /^docs\/audits\// && $2 ~ /^none\(/' | wc -l
 docs/audits/	artifacts
 docs/audits/heavy-tier-adjudication.md	none(hand-written one-off campaign finding -- The Governor -- never regenerated)
 docs/audits/land-elevation-attribution.md	none(hand-written one-off campaign finding -- The Glasshouse -- never regenerated)
@@ -239,6 +245,7 @@ docs/audits/the-reticence-report.md	artifacts
 docs/audits/glyph-specimen-sheet.txt	artifacts
 docs/audits/placement-audit-roster.md	artifacts
 docs/audits/plumb-roster.md	artifacts
+docs/audits/regularity-coverage-sugarscape-1996.md	artifacts
 
 # `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
 # by-hand write-set measurement made a byproduct of every ordinary run: a

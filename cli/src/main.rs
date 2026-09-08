@@ -2,8 +2,8 @@
 #![warn(missing_docs)]
 
 use hornvale::{
-    attest, audio, concepts, dictionary, flag_value, phonology, proto, repl, streams, systems,
-    tropes,
+    attest, audio, concepts, dictionary, flag_value, phonology, proto, regularities, repl, streams,
+    systems, tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
@@ -126,6 +126,12 @@ usage:
                           domains/*|windows/* subsystems no corpus's `present` verdicts cite
                           at all (ignores --corpus — the columns are the declared list, not
                           the caller's choice)
+  hornvale regularities [report|check] [--corpus <PATH>]
+                          score the frozen macro-regularity corpus against the committed
+                          census — does the world GROW this? (report: render to stdout;
+                          check: run the audit and diff against the artifact committed for
+                          that corpus's id; default corpus:
+                          regularities/sugarscape-1996.regularity.json)
   hornvale streams                         dump the stream manifest as markdown
   hornvale underworld --seed <N>           dump one seed's chamber lattice as text (the underworld
                                             witness: chamber counts by band and by rock, plus the
@@ -208,6 +214,7 @@ fn main() -> ExitCode {
         Some("concepts") => cmd_concepts(&args),
         Some("tropes") => cmd_tropes(&args),
         Some("systems") => cmd_systems(&args),
+        Some("regularities") => cmd_regularities(&args),
         Some("streams") => cmd_streams(),
         Some("underworld") => cmd_underworld(&args),
         Some("circuit") => cmd_circuit(&args),
@@ -1358,6 +1365,96 @@ fn cmd_systems(args: &[String]) -> Result<(), String> {
             "systems: unknown mode '{other}' (report|check|matrix)"
         )),
     }
+}
+
+/// The Seedbed: score the frozen macro-regularity corpus against the
+/// committed census. Unlike `cmd_systems` this resolver reads a DATASET, and
+/// unlike `cmd_tropes` it builds no world — the population is the census
+/// study the corpus names.
+fn cmd_regularities(args: &[String]) -> Result<(), String> {
+    // Mode is positional but may follow flags, so scan past each flag AND its
+    // value. `args.get(1)` alone would let `regularities --corpus X check`
+    // emit a report and exit 0 — a false pass for anything gating on `check`.
+    // Copied from `cmd_systems`'s scan for the same reason it exists there.
+    //
+    // This consumes the token after EVERY `--` flag, which is correct only
+    // because `regularities` has no valueless flags. It is not a property of
+    // `flag_value`: if this verb ever gains a valueless flag, this loop must
+    // learn which flags take values.
+    let mut mode = None;
+    let mut rest = args.iter().skip(1);
+    while let Some(a) = rest.next() {
+        if a.starts_with("--") {
+            rest.next();
+        } else {
+            mode = Some(a.as_str());
+            break;
+        }
+    }
+    let path = flag_value(args, "--corpus").unwrap_or(regularities::CORPORA[0]);
+    let json = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let corpus = regularities::load(&json)?;
+    let census = load_census(&corpus)?;
+    match mode {
+        Some("report") | None => {
+            // Prints to stdout. The committed artifact is written by the `>`
+            // redirect in `scripts/regenerate-artifacts.sh`, never by this
+            // command — running it bare regenerates nothing, and the drift
+            // check that follows then reports an empty diff that reads as
+            // "no drift" when nothing was rebuilt.
+            print!("{}", regularities::render(&corpus, &census, path));
+            Ok(())
+        }
+        Some("check") => {
+            let root = std::path::Path::new(".");
+            let generated = regularities::GeneratedPaths::read(root)?;
+            let facts = systems::RepoFacts::gather(root)?;
+            let findings = regularities::audit(&corpus, &census, &generated, &facts);
+            if !findings.is_empty() {
+                let listed: Vec<String> = findings
+                    .iter()
+                    .map(|f| match f {
+                        regularities::Finding::Unjustified { why, .. } => why.clone(),
+                        regularities::Finding::Dangling { why, .. } => why.clone(),
+                        regularities::Finding::Regressed { why, .. } => why.clone(),
+                        regularities::Finding::StaleDeferred { why, .. } => why.clone(),
+                    })
+                    .collect();
+                return Err(format!(
+                    "regularity coverage audit found {} finding(s) for `{}`:\n\n{}",
+                    findings.len(),
+                    corpus.corpus,
+                    listed.join("\n\n")
+                ));
+            }
+            let artifact = regularities::artifact_path(&corpus);
+            let committed =
+                std::fs::read_to_string(&artifact).map_err(|e| format!("{artifact}: {e}"))?;
+            if regularities::render(&corpus, &census, path) == committed {
+                Ok(())
+            } else {
+                Err(format!(
+                    "regularity coverage drifted for `{}`; run `make rebaseline` and review \
+                     the diff",
+                    corpus.corpus
+                ))
+            }
+        }
+        Some(other) => Err(format!(
+            "regularities: unknown mode '{other}' (report|check)"
+        )),
+    }
+}
+
+/// Load the committed census a corpus names as its population.
+///
+/// Reads the goldens off disk and never re-runs a study — a census refresh is
+/// a queued job on the canonical box, not something a report may trigger.
+fn load_census(
+    corpus: &regularities::Corpus,
+) -> Result<hornvale_lab::domesday::census::Census, String> {
+    let dir = std::path::Path::new(hornvale_lab::CENSUS_GOLDENS_DIR).join(&corpus.population);
+    hornvale_lab::domesday::census::load(&dir)
 }
 
 /// The matrix over every corpus in `systems::CORPORA`.
