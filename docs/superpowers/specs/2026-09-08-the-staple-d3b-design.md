@@ -1,6 +1,7 @@
 # The Staple D3B — gradient sufficiency design
 
-**Status:** Draft for G3 review. This document authorizes no implementation.
+**Status:** G3 approved 2026-09-08; diagnostic implementation complete,
+pending G6 merge/close review.
 
 ## 1. Purpose and boundary
 
