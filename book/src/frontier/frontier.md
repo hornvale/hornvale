@@ -5767,6 +5767,44 @@ life-history clock, not in its metabolism, so anything keyed to that clock
 stretches and anything keyed to metabolism does not. The asymmetry falls out
 of a distinction the code has already drawn for other reasons.
 
+**Learning is not one rate, and a skill is not the only thing that moves.**
+Two anatomically distinct systems learn, and they disagree about everything
+that matters here. Declarative learning — hippocampal — takes facts and rules,
+can acquire in a single trial, is consciously reportable, and fades. Procedural
+learning — basal ganglia and cerebellum — takes sequences and motor patterns,
+needs thousands of repetitions, cannot be verbalised, and is close to
+permanent. The evidence is a dissociation rather than a correlation: densely
+amnesic patients improve at mirror-drawing across sessions while retaining no
+memory of ever having sat down to it. Learning proceeded with the declarative
+system destroyed, which is not something one scale can do.
+
+So the acquisition rate is a short vector, one entry per system, and the
+dimension under training selects the entry — two numbers, not one per skill.
+Intellect gates the declarative entry and has little to say about the other,
+which is why the reasoner and the tumbler improve at such different speeds
+without either being the better learner.
+
+A third mechanism hides behind the word "training". Explosive power is not
+learned at all: its early gains are neural recruitment and its later ones are
+tissue, and unlike a skill it **reverses when practice stops**. That is not
+demand falling — it is the **ceiling moving**. The vocabulary needs all three:
+a skill lowers demand, training raises capacity, and a stock refills toward
+whatever the capacity currently is.
+
+The dividend is that forgetting need never be authored. A skill's blend of the
+two learning systems *is* its retention curve, so the scholar loses a language
+unspoken for twenty years and the swordsman does not lose the sword, from one
+number rather than a table. It also sharpens the fatigue claim above:
+*procedural* expertise resists exhaustion, while declarative recall degrades
+under it, so a tired duellist stays competent and a tired scholar goes patchy.
+Few skills are purely one system — vocabulary is declarative where phonology is
+procedural, chess openings declarative where pattern recognition is not — so
+the blend is a proportion, not a category. Hornvale already keeps a decay of
+this shape one scale up: `memory_half_life` in
+`windows/worldgen/src/knownness.rs` scales cultural forgetting by generation
+length. The individual case is the same instrument, needing two half-lives
+where the cultural one needed a single.
+
 The honest limit: charisma, or willpower, names no tissue and no metabolic
 law. Where an ability has no physical driver, its recovery is authored
 content, and saying so is better than deriving it from something that only
