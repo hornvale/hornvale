@@ -137,6 +137,77 @@ records as its common unit and `alive_at_now` as its denominator. Any future
 fantasy source must first prove a total join onto that unit before it can count
 as D3B evidence.
 
+## #3 [G2] — What shape should the gradient-sufficiency falsifier take?
+
+**Question:** Should Task 0 choose one scalar diversity metric, or compare
+source variation with the variation preserved by the current settlement
+projection?
+
+**Decision:** Use a **paired instrument** over the same live occupation units:
+
+1. **Source-support readout:** the materially occupied, mechanism-backed local
+   opportunity axes available at each unit's site. This asks whether the world
+   supplies distinct local regimes before roles or portfolios are named.
+2. **Projection readout:** the current settlement/economic value view that can
+   actually consume those axes—subsistence, stocks, access, relations, or
+   other existing projections. This asks whether current dynamics preserve
+   the distinctions or collapse them into one ranking/portfolio.
+
+The falsifier does not select a single scalar in advance. It reports both
+readouts with equal unit weighting and a branch table:
+
+```text
+source support has no materially occupied bands
+    -> dead pole 1: no usable gradient exists
+
+source support varies, but the current projection has one ranking/portfolio
+    -> dead pole 2: projection/measurement saturation
+
+source support varies, but no community-specific capability or need can use it
+    -> qualified capability gap; gradient exists, specialization pressure does not
+
+source support and projected positions both vary across multiple regimes
+    -> gradient sufficiency established; D4 may study emergence
+```
+
+**Why:** A scalar over pooled values can pass because values are merely
+nonzero, because labels differ, or because one hub contributes most of the
+mass. A source/projection pair makes those failures visible. The source layer
+can show genuine ecological, material, route, or anomalous opportunity
+variation even when the current economy ignores it; the projection layer can
+show whether the existing model turns variation into different effective
+positions. Equal weighting by live unit prevents a high-population hub from
+deciding the whole result. Axis bands and thresholds must be frozen from the
+verified code semantics before the readout, not tuned after seeing the output.
+
+**Alternatives discarded:**
+
+- **One scalar occupied-band count:** rejected because it cannot distinguish
+  source absence from projection saturation.
+- **Categorical subsistence diversity:** rejected as label variation; today's
+  subsistence is an exact biome/coast mapping and does not establish
+  comparative advantage.
+- **Portfolio divergence alone:** rejected because identical rankings can hide
+  materially different magnitudes, while different labels can be decorative.
+- **Pairwise pooled distance without equal-unit normalization:** rejected
+  because a dominant hub or large population can create a false gradient.
+- **Assigning `Function` labels first:** rejected because it measures the
+  proposed reading rather than the variation that would justify it.
+
+**Ideonomy passes / overturns:** one measure-selection pass, no overturn.
+Dimension identification separated materiality, connectivity, cyclicity,
+side effects, and polarity; the map organon exposed local regimes and border
+zones; the scale organon exposed the two collapse extremes. Cross-domain
+re-instantiation in ecology treated source support as niche opportunity and in
+network flow treated projection as reachable effective capacity. Both
+translations supported a paired source-versus-realization instrument rather
+than a single diversity score.
+
+**Capture actions:** the Task 0 design must enumerate the exact source and
+projection axes from current code, freeze their bands and thresholds, and
+retain the four-way branch table. No role, function, or portfolio label is
+permitted in the instrument.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
