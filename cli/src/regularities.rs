@@ -232,6 +232,23 @@ impl GeneratedPaths {
         Ok(GeneratedPaths { authors })
     }
 
+    /// The declaration covering `path`, if any: `Some(true)` when a roster
+    /// set authors it, `Some(false)` when it is declared `none(<reason>)`,
+    /// `None` when nothing in the file covers it at all.
+    ///
+    /// A file inherits the LONGEST declared directory prefix's author unless
+    /// it overrides with a row of its own.
+    fn declaration(&self, path: &str) -> Option<bool> {
+        if let Some(generated) = self.authors.get(path) {
+            return Some(*generated);
+        }
+        self.authors
+            .iter()
+            .filter(|(decl, _)| decl.ends_with('/') && path.starts_with(decl.as_str()))
+            .max_by_key(|(decl, _)| decl.len())
+            .map(|(_, generated)| *generated)
+    }
+
     /// Whether this path has a real generator.
     ///
     /// **Direction this enforces:** declared-and-generated ⇒ admissible. It
@@ -239,17 +256,24 @@ impl GeneratedPaths {
     /// `cli/tests/suite/generated_paths.rs`'s job, not this one.
     /// type-audit: bare-ok(artifact: path), bare-ok(flag: return)
     pub fn has_generator(&self, path: &str) -> bool {
-        if let Some(generated) = self.authors.get(path) {
-            return *generated;
-        }
-        // A file inherits the LONGEST declared directory prefix's author
-        // unless it overrides with a row of its own (handled above).
-        self.authors
-            .iter()
-            .filter(|(decl, _)| decl.ends_with('/') && path.starts_with(decl.as_str()))
-            .max_by_key(|(decl, _)| decl.len())
-            .map(|(_, generated)| *generated)
-            .unwrap_or(false)
+        self.declaration(path).unwrap_or(false)
+    }
+
+    /// Whether `docs/generated-paths.txt` says anything about this path at
+    /// all — whichever way it says it.
+    ///
+    /// Exists so a rejection can name the RIGHT repair, because the two ways
+    /// [`GeneratedPaths::has_generator`] returns `false` want opposite
+    /// actions: a path declared `none(<reason>)` is deliberately
+    /// hand-written and the verdict must move, whereas an undeclared path
+    /// may simply be missing its row. `crate::attest::DeclaredAuthor::None`
+    /// discards the `none(...)` reason text, so the reason itself cannot be
+    /// quoted here — naming the declaring file and which of the two cases
+    /// applies is the repair-bearing half of that message, and it needs no
+    /// widening of that variant.
+    /// type-audit: bare-ok(artifact: path), bare-ok(flag: return)
+    pub fn is_declared(&self, path: &str) -> bool {
+        self.declaration(path).is_some()
     }
 }
 
@@ -319,4 +343,360 @@ pub fn values_of(census: &hornvale_lab::domesday::census::Census, statistic: &st
         .into_iter()
         .filter_map(|reading| reading.parse::<f64>().ok())
         .collect()
+}
+
+/// Something wrong with an item, found by re-checking it against live state.
+///
+/// Three variants, and the third is why this family exists as more than a
+/// report. The sibling corpora (`tropes/`, `systems/`, `sentences/`) all
+/// ratchet — a built capability stays built — so they need only notice
+/// evidence that stopped resolving. A *grown* regularity is emergent, and any
+/// retune of the history bake can destroy it while every other gate stays
+/// green, so this family also compares the authored verdict against the
+/// measured one, in BOTH directions.
+/// type-audit: bare-ok(identifier-text: Unjustified.id), bare-ok(prose: Unjustified.why), bare-ok(identifier-text: Dangling.id), bare-ok(identifier-text: Dangling.anchor), bare-ok(prose: Dangling.why), bare-ok(identifier-text: Regressed.id), bare-ok(prose: Regressed.why)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Finding {
+    /// A verdict with no anchor, the wrong kind of anchor, or an anchor into
+    /// hand-written prose.
+    Unjustified {
+        /// The item's corpus-local id.
+        id: String,
+        /// What is wrong, in a sentence.
+        why: String,
+    },
+    /// The anchor — or the census column the verdict is measured through —
+    /// stopped resolving.
+    Dangling {
+        /// The item's corpus-local id.
+        id: String,
+        /// The anchor as authored.
+        anchor: String,
+        /// What would have caused this, and the legitimate repairs.
+        why: String,
+    },
+    /// The authored verdict and the measured verdict disagree — in either
+    /// direction. A `grown` that went flat is a lost regularity; a `flat`
+    /// that went grown is stale pessimism.
+    Regressed {
+        /// The item's corpus-local id.
+        id: String,
+        /// What the corpus claims.
+        authored: Verdict,
+        /// What the census says today.
+        computed: Verdict,
+        /// The measured summary that settles it.
+        why: String,
+    },
+}
+
+/// Human name of a verdict, for failure text.
+fn verdict_name(v: Verdict) -> &'static str {
+    match v {
+        Verdict::Grown => "grown",
+        Verdict::Flat => "flat",
+        Verdict::Refused => "refused",
+        Verdict::Deferred => "deferred",
+        Verdict::Absent => "absent",
+        Verdict::Inapplicable => "inapplicable",
+        Verdict::Unmeasured => "unmeasured",
+    }
+}
+
+/// The anchor kind a verdict requires, for failure text.
+fn expected_anchor_kind(v: Verdict) -> &'static str {
+    match v {
+        Verdict::Grown | Verdict::Flat => "a `doc:` anchor into generated prose",
+        Verdict::Refused => "a `decision:` anchor",
+        Verdict::Deferred => "a `registry:` anchor",
+        Verdict::Inapplicable => "a `reason:` anchor",
+        Verdict::Absent | Verdict::Unmeasured => "no anchor",
+    }
+}
+
+/// The anchor's own kind, for failure text.
+fn anchor_kind_name(a: &Anchor) -> &'static str {
+    match a {
+        Anchor::Doc(_) => "doc:",
+        Anchor::Decision(_) => "decision:",
+        Anchor::Registry(_) => "registry:",
+        Anchor::Reason(_) => "reason:",
+    }
+}
+
+/// Whether `a`'s kind is one the verdict `v` permits.
+fn anchor_matches_verdict(v: Verdict, a: &Anchor) -> bool {
+    matches!(
+        (v, a),
+        (Verdict::Grown, Anchor::Doc(_))
+            | (Verdict::Flat, Anchor::Doc(_))
+            | (Verdict::Refused, Anchor::Decision(_))
+            | (Verdict::Deferred, Anchor::Registry(_))
+            | (Verdict::Inapplicable, Anchor::Reason(_))
+    )
+}
+
+/// Audit every item against live state: the declared generated paths, the
+/// live repo facts, and the committed census. One finding per problem; a
+/// clean corpus returns an empty vector.
+///
+/// `unmeasured` items raise nothing at all — they are frozen but not yet
+/// measured, a lifecycle state rather than a coverage verdict, and the
+/// report lists them separately.
+pub fn audit(
+    corpus: &Corpus,
+    census: &hornvale_lab::domesday::census::Census,
+    generated: &GeneratedPaths,
+    facts: &crate::systems::RepoFacts,
+) -> Vec<Finding> {
+    corpus
+        .items
+        .iter()
+        .filter_map(|item| audit_item(item, census, generated, facts))
+        .collect()
+}
+
+/// Audit a single item. `None` means clean.
+fn audit_item(
+    item: &Item,
+    census: &hornvale_lab::domesday::census::Census,
+    generated: &GeneratedPaths,
+    facts: &crate::systems::RepoFacts,
+) -> Option<Finding> {
+    if item.verdict == Verdict::Unmeasured {
+        return None;
+    }
+
+    if item.verdict == Verdict::Absent {
+        return item.anchor.as_ref().map(|anchor| Finding::Unjustified {
+            id: item.id.clone(),
+            why: format!(
+                "{} has verdict `absent` but carries anchor `{anchor}`. An `absent` \
+                 verdict claims nothing and must carry no anchor — remove the anchor, \
+                 or change the verdict to the one the anchor actually supports.",
+                item.id
+            ),
+        });
+    }
+
+    let Some(anchor_str) = &item.anchor else {
+        return Some(Finding::Unjustified {
+            id: item.id.clone(),
+            why: format!(
+                "{} has verdict `{}` but no anchor. Every verdict except `absent` and \
+                 `unmeasured` must cite evidence: {} is required. Add an anchor, or \
+                 change the verdict to `absent` if there is truly nothing to cite.",
+                item.id,
+                verdict_name(item.verdict),
+                expected_anchor_kind(item.verdict)
+            ),
+        });
+    };
+
+    let Some(anchor) = Anchor::parse(anchor_str) else {
+        return Some(Finding::Unjustified {
+            id: item.id.clone(),
+            why: format!(
+                "{} cites `{anchor_str}`, which has an unrecognized anchor prefix. \
+                 Expected one of doc:, decision:, registry:, reason:. (`test:` and \
+                 `path:` are the sibling `systems` family's kinds and are deliberately \
+                 not admitted here: a regularity is not demonstrated by code existing.)",
+                item.id
+            ),
+        });
+    };
+
+    if !anchor_matches_verdict(item.verdict, &anchor) {
+        return Some(Finding::Unjustified {
+            id: item.id.clone(),
+            why: format!(
+                "{} has verdict `{}`, which requires {}, but its anchor `{anchor_str}` \
+                 is a {} anchor.",
+                item.id,
+                verdict_name(item.verdict),
+                expected_anchor_kind(item.verdict),
+                anchor_kind_name(&anchor)
+            ),
+        });
+    }
+
+    if let Some(finding) = resolve_anchor(item, anchor_str, &anchor, generated, facts) {
+        return Some(finding);
+    }
+
+    measure(item, census)
+}
+
+/// Verify `anchor` still resolves. `None` means clean.
+fn resolve_anchor(
+    item: &Item,
+    anchor_str: &str,
+    anchor: &Anchor,
+    generated: &GeneratedPaths,
+    facts: &crate::systems::RepoFacts,
+) -> Option<Finding> {
+    match anchor {
+        Anchor::Doc(path) => {
+            if generated.has_generator(path) {
+                return None;
+            }
+            // The two ways `has_generator` says no want opposite repairs, so
+            // the message names which one applies. It cannot quote the
+            // `none(<reason>)` prose — `attest::DeclaredAuthor::None`
+            // discards it — and does not need to: the reason is one line of
+            // the file this message names.
+            let detail = if generated.is_declared(path) {
+                "which docs/generated-paths.txt declares `none(<reason>)` — hand-written \
+                 prose that no roster set regenerates. Anchoring a measured verdict there \
+                 would be decision 0330's failure: a declaration that moves the score \
+                 without moving the world. Re-anchor to the generated page that states \
+                 the measured claim, or re-verdict this item."
+            } else {
+                "which docs/generated-paths.txt does not declare at all, so nothing \
+                 asserts it is regenerated or drift-checked. Either the page moved (fix \
+                 the anchor), or it is generated but undeclared (add its row to \
+                 docs/generated-paths.txt, which `cli/tests/suite/generated_paths.rs` \
+                 then holds tracked), or it is hand-written and cannot back a verdict."
+            };
+            Some(Finding::Unjustified {
+                id: item.id.clone(),
+                why: format!("{} cites doc:{path}, {detail}", item.id),
+            })
+        }
+        Anchor::Decision(d) => {
+            if facts.decision_in_force(d) {
+                None
+            } else {
+                Some(Finding::Dangling {
+                    id: item.id.clone(),
+                    anchor: anchor_str.to_string(),
+                    why: format!(
+                        "{} cites decision:{d}, which is not in \
+                         docs/digest/decisions-in-force.md. A decision leaves that file \
+                         when it is wholly superseded. Either re-verdict this item \
+                         against the superseding decision, or restore the anchor if the \
+                         supersession was partial.",
+                        item.id
+                    ),
+                })
+            }
+        }
+        Anchor::Registry(r) => {
+            if facts.registry_status(r).is_some() {
+                None
+            } else {
+                Some(Finding::Dangling {
+                    id: item.id.clone(),
+                    anchor: anchor_str.to_string(),
+                    why: format!(
+                        "{} cites registry:{r}, which does not appear in \
+                         book/src/frontier/idea-registry.md. Either the row ID changed \
+                         (fix the anchor) or the row was removed (re-verdict this item \
+                         against whatever replaced it).",
+                        item.id
+                    ),
+                })
+            }
+        }
+        Anchor::Reason(reason) => {
+            if reason.trim().is_empty() {
+                Some(Finding::Unjustified {
+                    id: item.id.clone(),
+                    why: format!(
+                        "{} has verdict `inapplicable` but its `reason:` anchor carries \
+                         no prose. A reasonless anchor is the same failure a reasonless \
+                         `waiver(...)` is for type-audit: state why this item does not \
+                         apply.",
+                        item.id
+                    ),
+                })
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// Recompute a measured item's verdict from the census and compare it to the
+/// authored one. `None` means they agree, or the item is not a measured one.
+///
+/// **The comparison is two-way, and that is the point.** The sibling corpus
+/// families ratchet, so a one-directional check suffices for them: a built
+/// capability stays built, and only its disappearance is news. A regularity
+/// is GROWN rather than built — nothing in the codebase names it, and a
+/// retune of the history bake can extinguish it with every other gate still
+/// green. So both disagreements are red:
+///
+/// - authored `grown`, computed `flat` — a regularity was LOST.
+/// - authored `flat`, computed `grown` — STALE PESSIMISM. A real gain must be
+///   claimed deliberately, in a commit that says so, rather than sitting
+///   unreported in a corpus that under-reports the world.
+///
+/// Reddening only the first direction would be half a guard, and the skipped
+/// half is the one that lets the corpus quietly understate what the world
+/// does.
+fn measure(item: &Item, census: &hornvale_lab::domesday::census::Census) -> Option<Finding> {
+    if !matches!(item.verdict, Verdict::Grown | Verdict::Flat) {
+        return None;
+    }
+    let criterion = item.criterion.as_ref()?;
+
+    // `Census::values` PANICS on a name that is not a column, which is the
+    // right behaviour for its own callers (a typo is a programming error)
+    // and the wrong one here: a census refresh that drops a metric is an
+    // ordinary, expected way for this corpus to decay, and an audit that
+    // aborts reports nothing about the remaining items.
+    if !census.has(&item.statistic) {
+        return Some(Finding::Dangling {
+            id: item.id.clone(),
+            anchor: item.anchor.clone().unwrap_or_default(),
+            why: format!(
+                "{} is measured through census statistic `{}`, which is not a column of \
+                 the committed census at all. Either the metric was renamed (fix the \
+                 `statistic` field) or it was retired from the study (re-verdict this \
+                 item to `deferred` or `absent`). Note this is NOT the same as a metric \
+                 every world declined to report, which is a legitimate measurement.",
+                item.id, item.statistic
+            ),
+        });
+    }
+
+    let present = values_of(census, &item.statistic);
+    let worlds = census.rows.len();
+    let computed = if meets(criterion, &present, worlds) {
+        Verdict::Grown
+    } else {
+        Verdict::Flat
+    };
+    if computed == item.verdict {
+        return None;
+    }
+
+    let repair = if item.verdict == Verdict::Grown {
+        "A regularity this corpus claims the world GROWS no longer measures grown. That \
+         is a finding about the world, not about the corpus: something upstream — most \
+         likely a retune of the history bake — stopped producing it, and no other gate \
+         would have said so. Investigate the cause before re-verdicting; if the loss is \
+         accepted, change the verdict to `flat` in a commit that says why."
+    } else {
+        "A regularity this corpus records as FLAT now measures grown. Stale pessimism is \
+         red for the same reason a loss is: a corpus that under-reports the world is as \
+         wrong as one that over-reports it. Promote the verdict to `grown` deliberately, \
+         in a commit that claims the gain and names what produced it."
+    };
+    Some(Finding::Regressed {
+        id: item.id.clone(),
+        authored: item.verdict,
+        computed,
+        why: format!(
+            "{}: authored `{}`, computed `{}` over {} present value(s) of `{}` across {} \
+             world(s). {repair}",
+            item.id,
+            verdict_name(item.verdict),
+            verdict_name(computed),
+            present.len(),
+            item.statistic,
+            worlds
+        ),
+    })
 }

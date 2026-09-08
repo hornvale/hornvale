@@ -1,4 +1,6 @@
-use hornvale::regularities::{self, Anchor, Criterion, GeneratedPaths, Verdict, meets};
+use hornvale::regularities::{
+    self, Anchor, Criterion, Finding, GeneratedPaths, Verdict, audit, meets, values_of,
+};
 use std::path::PathBuf;
 
 const FIXTURE: &str = r#"{
@@ -284,4 +286,160 @@ fn one_sided_bounds_are_inclusive() {
     assert!(meets(&Criterion::MedianAtLeast { bound: 2.0 }, &v, 3));
     assert!(meets(&Criterion::MedianAtMost { bound: 2.0 }, &v, 3));
     assert!(!meets(&Criterion::MedianAtLeast { bound: 2.5 }, &v, 3));
+}
+
+// --- The audit, and the two-way regression guard ---------------------------
+
+/// A one-item corpus with a chosen authored verdict and a criterion whose
+/// computed verdict is fixed by arithmetic rather than by census data.
+/// `bound: 1e308` is unreachable from below and unavoidable from above, so
+/// `median-at-least` never holds and `median-at-most` always does. **Do not
+/// "improve" these into realistic bands**: a guard test premised on today's
+/// median silently changes meaning at the next census refresh, which happens
+/// once per campaign.
+fn one_item_corpus(verdict: &str, kind: &str, anchor: &str) -> hornvale::regularities::Corpus {
+    let json = format!(
+        r#"{{"corpus":"t","unit":"regularity","ordered":false,
+             "population":"the-census","provenance":"p",
+             "frozen":"before first measurement, t",
+             "items":[{{"id":"i","title":"T","source":"S","emergence_type":2,
+               "statistic":"rank-size-slope",
+               "criterion":{{"kind":"{kind}","bound":1e308}},
+               "verdict":"{verdict}","anchor":"{anchor}","note":
+               "FALSIFYING WORLD: a fixture, not a real item"}}]}}"#
+    );
+    hornvale::regularities::load(&json).expect("fixture parses")
+}
+
+fn census() -> hornvale_lab::domesday::census::Census {
+    let dir = workspace_root()
+        .join(hornvale_lab::CENSUS_GOLDENS_DIR)
+        .join("the-census");
+    hornvale_lab::domesday::census::load(&dir).expect("committed census loads")
+}
+
+fn generated_paths() -> GeneratedPaths {
+    GeneratedPaths::read(&workspace_root()).expect("read declarations")
+}
+
+fn facts() -> hornvale::systems::RepoFacts {
+    hornvale::systems::RepoFacts::gather(&workspace_root()).expect("repo facts gather")
+}
+
+#[test]
+fn the_guard_fixtures_have_a_population_to_measure() {
+    // The only census dependency these guard tests retain. If this fails, the
+    // statistic went absent — not the guard broke.
+    assert!(
+        !values_of(&census(), "rank-size-slope").is_empty(),
+        "guard fixtures need at least one present value to measure"
+    );
+}
+
+#[test]
+fn a_lost_regularity_is_red() {
+    // Authored `grown` against a criterion no median can satisfy, so the
+    // computed verdict is `flat` whatever the census says.
+    let c = one_item_corpus(
+        "grown",
+        "median-at-least",
+        "doc:book/src/domesday/demography.md",
+    );
+    let findings = audit(&c, &census(), &generated_paths(), &facts());
+    // The DIRECTION is asserted, not merely that something reddened: a
+    // one-way implementation must not be able to satisfy both guard tests.
+    assert!(
+        findings.iter().any(|f| matches!(
+            f,
+            Finding::Regressed {
+                authored: Verdict::Grown,
+                computed: Verdict::Flat,
+                ..
+            }
+        )),
+        "an authored `grown` that no longer measures grown must be RED: {findings:?}"
+    );
+}
+
+#[test]
+fn stale_pessimism_is_also_red() {
+    // Authored `flat` against a criterion every median satisfies. A real gain
+    // must be claimed deliberately, in a commit that says so.
+    let c = one_item_corpus(
+        "flat",
+        "median-at-most",
+        "doc:book/src/domesday/demography.md",
+    );
+    let findings = audit(&c, &census(), &generated_paths(), &facts());
+    assert!(
+        findings.iter().any(|f| matches!(
+            f,
+            Finding::Regressed {
+                authored: Verdict::Flat,
+                computed: Verdict::Grown,
+                ..
+            }
+        )),
+        "an authored `flat` that now measures grown must be RED: {findings:?}"
+    );
+}
+
+#[test]
+fn agreement_raises_nothing() {
+    let c = one_item_corpus(
+        "flat",
+        "median-at-least",
+        "doc:book/src/domesday/demography.md",
+    );
+    let findings = audit(&c, &census(), &generated_paths(), &facts());
+    assert!(
+        findings.is_empty(),
+        "authored flat, measures flat: {findings:?}"
+    );
+}
+
+#[test]
+fn a_measured_verdict_anchored_to_hand_written_prose_is_unjustified() {
+    // `median-at-least` so the authored and computed verdicts AGREE — the
+    // only thing left for the audit to object to is the anchor.
+    let c = one_item_corpus(
+        "flat",
+        "median-at-least",
+        "doc:book/src/laboratory/overview.md",
+    );
+    let findings = audit(&c, &census(), &generated_paths(), &facts());
+    assert!(
+        findings
+            .iter()
+            .any(|f| matches!(f, Finding::Unjustified { .. })),
+        "a verdict anchored to hand-written prose must be RED: {findings:?}"
+    );
+}
+
+#[test]
+fn an_unmeasured_item_raises_nothing_and_needs_no_anchor() {
+    let json = r#"{"corpus":"t","unit":"regularity","ordered":false,
+      "population":"the-census","provenance":"p",
+      "frozen":"before first measurement, t",
+      "items":[{"id":"i","title":"T","source":"S","emergence_type":2,
+        "statistic":"rank-size-slope",
+        "criterion":{"kind":"median-in-band","lo":-1.2,"hi":-0.8},
+        "verdict":"unmeasured","note":""}]}"#;
+    let c = hornvale::regularities::load(json).expect("parses");
+    assert!(audit(&c, &census(), &generated_paths(), &facts()).is_empty());
+}
+
+/// The frozen corpus's own anchors, resolved against live state. The guard
+/// fixtures above are one item wide and all `grown`/`flat`; this is the only
+/// assertion that walks the `refused`, `deferred`, `inapplicable` and
+/// `absent` arms of the audit against the real repo, so a superseded
+/// decision, a removed registry row or a stray anchor on an `absent` item
+/// reddens here and nowhere else.
+#[test]
+fn the_committed_corpus_audits_clean_against_live_state() {
+    let findings = audit(&load_sugarscape(), &census(), &generated_paths(), &facts());
+    assert!(
+        findings.is_empty(),
+        "committed corpus has findings: {findings:#?}"
+    );
 }
