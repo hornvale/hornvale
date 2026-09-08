@@ -5,8 +5,8 @@ use hornvale_worldgen::district::{
     compose_district_patterns, project_districts,
 };
 use hornvale_worldgen::relation::{
-    RelationAssertion, RelationDirection, RelationDirectionPolicy, RelationInterval, RelationKind,
-    RelationMeasure, RelationMeasureFilter, RelationParticipant, RelationProvenance,
+    RelationAssertion, RelationDirection, RelationDirectionPolicy, RelationError, RelationInterval,
+    RelationKind, RelationMeasure, RelationMeasureFilter, RelationParticipant, RelationProvenance,
     RelationRecurrence, RelationReference, RelationRole, RelationView,
 };
 use std::collections::BTreeSet;
@@ -1376,5 +1376,167 @@ fn pattern_composition_preserves_structure_and_basis_refusals() {
     assert_eq!(
         compose_district_patterns(&unsupported, &config(RelationDirectionPolicy::Symmetric)),
         Err(DistrictStatus::Disconnected)
+    );
+}
+
+#[test]
+fn the_hollow_is_a_synthetic_disconnected_probe() {
+    let projection = project_districts(
+        &RelationView::new(Vec::new()).unwrap(),
+        DistrictBasis::Spatial,
+        district_interval(0, 10),
+        &config(RelationDirectionPolicy::Symmetric),
+    );
+    assert_eq!(projection.status, DistrictStatus::Disconnected);
+    assert!(projection.districts.is_empty());
+}
+
+#[test]
+fn the_flicker_is_a_synthetic_transient_probe() {
+    let view = RelationView::new(vec![assertion_during(
+        RelationKind::SpatialAdjacency,
+        "probe:flicker-left",
+        "probe:flicker-right",
+        RelationDirection::Symmetric,
+        1.0,
+        4,
+        5,
+    )])
+    .unwrap();
+    let mut cfg = config(RelationDirectionPolicy::Symmetric);
+    cfg.minimum_duration_ticks = 5;
+    let projection = project_districts(
+        &view,
+        DistrictBasis::Spatial,
+        district_interval(0, 10),
+        &cfg,
+    );
+    assert_eq!(projection.status, DistrictStatus::TransientOnly);
+}
+
+#[test]
+fn the_higher_arity_relation_is_an_explicit_refusal_probe() {
+    let mut relation = assertion(
+        RelationKind::Presence,
+        "probe:one",
+        "probe:two",
+        RelationDirection::Symmetric,
+        1.0,
+    );
+    relation.participants.push(RelationParticipant {
+        reference: reference("probe:three"),
+        role: RelationRole::new("participant"),
+    });
+    assert!(matches!(
+        RelationView::new(vec![relation]),
+        Err(RelationError::UnsupportedParticipantCount { count: 3, .. })
+    ));
+}
+
+#[test]
+fn the_r3_probe_summary_reaches_every_district_status() {
+    let interval = district_interval(0, 10);
+    let resolved_view = RelationView::new(vec![assertion(
+        RelationKind::SpatialAdjacency,
+        "probe:resolved-left",
+        "probe:resolved-right",
+        RelationDirection::Symmetric,
+        1.0,
+    )])
+    .unwrap();
+    let resolved_cfg = config(RelationDirectionPolicy::Symmetric);
+    let resolved = project_districts(
+        &resolved_view,
+        DistrictBasis::Spatial,
+        interval,
+        &resolved_cfg,
+    );
+
+    let mut insufficient_cfg = resolved_cfg.clone();
+    insufficient_cfg.minimum_members = 3;
+    let insufficient = project_districts(
+        &resolved_view,
+        DistrictBasis::Spatial,
+        interval,
+        &insufficient_cfg,
+    );
+
+    let mut contradictory_cfg = resolved_cfg.clone();
+    contradictory_cfg.maximum_overlaps_per_district = 0;
+    let contradictory_view = RelationView::new(vec![
+        assertion(
+            RelationKind::Access,
+            "probe:root",
+            "probe:left",
+            RelationDirection::Directed,
+            1.0,
+        ),
+        assertion(
+            RelationKind::Access,
+            "probe:root",
+            "probe:right",
+            RelationDirection::Directed,
+            1.0,
+        ),
+        assertion(
+            RelationKind::Access,
+            "probe:left",
+            "probe:join",
+            RelationDirection::Directed,
+            1.0,
+        ),
+        assertion(
+            RelationKind::Access,
+            "probe:right",
+            "probe:join",
+            RelationDirection::Directed,
+            1.0,
+        ),
+    ])
+    .unwrap();
+    let contradictory = project_districts(
+        &contradictory_view,
+        DistrictBasis::Access,
+        interval,
+        &DistrictConfig {
+            direction: RelationDirectionPolicy::SourceReachable(reference("probe:root")),
+            ..contradictory_cfg
+        },
+    );
+
+    let mut transient_cfg = resolved_cfg.clone();
+    transient_cfg.minimum_duration_ticks = 5;
+    let transient = project_districts(
+        &RelationView::new(vec![assertion_during(
+            RelationKind::SpatialAdjacency,
+            "probe:flicker-left",
+            "probe:flicker-right",
+            RelationDirection::Symmetric,
+            1.0,
+            4,
+            5,
+        )])
+        .unwrap(),
+        DistrictBasis::Spatial,
+        interval,
+        &transient_cfg,
+    );
+
+    let statuses = [
+        resolved.status,
+        insufficient.status,
+        contradictory.status,
+        DistrictStatus::Disconnected,
+        transient.status,
+    ];
+    assert_eq!(
+        statuses,
+        [
+            DistrictStatus::Resolved,
+            DistrictStatus::InsufficientEvidence,
+            DistrictStatus::ContradictoryEvidence,
+            DistrictStatus::Disconnected,
+            DistrictStatus::TransientOnly,
+        ]
     );
 }
