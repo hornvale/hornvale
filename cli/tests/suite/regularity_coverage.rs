@@ -645,6 +645,134 @@ fn the_binary_check_fails_on_drift_with_a_clean_audit() {
     );
 }
 
+/// `measure` is a READ: it exits 0 and leaves the corpus byte-identical.
+///
+/// The byte comparison is the load-bearing half. The mode exists because the
+/// rejected alternative was to interrogate the frozen corpus by MUTATING it
+/// (flip each item to `flat`, run `check`, read the findings), so a `measure`
+/// that wrote anything at all would have reintroduced the exact hazard it was
+/// built to avoid — and would do it silently, since a written corpus still
+/// exits 0.
+#[test]
+fn the_binary_measure_reads_and_writes_nothing() {
+    let corpus_path = workspace_root().join(regularities::CORPORA[0]);
+    let before = std::fs::read(&corpus_path).expect("reads the corpus");
+    let out = run(&["regularities", "measure"]);
+    assert!(
+        out.status.success(),
+        "measure asserts nothing and must exit 0: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let after = std::fs::read(&corpus_path).expect("reads the corpus");
+    assert_eq!(
+        before, after,
+        "`measure` must not write the corpus — it is a read, not a gate"
+    );
+}
+
+/// On a corpus with an `unmeasured` item, `measure` names the item, a
+/// computed verdict, and the number behind it.
+///
+/// Built on a scratch corpus rather than the real one, because the real
+/// corpus has been measured: every item carries a verdict, so `measure`
+/// correctly prints nothing there and a test reading its stdout would assert
+/// against an empty string forever.
+#[test]
+fn measure_names_the_item_its_computed_verdict_and_the_number() {
+    let scratch = scratch_corpus("measure", |c| {
+        let items = c["items"].as_array_mut().expect("items is an array");
+        for item in items.iter_mut() {
+            if item["id"] == serde_json::json!("sug-wealth-skew") {
+                item["verdict"] = serde_json::json!("unmeasured");
+                item.as_object_mut().expect("an object").remove("anchor");
+                break;
+            }
+        }
+    });
+    let out = run(&[
+        "regularities",
+        "--corpus",
+        scratch.to_str().expect("utf-8 path"),
+        "measure",
+    ]);
+    let _ = std::fs::remove_file(&scratch);
+    assert!(out.status.success(), "measure failed: {out:?}");
+    let stdout = String::from_utf8(out.stdout).expect("utf-8");
+    assert!(
+        stdout.contains("sug-wealth-skew"),
+        "measure must name the item: {stdout}"
+    );
+    assert!(
+        stdout.contains("flat") || stdout.contains("grown"),
+        "measure must state a computed verdict: {stdout}"
+    );
+    assert!(
+        stdout.contains("median(rank-size-slope)") && stdout.contains("band [-1.2, -0.8]"),
+        "measure must show the number the verdict was decided on, and the band it \
+         was decided against: {stdout}"
+    );
+}
+
+/// A measured item is NOT listed by `measure`.
+///
+/// Not a stylistic choice: a measured item's computed verdict is already
+/// gated by `audit`'s two-way `Regressed` comparison, and printing it here
+/// would be a second, unasserted answer to a question that already has an
+/// asserted one.
+#[test]
+fn measure_lists_only_unmeasured_items() {
+    let out = run(&["regularities", "measure"]);
+    assert!(out.status.success(), "measure failed: {out:?}");
+    let stdout = String::from_utf8(out.stdout).expect("utf-8");
+    let corpus = load_sugarscape();
+    assert!(
+        corpus
+            .items
+            .iter()
+            .all(|i| i.verdict != regularities::Verdict::Unmeasured),
+        "this test's premise is that the real corpus has been measured"
+    );
+    assert!(
+        stdout.trim().is_empty(),
+        "a fully measured corpus has nothing for `measure` to report: {stdout}"
+    );
+}
+
+/// An item whose statistic is not a census column is reported as
+/// uncomputable rather than aborting the run — `Census::values` panics on an
+/// unknown name, so this is the arm that keeps a retired metric from taking
+/// every other item's reading down with it.
+#[test]
+fn measure_reports_an_uncomputable_item_without_aborting() {
+    let scratch = scratch_corpus("uncomputable", |c| {
+        let items = c["items"].as_array_mut().expect("items is an array");
+        for item in items.iter_mut() {
+            if item["id"] == serde_json::json!("sug-wealth-skew") {
+                item["verdict"] = serde_json::json!("unmeasured");
+                item["statistic"] = serde_json::json!("a-metric-no-census-has");
+                item.as_object_mut().expect("an object").remove("anchor");
+                break;
+            }
+        }
+    });
+    let out = run(&[
+        "regularities",
+        "--corpus",
+        scratch.to_str().expect("utf-8 path"),
+        "measure",
+    ]);
+    let _ = std::fs::remove_file(&scratch);
+    assert!(
+        out.status.success(),
+        "measure asserts nothing, so an uncomputable item must not fail it: {out:?}"
+    );
+    let stdout = String::from_utf8(out.stdout).expect("utf-8");
+    assert!(
+        stdout.contains("uncomputable") && stdout.contains("a-metric-no-census-has"),
+        "the line must name the item and the column it could not find: {stdout}"
+    );
+}
+
 /// An unknown mode is refused by name rather than silently reporting.
 #[test]
 fn an_unknown_mode_is_refused() {

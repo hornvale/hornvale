@@ -355,16 +355,8 @@ pub fn meets(criterion: &Criterion, present: &[f64], worlds: usize) -> bool {
         Criterion::MedianInBand { .. }
         | Criterion::MedianAtLeast { .. }
         | Criterion::MedianAtMost { .. } => {
-            if present.is_empty() {
+            let Some(median) = median(present) else {
                 return false;
-            }
-            let mut sorted = present.to_vec();
-            sorted.sort_by(f64::total_cmp);
-            let mid = sorted.len() / 2;
-            let median = if sorted.len().is_multiple_of(2) {
-                (sorted[mid - 1] + sorted[mid]) / 2.0
-            } else {
-                sorted[mid]
             };
             match criterion {
                 Criterion::MedianInBand { lo, hi } => median >= *lo && median <= *hi,
@@ -374,6 +366,28 @@ pub fn meets(criterion: &Criterion, present: &[f64], worlds: usize) -> bool {
             }
         }
     }
+}
+
+/// The median of the present values, or `None` when there are none.
+///
+/// Extracted from [`meets`] rather than duplicated beside it, because
+/// `measure` mode must print the very number the verdict was decided on: two
+/// medians computed by two functions could agree for a hundred runs and
+/// disagree on the run that matters. Sorted with `total_cmp`, the workspace's
+/// only sanctioned float ordering.
+/// type-audit: bare-ok(ratio: present), bare-ok(ratio: return)
+pub fn median(present: &[f64]) -> Option<f64> {
+    if present.is_empty() {
+        return None;
+    }
+    let mut sorted = present.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    let mid = sorted.len() / 2;
+    Some(if sorted.len().is_multiple_of(2) {
+        (sorted[mid - 1] + sorted[mid]) / 2.0
+    } else {
+        sorted[mid]
+    })
 }
 
 /// The present numeric values of a statistic, in census row order.
@@ -387,6 +401,126 @@ pub fn values_of(census: &hornvale_lab::domesday::census::Census, statistic: &st
         .into_iter()
         .filter_map(|reading| reading.parse::<f64>().ok())
         .collect()
+}
+
+/// What the committed census says about one item's frozen criterion, computed
+/// fresh and asserting nothing.
+///
+/// This is the *read* half of the two-way guard in [`measure`]: the same
+/// computation, with the comparison against the authored verdict removed and
+/// the numbers behind it kept. `measure` mode prints these; nothing gates on
+/// them.
+/// type-audit: bare-ok(count: present), bare-ok(count: worlds), bare-ok(prose: summary)
+#[derive(Debug, Clone)]
+pub struct Measurement {
+    /// The verdict the criterion yields against the present census.
+    pub verdict: Verdict,
+    /// How many worlds reported a numeric value for the statistic.
+    pub present: usize,
+    /// The population size, including worlds where the statistic is absent.
+    pub worlds: usize,
+    /// The numbers the verdict was decided on, in one line.
+    pub summary: String,
+}
+
+/// Score one item's criterion against the census, without comparing it to the
+/// authored verdict. `Err` names why the item cannot be scored at all.
+///
+/// Deliberately separate from [`audit`]: an audit is a gate and returns
+/// findings, while this returns a reading. Sharing [`meets`] and [`median`]
+/// with the gate is what makes the reading trustworthy — a second
+/// implementation could quietly print a number the gate never used.
+/// type-audit: bare-ok(prose: return)
+pub fn compute(
+    item: &Item,
+    census: &hornvale_lab::domesday::census::Census,
+) -> Result<Measurement, String> {
+    let Some(criterion) = item.criterion.as_ref() else {
+        return Err(format!(
+            "{} carries no criterion, so there is nothing to score against the census",
+            item.id
+        ));
+    };
+    // Same reason `measure` guards this: `Census::values` PANICS on a name
+    // that is not a column, and a retired metric is an ordinary way for this
+    // corpus to decay.
+    if !census.has(&item.statistic) {
+        return Err(format!(
+            "{} is measured through census statistic `{}`, which is not a column of the \
+             committed census at all",
+            item.id, item.statistic
+        ));
+    }
+    let present = values_of(census, &item.statistic);
+    let worlds = census.rows.len();
+    let verdict = if meets(criterion, &present, worlds) {
+        Verdict::Grown
+    } else {
+        Verdict::Flat
+    };
+    let summary = match criterion {
+        Criterion::MedianInBand { lo, hi } => format!(
+            "median({}) = {}; band [{lo}, {hi}]",
+            item.statistic,
+            median_text(&present)
+        ),
+        Criterion::MedianAtLeast { bound } => format!(
+            "median({}) = {}; required >= {bound}",
+            item.statistic,
+            median_text(&present)
+        ),
+        Criterion::MedianAtMost { bound } => format!(
+            "median({}) = {}; required <= {bound}",
+            item.statistic,
+            median_text(&present)
+        ),
+        Criterion::FractionInBandAtLeast {
+            lo,
+            hi,
+            min_fraction,
+        } => {
+            let inside = present.iter().filter(|v| **v >= *lo && **v <= *hi).count();
+            format!(
+                "{inside} of {worlds} world(s) have {} in [{lo}, {hi}] = {}; required >= \
+                 {min_fraction}",
+                item.statistic,
+                fraction_text(inside, worlds)
+            )
+        }
+        Criterion::PresentOnFraction { min_fraction } => format!(
+            "{} present on {} of {worlds} world(s) = {}; required >= {min_fraction}",
+            item.statistic,
+            present.len(),
+            fraction_text(present.len(), worlds)
+        ),
+    };
+    Ok(Measurement {
+        verdict,
+        present: present.len(),
+        worlds,
+        summary,
+    })
+}
+
+/// The median rendered for a human, or `absent` when nothing was present.
+///
+/// Six decimals, not the census's own emitted precision: this text is read by
+/// a person deciding whether a verdict is believable, and is never parsed or
+/// committed, so it owes the quantize-at-emit contract nothing.
+fn median_text(present: &[f64]) -> String {
+    match median(present) {
+        Some(m) => format!("{m:.6}"),
+        None => "absent (no world reported a value)".to_string(),
+    }
+}
+
+/// A share rendered for a human. Zero worlds prints as `n/a` rather than a
+/// division nobody can read.
+fn fraction_text(part: usize, whole: usize) -> String {
+    if whole == 0 {
+        return "n/a (empty population)".to_string();
+    }
+    format!("{:.6}", part as f64 / whole as f64)
 }
 
 /// Something wrong with an item, found by re-checking it against live state.
@@ -458,8 +592,12 @@ pub enum Finding {
     },
 }
 
-/// Human name of a verdict, for failure text.
-fn verdict_name(v: Verdict) -> &'static str {
+/// Human name of a verdict, for failure text and for `measure`'s output.
+///
+/// Public so a caller printing a computed verdict spells it the same way the
+/// corpus and the audit's failure text do — one spelling, one place.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn verdict_name(v: Verdict) -> &'static str {
     match v {
         Verdict::Grown => "grown",
         Verdict::Flat => "flat",

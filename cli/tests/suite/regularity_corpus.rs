@@ -60,6 +60,49 @@ fn the_sugarscape_corpus_is_frozen_at_its_declared_size() {
     assert_eq!(c.items.len(), 45);
 }
 
+/// The first measurement happened, and no item may quietly slip back to
+/// `unmeasured` to escape the two-way guard.
+///
+/// `unmeasured` raises nothing in `audit` — deliberately, because a
+/// frozen-but-unscored item is a lifecycle state rather than a coverage
+/// verdict. That exemption is exactly what makes this ratchet necessary:
+/// without it, the cheapest way to silence a `Regressed` finding is to
+/// re-verdict the item back to `unmeasured`, and every gate stays green.
+#[test]
+fn the_corpus_has_been_measured() {
+    let c = load_sugarscape();
+    let pending: Vec<&str> = c
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Unmeasured)
+        .map(|i| i.id.as_str())
+        .collect();
+    assert!(
+        pending.is_empty(),
+        "unmeasured after the first run: {pending:?}"
+    );
+}
+
+/// Spec §8's falsification clause: if more than half the corpus is
+/// `inapplicable`, the finding is that Sugarscape is the wrong first corpus —
+/// NOT that Hornvale failed. Report it; do not re-author the corpus to raise
+/// the score.
+#[test]
+fn the_falsification_clause_has_not_fired() {
+    let c = load_sugarscape();
+    let n = c
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Inapplicable)
+        .count();
+    assert!(
+        n * 2 <= c.items.len(),
+        "{n} of {} items inapplicable — the falsification clause has fired, and \
+         that is a finding to report, not a corpus to re-author",
+        c.items.len()
+    );
+}
+
 #[test]
 fn the_corpus_declares_its_provenance_and_freeze() {
     let c = load_sugarscape();

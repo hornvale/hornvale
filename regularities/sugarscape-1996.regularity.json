@@ -13,7 +13,8 @@
       "emergence_type": 2,
       "statistic": "rank-size-slope",
       "criterion": { "kind": "median-in-band", "lo": -1.2, "hi": -0.8 },
-      "verdict": "unmeasured",
+      "verdict": "flat",
+      "anchor": "doc:book/src/domesday/settlement.md",
       "note": "NOT A BLIND TEST, disclosed under decision 0016: this statistic's distribution was measured during the brainstorm that motivated The Seedbed, before any corpus existed. Every other item in this corpus was authored before its statistic was looked at. FALSIFYING WORLD: one whose settlements all carry the same population, giving an OLS slope near 0, or one dominated by a single primate settlement, giving a slope near -2 — both fall outside the band and redden. The band is two-sided and both poles are real shapes, and it is the only band in this corpus taken from an OUTSIDE LAW WITH A NUMBER IN IT (Zipf/Auerbach's slope of about -1) rather than from a floor chosen to be safe. It is the model the other items are measured against, and the metric's own rustdoc records that Hornvale's condensation is deliberately NOT tuned to a rank-size target, so the band is genuinely at risk."
     },
 
@@ -42,7 +43,8 @@
       "emergence_type": 2,
       "statistic": "raid-victim-rate",
       "criterion": { "kind": "fraction-in-band-at-least", "lo": 0.02, "hi": 0.5, "min_fraction": 0.5 },
-      "verdict": "unmeasured",
+      "verdict": "grown",
+      "anchor": "doc:book/src/domesday/society.md",
       "note": "The combat rule is self-limiting by construction: an attacker discards every site vulnerable to retaliation, so violence is common without being the dominant mode of interaction. Band edges are the source's two poles — nonzero (combat happens at all) and under half (it does not become the society's principal way of ending). Read on Hornvale's community grain: the share of occupation records that ended at another community's hand. FALSIFYING WORLDS, ONE AT EACH POLE: a world whose bake never resolves a contest by conquest, so no occupation ends at another's hand and the rate sits at 0, below the 0.02 floor; and a world where raiding is the majority cause of ending, putting the rate above 0.5. Both reflect real settings of the bake's own `strength <= holder_strength * RAID_MARGIN` gate, so neither pole is hypothetical, and the criterion reddens at both."
     },
     {
@@ -52,7 +54,8 @@
       "emergence_type": 1,
       "statistic": "raid-initiator-rate",
       "criterion": { "kind": "median-at-most", "bound": 0.5 },
-      "verdict": "unmeasured",
+      "verdict": "grown",
+      "anchor": "doc:book/src/domesday/society.md",
       "note": "The offence side, separated from the defence side above because the source treats deterrence as its own finding: precisely the high vision that produced the migration waves suppresses them once combat is on. `initiate at all` is meaningful for an individual agent and for a community alike, hence type 1. FALSIFYING WORLD: one in which a majority of communities initiate at least one raid, putting the rate above 0.5 and reddening the criterion. TWO WEAKNESSES THAT SURVIVE THAT TEST AND ARE RECORDED RATHER THAN PATCHED. (1) The bound is ONE-SIDED, so a world with no raiding at all also scores `grown` — the deterrence claim is untested there, and it is only the LOWER edge of `sug-predation-is-bounded` that rules that world out. (2) The two items are NEAR-COLLINEAR: the metric's own rustdoc records the initiator/victim ratio at 1.00-1.03 on a non-census probe, so `initiator <= 0.5` is nearly implied by `victim <= 0.5`. A report must not count these two as independent corroborations of anything. Adding a lower edge here was considered and declined: it would restate `sug-predation-is-bounded`'s existing claim rather than add one, and a redundant criterion is worse than an acknowledged one-sided ceiling."
     },
     {
@@ -71,7 +74,8 @@
       "emergence_type": 2,
       "statistic": "tribute-relations-standing",
       "criterion": { "kind": "median-at-least", "bound": 1.0 },
-      "verdict": "unmeasured",
+      "verdict": "grown",
+      "anchor": "doc:book/src/domesday/society.md",
       "note": "The source's own framing: 'So far the agent societies studied in this book have been flat -- there is no sense in which some agents are subordinate to others. This stems from the fact that agent interactions are usually short lived ... or are symmetrical.' Sugarscape reaches hierarchy through credit; Hornvale reaches it through standing tribute. The MECHANISM differs and the item does not claim otherwise -- what is imported is the claim that a durable, asymmetric, one-directional relation is the thing that makes a society stop being flat. A standing relation is a property of a pair and a hierarchy of the whole, hence type 2. FALSIFYING WORLD: one whose bake resolves every contest by destruction or displacement and never by subjugation — communities raid, collapse and resettle, and no community ever ends up owing another anything that outlasts the encounter. Verified constructible from the emitter rather than assumed: `history_emit.rs` commits one `pays-tribute-to` fact per entry of the bake's own `h.tribute` and none otherwise, so an empty `h.tribute` yields a standing stock of 0 and the criterion reddens. That is a real outcome of the contest resolution, not a constant of the code — which is what separates this floor from the three demoted in fix round 2. It IS still a floor, and the honest limit of a floor is stated once here for the whole corpus: it can tell a hierarchy-forming world from a flat one, and it cannot say anything about how deep the hierarchy runs."
     },
     {

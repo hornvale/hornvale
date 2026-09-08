@@ -126,11 +126,13 @@ usage:
                           domains/*|windows/* subsystems no corpus's `present` verdicts cite
                           at all (ignores --corpus — the columns are the declared list, not
                           the caller's choice)
-  hornvale regularities [report|check] [--corpus <PATH>]
+  hornvale regularities [report|check|measure] [--corpus <PATH>]
                           score the frozen macro-regularity corpus against the committed
                           census — does the world GROW this? (report: render to stdout;
                           check: run the audit and diff against the artifact committed for
-                          that corpus's id; default corpus:
+                          that corpus's id; measure: print what the census says about every
+                          `unmeasured` item — a read that asserts nothing and writes
+                          nothing; default corpus:
                           regularities/sugarscape-1996.regularity.json)
   hornvale streams                         dump the stream manifest as markdown
   hornvale underworld --seed <N>           dump one seed's chamber lattice as text (the underworld
@@ -1440,8 +1442,40 @@ fn cmd_regularities(args: &[String]) -> Result<(), String> {
                 ))
             }
         }
+        Some("measure") => {
+            // A READ, NOT A GATE. It asserts nothing, writes nothing, and
+            // exits 0 whatever the census says — the whole point is to see
+            // what a verdict WOULD be before anyone transcribes it into the
+            // frozen corpus. The alternative considered and rejected was to
+            // flip each `unmeasured` item to `flat` and read `check`'s
+            // findings: that interrogates the corpus by mutating it, and a
+            // half-finished run leaves it in a state nobody authored.
+            //
+            // It lists only `unmeasured` items. A measured item's computed
+            // verdict already has a gate — `audit`'s two-way `Regressed`
+            // comparison — so printing it here would be a second, weaker
+            // answer to a question that is already asked properly.
+            for item in corpus
+                .items
+                .iter()
+                .filter(|i| i.verdict == regularities::Verdict::Unmeasured)
+            {
+                match regularities::compute(item, &census) {
+                    Ok(m) => println!(
+                        "{}\t{}\t{} (present on {} of {} world(s))",
+                        item.id,
+                        regularities::verdict_name(m.verdict),
+                        m.summary,
+                        m.present,
+                        m.worlds
+                    ),
+                    Err(why) => println!("{}\tuncomputable\t{why}", item.id),
+                }
+            }
+            Ok(())
+        }
         Some(other) => Err(format!(
-            "regularities: unknown mode '{other}' (report|check)"
+            "regularities: unknown mode '{other}' (report|check|measure)"
         )),
     }
 }
