@@ -88,6 +88,7 @@ pub mod circuit;
 pub mod circuit_readout;
 pub mod color_naming;
 pub mod components;
+pub mod d3b;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
@@ -135,6 +136,11 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of, tongue_paradigm_of,
 };
 pub use components::WorldComponents;
+pub use d3b::{
+    D3bCapacityBand, D3bCoverageBand, D3bOrdering, D3bProjectionSignature, D3bSourceSignature,
+    D3bTernaryBand, d3b_capacity_band, d3b_projection_signature, d3b_river_band,
+    d3b_source_signature, d3b_surplus_band,
+};
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use fieldpack::{FieldPack, field_pack_from};
 pub use fixture::seed_42_world;
