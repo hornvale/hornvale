@@ -128,6 +128,97 @@ fn the_tally_reports_grown_by_claim_not_only_by_item() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// The claim-level RULE, on synthetic corpora.
+//
+// The test above holds the report's number against the committed corpus, and
+// that corpus cannot exercise the rule: its one merged claim is all-grown and
+// every measurable item is measured, so `all` and `any` agree on it — both
+// quantifiers in `grown_claims` survived mutation to `any` at 186/186 tests.
+// The rule ("a claim counts as grown only when EVERY item merged into it
+// does") is a property of the function, so it is tested on groups built to
+// disagree with themselves.
+//
+// Both statistics below are real census columns correlated at 0.999 over the
+// committed population, which is what makes the two items ONE claim. The
+// positive control asserts that merge happened rather than assuming it: an
+// unmerged pair would read two claims and every assertion here would mean
+// something else.
+// ---------------------------------------------------------------------------
+
+/// The near-collinear census columns the founding corpus's merged claim is
+/// built from, reused here so the fixtures merge for the same reason it does.
+const COLLINEAR_A: &str = "raid-victim-rate";
+/// The other half of that pair.
+const COLLINEAR_B: &str = "raid-initiator-rate";
+
+/// A two-item corpus whose items read [`COLLINEAR_A`] and [`COLLINEAR_B`], so
+/// they merge into one claim, with the two authored verdicts chosen by the
+/// caller.
+///
+/// The criterion is present only because `measurable` requires one; nothing
+/// here computes a verdict, and `grown_claims` reads the AUTHORED verdict.
+fn merged_pair_corpus(left: &str, right: &str) -> regularities::Corpus {
+    let json = format!(
+        r#"{{"corpus":"t","unit":"regularity","ordered":false,
+             "population":"the-census","provenance":"p",
+             "frozen":"before first measurement, t",
+             "items":[
+               {{"id":"l","title":"L","source":"S","emergence_type":2,
+                 "statistic":"{COLLINEAR_A}",
+                 "criterion":{{"kind":"median-at-most","bound":1e308}},
+                 "verdict":"{left}","note":""}},
+               {{"id":"r","title":"R","source":"S","emergence_type":2,
+                 "statistic":"{COLLINEAR_B}",
+                 "criterion":{{"kind":"median-at-most","bound":1e308}},
+                 "verdict":"{right}","note":""}}]}}"#
+    );
+    regularities::load(&json).expect("fixture parses")
+}
+
+/// The positive control, and the anti-vacuity witness for the two tests
+/// below: the pair really does merge, so a reading of `1 of 1` — not `2 of
+/// 2` — is what an all-grown group produces.
+#[test]
+fn two_collinear_grown_items_are_one_grown_claim() {
+    assert_eq!(
+        regularities::claim_reading(&merged_pair_corpus("grown", "grown"), &census()),
+        (1, 1),
+        "the two statistics must merge into one claim, or the fixtures below \
+         are measuring something other than the merge rule"
+    );
+}
+
+/// A merged claim whose two readings DISAGREE is not grown.
+///
+/// One thing measured twice that answers two different ways is a claim whose
+/// instrument disagrees with itself; it must not round up. This is the
+/// assertion that reddens when `grown_claims`'s grown quantifier is relaxed
+/// from `all` to `any`.
+#[test]
+fn a_merged_claim_with_one_flat_member_is_not_grown() {
+    assert_eq!(
+        regularities::claim_reading(&merged_pair_corpus("grown", "flat"), &census()),
+        (0, 1),
+        "a merged claim counts as grown only when EVERY item merged into it does"
+    );
+}
+
+/// A merged claim with an UNMEASURED member is not measured at all.
+///
+/// Its verdict is unknown, not flat, so it belongs in neither the numerator
+/// nor the denominator: counting it as measured would publish a claim-level
+/// denominator that includes a claim nobody has scored. This is the assertion
+/// that reddens when the measured quantifier is relaxed from `all` to `any`.
+#[test]
+fn a_merged_claim_with_an_unmeasured_member_is_not_counted_at_all() {
+    assert_eq!(
+        regularities::claim_reading(&merged_pair_corpus("grown", "unmeasured"), &census()),
+        (0, 0),
+        "an unmeasured member makes the claim's verdict unknown, not flat"
+    );
+}
+
 /// Requirement 1 and 2 together: the independent-claim count is reported
 /// beside the item count, and it is STRICTLY BELOW it — the two raid-rate
 /// items read near-collinear statistics off the same population, so four
@@ -673,12 +764,22 @@ fn a_flag_before_the_mode_still_reaches_check() {
 }
 
 /// `check`'s OTHER failure arm: the audit is clean but the rendered report no
-/// longer matches the committed artifact. Exercised by moving an item's title,
-/// which changes the rendered bytes and nothing the audit inspects.
+/// longer matches the committed artifact. Exercised by moving an item's
+/// `note`, which changes the rendered bytes and nothing the audit inspects.
+///
+/// **It moved the TITLE until the final review's doc-anchor fix**, and the
+/// title stopped being audit-invisible at that moment: a `doc:` anchor now
+/// resolves only when the anchored page states the item's claim, and the
+/// title is half of what identifies that claim line. The title mutation
+/// therefore raised an audit finding and this test's own second assertion
+/// caught it. `note` is the field the module's own documentation calls
+/// "never parsed" — the audit reads it nowhere, and the report reproduces it
+/// verbatim in the item table — so it is the mutation that isolates the
+/// drift arm now.
 #[test]
 fn the_binary_check_fails_on_drift_with_a_clean_audit() {
     let scratch = scratch_corpus("drift", |c| {
-        c["items"][0]["title"] = serde_json::json!("A title nobody committed");
+        c["items"][0]["note"] = serde_json::json!("A note nobody committed");
     });
     let out = run(&[
         "regularities",
@@ -695,7 +796,7 @@ fn the_binary_check_fails_on_drift_with_a_clean_audit() {
     );
     assert!(
         !stderr.contains("audit found"),
-        "a title change must not raise an audit finding: {stderr}"
+        "a note change must not raise an audit finding: {stderr}"
     );
 }
 
@@ -1222,27 +1323,40 @@ fn the_rendered_corpus_pointer_is_the_relative_path() {
 ///
 /// Asserted over the real artifact, not a render, so it also holds that the
 /// regeneration actually ran.
+///
+/// **The page is resolved from the ITEM'S OWN ANCHOR, and it used to be
+/// resolved from the census column's `domain`.** That made this test look
+/// like the thing closing the loop on a `doc:` anchor while its subject was
+/// something else entirely: an item repointed at an unrelated generated page
+/// left this green, because the page it opened was still the one the renderer
+/// writes to. The anchor is the authored claim about where the evidence is,
+/// so the anchor is what has to be opened.
+///
+/// The last assertion keeps the two readings tied together: the anchor must
+/// also BE the page the Domesday writes this claim onto, which is what makes
+/// an anchor into a generated page a promise the regeneration can keep.
 #[test]
 fn the_committed_pages_carry_the_regularity_and_its_provenance() {
-    let corpus = lab_corpus();
+    let corpus = load_sugarscape();
     let root = workspace_root();
+    let census = census();
+    let mut checked = 0;
     for item in &corpus.items {
-        let domain = census()
-            .columns
-            .iter()
-            .find(|col| col.name == item.statistic)
-            .map(|col| col.domain.clone())
-            .expect("a scored statistic is a census column");
-        let page = std::fs::read_to_string(root.join(format!("book/src/domesday/{domain}.md")))
-            .expect("the domain page");
+        let Some(regularities::Anchor::Doc(path)) =
+            item.anchor.as_deref().and_then(regularities::Anchor::parse)
+        else {
+            continue;
+        };
+        let page = std::fs::read_to_string(root.join(&path))
+            .unwrap_or_else(|e| panic!("{}: cannot read its anchored page {path}: {e}", item.id));
         assert!(
             page.contains(&item.title),
-            "{}: the regularity itself is missing from {domain}.md",
+            "{}: the regularity itself is missing from its anchored page {path}",
             item.id
         );
         assert!(
             page.contains(&item.source),
-            "{}: the source citation is missing from {domain}.md",
+            "{}: the source citation is missing from its anchored page {path}",
             item.id
         );
         assert!(
@@ -1250,13 +1364,32 @@ fn the_committed_pages_carry_the_regularity_and_its_provenance() {
                 "## {}",
                 hornvale_lab::domesday::render::CLAIMS_SECTION_TITLE
             )),
-            "{domain}.md carries a claim but no gloss saying what one is"
+            "{path} carries a claim but no gloss saying what one is"
         );
         assert!(
             page.contains(&corpus.provenance),
-            "{domain}.md carries a claim but not the corpus provenance behind it"
+            "{path} carries a claim but not the corpus provenance behind it"
         );
+        let domain = census
+            .columns
+            .iter()
+            .find(|col| col.name == item.statistic)
+            .map(|col| col.domain.clone())
+            .expect("a scored statistic is a census column");
+        assert_eq!(
+            path,
+            format!("book/src/domesday/{domain}.md"),
+            "{}: the anchor names a page the Domesday does not write this claim onto — \
+             the survey renders each claim on the page of its own statistic's domain",
+            item.id
+        );
+        checked += 1;
     }
+    assert_eq!(
+        checked, 4,
+        "the founding corpus carries four doc: anchors; a loop that checked none \
+         would pass every assertion above"
+    );
 }
 
 // ---------------------------------------------------------------------------

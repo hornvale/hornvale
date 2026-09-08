@@ -19,7 +19,7 @@
 //! the same change.
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// The declared corpora, in matrix-column order.
 /// type-audit: bare-ok(artifact)
@@ -303,6 +303,10 @@ impl Anchor {
 /// are regenerated and by what.
 #[derive(Debug, Clone)]
 pub struct GeneratedPaths {
+    /// The repository root the declarations were read from. Carried so a
+    /// declared page can be OPENED, not merely recognized — see
+    /// [`GeneratedPaths::page_text`].
+    root: PathBuf,
     /// Declared path to whether its author is a real generator (`true`) or a
     /// declared `none(<reason>)` absence (`false`).
     authors: BTreeMap<String, bool>,
@@ -331,7 +335,22 @@ impl GeneratedPaths {
         if authors.is_empty() {
             return Err("no declared generated paths".to_string());
         }
-        Ok(GeneratedPaths { authors })
+        Ok(GeneratedPaths {
+            root: root.to_path_buf(),
+            authors,
+        })
+    }
+
+    /// The text of a declared page.
+    ///
+    /// The repository root travels with this type rather than through
+    /// [`audit`]'s signature because this is the object that already knows
+    /// it: a path declared in `docs/generated-paths.txt` is relative to the
+    /// root that file was found under, so resolving it here cannot pick up a
+    /// different root than the declaration did.
+    fn page_text(&self, path: &str) -> Result<String, String> {
+        let full = self.root.join(path);
+        std::fs::read_to_string(&full).map_err(|e| format!("{}: {e}", full.display()))
     }
 
     /// The declaration covering `path`, if any: `Some(true)` when a roster
@@ -562,23 +581,36 @@ pub fn compute(
 
 /// The median rendered for a human, or `absent` when nothing was present.
 ///
-/// Six decimals, not the census's own emitted precision: this text is read by
-/// a person deciding whether a verdict is believable, and is never parsed or
-/// committed, so it owes the quantize-at-emit contract nothing.
+/// Six decimals, matching the Domesday's `measured_text` so the number a
+/// reader sees on a survey page is spelled the same as the number `measure`
+/// mode prints.
+///
+/// **Quantized, and this doc used to say it need not be.** The old wording —
+/// "never parsed or committed, so it owes the quantize-at-emit contract
+/// nothing" — was true only while [`Measurement::summary`] went to stdout
+/// alone. The coverage report's item table now prints it, which makes this
+/// an emit boundary onto a committed, drift-checked artifact like every
+/// other float here (decision 0033).
 fn median_text(present: &[f64]) -> String {
     match median(present) {
-        Some(m) => format!("{m:.6}"),
+        Some(m) => format!("{:.6}", hornvale_kernel::quantize(m)),
         None => "absent (no world reported a value)".to_string(),
     }
 }
 
 /// A share rendered for a human. Zero worlds prints as `n/a` rather than a
 /// division nobody can read.
+///
+/// Quantized for the same reason [`median_text`] is: this string reaches the
+/// committed coverage report.
 fn fraction_text(part: usize, whole: usize) -> String {
     if whole == 0 {
         return "n/a (empty population)".to_string();
     }
-    format!("{:.6}", part as f64 / whole as f64)
+    format!(
+        "{:.6}",
+        hornvale_kernel::quantize(part as f64 / whole as f64)
+    )
 }
 
 /// Something wrong with an item, found by re-checking it against live state.
@@ -802,7 +834,7 @@ fn resolve_anchor(
     match anchor {
         Anchor::Doc(path) => {
             if generated.has_generator(path) {
-                return None;
+                return doc_states_the_claim(item, path, generated);
             }
             // The two ways `has_generator` says no want opposite repairs, so
             // the message names which one applies. It cannot quote the
@@ -897,6 +929,73 @@ fn resolve_anchor(
             }
         }
     }
+}
+
+/// Whether a page STATES an item's frozen claim, on one line.
+///
+/// A Domesday claim line is emitted as a single line opening with
+/// [`hornvale_lab::domesday::render::CLAIM_MARKER`] and continuing
+/// `*{title}* (…)`, so both halves are required on the SAME line. Asking
+/// only whether the page contains each of them somewhere would pass on a
+/// page that carries somebody ELSE's claim and happens to mention this
+/// item's title in an embedded metric doc string — which is exactly the
+/// looseness this guard exists to remove.
+fn page_states_claim(page: &str, title: &str) -> bool {
+    page.lines().any(|line| {
+        line.contains(hornvale_lab::domesday::render::CLAIM_MARKER) && line.contains(title)
+    })
+}
+
+/// The second half of the `doc:` resolution: the anchored page must carry
+/// THIS item's claim, not merely be a page something regenerates.
+///
+/// **Why this exists as a separate check.** [`GeneratedPaths::has_generator`]
+/// asks whether a path is declared generated, and for the life of Task 3 that
+/// was the whole `doc:` arm — so every generated path in
+/// `docs/generated-paths.txt` backed every measured verdict equally. The
+/// campaign's final review proved it vacuous by repointing an item's anchor
+/// at `book/src/domesday/climate.md`, a generated page carrying no claim at
+/// all, and watching the whole suite stay green. An anchor introduced as
+/// "the only surface a reader outside the program can falsify" has to name
+/// the page where the falsifying sentence actually is.
+///
+/// `None` means clean.
+fn doc_states_the_claim(item: &Item, path: &str, generated: &GeneratedPaths) -> Option<Finding> {
+    let text = match generated.page_text(path) {
+        Ok(text) => text,
+        Err(why) => {
+            return Some(Finding::Dangling {
+                id: item.id.clone(),
+                anchor: format!("doc:{path}"),
+                why: format!(
+                    "{} cites doc:{path}, which docs/generated-paths.txt declares \
+                     generated but which cannot be read ({why}). Either the page moved \
+                     (fix the anchor and the declaration together) or the regeneration \
+                     that authors it has not been run in this checkout.",
+                    item.id
+                ),
+            });
+        }
+    };
+    if page_states_claim(&text, &item.title) {
+        return None;
+    }
+    Some(Finding::Dangling {
+        id: item.id.clone(),
+        anchor: format!("doc:{path}"),
+        why: format!(
+            "{} cites doc:{path}, which is a generated page but does not STATE this \
+             item's claim: no line of it carries `{}` together with the item's title. \
+             A `doc:` anchor is not a citation of the repository at large — it names \
+             the one generated sentence a reader outside the program can check the \
+             verdict against. Re-anchor to the page whose census column this item is \
+             measured through (the Domesday writes each claim onto the page of its \
+             own statistic's domain), or, if the claim really is missing from that \
+             page, regenerate the survey.",
+            item.id,
+            hornvale_lab::domesday::render::CLAIM_MARKER
+        ),
+    })
 }
 
 /// Recompute a measured item's verdict from the census and compare it to the
@@ -1216,6 +1315,9 @@ fn independent_claims(items: &[&Item], pairs: &[Pair<'_>]) -> usize {
 /// together they suggest three claims grew. Two did. The near-collinear pair
 /// (r >= the threshold above) is one claim counted twice in the item tally,
 /// and nothing in a per-item count can say so.
+///
+/// Reached from outside this module only through [`claim_reading`], which is
+/// also how [`render`] reaches it.
 fn grown_claims(items: &[&Item], pairs: &[Pair<'_>]) -> (usize, usize) {
     let group = claim_grouping(items, pairs);
     let mut ids: Vec<usize> = group.clone();
@@ -1244,6 +1346,30 @@ fn grown_claims(items: &[&Item], pairs: &[Pair<'_>]) -> (usize, usize) {
         }
     }
     (grown, measured)
+}
+
+/// The report's headline claim-level reading: `(grown, measured)`.
+///
+/// The public seam over [`grown_claims`], and [`render`] reaches the number
+/// through it, so a test calling this exercises the very producer the
+/// committed artifact uses rather than a parallel one.
+///
+/// **Why it is public at all.** Both `all(...)` quantifiers in
+/// [`grown_claims`] survived mutation to `any(...)` with the whole suite
+/// green: today's merged claim is all-grown and every measurable item is
+/// measured, so on THIS corpus `all` and `any` agree and the campaign's
+/// headline number was pinned by nothing. The rule is a property of the
+/// function, not of the founding corpus, so it is tested against synthetic
+/// corpora whose merged group deliberately disagrees with itself — see
+/// `cli/tests/suite/regularity_coverage.rs`.
+/// type-audit: bare-ok(count: return)
+pub fn claim_reading(
+    corpus: &Corpus,
+    census: &hornvale_lab::domesday::census::Census,
+) -> (usize, usize) {
+    let items = measurable(corpus);
+    let pairs = pairs(&items, census);
+    grown_claims(&items, &pairs)
 }
 
 /// Whether a criterion constrains the statistic from both sides.
@@ -1469,7 +1595,7 @@ pub fn render(
     // `grown: N` and the Power section's `N independent claim(s)` are the same
     // numeral meaning two different things, paragraphs apart, and a reader
     // pairs them into "every claim grew".
-    let (grown_claims_n, measured_claims) = grown_claims(&items, &pairs);
+    let (grown_claims_n, measured_claims) = claim_reading(corpus, census);
     if measured_claims > 0 {
         s.push('\n');
         s.push_str(&wrap(&format!(
@@ -1572,13 +1698,32 @@ pub fn render(
         "- taxonomy does not apply: {untyped} (excluded from the split above)\n"
     ));
 
+    s.push_str("\n## Items\n\n");
+    // THE MEASURED HALF, PRINTED. Without it this table states a verdict and
+    // the band behind it but never the number, so a reader cannot see how
+    // close any pass came to its own bound — and on this corpus that is the
+    // whole question. `measured` is [`Measurement::summary`], the very string
+    // the gate's own reading produces, so the number here cannot drift from
+    // the number the verdict was decided on. `observed` is the scored
+    // column's min and max over the same population, which is what says
+    // whether the criterion had a reachable failing side at all: a floor no
+    // world in the census falls below discriminates nothing, and a reader
+    // could not tell that from the verdict.
+    s.push_str(&wrap(
+        "`measured` is the reading the audit itself computes — the same string, from \
+         the same function, so it cannot disagree with the verdict beside it. \
+         `observed` is the scored column's range over this population, printed so a \
+         one-sided bound can be judged: a bound no world in the census approaches \
+         separates nothing, and the verdict alone cannot say so.",
+    ));
+    s.push_str("\n\n");
     s.push_str(
-        "\n## Items\n\n| id | title | type | verdict | statistic | anchor | note |\n\
-         |---|---|---|---|---|---|---|\n",
+        "| id | title | type | verdict | statistic | measured | observed | anchor | note |\n\
+         |---|---|---|---|---|---|---|---|---|\n",
     );
     for item in &corpus.items {
         s.push_str(&format!(
-            "| {} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             item.id,
             table_text(&item.title),
             item.emergence_type
@@ -1586,9 +1731,48 @@ pub fn render(
                 .unwrap_or_else(|| "—".to_string()),
             verdict_name(item.verdict),
             item.statistic,
+            table_text(&measured_reading(item, census)),
+            table_text(&observed_range(item, census)),
             table_text(item.anchor.as_deref().unwrap_or("")),
             table_text(&item.note)
         ));
     }
     s
+}
+
+/// The `measured` column: what [`compute`] reads off the census for this
+/// item, or an em dash when the item is not one the census can score.
+///
+/// The `Err` text is deliberately NOT printed. A reader wants the number
+/// where there is one; why an `absent` item has none is what its verdict and
+/// its note are for, and repeating a resolver error in 35 rows of a table
+/// would bury the ten rows that carry a reading.
+fn measured_reading(item: &Item, census: &hornvale_lab::domesday::census::Census) -> String {
+    match compute(item, census) {
+        Ok(m) => m.summary,
+        Err(_) => "—".to_string(),
+    }
+}
+
+/// The `observed` column: the scored statistic's smallest and largest present
+/// value over the population, or an em dash when there is no column to read.
+///
+/// Quantized before formatting, like every other float this report emits
+/// (decision 0033): these bytes are committed and drift-checked.
+fn observed_range(item: &Item, census: &hornvale_lab::domesday::census::Census) -> String {
+    if item.statistic.is_empty() || !census.has(&item.statistic) {
+        return "—".to_string();
+    }
+    let present = values_of(census, &item.statistic);
+    let (Some(lo), Some(hi)) = (
+        present.iter().copied().reduce(f64::min),
+        present.iter().copied().reduce(f64::max),
+    ) else {
+        return "—".to_string();
+    };
+    format!(
+        "min {:.6}, max {:.6}",
+        hornvale_kernel::quantize(lo),
+        hornvale_kernel::quantize(hi)
+    )
 }

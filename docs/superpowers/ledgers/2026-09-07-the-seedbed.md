@@ -335,3 +335,67 @@ check*, authorable while blind:
 That check catches all three weak items without seeing any data. The corpus
 already states each item's FALSIFYING WORLD; the missing half is *why this
 world's machinery can produce it*. Carry it to `axelrod-1984`.
+
+## Final fix wave (post-whole-branch review): four findings, all closed
+
+**F1 — the `doc:` anchor was never checked against the page it cites.**
+`resolve_anchor`'s Doc arm asked only "is this path declared generated?", so
+every generated path in `docs/generated-paths.txt` backed every measured
+verdict equally; repointing an item at `book/src/domesday/climate.md` left the
+whole suite green. `doc_states_the_claim` now opens the anchored page and
+requires a line carrying both `CLAIM_MARKER` and the item's title, and
+`GeneratedPaths` carries the repository root so a declared page can be opened
+rather than only recognized. The page-provenance test now resolves the page
+from `item.anchor` (it resolved it from the census column's `domain`, so its
+subject was never the authored anchor) and additionally asserts the anchor IS
+the page the Domesday writes that claim onto. Re-proved by mutation: the same
+repoint now reddens 7 tests and `regularities check` at rc=1.
+
+Two consequences worth recording. The guard fixtures in
+`regularity_corpus.rs` can no longer invent a title — they borrow one from the
+committed corpus, because a fixture titled `T` reddens on the anchor before the
+audit reaches the verdict comparison the fixture is about. And
+`the_binary_check_fails_on_drift_with_a_clean_audit` moved its mutation from
+`title` to `note`: the title stopped being audit-invisible at this fix, and
+that test's own second assertion caught it.
+
+**F2 — the headline number had no test that could fail.** Both `all(...)`
+quantifiers in `grown_claims` survived mutation to `any(...)`, because today's
+merged claim is all-grown and every measurable item is measured, so on this
+corpus the two quantifiers agree. `claim_reading` is now the public seam
+`render` itself calls, and three synthetic corpora over the same near-collinear
+pair exercise the rule: all-grown (the positive control, and the witness that
+the merge happened at all), grown+flat, grown+unmeasured. Each mutation now
+reddens exactly one of them.
+
+**F3 — `regularities report` regenerated on the wrong side of the census
+refresh.** It sat in the Group B+C `spawn` block, reaped well before the
+`HV_CENSUS` block, so a census-refresh run authored the coverage report from the
+OLD census and the Domesday claim lines from the NEW one. The stale report
+matched the committed one byte-for-byte, so `add -u` staged nothing and the
+delivery looked clean — then the drift test reddened on the delivery branch's
+merge gate. Moved beside `lab domesday` as a serial trailer; its old comment's
+`HV_CENSUS` claim was right and its ORDER conclusion was wrong, and the
+correction says so where the line now sits.
+
+**F4 — a count that goes stale at the merge.** `docs/generated-paths.txt`'s
+`docs/audits/` header stated "25 tracked, 8 `artifacts`-written by name; 8
+exceptions" — correct on this branch, wrong the instant it merges, and it
+auto-merges cleanly so nothing objects. The block's own prose already warned
+that a count stated inside its own document goes wrong the moment a row lands,
+and had already been corrected once from 21/13/5. The three numbers are deleted
+rather than refreshed; the three re-derivation commands the block already prints
+are the answer and cannot rot. **`docs/generated-path-writes.tsv` still needs a
+human at merge time**: base `15 24`, `origin/main` `15 26`, this branch `16 25`
+— the correct product is `16 27`, which is neither side.
+
+**Also, and it is the campaign's thesis made visible:** the Items table prints
+no measured number, so a reader could not see that none of the three passes had
+a reachable failing side. It now carries `measured` (`Measurement::summary`, the
+gate's own string) and `observed` (the scored column's min and max). Derived,
+not asserted: `sug-retaliation-deters` reads max 0.422855 against a ceiling of
+0.5, `sug-predation-is-bounded` max 0.453316 against an upper pole of 0.5 (only
+its 0.02 floor discriminated), and `sug-credit-makes-hierarchy` min 0.000000
+against a floor of 1. `median_text` and `fraction_text` now quantize: their doc
+said they owed the quantize-at-emit contract nothing "because never committed",
+which stopped being true the moment the summary reached this artifact.

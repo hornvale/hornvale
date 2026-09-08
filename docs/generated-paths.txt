@@ -201,10 +201,17 @@ book/src/laboratory/census-of-coasts-ii.md	none(hand-written prose, never regene
 book/src/laboratory/census-of-coasts-iii.md	none(hand-written prose, never regenerated)
 book/src/laboratory/census-of-coasts-iv.md	none(hand-written prose, never regenerated)
 
-# --- docs/audits/ — 25 tracked, 8 `artifacts`-written by name; 8 exceptions ---
-# The three numbers above were 21/13/5 and every one of them was stale — a
-# count stated inside its own document goes wrong the moment a row lands and
-# nothing enforces it. Re-derive, do not transcribe:
+# --- docs/audits/ — `artifacts` by directory, with named exceptions ---
+# THIS HEADER STATED THREE COUNTS AND NO LONGER DOES. It said "25 tracked, 8
+# `artifacts`-written by name; 8 exceptions", having already been corrected
+# once from 21/13/5 — with the correction's own note explaining that a count
+# stated inside its own document goes wrong the moment a row lands and nothing
+# enforces it. It then went wrong again the same way, and would have gone
+# wrong at the next merge regardless: two branches each adding a row here
+# auto-merge cleanly and leave whichever number one of them wrote. Deleting
+# the numbers is strictly better than refreshing them, because the three
+# commands below already answer the question and cannot rot. Re-derive; do not
+# transcribe, and do not restate the answer here:
 #   git ls-files docs/audits/ | wc -l
 #   grep -v '^#' docs/generated-paths.txt | awk -F'\t' '$1 ~ /^docs\/audits\/.+/ && $2=="artifacts"' | wc -l
 #   grep -v '^#' docs/generated-paths.txt | awk -F'\t' '$1 ~ /^docs\/audits\// && $2 ~ /^none\(/' | wc -l

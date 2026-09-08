@@ -333,6 +333,44 @@ fn one_sided_bounds_are_inclusive() {
 
 // --- The audit, and the two-way regression guard ---------------------------
 
+/// The committed corpus item whose claim line these fixtures borrow, and the
+/// `doc:` anchor it carries.
+///
+/// **Why a fixture cannot invent its own title any more.** Since the final
+/// review's finding, a `doc:` anchor resolves only when the anchored page
+/// STATES the item's claim — a line carrying both the claim marker and the
+/// item's title. A fixture titled `T` therefore reddens on the anchor before
+/// the audit ever reaches the verdict comparison these tests are about, and
+/// `audit_item` returns at the first finding. So the fixtures borrow a title
+/// and a page that really go together, read from the committed corpus rather
+/// than transcribed, and stay about the thing they were written to test.
+const BORROWED_CLAIM_ITEM: &str = "sug-credit-makes-hierarchy";
+
+/// That item's title and anchor, live.
+fn borrowed_claim() -> (String, String) {
+    let corpus = load_sugarscape();
+    let item = corpus
+        .items
+        .iter()
+        .find(|i| i.id == BORROWED_CLAIM_ITEM)
+        .expect("the borrowed item is in the committed corpus");
+    let anchor = item
+        .anchor
+        .clone()
+        .expect("the borrowed item carries a doc: anchor");
+    assert!(
+        !item.title.contains('"') && !item.title.contains('\\'),
+        "the borrowed title is spliced into a JSON string literal below"
+    );
+    (item.title.clone(), anchor)
+}
+
+/// A generated page that carries no claim of this item's — the negative
+/// control for the doc-anchor guard. `book/src/domesday/climate.md` is
+/// declared `artifacts` through `book/src/domesday/`, so `has_generator`
+/// admits it and only the claim check can refuse it.
+const A_GENERATED_PAGE_WITHOUT_THE_CLAIM: &str = "doc:book/src/domesday/climate.md";
+
 /// A one-item corpus with a chosen authored verdict and a criterion whose
 /// computed verdict is fixed by arithmetic rather than by census data.
 /// `bound: 1e308` is unreachable from below and unavoidable from above, so
@@ -340,12 +378,17 @@ fn one_sided_bounds_are_inclusive() {
 /// "improve" these into realistic bands**: a guard test premised on today's
 /// median silently changes meaning at the next census refresh, which happens
 /// once per campaign.
+///
+/// The title is borrowed (see [`borrowed_claim`]) so that an anchor pointing
+/// at the borrowed page resolves; a test wanting the anchor to fail passes a
+/// different page.
 fn one_item_corpus(verdict: &str, kind: &str, anchor: &str) -> hornvale::regularities::Corpus {
+    let title = borrowed_claim().0;
     let json = format!(
         r#"{{"corpus":"t","unit":"regularity","ordered":false,
              "population":"the-census","provenance":"p",
              "frozen":"before first measurement, t",
-             "items":[{{"id":"i","title":"T","source":"S","emergence_type":2,
+             "items":[{{"id":"i","title":"{title}","source":"S","emergence_type":2,
                "statistic":"rank-size-slope",
                "criterion":{{"kind":"{kind}","bound":1e308}},
                "verdict":"{verdict}","anchor":"{anchor}","note":
@@ -383,11 +426,7 @@ fn the_guard_fixtures_have_a_population_to_measure() {
 fn a_lost_regularity_is_red() {
     // Authored `grown` against a criterion no median can satisfy, so the
     // computed verdict is `flat` whatever the census says.
-    let c = one_item_corpus(
-        "grown",
-        "median-at-least",
-        "doc:book/src/domesday/demography.md",
-    );
+    let c = one_item_corpus("grown", "median-at-least", &borrowed_claim().1);
     let findings = audit(&c, &census(), &generated_paths(), &facts());
     // The DIRECTION is asserted, not merely that something reddened: a
     // one-way implementation must not be able to satisfy both guard tests.
@@ -408,11 +447,7 @@ fn a_lost_regularity_is_red() {
 fn stale_pessimism_is_also_red() {
     // Authored `flat` against a criterion every median satisfies. A real gain
     // must be claimed deliberately, in a commit that says so.
-    let c = one_item_corpus(
-        "flat",
-        "median-at-most",
-        "doc:book/src/domesday/demography.md",
-    );
+    let c = one_item_corpus("flat", "median-at-most", &borrowed_claim().1);
     let findings = audit(&c, &census(), &generated_paths(), &facts());
     assert!(
         findings.iter().any(|f| matches!(
@@ -429,11 +464,7 @@ fn stale_pessimism_is_also_red() {
 
 #[test]
 fn agreement_raises_nothing() {
-    let c = one_item_corpus(
-        "flat",
-        "median-at-least",
-        "doc:book/src/domesday/demography.md",
-    );
+    let c = one_item_corpus("flat", "median-at-least", &borrowed_claim().1);
     let findings = audit(&c, &census(), &generated_paths(), &facts());
     assert!(
         findings.is_empty(),
@@ -456,6 +487,60 @@ fn a_measured_verdict_anchored_to_hand_written_prose_is_unjustified() {
             .iter()
             .any(|f| matches!(f, Finding::Unjustified { .. })),
         "a verdict anchored to hand-written prose must be RED: {findings:?}"
+    );
+}
+
+/// **The load-bearing direction of the `doc:` anchor, and it did not exist
+/// until the campaign's final review.**
+///
+/// `has_generator` asks only whether a path is declared generated, so for a
+/// while every generated path backed every measured verdict equally: an item
+/// repointed at `book/src/domesday/climate.md` — a generated page carrying no
+/// claim at all — left the whole suite green. An anchor introduced as "the
+/// only surface a reader outside the program can falsify" must name the page
+/// where the falsifying sentence actually is.
+///
+/// The verdicts AGREE here (`median-at-least` against an unreachable bound,
+/// authored `flat`), so the anchor is the only thing left to object to.
+#[test]
+fn a_measured_verdict_anchored_to_a_page_without_its_claim_is_red() {
+    let c = one_item_corpus(
+        "flat",
+        "median-at-least",
+        A_GENERATED_PAGE_WITHOUT_THE_CLAIM,
+    );
+    let findings = audit(&c, &census(), &generated_paths(), &facts());
+    assert!(
+        findings.iter().any(|f| matches!(
+            f,
+            Finding::Dangling { anchor, .. } if anchor == A_GENERATED_PAGE_WITHOUT_THE_CLAIM
+        )),
+        "a verdict anchored to a generated page that does not state its claim must \
+         be RED: {findings:?}"
+    );
+}
+
+/// The positive control for the test above: the page it calls a negative IS
+/// admitted by `has_generator`, so the red comes from the claim check and not
+/// from the declaration check that was already there.
+///
+/// Without this, repointing the negative control at any undeclared path would
+/// keep the test green while proving nothing new.
+#[test]
+fn the_page_without_the_claim_is_nonetheless_a_declared_generated_page() {
+    let path = A_GENERATED_PAGE_WITHOUT_THE_CLAIM
+        .strip_prefix("doc:")
+        .expect("the control is a doc: anchor");
+    let g = generated_paths();
+    assert!(
+        g.has_generator(path),
+        "{path} must be declared generated, or the claim check is not what \
+         reddens the test above"
+    );
+    let text = std::fs::read_to_string(workspace_root().join(path)).expect("the control page");
+    assert!(
+        !text.contains(&borrowed_claim().0),
+        "{path} must not carry the borrowed claim, or the control is not a negative"
     );
 }
 
