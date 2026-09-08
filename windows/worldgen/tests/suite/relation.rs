@@ -67,6 +67,20 @@ fn valid_binary_and_aggregate_presence_assertions_validate() {
 }
 
 #[test]
+fn symmetric_access_is_valid_and_undirected() {
+    let assertion = assertion(
+        RelationKind::Access,
+        vec![
+            participant("locus:a", "site"),
+            participant("locus:b", "site"),
+        ],
+        RelationDirection::Symmetric,
+        1.0,
+    );
+    assert_eq!(assertion.validate(), Ok(()));
+}
+
+#[test]
 fn higher_arity_assertions_are_preserved_but_not_lowered_by_view() {
     let assertion = assertion(
         RelationKind::Exchange,
@@ -157,4 +171,69 @@ fn relation_view_orders_assertions_deterministically() {
         .map(|assertion| assertion.participants[0].reference.as_str())
         .collect();
     assert_eq!(names, vec!["locus:a", "locus:z"]);
+}
+
+#[test]
+fn relation_view_order_includes_recurrence() {
+    let mut periodic = assertion(
+        RelationKind::Access,
+        vec![participant("locus:a", "from"), participant("locus:z", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    periodic.recurrence = RelationRecurrence::Periodic { period_ticks: 20 };
+    let once = assertion(
+        RelationKind::Access,
+        vec![participant("locus:a", "from"), participant("locus:z", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+
+    let view = RelationView::new(vec![periodic, once]).unwrap();
+    let recurrences: Vec<_> = view.iter().map(|a| a.recurrence).collect();
+    assert_eq!(
+        recurrences,
+        vec![
+            RelationRecurrence::Once,
+            RelationRecurrence::Periodic { period_ticks: 20 }
+        ]
+    );
+}
+
+#[test]
+fn periodic_recurrence_requires_a_positive_period() {
+    let mut assertion = assertion(
+        RelationKind::Access,
+        vec![participant("locus:a", "from"), participant("locus:z", "to")],
+        RelationDirection::Directed,
+        1.0,
+    );
+    assertion.recurrence = RelationRecurrence::Periodic { period_ticks: 0 };
+    assert_eq!(assertion.validate(), Err(RelationError::InvalidRecurrence));
+}
+
+#[test]
+fn symmetric_view_canonicalizes_reversed_participants() {
+    let forward = assertion(
+        RelationKind::SpatialAdjacency,
+        vec![
+            participant("locus:a", "site"),
+            participant("locus:z", "site"),
+        ],
+        RelationDirection::Symmetric,
+        1.0,
+    );
+    let reverse = assertion(
+        RelationKind::SpatialAdjacency,
+        vec![
+            participant("locus:z", "site"),
+            participant("locus:a", "site"),
+        ],
+        RelationDirection::Symmetric,
+        1.0,
+    );
+
+    let forward_view = RelationView::new(vec![forward]).unwrap();
+    let reverse_view = RelationView::new(vec![reverse]).unwrap();
+    assert_eq!(forward_view, reverse_view);
 }

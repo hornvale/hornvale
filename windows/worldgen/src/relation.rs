@@ -46,7 +46,7 @@ pub struct RelationInterval {
 
 /// Recurrence metadata carried by an assertion.
 /// type-audit: bare-ok(count)
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum RelationRecurrence {
     /// The assertion is supported by one interval.
     Once,
@@ -112,14 +112,14 @@ pub enum RelationKind {
     SpatialAdjacency,
     /// An aggregate cohort is present at a locus.
     Presence,
-    /// A directed or reciprocal route is available.
+    /// A symmetric, directed, or reciprocal route is available.
     Access,
     /// A directed or reciprocal exchange is observed.
     Exchange,
 }
 
 /// A role-bearing endpoint of an assertion.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct RelationParticipant {
     /// The opaque endpoint reference.
     pub reference: RelationReference,
@@ -210,7 +210,13 @@ impl RelationAssertion {
             RelationKind::SpatialAdjacency | RelationKind::Presence => {
                 self.direction == RelationDirection::Symmetric
             }
-            RelationKind::Access | RelationKind::Exchange => matches!(
+            RelationKind::Access => matches!(
+                self.direction,
+                RelationDirection::Symmetric
+                    | RelationDirection::Directed
+                    | RelationDirection::Reciprocal
+            ),
+            RelationKind::Exchange => matches!(
                 self.direction,
                 RelationDirection::Directed | RelationDirection::Reciprocal
             ),
@@ -244,6 +250,11 @@ impl RelationView {
             }
         }
         let mut view = Self { assertions };
+        for assertion in &mut view.assertions {
+            if assertion.direction == RelationDirection::Symmetric {
+                assertion.participants.sort();
+            }
+        }
         view.assertions.sort_by(relation_order);
         Ok(view)
     }
@@ -269,6 +280,7 @@ fn relation_order(left: &RelationAssertion, right: &RelationAssertion) -> Orderi
         .then_with(|| participant_order(left).cmp(&participant_order(right)))
         .then_with(|| left.interval.start.cmp(&right.interval.start))
         .then_with(|| left.interval.end.cmp(&right.interval.end))
+        .then_with(|| left.recurrence.cmp(&right.recurrence))
         .then_with(|| left.direction.cmp(&right.direction))
         .then_with(|| left.measure.value.total_cmp(&right.measure.value))
         .then_with(|| left.provenance.cmp(&right.provenance))
