@@ -607,6 +607,96 @@ invariant. No overturn.
 rule; next freeze the full falsifier branch table and its cross-seed pooling
 unit before G3 packaging.
 
+## #8 [G2] — How should seeds and underpowered worlds be pooled?
+
+**Question:** Should D3B decide from one pooled numerator/denominator, or can
+large seeds and large communities conceal a dead pole in smaller worlds?
+
+**Decision:** Produce both a per-seed table and pooled totals, but make the
+verdict **per nonempty seed**, not pooled-only. The fixed seed roster remains
+the campaign's denominator roster. For each seed, count live occupation units
+against that seed's existing `census(h).alive_at_now`; report empty seeds
+explicitly. Pooling is a descriptive secondary view and must not allow one
+seed's population to decide another seed's verdict.
+
+For each nonempty seed `s`, the readout records:
+
+- `N_s = census(h).alive_at_now`;
+- the count of occupied bands on every eligible source axis;
+- the number and sizes of joint source signatures;
+- the number and sizes of structural projection signatures;
+- the number of phase-complete projection witnesses; and
+- missing, duplicate, zero-demand, disabled-treatment, and conservation
+  branches.
+
+The seed is **underpowered**, not dead, when `N_s < 2` or when fewer than two
+phase-complete joined units remain after vacuity exclusions. A one-community
+world cannot prove either gradient sufficiency or saturation. It remains in
+the fixed roster, is reported, and prevents an all-seed “success” verdict until
+the campaign defines a deliberate treatment for underpowered seeds.
+
+Among adequately powered seeds:
+
+```text
+no eligible source axis has >1 occupied band on every adequate seed
+    -> dead pole 1: no usable gradient exists
+
+source guard passes, but every adequate seed has one committed projection
+vector/signature after the measurement-saturation branch is resolved
+    -> dead pole 2: projection/measurement saturation
+
+source and projection guards pass on every adequate seed
+    -> D3B clears gradient sufficiency; D4 may ask how portfolios emerge
+
+some adequate seeds pass and some fail, or any seed is underpowered/missing
+    -> MIXED / underpowered; no specialization design and no D4 claim
+```
+
+The exact first line is evaluated with the seed table, not with pooled counts:
+one varied seed cannot rescue nineteen flat seeds. The pooled table remains
+useful for describing total occupied regimes and for comparing the campaign
+with D3's pooled `N`, but it is not a license to average away a dead pole.
+
+**Why this is the existing denominator rather than a new one:** `alive_at_now`
+already names the live occupation population used by the bake census. The
+source and projection witnesses join to those same live records. No population
+weight, tribute-edge count, exchange-attempt count, or hub degree enters the
+verdict denominator.
+
+**Cross-domain re-instantiation:**
+
+- In an ecological survey, one large habitat cannot erase several sampled
+  habitats with no niche contrast; empty and undersampled plots remain
+  explicit.
+- In a market panel, national trade volume cannot prove local specialization
+  when every town has the same basket; town-level panels must clear first.
+- In a routing graph, a large connected component cannot make isolated or
+  singleton components evidence of differentiated flow; component-level
+  adequacy is reported before network pooling.
+
+These translations preserve the anti-hub and anti-vacuity rule. No overturn.
+
+**Alternatives discarded:**
+
+- **Pooled-only verdict:** rejected because seed size and hub composition would
+  weight the answer invisibly.
+- **Treat empty seeds as zeros:** rejected because no live unit is evidence of
+  a flat value field.
+- **Treat one-unit seeds as success:** rejected because a single point cannot
+  occupy a contrast or demonstrate projection saturation.
+- **Drop underpowered seeds silently:** rejected because it converts missing
+  evidence into a positive campaign result.
+
+**Ideonomy passes / overturns:** one pass (seed 4103), using
+organon-construction, negation, and cross-domain re-instantiation with
+timeline/graph organons. The timeline exposed seed adequacy as a precondition
+rather than an outcome; ecological, market, and routing graphs all rejected
+pooled-only inference. No overturn.
+
+**Capture actions:** freeze the per-seed table and explicit underpowered branch
+in the Task 0 design; retain pooled totals only as a descriptive companion;
+then assemble the G3 package without writing implementation code.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
