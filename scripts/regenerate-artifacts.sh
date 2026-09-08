@@ -1190,7 +1190,8 @@ reap
 echo "regenerate-artifacts: GROUP D — lab studies (serial)" >&2
 
 echo "regenerate-artifacts: the chorus study (C4/LANG-41, 50 seeds; live, not a census)" >&2
-run_release -p hornvale -- lab run studies/the-chorus.study.json
+HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-chorus -- \
+    cargo run -q --release -p hornvale -- lab run studies/the-chorus.study.json
 
 # Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
 # skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.
@@ -1262,9 +1263,24 @@ done
 # refresh left there, not a fresh run) and renders book/src/domesday/ — the
 # index plus one page per domain. It never triggers a census itself (spec
 # §4.5), so it runs unconditionally here, independent of the HV_CENSUS gate
-# above. It is spawned after schema backfill and reaped with anomalies below.
+# above. It is spawned after schema backfill and reaped with anomalies below;
+# both commands read the now-stable committed census and write disjoint files.
+# TIMED SEPARATELY (2026-09-07). `census` minus the two study rows left a
+# 221-318 s remainder across five runs with a 96.6 s spread and no trend, so
+# four perf changes across two campaigns were safe, byte-identical and
+# UNMEASURABLE — the effect each sought was smaller than the noise in the only
+# number that could see it. These two are the tail's serial trailers by their
+# own comments above, each reading 1000 worlds, which fits the tail's observed
+# cpu_ratio of 4.5-7.4 against the studies' ~36.
+#
+# NOTE THE EXPANDED `cargo run` RATHER THAN THE `run` HELPER: run() is a shell
+# FUNCTION (line 208), and scripts/timed.sh executes `time "$@"`, which cannot
+# invoke one. The existing census-study rows above expand it for the same
+# reason. Writing `timed.sh ... -- run -p hornvale ...` looks right and fails
+# at runtime.
 echo "regenerate-artifacts: the domesday survey" >&2
-spawn run -p hornvale -- lab domesday
+spawn env HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-domesday -- \
+    cargo run -q -p hornvale -- lab domesday
 
 # The anomaly report (The Gnomon, 2026-08-13): the Domesday's transpose, per
 # world rather than per column. Also a pure read over the same COMMITTED
@@ -1272,7 +1288,8 @@ spawn run -p hornvale -- lab domesday
 # here too. It is spawned alongside Domesday after the schema backfill above;
 # both commands read the now-stable committed census and write disjoint files.
 echo "regenerate-artifacts: the anomaly report" >&2
-spawn run -p hornvale -- lab anomalies
+spawn env HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-anomalies -- \
+    cargo run -q -p hornvale -- lab anomalies
 reap
 
 echo "regenerate-artifacts: done." >&2

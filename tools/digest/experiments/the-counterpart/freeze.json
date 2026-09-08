@@ -1,0 +1,538 @@
+{
+  "checker_author": {
+    "commit": "26c693ce027bbfb8c937e4f36f024949a6b97589",
+    "context": "Independent Task2 derivation from accepted contract and production ownership APIs; no Charter verdict implementation or owner records/patches. Disclosures are in checker-derivation.md. Resumed status-only before this freeze and confirmed no reserved challenge selected or revealed.",
+    "task": "/root/counterpart_checker"
+  },
+  "controller_commit_before_freeze": "d74b1d621e3561ab6baa8884e1b661d1375234c3",
+  "files": {
+    "checker.py": {
+      "bytes": 8304,
+      "sha256": "ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90"
+    },
+    "compare.py": {
+      "bytes": 8756,
+      "sha256": "ea13353f2133cc1f168fea6dcb2447405786af8ef37e3a4ccb158885ac9e03a5"
+    },
+    "contract.json": {
+      "bytes": 2062,
+      "sha256": "37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34"
+    },
+    "owners/settlement.json": {
+      "bytes": 9725,
+      "sha256": "99e4bb9eac1c1ed24fc4e783bfc44df9c323f494d6a9c0e110e9b61aea3f0787"
+    },
+    "owners/thing.json": {
+      "bytes": 13643,
+      "sha256": "0c18e52b78224bc66aad62cff9cf7222df10de38ec6d4e644418ec3f4d280010"
+    },
+    "panel.json": {
+      "bytes": 45866,
+      "sha256": "27648766387798093fd683580a38644b1a4b3b246a9a8869a5fa96acaa1581df"
+    },
+    "run.py": {
+      "bytes": 22608,
+      "sha256": "4890c2185e175a47ad4cd90b7612c4149c93f9efe82b3498f5df281428e08a5f"
+    },
+    "specimens.bundle": {
+      "bytes": 4642,
+      "sha256": "6199ffccfe88ad3782ce7b88a7b6a064029bcddb3307cef18bf4b9e8e878609b"
+    }
+  },
+  "frozen_utc": "2026-09-05T19:13:03.914206+00:00",
+  "identities": {
+    "checker": "ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90",
+    "contract": "37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34",
+    "implementation": "02796fe0ae719a55f431f8aedc2ab6853c9a2776",
+    "measure": "178183964c86f46b14b6ea31c1c647d5b7e8031d245f9e66297acb1447edc37a",
+    "owners": "5402a554e6437e2117c7e27172359ede265c6bc0b23f8829de18b41206d0f7f3",
+    "roster": "230bcfc8cd38bd8eeb91701894dc5399a7cf9fa4cb6b5b6af19330f6bfd6c3c6",
+    "rules": "ea13353f2133cc1f168fea6dcb2447405786af8ef37e3a4ccb158885ac9e03a5"
+  },
+  "owner_author_commits": {
+    "settlement": "9c47f253db7b968152c6bb6dfa8787845779a340",
+    "thing": "846f3fa27760480ed5aac7f1f6a30368bd23faa5"
+  },
+  "panel_commit": "57f030395cac159dc6b93a7989a3df291e4a9a71",
+  "schema": "counterpart-freeze-v1",
+  "source_arms": {
+    "base": {
+      "changed_paths": [],
+      "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "tree": "7350d1b4abc83775de94f35860a47e158c61dedc",
+      "variants": []
+    },
+    "collision-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "86d6c17e6ac3cfb023b4a6e0c816cdeefc9650d8",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13328,
+          "sha256": "725520ca2bfd3704932daa4b5c1b3794adc54a2f6ae2dc6f767b85e0c1e45679"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42443,
+          "sha256": "a51644aecdd53e3e4aca3779937717f2a0278ac732227a93c3082a7bdbb77dd1"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433",
+          "variant": "thing-joint-claim"
+        },
+        {
+          "sha256": "26ca7415560bae20f8b3e7887043d0f06b479d6dbf58a87be911b39393c88551",
+          "variant": "settlement-collision"
+        }
+      ],
+      "tree": "7ca56912a3cc44631b955f0687eaff628a3fd27a",
+      "variants": [
+        "thing-joint-claim",
+        "settlement-collision"
+      ]
+    },
+    "lender-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "99b0aa2682d042c02c1eb9bd31135d93245b6cca",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13270,
+          "sha256": "a618e441a46d845039dc2a6455b6659280cd797b25b02614b9319fa8d2a2a513"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42440,
+          "sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+          "variant": "thing-safe-addition"
+        },
+        {
+          "sha256": "cd086ff132dca931b4353ab62bfcd159c4f3a867a710ae8c8cec7d7420e05be5",
+          "variant": "settlement-lender-rename"
+        }
+      ],
+      "tree": "c5391c4fb9345811c0ba85be7af0126a74567466",
+      "variants": [
+        "thing-safe-addition",
+        "settlement-lender-rename"
+      ]
+    },
+    "safe-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "486b4e32aff92ebb381d62d666f8eaa197910986",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13337,
+          "sha256": "4ea29702dccb64ee0664a54c366739daf535c48188a2da732a030dc0fa60f465"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42440,
+          "sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+          "variant": "thing-safe-addition"
+        },
+        {
+          "sha256": "cd84cdbd973bf6c84731d2b72c530e8e13b90e56113df1694295b1fbf3e574c3",
+          "variant": "settlement-safe"
+        }
+      ],
+      "tree": "4a0c77a43ab9a33c6dd56cd55f794022b113dc35",
+      "variants": [
+        "thing-safe-addition",
+        "settlement-safe"
+      ]
+    },
+    "settlement-collision": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs"
+      ],
+      "commit": "38097214dc44cda42d5272dc7fb5e6c3429f410e",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13328,
+          "sha256": "725520ca2bfd3704932daa4b5c1b3794adc54a2f6ae2dc6f767b85e0c1e45679"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "26ca7415560bae20f8b3e7887043d0f06b479d6dbf58a87be911b39393c88551",
+          "variant": "settlement-collision"
+        }
+      ],
+      "tree": "4a84d9135198a3fda374fa3d6a88d5a4e4efd3b2",
+      "variants": [
+        "settlement-collision"
+      ]
+    },
+    "settlement-lender-rename": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs"
+      ],
+      "commit": "21172fafaadfd930c5bff459dd188e3b8e54ec05",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13270,
+          "sha256": "a618e441a46d845039dc2a6455b6659280cd797b25b02614b9319fa8d2a2a513"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "cd086ff132dca931b4353ab62bfcd159c4f3a867a710ae8c8cec7d7420e05be5",
+          "variant": "settlement-lender-rename"
+        }
+      ],
+      "tree": "9504483d57c5fb4105bfb6702a2d949ba6e8f6d9",
+      "variants": [
+        "settlement-lender-rename"
+      ]
+    },
+    "settlement-safe": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs"
+      ],
+      "commit": "b29a77abd0e317100a70e91a4a9b3a613f6c1ca2",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13337,
+          "sha256": "4ea29702dccb64ee0664a54c366739daf535c48188a2da732a030dc0fa60f465"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42202,
+          "sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "cd84cdbd973bf6c84731d2b72c530e8e13b90e56113df1694295b1fbf3e574c3",
+          "variant": "settlement-safe"
+        }
+      ],
+      "tree": "0a1dcf3fedc22bc403f85a76b42893070e3d25d7",
+      "variants": [
+        "settlement-safe"
+      ]
+    },
+    "thing-joint-claim": {
+      "changed_paths": [
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "851c1f708c911453097ab97c4342ebf59bfde420",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42443,
+          "sha256": "a51644aecdd53e3e4aca3779937717f2a0278ac732227a93c3082a7bdbb77dd1"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "7112c0af3ae8000cbf7f1801e64f9f1c83fb860e70d26cc0fe0f74188f89e433",
+          "variant": "thing-joint-claim"
+        }
+      ],
+      "tree": "76292cbe5419822de681ebcebe4fdd66f0c12500",
+      "variants": [
+        "thing-joint-claim"
+      ]
+    },
+    "thing-safe-addition": {
+      "changed_paths": [
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "ad3de13d62586abbc7456526a7d728ce9bef04c6",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42440,
+          "sha256": "2375e411991a3f25dc18daa7a42707b24584224b8bee17d53d4c005b55a3a211"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "24be89522e230f9287860857d7d24d7d20345414353c86b34efd7efc4175f239",
+          "variant": "thing-safe-addition"
+        }
+      ],
+      "tree": "a3398e00ef86fe0a6941b56d79d94809d0255522",
+      "variants": [
+        "thing-safe-addition"
+      ]
+    },
+    "thing-unusual-borrow": {
+      "changed_paths": [
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "b94c69f16f312cc00eb5fbd1bb7349281092ebbe",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13259,
+          "sha256": "1c98bed912153a0b6bf45c1f04332408c5ba276a99faa4bdbad1dc366e892456"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42388,
+          "sha256": "04a137c6d1955ad63f0a7f3849d408becb53bd929a244570588cdda8652f8835"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c",
+          "variant": "thing-unusual-borrow"
+        }
+      ],
+      "tree": "3f34037b3feee2164ef5c6eb3dd53deacf224819",
+      "variants": [
+        "thing-unusual-borrow"
+      ]
+    },
+    "unusual-joint": {
+      "changed_paths": [
+        "domains/settlement/src/lib.rs",
+        "domains/thing/src/lib.rs"
+      ],
+      "commit": "29495400c477ec872385c586679b130eb9585407",
+      "inputs": {
+        ".cargo/config.toml": {
+          "bytes": 2036,
+          "sha256": "15c4be4792d0a2250f7d3194803648a5f290d46eb5be40c222ec8967ae3d8617"
+        },
+        "Cargo.lock": {
+          "bytes": 8000,
+          "sha256": "bca9ffa8bb5a2bbd6ffd29e44bf8e236934cac512145b25b4586dc658906ce67"
+        },
+        "domains/settlement/src/lib.rs": {
+          "bytes": 13337,
+          "sha256": "4ea29702dccb64ee0664a54c366739daf535c48188a2da732a030dc0fa60f465"
+        },
+        "domains/thing/src/lib.rs": {
+          "bytes": 42388,
+          "sha256": "04a137c6d1955ad63f0a7f3849d408becb53bd929a244570588cdda8652f8835"
+        },
+        "rust-toolchain.toml": {
+          "bytes": 66,
+          "sha256": "4d0674575b116a100c7d0ad754308dc6dea178b4808c760afc43136db967c7a6"
+        },
+        "tools/digest/Cargo.lock": {
+          "bytes": 9981,
+          "sha256": "73d5d88d6b26cb6ccfe2427eed50c3c117b146a6a722e9f4ce8b3ce624c6bee3"
+        }
+      },
+      "patches": [
+        {
+          "sha256": "42e9d159ec5a07a7b50ccbdefb14de9390451bd85839229209793053c2608c5c",
+          "variant": "thing-unusual-borrow"
+        },
+        {
+          "sha256": "cd84cdbd973bf6c84731d2b72c530e8e13b90e56113df1694295b1fbf3e574c3",
+          "variant": "settlement-safe"
+        }
+      ],
+      "tree": "902ed51e0f252ed9a70fb9b3cc4b8e5fd56ae562",
+      "variants": [
+        "thing-unusual-borrow",
+        "settlement-safe"
+      ]
+    }
+  },
+  "source_base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "status": "Unreserved code reviewed; full canonical observation and Stage2 acceptance pending. Reserved challenge must wait for controller dispatch. No retuning frozen checker/rules/owners from challenge outcomes."
+}

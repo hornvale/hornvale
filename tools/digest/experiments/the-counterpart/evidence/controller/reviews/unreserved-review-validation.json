@@ -1,0 +1,136 @@
+{
+  "archive_members": 330,
+  "uncompressed_bytes": 144688229,
+  "standalone_commands": 292,
+  "judgments": {
+    "satisfied": 36,
+    "violated": 5,
+    "unknown": 3
+  },
+  "counts": {
+    "path": {
+      "proposed_questions": 28,
+      "effective_questions": 40,
+      "fallback_requests": 7,
+      "raw": {
+        "selected_satisfied": 23,
+        "selected_unknown": 2,
+        "selected_violating": 3,
+        "unknown": 3,
+        "unselected_violating": 2
+      },
+      "effective": {
+        "selected_satisfied": 32,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      }
+    },
+    "cargo": {
+      "proposed_questions": 37,
+      "effective_questions": 37,
+      "fallback_requests": 0,
+      "raw": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      },
+      "effective": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      }
+    },
+    "agreement": {
+      "proposed_questions": 37,
+      "effective_questions": 37,
+      "fallback_requests": 0,
+      "raw": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      },
+      "effective": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      }
+    }
+  },
+  "properties": {
+    "collision": {
+      "classes": [
+        "joint-only interaction",
+        "missing negative assumption"
+      ],
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "safe_pair": false,
+      "joint_only_interaction": true,
+      "solo_dependency_failure": false,
+      "joint_violating": [
+        "registration"
+      ],
+      "joint_unknown": [
+        "ownership"
+      ]
+    },
+    "lender": {
+      "classes": [
+        "existing dependency failure"
+      ],
+      "base_satisfied": true,
+      "both_solos_satisfied": false,
+      "safe_pair": false,
+      "joint_only_interaction": false,
+      "solo_dependency_failure": true,
+      "joint_violating": [
+        "borrowing",
+        "registration"
+      ],
+      "joint_unknown": [
+        "ownership"
+      ]
+    },
+    "safe": {
+      "classes": [
+        "safe pair"
+      ],
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "safe_pair": true,
+      "joint_only_interaction": false,
+      "solo_dependency_failure": false,
+      "joint_violating": [],
+      "joint_unknown": []
+    },
+    "unusual": {
+      "classes": [
+        "correct unusual borrowing"
+      ],
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "safe_pair": true,
+      "joint_only_interaction": false,
+      "solo_dependency_failure": false,
+      "joint_violating": [],
+      "joint_unknown": []
+    }
+  },
+  "costs": {
+    "wall_seconds": 123.9780108332634,
+    "preparation_seconds": 59.67734382394701,
+    "execution_seconds": 0.13211985677480698
+  },
+  "completed": true,
+  "note": "Read-only evidence validation, not source execution. Initial strict property equality differed only in lender joint_violating list ordering after sorted JSON reread; compared ID sets."
+}

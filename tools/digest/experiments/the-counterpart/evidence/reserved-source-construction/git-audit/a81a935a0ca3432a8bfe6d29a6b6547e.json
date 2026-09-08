@@ -1,0 +1,43 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+    "clone",
+    "--no-hardlinks",
+    "--no-checkout",
+    "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/source-objects"
+  ],
+  "context_phases": [],
+  "cwd": "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+  "direct_child_waited": true,
+  "elapsed_seconds": 1.6545398749876767,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.6650390625,
+    15.7783203125,
+    24.896484375
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 78921,
+  "peak_rss_bytes": 11026432,
+  "peak_rss_raw": 11026432,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:39:58Z",
+  "stderr": "Cloning into '/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/source-objects'...\ndone.\n",
+  "stderr_base64": "Q2xvbmluZyBpbnRvICcvdmFyL2ZvbGRlcnMvXzAvajBfemtxX2Qzam4wa2x6MDMzZ3EzM2NjMDAwMGduL1QvY291bnRlcnBhcnQtcmVzZXJ2ZWQtc291cmNlLTE5aW9nbXlkL2NvbnN0cnVjdGlvbi9zb3VyY2Utb2JqZWN0cycuLi4KZG9uZS4K",
+  "stderr_bytes": 138,
+  "stderr_sha256": "36348e5cec140867f2e9b18d540c877d179b0586ebd2131de714ff067350c0c4",
+  "stdout_base64": "",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "time_output": "        1.64 real         0.03 user         0.81 sys\n            11026432  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                2512  page reclaims\n                  18  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                5681  voluntary context switches\n                1029  involuntary context switches\n          8363017490  instructions retired\n          2557477938  cycles elapsed\n             4539648  peak memory footprint\n"
+}

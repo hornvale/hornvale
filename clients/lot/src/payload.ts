@@ -8,6 +8,9 @@
 // shows is a field of a payload — so if a quantity is not in this file, the
 // page may not display it.
 //
+// v1 is additive: the sim may append named slots and change an answerable
+// slot from by-design to no-fact without changing the schema. Clients must
+// ignore slot keys they do not render and read the sim-provided silence tally.
 // The parsers check the `schema` string and the shape of the fields the
 // page actually reads, and throw otherwise. A payload that arrived from a
 // stale wasm is a confusing page, not a blank one, unless something says so.

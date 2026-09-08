@@ -97,6 +97,8 @@ mod generalist_distinctness;
 mod graph_byte_identity;
 #[path = "suite/graph_derive.rs"]
 mod graph_derive;
+#[path = "suite/hidage_probe.rs"]
+mod hidage_probe;
 #[path = "suite/history_bake.rs"]
 mod history_bake;
 #[path = "suite/history_byte_identity.rs"]
@@ -183,12 +185,20 @@ mod range_readout;
 mod repose_exposure;
 #[path = "suite/repose_laws.rs"]
 mod repose_laws;
+#[path = "suite/reproductive.rs"]
+mod reproductive;
+#[path = "suite/social_projection.rs"]
+mod social_projection;
+#[path = "suite/social_readout.rs"]
+mod social_readout;
 #[path = "suite/soil_attribution_probe.rs"]
 mod soil_attribution_probe;
 #[path = "suite/solitary_tongue.rs"]
 mod solitary_tongue;
 #[path = "suite/species_worlds.rs"]
 mod species_worlds;
+#[path = "suite/staple_d2_probe.rs"]
+mod staple_d2_probe;
 #[path = "suite/stope_variety_probe.rs"]
 mod stope_variety_probe;
 #[path = "suite/subterranean_energy_probe.rs"]

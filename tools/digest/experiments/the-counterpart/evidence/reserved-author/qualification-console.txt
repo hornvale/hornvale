@@ -1,0 +1,5 @@
+Starting build through charter_measure.measure
+build: rc=0, elapsed=6.398s, cleanup_error=None
+Starting observation through charter_measure.measure
+observation: rc=0, elapsed=0.177s, cleanup_error=None
+Source and lock restoration verified byte-exact

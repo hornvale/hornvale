@@ -33,6 +33,14 @@ pub use allometry::{
     LifeHistory, age_at_maturity, basal_metabolic_rate_w, life_history, lifespan,
     reproductive_tempo,
 };
+mod reproduction;
+pub use reproduction::{
+    AssistanceCapability, CompatibilityContext, CompatibilityOutcome, CompatibilityRelation,
+    CompatibilityRule, DevelopmentSite, DevelopmentalTiming, DirectionalCompatibility, GuardStatus,
+    MaterialCompatibility, ReproductiveAffordances, ReproductiveOperation, ReproductivePathway,
+    ReproductiveProfile, ReproductiveRole, SupportMode, TransitionCapability, compatibility,
+    possible_pathways,
+};
 
 /// Predicate: a species entity's name (functional, Text).
 /// type-audit: bare-ok(identifier-text)

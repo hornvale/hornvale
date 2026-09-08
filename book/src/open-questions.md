@@ -2593,6 +2593,57 @@ by never having been told to look — and gains a worked example of the
 second: the check existed, the surface was live, and nobody had pointed the
 one at the other.
 
+**Re-scored by [The Sett](./chronicle/the-sett.md) (2026-09-07): a seventh
+entry, and the first where the document, the picture and the movement were
+each correct and the disagreement was between two of them.** Every prior
+entry on this ledger is some form of *picture against document* — the render
+misstates a packet, or offers a noun the substrate declines, or draws a
+geometry the wire did not describe. The Sett's is *picture against movement
+rule*, and neither half was wrong. The walk band's plate was a clamped
+Mercator raster: each box a rectangle of latitude and longitude, filled with
+the facet containing its centre. Movement was an edge of the facet adjacency
+graph, a compass word naming the neighbour of least angular error. Both are
+correct, and they tessellate the sphere by different things — coordinates in
+one case, adjacency in the other — so they coincide only where the coordinate
+grid happens to run along the graph's own edges. Measured over 3,456 facets
+at the walk rung, `w` landed in the box drawn to the left **83.0%** of the
+time on the equatorial faces and **17.7%** on the polar caps, and **1.13%**
+of moves landed on the box the observer already occupied. The report was a
+player pressing an arrow key: *"I press the left arrow, sometimes I move
+southwest."*
+
+**What this entry adds to the ledger is a class the row's own converted
+instrument is structurally blind to.** The Quire turned "does the picture
+state the document's geometry" into a byte-comparison against a second
+renderer of the same document, and The Quadrat extended it to two pictures
+agreeing *by construction* rather than by comparison. Neither could have seen
+this: there is no document in the loop, and both renderers of any document
+would have agreed with each other while disagreeing with the keyboard. Any
+instrument for it has to hold the picture against the **input**, which is a
+third thing the row had not previously required. And once again it was found
+by a human in ordinary play, not by a check — which is now the rule this
+ledger states rather than the anecdote it once was.
+
+The repair is the same move The Quadrat made, aimed one layer further out:
+**agreement by construction beats agreement by comparison.** The walk band's
+picture is now the movement rule iterated outward from the observer — box
+`(j, k)` is the facet reached by `k` steps along the observer's own compass
+chain and `j` along that facet's — so the box to the left *is* what the left
+key does, by construction, and there is nothing left to compare. The map band
+keeps Mercator at every rung, because a map is a coordinate instrument and a
+map that cannot draw the pole is a map telling the truth about a projection.
+
+Two smaller corrections to the ledger's standing picture come with it. The
+old path did not merely misplace near the poles, it **refused**: Mercator
+returns nothing past 85 degrees and the walk view's centring propagated the
+refusal, so an observer within five degrees of a pole could not have the view
+centred on them at all. The replacement's own fold covers 0.176 degrees, some
+eight hundred times less area, and degrades — repeating ground — rather than
+declining to draw. And the campaign's cost prediction was **falsified at 25x**,
+which turned out to be the useful outcome: the frozen response to that band
+was *find what is being paid per frame before optimising anything*, and what
+was found was one line, unrelated to the change under test, that the path being
+replaced had been paying all along behind a cache.
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
@@ -5624,3 +5675,77 @@ Unscored as a bet. It is filed as an instrument correction, beside the others
 in this section: a preregistration is falsifiable only over the population it
 names, and the population it names is the part nobody reads twice.
 
+### The sixth look at cost was scored by a count, because the clock could not see it (2026-09-06)
+
+Five sections above record that cost in this project is scored "when a campaign
+chooses to look", that the first two looks each found an unpredicted quadratic,
+that a third found a distribution, a fourth closed a loop, and a fifth found a
+repetition. This is the sixth, and it is at the fold the fifth look's own
+predecessor left standing: the water belief, which re-ran a budgeted graph
+search once per remembered water room, once per read.
+
+**The finding is again a repetition, and the shape of the redundancy is new.**
+[The Culvert](./chronicle/the-culvert.md) established that the search is a pure
+function of mesh geometry — the ranking passes an empty hazard set, and the
+search space consults no terrain, no ledger, and no tick — so a session-lived
+table of `(origin, destination, budget) → hop count` is byte-identical by
+construction. The distinct population at the counted horizon is **83 pairs**,
+against 679 and 4,060 calls on the two measured shapes — small and
+decelerating, though **no ceiling was demonstrated**: extended to sixty waits it
+reads 190, and the campaign's own ledger rules that it has been shown to pause
+rather than to stop. Searches per
+roster-wide sweep fell 679 → 83 and 4,060 → 83; node expansions fell 425,042 →
+57,190 and 392,391 → 14,474. Across reads rather than within a sweep, 2,692
+route questions over eight waits now cost **one** real search.
+
+**What is genuinely new is which instrument answered.** The campaign
+preregistered a count as its criterion of record and a timing criterion — a
+tenfold effect-size floor on the fold's slope against history — as the weaker
+companion. The timing criterion **failed, at 1.13×**, and the count established
+why: the timing probe constructs a fresh table inside its own repetition loop,
+so it never hits, and a same-tree control arm reproduced the pre-memo search
+counts *digit for digit at every band and every wait* on the campaign's own
+head. The instrument's call path does byte-identical work before and after. A
+column whose work is unchanged cannot fall tenfold.
+
+That is a sharper statement of a fault this chapter has now recorded three
+times in three different clothes. The fourth look found a criterion that could
+not see its own result because its instrument's *range* was too narrow. The
+fifth found a goodness-of-fit filter that emptied its sample precisely by
+succeeding. This one found a criterion whose instrument does not execute the
+mechanism at all — not too narrow, not mis-filtered, simply pointed elsewhere —
+and it was invisible until the readout. **A criterion is only worth the range
+its instrument samples, the filter it survives, and the code path it actually
+runs.** The third clause is the one added here, and it is the only one of the
+three that a count could settle where a clock could not.
+
+**The accounting does not move, and it moves for a reason worth naming.** There
+is still no cost gate on the simulation beyond the per-commit count the section
+above records, and that count cannot see this fold either. The unwatched
+dimension is narrowed by one more fold and is otherwise where the fifth look
+left it. What changed is the *method's* standing rather than the bet's: on this
+occasion the deterministic count was not merely the cheaper witness, it was the
+**only** one available, and the campaign would have reported a null on a
+mechanism that demonstrably works had it carried the clock alone.
+
+**One measurement escapes the accounting entirely, and it is about the world.**
+The roster member holding the most remembered water — forty-six rooms — can
+reach **none of it** within the plan budget from its own home, at every band,
+while members holding four rooms reach all four. The mechanism is causal: a
+creature accumulates remembered water by wandering, wandering carries it from
+home, and the belief plans from home. So the biggest believer behaves as
+ignorant while holding the largest memory, and the campaign's own headline
+figure — 95.1% of node expansions spent on searches that exhaust their budget
+and return nothing — is not a quirk of where the budget sits but a structure
+that concentrates on exactly the creatures that know the most. The fold's own
+documentation had recorded the anchoring choice; nothing had recorded its
+price. Fixing it moves committed facts, so it is filed with its measurement
+rather than acted on, and it is a claim about legibility, not cost: **a memory a
+creature cannot act on is not distinguishable, from outside, from no memory at
+all.**
+
+No bet in the graded tables above moved. The world's behaviour is unchanged by
+construction, and the two axes this readout touches — the standing of counts
+against clocks, and the reachability of a creature's own memory — are recorded
+here as new material on the cost thread rather than as a re-score of an
+existing row.

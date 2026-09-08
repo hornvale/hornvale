@@ -1,0 +1,20 @@
+{
+  "actual_chamber_sha": "8bd22b72a0650c72e9e6980a2b8b7712ef089525",
+  "bundle_sha256": "33ea34e8774bd11e1b237eb6f62d40601838e67d56f7b3b79ecc1eb4578102f8",
+  "cache_disclosure": "Shared canonical machine Cargo registry cache; separate new preparation checkout, dossier checkout and target. Timing is not a cold benchmark.",
+  "command": [
+    "python3",
+    "tools/digest/experiments/the-counterpart/run.py",
+    "--panel",
+    "tools/digest/experiments/the-counterpart/panel-full12.json",
+    "--output",
+    "/home/nathan/.local/state/hornvale/counterpart-independent-full12-m1o2h8zh/dossier"
+  ],
+  "cwd": "/home/nathan/Projects/hornvale-sluice-wt",
+  "independence_disclosure": "Committed panel/owner inputs include predictions and observations, never result authority. Independent from originating scratch/execution, not blinded outcome adjudication. No primary-run checkout or target is read or reused.",
+  "invocation_sha256": "33b9df21d209e381b061de047772555aeba034d65b3128bbb9b87a5f06197d10",
+  "package_commit": "ca4872744fe57801384ff9cd7149fe25ad197ef4",
+  "panel_sha256": "4d7588e3f25523358deae71a45c4e8d9529f73c5370511b0dd5b1810d759931c",
+  "role": "independent second full12 behavioral replay",
+  "source_only_receipt_sha256": "3e12b5271d427dbfe6c93556c30f2a8246850fc8acf96126e90f107791acba8d"
+}

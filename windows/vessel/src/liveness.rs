@@ -46,27 +46,35 @@ pub const AGENT_AT: &str = "agent-at";
 /// registry, which is `hornvale_kernel::phenomena`'s producer rule applied to
 /// facts (The Warrant spec §4.2).
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_WATER_KNOWN: &str = "errand/water-known";
 /// An errand toward water the creature does NOT know: exploring blind.
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_WATER_BLIND: &str = "errand/water-blind";
 /// An errand toward richer forage.
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_FORAGE: &str = "errand/forage";
 /// An errand toward a kinder temperature.
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_COMFORT: &str = "errand/comfort";
 /// An errand home to rest, driven by fatigue.
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_REST: &str = "errand/rest";
 /// An errand AWAY from frightening ground — repulsion, not attraction.
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_FLIGHT: &str = "errand/flight";
 /// An errand homeward, driven by loneliness.
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_COMPANY: &str = "errand/company";
 /// An errand home with nothing pressing: the sated walk back.
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(an ERRAND predicate, not a drive predicate -- the errand family has its own registration table, `liveness::errand_predicates`, which `Session::start` loops over separately from `DRIVE_PREDICATES`; see the merge note beside those two loops in session.rs for why the families stay apart)
 pub const ERRAND_HOME: &str = "errand/home";
 
 /// Which errand a creature is on, from the commitment [`Mode`] it carries and
@@ -1322,16 +1330,16 @@ pub fn drive_at(
 
 /// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
 /// `agent-at` history ∩ water-truth. Among the water rooms the agent has stood in
-/// at or before `t`, the one nearest to `npc.home` by planned hop-distance (ties
+/// at or before `t`, the one nearest to its committed current position by planned hop-distance (ties
 /// by ascending `Facet`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
 /// no stored belief — it re-derives from facts already committed (the matrix
-/// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
+/// verdict; UNI-20). Memory is allocentric; route choice is actor-relative.
 ///
 /// The candidate set comes off the caller-owned resident store (The Pawl):
 /// [`crate::resident::LatestVisit`] holds each entity's DISTINCT visited rooms
 /// with ascending visit lists, so this read is O(distinct rooms)
 /// where it was O(history). Nothing else moves — the `day <= t` admission, the
-/// `is_water` intersection, the home-anchored `plan_to_room` ranking and the
+/// `is_water` intersection, the current-position `plan_to_room` ranking and the
 /// `(hops, Facet)` tie-break are the same ones this function has always
 /// applied, in the same order over the same ascending-`Facet` candidates.
 ///
@@ -1339,6 +1347,10 @@ pub fn drive_at(
 /// A* over terrain and touches no fold, so holding the borrow across it would
 /// buy nothing and would make any future fold read inside the planner a
 /// runtime panic rather than a compile error.
+///
+/// The public `route_memo` parameter remains for caller compatibility, but this
+/// position-varying fold deliberately uses direct empty-hazard searches rather
+/// than introducing unbounded current-position keys to [`RouteMemo`].
 /// type-audit: bare-ok(count: budget)
 pub fn believed_water(
     ledger: &Ledger,
@@ -1347,6 +1359,7 @@ pub fn believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
+    _route_memo: &mut RouteMemo,
 ) -> Option<Facet> {
     let seen: Vec<Facet> = {
         let mut store = folds.borrow_mut();
@@ -1363,13 +1376,163 @@ pub fn believed_water(
         );
         latest_visit.water_at(npc.entity, t, terrain)
     };
+    let current = agent_position(ledger, npc, t);
     seen.into_iter()
         .filter_map(|r| {
-            plan_to_room(&npc.home, &r, budget, &std::collections::BTreeSet::new())
-                .map(|p| (p.len(), r))
+            plan_to_room(&current, &r, budget, &std::collections::BTreeSet::new())
+                .map(|path| (path.len(), r))
         })
         .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
         .map(|(_, r)| r)
+}
+
+/// A memo of `plan_to_room(from, dest, budget, ∅)` — the hop count only, and
+/// `None` when `dest` is not reachable from `from` within `budget`.
+///
+/// **Byte-identical by construction, not by testing.** `NavSpace`
+/// (`windows/vessel/src/action.rs`, private) holds exactly `dest` and `avoid`, and its `edges_from` computes
+/// `move_cost` over [`Facet::neighbors`]: it never consults a [`Terrain`], the
+/// ledger, or the tick. (Its `heuristic` returns `0`, so the search is
+/// Dijkstra, not A\*.) So with `avoid` fixed empty the memoized function is
+/// pure over mesh geometry, and caching it is exactly caching that function.
+/// Nothing within a process invalidates an entry — not a commit, not a terrain
+/// rebuild, not a belief change. The equivalence test
+/// (`the_memo_answers_exactly_what_a_fresh_search_answers`) confirms the
+/// construction; it is not the reason to believe it.
+///
+/// **It takes no `avoid` parameter, and that is the point.** Its home-keyed
+/// callers plan routes with a freshly-allocated EMPTY set, and only
+/// `HomeNavCache::home_nav` passes a real hazard set (`view.believed_hazard`).
+/// A future caller holding one cannot reach this memo, because there is
+/// nowhere to pass it — a compile error instead of a stale answer.
+///
+/// **Current-position belief folds are excluded.** [`believed_water`], its
+/// incremental twin, and [`shared_believed_water`]'s pooling search all anchor
+/// at an actor's current room. Their `positions x water rooms` key population
+/// has no boundedness argument, so they deliberately do not reach this memo.
+///
+/// **Read that exclusion for what it is, because the sentence that used to
+/// follow it here overstated it.** It said "a memo whose key space grows with
+/// session length is a leak wearing a cache's clothes", offered as the general
+/// rule the exclusion rests on. It is not one, and this campaign did not apply
+/// it evenly: the SAME 60-wait measurement found the home-anchored population
+/// — the one this memo does serve — still climbing, 83 pairs at wait 12 to 190
+/// at wait 60, with no ceiling demonstrated either. The exclusion rests on spec
+/// Rule 3's conservative default under genuine uncertainty (ledger #14, ruling
+/// R12), not on a measured separation between the two curves. This memo is held
+/// for a session because it is CHEAP, and the other site is not memoized
+/// because nobody has shown its growth is bounded — two different arguments,
+/// and only the second is about growth at all. See spec §1.3(d).
+///
+/// It is listed here rather than omitted because a
+/// two-item list reads as an oversight and would tell the next reader the
+/// site does not exist; what they will actually want to know is that it was
+/// considered.
+///
+/// `budget` IS in the key, for the reason [`HomeNavCache`]'s own private
+/// `HomeNavState` puts it in its: today every caller passes `PLAN_BUDGET` and
+/// nothing enforces that. That component is exercised, not merely argued —
+/// see `the_memo_keys_on_budget_not_only_on_the_room_pair`, which asks one
+/// REACHABLE pair at `budget = 1` (`None`) and then at the real budget
+/// (`Some`), and reddens if the second ask returns the first's cached
+/// failure.
+///
+/// **It stores the NEGATIVE result too, deliberately.** A memo holding only
+/// successes would re-pay the budget-exhausted searches forever while its hit
+/// rate read healthy — and those are the expensive ones: the campaign's own
+/// Task 2 measurement puts 59.5% of real calls in the `None` arm and 95.1% of
+/// all node expansions behind it. Caching `None` is not an optimisation of
+/// this memo, it is most of its point.
+///
+/// **Shared across entities, deliberately — the opposite of
+/// [`HomeNavCache`].** [`crate::resident::LatestVisit::water_at`] returns each
+/// entity's DISTINCT rooms, so an entity never duplicates its own pair within
+/// one sweep; every duplicate is a duplicate ACROSS entities, and on the
+/// possession shape a roster-wide sweep asks **3.9x-9.1x** as many route
+/// questions as there are distinct `(home, dest)` pairs seen so far, all of the
+/// excess coming from different entities. `HomeNavCache` is per-entity because
+/// `pos` and its avoid-epoch are per-entity; neither is in this key, so that
+/// half of the precedent does not transfer.
+///
+/// *That range read `6.4x-9.1x per sweep` until the campaign's final fix
+/// round, and both halves were off. It excluded **wait 1** (31 occurrences over
+/// 8 pairs = 3.9x, printed in The Culvert's ledger #5), being the min/max over
+/// waits 2-12 only; and the divisor is the CUMULATIVE distinct-pair count, not
+/// the count within that one sweep, so "per sweep" named a quantity the probe
+/// does not compute. Both errors are conservative — within-sweep distinct is at
+/// most cumulative distinct, so real within-sweep rates are at least these —
+/// and the argument for sharing needs only a rate above 1x, which every wait
+/// clears.*
+///
+/// **It stores the hop count, not the plan**, because `p.len()` is all any
+/// consumer of these two folds reads — the same refinement The Waymark reached
+/// for `HomeNavFeature`.
+///
+/// **This is NOT a resident index and decision 0756 does not govern it.** That
+/// rule is about resident indexes — folds over the ledger that absorb facts and
+/// must be asymptotically cheaper than a parent scan. This memo is derived from
+/// no fact, absorbs no fact, and has no parent to be cheaper than; it is the
+/// same category as [`hornvale_kernel::RoomMeshMemo`] and
+/// [`PrimaryAfraidMemo`] — a cache of a pure function over a fixed lattice
+/// (`RoomMeshMemo`) or a fixed ledger snapshot (`PrimaryAfraidMemo`).
+#[derive(Default)]
+pub struct RouteMemo {
+    /// `(from, dest, budget) → hops`, `None` = not reachable within `budget`.
+    /// The value is an `Option`, so an occupied entry holding `None` is a
+    /// CACHED FAILURE and a vacant entry is an unasked question — the
+    /// distinction the negative-caching paragraph above turns on.
+    hops: std::collections::BTreeMap<(Facet, Facet, usize), Option<usize>>,
+    /// How many real `plan_to_room` searches this memo has run, ever — the
+    /// deterministic witness this campaign preregisters on, in the shape
+    /// [`HomeNavCache::searches`] already has. Never a wall-clock proxy.
+    searches: u64,
+}
+
+impl RouteMemo {
+    /// An empty memo. Its lifetime is the caller's: nothing invalidates an
+    /// entry, so a memo may be as long-lived as the process (see the type
+    /// doc).
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// `plan_to_room(from, dest, budget, ∅).map(|p| p.len())`, memoized.
+    ///
+    /// A hit costs one `BTreeMap` lookup; a miss runs the real search (costing
+    /// exactly what the caller always paid), counts it in [`Self::searches`],
+    /// and inserts — including when the answer is `None`.
+    /// type-audit: bare-ok(count: budget), bare-ok(count: return)
+    pub fn hops(&mut self, from: &Facet, dest: &Facet, budget: usize) -> Option<usize> {
+        let key = (from.clone(), dest.clone(), budget);
+        if let Some(cached) = self.hops.get(&key) {
+            return *cached;
+        }
+        self.searches += 1;
+        let answer =
+            plan_to_room(from, dest, budget, &std::collections::BTreeSet::new()).map(|p| p.len());
+        self.hops.insert(key, answer);
+        answer
+    }
+
+    /// How many real `plan_to_room` searches this memo has run, ever.
+    /// type-audit: bare-ok(count: return)
+    pub fn searches(&self) -> u64 {
+        self.searches
+    }
+
+    /// How many distinct `(from, dest, budget)` keys this memo holds. A miss
+    /// inserts exactly one entry, so on a memo nothing has reset this equals
+    /// [`Self::searches`].
+    /// type-audit: bare-ok(count: return)
+    pub fn len(&self) -> usize {
+        self.hops.len()
+    }
+
+    /// Whether this memo holds no entries at all.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_empty(&self) -> bool {
+        self.hops.is_empty()
+    }
 }
 
 /// A memo of the PRIMARY-AFRAID emission `(entity, day) → arousal` (`0.0` when
@@ -1977,15 +2140,19 @@ pub fn hazard_memory_memo(
 
 /// The BAND's water belief for `npc` (The Tidings; anchoring split per
 /// decision #8). With NO co-located peer, returns `believed_water(npc)`
-/// verbatim — the home-anchored nearest water it remembers — an exact no-op
+/// verbatim — the actor-relative nearest water it remembers — an exact no-op
 /// (this is what keeps the live one-per-settlement population byte-identical).
 /// With a co-located peer, pools `npc`'s and every co-located peer's
 /// `believed_water` and returns the one nearest to `npc`'s CURRENT position
 /// (ties: ascending `Facet`), `None` if the pool is empty. Current-position
 /// anchoring is the semantics of hearsay — "water near HERE" — and is what lets
-/// a stranded creature adopt a here-reachable water its home-anchored memory
+/// a stranded creature adopt a here-reachable water its own memory
 /// could never admit. Order-independent by construction (`BTreeSet` union +
 /// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
+///
+/// `route_memo` remains threaded through the public solo-fold call shape, but
+/// neither this function nor [`believed_water`] reads it. Both route choices
+/// vary with current position and therefore run direct empty-hazard searches.
 /// type-audit: bare-ok(count: budget)
 #[allow(clippy::too_many_arguments)]
 pub fn shared_believed_water(
@@ -1996,8 +2163,9 @@ pub fn shared_believed_water(
     t: WorldTime,
     terrain: &dyn Terrain,
     budget: usize,
+    route_memo: &mut RouteMemo,
 ) -> Option<Facet> {
-    let own = believed_water(frozen, folds, npc, t, terrain, budget);
+    let own = believed_water(frozen, folds, npc, t, terrain, budget, route_memo);
     let here = agent_position(frozen, npc, t);
     let mut pool: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
     let mut has_peer = false;
@@ -2005,12 +2173,12 @@ pub fn shared_believed_water(
     for other in band {
         if other.entity != npc.entity && agent_position(frozen, other, t) == here {
             has_peer = true;
-            if let Some(w) = believed_water(frozen, folds, other, t, terrain, budget) {
+            if let Some(w) = believed_water(frozen, folds, other, t, terrain, budget, route_memo) {
                 pool.insert(w);
             }
         }
     }
-    // ALONE: home-anchored memory, unchanged — the byte-identical no-op.
+    // ALONE: actor-relative memory, unchanged — the exact no-op.
     if !has_peer {
         return own;
     }
@@ -2959,6 +3127,40 @@ pub const SLEPT: &str = "slept";
 /// every ledger written before this predicate existed.
 /// type-audit: bare-ok(identifier-text)
 pub const SLEPT_ON: &str = "slept-on";
+
+/// Every game-layer predicate the drive stack commits, with the doc string it
+/// registers under, in registration order — the ONE list, published so that
+/// `Session::start` and the benches consume it instead of each writing their
+/// own copy.
+///
+/// **Why this exists.** The list used to be written out three times in three
+/// spellings: `Session::start`'s chained `register_predicate` block, and a
+/// hand-copied subset in each of two `examples/` benches. When The Pallet added
+/// [`SLEPT_ON`] on 2026-09-03 it updated the session and neither bench, and both
+/// benches panicked with `UnknownPredicate` for two days across two merged
+/// campaigns — invisible to every gate, because `--all-targets` COMPILES an
+/// example and nothing RUNS one. `session.rs`'s own field doc had already
+/// recorded that this roster "has already gone stale three predicates in a
+/// row"; this is that observation given a mechanism.
+///
+/// **Scope: the DRIVE predicates only.** `Session::start` also registers the
+/// thing-layer predicates (`LOCATED_IN`, `OPENNESS`, `LOCKEDNESS`), which no
+/// bench needs and which are not this roster's business. It registers those
+/// beside this list, not from it.
+///
+/// Every predicate here is registered PER SESSION, never at genesis (spec §3).
+/// type-audit: bare-ok(identifier-text)
+pub const DRIVE_PREDICATES: &[(&str, &str)] = &[
+    (AGENT_AT, "an agent's position on a day"),
+    (DRANK, "an agent satisfied its sustenance goal"),
+    (RESTED, "an agent rested on a day, for this many ticks"),
+    (SLEPT, "an agent slept on a day, for this many ticks"),
+    (
+        SLEPT_ON,
+        "the kind of anchor an agent slept on, within the room it slept in",
+    ),
+    (EATEN, "an agent ate (eased its hunger) on a day"),
+];
 
 /// The solar-altitude band (degrees around the horizon) a CREPUSCULAR creature
 /// is awake in — dawn and dusk, when the sun is near the horizon (civil
@@ -6340,6 +6542,17 @@ pub fn affect_of_memo(
     mesh_memo: &mut RoomMeshMemo,
 ) -> Affect {
     let mut home_nav_cache = HomeNavCache::new();
+    // `route_memo` takes the SAME throwaway carve-out `home_nav_cache` does,
+    // for the same reason and with the same consequence: this function's
+    // public signature stays as every existing caller expects it, and a
+    // caller that HAS a session-lived scope to share (`run_simulation`) calls
+    // [`affect_of_memo_occupied`] directly instead. **The SEARCH count is
+    // what is exact**: a memo that starts empty and dies with the call misses
+    // every ask, so this path runs one `plan_to_room` per known water room
+    // per call, neither more nor fewer than before The Culvert. The
+    // instruction count is not exact — each miss additionally clones two
+    // `Facet`s and inserts into a map nothing will read.
+    let mut route_memo = RouteMemo::new();
     affect_of_memo_occupied(
         frozen,
         npc,
@@ -6350,6 +6563,7 @@ pub fn affect_of_memo(
         None,
         mesh_memo,
         &mut home_nav_cache,
+        &mut route_memo,
         folds,
     )
 }
@@ -6419,6 +6633,7 @@ pub fn affect_of_memo_occupied(
     occupancy: Option<&Occupancy>,
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    route_memo: &mut RouteMemo,
     folds: &OwnedFolds,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
@@ -6444,7 +6659,16 @@ pub fn affect_of_memo_occupied(
         .last_reset(npc.entity)
         .unwrap_or(WorldTime::GENESIS)
         .max(WorldTime::GENESIS);
-    let believed = shared_believed_water(frozen, folds, npc, band, day, terrain, PLAN_BUDGET);
+    let believed = shared_believed_water(
+        frozen,
+        folds,
+        npc,
+        band,
+        day,
+        terrain,
+        PLAN_BUDGET,
+        route_memo,
+    );
     let drive = drive_at(
         frozen,
         folds,
@@ -6859,6 +7083,7 @@ pub(crate) fn agent_at_fact(
 /// licenses treating the field as free to vary per call site. The operative
 /// constraint is narrower and sharper: **within one producer, one spelling.**
 /// type-audit: bare-ok(identifier-text)
+/// culvert-roster: waiver(not a predicate at all -- this is the `Fact.provenance` PRODUCER label the errand facts carry, so it names no registry key, is never passed to `register_predicate`, and belongs on no predicate roster. It matches this scan only because the scan keys on the `pub const NAME: &str` SHAPE, which is exactly as wide as it should be: narrowing it to names ending in a predicate-looking string would let a real predicate slip through on its spelling)
 pub const ERRAND_PRODUCER: &str = "vessel/liveness";
 
 /// A committed errand fact: `entity` set out from `origin` on `day`, for the
@@ -7223,6 +7448,11 @@ fn hold_step(
 /// session-lived like `mesh_memo`, but cross-tick rather than per-tick (see
 /// the cache's own doc for why a stationary, unchanged-belief creature must
 /// reach zero searches across ticks, not merely within one).
+///
+/// `route_memo` (The Culvert, Task 7) remains available to its unrelated
+/// home-anchored callers. The standing-in-water update and [`believed_water`]
+/// deliberately do not use it: their current-position route keys vary as the
+/// actor walks.
 #[allow(clippy::too_many_arguments)]
 fn decide_step(
     day: WorldTime,
@@ -7243,12 +7473,14 @@ fn decide_step(
     out: &[Fact],
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    _route_memo: &mut RouteMemo,
     folds: &OwnedFolds,
 ) -> (Resolution, f64) {
-    // Standing in water forms/updates belief (nearest-to-home wins) — the
+    // Standing in water forms/updates belief from the committed current room — the
     // live walk's own first step of every iteration.
     if is_water(pos, terrain) {
-        *believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
+        let current = agent_position(frozen, npc, day);
+        *believed = nearer_to_current(&current, believed.take(), pos.clone(), PLAN_BUDGET);
     }
     // THE ONE CROSSING IN THIS FUNCTION. The thirst and hunger path integrals
     // are CONTINUOUS quantities — a temperature-weighted rate integrated over
@@ -7536,6 +7768,7 @@ fn catch_up(
     // statement that the two lattices have merged.
     mesh_memo: &mut RoomMeshMemo,
     home_nav_cache: &mut HomeNavCache,
+    route_memo: &mut RouteMemo,
     folds: &OwnedFolds,
     controller: &mut dyn Controller,
 ) -> Mode {
@@ -7604,6 +7837,7 @@ fn catch_up(
             out,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             folds,
         );
         mode = resolution.mode;
@@ -7725,6 +7959,7 @@ impl<'a> DriveMovements<'a> {
         frozen: &Ledger,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        route_memo: &mut RouteMemo,
     ) -> (Vec<Fact>, Occupancy, Vec<Written>) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
@@ -7801,8 +8036,15 @@ impl<'a> DriveMovements<'a> {
         let to_ticks = local_ticks_of(self.to);
         let from_ticks = local_ticks_of(self.from);
         for npc in &self.npcs {
-            let mut st =
-                WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain, self.folds);
+            let mut st = WalkState::begin(
+                frozen,
+                npc,
+                &self.npcs,
+                self.from,
+                self.terrain,
+                self.folds,
+                route_memo,
+            );
             // THE THRESHOLD's crossing: arrive at the landing anchor of the
             // interior `WalkState::begin` just derived — the entry point for a
             // creature crossing INTO the room from the coarse (room-graph)
@@ -7873,6 +8115,7 @@ impl<'a> DriveMovements<'a> {
                 CATCH_UP_STEP_CAP,
                 mesh_memo,
                 home_nav_cache,
+                route_memo,
                 self.folds,
                 // Every body here is GOAP-driven (the driven body's own
                 // catch-up runs separately — see `step_one_with_controller`),
@@ -7900,6 +8143,7 @@ impl<'a> DriveMovements<'a> {
                 &mut out,
                 mesh_memo,
                 home_nav_cache,
+                route_memo,
                 // Every body in `self.npcs` today is GOAP-driven (a possessed
                 // body's own walk goes through `step_one_with_controller`
                 // instead, on a separate call, so `band`/`alarm` here never
@@ -8014,7 +8258,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // nothing beyond what the pre-Finding-2 code already paid every call.
         // `throwaway_nav` (Task 4) carries the identical carve-out: this path
         // pays a fresh `plan_to_room` per creature per pop, exactly what
-        // EVERY call paid before this task.
+        // EVERY call paid before this task. `throwaway_route` (The Culvert,
+        // Task 7) is the third of the same shape, for the same kernel-trait
+        // reason. **What is exact about it is the SEARCH count**: a cold memo
+        // misses every ask, so this path runs neither more nor fewer
+        // `plan_to_room` searches than it did before that task — which is the
+        // byte-identity-relevant claim. It is not exact to the instruction:
+        // each miss now also clones two `Facet`s and inserts into a
+        // `BTreeMap` that is dropped at the end of the call.
         //
         // THE RESIDENT FOLD STORE IS THE EXCEPTION, and it is why it lives on
         // the struct rather than beside these two (The Pawl, spec §2.1):
@@ -8024,8 +8275,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
         // path the store exists to take it off.
         let mut throwaway = RoomMeshMemo::new();
         let mut throwaway_nav = HomeNavCache::new();
-        self.step_with_occupancy(frozen, &mut throwaway, &mut throwaway_nav)
-            .0
+        let mut throwaway_route = RouteMemo::new();
+        self.step_with_occupancy(
+            frozen,
+            &mut throwaway,
+            &mut throwaway_nav,
+            &mut throwaway_route,
+        )
+        .0
     }
 }
 
@@ -8103,7 +8360,9 @@ impl WalkState {
     /// Open a walk for `npc` at `from`, deriving every field from the FROZEN
     /// pre-tick ledger — nothing here reads another creature's mid-tick state
     /// (spec §5), `band` being consulted only through `shared_believed_water`'s
-    /// own frozen reads.
+    /// own frozen reads. `route_memo` (The Culvert, Task 7) is the caller-owned
+    /// [`RouteMemo`] that read ranks through — session-lived and shared across
+    /// creatures, exactly like `step_with_occupancy`'s `home_nav_cache`.
     fn begin(
         frozen: &Ledger,
         npc: &Body,
@@ -8111,6 +8370,7 @@ impl WalkState {
         from: WorldTime,
         terrain: &dyn Terrain,
         folds: &OwnedFolds,
+        route_memo: &mut RouteMemo,
     ) -> WalkState {
         let pos = agent_position(frozen, npc, from);
         // The interval start, carried as the instant it already is — the walk
@@ -8165,7 +8425,16 @@ impl WalkState {
         // pre-tick history; grow it whenever the agent stands in water.
         // The Tidings: seed from the BAND's pooled belief (co-located
         // members share what they know), not the creature's alone.
-        let believed = shared_believed_water(frozen, folds, npc, band, from, terrain, PLAN_BUDGET);
+        let believed = shared_believed_water(
+            frozen,
+            folds,
+            npc,
+            band,
+            from,
+            terrain,
+            PLAN_BUDGET,
+            route_memo,
+        );
         let mut visited: std::collections::BTreeSet<Facet> = std::collections::BTreeSet::new();
         visited.insert(pos.clone());
         let steps = 0usize;
@@ -8248,6 +8517,7 @@ impl<'a> DriveMovements<'a> {
         out: &mut Vec<Fact>,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        route_memo: &mut RouteMemo,
         controller: &mut dyn Controller,
     ) -> bool {
         if st.day > self.to || st.steps >= MAX_STEPS {
@@ -8287,6 +8557,7 @@ impl<'a> DriveMovements<'a> {
             &*out,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             self.folds,
         );
         st.mode = resolution.mode;
@@ -8615,6 +8886,7 @@ impl<'a> DriveMovements<'a> {
         body: &Body,
         mesh_memo: &mut RoomMeshMemo,
         home_nav_cache: &mut HomeNavCache,
+        route_memo: &mut RouteMemo,
         controller: &mut dyn Controller,
     ) -> (Vec<Fact>, Written) {
         let band = [body.clone()];
@@ -8637,7 +8909,15 @@ impl<'a> DriveMovements<'a> {
             &band,
             &mut afraid_memo,
         );
-        let mut st = WalkState::begin(frozen, body, &band, self.from, self.terrain, self.folds);
+        let mut st = WalkState::begin(
+            frozen,
+            body,
+            &band,
+            self.from,
+            self.terrain,
+            self.folds,
+            route_memo,
+        );
         occupancy.arrive(
             body.entity,
             &st.pos,
@@ -8699,6 +8979,7 @@ impl<'a> DriveMovements<'a> {
             CATCH_UP_STEP_CAP,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             self.folds,
             &mut PlayerController::new(),
         );
@@ -8712,6 +8993,7 @@ impl<'a> DriveMovements<'a> {
             &mut out,
             mesh_memo,
             home_nav_cache,
+            route_memo,
             controller,
         ) {}
         (
@@ -8729,23 +9011,33 @@ impl<'a> DriveMovements<'a> {
     }
 }
 
-/// The nearer-to-home of an existing belief and a newly-perceived water room.
+/// The nearer-to-current of an existing belief and a newly-perceived water room.
 /// The tick's incremental fold — and its tie-break MUST match `believed_water`'s
 /// (smaller `Facet` wins on an equal hop-distance), or a mid-walk incremental
 /// belief could disagree with the same belief re-derived from the committed
 /// history, making the chosen source faintly sensitive to `wait` granularity
 /// (the-surmise T3+T4 review). Aligned here so the two folds are identical.
-fn nearer_to_home(
-    home: &Facet,
+///
+/// `current_position` is the position committed in the frozen ledger at the
+/// same time as the belief read. Like `believed_water`, this position-varying
+/// fold uses direct empty-hazard searches rather than [`RouteMemo`].
+fn nearer_to_current(
+    current_position: &Facet,
     current: Option<Facet>,
     found: Facet,
     budget: usize,
 ) -> Option<Facet> {
     let d = |r: &Facet| {
-        plan_to_room(home, r, budget, &std::collections::BTreeSet::new()).map(|p| p.len())
+        plan_to_room(
+            current_position,
+            r,
+            budget,
+            &std::collections::BTreeSet::new(),
+        )
+        .map(|path| path.len())
     };
     match current {
-        None => Some(found),
+        None => d(&found).map(|_| found),
         Some(c) => match (d(&c), d(&found)) {
             (Some(dc), Some(df)) => Some(match df.cmp(&dc) {
                 std::cmp::Ordering::Less => found,
@@ -8755,7 +9047,8 @@ fn nearer_to_home(
                 std::cmp::Ordering::Equal => std::cmp::min(c, found),
             }),
             (None, Some(_)) => Some(found),
-            _ => Some(c),
+            (Some(_), None) => Some(c),
+            (None, None) => None,
         },
     }
 }
@@ -9923,7 +10216,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None
         );
@@ -9936,7 +10230,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             Some(water)
         );
@@ -9978,7 +10273,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None
         );
@@ -10028,7 +10324,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             Some(far.clone())
         );
@@ -10040,10 +10337,262 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             Some(near),
             "belief switches to the nearer known source"
+        );
+    }
+
+    #[test]
+    fn believed_water_admits_currently_reachable_memory() {
+        // Mutation target: retaining `npc.home` as the route anchor rejects
+        // `here_water`, even though the committed current position reaches it.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = shared_belief_npc(entity, home, home_water.clone(), "current-admission");
+        commit_agent_at(&mut ledger, &reg, entity, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here_water, 2.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &npc,
+                td(3.0),
+                &terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(here_water),
+            "a remembered source reachable from the committed current room is admitted"
+        );
+    }
+
+    #[test]
+    fn believed_water_ranks_reachable_memory_from_current_position() {
+        // Mutation target: ranking from home makes `home_nearest` win its
+        // equal-home-hop tie instead of letting a zero-hop current source win.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let neighbors = home.neighbors();
+        let home_nearest = std::cmp::min(neighbors[0].clone(), neighbors[1].clone());
+        let current = std::cmp::max(neighbors[0].clone(), neighbors[1].clone());
+        let terrain = PlantedTerrain::fresh_only([home_nearest.clone(), current.clone()]);
+        let npc = shared_belief_npc(entity, home, home_nearest.clone(), "current-ranking");
+        commit_agent_at(&mut ledger, &reg, entity, &home_nearest, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &current, 2.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &npc,
+                td(3.0),
+                &terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(current.clone()),
+            "the current room is zero hops away and beats the other reachable memory"
+        );
+    }
+
+    #[test]
+    fn believed_water_breaks_current_position_ties_by_ascending_facet() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let tie_entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let tie_current = raddr(-1.0);
+        let tie_neighbors = tie_current.neighbors();
+        let smaller = std::cmp::min(tie_neighbors[0].clone(), tie_neighbors[1].clone());
+        let larger = std::cmp::max(tie_neighbors[0].clone(), tie_neighbors[1].clone());
+        let tie_terrain = PlantedTerrain::fresh_only([smaller.clone(), larger.clone()]);
+        let tie_npc = shared_belief_npc(tie_entity, raddr(1.0), smaller.clone(), "current-tie");
+        commit_agent_at(&mut ledger, &reg, tie_entity, &larger, 1.0);
+        commit_agent_at(&mut ledger, &reg, tie_entity, &smaller, 2.0);
+        commit_agent_at(&mut ledger, &reg, tie_entity, &tie_current, 3.0);
+
+        assert_eq!(
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &tie_npc,
+                td(4.0),
+                &tie_terrain,
+                10_000,
+                &mut RouteMemo::new(),
+            ),
+            Some(smaller),
+            "equal-hop current candidates resolve to ascending Facet, not visit order"
+        );
+    }
+
+    #[test]
+    fn incremental_water_belief_matches_fresh_fold_after_committed_position_change() {
+        // Mutation target: if either fold stays anchored at home, it disagrees
+        // after a committed walk from the home-side water to the current-side water.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let entity = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = shared_belief_npc(entity, home, home_water.clone(), "incremental-alignment");
+        commit_agent_at(&mut ledger, &reg, entity, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here, 2.0);
+        commit_agent_at(&mut ledger, &reg, entity, &here_water, 3.0);
+        let now = td(4.0);
+
+        let incremental =
+            nearer_to_current(&here_water, Some(home_water), here_water.clone(), 10_000);
+        let fresh = believed_water(
+            &ledger,
+            &test_folds(),
+            &npc,
+            now,
+            &terrain,
+            10_000,
+            &mut RouteMemo::new(),
+        );
+        assert_eq!(
+            incremental, fresh,
+            "the incremental update and re-derived belief share the committed current anchor"
+        );
+    }
+
+    /// The Fetch orientation probe. Keep the remembered set fixed, then compare
+    /// the current home-anchored fold with an independently computed
+    /// current-position ranking. This is deliberately ignored: it measures the
+    /// disagreement that the design must explain, rather than asserting a
+    /// production choice before the spec is written.
+    ///
+    /// The seed-42 and seed-17 possession constructors live as private helpers
+    /// in integration-suite modules (`the_culvert.rs` and `resident_folds.rs`).
+    /// A library-unit probe cannot call them without exporting or duplicating
+    /// their session scaffolding, so this keeps the strongest existing direct
+    /// two-room shape and records its direct planner counts instead.
+    #[test]
+    #[ignore = "probe: The Fetch home/current admission and ranking comparison"]
+    fn fetch_probe_compares_home_and_current_water_decisions() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity(test_lineage(ledger.entity_count() as u16));
+        let home = raddr(1.0);
+        let here = raddr(-1.0);
+        let home_water = home.neighbors()[0].clone();
+        let here_water = here.neighbors()[0].clone();
+        let terrain = PlantedTerrain::fresh_only([home_water.clone(), here_water.clone()]);
+        let npc = Body {
+            entity: e,
+            village: None,
+            perception: hornvale_species::PerceptionVector::MANIKIN,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            thermal_strategy: ThermalStrategy::Endothermic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
+            label: "fetch-probe".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &home_water, 1.0);
+        commit_agent_at(&mut ledger, &reg, e, &here_water, 2.0);
+        commit_agent_at(&mut ledger, &reg, e, &here, 3.0);
+        let t = WorldTime::from_std_days(5.0).expect("a day value is finite");
+        let folds = test_folds();
+        let remembered = {
+            let mut store = folds.borrow_mut();
+            store.latest_visit(&ledger).water_at(e, t, &terrain)
+        };
+        let home_ranked = believed_water(
+            &ledger,
+            &folds,
+            &npc,
+            t,
+            &terrain,
+            10_000,
+            &mut RouteMemo::new(),
+        );
+        // Count the direct searches, rather than timing them: each remembered
+        // room asks exactly one deterministic `plan_to_room` question from
+        // each anchor, whether or not that room is admitted.
+        let rank_from = |from: &Facet| {
+            let mut searches = 0usize;
+            let admitted: Vec<(usize, Facet)> = remembered
+                .iter()
+                .filter_map(|room| {
+                    searches += 1;
+                    plan_to_room(from, room, 10_000, &std::collections::BTreeSet::new())
+                        .map(|path| (path.len(), room.clone()))
+                })
+                .collect();
+            let ranked = admitted
+                .iter()
+                .min_by(|(a_hops, a_room), (b_hops, b_room)| {
+                    a_hops.cmp(b_hops).then_with(|| a_room.cmp(b_room))
+                })
+                .map(|(_, room)| room.clone());
+            (admitted.len(), ranked, searches)
+        };
+        let (home_admitted, home_direct_ranked, home_searches) = rank_from(&home);
+        let (current_admitted, current_ranked, current_searches) = rank_from(&here);
+        println!(
+            "fetch probe: remembered={} home_admitted={} current_admitted={} home_ranked={:?} current_ranked={:?} home_direct_searches={} current_direct_searches={}",
+            remembered.len(),
+            home_admitted,
+            current_admitted,
+            home_ranked,
+            current_ranked,
+            home_searches,
+            current_searches,
+        );
+        assert_eq!(
+            remembered.len(),
+            2,
+            "probe denominator: both water sightings must survive the raw fold"
+        );
+        assert!(
+            home_ranked.is_some(),
+            "probe denominator: home must rank at least one remembered source"
+        );
+        assert!(
+            current_ranked.is_some(),
+            "probe denominator: here must rank at least one remembered source"
+        );
+        assert_eq!(
+            home_ranked, home_direct_ranked,
+            "probe control: the direct home ranking must agree with believed_water"
+        );
+        assert_eq!(
+            home_searches,
+            remembered.len(),
+            "probe count: home must issue one direct route search per remembered room"
+        );
+        assert_eq!(
+            current_searches,
+            remembered.len(),
+            "probe count: current must issue one direct route search per remembered room"
+        );
+        assert_ne!(
+            home_ranked, current_ranked,
+            "probe must retain a home-selected source distinct from the current-position source"
         );
     }
 
@@ -10083,7 +10632,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None
         );
@@ -10128,7 +10678,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             None,
             "another agent's sighting does not become e's belief"
@@ -10141,6 +10692,7 @@ mod tests {
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
+            &mut RouteMemo::new(),
         );
         let json = serde_json::to_string(&ledger).unwrap();
         let reloaded: Ledger = serde_json::from_str(&json).unwrap();
@@ -10151,7 +10703,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             a
         );
@@ -10206,6 +10759,7 @@ mod tests {
             WorldTime::from_std_days(5.0).expect("a day value is finite"),
             &t,
             10_000,
+            &mut RouteMemo::new(),
         );
         assert_eq!(
             got,
@@ -10221,7 +10775,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(5.0).expect("a day value is finite"),
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             got,
             "the tie resolves identically after reload"
@@ -10653,12 +11208,29 @@ mod tests {
 
         // Alone, `lost` is ignorant.
         assert_eq!(
-            believed_water(&ledger, &test_folds(), &lost, now, &t, 10_000),
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             None
         );
         // Co-located with `knower`, it learns the water.
         assert_eq!(
-            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                &band,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             Some(water.clone())
         );
     }
@@ -11089,11 +11661,29 @@ mod tests {
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
         let ab = [knower.clone(), lost.clone()];
         let ba = [lost.clone(), knower.clone()];
-        let result = shared_believed_water(&ledger, &test_folds(), &lost, &ab, now, &t, 10_000);
+        let result = shared_believed_water(
+            &ledger,
+            &test_folds(),
+            &lost,
+            &ab,
+            now,
+            &t,
+            10_000,
+            &mut RouteMemo::new(),
+        );
         assert_eq!(result, Some(water));
         assert_eq!(
             result,
-            shared_believed_water(&ledger, &test_folds(), &lost, &ba, now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                &ba,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             "permuting the band must not change the pooled belief"
         );
     }
@@ -11113,11 +11703,28 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
         commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
         let now = WorldTime::from_std_days(1.0).expect("a day value is finite");
-        let solo = believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000);
+        let solo = believed_water(
+            &ledger,
+            &test_folds(),
+            &knower,
+            now,
+            &t,
+            10_000,
+            &mut RouteMemo::new(),
+        );
         assert_eq!(solo, Some(water));
 
         assert_eq!(
-            shared_believed_water(&ledger, &test_folds(), &knower, &[], now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &knower,
+                &[],
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             solo,
             "an empty band changes nothing"
         );
@@ -11129,7 +11736,8 @@ mod tests {
                 std::slice::from_ref(&knower),
                 now,
                 &t,
-                10_000
+                10_000,
+                &mut RouteMemo::new(),
             ),
             solo,
             "a band of only itself changes nothing"
@@ -11162,12 +11770,29 @@ mod tests {
 
         // sanity: knower does know water when consulted directly...
         assert_eq!(
-            believed_water(&ledger, &test_folds(), &knower, now, &t, 10_000),
+            believed_water(
+                &ledger,
+                &test_folds(),
+                &knower,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             Some(water)
         );
         // ...but lost gains nothing, since knower is in a different room.
         assert_eq!(
-            shared_believed_water(&ledger, &test_folds(), &lost, &band, now, &t, 10_000),
+            shared_believed_water(
+                &ledger,
+                &test_folds(),
+                &lost,
+                &band,
+                now,
+                &t,
+                10_000,
+                &mut RouteMemo::new()
+            ),
             None
         );
     }
@@ -12206,8 +12831,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts1, _occ1, _written1) =
-            sys1.step_with_occupancy(&ledger, &mut mesh_memo, &mut home_nav_cache);
+        let (facts1, _occ1, _written1) = sys1.step_with_occupancy(
+            &ledger,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut RouteMemo::new(),
+        );
         assert!(
             !facts1.is_empty(),
             "the fixture's first tick emitted nothing; it cannot pin cross-tick order"
@@ -12232,8 +12861,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts2, _occ2, _written2) =
-            sys2.step_with_occupancy(&ledger2, &mut mesh_memo, &mut home_nav_cache);
+        let (facts2, _occ2, _written2) = sys2.step_with_occupancy(
+            &ledger2,
+            &mut mesh_memo,
+            &mut home_nav_cache,
+            &mut RouteMemo::new(),
+        );
         assert!(
             !facts2.is_empty(),
             "the fixture's second tick emitted nothing; it cannot pin cross-tick order"
@@ -13366,6 +13999,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         assert!(
@@ -13379,6 +14013,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::PlayerController::new(),
         );
         assert!(
@@ -13446,6 +14081,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         let (imposed_facts, imposed_written) = sys.step_one_with_controller(
@@ -13453,6 +14089,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::ImposedController::new(),
         );
 
@@ -13603,6 +14240,7 @@ mod tests {
             &npc_a,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         let (imposed_facts_a, ..) = sys_a.step_one_with_controller(
@@ -13610,6 +14248,7 @@ mod tests {
             &npc_a,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::ImposedController::new(),
         );
 
@@ -13661,6 +14300,7 @@ mod tests {
             &npc_b,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut DefaultController,
         );
         let (imposed_facts_b, ..) = sys_b.step_one_with_controller(
@@ -13668,6 +14308,7 @@ mod tests {
             &npc_b,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut crate::controller::ImposedController::new(),
         );
 
@@ -13774,6 +14415,7 @@ mod tests {
             &npc,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &mut player,
         );
         assert!(
@@ -16985,7 +17627,8 @@ mod tests {
                 &npc,
                 WorldTime::from_std_days(40.0).expect("a day value is finite"),
                 &terrain,
-                PLAN_BUDGET
+                PLAN_BUDGET,
+                &mut RouteMemo::new(),
             ),
             Some(water)
         );
@@ -18987,8 +19630,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, _occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         // `slept`, not `rested`: the phase decides the act, and this fixture
         // put the body in its off-phase deliberately. A walk that had gone back
         // to committing one predicate for both acts fails here on the count.
@@ -19113,8 +19760,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, _occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         assert!(
             facts.iter().any(|f| f.subject == e && f.predicate == SLEPT),
             "the body must still sleep, bare ground or not: {facts:?}"
@@ -19184,8 +19835,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, _occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, _occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         let slept: Vec<&Fact> = facts
             .iter()
             .filter(|f| f.subject == e && f.predicate == SLEPT)
@@ -20752,8 +21407,12 @@ mod tests {
             terrain: &hearth_terrain,
             folds: &folds,
         };
-        let (_facts, occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (_facts, occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         let interior = interior_of(&home, &hearth_terrain);
         let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
         let hearth_id = interior
@@ -20801,8 +21460,12 @@ mod tests {
             terrain: &wild_terrain,
             folds: &folds,
         };
-        let (_facts2, occ2, _written) =
-            sys2.step_with_occupancy(&ledger2, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (_facts2, occ2, _written) = sys2.step_with_occupancy(
+            &ledger2,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         let wild_interior = interior_of(&home, &wild_terrain);
         let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
         assert_eq!(
@@ -21209,8 +21872,12 @@ mod tests {
             terrain: &terrain,
             folds: &folds,
         };
-        let (facts, occ, _written) =
-            sys.step_with_occupancy(&ledger, &mut RoomMeshMemo::new(), &mut HomeNavCache::new());
+        let (facts, occ, _written) = sys.step_with_occupancy(
+            &ledger,
+            &mut RoomMeshMemo::new(),
+            &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
+        );
         assert!(
             facts.is_empty(),
             "an instantaneous tick (from == to) leaves the live walk nothing \
@@ -21307,6 +21974,7 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &test_folds(),
         );
         assert!(
@@ -21346,6 +22014,7 @@ mod tests {
             &[],
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &test_folds(),
         );
         assert_eq!(
@@ -21415,6 +22084,7 @@ mod tests {
             CATCH_UP_STEP_CAP,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
             &test_folds(),
             &mut DefaultController,
         );
@@ -21479,6 +22149,7 @@ mod tests {
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
         );
 
         let folds = test_folds();
@@ -21498,6 +22169,7 @@ mod tests {
             &ledger,
             &mut RoomMeshMemo::new(),
             &mut HomeNavCache::new(),
+            &mut RouteMemo::new(),
         );
 
         assert_eq!(
@@ -21620,6 +22292,7 @@ mod tests {
                 CAP,
                 &mut RoomMeshMemo::new(),
                 &mut HomeNavCache::new(),
+                &mut RouteMemo::new(),
                 &test_folds(),
                 &mut DefaultController,
             );

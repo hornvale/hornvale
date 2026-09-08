@@ -249,6 +249,7 @@ fn synth_cell(
     roughness: f64,
 ) -> ChartCell {
     ChartCell {
+        room: 0,
         u: Some(0),
         v: Some(0),
         w: Some(0),

@@ -1,0 +1,550 @@
+{
+  "agreement_equals_cargo_on_all_arms": true,
+  "arm_count": 11,
+  "comparative_counts": {
+    "agreement": {
+      "effective": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      },
+      "effective_questions": 37,
+      "fallback_requests": 0,
+      "proposed_questions": 37,
+      "raw": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      }
+    },
+    "cargo": {
+      "effective": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      },
+      "effective_questions": 37,
+      "fallback_requests": 0,
+      "proposed_questions": 37,
+      "raw": {
+        "selected_satisfied": 29,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      }
+    },
+    "path": {
+      "effective": {
+        "selected_satisfied": 32,
+        "selected_unknown": 3,
+        "selected_violating": 5,
+        "unknown": 3,
+        "unselected_violating": 0
+      },
+      "effective_questions": 40,
+      "fallback_requests": 7,
+      "proposed_questions": 28,
+      "raw": {
+        "selected_satisfied": 23,
+        "selected_unknown": 2,
+        "selected_violating": 3,
+        "unknown": 3,
+        "unselected_violating": 2
+      }
+    }
+  },
+  "completed": true,
+  "costs": {
+    "build_seconds_by_arm": {
+      "base": 11.785918349400163,
+      "collision-joint": 1.3527094256132841,
+      "lender-joint": 1.2878868263214827,
+      "safe-joint": 1.0198718989267945,
+      "settlement-collision": 1.4922177819535136,
+      "settlement-lender-rename": 1.2977732373401523,
+      "settlement-safe": 1.3386452849954367,
+      "thing-joint-claim": 1.533220729790628,
+      "thing-safe-addition": 1.3487988049164414,
+      "thing-unusual-borrow": 1.0609121341258287,
+      "unusual-joint": 1.308106734417379
+    },
+    "dependency_fetch_seconds": 1.140632246620953,
+    "note": "Nested costs are not additive; these are recorded scopes, not full CLI or total campaign wall.",
+    "sum_arm_preparation_seconds": 59.67734382394701,
+    "sum_arm_wall_seconds": 123.9780108332634,
+    "sum_observation_seconds": 0.13211985677480698
+  },
+  "dependency_preparation_attribution_validated": true,
+  "diagnostic_stage": "outboard green; later phases pending; Stage2 acceptance remains pending",
+  "imports_only_supplement": {
+    "collision": {
+      "request_scope": {
+        "base_arm": "thing-joint-claim",
+        "changed_arm": "settlement-collision",
+        "changed_paths": [
+          "domains/settlement/src/lib.rs"
+        ],
+        "description": "right owner applied to left source; no behavioral input",
+        "observed_arm": "collision-joint",
+        "variants": [
+          "settlement-collision"
+        ]
+      },
+      "score": {
+        "effective": {
+          "selected_satisfied": [
+            "borrowing",
+            "components"
+          ],
+          "selected_unknown": [
+            "ownership"
+          ],
+          "selected_violating": [
+            "registration"
+          ],
+          "unknown": [
+            "ownership"
+          ],
+          "unselected_violating": []
+        },
+        "fallback_reasons": [
+          "negative namespace assumptions intentionally omitted"
+        ],
+        "raw": {
+          "selected_satisfied": [],
+          "selected_unknown": [],
+          "selected_violating": [],
+          "unknown": [
+            "ownership"
+          ],
+          "unselected_violating": [
+            "registration"
+          ]
+        }
+      },
+      "selection": {
+        "effective": [
+          "borrowing",
+          "components",
+          "ownership",
+          "registration"
+        ],
+        "kind": "agreement-imports-only-supplement",
+        "normalization": [
+          {
+            "mode": "post-variant roster and name subjects",
+            "owner": "settlement",
+            "reason": "Explicit finite manual normalization of reviewed owner records; no outcome input."
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-common-room",
+            "original": "settlement-common-room is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:counterpart-marker",
+            "original": "counterpart-marker is not claimed by Thing or any earlier registration in the solo base; a prospective independent claim invalidates this negative assumption.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-hearth",
+            "original": "settlement-hearth is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          }
+        ],
+        "proposed": [],
+        "rules": "counterpart-shadow-v1",
+        "unknown": [
+          "negative namespace assumptions intentionally omitted"
+        ]
+      }
+    },
+    "lender": {
+      "request_scope": {
+        "base_arm": "thing-safe-addition",
+        "changed_arm": "settlement-lender-rename",
+        "changed_paths": [
+          "domains/settlement/src/lib.rs"
+        ],
+        "description": "right owner applied to left source; no behavioral input",
+        "observed_arm": "lender-joint",
+        "variants": [
+          "settlement-lender-rename"
+        ]
+      },
+      "score": {
+        "effective": {
+          "selected_satisfied": [
+            "components"
+          ],
+          "selected_unknown": [
+            "ownership"
+          ],
+          "selected_violating": [
+            "borrowing",
+            "registration"
+          ],
+          "unknown": [
+            "ownership"
+          ],
+          "unselected_violating": []
+        },
+        "fallback_reasons": [
+          "negative namespace assumptions intentionally omitted"
+        ],
+        "raw": {
+          "selected_satisfied": [],
+          "selected_unknown": [
+            "ownership"
+          ],
+          "selected_violating": [
+            "borrowing",
+            "registration"
+          ],
+          "unknown": [
+            "ownership"
+          ],
+          "unselected_violating": []
+        }
+      },
+      "selection": {
+        "effective": [
+          "borrowing",
+          "components",
+          "ownership",
+          "registration"
+        ],
+        "kind": "agreement-imports-only-supplement",
+        "normalization": [
+          {
+            "mode": "post-variant roster and name subjects",
+            "owner": "settlement",
+            "reason": "Explicit finite manual normalization of reviewed owner records; no outcome input."
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-common-room",
+            "original": "settlement-common-room is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:counterpart-marker",
+            "original": "counterpart-marker is not claimed by Thing or any earlier registration in the solo base; a prospective independent claim invalidates this negative assumption.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-hearth",
+            "original": "settlement-hearth is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          }
+        ],
+        "proposed": [
+          "borrowing",
+          "ownership",
+          "registration"
+        ],
+        "rules": "counterpart-shadow-v1",
+        "unknown": [
+          "negative namespace assumptions intentionally omitted"
+        ]
+      }
+    },
+    "safe": {
+      "request_scope": {
+        "base_arm": "thing-safe-addition",
+        "changed_arm": "settlement-safe",
+        "changed_paths": [
+          "domains/settlement/src/lib.rs"
+        ],
+        "description": "right owner applied to left source; no behavioral input",
+        "observed_arm": "safe-joint",
+        "variants": [
+          "settlement-safe"
+        ]
+      },
+      "score": {
+        "effective": {
+          "selected_satisfied": [
+            "borrowing",
+            "components",
+            "ownership",
+            "registration"
+          ],
+          "selected_unknown": [],
+          "selected_violating": [],
+          "unknown": [],
+          "unselected_violating": []
+        },
+        "fallback_reasons": [
+          "negative namespace assumptions intentionally omitted"
+        ],
+        "raw": {
+          "selected_satisfied": [],
+          "selected_unknown": [],
+          "selected_violating": [],
+          "unknown": [],
+          "unselected_violating": []
+        }
+      },
+      "selection": {
+        "effective": [
+          "borrowing",
+          "components",
+          "ownership",
+          "registration"
+        ],
+        "kind": "agreement-imports-only-supplement",
+        "normalization": [
+          {
+            "mode": "post-variant roster and name subjects",
+            "owner": "settlement",
+            "reason": "Explicit finite manual normalization of reviewed owner records; no outcome input."
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-common-room",
+            "original": "settlement-common-room is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:counterpart-marker",
+            "original": "counterpart-marker is not claimed by Thing or any earlier registration in the solo base; a prospective independent claim invalidates this negative assumption.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-hearth",
+            "original": "settlement-hearth is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          }
+        ],
+        "proposed": [],
+        "rules": "counterpart-shadow-v1",
+        "unknown": [
+          "negative namespace assumptions intentionally omitted"
+        ]
+      }
+    },
+    "unusual": {
+      "request_scope": {
+        "base_arm": "thing-unusual-borrow",
+        "changed_arm": "settlement-safe",
+        "changed_paths": [
+          "domains/settlement/src/lib.rs"
+        ],
+        "description": "right owner applied to left source; no behavioral input",
+        "observed_arm": "unusual-joint",
+        "variants": [
+          "settlement-safe"
+        ]
+      },
+      "score": {
+        "effective": {
+          "selected_satisfied": [
+            "borrowing",
+            "components",
+            "ownership",
+            "registration"
+          ],
+          "selected_unknown": [],
+          "selected_violating": [],
+          "unknown": [],
+          "unselected_violating": []
+        },
+        "fallback_reasons": [
+          "negative namespace assumptions intentionally omitted"
+        ],
+        "raw": {
+          "selected_satisfied": [],
+          "selected_unknown": [],
+          "selected_violating": [],
+          "unknown": [],
+          "unselected_violating": []
+        }
+      },
+      "selection": {
+        "effective": [
+          "borrowing",
+          "components",
+          "ownership",
+          "registration"
+        ],
+        "kind": "agreement-imports-only-supplement",
+        "normalization": [
+          {
+            "mode": "post-variant roster and name subjects",
+            "owner": "settlement",
+            "reason": "Explicit finite manual normalization of reviewed owner records; no outcome input."
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-common-room",
+            "original": "settlement-common-room is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:counterpart-marker",
+            "original": "counterpart-marker is not claimed by Thing or any earlier registration in the solo base; a prospective independent claim invalidates this negative assumption.",
+            "owner": "settlement"
+          },
+          {
+            "field": "negative_assumptions",
+            "normalized": "unclaimed:settlement-hearth",
+            "original": "settlement-hearth is not claimed by Thing or any earlier registration in the observed two-domain composition.",
+            "owner": "settlement"
+          }
+        ],
+        "proposed": [],
+        "rules": "counterpart-shadow-v1",
+        "unknown": [
+          "negative namespace assumptions intentionally omitted"
+        ]
+      }
+    }
+  },
+  "judgments": {
+    "base": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    },
+    "collision-joint": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "unknown",
+      "registration": "violated"
+    },
+    "lender-joint": {
+      "borrowing": "violated",
+      "components": "satisfied",
+      "ownership": "unknown",
+      "registration": "violated"
+    },
+    "safe-joint": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    },
+    "settlement-collision": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    },
+    "settlement-lender-rename": {
+      "borrowing": "violated",
+      "components": "satisfied",
+      "ownership": "unknown",
+      "registration": "violated"
+    },
+    "settlement-safe": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    },
+    "thing-joint-claim": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    },
+    "thing-safe-addition": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    },
+    "thing-unusual-borrow": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    },
+    "unusual-joint": {
+      "borrowing": "satisfied",
+      "components": "satisfied",
+      "ownership": "satisfied",
+      "registration": "satisfied"
+    }
+  },
+  "properties": {
+    "collision": {
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "classes": [
+        "joint-only interaction",
+        "missing negative assumption"
+      ],
+      "joint_only_interaction": true,
+      "joint_unknown": [
+        "ownership"
+      ],
+      "joint_violating": [
+        "registration"
+      ],
+      "safe_pair": false,
+      "solo_dependency_failure": false
+    },
+    "lender": {
+      "base_satisfied": true,
+      "both_solos_satisfied": false,
+      "classes": [
+        "existing dependency failure"
+      ],
+      "joint_only_interaction": false,
+      "joint_unknown": [
+        "ownership"
+      ],
+      "joint_violating": [
+        "borrowing",
+        "registration"
+      ],
+      "safe_pair": false,
+      "solo_dependency_failure": true
+    },
+    "safe": {
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "classes": [
+        "safe pair"
+      ],
+      "joint_only_interaction": false,
+      "joint_unknown": [],
+      "joint_violating": [],
+      "safe_pair": true,
+      "solo_dependency_failure": false
+    },
+    "unusual": {
+      "base_satisfied": true,
+      "both_solos_satisfied": true,
+      "classes": [
+        "correct unusual borrowing"
+      ],
+      "joint_only_interaction": false,
+      "joint_unknown": [],
+      "joint_violating": [],
+      "safe_pair": true,
+      "solo_dependency_failure": false
+    }
+  },
+  "validated_archive_members": 330,
+  "validated_standalone_command_samples": 292,
+  "validation": "Controller recomputed every question, selection, confusion result and supplement through original frozen summarize; validated preparation and exact archive bytes"
+}

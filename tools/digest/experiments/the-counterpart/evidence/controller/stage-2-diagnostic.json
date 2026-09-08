@@ -1,0 +1,52 @@
+{
+  "request": "req-a9bae61544d0-20260905T213333Z",
+  "candidate": "a9bae61544d0322c8853902fb7d5f9940edb19be",
+  "host": "lefford",
+  "remote_log": "/home/nathan/.local/state/hornvale/sluice/sluice-a9bae61544d0-20260905T215707Z.log",
+  "log_bytes": 821566,
+  "log_sha256": "849a35c047ec9bd9dd8073569587d4dcbde163a19019f04c8e78baa17d54da31",
+  "phases": {
+    "artifacts": {
+      "wall_seconds": 230.945,
+      "exit_code": 0
+    },
+    "outboard": {
+      "wall_seconds": 300.397,
+      "exit_code": 0
+    },
+    "gate": {
+      "wall_seconds": 742.03,
+      "exit_code": 0
+    },
+    "clients": {
+      "wall_seconds": 137.747,
+      "exit_code": 0
+    }
+  },
+  "request_to_start_seconds": 1414,
+  "staff_lock_wait_seconds": 0,
+  "excerpts": [
+    "sluice-run: sluice-a9bae61544d0-20260905T215707Z started 2026-09-05T17:57:07-04:00 on lefford as pid 885402 kind=stage",
+    "sluice-run: queued for the staff (/tmp/hv-census.lock; up to 7200s) \u2026",
+    "sluice-run: holds the staff at 2026-09-05T17:57:07-04:00 after 0s queued",
+    "sluice-run: detached at 20c0cd375 (origin/main)",
+    "sluice-run: no Sluice-Headline: trailer in origin/main..a9bae61544d0; falling back to the tip subject.",
+    "sluice-run: merge product is 951e8057c73bc48b77cd92b07c0a4cffa084e814",
+    "sluice-run: === phase artifacts ===",
+    "timed.sh: 'sluice:artifacts' wall=230.945s user=956.461s sys=26.843s cpu_ratio=4.26 (recorded) rc=0",
+    "sluice-run: committed tracked drift from artifacts",
+    "sluice-run: === phase outboard ===",
+    "timed.sh: 'sluice:outboard' wall=300.397s user=162.510s sys=183.497s cpu_ratio=1.15 (recorded) rc=0",
+    "sluice-run: committed tracked drift from outboard",
+    "sluice-run: === phase gate ===",
+    "timed.sh: 'sluice:gate' wall=742.030s user=20302.234s sys=502.528s cpu_ratio=28.04 (recorded) rc=0",
+    "sluice-run: committed tracked drift from gate",
+    "sluice-run: === phase clients ===",
+    "timed.sh: 'sluice:clients' wall=137.747s user=2070.531s sys=167.729s cpu_ratio=16.25 (recorded) rc=0",
+    "sluice-run: committed tracked drift from clients",
+    "sluice-run: all phases green at 466d6659b.",
+    "sluice-run: STAGE REPORT \u2014 every phase green on merge product 951e8057c73bc48b77cd92b07c0a4cffa084e814 (final tree 466d6659b65fd530bcbc3926a99d841d5a3fb40d).",
+    "sluice-run: nothing pushed; main is unchanged at 20c0cd375719459ff75dc8e4b9615bf60a31fa97. kind=stage.",
+    "sluice-run: finished 2026-09-05T18:20:43-04:00 rc=0 why=exit"
+  ]
+}

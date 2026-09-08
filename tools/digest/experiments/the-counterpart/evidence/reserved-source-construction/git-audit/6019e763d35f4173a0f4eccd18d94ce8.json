@@ -1,0 +1,41 @@
+{
+  "cleanup_error": null,
+  "command": [
+    "git",
+    "-C",
+    "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/source-objects",
+    "bundle",
+    "verify",
+    "/private/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/specimens.bundle"
+  ],
+  "context_phases": [],
+  "cwd": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/source-objects",
+  "direct_child_waited": true,
+  "elapsed_seconds": 0.03208420891314745,
+  "exit_code": 0,
+  "failure_stdout": null,
+  "harness_deadline_exceeded": false,
+  "interrupted": false,
+  "launch_error": null,
+  "load_average": [
+    10.05078125,
+    15.56591796875,
+    24.76806640625
+  ],
+  "output_limit_exceeded": false,
+  "owned_session": 79065,
+  "peak_rss_bytes": 9191424,
+  "peak_rss_raw": 9191424,
+  "peak_rss_unit": "bytes",
+  "retained_sample_directory": null,
+  "retained_worktree": null,
+  "started_utc": "2026-09-05T21:40:02Z",
+  "stderr": "/private/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd/construction/specimens.bundle is okay\n",
+  "stderr_base64": "L3ByaXZhdGUvdmFyL2ZvbGRlcnMvXzAvajBfemtxX2Qzam4wa2x6MDMzZ3EzM2NjMDAwMGduL1QvY291bnRlcnBhcnQtcmVzZXJ2ZWQtc291cmNlLTE5aW9nbXlkL2NvbnN0cnVjdGlvbi9zcGVjaW1lbnMuYnVuZGxlIGlzIG9rYXkK",
+  "stderr_bytes": 132,
+  "stderr_sha256": "5e6770a3652ba6433f5e9a29c3e103726515f57d335f5a98a0df8b3049c16e00",
+  "stdout_base64": "VGhlIGJ1bmRsZSBjb250YWlucyB0aGlzIHJlZjoKYjBhZTg5ZDhhOTNjZGE2ZmU4OTMyZWQyNGUzOGRiOGQ2NDg2NTYxMyByZWZzL2hlYWRzL3NwZWNpbWVuLXJlc2VydmVkLWluZmVycmVkLW93bmVyClRoZSBidW5kbGUgcmVxdWlyZXMgdGhpcyByZWY6CjVjYzYyZDhiNmFlMzA1NTJmMjJhNjhlODVmZDlhMjg4NWFjNmUxZGQgClRoZSBidW5kbGUgdXNlcyB0aGlzIGhhc2ggYWxnb3JpdGhtOiBzaGExCg==",
+  "stdout_bytes": 229,
+  "stdout_sha256": "ba7243d9a1bf216dc805e19a15963784c61903b6eea8670ef4b2ab64e11d0f28",
+  "time_output": "        0.02 real         0.00 user         0.01 sys\n             9191424  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                1432  page reclaims\n                   7  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  17  involuntary context switches\n           150229508  instructions retired\n            59829293  cycles elapsed\n             3556224  peak memory footprint\n"
+}

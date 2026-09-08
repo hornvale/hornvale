@@ -81,7 +81,7 @@ use crate::line::Line;
 use crate::mercator::{self, Frame};
 use crate::plate::{self, BAND_B_RUNG, GLOBE_RUNG, Window};
 use hornvale_astronomy::SkyPins;
-use hornvale_game_core::{CandidateSource, Cursor, Focus};
+use hornvale_game_core::{ChartMarks, CurrentTurnNouns, Cursor, Focus, Lexicon};
 use hornvale_kernel::{Facet, FacetId, NearestVertexIndex, Seed, Vertex, World};
 use hornvale_language::{MorphOptions, Phonology};
 use hornvale_terrain::GeneratedTerrain;
@@ -108,11 +108,36 @@ const NOTHING_HERE_YET: &str = "nothing here yet";
 /// than on a second copy of it.
 const RUNG_OPENING: &str = "rung";
 
-/// What the strip says when the resolver ran and genuinely found no
-/// individuated feature at the observer's vertex — real terrain below every
-/// class's individuation floor, not "nothing there" (seed 42 measured 377
-/// of 40,962 vertices like this; spec §3.4).
-const UNNAMED_TERRAIN: &str = "unnamed terrain";
+/// How many marquee ticks [`Driver::map_facts_text`] (the rung line, the
+/// tile count, the oversample disclosure, the clamp caption) stays on the
+/// strip after a gesture changes it, before decaying back to the tile's
+/// own standing content (Task 6, B4 half b). Counted in marquee ticks
+/// rather than a new clock, per this task's own constraint: `marquee_ticks`
+/// (`Driver::tick_marquee`) is the client's one clock, and
+/// `MARQUEE_TICK = 300 ms` (`main.rs`) is its only wall-clock value.
+///
+/// **Derived, not guessed.** Measured at the flagship on the 80x24 floor
+/// (`the_strip_describes_the_tile_under_the_cursor`'s own doc), the strip's
+/// full content is 188 characters against a 40-column plate — an overflow
+/// of `188 - 40 = 148` scroll positions, one per marquee tick, i.e. 148 *
+/// 300 ms = 44.4 s for the marquee to carry the whole string once past the
+/// viewport. Any shorter and a clause appended near the end of the string
+/// (the rung line is emitted first, deliberately — see
+/// [`Driver::world_view_caption`] — but the block as a whole still runs to
+/// the clamp caption and the resolution disclosure) could decay before a
+/// reader watching the marquee ever sees the tail of it scroll by. 148
+/// ticks guarantees at least one complete pass.
+///
+/// **In-rate by decision 0717.** A layer may never read data changing
+/// faster than its own rate. The strip's own rate is `Rate::Instantaneous`
+/// — [`Driver::refresh_strip`] runs on every cursor move — while this decay
+/// is counted in MARQUEE ticks, which are coarser; reading slower data is
+/// always in-rate, so this holds by construction. (The word here was
+/// `Rate::Ornamental` until this campaign's fix wave. The conclusion was
+/// never affected, but the wrong label would invite someone to register
+/// `strip: Ornamental` in `plate.rs`'s `LAYERS` and produce a spurious
+/// `violations()` red.)
+const RUNG_LINE_TICKS: u32 = 148;
 
 /// The fixed, sim-authored prefix `windows/vessel/src/session.rs`'s
 /// `delve_at` prints on a SUCCESSFUL delve (`Session::delve`'s own
@@ -163,6 +188,40 @@ const DELVE_SUCCESS_PREFIX: &str = "You worm down into the dark.";
 /// 24 rows — see the module doc).
 const FLOOR_PLATE_CONTENT_HEIGHT: u16 =
     hornvale_game_core::spread::content_height(hornvale_game_core::MIN_HEIGHT);
+
+/// Memo keys one drawn box can add to [`Driver::rose_mesh_memo`]: its own
+/// facet, and that facet's grid-level ancestor (The Sett, Task 9).
+///
+/// `plate::terrain_at_facet` consults
+/// [`hornvale_kernel::Facet::corner_weights_memo`] at exactly those two
+/// addresses per box and nowhere else, so a plate of `n` boxes can grow the
+/// memo by at most `2n` entries. Measured on the 12x6 window
+/// `facet_reading.rs` draws: 34 entries for 72 boxes — well under the
+/// bound, because neighbouring boxes share both addresses.
+const ROSE_MESH_KEYS_PER_BOX: u64 = 2;
+
+/// How many whole plates' worth of mesh entries [`Driver::rose_mesh_memo`]
+/// may hold before it is emptied (The Sett, Task 9).
+///
+/// **The cap is a MULTIPLE OF THE LIVE PLATE, not a fixed number of
+/// entries**, and that is the one design choice here worth an argument. A
+/// fixed cap has to be sized for some assumed terminal: pick it for the
+/// 104x56 reference (a 64x52 plate, **3,328** boxes) and a player on a
+/// 300x100 terminal overflows it inside a single frame, so the memo is
+/// emptied on every redraw and silently returns to the un-memoised cost
+/// Task 9 exists to remove — with nothing to say so, since the answers stay
+/// byte-identical either way. Scaling by the plate makes the memo able to
+/// hold the frame it is about to draw plus three more, at every terminal
+/// size, so a clear can never happen more often than once per four plates
+/// of genuinely new ground.
+///
+/// Four rather than one because the walker moves and the plate does not
+/// jump: Task 1 measured the raster's frame-to-frame stability at 100%, so
+/// a step exposes one column or row and reuses the rest. Four plates is a
+/// few hundred steps of headroom at the reference size, and 26,624 entries
+/// there — a `BTreeMap` of a few megabytes, against a `TileCache` that
+/// holds 320 tiles of 32x32 each.
+const ROSE_MESH_PLATES_KEPT: u64 = 4;
 
 /// Why a [`Driver`] could not start.
 ///
@@ -327,6 +386,21 @@ pub struct Driver {
     /// ticks, so every test drives the marquee by calling
     /// [`Driver::tick_marquee`] and no test depends on real time.
     marquee_ticks: u32,
+    /// [`Self::map_facts_text`] as it read the last time [`Self::refresh_
+    /// strip`] ran, kept so the next refresh can tell whether a gesture
+    /// actually changed the rung, the frame, or the disclosure — not merely
+    /// moved the cursor — before deciding whether to restart the reading
+    /// window (Task 6, B4 half b). `None` before the first refresh.
+    last_map_facts: Option<String>,
+    /// The marquee tick at which the map-wide facts block currently on the
+    /// strip should decay back to the tile's own standing content, or
+    /// `None` while nothing is currently being freshly disclosed (before
+    /// the first gesture, or once decay has already run). Set by
+    /// [`Self::refresh_strip`] to `marquee_ticks + RUNG_LINE_TICKS`
+    /// whenever [`Self::last_map_facts`] shows the block actually changed;
+    /// cleared by [`Self::tick_marquee`] once that many ticks have
+    /// elapsed. See [`Self::map_facts_are_recent`].
+    map_facts_expire_at: Option<u32>,
     /// The world's landscape features, indexed by vertex, built once here at
     /// `start` and never rebuilt — the feature stack is immutable for the
     /// world's lifetime (`VertexFeatureIndex`'s own doc).
@@ -457,15 +531,31 @@ pub struct Driver {
     /// overwritten by the next submission: it names "what was asked most
     /// recently", not "what was asked this exact turn".
     echo: Option<String>,
-    /// The completion vocabulary's v1 scope, refreshed from every parsed
-    /// snapshot (see [`Driver::refresh`]). Held DIRECTLY rather than behind
-    /// a [`hornvale_game_core::Lexicon`]: spec §3 registers exactly one
-    /// scope in v1, so the fold (`Lexicon::candidates`'s ordered
-    /// first-wins dedup over scopes) has nothing to fold — wrapping a single
-    /// scope in a `Vec<Box<dyn CandidateSource>>` would buy allocation and
-    /// indirection without behaviour. The Lexicon becomes the right shape
-    /// the day a second scope lands; this field swaps for it then.
-    scope: hornvale_game_core::CurrentTurnNouns,
+    /// The completion vocabulary's first scope: the current turn's
+    /// examinable catalog, refreshed from every parsed snapshot (see
+    /// [`Driver::refresh`]).
+    ///
+    /// **The day a second scope landed (The Newel, Task 4).** This field
+    /// used to be held directly, with a doc note explaining that v1
+    /// registered exactly one scope so a [`hornvale_game_core::Lexicon`]
+    /// fold had nothing to fold. [`Self::chart_scope`] is that second
+    /// scope, and [`Self::scope`] is the `Lexicon` the two fold into —
+    /// this field now holds the mutable half `Lexicon` itself cannot (a
+    /// `Box<dyn CandidateSource>` cannot be updated in place; only
+    /// re-folded).
+    current_turn_scope: hornvale_game_core::CurrentTurnNouns,
+    /// The completion vocabulary's second scope (The Newel, Task 4):
+    /// settlement/cave marks drawn on the walk-band chart, gated by
+    /// discovery — see [`hornvale_game_core::ChartMarks`]'s own doc for
+    /// why the gate is supplied here rather than inside `core`.
+    chart_scope: hornvale_game_core::ChartMarks,
+    /// The completion vocabulary itself: an ordered, first-wins fold of
+    /// [`Self::current_turn_scope`] then [`Self::chart_scope`], rebuilt at
+    /// the end of every [`Driver::refresh`] from those two fields. First
+    /// wins so a noun in the room you are standing in beats a distant
+    /// chart mark of the same name (seed 42 has 390 settlements under 240
+    /// distinct names, so a collision is real, not hypothetical).
+    scope: hornvale_game_core::Lexicon,
     /// How an ambiguous completion presents (spec §4.2). [`TabStyle::Cycle`]
     /// is implemented and unit-tested but unbound — no preference mechanism
     /// exists yet, so every session runs [`TabStyle::Hint`].
@@ -516,11 +606,41 @@ pub struct Driver {
     // observable without timing anything (`Instant` is banned) — see its
     // own doc for the assertion that could not fail before it existed.
     //
-    // `world_view_vertex` still does NOT thread it (fix round 1, Fix 1):
-    // that call site reads `.vertex` alone and can never populate or read a
-    // hit here, so making three read-only queries advertise mutation to
-    // reach it would buy nothing.
+    // `world_view_tile` still does NOT thread it (fix round 1, Fix 1;
+    // widened at Task 5): that call site never populates or reads a hit
+    // here, so making three read-only queries advertise mutation to reach
+    // it would buy nothing.
     reflectance_cache: plate::ReflectanceCache,
+    /// The walk view's memo over [`hornvale_locale::heading_rose`], carried
+    /// across redraws (The Sett, Task 3) — beside [`Self::reflectance_cache`]
+    /// for the same reason that one is here: the raster is rebuilt every
+    /// redraw and the rose is a pure function of its facet, so a memo that
+    /// died with the frame would pay the whole chain again for a picture that
+    /// mostly did not move. Measured (ledger S7/S8): 114.16 ms unmemoised per
+    /// redraw, 11.31 ms cold and 1.04 ms warm with this.
+    ///
+    /// It is a cost instrument and never a correctness one —
+    /// [`crate::rose::RoseMemo`]'s own doc, and `tests/rose.rs`'s
+    /// `the_raster_is_deterministic_and_the_memo_changes_nothing`.
+    rose_memo: crate::rose::RoseMemo,
+    /// The walk view's mesh memo — the graph arm's equivalent of the one
+    /// [`crate::tiles::TileCache`] owns for the Mercator arm, and a separate
+    /// field because that one is private to the tile cache and the graph arm
+    /// draws no tiles. Long-lived for the same reason: it memoises
+    /// nearest-vertex corner resolution per facet, which a fresh
+    /// `RoomMeshMemo` per redraw would throw away every frame.
+    ///
+    /// **It carries TWO addresses per box since The Sett's Task 9** — the
+    /// grid-level ancestor and the box's own facet, the second for The
+    /// Hachure's bilinear height blend, which until that task recomputed
+    /// four nearest-vertex scans on every box of every frame (ledger S21:
+    /// 65.3% of a 9.712 ms walk-band redraw). That is what makes this field
+    /// accumulate a session's worth of entries rather than a mesh's worth,
+    /// and so what makes [`Driver::bound_rose_mesh_memo`] necessary:
+    /// [`hornvale_kernel::RoomMeshMemo`] is append-only and never evicts, so
+    /// an owner that keeps one for the life of the process has to bound it
+    /// itself.
+    rose_mesh_memo: hornvale_kernel::RoomMeshMemo,
 }
 
 /// What [`Driver::noun_prompt`] saves for `Esc` to restore.
@@ -1047,6 +1167,8 @@ impl Driver {
             strip: None,
             redraw_count: 0,
             marquee_ticks: 0,
+            last_map_facts: None,
+            map_facts_expire_at: None,
             index,
             nearest,
             geo,
@@ -1067,7 +1189,9 @@ impl Driver {
             line: Line::new(),
             history: History::new(),
             echo: None,
-            scope: hornvale_game_core::CurrentTurnNouns::default(),
+            current_turn_scope: CurrentTurnNouns::default(),
+            chart_scope: ChartMarks::default(),
+            scope: Lexicon::new(vec![]),
             tab_style: TabStyle::Hint,
             hint: None,
             cycle: None,
@@ -1076,6 +1200,8 @@ impl Driver {
             walk_scene: None,
             calendar,
             reflectance_cache: plate::ReflectanceCache::new(),
+            rose_memo: crate::rose::RoseMemo::new(),
+            rose_mesh_memo: hornvale_kernel::RoomMeshMemo::default(),
         };
         driver.refresh();
         Ok(driver)
@@ -1348,6 +1474,91 @@ impl Driver {
         )
     }
 
+    /// Empty [`Self::rose_mesh_memo`] once it holds more than
+    /// [`ROSE_MESH_PLATES_KEPT`] plates' worth of entries (The Sett, Task
+    /// 9).
+    ///
+    /// **Why the driver bounds it and the kernel does not.**
+    /// [`hornvale_kernel::RoomMeshMemo`] is append-only by design — its own
+    /// doc says nothing ever invalidates an entry, because a key already
+    /// carries everything its derivation reads — and it is the KERNEL's,
+    /// shared with `windows/locale`, `windows/worldgen` and `windows/lab`.
+    /// Giving it eviction would be a kernel-layer change with four
+    /// consumers, to solve a problem only this client has: every other
+    /// holder scopes a memo to a tick or a session and drops it, while this
+    /// one is a `Driver` field that lives as long as the process. The
+    /// unbounded growth is a property of THIS owner's lifetime, so the bound
+    /// belongs to this owner.
+    ///
+    /// **Why wholesale, and not [`crate::tiles::TileCache`]'s two radii.**
+    /// That precedent was read and does not transfer: `TileCache` owns its
+    /// own `BTreeMap` and evicts with a `retain` over keys it can measure a
+    /// distance on. `RoomMeshMemo` exposes no key iteration, no removal and
+    /// no length — [`hornvale_kernel::RoomMeshMemo::corner_weights_lookup`]
+    /// and the four counters are its whole read surface — so selective
+    /// eviction is not merely more complex out here, it is **not
+    /// expressible** without changing the kernel type. Replacing the whole
+    /// memo is the only bound available above that layer, and it is a
+    /// correct one: the memo is a pure cache, so emptying it costs one cold
+    /// frame (Task 7 measured a cold walk-band frame at 41-43 ms) and
+    /// changes no answer.
+    ///
+    /// **How the size is known without a `len()`.**
+    /// [`hornvale_kernel::RoomMeshMemo::corner_weights_misses`] counts the
+    /// calls that filled a fresh entry, and nothing ever removes one, so for
+    /// a memo this driver owns from empty the miss count **is** the entry
+    /// count. Replacing the memo resets both together, which is what makes
+    /// the reading stay true across a clear: the counters are per-generation
+    /// here, not per-process.
+    ///
+    /// A degenerate plate (zero boxes) gives a cap of zero and empties the
+    /// memo on every call. That is harmless rather than a special case:
+    /// a plate with no boxes fills nothing, so there is never anything to
+    /// throw away.
+    fn bound_rose_mesh_memo(&mut self, plate_width: u16, plate_height: u16) {
+        if self.rose_mesh_memo.corner_weights_misses()
+            > Self::rose_mesh_memo_cap(plate_width, plate_height)
+        {
+            self.rose_mesh_memo = hornvale_kernel::RoomMeshMemo::default();
+        }
+    }
+
+    /// `(hits, misses)` on [`Self::rose_mesh_memo`]'s corner-weight half
+    /// since it was last emptied (The Sett, Task 9).
+    ///
+    /// The `misses` half is also the memo's ENTRY COUNT — nothing ever
+    /// removes an entry, so every miss is one more key — which is what
+    /// [`Self::bound_rose_mesh_memo`] reads to decide whether to empty it,
+    /// and the reason both numbers reset together when it does. A reader
+    /// watching these across redraws therefore sees exactly two things: the
+    /// hit rate the memoised height blend buys, and the moment the bound
+    /// fires.
+    ///
+    /// Public for the cost readout (`examples/sett_raster_bench.rs`) and for
+    /// `tests/driver.rs`, which is the only way either can observe a private
+    /// field's behaviour without timing anything.
+    pub fn rose_mesh_memo_counters(&self) -> (u64, u64) {
+        (
+            self.rose_mesh_memo.corner_weights_hits(),
+            self.rose_mesh_memo.corner_weights_misses(),
+        )
+    }
+
+    /// The entry cap [`Self::bound_rose_mesh_memo`] applies to a
+    /// `plate_width` x `plate_height` plate (The Sett, Task 9) —
+    /// [`ROSE_MESH_PLATES_KEPT`] plates of [`ROSE_MESH_KEYS_PER_BOX`] keys
+    /// each.
+    ///
+    /// Public for the same reason as [`Self::rose_mesh_memo_counters`]: a
+    /// test that asserted against its own copy of this arithmetic would pass
+    /// while the driver used a different number.
+    pub fn rose_mesh_memo_cap(plate_width: u16, plate_height: u16) -> u64 {
+        u64::from(plate_width)
+            * u64::from(plate_height)
+            * ROSE_MESH_KEYS_PER_BOX
+            * ROSE_MESH_PLATES_KEPT
+    }
+
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
     /// `w`-by-`h` redraw — `Some` exactly when the band is one whose plate
     /// is the raster ([`Self::raster_is_drawn`]), `None` otherwise.
@@ -1409,6 +1620,23 @@ impl Driver {
             return None;
         }
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        // THE WALKER'S OWN VIEW IS A GRAPH, NOT A PROJECTION (The Sett, Task
+        // 3). Built BEFORE `plate_light` and the `Spectral` below, because
+        // this borrows `self.rose_memo` mutably and those borrow the session
+        // and the reflectance cache; taking them in this order keeps all
+        // three disjoint without a clone of anything but the anchor facet.
+        let walk_raster = self.drawing_the_walk_view().then(|| {
+            let anchor = self.session.position();
+            crate::rose::RoseRaster::build(&anchor, plate_width, plate_height, &mut self.rose_memo)
+        });
+        // BEFORE the draw, never after (The Sett, Task 9): a memo cleared
+        // after a redraw would throw away the very entries the NEXT redraw
+        // is about to ask for, which is the frame-to-frame reuse the whole
+        // change exists to buy. Cleared here, the cold frame is the one that
+        // was going to pay for new ground anyway.
+        if walk_raster.is_some() {
+            self.bound_rose_mesh_memo(plate_width, plate_height);
+        }
         // THE LIVE SESSION'S OWN PATH (The Wash, Task 6). `main.rs`'s
         // `redraw` calls this method and never `world_plate`, so this is the
         // call that decides what a player actually sees — it is threaded
@@ -1424,6 +1652,51 @@ impl Driver {
             season,
             cache: Some(&mut self.reflectance_cache),
         };
+        // THE SEAM, CHOSEN ONCE (The Sett, Task 4). Every layer of this
+        // redraw — the terrain raster, the feature layer, the perception
+        // layer, and the watercourses inside the terrain layer — places
+        // through THIS value, so the plate and the marks on it cannot come
+        // from two different pictures. `Placement`'s own doc says why a
+        // layer choosing its own would be right in one focus and wrong in
+        // the other, with nothing to show it until someone opened the map.
+        let placement = match walk_raster.as_ref() {
+            Some(raster) => plate::Placement::Graph(raster),
+            None => plate::Placement::Mercator {
+                f: &self.frame,
+                win: &self.window,
+            },
+        };
+        if let Some(raster) = walk_raster.as_ref() {
+            let mut grid = plate::draw_terrain_layer_from_raster(
+                &self.terrain,
+                &self.geo,
+                &self.nearest,
+                &mut self.rose_mesh_memo,
+                raster,
+                plate::colour_allowed(),
+                &mut spectral,
+            );
+            // THE TWO OVERLAYS PLACE THROUGH THE RASTER NOW (The Sett,
+            // Task 4). Until this task they projected through Mercator onto
+            // a graph-addressed plate and landed in the wrong boxes —
+            // measured: one step south of the seed-42 flagship start, the
+            // settlement just left was drawn on top of the walker rather
+            // than one box north of them. The watercourses are back too,
+            // inside the terrain layer where they have always lived; see
+            // `draw_terrain_layer_from_raster`'s own doc.
+            plate::draw_feature_layer(
+                &mut grid,
+                &self.geo,
+                &placement,
+                plate::colour_allowed(),
+                &self.sites,
+                &self.volcanoes,
+                &self.waterfalls,
+                &self.discovered,
+            );
+            self.compose_perception_layer(&mut grid, &placement);
+            return Some(grid);
+        }
         let mut grid = self.tiles.compose(
             &self.terrain,
             &self.geo,
@@ -1441,8 +1714,7 @@ impl Driver {
         plate::draw_feature_layer(
             &mut grid,
             &self.geo,
-            &self.frame,
-            &self.window,
+            &placement,
             plate::colour_allowed(),
             &self.sites,
             &self.volcanoes,
@@ -1458,7 +1730,7 @@ impl Driver {
         // every frame like the feature layer and for the same reason: it is a
         // handful of projections, and giving it an invalidation key is the
         // defect `CLIENT-tiles-need-the-overlay-split` records.
-        self.compose_perception_layer(&mut grid);
+        self.compose_perception_layer(&mut grid, &placement);
         Some(grid)
     }
 
@@ -1884,6 +2156,35 @@ impl Driver {
         self.on_walk_band
     }
 
+    /// Whether the plate about to be drawn is **the walker's own view** —
+    /// the walk band, at the walk rung, and not the map (The Sett, Task 3).
+    /// That plate is the compass rose iterated outward
+    /// ([`crate::rose::RoseRaster`]); every other plate this client draws is
+    /// still Mercator.
+    ///
+    /// **The band gate is not here, and moving it here would be F5 again.**
+    /// [`Self::raster_is_drawn`] answers whether a plate is drawn at all, and
+    /// its own doc records what happened when that question was asked of the
+    /// FOCUS instead: typing `map` inside a chamber replaced the floor plan
+    /// with the world raster, and [`Self::compose_perception_layer`]
+    /// correctly refuses off the walk band, so nothing marked the player's
+    /// position. This method chooses WHICH raster and never WHETHER one; the
+    /// caller asks `raster_is_drawn` first and this second.
+    ///
+    /// **[`Focus::Cli`] gets the rose raster too**, because a player typing
+    /// into the command line is still walking and is still looking at the
+    /// walk view (ledger, "Ruling 1 [G4]"). Only [`Focus::Map`] is exempt,
+    /// and the exemption is about state rather than taste: the map is a
+    /// geographic instrument with a cursor, a pan and a zoom, all expressed
+    /// as [`Window`] origin moves on a chart the rose raster does not have,
+    /// so making it a graph view would mean giving panning an anchor facet
+    /// this campaign has no need of. The map opens at
+    /// [`plate::map_entry_rung`], which is coarser than the walk rung, so
+    /// this clause bites only on a map zoomed all the way back in.
+    fn drawing_the_walk_view(&self) -> bool {
+        self.at_walk_band_rung() && self.focus != Focus::Map
+    }
+
     /// The active plate's own width and height, in grid columns and rows —
     /// the chamber band's fixed
     /// [`hornvale_game_core::spread::PLATE_WIDTH`] and `self.plate_height`
@@ -2238,6 +2539,21 @@ impl Driver {
         &self.frame
     }
 
+    /// The facet the possessed body is standing on right now — the walk
+    /// view's raster anchor ([`crate::rose::RoseRaster::build`]), and the
+    /// facet [`hornvale_locale::heading_rose`] is asked about when an arrow
+    /// key moves.
+    ///
+    /// **`pub` for the same reason [`Self::window`] is** (The Sett, Task 3):
+    /// the campaign's headline assertion — the box left of the mark is where
+    /// the left arrow goes — has to name the observer's own facet to say
+    /// anything, and a test that reconstructed it from a coordinate would be
+    /// asserting against a projection rather than against the address. The
+    /// session already owns this; nothing here derives it.
+    pub fn observer_facet(&self) -> hornvale_kernel::Facet {
+        self.session.position()
+    }
+
     /// Recompute `self.strip` for the current band and cursor position. See
     /// the module doc: only the walk band resolves, and it resolves the
     /// vertex the CURSOR points at, not the observer's own — every other band
@@ -2250,7 +2566,29 @@ impl Driver {
     /// the strip always also advances its scroll position by construction,
     /// rather than the two drifting out of step because some call site
     /// remembered one and not the other.
+    ///
+    /// **Also decides whether [`Self::map_facts_text`] gets a fresh
+    /// reading window (Task 6, B4 half b).** Every real redraw recomputes
+    /// the block and compares it against [`Self::last_map_facts`]; only a
+    /// redraw where it actually differs — a zoom, a recentre, a resize,
+    /// anything that moves the rung or the frame — restarts
+    /// [`Self::map_facts_expire_at`]. A redraw that leaves the block
+    /// unchanged (the common case: a plain cursor move) neither starts nor
+    /// extends a window, which is the whole point — these are facts about
+    /// the gesture just taken, not about wherever the cursor now sits.
     fn refresh_strip(&mut self) {
+        let facts = self.map_facts_text();
+        if self.last_map_facts.as_deref() != Some(facts.as_str()) {
+            // A GESTURE CHANGED THE MAP-WIDE FACTS. Restart the reading
+            // window at full length even if an earlier gesture's window
+            // was already mid-decay: each disclosure is fresh news about
+            // whatever was just done, not a shared queue slot, so a rung
+            // that changes twice in quick succession (zoom, zoom again)
+            // earns its own full `RUNG_LINE_TICKS` rather than inheriting
+            // whatever was left of the first change's clock.
+            self.map_facts_expire_at = Some(self.marquee_ticks.wrapping_add(RUNG_LINE_TICKS));
+        }
+        self.last_map_facts = Some(facts);
         self.strip = Some(self.resolve());
         self.redraw_count = self.redraw_count.wrapping_add(1);
     }
@@ -2258,8 +2596,26 @@ impl Driver {
     /// Advance the marquee by one tick. Called by the render loop when its
     /// input poll times out — never by an input handler, which is the
     /// whole point: the strip must scroll while the player does nothing.
+    ///
+    /// **Also the map-wide facts block's own decay clock (Task 6, B4 half
+    /// b).** Once [`Self::map_facts_expire_at`] is reached, the window
+    /// closes and the strip is recomputed immediately — not on the next
+    /// real redraw — so the block visibly decays with no player action at
+    /// all, the same "advances on ticks with no player action" guarantee
+    /// the marquee's own scroll is pinned to. This does not touch
+    /// [`Self::redraw_count`]: decay is driven by the clock, not a redraw,
+    /// exactly as that field's own doc distinguishes.
     pub fn tick_marquee(&mut self) {
         self.marquee_ticks = self.marquee_ticks.wrapping_add(1);
+        if self
+            .map_facts_expire_at
+            .is_some_and(|at| self.marquee_ticks >= at)
+        {
+            self.map_facts_expire_at = None;
+            if self.strip.is_some() {
+                self.strip = Some(self.resolve());
+            }
+        }
     }
 
     /// Whether the strip currently has more text than plate width, i.e.
@@ -2314,8 +2670,20 @@ impl Driver {
     /// walk-band scene, in which case the vertex the cursor points at
     /// ([`Self::resolve_walk_band`]; see the module doc for the chain from
     /// a screen position to a `Vertex`) is resolved against the
-    /// terrain-feature index — [`UNNAMED_TERRAIN`] if that chain comes up
-    /// empty at any step.
+    /// terrain-feature index, falling back to [`Self::resolve_world_view_at`]
+    /// (the SAME fallback the world view itself uses) wherever
+    /// `resolve_walk_band` finds no perceived facet under the cursor — the
+    /// common case, per that method's own doc.
+    ///
+    /// **B4 (Task 5): the fallback branch also carries [`Self::site_note`]**
+    /// — decision 0670's own gate, applied here exactly as Task 4 applied it
+    /// to a chart mark's name. It is asked separately from [`Self::resolve_
+    /// world_view_at`], not folded into it, because that method's own
+    /// structural blindness to [`Self::sites`] is a pinned property (see its
+    /// doc). **`UNNAMED_TERRAIN` is retired at this task**: since
+    /// [`Self::resolve_world_view`] is total (`plate::terrain_at_tile` never
+    /// fails), there is no longer a case where this method has nothing to
+    /// say about the tile under the cursor.
     fn resolve(&self) -> String {
         let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) else {
             return NOTHING_HERE_YET.to_string();
@@ -2341,10 +2709,27 @@ impl Driver {
         // returns `None` off band B and on any tile the overlay left to the
         // raster, which is what makes the fallback the common case rather
         // than an error path.
-        let base = self
-            .resolve_walk_band()
-            .or_else(|| self.resolve_world_view())
-            .unwrap_or_else(|| UNNAMED_TERRAIN.to_string());
+        let base = match self.resolve_walk_band() {
+            Some(text) => text,
+            None => {
+                // `resolve_world_view` (the chain plus the terrain readout)
+                // and `site_note` (the decision-0670 gate) each resolve the
+                // cursor's own tile independently rather than sharing one —
+                // `resolve_world_view`'s signature is exercised directly by
+                // several tests (`the_vertex_under_the_cursor_matches_the_
+                // window_at_every_zoom_and_offset` among them), so it stays
+                // a self-contained `&self -> Option<String>` query rather
+                // than threading a pre-resolved tile through it.
+                let mut text = self
+                    .resolve_world_view()
+                    .expect("Self::resolve_world_view is total since Task 5");
+                if let Some(note) = self.site_note(&self.world_view_tile().facet) {
+                    text.push_str(" — ");
+                    text.push_str(&note);
+                }
+                text
+            }
+        };
         let text = self.world_view_caption(base);
         if self.at_walk_band_rung() {
             caption(text, sight.as_ref())
@@ -2353,29 +2738,46 @@ impl Driver {
         }
     }
 
-    /// Append §3.3's clamp/central-line caption, and F5's resolution
-    /// disclosure when the active zoom covers more than one terrain vertex
-    /// per character, to `base` (the resolved containment chain, or
-    /// [`UNNAMED_TERRAIN`]). Unlike the walk band's [`caption`], this runs
-    /// UNCONDITIONALLY — the world view carries no sight channel to gate on
-    /// ([`Self::resolve_world_view`]'s own doc), and both captions are true
-    /// of the picture itself, independent of whether the cursor happens to
-    /// sit on a named feature.
+    /// Append [`Self::map_facts_text`] to `base` (the resolved containment
+    /// chain plus B4's terrain readout — see [`Self::resolve`]) whenever
+    /// [`Self::map_facts_are_recent`] says the block is still within its
+    /// post-gesture reading window (Task 6, B4 half b). Unlike the walk
+    /// band's [`caption`], every clause in the block is true of the
+    /// picture itself, independent of whether the cursor happens to sit on
+    /// a named feature — what gates it here is not the cursor at all, but
+    /// how recently a gesture actually changed one of those facts.
     fn world_view_caption(&self, base: String) -> String {
         let mut text = base;
-        // THE RUNG LINE COMES FIRST, and the order is a measurement rather
-        // than a preference (fix round 1, Important 3). The strip MARQUEES:
-        // on the 80x24 floor the plate is 40 columns and a tick is 300 ms, so
-        // a clause's position in this string is a delay before the reader can
-        // read it. With the rung line emitted third it began at character 90
-        // — the word "rung" first scrolled into view after ~15 s and the
-        // clause was readable after ~44 s. That made the one disclosure that
-        // answers "criteria I have not identified" the SLOWEST thing on the
-        // strip to reach. `mercator::clamp_caption` is 69 characters, static,
-        // and says the same thing at every rung and every cursor position, so
-        // it is exactly what should be waited for instead.
-        text.push_str(" — ");
-        text.push_str(&self.rung_caption());
+        if self.map_facts_are_recent() {
+            text.push_str(" — ");
+            text.push_str(&self.map_facts_text());
+        }
+        text
+    }
+
+    /// The map-wide facts block itself: §3.3's clamp/central-line caption
+    /// and F5's resolution disclosure (when the active zoom covers more
+    /// than one terrain vertex per character), appended to
+    /// [`Self::rung_caption`] — never gated on the cursor, because all
+    /// three are true of the picture rather than of any one tile. See
+    /// [`Self::world_view_caption`] for when this actually reaches the
+    /// strip, and [`Self::refresh_strip`]/[`Self::map_facts_are_recent`]
+    /// for the decay this task adds on top of a block that used to run
+    /// unconditionally.
+    ///
+    /// **THE RUNG LINE COMES FIRST, and the order is a measurement rather
+    /// than a preference (fix round 1, Important 3).** The strip MARQUEES:
+    /// on the 80x24 floor the plate is 40 columns and a tick is 300 ms, so
+    /// a clause's position in this string is a delay before the reader can
+    /// read it. With the rung line emitted third it began at character 90
+    /// — the word "rung" first scrolled into view after ~15 s and the
+    /// clause was readable after ~44 s. That made the one disclosure that
+    /// answers "criteria I have not identified" the SLOWEST thing on the
+    /// strip to reach. `mercator::clamp_caption` is 69 characters, static,
+    /// and says the same thing at every rung and every cursor position, so
+    /// it is exactly what should be waited for instead.
+    fn map_facts_text(&self) -> String {
+        let mut text = self.rung_caption();
         text.push_str(" — ");
         text.push_str(&mercator::clamp_caption(&self.frame));
         if let Some(disclosure) = self.resolution_disclosure() {
@@ -2383,6 +2785,16 @@ impl Driver {
             text.push_str(&disclosure);
         }
         text
+    }
+
+    /// Whether [`Self::map_facts_text`] is still inside its post-gesture
+    /// reading window (Task 6, B4 half b): `true` from the marquee tick a
+    /// gesture actually changed the block until [`RUNG_LINE_TICKS`] ticks
+    /// later, `false` otherwise — including before the very first refresh,
+    /// when [`Self::map_facts_expire_at`] is still `None`.
+    fn map_facts_are_recent(&self) -> bool {
+        self.map_facts_expire_at
+            .is_some_and(|expire_at| self.marquee_ticks < expire_at)
     }
 
     /// **THE RUNG LINE**, and the half of Nathan's founding report that no
@@ -2497,11 +2909,11 @@ impl Driver {
         ))
     }
 
-    /// The world view's own resolved [`hornvale_kernel::Vertex`] at the
+    /// The world view's own resolved [`plate::TileTerrain`] at the
     /// cursor's current screen position — [`plate::terrain_at_tile`], the
     /// SAME per-tile mesh addressing [`plate::draw_with`] itself paints
     /// from (one source of truth; see that function's own doc), asked for
-    /// the painted class's own representative vertex.
+    /// the painted class's own representative tile.
     ///
     /// **Fix round 1, Finding 2 (the reviewer's own framing, which
     /// improved on this task's first pass): the earlier single-centre-
@@ -2516,7 +2928,7 @@ impl Driver {
     /// still real: a player could point at a character drawn `~` and have
     /// the strip name a real feature on a LAND vertex nearest that
     /// character's exact centre. This method closes that: it can never
-    /// return a vertex whose class
+    /// return a tile whose class
     /// disagrees with what [`plate::draw_with`] would paint at the same
     /// screen position, because it asks the identical question for the
     /// identical answer, and picks a REPRESENTATIVE of the painted class.
@@ -2535,21 +2947,29 @@ impl Driver {
     /// position, against holding cross-call state for a pure function.
     ///
     /// **Stays `&self` (fix round 1, Fix 1: reverted from an earlier `&mut
-    /// self`).** This method's own next line reads only `.vertex` off the
-    /// result and discards the rest — a context here "would buy a discarded
-    /// reflectance per keypress", and that argument is STRUCTURAL, not
-    /// until-Task-6: this call site can never populate the `(FacetId,
-    /// season)` cache and can never read a hit from it, so threading
-    /// [`Self::reflectance_cache`] through by `&mut` here bought a false
-    /// appearance of use at the cost of making three read-only queries
-    /// (`resolve`/`resolve_world_view`/this one) advertise mutation to
-    /// every future caller. `season`/`reflectance_cache` below stay `0`/
-    /// `None` for that reason — and note that this is now the ONLY
-    /// `terrain_at_tile` call in the shipped tree that passes `ctx: None`
-    /// deliberately: [`plate::draw_terrain_layer`]'s call was the other one
-    /// and The Wash's Task 6 flipped it. See [`Self::reflectance_cache`]'s
-    /// own doc for where the field's real readers are.
-    fn world_view_vertex(&self) -> hornvale_kernel::Vertex {
+    /// self`).** Before Task 5 this method returned only `.vertex` and
+    /// discarded the rest of the struct — a context here "would buy a
+    /// discarded reflectance per keypress", and that argument is
+    /// STRUCTURAL, not until-Task-6: this
+    /// call site can never populate the `(FacetId, season)` cache and can
+    /// never read a hit from it, so threading [`Self::reflectance_cache`]
+    /// through by `&mut` here bought a false appearance of use at the cost
+    /// of making three read-only queries (`resolve`/`resolve_world_view`/
+    /// this one) advertise mutation to every future caller.
+    /// `season`/`reflectance_cache` below stay `0`/`None` for that reason —
+    /// and note that this is now the ONLY `terrain_at_tile` call in the
+    /// shipped tree that passes `ctx: None` deliberately:
+    /// [`plate::draw_terrain_layer`]'s call was the other one and The
+    /// Wash's Task 6 flipped it. See [`Self::reflectance_cache`]'s own doc
+    /// for where the field's real readers are.
+    ///
+    /// **Widened from a bare `Vertex` at Task 5 (B4).** The tile readout
+    /// (`Self::terrain_readout`) needs `water`/`band`/`height_asl`, and the
+    /// site note (`Self::site_note`) needs `facet` — three more fields off
+    /// the exact tile this call already resolves, so [`Self::resolve`] and
+    /// [`Self::resolve_world_view_at`] share the one struct rather than
+    /// each re-resolving the cursor's screen position.
+    fn world_view_tile(&self) -> plate::TileTerrain {
         let (virtual_w, virtual_h) = plate::virtual_dims(self.window.depth);
         plate::terrain_at_tile(
             &self.terrain,
@@ -2562,32 +2982,162 @@ impl Driver {
             virtual_h,
             u32::from(self.cursor.y),
             u32::from(self.cursor.x),
-            // This reads `.vertex` and nothing else, so a context here would
-            // buy a discarded reflectance per keypress.
+            // This reads `.vertex`/`.water`/`.band`/`.height_asl`/`.facet`
+            // and nothing else, so a context here would buy a discarded
+            // reflectance per keypress.
             None,
             hornvale_kernel::WorldTime::GENESIS,
             0,
             None,
         )
-        .vertex
     }
 
-    /// The world view's own resolution chain: [`Self::world_view_vertex`] to
-    /// the FULL containment chain there (Task 4, Step 1) — every feature at
-    /// the resolved vertex, most specific first, each with its class named in
-    /// prose (design spec §5).
-    fn resolve_world_view(&self) -> Option<String> {
-        let vertex_id = self.world_view_vertex();
+    /// **B4's terrain readout** (spec §4.4): the tile's own water class,
+    /// relief band and height above sea level, in prose — independent of
+    /// whether any gazetteer feature is named there at all. Before this
+    /// task the strip's standing content was 13.3% tile / 86.7% map (188
+    /// characters measured at the flagship, 25 about the tile); this is
+    /// the fill for that gap, built entirely from fields already carried
+    /// on [`plate::TileTerrain`] (`plate.rs:2170-2233`) rather than a new
+    /// derivation.
+    ///
+    /// `water`/`band` are indices into the SAME legends the renderer
+    /// itself classifies by (`hornvale_terrain::WaterKind::LEGEND`,
+    /// `hornvale_scene::RELIEF_LEGEND`), so this can never name a class the
+    /// picture disagrees with. `height_asl` is rounded to the nearest
+    /// metre for prose — the continuous reading is what
+    /// [`plate::TileTerrain::height_asl`]'s own doc says a sub-band
+    /// consumer would want, and a marquee line is not that consumer.
+    fn terrain_readout(tile: &plate::TileTerrain) -> String {
+        let water = hornvale_terrain::WaterKind::LEGEND[usize::from(tile.water)];
+        let relief = hornvale_scene::RELIEF_LEGEND[tile.band as usize];
+        let height = tile.height_asl.get().round() as i64;
+        format!("{water}, {relief}, {height} m above sea level")
+    }
+
+    /// The world view's own resolution chain plus B4's terrain readout, at
+    /// an ALREADY-RESOLVED `tile` — the shared body [`Self::resolve_world_
+    /// view`] and [`Self::resolve`] both build on, so the tile is paid for
+    /// once per keypress rather than once per consumer.
+    ///
+    /// **Deliberately blind to [`Self::sites`]**, and that is a pinned
+    /// property, not an oversight: `site_drawing_never_depends_on_
+    /// discovery_and_resolve_world_view_never_leaks_a_name` proves this
+    /// method is a pure function of `self.index` and the cursor position,
+    /// structurally unable to read `self.sites` at all. A placed site's
+    /// mention belongs to [`Self::site_note`], called separately by
+    /// [`Self::resolve`] — never folded in here, or that proof would stop
+    /// being true.
+    fn resolve_world_view_at(&self, tile: &plate::TileTerrain) -> String {
         let (species, ph, morph) = &self.namer;
-        resolve_chain_at(
+        let chain = resolve_chain_at(
             &self.index,
-            vertex_id,
+            tile.vertex,
             self.seed,
             species,
             ph,
             morph,
             &|id| self.discovered.contains(FeatureId::Extent(id)),
-        )
+        );
+        let readout = Self::terrain_readout(tile);
+        match chain {
+            Some(chain) => format!("{chain} — {readout}"),
+            None => readout,
+        }
+    }
+
+    /// The world view's own resolution chain plus B4's terrain readout, at
+    /// the cursor's current screen position — [`Self::world_view_tile`]
+    /// widened to the FULL containment chain there (Task 4, Step 1)
+    /// plus [`Self::terrain_readout`] (Task 5, B4). Every feature at the
+    /// resolved vertex, most specific first, each with its class named in
+    /// prose (design spec §5), followed by the tile's own water/relief/
+    /// height reading.
+    ///
+    /// **Always `Some` now** (Task 5): [`plate::terrain_at_tile`] is total,
+    /// so there is always a terrain readout to report even where the
+    /// containment chain is empty — the `None` this used to return for an
+    /// unfeatured vertex is gone, and with it the whole reason `Self::resolve`
+    /// ever needed a literal `"unnamed terrain"` fallback string (retired
+    /// at this task; see [`Self::resolve`]'s own doc).
+    fn resolve_world_view(&self) -> Option<String> {
+        Some(self.resolve_world_view_at(&self.world_view_tile()))
+    }
+
+    /// **The site's KIND, ungated; its NAME is what decision 0670 gates**
+    /// (Task 5, B4; corrected in this campaign's fix wave). Nathan's own
+    /// ruling, quoted in
+    /// `site_drawing_never_depends_on_discovery_and_the_cursor_never_leaks_
+    /// a_name`'s doc: *"We can say it's a cave, a village, etc, just don't
+    /// give its name."* `MapSite` carries no proper name at all (spec §7
+    /// non-goal), so there is nothing here for 0670 to withhold and this
+    /// method reports the kind whether or not the site has been encountered.
+    ///
+    /// **What the discovery gate used to be defending, and why it could not
+    /// defend it.** The gate's stated rationale was that silence-versus-not
+    /// would let a reader infer *something is here*. But
+    /// [`plate::draw_feature_layer`] draws the glyph at every rung
+    /// UNGATED (The Prospect, Gate A) — the reader is looking straight at a
+    /// `*` when they point the cursor at it — so the inference the gate was
+    /// protecting against is not available to protect. What it cost instead
+    /// was B4 itself: cursor on a visible cave glyph, strip says nothing.
+    ///
+    /// The name gate is unaffected and lives where a name actually exists:
+    /// [`hornvale_game_core::lexicon::ChartMarks::update`] withholds a
+    /// mark's proper name until discovery (Task 4), and
+    /// [`Self::resolve_world_view_at`] is structurally blind to
+    /// [`Self::sites`] entirely (a pinned property — see its own doc).
+    ///
+    /// `None` only when nothing placed stands on `facet`.
+    ///
+    /// **Structurally live only at band B's own rung — a known limitation
+    /// of this call, not a deliberate precision choice, and fix round 1
+    /// corrects an earlier version of this doc that claimed otherwise.**
+    /// `facet` is always [`Self::world_view_tile`]'s `.facet` — a facet at
+    /// the ACTIVE window's own depth — while `MapSite::placed` is a facet
+    /// fixed at walk-band granularity (`hornvale_worldgen::site_facet_for`'s
+    /// own doc). Facet equality between the two can only ever hold where
+    /// the active depth IS [`BAND_B_RUNG`], which [`Self::resolve`] reaches
+    /// whenever [`Self::resolve_walk_band`] finds no perceived facet at
+    /// BAND_B_RUNG itself — never at a coarser world-view rung.
+    ///
+    /// **This is NOT false precision being avoided.** A site's glyph is
+    /// drawn by [`plate::draw_feature_layer`] at every rung via a pure
+    /// geometric projection of `MapSite::coord`, independent of
+    /// `window.depth` — its screen position is exact at every zoom, unlike
+    /// the statistically blended terrain readout
+    /// [`Self::oversample_disclosure`] exists to caveat. So a reader who
+    /// points the cursor exactly at a drawn glyph at, say, `GLOBE_RUNG` and
+    /// gets no mention is not being protected from an over-precise claim —
+    /// the readout is simply silent because the matching primitive this
+    /// method reuses (`plate::sites_standing_in`'s exact `Facet` equality)
+    /// was shaped for the walk band's own room-standing check
+    /// (`Self::discover_placed_sites_at`) and was never adapted for a
+    /// coarser rung. Task 4's `ChartMarks::update` is not a precedent for
+    /// this shape either: its silence off the walk band is a different
+    /// axis (it reads no chart at all outside `Spatial::Walk`), not a
+    /// rung-vs-rung facet mismatch.
+    ///
+    /// **What would lift it:** matching by something rung-independent —
+    /// e.g. projecting `MapSite::coord` through the active window the same
+    /// way [`plate::draw_feature_layer`] does and comparing screen tiles,
+    /// or matching on [`plate::MapSite::vertex`]'s canonical mesh vertex
+    /// (the same granularity [`Self::resolve_world_view_at`]'s containment
+    /// chain already resolves at) instead of the placed `Facet`. Out of
+    /// scope for this task; recorded here so the silence is legible rather
+    /// than looking like a design decision it is not.
+    fn site_note(&self, facet: &Facet) -> Option<String> {
+        plate::sites_standing_in(&self.sites, facet)
+            .into_iter()
+            .next()
+            .map(|id| match id {
+                FeatureId::Settlement(_) => "a settlement stands here".to_string(),
+                FeatureId::Cave(_) => "a cave mouth stands here".to_string(),
+                FeatureId::Exotic(_) => "something unusual stands here".to_string(),
+                FeatureId::Extent(_) => {
+                    unreachable!("plate::sites_standing_in never yields a FeatureId::Extent")
+                }
+            })
     }
 
     /// The walk band's own resolution chain, cursor position to the full
@@ -2710,7 +3260,11 @@ impl Driver {
     /// one of them would collapse onto the observer's single tile and the
     /// overlay would claim to place facets it had merged — and off the walk
     /// band because there is no packet to draw.
-    fn compose_perception_layer(&self, dst: &mut hornvale_game_core::Grid) {
+    fn compose_perception_layer(
+        &self,
+        dst: &mut hornvale_game_core::Grid,
+        placement: &plate::Placement<'_>,
+    ) {
         let Some(scene) = self.walk_band_scene() else {
             return;
         };
@@ -2734,13 +3288,7 @@ impl Driver {
         if !self.at_walk_band_rung() {
             perceived.retain(|p| p.here);
         }
-        plate::draw_perception_layer(
-            dst,
-            &self.frame,
-            &self.window,
-            plate::colour_allowed(),
-            &perceived,
-        );
+        plate::draw_perception_layer(dst, placement, plate::colour_allowed(), &perceived);
     }
 
     /// Scroll band B's window so the observer's own facet sits at the middle
@@ -2899,6 +3447,45 @@ impl Driver {
             .map(|h| (h.stem.clone(), h.matches.clone()))
     }
 
+    /// The discovery predicate [`Self::refresh`] feeds
+    /// [`hornvale_game_core::ChartMarks::update`] (The Newel, Task 4;
+    /// decision 0670). A free associated function rather than an inline
+    /// closure so a test can drive it directly against a known room,
+    /// without needing that room's own settlement or cave to actually
+    /// appear on a live chart within walking distance of wherever a test
+    /// driver happens to start.
+    ///
+    /// Resolves the same chain [`Self::resolve_walk_band`] resolves a
+    /// cursor position with: a packed room id, [`FacetId::unpack`] to a
+    /// [`Facet`], [`Facet::coord`] to a lat/lon,
+    /// [`NearestVertexIndex::nearest`] to a [`hornvale_kernel::Vertex`] —
+    /// and then the same `discovered` ledger [`Self::update_discovery`]
+    /// writes. `kind` is only ever `"settlement"` or `"cave"`
+    /// (`ChartMarks::update`'s own doc: an `"agent"` mark never reaches
+    /// this function at all, because it is not a placed site and decision
+    /// 0670 never asked to gate it). An unpackable room id gates closed
+    /// (`false`) rather than panicking — the same defensive posture
+    /// `Self::resolve_walk_band`'s own `FacetId::unpack().ok()?` takes.
+    fn site_is_discovered(
+        geo: &hornvale_kernel::Geosphere,
+        nearest: &NearestVertexIndex,
+        discovered: &Discovered,
+        kind: &str,
+        room: u64,
+    ) -> bool {
+        let Ok(facet) = FacetId(room).unpack() else {
+            return false;
+        };
+        let coord = facet.coord();
+        let vertex = nearest.nearest(geo, coord.latitude, coord.longitude);
+        let feature = if kind == "settlement" {
+            FeatureId::Settlement(vertex)
+        } else {
+            FeatureId::Cave(vertex)
+        };
+        discovered.contains(feature)
+    }
+
     /// Re-derive `cached` from the live session. A snapshot read can fail
     /// only when the session itself is not live, which cannot happen
     /// between `start` succeeding and `Drop` running — so a failure here
@@ -2912,12 +3499,33 @@ impl Driver {
             .unwrap_or_default();
         // The completion scope rides every refresh: parse (which can fail
         // only as `refresh`'s own doc describes — a dead session) and
-        // replace the noun catalog from the new narration. On failure the
-        // previous catalog stands rather than being cleared: stale
-        // candidates complete nothing harmful, and an empty one mid-session
-        // would be a regression masquerading as caution.
+        // replace both scopes from the new snapshot, then re-fold them into
+        // `self.scope`. On failure every stale value stands rather than
+        // being cleared: stale candidates complete nothing harmful, and an
+        // empty one mid-session would be a regression masquerading as
+        // caution.
         if let Ok(snap) = hornvale_game_core::Snapshot::parse(&self.cached) {
-            self.scope.update(&snap.narration);
+            self.current_turn_scope.update(&snap.narration);
+            // The chart scope's own discovery gate (decision 0670: a
+            // placed site's glyph draws ungated, its proper name does
+            // not). Resolved the same way `Self::resolve_walk_band`
+            // resolves a cursor position — a packed room id,
+            // `FacetId::unpack` to a `Facet`, `Facet::coord` to a
+            // lat/lon, `NearestVertexIndex::nearest` to a `Vertex` — and
+            // then the same `self.discovered` ledger `update_discovery`
+            // writes. `ChartMarks::update`'s own doc: an `"agent"` mark
+            // never reaches this closure at all, because it is not a
+            // placed site and decision 0670 never asked to gate it.
+            let geo = &self.geo;
+            let nearest = &self.nearest;
+            let discovered = &self.discovered;
+            self.chart_scope.update(&snap.spatial, |kind, room| {
+                Self::site_is_discovered(geo, nearest, discovered, kind, room)
+            });
+            self.scope = Lexicon::new(vec![
+                Box::new(self.current_turn_scope.clone()),
+                Box::new(self.chart_scope.clone()),
+            ]);
             // The band, from the same parse (see `on_walk_band`'s own doc for
             // why it is cached and not re-derived per keypress). On a parse
             // failure the previous value stands, the same posture the scope
@@ -4355,7 +4963,7 @@ mod portolan_tests {
     /// bug shared by both copies (one living in `virtual_dims`, or in
     /// `move_cursor`'s scroll math). What it DOES catch, and the reason it
     /// is kept rather than deleted: a future edit that reintroduces a
-    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_vertex`
+    /// stale or hardcoded value INSIDE `resolve_world_view`/`world_view_tile`
     /// alone — a revert-to-no-op mutation of the whole zoom/scroll feature
     /// failed 12 of 15 tests in this module (task report, "behavioural
     /// REDs"), proving this is not vacuous even though it is not
@@ -4383,7 +4991,7 @@ mod portolan_tests {
                 d.apply(Action::CursorBy(dx, dy));
 
                 let (virtual_w, virtual_h) = plate::virtual_dims(d.window().depth);
-                let expected_vertex = plate::terrain_at_tile(
+                let expected_tile = plate::terrain_at_tile(
                     &d.terrain,
                     &d.geo,
                     &d.nearest,
@@ -4398,8 +5006,7 @@ mod portolan_tests {
                     hornvale_kernel::WorldTime::GENESIS,
                     0,
                     None,
-                )
-                .vertex;
+                );
                 let (species, ph, morph) = &d.namer;
                 // `resolve_chain_at`, not `resolve_at`: Task 4 made
                 // `resolve_world_view` (`resolved`, below) return the FULL
@@ -4407,15 +5014,27 @@ mod portolan_tests {
                 // must build the same chain to stay comparable — this test's
                 // own H3 claim (window/cursor state agrees with the
                 // resolver) is orthogonal to how many features get named.
-                let expected = resolve_chain_at(
+                //
+                // **Widened at Task 5 (B4) to the chain plus the terrain
+                // readout**, the same combination `resolve_world_view_at`
+                // builds — `resolve_world_view` is no longer chain-only, so
+                // an independent reconstruction that stopped at the chain
+                // would silently compare against a value the resolver no
+                // longer returns.
+                let expected_chain = resolve_chain_at(
                     &d.index,
-                    expected_vertex,
+                    expected_tile.vertex,
                     d.seed,
                     species,
                     ph,
                     morph,
                     &|id| d.discovered.contains(FeatureId::Extent(id)),
                 );
+                let expected_readout = Driver::terrain_readout(&expected_tile);
+                let expected = Some(match expected_chain {
+                    Some(chain) => format!("{chain} — {expected_readout}"),
+                    None => expected_readout,
+                });
 
                 let resolved = d.resolve_world_view();
                 assert_eq!(
@@ -4484,7 +5103,7 @@ mod portolan_tests {
             );
             let drawn_ocean = grid.get(d.cursor.x, d.cursor.y).and_then(|c| c.glyph) == Some('~');
 
-            let resolved_vertex = d.world_view_vertex();
+            let resolved_vertex = d.world_view_tile().vertex;
             let resolved_ocean = d.terrain.is_ocean(resolved_vertex);
 
             assert_eq!(
@@ -4519,20 +5138,72 @@ mod portolan_tests {
         );
     }
 
+    /// Split B4's terrain readout at its trailing height clause:
+    /// `("… relief,", height_m)`. `height_asl` is a CONTINUOUS reading
+    /// (`Self::terrain_readout`'s own doc), unlike the water/relief/chain
+    /// classes beside it, which are all discrete lookups keyed on the
+    /// NEAREST mesh vertex — kilometres-scale snapping that a sub-pixel
+    /// re-projection can never cross. `recentre_keeps_the_same_geographic_
+    /// point_under_the_cursor` needs this split for exactly that reason.
+    fn split_off_height(s: &str) -> (String, i64) {
+        let suffix = " m above sea level";
+        let with_suffix = s
+            .strip_suffix(suffix)
+            .expect("a world-view readout always ends in the height clause");
+        let comma = with_suffix
+            .rfind(", ")
+            .expect("the readout always has a relief clause before the height");
+        let (prefix, height) = with_suffix.split_at(comma);
+        (
+            prefix.to_string(),
+            height[2..]
+                .parse()
+                .expect("the height clause is a signed integer"),
+        )
+    }
+
+    /// **Finding, not a regression (Task 5).** Before B4 this compared the
+    /// two readouts for exact equality, which held because the only content
+    /// was the containment chain — a NAME keyed to the nearest mesh vertex,
+    /// kilometres apart, so no sub-pixel re-projection jitter could ever
+    /// change it. B4 adds `height_asl`, a CONTINUOUS reading
+    /// (`plate::TileTerrain::height_asl`'s own doc): `recentre` re-derives
+    /// the window's origin so the cursor's own SCREEN tile lands where it
+    /// already sat (`Self::recentre`'s own doc), not so the exact
+    /// real-valued (lat, lon) under it is bit-identical — Mercator's
+    /// non-linearity means those are not quite the same promise. Measured
+    /// on this fixture: a 1 m drift (-2321 to -2322) survives the round
+    /// trip. So this test now asserts what recentring actually promises —
+    /// the SAME feature named, at the SAME water class and relief band —
+    /// exactly, and the continuous height within a bound generous enough to
+    /// absorb re-projection noise without being vacuous (a real
+    /// off-by-a-band error, ≥300 m, would still fail it).
     #[test]
     fn recentre_keeps_the_same_geographic_point_under_the_cursor() {
         let mut d = test_driver();
         enter_world_view(&mut d);
         d.apply(Action::CursorBy(9, 5));
-        let before_name = d.resolve_world_view();
+        let before_name = d
+            .resolve_world_view()
+            .expect("Self::resolve_world_view is total since Task 5");
 
         d.apply(Action::Recentre);
-        let after_name = d.resolve_world_view();
+        let after_name = d
+            .resolve_world_view()
+            .expect("Self::resolve_world_view is total since Task 5");
 
+        let (before_prefix, before_height) = split_off_height(&before_name);
+        let (after_prefix, after_height) = split_off_height(&after_name);
         assert_eq!(
-            before_name, after_name,
+            before_prefix, after_prefix,
             "recentring must roll the map UNDER a still cursor, not change what the cursor \
-             names"
+             names, its water class or its relief band"
+        );
+        assert!(
+            (before_height - after_height).abs() <= 50,
+            "recentring moved the cursor's own height reading by more than \
+             re-projection noise should ever cost: {before_height} m before, \
+             {after_height} m after"
         );
     }
 
@@ -4641,7 +5312,7 @@ mod portolan_tests {
     /// majority and a single centre-point answer can disagree at a
     /// coastline — was and remains real.
     ///
-    /// The fix ([`Self::world_view_vertex`], now
+    /// The fix ([`Self::world_view_tile`], now built directly on
     /// [`plate::terrain_at_tile`]) makes the resolver ask the SAME question
     /// the plate draws from, and take the representative of the PAINTED
     /// class — so agreement is no longer a measured ratio, it is a
@@ -4794,7 +5465,7 @@ mod portolan_tests {
     /// coincidence of the example's own invented names, not a fact about
     /// this fixture. So this test SEARCHES the coarsest (whole-planet)
     /// world view for a real multi-feature vertex, through the actual
-    /// `Driver::world_view_vertex`/`resolve_chain_at` production path,
+    /// `Driver::world_view_tile`/`resolve_chain_at` production path,
     /// rather than assuming one at a fixed position.
     #[test]
     fn the_strip_carries_the_whole_containment_chain_most_specific_first() {
@@ -4815,7 +5486,7 @@ mod portolan_tests {
         'search: for y in 0..plate_h {
             for x in 0..plate_w {
                 d.cursor = hornvale_game_core::Cursor { x, y };
-                let vertex = d.world_view_vertex();
+                let vertex = d.world_view_tile().vertex;
                 if d.index.at(vertex).len() >= 2 {
                     found = Some(vertex);
                     break 'search;
@@ -5388,14 +6059,26 @@ mod portolan_tests {
     /// **The pair, pinned together (The Prospect, Gate A/B — the coordinator's
     /// own correction to the campaign's premise): a placed site's glyph
     /// draws whether or not it has been discovered, and discovering it
-    /// changes NOTHING the cursor readout can say.** Nathan's ruling: "We
-    /// can say it's a cave, a village, etc, just don't give its name."
-    /// Nothing pinned this pairing as one invariant before this test — the
-    /// glyph half is covered piecemeal elsewhere (`plate.rs`'s
+    /// changes nothing [`Driver::resolve_world_view`] can say.** Nathan's
+    /// ruling: "We can say it's a cave, a village, etc, just don't give its
+    /// name." Nothing pinned this pairing as one invariant before this test
+    /// — the glyph half is covered piecemeal elsewhere (`plate.rs`'s
     /// `the_feature_layer_draws_every_site_whether_or_not_it_is_discovered`,
     /// this file's own `standing_in_a_placed_sites_room_discovers_it_and_
     /// the_map_keeps_drawing_it`) and the readout half was never covered at
     /// all.
+    ///
+    /// **SCOPED TO `resolve_world_view`, NOT TO THE STRIP A READER SEES,
+    /// and the name says so deliberately** (fix wave; the earlier name and
+    /// doc said "the cursor readout", which is broader than what this
+    /// asserts). [`Driver::resolve`] appends [`Driver::site_note`] on top of
+    /// this method's answer, and that note DOES mention a placed site's
+    /// KIND — ungated, since the glyph is drawn ungated too. Nothing here is
+    /// unasserted as a result; the wider claim was simply unsafe to read.
+    /// What survives, and is what actually matters, is the NAME half:
+    /// `resolve_world_view` is structurally blind to [`Driver::sites`]
+    /// (proved below by removing the site from the roster entirely), and
+    /// `site_note` has no name to leak — `MapSite` carries none.
     ///
     /// **Why "changes nothing" is provable rather than merely observed.**
     /// [`Driver::resolve_world_view`]/[`Driver::resolve_walk_band`] — the
@@ -5423,7 +6106,7 @@ mod portolan_tests {
     /// discovery. Centring removes that confound: the glyph's presence here
     /// is evidence about Gate A, not about window placement.
     #[test]
-    fn site_drawing_never_depends_on_discovery_and_the_cursor_never_leaks_a_name() {
+    fn site_drawing_never_depends_on_discovery_and_resolve_world_view_never_leaks_a_name() {
         use hornvale_vessel::site::SiteKind;
 
         let (w, h) = (104u16, 56u16);
@@ -5960,13 +6643,30 @@ mod portolan_tests {
     /// this stronger than it was: it shows the centring actually rescues a
     /// corner origin (the negative control below fails without it), instead
     /// of resting on `start` happening to leave one lying around.
+    ///
+    /// **THE NEGATIVE CONTROL MOVED INTO [`Focus::Map`] AT THE SETT'S TASK 4,
+    /// and the reason is a property gained rather than coverage lost.** It
+    /// used to take the corner draw in the default [`Focus::Walk`], where a
+    /// corner origin hid the observer. The walk view is the compass rose now
+    /// ([`crate::rose::RoseRaster`]) and the perception layer places through
+    /// it, so that plate does not read [`Self::window`] AT ALL: the observer
+    /// is at its centre by construction and the control could never fail
+    /// again, whatever the origin. Taking the corner draw with the map
+    /// focused restores exactly the state the control needs — the window is
+    /// what decides a Mercator plate, and only a Mercator plate — and leaves
+    /// the ruling this test is about (band B's origin is centred on arrival)
+    /// asserted on the raster the ruling is about.
     #[test]
     fn band_b_centres_on_the_observer_not_the_arctic_corner() {
         let mut d = test_driver();
         d.resize(120, 40);
+        // The map, so the WINDOW is what decides the picture — see this
+        // test's own doc on why the walk view no longer can be cornered.
+        d.enter_map();
         // The corner, put there on purpose. At `BAND_B_RUNG` this is some
         // eleven thousand rows and two thousand columns from seed 42's
         // observer.
+        d.window.depth = BAND_B_RUNG;
         d.window.origin_row = 0;
         d.window.origin_col = 0;
         let arctic = d
@@ -5990,6 +6690,298 @@ mod portolan_tests {
             (0, 0),
             "the window must actually have moved off the corner"
         );
+    }
+
+    /// **AN OBSERVER INSIDE THE POLAR CLAMP STILL GETS A CENTRED WALK VIEW**
+    /// (The Sett, Task 5; ledger S13, following S11).
+    ///
+    /// [`Self::centre_window_on`] resolves through [`mercator::project`],
+    /// which returns `None` past [`mercator::LAT_CLAMP_DEG`] (85.0), and
+    /// propagates it with `?`. So before this campaign an observer within 5
+    /// degrees of a pole could not have the walk view centred on them at
+    /// all — 512 of 51,200 sampled polar-cap facets, 1.00% of the caps
+    /// (ledger S11) — and the plate kept drawing wherever the window last
+    /// was. Under the rose raster the walk plate's anchor is the observer's
+    /// own facet and no projection is consulted, so the refusal cannot
+    /// reach it. The map keeps Mercator and keeps the refusal, which is
+    /// correct: a geographic chart genuinely cannot draw the pole.
+    ///
+    /// # WHY THIS IS ASSERTED ONE LEVEL BELOW `Driver`, AND WHAT THAT COSTS
+    ///
+    /// The plan specified an observer *at* the pole. **No possession
+    /// reaches one.** Measured on this world, both shipped
+    /// [`PossessTarget`] variants land within four degrees of the equator —
+    /// flagship at latitude -4.0028, most-populous-settlement at -3.9611 —
+    /// and a walk step is one rung-13 facet, about 1.1 km, so the clamp is
+    /// some eight thousand `go n`s away. A fixture that pretended otherwise
+    /// would be asserting about a driver state no seed produces.
+    ///
+    /// So the property is asserted where it is actually decided: at
+    /// [`plate::Placement`], the seam every overlay — the observer's own
+    /// mark included — places through, chosen once in
+    /// [`Self::world_plate_for_redraw`]. The same polar facet is asked the
+    /// same question of both variants. What this does NOT cover is the
+    /// composition above it; [`Self::world_plate_for_redraw`]'s choice of
+    /// variant is
+    /// [`twenty_steps_leave_the_mark_exactly_centred_despite_a_scrolled_window`]'s
+    /// subject, on a facet a driver really occupies.
+    ///
+    /// **Non-vacuity, asserted before anything else:** the clamp must really
+    /// refuse the chosen position, or a latitude it never rejected would
+    /// pass this test with nothing proved. Asserted twice over, at
+    /// `mercator::project` itself and at `centre_window_on`, whose refusal
+    /// is the one S13 is about — and the ordinary-latitude control beside it
+    /// is what stops "the window did not move" from being true of every
+    /// call.
+    #[test]
+    fn an_observer_inside_the_polar_clamp_still_gets_a_centred_walk_view() {
+        let mut d = test_driver();
+        let (w, h) = (200u16, 50u16);
+        d.resize(w, h);
+
+        // REACHABILITY, stated as an assertion rather than as prose: the
+        // shipped possession targets are nowhere near the clamp, which is
+        // why this test builds its polar facet instead of walking to one.
+        let here = d.observer_facet().coord();
+        assert!(
+            here.latitude.abs() < 10.0,
+            "seed 42's flagship is meant to be equatorial (measured -4.0028); at \
+             {:.4} degrees this test's account of why it cannot walk to the pole \
+             needs re-measuring",
+            here.latitude
+        );
+
+        // The north polar cap's own centre facet at the walk rung, built by
+        // descending the quadtree to the middle of face 4 — latitude
+        // 89.9922, inside the clamp by five degrees.
+        let depth = BAND_B_RUNG;
+        let middle = 1i64 << (depth - 1);
+        let mut path = Vec::with_capacity(depth as usize);
+        for level in (0..depth).rev() {
+            let hx = ((middle >> level) & 1) as u8;
+            let hy = ((middle >> level) & 1) as u8;
+            path.push((hx << 1) | hy);
+        }
+        let polar = Facet { face: 4, path };
+        let at_pole = polar.coord();
+        assert!(
+            at_pole.latitude > mercator::LAT_CLAMP_DEG,
+            "NON-VACUITY: this facet must sit past the clamp, or the refusal \
+             below is not a refusal — got {:.4} degrees against a clamp of {}",
+            at_pole.latitude,
+            mercator::LAT_CLAMP_DEG
+        );
+
+        // NON-VACUITY ONE: the projection itself refuses it.
+        let (virtual_w, virtual_h) = plate::virtual_dims(BAND_B_RUNG);
+        assert_eq!(
+            mercator::project(
+                d.frame(),
+                at_pole.latitude,
+                at_pole.longitude,
+                virtual_w,
+                virtual_h
+            ),
+            None,
+            "NON-VACUITY: mercator::project must refuse the chosen position"
+        );
+
+        // NON-VACUITY TWO — and the refusal S13 actually names. The window
+        // is put somewhere known; centring on the pole must leave it there,
+        // while centring on the observer's own ordinary latitude must move
+        // it. Without the second half, "the window did not move" would be
+        // satisfied by a `centre_window_on` that did nothing at all.
+        d.window.depth = BAND_B_RUNG;
+        d.window.origin_row = 1_000;
+        d.window.origin_col = 2_000;
+        let parked = (d.window.origin_row, d.window.origin_col);
+        assert_eq!(
+            d.centre_window_on(at_pole.latitude, at_pole.longitude, w, h),
+            None,
+            "centre_window_on must propagate the projection's refusal"
+        );
+        assert_eq!(
+            (d.window.origin_row, d.window.origin_col),
+            parked,
+            "a refused centring leaves the window exactly where it was — this is \
+             the state the walk view used to keep drawing from"
+        );
+        assert_eq!(
+            d.centre_window_on(here.latitude, here.longitude, w, h),
+            Some(()),
+            "CONTROL: an ordinary latitude must still centre"
+        );
+        assert_ne!(
+            (d.window.origin_row, d.window.origin_col),
+            parked,
+            "CONTROL: the ordinary centring must actually move the window, or \
+             the refusal above proves nothing about the pole in particular"
+        );
+
+        // THE DELIVERY. The same facet, the same question, of both
+        // placements: the chart cannot answer it and the rose raster puts it
+        // at the plate's own centre.
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let mut memo = crate::rose::RoseMemo::new();
+        let raster = crate::rose::RoseRaster::build(&polar, plate_w, plate_h, &mut memo);
+        let chart = plate::Placement::Mercator {
+            f: d.frame(),
+            win: d.window(),
+        };
+        let graph = plate::Placement::Graph(&raster);
+        let (pw, ph) = (u32::from(plate_w), u32::from(plate_h));
+        assert_eq!(
+            chart.box_of_facet(&polar, pw, ph),
+            None,
+            "the chart still refuses the pole, which is correct and is the map's \
+             own behaviour (G4 ruling 1)"
+        );
+        assert_eq!(
+            raster.centre(),
+            (plate_w / 2, plate_h / 2),
+            "the anchor's box is the plate's own middle"
+        );
+        assert_eq!(
+            raster.facet_at(plate_w / 2, plate_h / 2),
+            Some(&polar),
+            "the walk view must DRAW a polar observer at the middle of their own \
+             plate — the refusal cannot reach a raster that consults no projection"
+        );
+
+        // AND THE FOLD, STATED RATHER THAN GLOSSED. `box_of_facet` is the
+        // INVERSE, and at the pole the picture is genuinely many-to-one: the
+        // meridian chain reverses there, so stepping north from the pole and
+        // north again returns to it, and the pole is drawn in every other box
+        // of the centre column — 12 boxes of this 100x46 plate. That is
+        // decision #4's ratified polar fold (ledger S10: it clears 16 facets
+        // out, 0.176 degrees), not a defect of this task.
+        //
+        // **The ROW is no longer the fold's to decide, and this assertion
+        // used to say it was.** `RoseRaster::box_of` resolved a repeated
+        // facet to the first box in row-major order, which named row 1 of
+        // this plate for the facet every other contract here puts at row 23,
+        // so a polar observer's own `@` drew near the top of their plate
+        // while `facet_at(centre)` correctly held them. Ledger decision #5
+        // replaced that scan order with a rule — nearest the centre, ties
+        // row-major — so the whole box is pinned below, not the column
+        // alone.
+        let repeats = (0..plate_h)
+            .flat_map(|row| (0..plate_w).map(move |col| (col, row)))
+            .filter(|&(col, row)| raster.facet_at(col, row) == Some(&polar))
+            .count();
+        assert!(
+            repeats > 1,
+            "NON-VACUITY: the row is only ambiguous because the pole repeats; at \
+             {repeats} occurrence(s) this comment would be describing a fold that \
+             is not there"
+        );
+        assert_eq!(
+            graph
+                .box_of_facet(&polar, pw, ph)
+                .expect("the graph must place what the chart refuses"),
+            (u32::from(plate_h / 2), u32::from(plate_w / 2)),
+            "the mark must be placed in the plate's own middle box, the same box \
+             the raster DRAWS the observer in, however many other boxes the fold \
+             repeats them into"
+        );
+    }
+
+    /// **THE MARK IS CENTRED BY CONSTRUCTION** (The Sett, Task 5).
+    ///
+    /// [`Self::follow_the_walker`]'s own doc records the measurement that
+    /// made it exist: the observer drifted about one plate row per 1.6
+    /// steps, from row 23 to row 18 in eight `go n`s. That was a Mercator
+    /// plate read through a STORED [`Window`], so the mark's position was
+    /// only ever as good as the last re-centring. Under the rose raster the
+    /// anchor IS the observer, so the per-turn re-centring cannot be what
+    /// holds the mark in the middle — and this asserts the stronger thing,
+    /// that twenty steps leave it exactly centred **with the window
+    /// deliberately scrolled away between every one of them**.
+    ///
+    /// **The per-turn centring stays and this test must not be read as
+    /// licence to remove it.** It is what puts the MAP on the observer when
+    /// [`Self::enter_map`] opens it, and the map is still Mercator at every
+    /// rung. What changed is that the walk view no longer depends on it.
+    ///
+    /// # THE POSITIVE CONTROL IS THE OLD BEHAVIOUR, RUN IN-TEST
+    ///
+    /// This assertion passes on arrival: Task 3 put the walk plate on the
+    /// rose raster and Task 4 put every overlay on the same seam, so by the
+    /// time it was written the property was already delivered. An assertion
+    /// nobody has seen fail is an open question about whether it can, so the
+    /// old behaviour is executed on every iteration rather than described:
+    /// [`Focus::Map`] is the one focus [`Self::drawing_the_walk_view`]
+    /// exempts, so taking the same draw there — same rung, same scrolled
+    /// window, same session — is exactly the Mercator plate the walk view
+    /// used to be. It must place the mark SOMEWHERE, and somewhere that is
+    /// not the centre; the `assert_ne!` is what stops the control decaying
+    /// into a restatement of the assertion it is controlling.
+    ///
+    /// Non-vacuity: the scroll must actually move [`Window::origin_col`],
+    /// asserted before the mark is read, and the control's mark must
+    /// actually be drawn — a no-op scroll, or a control that drew no `@` at
+    /// all, would leave this passing against the behaviour it exists to
+    /// exclude.
+    #[test]
+    fn twenty_steps_leave_the_mark_exactly_centred_despite_a_scrolled_window() {
+        let mut d = test_driver();
+        let (w, h) = (200u16, 50u16);
+        d.resize(w, h);
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let centre = (plate_w / 2, plate_h / 2);
+
+        /// How far the window is shoved off the observer between steps.
+        /// Small enough that the Mercator control still draws the mark
+        /// (otherwise the control would prove only that the observer had
+        /// left the chart), large enough that it cannot land on the centre.
+        /// type-audit: bare-ok(count)
+        const SHOVE: u32 = 7;
+
+        let mark = |d: &mut Driver| -> Option<(u16, u16)> {
+            let p = d.world_plate_for_redraw(w, h)?;
+            (0..p.height())
+                .flat_map(|y| (0..p.width()).map(move |x| (x, y)))
+                .find(|&(x, y)| p.get(x, y).is_some_and(|c| c.glyph == Some('@')))
+        };
+
+        for step in 0..20 {
+            d.handle("go n");
+            // The shove, applied AFTER the step's own re-centring so the
+            // window really is somewhere the observer is not.
+            let before = d.window.origin_col;
+            d.window.origin_col = before.wrapping_add(SHOVE);
+            d.window.origin_row = d.window.origin_row.saturating_add(SHOVE);
+            assert_ne!(
+                d.window.origin_col, before,
+                "NON-VACUITY at step {step}: the shove must move the window, or a \
+                 plate that read it would look centred anyway"
+            );
+
+            // POSITIVE CONTROL: the same draw in the one focus that still
+            // projects. This IS the pre-Sett walk view.
+            d.focus = Focus::Map;
+            let projected = mark(&mut d);
+            d.focus = Focus::Walk;
+            assert!(
+                projected.is_some(),
+                "CONTROL at step {step}: the projected plate must draw the mark \
+                 somewhere, or it witnesses a departed observer rather than a \
+                 mis-centred one"
+            );
+            assert_ne!(
+                projected,
+                Some(centre),
+                "CONTROL at step {step}: the projected plate must put the mark off \
+                 centre, or this test cannot tell the two pictures apart"
+            );
+
+            assert_eq!(
+                mark(&mut d),
+                Some(centre),
+                "step {step}: the walk view must hold the mark at the plate's own \
+                 centre {centre:?} whatever the window says"
+            );
+        }
     }
 
     /// A COARSE rung draws the OBSERVER and no marks — the coarsest rung's
@@ -6628,6 +7620,228 @@ mod portolan_tests {
             d.window
         );
     }
+
+    // -- The Newel, Task 5 / B4: the strip's standing content is the tile -
+
+    /// B4 (spec §4.4): the strip's standing content is the tile under the
+    /// cursor, not the map's own resolution. Measured before the fix: 188
+    /// characters, of which 25 (13.3%) described the tile and 160 (86.7%)
+    /// were the four map-wide clauses (the rung line, the tile count, the
+    /// oversample disclosure, the clamp caption) — the last of those
+    /// reachable only after 44.4 s of marquee scroll on the 80x24 floor.
+    ///
+    /// **Asserts the strip LEADS WITH the tile readout, not that a
+    /// map-wide clause is absent** (controller ruling on this task's own
+    /// brief): Task 6 makes those clauses appear-and-decay on a rung
+    /// change, and entering the world view (this test's own setup) is such
+    /// a change, so an absence assertion here would redden the moment that
+    /// lands. Leading with the tile is true both before and after Task 6 —
+    /// only what follows it changes.
+    #[test]
+    fn the_strip_describes_the_tile_under_the_cursor() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        let s = d.strip_text().expect("the world view has a strip");
+        assert!(
+            !s.starts_with(RUNG_OPENING),
+            "the standing line must not lead with the map-wide rung clause: {s}"
+        );
+        assert!(
+            s.contains("above sea level"),
+            "the standing line says nothing about the tile's own height: {s}"
+        );
+        let tile_pos = s
+            .find("above sea level")
+            .expect("checked immediately above");
+        let rung_pos = s
+            .find(RUNG_OPENING)
+            .expect("the map-wide rung clause is still appended after the tile");
+        assert!(
+            tile_pos < rung_pos,
+            "the tile's own height reading must reach the reader before the map-wide \
+             rung clause, got {s:?}"
+        );
+    }
+
+    /// **A placed site's KIND reaches the strip whether or not it has been
+    /// discovered, and discovering it changes nothing** — the ungated half
+    /// of B4, corrected in this campaign's fix wave (see
+    /// [`Driver::site_note`]'s own doc for the reasoning and Nathan's
+    /// ruling). The glyph is drawn ungated at every rung, so a reader
+    /// pointing the cursor at a visible `*` and being told nothing was the
+    /// defect, not the guarantee.
+    ///
+    /// **Both directions, because only one of them was ever at risk.** The
+    /// before/after equality is the invariant; the positive assertion is
+    /// what keeps it from holding vacuously, which a silent-in-both-states
+    /// regression would otherwise satisfy exactly.
+    #[test]
+    fn a_placed_sites_kind_is_mentioned_whether_or_not_it_is_discovered() {
+        use hornvale_vessel::site::SiteKind;
+
+        // AT BAND B'S OWN RUNG, deliberately, not a coarser world-view one:
+        // a placed site's own `Facet` (`MapSite::placed`) is addressed at
+        // walk-band granularity (`hornvale_worldgen::site_facet_for`'s own
+        // doc: "up to ~40 walk-facet edges"), and `Self::site_note` reads
+        // `Self::world_view_tile`'s `.facet`, which is a facet at the
+        // ACTIVE window's own depth — so the two can only ever agree where
+        // that depth IS band B's. A coarser rung's tile facet is a
+        // different, larger patch at a different level of the same
+        // hierarchy and can never equal a site's own placed facet.
+        let (w, h) = (104u16, 56u16);
+        let mut d = test_driver();
+        enter_band_b(&mut d);
+        let (plate_w, plate_h) = d.active_plate_dims();
+        let site = centre_on_a_placed_site(&mut d, SiteKind::Cave, plate_w, plate_h);
+        assert!(
+            !d.discovered().contains(site.feature_id()),
+            "guard: the cave must not already read as discovered"
+        );
+
+        // Find the exact screen position the cave's own glyph occupies —
+        // searched, not assumed at the plate's own centre, the same reason
+        // `site_drawing_never_depends_on_discovery_and_the_cursor_never_
+        // leaks_a_name` searches rather than computes.
+        let grid = d.world_plate(w, h);
+        let mut found: Option<(u16, u16)> = None;
+        'search: for y in 0..plate_h {
+            for x in 0..plate_w {
+                if grid.get(x, y).and_then(|c| c.glyph) == Some(plate::CAVE_GLYPH) {
+                    found = Some((x, y));
+                    break 'search;
+                }
+            }
+        }
+        let (x, y) = found.expect("an undiscovered, centred cave must still be drawn");
+        d.cursor = hornvale_game_core::Cursor { x, y };
+        d.refresh_strip();
+
+        let before = d
+            .strip_text()
+            .expect("the world view has a strip")
+            .to_string();
+        assert!(
+            before.contains("a cave mouth stands here"),
+            "the cave's glyph is drawn here ungated, so its KIND must reach the \
+             standing line ungated too: {before:?}"
+        );
+
+        // Discover whichever site actually sits under the CURSOR's own
+        // resolved facet — not necessarily `site`, the one
+        // `centre_on_a_placed_site` happened to centre on: the glyph search
+        // above finds the first cave glyph the whole plate draws, which at
+        // this rung can be a DIFFERENT cave than the centred one if more
+        // than one is in view. `site_note` gates on exactly this facet, so
+        // discovery must be recorded against the same one it reads.
+        let facet = d.world_view_tile().facet;
+        let ids = plate::sites_standing_in(&d.sites, &facet);
+        let id = ids.first().copied().unwrap_or_else(|| site.feature_id());
+        d.discovered_mut_for_test().record(id);
+        d.refresh_strip();
+        let after = d
+            .strip_text()
+            .expect("the world view has a strip")
+            .to_string();
+        assert!(
+            after.contains("a cave mouth stands here"),
+            "a discovered cave must still be mentioned: {after:?}"
+        );
+        assert_eq!(
+            before, after,
+            "discovering a placed site must change nothing the strip says about \
+             its kind — the NAME is what decision 0670 gates, and a `MapSite` \
+             carries none"
+        );
+    }
+
+    // -- Task 6, B4 half b: the map-wide facts appear on a gesture, decay -
+
+    /// A zoom is a gesture, so the rung line is news. It must appear when
+    /// the rung changes — see [`Driver::map_facts_are_recent`] and
+    /// [`Driver::refresh_strip`] for the mechanism, and
+    /// `the_rung_line_decays_off_the_strip_without_a_player_action` below
+    /// for the other half.
+    #[test]
+    fn zooming_puts_the_rung_line_back_on_the_strip() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::Zoom(1));
+        assert!(d.strip_text().unwrap().contains(RUNG_OPENING));
+    }
+
+    /// ...and must go away again on its own, so the standing line returns to
+    /// the cell. Decision 0196 is satisfied by disclosure, not by
+    /// permanence. Ticks the client's ONE clock
+    /// ([`Driver::tick_marquee`]) — never a real sleep — exactly
+    /// `RUNG_LINE_TICKS` times, which is [`Driver::map_facts_expire_at`]'s
+    /// own boundary: the block must survive every tick strictly before it
+    /// and be gone at it.
+    ///
+    /// **The decay must RETURN the standing line, not clear the strip**, and
+    /// asserting only the absence of `RUNG_OPENING` could not tell those
+    /// apart: a regression that decayed all the way to [`NOTHING_HERE_YET`]
+    /// — or to nothing at all — satisfies an absence check exactly as well
+    /// as the correct behaviour does. Hence the positive half below.
+    #[test]
+    fn the_rung_line_decays_off_the_strip_without_a_player_action() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::Zoom(1));
+        for _ in 0..RUNG_LINE_TICKS {
+            d.tick_marquee();
+        }
+        let after = d
+            .strip_text()
+            .expect("the world view has a strip")
+            .to_string();
+        assert!(
+            !after.contains(RUNG_OPENING),
+            "the rung line outlived its decay: {after:?}"
+        );
+        assert!(
+            after.contains("above sea level"),
+            "the block decayed off the strip and took the tile's own standing \
+             readout with it: {after:?}"
+        );
+        assert_ne!(
+            after, NOTHING_HERE_YET,
+            "the strip fell back to the no-resolver string rather than to the tile"
+        );
+    }
+
+    /// **The mid-decay-gesture question the brief left open, answered:**
+    /// each qualifying gesture restarts the reading window at full length,
+    /// rather than the second gesture's disclosure inheriting whatever was
+    /// left of the first one's clock. Zoom once, let the window run down to
+    /// its last tick (still showing), zoom again, and confirm the window is
+    /// back to nearly its full length rather than about to expire.
+    #[test]
+    fn a_second_gesture_mid_decay_restarts_the_window_rather_than_inheriting_it() {
+        let mut d = test_driver();
+        enter_world_view(&mut d);
+        d.apply(Action::Zoom(1));
+        for _ in 0..(RUNG_LINE_TICKS - 1) {
+            d.tick_marquee();
+        }
+        assert!(
+            d.strip_text().unwrap().contains(RUNG_OPENING),
+            "sanity: one tick short of decay, the block must still be showing"
+        );
+        // A SECOND GESTURE, one tick before the first would have decayed.
+        d.apply(Action::Zoom(1));
+        // If the window had NOT restarted, the first gesture's clock would
+        // expire on the very next tick and take the second gesture's own
+        // news down with it. Confirm it does not: tick once (one short of
+        // where the FIRST window would have expired) and the block must
+        // still be showing, because the SECOND gesture's own full window
+        // has barely begun.
+        d.tick_marquee();
+        assert!(
+            d.strip_text().unwrap().contains(RUNG_OPENING),
+            "a second gesture's disclosure must not inherit the first gesture's \
+             almost-expired clock"
+        );
+    }
 }
 
 #[cfg(test)]
@@ -6729,6 +7943,7 @@ mod caption_tests {
 mod completion_tests {
     use super::*;
     use crate::input::Action;
+    use hornvale_game_core::CandidateSource;
     use hornvale_game_core::schema::{Narration, NounEntry};
 
     /// A narration whose noun catalog names the completion fixtures: two
@@ -6757,13 +7972,59 @@ mod completion_tests {
     }
 
     /// A live driver whose scope has been overwritten with the fixture
-    /// catalog — the real refresh path (`scope.update` from a parsed
+    /// catalog — the real refresh path (`Driver::refresh`, from a parsed
     /// snapshot) is exercised by the integration suite; these tests need a
     /// KNOWN vocabulary.
+    ///
+    /// **`chart_scope` is explicitly reset, not merely left alone (fix
+    /// round 1).** `Driver::start` already runs one `refresh()` before
+    /// returning, against the REAL seed-42 flagship position — so
+    /// `d.chart_scope` is genuinely non-empty at this point (see
+    /// `a_chart_only_agent_name_completes_from_a_fresh_driver` in
+    /// `tests/driver.rs`, which completes a live chart mark from a bare
+    /// `Driver::start` with no setup at all). A doc comment here once
+    /// claimed the opposite — that `start`-time default meant empty — which
+    /// was false the moment `chart_scope` stopped being a field nobody
+    /// wrote to. Resetting it is what makes "these tests need a KNOWN
+    /// vocabulary" true rather than aspirational; pinned by
+    /// `seeded_driver_offers_exactly_the_fixture_vocabulary`, immediately
+    /// below, so a future collision between a fixture prefix and a real
+    /// chart mark reddens here instead of silently passing by luck.
     pub(crate) fn seeded_driver() -> Driver {
         let mut d = Driver::start(42, hornvale_vessel::PossessTarget::Flagship).unwrap();
-        d.scope.update(&fixture_narration());
+        d.current_turn_scope.update(&fixture_narration());
+        d.chart_scope = hornvale_game_core::ChartMarks::default();
+        d.scope = hornvale_game_core::Lexicon::new(vec![
+            Box::new(d.current_turn_scope.clone()),
+            Box::new(d.chart_scope.clone()),
+        ]);
         d
+    }
+
+    /// Pins the guarantee `seeded_driver`'s own doc makes, rather than
+    /// leaving it to prose (fix round 1's own lesson: a comment is what
+    /// went stale here, so a second comment is not the fix). Without this,
+    /// a green suite proves nothing about whether `chart_scope` was
+    /// actually cleared — every prefix this file's tests complete against
+    /// (`"bram"`, `"gnar"`) simply happens not to collide with seed 42's
+    /// real chart, today.
+    #[test]
+    fn seeded_driver_offers_exactly_the_fixture_vocabulary() {
+        let d = seeded_driver();
+        assert!(
+            d.chart_scope.candidates().is_empty(),
+            "chart_scope must be reset, not inherited from Driver::start's own refresh"
+        );
+        let candidates = d.scope.candidates();
+        let mut names: Vec<&str> = candidates.iter().map(|c| c.name.as_str()).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            vec!["Gnarlash", "Gnarlwood", "bramble"],
+            "seeded_driver's fold must offer exactly the fixture vocabulary — anything \
+             else means a real chart candidate leaked in and every prefix test below is \
+             trusting collision-avoidance luck rather than a known catalog"
+        );
     }
 
     #[test]
@@ -6914,6 +8175,127 @@ mod completion_tests {
         assert_eq!(
             completion_decision("examine bramble", 11, &cands(&["bramble"])),
             CompletionDecision::Fill("bramble".into())
+        );
+    }
+}
+
+/// The Newel, Task 4: the chart scope's own discovery gate (decision
+/// 0670), proven against `Driver::refresh`'s REAL wiring — not a
+/// test-supplied closure. `hornvale-game-core`'s own test suite
+/// (`clients/game/core/tests/lexicon.rs`) proves `ChartMarks`' abstract
+/// filtering mechanism is non-vacuous in isolation; these tests prove the
+/// production closure this crate feeds it (`Driver::site_is_discovered`:
+/// `FacetId::unpack` → `Facet::coord` → `NearestVertexIndex::nearest` →
+/// `Discovered::contains`) resolves and gates correctly against a real
+/// seed-42 world.
+#[cfg(test)]
+mod chart_scope_tests {
+    use super::*;
+    use crate::discovery::FeatureId;
+    use hornvale_game_core::CandidateSource;
+
+    fn test_driver() -> Driver {
+        Driver::start(42, hornvale_vessel::PossessTarget::Flagship).expect("seed 42 generates")
+    }
+
+    /// `Driver::site_is_discovered` directly, against a real,
+    /// self-consistent round trip: pack the observer's OWN position,
+    /// unpack it back, resolve its vertex the same way the closure does.
+    /// No second settlement needs to stand within chart radius of
+    /// wherever a test driver happens to start.
+    #[test]
+    fn site_is_discovered_gates_a_settlement_and_a_cave_separately() {
+        let d = test_driver();
+        let position = d.session.position();
+        let room = position
+            .pack()
+            .expect("a live possession's own position always packs")
+            .0;
+        let vertex = d.nearest.nearest(
+            &d.geo,
+            position.coord().latitude,
+            position.coord().longitude,
+        );
+
+        let empty = Discovered::default();
+        assert!(
+            !Driver::site_is_discovered(&d.geo, &d.nearest, &empty, "settlement", room),
+            "nothing has been discovered yet"
+        );
+
+        let mut settlement_discovered = Discovered::default();
+        settlement_discovered.record(FeatureId::Settlement(vertex));
+        assert!(
+            Driver::site_is_discovered(
+                &d.geo,
+                &d.nearest,
+                &settlement_discovered,
+                "settlement",
+                room
+            ),
+            "the settlement at this room's own vertex is now discovered"
+        );
+
+        // A CAVE discovery at the identical vertex must not leak into the
+        // SETTLEMENT gate — the two are different `FeatureId` variants
+        // (`discovery.rs`'s own module doc on why a point site's kind is
+        // part of its identity).
+        let mut cave_discovered = Discovered::default();
+        cave_discovered.record(FeatureId::Cave(vertex));
+        assert!(
+            !Driver::site_is_discovered(&d.geo, &d.nearest, &cave_discovered, "settlement", room),
+            "a discovered cave must not gate a settlement mark open"
+        );
+    }
+
+    /// An unpackable room id gates closed rather than panicking — the same
+    /// defensive posture `Self::resolve_walk_band`'s own
+    /// `FacetId::unpack().ok()?` takes.
+    #[test]
+    fn an_unpackable_room_id_gates_closed_not_panics() {
+        let d = test_driver();
+        // `FacetId(0)`'s sentinel bit is unset — `FacetId::unpack`'s own
+        // doc names this malformed.
+        assert!(!Driver::site_is_discovered(
+            &d.geo,
+            &d.nearest,
+            d.discovered(),
+            "settlement",
+            0
+        ));
+    }
+
+    /// End to end through `Driver::refresh` itself: the flagship's own
+    /// home settlement is on `chart_scope`'s own roster only once
+    /// `Self::discovered_mut_for_test` records it — proving `refresh`'s
+    /// wiring, not merely `ChartMarks`' abstract mechanism.
+    #[test]
+    fn refresh_gates_chart_scope_against_the_real_discovery_ledger() {
+        let mut d = test_driver();
+        let home = hornvale_game_core::Snapshot::parse(&d.snapshot())
+            .unwrap()
+            .me
+            .settlement;
+        assert!(!home.is_empty(), "sanity: the flagship names its own home");
+
+        assert!(
+            !d.chart_scope.candidates().iter().any(|c| c.name == home),
+            "the home settlement must not be offered by the chart scope before discovery"
+        );
+
+        let position = d.session.position();
+        let vertex = d.nearest.nearest(
+            &d.geo,
+            position.coord().latitude,
+            position.coord().longitude,
+        );
+        d.discovered_mut_for_test()
+            .record(FeatureId::Settlement(vertex));
+        d.refresh();
+
+        assert!(
+            d.chart_scope.candidates().iter().any(|c| c.name == home),
+            "the home settlement must be offered by the chart scope once discovered"
         );
     }
 }

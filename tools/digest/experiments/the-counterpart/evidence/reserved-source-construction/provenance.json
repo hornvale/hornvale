@@ -1,0 +1,31 @@
+{
+  "author": "/root/counterpart_checker",
+  "author_head_before_packaging": "41ceed7a270771833e8b738366e61721e5ab1ab7",
+  "branch": "codex/counterpart-challenge",
+  "limits": {
+    "deadline_seconds": 3600,
+    "output_limit_bytes": 16777216,
+    "retain_output": true
+  },
+  "method": "Frozen construct_sources produces the arm in a new owned clone; a separately initialized shallow base-only repository fetches only the declared prerequisite, verifies/imports the bundle, and compares the recovered source tree with an independent exact patch application.",
+  "not_run": [
+    "run_panel",
+    "evaluate",
+    "suggest",
+    "score",
+    "Cargo build",
+    "raw observation"
+  ],
+  "patch_sha256": "77fde4719e32393242c057bf3cdbfff9edd34b688ffee18ca8ddc1a280bcedcf",
+  "post_preregistration_disclosure": "Read only run.py construction, supervised Git, capture, source verification/reconstruction and input-hash helper definitions, imports/constants and function names for packaging mechanics. Imported the frozen runner (which imports checker/comparator definitions); no scoring or observation function was invoked. No panel, owner records, unreserved evidence or other worker reports read.",
+  "repository": "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+  "runner": {
+    "frozen_implementation": "02796fe0ae719a55f431f8aedc2ab6853c9a2776",
+    "path": "/Users/nathan/.config/superpowers/worktrees/hornvale/federation-next/tools/digest/experiments/the-counterpart/run.py",
+    "sha256": "4890c2185e175a47ad4cd90b7612c4149c93f9efe82b3498f5df281428e08a5f"
+  },
+  "schema": "counterpart-reserved-source-construction-v1",
+  "scratch_directory": "/var/folders/_0/j0_zkq_d3jn0klz033gq33cc0000gn/T/counterpart-reserved-source-19iogmyd",
+  "source_base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "started_utc": "2026-09-05T21:39:58.374675+00:00"
+}

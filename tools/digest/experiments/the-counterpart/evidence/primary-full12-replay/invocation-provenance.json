@@ -1,0 +1,10 @@
+{
+  "role": "primary full12 behavioral replay",
+  "parent": "/home/nathan/.local/state/hornvale/counterpart-full12-replay-7ky110gd",
+  "source_sha256": "8bd22b72a0650c72e9e6980a2b8b7712ef089525",
+  "panel_sha256": "4d7588e3f25523358deae71a45c4e8d9529f73c5370511b0dd5b1810d759931c",
+  "canonical_log": "canonical-sluice.log",
+  "canonical_log_sha256": "5600235c0643cdbf05f58962ea04eec3fc2015810f9c3f56b36a94e493e1e85f",
+  "completion_output": "completed=true for all 12 arms; exact output is retained in canonical-sluice.log",
+  "independence": "Primary canonical run; compared with the separately owned independent parent and target."
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "insulator-workloads-v1",
+  "description": "Frozen representative commands for the contributor build measurement.",
+  "workloads": [
+    {
+      "id": "digest-census-publication",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "tools/digest/Cargo.toml",
+        "-p",
+        "digest-census-publication",
+        "collect",
+        "--repo-root",
+        "${CHECKOUT}"
+      ],
+      "phases": {
+        "preparation": {
+          "command": ["cargo", "metadata", "--locked", "--offline", "--format-version", "1", "--manifest-path", "tools/digest/Cargo.toml"]
+        },
+        "test": {
+          "command": ["cargo", "test", "--locked", "--offline", "--manifest-path", "tools/digest/Cargo.toml", "-p", "digest-census-publication"]
+        }
+      },
+      "expected_outputs": [
+        {
+          "path": "tools/digest/target/debug/digest-census-publication",
+          "compare": "sha256"
+        }
+      ]
+    },
+    {
+      "id": "digest-thing",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--offline",
+        "--manifest-path",
+        "tools/digest/Cargo.toml",
+        "-p",
+        "digest-thing"
+      ],
+      "phases": {
+        "preparation": {
+          "command": ["cargo", "metadata", "--locked", "--offline", "--format-version", "1", "--manifest-path", "tools/digest/Cargo.toml"]
+        },
+        "test": {
+          "command": ["cargo", "test", "--locked", "--offline", "--manifest-path", "tools/digest/Cargo.toml", "-p", "digest-thing"]
+        }
+      },
+      "expected_outputs": [
+        {
+          "path": "tools/digest/target/debug/digest-thing",
+          "compare": "sha256"
+        }
+      ]
+    }
+  ]
+}

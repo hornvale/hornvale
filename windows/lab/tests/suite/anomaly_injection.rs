@@ -173,8 +173,13 @@ fn moved_columns_any(
 /// removes columns stales them.
 ///
 /// The branch table for a red here:
-/// - the census gained columns and the fixtures did not → re-author the
-///   fixtures in the same commit as the refresh (Task 7 carries this);
+/// - the census gained columns and the fixtures did not → a queued census
+///   delivery (`scripts/sluice-census.sh`) re-authors them at the census's
+///   ref, under the box lock, in the same commit as the goldens (decision
+///   0836); a delivery that could not — a ref predating The Spillway, whose
+///   authoring script refuses the staged goldens as dirt — is refused at its
+///   pre-flight, and the by-hand path is `scripts/gnomon-injection.sh` on the
+///   canonical box;
 /// - the fixtures carry columns the census lacks → they were authored
 ///   against a different metric registry; re-author, never filter the
 ///   mismatch away.
@@ -196,8 +201,9 @@ fn the_fixture_columns_match_the_census() {
              columns the census has and the fixture lacks: {missing:?}; \
              columns the fixture has and the census lacks: {extra:?}. \
              Re-author with scripts/gnomon-injection.sh on the canonical box \
-             in the same commit as the census refresh — never filter the \
-             mismatch away."
+             in the same commit as the census refresh — a queued delivery \
+             (make sluice-census) does this itself since The Spillway, \
+             decision 0836 — never filter the mismatch away."
         );
     }
 }

@@ -1,0 +1,1067 @@
+{
+  "archive": {
+    "bytes": 915278,
+    "path": "records.tar.gz",
+    "sha256": "d761cf521e4d663d80e23bab7577e34053c274fd6e8c79a16324b87f07458963"
+  },
+  "archive_revalidated_without_original_scratch": true,
+  "arm_count": 2,
+  "arms": {
+    "base": {
+      "arm_wall_seconds": 8.721869291970506,
+      "candidate_observations": {
+        "hornvale.thing:component-roster": "satisfied",
+        "hornvale.thing:concept-ownership": "satisfied",
+        "hornvale.thing:registration": "satisfied"
+      },
+      "candidate_status": "accepted",
+      "commands": [
+        {
+          "capture_context": {
+            "arm": "base",
+            "source": {
+              "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+              "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "cargo",
+            "metadata",
+            "--locked",
+            "--offline",
+            "--format-version",
+            "1",
+            "--manifest-path",
+            "tools/digest/Cargo.toml"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 0.11798075004480779,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "metadata-base",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 232125,
+          "stdout_sha256": "4325b52bae8b16aace9c8edf7e14c287a24e0900237e34cf90648beb87e22843"
+        },
+        {
+          "capture_context": {
+            "arm": "base",
+            "source": {
+              "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+              "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "cargo",
+            "metadata",
+            "--locked",
+            "--offline",
+            "--format-version",
+            "1",
+            "--manifest-path",
+            "tools/digest/Cargo.toml"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 0.1052357500884682,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "metadata-arm",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 232125,
+          "stdout_sha256": "4325b52bae8b16aace9c8edf7e14c287a24e0900237e34cf90648beb87e22843"
+        },
+        {
+          "capture_context": {
+            "arm": "base",
+            "source": {
+              "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+              "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--offline",
+            "--manifest-path",
+            "tools/digest/Cargo.toml",
+            "-p",
+            "digest-counterpart",
+            "--target-dir",
+            "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/target"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 5.815199000062421,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "build",
+          "stderr_bytes": 1318,
+          "stderr_sha256": "da29d3303b9e129f9286e330178a0a4f4137d3cc787976bba7f9ff00e6538dd9",
+          "stdout_bytes": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "capture_context": {
+            "arm": "base",
+            "source": {
+              "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+              "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/target/debug/digest-counterpart"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 0.16417095786891878,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "observe",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 5161,
+          "stdout_sha256": "68c31428f4e3fb32b76957f0e940daa4ce65eb9a192f9e76689f2127aa5ceb25"
+        }
+      ],
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "key_facts": {
+        "after_key": [
+          {
+            "name": "key",
+            "owner": "thing"
+          }
+        ],
+        "borrowing_for_key": [],
+        "source_includes_key": true
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "satisfied",
+          "reason": "Every Thing name has its declared owner, no extra Thing names exist, and lender owners persist"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "preparation_seconds": 1.6083607499022037,
+      "selections": {
+        "agreement": {
+          "effective": [],
+          "kind": "agreement",
+          "normalization": [],
+          "proposed": [],
+          "rules": "counterpart-shadow-v1",
+          "unknown": []
+        },
+        "cargo": {
+          "effective": [],
+          "kind": "cargo",
+          "normalization": [],
+          "proposed": [],
+          "rules": "counterpart-shadow-v1",
+          "unknown": []
+        },
+        "path": {
+          "effective": [],
+          "kind": "path",
+          "normalization": [],
+          "proposed": [],
+          "rules": "counterpart-shadow-v1",
+          "unknown": []
+        }
+      },
+      "source": {
+        "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+        "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+      }
+    },
+    "reserved-inferred-owner": {
+      "arm_wall_seconds": 3.4015841661021113,
+      "candidate_observations": {
+        "hornvale.thing:component-roster": "satisfied",
+        "hornvale.thing:concept-ownership": "satisfied",
+        "hornvale.thing:registration": "satisfied"
+      },
+      "candidate_status": "accepted",
+      "commands": [
+        {
+          "capture_context": {
+            "arm": "reserved-inferred-owner",
+            "source": {
+              "commit": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+              "tree": "7350d1b4abc83775de94f35860a47e158c61dedc"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "cargo",
+            "metadata",
+            "--locked",
+            "--offline",
+            "--format-version",
+            "1",
+            "--manifest-path",
+            "tools/digest/Cargo.toml"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 0.1131039580795914,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "metadata-base",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 232125,
+          "stdout_sha256": "4325b52bae8b16aace9c8edf7e14c287a24e0900237e34cf90648beb87e22843"
+        },
+        {
+          "capture_context": {
+            "arm": "reserved-inferred-owner",
+            "source": {
+              "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+              "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "cargo",
+            "metadata",
+            "--locked",
+            "--offline",
+            "--format-version",
+            "1",
+            "--manifest-path",
+            "tools/digest/Cargo.toml"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 0.11353591689839959,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "metadata-arm",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 232125,
+          "stdout_sha256": "4325b52bae8b16aace9c8edf7e14c287a24e0900237e34cf90648beb87e22843"
+        },
+        {
+          "capture_context": {
+            "arm": "reserved-inferred-owner",
+            "source": {
+              "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+              "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--offline",
+            "--manifest-path",
+            "tools/digest/Cargo.toml",
+            "-p",
+            "digest-counterpart",
+            "--target-dir",
+            "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/target"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 0.41343954205513,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "build",
+          "stderr_bytes": 525,
+          "stderr_sha256": "64f60ed400820b7e7e4163ec3930d9da238140a41657212a69733dcdbc743045",
+          "stdout_bytes": 0,
+          "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "capture_context": {
+            "arm": "reserved-inferred-owner",
+            "source": {
+              "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+              "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+            }
+          },
+          "cleanup_error": null,
+          "command": [
+            "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/target/debug/digest-counterpart"
+          ],
+          "cwd": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1/dossier/checkout",
+          "direct_child_waited": true,
+          "elapsed_seconds": 0.16952625010162592,
+          "exit_code": 0,
+          "harness_deadline_exceeded": false,
+          "interrupted": false,
+          "launch_error": null,
+          "output_limit_exceeded": false,
+          "role": "observe",
+          "stderr_bytes": 0,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 5166,
+          "stdout_sha256": "4811a0d01f1211c981f36020ebb64be4932532fbc914b1b925c0ecadf382c3b0"
+        }
+      ],
+      "comparisons": {
+        "agreement": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [
+              "ownership"
+            ],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "missing changed subject declaration: domains/thing/src/lib.rs",
+            "missing/ambiguous owner scope: tools/digest/packages/thing/src/lib.rs",
+            "unmapped variant: reserved-inferred-owner"
+          ],
+          "raw": {
+            "selected_satisfied": [],
+            "selected_unknown": [],
+            "selected_violating": [],
+            "unknown": [],
+            "unselected_violating": [
+              "ownership"
+            ]
+          }
+        },
+        "cargo": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [
+              "ownership"
+            ],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [
+              "ownership"
+            ],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        },
+        "path": {
+          "effective": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [
+              "ownership"
+            ],
+            "unknown": [],
+            "unselected_violating": []
+          },
+          "fallback_reasons": [
+            "no enrollment: tools/digest/packages/thing/src/lib.rs"
+          ],
+          "raw": {
+            "selected_satisfied": [
+              "borrowing",
+              "components",
+              "registration"
+            ],
+            "selected_unknown": [],
+            "selected_violating": [
+              "ownership"
+            ],
+            "unknown": [],
+            "unselected_violating": []
+          }
+        }
+      },
+      "key_facts": {
+        "after_key": [
+          {
+            "name": "key",
+            "owner": "settlement"
+          }
+        ],
+        "borrowing_for_key": [],
+        "source_includes_key": true
+      },
+      "outcomes": {
+        "borrowing": {
+          "outcome": "satisfied",
+          "reason": "Every borrowing is unique, used, non-self, and supplied by its lender"
+        },
+        "components": {
+          "outcome": "satisfied",
+          "reason": "Source and component rosters agree without duplicates"
+        },
+        "ownership": {
+          "outcome": "violated",
+          "reason": "'key' expected owner ['thing']; observed ['settlement']"
+        },
+        "registration": {
+          "outcome": "satisfied",
+          "reason": "Settlement and Thing registration both completed without refusal"
+        }
+      },
+      "preparation_seconds": 1.6149903750047088,
+      "selections": {
+        "agreement": {
+          "effective": [
+            "borrowing",
+            "components",
+            "ownership",
+            "registration"
+          ],
+          "kind": "agreement",
+          "normalization": [
+            {
+              "mode": "addition deltas and source locators",
+              "owner": "thing",
+              "reason": "Explicit finite manual normalization of reviewed owner records; no outcome input."
+            }
+          ],
+          "proposed": [],
+          "rules": "counterpart-shadow-v1",
+          "unknown": [
+            "missing changed subject declaration: domains/thing/src/lib.rs",
+            "missing/ambiguous owner scope: tools/digest/packages/thing/src/lib.rs",
+            "unmapped variant: reserved-inferred-owner"
+          ]
+        },
+        "cargo": {
+          "effective": [
+            "borrowing",
+            "components",
+            "ownership",
+            "registration"
+          ],
+          "kind": "cargo",
+          "normalization": [],
+          "proposed": [
+            "borrowing",
+            "components",
+            "ownership",
+            "registration"
+          ],
+          "rules": "counterpart-shadow-v1",
+          "unknown": []
+        },
+        "path": {
+          "effective": [
+            "borrowing",
+            "components",
+            "ownership",
+            "registration"
+          ],
+          "kind": "path",
+          "normalization": [],
+          "proposed": [
+            "borrowing",
+            "components",
+            "ownership",
+            "registration"
+          ],
+          "rules": "counterpart-shadow-v1",
+          "unknown": [
+            "no enrollment: tools/digest/packages/thing/src/lib.rs"
+          ]
+        }
+      },
+      "source": {
+        "commit": "b0ae89d8a93cda6fe8932ed24e38db8d64865613",
+        "tree": "17905910c5b081c3c706daa0b6e0709f0f3a4432"
+      }
+    }
+  },
+  "author_seconds": null,
+  "completed_scope": "Mac focused qualification: base plus reserved singleton only; not the full 12-arm panel",
+  "cost_note": "Mac foreground direct execution; queue and active author time not measured. Separate locked dependency preparation, per-command build/observation and overall wall retained. No cold-build or performance target claim.",
+  "dependency_fetch_seconds": 0.11100575001910329,
+  "failed_attempts": [],
+  "full12_summary_refusal": "missing ten required arms; focused dossier is not a full12 result",
+  "identities": {
+    "checker": "ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90",
+    "contract": "37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34",
+    "implementation": "02796fe0ae719a55f431f8aedc2ab6853c9a2776",
+    "measure": "178183964c86f46b14b6ea31c1c647d5b7e8031d245f9e66297acb1447edc37a",
+    "owners": "5402a554e6437e2117c7e27172359ede265c6bc0b23f8829de18b41206d0f7f3",
+    "roster": "b45a5a51e76e07261ef9aaa7d7c780b17a7e02e18e2de1707d915a85f056b27e",
+    "rules": "ea13353f2133cc1f168fea6dcb2447405786af8ef37e3a4ccb158885ac9e03a5"
+  },
+  "invocation": {
+    "command": [
+      "bash",
+      "/Users/nathan/.local/state/hornvale/counterpart-task6-mac-invocation-0sjgdfk5/committed-invocation.sh"
+    ],
+    "cwd": "/Users/nathan/.config/superpowers/worktrees/hornvale/federation-next",
+    "exit_code": 0,
+    "scope": "exact committed README invocation with documented base-reserved panel substitution",
+    "wall_seconds": 19.1672062498983
+  },
+  "invocation_directory": "/Users/nathan/.local/state/hornvale/counterpart-task6-mac-invocation-0sjgdfk5",
+  "original_member_inventory": [
+    {
+      "bytes": 2125,
+      "path": "dependency-fetch.json",
+      "sha256": "7742dccc113210c9f0caf39c77981039d2b103c2083c52e46118d23e8ce6d39c"
+    },
+    {
+      "bytes": 1496645,
+      "path": "dossier/base/arm.json",
+      "sha256": "c14d3f7f863d248329d4133044feb33c138a1208b1c8d69cb3c852ab788dcc1d"
+    },
+    {
+      "bytes": 5368,
+      "path": "dossier/base/build.json",
+      "sha256": "9324b4e0c009ce62c3949159a88cd833f72679dae616ac4858dd15fbfb11f238"
+    },
+    {
+      "bytes": 311666,
+      "path": "dossier/base/metadata-arm.json",
+      "sha256": "f8121e7c42a3eed6714b27104a13257ceaefa9dc2080c9de69d7be5af640d812"
+    },
+    {
+      "bytes": 311668,
+      "path": "dossier/base/metadata-base.json",
+      "sha256": "eed64c51ee54b8ca900ada91be4d40df45595e388b4df89b15c137e6c29d3509"
+    },
+    {
+      "bytes": 9011,
+      "path": "dossier/base/observe.json",
+      "sha256": "14f8c027793b13a930678944a110264ada401344824f01a0a1611e12d73b5318"
+    },
+    {
+      "bytes": 492,
+      "path": "dossier/base/selections.json",
+      "sha256": "9bc5b6f97d374aaf8f0ceaa7f8744a862f5401b476be595a7461111032a77104"
+    },
+    {
+      "bytes": 1881,
+      "path": "dossier/cargo.json",
+      "sha256": "03a1e93f6f4c120608bae29b92992412030fddf52dbbeca162b78649d8ed7d00"
+    },
+    {
+      "bytes": 3178171,
+      "path": "dossier/dossier.json",
+      "sha256": "7c77fc084ef89afc7061848affadfab1d722ce23aafd5ad75b2324cabba6e04f"
+    },
+    {
+      "bytes": 2010,
+      "path": "dossier/git-preparation/00fb2cf03e66430aa5aa335665fd5dbf.json",
+      "sha256": "6ae2ce021fbb0350d54943ad138c00e51723ae2db20af00af78c94cc263def4d"
+    },
+    {
+      "bytes": 2005,
+      "path": "dossier/git-preparation/025add9e40464299bfe9001636eac05d.json",
+      "sha256": "afd066a797bad5346463b6a8ebf1a1fa7eb920159be1f48cda5d40a636fccdb7"
+    },
+    {
+      "bytes": 2011,
+      "path": "dossier/git-preparation/0c838562299b4992ac6af815a214dcbc.json",
+      "sha256": "e2ca5cf5ea6607297894de68912ae76588911a9d6ae3428e9d45b5c8418cda4e"
+    },
+    {
+      "bytes": 1980,
+      "path": "dossier/git-preparation/10e2e346a2e349eab743e7563541fed8.json",
+      "sha256": "e0f90698a8b7b226962f00e134358519de5ab9e4d6de64c28a775e5b437b84b3"
+    },
+    {
+      "bytes": 1975,
+      "path": "dossier/git-preparation/17b833594021484f87ed5eda3c96b333.json",
+      "sha256": "b5fb5a7f19241d69c0b47221d154775d756f647d1f6f77dada78ccbc0691889b"
+    },
+    {
+      "bytes": 2001,
+      "path": "dossier/git-preparation/198d283b4fa94960a10114e6d61c045f.json",
+      "sha256": "01426b59eac9df7377cc97cc25e1b5a771dccb1d4ba29ec5a893cf8252d3d98f"
+    },
+    {
+      "bytes": 32136,
+      "path": "dossier/git-preparation/1b1128f202f747c394260fa57b0b8061.json",
+      "sha256": "ba575f37a4048528035129eb86da57f801766ad04fd38336897d5c02b213528c"
+    },
+    {
+      "bytes": 1980,
+      "path": "dossier/git-preparation/1c612367deee4395bcc79efa0f839753.json",
+      "sha256": "b23b3b6c75e0454e5803007b414f03f36ad4fcb862a36edd42c9917dda363f7f"
+    },
+    {
+      "bytes": 1976,
+      "path": "dossier/git-preparation/2054c2cae22f415ab5a1251b9163b0ff.json",
+      "sha256": "ce0e9f9105ee5464ae4ccada2ba627136e358fe50e644ce9708ea7f797acaade"
+    },
+    {
+      "bytes": 2198,
+      "path": "dossier/git-preparation/2a92aa8692e7448487fdce2265d08d78.json",
+      "sha256": "627094e3516d0847a1b965463708c83031097f454da005023fafa15a45c949d3"
+    },
+    {
+      "bytes": 1976,
+      "path": "dossier/git-preparation/313b28ed8b6647b78792c3583eca7204.json",
+      "sha256": "33d36ef445b21a71dc00fa13e51b044f0b6f1d2842c34caf34b77d6659f91f4e"
+    },
+    {
+      "bytes": 2009,
+      "path": "dossier/git-preparation/39a8da0fba1046019a84cbc244ba3640.json",
+      "sha256": "361c871d2d7001cbf2223ad45fc272950c1bab78997bbf3f027be30022dede39"
+    },
+    {
+      "bytes": 2002,
+      "path": "dossier/git-preparation/3ebdd40a3c744f099af390850700b405.json",
+      "sha256": "cb57cbba190c1e09267bd5a51eb4934fa89a55fd4690547886ce773b97182343"
+    },
+    {
+      "bytes": 3757,
+      "path": "dossier/git-preparation/4308a2f704214411a0e859db80a18712.json",
+      "sha256": "7d103e2d1f6451ae25f898cb432ef03206eddd0f902d2ea5c55a7437df2983dc"
+    },
+    {
+      "bytes": 1977,
+      "path": "dossier/git-preparation/43d0f54806204f9eb7158e61fb40f946.json",
+      "sha256": "78526d3b53fafdb05a40a4ea1f2360cd5088618a18e111d9b2a45b246ec83482"
+    },
+    {
+      "bytes": 2375,
+      "path": "dossier/git-preparation/480fb3b206e44a38aaa5c8c10e808ae4.json",
+      "sha256": "ab77a7cb8e9810e7e3878611adfe0c8f03326c55bcb2887e9a6e5cb43cbe064a"
+    },
+    {
+      "bytes": 2009,
+      "path": "dossier/git-preparation/4e6722a4fac84beb90f5797350c91bc5.json",
+      "sha256": "30d8c62916158e7809c632bc08318048b880eb6bc7ce69de25f133283558106f"
+    },
+    {
+      "bytes": 2008,
+      "path": "dossier/git-preparation/56cc5b4fa80e4cf88a3a4ca7aaf9b604.json",
+      "sha256": "edf3ae12a7c4fe08b46c3fa567bbb206780cb605a735efafa666202929674f6b"
+    },
+    {
+      "bytes": 1979,
+      "path": "dossier/git-preparation/573074e810714a3082013e9f8bd227a0.json",
+      "sha256": "e78805db836ae7f4e514dfe329d40e8613c5dd1c24c25977081c0f983116beb2"
+    },
+    {
+      "bytes": 2001,
+      "path": "dossier/git-preparation/59715d9719f94feebdcbccc137c58e68.json",
+      "sha256": "24c63d0a6f3e0baaaa32f1e1db65c526509e7a683445800d38bd0f89d840ebc7"
+    },
+    {
+      "bytes": 1979,
+      "path": "dossier/git-preparation/696034c0b77148aa8121cd6ccfacd2f3.json",
+      "sha256": "28c4e7e33b9c5ba4b7701afd1f3819007bad7f0bf1d72ab117c745a882438d3c"
+    },
+    {
+      "bytes": 1977,
+      "path": "dossier/git-preparation/6d6cbc9f6ab04bedaf7b70ab3fc30a21.json",
+      "sha256": "21112f8eaeb0afefc872a925955bc244d83060b14849efe0e58b3823b495a79e"
+    },
+    {
+      "bytes": 2195,
+      "path": "dossier/git-preparation/72f7433177e14241b6b5a5f4093679bc.json",
+      "sha256": "c8a2301e0d93f49f65226b61da652e3c32d01450acc8c0874d5c4c0c666f0051"
+    },
+    {
+      "bytes": 2005,
+      "path": "dossier/git-preparation/78bd6265a2d14aa2a2f03fa1d66af148.json",
+      "sha256": "d3481fb833bdeaeefd83dfd85c620ee4ce7d03c9b8a3fde5a9fe3735afeeb568"
+    },
+    {
+      "bytes": 1975,
+      "path": "dossier/git-preparation/7c7c8c5265b5417cbb6e6ea562a2ea3f.json",
+      "sha256": "62b1f34039b0aed2a05a33b995f4ab66d15599a678dabbe0f00a79c5b614e9dc"
+    },
+    {
+      "bytes": 4744,
+      "path": "dossier/git-preparation/7d231e0cbea6432cb49985ad27c1e146.json",
+      "sha256": "2f1d369113386905ce12581faae9888458a44b9c3297dd8f3f54ad6635faafad"
+    },
+    {
+      "bytes": 2012,
+      "path": "dossier/git-preparation/7d62a92103dd4149a778721d3ab07e71.json",
+      "sha256": "b5127ca93a725e00e203bb83198bdcbfc802e2d689f2084bcd7bdfaf42a2bbd5"
+    },
+    {
+      "bytes": 2001,
+      "path": "dossier/git-preparation/7e424b632c9141d4875ce7c0f763cdb5.json",
+      "sha256": "3eb6e439022ed964564d1540a961d40fc7b770f30eb140da4fafe633253ebf8c"
+    },
+    {
+      "bytes": 1977,
+      "path": "dossier/git-preparation/86850995f00246f7b27c2b772c6e47e3.json",
+      "sha256": "a79236d11d591b208bd3ebbccba376937ea76393b09a98c2d79db50889c30091"
+    },
+    {
+      "bytes": 2012,
+      "path": "dossier/git-preparation/8bffe27bc14742178a5173b0abfa7b63.json",
+      "sha256": "37ec3a1bf7c923a571c5383540db2c26e9d498ac75b8ab7e1748a3ea8f3fe0b9"
+    },
+    {
+      "bytes": 2196,
+      "path": "dossier/git-preparation/9bbacc4567724410b9bc8db9579b33a1.json",
+      "sha256": "7f226110929e6637c4949a1716f450cd13bae34144b417bad8201611329cfa38"
+    },
+    {
+      "bytes": 2009,
+      "path": "dossier/git-preparation/adb789f3fb7e4eab9f701d5fd2ea65b5.json",
+      "sha256": "acf4030335868f1ae645ab33b4916a1bc01379ef1956be662152f8d45b9b09cd"
+    },
+    {
+      "bytes": 2002,
+      "path": "dossier/git-preparation/ade3d09c848d452fa84c3ebf5b30dd9e.json",
+      "sha256": "aae3abe0730c347e1b3bec386b15d94abd6678181fc64104ab2c80b0fd056f16"
+    },
+    {
+      "bytes": 2009,
+      "path": "dossier/git-preparation/b17b9f28d52e433199237fd66e340a2c.json",
+      "sha256": "38b0abc59e30d2c18839fe6f6404eb7b4efe4d8dc8d97aca08b824bd1fa22336"
+    },
+    {
+      "bytes": 2419,
+      "path": "dossier/git-preparation/b33ba5c1973a4299bc20e7811b818646.json",
+      "sha256": "a7cecd3d247daf88724aa3a07062ec17e4b3e1c28a60e92b9718c6548d7613e0"
+    },
+    {
+      "bytes": 13067,
+      "path": "dossier/git-preparation/b34572ce7a484e8ca41ba208a56d7508.json",
+      "sha256": "8b05058d873c8e18dcfb7cefdcfd6c219db673b6eb38458b0edb403a4c12bf79"
+    },
+    {
+      "bytes": 2002,
+      "path": "dossier/git-preparation/c42525303eff4b3492cc16de890861a4.json",
+      "sha256": "2390d69c0d7fe13ccee5b67b661fc6a08eac1dc20f521bb1c08248502d6889ec"
+    },
+    {
+      "bytes": 2004,
+      "path": "dossier/git-preparation/cabab185fb3d4e25a6de39217cd2ca95.json",
+      "sha256": "86309d1738767d9240c9134755eb4106932609fff0c07f8ccec1419687323336"
+    },
+    {
+      "bytes": 13671,
+      "path": "dossier/git-preparation/cfb25ae139a24fc2aa2cd1a3cec1e129.json",
+      "sha256": "9c3665927ee3b19d4842e52909d4bf62d78b5b7c68189bf575b8354d551a6ff5"
+    },
+    {
+      "bytes": 2008,
+      "path": "dossier/git-preparation/d4974a8568de41f6a08451256cb8c369.json",
+      "sha256": "cad109e6ea83ce0c7fb56076f31773f43c8c12880a588544fcf63457e875831b"
+    },
+    {
+      "bytes": 2010,
+      "path": "dossier/git-preparation/d4ec903479be4dbc89b39ca85d7d4f08.json",
+      "sha256": "b0355483adb48c58b798caec17d75801900c5e36786e54373548d86b909a6209"
+    },
+    {
+      "bytes": 1979,
+      "path": "dossier/git-preparation/d59b93b8b0e24da5a1085dd5b39ce4ab.json",
+      "sha256": "ac56efbb3e48a3beda288406bda536305e01aef65a03760a30314f3df9725b46"
+    },
+    {
+      "bytes": 2196,
+      "path": "dossier/git-preparation/e237e7be3a624b0483e9152277a7687c.json",
+      "sha256": "e68e5635556f3040d02d99b6e907eeca1a7d6e924c20ea50a3b9c0447514e358"
+    },
+    {
+      "bytes": 1960,
+      "path": "dossier/git-preparation/e524afd399ba4f939413c3501cdcd946.json",
+      "sha256": "901be4caf6b5af4cfc4bcd74d7444f7f9b8aeca953bccc75dfae4738e79cffd3"
+    },
+    {
+      "bytes": 1980,
+      "path": "dossier/git-preparation/e8f174bd3b8b4ca09c7179bbec2b2080.json",
+      "sha256": "5174076711d348a06693dc0e3ec3693bcd62926e4f5f1141a9201bbe4eb60383"
+    },
+    {
+      "bytes": 2000,
+      "path": "dossier/git-preparation/e9d204d14834413ea0283299ce932626.json",
+      "sha256": "773c78c9f15632fb49351f32a5db157197a7840360a85584bb3f22be396fd38b"
+    },
+    {
+      "bytes": 2011,
+      "path": "dossier/git-preparation/ec6e6dabb0bd4fd0a371330be89d5aa1.json",
+      "sha256": "7bb80cf3fe97e7059ed31da5bf181397ab78620e7891aa15b9afb2377dd44555"
+    },
+    {
+      "bytes": 2005,
+      "path": "dossier/git-preparation/f066d029ef914f90b919ebb510bffa84.json",
+      "sha256": "ddf384017d78d84d86efdd9b10cf372b69d1bd77a95c931dade2b55e4b2772a3"
+    },
+    {
+      "bytes": 2008,
+      "path": "dossier/git-preparation/f1040e82ad06482cab04efc3bc65fa98.json",
+      "sha256": "ff8838c8cb4769f990cf5ae1326b465ef133b8454552a51a4f36d94d2f86575c"
+    },
+    {
+      "bytes": 2005,
+      "path": "dossier/git-preparation/f987f4c0cab141ae8c6711696a815572.json",
+      "sha256": "f980c2b0ec4fae6b7ec5fb7b977dff98c5e914209104f92f07649d8c4bdcd005"
+    },
+    {
+      "bytes": 2001,
+      "path": "dossier/git-preparation/fc9bb7dd4f5f422bb6dd8ca5bf506e26.json",
+      "sha256": "7082f22fbfb08e31fd5e22d696a279602d039ad801825299b120ab97f3b6e1a2"
+    },
+    {
+      "bytes": 31985,
+      "path": "dossier/manifest.json",
+      "sha256": "eb6a4f825648ba421c566aeef49b1063329338782d01527eebe875366cdf8cec"
+    },
+    {
+      "bytes": 1589868,
+      "path": "dossier/progress-base.json",
+      "sha256": "3aa86b6ea710a4502b3a4ac8e79db9cdf81890608dbc4646b214e02ad899ece8"
+    },
+    {
+      "bytes": 3178138,
+      "path": "dossier/progress-reserved-inferred-owner.json",
+      "sha256": "f550c0375b1d840ab8580d4db718bc5fba677ab779ec038f09d793f1faa5aa5a"
+    },
+    {
+      "bytes": 1496726,
+      "path": "dossier/reserved-inferred-owner/arm.json",
+      "sha256": "3128b79120edde5fbb18a9a090f1af9084128645591b4048060f14ec69cf3db4"
+    },
+    {
+      "bytes": 3520,
+      "path": "dossier/reserved-inferred-owner/build.json",
+      "sha256": "e370d9f9a59538803a9cba01c828bd28cf7cc307634db03e785ba470a76a55d3"
+    },
+    {
+      "bytes": 311689,
+      "path": "dossier/reserved-inferred-owner/metadata-arm.json",
+      "sha256": "5dd5784dcd4734bc61f617849b3c0ad522df2642ad0572a341be520b3b33be4c"
+    },
+    {
+      "bytes": 311686,
+      "path": "dossier/reserved-inferred-owner/metadata-base.json",
+      "sha256": "75351849fbb27a75c3b50cf3e7a99c445a9c10b046747397a1339613011c3596"
+    },
+    {
+      "bytes": 9037,
+      "path": "dossier/reserved-inferred-owner/observe.json",
+      "sha256": "61c5b81e55e5be23152531b1ee6726789121f59a865fa58540d75d6a82eadc25"
+    },
+    {
+      "bytes": 1388,
+      "path": "dossier/reserved-inferred-owner/selections.json",
+      "sha256": "901f90145c6a1a8c9ac51028449749f3339cefab05220b81ce782dde0d600679"
+    },
+    {
+      "bytes": 2083,
+      "path": "dossier/rustc.json",
+      "sha256": "c1bcb73043ee176581a0be0005dbeeea4fdf34d8318f3ade582bb50f1b9d71fc"
+    },
+    {
+      "bytes": 5655,
+      "path": "dossier/summary.json",
+      "sha256": "056c9dce91d1b201168d2c96b7242974dfc7be47d57579bc0c091b6253772081"
+    },
+    {
+      "bytes": 41,
+      "path": "invocation-source.sha",
+      "sha256": "f37ca2663a9f08626376c6f1350cf507214f5ac7aaab824e77f8f284468a4718"
+    },
+    {
+      "bytes": 1966,
+      "path": "preparation-after.json",
+      "sha256": "0a0bb5f4fa79ea07b086571a68b85e2956ac73c57c6d357a5dbeb28ec359ae7c"
+    },
+    {
+      "bytes": 1966,
+      "path": "preparation-before.json",
+      "sha256": "0a0bb5f4fa79ea07b086571a68b85e2956ac73c57c6d357a5dbeb28ec359ae7c"
+    },
+    {
+      "bytes": 2206,
+      "path": "preparation-git/372ce7b151ae4afabb04c92959cf38cf.json",
+      "sha256": "b64cbd27cce7f3102feedcd1f9cb0549d0844a220f7a07471b810f5d93bf1526"
+    },
+    {
+      "bytes": 2018,
+      "path": "preparation-git/4d536b6f4325446788049bf8dfa3721f.json",
+      "sha256": "3c60933620df9d281f120d0f3b0e9460023e1a3963b0a7c504cb2259a8ae68b7"
+    },
+    {
+      "bytes": 3765,
+      "path": "preparation-git/552dfa25f86242d2af83db3d8ca69751.json",
+      "sha256": "b2e7959a7709c9152549681e9a58cea2b7cc513102e03288bfdea304fc481fca"
+    },
+    {
+      "bytes": 1961,
+      "path": "preparation-git/5ec486e0ad0c4efa8f68e36749543479.json",
+      "sha256": "3aceb2577216a741e53c2a4790859a7ee36d7f2b66928d16ebf4abb29671483e"
+    },
+    {
+      "bytes": 2386,
+      "path": "preparation-git/6683eec4be704741aed81cd888404c00.json",
+      "sha256": "7249c14f92d2f57118b7307f0919c99828454e386ef9b33f7073a04916fe95cf"
+    },
+    {
+      "bytes": 2012,
+      "path": "preparation-git/74aa9e8c469342ee99d774096484404e.json",
+      "sha256": "f4ab489b52ce4b3ac1b3393e8c1a5101d78e766c86626500f314966228260f25"
+    },
+    {
+      "bytes": 2010,
+      "path": "preparation-git/96e02907418742d38bd7b556fdc5ba12.json",
+      "sha256": "40bb023f62e66330cb2bef180bfa463d0bd864f22dec81e3f96ed2f5e992a9d3"
+    },
+    {
+      "bytes": 1986,
+      "path": "preparation-git/a27d42051c254b1c9b388648ab102964.json",
+      "sha256": "7d0418d7e27f6412e2af9c7d0946957ed7dd121df934f99b3c9e3eed7ba1892c"
+    },
+    {
+      "bytes": 4752,
+      "path": "preparation-git/b12c57e817fd4e639eebc96d311d7df7.json",
+      "sha256": "d0b62cb8241185aa4345eaf42bbec4003ca7fd351c31164dca0c5f656e005676"
+    },
+    {
+      "bytes": 1986,
+      "path": "preparation-git/bab0de2685554252a537170607b2307b.json",
+      "sha256": "8c8f2c9fba77077235e50567a43a1297de03fffc595465302abe1fc582c6192a"
+    },
+    {
+      "bytes": 2018,
+      "path": "preparation-git/c57619110b434850a13952fae87fb972.json",
+      "sha256": "ca78cd4d537c215deaeb4345ca75991ea071f7dfa1c72f752b76aab88ce09749"
+    },
+    {
+      "bytes": 1964,
+      "path": "preparation-git/d2723d85dc324d8eaa1c3d872b23582f.json",
+      "sha256": "26e865510b51c33b198f9f248668e0c6ad2eeb4ad3f651a4c545222f143ece5e"
+    },
+    {
+      "bytes": 2000,
+      "path": "invocation/committed-invocation.sh",
+      "sha256": "c36456f2e3d322ddea1d7162bd682077ec5cdc8b2b656bb84bdf711662467e48"
+    },
+    {
+      "bytes": 167,
+      "path": "invocation/console.txt",
+      "sha256": "fd82d187de68635115e78074b33cc99ff59d97b6f9be9502fa5b563841201781"
+    },
+    {
+      "bytes": 375,
+      "path": "invocation/invocation.json",
+      "sha256": "1109133f6a28c5c29139134e4f922e54eb56f2229307b0cfd125e4dd408bd13f"
+    }
+  ],
+  "package_commit": "ca4872744fe57801384ff9cd7149fe25ad197ef4",
+  "panel_sha256": "eb6a4f825648ba421c566aeef49b1063329338782d01527eebe875366cdf8cec",
+  "parent_full12_panel_sha256": "4d7588e3f25523358deae71a45c4e8d9529f73c5370511b0dd5b1810d759931c",
+  "question_count_per_arm": 4,
+  "queue_seconds": null,
+  "retained_directory": "/Users/nathan/.local/state/hornvale/counterpart-full12-replay-pud5s1p1",
+  "schema": "counterpart-mac-reserved-receipt-v1",
+  "summary_revalidated": true
+}

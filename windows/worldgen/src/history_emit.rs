@@ -12,6 +12,7 @@
 //! never quantizes anything itself.
 
 use crate::history_bake::BakeId;
+use crate::social_projection::{GROUP_ROLE, PERSON_ROLE, SocialProjection};
 use crate::{BuildError, History};
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
@@ -202,6 +203,64 @@ fn resolve_people(label: &str) -> Option<KindId> {
         .iter()
         .find(|(k, _)| k.0 == label)
         .map(|(k, _)| *k)
+}
+
+/// Commit an explicitly enabled synthetic social projection. `None` is the
+/// default-world boundary and is an exact no-op.
+pub fn emit_social_projection(
+    world: &mut World,
+    projection: Option<&SocialProjection>,
+) -> Result<(), BuildError> {
+    let Some(projection) = projection else {
+        return Ok(());
+    };
+
+    for (ordinal, person) in projection.persons().iter().enumerate() {
+        let id = world.ledger.mint_entity(Lineage {
+            parent: None,
+            role: PERSON_ROLE,
+            ordinal: ordinal as u16,
+        });
+        assert_eq!(
+            id,
+            person.person(),
+            "projection person identity must match deterministic mint lineage"
+        );
+    }
+    for (ordinal, expected) in projection.groups().iter().copied().enumerate() {
+        let id = world.ledger.mint_entity(Lineage {
+            parent: None,
+            role: GROUP_ROLE,
+            ordinal: ordinal as u16,
+        });
+        assert_eq!(
+            id, expected,
+            "projection group identity must match deterministic mint lineage"
+        );
+    }
+
+    for person in projection.persons() {
+        world.ledger.commit(
+            Fact {
+                subject: person.person(),
+                predicate: hornvale_person::IS_PERSON.to_string(),
+                object: Value::Flag(true),
+                place: None,
+                day: Some(WorldTime::GENESIS),
+                provenance: crate::streams::SOCIAL_PROJECTION.as_str().to_string(),
+            },
+            &world.registry,
+        )?;
+        for fact in person.facts() {
+            world.ledger.commit(fact, &world.registry)?;
+        }
+    }
+    for event in projection.events() {
+        for fact in event.facts() {
+            world.ledger.commit(fact, &world.registry)?;
+        }
+    }
+    Ok(())
 }
 
 /// Commit a baked [`History`]'s whole occupation skeleton to `world`'s

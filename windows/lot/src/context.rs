@@ -58,6 +58,13 @@ pub struct LotContext {
     pub occupations: Vec<Prepared>,
     /// Entity id → index into `occupations`.
     pub by_entity: BTreeMap<EntityId, usize>,
+    /// Realized social people, in ledger commit order. Ordinary worlds have
+    /// none; synthetic social probes opt in by committing `is-person` facts.
+    pub social_people: Vec<EntityId>,
+    /// Explicit occupation-to-person identity. A mapping is usable only when
+    /// exactly one realized person is founded by the occupation; ambiguity is
+    /// intentional silence rather than an index-based guess.
+    pub social_people_by_occupation: BTreeMap<EntityId, Vec<EntityId>>,
     /// The rebuilt terrain (coordinates; hazards). `pub(crate)`: nothing
     /// outside this crate reads it (checked against `windows/lab`, `cli`
     /// and `clients/lot/wasm` — the final review's item 6); every read is
@@ -106,6 +113,13 @@ impl LotContext {
     /// type-audit: bare-ok(count: return)
     pub fn births_cdf(&self) -> &[f64] {
         &self.births_cdf
+    }
+
+    /// Resolve the realized person explicitly founded by this occupation.
+    /// Multiple candidates are ambiguous and therefore remain unreadable.
+    pub fn social_person_for_occupation(&self, occupation: EntityId) -> Option<EntityId> {
+        let people = self.social_people_by_occupation.get(&occupation)?;
+        (people.len() == 1).then_some(people[0])
     }
 
     /// Latitude/longitude of a Geosphere vertex, in degrees — the formula
@@ -168,6 +182,24 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
 
     let by_entity: BTreeMap<EntityId, usize> =
         records.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
+    let social_people: Vec<EntityId> = world
+        .ledger
+        .find(hornvale_person::IS_PERSON)
+        .filter_map(|fact| (fact.object == Value::Flag(true)).then_some(fact.subject))
+        .collect();
+    let mut social_people_by_occupation: BTreeMap<EntityId, Vec<EntityId>> = BTreeMap::new();
+    for person in &social_people {
+        for fact in world.ledger.facts_about(*person) {
+            if fact.predicate == hornvale_person::PERSON_FOUNDED
+                && let Value::Entity(occupation) = fact.object
+            {
+                social_people_by_occupation
+                    .entry(occupation)
+                    .or_default()
+                    .push(*person);
+            }
+        }
+    }
 
     // Per-people life history, resolved once.
     let mut life: BTreeMap<&str, (f64, f64)> = BTreeMap::new();
@@ -306,6 +338,8 @@ pub fn assemble(world: &World) -> Result<LotContext, LotError> {
         epoch_years: EPOCH_YEARS,
         occupations,
         by_entity,
+        social_people,
+        social_people_by_occupation,
         terrain,
         components: wc,
         settlements_by_vertex,

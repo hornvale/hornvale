@@ -148,8 +148,8 @@ pub fn action_for(key: KeyEvent, focus: Focus) -> Action {
             KeyCode::Down => Action::Move("south"),
             KeyCode::Left => Action::Move("west"),
             KeyCode::Right => Action::Move("east"),
-            KeyCode::Char('<') => Action::Move("up"),
-            KeyCode::Char('>') => Action::Move("down"),
+            KeyCode::Char('<') => Action::Move("ascend"),
+            KeyCode::Char('>') => Action::Move("descend"),
             KeyCode::Esc => Action::ToggleFocus,
             KeyCode::Char(c) => Action::FocusAndType(c),
             _ => Action::None,
@@ -348,6 +348,16 @@ mod tests {
 
     /// The six movement bindings under Walk. `<`/`>` arrive SHIFTed — they are
     /// the only shifted characters that do anything but type.
+    ///
+    /// **`<`/`>` bind to `ascend`/`descend`, not `up`/`down`** (The Newel,
+    /// Task 2, B1). The sim's own `up`/`down` mean the underground stairs
+    /// verb specifically and refuse everywhere else
+    /// ("You are not underground; there are no stairs to take.") — the exact
+    /// bug report this task closes. `ascend`/`descend` are the new sim-side
+    /// verbs that resolve to whichever of the four vertical band changes
+    /// applies to where the possession stands (spec §4.1); the client sends
+    /// the word unconditionally either way (this module's own doc: "the
+    /// client never validates").
     #[test]
     fn the_movement_keys_send_move_actions_when_walking() {
         let cases = [
@@ -369,11 +379,11 @@ mod tests {
             ),
             (
                 KeyEvent::new(KeyCode::Char('<'), KeyModifiers::SHIFT),
-                Action::Move("up"),
+                Action::Move("ascend"),
             ),
             (
                 KeyEvent::new(KeyCode::Char('>'), KeyModifiers::SHIFT),
-                Action::Move("down"),
+                Action::Move("descend"),
             ),
         ];
         for (key, want) in cases {

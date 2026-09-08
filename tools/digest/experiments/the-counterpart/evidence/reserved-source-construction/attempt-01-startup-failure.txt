@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker/tools/digest/experiments/the-counterpart/evidence/reserved-source-construction/driver.py.txt", line 32, in <module>
+    prereg = run.load_json(prereg_path)
+  File "/Users/nathan/.config/superpowers/worktrees/hornvale/federation-next/tools/digest/experiments/the-counterpart/run.py", line 44, in load_json
+    return json.loads(raw, object_pairs_hook=unique)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/json/__init__.py", line 339, in loads
+    raise TypeError(f'the JSON object must be str, bytes or bytearray, '
+                    f'not {s.__class__.__name__}')
+TypeError: the JSON object must be str, bytes or bytearray, not PosixPath

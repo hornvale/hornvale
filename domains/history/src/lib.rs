@@ -14,7 +14,13 @@
 pub mod descent;
 pub mod flesh;
 pub mod record;
+pub mod social;
 pub mod streams;
+pub use social::{
+    ASSOCIATION_FORM, AssociationForm, GroupMembershipEvent, LifecycleEvent, MEMBERSHIP_ENDED,
+    RECOGNITION_INTERPRETATION, RelationEvent, RelationKind, SocialEvent, SocialEventError,
+    validate_social_events,
+};
 pub use streams::stream_labels;
 
 use hornvale_kernel::{ConceptRegistry, RegistryError};
@@ -161,6 +167,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "the community this community pays standing tribute to",
     )?;
+    social::register_concepts(registry)?;
     Ok(())
 }
 

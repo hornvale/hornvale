@@ -368,10 +368,22 @@ run_bg() {
     _tmp="$(mktemp)"
     { TIMEFORMAT='%R %U %S'; time wait "$current_child_pid"; } 2>"$_tmp"
     _rc=$?
-    read -r _real _user _sys < "$_tmp"
+    # The same rule as scripts/timed.sh: a phase's CPU accounting must never
+    # decide whether the phase passed. This copy of the pattern failed in the
+    # same instant as that one on 2026-09-06 (campaign/the-warrant), for the
+    # same reason — the mktemp file was gone by the time it was read — and
+    # under `set -u` the unset `_user` aborted the run AFTER the phase had
+    # already succeeded. Losing a CPU figure costs a cell in jobs.tsv; losing
+    # the phase costs a campaign a slot on a strictly serial box.
+    _real=""; _user=""; _sys=""
+    if [ -r "$_tmp" ]; then read -r _real _user _sys < "$_tmp" || true; fi
     rm -f "$_tmp"
-    job_user_s="$(awk -v a="${job_user_s:-0}" -v b="$_user" 'BEGIN{printf "%.3f", a+b}')"
-    job_sys_s="$(awk -v a="${job_sys_s:-0}" -v b="$_sys" 'BEGIN{printf "%.3f", a+b}')"
+    if [ -n "$_user" ] && [ -n "$_sys" ]; then
+        job_user_s="$(awk -v a="${job_user_s:-0}" -v b="$_user" 'BEGIN{printf "%.3f", a+b}')"
+        job_sys_s="$(awk -v a="${job_sys_s:-0}" -v b="$_sys" 'BEGIN{printf "%.3f", a+b}')"
+    else
+        echo "sluice-run: phase CPU accounting unreadable; the phase's own rc=$_rc stands." >&2
+    fi
     current_child_pid=""
     return "$_rc"
 }
@@ -740,12 +752,39 @@ trap 'code=$?; rm -f "$claim_path"; echo "sluice-run: finished $(date -Is) rc=$c
 # lane dispatch `checkout --force`s and `reset --hard`s. A dedicated tree
 # always builds main-plus-a-delta, so its warm target/ stays hot and the
 # measured 771 s cold build is paid once, ever.
-wt="${HV_SLUICE_WORKTREE:-$repo_root/../hornvale-sluice-wt}"
+# ANCHOR TO THE MAIN WORKTREE, NOT THE CALLER'S. `$repo_root` is wherever this
+# script was invoked from, so running it from a LINKED worktree put the chamber's
+# scratch worktree inside .claude/worktrees/ — untracked, un-ignored, and
+# destroyable by a `git clean -fdx` in the checkout it sits under. That is
+# exactly the invariant decision 0146 restored for the census after
+# `HV_CENSUS_WORKTREE=canonical` created one at ~/Projects/hornvale/canonical;
+# the fix went into census-run.sh alone and the same defect stayed here and in
+# heavy-run.sh. Three strays on disk prove it happened:
+# .claude/worktrees/hornvale-sluice-wt (4.5G),
+# .claude/worktrees/tooling/hornvale-sluice-wt, and a lane-era one beside them.
+# Since fix/worktree-pool-recycling the pool is recyclable again, which makes
+# this worse rather than cosmetic: `worktree-take.sh --list` now offers those
+# strays to campaigns as pool members.
+# `git worktree list --porcelain` lists the MAIN worktree first (git's own
+# ordering) — the same resolution census-run.sh and worktree-take.sh use.
+_main_root="$(env -u GIT_DIR -u GIT_INDEX_FILE git -C "$repo_root" worktree list --porcelain \
+    | awk '/^worktree /{print $2; exit}')"
+[ -n "$_main_root" ] || _main_root="$repo_root"
+wt="${HV_SLUICE_WORKTREE:-$_main_root/../hornvale-sluice-wt}"
 base_ref="${HV_SLUICE_BASE:-origin/main}"
-git -C "$repo_root" fetch --all --quiet
+# FETCH origin EXPLICITLY IF `--all` FAILS. A second remote was added to this
+# repository (tangled.org) on 2026-09-07, and `--all` contacts every remote:
+# an unreachable secondary now aborts this script under `set -e`, BEFORE the
+# merge, with rc=1 — a code outside this script's own vocabulary, which the
+# drain records as "attribution pending" and blames the candidate for. Found
+# by a test that added a deliberately-broken remote and watched a chamber run
+# die at rc=1 immediately after its queue-row line. Falling back to origin
+# keeps the failure fatal only when the remote the chamber actually needs is
+# unreachable.
+git -C "$repo_root" fetch --all --quiet || git -C "$repo_root" fetch origin --quiet
 base_sha="$(git -C "$repo_root" rev-parse "$base_ref")"
 if [ -e "$wt/.git" ]; then
-    git -C "$wt" fetch --all --quiet
+    git -C "$wt" fetch --all --quiet || git -C "$wt" fetch origin --quiet
     git -C "$wt" checkout --force --detach "$base_sha"
     git -C "$wt" reset --hard "$base_sha" --quiet
     # -fd, NEVER -fdx: target/ is gitignored, and -x would destroy this box's
@@ -1088,4 +1127,38 @@ fi
 printf '%s\n' "$final_sha" > "$HV_SLUICE_DIR/last-pushed"
 git push origin "HEAD:refs/heads/$branch" || \
     echo "sluice-run: warning — could not update $branch; main is already landed." >&2
+
+# THE MIRROR IS BEST-EFFORT AND MUST NEVER FAIL A MERGE THAT HAS LANDED.
+#
+# Nathan added a second remote (tangled.org) and asked that main be pushed
+# there as well as to origin. This is the only correct place for it: the
+# chamber is the sole route by which main advances (decision 0139), and
+# scripts/hooks/pre-push gates `refs/heads/main` BY REF rather than by remote,
+# so a mirror push needs the canonical box's live claim exactly as the origin
+# push does. The chamber holds that claim here; a human pushing by hand does
+# not, and would need HV_PUSH_OK=1. Putting the mirror anywhere else would
+# either bypass 0139 or require the escape hatch on every landing.
+#
+# IT RUNS AFTER THE ORIGIN PUSH AND CANNOT AFFECT rc, DELIBERATELY. By this
+# line main HAS MOVED on origin: the merge is landed, the queue's induction
+# record is written, and the campaign is done. If tangled is unreachable,
+# failing the job would report a landed merge as a failure and send someone
+# hunting a candidate that was fine — the same mistake scripts/timed.sh made
+# when a vanished tempfile turned a green `artifacts` phase into rc=11 and
+# cost campaign/the-warrant a serial-box slot. A measurement, or a mirror,
+# must not hold veto power over the thing it observes.
+#
+# The remote name is overridable so scripts/test-sluice.sh can point it at a
+# scratch bare repo; nothing in production sets it. An absent remote is
+# silence, not a warning — most checkouts do not have it configured.
+mirror_remote="${HV_SLUICE_MIRROR_REMOTE:-tangled}"
+if git remote get-url "$mirror_remote" >/dev/null 2>&1; then
+    if git push "$mirror_remote" "$final_sha:refs/heads/main" >/dev/null 2>&1; then
+        echo "sluice-run: mirrored $final_sha to $mirror_remote"
+    else
+        echo "sluice-run: warning — could not mirror $final_sha to $mirror_remote." >&2
+        echo "sluice-run:   MAIN IS LANDED ON origin; this is a mirror lag, not a failed merge." >&2
+        echo "sluice-run:   catch up by hand: HV_PUSH_OK=1 git push $mirror_remote $final_sha:refs/heads/main" >&2
+    fi
+fi
 echo "sluice-run: LANDED $final_sha on main"

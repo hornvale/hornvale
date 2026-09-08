@@ -1,0 +1,114 @@
+{
+  "schema": "counterpart-reserved-author-v1",
+  "challenge_id": "reserved-inferred-owner",
+  "preregistered_utc": "2026-09-05T20:30:32.690483+00:00",
+  "source_base": "5cc62d8b6ae30552f22a68e85fd9a2885ac6e1dd",
+  "freeze_commit": "16861a886a7069cf01123d0cde5688364781cff9",
+  "freeze_file_sha256": "77fd21d1cb205a022c4821ad0a97d761d926fab882f47caf45338c2a040af6b4",
+  "frozen_identities": {
+    "checker": "ee14515c833ddb43397b25ad9b035dcc18d07c748d7f1a1f3effa6b9f8902c90",
+    "contract": "37ea8fa06f086000f94cf215a391b5bcbd74bef92b9502bdc02ebb0a9ad32b34",
+    "implementation": "02796fe0ae719a55f431f8aedc2ab6853c9a2776",
+    "measure": "178183964c86f46b14b6ea31c1c647d5b7e8031d245f9e66297acb1447edc37a",
+    "owners": "5402a554e6437e2117c7e27172359ede265c6bc0b23f8829de18b41206d0f7f3",
+    "roster": "230bcfc8cd38bd8eeb91701894dc5399a7cf9fa4cb6b5b6af19330f6bfd6c3c6",
+    "rules": "ea13353f2133cc1f168fea6dcb2447405786af8ef37e3a4ccb158885ac9e03a5"
+  },
+  "author_context": {
+    "author": "/root/counterpart_checker",
+    "checker_author_commit": "26c693ce027bbfb8c937e4f36f024949a6b97589",
+    "worktree": "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker",
+    "branch": "codex/counterpart-challenge",
+    "earlier_context": "Independently derived the checker from accepted contract and production APIs; existing Thing test comments appeared in symbol search. No Charter implementation or other owner records/specimens read during checker derivation.",
+    "post_freeze_exposure": [
+      "freeze.json identities, files, checker_author and top-level key names only; no source_arms values",
+      "production domains/thing/src/lib.rs borrowing and registration",
+      "production domains/settlement/src/lib.rs registration",
+      "tools/digest/packages/thing/src/lib.rs existing candidate collector and tests (first exposure after freeze)",
+      "scripts/charter_measure.py supervisor implementation",
+      "tools/digest/Cargo.toml and packages/counterpart/Cargo.toml for build command"
+    ],
+    "not_read": [
+      "owners/*.json",
+      "other author patches",
+      "panel arms",
+      "unreserved outputs",
+      "comparison implementation",
+      "other worker reports"
+    ],
+    "independence_limit": "Procedural separation with explicit shared authority; no filesystem or security blindness claim."
+  },
+  "patch": {
+    "path": "tools/digest/experiments/the-counterpart/patches/reserved-inferred-owner.patch",
+    "sha256": "77fde4719e32393242c057bf3cdbfff9edd34b688ffee18ca8ddc1a280bcedcf",
+    "bytes": 1217,
+    "sources": {
+      "domains/thing/src/lib.rs": {
+        "before_sha256": "63d1c154cc1cdcadc7a35c472d77c4a416d62a3ef9626cbc70b76f02f4d6c9d2",
+        "after_sha256": "840f8603619a4a383b476834e3e85205375631bb610b371a29478b805d52230c"
+      },
+      "tools/digest/packages/thing/src/lib.rs": {
+        "before_sha256": "58380075bf83ed7e43c00ea219214b1b87e3bfbab4b2d84b8eacc24230377379",
+        "after_sha256": "d47df566e33f5fa5ab920a12c1d8e4e0a4d5631120280f8f1a50afc262b30888"
+      }
+    }
+  },
+  "mutation": {
+    "production_behavior": "Register the ordinary Thing kind key under settlement, while key remains in THING_KINDS and has no BORROWED declaration.",
+    "candidate_check": "Infer expected_owner from the same composed registry being checked, falling back to declared borrowing only when no concept exists. Keep executable registration, component, missing-concept, extra-Thing-name, unused-borrowing, and duplicate checks.",
+    "correlation": "The mutated candidate promotes the observed misattribution into its expected owner; a supplied all-satisfied declaration then agrees with its real checks even though the independent ownership authority requires thing.",
+    "not_an_always_satisfied_stub": "No Outcome branch is replaced. The source registrar genuinely misattributes key, and the candidate still executes the real registrars and its other comparisons."
+  },
+  "declared_answers": {
+    "registration": "satisfied",
+    "components": "satisfied",
+    "borrowing": "satisfied",
+    "ownership": "satisfied"
+  },
+  "expected_behavioral_property": {
+    "source_contains": "key",
+    "components_contains": "key",
+    "borrowing_does_not_contain": "key",
+    "before_registry_does_not_contain": "key",
+    "after_registry_contains": {
+      "name": "key",
+      "owner": "settlement"
+    },
+    "registrations": {
+      "settlement": "accepted",
+      "thing": "accepted"
+    },
+    "candidate_observations": {
+      "hornvale.thing:registration": "satisfied",
+      "hornvale.thing:component-roster": "satisfied",
+      "hornvale.thing:concept-ownership": "satisfied"
+    },
+    "expected_independent_contract_violation": "ownership: key must be owned by thing absent an explicit borrowing declaration",
+    "status": "Preregistered prediction only; no compilation, raw observation, checker or comparator run yet."
+  },
+  "qualification_protocol": {
+    "measurement_api": "scripts/charter_measure.py::measure",
+    "retain_output": true,
+    "deadline_seconds": 3600,
+    "output_limit_bytes": 16777216,
+    "build_command": [
+      "cargo",
+      "build",
+      "--manifest-path",
+      "tools/digest/Cargo.toml",
+      "-p",
+      "digest-counterpart",
+      "--bin",
+      "digest-counterpart",
+      "--locked",
+      "--offline",
+      "--target-dir",
+      "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker/target/counterpart-reserved-author"
+    ],
+    "observation_command": [
+      "/Users/nathan/.config/superpowers/worktrees/hornvale/counterpart-checker/target/counterpart-reserved-author/debug/digest-counterpart"
+    ],
+    "formal_scoring": "Not run by author; waits for controller after green normal Stage2.",
+    "source_handling": "Apply patch to verified base-identical owned source files only after preregistration commit. Retain each measurement before interpreting. Restore exact original source and verify both Cargo locks before any artifact commit. Stop on uncertain cleanup."
+  }
+}

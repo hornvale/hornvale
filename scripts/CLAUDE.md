@@ -119,7 +119,10 @@ exactly that reason: it names the claim, not the deleted machinery.
   account); the chamber then commits the rewritten roster with the merge
   product. Exit 3 means no roster exists for this host — a different thing
   from an empty roster, and `gate-commit-run` treats it as a hard failure
-  rather than silently gating nothing.
+  rather than silently gating nothing. `HV_SUBFLOOR_EXCLUDE` omits matching
+  roster terms for one caller, `pre-commit` under `HV_CENSUS_DELIVERY` (The
+  Spillway, decision 0836); removal not wrapping, so the chunker's flat split
+  holds.
 - **`lane-outboard.sh`** — the driver for the `outboard` set: three suites
   nothing ran before The Staff — `tools/board`, `tools/digest`, and
   `tools/type-audit`'s own suite (distinct from the `type-audit check` lint
@@ -359,6 +362,18 @@ the exact SHA it tested.
   claim itself and deletes the claim file on exit, so nesting it clobbers the
   outer job's own claim). An unknown `kind` is gated and sent to the chamber —
   failing toward the check.
+- **`sluice-census.sh` re-authors the Gnomon injection arms before it commits
+  (The Spillway, decision 0836)** — with the ref's OWN `gnomon-injection.sh`
+  (its literals must match that source), under the shared flock, timed into
+  `docs/timings.md` as `gnomon-injection`, whenever a golden moved or an
+  arm's columns differ. It writes no claim file for those minutes, so
+  `census-run.sh status` reads idle while flock-takers wait. The rule that
+  places each census-shaped check: a delivery SATISFIES what a regeneration
+  remedies and DEFERS what needs a human re-statement — so `pre-commit`
+  stands down three checks under `HV_CENSUS_DELIVERY` (golden pins, the
+  yellow alarm, the column-count witness) and `test-census-guard.sh` pins
+  that count. A ref predating The Spillway is refused at the delivery's
+  pre-flight, goldens left staged, and The Warp's by-hand path applies.
 - **`test-sluice-drain.sh`** — tests those two rules, their negative controls,
   and that they AGREE about what a census is. The agreement test is the load-
   bearing one: the original defect was not either rule alone but the two
@@ -404,6 +419,32 @@ confirmation-gated in the Makefile.
   mutation and makes the resulting absence read as a pass. Not part of any
   gate and not mandatory; whether an ad-hoc `sed` is ever acceptable for a
   mutation demo is an open call recorded in The Underworld's retrospective.
+- **`worktree-take.sh`** — claims a recycled pool member (root `CLAUDE.md`
+  carries the pool's rationale). Its recyclability predicate is *branch merged
+  into BASE, and tree clean* — with **two** machine-written files excluded from
+  "clean", on two different premises. `docs/timings/test-baseline-<host>.tsv`
+  is rewritten by the next green gate, so discarding it loses nothing.
+  `docs/timings.md` is append-only history, so discarding a row destroys a
+  measurement — it is excluded anyway, and the discard is printed to stderr
+  rather than silent, which is the whole difference between the two.
+  **Without the second exclusion the script was dead code**: `gate-run` appends
+  a row on every green gate including the last one a campaign runs after its
+  final commit, whose row nobody is left to commit, so a finished campaign's
+  worktree was dirty *by construction* and never recycled again. The
+  degradation is unusually quiet — "no recyclable member", a cold worktree, and
+  a success exit — so it shows up only as disk use nobody attributes to it.
+  Measured 2026-09-06: 33 live worktrees against a design that assumed ~3,
+  ~700 GB, 9 of the 11 stale merged members blocked by that one file.
+  `scripts/test-worktree-take.sh` pins all of it (in the `outboard` set), and
+  its fixture is the load-bearing part: it must **advance main's copy of both
+  files** after the pool member branches, because `git switch -c` only refuses
+  a local modification whose content differs at the target. A fixture where
+  main never moves takes a branch production never takes, and a mutation
+  deleting the discard outright survived it with every assertion green.
+  **Still open:** the just-taken race in `docs/retrospectives/the-hidage.md` —
+  a freshly-taken member sits at `origin/main` with a clean tree and is
+  indistinguishable from a finished one under this same predicate.
+
 - **`shapecheck.py`** — compares the key-path SHAPE of two JSON documents
   (dicts/lists/scalars, values ignored), so a drifted byte-golden's diff can
   be answered structurally rather than by eyeballing a large single-line

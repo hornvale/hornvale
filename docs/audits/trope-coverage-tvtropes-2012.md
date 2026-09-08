@@ -519,7 +519,7 @@ missing 1 bundles, so no single row makes anything stageable on its own.
 
 ## Supply
 
-363 served tokens no situation in this corpus requires.
+401 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -790,12 +790,25 @@ missing half before this list can serve it.
 - `phenomenon:tide`
 - `predicate:anchor-mass-earth`
 - `predicate:anchor-orbit-au`
+- `predicate:association`
+- `predicate:association-ended`
+- `predicate:association-form`
 - `predicate:breakup-age`
 - `predicate:brightening-per-gyr`
+- `predicate:care`
+- `predicate:care-ended`
+- `predicate:custody`
+- `predicate:custody-ended`
 - `predicate:day-length-std`
 - `predicate:deity-epithet`
 - `predicate:deity-epithet-ipa`
 - `predicate:deity-name-ipa`
+- `predicate:dependency`
+- `predicate:dependency-ended`
+- `predicate:descent`
+- `predicate:descent-ended`
+- `predicate:die`
+- `predicate:dissolve`
 - `predicate:eccentricity-mean`
 - `predicate:figure-count`
 - `predicate:figure-members`
@@ -804,6 +817,10 @@ missing half before this list can serve it.
 - `predicate:fossil-shoreline`
 - `predicate:founding-solstice-azimuth-degrees`
 - `predicate:frost-retreat`
+- `predicate:gender-identity`
+- `predicate:gender-identity-ended`
+- `predicate:gender-recognition`
+- `predicate:gender-recognition-ended`
 - `predicate:genesis-note`
 - `predicate:glacial-maximum-era`
 - `predicate:greenhouse-forcing-k`
@@ -816,6 +833,8 @@ missing half before this list can serve it.
 - `predicate:is-neighbor`
 - `predicate:is-occupation`
 - `predicate:max-ice-fraction`
+- `predicate:membership`
+- `predicate:membership-ended`
 - `predicate:moon-age-gyr`
 - `predicate:moon-angular-size-rel`
 - `predicate:moon-count`
@@ -847,18 +866,33 @@ missing half before this list can serve it.
 - `predicate:occ-site`
 - `predicate:occ-tech`
 - `predicate:ocean-fraction`
+- `predicate:origin`
+- `predicate:origin-ended`
 - `predicate:person-founded`
+- `predicate:person-social-provenance`
 - `predicate:plate-count`
 - `predicate:pole-star-north`
 - `predicate:pole-star-south`
+- `predicate:recognition`
+- `predicate:recognition-ended`
+- `predicate:recognition-interpretation`
 - `predicate:refugium`
+- `predicate:reproductive-role`
+- `predicate:reproductive-role-ended`
+- `predicate:residence`
+- `predicate:residence-ended`
 - `predicate:retrograde-spin`
 - `predicate:rifted-from`
 - `predicate:scenario-pin`
 - `predicate:sea-level-m`
 - `predicate:sentiment`
+- `predicate:separate`
 - `predicate:settlement-pin`
+- `predicate:sex-trait`
+- `predicate:sex-trait-ended`
 - `predicate:sky-provider`
+- `predicate:social-role`
+- `predicate:social-role-ended`
 - `predicate:species-activity-cycle`
 - `predicate:species-deliberation-latency`
 - `predicate:species-exotic-manner`
@@ -887,6 +921,10 @@ missing half before this list can serve it.
 - `predicate:terrain-note`
 - `predicate:terrain-pin`
 - `predicate:tidally-locked`
+- `predicate:transfer`
+- `predicate:transfer-ended`
+- `predicate:transitioned`
+- `predicate:transitioned-ended`
 - `predicate:wanderer-class`
 - `predicate:wanderer-count`
 - `predicate:wanderer-orbit-au`

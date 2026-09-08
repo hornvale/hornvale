@@ -475,6 +475,46 @@ fn an_unplaceable_sun_lights_the_plate_flat() {
     );
 }
 
+/// An ocean tile (`water == 0`) with no ground reflectance at all — the
+/// wet arm never reads [`hornvale_game::plate::TileTerrain::reflectance`],
+/// so every other field is a placeholder built from the cheapest legal
+/// value for its type. `facet`/`vertex` are the empty-path root facet and
+/// vertex 0; `height_asl` is a plausible ocean depth. None of these three
+/// participate in [`hornvale_game::plate::color_for`]'s wet arms — only
+/// `water` does.
+fn ocean_tile() -> hornvale_game::plate::TileTerrain {
+    hornvale_game::plate::TileTerrain {
+        ocean: true,
+        facet: hornvale_kernel::Facet {
+            face: 0,
+            path: Vec::new(),
+        },
+        vertex: hornvale_kernel::Vertex(0),
+        band: 0,
+        reflectance: None,
+        height_asl: hornvale_kernel::SeaLevelHeight::from_metres(-1000.0),
+        water: 0,
+    }
+}
+
+/// B6: open water must answer to the clock like everything else. Before
+/// The Newel, `color_for`'s wet arms called `obs.show`, which takes no
+/// illuminant at all, so the ocean ink was byte-identical from a sun 80
+/// degrees up to one 60 degrees below the horizon.
+#[test]
+fn an_ocean_tile_is_a_different_colour_at_noon_and_at_midnight() {
+    let obs = hornvale_game::observer::TerminalObserver::new(
+        hornvale_game::observer::ColorDepth::TrueColor,
+    );
+    let (.., world) = wash_support::seed_42_world();
+    let noon = hornvale_game::driver::plate_illuminant_at(world, 80.0);
+    let night = hornvale_game::driver::plate_illuminant_at(world, -60.0);
+    let tile = ocean_tile();
+    let a = hornvale_game::plate::color_for(&tile, &noon, &obs).expect("truecolor renders");
+    let b = hornvale_game::plate::color_for(&tile, &night, &obs).expect("truecolor renders");
+    assert_ne!(a, b, "the ocean drew the same ink at noon and at midnight");
+}
+
 // =====================================================================
 // Task 6: the collapse — colour stops being keyed on elevation.
 // =====================================================================
@@ -570,24 +610,44 @@ mod wash_collapse {
             .collect()
     }
 
-    /// Every colour the SPECTRAL arm of [`plate::color_for`] claims over the
-    /// sample window, plus how many tiles were asked — the population the
-    /// deleted `RELIEF_COLORS` ladder used to colour, and the ONLY
-    /// population a claim about the spectral collapse may be made over.
+    /// The lowest water class [`plate::color_for`] answers from
+    /// `tile.reflectance` — its spectral `_` arm. Classes 0 (ocean) and 1
+    /// (salt basin) take client-authored CONSTANT spectra
+    /// (`ocean_reflectance()`, `salt_basin_reflectance()`) and never read
+    /// the ground at all; 2 (river) and 3 (dry land) do. Mirrors
+    /// `color_for`'s own match, which is the only place the split is
+    /// decided.
+    const FIRST_SPECTRAL_WATER_CLASS: u8 = 2;
+
+    /// What [`plate::color_for`] claims over the sample window, split by the
+    /// axis the two assertions below need it split by:
     ///
-    /// **Why this is not read off the drawn grid.** A drawn `Grid` position carries an
-    /// ink and no water class, so a whole-plate colour set mixes the
-    /// spectral answers with the three invented water-palette entries — and
-    /// those three are chromatic. Measured, not reasoned: collapsing the
-    /// spectral arm to greyscale (`[g, g, g]`) and re-running left the
-    /// whole-plate form of the hue assertion GREEN, satisfied entirely by
-    /// ocean, salt basin and river. That is finding (c)'s blind spot
-    /// reproduced one level up from where it was first found.
+    /// 0. **every** colour, all four water classes — the population for the
+    ///    count and wiring halves, which ask what a whole plate paints;
+    /// 1. the colours from the **spectral `_` arm alone** (`water >=`
+    ///    [`FIRST_SPECTRAL_WATER_CLASS`]) — the population for the
+    ///    chromaticity half;
+    /// 2. how many tiles actually took that arm AND resolved a colour there.
     ///
-    /// `water >= 2` is exactly [`plate::color_for`]'s own `_` arm — ocean
-    /// (0) and salt basin (1) take the palette, every wetter-or-drier class
-    /// from the river class up takes the spectrum.
-    fn spectral_land_colours() -> (BTreeSet<[u8; 3]>, usize) {
+    /// **Why the chromaticity half must NOT see the wet arms, even though
+    /// B6 put them under the same illuminant.** B6 routes ocean and salt
+    /// basin through `TerminalObserver::observe` rather than the old
+    /// fixed-sRGB `show`, so all four classes now vary on the same
+    /// ILLUMINANT axis — which is what made widening this population look
+    /// safe. The chromaticity assertion measures the other axis:
+    /// `color_for`'s wet arms read client-authored constant spectra and
+    /// never `tile.reflectance`, so a greyscale collapse of the `_` arm
+    /// leaves ocean-blue and salt-basin-white untouched, and those two alone
+    /// clear the floor with ~20x headroom.
+    ///
+    /// Measured, not reasoned, twice over. Collapsing the `_` arm to
+    /// `[g, g, g]` left the whole-DRAWN-GRID form of the hue assertion GREEN
+    /// (satisfied by ocean, salt basin and the river line `rasterize_rivers`
+    /// paints over the relief), which is why this reads `color_for` directly
+    /// rather than the grid. The same mutation then left the WIDENED form
+    /// green too — the same blind spot one level down — which is why the
+    /// `water >=` scoping is back for that half only.
+    fn spectral_land_colours() -> (BTreeSet<[u8; 3]>, BTreeSet<[u8; 3]>, usize) {
         let ctx = super::wash_support::seed_42_context();
         let terrain = ctx.terrain();
         let geo = terrain.geosphere();
@@ -597,7 +657,8 @@ mod wash_collapse {
         let light = PlateLight::flat(true);
 
         let mut colours = BTreeSet::new();
-        let mut sampled = 0usize;
+        let mut spectral = BTreeSet::new();
+        let mut spectral_sampled = 0usize;
         for (row, col) in super::wash_support::sample_tiles() {
             let t = plate::terrain_at_tile(
                 terrain,
@@ -615,15 +676,15 @@ mod wash_collapse {
                 plate::season_bucket(0.0),
                 None,
             );
-            if t.water < 2 {
-                continue;
-            }
-            sampled += 1;
             if let Some(c) = plate::color_for(&t, light.illuminant(), light.observer()) {
                 colours.insert(c);
+                if t.water >= FIRST_SPECTRAL_WATER_CLASS {
+                    spectral.insert(c);
+                    spectral_sampled += 1;
+                }
             }
         }
-        (colours, sampled)
+        (colours, spectral, spectral_sampled)
     }
 
     /// A colour's CHROMATICITY — its `(r, g)` share of total intensity.
@@ -699,12 +760,19 @@ mod wash_collapse {
     /// see how much headroom the claim actually has.
     #[test]
     fn the_plates_colours_differ_in_hue_and_not_only_in_value() {
-        let (set, sampled) = spectral_land_colours();
-        let colours: Vec<[u8; 3]> = set.iter().copied().collect();
+        let (set, spectral_set, sampled) = spectral_land_colours();
+        let colours: Vec<[u8; 3]> = spectral_set.iter().copied().collect();
 
         // NON-VACUITY, both halves. A window that held no land at all, or a
         // context that refused every address, would leave nothing to compare
         // and the assertion below would hold for the wrong reason.
+        //
+        // `sampled` counts tiles that TOOK THE SPECTRAL ARM and resolved a
+        // colour there — not tiles asked. The sample window is a fixed
+        // `24 * 80`, so a count of tiles asked is a constant that no defect
+        // can move, and a context resolving zero ground reflectances would
+        // report 1920 and pass while the assertion's own message
+        // ("degenerate") was exactly true.
         assert!(
             sampled > 100,
             "only {sampled} tiles of the window took the spectral arm; the sample is degenerate"
@@ -737,6 +805,11 @@ mod wash_collapse {
         // property of a function the renderer might not call — the exact
         // failure ("shipped with no consumer") this whole task exists to
         // close, and the one Task 1's `violations` actually committed.
+        //
+        // Measured over the WIDE population (every water class), unlike the
+        // chromaticity half above: this asks whether the renderer paints
+        // what `color_for` answers, and that question is about the whole
+        // function, not about one of its arms.
         let drawn = distinct_colours(&plate_at(true, ColorDepth::TrueColor));
         let shared = set.intersection(&drawn).count();
         assert!(
@@ -749,10 +822,10 @@ mod wash_collapse {
             // figure that a river-density change cannot flap it, and far
             // enough above zero that a renderer ignoring `color_for`
             // entirely still fails.
-            shared * 2 > colours.len(),
-            "only {shared} of the spectral arm's {} colours reached the drawn plate; \
+            shared * 2 > set.len(),
+            "only {shared} of `color_for`'s {} colours reached the drawn plate; \
              the renderer is not painting what `color_for` answers",
-            colours.len()
+            set.len()
         );
     }
 
@@ -785,9 +858,13 @@ mod wash_collapse {
     /// degraded or merely whether the ink gate closed. Arm two allows colour
     /// and hands the plate a `ColorDepth::None` observer, so the only thing
     /// that can produce a colourless plate is the observer itself. That is
-    /// also why `plate::color_for` routes its two invented water-palette
-    /// claims through `TerminalObserver::show` rather than emitting them
-    /// raw: without that, arm two would find ocean tiles still coloured.
+    /// also why `plate::color_for`'s wet arms go through the observer rather
+    /// than emitting a colour raw: without that, arm two would find ocean
+    /// tiles still coloured. Before The Newel (B6) the call they made was
+    /// `TerminalObserver::show` on an invented sRGB triple; it is
+    /// `TerminalObserver::observe` on an authored spectrum now, and this
+    /// arm's claim is unchanged by the swap because both end at the same
+    /// depth collapse.
     #[test]
     fn a_no_colour_plate_emits_no_colour_and_still_shows_relief() {
         for (colour_allowed, depth, arm) in [

@@ -40,4 +40,16 @@ fi
 # filterset wants its own binary_id (`hornvale-book`), which are not the same
 # string. Names collide across binaries only rarely, and a collision
 # over-selects — which costs a little time and never hides a failure.
-awk -F'$' '!/^#/ && NF>1 {printf "%stest(=%s)", sep, $2; sep=" | "}' "$roster"
+#
+# HV_SUBFLOOR_EXCLUDE narrows this roster for ONE caller: a census delivery
+# commit (scripts/hooks/pre-commit under HV_CENSUS_DELIVERY), which cannot
+# satisfy the column-count witness by construction — its name carries a count
+# that does not exist until the census does, and only a human re-states it
+# (The Spillway, decision 0836). Lines whose test path matches are OMITTED,
+# never wrapped in `and not (...)`: subfloor-run-chunked.sh splits the
+# filterset on a literal ' | ' and is lossless only while it stays flat. A
+# pattern that matches nothing is a no-op, and that is the safe direction —
+# the witness then runs and reds the delivery loudly. Empty for every other
+# caller, so the default roster is unchanged.
+awk -F'$' -v X="${HV_SUBFLOOR_EXCLUDE:-}" \
+    '!/^#/ && NF>1 && (X=="" || $2 !~ X) {printf "%stest(=%s)", sep, $2; sep=" | "}' "$roster"

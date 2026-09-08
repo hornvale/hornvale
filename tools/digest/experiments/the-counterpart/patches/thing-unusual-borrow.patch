@@ -1,0 +1,35 @@
+diff --git a/domains/thing/src/lib.rs b/domains/thing/src/lib.rs
+index c421d46b2..d827508f2 100644
+--- a/domains/thing/src/lib.rs
++++ b/domains/thing/src/lib.rs
+@@ -66,6 +66,7 @@ pub struct ThingTraits {
+ /// without adding a row in the same change.
+ /// type-audit: bare-ok(identifier-text)
+ pub const THING_KINDS: &[&str] = &[
++    "home",
+     "alcove",
+     "altar",
+     "anvil",
+@@ -183,6 +184,13 @@ pub mod kinds {
+ /// table, not two.
+ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
+     [
++        (
++            KindId("home"),
++            ThingTraits {
++                display: "home",
++                doc: None,
++            },
++        ),
+         (
+             KindId("alcove"),
+             ThingTraits {
+@@ -346,7 +354,7 @@ pub fn thing_registry() -> ComponentStore<KindId, ThingTraits> {
+ /// (`domains_roster_registers_thing_after_its_borrowed_owners`), which reads
+ /// this table rather than duplicating it.
+ /// type-audit: bare-ok(identifier-text)
+-pub const BORROWED: &[(&str, &str)] = &[("hearth", "settlement")];
++pub const BORROWED: &[(&str, &str)] = &[("hearth", "settlement"), ("home", "settlement")];
+ 
+ /// [`BORROWED`]'s owner for `label`, if any.
+ fn borrowed_owner(label: &str) -> Option<&'static str> {

@@ -96,5 +96,45 @@ else
     bad "control failed: the guard did not fire without the escape, so the escape test proves nothing"
 fi
 
+# --- the column-count witness stands down for a delivery (The Spillway) ----
+# `domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_<N>_column_census`
+# carries the census's column count in its NAME and is in the sub-floor roster,
+# so a census that grows the registry reds it on the delivery commit — it is
+# what refused The Warp's delivery FIRST (spec §1, leg 3). It can only be
+# re-stated by a human, so the delivery DEFERS it and the merge demands it.
+# TWO-WAY AGREEMENT, not execution: the gate-commit path builds and runs the
+# roster, so this reads the pattern OUT of the hook and drives the roster
+# script with it, asserting the omitted set is exactly one term.
+xpat="$(grep -m1 "^ *subfloor_exclude='" scripts/hooks/pre-commit | sed "s/^[^']*'//; s/'$//")"
+if [ -n "$xpat" ]; then ok "read subfloor_exclude from the hook: $xpat"
+else bad "could not read subfloor_exclude from scripts/hooks/pre-commit"; fi
+without="$(bash scripts/subfloor-roster.sh)"
+with="$(HV_SUBFLOOR_EXCLUDE="$xpat" bash scripts/subfloor-roster.sh)"
+terms() { printf '%s' "$1" | tr '|' '\n' | grep -c 'test(='; }
+n_without="$(terms "$without")"; n_with="$(terms "$with")"
+if [ "$((n_without - n_with))" -eq 1 ]; then
+    ok "the exclusion omits EXACTLY one roster term ($n_without -> $n_with)"
+else bad "the exclusion omitted $((n_without - n_with)) term(s), want 1 — the pattern has rotted or matches too widely"; fi
+if printf '%s' "$without" | grep -qE "test\(=[^)]*${xpat}\)"; then
+    ok "CONTROL: without the escape the witness IS selected"
+else bad "control failed: the witness is not in the roster at all, so the stand-down proves nothing"; fi
+if printf '%s' "$with" | grep -qE "${xpat}"; then
+    bad "with the escape the witness is STILL selected"
+else ok "with the escape the witness is not selected"; fi
+same="$(HV_SUBFLOOR_EXCLUDE='no_such_test_zzz_[0-9]+' bash scripts/subfloor-roster.sh)"
+if [ "$same" = "$without" ]; then ok "an exclusion matching nothing leaves the filterset byte-identical (rot fails SAFE: the witness runs)"
+else bad "a non-matching exclusion changed the filterset"; fi
+if printf '%s' "$with" | grep -q '(' && ! printf '%s' "$with" | grep -q 'and not'; then
+    ok "the excluded filterset is still FLAT (no wrapping) — subfloor-run-chunked.sh splits on ' | '"
+else bad "the excluded filterset is wrapped, which the chunker cannot split"; fi
+# THE STAND-DOWN COUNT. Three checks stand down for a delivery: the golden-pins
+# guard, the yellow-census alarm, and now the column-count witness. A fourth
+# is placed by the rule in decision 0836 and edits this expectation with its
+# reason, never silently.
+# shellcheck disable=SC2016  # single-quoted on purpose: a literal grep -F pattern, not a shell expansion
+n_sd="$(grep -cF 'if [ -n "${HV_CENSUS_DELIVERY:-}" ]' scripts/hooks/pre-commit)"
+if [ "$n_sd" = "3" ]; then ok "HV_CENSUS_DELIVERY stands down exactly three checks"
+else bad "HV_CENSUS_DELIVERY stand-down branches: $n_sd, want 3"; fi
+
 printf '\ntest-census-guard: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
