@@ -83,6 +83,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The instrument turned inward — the project as its own subject](#the-instrument-turned-inward--the-project-as-its-own-subject)
   - [A pattern language for traversal, not furnishing](#a-pattern-language-for-traversal-not-furnishing)
   - [The orange problem — one kind model, not two](#the-orange-problem--one-kind-model-not-two)
+  - [Stocks and capacities — the ability score as a ceiling, not a value](#stocks-and-capacities--the-ability-score-as-a-ceiling-not-a-value)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -5670,6 +5671,91 @@ fit is symmetric while only the sleeper receives the payoff. A general
 instances to preserve. The orange's last missing addition is therefore
 per-instance variation derived from `Lineage`; the kind-to-kind addition is
 shipped in a factorized form.
+
+## Stocks and capacities — the ability score as a ceiling, not a value
+
+Sugarscape's agents do not seek sugar. Their movement rule seeks *maximum
+welfare*, where welfare is a Cobb–Douglas function of the agent's holdings
+whose exponents are that agent's own metabolisms. Desire is never authored;
+it falls out of what an agent holds against what it burns. Epstein and Axtell
+note the consequence in their Appendix C: preferences are *state-dependent*,
+so "a landscape will look different in welfare terms to biologically
+identical agents when the only difference between them is their wealth."
+
+That model already contains a split it never applies to ability. Vision and
+metabolism are **fixed endowments**; sugar and spice are **stocks**; welfare
+is a function of the stock, *parameterised by* the endowment. The idea here is
+to carry that split onto the attributes a character sheet would call scores.
+
+**The score is a capacity, not a value.** An ability is two quantities, not
+one: a ceiling that says what is possible at all, and a stock drawn down by
+using it. This is what preserves identity under depletion — if everything is
+a stock, two people differ only by their current balance, and nobody is
+anybody. A ceiling is shape; a stock is state.
+
+**Cost is then a function of headroom, not of the task.** Let a task's demand
+and an actor's ceiling both be integers, and let headroom be their difference.
+One expression yields three regimes:
+
+| headroom | regime |
+| --- | --- |
+| negative | impossible — a hard gate, never attempted |
+| zero | possible exactly once, and it empties the actor |
+| large | routine, effectively free, repeatable all day |
+
+An intellect of 18 does the work of 7 without noticing; an intellect of 7 can
+do it once. The middle band is the interesting one, and it is a dramatic beat
+that is hard to author and easy to derive: the practitioner who manages the
+one working at the edge of their capacity, and is finished.
+
+The deeper gain is that **difficulty stops being a property of the task.** No
+difficulty classes, no fatigue tables — difficulty becomes a *relation*
+between a demand and whoever is meeting it, which is what difficulty has
+always actually been.
+
+**Recovery is the growback rule at a second scale.** A landscape regrows at a
+rate toward a per-site capacity; an actor's stocks regrow toward their
+ceiling. One mechanism, two scales. The rate varies along three axes, and
+they are not equally expensive:
+
+- **Species** — free, and already built. `domains/species`' allometry derives
+  `basal_metabolic_rate_w`, `lifespan`, `reproductive_tempo` and a normalised
+  `pace_of_life` from mass and thermal strategy. A fast-lived kind should
+  spend and recover fast; that is the same fast–slow continuum ecology
+  already calls pace of life, and it needs no new authored number.
+- **Dimension** — genuinely authored, and small. No physical law says
+  willpower recovers more slowly than stamina. One constant per stat.
+- **Individual** — a seeded draw, and the only part needing new substrate.
+
+**The individual draw is log-normal, and saying "three octaves" is what makes
+that so.** An octave is a doubling; a range stated in octaves is a statement
+in log space, so "normally distributed across about three octaves" already
+*describes* a normal distribution over the base-2 logarithm of the rate — a
+log-normal on the rate itself. That is also the right shape on the merits: a
+rate is strictly positive, so a normal on the rate has support below zero and
+needs a truncation that biases its own mean, and multiplicative biological
+traits are empirically log-normal in any case. Drawing the logarithm with a
+standard deviation of half an octave puts three standard deviations at ±1.5
+octaves, which makes a three-octave span the 99.7% interval rather than a
+hope; clamping there makes it exact. Because `pace_of_life` is already a
+normalised multiplier, the species term and the individual term compose by
+addition in log space.
+
+**What does not exist yet.** There is no Gaussian draw anywhere in the kernel
+or the domains — `octave` appears only as an fbm noise-band label. Adding one
+is a determinism-contract change: it needs its own stream labels, and its
+transcendentals must route through `kernel/src/math.rs` like every other, so
+that the draw is bit-identical across platforms.
+
+**Two cautions.** The first is arithmetic: a cost curve that diverges as
+headroom reaches zero puts a singularity at precisely the most
+dramatically-important point, which is a poor place for floating-point
+behaviour to get interesting. Keeping ceilings and demands as integers makes
+headroom exact, the same reasoning that makes `WorldTime` an integer tick
+count. The second is design: if cost already falls with headroom, letting
+recovery *also* scale with the ceiling compounds the two, and a high capacity
+stops being much better and becomes categorically different. Which of the two
+carries the variance is a choice to make deliberately rather than discover.
 
 ## Intellectual lineage
 
