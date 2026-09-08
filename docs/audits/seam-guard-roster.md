@@ -26,20 +26,22 @@ comment.
 
 ## `ledger_day_of_bake_year`
 
-- Defined at `windows/worldgen/src/history_emit.rs:62`
+- Defined at `windows/worldgen/src/history_emit.rs:63`
 - Operator: `identity(0)`
 - Test scope: `hornvale-worldgen`
 - No declaration: a survivor here fails the gate.
 - Call sites:
-  - `windows/lot/src/slots.rs:1112`
-  - `windows/lot/src/slots.rs:1113`
-  - `windows/lot/src/slots.rs:1153`
-  - `windows/lot/src/slots.rs:1154`
-  - `windows/worldgen/src/history_emit.rs:281`
-  - `windows/worldgen/src/history_emit.rs:428`
-  - `windows/worldgen/src/history_emit.rs:481`
-  - `windows/worldgen/src/history_emit.rs:508`
-  - `windows/worldgen/src/history_emit.rs:579`
+  - `windows/lot/src/slots.rs:183`
+  - `windows/lot/src/slots.rs:184`
+  - `windows/lot/src/slots.rs:1529`
+  - `windows/lot/src/slots.rs:1530`
+  - `windows/lot/src/slots.rs:1570`
+  - `windows/lot/src/slots.rs:1571`
+  - `windows/worldgen/src/history_emit.rs:340`
+  - `windows/worldgen/src/history_emit.rs:487`
+  - `windows/worldgen/src/history_emit.rs:540`
+  - `windows/worldgen/src/history_emit.rs:567`
+  - `windows/worldgen/src/history_emit.rs:638`
   - `windows/worldgen/src/person_promote.rs:343`
   - `windows/worldgen/src/person_promote.rs:434`
   - `windows/worldgen/tests/suite/tolerance_draw.rs:99`
