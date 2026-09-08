@@ -1,4 +1,5 @@
 use hornvale::regularities::{self, Criterion, Verdict};
+use std::path::PathBuf;
 
 const FIXTURE: &str = r#"{
   "corpus": "fixture",
@@ -46,4 +47,61 @@ fn an_unknown_criterion_kind_is_a_parse_error() {
         regularities::load(&bad).is_err(),
         "unknown criterion must not parse"
     );
+}
+
+/// The freeze. A corpus's item count is asserted so that changing the
+/// catalogue is a deliberate act, never a side effect — the same discipline
+/// `tropes/` and `systems/` carry for their own counts (decision 0016).
+#[test]
+fn the_sugarscape_corpus_is_frozen_at_its_declared_size() {
+    let c = load_sugarscape();
+    assert_eq!(c.items.len(), 45);
+}
+
+#[test]
+fn the_corpus_declares_its_provenance_and_freeze() {
+    let c = load_sugarscape();
+    assert!(
+        c.provenance.contains("Epstein"),
+        "provenance names its source"
+    );
+    assert!(c.frozen.contains("before first measurement"));
+    assert_eq!(c.population, "the-census");
+    assert!(!c.ordered, "Sugarscape's rules compose, they do not ladder");
+}
+
+#[test]
+fn every_item_id_is_unique_and_every_measurable_item_carries_a_criterion() {
+    let c = load_sugarscape();
+    let mut ids: Vec<&str> = c.items.iter().map(|i| i.id.as_str()).collect();
+    ids.sort_unstable();
+    let before = ids.len();
+    ids.dedup();
+    assert_eq!(before, ids.len(), "duplicate item id");
+    for item in &c.items {
+        let measurable = matches!(
+            item.verdict,
+            Verdict::Unmeasured | Verdict::Grown | Verdict::Flat
+        );
+        assert_eq!(
+            measurable,
+            item.criterion.is_some() && !item.statistic.is_empty(),
+            "{}: a measurable verdict needs a statistic and a criterion, and \
+             a non-measurable one must carry neither",
+            item.id
+        );
+    }
+}
+
+fn load_sugarscape() -> hornvale::regularities::Corpus {
+    let path = workspace_root().join(hornvale::regularities::CORPORA[0]);
+    let json = std::fs::read_to_string(&path).expect("corpus file");
+    hornvale::regularities::load(&json).expect("corpus parses")
+}
+
+fn workspace_root() -> PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root")
+        .to_path_buf()
 }

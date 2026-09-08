@@ -1,0 +1,411 @@
+{
+  "corpus": "sugarscape-1996",
+  "unit": "regularity",
+  "ordered": false,
+  "population": "the-census",
+  "provenance": "Joshua M. Epstein and Robert Axtell, *Growing Artificial Societies: Social Science From the Bottom Up* (Brookings Institution Press / MIT Press, 1996). Items are drawn from Appendix B's complete rule roster (growback, movement, replacement, seasonal growback, pollution formation and diffusion, mating, inheritance, cultural transmission, group membership, combat, trade, credit, immune response, disease transmission) and from the emergence claims the chapters attach to those rules. The taxonomy in `emergence_type` is the book's own, from Chapter II footnote 24: type 1 is a property meaningful for an individual but exhibited only by the collective (the diagonal migration wave — \"the group adopts a heading unavailable to any individual\"); type 2 is a property meaningful only for a collective (a wealth distribution). AN INSTRUMENT WITH KNOWN BIAS, NEVER A STANDARD (decision 0095). Sugarscape is one 1996 lattice model of agents harvesting a renewable resource, and roughly half of its roster is economic — trade, prices, credit, inheritance of holdings — because its authors were economists building toward generative social science. Hornvale has no economy, no per-individual wealth, and no disease model, so a large block of this corpus can only ever score `absent`; that is a property of the source's coverage, not a defect Hornvale is being charged with. Conversely Sugarscape has no terrain, no astronomy, no language and no deep time, so nothing here scores Hornvale's strongest ground. Coverage measures reach against this catalogue only. THE MAPPING FROM A SUGARSCAPE CLAIM TO A CENSUS COLUMN IS AN ANALOGY, AND EACH ITEM'S `note` STATES WHERE THE ANALOGY IS LOAD-BEARING. A Sugarscape agent is an individual; a Hornvale settlement is a community. Where an item reads a per-community statistic against a per-agent claim, the item says so, and a `flat` verdict on such an item may be about the analogy rather than about the world.",
+  "frozen": "before first measurement, The Seedbed (2026-09-07). Every item below was authored before any statistic in it was computed against the census, and no evaluation code existed in the repository when this file was written: `meets()`, the census reader and the audit all arrive in later tasks of the same campaign. The freeze is therefore structural rather than a promise (decision 0016). ONE DISCLOSED EXCEPTION, `sug-wealth-skew`, carries its disclosure in its own `note`.",
+  "items": [
+    {
+      "id": "sug-wealth-skew",
+      "title": "Holdings are distributed far more unequally than the endowments that produce them",
+      "source": "Ch. II, 'Emergence'; Animation II-3",
+      "emergence_type": 2,
+      "statistic": "rank-size-slope",
+      "criterion": { "kind": "median-in-band", "lo": -1.2, "hi": -0.8 },
+      "verdict": "unmeasured",
+      "note": "NOT A BLIND TEST, disclosed under decision 0016: this statistic's distribution was measured during the brainstorm that motivated The Seedbed, before any corpus existed. Every other item in this corpus was authored before its statistic was looked at."
+    },
+
+    {
+      "id": "sug-heterogeneous-landscape",
+      "title": "The skew is characteristic of heterogeneous agents extracting resources from a landscape of fixed, unevenly distributed capacity",
+      "source": "Ch. II, 'In the Beginning There Was Sugar'; 'Emergence'",
+      "emergence_type": 2,
+      "statistic": "plate-size-gini",
+      "criterion": { "kind": "median-at-least", "bound": 0.2 },
+      "verdict": "unmeasured",
+      "note": "The source attributes the skew to the SUBSTRATE as much as to the agents: a landscape of fixed capacity with peaks and terraces. This item tests the precondition rather than the consequence — that Hornvale's substrate is materially non-uniform. The Gini is over plate vertex counts, which is upstream of habitability, so this is the weakest link in the analogy and a `flat` here would say the tectonic layer is uniform, not that settlement is."
+    },
+    {
+      "id": "sug-spatial-segregation",
+      "title": "Purposeful local movement toward the best available site produces spatially segregated population pools rather than one homogeneous spread",
+      "source": "Ch. III, 'The Proto-History'; Ch. I, 'Sex, Culture, and Conflict'",
+      "emergence_type": 2,
+      "statistic": "settlement-count",
+      "criterion": { "kind": "median-at-least", "bound": 2.0 },
+      "verdict": "unmeasured",
+      "note": "The proto-history's first move: agents converge on the twin sugar peaks and split into two pools that then differentiate. Two is the source's own minimum — one pool per peak — so the bound is taken from the model, not from Hornvale's expected scale."
+    },
+    {
+      "id": "sug-predation-is-bounded",
+      "title": "Combat between groups claims a real but minority share of the population; predation does not consume the society that practises it",
+      "source": "Appendix B, agent combat rule C(alpha); Ch. III, 'Combat'",
+      "emergence_type": 2,
+      "statistic": "raid-victim-rate",
+      "criterion": { "kind": "fraction-in-band-at-least", "lo": 0.02, "hi": 0.5, "min_fraction": 0.5 },
+      "verdict": "unmeasured",
+      "note": "The combat rule is self-limiting by construction: an attacker discards every site vulnerable to retaliation, so violence is common without being the dominant mode of interaction. Band edges are the source's two poles — nonzero (combat happens at all) and under half (it does not become the society's principal way of ending). Read on Hornvale's community grain: the share of occupation records that ended at another community's hand."
+    },
+    {
+      "id": "sug-retaliation-deters",
+      "title": "The prospect of retaliation deters attack, so most agents in a mixed population never initiate combat",
+      "source": "Ch. III, 'Effect of Rule Changes on Emergent Structures' ('agents are deterred from racing forward to attack smaller agents ... by the presence of larger opposing agents within their vision')",
+      "emergence_type": 1,
+      "statistic": "raid-initiator-rate",
+      "criterion": { "kind": "median-at-most", "bound": 0.5 },
+      "verdict": "unmeasured",
+      "note": "The offence side, separated from the defence side above because the source treats deterrence as its own finding: precisely the high vision that produced the migration waves suppresses them once combat is on. `initiate at all` is meaningful for an individual agent and for a community alike, hence type 1."
+    },
+    {
+      "id": "sug-seasonal-phase-lock",
+      "title": "A seasonal environment does not merely move agents; it locks collective behaviour to the phase of the year",
+      "source": "Appendix B, seasonal growback rule S(alpha,beta,gamma); Ch. II, 'Seasonal Migration'",
+      "emergence_type": 2,
+      "statistic": "granary-raid-phase-concentration",
+      "criterion": { "kind": "median-at-least", "bound": 0.1 },
+      "verdict": "unmeasured",
+      "note": "Under S the sugarscape alternates bloom and drought halves and behaviour reorganizes around the flip. The Hornvale analogue is whether raid-caused endings cluster in a phase of the year at all: a resultant length of exactly 0 is uniform, so any positive concentration is the claim. A phase concentration is only meaningful over a collection of events, hence type 2. The 0.1 floor is a weak-but-falsifiable reading of 'seasonality organizes conflict', chosen because a stronger bound would be a guess about Hornvale's harvest curve rather than about Sugarscape."
+    },
+    {
+      "id": "sug-credit-makes-hierarchy",
+      "title": "Persistent asymmetric obligation is what makes a flat society hierarchical; without it no agent is subordinate to another",
+      "source": "Appendix B, agent credit rule L(d,r); Ch. IV, 'Credit Networks and the Emergence of Hierarchy'",
+      "emergence_type": 2,
+      "statistic": "tribute-relations-standing",
+      "criterion": { "kind": "median-at-least", "bound": 1.0 },
+      "verdict": "unmeasured",
+      "note": "The source's own framing: 'So far the agent societies studied in this book have been flat -- there is no sense in which some agents are subordinate to others. This stems from the fact that agent interactions are usually short lived ... or are symmetrical.' Sugarscape reaches hierarchy through credit; Hornvale reaches it through standing tribute. The MECHANISM differs and the item does not claim otherwise -- what is imported is the claim that a durable, asymmetric, one-directional relation is the thing that makes a society stop being flat. A standing relation is a property of a pair and a hierarchy of the whole, hence type 2."
+    },
+    {
+      "id": "sug-culture-is-generative",
+      "title": "Local cultural transmission is sufficient to generate culture; the rule K produces cultural formations rather than inert copies",
+      "source": "Appendix B, agent cultural transmission and group membership rules; Ch. III, 'Cultural Dynamics' ('Thus, K is sufficient to generate cultural groups')",
+      "emergence_type": 2,
+      "statistic": "cascade-rules-fired-goblin",
+      "criterion": { "kind": "median-at-least", "bound": 1.0 },
+      "verdict": "unmeasured",
+      "note": "Sugarscape's culture is an eleven-bit tag string flipped between neighbours; Hornvale's nearest generative cultural layer is the per-species sound cascade that derives a lexicon. The imported claim is SUFFICIENCY: a local transmission rule, left alone, produces structure instead of nothing. Zero distinct rules firing means the etymological layer is inert for that species, which is the falsifier."
+    },
+    {
+      "id": "sug-social-speciation",
+      "title": "Separated subpopulations differentiate: each converges on its own culture, and cultural distance is what marks the boundary between them",
+      "source": "Ch. III, 'Cultural Dynamics'; Ch. II, 'Seasonal Migration' ('in evolutionary time, speciation would occur')",
+      "emergence_type": 2,
+      "statistic": "cascade-rules-fired-bugbear",
+      "criterion": { "kind": "median-at-least", "bound": 1.0 },
+      "verdict": "unmeasured",
+      "note": "The companion to the item above and deliberately a SECOND people, because the source's claim is about differentiation between pools, not about one pool having a culture. This is the corpus's weakest analogy and it is stated plainly: the column measures that bugbear's cascade is independently live, not that bugbear and goblin diverged from a common ancestor. A better instrument is a cross-species distance the census does not carry."
+    },
+    {
+      "id": "sug-externality-displaces",
+      "title": "Environmental change is a live driver of relocation, not a decorative backdrop: degraded or depleted ground moves the people standing on it",
+      "source": "Appendix B, pollution formation and diffusion rules; Ch. II, 'Pollution: A Negative Externality'",
+      "emergence_type": 1,
+      "statistic": "climate-displacement-events",
+      "criterion": { "kind": "present-on-fraction", "min_fraction": 0.9 },
+      "verdict": "unmeasured",
+      "note": "PRESENCE, NOT LEVEL, AND DELIBERATELY SO. The column's own rustdoc describes its distribution (bimodal, a minority at zero), which this campaign read while establishing the column's SEMANTICS; a numeric band authored after reading that would be exactly the contamination decision 0016 forbids, so this item asks only whether the displacement quantity is defined -- i.e. whether the world grew a settled history against which relocation could be counted -- and takes no position on how large it is. A level criterion belongs to a re-freeze authored by someone who has not read that paragraph."
+    },
+
+    {
+      "id": "sug-carrying-capacity",
+      "title": "A given environment will not support an indefinite population; the population approaches an asymptotic carrying capacity from above",
+      "source": "Ch. II, 'Carrying Capacity'; Figure II-4 (400 agents settling to approximately 224)",
+      "emergence_type": 2,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "The claim is not that population is bounded -- any finite world bounds it -- but that it APPROACHES a level and stays there. That is a statement about a time series, and a census row is one number per finished world."
+    },
+    {
+      "id": "sug-carrying-capacity-tracks-traits",
+      "title": "Carrying capacity rises with mean agent vision and falls with mean metabolism: the environment's ceiling is a function of who is standing on it",
+      "source": "Ch. II, 'Carrying Capacity'; Figure II-5",
+      "emergence_type": 2,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "A comparative static over the asymptote of the item above, so it inherits that item's blocker: with no way to read the asymptote there is nothing to compare across pin sets. Hornvale's species vectors would supply the trait axis."
+    },
+    {
+      "id": "sug-inequality-accumulates",
+      "title": "Inequality is not a starting condition but an accumulation: the Gini coefficient rises as the run proceeds and society becomes less egalitarian",
+      "source": "Ch. II, 'Measures of Economic Inequality: The Gini Coefficient'",
+      "emergence_type": 2,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "The concentrating shape, distinct from `sug-wealth-skew`, which asks only whether the finished distribution is skewed. A final skew is compatible with a skew that was there all along; only the trajectory separates them, and that separation is the whole force of the source's 'emergent structure' claim."
+    },
+    {
+      "id": "sug-migration-wave",
+      "title": "A dense block of agents propagates as a succession of coherent waves whose collective heading is diagonal -- a direction no individual, restricted to the four lattice moves, can take",
+      "source": "Ch. II, 'Migration'; Animation II-6, Figure II-8; footnote 24, type 1",
+      "emergence_type": 1,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "The book's canonical type-1 emergence and the example footnote 24 is written around: 'the group adopts a heading unavailable to any individual'. A wave is a position field over time; a census row cannot hold one. Occupation records carry founded/ended spans, so the underlying data is partly in the ledger already -- nothing reads it as a series."
+    },
+    {
+      "id": "sug-population-oscillates",
+      "title": "Local mating rules alone produce regular, bounded population oscillations with a long period, produced entirely from the bottom up rather than imposed by an aggregate equation",
+      "source": "Ch. III, 'Regimes of Population Dynamics'; Figures III-3, III-4, III-6",
+      "emergence_type": 2,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "The source is explicit that the point is provenance as much as shape: oscillations, intermittencies and punctuated equilibria are usually modelled top-down with differential equations, and here they are grown. Amplitude, period and boundedness are all series properties."
+    },
+    {
+      "id": "sug-endogenous-crash",
+      "title": "A population can crash to extinction endogenously, through local interaction alone, with no external shock",
+      "source": "Ch. I, 'Sex, Culture, and Conflict'; Ch. VI, Animation VI-2",
+      "emergence_type": 2,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "Sugarscape's mechanism is density-dependent: mating is local, so a thinning population stops reproducing and the thinning becomes self-reinforcing. Hornvale collapses and abandons settlements, but 'crashed' is a shape a trajectory has, and a finished world that reads low is indistinguishable from one that was always small."
+    },
+    {
+      "id": "sug-cultural-convergence",
+      "title": "Under local tag transmission an isolated subpopulation converges to a single pure cultural group; mixing does not persist indefinitely",
+      "source": "Ch. III, 'Cultural Dynamics'; Animation III-6 (all agents Blue after some 2700 time periods)",
+      "emergence_type": 2,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "Convergence is a limit, and a limit needs the approach to it. Note the source's own hedge in footnote 32: which group wins is stochastic and the twin-peak outcome obtains in somewhat less than half of runs, so this is a claim about the SHAPE of the trajectory, not about its endpoint."
+    },
+    {
+      "id": "sug-epochs-alternate",
+      "title": "Inter-group history alternates between expansionist phases, in which one group looks set to achieve hegemony, and epochs of stalemate in which scattered border contact and assimilation are the rule",
+      "source": "Ch. III, 'The Proto-History'; Animation III-15",
+      "emergence_type": 2,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "The proto-history's headline result and the closest thing in the source to Hornvale's own subject matter. It is a claim about phase structure in time -- that the series has epochs at all -- which is the accumulating/oscillating blindness the registry row names."
+    },
+    {
+      "id": "sug-cycle-outlives-the-individual",
+      "title": "A society can sustain a cycle whose period exceeds any individual's maximum lifetime, so no member ever experiences the full pattern",
+      "source": "Ch. VI, 'Indecomposability' (peaks roughly 115 years apart against a maximum lifetime averaging eighty)",
+      "emergence_type": 1,
+      "verdict": "deferred",
+      "anchor": "registry:TOOL-a-regularity-corpus-can-measure-a-trajectory",
+      "note": "Type 1 by footnote 24's test: experiencing a cycle is meaningful for an individual, and here only the collective does it. Deferred rather than absent because the claim does not depend on Sugarscape's route to it -- trade -- and Hornvale's millennia of founding and abandonment are exactly the substrate on which an intergenerational period would show up, if anything read the records as a series."
+    },
+
+    {
+      "id": "sug-tribe-is-an-input-to-violence",
+      "title": "Group membership is a primitive input to conduct: the combat rule discards every site held by the agent's own tribe before considering any material fact about the target",
+      "source": "Appendix B, agent combat rule C(alpha); Ch. III, 'Combat'",
+      "emergence_type": 1,
+      "verdict": "refused",
+      "anchor": "decision:0021",
+      "note": "0021 forecloses exactly this shape: 'a people's conduct is a situation derived from material conditions, and any ideology ranking species is a generated output, never an input'. Hornvale's raid gate reads strength against a margin, not identity, and an in-group/out-group ranking is required to be derived rather than declared. Note what is NOT refused: Sugarscape's tags are themselves endogenous, so tribe FORMATION is fine and is scored at `sug-culture-is-generative`. What 0021 refuses is letting the resulting label enter the conduct rule as a term."
+    },
+    {
+      "id": "sug-conquest-monoculture",
+      "title": "Combat drives the landscape toward a single surviving group; the terminal state of inter-group contest is one culture on both mountains",
+      "source": "Ch. III, 'Combat and Assimilation: Two Modes of Group Defense'; Animation III-9 (Blue eradication of Red)",
+      "emergence_type": 2,
+      "verdict": "refused",
+      "anchor": "decision:0096",
+      "note": "0096 makes peoples-diversity a TERMINAL VALUE of the project -- 'a world that loses its goblins has gotten worse, however faithfully it did so' -- and names single-axis contest as the mechanism that manufactures monoculture, citing `domains/demography/src/coexist.rs` replacing per-cell fitness-argmax with a softmax, a viability floor, founder floors and refugia. Sugarscape resolves contest on one scalar (accumulated wealth) and gets the predicted result. THE REFUSAL IS NARROW AND SHOULD NOT BE READ WIDER: 0096 clause 2 explicitly accepts annihilation as an absorbing state a people can fall into, so the refusal is of monoculture as the DESIGNED terminal state and of the single-axis contest that guarantees it, not of any particular people dying."
+    },
+
+    {
+      "id": "sug-income-less-skewed-than-wealth",
+      "title": "Income -- what is harvested per period net of metabolism -- is much less skewed than accumulated holdings; the skew is a property of the stock, not the flow",
+      "source": "Ch. II, 'Emergence' and footnote 21",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "One of the source's sharpest findings and it needs both halves: a per-individual flow and a per-individual stock. Hornvale has neither. Its `stores` is community-scale non-edible wealth and no per-resident holding exists."
+    },
+    {
+      "id": "sug-selection-without-sex",
+      "title": "Selection operates with no fitness function specified anywhere: mean vision rises and mean metabolism falls across generations under replacement alone",
+      "source": "Ch. II, 'Selection without Sex'; Ch. I ('there is a kind of genetic algorithm at work here, though we have not specified any fitness function beforehand')",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "Requires heritable per-individual traits that vary and are transmitted. Hornvale's species vectors are fixed per people; decision 0548 draws a resident's deviation from the kind's dispersion per resident, which is variation without inheritance, so there is nothing for selection to act on across generations."
+    },
+    {
+      "id": "sug-inheritance-blunts-selection",
+      "title": "A social institution -- inheritance of holdings -- interferes with a biological process, weakening the selection pressure that would otherwise raise mean vision",
+      "source": "Appendix B, agent inheritance rule I; Ch. III, 'Nature and Nurture: The Genetic Effect of Inheritance'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "The source's most interdisciplinary claim and it depends on the two mechanisms above simultaneously: transmissible holdings and heritable traits. Hornvale has neither, so the interaction has no possible referent."
+    },
+    {
+      "id": "sug-genealogical-network",
+      "title": "Local mating yields family trees that branch across the landscape, and the genealogical graph is a distinct social network from the neighbourhood graph",
+      "source": "Appendix B, agent mating rule S; Ch. III, 'Genealogical Networks'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "Hornvale's history bake carries founder handles and community ancestry (decision 0127 distinguishes identity keys from discrimination keys over exactly those records), so a lineage graph is not unimaginable -- but it is a graph between COMMUNITIES, not between individuals, and no census column reads either. Absent rather than deferred: the blocker is that nothing computes the graph, not that the census cannot hold a series."
+    },
+    {
+      "id": "sug-friendship-network",
+      "title": "Cultural proximity plus repeated neighbourhood contact yields a friendship network distinct from both kinship and neighbourhood",
+      "source": "Ch. III, 'Networks of Friends'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "Rests on a per-agent memory of the five culturally nearest agents encountered. Hornvale holds no per-individual acquaintance record."
+    },
+    {
+      "id": "sug-neighbour-network",
+      "title": "Agents are connected in a neighbourhood graph that expands, contracts and deforms as they move; social connection is a shifting structure rather than a fixed one",
+      "source": "Ch. I, 'Agent Social Networks'; Ch. II, 'Social Networks'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "The book's unifying theme -- every chapter defines one more network over the same population. Hornvale commits inter-community relations (tribute, raiding) but never a per-individual adjacency graph, and no census column reads network structure of any kind."
+    },
+    {
+      "id": "sug-pollution-degrades-the-commons",
+      "title": "Production and consumption generate a pollutant that diffuses through the neighbourhood, degrading welfare for agents who did not produce it",
+      "source": "Appendix B, pollution formation rule P(x,n) and pollution diffusion rule; Ch. II, 'Pollution: A Negative Externality'",
+      "emergence_type": 1,
+      "verdict": "absent",
+      "note": "Hornvale has no pollutant field and no mechanism by which one community's subsistence degrades another's site. Type 1 because suffering the externality is meaningful for an individual, while the externality itself only exists between them."
+    },
+    {
+      "id": "sug-bilateral-price-equilibrium",
+      "title": "Decentralized bilateral bargaining between neighbours, with no auctioneer and no global information, approaches a market-clearing price -- but a statistical equilibrium, not the point equilibrium of neoclassical theory",
+      "source": "Appendix B, agent trade rule T; Ch. IV, 'Neoclassical Agents and Statistical Price Equilibrium'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "Hornvale has no money, no commodities, no prices and no exchange. Decision 0886 gives a dynamics probe (D2) two typed subsistence commodities, which is exploration outside the shipped world and outside the census, and no ratified decision refuses an economy -- so this is a gap, not a refusal."
+    },
+    {
+      "id": "sug-trade-raises-carrying-capacity",
+      "title": "Turning trade on raises the environment's carrying capacity, and the same change raises inequality: the gain is real and it is not free",
+      "source": "Ch. IV, 'Carrying Capacity Is Increased by Trade'; Ch. I, footnote 13",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "The book's clearest policy-shaped result and the one Chapter VI's indecomposability demonstration turns on -- two societies identical but for trade, one extinct and one prosperous. Needs both an economy and a readable asymptote; Hornvale lacks the first outright."
+    },
+    {
+      "id": "sug-horizontal-inequality",
+      "title": "Agents identical in preferences and endowments end in very different welfare states purely through the path of decentralized trade: they meet different partners and bargain to different prices",
+      "source": "Ch. IV, 'Horizontal Inequality'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "Inequality with no underlying difference to explain it -- the source's strongest challenge to the welfare properties of markets, and amplified further when agents have finite lives. No economy, and no per-individual welfare state to compare."
+    },
+    {
+      "id": "sug-local-optimality-global-inefficiency",
+      "title": "Every trade improves both parties and the allocation is nonetheless globally inefficient: exchange and production compete, leaving the economy perpetually out of equilibrium",
+      "source": "Ch. IV, 'Local Efficiency, Global Inefficiency'; 'Far from Equilibrium Economics'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "The negative result that undermines the First Welfare Theorem's case for laissez-faire in this model. Requires a welfare function over holdings, which Hornvale does not define."
+    },
+    {
+      "id": "sug-credit-roles-overlap",
+      "title": "Some agents are simultaneously borrowers and lenders, so the credit graph is a hierarchy of several layers rather than two flat classes",
+      "source": "Appendix B, agent credit rule L(d,r); Ch. IV, 'Credit Networks and the Emergence of Hierarchy'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "The source flags this as unexpected. Distinct from `sug-credit-makes-hierarchy`, which imports only the claim that durable asymmetric obligation makes a society non-flat: the LAYERING requires an agent to hold both roles at once, and Hornvale's tribute relation is one-directional between communities with no equivalent of simultaneous roles read anywhere."
+    },
+    {
+      "id": "sug-trade-network-computes",
+      "title": "The trade partner graph is a massively parallel computer whose interconnections evolve: agents optimizing only for themselves collectively perform a computation none of them represents",
+      "source": "Ch. I, 'Social Computation'; Ch. IV, 'Social Computation'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "Type 2 unambiguously: the computation is a property of the network and of nothing in it. No economy and no network readout."
+    },
+    {
+      "id": "sug-immune-memory-locks-in",
+      "title": "An immune system that has once matched a pathogen keeps the match: immunological memory arises as lock-in, with no memory mechanism written into the rule",
+      "source": "Appendix B, agent immune response rule; Ch. V, 'Immunological Memory as Lock In'",
+      "emergence_type": 1,
+      "verdict": "absent",
+      "note": "Hornvale has no disease model and no immune model; no ratified decision refuses one, so this is a gap. Type 1: immunity is an individual property, and the memory effect is observed in the individual too -- included because the roster is Appendix B's and this rule is on it."
+    },
+    {
+      "id": "sug-childhood-diseases-persist",
+      "title": "Some diseases persist as childhood diseases because acquired immunity is phenotypic and the transmitted genome is not: each generation must learn them again",
+      "source": "Ch. V, 'Childhood Diseases'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "The chapter's most striking result and a genuinely non-obvious explanation of a real epidemiological regularity -- one a Lamarckian could not give. Needs disease, immunity and inheritance together; Hornvale has none of the three."
+    },
+    {
+      "id": "sug-epidemic-couples-to-economy",
+      "title": "Infection raises metabolism, which changes movement and trading behaviour: epidemic dynamics and economic dynamics are not separable subsystems",
+      "source": "Ch. I, 'Disease Agents'; Ch. V, 'Digital Diseases on the Sugarscape'",
+      "emergence_type": 1,
+      "verdict": "absent",
+      "note": "The coupling is the point of putting epidemiology inside a social model at all. Both coupled systems are absent from Hornvale."
+    },
+    {
+      "id": "sug-society-can-clear-its-diseases",
+      "title": "Whether a society rids itself of its diseases or carries them permanently depends on the size of the pathogen pool relative to the immune repertoire, not on any agent's behaviour",
+      "source": "Ch. V, 'Digital Diseases on the Sugarscape' (a ten-disease master list is cleared; twenty-five is not)",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "A threshold result: the same rules give opposite societal outcomes at two parameterizations. No disease model."
+    },
+    {
+      "id": "sug-mass-migration-is-driven-by-resource",
+      "title": "The fundamental drive for the resource, and nothing else, is what produces mass movement across the landscape",
+      "source": "Ch. II, 'Migration'; Ch. III, 'The Proto-History'",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "The ATTRIBUTION half, separated from the volume half at `sug-externality-displaces`: the source's claim is that resource gradient alone accounts for the movement. Testing an attribution needs the counterfactual world with the gradient removed, and a census is a population of worlds under one physics, not an ablation."
+    },
+    {
+      "id": "sug-multiple-microrules-one-macrostructure",
+      "title": "The mapping from micro-rules to macrostructure may be many-to-one: several different rule sets can generate the same aggregate pattern",
+      "source": "Ch. I, 'Toward Generative Social Science', footnote 25",
+      "emergence_type": 2,
+      "verdict": "absent",
+      "note": "A claim about the space of models, testable only by varying the rules and comparing outcomes. A corpus scoring one world generator against a fixed physics cannot reach it, and no registry row asks for it."
+    },
+
+    {
+      "id": "sug-growback-parameterization",
+      "title": "Sugarscape growback rule G(alpha): at each lattice position the resource grows back at alpha units per time interval, up to that position's capacity",
+      "source": "Appendix B, sugarscape growback rule G(alpha); Ch. II, 'Simple Local Rules for the Environment'",
+      "emergence_type": 1,
+      "verdict": "inapplicable",
+      "anchor": "reason:a per-site regrowth constant on the source model's own resource lattice -- the knob its experiments turn, not a claim about how any world behaves",
+      "note": "Included because it heads Appendix B's roster and because the corpus should show where the source stops describing worlds and starts describing itself. Hornvale's harvest curve is a different abstraction serving a different purpose and the two are not commensurable."
+    },
+    {
+      "id": "sug-lattice-geometry",
+      "title": "Space is a fifty-by-fifty toroidal lattice on which vision extends in the four von Neumann directions and movement is one of those four",
+      "source": "Ch. II, 'In the Beginning There Was Sugar'; Appendix B, agent movement rule M",
+      "emergence_type": 1,
+      "verdict": "inapplicable",
+      "anchor": "reason:the source's own spatial representation; the four-direction restriction is the premise that makes its diagonal-wave result surprising, not a property of physical space",
+      "note": "Worth keeping visible rather than dropping, because `sug-migration-wave` is only interesting relative to it: the wave is emergent BECAUSE the lattice forbids the heading. On a sphere with continuous bearings the same finding has no content."
+    },
+    {
+      "id": "sug-agent-replacement-device",
+      "title": "Replacement rule R[a,b]: when an agent dies it is replaced by a new agent of age zero with random attributes, random position, random endowment and a maximum age drawn from [a,b]",
+      "source": "Appendix B, agent replacement rule R[a,b]; Ch. II, 'Emergence'",
+      "emergence_type": 1,
+      "verdict": "inapplicable",
+      "anchor": "reason:an experimental control that holds the population stationary so a distribution can be studied at all -- the source introduces it to study wealth rather than demography, and turns it off once sex arrives",
+      "note": "Not scored as refused despite resembling an authored floor under decision 0096: R is applied uniformly and takes no input from any agent's rank or weakness, so 0096's forbidden shape is not what this is. It is a scaffold, and calling it a world claim would be a category error."
+    },
+    {
+      "id": "sug-tag-string-encoding",
+      "title": "Culture is an eleven-bit binary string, transmission is a single bit flip toward a neighbour, and group membership is the majority bit",
+      "source": "Appendix B, agent cultural transmission and group membership rules; Ch. III, 'Cultural Groups' and footnote 20",
+      "emergence_type": 1,
+      "verdict": "inapplicable",
+      "anchor": "reason:the source's chosen representation of culture, and it says so -- footnote 20 lists several alternative membership rules and notes that longer strings with tag ordering give far more refined schemes",
+      "note": "The SUFFICIENCY claim this encoding supports is scored at `sug-culture-is-generative`; only the encoding itself is inapplicable. Keeping the two apart is what stops a Hornvale verdict from turning on whether its cultures happen to be binary."
+    },
+    {
+      "id": "sug-generative-explanation",
+      "title": "To explain a macro-structure is to grow it: exhibiting micro-specifications sufficient to generate the pattern is what constitutes an explanation",
+      "source": "Ch. I, 'Toward Generative Social Science: Can You Grow It?'; Ch. VI, 'Generative Social Science'",
+      "emergence_type": 2,
+      "verdict": "inapplicable",
+      "anchor": "reason:the book's methodological thesis -- a claim about what explanation is, not a regularity a world can exhibit",
+      "note": "It is nonetheless the reason this corpus exists, and the sense in which the whole file is one instrument: every measurable item above asks the book's own question of Hornvale rather than of Sugarscape. Recorded as an item so the thesis travels with the catalogue instead of only with the spec."
+    }
+  ]
+}
