@@ -146,10 +146,11 @@ pub use graph_derive::{
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP,
-    DiagnosticReturnBand, DiagnosticReturnClass, DiagnosticReturnWitness, ExchangeCensus,
-    ExchangeTreatment, GENESIS_POP, History, MIGRATE_SURVIVAL, ORE_CUT, TributeRelation, WAR_LOSS,
-    bake, cascade_sizes, census, classify_diagnostic_return, defensibility_for_test,
-    exchange_census, weakest_point_defensibility,
+    DiagnosticReturnBand, DiagnosticReturnClass, DiagnosticReturnWitness,
+    DiagnosticSubsistenceWitness, ExchangeCensus, ExchangeTreatment, GENESIS_POP, History,
+    MIGRATE_SURVIVAL, ORE_CUT, TributeRelation, WAR_LOSS, bake, cascade_sizes, census,
+    classify_diagnostic_return, defensibility_for_test, exchange_census,
+    weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,

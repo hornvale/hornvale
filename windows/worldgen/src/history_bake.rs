@@ -1023,6 +1023,108 @@ pub struct ExchangeCensus {
     pub conservation_residuals: [f64; 2],
 }
 
+/// Read-only, per-community D2 realization observed across every treatment
+/// phase the community lived through.
+///
+/// Coverage and shortfall are typed `[A, B]` component averages. Exchange
+/// counters use the same ordering and count requester-side outcomes; status
+/// counts may overlap because a settled attempt is also proposed and accepted.
+/// This diagnostic sidecar is never emitted into the history ledger.
+/// type-audit: bare-ok(count: phase_count), bare-ok(ratio: coverage), bare-ok(ratio: shortfall), bare-ok(count: attempts), bare-ok(count: proposed), bare-ok(count: accepted), bare-ok(count: settled), bare-ok(count: partial), bare-ok(count: refused), bare-ok(count: impossible)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DiagnosticSubsistenceWitness {
+    /// The live community observed.
+    pub community: BakeId,
+    /// The live community's site at [`History::now`].
+    pub site: Vertex,
+    /// Treatment phases contributing to the component averages.
+    pub phase_count: u32,
+    /// Mean same-typed demand coverage, ordered `[A, B]`.
+    pub coverage: [f64; 2],
+    /// Mean same-typed demand shortfall, ordered `[A, B]`.
+    pub shortfall: [f64; 2],
+    /// Typed request attempts, ordered `[A, B]`.
+    pub attempts: [u64; 2],
+    /// Typed attempts that reached proposal, ordered `[A, B]`.
+    pub proposed: [u64; 2],
+    /// Typed proposed attempts funded above zero, ordered `[A, B]`.
+    pub accepted: [u64; 2],
+    /// Typed accepted attempts delivered in full, ordered `[A, B]`.
+    pub settled: [u64; 2],
+    /// Typed accepted attempts delivered below their request, ordered `[A, B]`.
+    pub partial: [u64; 2],
+    /// Typed possible attempts that delivered nothing, ordered `[A, B]`.
+    pub refused: [u64; 2],
+    /// Typed attempts with no traversable direct counterparty, ordered `[A, B]`.
+    pub impossible: [u64; 2],
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+struct DiagnosticSubsistenceAccumulator {
+    phase_count: u32,
+    shortfall_sum: [f64; 2],
+    attempts: [u64; 2],
+    proposed: [u64; 2],
+    accepted: [u64; 2],
+    settled: [u64; 2],
+    partial: [u64; 2],
+    refused: [u64; 2],
+    impossible: [u64; 2],
+}
+
+impl DiagnosticSubsistenceAccumulator {
+    fn record_phase(&mut self, shortfall: [f64; 2]) {
+        debug_assert!(
+            shortfall
+                .iter()
+                .all(|ratio| ratio.is_finite() && (0.0..=1.0).contains(ratio))
+        );
+        self.phase_count = self
+            .phase_count
+            .checked_add(1)
+            .expect("diagnostic phase count overflow");
+        for (sum, ratio) in self.shortfall_sum.iter_mut().zip(shortfall) {
+            *sum += ratio;
+        }
+    }
+
+    fn record_attempt(&mut self, resource: SubsistenceResource, statuses: &[ExchangeStatus]) {
+        let index = subsistence_resource_index(resource);
+        self.attempts[index] += 1;
+        for status in statuses {
+            let counter = match status {
+                ExchangeStatus::Proposed => &mut self.proposed[index],
+                ExchangeStatus::Accepted => &mut self.accepted[index],
+                ExchangeStatus::Settled => &mut self.settled[index],
+                ExchangeStatus::Partial => &mut self.partial[index],
+                ExchangeStatus::Refused => &mut self.refused[index],
+                ExchangeStatus::Impossible => &mut self.impossible[index],
+            };
+            *counter += 1;
+        }
+    }
+
+    fn witness(&self, community: BakeId, site: Vertex) -> DiagnosticSubsistenceWitness {
+        debug_assert!(self.phase_count > 0);
+        let denominator = f64::from(self.phase_count);
+        let shortfall = self.shortfall_sum.map(|sum| sum / denominator);
+        DiagnosticSubsistenceWitness {
+            community,
+            site,
+            phase_count: self.phase_count,
+            coverage: shortfall.map(|ratio| 1.0 - ratio),
+            shortfall,
+            attempts: self.attempts,
+            proposed: self.proposed,
+            accepted: self.accepted,
+            settled: self.settled,
+            partial: self.partial,
+            refused: self.refused,
+            impossible: self.impossible,
+        }
+    }
+}
+
 /// The whole baked skeleton: every occupation record ever opened (alive and
 /// dead), in deterministic commit order, plus the `now` the bake closed at.
 /// The event census is tallied during the bake and read back by [`census`].
@@ -1043,6 +1145,9 @@ pub struct History {
     /// relations. This sidecar is intentionally not part of the save-facing
     /// `tribute` relation shape and `history_emit` does not consume it.
     pub diagnostic_returns: Vec<DiagnosticReturnWitness>,
+    /// Read-only per-live-community D2 realization witnesses, ordered by
+    /// [`BakeId`]. Empty when the exchange treatment was disabled.
+    pub diagnostic_subsistence: Vec<DiagnosticSubsistenceWitness>,
     /// Event tallies, counted as the bake resolves each epoch.
     tally: BakeCensus,
     exchange: ExchangeCensus,
@@ -1322,6 +1427,7 @@ impl History {
             now,
             tribute: Vec::new(),
             diagnostic_returns: Vec::new(),
+            diagnostic_subsistence: Vec::new(),
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
         }
@@ -1462,17 +1568,28 @@ fn subsistence_shortfall_ratio(
     shortfall: SubsistenceInventory,
     demand: SubsistenceInventory,
 ) -> f64 {
-    [SubsistenceResource::A, SubsistenceResource::B]
+    typed_subsistence_ratios(shortfall, demand)
+        .1
         .into_iter()
-        .map(|resource| {
-            let needed = demand.amount(resource);
-            if needed > 0.0 {
-                (shortfall.amount(resource) / needed).clamp(0.0, 1.0)
-            } else {
-                0.0
-            }
-        })
         .fold(0.0_f64, f64::max)
+}
+
+fn typed_subsistence_ratios(
+    shortfall: SubsistenceInventory,
+    demand: SubsistenceInventory,
+) -> ([f64; 2], [f64; 2]) {
+    let mut coverage = [0.0; 2];
+    let mut shortfall_ratios = [0.0; 2];
+    for resource in [SubsistenceResource::A, SubsistenceResource::B] {
+        let index = subsistence_resource_index(resource);
+        let needed = demand.amount(resource);
+        if needed > 0.0 {
+            let ratio = (shortfall.amount(resource) / needed).clamp(0.0, 1.0);
+            shortfall_ratios[index] = ratio;
+            coverage[index] = 1.0 - ratio;
+        }
+    }
+    (coverage, shortfall_ratios)
 }
 
 /// One community's immutable inputs to a current-phase exchange clearing.
@@ -2425,6 +2542,9 @@ struct Bake<'a> {
     tally: BakeCensus,
     /// Derived D2 study trace reduced during the treatment bake.
     exchange: ExchangeCensus,
+    /// Per-community D2 diagnostic state, indexed exactly as `communities`.
+    /// Dead communities retain their state until the closing live-only read.
+    subsistence_diagnostics: Vec<DiagnosticSubsistenceAccumulator>,
     /// The bake's epoch length in years (`cfg.epoch_years`), borrowed once at
     /// construction so [`Bake::live_an_epoch`] reads the same number [`bake`]'s
     /// own epoch loop steps by, rather than a second literal.
@@ -3655,6 +3775,8 @@ impl<'a> Bake<'a> {
         // opened mid-epoch has grown nothing yet this epoch, and so owes
         // nothing if it is subordinated before the epoch closes.
         self.epoch_growth.push(0.0);
+        self.subsistence_diagnostics
+            .push(DiagnosticSubsistenceAccumulator::default());
         self.node_index.insert((site, rung), community_idx);
         self.tally.records_total += 1;
         community_idx
@@ -4209,6 +4331,22 @@ impl<'a> Bake<'a> {
             .collect()
     }
 
+    /// Translate treatment observations for communities still alive at
+    /// `now`. A community with no observed phase is omitted so disabled
+    /// treatment remains distinguishable from measured full coverage.
+    fn diagnostic_subsistence_at_now(&self) -> Vec<DiagnosticSubsistenceWitness> {
+        debug_assert_eq!(self.communities.len(), self.subsistence_diagnostics.len());
+        let mut witnesses: Vec<_> = self
+            .communities
+            .iter()
+            .zip(&self.subsistence_diagnostics)
+            .filter(|(community, diagnostic)| community.alive && diagnostic.phase_count > 0)
+            .map(|(community, diagnostic)| diagnostic.witness(community.id, community.site))
+            .collect();
+        witnesses.sort_by_key(|witness| witness.community);
+        witnesses
+    }
+
     fn resolve_flights(&mut self, fleeing: Vec<usize>, era: &EraClimate, year: f64) {
         for sub in fleeing {
             self.take_flight(sub, era, year);
@@ -4709,7 +4847,11 @@ impl<'a> Bake<'a> {
             let (remaining, shortfall) =
                 consume_subsistence(self.communities[idx].subsistence, demand);
             self.communities[idx].subsistence = remaining;
-            let shortfall_ratio = subsistence_shortfall_ratio(shortfall, demand);
+            let (_, typed_shortfall) = typed_subsistence_ratios(shortfall, demand);
+            if demand.quantities.iter().all(|needed| *needed > 0.0) {
+                self.subsistence_diagnostics[idx].record_phase(typed_shortfall);
+            }
+            let shortfall_ratio = typed_shortfall.into_iter().fold(0.0_f64, f64::max);
             shortfall_sum[idx] += shortfall_ratio;
             #[cfg(test)]
             record_d2_epoch_event(D2EpochEvent::Consumption {
@@ -4725,8 +4867,17 @@ impl<'a> Bake<'a> {
     }
 
     fn record_exchange_clearing(&mut self, clearing: &ExchangeClearing) {
+        let indices: BTreeMap<BakeId, usize> = self
+            .communities
+            .iter()
+            .enumerate()
+            .filter(|(_, community)| community.alive)
+            .map(|(idx, community)| (community.id, idx))
+            .collect();
         self.exchange.attempts += clearing.attempts.len() as u64;
         for attempt in &clearing.attempts {
+            self.subsistence_diagnostics[indices[&attempt.requester]]
+                .record_attempt(attempt.resource, &attempt.statuses);
             for status in &attempt.statuses {
                 match status {
                     ExchangeStatus::Proposed => self.exchange.proposed += 1,
@@ -5606,6 +5757,7 @@ pub fn bake(
         epoch_growth: Vec::new(),
         tally: BakeCensus::default(),
         exchange: ExchangeCensus::default(),
+        subsistence_diagnostics: Vec::new(),
         epoch_years: cfg.epoch_years,
     };
 
@@ -5748,6 +5900,7 @@ pub fn bake(
         })
         .collect();
     let diagnostic_returns = bake.diagnostic_returns_at_now();
+    let diagnostic_subsistence = bake.diagnostic_subsistence_at_now();
 
     // No final person-years sweep is needed here: the epoch loop above runs
     // `while year < end_year`, so its last iteration's own end-of-epoch
@@ -5758,6 +5911,7 @@ pub fn bake(
         now,
         tribute,
         diagnostic_returns,
+        diagnostic_subsistence,
         tally: bake.tally,
         exchange: bake.exchange,
     }
@@ -5863,6 +6017,7 @@ mod tests {
                 epoch_growth: Vec::new(),
                 tally: BakeCensus::default(),
                 exchange: ExchangeCensus::default(),
+                subsistence_diagnostics: Vec::new(),
                 epoch_years: 25.0,
             };
             bake.working_site(&era, from, 0)
@@ -6065,6 +6220,7 @@ mod tests {
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
+            subsistence_diagnostics: Vec::new(),
             epoch_years: 25.0,
         };
 
@@ -6210,6 +6366,7 @@ mod tests {
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
+            subsistence_diagnostics: Vec::new(),
             epoch_years: 25.0,
         };
 
@@ -6555,6 +6712,7 @@ mod tests {
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
+            subsistence_diagnostics: Vec::new(),
             epoch_years: 25.0,
         }
     }
@@ -6808,6 +6966,7 @@ mod tests {
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
+            subsistence_diagnostics: Vec::new(),
             epoch_years: 25.0,
         };
 
@@ -7010,6 +7169,257 @@ mod tests {
             shortfall,
             SubsistenceInventory::default(),
             "same-typed stock equal to the full basket must leave no shortfall"
+        );
+    }
+
+    /// Mutation target: reducing typed ratios to the existing worst-component
+    /// scalar would make the A and B entries indistinguishable.
+    #[test]
+    fn typed_subsistence_ratios_report_full_component_coverage() {
+        let demand = SubsistenceInventory::new(4.0, 6.0);
+
+        let (coverage, shortfall) =
+            typed_subsistence_ratios(SubsistenceInventory::default(), demand);
+
+        assert_eq!(coverage, [1.0, 1.0]);
+        assert_eq!(shortfall, [0.0, 0.0]);
+    }
+
+    /// Mutation target: pooling the basket before normalization would let A's
+    /// surplus erase B's complete deprivation.
+    #[test]
+    fn typed_subsistence_ratios_preserve_one_sided_shortfall() {
+        let demand = SubsistenceInventory::new(4.0, 4.0);
+        let shortfall = typed_subsistence_shortfall(SubsistenceInventory::new(9.0, 0.0), demand);
+
+        let (coverage, shortfall) = typed_subsistence_ratios(shortfall, demand);
+
+        assert_eq!(coverage, [1.0, 0.0]);
+        assert_eq!(shortfall, [0.0, 1.0]);
+    }
+
+    /// Mutation target: treating the zero-demand branch as ordinary zero
+    /// shortfall would fabricate full coverage for an unmeasured component.
+    #[test]
+    fn typed_subsistence_ratios_do_not_turn_zero_demand_into_coverage() {
+        let (coverage, shortfall) = typed_subsistence_ratios(
+            SubsistenceInventory::default(),
+            SubsistenceInventory::default(),
+        );
+
+        assert_eq!(coverage, [0.0, 0.0]);
+        assert_eq!(shortfall, [0.0, 0.0]);
+    }
+
+    /// Mutation target: retaining only the last phase, or dividing by epochs
+    /// rather than phases, changes these hand-derived component averages.
+    #[test]
+    fn typed_subsistence_witness_averages_all_twelve_phases() {
+        let mut diagnostic = DiagnosticSubsistenceAccumulator::default();
+        for _ in 0..6 {
+            diagnostic.record_phase([0.0, 1.0]);
+        }
+        for _ in 0..6 {
+            diagnostic.record_phase([0.5, 0.0]);
+        }
+
+        let witness = diagnostic.witness(BakeId(7), Vertex(11));
+
+        assert_eq!(witness.community, BakeId(7));
+        assert_eq!(witness.site, Vertex(11));
+        assert_eq!(witness.phase_count, 12);
+        assert_eq!(witness.coverage, [0.75, 0.5]);
+        assert_eq!(witness.shortfall, [0.25, 0.5]);
+        assert_eq!(witness.attempts, [0, 0]);
+        assert_eq!(witness.proposed, [0, 0]);
+        assert_eq!(witness.accepted, [0, 0]);
+        assert_eq!(witness.settled, [0, 0]);
+        assert_eq!(witness.partial, [0, 0]);
+        assert_eq!(witness.refused, [0, 0]);
+        assert_eq!(witness.impossible, [0, 0]);
+    }
+
+    /// Mutation target: whole-bake status counting, or attributing both legs
+    /// to one resource/requester, changes these exact per-community vectors.
+    #[test]
+    fn exchange_status_counters_are_typed_and_preserve_conservation() {
+        let geo = Geosphere::new(1);
+        let graph = full_land_graph(&geo);
+        let graphs = vec![graph.clone()];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let left_site = Vertex(0);
+        let right_site = traversable_neighbors(&graph, left_site)[0];
+        let left = bake.open(
+            KindId("goblin"),
+            left_site,
+            0.0,
+            2.0,
+            Founding::Genesis(left_site),
+            None,
+            0.0,
+        );
+        let right = bake.open(
+            KindId("kobold"),
+            right_site,
+            0.0,
+            2.0,
+            Founding::Genesis(right_site),
+            None,
+            0.0,
+        );
+        let snapshots = vec![
+            ExchangeCommunitySnapshot {
+                id: bake.communities[left].id,
+                site: left_site,
+                projected_population: 2.0,
+                opening_stock: SubsistenceInventory::new(4.0, 0.0),
+            },
+            ExchangeCommunitySnapshot {
+                id: bake.communities[right].id,
+                site: right_site,
+                projected_population: 2.0,
+                opening_stock: SubsistenceInventory::new(0.0, 4.0),
+            },
+        ];
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        assert_eq!(clearing.conservation_residuals, [0.0, 0.0]);
+
+        bake.record_exchange_clearing(&clearing);
+        bake.subsistence_diagnostics[left].record_phase([0.0, 0.0]);
+        bake.subsistence_diagnostics[right].record_phase([0.0, 0.0]);
+        let witnesses = bake.diagnostic_subsistence_at_now();
+
+        assert_eq!(bake.exchange.conservation_residuals, [0.0, 0.0]);
+        assert_eq!(witnesses.len(), 2);
+        assert_eq!(witnesses[0].attempts, [0, 1]);
+        assert_eq!(witnesses[0].proposed, [0, 1]);
+        assert_eq!(witnesses[0].accepted, [0, 1]);
+        assert_eq!(witnesses[0].settled, [0, 1]);
+        assert_eq!(witnesses[0].partial, [0, 0]);
+        assert_eq!(witnesses[0].refused, [0, 0]);
+        assert_eq!(witnesses[0].impossible, [0, 0]);
+        assert_eq!(witnesses[1].attempts, [1, 0]);
+        assert_eq!(witnesses[1].proposed, [1, 0]);
+        assert_eq!(witnesses[1].accepted, [1, 0]);
+        assert_eq!(witnesses[1].settled, [1, 0]);
+    }
+
+    /// Mutation target: routing any terminal status to another counter, or
+    /// pooling A and B, changes these literal unsigned (therefore
+    /// non-negative) counts.
+    #[test]
+    fn typed_exchange_counters_cover_partial_refused_and_impossible_outcomes() {
+        let mut diagnostic = DiagnosticSubsistenceAccumulator::default();
+        diagnostic.record_attempt(
+            SubsistenceResource::A,
+            &[
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Partial,
+            ],
+        );
+        diagnostic.record_attempt(
+            SubsistenceResource::A,
+            &[ExchangeStatus::Proposed, ExchangeStatus::Refused],
+        );
+        diagnostic.record_attempt(
+            SubsistenceResource::B,
+            &[ExchangeStatus::Proposed, ExchangeStatus::Impossible],
+        );
+        diagnostic.record_attempt(
+            SubsistenceResource::B,
+            &[
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Settled,
+            ],
+        );
+        diagnostic.record_phase([0.0, 0.0]);
+
+        let witness = diagnostic.witness(BakeId(1), Vertex(0));
+
+        assert_eq!(witness.attempts, [2, 2]);
+        assert_eq!(witness.proposed, [2, 2]);
+        assert_eq!(witness.accepted, [1, 1]);
+        assert_eq!(witness.settled, [0, 1]);
+        assert_eq!(witness.partial, [1, 0]);
+        assert_eq!(witness.refused, [1, 0]);
+        assert_eq!(witness.impossible, [0, 1]);
+    }
+
+    /// Mutation target: emitting dead entries, retaining creation order
+    /// without the explicit key sort, or mutating during translation breaks
+    /// the repeated ordered reading below.
+    #[test]
+    fn diagnostic_subsistence_translation_is_live_only_and_deterministic() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        for site in [Vertex(0), Vertex(1), Vertex(2)] {
+            let idx = bake.open(
+                KindId("goblin"),
+                site,
+                0.0,
+                10.0,
+                Founding::Genesis(site),
+                None,
+                0.0,
+            );
+            bake.subsistence_diagnostics[idx].record_phase([0.25, 0.75]);
+        }
+        bake.close(1, 1.0, CauseOfEnd::Famine, Ended::Nature);
+
+        let first = bake.diagnostic_subsistence_at_now();
+        let second = bake.diagnostic_subsistence_at_now();
+
+        assert_eq!(first, second);
+        assert_eq!(
+            first
+                .iter()
+                .map(|witness| witness.community)
+                .collect::<Vec<_>>(),
+            vec![BakeId(1), BakeId(3)]
+        );
+        assert_eq!(
+            first.iter().map(|witness| witness.site).collect::<Vec<_>>(),
+            vec![Vertex(0), Vertex(2)]
+        );
+    }
+
+    /// Mutation target: constructing zero-valued witnesses on the disabled
+    /// path would disguise disabled treatment as measured zero shortfall.
+    #[test]
+    fn disabled_treatment_preserves_an_empty_diagnostic_sidecar() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            20.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+
+        bake.run_epoch(0.0, &era_at(0.0));
+
+        assert_eq!(bake.exchange, ExchangeCensus::default());
+        assert!(bake.diagnostic_subsistence_at_now().is_empty());
+        assert!(
+            History::new(bake.records.clone(), 25.0)
+                .diagnostic_subsistence
+                .is_empty()
         );
     }
 
