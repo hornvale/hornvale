@@ -84,6 +84,9 @@
 **Files:**
 - Create: windows/worldgen/tests/suite/staple_d3b_probe.rs — deterministic unit tests and ignored fixed-roster report.
 - Modify: windows/worldgen/tests/suite.rs — register the new module.
+- Modify: windows/worldgen/src/lib.rs — expose the same-run read-only `History`
+  from the existing `ExchangeTreatmentBuild` boundary so the probe can consume
+  enabled per-community witnesses without reconstructing or aggregating them.
 - Modify: docs/superpowers/ledgers/2026-09-08-the-staple-d3b.md — record implementation rulings and probe contract as they occur.
 
 **Interfaces:**

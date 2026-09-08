@@ -783,6 +783,23 @@ remaining findings.
 
 **Evidence:** implementation `f18ff7cf6`; correction `3b790782f`.
 
+## #13 [Ruling] — Task 3 requires the same-run History seam
+
+The first Task 3 probe attempt was blocked before editing. The enabled
+`build_world_with_exchange_treatment` path computed `History` and then
+discarded it after emission, returning only `World` and aggregate
+`ExchangeCensus`; the existing `history_for` path hardcodes disabled exchange.
+Reconstructing the witness from labels or aggregate counts would violate the
+approved falsifier. Amend Task 3 to expose the same-run `History` through the
+existing `ExchangeTreatmentBuild` boundary as a read-only diagnostic seam.
+This remains zero-impact to simulation and save emission: the returned clone
+is an observation of the already-computed bake, and the probe alone consumes
+the sidecar.
+
+**Rejected alternative:** derive per-community values from emitted labels or
+whole-bake totals. Rejected because it loses typed local identity and repeats
+D3's diagnostic saturation risk.
+
 - Verify the current ecology, stock, need, capability, movement, relation, and
   exchange identifiers and denominators before drafting Task 0.
 - Build a candidate-measure comparison covering opportunity contrast,
