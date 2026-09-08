@@ -697,6 +697,63 @@ pooled-only inference. No overturn.
 in the Task 0 design; retain pooled totals only as a descriptive companion;
 then assemble the G3 package without writing implementation code.
 
+## #9 [G2] — Self-review before G3 packaging
+
+The design was re-read against the campaign brief, the D3 result, the
+SugarScape material, and the live code rather than against the hoped-for D4
+outcome.
+
+**Challenge: are the source bands secretly specialization labels?** No. The
+initial bands are surplus gates, river-proximity endpoints, and capacity bars
+already present in code. They describe opportunity scale or access; they do
+not name an occupation or portfolio. Biome/coast subsistence labels remain
+explicitly excluded.
+
+**Challenge: can a single fantastic substrate rescue a flat present world?**
+No. Alchemy, underworld energy, hazards, relics, and anomalous extraction are
+deferred until they can join a live occupation and its actual consuming path.
+Their existence is recorded as design space, not counted as present economic
+variation.
+
+**Challenge: can D3B repeat D3's saturation error?** The paired instrument,
+per-unit projection witness, raw-vector retention, structural signatures, and
+measurement-saturation branch prevent a universal diagnostic class from being
+mistaken for specialization. Whole-bake exchange totals are explicitly
+disallowed as the verdict instrument.
+
+**Challenge: can pooling hide a dead world?** No. The verdict is per adequate
+seed, with empty, singleton, missing, duplicate, disabled-treatment, and
+conservation branches visible. Pooled totals cannot rescue a seed.
+
+**Challenge: is “two independent axes” an arbitrary implementation target?**
+It is an authored conservative sufficiency guard, not a claim about the final
+world ontology. The reason is falsificatory: one axis can be a uniform rescale
+or a single decorative contrast, while two joined axes test whether local
+regimes have enough dimensionality to support later portfolios. The criterion
+is exposed for G3 review rather than hidden as an implementation detail.
+
+**Challenge: has the brainstorm accidentally authorized a dynamics rung?** No.
+The only proposed future seam is a zero-impact diagnostic sidecar. No stock
+flow, epoch label, census re-baseline, history pin conversion, `Function`
+state, or specialization implementation is authorized before the written
+spec is approved and the falsifier establishes sufficiency.
+
+**G2 result:** the brainstorm is converged enough for G3 packaging. The open
+items are now spec questions, not unresolved direction questions: exact
+sidecar shape, exact source-axis join path, and the implementation/test
+acceptance checks. Per campaign policy, those belong in the written spec and
+the G3 Nathan review; they are not to be silently decided in code.
+
+**Ideonomy passes / overturns:** the prior passes for source bands, projection
+seam, vector comparison, and seed pooling were re-read as a combined graph;
+no new overturn. The combined review preserved the two dead poles and added
+no new axis or role vocabulary.
+
+**Capture actions:** package G3 with the four-way falsifier, the per-seed
+denominator table, the source/projection witness contract, SugarScape's
+heterogeneity-and-exchange rationale, and the fantasy-axis deferral. Stop
+before authoring the spec until Nathan reviews the G3 package.
+
 ## Follow-ups
 
 - Verify the current ecology, stock, need, capability, movement, relation, and
