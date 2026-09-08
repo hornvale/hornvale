@@ -919,3 +919,23 @@ fixed-roster report was only listed and not run, and no census was run.
 **Evidence:** final verification on `27ca6767f`; docs-consistency 41/41;
 focused D3B 15/15; D2 10/10; history-bake 100/100; commit gate and all
 4,280 subfloor tests passed.
+
+## #18 [Post-run ruling] — Zero-phase live units must remain joinable
+
+The first local fixed-roster run failed at seed 1's integrity assertion:
+313 live units matched the existing `alive_at_now` denominator, but 13 live
+units had no projection witness. Root-cause tracing found that
+`diagnostic_subsistence_at_now` omitted every live accumulator with
+`phase_count == 0`. This is not a scientific dead pole; it is a producer-side
+join defect because the falsifier's denominator is intentionally the existing
+live census.
+
+**Decision:** under enabled treatment, retain every live community in the
+sidecar. A zero-phase witness carries an explicit non-evidentiary zero
+sentinel and is rejected by the probe's phase-completeness branch before any
+coverage value is consumed. Disabled treatment remains an empty sidecar.
+
+**Evidence:** local fixed-roster run, seed 1, 313 live / 300 joined / 13
+missing projections; no census run. **Cost if wrong:** rerun the full roster;
+if zero-phase units are scientifically ineligible rather than incomplete, the
+denominator contract must be revisited at the next design gate.

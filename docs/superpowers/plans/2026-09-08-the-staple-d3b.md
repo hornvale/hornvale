@@ -124,3 +124,26 @@
   Use scripts/review-package.sh docs/superpowers/plans/2026-09-08-the-staple-d3b.md origin/main HEAD; review all changed paths, with special attention to public History shape and stream/order preservation.
 - [ ] Step 4: Record any finding as a ledger ruling before changing code; make one scoped fix cycle and rerun relevant focused tests and gate.
 - [ ] Step 5: Stop at the campaign boundary. Do not run the sanctioned census, submit to the sluice, merge, or close the campaign in this plan. Those require later G6 process.
+
+### Task 5: Preserve enabled zero-phase live witnesses
+
+**Files:**
+- Modify: windows/worldgen/src/history_bake.rs — retain enabled live
+  communities whose accumulator has zero phases as explicit incomplete
+  witnesses; preserve disabled-sidecar emptiness.
+- Modify: docs/superpowers/ledgers/2026-09-08-the-staple-d3b.md — record the
+  post-run root-cause ruling and verification.
+
+The fixed-roster run showed that live `BakeOccupation` units can have no
+observed exchange/consumption phase. They remain in the existing
+`alive_at_now` denominator, so omitting their witness creates a false join
+failure. A zero-phase witness is an explicit incomplete observation: its
+coverage/shortfall payload is a non-evidentiary zero sentinel and the probe
+must branch on `phase_count == 0` before consuming it. Disabled treatment
+continues to produce no sidecar witnesses.
+
+- [ ] Step 1: Add a failing unit test for an enabled live zero-phase witness.
+- [ ] Step 2: Implement the smallest translation/witness correction.
+- [ ] Step 3: Run focused history/D3B tests and the commit gate.
+- [ ] Step 4: Rerun the local ignored fixed-roster report and inspect the
+  per-seed verdicts; do not run a census.
