@@ -164,3 +164,16 @@ already taken under passes in #1 and #2; no new option space was opened.
   campaign is the first row in the file's history to populate it, which reds the
   prose gate. Row left blank, like every other. Registered as
   `TOOL-reconciliation-ledgers-column-is-unusable`.
+
+---
+
+## #4 [G3] — Spec approved
+
+Nathan, 2026-09-07: *"LGTM. No disagreements."* All five flagged items approved
+as written — the six-valued vocabulary including `flat`, the `doc:` anchor with
+the cross-family generalization deliberately deferred, the disclosed
+pre-freeze measurement of `rank-size-slope`, the regression guard's intended
+teeth on future bake work, and the unmeasured guard-placement branch table.
+
+No revisions. Proceeding to the implementation plan (G4: self-review against
+this spec, then execute).
