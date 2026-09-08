@@ -419,10 +419,12 @@ fn summarize_seed(input: &SeedInput) -> SeedReport {
             branches.invalid_projection_units.push(community);
             continue;
         }
-        if projection.witness.phase_count == 0
-            || projection.witness.phase_count % D2_PHASES_PER_EPOCH != 0
-        {
+        if projection.witness.phase_count == 0 {
             branches.phase_incomplete_units.push(community);
+            continue;
+        }
+        if projection.witness.phase_count % D2_PHASES_PER_EPOCH != 0 {
+            branches.invalid_projection_units.push(community);
             continue;
         }
         let projection_raw = RawProjectionVector {
@@ -1114,6 +1116,22 @@ fn explicit_zero_phase_incompleteness_is_non_clearing_without_being_malformed() 
         report.branches,
         IntegrityBranches {
             phase_incomplete_units: vec![BakeId(2)],
+            ..IntegrityBranches::default()
+        }
+    );
+}
+
+#[test]
+fn nonzero_partial_phases_are_invalid_measurements() {
+    let mut input = varied_source_input([[0.0, 1.0], [1.0, 0.0]]);
+    input.projections[1].witness.phase_count = D2_PHASES_PER_EPOCH - 1;
+    let report = summarize_seed(&input);
+
+    assert_eq!(report.verdict, SeedVerdict::InvalidMeasurement);
+    assert_eq!(
+        report.branches,
+        IntegrityBranches {
+            invalid_projection_units: vec![BakeId(2)],
             ..IntegrityBranches::default()
         }
     );
