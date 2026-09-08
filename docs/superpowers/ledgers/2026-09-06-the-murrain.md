@@ -644,3 +644,14 @@ history page already documents the epidemic metrics, and the registry flips
 and cross-links are recorded. The stage request
 `req-f4483c982321-20260908T213841Z` passed on commit `f4483c982321`; merge
 submission remains the next gate.
+
+## Post-G6 merge re-read
+
+The first merge chamber reached the heavy phase and held on the standing drow
+raider witness: 7/60 on the merge product versus its prior 9/60 pin. This is
+a legitimate post-Murrain re-read: `history/bake/v4` performs epidemic
+population reduction before raids, so the population substrate changes the
+flagship that remains at `now`. The denominator stayed 60 and the floor remains
+deferred rather than lowered. The synchronized witness assertion, ignored
+floor reason, heavy-tier roster copy, and BIO registry row were updated
+together.

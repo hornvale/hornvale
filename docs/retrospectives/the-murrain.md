@@ -48,3 +48,11 @@ The campaign did not run the census locally. Canonical census and Gnomon work
 went through the sluice, and the stage request passed before closeout. The
 remaining merge is therefore a queue operation, not an invitation to bypass
 the canonical host.
+
+The first merge attempt supplied one useful post-close measurement. The heavy
+tier re-read the deferred drow raider witness at 7/60 rather than the prior
+9/60. The denominator stayed at 60; the Murrain's history/bake/v4 epoch runs
+epidemic reduction before raids, so this is a population-substrate consequence
+of the shipped mechanism, not a reason to lower the old floor. The witness,
+ignore reason, heavy roster ratchet, and registry row now carry the same
+reading.
