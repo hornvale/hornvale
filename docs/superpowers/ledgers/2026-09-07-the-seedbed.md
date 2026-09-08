@@ -219,3 +219,119 @@ enforce yet. Recorded rather than silently skipped.
 
 **Ideonomy:** no separate pass; this is self-review of an approved design, and
 the amendment narrows rather than opens the option space.
+
+---
+
+## #6 [G5] — Execution rulings, promoted from scratch
+
+**A controller process defect, recorded first because it is mine.** Entries #1–#5
+were written here; every ruling from Task 1 through Task 7 was then written into
+`.superpowers/sdd/2026-09-07-the-seedbed/progress.md`, which is git-ignored and
+dies with the worktree. `campaign-autopilot` is explicit that task state belongs
+there and *rulings* belong here, and names a prior campaign that made exactly
+this split wrong in a single sitting. Caught by Task 7's reviewer, not by me.
+The rulings follow, in the order they were made.
+
+**Task 2 — amending a frozen corpus pre-measurement.** Decision 0016 freezes a
+corpus against MEASUREMENT, and nothing had been measured (Task 7 was the
+first), so authoring corrections were legal. The binding constraint is narrower
+and was carried into every fix dispatch: each correction had to be decidable
+**without census values**, and implementers were forbidden from consulting them.
+
+**Task 2 — the blind/unblind scope split.** A criterion can be vacuous two ways.
+*Logically* — it restates a design fact (`cascade-rules-fired-goblin >= 1` is
+true because the crate has a cascade); detectable from the metric's definition,
+so in scope. *Empirically* — it could fail in principle but the world's range
+never goes there; detecting that **requires reading the census**, so acting on it
+would unblind the corpus. Permanently out of scope. The durable remedy for the
+second is not a tighter band but a recorded one: every measurable item states
+its FALSIFYING WORLD, enforced by a test.
+
+**Task 2 — escalating a Minor against the skill's default.** Low discriminating
+power was filed Minor, which normally defers to the final review. Escalated
+because it has a deadline no other Minor has: a tighter band must be authored by
+a session that has not read the census, and every session that scores the corpus
+is thereafter disqualified. After Task 7 measured, nobody in this campaign could
+fix it.
+
+**Task 4 — `FractionInBandAtLeast` divides by `worlds`, not by the present
+slice.** A world where the statistic cannot be computed is not evidence *for* the
+regularity; dividing by the present slice would let a statistic absent almost
+everywhere score highly on the few worlds where it appears. Absence counts
+against the claim. Sibling kind `PresentOnFraction` already divided by `worlds`,
+so this also removed a disagreement between the two fraction-based kinds.
+
+**Task 5 — the stale-deferral hole, escalated on measured exposure.** All nine
+`deferred` items cite ONE registry row, so that row flipping to `shipped` would
+mis-verdict a fifth of the corpus in a single move. The consequence differs from
+the sibling `systems` family: there a stale deferral misreports a capability,
+here it **withholds an item from measurement** — the corpus keeps claiming it
+cannot measure something it now can, so the item never re-enters the queue.
+
+**Task 6 — the roadmap classification is a structured field, not parsed prose.**
+Two notes with the same content in different words were landing in different
+buckets, and `Item::note`'s doc still claimed "Never parsed" after Task 6 made it
+parsed. The reviewer's constraint drove the design: **the corpus is frozen, so
+fixing it by re-wording a note is exactly the data edit the freeze forbids.** The
+fix had to be in the schema.
+
+**Task 6 — Task 7 gains a `measure` mode.** The plan assumed `check` reports a
+finding per `unmeasured` item; `audit_item` returns `None` for those by design,
+so `check` exited 0. The suggested workaround — flip each item to `flat`, run
+`check`, read the findings — interrogates a frozen corpus by mutating it, and a
+half-finished run leaves it in a state nobody authored. A read-only `measure`
+mode is what the first measurement actually is.
+
+## #7 [G5] — Controller incident: I committed a reviewer's live mutation
+
+While verifying the new stale-deferral guard's negative control, the re-reviewer
+flipped `TOOL-a-regularity-corpus-can-measure-a-trajectory` from `raw` to
+`shipped`. Concurrently I was committing capture rows to **that same file**. My
+`git add` captured the flip; `7a0ddd208` shipped a false status that reddened the
+branch tip, since all nine deferred items cite that row. Fixed in `9f7f62af5`.
+
+**Explicit paths were not sufficient, and that is the lesson.** The standing rule
+is "explicit paths, never `add -A` in a shared worktree". I used explicit paths
+and it happened anyway, because the collision was on the file I meant to commit.
+Path discipline protects against sweeping *unrelated* files; it does nothing when
+a subagent is licensed to mutate the same file. The real control is temporal —
+do not commit a tracked file while a review that mutates it is in flight, or
+fence the reviewer to a scratch copy.
+
+The guard caught it one commit after being built, which is the only redeeming
+part: a false `shipped` withholding items from measurement is precisely the
+failure it was argued into existence for.
+
+## #8 [G5] — The first measurement, and a correction to my reading of it
+
+Recorded verdicts, re-derived by the controller from `rows.csv`:
+
+| item | verdict | number |
+| --- | --- | --- |
+| `sug-wealth-skew` | **flat** | median −0.577645, band [−1.2, −0.8], 17/1000 in band |
+| `sug-predation-is-bounded` | grown | 968/1000 in [0.02, 0.5]; all 32 misses below 0.02, none above 0.5 |
+| `sug-retaliation-deters` | grown | median 0.274309 ≤ 0.5 — but the **max over 1000 worlds is 0.4229** |
+| `sug-credit-makes-hierarchy` | grown | median 88.0 against a bound of 1.0 |
+
+Four measurable items are **three independent claims** (r = 0.999 merges the raid
+pair): two grew, one did not. `sug-retaliation-deters` had an **empty failing
+side** on this population.
+
+**My proposed lesson was over-general, and the reviewer named the right variable.**
+I read this as "prefer bands imported from outside empirical laws". But
+`sug-predation-is-bounded` *also* took both poles from the source and passed,
+because its band is enormous against the data's span; and `sug-wealth-skew`'s
+failure was already explained item-specifically by its own pre-measurement note,
+which cites the metric rustdoc recording that condensation is deliberately not
+tuned to a rank-size target. n = 1, with the mechanism already named.
+
+The separating variable is **band width relative to the statistic's dispersion**,
+and the rule worth carrying to the next corpus is a *preregistered reachability
+check*, authorable while blind:
+
+> For each criterion, state the value the statistic must take to redden, and
+> argue **from the mechanism** that a plausible world produces it.
+
+That check catches all three weak items without seeing any data. The corpus
+already states each item's FALSIFYING WORLD; the missing half is *why this
+world's machinery can produce it*. Carry it to `axelrod-1984`.
