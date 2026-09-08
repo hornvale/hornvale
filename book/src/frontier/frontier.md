@@ -5718,14 +5718,59 @@ rate toward a per-site capacity; an actor's stocks regrow toward their
 ceiling. One mechanism, two scales. The rate varies along three axes, and
 they are not equally expensive:
 
-- **Species** — free, and already built. `domains/species`' allometry derives
+- **Species** — mostly built. `domains/species`' allometry derives
   `basal_metabolic_rate_w`, `lifespan`, `reproductive_tempo` and a normalised
-  `pace_of_life` from mass and thermal strategy. A fast-lived kind should
-  spend and recover fast; that is the same fast–slow continuum ecology
-  already calls pace of life, and it needs no new authored number.
+  `pace_of_life` from mass and thermal strategy: the same fast–slow continuum
+  ecology already calls pace of life, and no new authored number.
 - **Dimension** — genuinely authored, and small. No physical law says
   willpower recovers more slowly than stamina. One constant per stat.
 - **Individual** — a seeded draw, and the only part needing new substrate.
+
+**But species and dimension do not simply multiply, and treating them as
+though they do is the model's first real simplification.** `pace_of_life` is a
+*scalar*: it scales every ability's recovery together, which makes the
+species-by-dimension matrix rank-one and leaves it unable to say the thing one
+most wants it to say — that a kind might mend its body quickly and its mind
+slowly. Would a goblin recover from thinking as fast as from lifting? Would an
+elf? A rank-one model answers "in the same ratio as each other, always," which
+is not an answer.
+
+Authoring the full matrix is the obvious repair and the wrong one: a handful of
+kinds against a handful of abilities is dozens of numbers, each unexplained.
+The interaction has a physical driver, so it can be derived like everything
+else. **A dimension names the system an effort draws on** — muscle, metabolism,
+whatever cognition turns out to cost — **and a species differs in its
+allocation to those systems.** That is one new per-species physiological
+vector, not a matrix, and it is meaningful data about a creature's build rather
+than a tuning knob. Hornvale carries no such vector today: there is no brain
+mass, no tissue budget, no encephalization anywhere in `domains/species`, and
+cognition is explicitly an unbuilt wave.
+
+Two interactions, though, are available *now*, for free, and they are the
+diegetic ones:
+
+- **Thermal strategy against dimension.** An ectotherm's realized metabolic
+  rate "couples to ambient temperature" — the type's own documentation says
+  so. Physical recovery therefore tracks the weather for a cold-blooded kind
+  and does not for a warm-blooded one, while there is no reason a cognitive
+  stock must couple the same way. A lizardfolk sluggish to mend in winter, and
+  no less sharp for it, is an interaction with no authored number behind it.
+- **The mass exponent, per dimension.** Recovery of a mass-scaled stock rides
+  the ¾-power metabolic law; a stock that is not mass-scaled has no reason to.
+  The exponent itself is the interaction term.
+
+And the life-history model already contains a principled answer to which
+recoveries a long-lived kind should slow. `LifeSchedule::Paced` stretches
+lifespan, maturity and reproductive tempo by its factor — and explicitly
+leaves the basal metabolic rate unmoved. An elf's slowness is therefore in its
+life-history clock, not in its metabolism, so anything keyed to that clock
+stretches and anything keyed to metabolism does not. The asymmetry falls out
+of a distinction the code has already drawn for other reasons.
+
+The honest limit: charisma, or willpower, names no tissue and no metabolic
+law. Where an ability has no physical driver, its recovery is authored
+content, and saying so is better than deriving it from something that only
+sounds like a mechanism.
 
 **The individual draw is log-normal, and saying "three octaves" is what makes
 that so.** An octave is a doubling; a range stated in octaves is a statement
