@@ -7,6 +7,17 @@
 //! counters are the separate access companion, not part of a source or
 //! projection signature.
 
+/// The private `structures_of` longhouse floor in `hornvale-history`, mirrored
+/// by name because the D3B capacity axis applies the same Hidage precedent to
+/// a continuous capacity value rather than to realized population.
+///
+/// Provenance: `hornvale_history::flesh::structures_of` and the Hidage probe's
+/// `LONGHOUSE_POPULATION_FLOOR` mirror. Drift rule: if the private source bar
+/// moves, update this mirror and its boundary tests in the same change; the
+/// source cannot be imported because it is intentionally private.
+/// plumb: pending(wave-1)
+const LONGHOUSE_POPULATION_FLOOR: u32 = 200;
+
 /// A three-way source band whose endpoint meaning is supplied by the axis.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum D3bTernaryBand {
@@ -125,9 +136,11 @@ pub fn d3b_capacity_band(capacity: f64) -> Option<D3bCapacityBand> {
     if !capacity.is_finite() || capacity < 0.0 {
         return None;
     }
-    Some(if capacity < 150.0 {
+    let hamlet_ceiling = f64::from(hornvale_history::flesh::HAMLET_POPULATION_CEILING);
+    let longhouse_floor = f64::from(LONGHOUSE_POPULATION_FLOOR);
+    Some(if capacity < hamlet_ceiling {
         D3bCapacityBand::BelowHamlet
-    } else if capacity < 200.0 {
+    } else if capacity < longhouse_floor {
         D3bCapacityBand::HamletToLonghouse
     } else {
         D3bCapacityBand::AtLeastLonghouse
@@ -225,20 +238,22 @@ mod tests {
 
     #[test]
     fn capacity_bands_keep_150_and_200_on_their_named_lower_endpoints() {
+        let hamlet_ceiling = f64::from(hornvale_history::flesh::HAMLET_POPULATION_CEILING);
+        let longhouse_floor = f64::from(super::LONGHOUSE_POPULATION_FLOOR);
         assert_eq!(
-            d3b_capacity_band(149.999_999),
+            d3b_capacity_band(hamlet_ceiling - 0.000_001),
             Some(D3bCapacityBand::BelowHamlet)
         );
         assert_eq!(
-            d3b_capacity_band(150.0),
+            d3b_capacity_band(hamlet_ceiling),
             Some(D3bCapacityBand::HamletToLonghouse)
         );
         assert_eq!(
-            d3b_capacity_band(199.999_999),
+            d3b_capacity_band(longhouse_floor - 0.000_001),
             Some(D3bCapacityBand::HamletToLonghouse)
         );
         assert_eq!(
-            d3b_capacity_band(200.0),
+            d3b_capacity_band(longhouse_floor),
             Some(D3bCapacityBand::AtLeastLonghouse)
         );
     }
