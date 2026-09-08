@@ -1,7 +1,7 @@
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_worldgen::district::{
-    DistrictBasis, DistrictConfig, DistrictContinuityState, DistrictId, DistrictInterval,
-    DistrictStatus, compare_districts, project_districts,
+    DistrictBasis, DistrictConfig, DistrictContinuityIncomparability, DistrictContinuityState,
+    DistrictId, DistrictInterval, DistrictStatus, compare_districts, project_districts,
 };
 use hornvale_worldgen::relation::{
     RelationAssertion, RelationDirection, RelationDirectionPolicy, RelationInterval, RelationKind,
@@ -755,6 +755,90 @@ fn uninterrupted_evidence_establishes_event_continuity() {
             current: district_id(DistrictBasis::Spatial, current_interval, "locus:a"),
         }]
     );
+}
+
+#[test]
+fn cross_basis_comparison_is_explicitly_incomparable() {
+    // Catches treating a basis mismatch as an unmatched predecessor in an
+    // otherwise valid continuity comparison.
+    let previous_interval = district_interval(0, 4);
+    let current_interval = district_interval(5, 9);
+    let cfg = config(RelationDirectionPolicy::Reciprocal);
+    let previous = project_districts(
+        &RelationView::new(vec![assertion_during(
+            RelationKind::SpatialAdjacency,
+            "locus:a",
+            "locus:b",
+            RelationDirection::Symmetric,
+            1.0,
+            0,
+            4,
+        )])
+        .unwrap(),
+        DistrictBasis::Spatial,
+        previous_interval,
+        &cfg,
+    );
+    let current = project_districts(
+        &RelationView::new(vec![assertion_during(
+            RelationKind::Exchange,
+            "locus:a",
+            "locus:b",
+            RelationDirection::Reciprocal,
+            1.0,
+            5,
+            9,
+        )])
+        .unwrap(),
+        DistrictBasis::Exchange,
+        current_interval,
+        &cfg,
+    );
+
+    assert_eq!(
+        compare_districts(&previous, &current, &cfg).states,
+        vec![DistrictContinuityState::Incomparable {
+            reason: DistrictContinuityIncomparability::DifferentBasis {
+                previous: DistrictBasis::Spatial,
+                current: DistrictBasis::Exchange,
+            },
+        }]
+    );
+}
+
+#[test]
+fn non_forward_intervals_are_explicitly_incomparable() {
+    // Catches accepting reversed, equal, or overlapping closed intervals as
+    // an earlier-to-later continuity comparison.
+    let view = RelationView::new(vec![assertion_during(
+        RelationKind::SpatialAdjacency,
+        "locus:a",
+        "locus:b",
+        RelationDirection::Symmetric,
+        1.0,
+        0,
+        9,
+    )])
+    .unwrap();
+    let cfg = config(RelationDirectionPolicy::Symmetric);
+
+    for (previous_interval, current_interval) in [
+        (district_interval(5, 9), district_interval(0, 4)),
+        (district_interval(0, 4), district_interval(0, 4)),
+        (district_interval(0, 5), district_interval(5, 9)),
+        (district_interval(5, 4), district_interval(6, 9)),
+        (district_interval(0, 4), district_interval(6, 5)),
+    ] {
+        let previous = project_districts(&view, DistrictBasis::Spatial, previous_interval, &cfg);
+        let current = project_districts(&view, DistrictBasis::Spatial, current_interval, &cfg);
+
+        assert_eq!(
+            compare_districts(&previous, &current, &cfg).states,
+            vec![DistrictContinuityState::Incomparable {
+                reason: DistrictContinuityIncomparability::NonForwardIntervals,
+            }]
+        );
+    }
 }
 
 #[test]

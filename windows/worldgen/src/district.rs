@@ -130,10 +130,29 @@ pub struct DistrictProjectionSet {
     overlap_limit: usize,
 }
 
+/// Why two district projection sets cannot be compared for continuity.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum DistrictContinuityIncomparability {
+    /// Continuity is meaningful only within one relation basis.
+    DifferentBasis {
+        /// Relation basis of the earlier projection set.
+        previous: DistrictBasis,
+        /// Relation basis of the later projection set.
+        current: DistrictBasis,
+    },
+    /// The later closed interval does not start after the earlier one ends.
+    NonForwardIntervals,
+}
+
 /// Explicit temporal relation between two district projection intervals.
 /// type-audit: bare-ok(count)
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum DistrictContinuityState {
+    /// The supplied projection sets do not define a valid continuity comparison.
+    Incomparable {
+        /// Exact reason the comparison cannot produce continuity states.
+        reason: DistrictContinuityIncomparability,
+    },
     /// Uninterrupted evidence supports one district in both intervals.
     EventContinuity {
         /// Projection-local identity in the earlier interval.
@@ -188,6 +207,24 @@ pub fn compare_districts(
     current: &DistrictProjectionSet,
     config: &DistrictConfig,
 ) -> DistrictContinuity {
+    let incomparability = if previous.basis != current.basis {
+        Some(DistrictContinuityIncomparability::DifferentBasis {
+            previous: previous.basis,
+            current: current.basis,
+        })
+    } else if !strictly_forward_intervals(previous.interval, current.interval) {
+        Some(DistrictContinuityIncomparability::NonForwardIntervals)
+    } else {
+        None
+    };
+    if let Some(reason) = incomparability {
+        return DistrictContinuity {
+            previous_interval: previous.interval,
+            current_interval: current.interval,
+            states: vec![DistrictContinuityState::Incomparable { reason }],
+        };
+    }
+
     let mut previous_districts: Vec<&DistrictProjection> = previous
         .districts
         .iter()
@@ -326,7 +363,9 @@ fn continuity_relation(
     previous: &DistrictProjection,
     current: &DistrictProjection,
 ) -> Option<PairContinuity> {
-    if previous.id.basis != current.id.basis {
+    if previous.id.basis != current.id.basis
+        || !strictly_forward_intervals(previous.id.interval, current.id.interval)
+    {
         return None;
     }
 
@@ -359,6 +398,10 @@ fn continuity_relation(
         .pop_first()
         .map(PairContinuity::Recurrence)
         .or_else(|| event_continuity.then_some(PairContinuity::Event))
+}
+
+fn strictly_forward_intervals(previous: DistrictInterval, current: DistrictInterval) -> bool {
+    previous.start <= previous.end && current.start <= current.end && previous.end < current.start
 }
 
 fn same_evidence_lineage(left: &RelationAssertion, right: &RelationAssertion) -> bool {
