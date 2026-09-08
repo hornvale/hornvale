@@ -216,7 +216,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | -1.0518004 | -0.6248594 | -0.5776447 | -0.53095787 | -0.34823261 | -0.58220994 |
 
-**Frozen claim** — *Holdings are distributed far more unequally than the endowments that produce them* (`sugarscape-1996` `sug-wealth-skew`; Ch. II, 'Emergence'; Animation II-3). Predicted median in [-1.2, -0.8]; measured -0.577645. FLAT. ([what this is](#frozen-claims))
+**Frozen claim** — *Holdings are distributed far more unequally than the endowments that produce them* (`sugarscape-1996` `sug-wealth-skew`; Ch. II, 'Emergence'; Animation II-3). Predicted median in [-1.2, -0.8]; measured -0.577645. FLAT. **NOT A BLIND TEST, disclosed under decision 0016: this statistic's distribution was measured during the brainstorm that motivated The Seedbed, before any corpus existed. Every other item in this corpus was authored before its statistic was looked at.** ([what this is](#frozen-claims))
 
 ### `settlement-count`
 
@@ -267,7 +267,9 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ## Frozen claims
 
-Some metrics above carry a **frozen claim**: a prediction an imported corpus made about this population *before* any of it was measured, printed beside what the committed census says today. The corpus is data this survey only reads — the corpus supplies the regularity, its source and the criterion, and the survey supplies the measurement and re-states the recorded verdict. Every part of a claim line is derived from one of those two, so a corpus that changes moves the line.
+Some metrics above carry a **frozen claim**: a prediction an imported corpus made about this population, printed beside what the committed census says today. The corpus is data this survey only reads — the corpus supplies the regularity, its source and the criterion, and the survey supplies the measurement and re-states the recorded verdict. Every part of a claim line is derived from one of those two, so a corpus that changes moves the line.
+
+Criteria here were authored before their statistics were looked at, with 1 declared exception(s) — `sug-wealth-skew` — each of which states its own disclosure on its claim line above. Do not read this page as a page of blind predictions without checking which.
 
 ### `sugarscape-1996`
 

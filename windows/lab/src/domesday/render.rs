@@ -457,14 +457,62 @@ pub const CLAIMS_SECTION_ANCHOR: &str = "#frozen-claims";
 /// It exists because "Frozen claim" is a term of art this survey invented,
 /// and a marker a reader cannot look up is decoration. It states no number:
 /// every number in a claim comes from the corpus or the census.
+///
+/// **It deliberately makes no blindness claim.** An earlier version said a
+/// frozen claim is "a prediction an imported corpus made about this
+/// population *before* any of it was measured", which is a UNIFORM claim
+/// this page cannot support: one of the founding corpus's four scored items
+/// discloses that it is not a blind test. A false uniform assurance is worse
+/// on this surface than on any other, because this is the surface a reader
+/// is invited to catch us on. Blindness is stated by
+/// [`blindness_sentence`] instead, derived per page from what the items
+/// actually disclose.
 const CLAIMS_PREAMBLE: &str = "\
 Some metrics above carry a **frozen claim**: a prediction an imported \
-corpus made about this population *before* any of it was measured, printed \
-beside what the committed census says today. The corpus is data this survey \
-only reads — the corpus supplies the regularity, its source and the \
-criterion, and the survey supplies the measurement and re-states the \
-recorded verdict. Every part of a claim line is derived from one of those \
-two, so a corpus that changes moves the line.";
+corpus made about this population, printed beside what the committed census \
+says today. The corpus is data this survey only reads — the corpus supplies \
+the regularity, its source and the criterion, and the survey supplies the \
+measurement and re-states the recorded verdict. Every part of a claim line \
+is derived from one of those two, so a corpus that changes moves the line.";
+
+/// What this page may honestly say about whether its claims were
+/// preregistered blind, given what its own items disclose.
+///
+/// Two branches, both derived, neither hard-coded to today's corpus:
+///
+/// - **no disclosure anywhere** — the page states blindness plainly,
+///   because on that page it is true;
+/// - **one or more disclosures** — the page says so and NAMES the items,
+///   so a reader who scrolled straight to a verdict can find out which one
+///   is not blind.
+///
+/// The naming half is what makes this more than a hedge. "Some of these may
+/// not be blind" would technically avoid the falsehood while telling a
+/// reader nothing they could act on; a named item is checkable.
+fn blindness_sentence(scored: &[&ScoredItem]) -> String {
+    let disclosed: Vec<&&ScoredItem> = scored
+        .iter()
+        .filter(|item| item.disclosure.is_some())
+        .collect();
+    if disclosed.is_empty() {
+        return "Every criterion on this page was authored before its statistic was \
+                looked at."
+            .to_string();
+    }
+    let names = disclosed
+        .iter()
+        .map(|item| format!("`{}`", item.id))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "Criteria here were authored before their statistics were looked at, with \
+         {} declared exception(s) — {} — each of which states its own disclosure on \
+         its claim line above. Do not read this page as a page of blind predictions \
+         without checking which.",
+        disclosed.len(),
+        names
+    )
+}
 
 /// The claim line printed under a scored metric's statistics.
 ///
@@ -516,15 +564,25 @@ pub fn claim_line_unmeasured(item: &ScoredItem) -> String {
 ///
 /// One function rather than two format strings, so the measured and absent
 /// arms cannot drift into stating the criterion two different ways.
+///
+/// A disclosed item carries its disclosure HERE, after the verdict, in bold
+/// — not only in the page's closing gloss. A reader who scrolls to a metric,
+/// reads `FLAT` and moves on must not be able to miss that this particular
+/// claim was not a blind test; a pointer they have to follow is a pointer
+/// most readers will not follow.
 fn claim_sentence(item: &ScoredItem, measured: &str) -> String {
     format!(
-        "*{}* (`{}` `{}`; {}). Predicted {}; measured {measured}. {}.",
+        "*{}* (`{}` `{}`; {}). Predicted {}; measured {measured}. {}.{}",
         item.title,
         item.corpus,
         item.id,
         item.source,
         item.criterion.prose(),
-        item.verdict.shouted()
+        item.verdict.shouted(),
+        match &item.disclosure {
+            Some(reason) => format!(" **{reason}**"),
+            None => String::new(),
+        }
     )
 }
 
@@ -579,7 +637,19 @@ fn render_claims_section(cols: &[&Column], corpora: &[ScoredCorpus]) -> String {
     if scoring.is_empty() {
         return String::new();
     }
-    let mut out = format!("## {CLAIMS_SECTION_TITLE}\n\n{CLAIMS_PREAMBLE}\n\n");
+    // Blindness is stated over the items this PAGE shows, not over every
+    // item loaded: a disclosure on a metric that lives on another domain's
+    // page is that page's business, and naming it here would send a reader
+    // looking for a claim line that is not present.
+    let shown: Vec<&ScoredItem> = scoring
+        .iter()
+        .flat_map(|corpus| corpus.items.iter())
+        .filter(|item| cols.iter().any(|col| col.name == item.statistic))
+        .collect();
+    let mut out = format!(
+        "## {CLAIMS_SECTION_TITLE}\n\n{CLAIMS_PREAMBLE}\n\n{}\n\n",
+        blindness_sentence(&shown)
+    );
     for corpus in scoring {
         out.push_str(&format!(
             "### `{}`\n\nFrozen corpus: `{}`\n\n{}\n\n",

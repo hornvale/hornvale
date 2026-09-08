@@ -95,7 +95,9 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ## Frozen claims
 
-Some metrics above carry a **frozen claim**: a prediction an imported corpus made about this population *before* any of it was measured, printed beside what the committed census says today. The corpus is data this survey only reads — the corpus supplies the regularity, its source and the criterion, and the survey supplies the measurement and re-states the recorded verdict. Every part of a claim line is derived from one of those two, so a corpus that changes moves the line.
+Some metrics above carry a **frozen claim**: a prediction an imported corpus made about this population, printed beside what the committed census says today. The corpus is data this survey only reads — the corpus supplies the regularity, its source and the criterion, and the survey supplies the measurement and re-states the recorded verdict. Every part of a claim line is derived from one of those two, so a corpus that changes moves the line.
+
+Every criterion on this page was authored before its statistic was looked at.
 
 ### `sugarscape-1996`
 

@@ -192,7 +192,7 @@ impl Criterion {
 /// Storing prose beside them would be a second authored copy of the frozen
 /// claim, free to drift from the numbers the verdict was actually taken on
 /// — the transcription failure this whole line exists to avoid.
-/// type-audit: bare-ok(identifier-text: corpus), bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(prose: source), bare-ok(identifier-text: statistic)
+/// type-audit: bare-ok(identifier-text: corpus), bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(prose: source), bare-ok(identifier-text: statistic), bare-ok(prose: disclosure)
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScoredItem {
     /// Which corpus scored it, e.g. `sugarscape-1996`.
@@ -220,6 +220,20 @@ pub struct ScoredItem {
     pub source: String,
     /// The census column it is measured through.
     pub statistic: String,
+    /// Why this item is NOT a blind test, when it is not one.
+    ///
+    /// `None` means the criterion was authored before the statistic was
+    /// looked at; `Some(reason)` is a disclosure under decision 0016. The
+    /// resolver's `Item::disclosure` carries the same value and the same
+    /// meaning, and the agreement test compares them.
+    ///
+    /// The page cannot do without it. The claims gloss tells a stranger
+    /// what a frozen claim is, and a gloss that asserts blindness for every
+    /// claim on the page is FALSE the moment one item discloses otherwise —
+    /// on the one surface a reader is invited to catch us on. So the gloss
+    /// is derived from this field rather than stated, and a disclosed item
+    /// carries its disclosure on its own claim line.
+    pub disclosure: Option<String>,
     /// The frozen criterion, as parameters.
     pub criterion: Criterion,
     /// What measuring found, as the corpus records it.
@@ -331,6 +345,9 @@ struct RawItem {
     /// The census column, empty for a non-measured verdict.
     #[serde(default)]
     statistic: String,
+    /// Why the item is not a blind test, when it is not one.
+    #[serde(default)]
+    disclosure: Option<String>,
     /// The frozen claim, absent for a non-measured verdict.
     #[serde(default)]
     criterion: Option<Criterion>,
@@ -372,6 +389,7 @@ pub fn load(json: &str, path: &str) -> Result<ScoredCorpus, String> {
                 title: item.title,
                 source: item.source,
                 statistic: item.statistic,
+                disclosure: item.disclosure,
                 criterion,
                 verdict,
             })

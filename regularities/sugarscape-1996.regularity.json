@@ -15,6 +15,7 @@
       "criterion": { "kind": "median-in-band", "lo": -1.2, "hi": -0.8 },
       "verdict": "flat",
       "anchor": "doc:book/src/domesday/settlement.md",
+      "disclosure": "NOT A BLIND TEST, disclosed under decision 0016: this statistic's distribution was measured during the brainstorm that motivated The Seedbed, before any corpus existed. Every other item in this corpus was authored before its statistic was looked at.",
       "note": "NOT A BLIND TEST, disclosed under decision 0016: this statistic's distribution was measured during the brainstorm that motivated The Seedbed, before any corpus existed. Every other item in this corpus was authored before its statistic was looked at. FALSIFYING WORLD: one whose settlements all carry the same population, giving an OLS slope near 0, or one dominated by a single primate settlement, giving a slope near -2 — both fall outside the band and redden. The band is two-sided and both poles are real shapes, and it is the only band in this corpus taken from an OUTSIDE LAW WITH A NUMBER IN IT (Zipf/Auerbach's slope of about -1) rather than from a floor chosen to be safe. It is the model the other items are measured against, and the metric's own rustdoc records that Hornvale's condensation is deliberately NOT tuned to a rank-size target, so the band is genuinely at risk."
     },
 

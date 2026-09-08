@@ -69,8 +69,18 @@ fn wealth_skew_item() -> ScoredItem {
             .into(),
         source: "Ch. II, 'Emergence'; Animation II-3".into(),
         statistic: "rank-size-slope".into(),
+        // The blind default. `disclosed_wealth_skew_item` is the other arm.
+        disclosure: None,
         criterion: Criterion::MedianInBand { lo: -1.2, hi: -0.8 },
         verdict: Verdict::Flat,
+    }
+}
+
+/// The same item declaring itself not blind.
+fn disclosed_wealth_skew_item() -> ScoredItem {
+    ScoredItem {
+        disclosure: Some("NOT A BLIND TEST, disclosed under decision 0016.".into()),
+        ..wealth_skew_item()
     }
 }
 
@@ -385,5 +395,116 @@ fn the_reader_fails_loudly_and_filters_quietly() {
         hornvale_lab::domesday::corpus::load("{ not json", "regularities/x.regularity.json")
             .is_err(),
         "a malformed corpus must not read as zero scored items"
+    );
+}
+
+/// A blind item's claim line carries no disclosure, and a disclosed one's
+/// carries it in the line itself — not only in the page's closing gloss.
+///
+/// A reader who scrolls to a metric, reads `FLAT` and moves on must not be
+/// able to miss that this particular claim was not a blind test.
+#[test]
+fn a_disclosed_item_carries_its_disclosure_on_its_own_claim_line() {
+    let blind = claim_line(&wealth_skew_item(), -0.577645);
+    assert!(
+        !blind.contains("NOT A BLIND TEST"),
+        "a blind item claims nothing about blindness: {blind}"
+    );
+    let disclosed = claim_line(&disclosed_wealth_skew_item(), -0.577645);
+    assert!(
+        disclosed.contains("NOT A BLIND TEST, disclosed under decision 0016."),
+        "the disclosure must reach the line itself: {disclosed}"
+    );
+    assert!(
+        disclosed.contains("FLAT"),
+        "a disclosed item is still measured and still scored: {disclosed}"
+    );
+}
+
+/// The absent arm carries the disclosure too.
+///
+/// Two format strings would have let this one drift; `claim_sentence` is
+/// shared precisely so it cannot.
+#[test]
+fn the_absent_arm_carries_the_disclosure_as_well() {
+    let line = claim_line_unmeasured(&disclosed_wealth_skew_item());
+    assert!(
+        line.contains("absent (no world reported a value)"),
+        "{line}"
+    );
+    assert!(line.contains("NOT A BLIND TEST"), "{line}");
+}
+
+/// The gloss is derived from the page's own items in BOTH directions.
+///
+/// A one-directional check would pass on a renderer hard-coded to either
+/// branch, which is exactly the defect this replaces: the old preamble
+/// asserted blindness for every claim unconditionally.
+#[test]
+fn the_gloss_states_blindness_only_when_the_page_can_support_it() {
+    let census = one_metric_census("rank-size-slope", "settlement", &["-1.0", "-0.9", "-0.8"]);
+
+    let blind = hornvale_lab::domesday::render::render_domain(
+        &census,
+        "settlement",
+        &[],
+        &corpus_of(vec![wealth_skew_item()]),
+    );
+    assert!(
+        blind.contains(
+            "Every criterion on this page was authored before its statistic \
+                        was looked at."
+        ),
+        "{blind}"
+    );
+    assert!(!blind.contains("declared exception(s)"), "{blind}");
+
+    let disclosed = hornvale_lab::domesday::render::render_domain(
+        &census,
+        "settlement",
+        &[],
+        &corpus_of(vec![disclosed_wealth_skew_item()]),
+    );
+    assert!(
+        disclosed.contains("1 declared exception(s) — `sug-wealth-skew`"),
+        "the gloss must count AND name what the page discloses: {disclosed}"
+    );
+    assert!(
+        !disclosed.contains("Every criterion on this page was authored before"),
+        "the page must never assert blindness it cannot support: {disclosed}"
+    );
+}
+
+/// A disclosure on a metric that lives on ANOTHER page is not this page's
+/// exception.
+///
+/// Naming it here would send a reader hunting for a claim line that is not
+/// present. The gloss is derived from what the page SHOWS, not from what the
+/// caller loaded.
+#[test]
+fn the_gloss_counts_only_the_items_this_page_shows() {
+    let census = one_metric_census("rank-size-slope", "settlement", &["-1.0", "-0.9", "-0.8"]);
+    let elsewhere = ScoredItem {
+        id: "sug-elsewhere".into(),
+        statistic: "raid-victim-rate".into(),
+        disclosure: Some("NOT A BLIND TEST, on another page.".into()),
+        ..wealth_skew_item()
+    };
+    let page = hornvale_lab::domesday::render::render_domain(
+        &census,
+        "settlement",
+        &[],
+        &corpus_of(vec![wealth_skew_item(), elsewhere]),
+    );
+    assert!(
+        page.contains(
+            "Every criterion on this page was authored before its statistic \
+                       was looked at."
+        ),
+        "the only item this page shows is blind: {page}"
+    );
+    assert!(
+        !page.contains("sug-elsewhere"),
+        "an item this page does not show must not be named on it: {page}"
     );
 }

@@ -968,8 +968,18 @@ fn lab_criterion_shape(c: &hornvale_lab::domesday::corpus::Criterion) -> (&'stat
 }
 
 /// One scored item as a plain, comparable tuple: id, statistic, criterion
-/// shape, verdict.
-type ScoredShape = (String, String, (&'static str, Vec<f64>), &'static str);
+/// shape, verdict, disclosure.
+///
+/// The disclosure is in the tuple because it is a field the two readers can
+/// now disagree about, and disagreement there is not cosmetic: it decides
+/// whether a survey page asserts blindness it cannot support.
+type ScoredShape = (
+    String,
+    String,
+    (&'static str, Vec<f64>),
+    &'static str,
+    Option<String>,
+);
 
 /// What the `cli` resolver considers a scored item of the founding corpus.
 fn cli_scored() -> Vec<ScoredShape> {
@@ -988,6 +998,7 @@ fn cli_scored() -> Vec<ScoredShape> {
                 item.statistic.clone(),
                 cli_criterion_shape(criterion),
                 verdict,
+                item.disclosure.clone(),
             ))
         })
         .collect()
@@ -1041,6 +1052,7 @@ fn the_two_readers_of_the_corpus_agree() {
                 i.statistic.clone(),
                 lab_criterion_shape(&i.criterion),
                 i.verdict.shouted(),
+                i.disclosure.clone(),
             )
         })
         .collect();
@@ -1245,4 +1257,167 @@ fn the_committed_pages_carry_the_regularity_and_its_provenance() {
             "{domain}.md carries a claim but not the corpus provenance behind it"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// The disclosure field (fix round 2).
+//
+// `sug-wealth-skew` is the founding corpus's one non-blind item. Before this
+// field existed, that fact lived only in the item's prose `note`, which no
+// consumer parses (deliberately — see `Item::roadmap_instrument`), so it
+// reached neither the audit report nor the Domesday. The report deferred to
+// the corpus ("does not count the exceptions") and the survey's gloss
+// asserted blindness for every claim on the page — false for one of four, on
+// the one surface a reader is invited to catch us on.
+// ---------------------------------------------------------------------------
+
+/// Exactly one item declares itself not blind, and it is the one whose own
+/// frozen note has said so since before the corpus was measured.
+///
+/// The second assertion is what makes this more than a spelling check: the
+/// structured field must agree with the frozen prose it restates. That is
+/// the whole legality argument for adding a field after measurement — it
+/// carries no information the corpus did not already have.
+#[test]
+fn the_disclosed_item_is_the_one_its_own_note_discloses() {
+    let corpus = load_sugarscape();
+    let disclosed: Vec<&str> = corpus
+        .items
+        .iter()
+        .filter(|i| i.disclosure.is_some())
+        .map(|i| i.id.as_str())
+        .collect();
+    assert_eq!(disclosed, vec!["sug-wealth-skew"]);
+
+    for item in &corpus.items {
+        let note_says = item.note.contains("NOT A BLIND TEST");
+        assert_eq!(
+            item.disclosure.is_some(),
+            note_says,
+            "{}: the structured disclosure and the frozen note disagree. The field is \
+             a RESTATEMENT of the note (which is why authoring it after measurement is \
+             legal at all), so the two must never diverge — and the field is authored \
+             by hand, never parsed from the note, so nothing keeps them together but \
+             this assertion.",
+            item.id
+        );
+    }
+}
+
+/// The audit report COUNTS and NAMES the exceptions instead of pointing at
+/// the corpus.
+///
+/// Closes the item Task 6's review deferred. The old paragraph said the
+/// report "does not count the exceptions, because the corpus is where they
+/// are declared", which made a reader open a 45-item JSON file and scan
+/// prose to learn that one band was not blind.
+#[test]
+fn the_power_section_states_the_blindness_exceptions_by_count_and_name() {
+    let corpus = load_sugarscape();
+    let report = flat(&regularities::render(
+        &corpus,
+        &census(),
+        regularities::CORPORA[0],
+    ));
+    assert!(
+        report.contains("DECLARE THEMSELVES NOT BLIND"),
+        "the report must state the exception count: {report}"
+    );
+    assert!(
+        report.contains("1 of the 4 measurable item(s) DECLARE THEMSELVES NOT BLIND"),
+        "the count must be derived from the corpus, not asserted"
+    );
+    assert!(
+        report.contains("`sug-wealth-skew`"),
+        "the exception must be named, not merely counted"
+    );
+    assert!(
+        !report.contains("does not count the exceptions"),
+        "the deferral-to-the-corpus pointer must be gone"
+    );
+}
+
+/// Flipping the disclosure in a scratch corpus moves BOTH the gloss and the
+/// claim line — neither is hard-coded to today's corpus.
+///
+/// Two directions in one test, because a one-directional check here would
+/// pass on a renderer that always printed the disclosed branch:
+///
+/// - remove the only disclosure and the page states blindness plainly, with
+///   no exception named and no disclosure on the claim line;
+/// - add one to a second item and the gloss names two.
+#[test]
+fn the_gloss_and_the_claim_line_follow_the_disclosure_field() {
+    let census = census();
+
+    let blind = scratch_corpus("no-disclosure", |c| {
+        for item in c["items"]
+            .as_array_mut()
+            .expect("items is an array")
+            .iter_mut()
+        {
+            if let Some(obj) = item.as_object_mut() {
+                obj.remove("disclosure");
+            }
+        }
+    });
+    let page = hornvale_lab::domesday::render::render_domain(
+        &census,
+        "settlement",
+        &[],
+        &read_scratch(&blind),
+    );
+    assert!(
+        page.contains(
+            "Every criterion on this page was authored before its statistic \
+                       was looked at."
+        ),
+        "with no disclosure the page may state blindness plainly: {page}"
+    );
+    assert!(
+        !page.contains("NOT A BLIND TEST"),
+        "no item discloses, so no claim line carries a disclosure: {page}"
+    );
+    assert!(
+        !page.contains("declared exception(s)"),
+        "nothing to except: {page}"
+    );
+
+    let real = vec![lab_corpus()];
+    let page = hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &real);
+    assert!(
+        page.contains("1 declared exception(s) — `sug-wealth-skew`"),
+        "the gloss must name the exception it has: {page}"
+    );
+    assert!(
+        !page.contains("Every criterion on this page was authored before"),
+        "the page must not assert uniform blindness while carrying an exception: {page}"
+    );
+    assert!(
+        page.contains("**NOT A BLIND TEST"),
+        "the disclosed item's own claim line must carry the disclosure: {page}"
+    );
+}
+
+/// A page whose claims are all blind says so plainly, and the sentence is
+/// the honest one rather than a hedge.
+///
+/// `society`'s three items carry no disclosure, so this is the negative
+/// branch taken over the REAL corpus rather than a scratch one — the
+/// derivation is per page, not per corpus.
+#[test]
+fn a_page_with_no_disclosed_item_states_blindness_plainly() {
+    let real = vec![lab_corpus()];
+    let page = hornvale_lab::domesday::render::render_domain(&census(), "society", &[], &real);
+    assert!(
+        page.contains(
+            "Every criterion on this page was authored before its statistic \
+                       was looked at."
+        ),
+        "society's three items are all blind: {page}"
+    );
+    assert!(
+        !page.contains("declared exception(s)"),
+        "society has no exception to declare: {page}"
+    );
 }

@@ -118,7 +118,7 @@ pub enum Criterion {
 }
 
 /// One imported regularity as authored in the corpus.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(prose: source), bare-ok(count: emergence_type), bare-ok(identifier-text: statistic), bare-ok(identifier-text: anchor), bare-ok(prose: roadmap_instrument), bare-ok(prose: note)
+/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(prose: source), bare-ok(count: emergence_type), bare-ok(identifier-text: statistic), bare-ok(identifier-text: anchor), bare-ok(prose: roadmap_instrument), bare-ok(prose: disclosure), bare-ok(prose: note)
 #[derive(Debug, Clone, Deserialize)]
 pub struct Item {
     /// Corpus-local identifier, e.g. `sug-wealth-skew`.
@@ -194,6 +194,37 @@ pub struct Item {
     /// the report says so rather than calling this half "small".
     #[serde(default)]
     pub roadmap_instrument: Option<String>,
+    /// Why this item is NOT a blind test, when it is not one.
+    ///
+    /// `None` is the ordinary case and means the criterion was authored
+    /// before its statistic was looked at. `Some(reason)` is a disclosure
+    /// under decision 0016: the item is still measured and still scored, but
+    /// a reader must not be told it was preregistered blind.
+    ///
+    /// **One `Option<String>`, not a `blind: bool` beside a reason.** Two
+    /// fields can disagree — `blind: true` with a disclosure text, or
+    /// `blind: false` with none — and there is no third party to adjudicate
+    /// which is right. Presence *is* the flag, so the two cannot drift.
+    ///
+    /// **This field was added AFTER the corpus was measured, and that is
+    /// legal on a narrow ground worth stating so nobody has to reconstruct
+    /// it.** It adds no information the corpus did not already carry: the
+    /// disclosure is verbatim in `sug-wealth-skew`'s own frozen `note`,
+    /// which was authored before measurement. It changes no criterion, band,
+    /// statistic or verdict, and nothing computed can move because of it —
+    /// [`meets`], [`compute`] and [`audit`] never read it. It is a
+    /// structured restatement of frozen content, on the same ground a
+    /// restatement of `median-at-least: 1.0` is not a leak. Re-freezing a
+    /// BAND, or promoting an `absent` item, remains something no session
+    /// that has read the census may do.
+    ///
+    /// **Authored explicitly; never parsed out of [`Item::note`].**
+    /// Classifying by scanning prose is the defect Task 6 removed from the
+    /// `absent` split (see [`Item::roadmap_instrument`]), and it must not
+    /// return by this route: a re-wording of a note would otherwise move a
+    /// committed artifact with nothing objecting.
+    #[serde(default)]
+    pub disclosure: Option<String>,
     /// One line of human context.
     ///
     /// **Never parsed, and that is now true again.** Task 6's first draft
@@ -1346,15 +1377,45 @@ pub fn render(
         items.len()
     )));
     s.push_str("\n\n");
+    // THE BLINDNESS READING, DERIVED. This paragraph used to say the report
+    // "does not count the exceptions, because the corpus is where they are
+    // declared" — a pointer chain, and the reason Task 6's reviewer asked for
+    // a structured field. A reader had to leave the report, open the corpus,
+    // and scan 45 notes to learn that one item is not blind. `Item::disclosure`
+    // makes the count a fact this report can state, and the ITEMS a fact it can
+    // name, with no prose coupling and nothing to re-word.
+    let disclosed: Vec<&Item> = items
+        .iter()
+        .copied()
+        .filter(|i| i.disclosure.is_some())
+        .collect();
+    let blindness = if disclosed.is_empty() {
+        "Every band here was authored ahead of measurement, and no item declares \
+         otherwise."
+            .to_string()
+    } else {
+        format!(
+            "{} of the {} measurable item(s) DECLARE THEMSELVES NOT BLIND — {} — and \
+             each states its own disclosure below. The rest were authored ahead of \
+             measurement. A disclosed item is still measured and still scored; what it \
+             is not is a preregistered prediction, so it must not be counted as one.",
+            disclosed.len(),
+            items.len(),
+            disclosed
+                .iter()
+                .map(|i| format!("`{}`", i.id))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    s.push_str(&wrap(&blindness));
+    s.push_str("\n\n");
     s.push_str(&wrap(
-        "The bands were authored ahead of measurement, except where the Frozen \
-         declaration above discloses otherwise, by name — this report does not restate \
-         the blanket claim, because the corpus itself does not make one, and does not \
-         count the exceptions, because the corpus is where they are declared. A two-sided \
-         band is the only shape here that can fail at BOTH poles, and it is \
-         correspondingly the shape with real discriminating power; the count above says \
-         how many of these items carry one. Read the individual notes for which bound is \
-         at risk on which item: several say so about themselves, in both directions.",
+        "A two-sided band is the only shape here that can fail at BOTH poles, and it \
+         is correspondingly the shape with real discriminating power; the count above \
+         says how many of these items carry one. Read the individual notes for which \
+         bound is at risk on which item: several say so about themselves, in both \
+         directions.",
     ));
     s.push_str("\n\n");
     s.push_str(&wrap(&format!(
