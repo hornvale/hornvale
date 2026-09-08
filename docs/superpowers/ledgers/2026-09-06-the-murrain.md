@@ -610,3 +610,15 @@ change. The old E.9 sentence that the four-seed control must be below `z = 3`
 is no longer true, so the witness now records the control's direction and
 requires it to remain less decisive than the frozen panel. The panel, cap,
 hazard, and mechanism are unchanged.
+
+### Client witness refresh after the population epoch
+
+The next canonical stage reached the game client and found two seed-42
+content witnesses, both downstream of the same world movement: the settlement
+site roster is now 307 rather than the pre-Murrain 389, and the F5 map probe's
+point-site/landform exclusion is now 128 of 800 tiles rather than 118. The
+client contracts themselves still hold: the roster contains only the three
+declared site kinds, placed sites carry facets, settlements do not, and the F5
+resolved terrain class agrees with every non-site glyph. Both values were
+re-measured on the post-Murrain world and their linked prose/pins were updated;
+no renderer behavior or population authority was changed.
