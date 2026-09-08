@@ -763,6 +763,15 @@ epoch, or census work.
 
 ## Follow-ups
 
+## #11 [Implementation] — Task 1 witness accepted
+
+Task 1 added the typed, per-community D2 diagnostic witness and its public
+read-only History accessor. The independent review found no issues. The
+witness remains outside save emission and exchange behavior; the timing
+follow-up was regenerated and committed with the gate evidence.
+
+**Evidence:** implementation `78f9ecad6`; timing follow-up `3df3c02e7`.
+
 - Verify the current ecology, stock, need, capability, movement, relation, and
   exchange identifiers and denominators before drafting Task 0.
 - Build a candidate-measure comparison covering opportunity contrast,
