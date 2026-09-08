@@ -361,6 +361,19 @@ misstate unavailable evidence.
 production return flow or function conversion. A fresh fixed-roster run is
 required after the repair before Task 0 can enter any dead-pole branch.
 
+## #10 [G3] — Pooled denominator repair approved
+
+Nathan approved the pooled relation denominator on 2026-09-07. The fixed
+roster remains exactly seeds `1..=200`; an individual seed with no standing
+relation contributes zero records, while Task 0 asserts the pooled relation
+count `N > 0`. This matches the preregistered definition of `N` as the count
+of standing relations in the measured baked result and does not post-select
+successful seeds.
+
+The repair is probe-fixture scope only. It authorizes one fresh fixed-roster
+diagnostic run, not production return flow, function conversion, epoch work,
+or a census.
+
 ## Follow-ups
 
 - Write the D3 brief/spec around this Task 0 criterion before proposing code.
