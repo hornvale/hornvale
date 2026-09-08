@@ -58,6 +58,13 @@ pub enum Criterion {
         hi: f64,
     },
     /// At least `min_fraction` of worlds lie in `[lo, hi]`.
+    ///
+    /// Measured against the population, not the present slice: a world
+    /// where the statistic is absent counts against the claim rather than
+    /// being excluded from the vote. Dividing by the present count instead
+    /// would let a statistic that is absent almost everywhere score highly
+    /// on the handful of worlds where it happens to appear — exactly the
+    /// shape a coverage instrument must not reward.
     FractionInBandAtLeast {
         /// Inclusive lower edge.
         lo: f64,
@@ -250,41 +257,54 @@ impl GeneratedPaths {
 ///
 /// `present` is the statistic's values over worlds that have one; `worlds` is
 /// the population size including worlds where the statistic is absent. The
-/// two differ, and `PresentOnFraction` is the criterion that cares — a world
-/// can be *present with value 0.0*, which is not the same as absent, so this
+/// two differ, and both fraction-based criteria (`FractionInBandAtLeast`,
+/// `PresentOnFraction`) divide by `worlds`, never by `present.len()`: an
+/// absent world counts against the claim rather than being excluded from
+/// the vote, so a statistic absent almost everywhere cannot score highly on
+/// the handful of worlds where it happens to appear. A world can also be
+/// *present with value 0.0*, which is not the same as absent, so this
 /// function never reads absence off the length of `present` alone.
 /// type-audit: bare-ok(ratio: present), bare-ok(count: worlds), bare-ok(flag: return)
 pub fn meets(criterion: &Criterion, present: &[f64], worlds: usize) -> bool {
-    if let Criterion::PresentOnFraction { min_fraction } = criterion {
-        if worlds == 0 {
-            return false;
-        }
-        return present.len() as f64 / worlds as f64 >= *min_fraction;
-    }
-    if present.is_empty() {
-        return false;
-    }
-    let mut sorted = present.to_vec();
-    sorted.sort_by(f64::total_cmp);
-    let mid = sorted.len() / 2;
-    let median = if sorted.len().is_multiple_of(2) {
-        (sorted[mid - 1] + sorted[mid]) / 2.0
-    } else {
-        sorted[mid]
-    };
     match criterion {
-        Criterion::MedianInBand { lo, hi } => median >= *lo && median <= *hi,
-        Criterion::MedianAtLeast { bound } => median >= *bound,
-        Criterion::MedianAtMost { bound } => median <= *bound,
+        Criterion::PresentOnFraction { min_fraction } => {
+            if worlds == 0 {
+                return false;
+            }
+            present.len() as f64 / worlds as f64 >= *min_fraction
+        }
         Criterion::FractionInBandAtLeast {
             lo,
             hi,
             min_fraction,
         } => {
+            if worlds == 0 {
+                return false;
+            }
             let inside = present.iter().filter(|v| **v >= *lo && **v <= *hi).count();
-            inside as f64 / present.len() as f64 >= *min_fraction
+            inside as f64 / worlds as f64 >= *min_fraction
         }
-        Criterion::PresentOnFraction { .. } => unreachable!("handled above"),
+        Criterion::MedianInBand { .. }
+        | Criterion::MedianAtLeast { .. }
+        | Criterion::MedianAtMost { .. } => {
+            if present.is_empty() {
+                return false;
+            }
+            let mut sorted = present.to_vec();
+            sorted.sort_by(f64::total_cmp);
+            let mid = sorted.len() / 2;
+            let median = if sorted.len().is_multiple_of(2) {
+                (sorted[mid - 1] + sorted[mid]) / 2.0
+            } else {
+                sorted[mid]
+            };
+            match criterion {
+                Criterion::MedianInBand { lo, hi } => median >= *lo && median <= *hi,
+                Criterion::MedianAtLeast { bound } => median >= *bound,
+                Criterion::MedianAtMost { bound } => median <= *bound,
+                _ => unreachable!("matched above"),
+            }
+        }
     }
 }
 

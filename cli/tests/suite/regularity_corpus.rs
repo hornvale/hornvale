@@ -220,12 +220,29 @@ fn median_in_band_is_inclusive_at_both_edges() {
 #[test]
 fn fraction_in_band_counts_only_values_inside_it() {
     let v = [-1.0, -1.0, -0.5, -0.5];
+    // 2 of the 4 present values (-1.0, -1.0) are in [-1.2, -0.8]; -0.5 is
+    // not. Measured against a population of 10 WORLDS (not the 4 present
+    // values), that is 2/10 = 20%, which fails a 50% bar. A denominator
+    // bug that divided by `present.len()` instead would compute 2/4 = 50%
+    // and pass here -- this is the discriminating case: the two
+    // implementations disagree on this exact input.
     let c = Criterion::FractionInBandAtLeast {
         lo: -1.2,
         hi: -0.8,
         min_fraction: 0.5,
     };
-    assert!(meets(&c, &v, 4), "exactly half is at least half");
+    assert!(
+        !meets(&c, &v, 10),
+        "2 in-band of 4 present, against 10 worlds, is 20% -- below the 50% bar"
+    );
+    // Same values, but the population IS exactly the present count: 2/4 =
+    // 50% clears the bar. This does not by itself discriminate the
+    // denominator bug (present.len() == worlds here), but it does confirm
+    // the numerator still counts only in-band values, not every present one.
+    assert!(
+        meets(&c, &v, 4),
+        "2 in-band of 4 present, against a population of 4, is 50% -- meets the bar"
+    );
     let c = Criterion::FractionInBandAtLeast {
         lo: -1.2,
         hi: -0.8,
