@@ -1100,13 +1100,19 @@ fn pairs<'a>(items: &[&'a Item], census: &hornvale_lab::domesday::census::Census
     out
 }
 
-/// How many INDEPENDENT claims the measurable items make.
+/// The claim grouping: for each item, the index of the claim it belongs to.
 ///
 /// Two items that read near-collinear statistics off the same population are
-/// one claim measured twice, not two corroborations — so this merges them and
-/// counts the groups. Union by repeated relaxation over the measured pairs;
-/// the item count is tiny and this needs no disjoint-set structure.
-fn independent_claims(items: &[&Item], pairs: &[Pair<'_>]) -> usize {
+/// one claim measured twice, not two corroborations. Union by repeated
+/// relaxation over the measured pairs; the item count is tiny and this needs
+/// no disjoint-set structure.
+///
+/// Separated from [`independent_claims`] so the claim-level verdict reading
+/// and the claim COUNT are derived from one merge rather than two. A second
+/// grouping computed beside this one could disagree with the correlation
+/// table the report prints, which is the table a reader would use to check
+/// either number.
+fn claim_grouping(items: &[&Item], pairs: &[Pair<'_>]) -> Vec<usize> {
     let mut group: Vec<usize> = (0..items.len()).collect();
     let index = |id: &str| items.iter().position(|i| i.id == id);
     let mut changed = true;
@@ -1128,10 +1134,58 @@ fn independent_claims(items: &[&Item], pairs: &[Pair<'_>]) -> usize {
             }
         }
     }
-    let mut seen: Vec<usize> = group.clone();
+    group
+}
+
+/// How many INDEPENDENT claims the measurable items make.
+fn independent_claims(items: &[&Item], pairs: &[Pair<'_>]) -> usize {
+    let mut seen = claim_grouping(items, pairs);
     seen.sort_unstable();
     seen.dedup();
     seen.len()
+}
+
+/// The claim-level reading: how many independent claims GREW, out of how many
+/// have been measured at all.
+///
+/// A claim counts as grown only when EVERY item merged into it measures
+/// `grown`. A merged claim is one thing measured twice, so two readings that
+/// disagree do not make it grown — they make it a claim whose instrument
+/// disagrees with itself, which must not round up.
+///
+/// Why the report needs this beside the tally: `grown: 3` and `3 independent
+/// claim(s)` are the same numeral meaning two different things, and read
+/// together they suggest three claims grew. Two did. The near-collinear pair
+/// (r >= the threshold above) is one claim counted twice in the item tally,
+/// and nothing in a per-item count can say so.
+fn grown_claims(items: &[&Item], pairs: &[Pair<'_>]) -> (usize, usize) {
+    let group = claim_grouping(items, pairs);
+    let mut ids: Vec<usize> = group.clone();
+    ids.sort_unstable();
+    ids.dedup();
+    let mut grown = 0;
+    let mut measured = 0;
+    for id in ids {
+        let members: Vec<&&Item> = items
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| group[*i] == id)
+            .map(|(_, item)| item)
+            .collect();
+        // A claim is measured only when every item in it is. An unmeasured
+        // member makes the claim's verdict unknown, not flat.
+        if !members
+            .iter()
+            .all(|i| matches!(i.verdict, Verdict::Grown | Verdict::Flat))
+        {
+            continue;
+        }
+        measured += 1;
+        if members.iter().all(|i| i.verdict == Verdict::Grown) {
+            grown += 1;
+        }
+    }
+    (grown, measured)
 }
 
 /// Whether a criterion constrains the statistic from both sides.
@@ -1321,6 +1375,24 @@ pub fn render(
         ));
     }
     s.push_str(&format!("- **total:** {total}\n"));
+
+    // THE CLAIM-LEVEL READING, derived from the same merge the Power section
+    // prints — never a second hard-coded number. Without it the tally's
+    // `grown: N` and the Power section's `N independent claim(s)` are the same
+    // numeral meaning two different things, paragraphs apart, and a reader
+    // pairs them into "every claim grew".
+    let (grown_claims_n, measured_claims) = grown_claims(&items, &pairs);
+    if measured_claims > 0 {
+        s.push('\n');
+        s.push_str(&wrap(&format!(
+            "By CLAIM rather than by item, merging the near-collinear pairs listed above: \
+             {grown_claims_n} of {measured_claims} measured claim(s) grew. A claim counts \
+             as grown only when every item merged into it does. Cite this number, not the \
+             item tally, when stating what the world grew — the item tally counts a merged \
+             pair twice."
+        )));
+        s.push('\n');
+    }
 
     s.push_str("\n## Unmeasured\n\n");
     let pending: Vec<&Item> = corpus

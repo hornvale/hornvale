@@ -74,6 +74,60 @@ fn the_regenerate_command_names_the_corpus_not_the_artifact() {
     )));
 }
 
+/// The tally reports a CLAIM-LEVEL grown count, and it is strictly below the
+/// item-level one.
+///
+/// `grown: 3` and `3 independent claim(s)` are the same numeral meaning two
+/// different things, paragraphs apart, and a reader pairs them into "every
+/// claim grew". Two did: the near-collinear raid pair is one claim counted
+/// twice in the item tally.
+///
+/// Asserts the PROPERTY — claim-grown strictly below item-grown, and the
+/// claim denominator strictly below the item count — rather than transcribing
+/// today's `2 of 3`. A transcribed pair would have to be re-typed at the next
+/// census refresh, which is how a derived number quietly becomes a
+/// hard-coded one.
+#[test]
+fn the_tally_reports_grown_by_claim_not_only_by_item() {
+    let corpus = load_sugarscape();
+    let report = regularities::render(&corpus, &census(), regularities::CORPORA[0]);
+    let prose = flat(&report);
+    let item_grown = corpus
+        .items
+        .iter()
+        .filter(|i| i.verdict == Verdict::Grown)
+        .count();
+    let measurable = corpus
+        .items
+        .iter()
+        .filter(|i| i.criterion.is_some() && !i.statistic.is_empty())
+        .count();
+    let found: Vec<(usize, usize)> = (0..=item_grown)
+        .flat_map(|g| (1..measurable).map(move |m| (g, m)))
+        .filter(|(g, m)| prose.contains(&format!("{g} of {m} measured claim(s) grew")))
+        .collect();
+    assert_eq!(
+        found.len(),
+        1,
+        "the tally must state exactly one claim-level grown reading: {report}"
+    );
+    let (grown, measured) = found[0];
+    assert!(
+        grown < item_grown,
+        "the merge must cost the grown count at least one item ({grown} vs {item_grown}); \
+         a claim-level count equal to the item-level one means the merge stopped happening"
+    );
+    assert!(
+        measured < measurable,
+        "the claim denominator must be below the measurable-item count ({measured} vs \
+         {measurable})"
+    );
+    assert!(
+        prose.contains("Cite this number, not the item tally"),
+        "the tally must say which number to cite: {report}"
+    );
+}
+
 /// Requirement 1 and 2 together: the independent-claim count is reported
 /// beside the item count, and it is STRICTLY BELOW it — the two raid-rate
 /// items read near-collinear statistics off the same population, so four
@@ -647,12 +701,22 @@ fn the_binary_check_fails_on_drift_with_a_clean_audit() {
 
 /// `measure` is a READ: it exits 0 and leaves the corpus byte-identical.
 ///
-/// The byte comparison is the load-bearing half. The mode exists because the
-/// rejected alternative was to interrogate the frozen corpus by MUTATING it
-/// (flip each item to `flat`, run `check`, read the findings), so a `measure`
-/// that wrote anything at all would have reintroduced the exact hazard it was
-/// built to avoid — and would do it silently, since a written corpus still
-/// exits 0.
+/// The mode exists because the rejected alternative was to interrogate the
+/// frozen corpus by MUTATING it (flip each item to `flat`, run `check`, read
+/// the findings), so a `measure` that wrote anything at all would have
+/// reintroduced the exact hazard it was built to avoid — and would do it
+/// silently, since a written corpus still exits 0.
+///
+/// **THIS TEST COVERS ONLY WRITES OUTSIDE THE PER-ITEM LOOP, and it did not
+/// always.** It runs against the REAL corpus, which had four `unmeasured`
+/// items when this was written and has none now, because the first
+/// measurement scored them all. The loop body therefore never executes here,
+/// so a write placed inside it is invisible to this assertion — the test was
+/// sound when authored and went vacuous the instant the task it guarded
+/// completed. It is kept for the outside-the-loop half it still covers;
+/// `measure_names_the_item_its_computed_verdict_and_the_number` carries the
+/// same comparison over a corpus that does have an `unmeasured` item, which
+/// is the arm where the loop actually runs.
 #[test]
 fn the_binary_measure_reads_and_writes_nothing() {
     let corpus_path = workspace_root().join(regularities::CORPORA[0]);
@@ -689,13 +753,27 @@ fn measure_names_the_item_its_computed_verdict_and_the_number() {
             }
         }
     });
+    let before = std::fs::read(&scratch).expect("reads the scratch corpus");
     let out = run(&[
         "regularities",
         "--corpus",
         scratch.to_str().expect("utf-8 path"),
         "measure",
     ]);
+    // THE WRITE-NOTHING GUARD THAT ACTUALLY COVERS THE LOOP. Its sibling
+    // `the_binary_measure_reads_and_writes_nothing` byte-compares the REAL
+    // corpus, which has no `unmeasured` items any more — so its per-item loop
+    // body never runs, and a write placed INSIDE the loop is invisible to it
+    // forever. That test was sound the day it was written and went vacuous the
+    // instant the first measurement completed. This corpus has an `unmeasured`
+    // item by construction, so the loop executes and the comparison is live.
+    let after = std::fs::read(&scratch).expect("reads the scratch corpus");
     let _ = std::fs::remove_file(&scratch);
+    assert_eq!(
+        before, after,
+        "`measure` must not write the corpus — it is a read, not a gate, and \
+         this is the arm where the per-item loop actually runs"
+    );
     assert!(out.status.success(), "measure failed: {out:?}");
     let stdout = String::from_utf8(out.stdout).expect("utf-8");
     assert!(

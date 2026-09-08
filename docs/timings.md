@@ -6691,3 +6691,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T04:42:26Z | rebaseline | 148.664 | 429.006 | 17.185 | 3.00 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-08T04:43:31Z | gate-commit | 53.042 | 75.225 | 17.676 | 1.75 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-08T04:44:21Z | gate-commit | 36.459 | 72.093 | 16.707 | 2.44 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:25Z | census-tail-chorus | 26.245 | 174.405 | 8.064 | 6.95 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:26Z | census-tail-domesday | 0.319 | 0.272 | 0.030 | 0.95 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:26Z | census-tail-anomalies | 0.274 | 0.228 | 0.029 | 0.94 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:28Z | rebaseline | 146.835 | 425.523 | 17.058 | 3.01 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:41Z | gate-commit | 5.155 | 3.703 | 0.614 | 0.84 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:59:17Z | gate-commit | 67.201 | 114.105 | 63.376 | 2.64 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |

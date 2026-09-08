@@ -132,6 +132,11 @@ totals add up, and again by name below.
 - unmeasured: 0 (0%)
 - **total:** 45
 
+By CLAIM rather than by item, merging the near-collinear pairs listed above:
+2 of 3 measured claim(s) grew. A claim counts as grown only when every item
+merged into it does. Cite this number, not the item tally, when stating what
+the world grew — the item tally counts a merged pair twice.
+
 ## Unmeasured
 
 None — every item carries a coverage verdict.
