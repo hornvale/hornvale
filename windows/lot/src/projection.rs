@@ -1,4 +1,8 @@
 //! Projection metadata and the persistent-consequence boundary.
+//!
+//! A projection is a view of a substrate cohort, not a substitute population
+//! count: its selection lens and materiality describe how the reader obtained
+//! an account of that cohort and whether consequences may write back.
 
 use hornvale_kernel::{KindId, Vertex};
 

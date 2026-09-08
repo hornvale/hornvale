@@ -522,7 +522,11 @@ fn composite_projection_refuses_persistent_write_back() {
         site: Vertex(7),
         year: 1200.0,
     };
+    let aggregate = Projection::aggregate(cohort);
     let composite = Projection::composite(cohort, true);
+    assert_eq!(aggregate.source_cohort, cohort);
+    assert!(aggregate.consequences_write_back());
+    assert_eq!(composite.source_cohort, aggregate.source_cohort);
     assert_eq!(composite.materiality, ProjectionMateriality::InWorld);
     assert!(!composite.consequences_write_back());
     let mut wrote = false;
@@ -531,6 +535,12 @@ fn composite_projection_refuses_persistent_write_back() {
     assert!(!wrote, "a composite projection executed a persistent write");
 
     let materialized = Projection::materialized_individual(cohort);
+    assert_eq!(materialized.source_cohort, aggregate.source_cohort);
+    assert_eq!(
+        materialized.materiality,
+        ProjectionMateriality::MaterializedIndividual
+    );
+    assert!(materialized.consequences_write_back());
     materialized
         .write_persistent_consequence(|| wrote = true)
         .expect("a materialized individual may persist consequences");
