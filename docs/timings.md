@@ -6634,3 +6634,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T00:49:06Z | sluice:gate | 817.824 | 21887.924 | 591.530 | 27.49 | 0 | d76b4c17d |  | lefford | 40 |
 | 2026-09-08T00:52:01Z | sluice:clients | 175.066 | 2779.398 | 258.451 | 17.35 | 0 | d134c63be |  | lefford | 40 |
 | 2026-09-08T01:00:02Z | sluice:heavy | 480.092 | 11310.727 | 165.053 | 23.90 | 0 | 2b716d229 |  | lefford | 40 |
+| 2026-09-07T23:25:17Z | prewarm | 203.566 | 1478.088 | 52.229 | 7.52 | 0 | efb22862e | campaign/the-route-cache | MacBookPro | 10 |
+| 2026-09-07T23:30:20Z | gate-commit | 48.406 | 106.788 | 18.402 | 2.59 | 0 | efb22862e | campaign/the-route-cache | MacBookPro | 10 |
+| 2026-09-07T23:31:07Z | gate-commit | 33.878 | 55.778 | 13.207 | 2.04 | 0 | efb22862e | campaign/the-route-cache | MacBookPro | 10 |
+| 2026-09-07T23:32:02Z | gate-commit | 34.481 | 55.685 | 13.491 | 2.01 | 0 | efb22862e | campaign/the-route-cache | MacBookPro | 10 |
+| 2026-09-07T23:33:08Z | gate-commit | 39.978 | 69.781 | 18.844 | 2.22 | 0 | efb22862e | campaign/the-route-cache | MacBookPro | 10 |
+| 2026-09-08T00:30:56Z | gate-commit | 36.777 | 67.490 | 18.829 | 2.35 | 0 | b297c9f20 | campaign/the-route-cache | MacBookPro | 10 |
