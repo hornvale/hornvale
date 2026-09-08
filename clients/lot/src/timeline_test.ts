@@ -41,6 +41,12 @@ Deno.test("a community's fate names its committed cause", () => {
   assertEquals(eventsOf(burned)[1].label, "Died at 32, when the community was burned.");
 });
 
+Deno.test("an outbreak ending names its pathogen", () => {
+  const struck = life();
+  struck.ending = { kind: "outbreak", cause: "the pest" };
+  assertEquals(eventsOf(struck)[1].label, "Died at 32 in an outbreak of the pest.");
+});
+
 Deno.test("a life still running says so rather than dying", () => {
   const alive = life();
   alive.ending = { kind: "alive", cause: null };

@@ -3355,11 +3355,8 @@ fn the_hazard_folds_integration_does_not_grow_with_the_tick_index() {
     // is left that way rather than cut again** (339.000 s -> 66.186 s and
     // 75.770 s in two full parallel crate runs; 52.442 s in a light one). The
     // tick
-    // index moves 3x, and the accrual floor is cleared by 3.5x rather than by
-    // the three orders of magnitude a twenty-turn `WALKING_SEED` roster gave:
-    // seed 6 commits 549 roster facts by turn 2 and 1,251 by turn 6, an accrual
-    // of 702 against `MIN_FACTS_ACCRUED`'s 200. That is a smaller margin than
-    // before and it is stated rather than left implied.
+    // index moves 3x, and the accrual floor is checked directly rather than
+    // copied from an older seed-specific measurement.
     //
     // The emitter-bearing world's SEARCH is the other half of this test's cost
     // and it was cut too, from eight waits per candidate seed to

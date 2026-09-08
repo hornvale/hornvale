@@ -3,12 +3,12 @@
 //
 // **WHY `matured` IS UNDATED, AND WHY THAT IS NOT A GAP TO PAPER OVER.**
 // The life payload carries `matured: bool` and no maturity age; the age
-// itself lives in `lot/odds/v1`, which has no `hl_*` export and which the
-// exhibit therefore cannot read. So this module emits maturity as an event
-// with `age: null` and the timeline draws it beside the axis rather than on
-// it. Placing it at a guessed age — 15, say, because that is what the
-// calibration band uses — would be a number the page invented, which is the
-// one thing spec §2.1 forbids. An absent tick is the honest rendering.
+// itself lives in `lot/odds/v1`, while this pure module deliberately receives
+// only the life payload. So it emits maturity as an event with `age: null`
+// and the timeline draws it beside the axis rather than on it. Placing it at
+// a guessed age — 15, say, because that is what the calibration band uses —
+// would be a number the page invented, which is the one thing spec §2.1
+// forbids. An absent tick is the honest rendering.
 //
 // Every other event's age is arithmetic over two payload fields
 // (`moved_year - birth_year`, `age_at_death`), never a model.
@@ -38,6 +38,9 @@ function endingLabel(life: Life): string {
   }
   if (life.ending.kind === "community-fate") {
     return `Died at ${age}, with the community.`;
+  }
+  if (life.ending.kind === "outbreak" && life.ending.cause !== null) {
+    return `Died at ${age} in an outbreak of ${life.ending.cause}.`;
   }
   return life.matured ? `Died at ${age}.` : `Died at ${age}, before maturity.`;
 }

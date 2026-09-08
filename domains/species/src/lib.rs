@@ -398,6 +398,255 @@ pub struct ConditionNiche {
     pub elevation: ConditionResponse,
 }
 
+/// The epidemiological regime a pathogen belongs to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PathogenClass {
+    /// A diffuse environmental burden.
+    Environmental,
+    /// A chronic host disease.
+    Chronic,
+    /// A vector-borne burden.
+    Vector,
+    /// A discrete reservoir spillover.
+    Zoonotic,
+    /// An acute crowd disease.
+    Crowd,
+}
+
+/// How a pathogen crosses between hosts or reservoirs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Transmission {
+    /// Fecal-oral transmission.
+    FecalOral,
+    /// Respiratory transmission.
+    Respiratory,
+    /// Vector transmission.
+    Vector,
+    /// Flea or direct-contact transmission.
+    FleaContact,
+}
+
+/// Authored pathogen data.  The epidemiology crate consumes the numeric
+/// fields; the species domain owns the catalogue and its ecological niche.
+/// type-audit: bare-ok(count: hosts), bare-ok(ratio: r0), bare-ok(count: infectious_years), bare-ok(flag: immunizing), bare-ok(ratio: attack_max), bare-ok(ratio: fatality), bare-ok(ratio: spillover_weight)
+#[derive(Clone, Debug, PartialEq)]
+pub struct PathogenTraits {
+    /// The regime owning the pathogen's later mechanism.
+    pub class: PathogenClass,
+    /// Uniform host susceptibility weights over the fifteen peoples.
+    /// type-audit: bare-ok(count)
+    pub hosts: Vec<(KindId, f64)>,
+    /// The authored transmission mode.
+    pub transmission: Transmission,
+    /// Environmental fit for the pathogen or its reservoir.
+    pub condition_niche: ConditionNiche,
+    /// Reproduction number, when host persistence is meaningful.
+    /// type-audit: bare-ok(ratio)
+    pub r0: Option<f64>,
+    /// Infectious period in years, when host persistence is meaningful.
+    /// type-audit: bare-ok(count)
+    pub infectious_years: Option<f64>,
+    /// Whether survivors retain lasting immunity.
+    /// type-audit: bare-ok(flag)
+    pub immunizing: bool,
+    /// Maximum attack fraction for epidemic kinds.
+    /// type-audit: bare-ok(ratio)
+    pub attack_max: Option<f64>,
+    /// Fatality fraction for epidemic kinds.
+    /// type-audit: bare-ok(ratio)
+    pub fatality: Option<f64>,
+    /// Relative spillover weight for epidemic kinds.
+    /// type-audit: bare-ok(ratio)
+    pub spillover_weight: Option<f64>,
+}
+
+impl Component for PathogenTraits {}
+
+const PATHOGEN_CONCEPTS: &[(&str, &str)] = &[
+    ("the-flux", "the flux"),
+    ("the-consumption", "the consumption"),
+    ("the-marsh-fever", "the marsh fever"),
+    ("the-pest", "the pest"),
+    ("the-pox", "the pox"),
+];
+
+fn indifferent_condition() -> ConditionResponse {
+    ConditionResponse {
+        optimum: 0.0,
+        width: 1.0e12,
+        devotion: 1.0,
+    }
+}
+
+fn indifferent_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: indifferent_condition(),
+        moisture: indifferent_condition(),
+        insolation: indifferent_condition(),
+        elevation: indifferent_condition(),
+    }
+}
+
+fn pathogen_hosts() -> Vec<(KindId, f64)> {
+    [
+        "goblin",
+        "kobold",
+        "hobgoblin",
+        "bugbear",
+        "human",
+        "desert-dwarf",
+        "gully-dwarf",
+        "hill-dwarf",
+        "desert-elf",
+        "drow",
+        "high-elf",
+        "sea-elf",
+        "snow-elf",
+        "wood-elf",
+        "gnoll",
+    ]
+    .into_iter()
+    .map(|name| (KindId(name), 1.0))
+    .collect()
+}
+
+/// The frozen five-row pathogen catalogue.
+pub fn pathogen_registry() -> ComponentStore<KindId, PathogenTraits> {
+    let all = indifferent_niche();
+    let warm_wet_low = ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 25.0,
+            width: 10.0,
+            devotion: 0.8,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.8,
+            width: 0.2,
+            devotion: 0.8,
+        },
+        insolation: all.insolation,
+        elevation: ConditionResponse {
+            optimum: 100.0,
+            width: 600.0,
+            devotion: 0.8,
+        },
+    };
+    let temperate_dry_grassland = ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 15.0,
+            width: 10.0,
+            devotion: 0.7,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.25,
+            width: 0.2,
+            devotion: 0.7,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.55,
+            width: 0.3,
+            devotion: 0.5,
+        },
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 1500.0,
+            devotion: 0.5,
+        },
+    };
+    let temperate = ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 15.0,
+            width: 10.0,
+            devotion: 0.8,
+        },
+        ..all
+    };
+    let rows = [
+        (
+            KindId("the-flux"),
+            PathogenTraits {
+                class: PathogenClass::Environmental,
+                hosts: pathogen_hosts(),
+                transmission: Transmission::FecalOral,
+                condition_niche: all,
+                r0: None,
+                infectious_years: None,
+                immunizing: false,
+                attack_max: None,
+                fatality: None,
+                spillover_weight: None,
+            },
+        ),
+        (
+            KindId("the-consumption"),
+            PathogenTraits {
+                class: PathogenClass::Chronic,
+                hosts: pathogen_hosts(),
+                transmission: Transmission::Respiratory,
+                condition_niche: all,
+                r0: Some(3.0),
+                infectious_years: Some(2.0),
+                immunizing: false,
+                attack_max: None,
+                fatality: None,
+                spillover_weight: None,
+            },
+        ),
+        (
+            KindId("the-marsh-fever"),
+            PathogenTraits {
+                class: PathogenClass::Vector,
+                hosts: pathogen_hosts(),
+                transmission: Transmission::Vector,
+                condition_niche: warm_wet_low,
+                r0: None,
+                infectious_years: None,
+                immunizing: false,
+                attack_max: None,
+                fatality: None,
+                spillover_weight: None,
+            },
+        ),
+        (
+            KindId("the-pest"),
+            PathogenTraits {
+                class: PathogenClass::Zoonotic,
+                hosts: pathogen_hosts(),
+                transmission: Transmission::FleaContact,
+                condition_niche: temperate_dry_grassland,
+                r0: Some(3.0),
+                infectious_years: Some(0.027),
+                immunizing: false,
+                attack_max: Some(0.60),
+                fatality: Some(0.60),
+                spillover_weight: Some(1.0),
+            },
+        ),
+        (
+            KindId("the-pox"),
+            PathogenTraits {
+                class: PathogenClass::Crowd,
+                hosts: pathogen_hosts(),
+                transmission: Transmission::Respiratory,
+                condition_niche: temperate,
+                r0: Some(6.0),
+                infectious_years: Some(0.038),
+                immunizing: true,
+                attack_max: Some(0.95),
+                fatality: Some(0.40),
+                spillover_weight: Some(0.2),
+            },
+        ),
+    ];
+    let registry: ComponentStore<KindId, PathogenTraits> = rows.into_iter().collect();
+    assert_eq!(
+        registry.len(),
+        5,
+        "the pathogen catalogue is frozen at five rows"
+    );
+    registry
+}
+
 /// Kobold condition niche: cool HIGHLANDER — dark-adapted (consistent with
 /// cool/polar), wide/indifferent on moisture, and staked to high elevation as
 /// its exclusive, hard-excluding stronghold axis (Task B2b re-authoring: the
@@ -5623,6 +5872,15 @@ pub fn kind_concept(species: &str) -> Option<&'static str> {
         .map(|(id, _)| *id)
 }
 
+/// The registered concept naming a pathogen catalogue row.
+/// type-audit: bare-ok(identifier-text: pathogen), bare-ok(identifier-text: return)
+pub fn pathogen_concept(pathogen: &str) -> Option<&'static str> {
+    PATHOGEN_CONCEPTS
+        .iter()
+        .find(|(id, _)| *id == pathogen)
+        .map(|(id, _)| *id)
+}
+
 /// future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(SPECIES_NAME, true, "a species entity's name")?;
@@ -5678,6 +5936,21 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 doc: doc.to_string(),
             },
             lexeme: Correspondent::Absent(Void::Gap("no language pack names species kinds yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    for (name, doc) in PATHOGEN_CONCEPTS {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "species".to_string(),
+                kind: ConceptKind::Living,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names pathogens yet")),
             percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",

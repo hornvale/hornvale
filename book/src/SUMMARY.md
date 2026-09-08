@@ -485,6 +485,7 @@
 - [The Grammar](./chronicle/the-grammar.md)
 - [The Insulator](./chronicle/the-insulator.md)
 - [The Sett](./chronicle/the-sett.md)
+- [The Murrain](./chronicle/the-murrain.md)
 
 # Appendix: The Frontier
 

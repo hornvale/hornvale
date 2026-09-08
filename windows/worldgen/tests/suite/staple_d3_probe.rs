@@ -79,6 +79,8 @@ fn history(seed: u64, components: &WorldComponents) -> History {
 fn emitted_ledger_bytes(history: &History) -> Vec<u8> {
     let mut world = World::new(Seed(42));
     hornvale_history::register_concepts(&mut world.registry).expect("history concepts register");
+    hornvale_epidemiology::register_concepts(&mut world.registry)
+        .expect("epidemiology concepts register");
     hornvale_settlement::register_concepts(&mut world.registry)
         .expect("settlement concepts register");
     emit_history(&mut world, history).expect("history emits");

@@ -541,7 +541,9 @@ mod tests {
                 // property exists to hold shut. See
                 // `windows/worldgen/src/hazard.rs`'s `event_key`.
                 "hazard/event v1",
-                "history/bake v3",
+                // The Murrain's epidemic deaths and plague endings are the
+                // current v4 provenance; v3 remains historical below.
+                "history/bake v4",
                 // The Salt re-keys the flesh seed from the occupation's
                 // entity id onto its material core, so residue and
                 // structures stop moving when an id moves. Taking the
@@ -620,7 +622,8 @@ mod tests {
                 // every world ever generated. See
                 // `windows/worldgen/src/streams.rs`'s `SETTLEMENT_BREACH` for
                 // why it is a keyed leg rather than a draw on
-                // `history/bake/v3`.
+                // the current `history/bake/v4` stream (the v3 measurement
+                // remains historical).
                 "settlement/breach v1",
                 // The Tolerance: the per-settlement disposition draw, a
                 // people's authored mind perturbed by its authored
@@ -646,8 +649,9 @@ mod tests {
                 // `Bake::grow` is a WORKING rather than a farm — the
                 // second siting objective that makes `Function::Mine`
                 // reachable at all (spec §B.3). Additive at v1: a NEW
-                // label on its own leg, so it consumes nothing from
-                // `history/bake v3` and a world moves only where a
+                // label on its own leg, so it consumes nothing from the
+                // historical `history/bake v3`; the current bake is v4, and
+                // a world moves only where a
                 // working is founded. Versioned from birth for the same
                 // reason `settlement/disposition v1` is — the rate
                 // (the site's own prospectivity) and the

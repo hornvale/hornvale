@@ -6579,6 +6579,18 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T20:00:10Z | sluice:gate | 910.691 | 22310.810 | 579.113 | 25.13 | 0 | 17c5ed6ab |  | lefford | 40 |
 | 2026-09-07T20:02:46Z | sluice:clients | 155.232 | 2498.946 | 203.974 | 17.41 | 0 | 71a984b25 |  | lefford | 40 |
 | 2026-09-07T20:10:52Z | sluice:heavy | 485.935 | 11332.836 | 169.571 | 23.67 | 0 | 7d5828298 |  | lefford | 40 |
+| 2026-09-06T15:04:38Z | prewarm | 195.579 | 1179.415 | 70.291 | 6.39 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-06T15:25:27Z | gate-commit | 25.059 | 32.955 | 42.042 | 2.99 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-06T15:26:50Z | gate-commit | 37.436 | 51.589 | 39.831 | 2.44 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-06T15:28:13Z | gate-commit | 70.583 | 196.923 | 68.474 | 3.76 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-06T15:29:02Z | gate-commit | 36.064 | 58.778 | 11.108 | 1.94 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-06T15:30:04Z | gate-commit | 36.596 | 62.201 | 13.797 | 2.08 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-06T15:30:48Z | gate-commit | 39.482 | 62.275 | 13.184 | 1.91 | 0 | b096b7d50 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-07T03:11:21Z | murrain-era-derivation-delta-10x | 3.831 | 7.730 | 1.710 | 2.46 | 0 | 66b0e9ce6 | campaign/the-murrain | MacBookPro | 10 |
+| 2026-09-07T23:09:24Z | census-study-the-census | 704.402 | 26614.010 | 147.129 | 37.99 | 0 | 85ef1edd3 |  | lefford | 40 |
+| 2026-09-07T23:15:02Z | census-study-the-meeting | 338.090 | 12205.363 | 135.797 | 36.50 | 0 | 85ef1edd3 |  | lefford | 40 |
+| 2026-09-07T23:15:07Z | census | 1398.403 | 41030.111 | 379.520 | 29.61 | 0 | 85ef1edd3 |  | lefford | 40 |
+| 2026-09-07T23:34:56Z | gnomon-injection | 421.056 | 4813.993 | 154.458 | 11.80 | 761 | 85ef1edd3 |  | lefford | 40 |
 | 2026-09-07T19:59:16Z | gate-commit | 142.557 | 1620.250 | 165.444 | 12.53 | 0 | 78a294b7f | tooling/instrument-the-census-tail | lefford | 40 |
 | 2026-09-07T20:40:12Z | census-tail-chorus | 49.052 | 637.431 | 17.556 | 13.35 | 0 | 453ac678e |  | lefford | 40 |
 | 2026-09-07T20:40:14Z | census-tail-domesday | 1.019 | 0.891 | 0.128 | 1.00 | 0 | 453ac678e |  | lefford | 40 |

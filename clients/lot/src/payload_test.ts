@@ -1,14 +1,39 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
-import { parseCurve, parseLife, parsePlaces } from "./payload.ts";
+import { parseCurve, parseLife, parseOdds, parsePlaces } from "./payload.ts";
 import { growingCurve, life, places } from "./fixtures.ts";
 
 Deno.test("a life payload parses every field the stages read", () => {
   const parsed = parseLife(JSON.stringify(life()));
   assertEquals(parsed.schema, "lot/life/v1");
   assertEquals(parsed.seed, 42);
-  assertEquals(parsed.slots.length, 8);
+  assertEquals(parsed.slots.length, 9);
   assertEquals(parsed.silences.by_design, 4);
   assertEquals(parsed.sources[1].function, "lot::draw::draw");
+  assertEquals(parsed.ending.cause, "the flux");
+  assertEquals(parsed.projection.kind, "composite");
+  assertEquals(parsed.projection.consequences_write_back, false);
+});
+
+Deno.test("cause odds parse as an additive table", () => {
+  const parsed = parseOdds(JSON.stringify({
+    schema: "lot/odds/v1",
+    e0: 30,
+    q_maturity: 0.4,
+    maturity_years: 15,
+    lifespan_years: 60,
+    strife: 0.2,
+    infant_share: 0.4,
+    background_share: 0.4,
+    senescent_share: 0.2,
+    causes: [
+      { cause: "the flux", share: 0.35 },
+      { cause: "age", share: 0.65 },
+    ],
+  }));
+  assertEquals(parsed.causes, [
+    { cause: "the flux", share: 0.35 },
+    { cause: "age", share: 0.65 },
+  ]);
 });
 
 Deno.test("lot/life/v1 accepts additive social slots and silence changes", () => {
@@ -94,6 +119,7 @@ Deno.test("the real seed-42 payloads parse, written by make lot-check's smoke", 
       ["/tmp/hv-lot-life-0.json", parseLife],
       ["/tmp/hv-lot-curve.json", parseCurve],
       ["/tmp/hv-lot-places.json", parsePlaces],
+      ["/tmp/hv-lot-odds.json", parseOdds],
     ] as const
   ) {
     let text: string;

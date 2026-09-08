@@ -33,6 +33,7 @@ instrument's own bias in its own output; it does not correct for it.
 - `domains/astronomy`
 - `domains/culture`
 - `domains/demography`
+- `domains/epidemiology`
 - `domains/history`
 - `domains/language`
 - `domains/paleoclimate`

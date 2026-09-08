@@ -35,8 +35,15 @@ export interface PlacesRequest {
   year: number;
 }
 
+/** Page -> worker: mortality odds for one occupation at one year. */
+export interface OddsRequest {
+  kind: "odds";
+  occ: number;
+  year: number;
+}
+
 /** Anything the page may ask. */
-export type WorkerRequest = NewRequest | LotRequest | CurveRequest | PlacesRequest;
+export type WorkerRequest = NewRequest | LotRequest | CurveRequest | PlacesRequest | OddsRequest;
 
 /** Worker -> page: the answer to a request, as the payload's own JSON. */
 export interface OkResponse {

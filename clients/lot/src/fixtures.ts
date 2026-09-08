@@ -94,7 +94,15 @@ export function life(): Life {
     death_year: 1783.3546,
     age_at_death: 31.71731,
     matured: true,
-    ending: { kind: "hazard", cause: null },
+    ending: { kind: "hazard", cause: "the flux" },
+    projection: {
+      kind: "composite",
+      source_cohort: { people: "kobold", site: 10630, year: 1751.6373 },
+      selection_lens: "representative",
+      materiality: "analytical",
+      sampling_bias: "representative",
+      consequences_write_back: false,
+    },
     moved_to: null,
     moved_year: null,
     shape: "rise-plateau",
@@ -112,6 +120,7 @@ export function life(): Life {
         sources: [3],
       },
       { key: "name", value: "Xaararo", silence: null, sources: [4] },
+      { key: "cause", value: "the flux", silence: null, sources: [2] },
       {
         key: "subsistence",
         value: null,
@@ -143,7 +152,7 @@ export function life(): Life {
         sources: [],
       },
     ],
-    silences: { filled: 3, no_fact: 1, by_design: 4 },
+    silences: { filled: 4, no_fact: 1, by_design: 4 },
     sources: [
       {
         number: 1,

@@ -54,7 +54,7 @@ hornvale_kernel::stream_labels! {
     /// [`crate::disposition::occupation_draw_key`] so the two composition-root
     /// keys that spell a year spell it the same way.
     ///
-    /// **A SEPARATE LEG RATHER THAN A DRAW ON `history/bake/v3`, AND THAT WAS
+    /// **A SEPARATE LEG RATHER THAN A DRAW ON THE HISTORICAL `history/bake/v3`, AND THAT WAS
     /// MEASURED, NOT ASSUMED.** The first cut of this campaign took the draw
     /// sequentially off the bake's own epoch-dynamics stream, one line below
     /// the `DAUGHTER_PROB` draw it is nested inside. That is the neighbouring
@@ -91,7 +91,7 @@ hornvale_kernel::stream_labels! {
     /// a place in the fixed lattice plus a place in time, never a generation
     /// ordinal (decision 0102).
     ///
-    /// **A SEPARATE LEG RATHER THAN A DRAW ON `history/bake/v3`, on the
+    /// **A SEPARATE LEG RATHER THAN A DRAW ON THE HISTORICAL `history/bake/v3`, on the
     /// measurement [`SETTLEMENT_WORKING`] already paid for.** That label's own
     /// doc records what happens when a conditional draw is inserted into the
     /// bake's sequential epoch-dynamics stream: occupation counts across four

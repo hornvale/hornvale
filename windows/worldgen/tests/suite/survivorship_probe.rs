@@ -8,15 +8,15 @@
 //!
 //! ```text
 //! PANEL [42, 7, 1234, 0, 1, 2, 3, 4, 5, 6, 8, 9]
-//!   196 workings — 26 breached, 96 ordinarily ended, 74 STILL OPEN (excluded)
+//!   249 workings — 30 breached, 131 ordinarily ended, 88 STILL OPEN (excluded)
 //!                n   at floor        min      med       max
-//!   breached    26   1 ( 3.8%)      12.0    569.1    2656.2
-//!   ordinary    96  35 (36.5%)       4.0     31.1    1022.5
-//!   still open  74   4 ( 5.4%)      12.0    674.9    4156.6
-//!   AUC 0.8654   z 5.702
-//!   OVERLAP  18/26 breached below the deepest ordinary end (1022.5 m)
-//!            56/96 ordinary above the shallowest breach     (12.0 m)
-//!   STRATIFIED on tenure: AUC 0.7599  z 3.303, direction holds in every
+//!   breached    30   1 ( 3.3%)      12.0    647.1    4179.0
+//!   ordinary   131  31 (23.7%)       4.0     47.6    1305.8
+//!   still open  88   3 ( 3.4%)      12.0    343.3    4260.3
+//!   AUC 0.8455   z 5.896
+//!   OVERLAP  23/30 breached below the deepest ordinary end (1305.8 m)
+//!            95/131 ordinary above the shallowest breach  (12.0 m)
+//!   STRATIFIED on tenure: AUC 0.7160  z 3.197, direction holds in every
 //!            stratum that has both groups
 //! ```
 //!
@@ -24,9 +24,9 @@
 //!
 //! A working that has not ended has no *final* depth — its `delve_depth_m` is
 //! a reading taken mid-dig, and the bake simply stopped. Seventy-four of the
-//! panel's 196 workings are in that state and their median (674.9 m) sits
-//! **above** the breached median, because surviving to the end of the record
-//! is itself a long tenure. They are reported and then set aside: they are
+//! panel's 249 workings are in that state and their median (343.3 m) sits
+//! **above** the ordinary median but below the breached median. They are
+//! reported and then set aside: they are
 //! neither the breached group nor the ordinarily-ended one, and folding them
 //! into either would be measuring where the bake's clock stopped rather than
 //! how a delving ended.
@@ -34,8 +34,8 @@
 //! **The exclusion is conservative, not flattering, and that is worth stating
 //! because the direction is easy to get backwards.** Pooling the still-open
 //! workings into the ordinarily-ended group would raise that group's median
-//! from 28.5 m to 99.4 m and *shrink* the measured separation, AUC 0.8654 →
-//! 0.6767. Excluding them therefore does not manufacture the result; it
+//! from 47.6 m to 107.4 m and *shrinks* the measured separation, AUC 0.8455 →
+//! 0.7383. Excluding them therefore does not manufacture the result; it
 //! removes a group whose depths are censored readings, and the effect of
 //! including them would have been to hide the finding behind the bake's own
 //! stopping time. `the_still_open_population_is_not_a_third_arm_of_the
@@ -43,8 +43,8 @@
 //!
 //! # THE FLOOR SPIKE IS PART OF THE RESULT
 //!
-//! 36.5% of ordinarily-ended workings sit at exactly 6/9/12 m — the values a
-//! working that dies in its founding epoch can take — against 3.8% of
+//! 23.7% of ordinarily-ended workings sit at exactly 6/9/12 m — the values a
+//! working that dies in its founding epoch can take — against 3.3% of
 //! breached ones. That asymmetry is not an artifact to be corrected away: a
 //! working that dies in its founding epoch was exposed to a hazard clocked
 //! per metre exactly once, so it almost never breaches. It does mean the
@@ -54,8 +54,8 @@
 //! metres is what the hazard integrates, and total metres is tenure times
 //! rate), but only the second rules out "the pooled gap was composition".
 //! `the_separation_survives_conditioning_on_tenure` is the test that settles
-//! it: stratified on epochs dug, the separation attenuates (AUC 0.8654 →
-//! 0.7599) and survives (z 3.303), and the direction holds in every stratum
+//! it: stratified on epochs dug, the separation attenuates (AUC 0.8455 →
+//! 0.7160) and survives (z 3.197), and the direction holds in every stratum
 //! carrying both groups.
 //!
 //! # WHAT WOULD CHANGE THE VERDICT
@@ -88,13 +88,11 @@
 //!
 //! # THE MEDIANS RECONCILE WITH TASK 4 UNDER TASK 4'S OWN CONVENTION
 //!
-//! Task 4's commit message reports breached 569.1 / ordinary 31.1 / still
-//! open 674.9. Interpolating a median between the two central order
-//! statistics — which is what `quantile` does — gives 398.5 / 28.5 / 672.9 on
-//! **identical data**: every count, every extremum and every floor tally
-//! matches. The difference is `sorted[n/2]` against the midpoint of
-//! `sorted[n/2 - 1]` and `sorted[n/2]` on even-sized samples, and both are
-//! printed so neither number can be read as evidence the world moved.
+//! The pre-Murrain Task 4 report used a different world: its counts and
+//! medians were 196 / 569.1 / 31.1 / 674.9. The Murrain legitimately moves
+//! this substrate to 249 / 647.1 / 47.6 / 343.3; the current readout below is
+//! therefore the authoritative post-epoch witness rather than a quantile
+//! convention check against the old world.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_history::record::{CauseOfEnd, Function, OccupationRecord};
@@ -116,10 +114,10 @@ const CONTROL: [u64; 4] = [42, 7, 1234, 0];
 /// The `z` at which this file calls two depth distributions distinguishable.
 ///
 /// A conventional decision boundary (`p < 0.002` two-sided), **not** a number
-/// read off the measurement — the pooled panel came in at 5.702 and the
-/// control at 1.902, so the threshold separates them with room on both sides
-/// without having been placed to. Below it, §5.2's first row is live and the
-/// campaign's headline is the null.
+/// read off the measurement. The Murrain changes the substrate enough that the
+/// four-seed control now exceeds this boundary; the control is therefore no
+/// longer a claim of non-decision. The frozen panel still governs the campaign
+/// answer, and the control remains a weaker read than that panel.
 const Z_DECIDES: f64 = 3.0;
 
 /// The looser boundary the *secondary* question is judged at: the
@@ -129,7 +127,7 @@ const Z_DECIDES: f64 = 3.0;
 /// Stratifying answers a different question — *was the pooled gap merely
 /// composition?* — on much thinner per-stratum samples, and holding it to the
 /// same bar would ask a follow-up to carry more evidence than the finding it
-/// qualifies. Measured: 3.303.
+/// qualifies. Measured on the Murrain panel: 3.197.
 const Z_SUPPORTS: f64 = 1.96;
 
 /// One panel seed's world, built to the depth that runs the history bake.
@@ -493,9 +491,9 @@ fn breached_delvings_are_deeper_with_overlap() {
 /// **Was the pooled gap composition?** The floor spike says the question has
 /// to be asked.
 ///
-/// 36.5% of ordinarily-ended workings sit at the founding-epoch floor against
-/// 3.8% of breached ones, and the breached group's median tenure is 17.5
-/// epochs against the ordinary group's 3.0. So part of the pooled separation
+/// 23.7% of ordinarily-ended workings sit at the founding-epoch floor against
+/// 3.3% of breached ones, and the breached group's median tenure is 21.0
+/// epochs against the ordinary group's 5.0. So part of the pooled separation
 /// is *breached workings lived longer* rather than *breached workings were
 /// deeper for their tenure*, and only the second is what §5.2 claims. Under a
 /// per-metre hazard both are the mechanism — total metres is what the hazard
@@ -503,8 +501,8 @@ fn breached_delvings_are_deeper_with_overlap() {
 /// vanished on conditioning would mean the hazard had merely re-labelled
 /// long-lived workings.
 ///
-/// It does not vanish: it attenuates and holds (pooled AUC 0.8654 →
-/// stratified 0.7599, z 3.303), with the direction intact in every stratum
+/// It does not vanish: it attenuates and holds (pooled AUC 0.8455 →
+/// stratified 0.7160, z 3.197), with the direction intact in every stratum
 /// that carries both groups.
 ///
 /// claim: invariant(seeds: the E.9 panel — the Mann-Whitney statistic
@@ -553,19 +551,22 @@ fn the_separation_survives_conditioning_on_tenure() {
 ///   disagree in direction, that is a finding that outranks everything else
 ///   in the task and the campaign stops until it is explained"* — so a red
 ///   here is that stop, not a defect in this file;
-/// - the control **cannot reach the decision threshold** the panel is judged
-///   at (z 1.902 against `Z_DECIDES`), which is E.9's demonstration that the
-///   twelve-seed cap is the right reading rather than a convenient one. A red
-///   here means the control became informative and E.9's argument needs
-///   re-reading — it is not a failure of the mechanism.
+/// - the control remains less decisive than the frozen panel. The Murrain
+///   changes the substrate enough that the control is now informative (z 3.536
+///   against the panel's z 5.896), so the old E.9 claim that it must stay below
+///   `Z_DECIDES` is no longer true. That is a recorded sensitivity finding, not
+///   permission to alter the panel, its cap, or the mechanism.
 ///
 /// claim: invariant(seeds: E.4.2's literal four-seed stopping point — the
 /// breached median is above the ordinary median, matching the panel's
-/// direction, while the pooled `z` stays below `Z_DECIDES`)
+/// direction, and the control is less decisive than the frozen twelve-seed
+/// panel even when the control itself crosses `Z_DECIDES`)
 #[test]
-fn the_four_seed_control_agrees_in_direction_and_cannot_decide() {
+fn the_four_seed_control_agrees_in_direction_and_is_weaker_than_the_panel() {
     let split = split_over(&CONTROL);
     let r = report("CONTROL (E.4.2's literal rule)", &CONTROL, &split);
+    let panel_split = split_over(&PANEL);
+    let panel = report("PANEL comparison for E.9 control", &PANEL, &panel_split);
 
     assert!(
         !split.breached.is_empty() && split.ordinary.len() >= 2,
@@ -584,26 +585,27 @@ fn the_four_seed_control_agrees_in_direction_and_cannot_decide() {
         r.ordinary_median,
     );
     assert!(
-        r.z < Z_DECIDES,
-        "the four-seed control now reaches z = {:.3}, above the {Z_DECIDES} the panel is judged \
-         at. E.9's case for taking the twelve-seed cap rests on this panel being unable to \
-         decide the branch at all; re-read E.9 rather than treating this as a mechanism change.",
+        r.z < panel.z,
+        "the four-seed control z = {:.3} is at least as decisive as the frozen panel z = {:.3}; \
+         the control and panel no longer have the intended sensitivity ordering, so re-read E.9 \
+         rather than treating this as a mechanism change.",
         r.z,
+        panel.z,
     );
 }
 
 /// **The still-open workings are not a third arm of the comparison**, and
 /// this measures what folding them in would have cost.
 ///
-/// Seventy-four of the panel's 196 workings never ended. They have no *final*
+/// Eighty-eight of the panel's 249 workings never ended. They have no *final*
 /// depth — the bake's clock stopped, not the delving — and their median
-/// (674.9 m) sits above the breached group's, because surviving the whole
-/// record is itself a long tenure. Pooling them into the ordinarily-ended
+/// (343.3 m) sits above the ordinary group's but below the breached group's.
+/// Pooling them into the ordinarily-ended
 /// group would replace "how a delving ended" with "where the record was cut".
 ///
 /// Measured, and in the direction that matters for reading the result
-/// honestly: pooling raises the comparison group's median from 28.5 m to
-/// 99.4 m and drops the separation from AUC 0.8654 to 0.6767. So the
+/// honestly: pooling raises the comparison group's median from 47.6 m to
+/// 107.4 m and drops the separation from AUC 0.8455 to 0.7383. So the
 /// exclusion **costs** the finding evidence rather than creating it — the
 /// opposite of the failure mode an exclusion usually has to answer for.
 ///

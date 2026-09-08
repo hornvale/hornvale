@@ -6,30 +6,17 @@
 |---|---|---|
 | `anchor-mass-earth` | yes | anchor world mass in Earth masses |
 | `anchor-orbit-au` | yes | anchor orbital distance in AU |
-| `association` | no | the second participant in an explicitly formed association |
-| `association-ended` | no | the association target whose relation from the subject ended at this time |
-| `association-form` | no | the declared form of the subject's association beginning at this time |
 | `biome` | yes | biome of a place |
 | `breakup-age` | no | a rifted seam's derived breakup age |
 | `brightening-per-gyr` | yes | the star's fractional main-sequence brightening per gigayear |
-| `care` | no | the care recipient, directed from their caregiver |
-| `care-ended` | no | the care target whose relation from the subject ended at this time |
 | `cell-id` | yes | Geosphere cell id a settlement sits on |
 | `cult-form` | yes | the cult form of a belief (organized or folk) |
-| `custody` | no | the person or thing for which the subject has custody |
-| `custody-ended` | no | the custody target whose relation from the subject ended at this time |
 | `day-length-std` | yes | solar day length in standard days, for spinning worlds |
 | `deity-epithet` | yes | a belief's epithet (roman) |
 | `deity-epithet-ipa` | yes | a belief's epithet (IPA transcription) |
 | `deity-name` | yes | a belief's deity name (roman) |
 | `deity-name-ipa` | yes | a belief's deity name (IPA transcription) |
-| `dependency` | no | the provider, directed from the dependent |
-| `dependency-ended` | no | the dependency target whose relation from the subject ended at this time |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
-| `descent` | no | the descendant, directed from an earlier contributor |
-| `descent-ended` | no | the descent target whose relation from the subject ended at this time |
-| `die` | no | the subject person ceased future lifecycle activity |
-| `dissolve` | no | the subject group ceased future activity |
 | `eccentricity-mean` | yes | mean orbital eccentricity (deep-time forcing) |
 | `figure-count` | yes | how many star figures the reference observer's sky holds |
 | `figure-members` | no | member count of a star figure |
@@ -38,10 +25,6 @@
 | `fossil-shoreline` | no | a fossil shoreline left by deep-time sea-level change |
 | `founding-solstice-azimuth-degrees` | yes | solstice-sunrise azimuth at a settlement's founding, degrees clockwise from north |
 | `frost-retreat` | no | the deep-time record of deglaciation |
-| `gender-identity` | no | a person's own gender-identity claim over a life interval |
-| `gender-identity-ended` | no | the exclusive end of this gender-identity claim |
-| `gender-recognition` | no | a social or institutional gender-recognition claim over a life interval |
-| `gender-recognition-ended` | no | the exclusive end of this gender-recognition claim |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
 | `glacial-maximum-era` | yes | standard day of peak ice extent |
 | `greenhouse-forcing-k` | yes | dimensionless atmospheric greenhouse residual, -1..1, mean 0 (drawn; hornvale-choice, decision 0106 — nothing consumes this yet) |
@@ -66,8 +49,6 @@
 | `latitude` | yes | settlement latitude, degrees |
 | `longitude` | yes | settlement longitude, degrees |
 | `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
-| `membership` | no | the group in which the subject participates |
-| `membership-ended` | no | the group in which the subject's membership ended at this time |
 | `moon-age-gyr` | no | a moon's age in gigayears |
 | `moon-angular-size-rel` | no | apparent size of a moon relative to Luna-from-Earth |
 | `moon-count` | yes | how many moons the anchor world has |
@@ -104,39 +85,25 @@
 | `occ-site` | yes | the Geosphere cell the occupation sits on |
 | `occ-tech` | yes | the occupation's technological horizon |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
-| `origin` | no | the originated person, directed from their origin source |
-| `origin-ended` | no | the origin target whose relation from the subject ended at this time |
+| `outbreak-deaths` | no | the deaths in a dated outbreak event |
 | `parent-of` | no | a person whose community was settled from this person's community, one generation removed |
 | `pays-tribute-to` | yes | the community this community pays standing tribute to |
 | `peopled-by` | yes | the species that peoples a settlement |
 | `person-born` | yes | the day this person was born; negative if before the history record began |
 | `person-died` | yes | the day this person died |
 | `person-founded` | yes | the community whose occupation this person founded |
-| `person-social-provenance` | no | the source supporting a realized person-social claim |
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `pole-star-north` | yes | a bright star stands within 10 degrees of the north celestial pole at genesis (epoch-scoped: precession retires pole stars) |
 | `pole-star-south` | yes | a bright star stands within 10 degrees of the south celestial pole at genesis (epoch-scoped: precession retires pole stars) |
 | `population` | yes | population of a settlement |
-| `recognition` | no | the recognized subject, directed from the recognizing person or institution |
-| `recognition-ended` | no | the recognition target whose relation from the subject ended at this time |
-| `recognition-interpretation` | no | the interpretation assigned by the recognizing subject at this time |
 | `refugium` | no | a place habitable through the glacial maximum |
-| `reproductive-role` | no | a realized reproductive-role reference over a life interval |
-| `reproductive-role-ended` | no | the exclusive end of this reproductive-role claim |
-| `residence` | no | the place or group in which the subject resides |
-| `residence-ended` | no | the residence target whose relation from the subject ended at this time |
 | `retrograde-spin` | yes | the anchor world spins backward: the sun rises in the west |
 | `rifted-from` | no | a rifted conjugate pair of cratons whose conjugate margins fit up to subsequent erosion |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
 | `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |
-| `separate` | no | the participant from whom the subject separated |
 | `settlement-pin` | no | a settlement scenario pin, round-trippable |
-| `sex-trait` | no | an observed sex trait over a life interval |
-| `sex-trait-ended` | no | the exclusive end of this sex-trait claim |
 | `sky-provider` | yes | the generated astronomy provider this world uses |
-| `social-role` | no | a realized social role over a life interval |
-| `social-role-ended` | no | the exclusive end of this social-role claim |
 | `species-activity-cycle` | yes | when a species is awake: diurnal, nocturnal, crepuscular |
 | `species-deliberation-latency` | yes | decision slowness, 0-1 |
 | `species-exotic-manner` | yes | exotic manner: none, trill, click, ejective |
@@ -161,15 +128,12 @@
 | `star-class` | yes | the host star's spectral class, as a registered concept id (Morgan-Keenan prose is rendered from it at read time by windows/book, never stored) |
 | `star-luminosity-solar` | yes | host star luminosity in solar units (derived M^3.5) |
 | `star-mass-solar` | yes | host star mass in solar masses |
+| `struck-by` | no | the pathogen in a dated outbreak event |
 | `subsistence` | yes | a settlement's subsistence mode |
 | `tenet` | yes | the tenet text of a belief |
 | `terrain-note` | no | a note recorded during tectonic genesis |
 | `terrain-pin` | no | a terrain scenario pin, round-trippable |
 | `tidally-locked` | yes | the anchor world is tidally locked (no local day) |
-| `transfer` | no | the recipient of a transfer from the subject |
-| `transfer-ended` | no | the transfer target whose relation from the subject ended at this time |
-| `transitioned` | no | a witnessed transition in this person's realized history |
-| `transitioned-ended` | no | the exclusive end of this transition-history claim |
 | `wanderer-class` | no | a wanderer's kind: rock or giant |
 | `wanderer-count` | yes | how many wandering planets cross this sky |
 | `wanderer-orbit-au` | no | orbital distance of a wanderer, in AU |
@@ -417,6 +381,11 @@
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
 | `temperate-rainforest` | climate | terrain | a biome class |
+| `the-consumption` | species | living | the consumption |
+| `the-flux` | species | living | the flux |
+| `the-marsh-fever` | species | living | the marsh fever |
+| `the-pest` | species | living | the pest |
+| `the-pox` | species | living | the pox |
 | `think` | language | act | to hold an uncertain belief |
 | `thorn-scrub` | climate | substance | Dry scrub of thorned shrubs. |
 | `threshold` | thing | object | the sill marking where one place ends and another begins |
