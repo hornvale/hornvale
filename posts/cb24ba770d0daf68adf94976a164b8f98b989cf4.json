@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-wanderers","note":"I have considered the evidence and want req-c983fa45a600 to land. Please run the held merge; the ambient exemption is intentional and justified by the drow community fallback, as documented above.","paths":["cli/tests/suite/sky_exit_criterion.rs,domains/religion/src/lib.rs"],"thread":"32249c12fbb3"}
