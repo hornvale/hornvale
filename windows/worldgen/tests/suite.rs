@@ -191,6 +191,10 @@ mod repose_exposure;
 mod repose_laws;
 #[path = "suite/reproductive.rs"]
 mod reproductive;
+#[path = "suite/social_projection.rs"]
+mod social_projection;
+#[path = "suite/social_readout.rs"]
+mod social_readout;
 #[path = "suite/soil_attribution_probe.rs"]
 mod soil_attribution_probe;
 #[path = "suite/solitary_tongue.rs"]
@@ -199,6 +203,8 @@ mod solitary_tongue;
 mod species_worlds;
 #[path = "suite/staple_d2_probe.rs"]
 mod staple_d2_probe;
+#[path = "suite/staple_d3_probe.rs"]
+mod staple_d3_probe;
 #[path = "suite/stope_variety_probe.rs"]
 mod stope_variety_probe;
 #[path = "suite/subterranean_energy_probe.rs"]

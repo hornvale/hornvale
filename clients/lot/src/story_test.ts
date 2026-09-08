@@ -97,3 +97,18 @@ Deno.test("the silence line reads the payload's tally, not a recount", () => {
 Deno.test("an unlabelled slot key shows up rather than vanishing", () => {
   assertEquals(labelOf("a-slot-added-later"), "a-slot-added-later");
 });
+
+Deno.test("additive social slots use stable labels and render their payload value", () => {
+  const subject = life();
+  subject.slots.push({
+    key: "associations",
+    value: "an explicitly recognized association is recorded",
+    silence: null,
+    sources: [1],
+  });
+  const association = tiles(subject).find((tile) => tile.key === "associations");
+  assert(association !== undefined);
+  assertEquals(association.label, "Associations");
+  assertEquals(association.value, "an explicitly recognized association is recorded");
+  assertEquals(association.sources, [1]);
+});

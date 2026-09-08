@@ -222,6 +222,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 | Label | Meaning |
 |---|---|
+| `social/projection/v1` | synthetic cohort-to-person realization |
 | `schema` | the folk causal-schema-selection sub-leg |
 | `sky` | the sky-domain fact-shape sub-leg |
 | `lexeme` | the lexicalization sub-leg for a chosen schema |

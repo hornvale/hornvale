@@ -669,6 +669,11 @@ mod tests {
                 // `windows/worldgen/src/streams.rs`'s `SITE_PLACEMENT` doc for
                 // why a draw rather than a threshold on the coarse mesh.
                 "site/placement v1",
+                // The Any Human Ever campaign: the opt-in synthetic
+                // cohort-to-person realization stream. Additive at v1; the
+                // default world never consumes it, so existing draws remain
+                // byte-stable when social projection is disabled.
+                "social/projection v1",
                 // The Adit, Task 3: the cellular-automata cave content
                 // generator (Karst-biased leaves). Versioned from birth
                 // like the other entries in this golden. See

@@ -4,6 +4,9 @@
 //! rename silently corrupts every world.
 
 hornvale_kernel::stream_labels! {
+    /// Synthetic cohort-to-person realization. This is opt-in probe state;
+    /// no default world derives this leg.
+    SOCIAL_PROJECTION = "social/projection/v1" => "synthetic cohort-to-person realization";
     /// The folk causal-schema-selection sub-leg, under a culture's own
     /// `hornvale_language::streams::ROOT` derivation.
     SCHEMA = "schema" => "the folk causal-schema-selection sub-leg";

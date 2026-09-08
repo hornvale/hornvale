@@ -13,9 +13,47 @@
 
 use hornvale_astronomy::SkyPins;
 use hornvale_history::record::CauseOfEnd;
-use hornvale_kernel::Seed;
+use hornvale_kernel::{Seed, Value};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{SettlementPins, build_world, occupation_records, present_year};
+
+#[test]
+fn approved_lot_probe_projection_has_real_positive_and_negative_edges() {
+    use hornvale_worldgen::SyntheticSociety;
+
+    for society in [
+        SyntheticSociety::IndependentOrigin,
+        SyntheticSociety::DualDescent,
+        SyntheticSociety::CareCluster,
+        SyntheticSociety::RecomposingMobility,
+        SyntheticSociety::InstitutionalRecognition,
+        SyntheticSociety::LifecycleTransition,
+    ] {
+        let projection =
+            hornvale_worldgen::approved_lot_probe_projection_for(Seed(42), society).unwrap();
+        let facts: Vec<_> = projection
+            .events()
+            .iter()
+            .flat_map(|event| event.facts())
+            .collect();
+        assert!(!facts.is_empty(), "{society:?} emitted no social facts");
+        assert!(
+            facts.iter().any(|fact| fact.predicate == "residence"
+                || fact.predicate == "descent"
+                || fact.predicate == "care"
+                || fact.predicate == "association"
+                || fact.predicate == "recognition"
+                || fact.predicate == "transfer"),
+            "{society:?} emitted no Lot-readable positive edge"
+        );
+        assert!(
+            !facts
+                .iter()
+                .any(|fact| fact.predicate == "care" && fact.object == Value::Entity(fact.subject)),
+            "{society:?} emitted a self-directed care proxy"
+        );
+    }
+}
 
 /// The Living Community's cross-seed sweep, so the rows line up with
 /// `book/src/laboratory/generated/the-history/rows.csv`.

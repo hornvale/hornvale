@@ -176,7 +176,7 @@ chooses a year or a place, pins two of the choices and lets the index drive the
 rest. The consequence is honest and worth stating: the same permalink draws the
 same life only until the record it reads changes.
 
-**Twenty-six questions, four of them silent on purpose.** The narrator asks
+**Twenty-six questions, four of them were silent by design.** The narrator asks
 every slot of every life. A slot resolves to committed facts, or to a derived
 read over committed facts, or to a silence, which is rendered as a plain
 sentence in the prose and as a null with a reason in the payload. It is never
@@ -185,6 +185,12 @@ height — are declared silent *by design*, because no domain carries a model
 behind them, and the fill rate is reported over the other twenty-two so the
 number measures the world rather than the lens's own restraint. Every sentence
 carries the facts it read, numbered, with the list at the end of the story.
+
+The Social Household has since added sourced social slots for sex and
+reproductive role, identity and recognition, association and descent, children
+and siblings, care and adoption, migration and recomposition, and parental
+death or inheritance. The projection remains opt-in: where it has no evidence,
+the Lot still says so.
 
 Three of the slot sources named in the design did not exist as written, and
 they were caught before any code was written by grepping the readers rather
@@ -272,9 +278,13 @@ tables, a running world, and a life read off what the world actually did.
   disease                     no producer for the plague ending   ABSENT
   cause of death              nothing per individual              ABSENT (the Siler
                                                                     hazard is the first)
-  sex                         no species carries a model          ABSENT
-  marriage, children,         no household model for anyone but   ABSENT
-  siblings, parents' deaths     founders
+  sex / reproductive role     realized social facts when projected  HAVE, sourced
+  gender / identity            realized social facts when projected  HAVE, sourced
+  association / descent        typed relations and group projections  HAVE, sourced
+  children, siblings           kinship projection when evidenced     HAVE, sourced
+  adoption / care              directed care and descent facts       HAVE, sourced
+  migration / recomposition    interval-bounded group history        HAVE, sourced
+  parents' deaths / inheritance lifecycle event projections          HAVE, sourced
   height                      species mass, no per-body spread    ABSENT (cheap)
   literacy                    reading and writing are inert       ABSENT
   income, wage, poverty       no economy                          ABSENT

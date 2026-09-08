@@ -16,6 +16,7 @@ hornvale-kernel = { path = "../../kernel" }
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-history = { path = "../../domains/history" }
 hornvale-epidemiology = { path = "../../domains/epidemiology" }
+hornvale-person = { path = "../../domains/person" }
 hornvale-species = { path = "../../domains/species" }
 # `hornvale_worldgen::terrain_of` returns `hornvale_terrain::GeneratedTerrain`
 # (imported privately inside worldgen, not re-exported: the composition

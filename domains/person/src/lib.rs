@@ -13,6 +13,48 @@ use hornvale_kernel::{
 };
 use std::collections::BTreeMap;
 
+/// A time-varying observation of a person's sex traits.
+/// type-audit: bare-ok(identifier-text)
+pub const SEX_TRAIT: &str = "sex-trait";
+/// A realized reference to a reproductive role.
+/// type-audit: bare-ok(identifier-text)
+pub const REPRODUCTIVE_ROLE: &str = "reproductive-role";
+/// A person's own gender-identity claim.
+/// type-audit: bare-ok(identifier-text)
+pub const GENDER_IDENTITY: &str = "gender-identity";
+/// A social or institutional gender-recognition claim, kept separate from
+/// the person's own identity claim.
+/// type-audit: bare-ok(identifier-text)
+pub const GENDER_RECOGNITION: &str = "gender-recognition";
+/// A person's realized social role over a life interval, distinct from
+/// reproductive role and gender recognition.
+/// type-audit: bare-ok(identifier-text)
+pub const SOCIAL_ROLE: &str = "social-role";
+/// A witnessed transition in a person's social or reproductive history.
+/// type-audit: bare-ok(identifier-text)
+pub const TRANSITIONED: &str = "transitioned";
+/// The exclusive end of a [`SEX_TRAIT`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const SEX_TRAIT_ENDED: &str = "sex-trait-ended";
+/// The exclusive end of a [`REPRODUCTIVE_ROLE`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const REPRODUCTIVE_ROLE_ENDED: &str = "reproductive-role-ended";
+/// The exclusive end of a [`GENDER_IDENTITY`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const GENDER_IDENTITY_ENDED: &str = "gender-identity-ended";
+/// The exclusive end of a [`GENDER_RECOGNITION`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const GENDER_RECOGNITION_ENDED: &str = "gender-recognition-ended";
+/// The exclusive end of a [`SOCIAL_ROLE`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const SOCIAL_ROLE_ENDED: &str = "social-role-ended";
+/// The exclusive end of a [`TRANSITIONED`] claim, repeating its value.
+/// type-audit: bare-ok(identifier-text)
+pub const TRANSITIONED_ENDED: &str = "transitioned-ended";
+/// The source that supports one realized person-social claim.
+/// type-audit: bare-ok(identifier-text)
+pub const PERSON_SOCIAL_PROVENANCE: &str = "person-social-provenance";
+
 /// Marks an entity as an individual person.
 /// type-audit: bare-ok(identifier-text)
 pub const IS_PERSON: &str = "is-person";
@@ -144,6 +186,66 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     )?;
     registry.register_predicate(PERSON_DIED, true, "the day this person died")?;
     registry.register_predicate(
+        SEX_TRAIT,
+        false,
+        "an observed sex trait over a life interval",
+    )?;
+    registry.register_predicate(
+        REPRODUCTIVE_ROLE,
+        false,
+        "a realized reproductive-role reference over a life interval",
+    )?;
+    registry.register_predicate(
+        GENDER_IDENTITY,
+        false,
+        "a person's own gender-identity claim over a life interval",
+    )?;
+    registry.register_predicate(
+        GENDER_RECOGNITION,
+        false,
+        "a social or institutional gender-recognition claim over a life interval",
+    )?;
+    registry.register_predicate(
+        SOCIAL_ROLE,
+        false,
+        "a realized social role over a life interval",
+    )?;
+    registry.register_predicate(
+        TRANSITIONED,
+        false,
+        "a witnessed transition in this person's realized history",
+    )?;
+    for (predicate, description) in [
+        (SEX_TRAIT_ENDED, "the exclusive end of this sex-trait claim"),
+        (
+            REPRODUCTIVE_ROLE_ENDED,
+            "the exclusive end of this reproductive-role claim",
+        ),
+        (
+            GENDER_IDENTITY_ENDED,
+            "the exclusive end of this gender-identity claim",
+        ),
+        (
+            GENDER_RECOGNITION_ENDED,
+            "the exclusive end of this gender-recognition claim",
+        ),
+        (
+            SOCIAL_ROLE_ENDED,
+            "the exclusive end of this social-role claim",
+        ),
+        (
+            TRANSITIONED_ENDED,
+            "the exclusive end of this transition-history claim",
+        ),
+    ] {
+        registry.register_predicate(predicate, false, description)?;
+    }
+    registry.register_predicate(
+        PERSON_SOCIAL_PROVENANCE,
+        false,
+        "the source supporting a realized person-social claim",
+    )?;
+    registry.register_predicate(
         PARENT_OF,
         false,
         "a person whose community was settled from this person's community, one generation removed",
@@ -185,6 +287,297 @@ pub struct PersonSeed {
     pub founding_day: f64,
     /// Death, in absolute standard days. `None` means still alive at `now`.
     pub death_day: Option<f64>,
+}
+
+/// Validation failure for one realized person-social claim.
+/// type-audit: bare-ok(prose: InvalidPersonSocial.0)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PersonSocialError {
+    /// A descriptive person-social contract violation.
+    InvalidPersonSocial(String),
+}
+
+impl PersonSocialError {
+    fn new(message: &str) -> Self {
+        Self::InvalidPersonSocial(message.to_string())
+    }
+}
+
+impl std::fmt::Display for PersonSocialError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidPersonSocial(message) => f.write_str(message),
+        }
+    }
+}
+
+impl std::error::Error for PersonSocialError {}
+
+/// One realized, interval-bearing person-social claim.
+///
+/// The predicate and object stay paired behind typed constructors so a
+/// reproductive-role reference cannot silently become a gender identity.
+/// `end` is the exclusive end of the claim's applicability. Fact conversion
+/// records both boundaries without retracting the start fact.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PersonSocialFact {
+    predicate: &'static str,
+    object: Value,
+    start: hornvale_kernel::WorldTime,
+    end: Option<hornvale_kernel::WorldTime>,
+    provenance: String,
+}
+
+impl PersonSocialFact {
+    fn new(
+        predicate: &'static str,
+        object: Value,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        if end.is_some_and(|end| end <= start) {
+            return Err(PersonSocialError::new(
+                "person social interval end must be after its start",
+            ));
+        }
+        if provenance.trim().is_empty() {
+            return Err(PersonSocialError::new(
+                "person social provenance must not be empty",
+            ));
+        }
+        if matches!(&object, Value::Text(value) if value.trim().is_empty()) {
+            return Err(PersonSocialError::new(
+                "person social text value must not be empty",
+            ));
+        }
+        Ok(Self {
+            predicate,
+            object,
+            start,
+            end,
+            provenance: provenance.to_string(),
+        })
+    }
+
+    /// Build an observed sex-trait claim.
+    /// type-audit: bare-ok(identifier-text: trait_name), bare-ok(prose: provenance)
+    pub fn sex_trait(
+        trait_name: &str,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        Self::new(
+            SEX_TRAIT,
+            Value::Text(trait_name.to_string()),
+            start,
+            end,
+            provenance,
+        )
+    }
+
+    /// Build a realized reproductive-role reference.
+    /// type-audit: bare-ok(prose: provenance)
+    pub fn reproductive_role(
+        role: EntityId,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        Self::new(
+            REPRODUCTIVE_ROLE,
+            Value::Entity(role),
+            start,
+            end,
+            provenance,
+        )
+    }
+
+    /// Build a person's own gender-identity claim.
+    /// type-audit: bare-ok(identifier-text: identity), bare-ok(prose: provenance)
+    pub fn gender_identity(
+        identity: &str,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        Self::new(
+            GENDER_IDENTITY,
+            Value::Text(identity.to_string()),
+            start,
+            end,
+            provenance,
+        )
+    }
+
+    /// Build a separate social or institutional recognition claim.
+    /// type-audit: bare-ok(identifier-text: recognition), bare-ok(prose: provenance)
+    pub fn gender_recognition(
+        recognition: &str,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        Self::new(
+            GENDER_RECOGNITION,
+            Value::Text(recognition.to_string()),
+            start,
+            end,
+            provenance,
+        )
+    }
+
+    /// Build a realized social-role claim.
+    /// type-audit: bare-ok(identifier-text: role), bare-ok(prose: provenance)
+    pub fn social_role(
+        role: &str,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        Self::new(
+            SOCIAL_ROLE,
+            Value::Text(role.to_string()),
+            start,
+            end,
+            provenance,
+        )
+    }
+
+    /// Build one witnessed transition-history claim.
+    /// type-audit: bare-ok(identifier-text: transition), bare-ok(prose: provenance)
+    pub fn transitioned(
+        transition: &str,
+        start: hornvale_kernel::WorldTime,
+        end: Option<hornvale_kernel::WorldTime>,
+        provenance: &str,
+    ) -> Result<Self, PersonSocialError> {
+        Self::new(
+            TRANSITIONED,
+            Value::Text(transition.to_string()),
+            start,
+            end,
+            provenance,
+        )
+    }
+
+    /// Predicate owned by this claim's independent axis.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn predicate(&self) -> &'static str {
+        self.predicate
+    }
+
+    /// Object asserted by this claim.
+    pub fn object(&self) -> &Value {
+        &self.object
+    }
+
+    /// Inclusive start of this claim's applicability.
+    pub fn start(&self) -> hornvale_kernel::WorldTime {
+        self.start
+    }
+
+    /// Exclusive end of this claim's applicability, or no known end.
+    pub fn end(&self) -> Option<hornvale_kernel::WorldTime> {
+        self.end
+    }
+
+    fn fact(&self, person: EntityId) -> Fact {
+        Fact {
+            subject: person,
+            predicate: self.predicate.to_string(),
+            object: self.object.clone(),
+            place: None,
+            day: Some(self.start),
+            provenance: self.provenance.clone(),
+        }
+    }
+
+    fn end_fact(&self, person: EntityId) -> Option<Fact> {
+        self.end.map(|end| Fact {
+            subject: person,
+            predicate: self.end_predicate().to_string(),
+            object: self.object.clone(),
+            place: None,
+            day: Some(end),
+            provenance: self.provenance.clone(),
+        })
+    }
+
+    fn end_predicate(&self) -> &'static str {
+        match self.predicate {
+            SEX_TRAIT => SEX_TRAIT_ENDED,
+            REPRODUCTIVE_ROLE => REPRODUCTIVE_ROLE_ENDED,
+            GENDER_IDENTITY => GENDER_IDENTITY_ENDED,
+            GENDER_RECOGNITION => GENDER_RECOGNITION_ENDED,
+            SOCIAL_ROLE => SOCIAL_ROLE_ENDED,
+            TRANSITIONED => TRANSITIONED_ENDED,
+            _ => unreachable!("typed person-social constructors own every predicate"),
+        }
+    }
+
+    fn provenance_fact(&self, person: EntityId) -> Fact {
+        Fact {
+            subject: person,
+            predicate: PERSON_SOCIAL_PROVENANCE.to_string(),
+            object: Value::Text(self.provenance.clone()),
+            place: None,
+            day: Some(self.start),
+            provenance: self.provenance.clone(),
+        }
+    }
+}
+
+/// Ordered realized social claims for one already-minted person.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PersonSocialSeed {
+    person: EntityId,
+    facts: Vec<PersonSocialFact>,
+}
+
+impl PersonSocialSeed {
+    /// Build an ordered handoff from worldgen without deriving one axis from
+    /// another. An empty vector is valid: absence remains silence.
+    pub fn new(person: EntityId, facts: Vec<PersonSocialFact>) -> Result<Self, PersonSocialError> {
+        for fact in &facts {
+            if fact.end.is_some_and(|end| end <= fact.start) {
+                return Err(PersonSocialError::new(
+                    "person social interval end must be after its start",
+                ));
+            }
+            if fact.provenance.trim().is_empty() {
+                return Err(PersonSocialError::new(
+                    "person social provenance must not be empty",
+                ));
+            }
+        }
+        Ok(Self { person, facts })
+    }
+
+    /// Person who owns every claim.
+    pub fn person(&self) -> EntityId {
+        self.person
+    }
+
+    /// Ordered typed claims, unchanged from the composition-root handoff.
+    pub fn social_facts(&self) -> &[PersonSocialFact] {
+        &self.facts
+    }
+
+    /// Convert each claim into its start fact, optional exclusive-end fact,
+    /// and explicit provenance fact, preserving claim order.
+    pub fn facts(&self) -> Vec<Fact> {
+        let mut facts = Vec::with_capacity(self.facts.len() * 3);
+        for social in &self.facts {
+            facts.push(social.fact(self.person));
+            if let Some(end) = social.end_fact(self.person) {
+                facts.push(end);
+            }
+            facts.push(social.provenance_fact(self.person));
+        }
+        facts
+    }
 }
 
 /// A person's day-stamped fact. `place` is the community, so a reader can find
@@ -315,6 +708,13 @@ mod tests {
             crate::PERSON_FOUNDED,
             crate::PERSON_BORN,
             crate::PERSON_DIED,
+            crate::SEX_TRAIT,
+            crate::REPRODUCTIVE_ROLE,
+            crate::GENDER_IDENTITY,
+            crate::GENDER_RECOGNITION,
+            crate::SOCIAL_ROLE,
+            crate::TRANSITIONED,
+            crate::PERSON_SOCIAL_PROVENANCE,
         ] {
             assert!(names.contains(&p), "{p} should be registered");
         }

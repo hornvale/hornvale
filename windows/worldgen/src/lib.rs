@@ -118,6 +118,7 @@ pub mod resolve;
 pub mod schedule;
 pub mod seed_sweep;
 pub mod settlement_pins;
+pub mod social_projection;
 pub mod streams;
 pub mod traversal;
 pub mod underworld_readout;
@@ -149,16 +150,18 @@ pub use graph_derive::{
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP,
-    ExchangeCensus, ExchangeTreatment, GENESIS_POP, History, MIGRATE_SURVIVAL, ORE_CUT,
-    OutbreakEvent, TributeRelation, WAR_LOSS, bake, cascade_sizes, census, defensibility_for_test,
-    exchange_census, interleaved_rehit_history, weakest_point_defensibility,
+    DiagnosticReturnBand, DiagnosticReturnClass, DiagnosticReturnWitness, ExchangeCensus,
+    ExchangeTreatment, GENESIS_POP, History, MIGRATE_SURVIVAL, ORE_CUT, OutbreakEvent,
+    TributeRelation, WAR_LOSS, bake, cascade_sizes, census, classify_diagnostic_return,
+    defensibility_for_test, exchange_census, interleaved_rehit_history,
+    weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
-    collapse_events, emit_history, emit_now, goblinoid_overlap, goblinoid_region_overlap,
-    ledger_day_of_bake_year, migration_events, occupation_records, occupations_at,
-    occupations_by_vertex, present_frame, present_year, ruins_of_people, stratigraphy,
-    sundered_landmasses, territories,
+    collapse_events, emit_history, emit_now, emit_social_projection, goblinoid_overlap,
+    goblinoid_region_overlap, ledger_day_of_bake_year, migration_events, occupation_records,
+    occupations_at, occupations_by_vertex, present_frame, present_year, ruins_of_people,
+    stratigraphy, sundered_landmasses, territories,
 };
 /// The derived climate, re-exported so a consumer of [`RungArtifacts`] can NAME
 /// what it is handed without taking its own edge to `domains/climate` — the
@@ -180,6 +183,11 @@ pub use reproductive::{
 };
 pub use resolve::{ChainLink, format_chain, resolve_at, resolve_chain_at};
 pub use settlement_pins::SettlementPins;
+pub use social_projection::{
+    SocialProjection, SocialProjectionError, SocialProjectionPins, SocialReadout, SyntheticSociety,
+    approved_lot_probe_projection, approved_lot_probe_projection_for, derive_social_readout,
+    project_social_cohort,
+};
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{
     HazardKind, SealState, Valence, Vestige, VestigeKind, prehuman_vestige,
