@@ -1,0 +1,1 @@
+{"kind":"notice","by":"main","note":"sluice: queued req-9f345acd79f9 for campaign/the-murrain at 9f345acd79f9 after preserving the historical pre-kinship fixture and adding a current-world person baseline; kinship suite and commit gate pass","paths":["windows/worldgen/tests/suite/kinship_facts.rs,windows/worldgen/tests/fixtures/person-facts-seed-42.json"]}
