@@ -82,25 +82,26 @@ The corpus proposes 4 measurable item(s), and they make 3 independent
 claim(s) — see the pairs below. Of those items, 2 carry a two-sided
 criterion and 2 carry a one-sided one.
 
-THE SURVIVING CRITERIA ARE MOSTLY CONSERVATIVE ONE-SIDED BOUNDS, and this
-report must not be read as though they were calibrated targets. A one-sided
-criterion says nothing on its unconstrained side: a floor is met by every
-world above it and a ceiling by every world below it, however far past
-anything the source describes. It separates a world that does the thing at
-all from one that does not, and it says nothing about magnitude. So a
+2 OF THE 4 SURVIVING CRITERIA ARE CONSERVATIVE ONE-SIDED BOUNDS, and this
+report must not be read as though any of them were a calibrated target. A
+one-sided criterion says nothing on its unconstrained side: a floor is met
+by every world above it and a ceiling by every world below it, however far
+past anything the source describes. It separates a world that does the thing
+at all from one that does not, and it says nothing about magnitude. So a
 near-uniform `grown` sweep across these items is NOT evidence of reach. It
 is evidence that the world clears a small number of low bars that a
 plausibly-flat world would fail — which is the most this instrument was
 built to claim, and less than a reader scanning a tally will assume.
 
-The bands were authored ahead of measurement, with the exceptions the Frozen
-declaration above discloses by name — this report does not restate the
-blanket claim, because the corpus itself does not make one. A two-sided band
-is the only shape here that can fail at BOTH poles, and it is
-correspondingly the shape with real discriminating power; the count above
-says how many of these items carry one. Read the individual notes for which
-bound is at risk on which item: several say so about themselves, in both
-directions.
+The bands were authored ahead of measurement, except where the Frozen
+declaration above discloses otherwise, by name — this report does not
+restate the blanket claim, because the corpus itself does not make one, and
+does not count the exceptions, because the corpus is where they are
+declared. A two-sided band is the only shape here that can fail at BOTH
+poles, and it is correspondingly the shape with real discriminating power;
+the count above says how many of these items carry one. Read the individual
+notes for which bound is at risk on which item: several say so about
+themselves, in both directions.
 
 The claim count is the item count with near-collinear statistics merged: two
 items reading statistics correlated at |r| >= 0.95 over the same population

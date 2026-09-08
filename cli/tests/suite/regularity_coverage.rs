@@ -133,6 +133,28 @@ fn the_collinearity_is_measured_on_the_scored_population() {
     );
 }
 
+/// The roadmap count as the REPORT states it — parsed out of `render`'s own
+/// output, never recomputed from the corpus.
+///
+/// This exists because the first draft of the two guards below recomputed the
+/// count from `roadmap_instrument.is_some()` and compared it to itself, which
+/// is invariant under every input and could not fail. Routing the assertion
+/// through this parser is what puts the production classifier
+/// (`names_an_instrument`) inside the loop; a guard that never calls the thing
+/// it guards is a restatement wearing a hat.
+fn roadmap_count_from_report(report: &str) -> usize {
+    let line = report
+        .lines()
+        .find(|l| l.starts_with("- roadmap ("))
+        .expect("the report states a roadmap count");
+    line.rsplit_once(": ")
+        .expect("the roadmap line carries a count")
+        .1
+        .trim()
+        .parse()
+        .expect("the roadmap count is a number")
+}
+
 /// Requirement 3: `absent` splits into roadmap and gap, both halves non-empty,
 /// and every roadmap item named with the instrument it declares. A degenerate
 /// split (all one side) would read as a distinction while carrying none.
@@ -189,13 +211,29 @@ fn the_absent_verdict_is_split_into_roadmap_and_gap() {
     }
 }
 
-/// The classification is DECLARED DATA, not inferred wording. A note may say
-/// "the discriminating instrument is …" and still be a gap, or say nothing of
-/// the sort and still be roadmap — because the field decides. Pinning that
-/// independence is what stops the prose classifier from creeping back.
+/// The classification is DECLARED DATA, not inferred wording — asserted
+/// against what `render` PRINTS, not against a recomputation of the field.
+///
+/// The distinction is the whole test. Comparing `roadmap_instrument.is_some()`
+/// to itself holds for every possible input and for every possible
+/// implementation of `names_an_instrument`; comparing the REPORT's count to
+/// the declared count fails the moment production classifies by anything else.
+/// Verified by mutation: reverting `names_an_instrument` to the retired prose
+/// sniffer turns this red.
 #[test]
 fn the_roadmap_split_is_not_a_function_of_note_wording() {
     let corpus = load_sugarscape();
+    let printed = roadmap_count_from_report(&regularities::render(
+        &corpus,
+        &census(),
+        regularities::CORPORA[0],
+    ));
+    let declared: Vec<&str> = corpus
+        .items
+        .iter()
+        .filter(|i| i.roadmap_instrument.is_some())
+        .map(|i| i.id.as_str())
+        .collect();
     let phrase_bearing: Vec<&str> = corpus
         .items
         .iter()
@@ -203,20 +241,21 @@ fn the_roadmap_split_is_not_a_function_of_note_wording() {
         .filter(|i| i.note.contains("instrument is") || i.note.contains("criterion is known"))
         .map(|i| i.id.as_str())
         .collect();
-    let declared: Vec<&str> = corpus
-        .items
-        .iter()
-        .filter(|i| i.roadmap_instrument.is_some())
-        .map(|i| i.id.as_str())
-        .collect();
+    assert_eq!(
+        printed,
+        declared.len(),
+        "the report must classify by the declared field: it printed {printed}, and \
+         {} item(s) declare an instrument",
+        declared.len()
+    );
+    // The two sets must DIFFER, or the assertion above cannot tell a
+    // field-driven classifier from a prose-driven one on this corpus.
     // `sug-spatial-segregation` is the live witness: it names three concrete
-    // instruments and carries neither marker phrase, so the two sets differ.
-    // If they ever coincide, the test below is the only thing left saying the
-    // classification is not prose-derived.
+    // instruments and carries neither marker phrase.
     assert_ne!(
-        phrase_bearing, declared,
-        "the declared set must not be reproducible from note phrases alone — if it \
-         becomes so, the independence of the field from the prose stops being observable"
+        declared, phrase_bearing,
+        "the declared set must not coincide with the prose-marker set — if it does, \
+         nothing here can observe which one production used"
     );
     assert!(
         declared.contains(&"sug-spatial-segregation"),
@@ -262,35 +301,49 @@ fn every_absent_item_declares_the_field_and_no_other_item_carries_it() {
     );
 }
 
-/// `note` is unparsed again, and this pins it. Rewording any note must not
-/// move the roadmap/gap split — the defect the structured field was added to
-/// close, where a committed artifact's headline was a function of prose.
+/// `note` is unparsed again, and this pins it THROUGH `render`.
+///
+/// **This test was a tautology in fix round 1 and the correction is the point
+/// of keeping it.** It defined its own `split()` over
+/// `roadmap_instrument.is_some()` and compared that to itself; `is_some()` is
+/// invariant under any content-only string substitution that leaves the key
+/// present, so `split(before) == split(after)` held for EVERY input and for
+/// every implementation of the classifier it claimed to guard. Its comment
+/// claimed a positive control, and the control only validated the fixture —
+/// the instrument the fixture was wired to was blind. Proven by mutation: with
+/// the prose sniffer restored, this test stayed green while four unrelated
+/// tests caught the regression.
+///
+/// It now renders both corpora and compares the counts the REPORTS state.
 #[test]
 fn rewording_a_note_cannot_move_the_split() {
     let path = workspace_root().join(regularities::CORPORA[0]);
     let json = std::fs::read_to_string(&path).expect("corpus file");
-    let before = regularities::load(&json).expect("parses");
-    let split = |c: &regularities::Corpus| {
-        c.items
-            .iter()
-            .filter(|i| i.verdict == Verdict::Absent && i.roadmap_instrument.is_some())
-            .count()
+    let c = census();
+    let count = |text: &str| {
+        let corpus = regularities::load(text).expect("corpus parses");
+        roadmap_count_from_report(&regularities::render(&corpus, &c, regularities::CORPORA[0]))
     };
     // Strip every marker phrase the retired prose classifier looked for. Under
-    // that classifier this collapses the roadmap half to the one item whose
-    // note never carried a phrase; under the field it must not move at all.
+    // that classifier this collapses the roadmap half to zero; under the field
+    // it must not move at all.
     let reworded = json
         .replace("instrument is", "thing to build is")
         .replace("criterion is known", "criterion has been worked out");
-    let after = regularities::load(&reworded).expect("reworded corpus still parses");
+    assert_ne!(
+        json, reworded,
+        "the rewording must actually change the corpus text, or this proves nothing"
+    );
+    let before = count(&json);
+    let after = count(&reworded);
     assert_eq!(
-        split(&before),
-        split(&after),
-        "the roadmap split must not depend on note wording"
+        before, after,
+        "the roadmap split the REPORT states must not depend on note wording: \
+         {before} before the rewording, {after} after"
     );
     assert!(
-        split(&before) > 1,
-        "the fixture must be able to detect a collapse"
+        before > 1,
+        "the fixture must be able to detect a collapse to zero or one"
     );
 }
 
@@ -307,6 +360,47 @@ fn the_power_caveat_precedes_the_tally() {
     assert!(
         report.contains("is NOT evidence of reach"),
         "the caveat must be stated, not implied: {report}"
+    );
+    // The one-sided claim is DERIVED, not a hard-coded quantifier. It read
+    // "MOSTLY ... ONE-SIDED BOUNDS" while the line above it printed a 2-and-2
+    // split — half, not mostly — and nothing would have moved the word when
+    // the mix changed again.
+    let measurable: Vec<&regularities::Item> = corpus
+        .items
+        .iter()
+        .filter(|i| i.criterion.is_some() && !i.statistic.is_empty())
+        .collect();
+    let two_sided = measurable
+        .iter()
+        .filter(|i| {
+            matches!(
+                i.criterion,
+                Some(regularities::Criterion::MedianInBand { .. })
+                    | Some(regularities::Criterion::FractionInBandAtLeast { .. })
+            )
+        })
+        .count();
+    assert!(
+        report.contains(&format!(
+            "{} OF THE {} SURVIVING CRITERIA ARE CONSERVATIVE ONE-SIDED BOUNDS",
+            measurable.len() - two_sided,
+            measurable.len()
+        )),
+        "the one-sided count must be derived from the criteria, not asserted: {report}"
+    );
+    for word in ["MOSTLY", "mostly"] {
+        assert!(
+            !report[..report.find("## Items").expect("an items table")].contains(word),
+            "a bare quantifier cannot track a changed mix — print the count instead"
+        );
+    }
+    // Singular/plural against the Frozen block: the corpus declares ONE
+    // disclosed exception, so the report must not assert a number of its own.
+    let voice = &report[..report.find("## Items").expect("an items table")];
+    assert!(
+        !voice.contains("with the exceptions the Frozen"),
+        "the report must not assert a count of disclosed exceptions the corpus \
+         declares as one: {voice}"
     );
 }
 
