@@ -963,12 +963,22 @@ git commit -m "feat(regularities): the coverage report and its committed artifac
 
 This is the moment the frozen predictions meet the data. **Record what is measured. Do not adjust a criterion after seeing its result** — a falsified prediction is a finding, and several campaigns ship the null as the headline (decision 0016).
 
-- [ ] **Step 1: Run the resolver and read the computed verdicts**
+- [ ] **Step 1: Add a `measure` mode, then read the computed verdicts**
 
-Run: `cargo run -p hornvale -- regularities check`
-Expected: one `Regressed` finding per `unmeasured` item, each naming the computed verdict and its measured summary.
+**Controller correction, found by Task 6 and verified: the plan as written could not work.** It assumed `regularities check` reports a `Regressed` finding per `unmeasured` item. It does not, and that is by design — `audit_item` returns `None` for `Unmeasured`, because an unmeasured item is frozen-but-not-yet-scored and must raise nothing. Measured: `cargo run -q -p hornvale -- regularities check` exits **0** on the current corpus.
+
+The suggested workaround was to flip each item to `flat`, run `check`, and read the resulting findings. **Do not do that** — it mutates the frozen corpus to interrogate it, and a half-completed run would leave the corpus in a state no one authored.
+
+Add the honest tool instead: a third mode, `regularities measure`, which for every `unmeasured` item prints its id, the computed verdict, and the measured summary that produced it — and **asserts nothing and writes nothing**. It is a read, not a gate. This is the operation the first measurement actually is, so it should exist as a command rather than as a trick, and it stays useful afterwards for inspecting what the census would say today.
+
+Mirror `cmd_regularities`'s existing `report`/`check` match arms, and add a usage line beside them.
+
+Run: `cargo run -p hornvale -- regularities measure`
+Expected: four lines, one per measurable item, each naming a computed verdict and the number behind it.
 
 - [ ] **Step 2: Transcribe each computed verdict into the corpus**
+
+Take the verdicts from `measure`'s output. Do not re-derive them by hand.
 
 For each item, set `verdict` to what was measured and add the `doc:` anchor. Do not touch `criterion`, `lo`, `hi` or `min_fraction`.
 
