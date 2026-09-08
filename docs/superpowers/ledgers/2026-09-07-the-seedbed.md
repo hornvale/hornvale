@@ -399,3 +399,50 @@ its 0.02 floor discriminated), and `sug-credit-makes-hierarchy` min 0.000000
 against a floor of 1. `median_text` and `fraction_text` now quantize: their doc
 said they owed the quantize-at-emit contract nothing "because never committed",
 which stopped being true the moment the summary reached this artifact.
+
+---
+
+## #9 [G5] — The final review, its fix wave, and two parked residuals
+
+**Fit to land.** The freeze was verified *mechanically*: `(id, verdict, statistic,
+criterion)` extracted as structured JSON at all six commits touching the corpus
+and diffed pairwise. No band, bound, statistic or criterion kind was ever altered
+after the freeze, and both post-measurement edits moved nothing in
+criterion-space. **All six demotions cost the campaign apparent `grown`s** — had
+they stayed the tally would read 9 grown / 1 flat instead of 3 / 1. The freeze was
+tightened against the campaign's interest at every step.
+
+**Two vacuous guards found and fixed**, both mutation-proved:
+
+1. **The `doc:` anchor was never checked against the page it cites** — the
+   campaign's headline mechanism. Repointing an anchor to a generated page
+   carrying no claim left 186/186 green. Now the Doc arm opens the page and
+   requires a line carrying the claim marker *and* the item's title.
+2. **The headline number had no failing test.** Both `all(...)` predicates behind
+   `2 of 3 measured claim(s) grew` survived mutation to `any(...)`, because
+   today's merged claim happens to be all-grown. Now pinned by synthetic
+   merged-group fixtures that kill one assertion each.
+
+Also fixed: `regularities report` regenerated on the *wrong side* of the census
+refresh (authored from the old census while the Domesday claim lines used the
+new one — fails closed, but in the wrong place); and three hard-coded counts in
+`docs/generated-paths.txt`'s header were deleted in favour of the re-derivation
+commands beside them.
+
+**Parked residual A — the title half of the new anchor check is untested.**
+Dropping `&& line.contains(title)` leaves 68/68 green: the negative control is a
+page with *no* marker, so nothing exercises "page has a marker but not *this*
+title". Behaviour is correct today (verified). *Ruling:* park. One fixture
+anchoring a `society` item at `settlement.md` closes it. Cost if wrong: the
+per-item specificity of a per-item check is unguarded, so a future anchor
+mis-pointed *between two pages that both carry claims* would pass.
+
+**Parked residual B — two wrong counts in a doc comment**, in the commit whose
+headline fix was deleting wrong counts. `measured_reading` says "35 rows" and
+"ten rows"; actual is 41 and 4. *Ruling:* park. Doc-only, no behaviour, not
+published. Cost if wrong: none beyond the irony.
+
+**Merge-time action requiring a human.** `docs/generated-path-writes.tsv`'s
+`docs/audits/` row: base `15 24`, `origin/main` `15 26`, branch `16 25`. Both
+sides moved independently, so it **auto-merges cleanly to a wrong value**. Set it
+to `16 27` at the merge.
