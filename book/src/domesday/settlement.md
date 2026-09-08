@@ -216,6 +216,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | -1.0518004 | -0.6248594 | -0.5776447 | -0.53095787 | -0.34823261 | -0.58220994 |
 
+**Frozen claim** — sugarscape-1996 `sug-wealth-skew`: predicted median in [-1.2, -0.8]; measured -0.577645. FLAT.
+
 ### `settlement-count`
 
 Number of settlements placed in the world

@@ -904,3 +904,251 @@ fn the_population_comes_from_the_corpus_not_a_hard_coded_study() {
         "a corpus naming an absent population must fail, not fall back to `the-census`"
     );
 }
+
+// ---------------------------------------------------------------------------
+// The two readers of the corpus (The Seedbed, Task 8).
+//
+// `windows/lab/src/domesday/corpus.rs` reads the same frozen files this
+// module's resolver reads, with a minimal view of four fields, because a
+// window may not depend on `cli` and the corpus schema does not belong in
+// the kernel. That is a duplication kept ON PURPOSE, so decision 0261's
+// condition applies: the two readers are held together by an agreement test.
+//
+// **The test lives here, not in `windows/lab/tests/`, and that is a decision
+// rather than a convenience.** Putting it there would need a `hornvale`
+// dev-dependency on `hornvale-lab` — the dependency edge run backwards.
+// `cli/tests/suite/architecture.rs` enforces the layer graph over
+// `[dependencies]` and does not examine dev-dependencies at all, so such an
+// edge would ESCAPE the guard rather than be permitted by it. Both crates are
+// already in scope here, and nothing has to look away.
+// ---------------------------------------------------------------------------
+
+/// A criterion reduced to its kind name and its frozen parameters, so the
+/// two independently-declared enums can be compared without either knowing
+/// the other's type. Both `match`es are exhaustive, so a sixth criterion
+/// kind added to one reader and not the other fails to compile here.
+fn cli_criterion_shape(c: &regularities::Criterion) -> (&'static str, Vec<f64>) {
+    use regularities::Criterion as C;
+    match c {
+        C::MedianInBand { lo, hi } => ("median-in-band", vec![*lo, *hi]),
+        C::FractionInBandAtLeast {
+            lo,
+            hi,
+            min_fraction,
+        } => ("fraction-in-band-at-least", vec![*lo, *hi, *min_fraction]),
+        C::MedianAtLeast { bound } => ("median-at-least", vec![*bound]),
+        C::MedianAtMost { bound } => ("median-at-most", vec![*bound]),
+        C::PresentOnFraction { min_fraction } => ("present-on-fraction", vec![*min_fraction]),
+    }
+}
+
+/// The same reduction over the Domesday renderer's own criterion enum.
+fn lab_criterion_shape(c: &hornvale_lab::domesday::corpus::Criterion) -> (&'static str, Vec<f64>) {
+    use hornvale_lab::domesday::corpus::Criterion as C;
+    match c {
+        C::MedianInBand { lo, hi } => ("median-in-band", vec![*lo, *hi]),
+        C::FractionInBandAtLeast {
+            lo,
+            hi,
+            min_fraction,
+        } => ("fraction-in-band-at-least", vec![*lo, *hi, *min_fraction]),
+        C::MedianAtLeast { bound } => ("median-at-least", vec![*bound]),
+        C::MedianAtMost { bound } => ("median-at-most", vec![*bound]),
+        C::PresentOnFraction { min_fraction } => ("present-on-fraction", vec![*min_fraction]),
+    }
+}
+
+/// One scored item as a plain, comparable tuple: id, statistic, criterion
+/// shape, verdict.
+type ScoredShape = (String, String, (&'static str, Vec<f64>), &'static str);
+
+/// What the `cli` resolver considers a scored item of the founding corpus.
+fn cli_scored() -> Vec<ScoredShape> {
+    load_sugarscape()
+        .items
+        .iter()
+        .filter_map(|item| {
+            let verdict = match item.verdict {
+                Verdict::Grown => "GROWN",
+                Verdict::Flat => "FLAT",
+                _ => return None,
+            };
+            let criterion = item.criterion.as_ref()?;
+            Some((
+                item.id.clone(),
+                item.statistic.clone(),
+                cli_criterion_shape(criterion),
+                verdict,
+            ))
+        })
+        .collect()
+}
+
+/// What the Domesday's own reader considers a scored item of the same file.
+fn lab_scored() -> Vec<hornvale_lab::domesday::corpus::ScoredItem> {
+    let path = workspace_root().join(regularities::CORPORA[0]);
+    hornvale_lab::domesday::corpus::read(&path).expect("the Domesday reader reads the corpus")
+}
+
+/// Decision 0261: the corpus schema is duplicated on purpose, so the
+/// duplication carries a two-way agreement test.
+///
+/// Every id, statistic, criterion and verdict one reader sees, the other
+/// must see identically and in the same order. Order is part of the claim:
+/// the Domesday renders claim lines in corpus order, and a reader that
+/// silently reordered would move a committed artifact.
+#[test]
+fn the_two_readers_of_the_corpus_agree() {
+    let via_cli = cli_scored();
+    let via_lab: Vec<ScoredShape> = lab_scored()
+        .iter()
+        .map(|i| {
+            (
+                i.id.clone(),
+                i.statistic.clone(),
+                lab_criterion_shape(&i.criterion),
+                i.verdict.shouted(),
+            )
+        })
+        .collect();
+    // Anti-vacuity: two empty vectors are equal, and an agreement test that
+    // can be satisfied by both readers seeing nothing asserts nothing.
+    assert!(
+        !via_cli.is_empty(),
+        "the resolver found no scored items, so the comparison below is vacuous"
+    );
+    assert_eq!(
+        via_cli, via_lab,
+        "the two readers of the regularity corpus disagree — `cli/src/regularities.rs` \
+         and `windows/lab/src/domesday/corpus.rs` parse the same files and must agree \
+         on every scored item (decision 0261)"
+    );
+}
+
+/// The two readers also agree on the NUMBER, not merely on the schema.
+///
+/// The Domesday prints a measurement beside each verdict, and the resolver
+/// decides that verdict from a measurement of its own. If the two ever
+/// computed the statistic differently, the survey would publish a number the
+/// verdict was not taken on — a sentence that reads as evidence and is not.
+/// The median kinds are compared against `regularities::median` and the
+/// fraction kinds against the same in-band count `regularities::meets` uses.
+#[test]
+fn the_two_readers_agree_on_the_measured_number() {
+    let census = census();
+    let corpus = load_sugarscape();
+    let mut compared = 0usize;
+    for item in lab_scored() {
+        let authored = corpus
+            .items
+            .iter()
+            .find(|i| i.id == item.id)
+            .expect("the lab reader invents no items");
+        let criterion = authored.criterion.as_ref().expect("a scored item has one");
+        let present = regularities::values_of(&census, &authored.statistic);
+        let worlds = census.rows.len();
+        let expected = match criterion {
+            regularities::Criterion::MedianInBand { .. }
+            | regularities::Criterion::MedianAtLeast { .. }
+            | regularities::Criterion::MedianAtMost { .. } => {
+                regularities::median(&present).expect("a present statistic has a median")
+            }
+            regularities::Criterion::FractionInBandAtLeast { lo, hi, .. } => {
+                present.iter().filter(|v| **v >= *lo && **v <= *hi).count() as f64 / worlds as f64
+            }
+            regularities::Criterion::PresentOnFraction { .. } => {
+                present.len() as f64 / worlds as f64
+            }
+        };
+        let measured = item
+            .measured(&census)
+            .expect("the committed census reports every scored statistic");
+        assert_eq!(
+            measured.to_bits(),
+            expected.to_bits(),
+            "{}: the Domesday would print {measured} while the resolver decided on \
+             {expected}",
+            item.id
+        );
+        compared += 1;
+    }
+    assert_eq!(compared, 4, "the founding corpus scores four items");
+}
+
+/// The claim line is DERIVED from the corpus record, not transcribed into
+/// the renderer.
+///
+/// The proof is a scratch corpus with one field changed — `sug-wealth-skew`'s
+/// recorded verdict flipped from `flat` to `grown` — rendered through the
+/// same path the committed page takes. A renderer holding a literal would
+/// print the same word both times. Nothing about the census changes between
+/// the two renders, so the only input that moved is the one under test.
+#[test]
+fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
+    let census = census();
+    let real = lab_scored();
+    let settlement =
+        hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &real);
+    assert!(
+        settlement.contains(hornvale_lab::domesday::render::CLAIM_MARKER),
+        "the settlement page must carry a claim for this test to say anything"
+    );
+    assert!(
+        settlement.contains(
+            "`sug-wealth-skew`: predicted median in [-1.2, -0.8]; measured \
+                             -0.577645. FLAT."
+        ),
+        "the committed reading moved; see the page: {settlement}"
+    );
+
+    let scratch = scratch_corpus("verdict-flip", |c| {
+        for item in c["items"]
+            .as_array_mut()
+            .expect("items is an array")
+            .iter_mut()
+        {
+            if item["id"] == serde_json::json!("sug-wealth-skew") {
+                item["verdict"] = serde_json::json!("grown");
+            }
+        }
+    });
+    let flipped = hornvale_lab::domesday::corpus::read(&scratch).expect("scratch corpus reads");
+    let _ = std::fs::remove_file(&scratch);
+    let after = hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &flipped);
+    assert!(
+        after.contains(
+            "`sug-wealth-skew`: predicted median in [-1.2, -0.8]; measured \
+                        -0.577645. GROWN."
+        ),
+        "the verdict is transcribed, not derived — flipping the corpus record left the \
+         page saying the same thing: {after}"
+    );
+}
+
+/// The measured half is derived too: changing the frozen BAND moves the
+/// criterion prose, and the number stays put because it is a fact about the
+/// census rather than about the claim.
+#[test]
+fn tightening_a_band_moves_the_criterion_but_not_the_measurement() {
+    let census = census();
+    let scratch = scratch_corpus("band-tighten", |c| {
+        for item in c["items"]
+            .as_array_mut()
+            .expect("items is an array")
+            .iter_mut()
+        {
+            if item["id"] == serde_json::json!("sug-wealth-skew") {
+                item["criterion"]["lo"] = serde_json::json!(-0.6);
+                item["criterion"]["hi"] = serde_json::json!(-0.5);
+            }
+        }
+    });
+    let tightened = hornvale_lab::domesday::corpus::read(&scratch).expect("scratch corpus reads");
+    let _ = std::fs::remove_file(&scratch);
+    let page =
+        hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &tightened);
+    assert!(
+        page.contains("predicted median in [-0.6, -0.5]; measured -0.577645."),
+        "the criterion prose is assembled from the frozen parameters: {page}"
+    );
+}

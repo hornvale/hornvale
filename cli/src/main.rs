@@ -2007,6 +2007,18 @@ fn cmd_lab_domesday() -> Result<(), String> {
     )?;
     let findings = hornvale_lab::domesday::detect::detect(&census, &comparators, &expectations);
 
+    // Spec §5's claim lines. The corpus paths come from `regularities::CORPORA`
+    // — the resolver's roster, not a second one — but the READING is
+    // `windows/lab`'s own minimal view: a window may not depend on `cli`, so
+    // the two readers are held in agreement by a test rather than by a shared
+    // type (decision 0261; see `windows/lab/src/domesday/corpus.rs`).
+    let mut scored = Vec::new();
+    for path in crate::regularities::CORPORA {
+        scored.extend(hornvale_lab::domesday::corpus::read(std::path::Path::new(
+            path,
+        ))?);
+    }
+
     let out_dir = std::path::Path::new("book/src/domesday");
     std::fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
 
@@ -2019,16 +2031,18 @@ fn cmd_lab_domesday() -> Result<(), String> {
 
     let domains = hornvale_lab::domesday::render::domains();
     for domain in &domains {
-        let page = hornvale_lab::domesday::render::render_domain(&census, domain, &findings);
+        let page =
+            hornvale_lab::domesday::render::render_domain(&census, domain, &findings, &scored);
         let path = out_dir.join(format!("{domain}.md"));
         std::fs::write(&path, page).map_err(|e| format!("writing {}: {e}", path.display()))?;
     }
 
     println!(
-        "domesday: {} worlds, {} domains, {} findings -> {}",
+        "domesday: {} worlds, {} domains, {} findings, {} frozen claim(s) -> {}",
         census.rows.len(),
         domains.len(),
         findings.len(),
+        scored.len(),
         out_dir.display()
     );
     Ok(())

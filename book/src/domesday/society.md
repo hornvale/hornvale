@@ -56,6 +56,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0 | 0.19325153 | 0.27430863 | 0.32581736 | 0.4228546 | 0.24639027 |
 
+**Frozen claim** — sugarscape-1996 `sug-retaliation-deters`: predicted median at most 0.5; measured 0.274309. GROWN.
+
 ### `raid-victim-rate`
 
 Share of this world's occupation records that ended at another community's hand (`Ended::By`) — the DEFENCE side of the raid mechanic (The Confusion). Over EVERY people with a record, not the six The Tolerance froze: this is the raid rate, not that campaign's readout. Absent on a world with no occupation records. Replaces `windows/worldgen/tests/tolerance_baseline.rs`'s 30-world victim-side proxy.
@@ -66,6 +68,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 0 | 0.19631902 | 0.27931485 | 0.33676232 | 0.45331616 | 0.2539182 |
 
+**Frozen claim** — sugarscape-1996 `sug-predation-is-bounded`: predicted at least 0.5 of worlds in [0.02, 0.5]; measured 0.968000. GROWN.
+
 ### `tribute-relations-standing`
 
 How many standing tribute relations (`pays-tribute-to`) this world holds at `now` — the subordination stock (The Assize). Replaces `windows/worldgen/tests/history_tithe.rs`'s twelve-world tribute-volume panel, whose quantity lives on the bake's discarded tally and is unreachable from any census metric. Agrees with that flow at spearman 0.934 over 36 worlds — a measured witness, NOT an equivalence: this is a stock and that was a flow. Absent on a world with no occupation records.
@@ -75,6 +79,8 @@ n = 1000 present, 0 absent (of 1000 worlds)
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
 | 0 | 56 | 88 | 120 | 272 | 88.268 |
+
+**Frozen claim** — sugarscape-1996 `sug-credit-makes-hierarchy`: predicted median at least 1; measured 88.000000. GROWN.
 
 ## Weaknesses found here
 
