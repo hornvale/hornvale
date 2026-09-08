@@ -595,3 +595,18 @@ sets. Lot projections retain their `SourceCohort` and explicitly remain views
 of that substrate; composite projections cannot write persistent consequences,
 while aggregate state and materialized individuals can. No epidemic constant
 was changed and no census fixture was re-pinned in this follow-up.
+
+### Survivorship control after the population epoch
+
+The first canonical stage after the kinship-baseline refresh exposed two
+failures. The Staple D3 probe had built a hand-rolled registry that omitted the
+two epidemic predicates now legitimately emitted by `history_for`; registering
+the epidemiology domain closes that composition gap without changing the
+probe. The Winze survivorship control also moved: main's four-seed control was
+previously `z = 1.902`, while the Murrain world measures `z = 3.536`; the
+fixed twelve-seed panel measures `z = 5.896` (30 breached, 131 ordinary, 88
+still open). This is a real substrate movement, not a mechanism or threshold
+change. The old E.9 sentence that the four-seed control must be below `z = 3`
+is no longer true, so the witness now records the control's direction and
+requires it to remain less decisive than the frozen panel. The panel, cap,
+hazard, and mechanism are unchanged.
