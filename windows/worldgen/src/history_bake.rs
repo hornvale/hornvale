@@ -546,6 +546,28 @@ const STORE_WEIGHT: f64 = 0.5;
 /// plumb: pending(wave-1)
 const STORE_DECAY: f64 = 0.95;
 
+/// The denominator floor for the diagnostic return ratios. It makes the
+/// closing readout total when a relation's assessment or observed population
+/// is zero; it does not alter either stock.
+/// type-audit: bare-ok(ratio: diagnostic denominator floor)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR: f64 = 1.0;
+/// A patron's portfolio-normalized store share must cover one quarter of a
+/// subordinate's present population before the diagnostic witness names Fort.
+/// type-audit: bare-ok(ratio: diagnostic Fort threshold)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_PROTECTION_FORT_MIN: f64 = 0.25;
+/// A patron's portfolio-normalized store share must cover a full assessment
+/// before the diagnostic witness names Trade.
+/// type-audit: bare-ok(ratio: diagnostic Trade threshold)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_GOODS_TRADE_MIN: f64 = 1.0;
+/// A subordinate must be at least as populous as when the relation was last
+/// observed before the diagnostic witness names Cult.
+/// type-audit: bare-ok(ratio: diagnostic Cult threshold)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_LEGITIMACY_CULT_MIN: f64 = 1.0;
+
 /// The sub-year grain at which a community's granary integrates (The Granary
 /// T3, spec §3.2–3.4). Twelve phases ≈ monthly resolution: coarse enough that
 /// the epoch loop's cost stays negligible (twelve curve samples per community
@@ -1017,6 +1039,10 @@ pub struct History {
     /// nothing here — exactly as a dead occupation leaves a ruin rather than a
     /// settlement.
     pub tribute: Vec<TributeRelation>,
+    /// Read-only, relation-local D3 diagnostic witnesses for standing tribute
+    /// relations. This sidecar is intentionally not part of the save-facing
+    /// `tribute` relation shape and `history_emit` does not consume it.
+    pub diagnostic_returns: Vec<DiagnosticReturnWitness>,
     /// Event tallies, counted as the bake resolves each epoch.
     tally: BakeCensus,
     exchange: ExchangeCensus,
@@ -1041,6 +1067,88 @@ pub struct TributeRelation {
     /// community, and this day is never earlier than the founding of either
     /// entity the emitted fact names.
     pub since: f64,
+}
+
+/// The diagnostic D3 return classification. These names describe a
+/// continuous return vector; no `Function` label is accepted as an input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiagnosticReturnClass {
+    /// No diagnostic component crosses its named threshold.
+    None,
+    /// The legitimacy component crossed its threshold.
+    Cult,
+    /// The goods component crossed its threshold.
+    Trade,
+    /// The protection component crossed its threshold.
+    Fort,
+}
+
+/// The greatest component's diagnostic magnitude band.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiagnosticReturnBand {
+    /// No component reaches the Fort threshold.
+    Low,
+    /// At least one component reaches the Fort threshold but none reaches one.
+    Medium,
+    /// At least one component reaches one.
+    High,
+}
+
+/// One read-only, relation-local D3 return observation at the bake's `now`.
+///
+/// Every component is a dimensionless ratio. `conservation_residual` is zero
+/// in this diagnostic-only stage because it does not apply an outflow.
+/// type-audit: bare-ok(ratio: protection), bare-ok(ratio: goods), bare-ok(ratio: legitimacy), bare-ok(ratio: conservation_residual)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DiagnosticReturnWitness {
+    /// The standing relation's paying community.
+    pub subordinate: BakeId,
+    /// The standing relation's collecting community.
+    pub patron: BakeId,
+    /// Portfolio share relative to the subordinate's present population.
+    pub protection: f64,
+    /// Portfolio share relative to this relation's assessment.
+    pub goods: f64,
+    /// Present subordinate population relative to the last observed value.
+    pub legitimacy: f64,
+    /// The greatest-component magnitude band.
+    pub band: DiagnosticReturnBand,
+    /// The explicit diagnostic class derived from the continuous vector.
+    pub classification: DiagnosticReturnClass,
+    /// The diagnostic stage's no-outflow conservation reading.
+    pub conservation_residual: f64,
+}
+
+/// Derive the diagnostic class from continuous return components only.
+///
+/// Precedence is Fort, then Trade, then Cult, as recorded in the Staple D3
+/// campaign ledger before this witness was implemented.
+/// type-audit: bare-ok(ratio: protection), bare-ok(ratio: goods), bare-ok(ratio: legitimacy)
+pub fn classify_diagnostic_return(
+    protection: f64,
+    goods: f64,
+    legitimacy: f64,
+) -> DiagnosticReturnClass {
+    if protection >= DIAGNOSTIC_RETURN_PROTECTION_FORT_MIN {
+        DiagnosticReturnClass::Fort
+    } else if goods >= DIAGNOSTIC_RETURN_GOODS_TRADE_MIN {
+        DiagnosticReturnClass::Trade
+    } else if legitimacy >= DIAGNOSTIC_RETURN_LEGITIMACY_CULT_MIN {
+        DiagnosticReturnClass::Cult
+    } else {
+        DiagnosticReturnClass::None
+    }
+}
+
+fn diagnostic_return_band(protection: f64, goods: f64, legitimacy: f64) -> DiagnosticReturnBand {
+    let magnitude = protection.max(goods).max(legitimacy);
+    if magnitude >= DIAGNOSTIC_RETURN_GOODS_TRADE_MIN {
+        DiagnosticReturnBand::High
+    } else if magnitude >= DIAGNOSTIC_RETURN_PROTECTION_FORT_MIN {
+        DiagnosticReturnBand::Medium
+    } else {
+        DiagnosticReturnBand::Low
+    }
 }
 
 /// A tally of the events a bake resolved — the falsification instrument. Under
@@ -1213,6 +1321,7 @@ impl History {
             records,
             now,
             tribute: Vec::new(),
+            diagnostic_returns: Vec::new(),
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
         }
@@ -4057,6 +4166,49 @@ impl<'a> Bake<'a> {
     /// alive; that is the whole of the coupling between entries, and it is why
     /// the order — while deterministic — is stated rather than left to be
     /// inferred.
+    /// Read one diagnostic return witness for every relation still standing at
+    /// `now`. This is deliberately a closing read over immutable borrows: it
+    /// neither clears stores nor changes a community, relation, tally, stream,
+    /// or epoch result.
+    fn diagnostic_returns_at_now(&self) -> Vec<DiagnosticReturnWitness> {
+        let mut holdings: BTreeMap<usize, usize> = BTreeMap::new();
+        for relation in self.tribute.values() {
+            *holdings.entry(relation.patron).or_insert(0) += 1;
+        }
+
+        self.tribute
+            .iter()
+            .map(|(&subordinate, relation)| {
+                let patron = relation.patron;
+                let portfolio = holdings
+                    .get(&patron)
+                    .copied()
+                    .expect("every standing relation contributes to its patron portfolio");
+                let share = self.communities[patron].stores / portfolio as f64;
+                let protection = share
+                    / self.communities[subordinate]
+                        .population
+                        .max(DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR);
+                let goods = share / relation.assessment.max(DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR);
+                let legitimacy = self.communities[subordinate].population
+                    / relation
+                        .last_seen_population
+                        .max(DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR);
+
+                DiagnosticReturnWitness {
+                    subordinate: self.communities[subordinate].id,
+                    patron: self.communities[patron].id,
+                    protection,
+                    goods,
+                    legitimacy,
+                    band: diagnostic_return_band(protection, goods, legitimacy),
+                    classification: classify_diagnostic_return(protection, goods, legitimacy),
+                    conservation_residual: 0.0,
+                }
+            })
+            .collect()
+    }
+
     fn resolve_flights(&mut self, fleeing: Vec<usize>, era: &EraClimate, year: f64) {
         for sub in fleeing {
             self.take_flight(sub, era, year);
@@ -5595,6 +5747,7 @@ pub fn bake(
             since: t.since,
         })
         .collect();
+    let diagnostic_returns = bake.diagnostic_returns_at_now();
 
     // No final person-years sweep is needed here: the epoch loop above runs
     // `while year < end_year`, so its last iteration's own end-of-epoch
@@ -5604,6 +5757,7 @@ pub fn bake(
         records: bake.records,
         now,
         tribute,
+        diagnostic_returns,
         tally: bake.tally,
         exchange: bake.exchange,
     }
@@ -6458,6 +6612,93 @@ mod tests {
             let geo = Geosphere::new(1);
             VertexMap::from_fn(&geo, |_| 0.0)
         })
+    }
+
+    #[test]
+    fn diagnostic_return_read_preserves_bake_state_and_is_deterministic() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let patron_site = geo
+            .neighbors(Vertex(0))
+            .iter()
+            .next()
+            .copied()
+            .expect("fixture globe has a patron site");
+        let subordinate = bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            12.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        let patron = bake.open(
+            KindId("goblin"),
+            patron_site,
+            0.0,
+            20.0,
+            Founding::Genesis(patron_site),
+            None,
+            0.0,
+        );
+        bake.communities[subordinate].stores = 7.5;
+        bake.communities[patron].stores = 23.0;
+        bake.records[subordinate].core.function = Function::Trade;
+        bake.records[patron].core.function = Function::Fort;
+        bake.tribute.insert(
+            subordinate,
+            Tribute {
+                patron,
+                assessment: 4.0,
+                since: 0.0,
+                last_seen_population: 10.0,
+            },
+        );
+        bake.tally.tribute_collected = 3.25;
+        bake.exchange.attempts = 2;
+        bake.epoch_growth[subordinate] = 1.5;
+
+        let snapshot = || {
+            (
+                bake.records.clone(),
+                bake.communities
+                    .iter()
+                    .map(|community| (community.population, community.stores))
+                    .collect::<Vec<_>>(),
+                bake.tribute
+                    .iter()
+                    .map(|(&subordinate, tribute)| {
+                        (
+                            subordinate,
+                            tribute.patron,
+                            tribute.assessment,
+                            tribute.since,
+                            tribute.last_seen_population,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+                bake.tally,
+                bake.exchange,
+                bake.epoch_growth.clone(),
+            )
+        };
+        let before = snapshot();
+        let first = bake.diagnostic_returns_at_now();
+        let after = snapshot();
+        let second = bake.diagnostic_returns_at_now();
+
+        assert_eq!(first, second, "diagnostic witness must be deterministic");
+        assert_eq!(before, after, "diagnostic read must not alter bake state");
+        assert_eq!(
+            first.len(),
+            1,
+            "fixture must exercise one standing relation"
+        );
     }
 
     /// The northernmost and southernmost vertices of the fixture globe — the pair

@@ -223,6 +223,7 @@ windows/worldgen/tests/suite/social_projection.rs	1	identity:1
 windows/worldgen/tests/suite/solitary_tongue.rs	1	unmigrated:1
 windows/worldgen/tests/suite/species_worlds.rs	5	unmigrated:5
 windows/worldgen/tests/suite/staple_d2_probe.rs	5	identity:5
+windows/worldgen/tests/suite/staple_d3_probe.rs	1	identity:1
 windows/worldgen/tests/suite/stope_variety_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/subterranean_energy_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/survivorship_probe.rs	1	unmigrated:1
