@@ -977,6 +977,20 @@ fixed roster must report this state rather than panic.
 **Evidence:** post-Task-5 local fixed-roster run, seed 1; `missing_projections`
 empty and `phase_incomplete_units` populated. No census run.
 
+## #21 [Review finding] — Nonzero partial phases remain fatal
+
+Independent review found that Task 6's first correction grouped zero-phase
+observations with nonzero phase counts that are not complete epoch multiples.
+That would let malformed counts such as 11 or 13 escape the fixed-roster
+integrity assertion as `IncompleteMeasurement`.
+
+**Decision:** only `phase_count == 0` is the explicit incomplete observation
+branch. A nonzero count that is not divisible by the epoch phase count remains
+`InvalidMeasurement`; restore a regression test for that severity boundary.
+
+**Evidence:** scoped review of `c90c440fa`; no roster or census run after the
+finding.
+
 ## #21 [Implementation] — Explicit incompleteness remains reportable
 
 Task 6 implements #20 with a distinct `IncompleteMeasurement` seed verdict.
