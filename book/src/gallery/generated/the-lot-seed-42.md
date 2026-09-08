@@ -80,7 +80,22 @@ They lived in tropical latitudes, and coral-reef country. [5] [32] [9]
 The sun was wholly taken 1 time over this life, the first at age 9. [33]
 The ground under them gave nothing — the ground held for the whole of this life. [34]
 They ate other living things — prey, detritus, or their remains. [35]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -157,7 +172,22 @@ They lived in tropical latitudes, and temperate-forest country. [5] [31] [9]
 The sun was wholly taken 4 times over this life, the first at age 27. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -233,7 +263,22 @@ They lived in tropical latitudes, and temperate-forest country. [6] [31] [10]
 The sun was never wholly taken in this life. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -309,7 +354,22 @@ They lived in tropical latitudes, and coral-reef country. [5] [26] [9]
 The sun was wholly taken 15 times over this life, the first at age 11. [27]
 The ground under them gave nothing — the ground held for the whole of this life. [28]
 They ate other living things — prey, detritus, or their remains. [29]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -380,7 +440,22 @@ They lived in tropical latitudes, and tropical-rainforest country. [5] [31] [9]
 The sun was wholly taken 1 time over this life, the first at age 7. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -456,7 +531,22 @@ They lived in tropical latitudes, and temperate-forest country. [6] [36] [10]
 The sun was wholly taken 6 times over this life, the first at age 2. [37]
 The ground under them gave nothing — the ground held for the whole of this life. [38]
 They ate other living things — prey, detritus, or their remains. [39]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -537,7 +627,22 @@ They lived in tropical latitudes, and temperate-forest country. [5] [32] [9]
 The sun was never wholly taken in this life. [33]
 The ground under them gave nothing — the ground held for the whole of this life. [34]
 They ate other living things — prey, detritus, or their remains. [35]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -614,7 +719,22 @@ They lived in tropical latitudes, and temperate-forest country. [5] [31] [9]
 The sun was wholly taken 4 times over this life, the first at age 25. [32]
 The ground under them gave nothing — the ground held for the whole of this life. [33]
 They ate other living things — prey, detritus, or their remains. [34]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -690,7 +810,22 @@ They lived in temperate latitudes, and temperate-rainforest country. [5] [32] [9
 The sun was never wholly taken in this life. [33]
 The ground under them gave nothing — the ground held for the whole of this life. [34]
 They ate other living things — prey, detritus, or their remains. [35]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
@@ -767,7 +902,22 @@ They lived in temperate latitudes, and taiga country. [6] [28] [10]
 The sun was wholly taken 3 times over this life, the first at age 27. [29]
 The ground under them gave nothing — the ground held for the whole of this life. [30]
 They ate other living things — prey, detritus, or their remains. [31]
-The record keeps no sex, household, trade or letters for anyone; those four silences are the world's, not this telling's.
+Nothing in the record says what sex traits they had: no realized person is committed for this life.
+Nothing in the record says what reproductive role they held: no realized person is committed for this life.
+Nothing in the record says how they identified: no realized person is committed for this life.
+Nothing in the record says how others recognized them: no realized person is committed for this life.
+Nothing in the record says what descent relations they had: no realized person is committed for this life.
+Nothing in the record says what associations they formed: no realized person is committed for this life.
+Nothing in the record says whether they had children: no realized person is committed for this life.
+Nothing in the record says whether they had siblings: no realized person is committed for this life.
+Nothing in the record says what their descent was: no realized person is committed for this life.
+Nothing in the record says whether adoption or custody occurred: no realized person is committed for this life.
+Nothing in the record says who cared for whom: no realized person is committed for this life.
+Nothing in the record says which groups they joined: no realized person is committed for this life.
+Nothing in the record says whether they migrated: no realized person is committed for this life.
+Nothing in the record says whether a parent died: no realized person is committed for this life.
+Nothing in the record says whether inheritance occurred: no realized person is committed for this life.
+The record keeps no trade or letters for anyone; those two silences are the world's, not this telling's.
 
 ### Sources
 
