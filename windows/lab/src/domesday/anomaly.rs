@@ -818,7 +818,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluable_columns_measured_surface_on_the_287_column_census() {
+    fn evaluable_columns_measured_surface_on_the_292_column_census() {
         // Pinned so a future census refresh that moves this materially is
         // visible here, not just in prose. See task-4-report.md for the
         // comparison against the spec's original 204-column figure
@@ -912,6 +912,13 @@ mod tests {
         // committed fixture had read PREDATES for these columns until this
         // refresh (the additive case), which is why this pin did not move
         // when the metrics were registered.
+        // THE MURRAIN (2026-09-07, canonical census on lefford at
+        // 85ef1edd3089, goldens delivered as c90072b92): evaluable 176 ->
+        // 180, excluded unchanged at 52, metric columns 287 -> 292 (295 CSV
+        // columns less `seed`, `pin_set` and `refusal`). Four of the five new
+        // epidemic/Lot columns vary across the 1000 worlds and land
+        // EVALUABLE; the remaining new column is structurally absent and does
+        // not enter either surface.
         // The test's NAME carries the census's metric-column count (290 CSV
         // columns less `seed`, `pin_set` and `refusal`);
         // `docs/timings/subfloor-roster.tsv`
@@ -921,7 +928,7 @@ mod tests {
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            176,
+            180,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
