@@ -1,6 +1,7 @@
 use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_worldgen::district::{
-    DistrictBasis, DistrictConfig, DistrictId, DistrictInterval, DistrictStatus, project_districts,
+    DistrictBasis, DistrictConfig, DistrictContinuityState, DistrictId, DistrictInterval,
+    DistrictStatus, compare_districts, project_districts,
 };
 use hornvale_worldgen::relation::{
     RelationAssertion, RelationDirection, RelationDirectionPolicy, RelationInterval, RelationKind,
@@ -52,6 +53,29 @@ fn assertion_during(
     start: i64,
     end: i64,
 ) -> RelationAssertion {
+    assertion_with_recurrence(
+        kind,
+        from,
+        to,
+        direction,
+        measure,
+        start,
+        end,
+        RelationRecurrence::Once,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn assertion_with_recurrence(
+    kind: RelationKind,
+    from: &str,
+    to: &str,
+    direction: RelationDirection,
+    measure: f64,
+    start: i64,
+    end: i64,
+    recurrence: RelationRecurrence,
+) -> RelationAssertion {
     RelationAssertion {
         kind,
         participants: vec![
@@ -65,7 +89,7 @@ fn assertion_during(
             },
         ],
         interval: relation_interval(start, end),
-        recurrence: RelationRecurrence::Once,
+        recurrence,
         direction,
         measure: RelationMeasure::new(measure),
         provenance: RelationProvenance::new(format!("fixture:{from}:{to}")),
@@ -698,4 +722,344 @@ fn projection_is_pure_over_stream_time_source_assertions_and_world_facts() {
             .iter()
             .all(|member| member.as_str().starts_with("aggregate:"))
     );
+}
+
+#[test]
+fn uninterrupted_evidence_establishes_event_continuity() {
+    // Catches comparing projection-local ids literally (their intervals
+    // differ) or treating every repeated observation as recurrence.
+    let view = RelationView::new(vec![assertion_during(
+        RelationKind::SpatialAdjacency,
+        "locus:a",
+        "locus:b",
+        RelationDirection::Symmetric,
+        1.0,
+        0,
+        9,
+    )])
+    .unwrap();
+    let previous_interval = district_interval(0, 4);
+    let current_interval = district_interval(5, 9);
+    let cfg = config(RelationDirectionPolicy::Symmetric);
+    let previous = project_districts(&view, DistrictBasis::Spatial, previous_interval, &cfg);
+    let current = project_districts(&view, DistrictBasis::Spatial, current_interval, &cfg);
+
+    let continuity = compare_districts(&previous, &current, &cfg);
+
+    assert_eq!(continuity.previous_interval, previous_interval);
+    assert_eq!(continuity.current_interval, current_interval);
+    assert_eq!(
+        continuity.states,
+        vec![DistrictContinuityState::EventContinuity {
+            previous: district_id(DistrictBasis::Spatial, previous_interval, "locus:a"),
+            current: district_id(DistrictBasis::Spatial, current_interval, "locus:a"),
+        }]
+    );
+}
+
+#[test]
+fn the_ring_recurs_on_matching_seasonal_windows() {
+    // Catches interval selection that ignores periodic occurrences and a
+    // comparator that mistakes a periodic gap for uninterrupted continuity.
+    let view = RelationView::new(vec![assertion_with_recurrence(
+        RelationKind::Access,
+        "cohort:ring",
+        "locus:summer-ground",
+        RelationDirection::Reciprocal,
+        1.0,
+        0,
+        2,
+        RelationRecurrence::Periodic { period_ticks: 10 },
+    )])
+    .unwrap();
+    let previous_interval = district_interval(0, 2);
+    let current_interval = district_interval(10, 12);
+    let cfg = config(RelationDirectionPolicy::Reciprocal);
+    let previous = project_districts(&view, DistrictBasis::Access, previous_interval, &cfg);
+    let current = project_districts(&view, DistrictBasis::Access, current_interval, &cfg);
+
+    assert_eq!(previous.status, DistrictStatus::Resolved);
+    assert_eq!(current.status, DistrictStatus::Resolved);
+    assert_eq!(
+        compare_districts(&previous, &current, &cfg).states,
+        vec![DistrictContinuityState::Recurrence {
+            previous: district_id(DistrictBasis::Access, previous_interval, "cohort:ring"),
+            current: district_id(DistrictBasis::Access, current_interval, "cohort:ring"),
+            period_ticks: 10,
+        }]
+    );
+}
+
+#[test]
+fn the_drift_recomposes_one_district_into_ordered_successors() {
+    // Catches one-to-one-only matching, member-overlap identity inference,
+    // and successor order inherited from the input vector.
+    let previous_view = RelationView::new(vec![
+        assertion_during(
+            RelationKind::SpatialAdjacency,
+            "locus:a",
+            "locus:b",
+            RelationDirection::Symmetric,
+            1.0,
+            0,
+            9,
+        ),
+        assertion_during(
+            RelationKind::SpatialAdjacency,
+            "locus:b",
+            "locus:c",
+            RelationDirection::Symmetric,
+            1.0,
+            0,
+            9,
+        ),
+        assertion_during(
+            RelationKind::SpatialAdjacency,
+            "locus:c",
+            "locus:d",
+            RelationDirection::Symmetric,
+            1.0,
+            0,
+            9,
+        ),
+    ])
+    .unwrap();
+    let current_view = RelationView::new(vec![
+        assertion_during(
+            RelationKind::SpatialAdjacency,
+            "locus:c",
+            "locus:d",
+            RelationDirection::Symmetric,
+            1.0,
+            10,
+            19,
+        ),
+        assertion_during(
+            RelationKind::SpatialAdjacency,
+            "locus:a",
+            "locus:b",
+            RelationDirection::Symmetric,
+            1.0,
+            10,
+            19,
+        ),
+    ])
+    .unwrap();
+    let previous_interval = district_interval(0, 9);
+    let current_interval = district_interval(10, 19);
+    let cfg = config(RelationDirectionPolicy::Symmetric);
+    let previous = project_districts(
+        &previous_view,
+        DistrictBasis::Spatial,
+        previous_interval,
+        &cfg,
+    );
+    let current = project_districts(
+        &current_view,
+        DistrictBasis::Spatial,
+        current_interval,
+        &cfg,
+    );
+    let mut reversed_current = current.clone();
+    reversed_current.districts.reverse();
+    let expected = vec![DistrictContinuityState::Recomposed {
+        previous: vec![district_id(
+            DistrictBasis::Spatial,
+            previous_interval,
+            "locus:a",
+        )],
+        current: vec![
+            district_id(DistrictBasis::Spatial, current_interval, "locus:a"),
+            district_id(DistrictBasis::Spatial, current_interval, "locus:c"),
+        ],
+    }];
+
+    assert_eq!(
+        compare_districts(&previous, &current, &cfg).states,
+        expected
+    );
+    assert_eq!(
+        compare_districts(&previous, &current, &cfg),
+        compare_districts(&previous, &reversed_current, &cfg)
+    );
+}
+
+#[test]
+fn unmatched_previous_district_dissolves_at_the_current_interval() {
+    // Catches silently dropping a district when no successor has explicit
+    // continuity evidence.
+    let previous_interval = district_interval(0, 9);
+    let current_interval = district_interval(10, 19);
+    let cfg = config(RelationDirectionPolicy::Symmetric);
+    let previous = project_districts(
+        &RelationView::new(vec![assertion_during(
+            RelationKind::SpatialAdjacency,
+            "locus:a",
+            "locus:b",
+            RelationDirection::Symmetric,
+            1.0,
+            0,
+            9,
+        )])
+        .unwrap(),
+        DistrictBasis::Spatial,
+        previous_interval,
+        &cfg,
+    );
+    let current = project_districts(
+        &RelationView::new(Vec::new()).unwrap(),
+        DistrictBasis::Spatial,
+        current_interval,
+        &cfg,
+    );
+
+    assert_eq!(
+        compare_districts(&previous, &current, &cfg).states,
+        vec![DistrictContinuityState::Dissolved {
+            previous: district_id(DistrictBasis::Spatial, previous_interval, "locus:a"),
+            at: WorldTime::from_ticks(10),
+        }]
+    );
+}
+
+#[test]
+fn transient_candidates_remain_distinct_from_refused_candidates() {
+    // Catches treating a supported short-lived district and a candidate that
+    // failed configured evidence support as the same temporal outcome.
+    let previous_interval = district_interval(-1, -1);
+    let current_interval = district_interval(0, 2);
+    let empty = RelationView::new(Vec::new()).unwrap();
+    let view = RelationView::new(vec![assertion_during(
+        RelationKind::SpatialAdjacency,
+        "locus:a",
+        "locus:b",
+        RelationDirection::Symmetric,
+        1.0,
+        1,
+        1,
+    )])
+    .unwrap();
+    let mut transient_cfg = config(RelationDirectionPolicy::Symmetric);
+    transient_cfg.minimum_duration_ticks = 2;
+    let previous = project_districts(
+        &empty,
+        DistrictBasis::Spatial,
+        previous_interval,
+        &transient_cfg,
+    );
+    let transient = project_districts(
+        &view,
+        DistrictBasis::Spatial,
+        current_interval,
+        &transient_cfg,
+    );
+
+    assert_eq!(
+        compare_districts(&previous, &transient, &transient_cfg).states,
+        vec![DistrictContinuityState::Transient {
+            district: district_id(DistrictBasis::Spatial, current_interval, "locus:a"),
+        }]
+    );
+
+    let mut refusing_cfg = transient_cfg;
+    refusing_cfg.minimum_evidence = 2;
+    let refused = project_districts(
+        &view,
+        DistrictBasis::Spatial,
+        current_interval,
+        &refusing_cfg,
+    );
+    assert_eq!(refused.status, DistrictStatus::InsufficientEvidence);
+    assert!(
+        compare_districts(&previous, &refused, &refusing_cfg)
+            .states
+            .is_empty()
+    );
+}
+
+#[test]
+fn overlapping_members_and_anchor_do_not_establish_identity() {
+    // Catches fuzzy matching by Jaccard overlap, member intersection, or a
+    // shared minimum-member anchor without shared producer evidence.
+    let previous_interval = district_interval(0, 9);
+    let current_interval = district_interval(10, 19);
+    let cfg = config(RelationDirectionPolicy::Symmetric);
+    let previous = project_districts(
+        &RelationView::new(vec![
+            assertion_during(
+                RelationKind::SpatialAdjacency,
+                "locus:a",
+                "locus:b",
+                RelationDirection::Symmetric,
+                1.0,
+                0,
+                9,
+            ),
+            assertion_during(
+                RelationKind::SpatialAdjacency,
+                "locus:b",
+                "locus:c",
+                RelationDirection::Symmetric,
+                1.0,
+                0,
+                9,
+            ),
+        ])
+        .unwrap(),
+        DistrictBasis::Spatial,
+        previous_interval,
+        &cfg,
+    );
+    let current = project_districts(
+        &RelationView::new(vec![
+            assertion_during(
+                RelationKind::SpatialAdjacency,
+                "locus:a",
+                "locus:d",
+                RelationDirection::Symmetric,
+                1.0,
+                10,
+                19,
+            ),
+            assertion_during(
+                RelationKind::SpatialAdjacency,
+                "locus:d",
+                "locus:b",
+                RelationDirection::Symmetric,
+                1.0,
+                10,
+                19,
+            ),
+        ])
+        .unwrap(),
+        DistrictBasis::Spatial,
+        current_interval,
+        &cfg,
+    );
+
+    assert_eq!(
+        intersection(
+            &previous.districts[0].members,
+            &current.districts[0].members
+        ),
+        refs(&["locus:a", "locus:b"])
+    );
+    assert_eq!(
+        previous.districts[0].id.anchor,
+        current.districts[0].id.anchor
+    );
+    assert_eq!(
+        compare_districts(&previous, &current, &cfg).states,
+        vec![DistrictContinuityState::Dissolved {
+            previous: district_id(DistrictBasis::Spatial, previous_interval, "locus:a"),
+            at: WorldTime::from_ticks(10),
+        }]
+    );
+}
+
+fn intersection(
+    left: &BTreeSet<RelationReference>,
+    right: &BTreeSet<RelationReference>,
+) -> BTreeSet<RelationReference> {
+    left.intersection(right).cloned().collect()
 }

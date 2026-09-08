@@ -2,7 +2,7 @@
 
 use crate::relation::{
     RelationAssertion, RelationBasisView, RelationDirection, RelationDirectionPolicy,
-    RelationMeasureFilter, RelationReference, RelationRefusal, RelationView,
+    RelationMeasureFilter, RelationRecurrence, RelationReference, RelationRefusal, RelationView,
 };
 use hornvale_kernel::WorldTime;
 use std::collections::{BTreeMap, BTreeSet};
@@ -130,6 +130,246 @@ pub struct DistrictProjectionSet {
     overlap_limit: usize,
 }
 
+/// Explicit temporal relation between two district projection intervals.
+/// type-audit: bare-ok(count)
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum DistrictContinuityState {
+    /// Uninterrupted evidence supports one district in both intervals.
+    EventContinuity {
+        /// Projection-local identity in the earlier interval.
+        previous: DistrictId,
+        /// Projection-local identity in the later interval.
+        current: DistrictId,
+    },
+    /// Periodic evidence supports corresponding districts in both intervals.
+    Recurrence {
+        /// Projection-local identity in the earlier interval.
+        previous: DistrictId,
+        /// Projection-local identity in the later interval.
+        current: DistrictId,
+        /// Exact recurrence period in world ticks.
+        period_ticks: i64,
+    },
+    /// A supported projection exists for less than the configured duration.
+    Transient {
+        /// Projection-local identity of the short-lived district.
+        district: DistrictId,
+    },
+    /// A previously supported district has no evidence-backed successor.
+    Dissolved {
+        /// Projection-local identity in the earlier interval.
+        previous: DistrictId,
+        /// Start of the interval in which no successor exists.
+        at: WorldTime,
+    },
+    /// Evidence from one or more prior districts supports a changed set of successors.
+    Recomposed {
+        /// Earlier projection-local identities in deterministic order.
+        previous: Vec<DistrictId>,
+        /// Later projection-local identities in deterministic order.
+        current: Vec<DistrictId>,
+    },
+}
+
+/// Complete, deterministic temporal comparison of two projection sets.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DistrictContinuity {
+    /// Interval supplying the earlier projections.
+    pub previous_interval: DistrictInterval,
+    /// Interval supplying the later projections.
+    pub current_interval: DistrictInterval,
+    /// Explicit continuity relations in deterministic order.
+    pub states: Vec<DistrictContinuityState>,
+}
+
+/// Compare two projection sets without reading or mutating world state.
+pub fn compare_districts(
+    previous: &DistrictProjectionSet,
+    current: &DistrictProjectionSet,
+    config: &DistrictConfig,
+) -> DistrictContinuity {
+    let mut previous_districts: Vec<&DistrictProjection> = previous
+        .districts
+        .iter()
+        .filter(|district| persistent_and_supported(district, config))
+        .collect();
+    let mut current_districts: Vec<&DistrictProjection> = current
+        .districts
+        .iter()
+        .filter(|district| persistent_and_supported(district, config))
+        .collect();
+    previous_districts.sort_by(|left, right| left.id.cmp(&right.id));
+    current_districts.sort_by(|left, right| left.id.cmp(&right.id));
+
+    let links: Vec<BTreeSet<usize>> = previous_districts
+        .iter()
+        .map(|earlier| {
+            current_districts
+                .iter()
+                .enumerate()
+                .filter_map(|(index, later)| continuity_relation(earlier, later).map(|_| index))
+                .collect()
+        })
+        .collect();
+    let reverse_links: Vec<BTreeSet<usize>> = (0..current_districts.len())
+        .map(|current_index| {
+            links
+                .iter()
+                .enumerate()
+                .filter_map(|(previous_index, successors)| {
+                    successors
+                        .contains(&current_index)
+                        .then_some(previous_index)
+                })
+                .collect()
+        })
+        .collect();
+
+    let mut states: Vec<DistrictContinuityState> = current
+        .districts
+        .iter()
+        .filter(|district| district.status == DistrictStatus::TransientOnly)
+        .map(|district| DistrictContinuityState::Transient {
+            district: district.id.clone(),
+        })
+        .collect();
+    let mut visited_previous = BTreeSet::new();
+
+    for start in 0..previous_districts.len() {
+        if links[start].is_empty() || visited_previous.contains(&start) {
+            continue;
+        }
+        let mut component_previous = BTreeSet::from([start]);
+        let mut component_current = BTreeSet::new();
+        let mut previous_frontier = BTreeSet::from([start]);
+        let mut current_frontier = BTreeSet::new();
+        while !previous_frontier.is_empty() || !current_frontier.is_empty() {
+            while let Some(previous_index) = previous_frontier.pop_first() {
+                visited_previous.insert(previous_index);
+                for &current_index in &links[previous_index] {
+                    if component_current.insert(current_index) {
+                        current_frontier.insert(current_index);
+                    }
+                }
+            }
+            while let Some(current_index) = current_frontier.pop_first() {
+                for &previous_index in &reverse_links[current_index] {
+                    if component_previous.insert(previous_index) {
+                        previous_frontier.insert(previous_index);
+                    }
+                }
+            }
+        }
+
+        if component_previous.len() == 1 && component_current.len() == 1 {
+            let previous_index = *component_previous.first().expect("one previous district");
+            let current_index = *component_current.first().expect("one current district");
+            let earlier = previous_districts[previous_index];
+            let later = current_districts[current_index];
+            let relation = continuity_relation(earlier, later)
+                .expect("component edges are evidence-backed continuity relations");
+            states.push(match relation {
+                PairContinuity::Event => DistrictContinuityState::EventContinuity {
+                    previous: earlier.id.clone(),
+                    current: later.id.clone(),
+                },
+                PairContinuity::Recurrence(period_ticks) => DistrictContinuityState::Recurrence {
+                    previous: earlier.id.clone(),
+                    current: later.id.clone(),
+                    period_ticks,
+                },
+            });
+        } else {
+            states.push(DistrictContinuityState::Recomposed {
+                previous: component_previous
+                    .into_iter()
+                    .map(|index| previous_districts[index].id.clone())
+                    .collect(),
+                current: component_current
+                    .into_iter()
+                    .map(|index| current_districts[index].id.clone())
+                    .collect(),
+            });
+        }
+    }
+
+    for (index, district) in previous_districts.into_iter().enumerate() {
+        if !visited_previous.contains(&index) {
+            states.push(DistrictContinuityState::Dissolved {
+                previous: district.id.clone(),
+                at: current.interval.start,
+            });
+        }
+    }
+    states.sort();
+
+    DistrictContinuity {
+        previous_interval: previous.interval,
+        current_interval: current.interval,
+        states,
+    }
+}
+
+fn persistent_and_supported(district: &DistrictProjection, config: &DistrictConfig) -> bool {
+    district.status == DistrictStatus::Resolved
+        && district.members.len() >= config.minimum_members
+        && district.evidence.len() >= config.minimum_evidence
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PairContinuity {
+    Event,
+    Recurrence(i64),
+}
+
+fn continuity_relation(
+    previous: &DistrictProjection,
+    current: &DistrictProjection,
+) -> Option<PairContinuity> {
+    if previous.id.basis != current.id.basis {
+        return None;
+    }
+
+    let mut event_continuity = false;
+    let mut recurrence_periods = BTreeSet::new();
+    for earlier in &previous.evidence {
+        let Some(earlier_occurrence) = occurrence_for(earlier, previous.id.interval) else {
+            continue;
+        };
+        for later in &current.evidence {
+            if !same_evidence_lineage(earlier, later) {
+                continue;
+            }
+            let Some(later_occurrence) = occurrence_for(later, current.id.interval) else {
+                continue;
+            };
+            if let RelationRecurrence::Periodic { period_ticks } = earlier.recurrence
+                && later_occurrence.start > earlier_occurrence.start
+                && (later_occurrence.start - earlier_occurrence.start) % i128::from(period_ticks)
+                    == 0
+            {
+                recurrence_periods.insert(period_ticks);
+            } else if earlier_occurrence.end.saturating_add(1) >= later_occurrence.start {
+                event_continuity = true;
+            }
+        }
+    }
+
+    recurrence_periods
+        .pop_first()
+        .map(PairContinuity::Recurrence)
+        .or_else(|| event_continuity.then_some(PairContinuity::Event))
+}
+
+fn same_evidence_lineage(left: &RelationAssertion, right: &RelationAssertion) -> bool {
+    left.kind == right.kind
+        && left.participants == right.participants
+        && left.recurrence == right.recurrence
+        && left.direction == right.direction
+        && left.measure == right.measure
+        && left.provenance == right.provenance
+}
+
 impl DistrictProjectionSet {
     /// Compare two projection sets without inferring cross-interval identity.
     ///
@@ -199,13 +439,16 @@ pub fn project_districts(
         );
     }
 
-    let basis_view = select_basis_view(view, basis, config);
+    let selected = RelationView::new(
+        view.iter()
+            .filter(|assertion| occurrence_for(assertion, interval).is_some())
+            .cloned()
+            .collect(),
+    )
+    .expect("a subset of a validated relation view remains valid");
+    let basis_view = select_basis_view(&selected, basis, config);
     let refusals = basis_view.refusals().to_vec();
-    let assertions: Vec<RelationAssertion> = basis_view
-        .iter()
-        .filter(|assertion| intersects(assertion, interval))
-        .cloned()
-        .collect();
+    let assertions: Vec<RelationAssertion> = basis_view.iter().cloned().collect();
 
     let candidates = match &config.direction {
         RelationDirectionPolicy::SourceReachable(source)
@@ -301,8 +544,35 @@ fn select_basis_view(
     }
 }
 
-fn intersects(assertion: &RelationAssertion, interval: DistrictInterval) -> bool {
-    assertion.interval.start <= interval.end && interval.start <= assertion.interval.end
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct Occurrence {
+    start: i128,
+    end: i128,
+}
+
+fn occurrence_for(assertion: &RelationAssertion, interval: DistrictInterval) -> Option<Occurrence> {
+    let source_start = i128::from(assertion.interval.start.ticks());
+    let source_end = i128::from(assertion.interval.end.ticks());
+    let requested_start = i128::from(interval.start.ticks());
+    let requested_end = i128::from(interval.end.ticks());
+    let offset = match assertion.recurrence {
+        RelationRecurrence::Once => 0,
+        RelationRecurrence::Periodic { period_ticks } => {
+            let period = i128::from(period_ticks);
+            if requested_start <= source_end {
+                0
+            } else {
+                (requested_start - source_end + period - 1) / period
+            }
+        }
+    };
+    let period = match assertion.recurrence {
+        RelationRecurrence::Once => 0,
+        RelationRecurrence::Periodic { period_ticks } => i128::from(period_ticks),
+    };
+    let start = source_start + offset * period;
+    let end = source_end + offset * period;
+    (start <= requested_end && requested_start <= end).then_some(Occurrence { start, end })
 }
 
 fn component_candidates(assertions: &[RelationAssertion]) -> Vec<Candidate> {
@@ -454,16 +724,17 @@ fn evidence_inside(
 fn common_duration_ticks(evidence: &[RelationAssertion], interval: DistrictInterval) -> i64 {
     let start = evidence
         .iter()
-        .map(|assertion| assertion.interval.start)
-        .fold(interval.start, WorldTime::max);
+        .filter_map(|assertion| occurrence_for(assertion, interval))
+        .map(|occurrence| occurrence.start.max(i128::from(interval.start.ticks())))
+        .fold(i128::from(interval.start.ticks()), i128::max);
     let end = evidence
         .iter()
-        .map(|assertion| assertion.interval.end)
-        .fold(interval.end, WorldTime::min);
-    end.ticks()
-        .saturating_sub(start.ticks())
+        .filter_map(|assertion| occurrence_for(assertion, interval))
+        .map(|occurrence| occurrence.end.min(i128::from(interval.end.ticks())))
+        .fold(i128::from(interval.end.ticks()), i128::min);
+    end.saturating_sub(start)
         .saturating_add(1)
-        .max(0)
+        .clamp(0, i128::from(i64::MAX)) as i64
 }
 
 fn articulation_members(
