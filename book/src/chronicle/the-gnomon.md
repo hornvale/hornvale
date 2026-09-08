@@ -699,3 +699,17 @@ one. The six-epoch series stands where it stood, and the verdict remains
 operations: diff the census first, and when the diff says additive, the single
 ablation of the new family *is* the ladder, with nothing further to climb.
 
+## Postscript 9 — the world moves under an unchanged instrument (The Murrain, 2026-09-08)
+
+The Murrain changed committed world facts by absorbing the social-household
+layer. The anomaly report's evaluable surface and census columns did not move,
+and the injection arms and scorer were unchanged. The witness nevertheless
+reads **64/120 = 0.5333**, with no void pairs. Arm for arm: geothermal 20/20,
+unconformity 2/20, aquifer 20/20, karst 2/20, pantheon 6/20, phonology 14/20.
+The bar stays at 0.60.
+
+This is the tenth canonical reading and the fourth consecutive incomparable
+one. It is not a new point in the six-epoch comparable series, whose verdict
+remains “cannot tell.” The reusable distinction is that a census can keep its
+columns while changed world facts still move the witness: unchanged instrument
+shape does not imply a comparable world.
