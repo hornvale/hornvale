@@ -104,6 +104,22 @@ fn every_item_id_is_unique_and_every_measurable_item_carries_a_criterion() {
                 item.id
             );
         }
+        // A criterion's discriminating power must be auditable from this file
+        // alone, with no data — because a session that has read the census
+        // can no longer author a band, so the only reviewer who can improve
+        // one is a reader who never sees the numbers. Stating the world in
+        // which the regularity is FALSE is what makes that review possible,
+        // and three criteria that could not redden on their own negation
+        // reached a committed corpus before this was required.
+        if measurable {
+            assert!(
+                item.note.contains("FALSIFYING WORLD"),
+                "{}: a measurable item's note must name the world in which \
+                 its regularity is false, so its power can be audited \
+                 without the census",
+                item.id
+            );
+        }
         if let Some(t) = item.emergence_type {
             assert!(
                 t == 1 || t == 2,
