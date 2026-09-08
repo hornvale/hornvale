@@ -87,6 +87,8 @@
 - Modify: windows/worldgen/src/lib.rs — expose the same-run read-only `History`
   from the existing `ExchangeTreatmentBuild` boundary so the probe can consume
   enabled per-community witnesses without reconstructing or aggregating them.
+- Modify: cli/tests/fixtures/world-build-sites.tsv — roster the probe's one
+  real world build so the commit gate can account for its cost.
 - Modify: docs/superpowers/ledgers/2026-09-08-the-staple-d3b.md — record implementation rulings and probe contract as they occur.
 
 **Interfaces:**
