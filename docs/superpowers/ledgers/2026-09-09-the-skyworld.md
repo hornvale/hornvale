@@ -323,6 +323,45 @@ test-only seam sampler.
 
 ## Rejected for this campaign
 
+## #11 [G5] — Does Skyworld reconstruct its already-built substrate?
+
+**Decision:** retain the direct `skyworld_from(world, terrain, climate,
+config)` construction and the current finite trajectory/rendering paths. Task
+3 adds counter-backed unit probes only; no production cache, saved fact,
+stream, or build-depth change is required.
+
+**Evidence:** the initial integration counter probe red-compiled with
+`E0425: cannot find value TERRAIN_OF_CALLS in crate hornvale_worldgen`, which
+confirms that the reconstruction counters remain crate-private test
+diagnostics. The probes therefore live in `skyworld.rs`'s unit-test module,
+where they reset and read the existing counters without exposing runtime API.
+Generation, all exact trajectory/propagation queries, and every PNG/ordinary
+readout/diagnostic-readout detail path each recorded zero additional terrain
+or climate constructions; repeated queries and renders remained identical and
+left the generated `SkyWorld` equal to its snapshot. The focused cost command
+printed `territories=2 short_samples=4 long_samples=16 sparse_records=1094
+render_pixels=[32768, 32768, 32768]`: samples follow the requested two/eight
+per-territory count, sparse state remains below the 5,136 vertex-by-time
+comparison, and each detail materializes the fixed 256×128 requested raster
+rather than a planet-by-time field.
+
+**Alternatives discarded:** publishing counter reset/read functions would
+make a test diagnostic part of the runtime API; retaining terrain/climate or a
+random stream inside `SkyWorld` would make query order and cache state
+load-bearing; adding a dense planet×time field would defeat the bounded-work
+contract.
+
+**Ideonomy passes / overturns:** one boundary-and-cardinality pass over
+counter visibility, materialized samples, and fixed raster output; no
+overturn. It confirmed that crate-local probes are the narrowest observable
+and that the existing direct references already establish ownership.
+
+**Capture:** `skyworld_generation_reuses_passed_substrate`,
+`rendering_does_not_reconstruct_substrate`,
+`queries_do_not_consume_randomness`, and
+`detail_changes_materialization_not_generation` are unit probes; the focused
+integration cost probe records the active territory/sample/pixel counts.
+
 - A universal `sugar` renaming of world concepts.
 - Individual plankton or full atmospheric particles.
 - A single scalar habitat health value.

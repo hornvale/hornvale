@@ -1175,7 +1175,7 @@ fn propagation_keeps_local_corridor_and_event_shapes_separate() {
 /// Materializing a planet-by-time grid or ignoring the requested sample count
 /// must fail these exact linear-work bounds.
 #[test]
-fn bounded_work_scales_with_active_territories_and_requested_samples() {
+fn cost_scales_with_active_territories_and_requested_samples() {
     let fixture = fixture(42);
     let short = generate_with(
         &fixture,
@@ -1204,6 +1204,16 @@ fn bounded_work_scales_with_active_territories_and_requested_samples() {
         .sum();
     assert_eq!(short_samples, short.territories.len() * 2);
     assert_eq!(long_samples, long.territories.len() * 8);
+
+    let rendered_pixels: Vec<_> = [
+        SkyWorldDetail::Planet,
+        SkyWorldDetail::Regional,
+        SkyWorldDetail::Habitat,
+    ]
+    .into_iter()
+    .map(|detail| png_rgb(&render_skyworld_png(&long, &fixture.terrain, detail)).len() / 3)
+    .collect();
+    assert_eq!(rendered_pixels, vec![256 * 128; 3]);
 
     let materialized_work = long_samples
         + long
@@ -1234,6 +1244,13 @@ fn bounded_work_scales_with_active_territories_and_requested_samples() {
                 .iter()
                 .all(|corridor| corridor.projected.len() <= territory.trajectory.len())
     }));
+    println!(
+        "skyworld cost: territories={} short_samples={} long_samples={} sparse_records={} render_pixels={rendered_pixels:?}",
+        long.territories.len(),
+        short_samples,
+        long_samples,
+        materialized_work
+    );
 }
 
 /// Consuming randomness, iterating territories in caller order, or changing

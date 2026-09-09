@@ -860,6 +860,46 @@ fn stocks_from_fields(fields: &SkyFields, orchard: bool) -> SkyStocks {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        climate_from, propagation_at, render_skyworld_diagnostic_readout, render_skyworld_png,
+        render_skyworld_readout, terrain_of, trajectory_at,
+    };
+
+    // The test fixture deliberately reconstructs the one substrate pair whose
+    // reuse the probes measure (decision 0092's named construction-site rule).
+    #[allow(clippy::disallowed_methods)]
+    fn fixture() -> (World, GeneratedTerrain, GeneratedClimate) {
+        let world = crate::fixture::seed_42_world();
+        let terrain = terrain_of(&world).expect("terrain reconstructs");
+        let climate = climate_from(&world, &terrain).expect("climate derives from terrain");
+        (world, terrain, climate)
+    }
+
+    fn config() -> SkyWorldConfig {
+        SkyWorldConfig {
+            max_projected_fraction: 0.10,
+            trajectory_samples: 8,
+            propagation_radius: 2,
+        }
+    }
+
+    fn reset_substrate_calls() {
+        crate::TERRAIN_OF_CALLS.with(|calls| calls.set(0));
+        crate::CLIMATE_FROM_CALLS.with(|calls| calls.set(0));
+    }
+
+    fn assert_substrate_was_not_reconstructed(context: &str) {
+        assert_eq!(
+            crate::TERRAIN_OF_CALLS.with(|calls| calls.get()),
+            0,
+            "{context} reconstructed terrain"
+        );
+        assert_eq!(
+            crate::CLIMATE_FROM_CALLS.with(|calls| calls.get()),
+            0,
+            "{context} reconstructed climate"
+        );
+    }
 
     #[test]
     fn edifice_bias_adds_to_the_distribution_score() {
@@ -868,5 +908,113 @@ mod tests {
 
         assert_eq!(without_edifice, (0.50, 0.50));
         assert_eq!(with_edifice, (0.75, 0.75));
+    }
+
+    #[test]
+    fn skyworld_generation_reuses_passed_substrate() {
+        let (world, terrain, climate) = fixture();
+        reset_substrate_calls();
+
+        let skyworld = skyworld_from(&world, &terrain, &climate, config());
+
+        assert!(
+            !skyworld.territories.is_empty(),
+            "VACUOUS: fixture generated no territories"
+        );
+        assert_substrate_was_not_reconstructed("skyworld_from");
+    }
+
+    #[test]
+    fn rendering_does_not_reconstruct_substrate() {
+        let (world, terrain, climate) = fixture();
+        let skyworld = skyworld_from(&world, &terrain, &climate, config());
+        let before = skyworld.clone();
+        reset_substrate_calls();
+
+        for detail in [
+            crate::SkyWorldDetail::Planet,
+            crate::SkyWorldDetail::Regional,
+            crate::SkyWorldDetail::Habitat,
+        ] {
+            assert_eq!(
+                render_skyworld_png(&skyworld, &terrain, detail),
+                render_skyworld_png(&skyworld, &terrain, detail),
+                "{detail:?} PNG changed between repeated renders"
+            );
+            assert_eq!(
+                render_skyworld_readout(&skyworld, detail),
+                render_skyworld_readout(&skyworld, detail),
+                "{detail:?} readout changed between repeated renders"
+            );
+            assert_eq!(
+                render_skyworld_diagnostic_readout(&skyworld, detail),
+                render_skyworld_diagnostic_readout(&skyworld, detail),
+                "{detail:?} diagnostic readout changed between repeated renders"
+            );
+        }
+
+        assert_eq!(
+            skyworld, before,
+            "rendering changed generated Skyworld state"
+        );
+        assert_substrate_was_not_reconstructed("rendering");
+    }
+
+    #[test]
+    fn queries_do_not_consume_randomness() {
+        let (world, terrain, climate) = fixture();
+        let skyworld = skyworld_from(&world, &terrain, &climate, config());
+        let before = skyworld.clone();
+        reset_substrate_calls();
+
+        for territory in &skyworld.territories {
+            for sample in territory.trajectory.iter().rev() {
+                assert_eq!(
+                    trajectory_at(&skyworld, territory.id, sample.time_slice),
+                    Some(sample)
+                );
+            }
+            for detail in [
+                SkyPropagationDetail::Local,
+                SkyPropagationDetail::Corridors,
+                SkyPropagationDetail::Events,
+                SkyPropagationDetail::All,
+            ] {
+                assert_eq!(
+                    propagation_at(&skyworld, territory.id, detail),
+                    propagation_at(&skyworld, territory.id, detail),
+                    "{detail:?} propagation changed between repeated queries"
+                );
+            }
+        }
+
+        assert_eq!(skyworld, before, "queries changed generated Skyworld state");
+        assert_substrate_was_not_reconstructed("queries");
+    }
+
+    #[test]
+    fn detail_changes_materialization_not_generation() {
+        let (world, terrain, climate) = fixture();
+        let skyworld = skyworld_from(&world, &terrain, &climate, config());
+        let before = skyworld.clone();
+        reset_substrate_calls();
+
+        let planet = render_skyworld_png(&skyworld, &terrain, crate::SkyWorldDetail::Planet);
+        let regional = render_skyworld_png(&skyworld, &terrain, crate::SkyWorldDetail::Regional);
+        let habitat = render_skyworld_png(&skyworld, &terrain, crate::SkyWorldDetail::Habitat);
+
+        assert_ne!(
+            planet, regional,
+            "planet and regional detail materialized the same PNG"
+        );
+        assert_ne!(
+            regional, habitat,
+            "regional and habitat detail materialized the same PNG"
+        );
+        assert_eq!(
+            skyworld, before,
+            "detail selection changed generated SkyWorld state"
+        );
+        assert_substrate_was_not_reconstructed("detail selection");
     }
 }
