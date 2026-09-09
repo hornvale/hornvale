@@ -1,0 +1,5 @@
+# Underworld Peoples campaign ledger
+
+## #1 [G1] — accession shape · four peoples enter through consumed Underworld signals · the existing Underworld supplies a separate delve ladder and chamber conditions, while the idea registry explicitly keeps aquatic medium distinct from subterranean depth · discarded one-axis “deep dwarf” and four independent niche designs · ideonomy passes / overturns: 1 convergence pass, no overturn; it added the aquatic-medium split and the overlap requirement · capture actions: design recorded in `docs/superpowers/specs/2026-09-08-underworld-peoples-design.md`
+
+## #2 [G2] — design self-review · keep species, environment, seating, and language as separate projections with measured admission branches · this matches the Underworld, Delvers, Axes, and Larder precedents and prevents a roster tail from becoming an allocator rewrite · discarded a new biome taxonomy and surface-elevation proxy · ideonomy passes / overturns: covered by the G1 convergence pass, no new material issue; no overturn · capture actions: explicit non-goals, decision table, and verification gates added to the spec
