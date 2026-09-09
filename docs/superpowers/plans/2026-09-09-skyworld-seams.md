@@ -27,7 +27,7 @@
 
 **Goal:** Make the existing composition boundary observable in tests and record exactly which source values feed each Skyworld layer before changing production APIs.
 
-**Status:** Not Started
+**Status:** Complete — commits `e2eac9dbd` and `7985595d7`; scoped review approved.
 
 **Files:**
 - Modify: `windows/worldgen/tests/suite/skyworld.rs`
