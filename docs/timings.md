@@ -6696,3 +6696,16 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T11:37:33Z | gate-commit | 176.424 | 72.926 | 19.334 | 0.52 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T11:37:33Z | gate-commit | 216.461 | 988.973 | 57.699 | 4.84 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T11:38:33Z | gate-commit | 40.741 | 70.917 | 19.435 | 2.22 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:39:45Z | gate-commit | 62.073 | 74.747 | 19.743 | 1.52 | 0 | 045d8f634 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:46:34Z | gate-commit | 31.610 | 44.272 | 4.585 | 1.55 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T11:48:04Z | gate-commit | 77.860 | 387.890 | 28.378 | 5.35 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:04:18Z | gate-commit | 45.562 | 124.212 | 14.189 | 3.04 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:05:46Z | gate-commit | 33.484 | 47.796 | 10.871 | 1.75 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:07:57Z | gate-commit | 47.054 | 50.758 | 9.650 | 1.28 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:10:35Z | gate-commit | 48.295 | 52.344 | 10.077 | 1.29 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:11:56Z | gate-commit | 32.605 | 45.635 | 9.469 | 1.69 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:12:56Z | gate-commit | 33.514 | 53.246 | 11.564 | 1.93 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:14:28Z | gate-commit | 45.254 | 93.206 | 31.857 | 2.76 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:15:47Z | gate-commit | 62.697 | 89.082 | 24.341 | 1.81 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:16:57Z | gate-commit | 54.477 | 133.943 | 36.300 | 3.13 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:18:18Z | gate-commit | 56.958 | 187.502 | 38.016 | 3.96 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |

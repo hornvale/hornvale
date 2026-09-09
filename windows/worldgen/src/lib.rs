@@ -5913,9 +5913,9 @@ mod gazetteer_wiring_tests {
     }
 
     #[test]
-    fn gazetteer_peoples_is_the_settled_roster_at_fifteen() {
+    fn gazetteer_peoples_is_the_settled_roster_at_nineteen() {
         // Seed-independent: the registry, not any generated world.
-        assert_eq!(gazetteer_peoples().len(), 15);
+        assert_eq!(gazetteer_peoples().len(), 19);
     }
 
     /// The entries this returns must actually carry names — the campaign's
@@ -11878,6 +11878,7 @@ mod tests {
             "desert-dwarf",
             "desert-elf",
             "drow",
+            "duergar",
             "gnoll",
             "goblin",
             "gully-dwarf",
@@ -11886,8 +11887,11 @@ mod tests {
             "hobgoblin",
             "human",
             "kobold",
+            "kuo-toa",
+            "mountain-dwarf",
             "sea-elf",
             "snow-elf",
+            "svirfneblin",
             "wood-elf",
         ]
         .into_iter()
@@ -16820,7 +16824,7 @@ mod tests {
         // rather than defaulted covers all fifteen.
         assert_eq!(
             peoples.len(),
-            15,
+            19,
             "the settling roster moved; re-read this test before re-pinning it"
         );
 

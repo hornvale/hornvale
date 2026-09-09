@@ -4241,7 +4241,7 @@ pub fn registry() -> Vec<Metric> {
             // property of a family, and `monophyly-goblinoid` was named after
             // what used to be its only possible subject.
             name: "monophyly-dwarf",
-            doc: "Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) \
+            doc: "Whether every dwarf daughter's (desert-dwarf, duergar, gully-dwarf, hill-dwarf, mountain-dwarf) \
                    Root derivation.proto matches an INDEPENDENT re-draw of the shared \
                    \"dwarf\" family proto-root for that concept (spec §3: cognates \
                    share a proto ancestor) — never reading the family proto back from a \
@@ -11368,10 +11368,16 @@ fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
 /// control's value is a deliberate act, not a refactor, so the constant stays.
 const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
 
-/// THE DELVERS (C2c): the dwarf family's three daughters — the roster's second
+/// THE DELVERS: the dwarf family's five daughters — the roster's second
 /// multi-member family, and `monophyly-dwarf`'s subject. Same shape, same
 /// rationale and the same drift guard as [`GOBLINOID_DAUGHTERS`].
-const DWARF_DAUGHTERS: [&str; 3] = ["desert-dwarf", "gully-dwarf", "hill-dwarf"];
+const DWARF_DAUGHTERS: [&str; 5] = [
+    "desert-dwarf",
+    "duergar",
+    "gully-dwarf",
+    "hill-dwarf",
+    "mountain-dwarf",
+];
 
 /// THE RADIATION (C2d): the elf family's six daughters — the roster's third
 /// and largest multi-member family, and `monophyly-elf`'s subject. Same shape,

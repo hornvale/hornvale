@@ -91,6 +91,7 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
             "desert-dwarf",
             "desert-elf",
             "drow",
+            "duergar",
             "gnoll",
             "goblin",
             "gully-dwarf",
@@ -99,8 +100,11 @@ fn settled_kinds_are_exactly_the_settling_peoples() {
             "hobgoblin",
             "human",
             "kobold",
+            "kuo-toa",
+            "mountain-dwarf",
             "sea-elf",
             "snow-elf",
+            "svirfneblin",
             "wood-elf"
         ],
         "Settled is exactly the settling peoples (ascending KindId)"
