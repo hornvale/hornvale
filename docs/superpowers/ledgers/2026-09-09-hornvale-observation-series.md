@@ -37,3 +37,14 @@ Ruling: the reviewer’s strict-record findings are load-bearing. Amend Task 1 b
 - **Result:** Manifest parsing, strict validation, approval semantics, CLI validation, and the first internal fixture are implemented and reviewed.
 - **Evidence:** 24 focused tests passed; the reviewer also recorded 404 tests passed, formatting, clippy, type-audit, placement-audit, plumb, and quick-gate success.
 - **Review:** Task review approved with no remaining findings.
+
+## Review ruling — Task 2, round 1
+
+Ruling: reject export for every capability state other than `existing`, and make reruns deterministic in an existing output directory by refusing or isolating stale frame files. The reviewer demonstrated that the current implementation can claim an authoritative packet where no observation surface exists and can report fewer packets than the directory contains. Add regression tests before proceeding.
+
+## Task 2: complete
+
+- **Commits:** `f2836f823` and `80b850f50`
+- **Result:** Deterministic frame packets, source digests, atomic writes, CLI export, unsupported-state refusal, and stale-owned-frame cleanup are implemented.
+- **Evidence:** 30 focused tests passed; independent exports produced identical frame-000 SHA-256 values; formatting and diff checks passed.
+- **Review:** Re-review approved with no remaining findings.
