@@ -1029,3 +1029,18 @@ the new verdict. The complete non-ignored D3B probe module passed 16/16; the
 ignored 200-seed report was listed as ignored and was not run. No producer,
 denominator, source band, role, specialization, save/emission path, or census
 behavior changed, and no census command ran.
+
+## #23 [Integration] — Main absorbed; stage gate remains the next boundary
+
+The campaign branch absorbed local `main` at `b096c7a7b` in merge commit
+`a9727eadf`. The merge required preserving the D3B History sidecars through
+main's new `history_from_bake` seam, carrying main's outbreak exports, and
+registering epidemiology concepts in the D3B save-inert helper. The focused
+D2/D3B suite passed 27/27 after those resolutions; the full local commit gate
+passed all four subfloor chunks, and the calibration-pin census check passed.
+
+This is an integration update, not a G6 close: no chronicle, retrospective,
+book freshness/gradient closeout, registry flip, census refresh, or merge
+sluice submission has occurred. The branch is ready for `make sluice-stage`
+once the updated documentation commit is made and pushed; it is not ready for
+the final `make sluice` merge request.
