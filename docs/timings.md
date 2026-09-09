@@ -6888,3 +6888,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T21:35:16Z | census-tail-anomalies | 0.283 | 0.234 | 0.032 | 0.94 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-09T21:35:18Z | rebaseline | 683.155 | 495.470 | 24.331 | 0.76 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-09T21:37:53Z | gate-commit | 154.904 | 539.703 | 45.414 | 3.78 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:40:11Z | gate-commit | 42.814 | 72.873 | 19.906 | 2.17 | 0 | 021eab765 | campaign/hornvale-observation-series | MacBookPro | 10 |
