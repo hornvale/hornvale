@@ -88,6 +88,21 @@ expect_refusal empty-output "--out must not be empty" \
 expect_refusal broad-output "refusing broad output target" \
     --manifest "$manifest" --frames "$valid_frames" --out "/"
 
+escaped_manifest="$tmp/escaped manifest.json"
+jq '.id = "../escaped"' "$manifest" >"$escaped_manifest"
+escaped_parent="$tmp/escaped-parent"
+mkdir -p "$escaped_parent"
+if run_film escaped-id --manifest "$escaped_manifest" --frames "$valid_frames" --out "$escaped_parent/package"; then
+    bad "path-traversing manifest id unexpectedly succeeded"
+else
+    if grep -Fq -- "manifest id must be a safe filename component" "$tmp/escaped-id.err" \
+        && [ ! -e "$escaped_parent/escaped.sha256" ] && [ ! -e "$escaped_parent/escaped.mp4" ]; then
+        ok "path-traversing manifest id cannot write outside --out"
+    else
+        bad "path-traversing manifest id was not clearly refused: $(cat "$tmp/escaped-id.err")"
+    fi
+fi
+
 printf '== observation-film: packet sequence identity\n'
 gap_frames="$tmp/gap frames"
 write_packet "$gap_frames" 0
@@ -177,6 +192,20 @@ if HV_OBSERVATION_FFMPEG="$fake_ffmpeg" bash "$film" \
     fi
 else
     bad "available assembler path failed: $(cat "$tmp/video.err")"
+fi
+
+if run_film rerun-no-ffmpeg --manifest "$manifest" --frames "$valid_frames" --out "$video_out"; then
+    if [ ! -e "$video_out/HV-TEST.mp4" ]; then
+        ok "ffmpeg-unavailable rerun removes the owned stale video"
+    else
+        bad "ffmpeg-unavailable rerun left an unchecked stale video"
+    fi
+else
+    if grep -Fq -- "existing derived video" "$tmp/rerun-no-ffmpeg.err"; then
+        ok "ffmpeg-unavailable rerun refuses an existing derived video"
+    else
+        bad "rerun neither reconciled nor clearly refused the stale video: $(cat "$tmp/rerun-no-ffmpeg.err")"
+    fi
 fi
 
 printf '\ntest-observation-film.sh: %d passed, %d failed\n' "$pass" "$fail"

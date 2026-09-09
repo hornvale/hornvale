@@ -77,6 +77,11 @@ esac
 
 episode_id="$(jq -er '.id | strings | select(length > 0)' "$manifest_abs")" \
     || die "validated manifest has no episode id"
+case "$episode_id" in
+    ""|.|..|.*|-*|*[!A-Za-z0-9_-]*)
+        die "manifest id must be a safe filename component: $episode_id"
+        ;;
+esac
 world_seed="$(jq -er '.seed | tostring' "$manifest_abs")" \
     || die "validated manifest has no seed"
 world_revision="$(jq -er '.world_revision | strings | select(length > 0)' "$manifest_abs")" \
@@ -160,6 +165,10 @@ if command -v "$ffmpeg_command" >/dev/null 2>&1; then
     mv "$video_tmp" "$out_abs/$episode_id.mp4"
     printf 'observation-film: wrote derived film %s\n' "$out_abs/$episode_id.mp4"
 else
+    owned_video="$out_abs/$episode_id.mp4"
+    if [ -e "$owned_video" ] || [ -L "$owned_video" ]; then
+        die "existing derived video prevents ffmpeg-unavailable rerun: $owned_video"
+    fi
     printf 'observation-film: ffmpeg unavailable; verified packets and wrote checksum sidecar only\n'
 fi
 
