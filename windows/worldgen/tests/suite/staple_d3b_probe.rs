@@ -1242,6 +1242,11 @@ fn enabled_same_seed_witnesses_are_deterministic_label_blind_and_save_inert() {
     let components = WorldComponents::assemble().expect("canonical components assemble");
     let first = enabled_build(11, &components);
     let second = enabled_build(11, &components);
+    assert!(!first.history.diagnostic_portfolios.is_empty());
+    assert_eq!(
+        first.history.diagnostic_portfolios,
+        second.history.diagnostic_portfolios
+    );
     assert_eq!(
         first.history.diagnostic_subsistence, second.history.diagnostic_subsistence,
         "the same seed must produce the same ordered typed witnesses"
@@ -1266,6 +1271,7 @@ fn enabled_same_seed_witnesses_are_deterministic_label_blind_and_save_inert() {
 
     let mut without_sidecar = first.history.clone();
     without_sidecar.diagnostic_subsistence.clear();
+    without_sidecar.diagnostic_portfolios.clear();
     assert_eq!(
         emitted_ledger_bytes(&first.history),
         emitted_ledger_bytes(&without_sidecar),

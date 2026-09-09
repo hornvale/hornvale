@@ -1060,3 +1060,122 @@ and must not invent `Function` labels before that design converges.
 
 **Evidence:** sluice status row for `req-2ae088604e78-20260909T010248Z`; no
 census refresh run.
+
+## #25 [G2] — D4 specialization-emergence design drafted
+
+The post-D3B brainstorm converged on a neutral intermediate vocabulary and a
+measurement-only next rung. A `portfolio profile` is an adequately observed,
+time-windowed typed vector; a `portfolio regime` is a recurring cluster of
+profiles with a defensible relationship to opportunity, capability, need,
+access, relation, or coercion. Neither is a `Function` label or persistent
+history state.
+
+The draft D4 falsifier uses the existing live `BakeOccupation` denominator
+and D2 history seam. It retains production, voluntary exchange, imports,
+shortfall, coercive transfer, and protection access as separate channels. One
+complete window establishes only a provisional profile; same-phase recurrence
+establishes a seasonal regime candidate; cross-phase recurrence establishes a
+persistent regime candidate. The diagnostic compares portfolio composition
+with opportunity-adjusted position, reports capability and need as companion
+explanations, and records axis debt when fantasy dimensions lack a joined
+consumer path.
+
+Rejected alternatives include output-only vectors, one signed scalar,
+one-cycle specialization, all-window averaging, persistent state first,
+discarding coercive flows, one-to-one source mapping, and `Function` labels.
+The written draft is ready for G3 review; no code, implementation plan,
+dynamics rung, census action, or final merge is authorized.
+
+**Evidence:** `docs/superpowers/specs/2026-09-09-the-staple-d4-design.md`;
+ideonomy passes on temporal windows, seasonal regimes, mechanism separation,
+and portfolio-regime vocabulary.
+
+## #26 [G3] — D4 design approved
+
+Nathan approved the D4 portfolio-regime design on 2026-09-09. The approved
+boundary is a zero-impact diagnostic over existing dynamics: profiles and
+recurring regimes may be observed, but no `Function`, occupation, learning,
+movement rule, persistent specialization state, new fantasy extraction path,
+epoch, census, or save-facing history change is authorized by the approval.
+
+The implementation plan must preserve phase identity, keep voluntary and
+coercive channels comparable but separate, report capability/need as
+companion explanations, and expose axis debt rather than fabricating missing
+mechanisms as zero. Execution proceeds under subagent-driven development;
+the campaign stops before the fixed-roster report and final merge boundary.
+
+**Evidence:** `docs/superpowers/specs/2026-09-09-the-staple-d4-design.md`;
+`docs/superpowers/plans/2026-09-09-the-staple-d4.md`.
+
+## #27 [Review ruling] — D4 normalization must reject aggregate overflow
+
+Task 1 review found that `d4_normalize_profile` validated each finite,
+non-negative channel but accepted a finite-input sum that overflowed to
+infinity. That could divide every component by infinity and manufacture a
+zero composition marked complete, violating the explicit non-evidentiary
+vacuity rule.
+
+**Ruling:** reject a non-finite accumulated total before division and add a
+regression covering finite-input overflow. Keep the fix inside the pure D4
+helper; no runtime path or world behavior changes.
+
+**Evidence:** Task 1 review at
+`.superpowers/sdd/2026-09-09-the-staple-d4/task-1-review.md`.
+
+## #28 [Task 1 review] — D4 pure portfolio model approved after overflow fix
+
+The Task 1 reviewer found one important numerical-integrity issue in
+`d4_normalize_profile`: finite channel inputs could overflow their aggregate
+to infinity and fabricate a zero composition. The scoped fix rejects a
+non-finite total and adds direct non-finite and finite-input-overflow tests.
+
+The re-review approved the fix with no remaining findings. Task 1 is complete
+and produces the pure D4 vocabulary only; the history observation seam remains
+the next task.
+
+**Evidence:** commits `aeb4a82bf` and `c4e7616cf`; focused D4 tests (6/6),
+`cargo fmt --check`, and `make gate-commit` green; review and re-review in
+`.superpowers/sdd/2026-09-09-the-staple-d4/`.
+
+## #29 [Task 2 ruling] — Do not phase-fake epoch-level coercion
+
+The Task 2 seam audit confirmed that D2 production, exchange, and consumption
+already occur inside the twelve-phase loop, while tribute collection and its
+protection relation are observed at an epoch-level boundary. A phase-resolved
+portfolio witness must not attach an epoch-level remittance to an arbitrary
+phase or represent an unjoined mechanism as zero.
+
+**Ruling:** record coercive/protection values in a phase record only when the
+existing path supplies a defensible phase identity. Otherwise preserve an
+explicit mechanism/temporal availability debt in the sidecar and leave the
+value absent. This keeps the sidecar honest and lets the later probe report
+causal/temporal debt rather than manufacturing phase evidence.
+
+**Evidence:** Task 2 code-boundary verification of
+`produce_subsistence_phase`, `clear_subsistence_phase`,
+`consume_subsistence_phase`, `record_exchange_clearing`, and
+`collect_tribute` in `windows/worldgen/src/history_bake.rs`.
+
+## #30 [Process ruling] — Re-dispatch the stalled Task 2 seam
+
+The first Task 2 worker made a substantial partial edit but remained idle
+through multiple status and continuation nudges without completing tests or a
+commit. Its uncommitted diff was preserved at
+`.superpowers/sdd/2026-09-09-the-staple-d4/task-2-partial.diff` before the
+worker was closed. No partial work was discarded.
+
+**Ruling:** continue from the preserved partial seam with a fresh,
+more-capable integration worker and require a concrete DONE/BLOCKED report.
+The approved Task 2 boundary and #29's no-phase-faking rule remain unchanged.
+
+### Task 2 seam implementation clarification
+
+The live sidecar uses `DiagnosticPortfolioValues`: production, delivered
+voluntary exports/imports, and D2 typed shortfall ratios retain phase order.
+Coercion and protection are `None` with explicit temporal debt, per #29;
+they are not zeros in the pure model's numeric vector. Phase-local requests
+retain the existing requester, counterparty, resource, quantities, and status
+sequence, including impossible and refused outcomes. Complete phase records
+are emitted in observation order (indices repeat each epoch); live communities
+with no complete phases remain present with an empty phase vector. No tribute
+flow, D2 accumulator, exchange census, or save-emission behavior is changed.

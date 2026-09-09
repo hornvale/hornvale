@@ -32,6 +32,7 @@
 //! `records`.
 
 use crate::harvest::{Curve, LatDeg};
+use crate::{D4Availability, D4AxisDebt, D4MechanismAvailability};
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, Occupation, TechHorizon,
 };
@@ -1069,6 +1070,146 @@ pub struct DiagnosticSubsistenceWitness {
     pub impossible: [u64; 2],
 }
 
+/// Observed phase values; unjoined epoch-level channels have no value.
+/// type-audit: bare-ok(diagnostic-value: realized_output), bare-ok(diagnostic-value: voluntary_exchange), bare-ok(diagnostic-value: imports), bare-ok(ratio: shortfall), bare-ok(diagnostic-value: coercive_transfer), bare-ok(diagnostic-value: protection_access)
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DiagnosticPortfolioValues {
+    /// Production by D2 resource (A, B), before consumption.
+    pub realized_output: [f64; 2],
+    /// Delivered voluntary exports by resource.
+    pub voluntary_exchange: [f64; 2],
+    /// Delivered voluntary imports by resource.
+    pub imports: [f64; 2],
+    /// Unmet demand ratios by resource, matching D2.
+    pub shortfall: [f64; 2],
+    /// Absent until a typed, phase-resolved coercive path exists.
+    pub coercive_transfer: Option<[f64; 2]>,
+    /// Absent until a typed, phase-resolved protection path exists.
+    pub protection_access: Option<[f64; 2]>,
+}
+
+/// One complete D2 treatment phase observed for a live community.
+/// type-audit: bare-ok(index: phase)
+#[derive(Clone, Debug, PartialEq)]
+pub struct DiagnosticPortfolioPhase {
+    /// The existing within-year phase index.
+    pub phase: u16,
+    /// Typed values observed without averaging across phases.
+    pub portfolio: DiagnosticPortfolioValues,
+    /// Requests made by this community, including unsuccessful outcomes.
+    pub exchange_attempts: Vec<ExchangeAttempt>,
+    /// Availability kept separate from numeric zero.
+    pub mechanism_availability: D4MechanismAvailability,
+}
+
+/// Read-only, phase-resolved D4 observation for one live community.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DiagnosticPortfolioWitness {
+    /// The live community observed.
+    pub community: BakeId,
+    /// The live community's site at [`History::now`].
+    pub site: Vertex,
+    /// Complete treatment phases in observation order; the phase index
+    /// repeats for each epoch's twelve-phase window. Empty means incomplete.
+    pub phases: Vec<DiagnosticPortfolioPhase>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+struct DiagnosticPortfolioPhaseAccumulator {
+    portfolio: DiagnosticPortfolioValues,
+    exchange_attempts: Vec<ExchangeAttempt>,
+    production_observed: bool,
+    exchange_observed: bool,
+    shortfall_observed: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+struct DiagnosticPortfolioAccumulator {
+    phases: Vec<(u16, DiagnosticPortfolioPhaseAccumulator)>,
+}
+
+impl DiagnosticPortfolioAccumulator {
+    fn phase(&mut self, phase: usize) -> &mut DiagnosticPortfolioPhaseAccumulator {
+        let phase = u16::try_from(phase).expect("portfolio phase index exceeds u16");
+        let index = self
+            .phases
+            .iter()
+            .rposition(|(candidate, record)| *candidate == phase && !record.shortfall_observed)
+            .expect("portfolio phase must begin with production");
+        &mut self.phases[index].1
+    }
+
+    fn record_production(&mut self, phase: usize, production: [f64; 2]) {
+        let phase = u16::try_from(phase).expect("portfolio phase index exceeds u16");
+        self.phases.push((
+            phase,
+            DiagnosticPortfolioPhaseAccumulator {
+                portfolio: DiagnosticPortfolioValues {
+                    realized_output: production,
+                    ..DiagnosticPortfolioValues::default()
+                },
+                production_observed: true,
+                ..DiagnosticPortfolioPhaseAccumulator::default()
+            },
+        ));
+    }
+
+    fn record_exchange_phase(&mut self, phase: usize) {
+        self.phase(phase).exchange_observed = true;
+    }
+
+    fn record_delivery(
+        &mut self,
+        phase: usize,
+        resource: SubsistenceResource,
+        quantity: f64,
+        outgoing: bool,
+    ) {
+        let index = subsistence_resource_index(resource);
+        let record = self.phase(phase);
+        record.exchange_observed = true;
+        if outgoing {
+            record.portfolio.voluntary_exchange[index] += quantity;
+        } else {
+            record.portfolio.imports[index] += quantity;
+        }
+    }
+
+    fn record_shortfall(&mut self, phase: usize, shortfall: [f64; 2]) {
+        let record = self.phase(phase);
+        record.portfolio.shortfall = shortfall;
+        record.shortfall_observed = true;
+    }
+
+    fn witness(&self, community: BakeId, site: Vertex) -> DiagnosticPortfolioWitness {
+        let phases = self
+            .phases
+            .iter()
+            .filter(|(_, record)| {
+                record.production_observed && record.exchange_observed && record.shortfall_observed
+            })
+            .map(|(phase, record)| DiagnosticPortfolioPhase {
+                phase: *phase,
+                portfolio: record.portfolio,
+                exchange_attempts: record.exchange_attempts.clone(),
+                mechanism_availability: D4MechanismAvailability {
+                    realized_output: D4Availability::Available,
+                    voluntary_exchange: D4Availability::Available,
+                    imports: D4Availability::Available,
+                    shortfall: D4Availability::Available,
+                    coercive_transfer: D4Availability::Debt(D4AxisDebt::Temporal),
+                    protection_access: D4Availability::Debt(D4AxisDebt::Temporal),
+                },
+            })
+            .collect();
+        DiagnosticPortfolioWitness {
+            community,
+            site,
+            phases,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 struct DiagnosticSubsistenceAccumulator {
     phase_count: u32,
@@ -1164,6 +1305,9 @@ pub struct History {
     /// Read-only per-live-community D2 realization witnesses, ordered by
     /// [`BakeId`]. Empty when the exchange treatment was disabled.
     pub diagnostic_subsistence: Vec<DiagnosticSubsistenceWitness>,
+    /// Read-only phase-resolved D4 observations, ordered by [`BakeId`].
+    /// Empty when the exchange treatment was disabled.
+    pub diagnostic_portfolios: Vec<DiagnosticPortfolioWitness>,
     /// Event tallies, counted as the bake resolves each epoch.
     tally: BakeCensus,
     exchange: ExchangeCensus,
@@ -1460,6 +1604,7 @@ impl History {
             outbreaks: Vec::new(),
             diagnostic_returns: Vec::new(),
             diagnostic_subsistence: Vec::new(),
+            diagnostic_portfolios: Vec::new(),
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
         }
@@ -1470,8 +1615,10 @@ impl History {
 /// resource can satisfy demand only for that same variant.
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum SubsistenceResource {
+pub enum SubsistenceResource {
+    /// First required D2 subsistence resource.
     A,
+    /// Second required D2 subsistence resource.
     B,
 }
 
@@ -1639,25 +1786,38 @@ struct ExchangeCommunitySnapshot {
 /// A derived step or terminal outcome in one typed exchange attempt.
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ExchangeStatus {
+pub enum ExchangeStatus {
+    /// A request entered clearing.
     Proposed,
+    /// A counterparty accepted the request.
     Accepted,
+    /// The requested quantity was delivered.
     Settled,
+    /// A positive but insufficient quantity was delivered.
     Partial,
+    /// A counterparty refused the request.
     Refused,
+    /// No feasible exchange was available.
     Impossible,
 }
 
 /// One community's request for one typed resource and its clearing result.
+/// type-audit: bare-ok(diagnostic-value: requested), bare-ok(diagnostic-value: delivered)
 #[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq)]
-struct ExchangeAttempt {
-    requester: BakeId,
-    counterparty: Option<BakeId>,
-    resource: SubsistenceResource,
-    requested: f64,
-    delivered: f64,
-    statuses: Vec<ExchangeStatus>,
+pub struct ExchangeAttempt {
+    /// Community making this request.
+    pub requester: BakeId,
+    /// Selected counterparty, if any.
+    pub counterparty: Option<BakeId>,
+    /// Resource requested.
+    pub resource: SubsistenceResource,
+    /// Quantity requested before clearing.
+    pub requested: f64,
+    /// Quantity actually delivered.
+    pub delivered: f64,
+    /// Existing clearing transitions, in their original order.
+    pub statuses: Vec<ExchangeStatus>,
 }
 
 /// One funded, atomic, typed movement across a traversable one-hop link.
@@ -2168,6 +2328,7 @@ fn clear_local_exchange(
 fn history_from_bake(bake: Bake<'_>, now: f64, tribute: Vec<TributeRelation>) -> History {
     let diagnostic_returns = bake.diagnostic_returns_at_now();
     let diagnostic_subsistence = bake.diagnostic_subsistence_at_now();
+    let diagnostic_portfolios = bake.diagnostic_portfolios_at_now();
     History {
         records: bake.records,
         now,
@@ -2175,6 +2336,7 @@ fn history_from_bake(bake: Bake<'_>, now: f64, tribute: Vec<TributeRelation>) ->
         outbreaks: bake.outbreaks,
         diagnostic_returns,
         diagnostic_subsistence,
+        diagnostic_portfolios,
         tally: bake.tally,
         exchange: bake.exchange,
     }
@@ -2602,6 +2764,8 @@ struct Bake<'a> {
     /// Per-community D2 diagnostic state, indexed exactly as `communities`.
     /// Dead communities retain their state until the closing live-only read.
     subsistence_diagnostics: Vec<DiagnosticSubsistenceAccumulator>,
+    /// Per-community phase-resolved D4 diagnostic state.
+    portfolio_diagnostics: Vec<DiagnosticPortfolioAccumulator>,
     /// The bake's epoch length in years (`cfg.epoch_years`), borrowed once at
     /// construction so [`Bake::live_an_epoch`] reads the same number [`bake`]'s
     /// own epoch loop steps by, rather than a second literal.
@@ -3859,6 +4023,8 @@ impl<'a> Bake<'a> {
         self.epoch_growth.push(0.0);
         self.subsistence_diagnostics
             .push(DiagnosticSubsistenceAccumulator::default());
+        self.portfolio_diagnostics
+            .push(DiagnosticPortfolioAccumulator::default());
         self.node_index.insert((site, rung), community_idx);
         self.tally.records_total += 1;
         community_idx
@@ -4433,6 +4599,22 @@ impl<'a> Bake<'a> {
         witnesses
     }
 
+    fn diagnostic_portfolios_at_now(&self) -> Vec<DiagnosticPortfolioWitness> {
+        debug_assert_eq!(self.communities.len(), self.portfolio_diagnostics.len());
+        if self.exchange_treatment != ExchangeTreatment::Enabled {
+            return Vec::new();
+        }
+        let mut witnesses: Vec<_> = self
+            .communities
+            .iter()
+            .zip(&self.portfolio_diagnostics)
+            .filter(|(community, _)| community.alive)
+            .map(|(community, diagnostic)| diagnostic.witness(community.id, community.site))
+            .collect();
+        witnesses.sort_by_key(|witness| witness.community);
+        witnesses
+    }
+
     fn resolve_flights(&mut self, fleeing: Vec<usize>, era: &EraClimate, year: f64) {
         for sub in fleeing {
             self.take_flight(sub, era, year);
@@ -4877,6 +5059,7 @@ impl<'a> Bake<'a> {
                 * PHASES_PER_YEAR as f64
                 * shares[idx][phase];
             let production = partition_subsistence_production(total, community.curve);
+            self.portfolio_diagnostics[idx].record_production(phase, production.quantities);
             self.communities[idx].subsistence =
                 carry_subsistence_inventory(community.subsistence, production);
             #[cfg(test)]
@@ -4891,7 +5074,7 @@ impl<'a> Bake<'a> {
         }
     }
 
-    fn clear_subsistence_phase(&mut self, snapshot: &[usize], _phase: usize) {
+    fn clear_subsistence_phase(&mut self, snapshot: &[usize], phase: usize) {
         let exchange_snapshot: Vec<ExchangeCommunitySnapshot> = snapshot
             .iter()
             .copied()
@@ -4907,13 +5090,45 @@ impl<'a> Bake<'a> {
             })
             .collect();
         let clearing = clear_local_exchange(&self.graphs[self.cur_graph], &exchange_snapshot);
+        for &idx in snapshot {
+            if self.communities[idx].alive {
+                self.portfolio_diagnostics[idx].record_exchange_phase(phase);
+            }
+        }
+        let indices: BTreeMap<BakeId, usize> = self
+            .communities
+            .iter()
+            .enumerate()
+            .filter(|(_, community)| community.alive)
+            .map(|(idx, community)| (community.id, idx))
+            .collect();
+        for delivery in &clearing.deliveries {
+            self.portfolio_diagnostics[indices[&delivery.from]].record_delivery(
+                phase,
+                delivery.resource,
+                delivery.quantity,
+                true,
+            );
+            self.portfolio_diagnostics[indices[&delivery.to]].record_delivery(
+                phase,
+                delivery.resource,
+                delivery.quantity,
+                false,
+            );
+        }
+        for attempt in &clearing.attempts {
+            self.portfolio_diagnostics[indices[&attempt.requester]]
+                .phase(phase)
+                .exchange_attempts
+                .push(attempt.clone());
+        }
         #[cfg(test)]
         let delivery_count = clearing.deliveries.len();
         self.record_exchange_clearing(&clearing);
         self.apply_subsistence_deliveries(&clearing.deliveries);
         #[cfg(test)]
         record_d2_epoch_event(D2EpochEvent::Clearing {
-            phase: _phase,
+            phase,
             deliveries: delivery_count,
         });
     }
@@ -4921,7 +5136,7 @@ impl<'a> Bake<'a> {
     fn consume_subsistence_phase(
         &mut self,
         snapshot: &[usize],
-        _phase: usize,
+        phase: usize,
         shortfall_sum: &mut [f64],
     ) {
         for &idx in snapshot {
@@ -4937,12 +5152,13 @@ impl<'a> Bake<'a> {
             let (_, typed_shortfall) = typed_subsistence_ratios(shortfall, demand);
             if demand.quantities.iter().all(|needed| *needed > 0.0) {
                 self.subsistence_diagnostics[idx].record_phase(typed_shortfall);
+                self.portfolio_diagnostics[idx].record_shortfall(phase, typed_shortfall);
             }
             let shortfall_ratio = typed_shortfall.into_iter().fold(0.0_f64, f64::max);
             shortfall_sum[idx] += shortfall_ratio;
             #[cfg(test)]
             record_d2_epoch_event(D2EpochEvent::Consumption {
-                phase: _phase,
+                phase,
                 community: idx,
                 removed: [
                     before[0] - remaining.quantities[0],
@@ -6288,6 +6504,7 @@ pub fn bake(
         tally: BakeCensus::default(),
         exchange: ExchangeCensus::default(),
         subsistence_diagnostics: Vec::new(),
+        portfolio_diagnostics: Vec::new(),
         epoch_years: cfg.epoch_years,
     };
 
@@ -6495,6 +6712,7 @@ pub fn interleaved_rehit_history(site: Vertex) -> History {
         tally: BakeCensus::default(),
         exchange: ExchangeCensus::default(),
         subsistence_diagnostics: Vec::new(),
+        portfolio_diagnostics: Vec::new(),
         epoch_years: 25.0,
     };
     let occupation = bake.open(
@@ -6638,6 +6856,7 @@ mod tests {
                 tally: BakeCensus::default(),
                 exchange: ExchangeCensus::default(),
                 subsistence_diagnostics: Vec::new(),
+                portfolio_diagnostics: Vec::new(),
                 epoch_years: 25.0,
             };
             bake.working_site(&era, from, 0)
@@ -6847,6 +7066,7 @@ mod tests {
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
             subsistence_diagnostics: Vec::new(),
+            portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
         };
 
@@ -6999,6 +7219,7 @@ mod tests {
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
             subsistence_diagnostics: Vec::new(),
+            portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
         };
 
@@ -7351,6 +7572,7 @@ mod tests {
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
             subsistence_diagnostics: Vec::new(),
+            portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
         }
     }
@@ -8146,6 +8368,7 @@ mod tests {
             tally: BakeCensus::default(),
             exchange: ExchangeCensus::default(),
             subsistence_diagnostics: Vec::new(),
+            portfolio_diagnostics: Vec::new(),
             epoch_years: 25.0,
         };
 
@@ -8649,6 +8872,136 @@ mod tests {
                 .diagnostic_subsistence
                 .is_empty()
         );
+    }
+
+    /// Mutation target: averaging production over the year or replacing the
+    /// phase key with insertion order erases the literal spike at phase 7.
+    #[test]
+    fn d4_portfolio_retains_phase_identity_and_harvest_spikes() {
+        let mut diagnostic = DiagnosticPortfolioAccumulator::default();
+        for phase in 0..(PHASES_PER_YEAR * 2) {
+            let phase_index = phase % PHASES_PER_YEAR;
+            diagnostic.record_production(phase_index, [if phase == 7 { 12.0 } else { 0.0 }, 0.0]);
+            diagnostic.record_exchange_phase(phase_index);
+            diagnostic.record_shortfall(phase_index, [0.0; 2]);
+        }
+
+        let witness = diagnostic.witness(BakeId(4), Vertex(9));
+
+        assert_eq!(
+            witness
+                .phases
+                .iter()
+                .map(|record| record.phase)
+                .collect::<Vec<_>>(),
+            (0..12).chain(0..12).collect::<Vec<_>>()
+        );
+        assert_eq!(witness.phases[6].portfolio.realized_output, [0.0, 0.0]);
+        assert_eq!(witness.phases[7].portfolio.realized_output, [12.0, 0.0]);
+        assert_eq!(witness.phases[8].portfolio.realized_output, [0.0, 0.0]);
+    }
+
+    /// Mutation target: routing deliveries into coercive transfer, or marking
+    /// epoch-level tribute as an observed zero, breaks both assertions.
+    #[test]
+    fn d4_portfolio_keeps_voluntary_exchange_separate_from_epoch_level_tribute() {
+        let mut diagnostic = DiagnosticPortfolioAccumulator::default();
+        diagnostic.record_production(3, [2.0, 3.0]);
+        diagnostic.record_delivery(3, SubsistenceResource::A, 1.5, true);
+        diagnostic.record_delivery(3, SubsistenceResource::B, 0.75, false);
+        diagnostic.record_shortfall(3, [0.25, 0.5]);
+
+        let phase = &diagnostic.witness(BakeId(1), Vertex(2)).phases[0];
+
+        assert_eq!(phase.portfolio.voluntary_exchange, [1.5, 0.0]);
+        assert_eq!(phase.portfolio.imports, [0.0, 0.75]);
+        assert_eq!(phase.portfolio.coercive_transfer, None);
+        assert_eq!(phase.portfolio.protection_access, None);
+        assert_eq!(
+            phase.mechanism_availability.coercive_transfer,
+            crate::D4Availability::Debt(crate::D4AxisDebt::Temporal)
+        );
+        assert_eq!(
+            phase.mechanism_availability.protection_access,
+            crate::D4Availability::Debt(crate::D4AxisDebt::Temporal)
+        );
+    }
+
+    /// Mutation target: translating default accumulators on the control path
+    /// makes unavailable treatment indistinguishable from observed zeros.
+    #[test]
+    fn d4_portfolio_disabled_treatment_emits_no_sidecar() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        for site in [Vertex(0), Vertex(1), Vertex(2)] {
+            bake.open(
+                KindId("goblin"),
+                site,
+                0.0,
+                20.0,
+                Founding::Genesis(site),
+                None,
+                0.0,
+            );
+        }
+        assert!(bake.diagnostic_portfolios_at_now().is_empty());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
+        bake.close(1, 1.0, CauseOfEnd::Famine, Ended::Nature);
+        let witnesses = bake.diagnostic_portfolios_at_now();
+        assert_eq!(witnesses, bake.diagnostic_portfolios_at_now());
+        assert_eq!(
+            witnesses
+                .iter()
+                .map(|w| (w.community, w.site))
+                .collect::<Vec<_>>(),
+            vec![(BakeId(1), Vertex(0)), (BakeId(3), Vertex(2))]
+        );
+        assert!(witnesses.iter().all(|w| w.phases.is_empty()));
+    }
+
+    /// Missing clearing capture would lose impossible requests even though
+    /// the production and consumption observations still complete the phase.
+    #[test]
+    fn d4_portfolio_runtime_retains_unsatisfied_exchange_and_typed_shortfall() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 0.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
+        bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            20.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        bake.produce_subsistence_phase(&[0], &era_at(0.0), &[[1.0; PHASES_PER_YEAR]], 0);
+        bake.clear_subsistence_phase(&[0], 0);
+        bake.consume_subsistence_phase(&[0], 0, &mut [0.0]);
+        let witnesses = bake.diagnostic_portfolios_at_now();
+        let phase = &witnesses[0].phases[0];
+        assert_eq!(phase.portfolio.realized_output, [0.0; 2]);
+        assert_eq!(phase.portfolio.shortfall, [1.0; 2]);
+        assert_eq!(phase.exchange_attempts.len(), 2);
+        assert!(
+            phase
+                .exchange_attempts
+                .iter()
+                .all(|attempt| attempt.requester == BakeId(1)
+                    && attempt.counterparty.is_none()
+                    && attempt.statuses.contains(&ExchangeStatus::Impossible))
+        );
+        assert_eq!(bake.diagnostic_subsistence_at_now()[0].impossible, [1, 1]);
+        assert_eq!(phase.portfolio.coercive_transfer, None);
+        assert_eq!(phase.portfolio.protection_access, None);
     }
 
     #[test]
