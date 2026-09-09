@@ -14114,13 +14114,12 @@ mod tests {
         // THE WINZE T2b re-pin: 2.391304347826087 -> 2.5. The ring scan changes
         // WHERE workings are founded, so seed 42's site pool moves and with it
         // which goblin names are drawn. Still inside the 2-3 target.
-        // THE MURRAIN re-pin (2026-09-07): 2.5 -> 2.4285714285714284.
-        // The epidemiology/history bake changes the seed-42 settlement and
-        // naming substrate; this remains the same metric claim, with the
-        // exact value re-measured on the new deterministic world.
+        // THE UNDERWORLD re-pin: 2.4285714285714284 -> 2.5. Adding the four
+        // peoples changes seed 42's settlement and naming substrate; the
+        // metric claim is unchanged and the exact value is re-measured here.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.4285714285714284)
+            MetricValue::Number(2.5)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14351,13 +14350,12 @@ mod tests {
         // census: this campaign's refresh happens once, at pre-merge close, and
         // has not been run.
         //
-        // THE MURRAIN re-pin (2026-09-07): 2.5067567567567566 -> 2.8. The
-        // epidemiology/history bake changes the seed-42 settlement substrate
-        // and therefore the named-site sample; the metric remains inside its
-        // stated 2-3 target.
+        // THE UNDERWORLD re-pin: 2.8 -> 2.357142857142857. Adding the four
+        // peoples changes the seed-42 settlement substrate and therefore the
+        // named-site sample; the metric remains inside its stated 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.8)
+            MetricValue::Number(2.357142857142857)
         );
     }
 
@@ -14599,10 +14597,10 @@ mod tests {
         // pool, changing which names read as transparent. NOT corroborated
         // against a census: this campaign's refresh happens once, at pre-merge
         // close, and has not been run.
-        // THE MURRAIN re-pin (2026-09-07): 0.6102564102564103 ->
-        // 0.6905537459283387, from the same deterministic settlement
-        // substrate change that moved the syllable pin above.
-        assert_eq!(share, 0.6905537459283387, "seed 42 transparency drifted");
+        // THE UNDERWORLD re-pin: 0.6905537459283387 -> 0.6707692307692308,
+        // from the same deterministic settlement substrate change that moved
+        // the syllable pin above. The distribution claim is unchanged.
+        assert_eq!(share, 0.6707692307692308, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
