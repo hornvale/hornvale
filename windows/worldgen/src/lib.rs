@@ -92,6 +92,7 @@ pub mod circuit_readout;
 pub mod color_naming;
 pub mod components;
 pub mod d3b;
+pub mod d4;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
@@ -145,6 +146,12 @@ pub use d3b::{
     D3bCapacityBand, D3bCoverageBand, D3bOrdering, D3bProjectionSignature, D3bSourceSignature,
     D3bTernaryBand, d3b_capacity_band, d3b_projection_signature, d3b_river_band,
     d3b_source_signature, d3b_surplus_band,
+};
+pub use d4::{
+    D4Availability, D4AxisDebt, D4Completeness, D4MechanismAvailability, D4MechanismClass,
+    D4PortfolioProfile, D4PortfolioVector, D4ProfileError, D4ProfileSignature, D4RecurrenceClass,
+    D4RegimeEvidence, D4RegimeVerdict, d4_normalize_profile, d4_profile_signature,
+    d4_recurrence_class, d4_regime_verdict,
 };
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use fieldpack::{FieldPack, field_pack_from};
