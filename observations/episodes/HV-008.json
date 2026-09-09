@@ -1,0 +1,38 @@
+{
+  "id": "HV-008",
+  "title": "One branch through five depth bands",
+  "object": "chamber run",
+  "scale": "cave system",
+  "primary_axis": "viewpoint or resolution",
+  "phenomenon": "one branch's drawn floors",
+  "visual_grammar": "spatial",
+  "observation_sentence": "The first listed fracture-cave branch draws 33 floors across five depth bands.",
+  "count_unit": "floors",
+  "world_revision": "0d7067a0f20aafbe88fb67358537f56963fba5b0",
+  "seed": 42,
+  "time_window": null,
+  "frame_count": 120,
+  "frame_rate": 30.0,
+  "source_commands": [
+    "cargo run -p hornvale -- underworld --seed 42"
+  ],
+  "evidence_status": "reviewed",
+  "capability_state": "existing",
+  "controlled_inputs": {
+    "branch": 0,
+    "seed": 42,
+    "vertex": 30
+  },
+  "comparison_reference": null,
+  "lead_time": null,
+  "source_data": [
+    "hornvale underworld stdout"
+  ],
+  "render_output": null,
+  "caption_draft": [
+    "Here is one cave branch, followed through all five depth bands: 33 drawn floors in total.",
+    "It belongs to the first fracture cave listed for seed 42."
+  ],
+  "editorial_status": "draft",
+  "approval": null
+}

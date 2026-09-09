@@ -1,0 +1,36 @@
+{
+  "id": "HV-002",
+  "title": "Entrances into the underworld",
+  "object": "entrances",
+  "scale": "world",
+  "primary_axis": "quantity",
+  "phenomenon": "drawn cave entrances",
+  "visual_grammar": "spatial",
+  "observation_sentence": "The seed-42 underworld contains 1,626 drawn entrances.",
+  "count_unit": "entrances",
+  "world_revision": "0d7067a0f20aafbe88fb67358537f56963fba5b0",
+  "seed": 42,
+  "time_window": null,
+  "frame_count": 120,
+  "frame_rate": 30.0,
+  "source_commands": [
+    "cargo run -p hornvale -- underworld --seed 42"
+  ],
+  "evidence_status": "reviewed",
+  "capability_state": "existing",
+  "controlled_inputs": {
+    "seed": 42
+  },
+  "comparison_reference": null,
+  "lead_time": null,
+  "source_data": [
+    "hornvale underworld stdout"
+  ],
+  "render_output": null,
+  "caption_draft": [
+    "Seed 42 has 1,626 ways down into its cave systems. That is a lot of doors into the dark.",
+    "These are drawn entrances in the world data, not a guess from the picture."
+  ],
+  "editorial_status": "draft",
+  "approval": null
+}

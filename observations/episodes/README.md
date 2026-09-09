@@ -19,3 +19,10 @@ lifecycle. A manifest is not publishable until `editorial_status` is
 Keep comparison references in `comparison_reference`; they are internal
 research metadata and must not replace the public title or observation
 sentence.
+
+The opening pilot is indexed in
+`observations/batches/2026-09-opening-batch.md`. Its manifests deliberately
+use only the currently exportable underworld producer and spatial grammar.
+The accompanying files in `observations/captions/` are casual drafts, not
+reviewed or approved copy. The seven-package approved reserve remains pending
+Nathan's manual review of each exact video and caption package.
