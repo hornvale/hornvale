@@ -116,7 +116,7 @@
 
 **Goal:** Establish with counters and bounded-work assertions that Skyworld generation and rendering reuse existing substrate artifacts and do not scale as a planet-by-time rebuild.
 
-**Status:** Not Started
+**Status:** Complete — commits `f2fa42771` and `2a398be5e`; scoped review approved.
 
 **Files:**
 - Modify: `windows/worldgen/src/lib.rs` only if existing test-only reconstruction counters need a narrowly scoped reset/read helper

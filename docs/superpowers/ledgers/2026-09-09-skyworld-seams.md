@@ -52,6 +52,21 @@ fact, stream roster, or cross-realm implementation was added.
 
 **Capture:** Task 2 commits `b5c9b39d3`, `a410a2bfb`, and `4d9f3005b`.
 
+## #3 [G5] — Does Skyworld work scale with requested materialization?
+
+**Decision:** accept the cost evidence after one review-driven fix round.
+Test-only loop counters now measure actual generation, trajectory, raster, and
+pixel-loop work; the probes compare inactive/active territory counts, low/high
+trajectory samples, and all three render details. The previous returned-state
+proxy and unsupported print-only measurement were removed.
+
+**Evidence:** the focused cost probe, 34 Skyworld integration tests, and
+`make gate-commit` passed. Counters remain `cfg(test)` and do not affect
+runtime output, stream consumption, save facts, or BuildDepth. The merged
+branch still carries only the known unstaged gate timing drift.
+
+**Capture:** Task 3 commits `f2fa42771` and `2a398be5e`.
+
 ## Deferred
 
 - No organisms, species, lifecycle mutation, tethering, mutable atmosphere,
