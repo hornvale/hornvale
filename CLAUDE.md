@@ -74,7 +74,7 @@ editing:
   `cli/tests/suite/sentence_corpus.rs` and nothing in `domains/language`
   reads a corpus file — and the same freeze-before-measurement discipline
   (decision 0016).
-- `regularities/` — the **fourth** sibling (decision 0908, The Seedbed), and
+- `regularities/` — the **fourth** sibling (decision 0936, The Seedbed), and
   the one whose verdict can DECAY. `tropes/` asks whether a world can
   represent a situation, `systems/` whether the program implements a
   capability, `sentences/` whether the grammar can produce an utterance —

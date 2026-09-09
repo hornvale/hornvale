@@ -10,6 +10,8 @@
 
 **Spec:** [`docs/superpowers/specs/2026-09-07-the-seedbed-design.md`](../specs/2026-09-07-the-seedbed-design.md)
 
+**Decision block: 0936-0945**
+
 ## Global Constraints
 
 - **Dependencies:** `serde`, `serde_json`, `libm` only. No new crates. The allowlist is `ALLOWED_EXTERNAL` in `cli/tests/suite/architecture.rs`.

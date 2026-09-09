@@ -454,7 +454,7 @@ to `16 27` at the merge.
 Definition of Done complete on the branch before submission: chronicle
 (`book/src/chronicle/the-seedbed.md`, wired into `SUMMARY.md`), retrospective
 (`docs/retrospectives/the-seedbed.md`, carrying the deferred-minor table and
-where each landed), decision **0908**, a Confidence Gradient re-score
+where each landed), decision **0936**, a Confidence Gradient re-score
 (*a preregistered threshold can be external and still unreachable*),
 CLAUDE.md's directory guide for `regularities/`, and the reconciliation row.
 
@@ -463,10 +463,46 @@ artifacts, resolved by regeneration rather than by hand — which produced
 `docs/audits/ 16 27` for the contested `generated-path-writes.tsv` row,
 matching the value the final review derived independently. `gate-commit` rc=0
 on the merged product; drift clean over every declared path. The digest's
-in-force index was stale after 0908 and was regenerated — caught by the close
+in-force index was stale after 0936 and was regenerated — caught by the close
 walk, not by a gate.
 
 Nothing pre-existing in the idea registry required a status flip; the 47 rows
 this campaign added are new captures, and
 `TOOL-a-regularity-corpus-can-measure-a-trajectory` deliberately stays `raw`
 because nine `deferred` corpus items anchor to it.
+
+---
+
+## #10 [G5] — Held at the queue: a decision minted with no reserved block
+
+**A tenth controller defect, and the same shape as the other nine.** The merge
+request was held by the operator, not for a conflict but because it minted
+decision **0908** — inside `the-sett`'s reserved `0906-0915`, and the next
+number they would have taken.
+
+**How it happened:** I read the highest file on disk
+(`ls docs/decisions/ | sort -n | tail`) and took the next integer. That is the
+*observable*, not the *mechanism*. Reservations live in a live ledger the
+queue holds, which is invisible from a worktree — and `make decision-block
+NAME=<campaign>` / `make decision-blocks` are the interface. Both are named on
+the board, in a post that says exactly this: *"USE YOUR RESERVED BLOCK."*
+
+**Nothing in the repository could have caught it, and the guard says so.**
+`decision_blocks_do_not_overlap_across_campaigns` compares *declared* blocks;
+its own doc comment records the precedent — `campaign/the-stride` minting 0160
+inside `campaign/the-burr`'s reserved range — and states plainly that the test
+"is blind to a record minted with no declared block at all." A record with no
+declaration has nothing to compare against. So the operator was the only
+backstop, and this is a real coverage gap rather than a missed check.
+
+**Repair:** reserved `0936-0945`; renumbered `0908` → `0936`; updated the four
+real references (CLAUDE.md, the spec, this ledger, the reconciliation row) and
+left `the-murrain`'s ledger alone, whose `0908` is a timestamp inside a request
+id rather than a citation; regenerated the in-force index; and **declared the
+block in the spec and the plan**, which is the thing whose absence made the
+collision undetectable.
+
+*Ruling:* renumber rather than negotiate. Cost if wrong: none — the range is
+disjoint by construction, gaps inside a block are explicitly harmless, and a
+hole between main's ceiling (0907) and 0936 costs nothing since the `no_gaps`
+check was retired.

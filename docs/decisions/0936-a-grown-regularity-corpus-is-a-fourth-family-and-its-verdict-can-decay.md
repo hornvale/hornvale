@@ -1,4 +1,4 @@
-# 0908. A grown-regularity corpus is a fourth family, and its verdict can decay
+# 0936. A grown-regularity corpus is a fourth family, and its verdict can decay
 
 **Status:** Accepted (2026-09-08) · **Decider:** Nathan · **Relates:**
 [0011](0011-studies-are-data-metrics-are-code.md),

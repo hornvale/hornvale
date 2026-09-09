@@ -2,6 +2,8 @@
 
 **Campaign:** The Seedbed · **Date:** 2026-09-07 · **Status:** design, awaiting G3
 
+**Decision block: 0936-0945** (reserved 2026-09-09; main ceiling was 0907). Minted: 0936. The first draft minted 0908 with NO reserved block, which trespassed on the-sett's 0906-0915 — held at the queue by the operator, since `decision_blocks_do_not_overlap_across_campaigns` is blind to a record minted with no declaration at all (its own doc says so).
+
 **Ledger:** [`docs/superpowers/ledgers/2026-09-07-the-seedbed.md`](../ledgers/2026-09-07-the-seedbed.md)
 
 ---
@@ -296,4 +298,4 @@ do not re-author the corpus to raise the score.
 
 ---
 
-**Status: COMPLETE.** Shipped as decision 0908; see [the chronicle](../../../book/src/chronicle/the-seedbed.md) and [the retrospective](../../retrospectives/the-seedbed.md). The first measurement recorded 2 of 3 independent claims grown; `sug-wealth-skew` is FLAT.
+**Status: COMPLETE.** Shipped as decision 0936; see [the chronicle](../../../book/src/chronicle/the-seedbed.md) and [the retrospective](../../retrospectives/the-seedbed.md). The first measurement recorded 2 of 3 independent claims grown; `sug-wealth-skew` is FLAT.
