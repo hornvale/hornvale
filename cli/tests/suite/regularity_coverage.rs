@@ -1122,6 +1122,38 @@ fn lab_scored() -> Vec<hornvale_lab::domesday::corpus::ScoredItem> {
     lab_corpus().items
 }
 
+/// The claim-line measurement the committed census produces for item `id`,
+/// spelled the way the page will spell it.
+///
+/// **Derived, never transcribed.** The three assertions below used to carry
+/// the number as a literal (`measured -0.577645.`), which made them a
+/// snapshot of whichever census happened to be committed the day they were
+/// written. `campaign/the-murrain-across-world` moved the
+/// `rank-size-slope` column — median `-0.577645` to `-0.583393` — and all
+/// three went red on the canonical box while the guards they belong to,
+/// including the two-way regression check, correctly stayed green: the
+/// verdict had not moved, only the census had. The number is a fact about
+/// the census; the verdict word and the criterion prose are facts about the
+/// corpus, and those are what these tests are for.
+///
+/// **What this deliberately does not pin, because each half already has an
+/// owner.** That the number is the RIGHT one belongs to
+/// `the_two_readers_agree_on_the_measured_number`, which recomputes the
+/// statistic from the census independently of the resolver. That it is
+/// SPELLED correctly belongs to `windows/lab/tests/suite/domesday_claim.rs`,
+/// which formats a fixture value no census supplies — which is why the
+/// literals there are correct and must stay.
+fn measured_text_of(id: &str, census: &hornvale_lab::domesday::census::Census) -> String {
+    let item = lab_scored()
+        .into_iter()
+        .find(|i| i.id == id)
+        .unwrap_or_else(|| panic!("the founding corpus scores `{id}`"));
+    let measured = item
+        .measured(census)
+        .expect("the committed census reports this item's statistic");
+    hornvale_lab::domesday::render::measured_text(measured)
+}
+
 /// A scratch corpus read through the Domesday's reader and then deleted.
 ///
 /// The pointer it records is the SCRATCH path, which is exactly right: a
@@ -1229,6 +1261,11 @@ fn the_two_readers_agree_on_the_measured_number() {
 /// same path the committed page takes. A renderer holding a literal would
 /// print the same word both times. Nothing about the census changes between
 /// the two renders, so the only input that moved is the one under test.
+///
+/// The MEASUREMENT in both assertions is derived once, from the real corpus
+/// item, by [`measured_text_of`] — so the second assertion also states that
+/// flipping a verdict left the number alone, and neither assertion is a
+/// snapshot of today's census.
 #[test]
 fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
     let census = census();
@@ -1243,9 +1280,13 @@ fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
         settlement.contains("`sug-wealth-skew`"),
         "the item must be named: {settlement}"
     );
+    let number = measured_text_of("sug-wealth-skew", &census);
     assert!(
-        settlement.contains("Predicted median in [-1.2, -0.8]; measured -0.577645. FLAT."),
-        "the committed reading moved; see the page: {settlement}"
+        settlement.contains(&format!(
+            "Predicted median in [-1.2, -0.8]; measured {number}. FLAT."
+        )),
+        "the page does not state the frozen band and the recorded verdict beside the \
+         measurement the resolver computed ({number}); see the page: {settlement}"
     );
 
     let scratch = scratch_corpus("verdict-flip", |c| {
@@ -1262,7 +1303,9 @@ fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
     let flipped = read_scratch(&scratch);
     let after = hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &flipped);
     assert!(
-        after.contains("Predicted median in [-1.2, -0.8]; measured -0.577645. GROWN."),
+        after.contains(&format!(
+            "Predicted median in [-1.2, -0.8]; measured {number}. GROWN."
+        )),
         "the verdict is transcribed, not derived — flipping the corpus record left the \
          page saying the same thing: {after}"
     );
@@ -1271,9 +1314,15 @@ fn flipping_a_recorded_verdict_moves_the_rendered_claim() {
 /// The measured half is derived too: changing the frozen BAND moves the
 /// criterion prose, and the number stays put because it is a fact about the
 /// census rather than about the claim.
+///
+/// The "stays put" half is stated by taking the expected number from the
+/// UNTOUCHED corpus item and asserting the TIGHTENED page still carries it —
+/// so the two sides of the comparison really are the two sides of the
+/// claim, rather than one number transcribed twice.
 #[test]
 fn tightening_a_band_moves_the_criterion_but_not_the_measurement() {
     let census = census();
+    let number = measured_text_of("sug-wealth-skew", &census);
     let scratch = scratch_corpus("band-tighten", |c| {
         for item in c["items"]
             .as_array_mut()
@@ -1290,7 +1339,9 @@ fn tightening_a_band_moves_the_criterion_but_not_the_measurement() {
     let page =
         hornvale_lab::domesday::render::render_domain(&census, "settlement", &[], &tightened);
     assert!(
-        page.contains("Predicted median in [-0.6, -0.5]; measured -0.577645."),
+        page.contains(&format!(
+            "Predicted median in [-0.6, -0.5]; measured {number}."
+        )),
         "the criterion prose is assembled from the frozen parameters: {page}"
     );
 }

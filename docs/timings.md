@@ -6787,3 +6787,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T01:11:06Z | sluice:artifacts | 300.724 | 1706.834 | 69.082 | 5.91 | 0 | 9ddda9d72 |  | lefford | 40 |
 | 2026-09-09T01:12:56Z | sluice:outboard | 109.727 | 96.175 | 83.746 | 1.64 | 0 | 22d3d34d5 |  | lefford | 40 |
 | 2026-09-09T01:27:23Z | sluice:gate | 866.356 | 25089.069 | 789.681 | 29.87 | 0 | e05f112b6 |  | lefford | 40 |
+| 2026-09-09T02:50:40Z | census-tail-chorus | 37.421 | 218.715 | 13.082 | 6.19 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:50:40Z | census-tail-domesday | 0.334 | 0.291 | 0.026 | 0.95 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:50:41Z | census-tail-anomalies | 0.283 | 0.241 | 0.027 | 0.95 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:50:43Z | rebaseline | 162.182 | 483.767 | 24.226 | 3.13 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:51:30Z | gate-commit | 39.528 | 74.089 | 17.472 | 2.32 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |

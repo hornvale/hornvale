@@ -431,7 +431,16 @@ pub const CLAIM_MARKER: &str = "**Frozen claim** —";
 /// and six places because that is what `hornvale::regularities`' own
 /// `measure` mode prints, so the number a reader sees here is spelled the
 /// same as the number the resolver reports.
-fn measured_text(measured: f64) -> String {
+///
+/// **Public so a test can state what a page WILL print without transcribing
+/// today's census into itself.** Three assertions in
+/// `cli/tests/suite/regularity_coverage.rs` carried this number as a literal
+/// (`measured -0.577645.`) and went red on the canonical box when an
+/// unrelated campaign moved the `rank-size-slope` column — a snapshot of one
+/// day's census sitting inside guards whose subject is the corpus, not the
+/// census. Those assertions call this instead.
+/// type-audit: bare-ok(ratio: measured), bare-ok(prose: return)
+pub fn measured_text(measured: f64) -> String {
     format!("{:.6}", quantize(measured))
 }
 
