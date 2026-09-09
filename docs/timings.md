@@ -6834,3 +6834,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T04:09:16Z | sluice:gate | 853.643 | 25230.739 | 794.159 | 30.49 | 0 | 5335ef48c |  | lefford | 40 |
 | 2026-09-09T04:12:48Z | sluice:clients | 211.873 | 3336.131 | 337.894 | 17.34 | 0 | 2f4d42e7d |  | lefford | 40 |
 | 2026-09-09T04:22:01Z | sluice:heavy | 552.767 | 12991.237 | 215.995 | 23.89 | 0 | 377a0d0af |  | lefford | 40 |
+| 2026-09-09T14:08:00Z | census-tail-chorus | 74.311 | 174.612 | 7.086 | 2.45 | 0 | eb5a63674 | campaign/skyworld | MacBookPro | 10 |
+| 2026-09-09T14:08:01Z | census-tail-domesday | 0.789 | 0.486 | 0.042 | 0.67 | 0 | eb5a63674 | campaign/skyworld | MacBookPro | 10 |
+| 2026-09-09T14:08:02Z | census-tail-anomalies | 0.568 | 0.340 | 0.038 | 0.67 | 0 | eb5a63674 | campaign/skyworld | MacBookPro | 10 |
+| 2026-09-09T14:08:05Z | rebaseline | 338.898 | 493.074 | 23.220 | 1.52 | 0 | eb5a63674 | campaign/skyworld | MacBookPro | 10 |
