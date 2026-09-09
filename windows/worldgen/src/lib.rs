@@ -8347,6 +8347,21 @@ type BuildObserver<'a> = &'a mut dyn FnMut(BuildDepth, &World, RungArtifacts<'_>
 // Named construction site (decision 0092): worldgen's own build path —
 // the whole point of this fn is to derive terrain/climate for the world it
 // is building.
+type CollectiveAutonym<'a> = (&'a str, u32, Option<String>);
+
+fn cached_collective_autonyms<'a, E, F>(
+    peoples: &[(&'a str, u32)],
+    mut resolve: F,
+) -> Result<Vec<CollectiveAutonym<'a>>, E>
+where
+    F: FnMut(&str) -> Result<Option<String>, E>,
+{
+    peoples
+        .iter()
+        .map(|(kind, epoch)| resolve(kind).map(|autonym| (*kind, *epoch, autonym)))
+        .collect()
+}
+
 #[allow(clippy::disallowed_methods)]
 fn build_to(
     seed: Seed,
@@ -9270,13 +9285,20 @@ fn build_to_configured(
             })
             .max()
             .unwrap_or(0);
-        let mut reserved_older_names = std::collections::BTreeSet::new();
-        for (kind, _) in &peoples {
-            let epoch = hornvale_language::concept_epoch(
-                hornvale_species::kind_concept(kind).unwrap_or(kind),
-            );
-            if epoch < newest_epoch
-                && let Some(name) = lexicon_of_in_from(&world, wc, kind, &terrain, &climate)?
+        let people_with_epochs: Vec<(&str, u32)> = peoples
+            .iter()
+            .map(|(kind, _)| {
+                (
+                    *kind,
+                    hornvale_language::concept_epoch(
+                        hornvale_species::kind_concept(kind).unwrap_or(kind),
+                    ),
+                )
+            })
+            .collect();
+        let collective_autonyms = cached_collective_autonyms(&people_with_epochs, |kind| {
+            Ok::<_, BuildError>(
+                lexicon_of_in_from(&world, wc, kind, &terrain, &climate)?
                     .entry("person")
                     .and_then(|entry| match entry {
                         hornvale_language::LexEntry::Root { views, .. }
@@ -9284,12 +9306,18 @@ fn build_to_configured(
                             Some(views.roman.clone())
                         }
                         hornvale_language::LexEntry::Gap { .. } => None,
-                    })
+                    }),
+            )
+        })?;
+        let mut reserved_older_names = std::collections::BTreeSet::new();
+        for (_, epoch, autonym) in &collective_autonyms {
+            if *epoch < newest_epoch
+                && let Some(name) = autonym
             {
-                reserved_older_names.insert(name);
+                reserved_older_names.insert(name.clone());
             }
         }
-        for kind in peoples {
+        for ((kind, _), (_, epoch, autonym)) in peoples.into_iter().zip(collective_autonyms) {
             // A people-as-a-whole belongs to the world rather than to another
             // entity, so it is a root.
             //
@@ -9310,7 +9338,7 @@ fn build_to_configured(
             let ordinal = wc
                 .biosphere
                 .ids()
-                .position(|k| k.0 == kind.0)
+                .position(|k| k.0 == kind)
                 .ok_or_else(|| {
                     // A people placed in this world whose kind has no body in
                     // this world's own roster is a referential-integrity
@@ -9323,7 +9351,7 @@ fn build_to_configured(
                     BuildError::MalformedKind(format!(
                         "people {:?} placed a settlement but has no biosphere row, \
                          so its collective has no stable roster ordinal",
-                        kind.0
+                        kind
                     ))
                 })? as u16;
             let collective = mint_instance_of_kind(
@@ -9334,23 +9362,11 @@ fn build_to_configured(
                     role: "people",
                     ordinal,
                 },
-                kind.0,
+                kind,
                 None,
                 "the people as a roster kind",
             )?;
-            let autonym = lexicon_of_in_from(&world, wc, kind.0, &terrain, &climate)?
-                .entry("person")
-                .and_then(|entry| match entry {
-                    hornvale_language::LexEntry::Root { views, .. }
-                    | hornvale_language::LexEntry::Compound { views, .. } => {
-                        Some(views.roman.clone())
-                    }
-                    hornvale_language::LexEntry::Gap { .. } => None,
-                });
             if let Some(mut name) = autonym {
-                let epoch = hornvale_language::concept_epoch(
-                    hornvale_species::kind_concept(kind.0).unwrap_or(kind.0),
-                );
                 if used_collective_names.contains(&name)
                     || (epoch == newest_epoch && reserved_older_names.contains(&name))
                 {
@@ -9361,7 +9377,7 @@ fn build_to_configured(
                     // autonym — so the disambiguated collective still reads as
                     // a word in that people's own language.
                     let namer = namers
-                        .get(kind.0)
+                        .get(kind)
                         .expect("a Namer was built for every placed species");
                     // The species' own options. `Namer::name` is the v1
                     // bare-stem draw and never consults the shape profile,
@@ -9370,10 +9386,10 @@ fn build_to_configured(
                     // root for the real one rather than inventing a value.
                     let morph = morph_options(
                         wc.psyche
-                            .get(&KindId(kind.0))
+                            .get(&KindId(kind))
                             .expect("a placed people carries a mind vector"),
                         wc.society
-                            .get(&KindId(kind.0))
+                            .get(&KindId(kind))
                             .expect("a placed people carries a society vector"),
                     );
                     let mut salt = 0u64;
@@ -13079,6 +13095,27 @@ mod tests {
             matches!(&f.object, Value::Text(_)) && world.ledger.text_of(f.subject, "name").is_some()
         });
         assert!(has, "a named collective per placed people");
+    }
+
+    #[test]
+    fn collective_autonym_cache_resolves_each_people_once_in_order() {
+        let mut calls = Vec::new();
+        let cached =
+            cached_collective_autonyms(&[("older", 1), ("newer", 2), ("third", 2)], |kind| {
+                calls.push(kind.to_owned());
+                Ok::<_, ()>(Some(kind.to_owned()))
+            })
+            .expect("autonym resolution succeeds");
+
+        assert_eq!(calls, vec!["older", "newer", "third"]);
+        assert_eq!(
+            cached,
+            vec![
+                ("older", 1, Some("older".to_owned())),
+                ("newer", 2, Some("newer".to_owned())),
+                ("third", 2, Some("third".to_owned())),
+            ]
+        );
     }
 
     #[test]
