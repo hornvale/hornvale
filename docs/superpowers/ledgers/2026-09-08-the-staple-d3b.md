@@ -1172,6 +1172,22 @@ all existing D2 behavior unchanged.
 **Evidence:** Task 2 review at
 `.superpowers/sdd/2026-09-09-the-staple-d4/task-2-review.md`.
 
+## #32 [Task 2 review] — Phase-resolved portfolio seam approved
+
+The live-delivery review finding was fixed with a runtime fixture that uses
+positive typed production, successful voluntary clearing, producer export,
+recipient import, settled delivery, and typed shortfall. The scoped re-review
+approved the implementation with no new issues. Its isolated rerun encountered
+an unrelated arm64 linker failure before test execution; the implementer's
+completed focused run and D2/D3B suite were green, and the gate passed.
+
+Task 2 is complete. The sidecar remains zero-impact, phase-resolved for D2
+production/exchange/consumption, and explicit temporal debt for epoch-level
+coercion/protection.
+
+**Evidence:** commits `fd60f6e12` and `944ecfc52`; review and re-review in
+`.superpowers/sdd/2026-09-09-the-staple-d4/`.
+
 ## #30 [Process ruling] — Re-dispatch the stalled Task 2 seam
 
 The first Task 2 worker made a substantial partial edit but remained idle
@@ -1195,3 +1211,85 @@ sequence, including impossible and refused outcomes. Complete phase records
 are emitted in observation order (indices repeat each epoch); live communities
 with no complete phases remain present with an empty phase vector. No tribute
 flow, D2 accumulator, exchange census, or save-emission behavior is changed.
+
+## #33 [Task 3 ruling] — D4 probe joins live units by BakeId and keeps recurrence per community
+
+The Task 3 falsifier uses the existing `census(history).alive_at_now`
+denominator and joins each live `BakeOccupation` to exactly one same-run
+`DiagnosticPortfolioWitness` and site. It retains raw typed vectors beside
+normalized signatures, compares each community's phase sequence before any
+descriptive pooling, and reports missing, duplicate, disabled, site-mismatch,
+incomplete, and unavailable-mechanism branches as non-clearing evidence.
+
+**Ruling:** equal normalized composition with different raw scale is not a
+distinct regime; one complete window is transient, same-phase recurrence is
+seasonal, and cross-phase recurrence is a persistent candidate only. Tribute-
+only evidence remains coercive/mixed rather than voluntary specialization.
+The fixed-roster report remains ignored and is not run locally.
+
+**Evidence:** the non-ignored D4/D2/D3B focused suite passed 34/34; the D4
+probe's live seed-11 build was deterministic and its diagnostic sidecar was
+save-inert under emitted ledger-byte comparison. No census or fixed-roster
+report was run.
+
+## #36 [Task 3 re-review] — Mixed coercion and partial joins remain non-clearing
+
+Scoped re-review found three residual gaps: mixed voluntary/coercive evidence
+could still clear because vacuity required every community to be voluntary-free;
+source accounting was skipped when witness or live-site joins failed; and
+declared mechanism debt was not retained when a witness was duplicated or its
+site failed to match.
+
+**Ruling:** any observed coercive realization in an otherwise positive candidate
+is vacuous/mixed until causal separation is available, source results must be
+recorded for every live denominator unit independently of the other joins, and
+all available witness rows must contribute their declared axis debt before join
+acceptance. Re-review is required again after this correction.
+
+**Evidence:** scoped re-review of the Task 3 probe; no files were changed by the
+reviewer, and no census or fixed-roster report was run.
+
+## #34 [Task 3 review] — Do not accept synthetic or Frankenstein gradient evidence
+
+The first Task 3 review found that the probe re-derived mechanism availability
+instead of consuming the sidecar declaration, supplied a constant synthetic
+source vector for live builds, silently dropped missing or duplicate source
+rows, used a narrow all-phases coercion vacuity check, and could combine
+recurrence from one community with regime contrast from another. These are
+measurement false-positive/false-negative risks, not implementation polish.
+
+**Ruling:** the corrective pass must preserve declared axis debt, obtain source
+or access variation from an existing live observation rather than `[1, 1]`,
+make source joins denominator-bearing, require the same communities to support
+the recurrence and contrast claim, and treat mixed/tribute-only evidence as
+non-voluntary even when coercion is intermittent. Re-review is required before
+Task 3 can be accepted.
+
+**Evidence:** Task 3 review at
+`.superpowers/sdd/2026-09-09-the-staple-d4/`; no census or fixed-roster report
+was run.
+
+## #35 [Task 3 review] — Corrective pass closes the false-positive paths
+
+The corrective pass now consumes the sidecar's declared mechanism availability,
+keeps exact axis debt, treats the absent live source/access observation as
+explicit underpowered evidence instead of `[1, 1]`, and makes source joins
+denominator-bearing. Recurrence and contrast must be supported by the same
+communities; mixed recurrence is not collapsed into a transient positive.
+Tribute-only evidence remains vacuous when coercion is intermittent.
+
+**Evidence:** 35 focused D4/D2/D3B tests passed, including explicit missing and
+duplicate source rows, mixed recurrence, intermittent coercion, deterministic
+live sidecar emission, and save-inert ledger comparison. No census or ignored
+fixed-roster report was run.
+
+## #37 [Task 3 re-review] — Conservative mixed-mechanism and denominator closure
+
+The final correction makes any observed coercive realization vacuity-bearing,
+records source presence independently for every live unit, and records debt
+from every available witness before accepting uniqueness or site agreement.
+The earlier #35 closure is superseded by #36 and this ruling.
+
+**Evidence:** the corrective focused D4/D2/D3B suite passed 35/35 after adding
+mixed voluntary/coercive, partial-join, and debt-preservation coverage. No
+census or ignored fixed-roster report was run.
