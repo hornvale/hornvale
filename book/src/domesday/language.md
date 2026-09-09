@@ -429,7 +429,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `monophyly-dwarf`
 
-Whether every dwarf daughter's (desert-dwarf, gully-dwarf, hill-dwarf) Root derivation.proto matches an INDEPENDENT re-draw of the shared "dwarf" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no dwarf daughter minted a Root
+Whether every dwarf daughter's (desert-dwarf, duergar, gully-dwarf, hill-dwarf, mountain-dwarf) Root derivation.proto matches an INDEPENDENT re-draw of the shared "dwarf" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no dwarf daughter minted a Root
 
 n = 1000 present, 0 absent (of 1000 worlds)
 

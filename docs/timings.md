@@ -6709,3 +6709,13 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T12:15:47Z | gate-commit | 62.697 | 89.082 | 24.341 | 1.81 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T12:16:57Z | gate-commit | 54.477 | 133.943 | 36.300 | 3.13 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T12:18:18Z | gate-commit | 56.958 | 187.502 | 38.016 | 3.96 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:19:18Z | gate-commit | 35.847 | 67.395 | 18.221 | 2.39 | 0 | ac1b303f3 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:20:15Z | quick | 26.152 | 25.001 | 0.764 | 0.99 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:39Z | census-tail-chorus | 51.695 | 202.317 | 8.399 | 4.08 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:40Z | census-tail-domesday | 0.317 | 0.271 | 0.032 | 0.96 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:40Z | census-tail-anomalies | 0.245 | 0.206 | 0.027 | 0.95 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:24:42Z | rebaseline | 207.303 | 478.910 | 21.679 | 2.41 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:04Z | census-tail-chorus | 26.430 | 201.065 | 8.421 | 7.93 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:05Z | census-tail-domesday | 0.312 | 0.267 | 0.031 | 0.96 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:05Z | census-tail-anomalies | 0.258 | 0.215 | 0.028 | 0.94 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T12:43:07Z | rebaseline | 154.951 | 472.216 | 21.655 | 3.19 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |

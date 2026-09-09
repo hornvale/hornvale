@@ -139,7 +139,7 @@ that is the difference.
 
 ## Supply
 
-401 served tokens no situation in this corpus requires.
+405 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -193,6 +193,7 @@ missing half before this list can serve it.
 - `concept:door` (thing)
 - `concept:drink` (language)
 - `concept:drow-kind` (species)
+- `concept:duergar-kind` (species)
 - `concept:eager` (language)
 - `concept:earth` (language)
 - `concept:east` (language)
@@ -257,6 +258,7 @@ missing half before this list can serve it.
 - `concept:killer-whale-kind` (species)
 - `concept:know` (language)
 - `concept:kobold-kind` (species)
+- `concept:kuo-toa-kind` (species)
 - `concept:lake` (terrain)
 - `concept:ledge` (thing)
 - `concept:lens` (language)
@@ -279,6 +281,7 @@ missing half before this list can serve it.
 - `concept:moon` (astronomy)
 - `concept:mossy-deadfall` (climate)
 - `concept:mountain` (terrain)
+- `concept:mountain-dwarf-kind` (species)
 - `concept:mouth` (language)
 - `concept:muskeg` (climate)
 - `concept:name` (language)
@@ -356,6 +359,7 @@ missing half before this list can serve it.
 - `concept:sun-like-star` (astronomy)
 - `concept:supports-rest` (language)
 - `concept:survey` (language)
+- `concept:svirfneblin-kind` (species)
 - `concept:taiga` (climate)
 - `concept:temperate-forest` (climate)
 - `concept:temperate-grassland` (climate)

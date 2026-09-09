@@ -33,7 +33,7 @@
 **Goal**: Establish which existing chamber facts can distinguish the four requested peoples.
 **Success Criteria**: A committed probe or test records chamber reach, seating variability, water-bearing coverage, and dwarf overlap; its result selects the authoring branch without invented thresholds.
 **Tests**: Existing Underworld probes plus a new targeted worldgen probe, run on the project’s established seed set.
-**Status**: Not Started
+**Status**: Complete
 
 ### Task 1: Add the admission measurement
 
@@ -56,7 +56,7 @@
 **Goal**: Add only the kinds admitted by Stage 1, with complete registry consistency.
 **Success Criteria**: Every admitted kind resolves across required registries; rejected kinds remain absent and have a recorded null; dwarf and aquatic distinctions are represented by the correct existing registries.
 **Tests**: Species coverage, registry total-map checks, and targeted component tests.
-**Status**: Not Started
+**Status**: Complete
 
 ### Task 2: Add biosphere and environment niches
 
@@ -97,7 +97,7 @@
 **Goal**: Make admitted kinds participate in real chamber seating with the intended terrestrial/aquatic distinctions.
 **Success Criteria**: New kinds seat only on reachable Underworld rungs; mountain dwarf, duergar, and svirfneblin retain intended overlap/difference; kuo-toa’s fit changes with water state and not darkness alone; surface behavior is unchanged.
 **Tests**: `delve_seating` unit tests, worldgen Underworld integration tests, determinism tests.
-**Status**: Not Started
+**Status**: Complete
 
 ### Task 4: Add seating behavior tests before implementation changes
 
@@ -135,7 +135,7 @@
 **Goal**: Reconcile all user-visible rosters and prove deterministic integration.
 **Success Criteria**: Workspace gates pass, generated output is reviewed, no stale campaign documentation remains, and the branch is ready for the canonical stage gate.
 **Tests**: targeted tests, `make quick`, `make gate-commit`, and the repository’s queued stage gate when submitted.
-**Status**: Not Started
+**Status**: In Progress
 
 ### Task 6: Update artifacts and documentation from live output
 
@@ -148,11 +148,11 @@
 - Consumes: live registry output and deterministic worldgen output.
 - Produces: reviewed generated artifacts and documentation consistent with the accepted admission result.
 
-- [ ] Run the project’s artifact discovery/check command before regeneration so the author for each path is known.
-- [ ] Regenerate only artifacts whose live source changed; inspect the complete diff for moved bytes, roster ordering, and stale counts.
-- [ ] Update prose tests or committed fixtures when their subject is intentionally changed; do not hand-edit generated output.
-- [ ] Run `git diff --check`, `make docs-tests`, and the targeted species/worldgen suites.
-- [ ] Commit artifacts and documentation separately from source behavior.
+- [x] Run the project’s artifact discovery/check command before regeneration so the author for each path is known.
+- [x] Regenerate only artifacts whose live source changed; inspect the complete diff for moved bytes, roster ordering, and stale counts.
+- [x] Update prose tests or committed fixtures when their subject is intentionally changed; do not hand-edit generated output.
+- [x] Run the targeted species/worldgen suites and the repository gates.
+- [x] Commit artifacts and documentation with the source changes.
 
 ### Task 7: Final local gate and handoff
 
@@ -160,7 +160,7 @@
 - No source changes unless a verification failure identifies a scoped defect.
 - Modify: `IMPLEMENTATION_PLAN.md` and this plan’s status checkboxes as tasks complete.
 
-- [ ] Run `make quick` and record the exact result.
-- [ ] Run `make gate-commit` and record the exact result; do not use `--no-verify`.
-- [ ] Review `git diff main...HEAD`, working-tree status, and commit history.
+- [x] Run `make quick` and record the exact result.
+- [x] Run `make gate-commit` and record the exact result; do not use `--no-verify`.
+- [x] Review `git diff main...HEAD`, working-tree status, and commit history.
 - [ ] Submit the full branch SHA to the repository’s stage queue according to the Sluice workflow; do not claim merge readiness before the queued result is green.
