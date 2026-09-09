@@ -91,6 +91,8 @@ pub mod circuit;
 pub mod circuit_readout;
 pub mod color_naming;
 pub mod components;
+pub mod d3b;
+pub mod d4;
 pub mod delve_seating;
 mod descent;
 pub mod disposition;
@@ -142,6 +144,17 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of, tongue_paradigm_of,
 };
 pub use components::WorldComponents;
+pub use d3b::{
+    D3bCapacityBand, D3bCoverageBand, D3bOrdering, D3bProjectionSignature, D3bSourceSignature,
+    D3bTernaryBand, d3b_capacity_band, d3b_projection_signature, d3b_river_band,
+    d3b_source_signature, d3b_surplus_band,
+};
+pub use d4::{
+    D4Availability, D4AxisDebt, D4Completeness, D4MechanismAvailability, D4MechanismClass,
+    D4PortfolioProfile, D4PortfolioVector, D4ProfileError, D4ProfileSignature, D4RecurrenceClass,
+    D4RegimeEvidence, D4RegimeVerdict, d4_normalize_profile, d4_profile_signature,
+    d4_recurrence_class, d4_regime_verdict,
+};
 pub use descent::{clan_root_of, forebear_of, founder_of, generation_length_of, name_pattern};
 pub use fieldpack::{FieldPack, field_pack_from};
 pub use fixture::seed_42_world;
@@ -153,10 +166,12 @@ pub use graph_derive::{
 pub use hazard::{HazardEvent, HazardEventKind, Recurrence, events_in, has_edifice, hazard_at};
 pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP,
-    DiagnosticReturnBand, DiagnosticReturnClass, DiagnosticReturnWitness, ExchangeCensus,
+    DiagnosticPortfolioPhase, DiagnosticPortfolioValues, DiagnosticPortfolioWitness,
+    DiagnosticReturnBand, DiagnosticReturnClass, DiagnosticReturnWitness,
+    DiagnosticSubsistenceWitness, ExchangeAttempt, ExchangeCensus, ExchangeStatus,
     ExchangeTreatment, GENESIS_POP, History, MIGRATE_SURVIVAL, ORE_CUT, OutbreakEvent,
-    TributeRelation, WAR_LOSS, bake, cascade_sizes, census, classify_diagnostic_return,
-    defensibility_for_test, exchange_census, interleaved_rehit_history,
+    SubsistenceResource, TributeRelation, WAR_LOSS, bake, cascade_sizes, census,
+    classify_diagnostic_return, defensibility_for_test, exchange_census, interleaved_rehit_history,
     weakest_point_defensibility,
 };
 pub use history_emit::{
@@ -398,12 +413,15 @@ pub struct BuildArtifacts {
 }
 
 /// A settlement-depth world built through an explicit D2 treatment boundary,
-/// paired with the treatment's derived whole-bake exchange counts.
+/// paired with the treatment's same-run history and derived whole-bake
+/// exchange counts.
 pub struct ExchangeTreatmentBuild {
     /// The built world.
     pub world: World,
     /// Derived exchange counts and stock-conservation residuals.
     pub exchange: ExchangeCensus,
+    /// The already-computed history used to emit [`Self::world`].
+    pub history: History,
 }
 
 /// The derived artifacts a rung had already built when the observer fired,
@@ -7769,6 +7787,7 @@ pub fn build_world_with_exchange_treatment(
     treatment: ExchangeTreatment,
 ) -> Result<ExchangeTreatmentBuild, BuildError> {
     let mut exchange = ExchangeCensus::default();
+    let mut history = None;
     let built = build_to_configured(
         seed,
         pins,
@@ -7779,10 +7798,12 @@ pub fn build_world_with_exchange_treatment(
         treatment,
         None,
         Some(&mut exchange),
+        Some(&mut history),
     )?;
     Ok(ExchangeTreatmentBuild {
         world: built.world,
         exchange,
+        history: history.expect("the settlement rung always bakes a history"),
     })
 }
 
@@ -8346,6 +8367,7 @@ fn build_to(
         ExchangeTreatment::Disabled,
         observer,
         None,
+        None,
     )
 }
 
@@ -8361,6 +8383,7 @@ fn build_to_configured(
     exchange_treatment: ExchangeTreatment,
     mut observer: Option<BuildObserver<'_>>,
     exchange_out: Option<&mut ExchangeCensus>,
+    history_out: Option<&mut Option<History>>,
 ) -> Result<BuildArtifacts, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
@@ -8581,6 +8604,12 @@ fn build_to_configured(
         *out = exchange_census(&history);
     }
     emit_history(&mut world, &history)?;
+    if let Some(out) = history_out {
+        // The explicit treatment boundary is the sole owner of this clone:
+        // its caller needs the exact enabled/disabled bake used above for
+        // emission, not a reconstruction after the build has discarded it.
+        *out = Some(history.clone());
+    }
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
     // present isn't the latest occupation event (a stochastic bake rarely
     // lands its last draw exactly on the boundary) — it's this fixed
