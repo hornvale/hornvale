@@ -4326,6 +4326,7 @@ hornvale::suite$provision::declared_absent_row_carries_its_reason
 hornvale::suite$provision::declared_but_unserved_token_is_not_served
 hornvale::suite$provision::feels_toward_does_not_resolve
 hornvale::suite$regularity_corpus::a_corpus_parses_its_items_criteria_and_verdicts
+hornvale::suite$regularity_corpus::a_deferred_item_whose_registry_row_settled_is_stale
 hornvale::suite$regularity_corpus::a_doc_anchor_into_generated_prose_resolves
 hornvale::suite$regularity_corpus::a_doc_anchor_into_hand_written_prose_is_refused
 hornvale::suite$regularity_corpus::a_lost_regularity_is_red

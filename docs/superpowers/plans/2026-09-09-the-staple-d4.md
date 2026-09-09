@@ -159,6 +159,6 @@
 ## Completion note
 
 Tasks 1–4 are complete. The approved D4 diagnostic is implemented, locally
-gated, and green through the canonical stage gate. The fixed-roster report and
-census remain intentionally unrun; they belong only to a later campaign-close
-decision after G6 review.
+gated, and green through the canonical stage and merge gates; it landed on
+main at `8c5e6e95`. The fixed-roster report and census remain intentionally
+unrun because D4 is a diagnostic rung, not a dynamics rung.
