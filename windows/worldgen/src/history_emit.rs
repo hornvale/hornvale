@@ -137,11 +137,25 @@ pub fn bake_year_of_ledger_day(day: f64) -> f64 {
 /// it is finite by construction of the bake it came from, and a finite year
 /// scaled by a finite constant stays finite; `.expect()` is sound here.
 fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
+    fact_at(subject, predicate, object, day, Some(subject))
+}
+
+/// Build a dated fact with an explicit subject and place. Paired epidemic
+/// facts make the minted outbreak event their subject and retain the struck
+/// occupation in `place`, which preserves the kernel envelope's location
+/// contract while giving both facts one serialized event identity.
+fn fact_at(
+    subject: EntityId,
+    predicate: &str,
+    object: Value,
+    day: f64,
+    place: Option<EntityId>,
+) -> Fact {
     Fact {
         subject,
         predicate: predicate.to_string(),
         object,
-        place: Some(subject),
+        place,
         day: Some(WorldTime::from_std_days(day).expect("history-bake day is finite")),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     }
@@ -304,6 +318,22 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         .map(|(r, e)| (r.community, e))
         .collect();
 
+    let outbreak_entities: Vec<EntityId> = h
+        .outbreaks
+        .iter()
+        .enumerate()
+        .map(|(ordinal, event)| {
+            let subject = *bake_to_ledger
+                .get(&event.occupation)
+                .expect("an outbreak names an occupation minted in this history");
+            world.ledger.mint_entity(Lineage {
+                parent: Some(subject),
+                role: "outbreak-event",
+                ordinal: ordinal as u16,
+            })
+        })
+        .collect();
+
     for (record, &id) in h.records.iter().zip(minted.iter()) {
         // The unit boundary: `record.core.founded`/`ended` are bake YEARS;
         // everything below this line is standard DAYS.
@@ -443,6 +473,43 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         } else {
             commit_on(hornvale_history::IS_RUIN, Value::Flag(true), end_day)?;
         }
+    }
+
+    // Epidemic events are paired by (occupation, day, pathogen). Validate that
+    // join key before committing either half so malformed bake output cannot
+    // leave a plausible orphan fact in the ledger. The event entity is the
+    // subject of both facts; its place remains the struck occupation.
+    let mut outbreak_keys = BTreeSet::new();
+    for (ordinal, outbreak) in h.outbreaks.iter().enumerate() {
+        let occupation = *bake_to_ledger
+            .get(&outbreak.occupation)
+            .expect("an outbreak names an occupation minted in this history");
+        let day = ledger_day_of_bake_year(outbreak.year);
+        assert!(
+            outbreak_keys.insert((occupation, day.to_bits(), outbreak.pathogen)),
+            "one aggregated outbreak event per occupation, day, and pathogen"
+        );
+        let event = outbreak_entities[ordinal];
+        world.ledger.commit(
+            fact_at(
+                event,
+                hornvale_epidemiology::STRUCK_BY,
+                Value::Text(outbreak.pathogen.0.to_string()),
+                day,
+                Some(occupation),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact_at(
+                event,
+                hornvale_epidemiology::OUTBREAK_DEATHS,
+                Value::Number(outbreak.deaths),
+                day,
+                Some(occupation),
+            ),
+            &world.registry,
+        )?;
     }
 
     // The tribute relations still standing at `now` (spec §4.4). One fact per

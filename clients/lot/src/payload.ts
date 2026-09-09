@@ -59,6 +59,23 @@ export interface Ending {
   cause: string | null;
 }
 
+/** The substrate cohort a projection came from. */
+export interface SourceCohort {
+  people: string;
+  site: number;
+  year: number;
+}
+
+/** The projection boundary carried by a life. */
+export interface Projection {
+  kind: string;
+  source_cohort: SourceCohort;
+  selection_lens: string;
+  materiality: string;
+  sampling_bias: string;
+  consequences_write_back: boolean;
+}
+
 /** Which pins the reader applied, echoed back. */
 export interface Pick {
   year: number | null;
@@ -82,6 +99,7 @@ export interface Life {
   age_at_death: number;
   matured: boolean;
   ending: Ending;
+  projection: Projection;
   moved_to: number | null;
   moved_year: number | null;
   shape: string;
@@ -120,6 +138,26 @@ export interface Places {
   schema: string;
   year: number;
   places: Place[];
+}
+
+/** One attributed cause in `lot/odds/v1`. */
+export interface CauseOdds {
+  cause: string;
+  share: number;
+}
+
+/** `lot/odds/v1`. */
+export interface Odds {
+  schema: string;
+  e0: number;
+  q_maturity: number;
+  maturity_years: number;
+  lifespan_years: number;
+  strife: number;
+  infant_share: number;
+  background_share: number;
+  senescent_share: number;
+  causes: CauseOdds[];
 }
 
 function object(value: unknown, what: string): Record<string, unknown> {
@@ -186,6 +224,8 @@ export function parseLife(json: string): Life {
   schema(doc, "lot/life/v1");
   const pick = object(doc.pick, "pick");
   const ending = object(doc.ending, "ending");
+  const projection = object(doc.projection, "projection");
+  const sourceCohort = object(projection.source_cohort, "projection.source_cohort");
   const silences = object(doc.silences, "silences");
   return {
     schema: "lot/life/v1",
@@ -200,6 +240,18 @@ export function parseLife(json: string): Life {
     age_at_death: num(doc, "age_at_death"),
     matured: doc.matured === true,
     ending: { kind: text(ending, "kind"), cause: optText(ending, "cause") },
+    projection: {
+      kind: text(projection, "kind"),
+      source_cohort: {
+        people: text(sourceCohort, "people"),
+        site: num(sourceCohort, "site"),
+        year: num(sourceCohort, "year"),
+      },
+      selection_lens: text(projection, "selection_lens"),
+      materiality: text(projection, "materiality"),
+      sampling_bias: text(projection, "sampling_bias"),
+      consequences_write_back: projection.consequences_write_back === true,
+    },
     moved_to: optNum(doc, "moved_to"),
     moved_year: optNum(doc, "moved_year"),
     shape: text(doc, "shape"),
@@ -283,6 +335,27 @@ export function parsePlaces(json: string): Places {
         population: num(place, "population"),
         births_per_year: num(place, "births_per_year"),
       };
+    }),
+  };
+}
+
+/** Parse `lot/odds/v1`. */
+export function parseOdds(json: string): Odds {
+  const doc = object(JSON.parse(json), "lot/odds/v1");
+  schema(doc, "lot/odds/v1");
+  return {
+    schema: "lot/odds/v1",
+    e0: num(doc, "e0"),
+    q_maturity: num(doc, "q_maturity"),
+    maturity_years: num(doc, "maturity_years"),
+    lifespan_years: num(doc, "lifespan_years"),
+    strife: num(doc, "strife"),
+    infant_share: num(doc, "infant_share"),
+    background_share: num(doc, "background_share"),
+    senescent_share: num(doc, "senescent_share"),
+    causes: list(doc, "causes").map((raw, at) => {
+      const row = object(raw, `causes[${at}]`);
+      return { cause: text(row, "cause"), share: num(row, "share") };
     }),
   };
 }

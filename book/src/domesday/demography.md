@@ -14,7 +14,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 20 | 176 | 3144 | 186.771 |
+| 0 | 2 | 19 | 183 | 3158 | 185.481 |
+
+### `epidemic-largest-metapopulation-now`
+
+Largest connected host population in the era containing the present, reconstructed from occ-founded, occ-ended, occ-peak and occ-person-years over the bake's era graph; Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| min | p25 | median | p75 | max | mean |
+|---|---|---|---|---|---|
+| 185.60061 | 2892.6161 | 4832.3077 | 6828.7071 | 15784.77 | 5021.4927 |
 
 ### `goblin-flagship-population`
 
@@ -24,17 +34,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 34 | 40 | 41 | 43 | 34.913 |
+| 2 | 35 | 40 | 41 | 43 | 34.898 |
 
 ### `kobold-flagship-population`
 
 The kobold flagship settlement's committed population; Absent if kobolds placed no settlement
 
-n = 980 present, 20 absent (of 1000 worlds)
+n = 981 present, 19 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 29 | 45 | 56 | 70 | 41.491837 |
+| 2 | 27 | 45 | 56 | 70 | 41.277268 |
 
 ### `mean-population`
 
@@ -44,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 6.3063584 | 23.536481 | 28.830471 | 31.558313 | 42.120968 | 26.89191 |
+| 7.5677966 | 23.523077 | 28.534801 | 31.4125 | 39.83237 | 26.781563 |
 
 ### `peoples-alive-at-bake-end`
 
@@ -54,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 8 | 15 | 15 | 15 | 15 | 14.905 |
+| 9 | 15 | 15 | 15 | 15 | 14.914 |
 
 ### `peoples-placed`
 
@@ -64,7 +74,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 8 | 15 | 15 | 15 | 15 | 14.905 |
+| 9 | 15 | 15 | 15 | 15 | 14.914 |
 
 ### `total-population`
 
@@ -74,26 +84,26 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 445 | 4883 | 7490 | 9753 | 18757 | 7383.817 |
+| 457 | 5061 | 7323.5 | 9582 | 16906 | 7219.338 |
 
 ## Weaknesses found here
 
 ### `climate-displacement-events`
 
-- **D5 strength**: declared moderate tracking habitable-fraction, but observed r = -0.195 (1000 pairs) is weak (negative)
+- **D5 strength**: declared moderate tracking habitable-fraction, but observed r = -0.198 (1000 pairs) is weak (negative)
 
 ### `peoples-alive-at-bake-end`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 7 min..max range), under the 5% bar
-- **D4**: median 15 equals the max (8 .. 15)
+- **D3**: p25..p75 spans 0 (0.00% of the 6 min..max range), under the 5% bar
+- **D4**: median 15 equals the max (9 .. 15)
 
 ### `peoples-placed`
 
-- **D3**: p25..p75 spans 0 (0.00% of the 7 min..max range), under the 5% bar
-- **D4**: median 15 equals the max (8 .. 15)
+- **D3**: p25..p75 spans 0 (0.00% of the 6 min..max range), under the 5% bar
+- **D4**: median 15 equals the max (9 .. 15)
 
 ### `total-population`
 
-- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.244 (1000 pairs) is weak (positive)
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.232 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking fertile-land-fraction, but observed r = +0.236 (1000 pairs) is weak (positive)
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.210 (1000 pairs) is weak (positive)
 

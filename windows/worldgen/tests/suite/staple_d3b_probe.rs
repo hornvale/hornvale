@@ -801,6 +801,8 @@ fn emitted_ledger_bytes(history: &History) -> Vec<u8> {
     hornvale_history::register_concepts(&mut world.registry).expect("history concepts register");
     hornvale_settlement::register_concepts(&mut world.registry)
         .expect("settlement concepts register");
+    hornvale_epidemiology::register_concepts(&mut world.registry)
+        .expect("epidemiology concepts register");
     emit_history(&mut world, history).expect("history emits");
     serde_json::to_vec(&world.ledger).expect("ledger serializes")
 }

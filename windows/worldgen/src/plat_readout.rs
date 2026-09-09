@@ -258,7 +258,7 @@ mod tests {
     /// Decision 0092: the sculpt is the sanctioned cost here. The section is
     /// a function of `(world, terrain)` and the committed fixture supplies
     /// only the world, so a named construction site is the only way to hold
-    /// the real seed-42 population this test asserts a count of.
+    /// the real seed-42 historical occupied-column layer this test asserts.
     #[test]
     #[allow(clippy::disallowed_methods)]
     fn the_section_speaks_in_the_specs_frozen_words() {
@@ -266,7 +266,7 @@ mod tests {
         let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
         let out = render_made_population(&world, &terrain);
         for needle in [
-            "the Made population: 26 occupied columns",
+            "the Made population: 5 occupied columns",
             "heart decile <= 5:",
             "(frozen floor 0.6667; FROM Made levels TO the Heart's depth decile)",
             "doors on Made rungs:",

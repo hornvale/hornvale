@@ -241,6 +241,11 @@ The shared ancestral language bugbear, goblin, and hobgoblin all descend from (s
 | `temperate-forest` | a biome class | *Na | /na/ |
 | `temperate-grassland` | a biome class | *Noo | /noo/ |
 | `temperate-rainforest` | a biome class | *Daenao | /daenao/ |
+| `the-consumption` | the consumption | *Neatoo | /neatoo/ |
+| `the-flux` | the flux | *Doonea | /doonea/ |
+| `the-marsh-fever` | the marsh fever | *Nanoe | /nanoe/ |
+| `the-pest` | the pest | *Naedo | /naedo/ |
+| `the-pox` | the pox | *Paedoo | /paedoo/ |
 | `think` | to hold an uncertain belief | *Peo | /peo/ |
 | `thorn-scrub` | Dry scrub of thorned shrubs. | *Nako | /nako/ |
 | `threshold` | the sill marking where one place ends and another begins | *Teane | /teane/ |

@@ -93,6 +93,7 @@ windows/lab/tests/suite/the_mire_calibration.rs	1	unmigrated:1
 windows/locale/src/budget.rs	1	identity:1
 windows/locale/tests/suite/surface_mixture.rs	1	unmigrated:1
 windows/lot/tests/suite/lot_readout.rs	1	identity:1
+windows/lot/tests/suite/murrain.rs	3	identity:3
 windows/scene/src/lib.rs	6	unmigrated:6
 windows/scene/src/region.rs	2	unmigrated:2
 windows/scene/src/surrounds.rs	1	identity:1
@@ -186,7 +187,7 @@ windows/worldgen/tests/suite/generalist_distinctness.rs	1	unmigrated:1
 windows/worldgen/tests/suite/graph_byte_identity.rs	1	unmigrated:1
 windows/worldgen/tests/suite/hidage_probe.rs	1	identity:1
 windows/worldgen/tests/suite/history_byte_identity.rs	1	unmigrated:1
-windows/worldgen/tests/suite/history_emit.rs	2	unmigrated:2
+windows/worldgen/tests/suite/history_emit.rs	3	identity:1 unmigrated:2
 windows/worldgen/tests/suite/history_gates.rs	2	unmigrated:2
 windows/worldgen/tests/suite/history_placement.rs	1	unmigrated:1
 windows/worldgen/tests/suite/history_shape_probe.rs	3	unmigrated:3
@@ -200,6 +201,9 @@ windows/worldgen/tests/suite/keeping_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/kinship_facts.rs	1	unmigrated:1
 windows/worldgen/tests/suite/lot_probe.rs	1	identity:1
 windows/worldgen/tests/suite/mines_exist.rs	2	unmigrated:2
+windows/worldgen/tests/suite/murrain_probe.rs	1	identity:1
+windows/worldgen/tests/suite/murrain_population.rs	1	build-path:1
+windows/worldgen/tests/suite/population_layers.rs	1	build-path:1
 windows/worldgen/tests/suite/niche_breadth_probe.rs	1	unmigrated:1
 windows/worldgen/tests/suite/non_void_roster.rs	1	unmigrated:1
 windows/worldgen/tests/suite/occupancy_readout.rs	1	unmigrated:1

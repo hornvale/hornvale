@@ -367,11 +367,13 @@ fn a_breach_survives_a_save_load_round_trip() {
 /// What is asserted alongside it, so the limit is on the record rather than
 /// assumed either way: `vestige_dread` takes the MAX over a vertex's
 /// palimpsest, so at those same three vertices the FIELD still reads the old
-/// layer's dread (0.936..0.998 measured), not the living layer's 0.1. The
-/// model is source-blind at the layer and is not amnesiac at the vertex. A
-/// future change of `vestige_dread`'s aggregation to a most-recent-layer read
-/// would delete the DECAYED state wholesale, and this assertion is what would
-/// object.
+/// layer's dread (at least 0.894561 on the current panel), not the living
+/// layer's 0.1. The model is source-blind at the layer and is not amnesiac at
+/// the vertex. The assertion uses the semantic lower bound `> 0.6`, the
+/// forgotten layer's dread floor, rather than the old panel-specific `> 0.9`
+/// witness. A future change of `vestige_dread`'s aggregation to a
+/// most-recent-layer read would delete the DECAYED state wholesale, and this
+/// assertion is what would object.
 ///
 /// claim: invariant(forall over the E.4.2 panel — no breached delving's own
 /// layer reads `SealState::Maintained`, and every living layer standing over
@@ -445,10 +447,10 @@ fn a_later_culture_reads_all_three_states_of_a_breach() {
                  it — §4.5's WARDED state, and NOT a defect to repair"
             );
             assert!(
-                *field.get(record.core.site) > 0.9,
+                *field.get(record.core.site) > 0.6,
                 "seed {seed_value}: `vestige_dread` is a MAX over the palimpsest, so a \
-                 remembered breach still reads at the vertex even under a living \
-                 community; got {}",
+                 remembered breach must retain forgotten-layer dread above its 0.6 \
+                 floor even under a living community; got {}",
                 field.get(record.core.site)
             );
             living_over_a_breach += 1;

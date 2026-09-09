@@ -33,14 +33,15 @@ comment.
 - Call sites:
   - `windows/lot/src/slots.rs:183`
   - `windows/lot/src/slots.rs:184`
-  - `windows/lot/src/slots.rs:1443`
-  - `windows/lot/src/slots.rs:1444`
-  - `windows/lot/src/slots.rs:1484`
-  - `windows/lot/src/slots.rs:1485`
-  - `windows/worldgen/src/history_emit.rs:310`
-  - `windows/worldgen/src/history_emit.rs:473`
-  - `windows/worldgen/src/history_emit.rs:500`
-  - `windows/worldgen/src/history_emit.rs:571`
+  - `windows/lot/src/slots.rs:1529`
+  - `windows/lot/src/slots.rs:1530`
+  - `windows/lot/src/slots.rs:1570`
+  - `windows/lot/src/slots.rs:1571`
+  - `windows/worldgen/src/history_emit.rs:340`
+  - `windows/worldgen/src/history_emit.rs:487`
+  - `windows/worldgen/src/history_emit.rs:540`
+  - `windows/worldgen/src/history_emit.rs:567`
+  - `windows/worldgen/src/history_emit.rs:638`
   - `windows/worldgen/src/person_promote.rs:343`
   - `windows/worldgen/src/person_promote.rs:434`
   - `windows/worldgen/tests/suite/tolerance_draw.rs:99`

@@ -42,6 +42,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use hornvale_lab::census_guard::{CENSUS_ALARM_SECS, CENSUS_REFUSAL_SECS};
+
 /// Seconds a census may take before this test fails.
 ///
 /// **The policy target was 900 — Nathan's ~15 minutes — and the constant is now
@@ -270,8 +272,7 @@ use std::path::{Path, PathBuf};
 /// 1200 s.** At that point 1240 restores this raise's headroom-to-spread ratio,
 /// and the refusal ceiling below follows it at the same ratio. Read the median
 /// from `docs/timings.md`, never from this comment.
-const CENSUS_ALARM_SECS: f64 = 1320.0;
-
+///
 /// **The refusal ceiling, and why there are now two numbers instead of one.**
 ///
 /// The doc above diagnosed the defect precisely and then could not act on it:
@@ -359,8 +360,7 @@ const CENSUS_ALARM_SECS: f64 = 1320.0;
 ///
 /// **Ratchet back down with ALARM:** when the median over ten consecutive runs
 /// falls below 1200 s, ALARM returns to 1240 and this ceiling to 1550.
-const CENSUS_REFUSAL_SECS: f64 = 1650.0;
-
+///
 /// The repository root, resolved from this crate's manifest directory.
 fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -4067,6 +4067,76 @@
     },
     {
       "buckets": [
+        1000.0,
+        3000.0,
+        5000.0,
+        10000.0,
+        100000.0
+      ],
+      "doc": "Largest connected host population in the era containing the present, reconstructed from occ-founded, occ-ended, occ-peak and occ-person-years over the bake's era graph; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "demography",
+      "kind": "numeric",
+      "name": "epidemic-largest-metapopulation-now",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether any crowd-class kind in the pathogen catalogue persists in the present largest component, comparing its authored CCS against epidemic-largest-metapopulation-now; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "biology",
+      "kind": "flag",
+      "name": "epidemic-crowd-endemic",
+      "role": "invariant",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        5.0,
+        10.0,
+        20.0,
+        40.0,
+        60.0
+      ],
+      "doc": "Count of occupation records whose committed occ-cause is plague; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "epidemic-plague-endings",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        40.0,
+        100.0,
+        200.0,
+        400.0
+      ],
+      "doc": "Count of paired epidemic events, keyed by each struck-by fact after Lot context assembly has verified its matching outbreak-deaths fact; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "epidemic-outbreak-events",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        40.0,
+        80.0,
+        120.0,
+        160.0,
+        200.0
+      ],
+      "doc": "Count among lots 0-199 whose Life.cause is a catalogue pathogen; outbreak causes come from paired struck-by and outbreak-deaths facts and endemic causes from the Lot context's committed inputs; Absent if the world has no occupations or predates occ-person-years",
+      "domain": "history",
+      "kind": "numeric",
+      "name": "lot-named-disease-deaths",
+      "role": "descriptor",
+      "rung": "full"
+    },
+    {
+      "buckets": [
         10000.0,
         30000.0,
         100000.0,
@@ -4138,7 +4208,7 @@
         18.0,
         20.0
       ],
-      "doc": "Mean number of the 22 non-by-design story slots filled per lot over lots 0-199; Absent if the world has no occupations or predates occ-person-years",
+      "doc": "Mean number of the 23 non-by-design story slots filled per lot over lots 0-199, counted from each told Story.slots roster; Absent if the world has no occupations or predates occ-person-years",
       "domain": "history",
       "kind": "numeric",
       "name": "lot-slots-filled-mean",
@@ -4171,7 +4241,7 @@
   },
   "rows": {
     "count": 20,
-    "fnv1a64": "0xc07688f62af4c67a"
+    "fnv1a64": "0x5c16ab8711bbf69f"
   },
   "schema_version": 1,
   "study": {

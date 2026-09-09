@@ -211,6 +211,36 @@ pub extern "C" fn hl_lot_places(year: f64) -> i32 {
     0
 }
 
+/// Emit one occupation's `lot/odds/v1` mortality profile at `year`. 0 ok;
+/// 2 for a non-finite year or out-of-range occupation; -3 without a world.
+#[unsafe(no_mangle)]
+pub extern "C" fn hl_lot_odds(occ: u32, year: f64) -> i32 {
+    let world_ptr = &raw const WORLD;
+    let Some(world) = (unsafe { (*world_ptr).as_ref() }) else {
+        set_error("no world; call hl_new first");
+        return -3;
+    };
+    if !year.is_finite() {
+        set_error("year must be finite");
+        return 2;
+    }
+    let ctx = match lot_ctx(world) {
+        Ok(c) => c,
+        Err(e) => {
+            set_error(&e.to_string());
+            return 2;
+        }
+    };
+    let occ = occ as usize;
+    if occ >= ctx.occupations.len() {
+        set_error("occupation index is outside the Lot context");
+        return 2;
+    }
+    let odds = hornvale_lot::draw::odds_at(ctx, occ, year);
+    set_out(hornvale_lot::json::odds_json(&odds));
+    0
+}
+
 /// Pointer to the current output text (UTF-8, `hl_out_len` bytes).
 #[unsafe(no_mangle)]
 pub extern "C" fn hl_out_ptr() -> *const u8 {

@@ -685,6 +685,11 @@ hornvale-demography::suite$social::missing_social_typicality_is_not_a_measured_z
 hornvale-demography::suite$social::summary_preserves_overlapping_care_topology
 hornvale-demography::suite$social::summary_preserves_the_complete_nonzero_biological_handoff
 hornvale-demography::suite$social::summary_surface_is_aggregate_plain_data
+hornvale-epidemiology::suite$critical_size_decreases_with_each_transmission_parameter
+hornvale-epidemiology::suite$critical_size_trough_constant_is_in_the_anchor_band
+hornvale-epidemiology::suite$outbreak_arithmetic_and_plague_threshold_are_exact
+hornvale-epidemiology::suite$persistence_has_a_strict_threshold
+hornvale-epidemiology::suite$wave_reach_is_bounded_and_deterministic
 hornvale-explain::hornvale_explain$tests::explain_gazetteer_is_none_on_an_empty_summary_list
 hornvale-explain::hornvale_explain$tests::explain_gazetteer_narrates_every_classs_largest_feature
 hornvale-explain::hornvale_explain$tests::explain_sky_is_none_without_sky_facts
@@ -1328,7 +1333,7 @@ hornvale-lab::hornvale_lab$diff::tests::identical_results_report_no_movement
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_frozen_column_is_excluded_with_a_reason
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_columns_still_reports_up_to_report_size
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
-hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_287_column_census
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
@@ -1408,6 +1413,7 @@ hornvale-lab::hornvale_lab$domesday::render::tests::every_domain_renders_and_non
 hornvale-lab::hornvale_lab$domesday::render::tests::leaves_an_unrelated_paren_alone_while_dropping_the_citing_one
 hornvale-lab::hornvale_lab$domesday::render::tests::no_domain_is_currently_empty
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_full_exclusion_roster_with_reasons
+hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_carries_the_generated_header_and_frozen_constants
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_lists_the_top_worlds_ranked_first
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_only_publishes_up_to_top_worlds_worlds
 hornvale-lab::hornvale_lab$domesday::render::tests::the_anomalies_page_prints_the_true_uncapped_score_not_the_capped_flag_count
@@ -1638,6 +1644,12 @@ hornvale-lab::suite$hearth_population_calibration::the_hearth_never_worsens_a_pl
 hornvale-lab::suite$individuation::awakening_is_a_fact_and_the_large_owlbear_stays_large
 hornvale-lab::suite$individuation::mighty_things_in_the_cold_north
 hornvale-lab::suite$individuation::the_roster_passes_integrity_and_stays_out_of_the_canon
+hornvale-lab::suite$murrain_metrics::six_murrain_metrics_have_stable_names_domains_kinds_and_sources
+hornvale-lab::suite$murrain_metrics::six_murrain_metrics_render_as_additive_full_rung_schema_columns
+hornvale-lab::suite$murrain_readout::h_p3_requires_first_plague_cause_on_every_growing_seed
+hornvale-lab::suite$murrain_readout::isolated_cost_projection_is_compared_to_alarm_and_refusal_limits
+hornvale-lab::suite$murrain_readout::prediction_verdicts_use_preregistered_counts_not_ratios
+hornvale-lab::suite$murrain_readout::recorded_cost_projection_is_below_canonical_census_limits
 hornvale-lab::suite$namesake_metrics::the_six_namesake_metrics_are_registered
 hornvale-lab::suite$preregistration_guard::a_bare_ignore_is_rejected
 hornvale-lab::suite$preregistration_guard::a_decision_cite_is_sanctioned
@@ -2070,12 +2082,16 @@ hornvale-locale::hornvale_locale$surface::tests::a_desert_vertex_leans_sand_or_s
 hornvale-locale::hornvale_locale$surface::tests::legend_index_and_name_agree_for_every_variant
 hornvale-locale::hornvale_locale$tests::the_eight_bearings_are_distinct_and_evenly_spaced
 hornvale-locale::suite$water_reading::the_schema_tag_is_still_v2
+hornvale-lot::hornvale_lot$draw::tests::closing_same_year_outbreak_is_the_second_pathogen_event
 hornvale-lot::suite$draw::a_world_without_the_fact_is_refused
 hornvale-lot::suite$draw::uniform_is_pure_and_label_sensitive
+hornvale-lot::suite$hazard::attribution_preserves_hm2_survival_bytes
 hornvale-lot::suite$hazard::calibration_band_holds_at_the_human_anchor
 hornvale-lot::suite$hazard::death_age_is_the_inverse_of_survival
 hornvale-lot::suite$hazard::e0_is_monotone_in_lifespan_and_strife
 hornvale-lot::suite$hazard::survival_starts_at_one_and_is_nonincreasing
+hornvale-lot::suite$murrain::composite_projection_refuses_persistent_write_back
+hornvale-lot::suite$murrain::outbreak_probability_is_spliced_into_the_life_course
 hornvale-lot::suite$shape::a_community_that_died_before_plateau_is_a_triangle
 hornvale-lot::suite$shape::epoch_years_matches_the_bakes_own_default
 hornvale-lot::suite$shape::every_seed_42_occupation_reconstructs_to_its_committed_integral
@@ -2291,6 +2307,8 @@ hornvale-species::suite$life_history_golden::the_life_history_table_is_not_vacuo
 hornvale-species::suite$metabolic_pairs::chemotrophic_is_declared_and_unwitnessed
 hornvale-species::suite$metabolic_pairs::every_kind_carries_a_sanctioned_pair
 hornvale-species::suite$metabolic_pairs::sanctioned_thermal_keys_are_pairwise_distinct
+hornvale-species::suite$pathogens::pathogen_catalogue_has_five_rows_and_two_epidemic_kinds
+hornvale-species::suite$pathogens::pathogen_host_weights_cover_all_fifteen_peoples
 hornvale-species::suite$potency_assay::mundane_kinds_carry_no_potency
 hornvale-species::suite$potency_assay::potency_is_challenge_rating_over_thirty
 hornvale-species::suite$potency_assay::the_might_order_is_red_black_white_treant_xorn
@@ -3601,6 +3619,7 @@ hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_vassal_that_outgrows
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_vertex_still_holds_exactly_one_surface_community
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::a_weak_roller_flees_to_the_empties_instead_of_preying
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::an_insular_subordinate_remits_less_than_an_expansive_one
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::an_interleaved_rehit_moves_the_closing_event_to_bake_order_end
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::an_over_milked_vassal_shrinks_and_its_patron_eases_off
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::an_unauthored_patron_is_read_at_the_neutral_middle
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::approach_ease_is_zero_for_an_isolated_vertex
@@ -3611,6 +3630,8 @@ hornvale-worldgen::hornvale_worldgen$history_bake::tests::communities_at_opposit
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::competing_requests_share_scarce_stock_pro_rata
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::diagnostic_return_read_preserves_bake_state_and_is_deterministic
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::disabled_step_uses_the_zero_shortfall_identity
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::epidemic_component_cache_stores_members_once_per_component
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::epidemic_persistence_is_host_weighted_component_wide_and_events_aggregate_by_kind
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::every_typed_delivery_conserves_each_resource
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::fractional_bundle_quantities_clear_without_roundoff_loss
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::full_subsistence_satisfaction_is_pressure_identity
@@ -3618,9 +3639,11 @@ hornvale-worldgen::hornvale_worldgen$history_bake::tests::granary_clamps_at_zero
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::granary_integration_preserves_the_annual_increment
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::incoming_stock_funds_a_declared_acyclic_chain
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::increasing_typed_shortfall_cannot_reduce_pressure
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::live_spillover_wave_and_plague_boundary_follow_the_epoch_order
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::no_patron_may_demand_more_than_the_land_could_ever_produce
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::no_subordinate_is_farmed_below_the_farm_floor_by_tribute
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::opening_surpluses_fund_a_reciprocal_cycle
+hornvale-worldgen::hornvale_worldgen$history_bake::tests::overlapping_live_spillovers_consume_all_attacks_and_aggregate_once
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::phase_shares_sum_to_one_across_curves
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::record_cascade_bins_by_log2_and_skips_zero
 hornvale-worldgen::hornvale_worldgen$history_bake::tests::relocate_founds_from_the_specific_predecessor_not_the_lineage_ancestor
@@ -3749,7 +3772,6 @@ hornvale-worldgen::hornvale_worldgen$vestige::tests::an_ancient_breach_is_dreade
 hornvale-worldgen::hornvale_worldgen$vestige::tests::an_ancient_ruin_is_breached_and_forgotten_with_a_lost_warning
 hornvale-worldgen::hornvale_worldgen$volcano::tests::the_volcano_key_spelling_is_pinned
 hornvale-worldgen::suite$artifacts::astronomy_depth_produces_no_terrain_and_no_climate
-hornvale-worldgen::suite$artifacts::terrain_depth_produces_terrain_but_no_climate
 hornvale-worldgen::suite$axis_geometry::axis_distance_orders_the_affinity_ladder
 hornvale-worldgen::suite$axis_geometry::every_rated_biome_resolves_to_an_assigned_name
 hornvale-worldgen::suite$beholding_probe::a_dichromat_separates_red_from_green_less_than_a_trichromat_does
@@ -3831,6 +3853,7 @@ hornvale-worldgen::suite$history_bake::a_hostile_vertex_in_a_full_world_starves_
 hornvale-worldgen::suite$history_bake::a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare
 hornvale-worldgen::suite$history_bake::a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict
 hornvale-worldgen::suite$history_bake::different_seeds_diverge
+hornvale-worldgen::suite$history_bake::epidemic_history_uses_bake_epoch_v4
 hornvale-worldgen::suite$history_bake::ocean_sunders_and_a_lane_leapfrogs
 hornvale-worldgen::suite$history_bake::same_seed_bakes_byte_identical_history
 hornvale-worldgen::suite$history_bake::the_workload_fires_climate_displacement_at_volume_without_conflict
@@ -3840,6 +3863,7 @@ hornvale-worldgen::suite$history_emit::emit_is_deterministic
 hornvale-worldgen::suite$history_emit::end_of_life_facts_are_day_stamped_at_ended_not_founded
 hornvale-worldgen::suite$history_emit::founded_from_and_ended_by_resolve_to_the_right_entities
 hornvale-worldgen::suite$history_emit::occupation_records_round_trip_every_committed_field
+hornvale-worldgen::suite$history_emit::outbreak_events_emit_as_a_paired_dated_fact
 hornvale-worldgen::suite$history_emit::person_years_matches_epochs_credited_at_their_end
 hornvale-worldgen::suite$history_emit::present_frame_crosses_the_bake_year_by_days_per_year
 hornvale-worldgen::suite$history_emit::same_day_layers_order_by_material_facts_not_mint_order
@@ -3847,6 +3871,7 @@ hornvale-worldgen::suite$history_emit::territories_group_alive_occupations_by_pe
 hornvale-worldgen::suite$history_emit::the_deep_past_is_queryable_not_replayed
 hornvale-worldgen::suite$history_emit::the_present_fallback_reads_back_in_years_too
 hornvale-worldgen::suite$history_emit::the_present_is_the_live_occupations
+hornvale-worldgen::suite$history_emit::world_registry_accepts_the_paired_outbreak_predicates
 hornvale-worldgen::suite$history_tithe::spearman_reads_known_orderings
 hornvale-worldgen::suite$hollow_readout::the_restated_h2_rejects_a_collapsed_and_a_two_valued_depth
 hornvale-worldgen::suite$hollow_readout::the_retired_h2_estimator_is_satisfied_by_its_own_generator
@@ -4180,6 +4205,8 @@ hornvale::suite$lexicon_guard::a_waiver_needs_a_reason
 hornvale::suite$lexicon_guard::no_vertex_sense_cell_comes_back
 hornvale::suite$lexicon_guard::the_inventory_is_sorted_and_not_empty
 hornvale::suite$lexicon_guard::the_tokenizer_counts_affixed_bare_and_shouting_forms
+hornvale::suite$murrain_epidemiology::h_m1_binds_catalogue_rows_and_uses_the_monotonicity_grid
+hornvale::suite$murrain_epidemiology::h_m2_exercises_both_sides_for_each_authored_ccs_row
 hornvale::suite$no_entity_id_values_in_prose::derived_prose_never_reads_an_entity_id_for_its_value
 hornvale::suite$provision::act_tokens_resolve_through_session_home
 hornvale::suite$provision::affect_kind_and_affect_intensity_resolve_through_component_home

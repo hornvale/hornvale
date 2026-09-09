@@ -1570,7 +1570,7 @@ fn a_neighbouring_mark_draws_in_its_own_box() {
 /// a fixture that could disagree with what the client actually draws.
 ///
 /// **Non-vacuity, three guards**: exactly one settlement of the whole
-/// 389-vertex roster lands on this 40x20 plate at all, so the set equality
+/// 307-vertex roster lands on this 40x20 plate at all, so the set equality
 /// below is asserted against a roster that really does have something to
 /// place; the box it belongs in must not be the plate's centre, where a
 /// re-centred Mercator window would put the observer's own facet and where

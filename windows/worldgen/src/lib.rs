@@ -14,6 +14,8 @@ use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, PrecipRegime, RotationRegime, SeafloorFeature,
     UniformClimate, diurnal_waveform,
 };
+use hornvale_history::record::Founding;
+use hornvale_history::trajectory::{population_at, shape_of};
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
@@ -28,6 +30,7 @@ use hornvale_terrain::{
     Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, Horizon, TerrainPins,
 };
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 // The profiler measures wall-clock stage durations for a committed diagnostic
 // (`profile_build` example); it never reads `WorldTime` and never touches a
@@ -106,8 +109,10 @@ pub mod knownness;
 pub mod observer;
 pub mod person_promote;
 pub mod placement;
+pub mod plague_bake;
 pub mod plat;
 pub mod plat_readout;
+pub mod population;
 pub mod render;
 mod reproductive;
 pub mod residents;
@@ -154,9 +159,9 @@ pub use history_bake::{
     BakeCensus, BakeConfig, BakeId, BakeOccupation, CASCADE_DEPTH_CAP, DAUGHTER_POP,
     DiagnosticReturnBand, DiagnosticReturnClass, DiagnosticReturnWitness,
     DiagnosticSubsistenceWitness, ExchangeCensus, ExchangeTreatment, GENESIS_POP, History,
-    MIGRATE_SURVIVAL, ORE_CUT, TributeRelation, WAR_LOSS, bake, cascade_sizes, census,
-    classify_diagnostic_return, defensibility_for_test, exchange_census,
-    weakest_point_defensibility,
+    MIGRATE_SURVIVAL, ORE_CUT, OutbreakEvent, TributeRelation, WAR_LOSS, bake, cascade_sizes,
+    census, classify_diagnostic_return, defensibility_for_test, exchange_census,
+    interleaved_rehit_history, weakest_point_defensibility,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, bake_year_of_ledger_day,
@@ -179,6 +184,7 @@ pub use hornvale_climate::GeneratedClimate;
 pub use hornvale_demography::DemographyReport;
 pub use knownness::{Knownness, knownness, memory_half_life};
 pub use placement::{SiteReason, site_facet_for};
+pub use population::{PopulationCensus, population_census};
 pub use reproductive::{
     HybridPartnerConfig, ReproductiveAdapterError, ReproductivePopulationConfig,
     ReproductiveSubstrate, reproductive_substrate_from,
@@ -204,6 +210,109 @@ pub use weft::{
     WeftFeature, WeftKey, WeftKind, WeftWindow, all_features_at_cached, features_at_cached, occurs,
     prevalence, prevalence_with_weights,
 };
+
+/// The population substrate at one site and the beginning of one bake era.
+///
+/// This is a read-only projection of reconstructed live occupation
+/// trajectories. It is deliberately independent of `windows/lot`:
+/// epidemiology and other windows consume these plain numbers without
+/// reconstructing named lives.
+/// type-audit: bare-ok(count: era_start), bare-ok(count: population)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EraSitePopulation {
+    /// The bake year at which this era begins.
+    /// type-audit: bare-ok(count)
+    pub era_start: f64,
+    /// The occupied site.
+    pub site: hornvale_kernel::Vertex,
+    /// Reconstructed live population at this site during the era.
+    /// type-audit: bare-ok(count)
+    pub population: f64,
+}
+
+/// Read-only population-substrate view over all era/site pairs.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EraPopulationView {
+    rows: Vec<EraSitePopulation>,
+}
+
+impl EraPopulationView {
+    /// Iterate rows in era order, then site order.
+    pub fn rows(&self) -> impl Iterator<Item = &EraSitePopulation> {
+        self.rows.iter()
+    }
+
+    /// Read the population at an era/site pair, or zero when unoccupied.
+    /// type-audit: bare-ok(count: era_start), bare-ok(count: return)
+    pub fn population_at(&self, era_start: f64, site: hornvale_kernel::Vertex) -> f64 {
+        self.rows
+            .iter()
+            .find(|row| row.era_start == era_start && row.site == site)
+            .map_or(0.0, |row| row.population)
+    }
+}
+
+/// Build the authoritative, read-only era/site population substrate view.
+///
+/// Population is reconstructed from the committed trajectory facts, using
+/// the same lower-layer helper as the Lot: founded/ended span, peak,
+/// person-years, and the founding-kind opening value. Each era samples the
+/// reconstructed live curves at its midpoint. Peaks are only an upper-bound
+/// diagnostic and are never published as this epidemiological substrate.
+/// The Lot is a projection consumer and is intentionally not involved in this
+/// accessor.
+pub fn bake_era_population_view(world: &World) -> Result<EraPopulationView, BuildError> {
+    let eras = bake_era_graphs(world)?;
+    Ok(bake_era_population_view_from(world, &eras))
+}
+
+/// [`bake_era_population_view`] over era graphs an observing window already
+/// derived. The graph values supply the bake's exact era boundaries; this
+/// function reads no terrain or climate and therefore lets one per-world
+/// derivation serve both connected-component and population questions.
+/// type-audit: bare-ok(count: eras)
+pub fn bake_era_population_view_from(
+    world: &World,
+    eras: &[(f64, hornvale_topology::ConnectionGraph)],
+) -> EraPopulationView {
+    let now = present_year(world);
+    let occupations = occupation_records(world);
+    let mut rows = Vec::new();
+    for (index, (era_start, _)) in eras.iter().enumerate() {
+        let era_end = eras.get(index + 1).map_or(now, |(year, _)| *year);
+        let midpoint = *era_start + (era_end - *era_start) / 2.0;
+        let mut by_site: BTreeMap<hornvale_kernel::Vertex, f64> = BTreeMap::new();
+        for occupation in &occupations {
+            if occupation.core.founded < era_end
+                && occupation.core.ended.unwrap_or(now) > *era_start
+            {
+                let opening = match occupation.founded_from {
+                    Founding::Genesis(_) => GENESIS_POP,
+                    Founding::From(_) => DAUGHTER_POP,
+                };
+                let shape = shape_of(
+                    occupation.core.founded,
+                    occupation.core.ended.unwrap_or(now),
+                    occupation.core.peak_population,
+                    occupation.core.person_years,
+                    opening,
+                );
+                *by_site.entry(occupation.core.site).or_default() +=
+                    population_at(&shape, midpoint);
+            }
+        }
+        rows.extend(
+            by_site
+                .into_iter()
+                .map(|(site, population)| EraSitePopulation {
+                    era_start: *era_start,
+                    site,
+                    population,
+                }),
+        );
+    }
+    EraPopulationView { rows }
+}
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
@@ -415,6 +524,7 @@ pub const DOMAINS: &[&dyn Domain] = &[
     // seed labels, so its predicates must be registered and its stream labels
     // published into the manifest before genesis emits them.
     &hornvale_history::History,
+    &hornvale_epidemiology::Epidemiology,
     // Order matters on this roster only for concept lenders and borrowers;
     // person is neither, so it sits last with no ordering constraint.
     //
@@ -3959,6 +4069,105 @@ fn bake_eras(
         });
     }
     Ok((eras, adjusts, years))
+}
+
+/// The deep-history bake's own per-era connection graphs, keyed by the bake
+/// year each era begins at, derived exactly as [`bake_history_from`] derives
+/// them and never committed (The Sundering: "the graph stays derived").
+///
+/// A reader that wants to ask a question of the transport topology the bake
+/// actually walked — which sites could reach which, in which era — reads it
+/// here rather than re-deriving a present-day graph and calling it history.
+/// The first consumer is The Murrain's Task 0 probe, which measures the
+/// connected metapopulation a pathogen would have to persist in
+/// (`windows/worldgen/tests/suite/murrain_probe.rs`).
+///
+/// The era count and the bake span are the bake's own
+/// (`CLIMATE_ERAS`, `BakeConfig::default_millennia`), so the returned years
+/// are the same `era_years` the bake's `era_index_for` reads: an era holds
+/// every bake year from its own start up to the next era's.
+///
+/// A reader that already holds the world's terrain and climate — the Lot's
+/// context does — should call [`bake_era_graphs_from`] and not pay a second
+/// sculpt and fit through this wrapper (the same redundancy
+/// `connection_graph_of`'s doc names).
+// Named construction site (decision 0092): the sole caller of `terrain_of`/
+// `climate_of` on this path -- sculpts/fits once for its own era-graph
+// readout, then hands the pair to `bake_era_graphs_from`, which takes an
+// already-built terrain/climate and therefore calls neither disallowed
+// method itself and needs no allow of its own.
+/// type-audit: bare-ok(count: return)
+#[allow(clippy::disallowed_methods)]
+pub fn bake_era_graphs(
+    world: &World,
+) -> Result<Vec<(f64, hornvale_topology::ConnectionGraph)>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    bake_era_graphs_from(world, &terrain, &climate)
+}
+
+/// [`bake_era_graphs`] over an already-built terrain and climate: the same
+/// derivation, none of the sculpting.
+/// type-audit: bare-ok(count: return)
+pub fn bake_era_graphs_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<Vec<(f64, hornvale_topology::ConnectionGraph)>, BuildError> {
+    let cfg = history_bake::BakeConfig::default_millennia();
+    let (eras, _adjusts, years) = bake_eras(world, terrain, &cfg)?;
+    let geo = terrain.geosphere();
+    let current = hornvale_kernel::VertexMap::from_fn(geo, |c| climate.current_at(c));
+    let elevation = &terrain.globe().elevation;
+    Ok(years
+        .into_iter()
+        .zip(eras.iter())
+        .map(|(year, era)| {
+            (
+                year,
+                crate::graph_derive::connection_graph_at(
+                    geo,
+                    elevation,
+                    era.sea_level,
+                    &current,
+                    &[],
+                    &crate::graph_derive::GraphConfig::default(),
+                ),
+            )
+        })
+        .collect())
+}
+
+/// The bake's era-adjusted ecological substrates over already-built terrain
+/// and climate. This is the substrate the history bake uses for pathogen
+/// niche fit; observational windows consume it without becoming a second
+/// population or climate authority.
+/// type-audit: bare-ok(count: return)
+pub fn bake_era_substrates_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<Vec<(f64, hornvale_kernel::VertexMap<Substrate>)>, BuildError> {
+    let cfg = history_bake::BakeConfig::default_millennia();
+    let (_eras, adjusts, years) = bake_eras(world, terrain, &cfg)?;
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+        stellar_inputs(&sky_of(world)?);
+    let insolation = insolation_field(
+        terrain.geosphere(),
+        obliquity_deg,
+        insolation_scalar,
+        &regime,
+    );
+    Ok(years
+        .into_iter()
+        .zip(adjusts.iter())
+        .map(|(year, adjust)| {
+            (
+                year,
+                substrate_field_at(terrain.geosphere(), terrain, climate, &insolation, adjust),
+            )
+        })
+        .collect())
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
@@ -7933,6 +8142,51 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.time_horizon)))
         .collect();
+    cfg.lifespans = peoples
+        .iter()
+        .zip(species_biosphere.iter())
+        .map(|(&kind, traits)| {
+            (
+                kind,
+                hornvale_species::lifespan(traits.mass, traits.thermal_strategy, traits.schedule)
+                    .get(),
+            )
+        })
+        .collect();
+    let era_substrates: Vec<_> = era_adjusts
+        .iter()
+        .map(|adjust| substrate_field_at(geo, terrain, climate, &hoisted.insolation, adjust))
+        .collect();
+    cfg.epidemics = hornvale_species::pathogen_registry()
+        .iter()
+        .filter(|(_, traits)| {
+            matches!(
+                traits.class,
+                hornvale_species::PathogenClass::Zoonotic | hornvale_species::PathogenClass::Crowd
+            )
+        })
+        .map(|(&kind, traits)| crate::plague_bake::EpidemicKind {
+            kind,
+            hosts: traits.hosts.iter().copied().collect(),
+            fit_by_era: era_substrates
+                .iter()
+                .map(|substrate| {
+                    hornvale_kernel::VertexMap::from_fn(geo, |vertex| {
+                        tolerance_liebig(&traits.condition_niche, substrate.get(vertex), 0.0)
+                    })
+                })
+                .collect(),
+            attack_max: traits.attack_max.expect("epidemic attack fraction"),
+            fatality: traits.fatality.expect("epidemic fatality"),
+            spillover_weight: traits.spillover_weight.expect("epidemic spillover weight"),
+            immunizing: traits.immunizing,
+            ccs: hornvale_epidemiology::critical_community_size(
+                traits.r0.expect("epidemic R0"),
+                traits.infectious_years.expect("epidemic infectious period"),
+                1.0 / 30.0,
+            ),
+        })
+        .collect();
     let current = hornvale_kernel::VertexMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
@@ -11388,7 +11642,14 @@ mod tests {
         // property holding: the draw is still keyed on the parent's
         // (vertex, band, year), so a world moves where a working is founded and
         // nowhere else.
-        assert_eq!(count("name-gloss"), 515);
+        //
+        // The Murrain re-pin: the epidemic/history bake changes the actual
+        // historical settlement substrate, not the population-layer read. On
+        // the committed seed-42 fixtures, alive occupations move 390 -> 307,
+        // exactly matching this name-gloss count's 515 -> 432. The three
+        // occlusion counts above remain the invariant; this exact count records
+        // the population-driven naming consequence.
+        assert_eq!(count("name-gloss"), 432);
     }
 
     #[test]
@@ -14417,7 +14678,7 @@ mod tests {
     #[test]
     fn domains_roster_crate_names_are_unique_and_nonempty() {
         let mut names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
-        assert_eq!(names.len(), 12, "expected twelve domains in the roster");
+        assert_eq!(names.len(), 13, "expected thirteen domains in the roster");
         assert!(names.iter().all(|n| !n.is_empty()));
         let before = names.len();
         names.sort_unstable();
