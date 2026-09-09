@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/the-wanderers","note":"sluice: requeued req-0f901813b417-20260909T004126Z for campaign/the-wanderers at 0f901813b417 after absorbing current main, regenerating merge artifacts, and passing gate-commit","paths":["cli/tests/fixtures/world-seed-42.json,windows/worldgen/tests/suite/weft_ledger_guard.rs"]}
