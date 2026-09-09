@@ -136,6 +136,8 @@ usage:
                           regularities/sugarscape-1996.regularity.json)
   hornvale observations validate --manifest <PATH>
                           validate one internal observation episode manifest
+  hornvale observations export --manifest <PATH> --out <DIR>
+                          export deterministic renderer packets from an existing world surface
   hornvale streams                         dump the stream manifest as markdown
   hornvale underworld --seed <N>           dump one seed's chamber lattice as text (the underworld
                                             witness: chamber counts by band and by rock, plus the
@@ -275,10 +277,43 @@ fn cmd_observations(args: &[String]) -> Result<(), String> {
             );
             Ok(())
         }
+        Some("export") => {
+            if args.get(2).map(String::as_str) != Some("--manifest") {
+                return Err(
+                    "observations export: expected --manifest <PATH> after export".to_string(),
+                );
+            }
+            let manifest_path = args
+                .get(3)
+                .ok_or_else(|| "observations export: --manifest <PATH> is required".to_string())?;
+            if args.get(4).map(String::as_str) != Some("--out") {
+                return Err("observations export: expected --out <DIR> after manifest".to_string());
+            }
+            let out_dir = args
+                .get(5)
+                .ok_or_else(|| "observations export: --out <DIR> is required".to_string())?;
+            if let Some(unexpected) = args.get(6) {
+                return Err(format!(
+                    "observations export: unexpected argument '{unexpected}'"
+                ));
+            }
+            let manifest = observations::read_manifest(std::path::Path::new(manifest_path))
+                .map_err(|error| error.to_string())?;
+            let report = observations::export_frames(&manifest, std::path::Path::new(out_dir))
+                .map_err(|error| error.to_string())?;
+            println!(
+                "exported observation {}: frames={} source={} out={}",
+                report.episode_id,
+                report.frame_count,
+                report.source_digest,
+                std::path::Path::new(out_dir).display()
+            );
+            Ok(())
+        }
         Some(other) => Err(format!(
-            "observations: unknown mode '{other}' (expected validate)"
+            "observations: unknown mode '{other}' (expected validate or export)"
         )),
-        None => Err("observations: mode is required (expected validate)".to_string()),
+        None => Err("observations: mode is required (expected validate or export)".to_string()),
     }
 }
 

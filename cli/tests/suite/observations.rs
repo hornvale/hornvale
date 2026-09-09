@@ -10,6 +10,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 static NEXT_TEMP_FILE: AtomicU64 = AtomicU64::new(0);
 
+fn temp_output_dir(tag: &str) -> PathBuf {
+    let serial = NEXT_TEMP_FILE.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!(
+        "hornvale-observation-{tag}-{}-{serial}",
+        std::process::id()
+    ))
+}
+
 fn valid_manifest() -> EpisodeManifest {
     EpisodeManifest {
         id: "HV-001".to_string(),
@@ -450,4 +458,167 @@ fn observations_fixture_source_command_runs_from_repository_root() {
         .output()
         .expect("execute fixture source command through the current binary");
     assert!(out.status.success(), "fixture command failed: {out:?}");
+}
+
+#[test]
+fn observations_export_is_contiguous_identified_and_byte_deterministic() {
+    let manifest = temp_manifest(
+        "export",
+        &manifest_json(&[
+            ("frame_count", serde_json::json!(3)),
+            (
+                "source_commands",
+                serde_json::json!(["cargo run -p hornvale -- underworld --seed 42"]),
+            ),
+        ]),
+    );
+    let first = temp_output_dir("export-first");
+    let second = temp_output_dir("export-second");
+
+    for output_dir in [&first, &second] {
+        let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+            .args(["observations", "export", "--manifest"])
+            .arg(&manifest)
+            .arg("--out")
+            .arg(output_dir)
+            .output()
+            .expect("run observations export");
+        assert!(out.status.success(), "command failed: {out:?}");
+    }
+
+    let expected_names = ["frame-000.json", "frame-001.json", "frame-002.json"];
+    for (index, name) in expected_names.iter().enumerate() {
+        let bytes = std::fs::read(first.join(name)).expect("read first exported packet");
+        let packet: serde_json::Value =
+            serde_json::from_slice(&bytes).expect("packet is valid JSON");
+        assert_eq!(packet["frame_index"], index);
+        assert_eq!(packet["episode_id"], "HV-001");
+        assert_eq!(packet["world_seed"], 42);
+        assert_eq!(packet["world_revision"], "test-revision");
+        assert!(
+            packet["source_digest"]
+                .as_str()
+                .is_some_and(|digest| !digest.is_empty()),
+            "packet must bind itself to authoritative source bytes: {packet}"
+        );
+        assert_eq!(
+            bytes,
+            std::fs::read(second.join(name)).expect("read second exported packet"),
+            "repeated export changed {name}"
+        );
+    }
+    assert_eq!(
+        std::fs::read_dir(&first)
+            .expect("read first output directory")
+            .count(),
+        expected_names.len(),
+        "export must emit exactly frame_count packets"
+    );
+
+    std::fs::remove_file(manifest).expect("remove temporary manifest");
+    std::fs::remove_dir_all(first).expect("remove first export");
+    std::fs::remove_dir_all(second).expect("remove second export");
+}
+
+#[test]
+fn observations_export_missing_manifest_does_not_create_output_directory() {
+    let manifest = temp_output_dir("missing-manifest").join("absent.json");
+    let output_dir = temp_output_dir("missing-manifest-output");
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&manifest)
+        .arg("--out")
+        .arg(&output_dir)
+        .output()
+        .expect("run observations export with missing manifest");
+
+    assert!(!out.status.success(), "missing manifest was accepted");
+    assert!(
+        !output_dir.exists(),
+        "output directory was created before the manifest was read"
+    );
+}
+
+#[test]
+fn observations_export_refuses_needs_simulation_extension() {
+    let manifest = temp_manifest(
+        "simulation-extension",
+        &manifest_json(&[
+            ("frame_count", serde_json::json!(1)),
+            (
+                "source_commands",
+                serde_json::json!(["cargo run -p hornvale -- underworld --seed 42"]),
+            ),
+            (
+                "capability_state",
+                serde_json::json!("needs_simulation_extension"),
+            ),
+        ]),
+    );
+    let output_dir = temp_output_dir("simulation-extension-output");
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&manifest)
+        .arg("--out")
+        .arg(&output_dir)
+        .output()
+        .expect("run observations export for unsupported capability state");
+
+    assert!(!out.status.success(), "simulation extension was downgraded");
+    let stderr = String::from_utf8(out.stderr).expect("utf-8 stderr");
+    assert!(stderr.contains("needs_simulation_extension"), "{stderr}");
+    assert!(!output_dir.exists(), "refused export created output");
+
+    std::fs::remove_file(manifest).expect("remove temporary manifest");
+}
+
+#[test]
+fn observations_hv_001_fixture_is_producer_backed_and_contains_no_client_classification() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root");
+    let manifest_path = root.join("observations/episodes/HV-001.json");
+    let expected_path = root.join("observations/fixtures/HV-001/expected-frame-000.json");
+    let output_dir = temp_output_dir("fixture-export");
+
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&manifest_path)
+        .arg("--out")
+        .arg(&output_dir)
+        .output()
+        .expect("export committed HV-001 manifest");
+    assert!(out.status.success(), "fixture export failed: {out:?}");
+
+    let expected = std::fs::read(&expected_path).expect("read committed frame fixture");
+    let actual = std::fs::read(output_dir.join("frame-000.json"))
+        .expect("read freshly exported first frame");
+    assert_eq!(actual, expected, "committed fixture drifted from producer");
+
+    let packet: serde_json::Value =
+        serde_json::from_slice(&expected).expect("fixture is valid JSON");
+    let label_keys: Vec<_> = packet["labels"]
+        .as_object()
+        .expect("labels object")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(
+        label_keys,
+        ["object", "observation_sentence", "primary_axis", "scale"],
+        "renderer labels must remain authored manifest fields"
+    );
+    let spatial_keys: Vec<_> = packet["spatial"]
+        .as_object()
+        .expect("spatial observation object")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(
+        spatial_keys,
+        ["readout", "source"],
+        "spatial evidence must remain the producer readout, without client classification"
+    );
+
+    std::fs::remove_dir_all(output_dir).expect("remove fixture export");
 }

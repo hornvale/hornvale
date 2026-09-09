@@ -2,9 +2,12 @@
 
 use serde::de::{DeserializeSeed, Error as _, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
+
+use hornvale_kernel::Seed;
+use hornvale_worldgen as world_builder;
 
 /// Editorial state of an observation package.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -169,8 +172,58 @@ pub struct EpisodeManifest {
     pub approval: Option<Approval>,
 }
 
+/// Authoritative spatial evidence carried by one observation frame.
+/// type-audit: bare-ok(identifier-text: source), bare-ok(prose: readout)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SpatialObservation {
+    /// Existing producer whose bytes supplied this evidence.
+    pub source: String,
+    /// Byte-stable text emitted by that producer.
+    pub readout: String,
+}
+
+/// Deterministic renderer input for one frame of an observation episode.
+/// type-audit: bare-ok(identifier-text: episode_id), bare-ok(count: frame_index), bare-ok(count: world_seed), bare-ok(identifier-text: world_revision), bare-ok(diagnostic-value: time_day), bare-ok(prose: title), bare-ok(identifier-text: labels), bare-ok(identifier-text: source_digest)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FramePacket {
+    /// Stable episode identifier.
+    pub episode_id: String,
+    /// Zero-based position in the exported sequence.
+    pub frame_index: u32,
+    /// Seed identifying the observed world.
+    pub world_seed: u64,
+    /// Revision identifying the observed simulation code.
+    pub world_revision: String,
+    /// World time represented by this frame, when the episode is temporal.
+    pub time_day: Option<f64>,
+    /// Authored episode title; never derived by a client.
+    pub title: String,
+    /// Authored labels needed by the renderer.
+    pub labels: BTreeMap<String, String>,
+    /// Existing simulation output observed by this spatial episode.
+    pub spatial: SpatialObservation,
+    /// Digest binding this packet to the authoritative producer bytes.
+    pub source_digest: String,
+}
+
+/// Summary of one completed frame export.
+/// type-audit: bare-ok(identifier-text: episode_id), bare-ok(count: frame_count), bare-ok(identifier-text: source_digest)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExportReport {
+    /// Episode whose packets were exported.
+    pub episode_id: String,
+    /// Number of packets written.
+    pub frame_count: u32,
+    /// Digest shared by every packet in this export.
+    pub source_digest: String,
+    /// Final packet paths in frame order.
+    pub output_paths: Vec<PathBuf>,
+}
+
 /// A manifest could not be read, parsed, or semantically validated.
-/// type-audit: bare-ok(prose: Read.reason), bare-ok(prose: Parse.reason), bare-ok(identifier-text: Invalid.field), bare-ok(prose: Invalid.reason)
+/// type-audit: bare-ok(prose: Read.reason), bare-ok(prose: Parse.reason), bare-ok(identifier-text: Invalid.field), bare-ok(prose: Invalid.reason), bare-ok(identifier-text: Build.episode_id), bare-ok(prose: Build.reason), bare-ok(identifier-text: Export.episode_id), bare-ok(count: Export.frame_index), bare-ok(prose: Export.reason)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ObservationError {
     /// The manifest file could not be read.
@@ -194,6 +247,24 @@ pub enum ObservationError {
         /// Human-readable reason for refusal.
         reason: String,
     },
+    /// An existing simulation producer could not build its source evidence.
+    Build {
+        /// Episode whose world failed to build.
+        episode_id: String,
+        /// Producer or world-builder error text.
+        reason: String,
+    },
+    /// A frame packet could not be serialized or atomically written.
+    Export {
+        /// Episode whose export failed.
+        episode_id: String,
+        /// Frame being written, when failure occurred after framing began.
+        frame_index: Option<u32>,
+        /// Path involved in the failed operation.
+        path: PathBuf,
+        /// Serializer or operating-system error text.
+        reason: String,
+    },
 }
 
 impl fmt::Display for ObservationError {
@@ -204,6 +275,22 @@ impl fmt::Display for ObservationError {
                 write!(f, "{}: manifest parse: {reason}", path.display())
             }
             Self::Invalid { field, reason } => write!(f, "{field}: {reason}"),
+            Self::Build { episode_id, reason } => {
+                write!(f, "observation {episode_id}: source build: {reason}")
+            }
+            Self::Export {
+                episode_id,
+                frame_index,
+                path,
+                reason,
+            } => match frame_index {
+                Some(index) => write!(
+                    f,
+                    "observation {episode_id} frame {index}: {}: {reason}",
+                    path.display()
+                ),
+                None => write!(f, "observation {episode_id}: {}: {reason}", path.display()),
+            },
         }
     }
 }
@@ -506,4 +593,152 @@ pub fn read_manifest(path: &Path) -> Result<EpisodeManifest, ObservationError> {
     })?;
     validate_manifest(&manifest).map_err(|error| at_path(error, path))?;
     Ok(manifest)
+}
+
+fn time_day(manifest: &EpisodeManifest, frame_index: u32) -> Option<f64> {
+    manifest.time_window.map(|window| {
+        if manifest.frame_count == 1 {
+            window.start_day
+        } else {
+            let progress = f64::from(frame_index) / f64::from(manifest.frame_count - 1);
+            window.start_day + (window.end_day - window.start_day) * progress
+        }
+    })
+}
+
+fn underworld_source(manifest: &EpisodeManifest) -> Result<String, ObservationError> {
+    let expected_command = format!(
+        "cargo run -p hornvale -- underworld --seed {}",
+        manifest.seed
+    );
+    if manifest.source_commands.as_slice() != [expected_command] {
+        return Err(invalid(
+            "source_commands",
+            format!(
+                "export currently requires exactly 'cargo run -p hornvale -- underworld --seed {}'",
+                manifest.seed
+            ),
+        ));
+    }
+
+    let components =
+        world_builder::WorldComponents::assemble().map_err(|error| ObservationError::Build {
+            episode_id: manifest.id.clone(),
+            reason: error.to_string(),
+        })?;
+    let artifacts = world_builder::build_world_to_with_artifacts(
+        Seed(manifest.seed),
+        &hornvale_astronomy::SkyPins::default(),
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+        &components,
+        world_builder::BuildDepth::Full,
+    )
+    .map_err(|error| ObservationError::Build {
+        episode_id: manifest.id.clone(),
+        reason: error.to_string(),
+    })?;
+    let world_builder::BuildArtifacts { world, terrain, .. } = artifacts;
+    let terrain = terrain.ok_or_else(|| ObservationError::Build {
+        episode_id: manifest.id.clone(),
+        reason: "BuildDepth::Full did not return terrain".to_string(),
+    })?;
+    let overrides = world_builder::delve_seating::ledger_overrides(&world, &terrain);
+    Ok(world_builder::underworld_readout::render_underworld(
+        Seed(manifest.seed),
+        &terrain,
+        &overrides,
+    ))
+}
+
+/// Build one authoritative source once and atomically emit its frame packets.
+pub fn export_frames(
+    manifest: &EpisodeManifest,
+    out_dir: &Path,
+) -> Result<ExportReport, ObservationError> {
+    validate_manifest(manifest)?;
+    if manifest.capability_state == CapabilityState::NeedsSimulationExtension {
+        return Err(invalid(
+            "capability_state",
+            "needs_simulation_extension cannot be exported",
+        ));
+    }
+
+    let source = underworld_source(manifest)?;
+    let source_digest = format!("fnv1a64:{:016x}", hornvale_lab::fnv1a64(source.as_bytes()));
+    let labels = BTreeMap::from([
+        ("object".to_string(), manifest.object.clone()),
+        ("scale".to_string(), manifest.scale.clone()),
+        ("primary_axis".to_string(), manifest.primary_axis.clone()),
+        (
+            "observation_sentence".to_string(),
+            manifest.observation_sentence.clone(),
+        ),
+    ]);
+
+    let mut serialized = Vec::with_capacity(manifest.frame_count as usize);
+    for frame_index in 0..manifest.frame_count {
+        let packet = FramePacket {
+            episode_id: manifest.id.clone(),
+            frame_index,
+            world_seed: manifest.seed,
+            world_revision: manifest.world_revision.clone(),
+            time_day: time_day(manifest, frame_index),
+            title: manifest.title.clone(),
+            labels: labels.clone(),
+            spatial: SpatialObservation {
+                source: "hornvale underworld stdout".to_string(),
+                readout: source.clone(),
+            },
+            source_digest: source_digest.clone(),
+        };
+        let mut bytes =
+            serde_json::to_vec_pretty(&packet).map_err(|error| ObservationError::Export {
+                episode_id: manifest.id.clone(),
+                frame_index: Some(frame_index),
+                path: out_dir.to_path_buf(),
+                reason: format!("serialize packet: {error}"),
+            })?;
+        bytes.push(b'\n');
+        serialized.push(bytes);
+    }
+
+    std::fs::create_dir_all(out_dir).map_err(|error| ObservationError::Export {
+        episode_id: manifest.id.clone(),
+        frame_index: None,
+        path: out_dir.to_path_buf(),
+        reason: format!("create output directory: {error}"),
+    })?;
+    let mut output_paths = Vec::with_capacity(serialized.len());
+    for (frame_index, bytes) in serialized.into_iter().enumerate() {
+        let frame_index = frame_index as u32;
+        let final_path = out_dir.join(format!("frame-{frame_index:03}.json"));
+        let temporary_path = out_dir.join(format!(
+            ".frame-{frame_index:03}.json.tmp-{}",
+            std::process::id()
+        ));
+        std::fs::write(&temporary_path, bytes).map_err(|error| ObservationError::Export {
+            episode_id: manifest.id.clone(),
+            frame_index: Some(frame_index),
+            path: temporary_path.clone(),
+            reason: format!("write temporary packet: {error}"),
+        })?;
+        std::fs::rename(&temporary_path, &final_path).map_err(|error| {
+            let _ = std::fs::remove_file(&temporary_path);
+            ObservationError::Export {
+                episode_id: manifest.id.clone(),
+                frame_index: Some(frame_index),
+                path: final_path.clone(),
+                reason: format!("rename temporary packet: {error}"),
+            }
+        })?;
+        output_paths.push(final_path);
+    }
+
+    Ok(ExportReport {
+        episode_id: manifest.id.clone(),
+        frame_count: manifest.frame_count,
+        source_digest,
+        output_paths,
+    })
 }
