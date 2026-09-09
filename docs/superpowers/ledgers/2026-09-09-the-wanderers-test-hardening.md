@@ -43,3 +43,25 @@ stable mechanism witness.
 the pinned 1, and live order changes [(42, 0), (7, 1), (1000, 5)] instead of
 the pinned [(42, 0), (7, 1), (1000, 1)]. Both corrected focused tests pass
 locally.
+
+## #3 [G6] — What did the merge-only heavy phase own?
+
+**Question.** Which of the remaining heavy reds are code regressions, local
+golden drift, or a calibration witness that must be re-read?
+
+**Decision.** Regenerate the occupancy byte golden from the Wanderers tree,
+record the drow calibration as 9/60 with its measured binary-topology
+attribution, and queue the canonical census refresh on lefford. Do not alter
+production behavior or lower the deferred raider floor.
+
+**Why.** The occupancy test is explicitly a live-render/committed-byte
+change detector and its dedicated ignored writer produced a matching golden.
+The drow witness moved only under default stellar admission: the shipped tree
+reads 9/60, while a control forcing only SkyPins.topology to Single restores
+7/60. The census fixture is canonical-host-authored data and must be refreshed
+through the Sluice census path, never locally.
+
+**Evidence.** The held heavy phase reported exactly three reds: stale
+the-census probe data, stale windows/worldgen/tests/fixtures/occupancy.csv,
+and the drow witness at 9/60 versus 7/60. The regenerated occupancy drift
+test passes; the focused drow witness passes at 9/60.
