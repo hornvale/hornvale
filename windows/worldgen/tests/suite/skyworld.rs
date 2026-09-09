@@ -1604,15 +1604,27 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         "SkyWorldDetail,render_skyworld_diagnostic_readout,render_skyworld_png,render_skyworld_readout,",
         "root exports gained an unreviewed Skyworld observation surface"
     );
+    let standalone_root_exports: Vec<_> = WORLDGEN_LIB
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            (line.starts_with("pub use skyworld::") && !line.starts_with("pub use skyworld::{"))
+                || line.starts_with("pub use skyworld_propagation::")
+        })
+        .collect();
+    assert_eq!(
+        standalone_root_exports,
+        [
+            "pub use skyworld::skyworld_from;",
+            "pub use skyworld_propagation::{propagation_at, trajectory_at};",
+        ],
+        "the root surface must expose exactly the approved standalone Skyworld constructor and propagation queries"
+    );
     assert!(
-        WORLDGEN_LIB.contains("pub use skyworld::skyworld_from;")
-            && WORLDGEN_LIB
-                .contains("pub use skyworld_propagation::{propagation_at, trajectory_at};")
-            && !WORLDGEN_LIB
-                .lines()
-                .any(|line| line.trim_start().starts_with("pub use skyworld")
-                    && line.contains("save")),
-        "the public Skyworld surface remains pure derivation, query, and observation"
+        !WORLDGEN_LIB
+            .lines()
+            .any(|line| line.trim_start().starts_with("pub use skyworld") && line.contains("save")),
+        "the root surface must not expose Skyworld save behavior"
     );
     for source in [SKYWORLD_SOURCE, PROPAGATION_SOURCE, RENDER_SOURCE] {
         for save_surface in [

@@ -1,7 +1,7 @@
 # Skyworld Seams — design
 
 **Campaign:** The Skyworld Seams · **Branch:** `campaign/skyworld`
-**Status:** G3 package — awaiting review
+**Status:** G3 approved; Tasks 1–4 complete, including review-hardened seam contracts; awaiting the campaign's normal review and close process
 
 ## 1. Purpose
 

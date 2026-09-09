@@ -161,7 +161,7 @@
 
 **Files:**
 - Modify: `windows/worldgen/tests/suite/skyworld.rs` with final immutability and contract probes
-- Modify: `docs/superpowers/ledgers/2026-09-09-the-skyworld.md` with measurements, reusable contract, rejected abstractions, and follow-ups
+- Modify: `docs/superpowers/ledgers/2026-09-09-skyworld-seams.md` with measurements, reusable contract, rejected abstractions, and follow-ups
 - Modify: `docs/audits/campaign-reconciliation.tsv` to include this plan path when the campaign record is complete
 - Modify: `docs/superpowers/specs/2026-09-09-skyworld-seams-design.md` only if implementation evidence requires an approved clarification
 - Modify: `book/src/frontier/idea-registry.md` only if a measured implementation result changes a registered idea’s status
@@ -193,7 +193,7 @@
 - [x] **Step 5: Commit the completed seam-audit slice.**
 
   ```bash
-  git add windows/worldgen/tests/suite/skyworld.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md docs/audits/campaign-reconciliation.tsv docs/superpowers/specs/2026-09-09-skyworld-seams-design.md book/src/frontier/idea-registry.md
+  git add windows/worldgen/tests/suite/skyworld.rs docs/superpowers/ledgers/2026-09-09-skyworld-seams.md docs/audits/campaign-reconciliation.tsv docs/superpowers/specs/2026-09-09-skyworld-seams-design.md book/src/frontier/idea-registry.md
   git commit -m "docs: capture Skyworld seam audit"
   ```
 
