@@ -6780,3 +6780,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T00:43:49Z | gate-commit | 38.634 | 74.186 | 16.729 | 2.35 | 0 | fe3e5a387 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-09T00:45:25Z | gate-commit | 38.690 | 74.379 | 16.732 | 2.35 | 0 | 6aefd7dec | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-09T01:04:01Z | gate-commit | 40.148 | 75.245 | 16.715 | 2.29 | 0 | 8330d59d0 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T00:38:09Z | gate-commit | 275.759 | 1073.378 | 58.946 | 4.11 | 0 | 40ebeb42b | campaign/the-murrain-across-world | MacBookPro | 10 |
+| 2026-09-09T01:11:01Z | census-tail-chorus | 56.383 | 701.535 | 20.858 | 12.81 | 0 | 9ddda9d72 |  | lefford | 40 |
+| 2026-09-09T01:11:03Z | census-tail-domesday | 1.494 | 1.343 | 0.152 | 1.00 | 0 | 9ddda9d72 |  | lefford | 40 |
+| 2026-09-09T01:11:04Z | census-tail-anomalies | 1.057 | 0.927 | 0.130 | 1.00 | 0 | 9ddda9d72 |  | lefford | 40 |
+| 2026-09-09T01:11:06Z | sluice:artifacts | 300.724 | 1706.834 | 69.082 | 5.91 | 0 | 9ddda9d72 |  | lefford | 40 |
+| 2026-09-09T01:12:56Z | sluice:outboard | 109.727 | 96.175 | 83.746 | 1.64 | 0 | 22d3d34d5 |  | lefford | 40 |
+| 2026-09-09T01:27:23Z | sluice:gate | 866.356 | 25089.069 | 789.681 | 29.87 | 0 | e05f112b6 |  | lefford | 40 |
