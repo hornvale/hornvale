@@ -235,7 +235,7 @@ priority = 100
 # class needs neither.
 [[profile.default.overrides]]
 # class: sized-sweep
-filter = 'test(/the_blast_radius_readout$/) | test(/is_the_raid_proxy_ambiguous_or_is_its_population_stale$/) | test(/zero_dispersion_collapses_between_settlement_variance$/) | test(/the_cascade_distribution_is_adjudicated$/)'
+filter = 'test(/the_blast_radius_readout$/) | test(/is_the_raid_proxy_ambiguous_or_is_its_population_stale$/) | test(/zero_dispersion_collapses_between_settlement_variance$/) | test(/the_cascade_distribution_is_adjudicated$/) | test(/cascade_sizes_are_measured_and_the_shape_adjudicated$/)'
 threads-required = 30
 
 # UNUSED since The Sexton (Task 3): `make gate` (the only caller of the

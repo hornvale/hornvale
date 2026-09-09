@@ -85,7 +85,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, WorldComponents, build_world_to, cascade_sizes, census, history_for,
+    BuildDepth, SettlementPins, WorldComponents, build_world_to, cascade_sizes, census,
+    history_for, seed_sweep,
 };
 
 /// The seed sample the pooled shape verdict is measured over. Fixed (not a
@@ -119,6 +120,19 @@ const MIN_ALIVE_AT_NOW: u64 = 50;
 /// sub-critical (module docs), and asserting a ceiling on it would freeze the
 /// falsification the deferred dominance-hierarchy slice is meant to break.
 const MIN_POOLED_CASCADES: u64 = 10;
+
+/// Build one history against an already assembled canonical component set.
+/// The headline seed sweep shares that immutable assembly across workers.
+fn history_with_components(seed: u64, wc: &WorldComponents) -> hornvale_worldgen::History {
+    history_for(
+        Seed(seed),
+        &SkyPins::default(),
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        wc,
+    )
+    .expect("bakes")
+}
 
 /// Gate — conflict FIRES, on value rather than on crowding (spec §8.1). Seed
 /// 42 is the seed that never crowds: the pre-Tumult bake resolved zero raids
@@ -210,9 +224,41 @@ fn cascades_do_not_depopulate_the_world() {
 /// pin against it would freeze the falsification instead of recording it.
 /// claim: readout(off-gate, heavy:) — cascade-size distribution over
 /// SHAPE_SAMPLE, with pooled revolt/flight counts, adjudicated
+///
+/// nextest: sized-sweep
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
+    struct SeedReadout {
+        raided: u64,
+        resettled: u64,
+        collapsed: u64,
+        alive: u64,
+        flights: u64,
+        revolts: u64,
+        hist: [u64; 12],
+    }
+
+    let wc = WorldComponents::assemble().expect("registries");
+    // Each world is a pure function of its seed and the immutable canonical
+    // components. `map_seeds` returns rows in seed order, so the caller-thread
+    // fold and readout below are byte-identical to the serial loop this
+    // replaces. Set `HV_SEED_SWEEP_THREADS=1` to reproduce the old execution
+    // shape exactly.
+    let per_seed: Vec<SeedReadout> = seed_sweep::map_seeds(SHAPE_SAMPLE, |s| {
+        let h = history_with_components(s, &wc);
+        let c = census(&h);
+        SeedReadout {
+            raided: c.raided,
+            resettled: c.resettled,
+            collapsed: c.collapsed,
+            alive: c.alive_at_now,
+            flights: c.vassal_flights,
+            revolts: c.vassal_revolts,
+            hist: cascade_sizes(&h),
+        }
+    });
+
     let mut agg = [0u64; 12];
     let mut raided = 0u64;
     let mut resettled = 0u64;
@@ -224,29 +270,18 @@ fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
     // disappointing.
     let mut flights = 0u64;
     let mut revolts = 0u64;
-    for s in SHAPE_SAMPLE {
-        let wc = WorldComponents::assemble().expect("registries");
-        let h = history_for(
-            Seed(s),
-            &SkyPins::default(),
-            &TerrainPins::default(),
-            &SettlementPins::default(),
-            &wc,
-        )
-        .expect("bakes");
-        let c = census(&h);
-        let hi = cascade_sizes(&h);
+    for (s, row) in SHAPE_SAMPLE.zip(per_seed) {
         eprintln!(
             "SUNDER-TUMULT seed {s}: raided {} resettled {} collapsed {} alive {} \
-             flights {} revolts {} hist {hi:?}",
-            c.raided, c.resettled, c.collapsed, c.alive_at_now, c.vassal_flights, c.vassal_revolts
+             flights {} revolts {} hist {:?}",
+            row.raided, row.resettled, row.collapsed, row.alive, row.flights, row.revolts, row.hist
         );
-        raided += c.raided;
-        resettled += c.resettled;
-        collapsed += c.collapsed;
-        flights += c.vassal_flights;
-        revolts += c.vassal_revolts;
-        for (a, b) in agg.iter_mut().zip(hi.iter()) {
+        raided += row.raided;
+        resettled += row.resettled;
+        collapsed += row.collapsed;
+        flights += row.flights;
+        revolts += row.revolts;
+        for (a, b) in agg.iter_mut().zip(row.hist.iter()) {
             *a += b;
         }
     }
