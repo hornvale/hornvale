@@ -1596,12 +1596,28 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         const SKY_MODULE_PATHS: [&str; 3] =
             ["skyworld::", "skyworld_propagation::", "skyworld_render::"];
 
+        fn starts_with_skyworld_module_path(path: &str) -> bool {
+            SKY_MODULE_PATHS
+                .iter()
+                .any(|module_path| path.starts_with(module_path))
+        }
+
         pub_use_declarations(source)
             .into_iter()
             .filter(|declaration| {
-                SKY_MODULE_PATHS
-                    .iter()
-                    .any(|module_path| declaration.contains(module_path))
+                let path = declaration
+                    .strip_prefix("pubuse")
+                    .expect("collected declarations begin with pub use");
+                starts_with_skyworld_module_path(path)
+                    || ["crate::", "self::"].iter().any(|prefix| {
+                        path.strip_prefix(prefix)
+                            .is_some_and(starts_with_skyworld_module_path)
+                    })
+                    || ["crate::{", "self::{"].iter().any(|prefix| {
+                        path.strip_prefix(prefix).is_some_and(|group| {
+                            group.split(',').any(starts_with_skyworld_module_path)
+                        })
+                    })
             })
             .collect()
     }
@@ -1666,8 +1682,21 @@ fn skyworld_contract_has_no_build_or_save_surface() {
             pub use crate::skyworld_propagation::{
                 propagation_at as propagate_overlay,
             };
+            pub use crate::{
+                unrelated::Other,
+                skyworld::{SkyWorld as outer_overlay},
+            };
+            pub use self::{
+                skyworld_render::{render_skyworld_readout as render_outer_overlay},
+            };
             pub use unrelated_render::{
                 render_readout,
+            };
+            pub use unrelated_skyworld::{
+                SkyWorld,
+            };
+            pub use unrelated::skyworld::{
+                SkyWorld as unrelated_overlay,
             };
             "#,
         ),
@@ -1675,6 +1704,8 @@ fn skyworld_contract_has_no_build_or_save_surface() {
             "pubusecrate::skyworld::skyworld_fromasoverlay_from;",
             "pubuseself::skyworld_render::{render_skyworld_readoutasrender_overlay,};",
             "pubusecrate::skyworld_propagation::{propagation_ataspropagate_overlay,};",
+            "pubusecrate::{unrelated::Other,skyworld::{SkyWorldasouter_overlay},};",
+            "pubuseself::{skyworld_render::{render_skyworld_readoutasrender_outer_overlay},};",
         ],
         "the source matcher must collect only Skyworld root re-exports with alternate paths and aliases"
     );
