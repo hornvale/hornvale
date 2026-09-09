@@ -56,7 +56,9 @@ esac
 
 out_parent="$(dirname "$out")"
 out_leaf="$(basename "$out")"
-[ "$out_leaf" != "." ] && [ "$out_leaf" != ".." ] || die "refusing broad output target: $out"
+if [ "$out_leaf" = "." ] || [ "$out_leaf" = ".." ]; then
+    die "refusing broad output target: $out"
+fi
 [ -d "$out_parent" ] || die "output parent directory does not exist: $out_parent"
 out_parent_abs="$(cd "$out_parent" && pwd -P)"
 out_abs="$out_parent_abs/$out_leaf"
