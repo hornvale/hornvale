@@ -88,8 +88,8 @@ use hornvale_locale::LocaleContext;
 use hornvale_vessel::body::Body;
 use hornvale_vessel::ground::{GroundHazards, OwnedGround};
 use hornvale_vessel::liveness::{
-    AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, HomeNavCache, LocaleTerrain, Occupancy,
-    PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SLEPT_ON, SUSTENANCE, Terrain,
+    AGENT_AT, DRANK, DriveMovements, EATEN, HazardMemory, Hazards, HomeNavCache, LocaleTerrain,
+    Occupancy, PrimaryAfraidMemo, RESTED, RouteMemo, SLEPT, SLEPT_ON, SUSTENANCE, Terrain,
     affect_of_memo_occupied, alarm_field_memo, derive_npcs, errand_predicates, hazard_memory_memo,
     waking_offset,
 };
@@ -141,11 +141,79 @@ pub struct BenchShape {
     pub copied_per_tick: Vec<u64>,
 }
 
+/// A test-only terrain seam for the rule-four witness. The generated world's
+/// population and routes remain real, but every room carries a deterministic
+/// uncanny signal when the witness opts in, guaranteeing that the scan reaches
+/// its emitter branch without selecting a lucky world seed.
+struct EmitterWitnessTerrain<'a> {
+    inner: &'a dyn Terrain,
+    force_emitters: bool,
+}
+
+impl Terrain for EmitterWitnessTerrain<'_> {
+    fn elevation(&self, room: &hornvale_kernel::Facet) -> f64 {
+        self.inner.elevation(room)
+    }
+
+    fn is_fresh_water(&self, room: &hornvale_kernel::Facet) -> bool {
+        self.inner.is_fresh_water(room)
+    }
+
+    fn temperature(&self, room: &hornvale_kernel::Facet, day: WorldTime) -> f64 {
+        self.inner.temperature(room, day)
+    }
+
+    fn solar_altitude(&self, room: &hornvale_kernel::Facet, day: WorldTime) -> Option<f64> {
+        self.inner.solar_altitude(room, day)
+    }
+
+    fn day_ticks(&self) -> Option<hornvale_kernel::units::TickSpan> {
+        self.inner.day_ticks()
+    }
+
+    fn forage_value(&self, room: &hornvale_kernel::Facet) -> f64 {
+        self.inner.forage_value(room)
+    }
+
+    fn hazards(&self, room: &hornvale_kernel::Facet) -> Hazards {
+        let mut hazards = self.inner.hazards(room);
+        if self.force_emitters {
+            hazards.uncanny = hazards.uncanny.max(1.0);
+        }
+        hazards
+    }
+
+    fn is_built(&self, room: &hornvale_kernel::Facet) -> bool {
+        self.inner.is_built(room)
+    }
+
+    fn settlement_name(&self, room: &hornvale_kernel::Facet) -> Option<&str> {
+        self.inner.settlement_name(room)
+    }
+
+    fn is_cold(&self, room: &hornvale_kernel::Facet) -> bool {
+        self.inner.is_cold(room)
+    }
+
+    fn prey_value(&self, room: &hornvale_kernel::Facet) -> f64 {
+        self.inner.prey_value(room)
+    }
+}
+
 /// `session_length_scaling.rs`'s construction, counted: the world at `seed`,
 /// `agents` derived bodies, `ticks` ticks of `DriveMovements::step_with_occupancy`
 /// over one caller-owned store, mesh memo and nav cache, with every tick's
 /// terrain wrapped in a `CountingTerrain`.
 pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
+    bench_shape_with_terrain(seed, ticks, agents, false)
+}
+
+fn bench_shape_with_terrain(
+    seed: u64,
+    ticks: usize,
+    agents: usize,
+    force_emitters: bool,
+) -> BenchShape {
     let world = common::build(seed).expect("the seed builds a world");
     let ctx = LocaleContext::build(&world).expect("the locale context builds");
     let home_settlement = hornvale_settlement::village_info(&world)
@@ -205,7 +273,11 @@ pub fn bench_shape(seed: u64, ticks: usize, agents: usize) -> BenchShape {
         let mesh_snapshot = mesh_memo.clone();
         let base = LocaleTerrain::with_fields(&ctx, None, None, None, None, Some(&mesh_snapshot))
             .with_ground(&ground);
-        let terrain = common::CountingTerrain::new(&base);
+        let witness_terrain = EmitterWitnessTerrain {
+            inner: &base,
+            force_emitters,
+        };
+        let terrain = common::CountingTerrain::new(&witness_terrain);
         let sys = DriveMovements {
             npcs: npcs.clone(),
             from,
@@ -1078,8 +1150,10 @@ const RULE_FOUR_SEED: u64 = 28;
 
 #[test]
 fn rule_four_witness_the_emitter_timeline_copy() {
-    let shape = bench_shape(RULE_FOUR_SEED, 60, 50);
-    println!("--- rule 4 witness: seed {RULE_FOUR_SEED}, 50 agents, 60 ticks ---");
+    let shape = bench_shape_with_terrain(RULE_FOUR_SEED, 60, 50, true);
+    println!(
+        "--- rule 4 witness: deterministic emitter terrain, seed {RULE_FOUR_SEED}, 50 agents, 60 ticks ---"
+    );
     println!("copied/tick profile: {:?}", shape.copied_per_tick);
     let copied_15 = shape.copied_per_tick[14];
     let copied_30 = shape.copied_per_tick[29];
@@ -1099,6 +1173,10 @@ fn rule_four_witness_the_emitter_timeline_copy() {
         with_emitters > 0,
         "rule 4 denominator: this shape must build at least one scan that finds an emitter, or \
          pass 3 never copies anything"
+    );
+    assert!(
+        copied_60 > 0,
+        "rule 4 numerator: an emitter scan must copy at least one timeline entry"
     );
     println!(
         "rule 4 verdict input: tick 15 -> tick 60 copied {copied_15} -> {copied_60} (grows with \
