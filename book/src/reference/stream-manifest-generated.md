@@ -253,8 +253,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `derived/overhang/v1` | occurrence of a derived overhang at a walk facet, keyed on position |
 | `derived/thicket/v1` | occurrence of a derived thicket at a walk facet, keyed on position |
 | `derived/erratic/v1` | occurrence of a derived erratic at a walk facet, keyed on position |
-| `skyworld/coverage/v1` | seeded sky-habitat coverage target |
-| `skyworld/distribution/v1` | position-keyed sky-habitat distribution |
+| `skyworld/coverage/v1` | seeded sky-habitat coverage draw conditioned by the deterministic environment score |
+| `skyworld/distribution/v1` | sky-habitat distribution and origin altitude, keyed on the stable surface vertex as vertex/{id} |
 | `skyworld/atmosphere/v1` | stable world-level sky atmospheric fields |
 | `skyworld/phenotype/v1` | sky-territory phenotype and stability traits |
 | `skyworld/lineage/v1` | sky-territory lineage and lifecycle metadata |

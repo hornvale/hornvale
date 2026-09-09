@@ -19,11 +19,15 @@ struct Fixture {
 }
 
 fn fixture(seed: u64) -> Fixture {
+    fixture_with_terrain_pins(seed, TerrainPins::default())
+}
+
+fn fixture_with_terrain_pins(seed: u64, terrain_pins: TerrainPins) -> Fixture {
     let components = WorldComponents::assemble().expect("the shipped component roster assembles");
     let built = build_world_to_with_artifacts(
         Seed(seed),
         &SkyPins::default(),
-        &TerrainPins::default(),
+        &terrain_pins,
         &SettlementPins::default(),
         &components,
         BuildDepth::Terrain,
@@ -125,6 +129,82 @@ fn projected_coverage_is_nonempty_and_never_exceeds_ten_percent() {
 }
 
 #[test]
+fn zero_one_and_two_vertex_ceilings_are_never_exceeded() {
+    let fixture = fixture(42);
+    let vertex_count = fixture.terrain.geosphere().vertex_count();
+
+    for ceiling in 0..=2 {
+        let max_projected_fraction = if ceiling == 0 {
+            0.0
+        } else {
+            (ceiling as f64 + 0.25) / vertex_count as f64
+        };
+        assert_eq!(
+            (vertex_count as f64 * max_projected_fraction).floor() as usize,
+            ceiling,
+            "test setup did not realize its intended ceiling"
+        );
+        let skyworld = skyworld_from(
+            &fixture.world,
+            &fixture.terrain,
+            &fixture.climate,
+            SkyWorldConfig {
+                max_projected_fraction,
+                ..config()
+            },
+        );
+        let covered = projected(&skyworld);
+
+        assert_eq!(
+            covered.len(),
+            ceiling,
+            "a configured ceiling of {ceiling} realized {} vertices",
+            covered.len()
+        );
+    }
+}
+
+#[test]
+fn coverage_target_reads_environmental_volcanism() {
+    let sparse = fixture_with_terrain_pins(
+        42,
+        TerrainPins {
+            plates: Some(2),
+            ..TerrainPins::default()
+        },
+    );
+    let active = fixture_with_terrain_pins(
+        42,
+        TerrainPins {
+            plates: Some(64),
+            ..TerrainPins::default()
+        },
+    );
+    let volcanic_count = |fixture: &Fixture| {
+        fixture
+            .terrain
+            .geosphere()
+            .vertices()
+            .filter(|&vertex| hornvale_worldgen::has_edifice(&fixture.terrain, vertex))
+            .count()
+    };
+    let sparse_volcanism = volcanic_count(&sparse);
+    let active_volcanism = volcanic_count(&active);
+    assert_ne!(
+        sparse_volcanism, active_volcanism,
+        "VACUOUS: the conditioning fixtures carry equal volcanic signals"
+    );
+
+    let sparse_coverage = projected(&generate(&sparse)).len();
+    let active_coverage = projected(&generate(&active)).len();
+    assert_ne!(
+        sparse_coverage, active_coverage,
+        "coverage ignored distinct environmental volcanism ({sparse_volcanism} versus \
+         {active_volcanism} edifice vertices) under the same seed"
+    );
+}
+
+#[test]
 fn coverage_projects_over_both_land_and_ocean() {
     let fixture = fixture(42);
     let covered = projected(&generate(&fixture));
@@ -218,6 +298,41 @@ fn altitude_profiles_are_stable_and_filter_radiation_before_moisture() {
         low.high_sky_radiation < high.high_sky_radiation,
         "the lower atmosphere did not filter high-sky radiation"
     );
+}
+
+#[test]
+fn altitude_sampling_is_independent_of_intermediate_samples() {
+    let fixture = fixture(42);
+    let fields = generate(&fixture).fields;
+    let direct = fields.at_altitude(9_137.0);
+    let chained = fields.at_altitude(2_731.0).at_altitude(9_137.0);
+    let close = |left: f64, right: f64| {
+        let scale = left.abs().max(right.abs()).max(1.0);
+        (left - right).abs() <= scale * 1.0e-12
+    };
+
+    assert_eq!(direct.altitude_m, chained.altitude_m);
+    assert!(close(direct.pressure, chained.pressure));
+    assert!(close(direct.density, chained.density));
+    assert!(close(direct.temperature_c, chained.temperature_c));
+    assert!(close(direct.high_sky_radiation, chained.high_sky_radiation));
+    assert!(close(direct.aether, chained.aether));
+    assert!(close(direct.moisture, chained.moisture));
+    for (direct, chained) in direct.wind.into_iter().zip(chained.wind) {
+        assert!(
+            close(direct, chained),
+            "chained wind {chained} differs from direct wind {direct}"
+        );
+    }
+    assert!(
+        close(direct.wind_shear, chained.wind_shear),
+        "chained shear {} differs from direct shear {}",
+        chained.wind_shear,
+        direct.wind_shear
+    );
+    assert_eq!(direct.lapse_rate_c_per_km, chained.lapse_rate_c_per_km);
+    assert_eq!(direct.lunar_forcing, chained.lunar_forcing);
+    assert_eq!(direct.stellar_forcing, chained.stellar_forcing);
 }
 
 #[test]

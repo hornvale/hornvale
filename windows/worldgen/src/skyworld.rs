@@ -95,7 +95,7 @@ impl SkyFields {
         let pressure_factor = math::exp(-delta / PRESSURE_SCALE_M);
         let density_factor = math::exp(-delta / DENSITY_SCALE_M);
         let moisture_factor = math::exp(-delta / MOISTURE_SCALE_M);
-        let wind_factor = 1.0 + delta / WIND_SCALE_M;
+        let wind_ratio = wind_profile(altitude_m) / wind_profile(self.altitude_m);
         SkyFields {
             altitude_m,
             pressure: self.pressure * pressure_factor,
@@ -106,11 +106,11 @@ impl SkyFields {
             aether: self.aether * aether_ratio,
             moisture: self.moisture * moisture_factor,
             wind: [
-                self.wind[0] * wind_factor,
-                self.wind[1] * wind_factor,
-                self.wind[2] * wind_factor,
+                self.wind[0] * wind_ratio,
+                self.wind[1] * wind_ratio,
+                self.wind[2] * wind_ratio,
             ],
-            wind_shear: (self.wind_shear * wind_factor).max(0.0),
+            wind_shear: (self.wind_shear * wind_ratio).max(0.0),
             lunar_forcing: self.lunar_forcing,
             stellar_forcing: self.stellar_forcing,
         }
@@ -403,6 +403,10 @@ fn aether_profile(altitude_m: f64) -> f64 {
             * math::exp(-((altitude_m.max(0.0) - 8_000.0) / AETHER_SCALE_M).powi(2))
 }
 
+fn wind_profile(altitude_m: f64) -> f64 {
+    1.0 + altitude_m.max(0.0) / WIND_SCALE_M
+}
+
 fn derive_fields(
     world: &World,
     terrain: &GeneratedTerrain,
@@ -488,8 +492,9 @@ fn distribution_score(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
     scores: &mut Vec<f64>,
+    altitudes: &mut Vec<f64>,
     vertex: Vertex,
-) -> f64 {
+) -> (f64, f64) {
     let key = format!("vertex/{}", vertex.0);
     let mut draw = world
         .seed
@@ -507,13 +512,29 @@ fn distribution_score(
     let climate_bias =
         climate.moisture_at(vertex) * 0.20 + climate.storm_propensity_at(vertex) * 0.15;
     let coastal_bias = if coastal { 0.25 } else { 0.0 };
-    let score =
-        terrain_bias + elevation_bias + climate_bias + coastal_bias + draw.next_f64() * 0.45;
+    let volcanic_bias = if crate::hazard::has_edifice(terrain, vertex) {
+        0.25
+    } else {
+        0.0
+    };
+    let environment = (terrain_bias + elevation_bias + climate_bias + coastal_bias + volcanic_bias)
+        .clamp(0.0, 1.0);
+    let score = environment + draw.next_f64() * 0.45;
+    let altitude = 4_000.0 + 8_000.0 * draw.next_f64();
     if scores.len() <= vertex.0 as usize {
         scores.resize(vertex.0 as usize + 1, 0.0);
+        altitudes.resize(vertex.0 as usize + 1, 0.0);
     }
     scores[vertex.0 as usize] = score;
-    score
+    altitudes[vertex.0 as usize] = altitude;
+    (score, environment)
+}
+
+fn coverage_target(ceiling: usize, draw: f64, environment: f64) -> usize {
+    let minimum = ceiling.min(3);
+    let span = ceiling - minimum;
+    let conditioned = draw * environment.clamp(0.0, 1.0);
+    minimum + (span as f64 * conditioned).round() as usize
 }
 
 fn derive_territories(
@@ -535,23 +556,27 @@ fn derive_territories(
     if ceiling == 0 {
         return Vec::new();
     }
-    let mut coverage = world
-        .seed
-        .derive(crate::streams::SKYWORLD_COVERAGE)
-        .stream();
-    let minimum = ceiling.min(3);
-    let target = minimum + ((ceiling - minimum + 1) as f64 * coverage.next_f64()) as usize;
     let mut scores = Vec::with_capacity(vertex_count);
+    let mut altitudes = Vec::with_capacity(vertex_count);
     let mut land = Vec::new();
     let mut ocean = Vec::new();
+    let mut environment_total = 0.0;
     for vertex in terrain.geosphere().vertices() {
-        let score = distribution_score(world, terrain, climate, &mut scores, vertex);
+        let (score, environment) =
+            distribution_score(world, terrain, climate, &mut scores, &mut altitudes, vertex);
+        environment_total += environment;
         if terrain.is_ocean(vertex) {
             ocean.push((vertex, score));
         } else {
             land.push((vertex, score));
         }
     }
+    let environment = environment_total / vertex_count as f64;
+    let mut coverage = world
+        .seed
+        .derive(crate::streams::SKYWORLD_COVERAGE)
+        .stream();
+    let target = coverage_target(ceiling, coverage.next_f64(), environment);
     let by_score =
         |a: &(Vertex, f64), b: &(Vertex, f64)| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0));
     land.sort_by(by_score);
@@ -570,13 +595,15 @@ fn derive_territories(
         .chain(ocean.iter())
         .map(|(v, _)| *v)
         .find(|v| excluded.as_ref().is_none_or(|set| !set.contains(v)));
+    let cluster_size = target.saturating_sub(1);
     let mut cluster = std::collections::BTreeSet::new();
     let mut frontier = Vec::new();
-    if let Some(seed) = cluster_seed {
+    if cluster_size > 0
+        && let Some(seed) = cluster_seed
+    {
         cluster.insert(seed);
         frontier.push(seed);
     }
-    let cluster_size = target.saturating_sub(1);
     let mut cursor = 0;
     while cluster.len() < cluster_size && cursor < frontier.len() {
         let current = frontier[cursor];
@@ -619,19 +646,22 @@ fn derive_territories(
     }
     let mut territories = Vec::new();
     if !cluster.is_empty() {
-        territories.push(make_territory(
-            world,
-            fields,
-            cluster.into_iter().collect(),
-            true,
-        ));
+        let projected: Vec<Vertex> = cluster.into_iter().collect();
+        let altitude = altitudes[projected[0].0 as usize];
+        territories.push(make_territory(world, fields, projected, altitude, true));
     }
     if let Some(isolated) = isolated
         && !territories
             .iter()
             .any(|t| t.physical.projected.contains(&isolated))
     {
-        territories.push(make_territory(world, fields, vec![isolated], false));
+        territories.push(make_territory(
+            world,
+            fields,
+            vec![isolated],
+            altitudes[isolated.0 as usize],
+            false,
+        ));
     }
     territories.sort_by_key(|territory| territory.id);
     territories
@@ -641,6 +671,7 @@ fn make_territory(
     world: &World,
     fields: &SkyFields,
     mut projected: Vec<Vertex>,
+    altitude: f64,
     orchard: bool,
 ) -> SkyTerritory {
     projected.sort();
@@ -654,11 +685,6 @@ fn make_territory(
     let mut movement_draw = world
         .seed
         .derive(crate::streams::SKYWORLD_MOVEMENT)
-        .derive(StreamLabel::dynamic(&key))
-        .stream();
-    let mut lineage_draw = world
-        .seed
-        .derive(crate::streams::SKYWORLD_LINEAGE)
         .derive(StreamLabel::dynamic(&key))
         .stream();
     let pick = |draw: &mut Stream, count: u64| (draw.next_u64() % count) as usize;
@@ -711,7 +737,6 @@ fn make_territory(
         SkyEcology::Wooded,
         SkyEcology::OrchardBearing,
     ][pick(&mut phenotype_draw, 5)];
-    let altitude = 4_000.0 + 8_000.0 * lineage_draw.next_f64();
     let local_fields = fields.at_altitude(altitude);
     let phenotype = SkyPhenotype {
         substrate,
