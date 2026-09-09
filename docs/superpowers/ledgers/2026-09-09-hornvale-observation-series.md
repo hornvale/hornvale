@@ -8,3 +8,32 @@
 - **Alternatives discarded:** Implementing the entire open-ended episode population in one plan would mix independent simulation extensions, renderers, media records, and editorial workflow. Treating captions as publishable output would violate the manual approval boundary.
 - **Ideonomy passes / overturns:** One ideonomy pass plus three independent reviews. The pass enriched the design with scale substitution, axis substitution, and combination. The editorial review overturned a strictly prerequisite-first public order; the final design separates evidence dependencies from release order. No unresolved design reversal remains.
 - **Capture actions:** The approved design is `docs/superpowers/specs/2026-09-09-hornvale-observation-series-design.md`. The implementation plan is `docs/superpowers/plans/2026-09-09-hornvale-observation-series.md`. The reconciliation table records both artifacts. No code or public media has been published.
+
+## Execution scan
+
+| Task | Shared file/interface | Producer → consumer | Finding and ruling |
+|---|---|---|---|
+| 1 → 2 | `cli/src/observations.rs`, manifest and validator | Task 1 produces validated manifests; Task 2 extends the same module with frame export | Compatible. Task 1 keeps parsing and validation reusable and does not bake in frame-only fields. |
+| 1 → 5 | `observations/episodes/`, manifest status and capability state | Task 1 defines the record contract; Task 5 supplies the pilot records | Compatible. `approved` remains a human review state; Task 5 may not infer approval from generation. |
+| 2 → 3 | frame-packet JSON contract | Task 2 produces deterministic packets; Task 3 consumes only supplied fields | Compatible. The client must not derive semantic classifications absent from packets. |
+| 2 → 4 | frame directory and export report | Task 2 emits contiguous packets; Task 4 verifies and assembles them | Compatible. Task 4 treats checksum sidecars and videos as local artifacts, not published output. |
+| 3 → 4 | rendered frame inputs and viewport behavior | Task 3 defines renderable state; Task 4 assembles rendered frames | Compatible. The shell layer remains presentation plumbing and does not become a second renderer. |
+| 4 → 5 | verification commands and artifact policy | Task 4 establishes local checks; Task 5 uses them for the pilot | Compatible. Committed manifests/captions remain internal records; generated frames stay ignored unless policy changes explicitly. |
+| 1 | `cli/src/observations.rs`, CLI command, tests, fixture | Tests exercise the parser/validator and command specified by the task | Internally consistent. The valid fixture is intentionally introduced in Task 1 for later tasks. |
+| 2 | export implementation, fixture, CLI command | Tests compare repeated exports and inspect packet provenance | Internally consistent. Existing world surfaces are the only simulation dependency in this increment. |
+| 3 | atlas renderer, tests, render fixture | Pure render tests exercise phone/laptop composition and labels | Internally consistent. No browser event-loop integration is required by this task. |
+| 4 | two shell scripts, README, Make target | Shell tests invoke the assembler and its failure cases | Internally consistent. `shellcheck` is an explicit gate before commit. |
+| 5 | eight manifests, captions, batch record | Review checklist exercises every manifest and caption package | Internally consistent. The task records unsupported candidates rather than inventing simulation mechanisms. |
+
+Ruling: execute the plan in task order. The shared interfaces are deliberately additive; no task conflict requires a plan change before Task 1.
+
+## Review ruling — Task 1, round 1
+
+Ruling: the reviewer’s strict-record findings are load-bearing. Amend Task 1 before proceeding: reject duplicate and unknown JSON fields, make approval state explicit and internally consistent, require a reproducible repository-relative fixture command, and align the manifest with the approved spec’s separate evidence and editorial fields. The cost is a slightly larger record contract now; the benefit is that later frame export cannot preserve ambiguity or claim provenance it cannot replay.
+
+## Task 1: complete
+
+- **Commits:** `9d525615d` and `8a26f4bd2`
+- **Result:** Manifest parsing, strict validation, approval semantics, CLI validation, and the first internal fixture are implemented and reviewed.
+- **Evidence:** 24 focused tests passed; the reviewer also recorded 404 tests passed, formatting, clippy, type-audit, placement-audit, plumb, and quick-gate success.
+- **Review:** Task review approved with no remaining findings.
