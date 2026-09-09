@@ -493,7 +493,7 @@ fn observations_export_is_contiguous_identified_and_byte_deterministic() {
             serde_json::from_slice(&bytes).expect("packet is valid JSON");
         assert_eq!(packet["frame_index"], index);
         assert_eq!(packet["episode_id"], "HV-001");
-        assert_eq!(packet["world_seed"], 42);
+        assert_eq!(packet["world_seed"], "42");
         assert_eq!(packet["world_revision"], "test-revision");
         assert!(
             packet["source_digest"]

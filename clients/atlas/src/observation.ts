@@ -4,11 +4,10 @@ import { initialViewport, type Viewport as AtlasViewport } from "./projection.ts
 const FRAME_SCHEMA = "observation/frame/v1";
 
 export interface FramePacket {
-  /** Optional until the producer begins emitting an explicit schema tag. */
-  schema?: string;
+  schema: string;
   episode_id: string;
   frame_index: number;
-  world_seed: number;
+  world_seed: string;
   world_revision: string;
   time_day: number | null;
   title: string;
@@ -56,7 +55,7 @@ export interface RenderState {
   provenance: {
     episodeId: string;
     frameIndex: number;
-    worldSeed: number;
+    worldSeed: string;
     worldRevision: string;
     timeDay: number | null;
     sourceDigest: string;
@@ -66,8 +65,80 @@ export interface RenderState {
 /** A frame cannot be composed without its known provenance contract. */
 export class ObservationFrameError extends Error {}
 
+function record(value: unknown, field: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new ObservationFrameError(`${field} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function text(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ObservationFrameError(`${field} must be a non-empty string`);
+  }
+  return value;
+}
+
+/** Parse the producer packet and enforce the renderer's lossless input contract. */
+export function parseObservationFramePacket(input: string): FramePacket {
+  let value: unknown;
+  try {
+    value = JSON.parse(input);
+  } catch (error) {
+    throw new ObservationFrameError(`JSON is malformed: ${error}`);
+  }
+  const doc = record(value, "packet");
+  if (doc.schema !== FRAME_SCHEMA) {
+    throw new ObservationFrameError(`schema must be ${FRAME_SCHEMA}, got ${String(doc.schema)}`);
+  }
+  const labels = record(doc.labels, "labels");
+  const spatial = record(doc.spatial, "spatial");
+  const worldSeed = text(doc.world_seed, "world_seed");
+  if (!/^\d+$/.test(worldSeed)) {
+    throw new ObservationFrameError("world_seed must be a decimal string");
+  }
+  const frameIndex = doc.frame_index;
+  if (typeof frameIndex !== "number" || !Number.isInteger(frameIndex) || frameIndex < 0) {
+    throw new ObservationFrameError("frame_index must be a non-negative integer");
+  }
+  if (typeof doc.time_day !== "number" && doc.time_day !== null) {
+    throw new ObservationFrameError("time_day must be a number or null");
+  }
+  const labelValues: Record<string, string> = {};
+  for (const [key, value] of Object.entries(labels)) {
+    labelValues[key] = text(value, `labels.${key}`);
+  }
+  for (const key of ["object", "scale", "primary_axis", "observation_sentence"]) {
+    text(labelValues[key], `labels.${key}`);
+  }
+  return {
+    schema: FRAME_SCHEMA,
+    episode_id: text(doc.episode_id, "episode_id"),
+    frame_index: frameIndex,
+    world_seed: worldSeed,
+    world_revision: text(doc.world_revision, "world_revision"),
+    time_day: doc.time_day as number | null,
+    title: text(doc.title, "title"),
+    labels: labelValues,
+    spatial: {
+      source: text(spatial.source, "spatial.source"),
+      readout: text(spatial.readout, "spatial.readout"),
+    },
+    source_digest: text(doc.source_digest, "source_digest"),
+  };
+}
+
 function bounds(x: number, y: number, width: number, height: number): Bounds {
   return { x, y, width: Math.max(1, width), height: Math.max(1, height) };
+}
+
+function compareCodePoints(left: string, right: string): number {
+  const a = Array.from(left, (character) => character.codePointAt(0)!);
+  const b = Array.from(right, (character) => character.codePointAt(0)!);
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    if (a[index] !== b[index]) return a[index] - b[index];
+  }
+  return a.length - b.length;
 }
 
 /**
@@ -78,7 +149,7 @@ export function renderObservationFrame(
   packet: FramePacket,
   viewport: ViewportDimensions,
 ): RenderState {
-  if (packet.schema !== undefined && packet.schema !== FRAME_SCHEMA) {
+  if (packet.schema !== FRAME_SCHEMA) {
     throw new ObservationFrameError(
       `schema must be ${FRAME_SCHEMA}, got ${String(packet.schema)}`,
     );
@@ -113,7 +184,7 @@ export function renderObservationFrame(
 
   const legend = Object.entries(packet.labels)
     .filter(([key]) => key !== "observation_sentence")
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareCodePoints(left, right))
     .map(([key, value]) => ({ key, value }));
 
   return {
@@ -146,4 +217,43 @@ export function renderObservationFrame(
       sourceDigest: packet.source_digest,
     },
   };
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) =>
+    ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character]!);
+}
+
+/** Produce a self-contained browser-inspectable SVG/HTML preview for one frame. */
+export function renderObservationFrameHtml(
+  packet: FramePacket,
+  viewport: ViewportDimensions,
+): string {
+  const state = renderObservationFrame(packet, viewport);
+  const legend = state.legend.map(({ key, value }) =>
+    `<li><span>${escapeHtml(key)}</span>: ${escapeHtml(value)}</li>`
+  ).join("");
+  const map = state.map;
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(state.title)}</title>
+<style>body{margin:0;background:#f3f0e8;color:#1a1a19;font:16px system-ui,sans-serif}main{box-sizing:border-box;padding:24px;max-width:1440px;margin:auto}svg{display:block;width:100%;background:#e1d7be;border:2px solid #1a1a19}pre{box-sizing:border-box;margin:0;padding:16px;overflow:auto;font:12px ui-monospace,monospace;line-height:1.35}aside{padding:16px 0}ul{padding-left:20px}</style></head>
+<body><main data-layout="${state.layout}" data-width="${viewport.width}" data-height="${viewport.height}">
+<header><h1>${escapeHtml(state.title)}</h1><p>${escapeHtml(state.objectLabel)} · ${
+    escapeHtml(state.scaleLabel)
+  }</p></header>
+<section data-map data-source="${escapeHtml(map.source)}"><svg role="img" aria-label="${
+    escapeHtml(map.source)
+  }" viewBox="0 0 ${map.bounds.width} ${map.bounds.height}" width="${map.bounds.width}" height="${map.bounds.height}"><rect width="100%" height="100%" fill="#e1d7be"></rect><foreignObject x="0" y="0" width="100%" height="100%"><pre>${
+    escapeHtml(map.content)
+  }</pre></foreignObject></svg></section>
+<section aria-label="Legend"><h2>Legend</h2><ul>${legend}</ul></section>
+<aside aria-label="Observation"><p>${escapeHtml(state.annotation.text)}</p></aside>
+</main></body></html>`;
 }

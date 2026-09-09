@@ -184,7 +184,7 @@ pub struct SpatialObservation {
 }
 
 /// Deterministic renderer input for one frame of an observation episode.
-/// type-audit: bare-ok(identifier-text: episode_id), bare-ok(count: frame_index), bare-ok(count: world_seed), bare-ok(identifier-text: world_revision), bare-ok(diagnostic-value: time_day), bare-ok(prose: title), bare-ok(identifier-text: labels), bare-ok(identifier-text: source_digest)
+/// type-audit: bare-ok(identifier-text: episode_id), bare-ok(count: frame_index), bare-ok(identifier-text: world_seed), bare-ok(identifier-text: world_revision), bare-ok(diagnostic-value: time_day), bare-ok(prose: title), bare-ok(identifier-text: labels), bare-ok(identifier-text: source_digest), bare-ok(identifier-text: schema)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FramePacket {
@@ -193,7 +193,7 @@ pub struct FramePacket {
     /// Zero-based position in the exported sequence.
     pub frame_index: u32,
     /// Seed identifying the observed world.
-    pub world_seed: u64,
+    pub world_seed: String,
     /// Revision identifying the observed simulation code.
     pub world_revision: String,
     /// World time represented by this frame, when the episode is temporal.
@@ -206,6 +206,8 @@ pub struct FramePacket {
     pub spatial: SpatialObservation,
     /// Digest binding this packet to the authoritative producer bytes.
     pub source_digest: String,
+    /// Version of the renderer input contract.
+    pub schema: String,
 }
 
 /// Summary of one completed frame export.
@@ -701,7 +703,7 @@ pub fn export_frames(
         let packet = FramePacket {
             episode_id: manifest.id.clone(),
             frame_index,
-            world_seed: manifest.seed,
+            world_seed: manifest.seed.to_string(),
             world_revision: manifest.world_revision.clone(),
             time_day: time_day(manifest, frame_index),
             title: manifest.title.clone(),
@@ -711,6 +713,7 @@ pub fn export_frames(
                 readout: source.clone(),
             },
             source_digest: source_digest.clone(),
+            schema: "observation/frame/v1".to_string(),
         };
         let mut bytes =
             serde_json::to_vec_pretty(&packet).map_err(|error| ObservationError::Export {
