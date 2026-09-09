@@ -26,7 +26,7 @@ use hornvale_worldgen::seed_42_world;
 /// `seed_42_world()`'s own fact count, measured directly (not `build_world`,
 /// which `fixture.rs`'s own `the_fixture_equals_a_live_build` already keeps
 /// honest against the fixture) — the number this test pins.
-const SEED_42_FACT_COUNT: usize = 22_914;
+const SEED_42_FACT_COUNT: usize = 20_109;
 
 /// Pinned to an exact count, not a floor, for the same reason
 /// `fixture.rs`'s own doc gives for its `> 20_000` check being the wrong

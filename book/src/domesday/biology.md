@@ -46,6 +46,17 @@ n = 1000 present, 0 absent (of 1000 worlds)
 |---|---|---|---|---|---|
 | 3.0098379 | 3.0098379 | 3.0098379 | 3.0098379 | 3.0098379 | 3.0098379 |
 
+### `epidemic-crowd-endemic`
+
+Whether any crowd-class kind in the pathogen catalogue persists in the present largest component, comparing its authored CCS against epidemic-largest-metapopulation-now; Absent if the world has no occupations or predates occ-person-years
+
+n = 1000 present, 0 absent (of 1000 worlds)
+
+| value | count | share |
+|---|---|---|
+| `true` | 0 | 0.0% |
+| `false` | 1000 | 100.0% |
+
 ### `generation-length-years-goblin`
 
 Goblin's generation length in years; Absent if goblin is off-roster or ametabolic

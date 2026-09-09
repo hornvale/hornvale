@@ -440,8 +440,10 @@ fn main() {
         plate::draw_feature_layer(
             &mut base,
             geo,
-            &f,
-            &aligned,
+            &plate::Placement::Mercator {
+                f: &f,
+                win: &aligned,
+            },
             false,
             &caves,
             &empty,
@@ -454,8 +456,10 @@ fn main() {
         plate::draw_feature_layer(
             &mut base,
             geo,
-            &f,
-            &aligned,
+            &plate::Placement::Mercator {
+                f: &f,
+                win: &aligned,
+            },
             false,
             &caves,
             &empty,

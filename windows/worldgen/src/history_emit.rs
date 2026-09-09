@@ -12,6 +12,7 @@
 //! never quantizes anything itself.
 
 use crate::history_bake::BakeId;
+use crate::social_projection::{GROUP_ROLE, PERSON_ROLE, SocialProjection};
 use crate::{BuildError, History};
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, FoundingCoords, Function, Notability, Occupation,
@@ -136,11 +137,25 @@ pub fn bake_year_of_ledger_day(day: f64) -> f64 {
 /// it is finite by construction of the bake it came from, and a finite year
 /// scaled by a finite constant stays finite; `.expect()` is sound here.
 fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
+    fact_at(subject, predicate, object, day, Some(subject))
+}
+
+/// Build a dated fact with an explicit subject and place. Paired epidemic
+/// facts make the minted outbreak event their subject and retain the struck
+/// occupation in `place`, which preserves the kernel envelope's location
+/// contract while giving both facts one serialized event identity.
+fn fact_at(
+    subject: EntityId,
+    predicate: &str,
+    object: Value,
+    day: f64,
+    place: Option<EntityId>,
+) -> Fact {
     Fact {
         subject,
         predicate: predicate.to_string(),
         object,
-        place: Some(subject),
+        place,
         day: Some(WorldTime::from_std_days(day).expect("history-bake day is finite")),
         provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     }
@@ -204,6 +219,64 @@ fn resolve_people(label: &str) -> Option<KindId> {
         .map(|(k, _)| *k)
 }
 
+/// Commit an explicitly enabled synthetic social projection. `None` is the
+/// default-world boundary and is an exact no-op.
+pub fn emit_social_projection(
+    world: &mut World,
+    projection: Option<&SocialProjection>,
+) -> Result<(), BuildError> {
+    let Some(projection) = projection else {
+        return Ok(());
+    };
+
+    for (ordinal, person) in projection.persons().iter().enumerate() {
+        let id = world.ledger.mint_entity(Lineage {
+            parent: None,
+            role: PERSON_ROLE,
+            ordinal: ordinal as u16,
+        });
+        assert_eq!(
+            id,
+            person.person(),
+            "projection person identity must match deterministic mint lineage"
+        );
+    }
+    for (ordinal, expected) in projection.groups().iter().copied().enumerate() {
+        let id = world.ledger.mint_entity(Lineage {
+            parent: None,
+            role: GROUP_ROLE,
+            ordinal: ordinal as u16,
+        });
+        assert_eq!(
+            id, expected,
+            "projection group identity must match deterministic mint lineage"
+        );
+    }
+
+    for person in projection.persons() {
+        world.ledger.commit(
+            Fact {
+                subject: person.person(),
+                predicate: hornvale_person::IS_PERSON.to_string(),
+                object: Value::Flag(true),
+                place: None,
+                day: Some(WorldTime::GENESIS),
+                provenance: crate::streams::SOCIAL_PROJECTION.as_str().to_string(),
+            },
+            &world.registry,
+        )?;
+        for fact in person.facts() {
+            world.ledger.commit(fact, &world.registry)?;
+        }
+    }
+    for event in projection.events() {
+        for fact in event.facts() {
+            world.ledger.commit(fact, &world.registry)?;
+        }
+    }
+    Ok(())
+}
+
 /// Commit a baked [`History`]'s whole occupation skeleton to `world`'s
 /// ledger: one entity per [`OccupationRecord`] (minted in `records` order),
 /// tagged `is-occupation` plus its ~11 descriptive facts, `is-ruin` for a
@@ -243,6 +316,22 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         .iter()
         .zip(minted.iter().copied())
         .map(|(r, e)| (r.community, e))
+        .collect();
+
+    let outbreak_entities: Vec<EntityId> = h
+        .outbreaks
+        .iter()
+        .enumerate()
+        .map(|(ordinal, event)| {
+            let subject = *bake_to_ledger
+                .get(&event.occupation)
+                .expect("an outbreak names an occupation minted in this history");
+            world.ledger.mint_entity(Lineage {
+                parent: Some(subject),
+                role: "outbreak-event",
+                ordinal: ordinal as u16,
+            })
+        })
         .collect();
 
     for (record, &id) in h.records.iter().zip(minted.iter()) {
@@ -384,6 +473,43 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
         } else {
             commit_on(hornvale_history::IS_RUIN, Value::Flag(true), end_day)?;
         }
+    }
+
+    // Epidemic events are paired by (occupation, day, pathogen). Validate that
+    // join key before committing either half so malformed bake output cannot
+    // leave a plausible orphan fact in the ledger. The event entity is the
+    // subject of both facts; its place remains the struck occupation.
+    let mut outbreak_keys = BTreeSet::new();
+    for (ordinal, outbreak) in h.outbreaks.iter().enumerate() {
+        let occupation = *bake_to_ledger
+            .get(&outbreak.occupation)
+            .expect("an outbreak names an occupation minted in this history");
+        let day = ledger_day_of_bake_year(outbreak.year);
+        assert!(
+            outbreak_keys.insert((occupation, day.to_bits(), outbreak.pathogen)),
+            "one aggregated outbreak event per occupation, day, and pathogen"
+        );
+        let event = outbreak_entities[ordinal];
+        world.ledger.commit(
+            fact_at(
+                event,
+                hornvale_epidemiology::STRUCK_BY,
+                Value::Text(outbreak.pathogen.0.to_string()),
+                day,
+                Some(occupation),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact_at(
+                event,
+                hornvale_epidemiology::OUTBREAK_DEATHS,
+                Value::Number(outbreak.deaths),
+                day,
+                Some(occupation),
+            ),
+            &world.registry,
+        )?;
     }
 
     // The tribute relations still standing at `now` (spec §4.4). One fact per

@@ -481,7 +481,7 @@ fn detect_d7(c: &Census) -> Vec<Finding> {
     out
 }
 
-/// Every crate under `domains/` — 15 as of The Chattel's `domains/thing`
+/// Every crate under `domains/` — 16 as of The Murrain's `domains/epidemiology`
 /// (spec §4.4a authored this list at 13; it had already drifted to 14 with
 /// `person` before this campaign touched it, undetected because this comment
 /// is prose the roster-vs-tree check below has no opinion about).
@@ -493,6 +493,9 @@ const DOMAIN_CRATES: &[&str] = &[
     "climate",
     "culture",
     "demography",
+    // The Murrain's pure rules crate. Stage 4's crowd-endemic metric reads
+    // its CCS and persistence rules directly, so it is measured below.
+    "epidemiology",
     "history",
     "language",
     "paleoclimate",
@@ -537,6 +540,7 @@ const MEASURED_CRATES: &[&str] = &[
     "climate",
     "culture",
     "demography",
+    "epidemiology",
     "history",
     "language",
     "religion",

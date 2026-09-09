@@ -1342,9 +1342,13 @@ plan-2026-09-04-the-charter	shipped	none		implementation and qualification compl
 spec-2026-09-04-federated-development-program-metaplan-design	active	none		bounded Charter pilot qualified; broader federation program remains active	docs/superpowers/specs/2026-09-04-federated-development-program-metaplan-design.md				
 spec-2026-09-04-the-charter-design	shipped	none		implementation and qualification complete; G6 approved; approved close for ordinary sluice admission	docs/superpowers/specs/2026-09-04-the-charter-design.md				
 spec-2026-09-05-the-warrant-design	shipped	none		status header records closure; H2 falsified and reported unamended in the appended results note	docs/superpowers/specs/2026-09-05-the-warrant-design.md				
+spec-2026-09-06-the-murrain-design	shipped	none		implemented; canonical stage gate passed; merge close in progress	docs/superpowers/specs/2026-09-06-the-murrain-design.md				
+chronicle-the-murrain	active	none		chronicle drafted for G6 close				book/src/chronicle/the-murrain.md	
+retrospective-the-murrain	active	none		retrospective drafted for G6 close					docs/retrospectives/the-murrain.md
 retrospective-the-sluicegate	shipped	none		published retrospective					docs/retrospectives/the-sluicegate.md
 chronicle-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission				book/src/chronicle/the-charter.md	
 retrospective-the-charter	shipped	none		G6 approved; approved close for ordinary sluice admission					docs/retrospectives/the-charter.md
+plan-2026-09-08-population-layers	active	none		population-layer implementation plan; Stage 1 complete and Stage 2 in progress		docs/superpowers/plans/2026-09-08-population-layers.md			
 spec-2026-09-05-the-counterpart-design	active	none		G3 approved; G4 self-reviewed; implementation plan active	docs/superpowers/specs/2026-09-05-the-counterpart-design.md				
 plan-2026-09-05-the-counterpart	active	none		G3 approved; G4 self-reviewed; three-stage experiment		docs/superpowers/plans/2026-09-05-the-counterpart.md			
 the-tenon	shipped	none		plan: COMPLETE; Nathan authorized G6 close; retrospective and chronicle record accepted result	docs/superpowers/specs/2026-09-04-the-tenon-design.md	docs/superpowers/plans/2026-09-04-the-tenon.md		book/src/chronicle/the-tenon.md	docs/retrospectives/the-tenon.md
@@ -1371,8 +1375,11 @@ spec-2026-09-06-the-fetch-design	active	none		G3 draft; implementation not start
 chronicle-the-fetch	active	none		awaiting G6 closure				book/src/chronicle/the-fetch.md	
 retrospective-the-fetch	active	none		awaiting G6 closure					docs/retrospectives/the-fetch.md
 the-newel	active	none		B1/B2/B4/B6 shipped in six tasks; B3 and B5 split out at G3 as the-sett and the-stipple; chronicle and retrospective committed; awaiting G6 approval before sluice submission	docs/superpowers/specs/2026-09-06-the-newel-design.md	docs/superpowers/plans/2026-09-06-the-newel.md		book/src/chronicle/the-newel.md	docs/retrospectives/the-newel.md
-the-sett	active	none		spun out of the-newel at G3; design written, not yet planned	docs/superpowers/specs/2026-09-06-the-sett-design.md				
+the-sett	active	none		design amended at G3 (raster decision overturned on re-measurement); nine tasks shipped; decisions 0906 and 0907 ratified; chronicle and retrospective committed; awaiting G6 approval before sluice submission	docs/superpowers/specs/2026-09-06-the-sett-design.md	docs/superpowers/plans/2026-09-06-the-sett.md		book/src/chronicle/the-sett.md	docs/retrospectives/the-sett.md
 the-stipple	active	none		spun out of the-newel at G3; design written, not yet planned	docs/superpowers/specs/2026-09-06-the-stipple-design.md				
 the-grammar	active	none		BIO-3 substrate and SOC-2 successor contract complete; stage gate green; close artifacts committed; merge pending	docs/superpowers/specs/2026-09-06-the-grammar-design.md	docs/superpowers/plans/2026-09-06-the-grammar.md		book/src/chronicle/the-grammar.md	docs/retrospectives/the-grammar.md
 the-wanderers	shipped	none		plan complete through Task 4; G6 close recorded; chronicle and retrospective landed	docs/superpowers/specs/2026-09-07-the-wanderers-design.md	docs/superpowers/plans/2026-09-07-the-wanderers.md		book/src/chronicle/the-wanderers.md	docs/retrospectives/the-wanderers.md
+the-soc-household	shipped	none		cohort-to-person/group substrate and The Lot projection shipped; stage gate pending refreshed close submission	docs/superpowers/specs/2026-09-07-soc-household-design.md	docs/superpowers/plans/2026-09-07-soc-household.md		book/src/chronicle/the-soc-household.md	docs/retrospectives/the-soc-household.md
 the-insulator	shipped	none		closed 2026-09-07; qualified rejection with committed measurement cell, baseline, candidate manifest, comparison, chronicle, and retrospective; Linux explicitly unrun after decisive Mac mismatch	docs/superpowers/specs/2026-09-06-the-insulator-design.md			book/src/chronicle/the-insulator.md	docs/retrospectives/the-insulator.md
+the-route-cache	active	none		measurement-only follow-up; persistent position-keyed cache rejected; close artifacts committed				book/src/chronicle/the-route-cache.md	docs/retrospectives/the-route-cache.md
+the-staple-d3	active	none		Task 0 falsifier preregistered; G3 spec review pending	docs/superpowers/specs/2026-09-07-the-staple-d3-design.md	docs/superpowers/plans/2026-09-07-the-staple-d3.md			

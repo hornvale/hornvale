@@ -7,9 +7,11 @@
 
 pub mod context;
 pub mod draw;
+pub mod endemic;
 pub mod hazard;
 pub mod json;
 pub mod narrate;
+pub mod projection;
 pub mod shape;
 pub mod slots;
 

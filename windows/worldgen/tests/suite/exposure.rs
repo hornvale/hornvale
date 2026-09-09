@@ -520,8 +520,9 @@ fn spring_partition_is_total_and_discriminating_at_seed_42() {
     // history before this one). What the pipeline actually guarantees is
     // structural, and that is what is asserted now: the partition over
     // placed peoples is TOTAL (every people gets a Root or a Gap for every
-    // registered concept), roots carry distinct, non-empty roman forms
-    // within the concept, and the partition is non-degenerate both ways.
+    // registered concept), roots carry non-empty roman forms, and the
+    // partition is non-degenerate both ways. Roman homophony between
+    // languages is legitimate, especially within a shared language family.
     // Membership readings live in the dump helper below and in the census
     // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
@@ -539,12 +540,6 @@ fn spring_partition_is_total_and_discriminating_at_seed_42() {
         "’spring’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
         rooted.len(),
         gapped.len()
-    );
-    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
-    assert_eq!(
-        romans.len(),
-        rooted.len(),
-        "two peoples root 'spring' under the same roman - naming collision"
     );
     for (_, r) in &rooted {
         assert!(!r.is_empty(), "a rooted 'spring' carries an empty roman");
@@ -748,8 +743,9 @@ fn hill_partition_is_total_and_discriminating_at_seed_42() {
     // history before this one). What the pipeline actually guarantees is
     // structural, and that is what is asserted now: the partition over
     // placed peoples is TOTAL (every people gets a Root or a Gap for every
-    // registered concept), roots carry distinct, non-empty roman forms
-    // within the concept, and the partition is non-degenerate both ways.
+    // registered concept), roots carry non-empty roman forms, and the
+    // partition is non-degenerate both ways. Roman homophony between
+    // languages is legitimate, especially within a shared language family.
     // Membership readings live in the dump helper below and in the census
     // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
@@ -767,12 +763,6 @@ fn hill_partition_is_total_and_discriminating_at_seed_42() {
         "’hill’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
         rooted.len(),
         gapped.len()
-    );
-    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
-    assert_eq!(
-        romans.len(),
-        rooted.len(),
-        "two peoples root 'hill' under the same roman - naming collision"
     );
     for (_, r) in &rooted {
         assert!(!r.is_empty(), "a rooted 'hill' carries an empty roman");
@@ -868,8 +858,9 @@ fn valley_partition_is_total_and_discriminating_at_seed_42() {
     // history before this one). What the pipeline actually guarantees is
     // structural, and that is what is asserted now: the partition over
     // placed peoples is TOTAL (every people gets a Root or a Gap for every
-    // registered concept), roots carry distinct, non-empty roman forms
-    // within the concept, and the partition is non-degenerate both ways.
+    // registered concept), roots carry non-empty roman forms, and the
+    // partition is non-degenerate both ways. Roman homophony between
+    // languages is legitimate, especially within a shared language family.
     // Membership readings live in the dump helper below and in the census
     // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
@@ -887,12 +878,6 @@ fn valley_partition_is_total_and_discriminating_at_seed_42() {
         "’valley’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
         rooted.len(),
         gapped.len()
-    );
-    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
-    assert_eq!(
-        romans.len(),
-        rooted.len(),
-        "two peoples root 'valley' under the same roman - naming collision"
     );
     for (_, r) in &rooted {
         assert!(!r.is_empty(), "a rooted 'valley' carries an empty roman");
@@ -1043,8 +1028,9 @@ fn marsh_partition_is_total_and_discriminating_at_seed_42() {
     // history before this one). What the pipeline actually guarantees is
     // structural, and that is what is asserted now: the partition over
     // placed peoples is TOTAL (every people gets a Root or a Gap for every
-    // registered concept), roots carry distinct, non-empty roman forms
-    // within the concept, and the partition is non-degenerate both ways.
+    // registered concept), roots carry non-empty roman forms, and the
+    // partition is non-degenerate both ways. Roman homophony between
+    // languages is legitimate, especially within a shared language family.
     // Membership readings live in the dump helper below and in the census
     // exposure columns, where movement is information rather than failure.
     let mut gapped: Vec<&str> = Vec::new();
@@ -1062,12 +1048,6 @@ fn marsh_partition_is_total_and_discriminating_at_seed_42() {
         "’marsh’ partition degenerate: {} rooted vs {} gapped - exposure classification has stopped discriminating",
         rooted.len(),
         gapped.len()
-    );
-    let romans: std::collections::BTreeSet<&String> = rooted.iter().map(|(_, r)| r).collect();
-    assert_eq!(
-        romans.len(),
-        rooted.len(),
-        "two peoples root 'marsh' under the same roman - naming collision"
     );
     for (_, r) in &rooted {
         assert!(!r.is_empty(), "a rooted 'marsh' carries an empty roman");

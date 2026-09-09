@@ -1066,16 +1066,20 @@ fn rule_two_witness_the_affect_replay_share_of_the_hazard_read() {
     );
 }
 
-/// Spec §3 rule 4: the emitter scan's pass-3 timeline copy, on seed 6's
-/// 50-agent, 60-tick roster — the same shape H5/H6 measure over. Prints the
+/// Spec §3 rule 4: the emitter scan's pass-3 timeline copy, on the rule-four
+/// fixture seed's 50-agent, 60-tick roster — the same shape H5/H6 measure
+/// over. Prints the
 /// entries copied per tick at 15/30/60 beside the roster's own trail sum, so
 /// a reader can see whether the copy grows with history or stays flat. No
 /// threshold: the branch (spec §3 rule 4) is decided in the ledger from this
 /// print, not from an assertion here.
+const RULE_FOUR_SEED: u64 = 28;
+// type-audit: bare-ok(index)
+
 #[test]
 fn rule_four_witness_the_emitter_timeline_copy() {
-    let shape = bench_shape(EMITTER_SEED, 60, 50);
-    println!("--- rule 4 witness: seed {EMITTER_SEED}, 50 agents, 60 ticks ---");
+    let shape = bench_shape(RULE_FOUR_SEED, 60, 50);
+    println!("--- rule 4 witness: seed {RULE_FOUR_SEED}, 50 agents, 60 ticks ---");
     println!("copied/tick profile: {:?}", shape.copied_per_tick);
     let copied_15 = shape.copied_per_tick[14];
     let copied_30 = shape.copied_per_tick[29];

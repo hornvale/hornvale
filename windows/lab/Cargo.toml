@@ -20,6 +20,9 @@ hornvale-demography = { path = "../../domains/demography" }
 hornvale-culture = { path = "../../domains/culture" }
 hornvale-species = { path = "../../domains/species" }
 hornvale-history = { path = "../../domains/history" }
+# The Murrain metrics compare the authoritative connected population against
+# the epidemiology domain's CCS rule and count its paired outbreak facts.
+hornvale-epidemiology = { path = "../../domains/epidemiology" }
 hornvale-language = { path = "../../domains/language" }
 hornvale-hearsay = { path = "../hearsay" }
 # The Lot's six `lot-*` metrics (The Lot, Task 9): a window depending on

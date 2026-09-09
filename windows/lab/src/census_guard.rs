@@ -33,6 +33,16 @@ pub const CENSUS_GOLDENS_DIR: &str = "book/src/laboratory/generated";
 pub const CANONICAL_CENSUS_HOST: &str =
     include_str!("../../../scripts/census-canonical-host.txt").trim_ascii();
 
+/// Canonical wall-clock alarm threshold for a census run, in seconds.
+/// type-audit: bare-ok(diagnostic-value: CENSUS_ALARM_SECS)
+/// plumb: universal(the canonical census alarm policy limit shared by every caller)
+pub const CENSUS_ALARM_SECS: f64 = 1_320.0;
+
+/// Canonical wall-clock refusal threshold for a census run, in seconds.
+/// type-audit: bare-ok(diagnostic-value: CENSUS_REFUSAL_SECS)
+/// plumb: universal(the canonical census refusal policy limit shared by every caller)
+pub const CENSUS_REFUSAL_SECS: f64 = 1_650.0;
+
 /// True if `name` names a census-scale study. By convention every study
 /// under `studies/` that carries decision 0063's cross-machine divergence
 /// risk is either named `the-census` or prefixed `census-of-` (see
