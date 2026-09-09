@@ -48,3 +48,22 @@ Ruling: reject export for every capability state other than `existing`, and make
 - **Result:** Deterministic frame packets, source digests, atomic writes, CLI export, unsupported-state refusal, and stale-owned-frame cleanup are implemented.
 - **Evidence:** 30 focused tests passed; independent exports produced identical frame-000 SHA-256 values; formatting and diff checks passed.
 - **Review:** Re-review approved with no remaining findings.
+
+## Review ruling — Task 3, round 1
+
+Ruling: strengthen the client boundary before accepting the renderer. Add runtime packet validation, preserve `u64` seed identity as a string, use locale-independent ordering, and provide an actual browser/visual inspection harness for phone and laptop targets. The cost is a stricter client input contract and a small harness; the benefit is that a “rendered” observation is tested as an actual presentation rather than only as an abstract object.
+
+## Review ruling — Task 3, round 2
+
+Ruling: finish the client contract at the numeric boundary and make the preview genuinely inspectable. Enforce canonical decimal `u64` range and finite time values, expose a browser-consumable preview path, and render the spatial/provenance fields required by the episode contract. This prevents a visually attractive but semantically incomplete frame from entering the production pipeline.
+
+## Review ruling — Task 3, round 3
+
+Ruling: carry `count_unit` through the Rust manifest, exported frame, fixture, and client parser, and wire the preview mount into an exercised browser entry path. A client-supplied count unit would violate the producer/client boundary; an uncalled mount would be a visual claim without a witness.
+
+## Task 3: complete
+
+- **Commits:** `d4cab8582`, `ca990b240`, `a950f5929`, `ec6b748ea`, `5480c0ecf`
+- **Result:** Pure spatial render state, strict packet parsing, exact numeric handling, producer-owned count units, deterministic ordering, and LinkeDOM-inspected phone/laptop previews are implemented.
+- **Evidence:** 39 Deno tests and 31 Rust observation tests passed; checks, formatting, lint, and diff checks passed.
+- **Review:** Final re-review approved with no remaining findings.
