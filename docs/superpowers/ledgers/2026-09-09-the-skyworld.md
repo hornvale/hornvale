@@ -171,6 +171,21 @@ the fixed land/sea surface and leaves future client-specific presentation open.
 **Capture:** implemented in `skyworld_render.rs`; future clients may consume
 the same detail contracts without changing generation or lifecycle semantics.
 
+## #7 [G6] — What did the first implementation prove?
+
+**Result:** Tasks 1–3 now generate and render a deterministic Skyworld
+overlay. The focused suite exercises 27 Skyworld probes, including both land
+and ocean coverage, minimal ceilings, environmental variation, bounded
+trajectories, three footprint classes, explicit propagation channels, detail
+separation, surface preservation, sparse render locality, and read-only
+rendering. The local commit gate passes its 1,425-test subfloor across four
+chunks, with clippy, type-audit, placement-audit, and plumb checks green.
+
+**Non-results:** no lifecycle transitions, individual organisms, species
+expansion, tethering, mutable atmosphere, archipelago recombination, magic,
+technology, or census refresh were added. The reconciliation row remains
+active until the queued stage gate and final campaign review.
+
 ## Follow-ups
 
 - Run the first Skyworld implementation as a pressure test of the existing

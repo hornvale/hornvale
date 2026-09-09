@@ -1017,3 +1017,22 @@ fn changing_one_route_sample_changes_only_sparse_route_pixels() {
         "one sparse route sample repainted {changed} pixels"
     );
 }
+
+/// Rendering is a read-only lens: changing detail must not alter generated
+/// territory state or the atmospheric baseline.
+#[test]
+fn rendering_does_not_mutate_generated_skyworld() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let before = skyworld.clone();
+    for detail in [
+        SkyWorldDetail::Planet,
+        SkyWorldDetail::Regional,
+        SkyWorldDetail::Habitat,
+    ] {
+        let _ = render_skyworld_png(&skyworld, &fixture.terrain, detail);
+        let _ = render_skyworld_readout(&skyworld, detail);
+        let _ = render_skyworld_diagnostic_readout(&skyworld, detail);
+    }
+    assert_eq!(skyworld, before);
+}
