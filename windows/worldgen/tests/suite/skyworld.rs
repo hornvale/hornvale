@@ -120,6 +120,13 @@ mod seams {
         }
     }
 
+    fn surface_projection(fixture: &Fixture) -> Vec<(Vertex, SurfaceSample)> {
+        ascending_vertices(fixture)
+            .into_iter()
+            .map(|vertex| (vertex, sample_surface(fixture, vertex)))
+            .collect()
+    }
+
     fn projected_at(skyworld: &SkyWorld, vertex: Vertex) -> bool {
         skyworld
             .territories
@@ -423,19 +430,38 @@ mod seams {
                 ..TerrainPins::default()
             },
         );
-        let sparse_features = sparse.terrain.features().all().count();
-        let active_features = active.terrain.features().all().count();
+        let low_coverage = SkyWorldConfig {
+            max_projected_fraction: 0.01,
+            ..config()
+        };
+        let sparse_skyworld = generate_with(&sparse, low_coverage.clone());
+        let active_skyworld = generate_with(&active, low_coverage);
+        let vertex = ascending_vertices(&sparse)
+            .into_iter()
+            .zip(ascending_vertices(&active))
+            .find_map(|(vertex, other)| {
+                assert_eq!(vertex, other, "the pin changed the surface index space");
+                let sparse_edifice =
+                    hornvale_worldgen::hazard::has_edifice(&sparse.terrain, vertex);
+                let active_edifice =
+                    hornvale_worldgen::hazard::has_edifice(&active.terrain, vertex);
+                (sparse_edifice != active_edifice
+                    && !projected_at(&sparse_skyworld, vertex)
+                    && projected_at(&active_skyworld, vertex))
+                .then_some(vertex)
+            })
+            .expect(
+                "VACUOUS: no changed has_edifice source reached low-coverage Skyworld selection",
+            );
         assert_ne!(
-            sparse_features, active_features,
-            "VACUOUS: plate perturbation did not change tectonic feature sources"
+            hornvale_worldgen::hazard::has_edifice(&sparse.terrain, vertex),
+            hornvale_worldgen::hazard::has_edifice(&active.terrain, vertex),
+            "VACUOUS: the plate perturbation did not change has_edifice at {vertex:?}"
         );
-
-        let sparse_skyworld = generate(&sparse);
-        let active_skyworld = generate(&active);
         assert_ne!(
-            projected(&sparse_skyworld).len(),
-            projected(&active_skyworld).len(),
-            "tectonic feature coverage did not reach derived Skyworld distribution"
+            projected_at(&sparse_skyworld, vertex),
+            projected_at(&active_skyworld, vertex),
+            "has_edifice at {vertex:?} did not reach derived low-coverage Skyworld selection"
         );
         assert_eq!(
             sparse_skyworld.fields.aether, active_skyworld.fields.aether,
@@ -449,30 +475,58 @@ mod seams {
 
     #[test]
     fn perturbations_preserve_surface_projection() {
-        let fixture = fixture(42);
-        let before: Vec<(Vertex, SurfaceSample)> = ascending_vertices(&fixture)
-            .into_iter()
-            .map(|vertex| (vertex, sample_surface(&fixture, vertex)))
-            .collect();
-        let fields = generate(&fixture).fields;
-        let altitude_m = 8_000.0;
-        assert_ne!(
-            fields.altitude_m, altitude_m,
-            "VACUOUS: altitude perturbation did not change its source"
+        let sparse = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                ocean_fraction: Some(0.05),
+                ..TerrainPins::default()
+            },
         );
-        let elevated = fields.at_altitude(altitude_m);
-        assert_ne!(
-            fields.high_sky_radiation, elevated.high_sky_radiation,
-            "altitude perturbation did not change its dependent radiation field"
+        let oceanic = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                ocean_fraction: Some(0.95),
+                ..TerrainPins::default()
+            },
         );
-
-        let after: Vec<(Vertex, SurfaceSample)> = ascending_vertices(&fixture)
-            .into_iter()
-            .map(|vertex| (vertex, sample_surface(&fixture, vertex)))
-            .collect();
-        assert_eq!(
+        let (vertex, before, after) = changed_surface_vertex_where(&sparse, &oceanic, |_| true);
+        assert_ne!(
             before, after,
-            "Skyworld altitude derivation mutated the surface projection"
+            "VACUOUS: regenerated terrain/climate fixtures did not change a source at {vertex:?}"
+        );
+        assert!(
+            before.mean_temperature_c != after.mean_temperature_c
+                || before.moisture != after.moisture
+                || before.storm_propensity != after.storm_propensity
+                || before.current != after.current
+                || before.prevailing_wind != after.prevailing_wind,
+            "ocean-fraction perturbation changed no climate source at {vertex:?}"
+        );
+        let sparse_surface = surface_projection(&sparse);
+        let oceanic_surface = surface_projection(&oceanic);
+        let sparse_skyworld = generate(&sparse);
+        let oceanic_skyworld = generate(&oceanic);
+        assert_ne!(
+            sparse_skyworld.fields.temperature_c, oceanic_skyworld.fields.temperature_c,
+            "regenerated climate input did not change its dependent Skyworld temperature"
+        );
+        assert_ne!(
+            sparse_skyworld.fields.moisture, oceanic_skyworld.fields.moisture,
+            "regenerated climate input did not change its dependent Skyworld moisture"
+        );
+        assert_eq!(
+            sparse_surface,
+            surface_projection(&sparse),
+            "Skyworld regeneration mutated the sparse terrain/climate/BiomeExpr projection"
+        );
+        assert_eq!(
+            oceanic_surface,
+            surface_projection(&oceanic),
+            "Skyworld regeneration mutated the oceanic terrain/climate/BiomeExpr projection"
+        );
+        assert_eq!(
+            sparse_skyworld.fields.aether, oceanic_skyworld.fields.aether,
+            "a regenerated surface perturbation changed the independent world-seeded aether"
         );
     }
 }

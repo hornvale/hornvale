@@ -309,6 +309,14 @@ high-sky, and tectonic axes; no overturn. It confirmed that altitude fields
 are the independent high-sky input surface, while terrain pins remain the
 appropriate source of climate and tectonic perturbations.
 
+**Fix-round evidence:** the tectonic probe now finds a shared vertex whose
+exact `hazard::has_edifice` value changes under the plate perturbation, then
+requires its low-coverage Skyworld selection to change. Replacing the
+production volcanic bias with zero makes that probe fail. The preservation
+probe now regenerates both terrain/climate/Skyworld fixtures, snapshots each
+terrain/climate/`BiomeExpr` projection around generation, and observes only
+the dependent overlay climate fields change.
+
 **Capture:** no `skyworld.rs`, `BuildDepth`, save fact, stream, domain, biome,
 organism, lifecycle, or census change was required. The matrix remains in the
 test-only seam sampler.
