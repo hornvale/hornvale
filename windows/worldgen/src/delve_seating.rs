@@ -923,11 +923,15 @@ mod tests {
         );
     }
 
-    /// Seed 42 holds 26 occupied underworld columns, every one seated at the
-    /// top or second rung (`underworld_capacity_probe`, 2026-09-03). At least
-    /// one column therefore reads `Made` at rung 0 or 1, exactly one rung
-    /// per column is Made (a people has one seat), and its tenancy follows
-    /// `is_alive()`.
+    /// Seed 42's Murrain world holds 5 historical cave-bearing columns with an
+    /// occupation record for an underworld people, including records whose
+    /// occupations have ended. The pre-Murrain `underworld_capacity_probe`
+    /// measured 26 on 2026-09-03; the difference is real history movement,
+    /// not a reclassification between population layers. Every current column
+    /// is seated at the top or second rung, so at least one column reads
+    /// `Made` at rung 0 or 1 and exactly one rung per column is Made (a people
+    /// has one seat). This historical column witness is distinct from the
+    /// present living-occupation layer: only tenancy follows `is_alive()`.
     ///
     /// **Grouped by vertex once, rather than calling [`crate::history_emit::
     /// occupations_at`] per vertex of the globe.** That function's
@@ -946,7 +950,7 @@ mod tests {
     // terrain rather than rebuilding the world.
     #[allow(clippy::disallowed_methods)]
     #[test]
-    fn a_settled_column_is_made_at_its_seated_rung_and_nowhere_else() {
+    fn a_historically_settled_column_is_made_at_its_seated_rung_and_nowhere_else() {
         let world = crate::fixture::seed_42_world();
         let terrain = crate::terrain_of(&world).expect("seed 42 sculpts");
         let rungs: Vec<Band> = rungs()
@@ -961,11 +965,11 @@ mod tests {
             by_vertex.entry(o.core.site).or_default().push(o);
         }
         let empty: Vec<hornvale_history::record::OccupationRecord> = Vec::new();
-        let mut made_columns = 0usize;
+        let mut historical_made_columns = 0usize;
         for vertex in terrain.geosphere().vertices() {
             let occ = by_vertex.get(&vertex).unwrap_or(&empty);
-            let settled = occ.iter().any(|o| niches.get(&o.core.people).is_some());
-            if terrain.cave_at(vertex).is_none() || !settled {
+            let historically_settled = occ.iter().any(|o| niches.get(&o.core.people).is_some());
+            if terrain.cave_at(vertex).is_none() || !historically_settled {
                 continue;
             }
             let origins = column_origins(&world, &terrain, vertex, &rungs);
@@ -981,17 +985,20 @@ mod tests {
                 "vertex {vertex:?}: seated at rung {}",
                 made[0]
             );
-            let alive = occ
+            let presently_occupied = occ
                 .iter()
                 .any(|o| niches.get(&o.core.people).is_some() && o.is_alive());
-            let expected = if alive {
+            let expected = if presently_occupied {
                 Tenancy::Inhabited
             } else {
                 Tenancy::Abandoned
             };
             assert_eq!(origins[made[0]].1, expected, "vertex {vertex:?}");
-            made_columns += 1;
+            historical_made_columns += 1;
         }
-        assert_eq!(made_columns, 26, "the probe's count for seed 42");
+        assert_eq!(
+            historical_made_columns, 5,
+            "seed 42 historical occupied-underworld-column witness"
+        );
     }
 }

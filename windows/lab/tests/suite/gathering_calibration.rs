@@ -457,9 +457,13 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // directional assertion (below the uniform-sphere baseline of 32.7) sits
     // ABOVE this line and the run reached here, so 17.2377 cleared it by
     // better than 1.89x.
+    // The Murrain's close regen (2026-09-08, canonical census on lefford at
+    // 85ef1edd, goldens c90072b9): epidemic-history population work changes
+    // which settlement populations carry the latitude weighting, moving the
+    // measured mean to 17.4432. The below-uniform-sphere claim remains true.
     assert!(
-        (mean - 17.2377).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.2377)"
+        (mean - 17.4432).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.4432)"
     );
 }
 

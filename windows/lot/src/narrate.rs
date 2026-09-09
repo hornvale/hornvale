@@ -39,6 +39,7 @@ pub const STAGES: [(&str, &[&str]); 4] = [
             "founded-from",
             "founder-kinship",
             "community-fate",
+            "cause",
         ],
     ),
     (
@@ -146,12 +147,21 @@ fn disclaimer(ctx: &LotContext, life: &Life, story: &Story) -> String {
         Some(SlotValue::Filled(where_it_was)) => where_it_was.as_str(),
         _ => "a place the record does not name",
     };
-    format!(
-        "{who} is not a real person, but this life is drawn from the statistical reality of \
-         {place} in year {} of seed {}.",
-        life.birth_year.round() as i64,
-        ctx.seed
-    )
+    if life.projection.kind == crate::projection::ProjectionKind::Composite {
+        format!(
+            "{who} is a non-causal composite case, not a real person; it is drawn from the \
+             statistical reality of {place} in year {} of seed {}, and cannot write \
+             consequences back to that world.",
+            life.birth_year.round() as i64,
+            ctx.seed
+        )
+    } else {
+        format!(
+            "{who} is drawn from the statistical reality of {place} in year {} of seed {}.",
+            life.birth_year.round() as i64,
+            ctx.seed
+        )
+    }
 }
 
 /// One Filled slot's sentence. The slot's own value is the whole content;
@@ -167,6 +177,7 @@ fn sentence(key: &str, value: &str) -> String {
         "name" => format!("They were called {value}."),
         "community-size" => format!("The community held {value}."),
         "founded-from" => format!("It had been {value}."),
+        "cause" => format!("They died of {value}."),
         "tech" => format!("They had {value}."),
         "function" => format!("The community was for {value}."),
         "tongue" => format!("They spoke {value}."),
@@ -208,6 +219,7 @@ fn question(key: &str) -> &'static str {
         "founder-kinship" => {
             "Nothing in the record says how its founder stood to the mother community's founder"
         }
+        "cause" => "No cause of death exists yet",
         "tongue" => "Nothing in the record says what tongue they spoke",
         "belief" => "Nothing in the record names what they held sacred",
         "held-true" => "Nothing in the record says what the community held true about its own kin",

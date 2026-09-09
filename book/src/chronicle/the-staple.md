@@ -127,11 +127,41 @@ campaign earlier, underground, where tenancy is a tense rather than a flag.
 
 ## What the campaign shipped
 
-A document, and one measurement that anyone can retake. The probe is committed
-rather than left in a scratch directory, because every number above comes from
-it and the alternative is a claim with a date and no way to check it — which is
-how the predecessor plan's own cost figures went stale.
+A document, a diagnostic witness, and one measurement that anyone can retake.
+The witness is emitted beside the save-facing tribute facts, reads continuous
+portfolio, need, assessment, and health causes, and changes no world state.
+The fixed 200-seed readout pooled 17,740 standing relations: all 17,740
+classified, with every magnitude band high. That is the uniform-relabeling
+pole, not the differentiated return the rung requires. The witness is
+committed rather than left in scratch, because a measured null is still a
+claim with a date and a way to check it.
 
-Nothing else moved. No mechanism was built, no epoch was taken, and the rung
-this campaign was opened to build now has a document explaining what must be
-true before it has a subject.
+No production mechanism was built, no epoch was taken, and no census was run.
+The rung this campaign was opened to build now has an explicit measured reason
+to wait: a return that classifies every existing relation is a label change,
+not a gradient.
+
+## R3: the district becomes a reading
+
+R3 supplied the missing boundary without pretending the world already has
+cities. Typed relation assertions now retain opaque participants, roles,
+intervals, recurrence, direction, measures, and provenance. Basis-specific
+views keep spatial neighborhood, presence, access, and exchange apart. A pure
+district projection can expose connected components, directed reach,
+boundaries, articulation members, bounded containment, explicit overlaps, and
+honest refusal statuses.
+
+The projection is cohort-first. Its members can be aggregate cohorts or loci;
+the downstream pattern readout preserves those references and never expands
+them into persons, households, or biographies. Temporal comparison distinguishes
+continuity, recurrence, transient evidence, dissolution, recomposition, and
+incomparable inputs. The Row, Fork, Reach, Gate, Weave, Hollow, Flicker, and
+Higher-Arity Relation are synthetic tests, not new Hornvale canon.
+
+The result is a substrate, not a city generator. Subsistence, property,
+mobility, authority, religion, contact, and population pressure remain inputs
+for future producers and cultural interpretation; none is smuggled into the
+district class. The Lot can eventually observe aggregate districts, their
+bases, evidence, temporal transitions, and refusal reasons. It still cannot
+observe households, kinship, gender, marriage, inheritance, or biographies from
+this campaign.

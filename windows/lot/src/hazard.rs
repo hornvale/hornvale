@@ -173,3 +173,16 @@ pub fn hazard_shares(h: &Hazard) -> HazardShares {
         }
     }
 }
+
+/// The three Siler terms' shares at one real age. This attributes a death
+/// without changing the summed hazard that produced its age.
+/// type-audit: bare-ok(count: age)
+pub fn hazard_shares_at_age(h: &Hazard, age: f64) -> HazardShares {
+    let (infant, background, senescent) = h.terms_at_scaled(age.max(0.0) * h.scale());
+    let total = infant + background + senescent;
+    HazardShares {
+        infant: infant / total,
+        background: background / total,
+        senescent: senescent / total,
+    }
+}

@@ -106,6 +106,7 @@
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
 | `origin` | no | the originated person, directed from their origin source |
 | `origin-ended` | no | the origin target whose relation from the subject ended at this time |
+| `outbreak-deaths` | no | the deaths in a dated outbreak event |
 | `parent-of` | no | a person whose community was settled from this person's community, one generation removed |
 | `pays-tribute-to` | yes | the community this community pays standing tribute to |
 | `peopled-by` | yes | the species that peoples a settlement |
@@ -161,6 +162,7 @@
 | `star-class` | yes | the host star's spectral class, as a registered concept id (Morgan-Keenan prose is rendered from it at read time by windows/book, never stored) |
 | `star-luminosity-solar` | yes | host star luminosity in solar units (derived M^3.5) |
 | `star-mass-solar` | yes | host star mass in solar masses |
+| `struck-by` | no | the pathogen in a dated outbreak event |
 | `subsistence` | yes | a settlement's subsistence mode |
 | `tenet` | yes | the tenet text of a belief |
 | `terrain-note` | no | a note recorded during tectonic genesis |
@@ -417,6 +419,11 @@
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
 | `temperate-rainforest` | climate | terrain | a biome class |
+| `the-consumption` | species | living | the consumption |
+| `the-flux` | species | living | the flux |
+| `the-marsh-fever` | species | living | the marsh fever |
+| `the-pest` | species | living | the pest |
+| `the-pox` | species | living | the pox |
 | `think` | language | act | to hold an uncertain belief |
 | `thorn-scrub` | climate | substance | Dry scrub of thorned shrubs. |
 | `threshold` | thing | object | the sill marking where one place ends and another begins |

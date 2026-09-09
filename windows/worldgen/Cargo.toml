@@ -15,6 +15,7 @@ hornvale-settlement = { path = "../../domains/settlement" }
 hornvale-history = { path = "../../domains/history" }
 hornvale-person = { path = "../../domains/person" }
 hornvale-demography = { path = "../../domains/demography" }
+hornvale-epidemiology = { path = "../../domains/epidemiology" }
 hornvale-species = { path = "../../domains/species" }
 hornvale-language = { path = "../../domains/language" }
 hornvale-culture = { path = "../../domains/culture" }

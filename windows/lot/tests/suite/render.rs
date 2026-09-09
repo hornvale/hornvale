@@ -49,13 +49,13 @@ fn the_payload_is_byte_stable_and_names_its_schema() {
     assert_eq!(doc["schema"], "lot/life/v1");
     assert_eq!(doc["seed"], 42);
     assert_eq!(doc["index"], 0);
-    assert_eq!(doc["slots"].as_array().unwrap().len(), 39);
+    assert_eq!(doc["slots"].as_array().unwrap().len(), 40);
     assert_eq!(doc["silences"]["by_design"].as_u64().unwrap(), 2);
     let filled = doc["silences"]["filled"].as_u64().unwrap();
     let no_fact = doc["silences"]["no_fact"].as_u64().unwrap();
     assert_eq!(
         filled + no_fact + 2,
-        39,
+        40,
         "every slot is counted exactly once"
     );
     // A filled slot carries at least one source number, and every number in

@@ -601,7 +601,7 @@ pub struct FullView {
     /// This view's own Lot sample (The Lot, Task 9): the assembled
     /// `hornvale_lot::context::LotContext` plus 200 drawn lots (indices
     /// 0-199, `Pick::default()`), computed on first demand by [`lot_sample`]
-    /// and then reused by all six `lot-*` metrics.
+    /// and then reused by the Lot and Murrain metric families.
     ///
     /// **Scoping is the whole safety argument, so it is stated here, the
     /// same way [`TerrainView::band_transects`] states it.** The cell is a  // lexicon: std::cell::OnceCell, the Rust interior-mutability type, not the mesh sense
@@ -685,7 +685,7 @@ impl FullView {
 /// `hornvale_lot::context::LotContext` plus the world's souls-ever total
 /// (`hornvale_lot::draw::curve`'s own field) and 200 drawn lots (indices
 /// 0-199, `Pick::default()`) with their told stories, in draw order —
-/// built once per view by [`lot_sample`] and shared by all six `lot-*`
+/// built once per view by [`lot_sample`] and shared by all Lot and Murrain
 /// metrics. See [`FullView::lot`]'s own doc for the memo's scoping
 /// argument.
 struct LotSample {
@@ -707,7 +707,7 @@ const LOT_BY_DESIGN_SLOTS: [&str; 4] = ["sex", "family", "work", "literacy"];
 /// Build (once, memoised on `v.lot`) this world's Lot sample: `None` when
 /// `hornvale_lot::context::assemble` refuses this world (no occupations, or
 /// one saved before The Lot with no `occ-person-years` fact) — exactly the
-/// condition each `lot-*` metric's doc names as `Absent`. A drawn `Pick::
+/// condition each dependent metric's doc names as `Absent`. A drawn `Pick::
 /// default()` index never itself fails once `assemble` has succeeded (every
 /// index in `0..200` draws a birth year and site from the same context
 /// `assemble` just built), so a failure there would be a genuine bug rather
@@ -717,7 +717,8 @@ const LOT_BY_DESIGN_SLOTS: [&str; 4] = ["sex", "family", "work", "literacy"];
 fn lot_sample(v: &FullView) -> Option<&LotSample> {
     v.lot
         .get_or_init(|| {
-            let ctx = hornvale_lot::context::assemble(v.world()).ok()?;
+            let ctx =
+                hornvale_lot::context::assemble_from(v.world(), v.terrain(), v.climate()).ok()?;
             let souls_ever = hornvale_lot::draw::curve(&ctx).souls_ever;
             let mut lots = Vec::with_capacity(200);
             for i in 0..200u64 {
@@ -6255,6 +6256,138 @@ pub fn registry() -> Vec<Metric> {
             role: Role::Descriptor,
             extract: Extractor::Climate(|v: &ClimateView| warp_max_class_rate(v, 3)),
         },
+        // --- The Murrain (Task 4): epidemic population/history counts and
+        // named disease deaths. All five additions share `lot_sample` with
+        // the existing slot-fill metric below, so the already-built terrain,
+        // one era-graph derivation, the authoritative population substrate,
+        // and the 200 drawn lots are each paid once per census world. ---
+        Metric {
+            name: "epidemic-largest-metapopulation-now",
+            doc: "Largest connected host population in the era containing the present, \
+                  reconstructed from occ-founded, occ-ended, occ-peak and \
+                  occ-person-years over the bake's era graph; Absent if the world has \
+                  no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1_000.0, 3_000.0, 5_000.0, 10_000.0, 100_000.0],
+            },
+            domain: Domain::Demography,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(
+                    sample
+                        .ctx
+                        .largest_metapopulation_at(sample.ctx.present_year),
+                ),
+            }),
+        },
+        Metric {
+            name: "epidemic-crowd-endemic",
+            doc: "Whether any crowd-class kind in the pathogen catalogue persists in \
+                  the present largest component, comparing its authored CCS against \
+                  epidemic-largest-metapopulation-now; Absent if the world has no \
+                  occupations or predates occ-person-years",
+            summary: SummaryKind::Flag,
+            domain: Domain::Biology,
+            role: Role::Invariant,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => {
+                    let population = sample
+                        .ctx
+                        .largest_metapopulation_at(sample.ctx.present_year);
+                    let endemic =
+                        hornvale_species::pathogen_registry()
+                            .iter()
+                            .any(|(_, traits)| {
+                                traits.class == hornvale_species::PathogenClass::Crowd
+                                    && traits.r0.zip(traits.infectious_years).is_some_and(
+                                        |(r0, infectious_years)| {
+                                            let ccs =
+                                                hornvale_epidemiology::critical_community_size(
+                                                    r0,
+                                                    infectious_years,
+                                                    1.0 / 30.0,
+                                                );
+                                            hornvale_epidemiology::persists(population, ccs)
+                                        },
+                                    )
+                            });
+                    MetricValue::Flag(endemic)
+                }
+            }),
+        },
+        Metric {
+            name: "epidemic-plague-endings",
+            doc: "Count of occupation records whose committed occ-cause is plague; \
+                  Absent if the world has no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 5.0, 10.0, 20.0, 40.0, 60.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(
+                    sample
+                        .ctx
+                        .occupations
+                        .iter()
+                        .filter(|occupation| {
+                            occupation.record.core.cause
+                                == Some(hornvale_history::record::CauseOfEnd::Plague)
+                        })
+                        .count() as f64,
+                ),
+            }),
+        },
+        Metric {
+            name: "epidemic-outbreak-events",
+            doc: "Count of paired epidemic events, keyed by each struck-by fact after \
+                  Lot context assembly has verified its matching outbreak-deaths fact; \
+                  Absent if the world has no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 40.0, 100.0, 200.0, 400.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(_) => MetricValue::Number(
+                    v.world()
+                        .ledger
+                        .find(hornvale_epidemiology::STRUCK_BY)
+                        .count() as f64,
+                ),
+            }),
+        },
+        Metric {
+            name: "lot-named-disease-deaths",
+            doc: "Count among lots 0-199 whose Life.cause is a catalogue pathogen; \
+                  outbreak causes come from paired struck-by and outbreak-deaths facts \
+                  and endemic causes from the Lot context's committed inputs; Absent if \
+                  the world has no occupations or predates occ-person-years",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 40.0, 80.0, 120.0, 160.0, 200.0],
+            },
+            domain: Domain::History,
+            role: Role::Descriptor,
+            extract: Extractor::Full(|v: &FullView| match lot_sample(v) {
+                None => MetricValue::Absent,
+                Some(sample) => MetricValue::Number(
+                    sample
+                        .lots
+                        .iter()
+                        .filter(|(life, _)| {
+                            matches!(
+                                life.cause,
+                                Some(hornvale_lot::draw::DeathCause::Pathogen(_))
+                            )
+                        })
+                        .count() as f64,
+                ),
+            }),
+        },
         // --- The Lot (Task 9): six census columns over 200 drawn lots
         // (indices 0-199, `Pick::default()`), one representative life per
         // index from everyone who ever lived in the world. `Absent` when
@@ -6362,9 +6495,9 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "lot-slots-filled-mean",
-            doc: "Mean number of the 22 non-by-design story slots filled per lot \
-                  over lots 0-199; Absent if the world has no occupations or predates \
-                  occ-person-years",
+            doc: "Mean number of the 23 non-by-design story slots filled per lot \
+                  over lots 0-199, counted from each told Story.slots roster; Absent if \
+                  the world has no occupations or predates occ-person-years",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0],
             },
@@ -12887,7 +13020,11 @@ mod tests {
         // `lot-born-last-quarter-share` — over 200 lots drawn from
         // `hornvale_lot::context::assemble`, memoised per world on
         // `FullView::lot` and shared by all six (`lot_sample`'s own doc).
-        assert_eq!(registry().len(), 287);
+        // +5 for THE MURRAIN (Task 4): epidemic-largest-metapopulation-now,
+        // epidemic-crowd-endemic, epidemic-plague-endings,
+        // epidemic-outbreak-events and lot-named-disease-deaths. The sixth
+        // preregistered metric is the existing lot-slots-filled-mean column.
+        assert_eq!(registry().len(), 292);
         //
         // THE CONFIDANT (Task 7) registered +45 here — `reportable-
         // fraction-<species>`, `collapse-ratio-<species>`,
@@ -12925,7 +13062,7 @@ mod tests {
         // for the roster).
         // THE LOT (Task 9): 281 -> 287 (+6, see this test's first assertion
         // for the roster).
-        assert_eq!(registry().len(), 287);
+        assert_eq!(registry().len(), 292);
     }
 
     // --- The Ford (spec §10): the estimators behind the three channel
@@ -13971,9 +14108,13 @@ mod tests {
         // THE WINZE T2b re-pin: 2.391304347826087 -> 2.5. The ring scan changes
         // WHERE workings are founded, so seed 42's site pool moves and with it
         // which goblin names are drawn. Still inside the 2-3 target.
+        // THE MURRAIN re-pin (2026-09-07): 2.5 -> 2.4285714285714284.
+        // The epidemiology/history bake changes the seed-42 settlement and
+        // naming substrate; this remains the same metric claim, with the
+        // exact value re-measured on the new deterministic world.
         assert_eq!(
             extract_from(&built, "name-syllables-goblin"),
-            MetricValue::Number(2.5)
+            MetricValue::Number(2.4285714285714284)
         );
         // The Watershed, Item 0: sonority sequencing collapses equal-sonority
         // neighbours inside a template, so kobold falls 2.743 -> 2.683. Goblin
@@ -14203,9 +14344,14 @@ mod tests {
         // touches phonology, wear or the namer. NOT corroborated against a
         // census: this campaign's refresh happens once, at pre-merge close, and
         // has not been run.
+        //
+        // THE MURRAIN re-pin (2026-09-07): 2.5067567567567566 -> 2.8. The
+        // epidemiology/history bake changes the seed-42 settlement substrate
+        // and therefore the named-site sample; the metric remains inside its
+        // stated 2-3 target.
         assert_eq!(
             extract_from(&built, "name-syllables-kobold"),
-            MetricValue::Number(2.5067567567567566)
+            MetricValue::Number(2.8)
         );
     }
 
@@ -14447,7 +14593,10 @@ mod tests {
         // pool, changing which names read as transparent. NOT corroborated
         // against a census: this campaign's refresh happens once, at pre-merge
         // close, and has not been run.
-        assert_eq!(share, 0.6102564102564103, "seed 42 transparency drifted");
+        // THE MURRAIN re-pin (2026-09-07): 0.6102564102564103 ->
+        // 0.6905537459283387, from the same deterministic settlement
+        // substrate change that moved the syllable pin above.
+        assert_eq!(share, 0.6905537459283387, "seed 42 transparency drifted");
     }
 
     /// The arity regression `name-gloss-true` had, stated as a test so it
@@ -15093,7 +15242,14 @@ mod tests {
             // the seed, per the precedent this comment has now followed
             // through all ten. Coverage is the best it has ever been here:
             // river, elevation and karst/wetland gate classes all exercised.
-            vec!["river", "ford", "valley", "marsh", "spring", "island"],
+            // THE MURRAIN re-pin (2026-09-07): FIVE — "island" leaves while
+            // the other five remain. The epidemiology/history bake changes
+            // the committed settlement substrate, so this witness is
+            // re-pinned rather than treated as a regression in the
+            // independent exposure reading. The precondition remains
+            // nonempty and the mutation still exercises the river and
+            // karst/wetland gates.
+            vec!["river", "ford", "valley", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
@@ -16422,12 +16578,19 @@ mod tests {
     /// gap collapsed: `iron`-keyed occupations now begin at day `0.0`, the
     /// same as the unfiltered minimum, because a genesis settlement that used
     /// to be lost now survives to the iron horizon. Re-swept seeds 11-22:
-    /// 15, 18, 20 and 21 still show the gap. **Seed 15** is taken — unfiltered
+    /// 15, 18, 20 and 21 still show the gap. **Seed 15** was taken on the
+    /// pre-Murrain tree — unfiltered
     /// min `0.0`, iron min `100_443.75` (max `383_512.5`, 15 iron-keyed
     /// facts) — because its gap is the widest of the four and so the most
     /// likely to survive the next world change. Swapping the seed rather than
     /// re-pinning follows this doc's own precedent above: the seed is a
     /// technical witness for `first_day`'s object filter, not a subject world.
+    /// **THE MURRAIN re-witness (2026-09-07): seed 15 -> seed 18.** The
+    /// epidemiology/history bake changes the occupation-day substrate and
+    /// collapses seed 15's iron gap to genesis. Re-sweeping the nearby
+    /// technical witnesses leaves seed 18 as the earliest surviving gap in
+    /// this local range, so the witness moves rather than weakening its
+    /// two self-defence guards.
     ///
     /// Both self-defence guards from the sibling tests apply here together:
     /// `expected_min != expected_max` (catches `first_day` silently returning
@@ -16439,7 +16602,7 @@ mod tests {
     /// passing for the wrong reason.
     #[test]
     fn first_day_of_a_keyed_object_with_a_higher_floor_matches_an_independently_computed_minimum() {
-        let v = FullView::build(Seed(15), &SkyPins::default()).expect("seed 15 builds");
+        let v = FullView::build(Seed(18), &SkyPins::default()).expect("seed 18 builds");
         let mut unfiltered_days: Vec<f64> = v
             .world()
             .ledger
@@ -17431,6 +17594,8 @@ mod tests {
         }
     }
 
+    /// claim: invariant(forall-seed) — every staple has a live authoritative
+    /// witness, and the independent reading agrees wherever it is steeped.
     #[test]
     fn the_independent_reading_covers_every_staple_worldgen_can_steep() {
         // The Contour epoch v2 re-witness (2026-08-02, history/bake/v2 regen
@@ -17802,31 +17967,43 @@ mod tests {
         // still load-bearing alone — no same-seed second species — and **THE
         // SUBJECT MOVED AGAIN**, species with it: kobold -> bugbear, onto the
         // flagship seed.
-        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        let lexicon = lex(&view, "bugbear").expect("bugbears hold a lexicon");
-        let steeped = independently_steeped_concepts(&view, "bugbear").expect("bugbear is placed");
-        for staple in STAPLE_CONCEPTS {
-            // The sweep's own criterion, asserted rather than assumed: this
-            // test bites only where WORLDGEN steeps the staple, and a lexicon
-            // `Root` is minted only from a `Steeped` classification. Without
-            // this line a moved witness is indistinguishable from a stale
-            // duplicate, and the test spent a whole campaign reporting the
-            // wrong one.
-            assert!(
-                matches!(lexicon.entry(staple), Some(LexEntry::Root { .. })),
-                // The seed and species are named from the witness the sweep
-                // above selected, not from a literal — this message read
-                // "seed 26 hobgoblins" through two witness moves before The
-                // Winze, and a failure message that names the wrong world
-                // sends its reader to the wrong place.
-                "seed 42 bugbears must root {staple} for this test to bite"
-            );
-            assert!(
-                steeped.contains(staple),
-                "the lab's independent reading does not steep {staple}, which \
-                 worldgen does — the duplicate is stale again"
-            );
+        // THE MURRAIN reframe (2026-09-07): its population/history bake no
+        // longer leaves one stable seed/species pair spanning all six crop
+        // bands. Keep the invariant selection-free by witnessing each staple
+        // wherever the fixed cross-seed exposure sweep finds it, rather than
+        // weakening the claim or pinning a new arbitrary world.
+        let mut seen = std::collections::BTreeSet::new();
+        for seed in [1u64, 5, 7, 26, 42, 83, 100] {
+            let Ok(view) = FullView::build(Seed(seed), &SkyPins::default()) else {
+                continue;
+            };
+            let (world, terrain, climate) = (view.world(), view.terrain(), view.climate());
+            for species in all_daughters(&view) {
+                let Ok(authoritative) =
+                    hornvale_worldgen::exposure_from(world, species, terrain, climate)
+                else {
+                    continue;
+                };
+                let Some(independent) = independently_steeped_concepts(&view, species) else {
+                    continue;
+                };
+                for staple in STAPLE_CONCEPTS {
+                    if matches!(
+                        authoritative.get(staple),
+                        Some(hornvale_language::ExposureClass::Steeped)
+                    ) {
+                        assert!(
+                            independent.contains(staple),
+                            "seed {seed} {species} authoritative exposure steeped {staple}, \
+                             but the independent reading did not"
+                        );
+                        seen.insert(staple);
+                    }
+                }
+            }
         }
+        let expected: std::collections::BTreeSet<&str> = STAPLE_CONCEPTS.into_iter().collect();
+        assert_eq!(seen, expected, "every staple needs a live steeped witness");
     }
 
     /// **The Confidant, the campaign `calibration.rs`'s

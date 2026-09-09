@@ -3847,7 +3847,7 @@ mod portolan_tests {
     /// **The roster the map draws from holds all three site kinds, and the
     /// counts are the campaign's own headline.** The Prospect exists because
     /// a world's caves and exotic sites were invisible; before Task 8 this
-    /// client's rosters were 389 settlement vertices and 874 cave vertices
+    /// client's rosters were 307 settlement vertices and 874 cave vertices
     /// in two separate structures, with NO representation of an exotic site
     /// at all — so the 103 asserted here are the sites the map could not
     /// draw at any rung, in any window, however much a reader explored.
@@ -3875,12 +3875,12 @@ mod portolan_tests {
         );
         assert_eq!(
             count(SiteKind::Settlement),
-            389,
+            307,
             "seed 42's settlement-vertex roster moved"
         );
         assert_eq!(
             d.sites.len(),
-            874 + 103 + 389,
+            874 + 103 + 307,
             "the roster holds nothing else"
         );
 
@@ -5339,13 +5339,15 @@ mod portolan_tests {
     /// glyph, and the two disagreeing there is not the Finding 2 defect
     /// this test exists to catch.
     ///
-    /// **Measured on seed 42's default floor plate: 118 of 800 tiles are
-    /// excluded — 14.75% of the plate, not the "12 of 800" an earlier
-    /// version of this doc claimed.** That number was a review-caught
+    /// **Measured on the post-Murrain seed-42 default floor plate: 128 of
+    /// 800 tiles are excluded — 16.00% of the plate.** The pre-Murrain
+    /// measurement was 118; the movement is a consequence of the changed
+    /// settlement/site roster, not a change to the F5 resolver. The earlier
+    /// "12 of 800" version of this doc was a review-caught
     /// mistake, not a rounding difference: 12 is the count of excluded
     /// tiles whose vertex ALSO happens to resolve to ocean — i.e. the
     /// subset that would actually have disagreed and reddened the test —
-    /// mismeasured as the exclusion's own size. The other 106 excluded
+    /// mismeasured as the exclusion's own size. The other 116 excluded
     /// tiles draw a site glyph over non-ocean terrain and would have agreed
     /// anyway; excluding them changes no verdict TODAY, but they are still
     /// genuinely outside what this test can vouch for, which is why
@@ -5353,7 +5355,9 @@ mod portolan_tests {
     /// one — a regression that grew the excluded set (say, a bug drawing
     /// site glyphs far more broadly than the roster warrants) would
     /// otherwise silently shrink the guarantee while `agree == total` kept
-    /// reporting a perfect, and decreasingly meaningful, ratio.
+    /// reporting a perfect, and decreasingly meaningful, ratio. This count
+    /// was re-measured by the test after the Murrain epoch, not copied from
+    /// the old witness.
     #[test]
     fn f5_the_resolved_vertex_always_matches_the_drawn_glyph_after_the_fix() {
         let mut d = test_driver();
@@ -5437,7 +5441,7 @@ mod portolan_tests {
         // PINNED, not merely printed (review fix round 1): an unasserted
         // `excluded` can grow without bound and this test would keep
         // reporting a perfect ratio over a shrinking, decreasingly
-        // meaningful `total`. 118 is this test's own doc's measured figure
+        // meaningful `total`. 128 is this test's own doc's measured figure
         // for seed 42's default floor plate at the coarsest zoom — a
         // golden that moves on a terrain epoch, a site-roster change
         // (caves/exotic/settlements) or a site-glyph vocabulary change,
@@ -5445,7 +5449,7 @@ mod portolan_tests {
         // `the_site_roster_carries_every_kind_and_only_placed_kinds_carry_
         // a_facet`'s own three golden counts.
         assert_eq!(
-            excluded, 118,
+            excluded, 128,
             "the point-site/landform exclusion moved — update this test's own doc \
              (and re-measure, do not just paste the new number) if this is expected"
         );

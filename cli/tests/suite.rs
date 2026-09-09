@@ -62,12 +62,18 @@ mod lexicon_guard;
 mod lens_purity;
 #[path = "suite/locale_cli.rs"]
 mod locale_cli;
+#[path = "suite/murrain_epidemiology.rs"]
+mod murrain_epidemiology;
 #[path = "suite/no_entity_id_values_in_prose.rs"]
 mod no_entity_id_values_in_prose;
 #[path = "suite/prose_is_not_a_contract.rs"]
 mod prose_is_not_a_contract;
 #[path = "suite/provision.rs"]
 mod provision;
+#[path = "suite/regularity_corpus.rs"]
+mod regularity_corpus;
+#[path = "suite/regularity_coverage.rs"]
+mod regularity_coverage;
 #[path = "suite/release_determinism.rs"]
 mod release_determinism;
 #[path = "suite/repertory_corpus.rs"]

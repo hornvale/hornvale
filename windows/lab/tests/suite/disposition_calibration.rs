@@ -735,7 +735,7 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// `RAID_DISPOSITION_MIN` re-seats its genesis flagship on at least
 /// `RAIDER_MIN` of the seed panel's worlds.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), and to 9/60 = 0.150 at The Winze's close (mechanism measured, not assumed: the breach hazard, NOT the working's placement - see the witness), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 9 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), to 9/60 = 0.150 at The Winze's close (mechanism measured, not assumed: the breach hazard, NOT the working's placement), and to 7/60 = 0.117 at The Murrain's close (history/bake/v4 and epidemic-before-raid population reduction), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 7 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
 fn every_raider_clears_the_floor_preregistered_not_met() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, _) = raiders_and_abstainers(&wc);
@@ -754,9 +754,10 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
         "PREREGISTERED, NOT MET (decision 0138): {} raiding people(s) below the \
          {RAIDER_MIN} floor: {under:?}. Measured 14/60 = 0.233 for drow at The Glasshouse's \
          close, 12/60 = 0.200 at The Underworld's, 10/60 = 0.167 at The Granary's \
-         (cause named at The Governor's close: eeaa011fd, BAKE v2 -> v3), and 9/60 = 0.150 \
+         (cause named at The Governor's close: eeaa011fd, BAKE v2 -> v3), 9/60 = 0.150 \
          at The Winze's (mechanism measured: the breach hazard, not the working's \
-         placement); a DIFFERENT reading here means the deferral has moved and owes a \
+         placement), and 7/60 = 0.117 at The Murrain's (v4 epidemic-before-raid epoch); \
+         a DIFFERENT reading here means the deferral has moved and owes a \
          re-read, not a lowered floor. See this test's doc comment.",
         under.len()
     );
@@ -903,6 +904,19 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// the hazard is a shipped, spec'd feature (The Winze §4.3) doing exactly
 /// what it was built to do, so there is nothing to fix — only a stale number
 /// to correct with its cause on record.
+///
+/// **RE-READ AT THE MURRAIN'S CLOSE (2026-09-08): 9/60 → 7/60.** The
+/// denominator still holds at 60, so the witness moved by fewer live re-seats,
+/// not by a new failure mode. The cause is the campaign's deliberate
+/// `history/bake/v4` epoch: epidemic reduction runs before raids, and the
+/// resulting population substrate changes which occupation remains the
+/// flagship at `now`. This is a new post-epoch measurement, not a reason to
+/// lower the preregistered floor or to call the plague phase defective.
+///
+/// Re-stated rather than repaired again: the Murrain's v4 stream and
+/// epidemic-before-raid ordering are the shipped mechanism under test. The
+/// deferred floor remains a re-fit question, and the witness now records
+/// 7/60 = 0.117 until that successor measurement exists.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
@@ -912,8 +926,8 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
     println!("witness: drow re-seated {changed}/{worlds}");
     assert_eq!(
         (changed, worlds),
-        (9, 60),
-        "drow's flagship re-seating moved from the pinned 9/60. This is NOT a number to \
+        (7, 60),
+        "drow's flagship re-seating moved from the pinned 7/60. This is NOT a number to \
          update — re-read it, then re-state this witness, the #[ignore] reason on \
          every_raider_clears_the_floor_preregistered_not_met, its roster entry in \
          cli/tests/suite/heavy_tier.rs (the EXPECTED_UNTOKENISED ratchet, which holds a \
@@ -923,9 +937,10 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
          12/60; The Granary, landed 2026-08-24 and re-read at The Governor's close on \
          2026-08-28, 12/60 → 10/60, `eeaa011fd`'s BAKE v2 -> v3 epoch bump; The Winze, \
          2026-08-30, 10/60 → 9/60, the breach hazard and NOT the working placement, \
-         isolated by neutralising each half). BEFORE ASSUMING A CAUSE, MEASURE ONE — the \
-         Winze re-read is the worked example: the obvious story (placement moved) was \
-         measured and refuted."
+         isolated by neutralising each half; The Murrain, 2026-09-08, 7/60 = 0.117, \
+         after its history/bake/v4 epoch and epidemic-before-raid population reduction). \
+         BEFORE ASSUMING A CAUSE, MEASURE ONE — the Winze re-read is the worked example: \
+         the obvious story (placement moved) was measured and refuted."
     );
 }
 

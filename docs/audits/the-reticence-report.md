@@ -22,9 +22,9 @@ Computed once, at `Seed(42)` — see this function's own module doc for why a fu
 | gully-dwarf | organized | God | Guarded | 2 |
 | high-elf | organized | God | Guarded | 2 |
 | hill-dwarf | organized | God | Guarded | 2 |
-| hobgoblin | folk | Spirit | Wary | 4 |
+| hobgoblin | organized | God | Guarded | 2 |
 | human | organized | God | Guarded | 2 |
-| kobold | folk | Spirit | Wary | 4 |
+| kobold | organized | God | Guarded | 2 |
 | sea-elf | folk | Spirit | Wary | 4 |
 | snow-elf | folk | Spirit | Wary | 4 |
 | wood-elf | organized | God | Guarded | 2 |

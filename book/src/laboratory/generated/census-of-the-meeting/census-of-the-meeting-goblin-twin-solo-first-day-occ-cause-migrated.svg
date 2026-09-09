@@ -16,18 +16,18 @@
 <rect x="203.3" y="220.8" width="60.4" height="15.2" fill="#5b8dd9" rx="2" />
 <text x="233.5" y="216.8" font-size="11" fill="currentColor" text-anchor="middle">38</text>
 <text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 233.5 252.0)">[50000, 150000)</text>
-<rect x="274.3" y="224.4" width="60.4" height="11.6" fill="#5b8dd9" rx="2" />
-<text x="304.5" y="220.4" font-size="11" fill="currentColor" text-anchor="middle">29</text>
+<rect x="274.3" y="225.2" width="60.4" height="10.8" fill="#5b8dd9" rx="2" />
+<text x="304.5" y="221.2" font-size="11" fill="currentColor" text-anchor="middle">27</text>
 <text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">[150000, 300000)</text>
-<rect x="345.3" y="228.0" width="60.4" height="8.0" fill="#5b8dd9" rx="2" />
-<text x="375.5" y="224.0" font-size="11" fill="currentColor" text-anchor="middle">20</text>
+<rect x="345.3" y="226.8" width="60.4" height="9.2" fill="#5b8dd9" rx="2" />
+<text x="375.5" y="222.8" font-size="11" fill="currentColor" text-anchor="middle">23</text>
 <text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">[300000, 500000)</text>
-<rect x="416.3" y="231.2" width="60.4" height="4.8" fill="#5b8dd9" rx="2" />
-<text x="446.5" y="227.2" font-size="11" fill="currentColor" text-anchor="middle">12</text>
+<rect x="416.3" y="232.4" width="60.4" height="3.6" fill="#5b8dd9" rx="2" />
+<text x="446.5" y="228.4" font-size="11" fill="currentColor" text-anchor="middle">9</text>
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">[500000, 750000)</text>
 <text x="517.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">&gt;= 750000</text>
-<rect x="558.3" y="94.8" width="60.4" height="141.2" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="90.8" font-size="11" fill="currentColor" text-anchor="middle">353</text>
+<rect x="558.3" y="94.0" width="60.4" height="142.0" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="90.0" font-size="11" fill="currentColor" text-anchor="middle">355</text>
 <text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 588.5 252.0)">absent</text>
 </svg>

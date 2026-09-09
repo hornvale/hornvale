@@ -38,6 +38,8 @@ mod census_sentinel;
 mod depth_ladder;
 #[path = "suite/disposition_calibration.rs"]
 mod disposition_calibration;
+#[path = "suite/domesday_claim.rs"]
+mod domesday_claim;
 #[path = "suite/earth_anchor.rs"]
 mod earth_anchor;
 #[path = "suite/fixture_staleness.rs"]
@@ -54,6 +56,10 @@ mod individuation;
 mod metric_roster_safety;
 #[path = "suite/millrace_probe.rs"]
 mod millrace_probe;
+#[path = "suite/murrain_metrics.rs"]
+mod murrain_metrics;
+#[path = "suite/murrain_readout.rs"]
+mod murrain_readout;
 #[path = "suite/namesake_metrics.rs"]
 mod namesake_metrics;
 #[path = "suite/preregistration_guard.rs"]

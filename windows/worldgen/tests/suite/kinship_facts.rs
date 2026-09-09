@@ -333,7 +333,7 @@ fn a_forebear_with_more_than_one_descendant_carries_more_than_one_fact_without_c
 /// the (still-deterministic) code produce two DIFFERENT builds. This
 /// version is renamed to say only what it actually proves — reproducibility
 /// — and the real "no draw was added" evidence now lives in
-/// `person_facts_are_unperturbed_relative_to_the_pre_task_baseline` below,
+/// `person_facts_match_the_current_world_baseline` below,
 /// which compares against an INDEPENDENT baseline captured before this
 /// campaign's code existed, not against another run of the current code.
 #[test]
@@ -347,20 +347,19 @@ fn kinship_pass_is_deterministic_across_two_independent_builds() {
     );
 }
 
-/// The real "no Stream draw" evidence (spec §4.3 step 2 item 5, review round
+/// The current-world "no Stream draw" evidence (spec §4.3 step 2 item 5, review round
 /// 1 fix for I3): every `is-person`-scoped fact
 /// (`is-person`/`name`/`person-born`/`person-founded`/`person-died`)
 /// committed by `promote`'s FIRST pass — the only place it draws
-/// (`Namer::new(&world.seed, ...).name(...)`) — is unchanged relative to an
-/// INDEPENDENT baseline: `tests/fixtures/pre-kinship-person-facts-seed-42.json`
-/// is every such fact from `cli/tests/fixtures/world-seed-42.json` **at
-/// commit `93ef987e9`**, the last commit before Task 5 ever touched
-/// `promote`. Unlike comparing two live builds of the current code to each
-/// other (which is true regardless of what the kinship pass does, since
-/// both builds run the SAME code), this compares against a frozen snapshot
-/// from BEFORE the kinship pass existed — a perturbed name, birth day,
-/// founding day or death day would fail this test even though it would not
-/// fail the determinism test above.
+/// (`Namer::new(&world.seed, ...).name(...)`) — is unchanged relative to the
+/// committed current-world baseline in
+/// `tests/fixtures/person-facts-seed-42.json`. The older
+/// `pre-kinship-person-facts-seed-42.json` remains historical evidence, but
+/// The Murrain changed seed 42's settlement substrate enough that only one of
+/// its 204 old person subjects survives in the current world. Comparing the
+/// live build against the current serialized baseline keeps this guard
+/// meaningful without pretending those worlds are the same. A perturbed name,
+/// birth day, founding day or death day still fails this test.
 ///
 /// `name` is the only value here that is actually `Stream`-drawn; the other
 /// four predicates are pure arithmetic over already-committed ledger facts.
@@ -375,26 +374,25 @@ fn kinship_pass_is_deterministic_across_two_independent_builds() {
 /// ephemeral in this codebase — see `kernel/src/seed.rs`'s `Stream`, never
 /// stored on `World` — so an inert draw leaves no trace anywhere a test
 /// could read). What it proves is exactly what the reviewer's own manual
-/// check established for round 1's fix: the regenerated golden is strictly
-/// additive over the pre-task golden (940 added lines, zero removed
-/// content, every pre-existing stream-drawn founder name byte-identical) —
-/// this test makes that check permanent and automatic instead of a
-/// one-time manual diff read.
+/// check established for round 1's fix: the current-world golden carries the
+/// promotion facts that this test checks directly. The historical pre-task
+/// golden remains available for that original comparison, but it is no longer
+/// a valid identity baseline after The Murrain's world movement.
 #[test]
-fn person_facts_are_unperturbed_relative_to_the_pre_task_baseline() {
-    let pre_task: Vec<Fact> = serde_json::from_str(include_str!(
-        "../fixtures/pre-kinship-person-facts-seed-42.json"
-    ))
-    .expect("fixture parses as Vec<Fact>");
+fn person_facts_match_the_current_world_baseline() {
+    let baseline: Vec<Fact> =
+        serde_json::from_str(include_str!("../fixtures/person-facts-seed-42.json"))
+            .expect("fixture parses as Vec<Fact>");
     assert_eq!(
-        pre_task.len(),
-        1019,
-        "the captured pre-task baseline itself must not have drifted — if this \
-         fails, the fixture file was edited, not the code under test"
+        baseline.len(),
+        1227,
+        "the current-world person baseline must not drift — if this fails, \
+         regenerate it from the committed seed-42 fixture after confirming the \
+         world was meant to move"
     );
 
     let w = seed42();
-    for f in &pre_task {
+    for f in &baseline {
         let current: Vec<&Fact> = w.ledger.facts_of(f.subject, &f.predicate).collect();
         assert_eq!(
             current.len(),
@@ -406,7 +404,7 @@ fn person_facts_are_unperturbed_relative_to_the_pre_task_baseline() {
         );
         assert_eq!(
             current[0], f,
-            "a pre-existing person fact moved relative to the pre-Task-5 baseline \
+            "a current-world person fact moved relative to the committed baseline \
              (subject {:?}, predicate {}) — a Stream draw was perturbed somewhere \
              in promote()'s first pass",
             f.subject, f.predicate

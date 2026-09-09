@@ -16,6 +16,7 @@ pub mod flesh;
 pub mod record;
 pub mod social;
 pub mod streams;
+pub mod trajectory;
 pub use social::{
     ASSOCIATION_FORM, AssociationForm, GroupMembershipEvent, LifecycleEvent, MEMBERSHIP_ENDED,
     RECOGNITION_INTERPRETATION, RelationEvent, RelationKind, SocialEvent, SocialEventError,

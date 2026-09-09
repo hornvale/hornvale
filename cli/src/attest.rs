@@ -313,7 +313,11 @@ pub const CONDITIONALLY_DROPPABLE: &[&str] = &["seam-guard", "clients", "heavy"]
 /// A declared path's author, per `docs/generated-paths.txt` (Task 5, The
 /// Attestation): either a roster set name, or a declared absence carrying
 /// its reason.
-enum DeclaredAuthor {
+///
+/// Public since `regularities::GeneratedPaths` reuses this reader instead
+/// of writing a second parser for the same file — see [`parse_declared`].
+/// type-audit: bare-ok(identifier-text: Roster.0)
+pub enum DeclaredAuthor {
     /// A roster set name (`artifacts`, `census`, `heavy`).
     Roster(String),
     /// `none(<reason>)` — no roster author writes this path, by declaration.
@@ -329,7 +333,12 @@ enum DeclaredAuthor {
 /// reasonless-`none` parse-error panic — a malformed declaration is not a
 /// reporting-worthy fact for this reader either, it is upstream input this
 /// module trusts other tests to keep well-formed.
-fn parse_declared(text: &str) -> Vec<(String, DeclaredAuthor)> {
+///
+/// Public so `regularities::GeneratedPaths` can build its directory-
+/// inheritance map from this reader's output rather than re-parsing the
+/// file a third time: one semantics for this format, in one place.
+/// type-audit: bare-ok(artifact: text), bare-ok(identifier-text: return)
+pub fn parse_declared(text: &str) -> Vec<(String, DeclaredAuthor)> {
     text.lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))

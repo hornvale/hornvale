@@ -15,14 +15,17 @@ import { type Envelope, type WorkerRequest, type WorkerResponse } from "./protoc
 import {
   type Curve,
   type Life,
+  type Odds,
   parseCurve,
   parseLife,
+  parseOdds,
   parsePlaces,
   type Place,
 } from "./payload.ts";
 import { type Axis, birthsToPath, xToYear, yearToX } from "./graph.ts";
 import { dotRadius, nearestPlace, peakBirths, placeAtSite, placeLabel, project } from "./map.ts";
 import { eventsOf, eventX } from "./timeline.ts";
+import { causeRows } from "./odds.ts";
 import { byDesignNote, disclaimer, silenceLine, sourceLine, tiles } from "./story.ts";
 import { format as formatLink, parse as parseLink } from "./permalink.ts";
 import { heroLine, hintFor, spinYears, thousands } from "./stages.ts";
@@ -364,11 +367,7 @@ function mount(container: HTMLElement): void {
   }
 
   // ---- the Life stage ---------------------------------------------
-  function oddsTiles(subject: Life): [string, string][] {
-    // EVERY ONE OF THESE IS A FIELD OF `lot/life/v1`. The odds payload's
-    // e0 and q_maturity would belong here and are NOT reachable: there is
-    // no `hl_lot_odds` export, so the exhibit shows the life course the
-    // payload carries rather than the mortality profile behind it.
+  function oddsTiles(subject: Life, chances: Odds): [string, string][] {
     const rows: [string, string][] = [
       ["Born", year(subject.birth_year)],
       ["Age at death", `${Math.round(subject.age_at_death)}`],
@@ -379,14 +378,18 @@ function mount(container: HTMLElement): void {
     if (subject.moved_year !== null) {
       rows.push(["Moved", `in year ${year(subject.moved_year)}`]);
     }
+    for (const [cause, share] of causeRows(chances)) {
+      rows.push([`Cause — ${cause}`, share]);
+    }
     return rows;
   }
 
   async function showLife(): Promise<void> {
     if (!life) return;
     lifeStage.hidden = false;
+    const chances = parseOdds(await ask({ kind: "odds", occ: life.occ, year: life.birth_year }));
     odds.replaceChildren();
-    for (const [label, value] of oddsTiles(life)) {
+    for (const [label, value] of oddsTiles(life, chances)) {
       const tile = el("div", "lot-tile", odds);
       el("span", "lot-tile-label", tile).textContent = label;
       el("span", "lot-tile-value", tile).textContent = value;

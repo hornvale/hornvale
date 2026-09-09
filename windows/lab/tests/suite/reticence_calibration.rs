@@ -132,10 +132,10 @@ fn h1_the_improvising_arms_are_distributed_as_preregistered() {
             ImprovisedName::Wordless { .. } => wordless += 1,
         }
     }
-    // THE WINZE T2b re-pin: (9, 6) -> (8, 7). Spec amendment E's working ring
-    // scan moves every world's settlement history, which re-draws the lexicons
-    // this arm assignment reads. A readout, not a target.
-    assert_eq!((god, spirit), (8, 7), "frozen arm counts over 15 peoples");
+    // THE MURRAIN re-pin: (8, 7) -> (10, 5). The epidemic phase moves every
+    // world's deterministic history, which re-draws the lexicons this arm
+    // assignment reads. A readout, not a target.
+    assert_eq!((god, spirit), (10, 5), "frozen arm counts over 15 peoples");
     assert_eq!(
         god + spirit + wordless,
         15,

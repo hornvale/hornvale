@@ -1,4 +1,4 @@
-# The Contested Clearing of Seed 42
+# A Living Clearing of Seed 42
 
 A site read back out of the ledger by the `history` verb: the stratigraphy
 of every people that ever settled one vertex, oldest layer deepest, and the
@@ -8,111 +8,24 @@ today. Nothing here replays the deep-history bake; it is all a
 (structures, residue) derived on demand and never committed.
 
 This is a real clearing on the world of seed 42 — vertex 10626 — and
-twelve kobold steadings have risen on it, one settling atop the ruins
-of the last, from the year 200 down to the present. No other people
-ever touched this ground: it is a people with only itself to fight,
-and it has fought itself here for eighteen centuries. Seven of the
-eleven completed layers ended at kobold hands; four were not
-evictions at all — the occupants drove rival kobolds off better
-ground nearby (once off vertex 2666, three times off vertex 10628) and
-carried the settlement onto the land they had taken, so the layer
-closes on a departure rather than a defeat.
-
-The cold is in this column, but never as an ending. Not one layer
-fell to ice. Every layer instead *arrived* fleeing it — all twelve,
-the deepest included, driven off one of four neighbouring clearings
-(2666 and 10628 most often, 10627 and 10638 once each). No one ever
-broke this soil by choice: it has been a refuge from its first layer
-to its last. Read bottom to top, the column carries a complete
-technological arc — two neolithic layers at the base, then bronze,
-iron, and six classical layers on top, the whole craft history of a
-people in one stack of earth. The twelfth was founded in the year
-1875 and stands yet: some 24 souls, two huts and a granary, and no
-ruin yet to read.
+one human steading has risen on it. Settlers came from vertex 10638
+in the year 1775, and the layer still stands after 225 years. At its
+height some 12 souls raised two huts and a granary. There is no ruin
+to read yet — only a living settlement and smoke on the air.
 
 ```text
 The clearing at vertex 10626
 ============================
 
-15 lives have passed over this ground, one settling atop the ruins of the last.
+One people, and one only, ever made a home of this ground.
 
-The deepest layer — a neolithic kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere eight souls.
-  Its founders fled the ice of the clearing at vertex 10628, kobolds looking for kinder ground.
-  Founded in the year 200, it held for 0 years, until the year 200.
-  They fled — put to flight by kobolds — and did not return.
-
-Above it — a neolithic kobold steading, an ordinary place, neither famed nor forgotten, at its height some 25 souls.
-  Its founders fled the ice of the clearing at vertex 10628, kobolds looking for kinder ground.
-  Founded in the year 200, it held for 25 years, until the year 225.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 2666, and carried the settlement onto the land they had taken.
-
-Higher still — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some ten souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 225, it held for 125 years, until the year 350.
-  They fled — put to flight by kobolds — and did not return.
-
-Above that again — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 22 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 350, it held for 25 years, until the year 375.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 10628, and carried the settlement onto the land they had taken.
-
-And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere four souls.
-  Its founders fled the ice of the clearing at vertex 10627, kobolds looking for kinder ground.
-  Founded in the year 375, it held for 0 years, until the year 375.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 375, it held for 0 years, until the year 375.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 24 souls.
-  Its founders fled the ice of the clearing at vertex 10638, kobolds looking for kinder ground.
-  Founded in the year 375, it held for 375 years, until the year 750.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a bronze-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 18 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 750, it held for 0 years, until the year 750.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 29 souls.
-  Its founders fled the ice of the clearing at vertex 10638, kobolds looking for kinder ground.
-  Founded in the year 750, it held for 200 years, until the year 950.
-  They were not driven from this ground — they left it: in that same year they drove the kobolds off the clearing at vertex 10628, and carried the settlement onto the land they had taken.
-
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
-  Its founders fled the ice of the clearing at vertex 10639, kobolds looking for kinder ground.
-  Founded in the year 975, it held for 0 years, until the year 975.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height some 13 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 975, it held for 25 years, until the year 1000.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 18 souls.
-  Its founders fled the ice of the clearing at vertex 10639, kobolds looking for kinder ground.
-  Founded in the year 1000, it held for 275 years, until the year 1275.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 15 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground.
-  Founded in the year 1275, it held for 0 years, until the year 1275.
-  They fled — put to flight by kobolds — and did not return.
-
-And later — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 20 souls.
-  Its founders fled the ice of the clearing at vertex 10638, kobolds looking for kinder ground.
-  Founded in the year 1275, it held for 150 years, until the year 1425.
-  They fled — put to flight by kobolds — and did not return.
-
-The last of them — a classical kobold steading, an ordinary place, neither famed nor forgotten, at its height some 40 souls.
-  Its founders fled the ice of the clearing at vertex 2666, kobolds looking for kinder ground. It was founded by Xaro.
-  Founded in the year 1425, it stands yet — 575 years and counting.
+The deepest layer — a classical human steading, an ordinary place, neither famed nor forgotten, at its height some 12 souls.
+  It was settled by humans sent out from the clearing at vertex 10638.
+  Founded in the year 1775, it stands yet — 225 years and counting.
   It has never ended; the people are there still.
 
 In the grass today
 ------------------
-At its height some 40 souls, the last kobolds here raised a hut and a granary.
+At its height some 12 souls, the last humans here raised two huts and a granary.
 They are living there yet — there is no ruin to read, only smoke on the air.
 ```
