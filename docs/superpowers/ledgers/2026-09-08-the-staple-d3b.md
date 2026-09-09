@@ -1044,3 +1044,19 @@ book freshness/gradient closeout, registry flip, census refresh, or merge
 sluice submission has occurred. The branch is ready for `make sluice-stage`
 once the updated documentation commit is made and pushed; it is not ready for
 the final `make sluice` merge request.
+
+## #24 [Stage gate] — D3B stage product passed on the canonical box
+
+The stage request `req-2ae088604e78-20260909T010248Z` completed with all four
+stage phases green (`rc=0`) in 1,508 seconds. The chamber merged the candidate
+against the then-current `main` and left `main` unchanged. The operator found
+no census pins, heavy calibrations, world fixtures, registry surfaces, or
+scene-schema changes requiring follow-up on this campaign.
+
+**Decision:** treat D3B as stage-gate-passed and continue the campaign at the
+design boundary. This is not a G6 close or authorization for a final merge;
+the next work remains brainstorming/specification for specialization emergence
+and must not invent `Function` labels before that design converges.
+
+**Evidence:** sluice status row for `req-2ae088604e78-20260909T010248Z`; no
+census refresh run.
