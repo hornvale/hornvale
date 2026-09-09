@@ -446,3 +446,27 @@ published. Cost if wrong: none beyond the irony.
 `docs/audits/` row: base `15 24`, `origin/main` `15 26`, branch `16 25`. Both
 sides moved independently, so it **auto-merges cleanly to a wrong value**. Set it
 to `16 27` at the merge.
+
+---
+
+## Close
+
+Definition of Done complete on the branch before submission: chronicle
+(`book/src/chronicle/the-seedbed.md`, wired into `SUMMARY.md`), retrospective
+(`docs/retrospectives/the-seedbed.md`, carrying the deferred-minor table and
+where each landed), decision **0908**, a Confidence Gradient re-score
+(*a preregistered threshold can be external and still unreachable*),
+CLAUDE.md's directory guide for `regularities/`, and the reconciliation row.
+
+`main` absorbed at `b096c7a7b`; three conflicts, all in regenerator-owned
+artifacts, resolved by regeneration rather than by hand — which produced
+`docs/audits/ 16 27` for the contested `generated-path-writes.tsv` row,
+matching the value the final review derived independently. `gate-commit` rc=0
+on the merged product; drift clean over every declared path. The digest's
+in-force index was stale after 0908 and was regenerated — caught by the close
+walk, not by a gate.
+
+Nothing pre-existing in the idea registry required a status flip; the 47 rows
+this campaign added are new captures, and
+`TOOL-a-regularity-corpus-can-measure-a-trajectory` deliberately stays `raw`
+because nine `deferred` corpus items anchor to it.
