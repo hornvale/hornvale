@@ -274,6 +274,9 @@ pub fn d4_normalize_profile(
         return Err(D4ProfileError::NegativeQuantity);
     }
     let total: f64 = values.iter().sum();
+    if !total.is_finite() {
+        return Err(D4ProfileError::NonFiniteQuantity);
+    }
     if total == 0.0 {
         return Ok(None);
     }
@@ -421,6 +424,23 @@ mod tests {
         assert_eq!(
             d4_normalize_profile(&D4PortfolioVector::zero()).unwrap(),
             None
+        );
+    }
+
+    #[test]
+    fn normalization_rejects_non_finite_inputs_and_finite_sum_overflow() {
+        // Break caught: non-finite values, or a non-finite total accumulated
+        // from finite values, reach division and fabricate a zero composition.
+        for invalid in [f64::NAN, f64::INFINITY] {
+            assert_eq!(
+                d4_normalize_profile(&vector([invalid, 0.0])),
+                Err(D4ProfileError::NonFiniteQuantity)
+            );
+        }
+
+        assert_eq!(
+            d4_normalize_profile(&vector([f64::MAX, f64::MAX])),
+            Err(D4ProfileError::NonFiniteQuantity)
         );
     }
 
