@@ -11,7 +11,7 @@
   "world_revision": "ed8e6f3369f2b45097d702a5c28cc84f1ae35f56",
   "seed": 42,
   "time_window": null,
-  "frame_count": 120,
+  "frame_count": 900,
   "frame_rate": 30.0,
   "source_commands": [
     "cargo run -p hornvale -- underworld --seed 42"

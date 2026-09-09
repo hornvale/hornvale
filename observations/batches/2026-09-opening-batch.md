@@ -1,10 +1,9 @@
 # 2026-09 opening observation batch
 
-Batch status: **draft internal pilot**. Seven new evidence statements have
-been checked against the current producer readout; HV-001 retains its earlier
-draft wording for later editorial tightening. No exact video/copy package has
-been approved. The seven-approved-package reserve is pending Nathan's manual
-review. Nothing in this record authorizes publication.
+Batch status: **draft internal pilot**. All eight evidence records and caption
+packages remain drafts. No exact video/copy package has been reviewed or
+approved by Nathan. The seven-package approval reserve remains pending
+Nathan's manual review. Nothing in this record authorizes publication.
 
 ## Realized surface and scope
 
@@ -34,13 +33,13 @@ pipeline and editorial pilot, not a claim of broad atlas coverage.
 | Episode | Object | Scale | Axis | Count unit | Grammar | Evidence | Package |
 |---|---|---|---|---|---|---|---|
 | HV-001 | geography | world | spatial arrangement | chambers | spatial | draft | draft |
-| HV-002 | entrances | world | quantity | entrances | spatial | reviewed | draft |
-| HV-003 | cave systems | world | quantity | cave systems | spatial | reviewed | draft |
-| HV-004 | chambers | depth band | distribution | chambers | spatial | reviewed | draft |
-| HV-005 | chambers | rock layer | distribution | chambers | spatial | reviewed | draft |
-| HV-006 | chambers | world | provenance | chambers | spatial | reviewed | draft |
-| HV-007 | cave systems | depth band | topology or connectivity | cave systems | spatial | reviewed | draft |
-| HV-008 | chamber run | cave system | viewpoint or resolution | floors | spatial | reviewed | draft |
+| HV-002 | entrances | world | quantity | entrances | spatial | draft | draft |
+| HV-003 | cave systems | world | quantity | cave systems | spatial | draft | draft |
+| HV-004 | chambers | depth band | distribution | chambers | spatial | draft | draft |
+| HV-005 | chambers | rock layer | distribution | chambers | spatial | draft | draft |
+| HV-006 | chambers | world | provenance | chambers | spatial | draft | draft |
+| HV-007 | cave systems | depth band | topology or connectivity | cave systems | spatial | draft | draft |
+| HV-008 | chamber run | cave system | viewpoint or resolution | floors | spatial | draft | draft |
 
 Every manifest names one value for object, scale, axis, count unit, visual
 grammar, and observation sentence. Every source command is the exact current
@@ -48,7 +47,8 @@ repository-root command accepted by the exporter.
 
 ## Reproduction record
 
-Each manifest requests 120 packets at 30 frames per second. The batch was
+Each manifest requests 900 packets at 30 frames per second, a declared
+30-second episode. The batch was
 exported from clean per-episode directories. `source_digest` was
 `fnv1a64:5344fcc22e8d960d` for every episode because every packet observes the
 same producer bytes. The atlas fixture's tested viewports are 390×844 (phone)
@@ -59,14 +59,14 @@ through `frame-119.json`, concatenated in lexical order.
 
 | Episode | Frames | Sequence SHA-256 |
 |---|---:|---|
-| HV-001 | 120 | `26814f8c63301fd3cf545b1e6ea744712ccf2ac5e4e70e40281a1d63271a25b1` |
-| HV-002 | 120 | `d6b02e23c8bc2b3c27b99fab7cfb0917d90f310a67a5e2cae4258179e35280d2` |
-| HV-003 | 120 | `5f410474bf45c16c194c1f2372159de5b7b26dc4e919f9e3ed039d8f2ddf8bbe` |
-| HV-004 | 120 | `db3ae88c5242ac275a5708e83ef116e3362ff49a6bfe8a2c1630d0ad2005c334` |
-| HV-005 | 120 | `af0d2b702c00289b86a7f750193735cd0abefbf3bc0acc7de1e822f2a46fbf8c` |
-| HV-006 | 120 | `f019b5001d7d2e7c20b7796a8ff9583fb7b84fbf16d28b9dc81160e65eb949cf` |
-| HV-007 | 120 | `98c6c53883aac2e2c1a4eb581bbb49dd378b3f6dd433d24d04095004a9a587cc` |
-| HV-008 | 120 | `5e8c95896488f00f0f01f91ee7d3d4e837185202cb1df4cdc5be8fecb6e18216` |
+| HV-001 | 900 | `2d1cad2d9b01a2aba3aa5e3415efce363a1c85a0958a0ee34ae82a0b1fb02d1c` |
+| HV-002 | 900 | `4fb27ea29e7ca9549e3b649593dd763e3b5230febf9df00a5e8884c0124190a3` |
+| HV-003 | 900 | `3a74b3cfa51ebf5f85af46801f017302fe5a0087896e0d2145fff3374c48eafd` |
+| HV-004 | 900 | `76bcc2567779bfb5f4331a8385e440cdb61cd3a83510099d558f5e8728e5cbff` |
+| HV-005 | 900 | `5a9a752d1162fc8b0da24d11def7fc700cb993a3340255609a9b8d3a2bebe551` |
+| HV-006 | 900 | `da1c6964bdcc6bc9d94a5de847344ccf8cc2943e2e80a76d64b9884b0a52ce5f` |
+| HV-007 | 900 | `f95e63ea64e2e6399b9aadddd22e2878082d8bd0f8631e7cd67c2a48ec92ee6e` |
+| HV-008 | 900 | `723ede96f6e9d3f30f0869bc85901a63527e80e509241cd05be621ca34f26db7` |
 
 These checksums cover authoritative JSON packets, not PNGs or videos. The
 current renderer has a deterministic browser preview and phone/laptop layout
@@ -93,14 +93,15 @@ publication.
 
 ## Review boundary
 
-- Evidence review checked HV-002 through HV-008 against the producer fixture
-  and kept causal language out of distribution claims. HV-001 remains an
-  evidence draft because its existing phrase "across depth bands" needs an
-  editorial decision about whether it describes distribution or connectivity;
-  the pilot does not silently rewrite the committed renderer fixture.
+- Evidence status remains `draft` for all eight manifests; no evidence record
+  is represented as reviewed. HV-001's existing phrase "across depth bands"
+  is explicitly pending an editorial decision about whether it describes
+  distribution or connectivity. The pilot does not silently rewrite the
+  committed renderer fixture.
 - Renderer tests, rather than an invented screenshot record, establish the two
   layout dimensions and preservation of authored labels.
 - Caption files contain advisory primary drafts and optional replies only.
-- All eight exact videos, rendered labels, and caption packages still require
-  Nathan's manual review. Until then every `editorial_status` remains `draft`,
-  every `approval` remains `null`, and the approved reserve count is **0 of 7**.
+- Exact video/copy review by Nathan remains pending for all eight packages.
+  Until then every `editorial_status` remains `draft`, every `approval` remains
+  `null`, and seven-package approval remains pending with a reserve count of
+  **0 of 7**.
