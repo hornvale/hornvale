@@ -6787,6 +6787,25 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T02:30:39Z | sluice:gate | 872.503 | 22823.744 | 623.322 | 26.87 | 0 | dedf5999e |  | lefford | 40 |
 | 2026-09-08T02:33:50Z | sluice:clients | 190.771 | 2861.025 | 258.179 | 16.35 | 0 | f93b1ebb4 |  | lefford | 40 |
 | 2026-09-08T02:41:53Z | sluice:heavy | 482.307 | 11381.407 | 162.804 | 23.94 | 0 | a332a522a |  | lefford | 40 |
+| 2026-09-08T15:28:51Z | gate-commit | 29.937 | 70.766 | 15.900 | 2.89 | 0 | 7ef751229 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T15:31:52Z | gate-commit | 145.361 | 761.157 | 55.170 | 5.62 | 0 | 7ef751229 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T15:33:48Z | gate-commit | 51.395 | 73.425 | 18.445 | 1.79 | 0 | 7ef751229 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T15:55:59Z | gate-commit | 34.173 | 41.655 | 9.105 | 1.49 | 0 | c67ad8743 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T15:57:09Z | gate-commit | 27.047 | 25.237 | 0.683 | 0.96 | 0 | c67ad8743 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T16:00:52Z | gate-commit | 38.195 | 68.870 | 18.581 | 2.29 | 0 | c67ad8743 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T16:11:35Z | gate-commit | 58.958 | 107.374 | 48.337 | 2.64 | 0 | f18ff7cf6 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T16:35:08Z | gate-commit | 51.500 | 104.803 | 48.622 | 2.98 | 0 | 1bf6c768d | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T16:37:14Z | gate-commit | 62.065 | 193.523 | 48.874 | 3.91 | 0 | 1bf6c768d | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T16:38:24Z | gate-commit | 35.332 | 66.890 | 17.768 | 2.40 | 0 | 1bf6c768d | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T17:25:13Z | gate-commit | 33.843 | 53.850 | 11.993 | 1.95 | 0 | 1feb5ced7 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T17:27:58Z | gate-commit | 46.471 | 108.110 | 18.906 | 2.73 | 0 | 1feb5ced7 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T17:30:10Z | gate-commit | 38.306 | 68.459 | 17.935 | 2.26 | 0 | 1feb5ced7 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T17:31:21Z | gate-commit | 36.109 | 66.488 | 16.808 | 2.31 | 0 | 1feb5ced7 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T17:50:03Z | gate-commit | 46.621 | 108.650 | 18.604 | 2.73 | 0 | d9be68942 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T17:50:52Z | gate-commit | 36.773 | 67.580 | 18.036 | 2.33 | 0 | d9be68942 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T19:04:22Z | gate-commit | 43.740 | 85.083 | 39.876 | 2.86 | 0 | 3b0db9459 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T19:06:16Z | gate-commit | 34.588 | 66.573 | 17.561 | 2.43 | 0 | 3b0db9459 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-08T19:07:24Z | gate-commit | 34.515 | 66.243 | 17.337 | 2.42 | 0 | 3b0db9459 | campaign/the-staple-d4 | MacBookPro | 10 |
 | 2026-09-08T23:33:42Z | census-tail-chorus | 58.836 | 745.869 | 24.567 | 13.09 | 0 | 4283f5298 |  | lefford | 40 |
 | 2026-09-08T23:33:45Z | census-tail-domesday | 1.184 | 1.058 | 0.126 | 1.00 | 0 | 4283f5298 |  | lefford | 40 |
 | 2026-09-08T23:33:45Z | census-tail-anomalies | 0.534 | 0.470 | 0.064 | 1.00 | 0 | 4283f5298 |  | lefford | 40 |
@@ -6795,6 +6814,9 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T23:48:48Z | sluice:gate | 806.968 | 24199.571 | 746.968 | 30.91 | 0 | 071123fcd |  | lefford | 40 |
 | 2026-09-08T23:51:56Z | sluice:clients | 188.433 | 3130.761 | 319.969 | 18.31 | 0 | 4eec2d166 |  | lefford | 40 |
 | 2026-09-09T00:01:34Z | sluice:heavy | 577.160 | 12961.594 | 211.813 | 22.82 | 0 | 4e340af28 |  | lefford | 40 |
+| 2026-09-09T00:16:05Z | gate-commit | 75.168 | 64.828 | 15.179 | 1.06 | 0 | 5e5185ba6 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-09T00:23:13Z | gate-commit | 376.725 | 987.041 | 59.574 | 2.78 | 0 | 5e5185ba6 | campaign/the-staple-d4 | MacBookPro | 10 |
+| 2026-09-09T01:02:30Z | gate-commit | 38.201 | 67.723 | 18.283 | 2.25 | 0 | 2ae088604 | campaign/the-staple-d4 | MacBookPro | 10 |
 | 2026-09-09T00:23:45Z | census-tail-chorus | 178.500 | 207.672 | 8.076 | 1.21 | 0 | 3c4b74834 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-09T00:23:46Z | census-tail-domesday | 0.654 | 0.401 | 0.042 | 0.68 | 0 | 3c4b74834 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-09T00:23:47Z | census-tail-anomalies | 0.493 | 0.318 | 0.039 | 0.72 | 0 | 3c4b74834 | campaign/the-seedbed | MacBookPro | 10 |
@@ -6853,3 +6875,11 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T16:19:54Z | gate-commit | 58.984 | 74.886 | 19.990 | 1.61 | 0 | d4cab8582 | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-09T16:43:39Z | gate-commit | 47.953 | 78.073 | 22.803 | 2.10 | 0 | a950f5929 | campaign/hornvale-observation-series | MacBookPro | 10 |
 | 2026-09-09T18:00:19Z | gate-commit | 38.609 | 70.713 | 19.340 | 2.33 | 0 | 4dbef7a0e | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T20:30:41Z | census-tail-chorus | 55.643 | 740.074 | 21.420 | 13.69 | 0 | d0eb35611 |  | lefford | 40 |
+| 2026-09-09T20:30:43Z | census-tail-domesday | 1.235 | 1.101 | 0.134 | 1.00 | 0 | d0eb35611 |  | lefford | 40 |
+| 2026-09-09T20:30:44Z | census-tail-anomalies | 0.879 | 0.809 | 0.070 | 1.00 | 0 | d0eb35611 |  | lefford | 40 |
+| 2026-09-09T20:30:47Z | sluice:artifacts | 310.288 | 2236.672 | 88.718 | 7.49 | 0 | d0eb35611 |  | lefford | 40 |
+| 2026-09-09T20:32:26Z | sluice:outboard | 98.805 | 118.592 | 84.639 | 2.06 | 0 | ad169d0c8 |  | lefford | 40 |
+| 2026-09-09T20:46:51Z | sluice:gate | 864.744 | 25406.499 | 799.676 | 30.31 | 0 | a8b8995d8 |  | lefford | 40 |
+| 2026-09-09T20:50:23Z | sluice:clients | 211.429 | 3353.439 | 305.325 | 17.30 | 0 | 062e2dd9c |  | lefford | 40 |
+| 2026-09-09T21:00:12Z | sluice:heavy | 588.777 | 12958.498 | 195.346 | 22.34 | 0 | c1ca0f6e2 |  | lefford | 40 |
