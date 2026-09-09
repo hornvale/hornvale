@@ -1,0 +1,1 @@
+{"kind":"notice","by":"campaign/hornvale-observation-series","note":"sluice: queued replacement req-0d7067a0f20a-20260909T192826Z for campaign/hornvale-observation-series at 0d7067a0f20a (fixes held shellcheck finding)","paths":["scripts/observation-film.sh"]}
