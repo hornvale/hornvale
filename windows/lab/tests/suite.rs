@@ -38,6 +38,8 @@ mod census_sentinel;
 mod depth_ladder;
 #[path = "suite/disposition_calibration.rs"]
 mod disposition_calibration;
+#[path = "suite/domesday_claim.rs"]
+mod domesday_claim;
 #[path = "suite/earth_anchor.rs"]
 mod earth_anchor;
 #[path = "suite/fixture_staleness.rs"]

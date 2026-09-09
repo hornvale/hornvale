@@ -13,6 +13,7 @@ pub mod dictionary;
 pub mod phonology;
 pub mod proto;
 pub mod provision;
+pub mod regularities;
 pub mod repl;
 pub mod streams;
 pub mod systems;

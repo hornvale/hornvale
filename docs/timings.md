@@ -6635,6 +6635,86 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-07T22:08:51Z | sluice:gate | 877.922 | 22823.167 | 645.134 | 26.73 | 0 | 2c45f7391 |  | lefford | 40 |
 | 2026-09-07T22:12:02Z | sluice:clients | 190.894 | 2979.834 | 294.079 | 17.15 | 0 | 9060a4bf9 |  | lefford | 40 |
 | 2026-09-07T22:20:18Z | sluice:heavy | 495.771 | 11520.314 | 174.128 | 23.59 | 0 | 139dc7e2f |  | lefford | 40 |
+| 2026-09-08T01:13:25Z | gate-commit | 15.484 | 15.062 | 0.313 | 0.99 | 0 | e9dd87031 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T01:16:07Z | gate-commit | 126.536 | 789.116 | 52.695 | 6.65 | 0 | e9dd87031 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T01:32:26Z | gate-commit | 37.299 | 72.292 | 16.920 | 2.39 | 0 | 70227dffe | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T01:48:25Z | gate-commit | 40.270 | 75.129 | 18.685 | 2.33 | 0 | 4905e2fec | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T01:56:47Z | gate-commit | 39.177 | 73.921 | 17.029 | 2.32 | 0 | 972ff5d1f | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:03:33Z | quick | 27.574 | 26.790 | 0.524 | 0.99 | 0 | 25306c983 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:13:00Z | gate-commit | 37.920 | 73.437 | 17.526 | 2.40 | 0 | 60baf9d12 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:26:08Z | gate-commit | 37.764 | 70.280 | 14.200 | 2.24 | 0 | 5a478597f | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:27:18Z | gate-commit | 34.222 | 60.833 | 13.038 | 2.16 | 0 | 5a478597f | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:29:27Z | gate-commit | 37.566 | 72.779 | 17.662 | 2.41 | 0 | 5a478597f | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:37:48Z | gate-commit | 37.461 | 72.750 | 17.626 | 2.41 | 0 | 269a4df0e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:50:19Z | gate-commit | 37.732 | 73.155 | 17.798 | 2.41 | 0 | b3c9b2ea1 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T02:57:18Z | gate-commit | 37.443 | 72.990 | 17.736 | 2.42 | 0 | acd2c2ba9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:41:22Z | census-tail-chorus | 40.501 | 173.464 | 7.725 | 4.47 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:41:22Z | census-tail-domesday | 0.331 | 0.285 | 0.030 | 0.95 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:41:23Z | census-tail-anomalies | 0.276 | 0.235 | 0.027 | 0.95 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:41:25Z | rebaseline | 188.240 | 432.139 | 18.511 | 2.39 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:44:02Z | census-tail-chorus | 21.360 | 173.310 | 8.234 | 8.50 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:44:02Z | census-tail-domesday | 0.335 | 0.286 | 0.029 | 0.94 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:44:03Z | census-tail-anomalies | 0.303 | 0.254 | 0.026 | 0.92 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:44:05Z | rebaseline | 142.586 | 424.625 | 18.028 | 3.10 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:47:25Z | gate-commit | 40.045 | 74.773 | 17.642 | 2.31 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T03:48:19Z | gate-commit | 36.865 | 72.368 | 16.892 | 2.42 | 0 | b1275c009 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:05:58Z | census-tail-chorus | 27.053 | 174.994 | 7.758 | 6.76 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:05:59Z | census-tail-domesday | 0.330 | 0.284 | 0.030 | 0.95 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:05:59Z | census-tail-anomalies | 0.273 | 0.233 | 0.026 | 0.95 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:06:01Z | rebaseline | 149.906 | 426.391 | 17.313 | 2.96 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:08:55Z | census-tail-chorus | 26.781 | 176.571 | 9.108 | 6.93 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:08:56Z | census-tail-domesday | 0.323 | 0.282 | 0.026 | 0.95 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:08:56Z | census-tail-anomalies | 0.275 | 0.234 | 0.027 | 0.95 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:08:58Z | rebaseline | 153.247 | 432.392 | 19.040 | 2.95 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:11:49Z | gate-commit | 38.402 | 73.315 | 17.832 | 2.37 | 0 | 80af968e9 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:27:15Z | census-tail-chorus | 26.004 | 175.098 | 8.446 | 7.06 | 0 | 1295d4185 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:27:16Z | census-tail-domesday | 0.350 | 0.295 | 0.031 | 0.93 | 0 | 1295d4185 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:27:16Z | census-tail-anomalies | 0.276 | 0.232 | 0.029 | 0.95 | 0 | 1295d4185 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:27:18Z | rebaseline | 153.106 | 445.950 | 19.044 | 3.04 | 0 | 1295d4185 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:30:43Z | gate-commit | 38.961 | 73.000 | 17.762 | 2.33 | 0 | 1295d4185 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:42:24Z | census-tail-chorus | 26.082 | 176.318 | 8.179 | 7.07 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:42:24Z | census-tail-domesday | 0.311 | 0.271 | 0.026 | 0.95 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:42:25Z | census-tail-anomalies | 0.269 | 0.230 | 0.024 | 0.94 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:42:26Z | rebaseline | 148.664 | 429.006 | 17.185 | 3.00 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:43:31Z | gate-commit | 53.042 | 75.225 | 17.676 | 1.75 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:44:21Z | gate-commit | 36.459 | 72.093 | 16.707 | 2.44 | 0 | 7404b8ea2 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:25Z | census-tail-chorus | 26.245 | 174.405 | 8.064 | 6.95 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:26Z | census-tail-domesday | 0.319 | 0.272 | 0.030 | 0.95 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:26Z | census-tail-anomalies | 0.274 | 0.228 | 0.029 | 0.94 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:28Z | rebaseline | 146.835 | 425.523 | 17.058 | 3.01 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:57:41Z | gate-commit | 5.155 | 3.703 | 0.614 | 0.84 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T04:59:17Z | gate-commit | 67.201 | 114.105 | 63.376 | 2.64 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:00:10Z | gate-commit | 37.234 | 71.862 | 16.614 | 2.38 | 0 | 2989b7e4e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:16:07Z | census-tail-chorus | 30.037 | 176.684 | 8.637 | 6.17 | 0 | d0c15527e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:16:07Z | census-tail-domesday | 0.318 | 0.276 | 0.027 | 0.95 | 0 | d0c15527e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:16:08Z | census-tail-anomalies | 0.262 | 0.224 | 0.025 | 0.95 | 0 | d0c15527e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:16:09Z | rebaseline | 160.806 | 444.766 | 18.486 | 2.88 | 0 | d0c15527e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:21:59Z | gate-commit | 36.352 | 71.996 | 16.484 | 2.43 | 0 | d0c15527e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:22:48Z | gate-commit | 35.951 | 71.677 | 16.622 | 2.46 | 0 | d0c15527e | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:43:46Z | census-tail-chorus | 29.688 | 176.516 | 8.630 | 6.24 | 0 | 3f30f4dbb | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:43:47Z | census-tail-domesday | 0.316 | 0.274 | 0.026 | 0.95 | 0 | 3f30f4dbb | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:43:47Z | census-tail-anomalies | 0.262 | 0.224 | 0.025 | 0.95 | 0 | 3f30f4dbb | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:43:49Z | rebaseline | 155.132 | 431.995 | 17.809 | 2.90 | 0 | 3f30f4dbb | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T05:49:51Z | gate-commit | 36.122 | 71.618 | 16.827 | 2.45 | 0 | 3f30f4dbb | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:03:00Z | census-tail-chorus | 30.089 | 173.796 | 7.938 | 6.04 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:03:00Z | census-tail-domesday | 0.312 | 0.272 | 0.027 | 0.96 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:03:01Z | census-tail-anomalies | 0.263 | 0.225 | 0.026 | 0.95 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:03:03Z | rebaseline | 153.199 | 424.941 | 16.975 | 2.88 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:06:13Z | census-tail-chorus | 29.948 | 175.874 | 8.992 | 6.17 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:06:14Z | census-tail-domesday | 0.310 | 0.273 | 0.025 | 0.96 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:06:14Z | census-tail-anomalies | 0.259 | 0.224 | 0.023 | 0.95 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:06:16Z | rebaseline | 149.447 | 428.286 | 18.510 | 2.99 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:12:13Z | gate-commit | 35.962 | 71.633 | 16.741 | 2.46 | 0 | 4a85e7f19 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:39:52Z | census-tail-chorus | 30.060 | 176.875 | 8.919 | 6.18 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:39:52Z | census-tail-domesday | 0.314 | 0.274 | 0.027 | 0.96 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:39:53Z | census-tail-anomalies | 0.272 | 0.233 | 0.026 | 0.95 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:39:54Z | rebaseline | 149.919 | 428.138 | 17.983 | 2.98 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:56:31Z | census-tail-chorus | 26.093 | 177.406 | 9.024 | 7.14 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:56:31Z | census-tail-domesday | 0.316 | 0.275 | 0.027 | 0.96 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:56:32Z | census-tail-anomalies | 0.261 | 0.223 | 0.025 | 0.95 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:56:34Z | rebaseline | 145.692 | 428.889 | 17.837 | 3.07 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T06:57:37Z | gate-commit | 59.124 | 110.440 | 58.370 | 2.86 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-08T07:12:10Z | gate-commit | 36.194 | 71.407 | 16.735 | 2.44 | 0 | 11c8dd137 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-07T17:18:10Z | gate-commit | 40.049 | 68.308 | 17.886 | 2.15 | 0 | dc3da837d | campaign/soc-household | MacBookPro | 10 |
 | 2026-09-07T17:18:14Z | gate-commit | 40.713 | 68.185 | 18.014 | 2.12 | 0 | 6f3d7bf62 | campaign/soc-household | MacBookPro | 10 |
 | 2026-09-07T17:51:54Z | gate-commit | 87.039 | 286.857 | 43.607 | 3.80 | 0 | 6f3d7bf62 | campaign/soc-household | MacBookPro | 10 |
@@ -6715,6 +6795,14 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T23:48:48Z | sluice:gate | 806.968 | 24199.571 | 746.968 | 30.91 | 0 | 071123fcd |  | lefford | 40 |
 | 2026-09-08T23:51:56Z | sluice:clients | 188.433 | 3130.761 | 319.969 | 18.31 | 0 | 4eec2d166 |  | lefford | 40 |
 | 2026-09-09T00:01:34Z | sluice:heavy | 577.160 | 12961.594 | 211.813 | 22.82 | 0 | 4e340af28 |  | lefford | 40 |
+| 2026-09-09T00:23:45Z | census-tail-chorus | 178.500 | 207.672 | 8.076 | 1.21 | 0 | 3c4b74834 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T00:23:46Z | census-tail-domesday | 0.654 | 0.401 | 0.042 | 0.68 | 0 | 3c4b74834 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T00:23:47Z | census-tail-anomalies | 0.493 | 0.318 | 0.039 | 0.72 | 0 | 3c4b74834 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T00:23:52Z | rebaseline | 601.705 | 551.619 | 27.080 | 0.96 | 0 | 3c4b74834 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T00:38:32Z | gate-commit | 273.899 | 959.281 | 86.681 | 3.82 | 0 | 081e6410b | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T00:43:49Z | gate-commit | 38.634 | 74.186 | 16.729 | 2.35 | 0 | fe3e5a387 | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T00:45:25Z | gate-commit | 38.690 | 74.379 | 16.732 | 2.35 | 0 | 6aefd7dec | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T01:04:01Z | gate-commit | 40.148 | 75.245 | 16.715 | 2.29 | 0 | 8330d59d0 | campaign/the-seedbed | MacBookPro | 10 |
 | 2026-09-09T00:38:09Z | gate-commit | 275.759 | 1073.378 | 58.946 | 4.11 | 0 | 40ebeb42b | campaign/the-murrain-across-world | MacBookPro | 10 |
 | 2026-09-09T01:11:01Z | census-tail-chorus | 56.383 | 701.535 | 20.858 | 12.81 | 0 | 9ddda9d72 |  | lefford | 40 |
 | 2026-09-09T01:11:03Z | census-tail-domesday | 1.494 | 1.343 | 0.152 | 1.00 | 0 | 9ddda9d72 |  | lefford | 40 |
@@ -6730,3 +6818,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T02:47:14Z | sluice:gate | 862.302 | 25462.848 | 805.150 | 30.46 | 0 | 268316ff8 |  | lefford | 40 |
 | 2026-09-09T02:50:40Z | sluice:clients | 205.758 | 3172.473 | 313.868 | 16.94 | 0 | ab6e51384 |  | lefford | 40 |
 | 2026-09-09T02:59:50Z | sluice:heavy | 550.403 | 12976.507 | 203.994 | 23.95 | 0 | d96095274 |  | lefford | 40 |
+| 2026-09-09T02:50:40Z | census-tail-chorus | 37.421 | 218.715 | 13.082 | 6.19 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:50:40Z | census-tail-domesday | 0.334 | 0.291 | 0.026 | 0.95 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:50:41Z | census-tail-anomalies | 0.283 | 0.241 | 0.027 | 0.95 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:50:43Z | rebaseline | 162.182 | 483.767 | 24.226 | 3.13 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:51:30Z | gate-commit | 39.528 | 74.089 | 17.472 | 2.32 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:57:11Z | gate-commit | 51.105 | 77.369 | 17.819 | 1.86 | 0 | d67b7248d | campaign/the-seedbed | MacBookPro | 10 |
+| 2026-09-09T02:59:36Z | gate-commit | 40.066 | 74.412 | 16.991 | 2.28 | 0 | 17478ed0b | campaign/the-seedbed | MacBookPro | 10 |
