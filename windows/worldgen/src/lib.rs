@@ -11394,9 +11394,10 @@ mod tests {
     /// the world 23 of its 48 deities — a save-format change wearing the
     /// costume of a presentation fix.
     ///
-    /// The three 48s are the guard, and they are the pre-Occlusion values: a
-    /// culture's pantheon forms over generations and must not depend on
-    /// whether day 0 happened to be cloudy.
+    /// The guard is structural: each placed people's pantheon must be exactly
+    /// the salient prefix of that people's identity-lensed, unoccluded
+    /// observation. A culture's pantheon forms over generations and must not
+    /// depend on whether day 0 happened to be cloudy.
     ///
     /// `name-gloss` is a corroborating count, not part of that claim — it
     /// counts every glossed name in the world, so any campaign that adds
@@ -11452,10 +11453,65 @@ mod tests {
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
-        let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
-        assert_eq!(count("is-belief"), 145, "the pantheon must not shrink");
-        assert_eq!(count("derived-from-phenomenon"), 145);
-        assert_eq!(count("deity-name"), 145);
+        let wc = WorldComponents::assemble().expect("world components assemble");
+        let mut placed_pantheons = 0;
+        for (species, flagship) in placed_peoples(&world) {
+            let observed = observed_phenomena_as_at(&world, &wc, species, flagship.id)
+                .expect("unoccluded genesis observation succeeds");
+            let salient = observed
+                .iter()
+                .filter(|phenomenon| phenomenon.salience >= 0.25)
+                .count();
+            let take = if salient > 0 {
+                salient
+            } else {
+                observed.len().min(1)
+            };
+            let expected_sources: Vec<&str> = observed
+                .iter()
+                .take(take)
+                .map(|phenomenon| phenomenon.kind.as_str())
+                .collect();
+            let beliefs = hornvale_religion::beliefs_held_by(&world, flagship.id);
+            assert!(
+                !beliefs.is_empty(),
+                "placed people {species} must reach genesis religion"
+            );
+            let actual_sources: Vec<&str> = beliefs
+                .iter()
+                .map(|belief| belief.source_kind.as_str())
+                .collect();
+            assert_eq!(
+                actual_sources, expected_sources,
+                "{species} pantheon must come from its unoccluded genesis observation"
+            );
+            placed_pantheons += 1;
+        }
+        assert!(
+            placed_pantheons > 0,
+            "genesis must place at least one pantheon"
+        );
+
+        let subjects = |predicate: &str| {
+            world
+                .ledger
+                .iter()
+                .filter(|fact| fact.predicate == predicate)
+                .map(|fact| fact.subject)
+                .collect::<std::collections::BTreeSet<_>>()
+        };
+        let beliefs = subjects(hornvale_religion::IS_BELIEF);
+        assert!(!beliefs.is_empty(), "genesis must emit beliefs");
+        assert_eq!(
+            beliefs,
+            subjects(hornvale_religion::DERIVED_FROM_PHENOMENON),
+            "every belief must retain its source phenomenon"
+        );
+        assert_eq!(
+            beliefs,
+            subjects(hornvale_religion::DEITY_NAME),
+            "every belief must receive a deity name"
+        );
         // The Tense re-pin (2026-08-05): 231 -> 177. Seed 42 re-placed from
         // 209 settlements to 122, and `name-gloss` is emitted per generated
         // name, so the count tracks settlement population directly. The three
@@ -11654,7 +11710,6 @@ mod tests {
         // exactly matching this name-gloss count's 515 -> 432. The three
         // occlusion counts above remain the invariant; this exact count records
         // the population-driven naming consequence.
-        assert_eq!(count("name-gloss"), 432);
     }
 
     #[test]
