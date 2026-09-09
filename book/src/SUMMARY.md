@@ -488,6 +488,7 @@
 - [The Sett](./chronicle/the-sett.md)
 - [The Murrain](./chronicle/the-murrain.md)
 - [The Seedbed](./chronicle/the-seedbed.md)
+- [The Census Tail](./chronicle/the-census-tail.md)
 
 # Appendix: The Frontier
 
