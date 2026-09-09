@@ -1283,6 +1283,28 @@ duplicate source rows, mixed recurrence, intermittent coercion, deterministic
 live sidecar emission, and save-inert ledger comparison. No census or ignored
 fixed-roster report was run.
 
+## #38 [Task 4 review] — Cross-domain re-instantiation preserves the D4 boundary
+
+The implementation was checked against three domains without widening the
+model. In ecology, a typed opportunity/source vector is the required future
+instantiation; because no phase-resolved live source observation exists today,
+the probe reports source debt rather than fabricating one. In network flow,
+BakeId/site joins, typed voluntary delivery, imports, and phase recurrence are
+the measurable path; pooled degree or hub dominance cannot clear a branch. In
+a non-economic domain, protection/coercion remains a separately declared
+mechanism with explicit temporal/mechanism debt and cannot be relabeled as
+specialization.
+
+**Ruling:** D4 remains a measurement-only portfolio/regime reading. It assigns
+no `Function`, writes no persistent role state, changes no save-facing history,
+and does not add movement, learning, prices, or fantasy extraction dynamics.
+The approved contract survives cross-domain re-instantiation; the absent
+source/access seam is a recorded debt and the live branch is non-clearing.
+
+**Evidence:** commit `0d6f9c332`; final local commit gate passed all four
+sub-floor chunks and the focused non-ignored D4/D2/D3B suite passed 35/35. No
+census, fixed-roster report, stage submission, or merge was run.
+
 ## #37 [Task 3 re-review] — Conservative mixed-mechanism and denominator closure
 
 The final correction makes any observed coercive realization vacuity-bearing,
