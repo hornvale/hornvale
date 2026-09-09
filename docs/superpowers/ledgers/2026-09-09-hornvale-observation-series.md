@@ -61,6 +61,17 @@ Ruling: finish the client contract at the numeric boundary and make the preview 
 
 Ruling: carry `count_unit` through the Rust manifest, exported frame, fixture, and client parser, and wire the preview mount into an exercised browser entry path. A client-supplied count unit would violate the producer/client boundary; an uncalled mount would be a visual claim without a witness.
 
+## Review ruling — Task 4, round 1
+
+Ruling: constrain manifest IDs before using them in filesystem paths, and make reruns reconcile derived video state rather than leaving an unchecked stale file. The assembly tool is a local artifact boundary; path traversal and stale checksums would undermine that boundary even though fresh-output tests pass.
+
+## Task 4: complete
+
+- **Commits:** `9645e7d2e`, `792ec1716`
+- **Result:** Local frame/video assembly verification, checksum sidecars, safe target handling, shell tests, and the non-publishing `observation-check` target are implemented.
+- **Evidence:** 20 shell tests, 31 Rust observation tests, and 39 Atlas tests passed; shellcheck and `make observation-check` passed.
+- **Review:** Re-review approved with no remaining findings.
+
 ## Task 3: complete
 
 - **Commits:** `d4cab8582`, `ca990b240`, `a950f5929`, `ec6b748ea`, `5480c0ecf`
