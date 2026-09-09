@@ -250,9 +250,19 @@ fn main() -> ExitCode {
 fn cmd_observations(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("validate") => {
-            let path = flag_value(args, "--manifest").ok_or_else(|| {
+            if args.get(2).map(String::as_str) != Some("--manifest") {
+                return Err(
+                    "observations validate: expected --manifest <PATH> after validate".to_string(),
+                );
+            }
+            let path = args.get(3).ok_or_else(|| {
                 "observations validate: --manifest <PATH> is required".to_string()
             })?;
+            if let Some(unexpected) = args.get(4) {
+                return Err(format!(
+                    "observations validate: unexpected argument '{unexpected}'"
+                ));
+            }
             let manifest = observations::read_manifest(std::path::Path::new(path))
                 .map_err(|error| error.to_string())?;
             println!(

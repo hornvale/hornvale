@@ -10,9 +10,11 @@ Validate a record from the repository root with:
 cargo run -p hornvale -- observations validate --manifest observations/episodes/HV-001.json
 ```
 
-Caption drafts remain advisory. A manifest is not publishable until its
-`evidence_status` is `approved` and its `approval` field records Nathan's
-review of the exact video and copy package. Publication itself is manual.
+Caption drafts remain advisory. `evidence_status` records evidence review;
+`editorial_status` separately records the exact video and copy package's
+lifecycle. A manifest is not publishable until `editorial_status` is
+`approved` and `approval` records reviewer `Nathan` with a UTC timestamp in
+`YYYY-MM-DDTHH:MM:SSZ` form. Publication itself is manual.
 
 Keep comparison references in `comparison_reference`; they are internal
 research metadata and must not replace the public title or observation

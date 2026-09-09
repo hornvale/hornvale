@@ -1,8 +1,8 @@
 //! Observation manifests refuse ambiguous claims at their file boundary.
 
 use hornvale::observations::{
-    Approval, CapabilityState, EpisodeManifest, ObservationStatus, TimeWindow, VisualGrammar,
-    read_manifest, validate_manifest,
+    Approval, CapabilityState, EpisodeManifest, EvidenceStatus, ObservationStatus, TimeWindow,
+    VisualGrammar, read_manifest, validate_manifest,
 };
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -29,11 +29,19 @@ fn valid_manifest() -> EpisodeManifest {
         frame_count: 120,
         frame_rate: 30.0,
         source_commands: vec!["hornvale map --world world.json --field elevation".to_string()],
-        evidence_status: ObservationStatus::Draft,
-        approval: None,
+        evidence_status: EvidenceStatus::Draft,
         capability_state: CapabilityState::Existing,
+        controlled_inputs: serde_json::Map::from_iter([(
+            "seed".to_string(),
+            serde_json::json!(42),
+        )]),
         comparison_reference: None,
+        lead_time: None,
+        source_data: vec!["hornvale map output".to_string()],
+        render_output: None,
         caption_draft: vec!["The ridges are doing more than looking dramatic.".to_string()],
+        editorial_status: ObservationStatus::Draft,
+        approval: None,
     }
 }
 
@@ -67,6 +75,11 @@ fn manifest_json(overrides: &[(&str, serde_json::Value)]) -> String {
         "approval": null,
         "capability_state": "existing",
         "comparison_reference": null,
+        "controlled_inputs": { "seed": 42 },
+        "lead_time": null,
+        "source_data": ["hornvale underworld stdout"],
+        "render_output": null,
+        "editorial_status": "draft",
         "caption_draft": ["The ridges are doing more than looking dramatic."]
     });
     let object = value.as_object_mut().expect("manifest object");
@@ -149,12 +162,163 @@ fn observations_unknown_visual_grammar_is_refused() {
 }
 
 #[test]
+fn observations_unknown_manifest_field_is_refused() {
+    let json = manifest_json(&[("surprise", serde_json::json!(true))]);
+    let path = temp_manifest("unknown-field", &json);
+    let error = read_manifest(&path)
+        .expect_err("unknown fields must not cross the manifest boundary")
+        .to_string();
+    std::fs::remove_file(path).expect("remove temporary manifest");
+    assert!(error.contains("surprise"), "error was: {error}");
+}
+
+#[test]
+fn observations_duplicate_manifest_key_is_refused() {
+    let json = manifest_json(&[]);
+    let needle = "  \"title\": \"Where the high country gathers water\",";
+    assert!(json.contains(needle), "title line exists before mutation");
+    let duplicated = json.replacen(needle, &format!("{needle}\n{needle}"), 1);
+    let path = temp_manifest("duplicate-key", &duplicated);
+    let error = read_manifest(&path)
+        .expect_err("duplicate keys must not cross the manifest boundary")
+        .to_string();
+    std::fs::remove_file(path).expect("remove temporary manifest");
+    assert!(error.contains("duplicate"), "error was: {error}");
+    assert!(error.contains("title"), "error was: {error}");
+}
+
+#[test]
+fn observations_duplicate_nested_metadata_key_is_refused() {
+    let json = manifest_json(&[]);
+    let needle = "    \"seed\": 42";
+    assert!(
+        json.contains(needle),
+        "controlled-input seed exists before mutation"
+    );
+    let duplicated = json.replacen(needle, &format!("{needle},\n{needle}"), 1);
+    let path = temp_manifest("duplicate-nested-key", &duplicated);
+    let error = read_manifest(&path)
+        .expect_err("nested duplicate keys must not cross the manifest boundary")
+        .to_string();
+    std::fs::remove_file(path).expect("remove temporary manifest");
+    assert!(error.contains("duplicate key `seed`"), "error was: {error}");
+}
+
+#[test]
 fn observations_published_status_without_approval_is_refused() {
     let error = read_error(
         "published-unapproved",
-        &[("evidence_status", serde_json::json!("published"))],
+        &[("editorial_status", serde_json::json!("published"))],
     );
     assert!(error.contains("approval"), "error was: {error}");
+}
+
+#[test]
+fn observations_evidence_and_editorial_status_are_independent() {
+    let path = temp_manifest(
+        "independent-statuses",
+        &manifest_json(&[("evidence_status", serde_json::json!("reviewed"))]),
+    );
+    let manifest =
+        read_manifest(&path).expect("reviewed evidence does not imply editorial approval metadata");
+    std::fs::remove_file(path).expect("remove temporary manifest");
+    assert_eq!(manifest.evidence_status, EvidenceStatus::Reviewed);
+    assert_eq!(manifest.editorial_status, ObservationStatus::Draft);
+}
+
+#[test]
+fn observations_evidence_status_rejects_editorial_only_values() {
+    for status in ["approved", "published"] {
+        let error = read_error(
+            "editorial-evidence-status",
+            &[
+                ("evidence_status", serde_json::json!(status)),
+                ("editorial_status", serde_json::json!("approved")),
+                (
+                    "approval",
+                    serde_json::json!({
+                        "reviewer": "Nathan",
+                        "approved_at": "2026-09-09T12:00:00Z"
+                    }),
+                ),
+            ],
+        );
+        assert!(
+            error.contains("evidence_status"),
+            "status {status} produced: {error}"
+        );
+    }
+}
+
+#[test]
+fn observations_approved_editorial_status_requires_approval() {
+    let error = read_error(
+        "approved-without-record",
+        &[("editorial_status", serde_json::json!("approved"))],
+    );
+    assert!(error.contains("approval"), "error was: {error}");
+}
+
+#[test]
+fn observations_draft_editorial_status_forbids_approval() {
+    let error = read_error(
+        "draft-with-approval",
+        &[(
+            "approval",
+            serde_json::json!({
+                "reviewer": "Nathan",
+                "approved_at": "2026-09-09T12:00:00Z"
+            }),
+        )],
+    );
+    assert!(error.contains("approval"), "error was: {error}");
+}
+
+#[test]
+fn observations_approval_reviewer_must_be_nathan() {
+    let error = read_error(
+        "wrong-reviewer",
+        &[
+            ("editorial_status", serde_json::json!("approved")),
+            (
+                "approval",
+                serde_json::json!({
+                    "reviewer": "Editor",
+                    "approved_at": "2026-09-09T12:00:00Z"
+                }),
+            ),
+        ],
+    );
+    assert!(error.contains("approval.reviewer"), "error was: {error}");
+}
+
+#[test]
+fn observations_approval_timestamp_is_strict_utc_second_precision() {
+    for timestamp in [
+        "2026-9-9T12:00:00Z",
+        "2026-09-09T12:00:00-04:00",
+        "2026-09-09T12:00:00.000Z",
+        "2026-02-30T12:00:00Z",
+        "2026-09-09T25:00:00Z",
+    ] {
+        let error = read_error(
+            "bad-timestamp",
+            &[
+                ("editorial_status", serde_json::json!("approved")),
+                (
+                    "approval",
+                    serde_json::json!({
+                        "reviewer": "Nathan",
+                        "approved_at": timestamp
+                    }),
+                ),
+            ],
+        );
+        assert!(
+            error.contains("approval.approved_at"),
+            "timestamp {timestamp} produced: {error}"
+        );
+    }
 }
 
 #[test]
@@ -234,9 +398,24 @@ fn observations_validate_cli_names_path_and_field_on_failure() {
 }
 
 #[test]
+fn observations_validate_cli_rejects_trailing_arguments() {
+    let path = temp_manifest("cli-extra", &manifest_json(&[]));
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "validate", "--manifest"])
+        .arg(&path)
+        .arg("unexpected")
+        .output()
+        .expect("run observations validate");
+    std::fs::remove_file(path).expect("remove temporary manifest");
+    assert!(!out.status.success(), "unexpected argument was accepted");
+    let stderr = String::from_utf8(out.stderr).expect("utf-8 stderr");
+    assert!(stderr.contains("unexpected"), "{stderr}");
+}
+
+#[test]
 fn observations_approved_manifest_carries_editorial_record() {
     let mut manifest = valid_manifest();
-    manifest.evidence_status = ObservationStatus::Approved;
+    manifest.editorial_status = ObservationStatus::Approved;
     manifest.approval = Some(Approval {
         reviewer: "Nathan".to_string(),
         approved_at: "2026-09-09T12:00:00Z".to_string(),
@@ -252,4 +431,23 @@ fn observations_fixture_is_a_valid_internal_record() {
     let manifest = read_manifest(&root.join("observations/episodes/HV-001.json"))
         .expect("committed fixture validates");
     assert_eq!(manifest.id, "HV-001");
+}
+
+#[test]
+fn observations_fixture_source_command_runs_from_repository_root() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root");
+    let manifest = read_manifest(&root.join("observations/episodes/HV-001.json"))
+        .expect("committed fixture validates");
+    assert_eq!(manifest.source_commands.len(), 1);
+    let command = manifest.source_commands[0]
+        .strip_prefix("cargo run -p hornvale -- ")
+        .expect("fixture command uses the repository-root cargo form");
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(command.split_whitespace())
+        .current_dir(root)
+        .output()
+        .expect("execute fixture source command through the current binary");
+    assert!(out.status.success(), "fixture command failed: {out:?}");
 }
