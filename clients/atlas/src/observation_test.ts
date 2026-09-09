@@ -5,6 +5,7 @@ import {
   parseObservationFramePacket,
   renderObservationFrame,
   renderObservationFrameHtml,
+  renderObservationPreview,
 } from "./observation.ts";
 
 const PHONE = { width: 390, height: 844 };
@@ -126,9 +127,46 @@ Deno.test("packet parsing preserves a world seed above JavaScript's safe integer
   assertEquals(renderObservationFrame(packet, LAPTOP).provenance.worldSeed, "9007199254740993");
 });
 
+Deno.test("packet parsing accepts only canonical decimal u64 seeds", async () => {
+  // Catches aliases that identify a different serialized world or exceed Rust u64.
+  const input = await fixtureText();
+  for (const seed of ["0", "18446744073709551615"]) {
+    assertEquals(
+      parseObservationFramePacket(input.replace('"world_seed": "42"', `"world_seed": "${seed}"`))
+        .world_seed,
+      seed,
+    );
+  }
+  for (const seed of ["00", "01", "+1", "1_0", "18446744073709551616"]) {
+    assertThrows(
+      () =>
+        parseObservationFramePacket(input.replace('"world_seed": "42"', `"world_seed": "${seed}"`)),
+      ObservationFrameError,
+      "world_seed",
+    );
+  }
+});
+
+Deno.test("packet parsing refuses non-finite time values", async () => {
+  // Catches Infinity/NaN escaping JSON validation into render state.
+  const input = await fixtureText();
+  assertThrows(
+    () => parseObservationFramePacket(input.replace('"time_day": null', '"time_day": 1e309')),
+    ObservationFrameError,
+    "time_day",
+  );
+  assertThrows(
+    () => parseObservationFramePacket(input.replace('"time_day": null', '"time_day": "day 1"')),
+    ObservationFrameError,
+    "time_day",
+  );
+});
+
 Deno.test("browser preview output exists at phone and laptop sizes with supplied evidence", async () => {
   // Catches a renderer that only returns state without a browser-inspectable visual surface.
   const packet = await fixture();
+  packet.labels.count_unit = "chambers";
+  packet.time_day = 12.5;
   for (const viewport of [PHONE, LAPTOP]) {
     const output = renderObservationFrameHtml(packet, viewport);
     assert(output.length > 0);
@@ -137,10 +175,36 @@ Deno.test("browser preview output exists at phone and laptop sizes with supplied
     assert(output.includes("How the underworld gathers into chambers"));
     assert(output.includes("geography"));
     assert(output.includes("world"));
+    assert(output.includes("chambers"));
     assert(output.includes("vertex 30 — fracture cave"));
     assert(output.includes("Chambers gather into connected cave systems across depth bands."));
+    assert(output.includes(packet.world_revision));
+    assert(output.includes("12.5"));
+    assert(output.includes(packet.world_seed));
+    assert(output.includes(packet.source_digest));
     assert(!output.includes("comparison_reference"));
   }
+});
+
+Deno.test("preview exposes independently inspectable phone and laptop frame states", async () => {
+  // Catches a preview that only tests text fragments instead of both rendered frame outputs.
+  const packet = await fixture();
+  packet.labels.count_unit = "chambers";
+  const preview = renderObservationPreview(packet);
+
+  assertEquals(preview.phone.state.layout, "phone");
+  assertEquals(preview.phone.state.viewport, PHONE);
+  assertEquals(preview.phone.state.map.content, packet.spatial.readout);
+  assertEquals(preview.phone.state.annotation.text, packet.labels.observation_sentence);
+  assertEquals(preview.phone.state.countUnitLabel, "chambers");
+  assert(preview.phone.html.length > 0);
+
+  assertEquals(preview.laptop.state.layout, "laptop");
+  assertEquals(preview.laptop.state.viewport, LAPTOP);
+  assertEquals(preview.laptop.state.title, packet.title);
+  assertEquals(preview.laptop.state.provenance.worldRevision, packet.world_revision);
+  assertEquals(preview.laptop.state.provenance.sourceDigest, packet.source_digest);
+  assert(preview.laptop.html.length > 0);
 });
 
 Deno.test("comparison metadata never enters public render state", async () => {

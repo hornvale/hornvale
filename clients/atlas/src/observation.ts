@@ -37,6 +37,7 @@ export interface RenderState {
   title: string;
   objectLabel: string;
   scaleLabel: string;
+  countUnitLabel?: string;
   legend: Array<{ key: string; value: string }>;
   map: {
     bounds: Bounds;
@@ -79,6 +80,22 @@ function text(value: unknown, field: string): string {
   return value;
 }
 
+function canonicalU64(value: unknown): string {
+  const seed = text(value, "world_seed");
+  if ((seed.length > 1 && seed.startsWith("0")) || !/^\d+$/.test(seed)) {
+    throw new ObservationFrameError("world_seed must be a canonical decimal string");
+  }
+  try {
+    if (BigInt(seed) > 18446744073709551615n) {
+      throw new ObservationFrameError("world_seed exceeds u64 maximum");
+    }
+  } catch (error) {
+    if (error instanceof ObservationFrameError) throw error;
+    throw new ObservationFrameError("world_seed must be a canonical decimal string");
+  }
+  return seed;
+}
+
 /** Parse the producer packet and enforce the renderer's lossless input contract. */
 export function parseObservationFramePacket(input: string): FramePacket {
   let value: unknown;
@@ -93,15 +110,15 @@ export function parseObservationFramePacket(input: string): FramePacket {
   }
   const labels = record(doc.labels, "labels");
   const spatial = record(doc.spatial, "spatial");
-  const worldSeed = text(doc.world_seed, "world_seed");
-  if (!/^\d+$/.test(worldSeed)) {
-    throw new ObservationFrameError("world_seed must be a decimal string");
-  }
+  const worldSeed = canonicalU64(doc.world_seed);
   const frameIndex = doc.frame_index;
   if (typeof frameIndex !== "number" || !Number.isInteger(frameIndex) || frameIndex < 0) {
     throw new ObservationFrameError("frame_index must be a non-negative integer");
   }
-  if (typeof doc.time_day !== "number" && doc.time_day !== null) {
+  if (
+    (typeof doc.time_day !== "number" && doc.time_day !== null) ||
+    (typeof doc.time_day === "number" && !Number.isFinite(doc.time_day))
+  ) {
     throw new ObservationFrameError("time_day must be a number or null");
   }
   const labelValues: Record<string, string> = {};
@@ -157,6 +174,10 @@ export function renderObservationFrame(
   if (typeof packet.source_digest !== "string" || packet.source_digest.length === 0) {
     throw new ObservationFrameError("source_digest must be present");
   }
+  canonicalU64(packet.world_seed);
+  if (packet.time_day !== null && !Number.isFinite(packet.time_day)) {
+    throw new ObservationFrameError("time_day must be finite");
+  }
   if (
     !Number.isFinite(viewport.width) || !Number.isFinite(viewport.height) ||
     viewport.width <= 0 || viewport.height <= 0
@@ -193,6 +214,7 @@ export function renderObservationFrame(
     title: packet.title,
     objectLabel: packet.labels.object,
     scaleLabel: packet.labels.scale,
+    countUnitLabel: packet.labels.count_unit,
     legend,
     map: {
       bounds: mapBounds,
@@ -247,7 +269,7 @@ export function renderObservationFrameHtml(
 <body><main data-layout="${state.layout}" data-width="${viewport.width}" data-height="${viewport.height}">
 <header><h1>${escapeHtml(state.title)}</h1><p>${escapeHtml(state.objectLabel)} · ${
     escapeHtml(state.scaleLabel)
-  }</p></header>
+  }${state.countUnitLabel ? ` · ${escapeHtml(state.countUnitLabel)}` : ""}</p></header>
 <section data-map data-source="${escapeHtml(map.source)}"><svg role="img" aria-label="${
     escapeHtml(map.source)
   }" viewBox="0 0 ${map.bounds.width} ${map.bounds.height}" width="${map.bounds.width}" height="${map.bounds.height}"><rect width="100%" height="100%" fill="#e1d7be"></rect><foreignObject x="0" y="0" width="100%" height="100%"><pre>${
@@ -255,5 +277,38 @@ export function renderObservationFrameHtml(
   }</pre></foreignObject></svg></section>
 <section aria-label="Legend"><h2>Legend</h2><ul>${legend}</ul></section>
 <aside aria-label="Observation"><p>${escapeHtml(state.annotation.text)}</p></aside>
+<footer data-provenance><p>Episode ${
+    escapeHtml(state.provenance.episodeId)
+  } · frame ${state.provenance.frameIndex} · seed ${
+    escapeHtml(state.provenance.worldSeed)
+  } · revision ${escapeHtml(state.provenance.worldRevision)} · time ${
+    String(state.provenance.timeDay)
+  } · source ${escapeHtml(state.provenance.sourceDigest)}</p></footer>
 </main></body></html>`;
+}
+
+export interface PreviewFrame {
+  state: RenderState;
+  html: string;
+}
+
+export interface ObservationPreview {
+  phone: PreviewFrame;
+  laptop: PreviewFrame;
+}
+
+/** Build both inspection targets from one validated packet for browser review. */
+export function renderObservationPreview(packet: FramePacket): ObservationPreview {
+  const phone = { width: 390, height: 844 };
+  const laptop = { width: 1440, height: 900 };
+  return {
+    phone: {
+      state: renderObservationFrame(packet, phone),
+      html: renderObservationFrameHtml(packet, phone),
+    },
+    laptop: {
+      state: renderObservationFrame(packet, laptop),
+      html: renderObservationFrameHtml(packet, laptop),
+    },
+  };
 }
