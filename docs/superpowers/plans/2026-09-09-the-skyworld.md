@@ -28,7 +28,7 @@
 
 ---
 
-## Stage 1: Skyworld data model and deterministic field derivation
+## Task 1: Skyworld data model and deterministic field derivation
 
 **Goal:** Establish the compact overlay types and deterministic world-level fields without changing existing biome semantics.
 
@@ -116,7 +116,7 @@
   git commit -m "feat: add Skyworld overlay data model"
   ```
 
-## Stage 2: Orchard resource chain, trajectories, adjacency, and propagation
+## Task 2: Orchard resource chain, trajectories, adjacency, and propagation
 
 **Goal:** Turn each generated territory into a coherent mature orchard with prerequisites, deterministic movement, temporal adjacency, and bounded influence readouts.
 
@@ -166,7 +166,7 @@
   git commit -m "feat: derive Skyworld orchard and trajectories"
   ```
 
-## Stage 3: Deterministic ordinary and diagnostic rendering
+## Task 3: Deterministic ordinary and diagnostic rendering
 
 **Goal:** Render the Skyworld as an additional layer at planet, regional, and habitat detail without repainting or re-deriving the full planet for each moving territory.
 
@@ -215,7 +215,7 @@
   git commit -m "feat: render Skyworld overlay"
   ```
 
-## Stage 4: Integration probes, documentation, and campaign close preparation
+## Task 4: Integration probes, documentation, and campaign close preparation
 
 **Goal:** Validate the full generation/rendering slice against the project’s determinism, coverage, layering, and artifact conventions without prematurely adding lifecycle simulation or cross-realm mutation.
 
