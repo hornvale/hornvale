@@ -1,0 +1,371 @@
+# Hornvale Observation Series Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Build the first reusable observation pipeline for Hornvale: precise episode manifests, deterministic frame exports, one production-quality visual path, and a reviewed pilot batch that can enter a seven-episode reserve.
+
+**Architecture:** Keep the simulation authoritative and keep the client responsible for presentation. A manifest identifies one episode's object, scale, axis, world state, evidence, and visual grammar; a CLI/export surface produces reproducible observation data and frame inputs; a client renderer turns those inputs into phone- and laptop-legible frames. Public copy remains a manually reviewed draft outside the generation path.
+
+**Tech Stack:** Rust CLI and existing worldgen/scene producers; serde JSON for machine-readable manifests and frame packets; existing PNG renderers and browser clients where they already provide the required visual grammar; Deno tests for client presentation; ffmpeg only for final local assembly if available, with PNG frame sequences remaining the authoritative render output.
+
+**Spec:** `docs/superpowers/specs/2026-09-09-hornvale-observation-series-design.md`
+
+## Global Constraints
+
+- One episode observes one primary feature, axis, or dimension at one explicit scale.
+- Every rendered claim names its object, counted unit, time interval, seed, and revision.
+- The public sequence is Hornvale-native; comparison references remain internal metadata.
+- Public copy is casual and advisory; no tool publishes or treats generated copy as approved.
+- The authoritative output is deterministic data plus PNG frames; video assembly is a derived convenience.
+- Capability work is identified at least fourteen days before demonstration and tested at least seven days before publication.
+- Maintain at least seven fully approved video/copy packages before publication continues.
+- Preserve the four visual grammars: spatial film, temporal film, relational film, and close reading.
+- Do not add a new simulation mechanism merely to create a visually convenient claim; record the gap as an internal capability requirement.
+- Use existing project gates and scoped tests during iteration; do not run retired whole-workspace local gate commands.
+
+---
+
+## File and boundary map
+
+The first increment uses these boundaries:
+
+- Create `cli/src/observations.rs` for manifest parsing, validation, episode status, and frame-export orchestration.
+- Modify `cli/src/main.rs` to expose the `observations` command without moving existing render commands.
+- Create `cli/tests/suite/observations.rs` for manifest and CLI behavior tests; add it to `cli/tests/suite.rs`.
+- Create `observations/episodes/` for committed internal episode manifests and reviewed caption drafts. These are planning/evidence records, not public posts and not generated artifacts.
+- Create `observations/frames/` only if the repository’s artifact policy accepts committed pilot frames; otherwise write pilot output to a documented ignored directory and commit only the manifest and a small fixture.
+- Modify `scripts/regenerate-artifacts.sh` only if the pilot’s committed output is declared a generated artifact; do not add an undeclared generated path.
+- Modify `clients/atlas/src/main.ts` only for the first spatial-film renderer if existing atlas behavior cannot express the required overlays without ambiguity.
+- Create `clients/atlas/src/observation.ts` for observation-specific composition rather than adding episode logic to the general atlas event loop.
+- Create `clients/atlas/src/observation_test.ts` for pure frame-state and label tests.
+- Create `scripts/observation-film.sh` only after the frame contract is stable; it assembles verified PNG frames and writes a manifest/checksum sidecar but never publishes.
+- Create `scripts/test-observation-film.sh` for shell-level failure and output-shape tests; run `shellcheck` on the script before committing it.
+
+The plan intentionally does not create a new simulation crate in this increment. If an episode requires a new world mechanism rather than an observation surface, that requirement is recorded in the manifest and split into its own design campaign before implementation.
+
+## Data contracts
+
+The Rust-side manifest and the client-side frame packet must agree on these semantic fields:
+
+```text
+EpisodeManifest
+  id: stable string
+  title: string
+  object: string
+  scale: string
+  primary_axis: string
+  phenomenon: string
+  visual_grammar: spatial | temporal | relational | close_reading
+  observation_sentence: string
+  world_revision: string
+  seed: u64
+  time_window: optional { start_day: f64, end_day: f64 }
+  frame_count: positive integer
+  frame_rate: positive finite number
+  source_commands: non-empty list of reproducible commands
+  evidence_status: draft | reviewed | approved | published
+  approval: optional { reviewer: string, approved_at: string }
+  capability_state: existing | needs_observation_surface | needs_renderer | needs_simulation_extension
+  comparison_reference: optional internal-only object
+  caption_draft: one to three strings
+```
+
+The exported frame packet contains only data needed by a renderer and carries:
+
+```text
+FramePacket
+  episode_id
+  frame_index
+  world_seed
+  world_revision
+  time_day: optional finite number
+  title
+  labels
+  spatial or temporal observations
+  source_digest
+```
+
+Unknown enum values, missing required fields, zero frame counts, non-finite
+numbers, empty source commands, and a public status without an approved
+editorial record must fail loudly. The validator must not silently coerce a
+wrong scale or counted unit.
+
+### Task 1: Add the observation manifest model and validator
+
+**Files:**
+- Create: `cli/src/observations.rs`
+- Modify: `cli/src/main.rs`
+- Modify: `cli/tests/suite.rs`
+- Create: `cli/tests/suite/observations.rs`
+- Create: `observations/episodes/README.md`
+
+**Interfaces:**
+- `observations::EpisodeManifest` owns the serde representation and validation.
+- `observations::ObservationStatus` owns the four editorial lifecycle values.
+- `observations::CapabilityState` owns the four internal capability states.
+- `observations::VisualGrammar` owns the four visual grammars.
+- `observations::validate_manifest(&EpisodeManifest) -> Result<(), ObservationError>` validates semantic constraints.
+- `observations::read_manifest(path: &Path) -> Result<EpisodeManifest, ObservationError>` parses and validates one manifest.
+- The CLI gains `hornvale observations validate --manifest <PATH>` and prints one deterministic success line or a descriptive error.
+
+- [ ] **Step 1: Write the failing Rust tests for valid and invalid manifests.**
+
+  Add tests for:
+
+  - a valid spatial manifest with a seed, revision, one source command, and one caption draft;
+  - missing object or scale;
+  - zero `frame_count`;
+  - non-finite frame rate and time values;
+  - an empty source-command list;
+  - an unknown visual grammar;
+  - `published` status without an approval record;
+  - a population/settlement/occupation scale spelled as a different object;
+  - comparison metadata present without changing the public title or claim fields.
+
+  Use behavior assertions on returned errors, not implementation details of serde.
+
+- [ ] **Step 2: Run the focused test to verify it fails.**
+
+  Run:
+
+  ```bash
+  cargo nextest run -p hornvale --test suite -E 'test(observations)'
+  ```
+
+  Expected: compilation or test failure because the observation module and test cases do not yet exist.
+
+- [ ] **Step 3: Implement the manifest types and validator.**
+
+  Follow existing CLI data types and serde patterns. Keep validation explicit and local to the manifest boundary. Reject malformed semantic fields instead of defaulting them. Keep comparison metadata private to the serialized internal record and never use it to generate public titles.
+
+- [ ] **Step 4: Wire the validation command.**
+
+  Add the command to the existing usage text and dispatch table. Make success output include the manifest id, object, scale, axis, and frame count. Make failure output include the path and field-level reason.
+
+- [ ] **Step 5: Add the manifest-directory README and one fixture.**
+
+  Document that files under `observations/episodes/` are internal records and that a manifest is not publishable until its status is `approved`. Add one valid fixture for later tasks to consume.
+
+- [ ] **Step 6: Run the focused tests and commit.**
+
+  Run:
+
+  ```bash
+  cargo nextest run -p hornvale --test suite -E 'test(observations)'
+  cargo fmt --check
+  git diff --check
+  ```
+
+  Commit:
+
+  ```bash
+  git add cli/src/observations.rs cli/src/main.rs cli/tests/suite.rs cli/tests/suite/observations.rs observations/episodes/README.md observations/episodes/HV-001.json
+  git commit -m "feat: validate Hornvale observation manifests"
+  ```
+
+### Task 2: Export deterministic frame packets from existing world surfaces
+
+**Files:**
+- Modify: `cli/src/observations.rs`
+- Modify: `cli/src/main.rs`
+- Modify: `cli/tests/suite/observations.rs`
+- Create: `observations/episodes/HV-001.json`
+- Create: `observations/fixtures/HV-001/expected-frame-000.json`
+
+**Interfaces:**
+- `observations::export_frames(manifest: &EpisodeManifest, out_dir: &Path) -> Result<ExportReport, ObservationError>` builds the requested world once and emits one JSON frame packet per frame.
+- CLI command: `hornvale observations export --manifest <PATH> --out <DIR>`.
+- `ExportReport` carries episode id, frame count, source digest, and output paths.
+
+- [ ] **Step 1: Write the failing export tests.**
+
+  Test that:
+
+  - seed 42 emits the requested number of packets;
+  - frame indices are contiguous and start at zero;
+  - every packet repeats the episode id, seed, and revision;
+  - repeated export to two directories produces byte-identical JSON;
+  - a missing manifest path fails before creating an output directory;
+  - a manifest with `needs_simulation_extension` is rejected by export with a message that names the required state rather than silently producing a weaker frame.
+
+- [ ] **Step 2: Run the focused tests to verify failure.**
+
+  Run:
+
+  ```bash
+  cargo nextest run -p hornvale --test suite -E 'test(observations)'
+  ```
+
+  Expected: failure because export is not implemented.
+
+- [ ] **Step 3: Implement export through existing producers.**
+
+  Start with a spatial episode backed by an existing deterministic surface, such as the terrain/biome/settlement map path. Do not recompute producer semantics in the CLI. Use the existing world builder and renderer inputs, and include a source digest so a frame cannot be mistaken for a hand-authored image.
+
+- [ ] **Step 4: Implement atomic output behavior.**
+
+  Write each packet to a temporary file in the requested output directory, rename only after serialization succeeds, and return a descriptive error with the episode id and frame index on failure. Do not delete an unrelated existing directory.
+
+- [ ] **Step 5: Run deterministic export tests and inspect the fixture.**
+
+  Run the focused observation test filter and compare the fixture with a second export. Confirm the fixture contains no client-generated classification that the producer did not provide.
+
+- [ ] **Step 6: Commit the frame-packet export.**
+
+  ```bash
+  git add cli/src/observations.rs cli/src/main.rs cli/tests/suite/observations.rs observations/episodes/HV-001.json observations/fixtures/HV-001/expected-frame-000.json
+  git commit -m "feat: export deterministic observation frames"
+  ```
+
+### Task 3: Build the first spatial-film renderer
+
+**Files:**
+- Create: `clients/atlas/src/observation.ts`
+- Create: `clients/atlas/src/observation_test.ts`
+- Modify: `clients/atlas/src/main.ts` only if the renderer must be reachable from the existing atlas entry point
+- Modify: `clients/atlas/deno.json` only if a new explicit check/test task is required
+- Create: `observations/fixtures/HV-001/render-input.json`
+
+**Interfaces:**
+- `observation.ts` exports pure functions that accept a validated frame packet and return render state; no function reads the world or derives an unprovided semantic field.
+- `renderObservationFrame(packet, viewport) -> RenderState` composes the map, title, legend, scale label, and one observation annotation.
+- `renderObservationFrame` supports the phone target and laptop target through viewport dimensions, not separate semantic logic.
+
+- [ ] **Step 1: Write failing Deno tests for the frame composition.**
+
+  Test that:
+
+  - the episode title and object/scale labels appear;
+  - the renderer uses the packet’s supplied labels and does not invent a biome/resource name;
+  - the same packet gives the same render state at the same viewport;
+  - the phone viewport retains the primary map and observation sentence;
+  - an unknown packet schema or missing source digest is refused;
+  - comparison metadata is not rendered into the public frame.
+
+- [ ] **Step 2: Run Deno checks to verify failure.**
+
+  From `clients/atlas/`, run the existing check and test tasks. Expected: the new test module fails because the observation renderer does not yet exist.
+
+- [ ] **Step 3: Implement the renderer using the atlas’s existing projection and palette conventions.**
+
+  Keep the renderer’s semantic input limited to the frame packet. Use a restrained title/legend treatment, preserve keyboard and reduced-motion behavior in any interactive preview, and avoid adding a second application shell.
+
+- [ ] **Step 4: Add a deterministic browser fixture and visual inspection harness.**
+
+  Render one frame at phone and laptop viewports. Verify the actual map, labels, and annotation rather than only the DOM structure. Store the fixture input, not an unreviewed screenshot, unless the project’s generated-artifact policy explicitly declares the image.
+
+- [ ] **Step 5: Run client checks and commit.**
+
+  Run the existing `clients/atlas` check and test tasks, then:
+
+  ```bash
+  git add clients/atlas/src/observation.ts clients/atlas/src/observation_test.ts clients/atlas/src/main.ts clients/atlas/deno.json observations/fixtures/HV-001/render-input.json
+  git commit -m "feat: render observation frames in atlas"
+  ```
+
+### Task 4: Add local frame assembly and artifact verification
+
+**Files:**
+- Create: `scripts/observation-film.sh`
+- Create: `scripts/test-observation-film.sh`
+- Create: `observations/README.md`
+- Modify: `.gitignore` only for the explicit ignored render-output directory
+- Modify: `Makefile` only to add a non-publishing `observation-check` target
+
+**Interfaces:**
+- `scripts/observation-film.sh --manifest PATH --frames DIR --out DIR` validates the manifest, verifies contiguous frame packets, writes a video if the requested assembler is available, and always writes a checksum sidecar.
+- The script never contacts BlueSky or any social network.
+- `make observation-check` runs manifest validation, frame export, shellcheck, and fixture checks without changing committed artifacts.
+
+- [ ] **Step 1: Write shell tests for failure modes.**
+
+  Cover missing arguments, missing frame directory, non-contiguous frame indices, mismatched episode ids, mismatched seeds, an output path inside the input frame directory, and a successful no-video mode that still writes a checksum report.
+
+- [ ] **Step 2: Run shellcheck and the shell tests to establish red.**
+
+  Run `shellcheck scripts/observation-film.sh scripts/test-observation-film.sh` and the focused test script. Expected: failure because the scripts do not exist.
+
+- [ ] **Step 3: Implement the bounded assembly script.**
+
+  Quote every path, refuse empty or broad targets, use explicit temporary directories, and distinguish authoritative frame packets from derived video output. If ffmpeg is unavailable, report that clearly and still verify the frame sequence and write the sidecar.
+
+- [ ] **Step 4: Add the local Make target and workflow documentation.**
+
+  Document that frame packets are the reproducible source, video files are derived, publication is manual, and an approved package must contain the exact manifest, frame checksum, video checksum when present, and final caption text.
+
+- [ ] **Step 5: Run shellcheck, the shell tests, and the scoped Rust/client checks.**
+
+  Commit:
+
+  ```bash
+  git add scripts/observation-film.sh scripts/test-observation-film.sh observations/README.md .gitignore Makefile
+  git commit -m "build: verify observation film assembly"
+  ```
+
+### Task 5: Create and review the first pilot batch
+
+**Files:**
+- Create: `observations/episodes/HV-001.json` through `observations/episodes/HV-008.json`
+- Create: `observations/captions/HV-001.md` through `observations/captions/HV-008.md`
+- Create: `observations/batches/2026-09-opening-batch.md`
+- Modify: `observations/episodes/README.md`
+
+**Interfaces:**
+- Each pilot manifest validates through the Task 1 command.
+- Each pilot episode names one object, scale, axis, visual grammar, and observation sentence.
+- Each caption file contains a casual primary draft and up to two optional replies, clearly marked as drafts.
+
+- [ ] **Step 1: Select eight realized observations from distinct atlas cells.**
+
+  Use a varied opening batch rather than eight near-identical maps. The batch should include spatial, temporal, relational, and close-reading candidates where existing producers support them. Keep each candidate grounded in current output; do not create a manifest for an unimplemented capability.
+
+- [ ] **Step 2: Record capability requirements before rendering.**
+
+  For each candidate, mark `existing`, `needs_observation_surface`, or `needs_renderer`. If a candidate needs a simulation extension, record it in the batch file with the exact object, scale, and observable required, then replace that candidate with an existing observation for the pilot.
+
+- [ ] **Step 3: Generate all eight frame sequences at least seven days before the intended publication window.**
+
+  Store the revision, seed, source digest, frame checksums, and render dimensions in the batch record. Confirm that the batch can be reproduced from a clean output directory.
+
+- [ ] **Step 4: Draft the public posts in Nathan’s casual voice.**
+
+  Drafts may be loose, curious, and wordy. They must not mention unshown capabilities, future episodes, missing functionality, or an external comparison as the primary frame. Keep exact technical details in the internal manifest unless they are useful in the post.
+
+- [ ] **Step 5: Perform editorial and visual review.**
+
+  For every episode, verify the object, scale, axis, title, labels, and observation sentence. Inspect phone and laptop renders. Mark each package `reviewed`; do not mark it `approved` until Nathan has reviewed the exact video and copy.
+
+- [ ] **Step 6: Establish the seven-package reserve.**
+
+  Mark at least seven packages `approved` only after Nathan’s review. If fewer than seven are approved, keep the pilot in production and do not treat the batch as publication-ready.
+
+- [ ] **Step 7: Commit the pilot records and close the first implementation increment.**
+
+  Run the manifest validator, `make observation-check`, client checks, shellcheck, and `git diff --check`. Commit with:
+
+  ```bash
+  git add observations/episodes observations/captions observations/batches/2026-09-opening-batch.md
+  git commit -m "docs: define the opening observation batch"
+  ```
+
+## Verification matrix
+
+| Requirement | Verification |
+|---|---|
+| One feature/axis per episode | Manifest validator and review checklist |
+| Explicit object and scale | Manifest validator; rendered labels |
+| Deterministic world state | Repeat export byte comparison |
+| No client-invented semantics | Frame-packet source digest and renderer tests |
+| Phone/laptop legibility | Browser inspection at both viewport classes |
+| Four visual grammars remain available | Pilot batch manifest review |
+| No automatic publication | Shell test and code review of assembly script |
+| Seven approved packages | Batch record and manual approval state |
+| Capability work scheduled early | Batch records every non-existing requirement with lead time |
+| Existing project conventions | Scoped tests, shellcheck, fmt, diff check, prose-subject hooks |
+
+## Scope boundary for the next plan
+
+After this plan is complete, a separate plan may implement the first genuinely
+new observation surface or simulation extension selected from the atlas. That
+plan must begin with the exact phenomenon, object, scale, axis, falsifying case,
+and visual grammar. It must not be inferred from a caption request alone.
