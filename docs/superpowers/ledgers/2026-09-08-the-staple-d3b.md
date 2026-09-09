@@ -1156,6 +1156,22 @@ causal/temporal debt rather than manufacturing phase evidence.
 `consume_subsistence_phase`, `record_exchange_clearing`, and
 `collect_tribute` in `windows/worldgen/src/history_bake.rs`.
 
+## #31 [Task 2 review] — Live D4 seam needs a successful typed-delivery witness
+
+Task 2 review found that the live-path regression used zero capacity and only
+impossible requests. That proves the sidecar can retain an unsatisfied path,
+but not that nonzero typed production or a successful voluntary delivery
+reaches the D4 witness. The hand-populated accumulator test cannot cover that
+runtime wiring.
+
+**Ruling:** add one focused live-path fixture with nonzero typed production and
+at least one successful typed delivery, asserting producer output/export,
+recipient import, and typed shortfall. Keep the observation-only boundary and
+all existing D2 behavior unchanged.
+
+**Evidence:** Task 2 review at
+`.superpowers/sdd/2026-09-09-the-staple-d4/task-2-review.md`.
+
 ## #30 [Process ruling] — Re-dispatch the stalled Task 2 seam
 
 The first Task 2 worker made a substantial partial edit but remained idle

@@ -9004,6 +9004,95 @@ mod tests {
         assert_eq!(phase.portfolio.protection_access, None);
     }
 
+    /// Mutation target: dropping nonzero production or either side of a
+    /// successful typed delivery must remove the producer export or recipient
+    /// import asserted by this real phase path.
+    #[test]
+    fn d4_portfolio_runtime_retains_production_and_successful_typed_delivery() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 2.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
+        let producer = bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            20.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        let recipient = bake.open(
+            KindId("kobold"),
+            traversable_neighbors(&graphs[0], Vertex(0))[0],
+            0.0,
+            20.0,
+            Founding::Genesis(Vertex(1)),
+            None,
+            0.0,
+        );
+        bake.communities[producer].curve =
+            Curve::new(LatDeg::new(-45.0).unwrap(), BiomeClass::Arid);
+        bake.communities[recipient].curve =
+            Curve::new(LatDeg::new(-45.0).unwrap(), BiomeClass::Grassland);
+
+        bake.produce_subsistence_phase(
+            &[producer, recipient],
+            &era_at(0.0),
+            &[[1.0; PHASES_PER_YEAR]; 2],
+            0,
+        );
+        bake.clear_subsistence_phase(&[producer, recipient], 0);
+        bake.consume_subsistence_phase(&[producer, recipient], 0, &mut [0.0, 0.0]);
+
+        let witnesses = bake.diagnostic_portfolios_at_now();
+        let producer_phase = &witnesses
+            .iter()
+            .find(|witness| witness.community == BakeId(1))
+            .expect("producer witness")
+            .phases[0];
+        let recipient_phase = &witnesses
+            .iter()
+            .find(|witness| witness.community == BakeId(2))
+            .expect("recipient witness")
+            .phases[0];
+
+        assert!(
+            producer_phase
+                .portfolio
+                .realized_output
+                .iter()
+                .any(|value| *value > 0.0)
+        );
+        let exported_resource = producer_phase
+            .portfolio
+            .voluntary_exchange
+            .iter()
+            .position(|value| *value > 0.0)
+            .expect("producer exports one typed resource");
+        assert!(recipient_phase.portfolio.imports[exported_resource] > 0.0);
+        assert!(
+            producer_phase
+                .portfolio
+                .shortfall
+                .iter()
+                .chain(recipient_phase.portfolio.shortfall.iter())
+                .any(|value| *value > 0.0)
+        );
+        assert!(
+            producer_phase
+                .exchange_attempts
+                .iter()
+                .chain(recipient_phase.exchange_attempts.iter())
+                .any(|attempt| {
+                    attempt.delivered > 0.0 && attempt.statuses.contains(&ExchangeStatus::Settled)
+                })
+        );
+    }
+
     #[test]
     fn subsistence_consumption_never_spends_non_edible_stores() {
         let geo = Geosphere::new(1);
