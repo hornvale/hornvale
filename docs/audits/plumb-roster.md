@@ -13,7 +13,7 @@ of it has been judged; it does not guess a rung for anything.
 |------|-------|
 | Roots | `domains`, `windows` |
 | Default roots | `domains`, `windows` |
-| Files parsed | 349 |
+| Files parsed | 350 |
 | Constant types judged | every type except the non-quantities below |
 | Declared non-quantities | `str`, `String`, `bool`, `char`, `KindId`, `ConceptKind`, `Realm`, `Segment`, `Eyes`, `AffectLabel`, `ChannelMask`, `HabitatRealm`, `Transmission`, plus containers (generic, array, tuple, reference) and markers |
 | Directories pruned | `tests`, `examples`, `benches`, `target` |
@@ -27,20 +27,20 @@ naming them explicitly (`plumb report kernel cli`).
 
 | Bucket | Count |
 |--------|------:|
-| Quantity consts judged (the denominator) | 804 |
-| … file-level | 761 |
+| Quantity consts judged (the denominator) | 806 |
+| … file-level | 763 |
 | … associated (impl/trait) | 9 |
 | … inside a fn body | 34 |
 | Excluded: test-only (`#[cfg(test)]` / `#[test]`) | 173 |
 | Excluded: declared non-quantity type | 555 |
-| **Every `const` the walk touched** | **1532** |
+| **Every `const` the walk touched** | **1534** |
 
 The campaign's spec measured **610** with a line grep over these same
 two roots. That grep could see only column 0 and only the five names
 `f64`, `i64`, `u64`, `u32`, `usize`, so the figure comparable to it is neither the denominator above
-nor the whole `file-level` row — it is **727**: file-level
+nor the whole `file-level` row — it is **729**: file-level
 constants of those five types. The `file-level` row itself is
-**761**, and the denominator is **804**; the difference is
+**763**, and the denominator is **806**; the difference is
 what a line scanner restricted to five primitives cannot see. The two
 figures do not have to agree, and this table is printed so that a
 reader can see exactly where they do not.
@@ -72,7 +72,7 @@ rather than a quantity belongs in `NON_QUANTITY_TYPES`.
 | `i32` | 7 |
 | `i64` | 2 |
 | `u16` | 1 |
-| `u32` | 80 |
+| `u32` | 82 |
 | `u64` | 18 |
 | `u8` | 8 |
 | `usize` | 56 |
@@ -156,7 +156,7 @@ bare count would hide a quantity someone had wrongly denied.
 
 | Verdict | Count |
 |---------|------:|
-| pending(wave-1) | 612 |
+| pending(wave-1) | 614 |
 | per-individual | 2 |
 | per-people | 1 |
 | per-species | 32 |
@@ -164,9 +164,9 @@ bare count would hide a quantity someone had wrongly denied.
 | universal | 151 |
 | **undeclared** | **0** |
 | **malformed tag** | **0** |
-| _total_ | 804 |
+| _total_ | 806 |
 
-Declared: **804 of 804**. Undeclared is backlog; a malformed
+Declared: **806 of 806**. Undeclared is backlog; a malformed
 tag is a defect.
 
 ## Fidelity findings
@@ -224,8 +224,8 @@ counts are already the Coverage table above. 41 finding(s).
 
 ## The contested middle
 
-384 of the 804 constants sit in a file mentioning one of
-the kind-adjacency markers above, across 146 of the 349 files parsed —
+384 of the 806 constants sit in a file mentioning one of
+the kind-adjacency markers above, across 146 of the 350 files parsed —
 the creature-modelling middle where a rung is genuinely arguable, and
 where `FATIGUE_RISE` lived. 384 of them are declared.
 
@@ -257,4 +257,4 @@ in the inclusive direction on purpose.
 | species | 39 | 0 | 0 | 39 |
 | terrain | 152 | 0 | 0 | 152 |
 | vessel | 110 | 0 | 0 | 110 |
-| worldgen | 193 | 0 | 0 | 193 |
+| worldgen | 195 | 0 | 0 | 195 |

@@ -5,12 +5,14 @@ use std::collections::BTreeSet;
 
 use hornvale_astronomy::SkyPins;
 use hornvale_climate::{Biome, BiomeExpr, GeneratedClimate};
-use hornvale_kernel::{Seed, Vertex, World};
+use hornvale_kernel::{NearestVertexIndex, Seed, Vertex, World};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyCorridorKind, SkyEcology, SkyEventKind, SkyPropagationDetail,
-    SkyStocks, SkyWorld, SkyWorldConfig, WorldComponents, build_world_to_with_artifacts,
-    climate_from, propagation_at, skyworld_from, trajectory_at,
+    SkyStocks, SkyWorld, SkyWorldConfig, SkyWorldDetail, WorldComponents,
+    build_world_to_with_artifacts, climate_from, propagation_at,
+    render_skyworld_diagnostic_readout, render_skyworld_png, render_skyworld_readout,
+    skyworld_from, trajectory_at,
 };
 
 struct Fixture {
@@ -69,6 +71,45 @@ fn projected(skyworld: &SkyWorld) -> BTreeSet<Vertex> {
         .iter()
         .flat_map(|territory| territory.physical.projected.iter().copied())
         .collect()
+}
+
+fn png_rgb(png: &[u8]) -> Vec<u8> {
+    let width = u32::from_be_bytes(png[16..20].try_into().unwrap()) as usize;
+    let height = u32::from_be_bytes(png[20..24].try_into().unwrap()) as usize;
+    let mut idat = Vec::new();
+    let mut chunk = 8;
+    while chunk < png.len() {
+        let len = u32::from_be_bytes(png[chunk..chunk + 4].try_into().unwrap()) as usize;
+        if &png[chunk + 4..chunk + 8] == b"IDAT" {
+            idat.extend_from_slice(&png[chunk + 8..chunk + 8 + len]);
+        }
+        chunk += len + 12;
+    }
+
+    assert_eq!(
+        &idat[..2],
+        &[0x78, 0x01],
+        "renderer stopped using stored deflate"
+    );
+    let mut raw = Vec::new();
+    let mut cursor = 2;
+    loop {
+        let final_block = idat[cursor] == 1;
+        let len = u16::from_le_bytes([idat[cursor + 1], idat[cursor + 2]]) as usize;
+        raw.extend_from_slice(&idat[cursor + 5..cursor + 5 + len]);
+        cursor += len + 5;
+        if final_block {
+            break;
+        }
+    }
+
+    let mut rgb = Vec::with_capacity(width * height * 3);
+    for row in raw.chunks_exact(width * 3 + 1) {
+        assert_eq!(row[0], 0, "renderer introduced a filtered scanline");
+        rgb.extend_from_slice(&row[1..]);
+    }
+    assert_eq!(rgb.len(), width * height * 3);
+    rgb
 }
 
 #[test]
@@ -723,4 +764,256 @@ fn bounded_work_scales_with_active_territories_and_requested_samples() {
                 .iter()
                 .all(|corridor| corridor.projected.len() <= territory.trajectory.len())
     }));
+}
+
+/// Consuming randomness, iterating territories in caller order, or changing
+/// the requested detail's materialization must fail these byte comparisons.
+#[test]
+fn render_is_byte_deterministic_and_detail_specific() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let mut pngs = Vec::new();
+    let mut readouts = Vec::new();
+
+    for detail in [
+        SkyWorldDetail::Planet,
+        SkyWorldDetail::Regional,
+        SkyWorldDetail::Habitat,
+    ] {
+        let png = render_skyworld_png(&skyworld, &fixture.terrain, detail);
+        let readout = render_skyworld_readout(&skyworld, detail);
+        assert_eq!(
+            png,
+            render_skyworld_png(&skyworld, &fixture.terrain, detail)
+        );
+        assert_eq!(readout, render_skyworld_readout(&skyworld, detail));
+        assert!(png.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        assert_eq!(&png[16..20], &256_u32.to_be_bytes());
+        assert_eq!(&png[20..24], &128_u32.to_be_bytes());
+        pngs.push(png);
+        readouts.push(readout);
+    }
+
+    assert_ne!(pngs[0], pngs[1], "planet and regional rasters collapsed");
+    assert_ne!(pngs[1], pngs[2], "regional and habitat rasters collapsed");
+    assert_ne!(readouts[0], readouts[1]);
+    assert_ne!(readouts[1], readouts[2]);
+}
+
+/// Moving phenotype, lifecycle, or stocks into a coarser detail—or exposing
+/// atmospheric causes through the ordinary lens—must fail these boundaries.
+#[test]
+fn ordinary_readout_keeps_detail_and_diagnostic_causes_separate() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let planet = render_skyworld_readout(&skyworld, SkyWorldDetail::Planet);
+    let regional = render_skyworld_readout(&skyworld, SkyWorldDetail::Regional);
+    let habitat = render_skyworld_readout(&skyworld, SkyWorldDetail::Habitat);
+    let diagnostic = render_skyworld_diagnostic_readout(&skyworld, SkyWorldDetail::Habitat);
+
+    assert!(planet.contains("coverage="));
+    assert!(planet.contains("centroid="));
+    assert!(planet.contains("corridor="));
+    assert!(planet.contains("event="));
+    assert!(!planet.contains("phenotype="));
+    assert!(!planet.contains("lifecycle="));
+    assert!(!planet.contains("stocks="));
+
+    for visible in ["physical=", "projection=", "influence=", "route="] {
+        assert!(
+            regional.contains(visible),
+            "regional view omitted {visible}"
+        );
+    }
+    assert!(!regional.contains("phenotype="));
+    assert!(!regional.contains("lifecycle="));
+    assert!(!regional.contains("stocks="));
+
+    for internal in ["phenotype=", "lifecycle=", "stocks="] {
+        assert!(
+            habitat.contains(internal),
+            "habitat view omitted {internal}"
+        );
+    }
+    for hidden in [
+        "pressure=",
+        "density=",
+        "radiation=",
+        "aether=",
+        "wind=",
+        "moisture=",
+    ] {
+        assert!(!planet.contains(hidden), "planet view leaked {hidden}");
+        assert!(!regional.contains(hidden), "regional view leaked {hidden}");
+        assert!(!habitat.contains(hidden), "habitat view leaked {hidden}");
+        assert!(diagnostic.contains(hidden), "diagnostic omitted {hidden}");
+    }
+    assert!(diagnostic.contains("stocks="));
+    assert!(diagnostic.contains("propagation="));
+}
+
+/// Visible consequences must be derived from present physical/exchange state;
+/// deleting that state must remove the words rather than leave stock boilerplate.
+#[test]
+fn ordinary_readout_names_only_present_visible_consequences() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let ordinary = render_skyworld_readout(&skyworld, SkyWorldDetail::Regional);
+    for consequence in ["shadow", "spores", "rain", "cloud-contact"] {
+        assert!(
+            ordinary.contains(consequence),
+            "fixture omitted {consequence}"
+        );
+    }
+
+    let mut absent = skyworld.clone();
+    for territory in &mut absent.territories {
+        territory.physical.projected.clear();
+        territory.exchange.projected.clear();
+        territory.influence.local.clear();
+        territory.influence.corridors.clear();
+        territory.influence.events.clear();
+        territory.stocks.cloud_water = 0.0;
+        territory.stocks.seed_spore_reserve = 0.0;
+    }
+    let ordinary = render_skyworld_readout(&absent, SkyWorldDetail::Regional);
+    for consequence in ["shadow", "spores", "rain", "cloud-contact"] {
+        assert!(
+            !ordinary.contains(consequence),
+            "absent consequence still rendered: {consequence}"
+        );
+    }
+}
+
+/// Replacing the surface base or merging the physical, exchange, and
+/// influence layers must fail the untouched-pixel and palette assertions.
+#[test]
+fn regional_png_preserves_surface_and_distinguishes_three_world_footprints() {
+    let fixture = fixture(42);
+    let generated = generate(&fixture);
+    let mut baseline_world = generated.clone();
+    baseline_world.territories.clear();
+    let baseline = png_rgb(&render_skyworld_png(
+        &baseline_world,
+        &fixture.terrain,
+        SkyWorldDetail::Regional,
+    ));
+
+    let mut territory = generated.territories[0].clone();
+    territory.influence.corridors.clear();
+    territory.influence.events.clear();
+    let physical: BTreeSet<_> = territory.physical.projected.iter().copied().collect();
+    let exchange: BTreeSet<_> = territory.exchange.projected.iter().copied().collect();
+    let influence: BTreeSet<_> = territory.influence.local.iter().copied().collect();
+    assert!(physical.is_subset(&exchange) && physical != exchange);
+    assert!(exchange.is_subset(&influence) && exchange != influence);
+    let one = SkyWorld {
+        fields: generated.fields,
+        territories: vec![territory],
+    };
+    let rendered = png_rgb(&render_skyworld_png(
+        &one,
+        &fixture.terrain,
+        SkyWorldDetail::Regional,
+    ));
+
+    let geo = fixture.terrain.geosphere();
+    let index = NearestVertexIndex::new(geo);
+    let mut physical_colors = BTreeSet::new();
+    let mut exchange_colors = BTreeSet::new();
+    let mut influence_colors = BTreeSet::new();
+    let mut untouched_land = false;
+    let mut untouched_ocean = false;
+    for py in 0..128 {
+        let latitude = 90.0 - (py as f64 + 0.5) / 128.0 * 180.0;
+        for px in 0..256 {
+            let longitude = (px as f64 + 0.5) / 256.0 * 360.0 - 180.0;
+            let vertex = index.nearest(geo, latitude, longitude);
+            let offset = (py as usize * 256 + px as usize) * 3;
+            let color = rendered[offset..offset + 3].to_vec();
+            if physical.contains(&vertex) {
+                physical_colors.insert(color);
+            } else if exchange.contains(&vertex) {
+                exchange_colors.insert(color);
+            } else if influence.contains(&vertex) {
+                influence_colors.insert(color);
+            } else if fixture.terrain.is_ocean(vertex) {
+                untouched_ocean |= rendered[offset..offset + 3] == baseline[offset..offset + 3];
+            } else {
+                untouched_land |= rendered[offset..offset + 3] == baseline[offset..offset + 3];
+            }
+        }
+    }
+    assert_eq!(
+        physical_colors.len(),
+        1,
+        "physical layer is not one projection"
+    );
+    assert_eq!(
+        exchange_colors.len(),
+        1,
+        "exchange layer is not one projection"
+    );
+    assert_eq!(
+        influence_colors.len(),
+        1,
+        "influence layer is not one projection"
+    );
+    assert_ne!(physical_colors, exchange_colors);
+    assert_ne!(exchange_colors, influence_colors);
+    assert_ne!(physical_colors, influence_colors);
+    assert!(
+        untouched_land,
+        "ordinary land disappeared beneath the overlay"
+    );
+    assert!(
+        untouched_ocean,
+        "ordinary sea disappeared beneath the overlay"
+    );
+}
+
+/// Repainting the whole image per route sample must fail this narrow delta:
+/// replacing one route vertex may alter its old/new pixels, but no unrelated
+/// part of the surface or another territory.
+#[test]
+fn changing_one_route_sample_changes_only_sparse_route_pixels() {
+    let fixture = fixture(42);
+    let generated = generate(&fixture);
+    let mut one = generated.clone();
+    one.territories.truncate(1);
+    let territory = &mut one.territories[0];
+    territory.physical.projected.clear();
+    territory.exchange.projected.clear();
+    territory.influence.local.clear();
+    territory.influence.events.clear();
+    let route = &mut territory.influence.corridors[0].projected;
+    assert!(!route.is_empty(), "VACUOUS: fixture has no route sample");
+    let replacement = fixture
+        .terrain
+        .geosphere()
+        .vertices()
+        .find(|vertex| !route.contains(vertex))
+        .expect("the route is sparse");
+
+    let before = png_rgb(&render_skyworld_png(
+        &one,
+        &fixture.terrain,
+        SkyWorldDetail::Regional,
+    ));
+    one.territories[0].influence.corridors[0].projected[0] = replacement;
+    let after = png_rgb(&render_skyworld_png(
+        &one,
+        &fixture.terrain,
+        SkyWorldDetail::Regional,
+    ));
+    let changed = before
+        .chunks_exact(3)
+        .zip(after.chunks_exact(3))
+        .filter(|(left, right)| left != right)
+        .count();
+    assert!(changed > 0, "the selected route sample was not rendered");
+    assert!(
+        changed < (256 * 128) / 100,
+        "one sparse route sample repainted {changed} pixels"
+    );
 }

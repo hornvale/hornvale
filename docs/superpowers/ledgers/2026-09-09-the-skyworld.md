@@ -153,6 +153,24 @@ that preserves both compactness and cache independence.
 need for non-daily samples is captured below as an explicit-cadence extension,
 not as permission for opportunistic caching.
 
+## #6 [G6] — How does the first Skyworld renderer expose the overlay?
+
+**Ruling:** keep the ordinary renderer as a surface-plus-overlay lens with
+three explicit detail levels. Planet detail shows coverage, centroids, broad
+corridors, and sparse events; regional detail adds physical, exchange, local
+influence, and routes; habitat detail adds phenotype, lifecycle, and stocks.
+Atmospheric causes remain in a separate diagnostic readout. Rasterization is
+fixed, equirectangular, nearest-vertex, and byte-stable; sparse geographic
+stamps ensure a moving route sample changes only a bounded local pixel set.
+
+**Why:** the renderer should make the Skyworld legible without repainting or
+re-deriving the whole planet per moving territory, and ordinary observers see
+consequences rather than hidden aether/radiation causes. This is additive to
+the fixed land/sea surface and leaves future client-specific presentation open.
+
+**Capture:** implemented in `skyworld_render.rs`; future clients may consume
+the same detail contracts without changing generation or lifecycle semantics.
+
 ## Follow-ups
 
 - Run the first Skyworld implementation as a pressure test of the existing
