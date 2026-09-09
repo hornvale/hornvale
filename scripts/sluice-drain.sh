@@ -34,6 +34,47 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # read. The conflict is still real and still blocks the DELIVERY branch's
 # eventual merge; that is the campaign's problem at merge time, not a reason to
 # withhold the measurement now.
+# ANNOUNCE A TERMINAL STATE ON THE BOARD, ADDRESSED TO THE BRANCH.
+#
+# The queue read the board on the way IN and wrote nothing on the way OUT.
+# sluice-request.sh syncs and reads it for the hold-off advisory (line ~201);
+# every terminal state below was written to the queue ROW and nowhere else. So
+# a campaign that submitted had no way to learn its outcome except polling
+# `make sluice-status` or being told by whoever was operating the queue — which
+# is what actually happened, by hand, forty-odd times on 2026-09-07.
+#
+# THE BRANCH IS THE ADDRESS. The queue row carries no submitter identity — no
+# host, no session, no user; `host=` in sluice-request.sh's output is the
+# CANONICAL box, not the caller's — so there is no session to push to even in
+# principle. What every row does carry is the branch, and `board post <kind>
+# <by>` takes exactly that. A campaign reading the board sees its own name.
+#
+# IT IS PULL, NOT PUSH, AND THAT IS THE HONEST LIMIT. The board is read at
+# SessionStart, and its sync is asynchronous, so the render a session sees is
+# one sync behind (root CLAUDE.md). A campaign learns its outcome at its next
+# session start, or immediately with `make board-sync && make board`. That is
+# strictly better than nothing, which is what exists today, and it removes the
+# operator from the routine path without pretending to be a notification.
+#
+# BEST-EFFORT, NEVER FATAL. By the time this runs the job is over and its
+# terminal state is already recorded in the row, which is the authoritative
+# place. A board that is unreachable, or a checkout with no built binary, must
+# not turn a landed merge into a drain failure — the same rule scripts/timed.sh
+# learned when a vanished tempfile reddened a green phase. Deliberately never
+# compiles the binary, matching board-render.sh's precedent.
+announce() {
+    local state="$1" note="$2" cand
+    [ "${HV_SLUICE_SKIP_BOARD:-}" = "1" ] && return 0
+    for cand in tools/board/target/release/board tools/board/target/debug/board; do
+        if [ -x "$repo_root/$cand" ]; then
+            (cd "$repo_root" && "./$cand" post notice "$BR" \
+                "note=sluice: $BR $state — $note" >/dev/null 2>&1) \
+                || echo "sluice-drain: warning — could not announce $state on the board (the row is authoritative)" >&2
+            return 0
+        fi
+    done
+}
+
 mouth_applies_to() {
     [ "${1:-}" != "census" ]
 }
@@ -88,6 +129,7 @@ run_one() {
         printf '%s\n' "$MOUTHOUT"
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" held \
             "REFUSED AT THE MOUTH rc=$MRC, box never taken, main unchanged at ${BEFORE}. $(printf '%s' "$MOUTHOUT" | tr '\n' ' ' | cut -c1-300)")
+        announce "REFUSED AT THE MOUTH" "rc=$MRC, box never taken, main unchanged at ${BEFORE}. Absorb main and resubmit; the sha changes, so it is a new request. $(printf '%s' "$MOUTHOUT" | tr '\n' ' ' | cut -c1-400)"
         echo "=== rc=$MRC MOUTH REFUSAL — box never taken, main ${BEFORE}..${BEFORE} ==="
         return 0
     fi
@@ -127,15 +169,19 @@ run_one() {
     if [ "$RC" = "0" ] && [ "$KIND" = "stage" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" reported \
             "all stage phases rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}.")
+        announce "STAGE GREEN" "all stage phases rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}. Nothing pushed."
     elif [ "$RC" = "0" ] && [ "$KIND" = "census" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" reported \
             "census rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}. $(census_note "$LOG")")
+        announce "CENSUS DONE" "rc=0 in ${ELAPSED}s; main unchanged at ${AFTER}. $(census_note "$LOG")"
     elif [ "$RC" = "0" ]; then
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" landed \
             "all merge phases rc=0 in ${ELAPSED}s; main ${BEFORE}..${AFTER}.")
+        announce "LANDED" "all merge phases rc=0 in ${ELAPSED}s; main ${BEFORE}..${AFTER}."
     else
         (cd "$repo_root" && bash scripts/sluice-queue.sh set-state "$ID" held \
             "CHAMBER RED rc=$RC after ${ELAPSED}s; main ${BEFORE}..${AFTER}. Log: ${LOG} — attribution pending.")
+        announce "CHAMBER RED" "rc=$RC after ${ELAPSED}s; main ${BEFORE}..${AFTER}. Log: ${LOG}. Attribution pending — read the log before assuming it is your code."
     fi
 
     echo "=== rc=$RC elapsed=${ELAPSED}s kind=$KIND main ${BEFORE}..${AFTER} ==="
