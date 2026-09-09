@@ -1244,6 +1244,19 @@ Unavailable channels remain incomplete and cannot enter a positive branch.
 36/36 (one pre-existing leaky test). No census, fixed-roster report, stage, or
 merge was run.
 
+## #41 [Task 4 final verification] — Corrective commit closes the reviewed gaps
+
+The final controller review confirms that repeated multi-phase signatures retain
+their phase layout while classifying as seasonal, structural vacuity fixtures
+are explicitly non-clearing, orphan source rows invalidate the join, and the
+original optional channel values remain available beside the numeric profile
+projection. No new dynamics, labels, save fields, or fantasy extraction were
+introduced.
+
+**Evidence:** commit `96018808d`; D4 library tests 11/11; focused D2/D3B/D4
+tests 36/36; final local commit gate passed all four sub-floor chunks. No
+census, fixed-roster report, stage submission, or merge was run.
+
 ## #36 [Task 3 re-review] — Mixed coercion and partial joins remain non-clearing
 
 Scoped re-review found three residual gaps: mixed voluntary/coercive evidence
