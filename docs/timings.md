@@ -6698,3 +6698,4 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T01:11:04Z | census-tail-anomalies | 1.057 | 0.927 | 0.130 | 1.00 | 0 | 9ddda9d72 |  | lefford | 40 |
 | 2026-09-09T01:11:06Z | sluice:artifacts | 300.724 | 1706.834 | 69.082 | 5.91 | 0 | 9ddda9d72 |  | lefford | 40 |
 | 2026-09-09T01:12:56Z | sluice:outboard | 109.727 | 96.175 | 83.746 | 1.64 | 0 | 22d3d34d5 |  | lefford | 40 |
+| 2026-09-09T01:27:23Z | sluice:gate | 866.356 | 25089.069 | 789.681 | 29.87 | 0 | e05f112b6 |  | lefford | 40 |
