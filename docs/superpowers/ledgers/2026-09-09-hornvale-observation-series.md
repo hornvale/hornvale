@@ -82,3 +82,12 @@ Ruling: constrain manifest IDs before using them in filesystem paths, and make r
 - **Result:** Pure spatial render state, strict packet parsing, exact numeric handling, producer-owned count units, deterministic ordering, and LinkeDOM-inspected phone/laptop previews are implemented.
 - **Evidence:** 39 Deno tests and 31 Rust observation tests passed; checks, formatting, lint, and diff checks passed.
 - **Review:** Final re-review approved with no remaining findings.
+
+## Reincorporation ruling — The Staple D4
+
+Ruling: absorb `origin/main` before the next stage request so the observation
+campaign is tested against the current canonical line, including The Staple
+D4. The sanctioned absorb resolved the generated type-audit report through
+regeneration; the resulting merge is clean with no source conflict. The
+rebaseline regenerated the current local artifact measurements. A fresh
+commit gate is required before resubmission.

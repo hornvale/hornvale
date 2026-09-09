@@ -6883,3 +6883,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T20:46:51Z | sluice:gate | 864.744 | 25406.499 | 799.676 | 30.31 | 0 | a8b8995d8 |  | lefford | 40 |
 | 2026-09-09T20:50:23Z | sluice:clients | 211.429 | 3353.439 | 305.325 | 17.30 | 0 | 062e2dd9c |  | lefford | 40 |
 | 2026-09-09T21:00:12Z | sluice:heavy | 588.777 | 12958.498 | 195.346 | 22.34 | 0 | c1ca0f6e2 |  | lefford | 40 |
+| 2026-09-09T21:35:14Z | census-tail-chorus | 113.119 | 177.604 | 6.626 | 1.63 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:35:15Z | census-tail-domesday | 0.388 | 0.329 | 0.034 | 0.94 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:35:16Z | census-tail-anomalies | 0.283 | 0.234 | 0.032 | 0.94 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:35:18Z | rebaseline | 683.155 | 495.470 | 24.331 | 0.76 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
+| 2026-09-09T21:37:53Z | gate-commit | 154.904 | 539.703 | 45.414 | 3.78 | 0 | 4a0c02349 | campaign/hornvale-observation-series | MacBookPro | 10 |
