@@ -217,6 +217,36 @@ active until the queued stage gate and final campaign review.
 - Explore local calendars, spirits, animism, religion, and cultural memory
   only after the world can generate persistent, consequential phenomena.
 
+## #8 [G3] — What should the next Skyworld slice pressure-test?
+
+**Recommendation:** run a diagnostic seam-and-cost campaign before adding
+organisms, species, lifecycle mutation, or tethering. Keep `BuildDepth` and
+the save format unchanged while making the terrain/climate-to-overlay boundary
+explicit, measuring artifact reuse, and testing which environment axes actually
+propagate into Skyworld outputs.
+
+**Why:** the first implementation already demonstrates the overlay shape. The
+next uncertainty is whether the existing biome and environment system earns
+its abstractions when the same surface feeds a mobile habitat. A measurement
+slice is reversible and can expose an impedance mismatch before it becomes a
+cross-realm API or epoch commitment.
+
+**Alternatives discarded:** adding a new build-depth rung now would entangle a
+derived overlay with the fact-committing ladder before its cost is understood;
+adding species or lifecycle now would multiply consumers of an untested seam;
+replacing `BiomeExpr` would be a big-bang rewrite without evidence; a universal
+Sugar model would violate the approved worldly vocabulary.
+
+**Ideonomy pass / overturns:** one organon-construction map pass using the
+side-effect and modularity dimensions. It surfaced four dense regions — fixed
+surface, atmospheric fields, habitat derivation, and observation — and the
+most important border between them: an overlay that is technically modular
+but accidentally rebuilds its substrate per observer. No overturn; the pass
+added the explicit cost/ownership experiment and the cross-realm transfer
+test.
+
+**Capture:** design package at `docs/superpowers/specs/2026-09-09-skyworld-seams-design.md`.
+
 ## Rejected for this campaign
 
 - A universal `sugar` renaming of world concepts.
