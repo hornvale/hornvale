@@ -33,7 +33,7 @@ use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SealState, SettlementPins, Valence, VestigeKind, WorldComponents, build_world_to,
-    build_world_to_with_artifacts, occupation_records, present_year, vestige_dread,
+    build_world_to_with_artifacts, occupation_records, present_year, seed_sweep, vestige_dread,
     vestige_from_occupation, vestige_lines_from,
 };
 use std::collections::BTreeSet;
@@ -299,8 +299,16 @@ fn a_breach_names_nothing_that_came_through() {
 /// `Breached` records asserted so the comparison is not vacuous)
 #[test]
 fn a_breach_survives_a_save_load_round_trip() {
-    let mut breached_pooled = 0usize;
-    for seed_value in SEEDS {
+    struct SeedReadout {
+        seed: u64,
+        before: Vec<(Option<CauseOfEnd>, Option<f64>)>,
+        after: Vec<(Option<CauseOfEnd>, Option<f64>)>,
+    }
+
+    // Each save/load round trip is independent per seed. `map_seeds` returns
+    // the completed readouts in panel order, so the comparison and any
+    // failure diagnostics remain on this thread and retain the serial order.
+    let per_seed = seed_sweep::map_seeds(SEEDS, |seed_value| {
         let world = panel_world(seed_value);
         let before: Vec<(Option<CauseOfEnd>, Option<f64>)> = occupation_records(&world)
             .iter()
@@ -312,11 +320,22 @@ fn a_breach_survives_a_save_load_round_trip() {
             .iter()
             .map(|r| (r.core.cause, r.core.ended))
             .collect();
+        SeedReadout {
+            seed: seed_value,
+            before,
+            after,
+        }
+    });
+
+    let mut breached_pooled = 0usize;
+    for row in per_seed {
         assert_eq!(
-            before, after,
-            "seed {seed_value}: the ending causes differ across a save/load round trip"
+            row.before, row.after,
+            "seed {}: the ending causes differ across a save/load round trip",
+            row.seed
         );
-        breached_pooled += before
+        breached_pooled += row
+            .before
             .iter()
             .filter(|(c, _)| *c == Some(CauseOfEnd::Breached))
             .count();
@@ -381,13 +400,31 @@ fn a_breach_survives_a_save_load_round_trip() {
 /// populations each asserted non-empty so no quantifier is vacuous)
 #[test]
 fn a_later_culture_reads_all_three_states_of_a_breach() {
-    let mut breached_layers = 0usize;
-    let mut most_legible = f64::NEG_INFINITY;
-    let mut least_legible = f64::INFINITY;
-    let mut dread_at_least_legible = f64::NAN;
-    let mut living_over_a_breach = 0usize;
+    struct BreachLayer {
+        seal_state: SealState,
+        kind: VestigeKind,
+        warning_legibility: f64,
+        dread: f64,
+    }
 
-    for seed_value in SEEDS {
+    struct LivingLayer {
+        seal_state: SealState,
+        valence: Valence,
+        dread: f64,
+        warning_legibility: f64,
+        field_dread: f64,
+    }
+
+    struct SeedReadout {
+        seed: u64,
+        breach_layers: Vec<BreachLayer>,
+        living_layers: Vec<LivingLayer>,
+    }
+
+    // Every panel world is independent. `map_seeds` returns readouts in
+    // `SEEDS` order, leaving the pooled fold and all diagnostics below
+    // byte-identical to the serial test while overlapping world construction.
+    let per_seed = seed_sweep::map_seeds(SEEDS, |seed_value| {
         let world = panel_world(seed_value);
         let occs = occupation_records(&world);
         let now = present_year(&world);
@@ -398,60 +435,99 @@ fn a_later_culture_reads_all_three_states_of_a_breach() {
             .map(|r| r.core.site)
             .collect();
 
-        for record in occs
+        let breach_layers = occs
             .iter()
             .filter(|r| r.core.cause == Some(CauseOfEnd::Breached))
-        {
-            let v = vestige_from_occupation(record, now);
+            .map(|record| {
+                let v = vestige_from_occupation(record, now);
+                BreachLayer {
+                    seal_state: v.seal_state,
+                    kind: v.kind,
+                    warning_legibility: v.warning_legibility,
+                    dread: v.dread,
+                }
+            })
+            .collect();
+
+        let living_layers = if breach_sites.is_empty() {
+            Vec::new()
+        } else {
+            let field = vestige_dread(&world).expect("a panel world derives its own dread field");
+            occs.iter()
+                .filter(|r| r.core.ended.is_none() && breach_sites.contains(&r.core.site))
+                .map(|record| {
+                    let v = vestige_from_occupation(record, now);
+                    LivingLayer {
+                        seal_state: v.seal_state,
+                        valence: v.valence,
+                        dread: v.dread,
+                        warning_legibility: v.warning_legibility,
+                        field_dread: *field.get(record.core.site),
+                    }
+                })
+                .collect()
+        };
+
+        SeedReadout {
+            seed: seed_value,
+            breach_layers,
+            living_layers,
+        }
+    });
+
+    let mut breached_layers = 0usize;
+    let mut most_legible = f64::NEG_INFINITY;
+    let mut least_legible = f64::INFINITY;
+    let mut dread_at_least_legible = f64::NAN;
+    let mut living_over_a_breach = 0usize;
+
+    for row in per_seed {
+        for layer in row.breach_layers {
             assert_ne!(
-                v.seal_state,
+                layer.seal_state,
                 SealState::Maintained,
-                "seed {seed_value}: a delving that ended by breaching read as a KEPT \
+                "seed {}: a delving that ended by breaching read as a KEPT \
                  seal — `SealState::Breached` and `CauseOfEnd::Breached` have been \
-                 conflated somewhere"
+                 conflated somewhere",
+                row.seed
             );
             assert_eq!(
-                v.kind,
+                layer.kind,
                 VestigeKind::AbandonedDelving,
-                "seed {seed_value}: only a working breaches, so every breach layer \
-                 is a delving"
+                "seed {}: only a working breaches, so every breach layer is a delving",
+                row.seed
             );
             breached_layers += 1;
-            if v.warning_legibility > most_legible {
-                most_legible = v.warning_legibility;
+            if layer.warning_legibility > most_legible {
+                most_legible = layer.warning_legibility;
             }
-            if v.warning_legibility < least_legible {
-                least_legible = v.warning_legibility;
-                dread_at_least_legible = v.dread;
+            if layer.warning_legibility < least_legible {
+                least_legible = layer.warning_legibility;
+                dread_at_least_legible = layer.dread;
             }
         }
 
-        if breach_sites.is_empty() {
-            continue;
-        }
-        let field = vestige_dread(&world).expect("a panel world derives its own dread field");
-        for record in occs
-            .iter()
-            .filter(|r| r.core.ended.is_none() && breach_sites.contains(&r.core.site))
-        {
-            let v = vestige_from_occupation(record, now);
+        for layer in row.living_layers {
             assert_eq!(
-                (v.seal_state, v.valence),
+                (layer.seal_state, layer.valence),
                 (SealState::Maintained, Valence::Venerated),
-                "seed {seed_value}: a living occupation over a breach reads as a kept seal"
+                "seed {}: a living occupation over a breach reads as a kept seal",
+                row.seed
             );
             assert_eq!(
-                (v.dread, v.warning_legibility),
+                (layer.dread, layer.warning_legibility),
                 (0.1, 1.0),
-                "seed {seed_value}: the living layer carries no trace of what is under \
-                 it — §4.5's WARDED state, and NOT a defect to repair"
+                "seed {}: the living layer carries no trace of what is under \
+                 it — §4.5's WARDED state, and NOT a defect to repair",
+                row.seed
             );
             assert!(
-                *field.get(record.core.site) > 0.6,
-                "seed {seed_value}: `vestige_dread` is a MAX over the palimpsest, so a \
+                layer.field_dread > 0.6,
+                "seed {}: `vestige_dread` is a MAX over the palimpsest, so a \
                  remembered breach must retain forgotten-layer dread above its 0.6 \
                  floor even under a living community; got {}",
-                field.get(record.core.site)
+                row.seed,
+                layer.field_dread
             );
             living_over_a_breach += 1;
         }
