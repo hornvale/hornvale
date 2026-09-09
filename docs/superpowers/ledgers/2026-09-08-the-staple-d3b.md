@@ -1232,6 +1232,18 @@ probe's live seed-11 build was deterministic and its diagnostic sidecar was
 save-inert under emitted ledger-byte comparison. No census or fixed-roster
 report was run.
 
+## #40 [Task 4 corrective pass] — Seasonal cycles and structural joins are explicit
+
+The corrective pass recognizes repeated multi-phase cycles while retaining
+phase identity, adds probe-side structural vacuity controls for isolation,
+hub dominance, and single-type dominance, rejects orphan source rows, and
+retains original optional channel values beside the numeric profile projection.
+Unavailable channels remain incomplete and cannot enter a positive branch.
+
+**Evidence:** D4 library tests passed 11/11; focused D2/D3B/D4 tests passed
+36/36 (one pre-existing leaky test). No census, fixed-roster report, stage, or
+merge was run.
+
 ## #36 [Task 3 re-review] — Mixed coercion and partial joins remain non-clearing
 
 Scoped re-review found three residual gaps: mixed voluntary/coercive evidence
@@ -1282,6 +1294,27 @@ Tribute-only evidence remains vacuous when coercion is intermittent.
 duplicate source rows, mixed recurrence, intermittent coercion, deterministic
 live sidecar emission, and save-inert ledger comparison. No census or ignored
 fixed-roster report was run.
+
+## #39 [Task 4 re-review] — Temporal and structural vacuity are not yet closed
+
+The delayed cross-domain re-review found four remaining contract gaps. The
+recurrence classifier only recognizes identical repeated signatures, so a
+repeating multi-phase seasonal cycle can be labeled drifting or rotating. The
+probe has no isolation, hub, or single-type dominance vacuity controls. Source
+rows orphaned from the live denominator are silently ignored. Finally,
+unavailable optional channels are represented as numeric zeroes in the raw
+vector, requiring a second field to recover their status.
+
+**Ruling:** the corrective pass must recognize repeated multi-phase seasonal
+cycles without erasing phase identity, make isolation/hub/single-type
+dominance non-clearing or explicitly debt-bearing, reject orphan source rows,
+and preserve unavailable channels as unavailable in the diagnostic surface
+rather than presenting them as observed zeroes. Re-review is required before
+Task 4 can close.
+
+**Evidence:** delayed Task 4 review; focused 35-test suite and D4 library tests
+were green, but they did not cover these branches. No census, fixed-roster
+report, stage gate, or merge was run.
 
 ## #38 [Task 4 review] — Cross-domain re-instantiation preserves the D4 boundary
 

@@ -311,6 +311,19 @@ pub fn d4_recurrence_class(profiles: &[D4PortfolioProfile]) -> D4RecurrenceClass
     if signatures.len() == 1 {
         return D4RecurrenceClass::Transient;
     }
+    // A repeated phase cycle is seasonal even when the cycle contains more
+    // than one distinct profile. Phase identity remains part of the cycle;
+    // this is not an all-window average or a cross-phase relabeling.
+    for period in 1..=(signatures.len() / 2) {
+        if signatures.len() % period == 0
+            && (period..signatures.len()).all(|index| {
+                signatures[index] == signatures[index % period]
+                    && profiles[index].phase == profiles[index % period].phase
+            })
+        {
+            return D4RecurrenceClass::Seasonal;
+        }
+    }
     if signatures
         .iter()
         .all(|signature| *signature == signatures[0])
@@ -487,6 +500,10 @@ mod tests {
         assert_eq!(
             d4_recurrence_class(&[a0.clone(), a1]),
             D4RecurrenceClass::PersistentCandidate
+        );
+        assert_eq!(
+            d4_recurrence_class(&[a0.clone(), b.clone(), a0.clone(), b.clone()]),
+            D4RecurrenceClass::Seasonal
         );
         assert_eq!(
             d4_recurrence_class(&[a0.clone(), b.clone(), a0.clone()]),

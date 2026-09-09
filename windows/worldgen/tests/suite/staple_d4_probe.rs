@@ -26,6 +26,14 @@ struct Input {
     witnesses: Vec<DiagnosticPortfolioWitness>,
     sources: Vec<(BakeId, Vertex, [f64; 2])>,
     treatment: ExchangeTreatment,
+    structural: StructuralVacuity,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct StructuralVacuity {
+    isolated: bool,
+    hub_dominant: bool,
+    single_type_dominant: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -36,9 +44,11 @@ struct Branches {
     missing_witness: Vec<BakeId>,
     missing_source: Vec<BakeId>,
     orphan_witness: Vec<BakeId>,
+    orphan_source: Vec<BakeId>,
     site_mismatch: Vec<BakeId>,
     incomplete: Vec<BakeId>,
     axis_debt: Vec<D4AxisDebt>,
+    structural_vacuity: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -46,6 +56,7 @@ struct Joined {
     community: BakeId,
     site: Vertex,
     profiles: Vec<D4PortfolioProfile>,
+    observations: Vec<DiagnosticPortfolioValues>,
     source: [f64; 2],
 }
 
@@ -149,6 +160,18 @@ fn summarize(input: &Input) -> Report {
         .filter(|id| !live.contains_key(id))
         .copied()
         .collect();
+    branches.orphan_source = sources
+        .keys()
+        .filter(|id| !live.contains_key(id))
+        .copied()
+        .collect();
+    branches.structural_vacuity = input.structural.isolated
+        || input.structural.hub_dominant
+        || input.structural.single_type_dominant;
+    if branches.structural_vacuity {
+        add_debt(&mut branches, D4AxisDebt::Access);
+        add_debt(&mut branches, D4AxisDebt::Capability);
+    }
 
     let mut joined = Vec::new();
     for (&community, sites) in &live {
@@ -193,6 +216,7 @@ fn summarize(input: &Input) -> Report {
             community,
             site: sites[0],
             profiles,
+            observations: witness.phases.iter().map(|phase| phase.portfolio).collect(),
             source,
         });
     }
@@ -262,7 +286,7 @@ fn summarize(input: &Input) -> Report {
             unit.profiles
                 .iter()
                 .any(|profile| profile.raw.coercive_transfer != [0.0; 2])
-        }),
+        }) || branches.structural_vacuity,
         recurrence,
         some_units_underpowered: !branches.incomplete.is_empty()
             || !branches.missing_witness.is_empty()
@@ -275,6 +299,7 @@ fn summarize(input: &Input) -> Report {
         || !branches.duplicate_source.is_empty()
         || !branches.missing_witness.is_empty()
         || !branches.missing_source.is_empty()
+        || !branches.orphan_source.is_empty()
         || !branches.orphan_witness.is_empty()
         || !branches.site_mismatch.is_empty();
     let verdict = if input.treatment != ExchangeTreatment::Enabled || invalid_join {
@@ -329,6 +354,7 @@ fn fixture(phases: &[u16]) -> Input {
             })
             .collect(),
         treatment: ExchangeTreatment::Enabled,
+        structural: StructuralVacuity::default(),
     }
 }
 
@@ -363,6 +389,7 @@ fn input_from_build(seed: u64, built: &ExchangeTreatmentBuild) -> Input {
         witnesses: built.history.diagnostic_portfolios.clone(),
         sources,
         treatment: ExchangeTreatment::Enabled,
+        structural: StructuralVacuity::default(),
     }
 }
 
@@ -402,6 +429,10 @@ fn typed_dependencies_and_mechanisms_remain_distinct() {
     assert_eq!(phase.raw.voluntary_exchange, [0.0; 2]);
     assert_eq!(phase.raw.coercive_transfer, [2.0, 0.0]);
     assert_eq!(mechanism_class(&phase.raw), D4MechanismClass::CoerciveOnly);
+    assert_eq!(
+        input.witnesses[0].phases[0].portfolio.protection_access,
+        Some([0.0; 2])
+    );
 }
 
 #[test]
@@ -463,6 +494,34 @@ fn duplicate_missing_disabled_and_site_mismatch_inputs_are_explicit() {
         D4RegimeVerdict::MixedOrUnderpowered
     );
     assert_eq!(duplicate_source_report.branches.duplicate_source.len(), 1);
+    let mut orphan_source = fixture(&[0, 0]);
+    orphan_source
+        .sources
+        .push((BakeId(99), Vertex(99), [0.5, 0.5]));
+    let orphan_source_report = summarize(&orphan_source);
+    assert_eq!(
+        orphan_source_report.verdict,
+        D4RegimeVerdict::MixedOrUnderpowered
+    );
+    assert_eq!(
+        orphan_source_report.branches.orphan_source,
+        vec![BakeId(99)]
+    );
+}
+
+#[test]
+fn structural_vacuity_controls_are_non_clearing() {
+    for mutate in [
+        |input: &mut Input| input.structural.isolated = true,
+        |input: &mut Input| input.structural.hub_dominant = true,
+        |input: &mut Input| input.structural.single_type_dominant = true,
+    ] {
+        let mut input = fixture(&[0, 0]);
+        mutate(&mut input);
+        let report = summarize(&input);
+        assert_eq!(report.verdict, D4RegimeVerdict::VacuousDifferentiation);
+        assert!(report.branches.structural_vacuity);
+    }
 }
 
 #[test]
@@ -490,6 +549,17 @@ fn live_sidecar_is_deterministic_and_save_inert() {
         report.joined.len() + report.branches.missing_source.len()
     );
     assert_eq!(report.verdict, D4RegimeVerdict::MixedOrUnderpowered);
+    assert!(
+        first
+            .history
+            .diagnostic_portfolios
+            .iter()
+            .flat_map(|witness| witness.phases.iter())
+            .all(|phase| {
+                phase.portfolio.coercive_transfer.is_none()
+                    && phase.portfolio.protection_access.is_none()
+            })
+    );
     let mut without_sidecar = first.history.clone();
     without_sidecar.diagnostic_portfolios.clear();
     assert_eq!(
