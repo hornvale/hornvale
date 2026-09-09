@@ -30,6 +30,8 @@
 
 ## Task 1: Skyworld data model and deterministic field derivation
 
+**Status:** Complete — commit `9b139f63f`, review fixes `86bf5aa23`, and local gates passed.
+
 **Goal:** Establish the compact overlay types and deterministic world-level fields without changing existing biome semantics.
 
 **Success Criteria:** `SkyWorld::generate` can produce a nonempty, bounded sky overlay from a built world plus existing terrain and climate; all public types have stable ordering and no hidden renderer-only state.
@@ -118,6 +120,8 @@
 
 ## Task 2: Orchard resource chain, trajectories, adjacency, and propagation
 
+**Status:** Complete — commit `9d07cbaa2`, local gate passed, and scoped review approved.
+
 **Goal:** Turn each generated territory into a coherent mature orchard with prerequisites, deterministic movement, temporal adjacency, and bounded influence readouts.
 
 **Success Criteria:** The orchard’s resources explain fruit through ambient prerequisites and aggregate stocks; trajectories are cache-independent and deterministic; local kernels, wind corridors, and sparse events remain distinct.
@@ -168,6 +172,8 @@
 
 ## Task 3: Deterministic ordinary and diagnostic rendering
 
+**Status:** Complete — commits `34d9c55ee` and `210bd1664`, local gate passed, and scoped review approved.
+
 **Goal:** Render the Skyworld as an additional layer at planet, regional, and habitat detail without repainting or re-deriving the full planet for each moving territory.
 
 **Success Criteria:** Rendering is byte-stable, shows the surface beneath the overlay, keeps the four footprints distinct, and does not expose diagnostic causes in the ordinary view.
@@ -216,6 +222,8 @@
   ```
 
 ## Task 4: Integration probes, documentation, and campaign close preparation
+
+**Status:** In progress — local probes and gate passed; canonical stage queue submission remains pending.
 
 **Goal:** Validate the full generation/rendering slice against the project’s determinism, coverage, layering, and artifact conventions without prematurely adding lifecycle simulation or cross-realm mutation.
 
