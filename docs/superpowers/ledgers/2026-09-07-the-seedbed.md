@@ -506,3 +506,55 @@ collision undetectable.
 disjoint by construction, gaps inside a block are explicitly harmless, and a
 hole between main's ceiling (0907) and 0936 costs nothing since the `no_gaps`
 check was retired.
+
+---
+
+## #11 [G5] — Chamber red: the guard held, my test literal did not
+
+The merge was held CHAMBER RED rc=11, `gate` phase rc=2, one failing test:
+`regularity_coverage::flipping_a_recorded_verdict_moves_the_rendered_claim`.
+
+**Cause, and it is the campaign's own subject arriving live.**
+`campaign/the-murrain-across-world` — a plague campaign — landed while this
+branch sat in the queue, and moved the census:
+
+```
+rank-size-slope median      -0.577645  ->  -0.583393
+in band [-1.2,-0.8]            17/1000 ->  23/1000
+sug-wealth-skew verdict           FLAT ->  FLAT
+```
+
+**The two-way regression guard did its job by NOT firing.** A campaign
+redistributed settlements across a thousand worlds, the statistic moved, and
+the guard correctly reported the regularity unchanged. That is the instrument
+working on data it never saw during development, and it is the strongest
+evidence the campaign has produced that the thing is real.
+
+**What broke was a hard-coded census-derived number in a test — the seventh
+instance of this campaign's signature defect, in the worst possible place.**
+The test's own doc comment reads *"The claim line is DERIVED from the corpus
+record, not transcribed into the renderer"*, and it proved that by asserting
+against a transcribed literal. Three sites, all in `regularity_coverage.rs`.
+
+*Ruling:* derive, never re-pin. Freshening the literal to `-0.583393` would
+reproduce the defect with a newer value and break again the next time any
+campaign moves the census — weekly, on this evidence. The fix routes the
+number through `ScoredItem::measured(&census)` and the renderer's own
+formatter, so the tests assert the relationship they are about rather than a
+snapshot of one day. Cost if wrong: `measured_text` became `pub`.
+
+**Proved by the comparison a re-pin cannot pass.** Under a perturbed scratch
+census (column-local, round-trip byte-identity control run first) the derived
+tests pass and the re-pinned alternative FAILS. The class sweep then perturbed
+all four scored columns at once, sized so every verdict held — so any failure
+could only be an embedded literal — and the full 1,074-test run produced only
+four failures, all correct: three artifact drift checks that a census move
+*should* move, and the pre-existing census sentinel catching a hand-edited
+rows file exactly as designed. Nothing else embeds a census value.
+
+**The tell, worth carrying past this campaign:** `make rebaseline` moved only
+the type-audit report. The Domesday pages did **not** move, because absorbing
+`origin/main` had already rebaselined them to `-0.583393` while the test still
+said `-0.577645`. *The artifact tracked the census and the test did not* —
+that gap is the whole defect, and a generated artifact is the thing that stays
+honest while a test literal quietly rots.

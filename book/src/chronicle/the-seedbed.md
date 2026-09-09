@@ -170,3 +170,21 @@ The reverse is equally true and is stated on the page: Sugarscape has no
 terrain, no astronomy, no language and no deep time, so nothing in this
 corpus scores Hornvale's strongest ground. A single column is one reading
 through one biased ruler (decision 0095). The matrix wants a second.
+
+## A postscript the campaign did not arrange
+
+Between this branch's submission and its merge, a plague campaign landed and
+moved the census. `rank-size-slope`'s median went from −0.577645 to −0.583393
+and the count inside the Zipf band rose from 17 worlds to 23.
+
+The two-way guard did not fire, and that is the result worth recording: the
+statistic moved, the regularity did not, and the instrument said so without
+being asked. A thousand worlds were redistributed by an unrelated campaign and
+the answer to *does Hornvale grow the rank-size law* came back unchanged —
+still no, still systematically flatter.
+
+One thing did break: a test of this campaign's own, which had transcribed the
+old measurement into an assertion whose stated purpose was proving that
+measurements are never transcribed. The generated page had already followed
+the census; only the test had not. That is the campaign's argument in
+miniature, and it cost a queue slot to learn.

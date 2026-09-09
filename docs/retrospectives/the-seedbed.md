@@ -27,6 +27,13 @@ Every one was found by mutation, never by reading:
 And after fixing (6), the *title half* of the new check turned out to be
 untested too, because the negative control used a page with no marker at all.
 
+A **seventh** arrived after the campaign was submitted, and it is the sharpest
+of the set. A test asserting *"the claim line is DERIVED, not transcribed"*
+proved it against a transcribed literal — the committed census's median, spelled
+into the assertion. It survived every review because it was green, and it went
+red only when an unrelated campaign moved the census underneath it. The
+generated artifact had already tracked the move; only the test had not.
+
 The pattern is not carelessness. In every case the guard's **subject was not
 quite the thing under test** — adjacent to it, derived from it, or selected by
 a population that later changed. Two rules earned their place and are now in
