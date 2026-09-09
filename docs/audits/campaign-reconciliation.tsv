@@ -1386,3 +1386,4 @@ the-seedbed	active	none		fourth corpus family shipped; corpus frozen blind befor
 the-route-cache	active	none		measurement-only follow-up; persistent position-keyed cache rejected; close artifacts committed				book/src/chronicle/the-route-cache.md	docs/retrospectives/the-route-cache.md
 the-murrain-across-world	active	none		measurement-only follow-up; across-world population result recorded; no new metric proposed					docs/retrospectives/the-murrain-across-world.md
 the-staple-d3	active	none		Task 0 falsifier preregistered; G3 spec review pending	docs/superpowers/specs/2026-09-07-the-staple-d3-design.md	docs/superpowers/plans/2026-09-07-the-staple-d3.md			
+spec-2026-09-09-hornvale-observation-series-design	active	none		approved design; spec committed; implementation not started	docs/superpowers/specs/2026-09-09-hornvale-observation-series-design.md				
