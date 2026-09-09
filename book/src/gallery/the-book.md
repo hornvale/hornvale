@@ -7,10 +7,10 @@ The Bao are bugbears.
 The Bazap are desert dwarfs.
 The Ruašre are desert elfs.
 The Roašror are drows.
-The Dazha are duergars.
+The Fovfav are duergars.
 The Wakdao are gnolls.
 The Qwootoqo are goblins.
-The Xabxat are gully dwarfs.
+The Dazha are gully dwarfs.
 The Šdoašded are high elfs.
 The Dashav are hill dwarfs.
 The Dweowbaw are hobgoblins.
@@ -33,13 +33,13 @@ Ruašre Reursruureu Raunru. (in the desert-elf tongue: "The Ruašre are desert e
 Booko Rooreu Raunru. (in the desert-elf tongue: "Booko is the earth.")
 Roašror Rooršraar Ṅro. (in the drow tongue: "The Roašror are drows.")
 Booko Roor Ṅro. (in the drow tongue: "Booko is the earth.")
-Dazha Sasakga. (in the duergar tongue: "The Dazha are duergars.")
+Fovfav Sasakga. (in the duergar tongue: "The Fovfav are duergars.")
 Booko Sazhakga. (in the duergar tongue: "Booko is the earth.")
 Wakdao Paab Loadwaawoo. (in the gnoll tongue: "The Wakdao are gnolls.")
 Booko Paab Laakaa. (in the gnoll tongue: "Booko is the earth.")
 Ka Jookaojo Qwootoqo. (in the goblin tongue: "The Qwootoqo are goblins.")
 Ka Jejoeke Booko. (in the goblin tongue: "Booko is the earth.")
-Xabxat Bazha Xat. (in the gully-dwarf tongue: "The Xabxat are gully dwarfs.")
+Dazha Bazha Xat. (in the gully-dwarf tongue: "The Dazha are gully dwarfs.")
 Booko Shazha Xat. (in the gully-dwarf tongue: "Booko is the earth.")
 Šdoašded Šdeo Daddaad Dlea. (in the high-elf tongue: "The Šdoašded are high elfs.")
 Booko Šdeo Dood Dlea. (in the high-elf tongue: "Booko is the earth.")
@@ -92,10 +92,10 @@ The Bao are bugbears — ourselves.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -121,10 +121,10 @@ The Bao are bugbears — ourselves.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -153,10 +153,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — ourselves.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -180,10 +180,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — ourselves.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -204,10 +204,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — ourselves.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -232,10 +232,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — ourselves.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -254,16 +254,16 @@ The moons cross because Roor walks the sky, slowly.
 
 *In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Dazha tell it
+#### As the Fovfav tell it
 
 The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — ourselves.
+The Fovfav are duergars — ourselves.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -286,10 +286,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — ourselves.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -313,10 +313,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — ourselves.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -341,10 +341,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — ourselves.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -363,16 +363,16 @@ The day returns because Veewe strides the sky, briskly.
 
 *In truth, Booko is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Xabxat tell it
+#### As the Dazha tell it
 
 The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — ourselves.
+The Dazha are gully dwarfs — ourselves.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -389,7 +389,7 @@ The day returns because the sky must be crossed.
 
 *In truth, Booko is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Xabxat teach it
+##### As the priesthood of the Dazha teach it
 
 Booko Shazha Xat. ("Booko is the earth — as it is taught.")
 
@@ -397,10 +397,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — ourselves.
+The Dazha are gully dwarfs — ourselves.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -428,10 +428,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — ourselves.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -457,10 +457,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — ourselves.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -481,10 +481,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — ourselves.
 The Dweowbaw are hobgoblins — neighbors.
@@ -509,10 +509,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — ourselves.
 The Dweowbaw are hobgoblins — neighbors.
@@ -537,10 +537,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — ourselves.
@@ -565,10 +565,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — ourselves.
@@ -595,10 +595,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -625,10 +625,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -652,10 +652,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -681,10 +681,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -707,10 +707,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -733,10 +733,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -762,10 +762,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -786,10 +786,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -813,10 +813,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -841,10 +841,10 @@ The Bao are bugbears — rivals.
 The Bazap are desert dwarfs — rivals.
 The Ruašre are desert elfs — rivals.
 The Roašror are drows — rivals.
-The Dazha are duergars — rivals.
+The Fovfav are duergars — rivals.
 The Wakdao are gnolls — rivals.
 The Qwootoqo are goblins — rivals.
-The Xabxat are gully dwarfs — rivals.
+The Dazha are gully dwarfs — rivals.
 The Šdoašded are high elfs — rivals.
 The Dashav are hill dwarfs — rivals.
 The Dweowbaw are hobgoblins — rivals.
@@ -869,10 +869,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -897,10 +897,10 @@ The Bao are bugbears — neighbors.
 The Bazap are desert dwarfs — neighbors.
 The Ruašre are desert elfs — neighbors.
 The Roašror are drows — neighbors.
-The Dazha are duergars — neighbors.
+The Fovfav are duergars — neighbors.
 The Wakdao are gnolls — neighbors.
 The Qwootoqo are goblins — neighbors.
-The Xabxat are gully dwarfs — neighbors.
+The Dazha are gully dwarfs — neighbors.
 The Šdoašded are high elfs — neighbors.
 The Dashav are hill dwarfs — neighbors.
 The Dweowbaw are hobgoblins — neighbors.
@@ -937,16 +937,16 @@ Among the Roašror, the sky has darkened, now and again.
 The priesthood of the Roašror numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
 The Roašror's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Dazha, the sky has darkened, now and again.
+Among the Fovfav, the sky has darkened, now and again.
 Among the Wakdao, the sky has darkened, now and again.
 Among the Qwootoqo, the sky has darkened, now and again.
 The priesthood of the Qwootoqo numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
 The Qwootoqo's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
-Among the Xabxat, the sky has darkened, now and again.
-The priesthood of the Xabxat numbers the darkenings: 4010.
+Among the Dazha, the sky has darkened, now and again.
+The priesthood of the Dazha numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36531.
-The Xabxat's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
+The Dazha's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Šdoašded, the sky has darkened, now and again.
 The priesthood of the Šdoašded numbers the darkenings: 6472.
 The next darkening, it teaches, comes on day 36531.
@@ -983,7 +983,7 @@ The Sruasrer's own priesthood taught wrongly, and could be shown wrong by any wh
 *In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Roašror's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
-*In truth, the Xabxat's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
+*In truth, the Dazha's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Šdoašded's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Dashav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*

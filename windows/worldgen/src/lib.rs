@@ -9224,7 +9224,41 @@ fn build_to_configured(
         // bugbear, yields to it).
         let mut used_collective_names: std::collections::BTreeSet<String> =
             std::collections::BTreeSet::new();
-        for kind in placed_peoples(&world) {
+        let peoples = placed_peoples(&world);
+        // Collective autonyms are collision-resolved here, at the
+        // composition root. Reserve names from older accession cohorts before
+        // resolving the newest cohort, so a newly appended people cannot take
+        // a name already held by an older people. Keep the original registry
+        // order for minting: entity order is observable in rendered outputs.
+        let newest_epoch = peoples
+            .iter()
+            .map(|(kind, _)| {
+                hornvale_language::concept_epoch(
+                    hornvale_species::kind_concept(kind).unwrap_or(kind),
+                )
+            })
+            .max()
+            .unwrap_or(0);
+        let mut reserved_older_names = std::collections::BTreeSet::new();
+        for (kind, _) in &peoples {
+            let epoch = hornvale_language::concept_epoch(
+                hornvale_species::kind_concept(kind).unwrap_or(kind),
+            );
+            if epoch < newest_epoch
+                && let Some(name) = lexicon_of_in_from(&world, wc, kind, &terrain, &climate)?
+                    .entry("person")
+                    .and_then(|entry| match entry {
+                        hornvale_language::LexEntry::Root { views, .. }
+                        | hornvale_language::LexEntry::Compound { views, .. } => {
+                            Some(views.roman.clone())
+                        }
+                        hornvale_language::LexEntry::Gap { .. } => None,
+                    })
+            {
+                reserved_older_names.insert(name);
+            }
+        }
+        for kind in peoples {
             // A people-as-a-whole belongs to the world rather than to another
             // entity, so it is a root.
             //
@@ -9283,7 +9317,12 @@ fn build_to_configured(
                     hornvale_language::LexEntry::Gap { .. } => None,
                 });
             if let Some(mut name) = autonym {
-                if used_collective_names.contains(&name) {
+                let epoch = hornvale_language::concept_epoch(
+                    hornvale_species::kind_concept(kind.0).unwrap_or(kind.0),
+                );
+                if used_collective_names.contains(&name)
+                    || (epoch == newest_epoch && reserved_older_names.contains(&name))
+                {
                     // Deterministic disambiguation: advance the salt through
                     // this people's namer until the rendered stem is unused.
                     // `NameKind::Settlement` is a bare stem (no honorifics, no
