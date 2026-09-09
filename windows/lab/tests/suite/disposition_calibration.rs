@@ -727,7 +727,7 @@ fn the_weakest_raider_beats_the_strongest_abstainer_primary_claim() {
 /// `RAID_DISPOSITION_MIN` re-seats its genesis flagship on at least
 /// `RAIDER_MIN` of the seed panel's worlds.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), to 9/60 = 0.150 at The Winze's close (mechanism measured, not assumed: the breach hazard, NOT the working's placement), and to 7/60 = 0.117 at The Murrain's close (history/bake/v4 and epidemic-before-raid population reduction), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 7 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), to 9/60 = 0.150 at The Winze's close (mechanism measured, not assumed: the breach hazard, NOT the working's placement), to 7/60 = 0.117 at The Murrain's close (history/bake/v4 and epidemic-before-raid population reduction), and back to 9/60 = 0.150 at The Wanderers' close (default binary-system admission; the same campaign tree forced to Single restored 7/60), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 9 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)"]
 fn every_raider_clears_the_floor_preregistered_not_met() {
     let wc = WorldComponents::assemble().expect("assemble the shipped component set");
     let (raiders, _) = raiders_and_abstainers(&wc);
@@ -748,7 +748,9 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
          close, 12/60 = 0.200 at The Underworld's, 10/60 = 0.167 at The Granary's \
          (cause named at The Governor's close: eeaa011fd, BAKE v2 -> v3), 9/60 = 0.150 \
          at The Winze's (mechanism measured: the breach hazard, not the working's \
-         placement), and 7/60 = 0.117 at The Murrain's (v4 epidemic-before-raid epoch); \
+         placement), 7/60 = 0.117 at The Murrain's (v4 epidemic-before-raid epoch), \
+         and 9/60 = 0.150 at The Wanderers' (default binary-system admission; a \
+         forced-Single control restored 7/60); \
          a DIFFERENT reading here means the deferral has moved and owes a \
          re-read, not a lowered floor. See this test's doc comment.",
         under.len()
@@ -909,6 +911,21 @@ fn every_raider_clears_the_floor_preregistered_not_met() {
 /// epidemic-before-raid ordering are the shipped mechanism under test. The
 /// deferred floor remains a re-fit question, and the witness now records
 /// 7/60 = 0.117 until that successor measurement exists.
+///
+/// **RE-READ AT THE WANDERERS' CLOSE (2026-09-09): 7/60 → 9/60.** The
+/// denominator still holds at 60, and nine live re-seats still refute the
+/// floor's stated dead-branch mechanism. The movement is attributable to the
+/// campaign's admission of binary systems under default sky pins: the shipped
+/// campaign tree reads 9/60, while the same tree with only
+/// `SkyPins.topology` forced to `StellarTopology::Single` restores 7/60.
+/// That one-variable neutralisation retains the campaign's appended stream
+/// labels and all other astronomy code, so the topology outcome is sufficient
+/// to explain the movement. It does not establish which downstream climate,
+/// placement, or history cascades produce the net two-world increase.
+///
+/// Re-stated rather than repaired: binary stellar topologies are the shipped
+/// Wanderers feature, and the single-star control preserves the pre-campaign
+/// reading. The deferred floor remains a re-fit question; it is not lowered.
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
@@ -918,19 +935,21 @@ fn the_sub_floor_raider_reading_is_pinned_as_a_witness() {
     println!("witness: drow re-seated {changed}/{worlds}");
     assert_eq!(
         (changed, worlds),
-        (7, 60),
-        "drow's flagship re-seating moved from the pinned 7/60. This is NOT a number to \
+        (9, 60),
+        "drow's flagship re-seating moved from the pinned 9/60. This is NOT a number to \
          update — re-read it, then re-state this witness, the #[ignore] reason on \
          every_raider_clears_the_floor_preregistered_not_met, its roster entry in \
          cli/tests/suite/heavy_tier.rs (the EXPECTED_UNTOKENISED ratchet, which holds a \
          VERBATIM copy of that reason string and will red if you touch one and not the \
          other) and the BIO-raid-partition-order-statistic registry row in the SAME \
-         commit. THIS HAS NOW HAPPENED THREE TIMES (The Underworld, 2026-08-18, 14/60 → \
+         commit. THIS HAS NOW HAPPENED FIVE TIMES (The Underworld, 2026-08-18, 14/60 → \
          12/60; The Granary, landed 2026-08-24 and re-read at The Governor's close on \
          2026-08-28, 12/60 → 10/60, `eeaa011fd`'s BAKE v2 -> v3 epoch bump; The Winze, \
          2026-08-30, 10/60 → 9/60, the breach hazard and NOT the working placement, \
-         isolated by neutralising each half; The Murrain, 2026-09-08, 7/60 = 0.117, \
-         after its history/bake/v4 epoch and epidemic-before-raid population reduction). \
+         isolated by neutralising each half; The Murrain, 2026-09-08, 9/60 → 7/60, \
+         after its history/bake/v4 epoch and epidemic-before-raid population reduction; \
+         The Wanderers, 2026-09-09, 7/60 → 9/60, default binary-system admission, \
+         isolated by forcing only the topology back to Single and restoring 7/60). \
          BEFORE ASSUMING A CAUSE, MEASURE ONE — the Winze re-read is the worked example: \
          the obvious story (placement moved) was measured and refuted."
     );
