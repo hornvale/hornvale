@@ -626,6 +626,16 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // three, and editing an earlier cohort would re-sort concepts whose
     // proto-root assignments are already part of saved worlds.
     &["bracken", "ledge", "rushes"],
+    // Epoch 22 — The Murrain, Task 1: the five pathogen species rows. They
+    // are appended as a new cohort so the authored catalogue concepts do not
+    // silently default to epoch 0 or perturb earlier proto-root assignments.
+    &[
+        "the-consumption",
+        "the-flux",
+        "the-marsh-fever",
+        "the-pest",
+        "the-pox",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

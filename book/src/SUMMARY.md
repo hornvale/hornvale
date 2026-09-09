@@ -470,6 +470,7 @@
 - [The Charter](./chronicle/the-charter.md)
 - [The Counterpart](./chronicle/the-counterpart.md)
 - [The Lot](./chronicle/the-lot.md)
+- [The Social Household](./chronicle/the-soc-household.md)
 - [The Warp](./chronicle/the-warp.md)
 - [The Cruck](./chronicle/the-cruck.md)
 - [The Hidage](./chronicle/the-hidage.md)
@@ -479,10 +480,12 @@
 - [The Ken](./chronicle/the-ken.md)
 - [The Spillway](./chronicle/the-spillway.md)
 - [The Fetch](./chronicle/the-fetch.md)
+- [The Route Cache](./chronicle/the-route-cache.md)
 - [The Newel](./chronicle/the-newel.md)
 - [The Grammar](./chronicle/the-grammar.md)
 - [The Insulator](./chronicle/the-insulator.md)
 - [The Sett](./chronicle/the-sett.md)
+- [The Murrain](./chronicle/the-murrain.md)
 
 # Appendix: The Frontier
 

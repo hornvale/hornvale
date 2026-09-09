@@ -39,6 +39,7 @@ pub const STAGES: [(&str, &[&str]); 4] = [
             "founded-from",
             "founder-kinship",
             "community-fate",
+            "cause",
         ],
     ),
     (
@@ -59,19 +60,32 @@ pub const STAGES: [(&str, &[&str]); 4] = [
             "ground",
             "diet",
             "sex",
+            "reproductive-role",
+            "gender-identity",
+            "gender-recognition",
             "family",
+            "associations",
+            "children",
+            "siblings",
+            "descent",
+            "adoption",
+            "care",
+            "group-membership",
+            "migration",
+            "parental-death",
+            "inheritance",
             "work",
             "literacy",
         ],
     ),
 ];
 
-/// The one sentence the four by-design silences (spec §4.4) are folded
+/// The one sentence the two remaining by-design silences (spec §4.4) are folded
 /// into. Four separate "nothing in the record says" sentences would read as
 /// four failures of this world's record; they are one statement about what
 /// no world here models at all, so they are said once, together.
-const BY_DESIGN: &str = "The record keeps no sex, household, trade or letters for anyone; those \
-                         four silences are the world's, not this telling's.";
+const BY_DESIGN: &str = "The record keeps no trade or letters for anyone; those two silences are \
+                         the world's, not this telling's.";
 
 /// Tell one drawn life as prose: the four stages, then the sources.
 ///
@@ -133,12 +147,21 @@ fn disclaimer(ctx: &LotContext, life: &Life, story: &Story) -> String {
         Some(SlotValue::Filled(where_it_was)) => where_it_was.as_str(),
         _ => "a place the record does not name",
     };
-    format!(
-        "{who} is not a real person, but this life is drawn from the statistical reality of \
-         {place} in year {} of seed {}.",
-        life.birth_year.round() as i64,
-        ctx.seed
-    )
+    if life.projection.kind == crate::projection::ProjectionKind::Composite {
+        format!(
+            "{who} is a non-causal composite case, not a real person; it is drawn from the \
+             statistical reality of {place} in year {} of seed {}, and cannot write \
+             consequences back to that world.",
+            life.birth_year.round() as i64,
+            ctx.seed
+        )
+    } else {
+        format!(
+            "{who} is drawn from the statistical reality of {place} in year {} of seed {}.",
+            life.birth_year.round() as i64,
+            ctx.seed
+        )
+    }
 }
 
 /// One Filled slot's sentence. The slot's own value is the whole content;
@@ -154,6 +177,7 @@ fn sentence(key: &str, value: &str) -> String {
         "name" => format!("They were called {value}."),
         "community-size" => format!("The community held {value}."),
         "founded-from" => format!("It had been {value}."),
+        "cause" => format!("They died of {value}."),
         "tech" => format!("They had {value}."),
         "function" => format!("The community was for {value}."),
         "tongue" => format!("They spoke {value}."),
@@ -166,6 +190,21 @@ fn sentence(key: &str, value: &str) -> String {
         "climate" => format!("They lived in {value}."),
         "ground" => format!("The ground under them gave {value}."),
         "diet" => format!("They {value}."),
+        "sex" => format!("Their observed sex traits were {value}."),
+        "reproductive-role" => format!("Their reproductive role was {value}."),
+        "gender-identity" => format!("Their recorded gender identity was {value}."),
+        "gender-recognition" => format!("Their recorded gender recognition was {value}."),
+        "family" => format!("Their recorded descent included {value}."),
+        "associations" => format!("Their recorded associations included {value}."),
+        "children" => format!("Their recorded descent included {value}."),
+        "siblings" => format!("Their sibling relations were {value}."),
+        "descent" => format!("Their descent record included {value}."),
+        "adoption" => format!("Their adoption or custody record included {value}."),
+        "care" => format!("Their care record included {value}."),
+        "group-membership" => format!("Their group memberships included {value}."),
+        "migration" => format!("Their residence history included {value}."),
+        "parental-death" => format!("{value}."),
+        "inheritance" => format!("Their inheritance record included {value}."),
         _ => format!("{}.", sentence_case(value)),
     }
 }
@@ -180,6 +219,7 @@ fn question(key: &str) -> &'static str {
         "founder-kinship" => {
             "Nothing in the record says how its founder stood to the mother community's founder"
         }
+        "cause" => "No cause of death exists yet",
         "tongue" => "Nothing in the record says what tongue they spoke",
         "belief" => "Nothing in the record names what they held sacred",
         "held-true" => "Nothing in the record says what the community held true about its own kin",
@@ -192,6 +232,21 @@ fn question(key: &str) -> &'static str {
         "sky" => "Nothing in the record says what the sky did over this life",
         "ground" => "Nothing in the record says what the ground did under this life",
         "diet" => "Nothing in the record says where they got their food",
+        "sex" => "Nothing in the record says what sex traits they had",
+        "reproductive-role" => "Nothing in the record says what reproductive role they held",
+        "gender-identity" => "Nothing in the record says how they identified",
+        "gender-recognition" => "Nothing in the record says how others recognized them",
+        "family" => "Nothing in the record says what descent relations they had",
+        "associations" => "Nothing in the record says what associations they formed",
+        "children" => "Nothing in the record says whether they had children",
+        "siblings" => "Nothing in the record says whether they had siblings",
+        "descent" => "Nothing in the record says what their descent was",
+        "adoption" => "Nothing in the record says whether adoption or custody occurred",
+        "care" => "Nothing in the record says who cared for whom",
+        "group-membership" => "Nothing in the record says which groups they joined",
+        "migration" => "Nothing in the record says whether they migrated",
+        "parental-death" => "Nothing in the record says whether a parent died",
+        "inheritance" => "Nothing in the record says whether inheritance occurred",
         _ => "Nothing in the record answers this",
     }
 }

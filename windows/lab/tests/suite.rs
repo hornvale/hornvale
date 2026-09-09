@@ -56,6 +56,10 @@ mod individuation;
 mod metric_roster_safety;
 #[path = "suite/millrace_probe.rs"]
 mod millrace_probe;
+#[path = "suite/murrain_metrics.rs"]
+mod murrain_metrics;
+#[path = "suite/murrain_readout.rs"]
+mod murrain_readout;
 #[path = "suite/namesake_metrics.rs"]
 mod namesake_metrics;
 #[path = "suite/preregistration_guard.rs"]

@@ -10,8 +10,9 @@ use hornvale_history::record::{
 };
 use hornvale_kernel::{EntityId, KindId, Seed, Vertex, World, WorldTime};
 use hornvale_worldgen::{
-    BakeId, BakeOccupation, History, TributeRelation, build_world, emit_history,
-    occupation_records, occupations_at, occupations_by_vertex, ruins_of_people, territories,
+    BakeId, BakeOccupation, BuildDepth, History, OutbreakEvent, SettlementPins, TributeRelation,
+    WorldComponents, build_world, build_world_to, emit_history, occupation_records, occupations_at,
+    occupations_by_vertex, ruins_of_people, territories,
 };
 use std::collections::BTreeMap;
 
@@ -23,11 +24,128 @@ fn bid(n: u64) -> BakeId {
     BakeId(n)
 }
 
+/// Break caught: the composition root registers the predicates but never runs
+/// the phase, or emits one half without its mate on a real deterministic bake.
+#[test]
+fn seed_42_emits_paired_outbreak_history_and_plague_endings() {
+    let components = WorldComponents::assemble().unwrap();
+    let world = build_world_to(
+        Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins::default(),
+        &components,
+        BuildDepth::Settlements,
+    )
+    .unwrap();
+    let struck: Vec<_> = world.ledger.find("struck-by").collect();
+    let deaths: Vec<_> = world.ledger.find("outbreak-deaths").collect();
+    assert!(
+        !struck.is_empty(),
+        "seed 42 must exercise the epidemic phase"
+    );
+    assert_eq!(struck.len(), deaths.len());
+    for event in struck {
+        assert!(deaths.iter().any(|death| {
+            death.subject == event.subject && death.place == event.place && death.day == event.day
+        }));
+    }
+    assert!(
+        world
+            .ledger
+            .find(hornvale_history::OCC_CAUSE)
+            .any(|fact| fact.object == hornvale_kernel::Value::Text("plague".into())),
+        "seed 42 must exercise CauseOfEnd::Plague"
+    );
+}
+
+/// Break caught: either half of an outbreak is omitted, attached to the wrong
+/// occupation, or stamped on a different day from its mate.
+#[test]
+fn outbreak_events_emit_as_a_paired_dated_fact() {
+    let mut world = test_world();
+    hornvale_epidemiology::register_concepts(&mut world.registry).unwrap();
+    let mut history = hand_history();
+    history.outbreaks.push(OutbreakEvent {
+        occupation: bid(2),
+        pathogen: KindId("the-pest"),
+        year: 75.0,
+        deaths: 12.5,
+    });
+    history.outbreaks.push(OutbreakEvent {
+        occupation: bid(2),
+        pathogen: KindId("the-fever"),
+        year: 75.0,
+        deaths: 3.5,
+    });
+
+    emit_history(&mut world, &history).unwrap();
+    let struck: Vec<_> = world.ledger.find("struck-by").collect();
+    let deaths: Vec<_> = world.ledger.find("outbreak-deaths").collect();
+    assert_eq!(struck.len(), 2);
+    assert_eq!(deaths.len(), 2);
+    let strike_ids: Vec<_> = struck.iter().map(|fact| fact.subject).collect();
+    let death_ids: Vec<_> = deaths.iter().map(|fact| fact.subject).collect();
+    assert_eq!(strike_ids, death_ids);
+    assert_eq!(
+        strike_ids
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        2
+    );
+    for strike in &struck {
+        let death = deaths
+            .iter()
+            .find(|death| death.subject == strike.subject)
+            .expect("each outbreak pair shares its event identity");
+        assert_eq!(strike.place, death.place);
+        assert_eq!(strike.day, death.day);
+        assert_ne!(strike.subject, strike.place.unwrap());
+    }
+    assert_eq!(
+        struck[0].object,
+        hornvale_kernel::Value::Text("the-pest".into())
+    );
+    assert_eq!(deaths[0].object, hornvale_kernel::Value::Number(12.5));
+
+    let bytes = serde_json::to_vec(&world.ledger).unwrap();
+    let restored: hornvale_kernel::Ledger = serde_json::from_slice(&bytes).unwrap();
+    let restored_struck: Vec<_> = restored.find("struck-by").collect();
+    let restored_deaths: Vec<_> = restored.find("outbreak-deaths").collect();
+    assert_eq!(restored_struck.len(), 2);
+    let restored_strike_ids: Vec<_> = restored_struck.iter().map(|fact| fact.subject).collect();
+    let restored_death_ids: Vec<_> = restored_deaths.iter().map(|fact| fact.subject).collect();
+    assert_eq!(restored_strike_ids, restored_death_ids);
+    assert_eq!(
+        restored_strike_ids
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        2
+    );
+    assert!(restored_struck.iter().all(|strike| {
+        restored_deaths
+            .iter()
+            .any(|death| death.subject == strike.subject && death.place == strike.place)
+    }));
+}
+
 fn test_world() -> World {
     let mut w = World::new(Seed(42));
     hornvale_history::register_concepts(&mut w.registry).unwrap();
     hornvale_settlement::register_concepts(&mut w.registry).unwrap();
     w
+}
+
+/// Break caught: world composition forgets epidemiology's two dated-event
+/// predicates, so an otherwise-correct bake cannot commit either half.
+#[test]
+fn world_registry_accepts_the_paired_outbreak_predicates() {
+    let mut world = World::new(Seed(42));
+    hornvale_worldgen::register_all(&mut world.registry).expect("domain roster registers");
+    assert!(world.registry.predicate("struck-by").is_some());
+    assert!(world.registry.predicate("outbreak-deaths").is_some());
 }
 
 /// A record with every "un-set" field filled with a neutral default, so each
@@ -841,8 +959,11 @@ fn distinct_layers_tie_only_on_genuine_material_matches() {
     // a world grows, never a property of `layer_key` — and at 2 ties the
     // per-tie assertions above stay load-bearing. Post-unblinding re-measure,
     // declared per decision 0016.
+    // THE MURRAIN epoch re-reading (2026-09-06): 2 -> 1 over 6628 pairs.
+    // The v4 bake stream and epidemic mortality replace occupation chains;
+    // the key itself is unchanged. Declared fixture drift for the genesis epoch.
     assert_eq!(
-        ties, 2,
+        ties, 1,
         "measured {ties} tying pairs on the live corpus over {pairs} compared pairs; a \
          different count means the key's tie conditions changed"
     );
@@ -1161,9 +1282,11 @@ fn the_material_fourth_key_barely_moves_the_stratigraphy() {
     // this time and is worth having on the record: none of seed 42's sixteen
     // workings breached, so this epoch does not move that world at all
     // (`breach.rs` reports 0 breached on seed 42 across the whole panel).
+    // THE MURRAIN epoch re-reading (2026-09-06): [0, 0, 2] -> [0, 1, 1].
+    // This is declared corpus drift from v4 history, not a `layer_key` change.
     assert_eq!(
         measured,
-        vec![(42u64, 0usize), (7, 0), (1000, 2)],
+        vec![(42u64, 0usize), (7, 1), (1000, 1)],
         "the per-seed order-change counts moved"
     );
 }

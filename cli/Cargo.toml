@@ -15,6 +15,7 @@ hornvale-paleoclimate = { path = "../domains/paleoclimate" }
 hornvale-religion = { path = "../domains/religion" }
 hornvale-settlement = { path = "../domains/settlement" }
 hornvale-species = { path = "../domains/species" }
+hornvale-epidemiology = { path = "../domains/epidemiology" }
 hornvale-terrain = { path = "../domains/terrain" }
 hornvale-thing = { path = "../domains/thing" }
 hornvale-almanac = { path = "../windows/almanac" }

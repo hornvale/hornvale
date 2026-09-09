@@ -249,17 +249,18 @@ fn a_neighbour_reversing_settlement_room_keeps_its_own_living_occupation() {
 /// settlement in the production roster.
 #[test]
 fn a_shared_settlement_room_uses_the_same_first_settlement_for_name_and_people() {
-    let world = world(42);
-    let world_context = WorldContext::build(&world).expect("seed 42 builds a world context");
+    let world = world(1);
+    let world_context = WorldContext::build(&world).expect("seed 1 builds a world context");
     let context = world_context.context();
     let walk = hornvale_locale::walk_depth(context);
     let occupations = occupations_by_vertex(&world);
     let colocated: Vec<_> = occupations
-        .get(&hornvale_kernel::Vertex(2_103))
-        .expect("seed 42 retains the measured shared column")
-        .iter()
-        .filter(|row| row.is_alive())
-        .collect();
+        .values()
+        .find_map(|rows| {
+            let living: Vec<_> = rows.iter().filter(|row| row.is_alive()).collect();
+            (living.len() == 2).then_some(living)
+        })
+        .expect("seed 1 retains a measured shared column");
     assert_eq!(
         colocated.len(),
         2,

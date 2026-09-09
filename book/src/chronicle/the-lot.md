@@ -176,7 +176,7 @@ chooses a year or a place, pins two of the choices and lets the index drive the
 rest. The consequence is honest and worth stating: the same permalink draws the
 same life only until the record it reads changes.
 
-**Twenty-six questions, four of them silent on purpose.** The narrator asks
+**Twenty-six questions, four of them were silent by design.** The narrator asks
 every slot of every life. A slot resolves to committed facts, or to a derived
 read over committed facts, or to a silence, which is rendered as a plain
 sentence in the prose and as a null with a reason in the payload. It is never
@@ -185,6 +185,12 @@ height — are declared silent *by design*, because no domain carries a model
 behind them, and the fill rate is reported over the other twenty-two so the
 number measures the world rather than the lens's own restraint. Every sentence
 carries the facts it read, numbered, with the list at the end of the story.
+
+The Social Household has since added sourced social slots for sex and
+reproductive role, identity and recognition, association and descent, children
+and siblings, care and adoption, migration and recomposition, and parental
+death or inheritance. The projection remains opt-in: where it has no evidence,
+the Lot still says so.
 
 Three of the slot sources named in the design did not exist as written, and
 they were caught before any code was written by grepping the readers rather
@@ -269,12 +275,16 @@ tables, a running world, and a life read off what the world actually did.
   subsistence                 a culture fact, living places only  HAVE, thin
   diet                        the species' resource niche         HAVE, very thin
   --------------------------  ----------------------------------  ---------------------
-  disease                     no producer for the plague ending   ABSENT
-  cause of death              nothing per individual              ABSENT (the Siler
-                                                                    hazard is the first)
-  sex                         no species carries a model          ABSENT
-  marriage, children,         no household model for anyone but   ABSENT
-  siblings, parents' deaths     founders
+  disease                     pathogen catalogue, endemic burden,  HAVE, named
+                              outbreak and plague ending
+  cause of death              every drawn death receives a cause   HAVE, sourced
+  sex / reproductive role     realized social facts when projected  HAVE, sourced
+  gender / identity            realized social facts when projected  HAVE, sourced
+  association / descent        typed relations and group projections  HAVE, sourced
+  children, siblings           kinship projection when evidenced     HAVE, sourced
+  adoption / care              directed care and descent facts       HAVE, sourced
+  migration / recomposition    interval-bounded group history        HAVE, sourced
+  parents' deaths / inheritance lifecycle event projections          HAVE, sourced
   height                      species mass, no per-body spread    ABSENT (cheap)
   literacy                    reading and writing are inert       ABSENT
   income, wage, poverty       no economy                          ABSENT
@@ -283,23 +293,30 @@ tables, a running world, and a life read off what the world actually did.
   comets, guest stars         none                                ABSENT
 ```
 
-**Disease is the largest single hole, and it is the one the site leans on
+**Disease was the largest single hole, and it was the one the site leaned on
 most.** For that blacksmith's place and era the site's cause table reads
 smallpox 15%, dysentery 12%, tuberculosis 12%, degenerative 9%, birth
-complications 8%, injury 8%, other 36%. This world has a plague ending in its
-vocabulary of how a community dies, and a laboratory metric that counts it, and
-nothing anywhere ever assigns it — only flight, migration, breach and famine
-are ever produced, and the nine-seed probe finds no plague share on any seed.
-The shape the absence wants is a pathogen modelled as a *species* whose niche
-is another species, spreading over the connection graph and the household
-lattice, and there is a derivable finding waiting inside it: crowd diseases
-need contiguous populations in the hundreds of thousands, and these communities
-peak under ninety. **A world of this world's scale would be a
-dysentery-and-tuberculosis world, and could never be a smallpox one.** The
-Siler hazard yields an age at death and a category — infant, background,
-senescent, or the community's own fate — and never a named disease, and the
-slot table leaves the cause of death as a category on purpose so that a disease
-domain can later fill it without moving the lens.
+complications 8%, injury 8%, other 36%. This world now has a pathogen
+catalogue, a derived endemic burden, outbreak events, named disease causes,
+and plague endings. The nine-seed readout found that the preregistered
+plague-ending and outbreak-event bands were too high, without retuning them.
+The population result survives the falsification: the largest connected
+present population is only 7,882 and no era/component in the Task 0 panel
+reaches 10,000, so crowd disease cannot persist here as a hidden smallpox
+analogue. The world's disease is instead the small-scale kind the model can
+support, while the Lot receives the disease as a projection of the substrate
+rather than as a new population authority.
+
+## The population boundary
+
+The Murrain made the boundary explicit. Worldgen's population substrate is
+the causal authority for connected host populations, persistence, spread, and
+population change. The Lot is a projection: it may draw an aggregate, a
+composite case, or a materialized individual, and it may weight those views
+for salience and play rather than statistical representativeness. A composite
+can be useful in-world without becoming a named causal person; only aggregate
+state and materialized individuals write consequences back. The two layers are
+linked, but they are not interchangeable.
 
 ## The exhibit, and what it costs
 

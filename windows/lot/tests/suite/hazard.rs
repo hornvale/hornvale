@@ -66,3 +66,30 @@ fn death_age_is_the_inverse_of_survival() {
     }
     assert_eq!(death_age(&h, 1.0), 0.0);
 }
+
+/// H-M4: attributing the hazard must not move the mortality envelope.
+#[test]
+fn attribution_preserves_hm2_survival_bytes() {
+    let mut digest = 0xcbf2_9ce4_8422_2325_u64;
+    for lifespan_years in [20.0, 40.0, 60.0, 120.0, 300.0] {
+        for strife in [0.0, 0.25, 0.5, 1.0] {
+            let hazard = Hazard {
+                lifespan_years,
+                strife,
+            };
+            for value in survival_table(&hazard)
+                .into_iter()
+                .chain([e0(&hazard), q_before(&hazard, 15.0)])
+            {
+                for byte in value.to_bits().to_le_bytes() {
+                    digest ^= u64::from(byte);
+                    digest = digest.wrapping_mul(0x0000_0100_0000_01b3);
+                }
+            }
+        }
+    }
+    assert_eq!(
+        digest, 0xc684_461c_0d83_9d3a,
+        "the frozen H-M2 mortality envelope moved"
+    );
+}

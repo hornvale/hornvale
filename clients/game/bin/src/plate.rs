@@ -2173,7 +2173,7 @@ fn site_box(
 /// "show placed sites on the world map... just don't show their labels").**
 /// Before this, this layer drew nothing until the possession had entered the
 /// site, which is precisely why seed 42's map — 874 caves, 103 exotic sites,
-/// 389 settlement vertices — read as ~1% coverage of undifferentiated forest
+/// 307 settlement vertices — read as ~1% coverage of undifferentiated forest
 /// no matter how much of the world had actually been explored: the KIND a
 /// site is (its glyph) is drawn like any other terrain fact now, ground
 /// truth the same way a relief band or a river channel already is. What
