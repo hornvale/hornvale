@@ -83,6 +83,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The instrument turned inward — the project as its own subject](#the-instrument-turned-inward--the-project-as-its-own-subject)
   - [A pattern language for traversal, not furnishing](#a-pattern-language-for-traversal-not-furnishing)
   - [The orange problem — one kind model, not two](#the-orange-problem--one-kind-model-not-two)
+  - [Stocks and capacities — the ability score as a ceiling, not a value](#stocks-and-capacities--the-ability-score-as-a-ceiling-not-a-value)
   - [Intellectual lineage](#intellectual-lineage)
 
 ---
@@ -5670,6 +5671,174 @@ fit is symmetric while only the sleeper receives the payoff. A general
 instances to preserve. The orange's last missing addition is therefore
 per-instance variation derived from `Lineage`; the kind-to-kind addition is
 shipped in a factorized form.
+
+## Stocks and capacities — the ability score as a ceiling, not a value
+
+Sugarscape's agents do not seek sugar. Their movement rule seeks *maximum
+welfare*, where welfare is a Cobb–Douglas function of the agent's holdings
+whose exponents are that agent's own metabolisms. Desire is never authored;
+it falls out of what an agent holds against what it burns. Epstein and Axtell
+note the consequence in their Appendix C: preferences are *state-dependent*,
+so "a landscape will look different in welfare terms to biologically
+identical agents when the only difference between them is their wealth."
+
+That model already contains a split it never applies to ability. Vision and
+metabolism are **fixed endowments**; sugar and spice are **stocks**; welfare
+is a function of the stock, *parameterised by* the endowment. The idea here is
+to carry that split onto the attributes a character sheet would call scores.
+
+**The score is a capacity, not a value.** An ability is two quantities, not
+one: a ceiling that says what is possible at all, and a stock drawn down by
+using it. This is what preserves identity under depletion — if everything is
+a stock, two people differ only by their current balance, and nobody is
+anybody. A ceiling is shape; a stock is state.
+
+**Cost is then a function of headroom, not of the task.** Let a task's demand
+and an actor's ceiling both be integers, and let headroom be their difference.
+One expression yields three regimes:
+
+| headroom | regime |
+| --- | --- |
+| negative | impossible — a hard gate, never attempted |
+| zero | possible exactly once, and it empties the actor |
+| large | routine, effectively free, repeatable all day |
+
+An intellect of 18 does the work of 7 without noticing; an intellect of 7 can
+do it once. The middle band is the interesting one, and it is a dramatic beat
+that is hard to author and easy to derive: the practitioner who manages the
+one working at the edge of their capacity, and is finished.
+
+The deeper gain is that **difficulty stops being a property of the task.** No
+difficulty classes, no fatigue tables — difficulty becomes a *relation*
+between a demand and whoever is meeting it, which is what difficulty has
+always actually been.
+
+**Recovery is the growback rule at a second scale.** A landscape regrows at a
+rate toward a per-site capacity; an actor's stocks regrow toward their
+ceiling. One mechanism, two scales. The rate varies along three axes, and
+they are not equally expensive:
+
+- **Species** — mostly built. `domains/species`' allometry derives
+  `basal_metabolic_rate_w`, `lifespan`, `reproductive_tempo` and a normalised
+  `pace_of_life` from mass and thermal strategy: the same fast–slow continuum
+  ecology already calls pace of life, and no new authored number.
+- **Dimension** — genuinely authored, and small. No physical law says
+  willpower recovers more slowly than stamina. One constant per stat.
+- **Individual** — a seeded draw, and the only part needing new substrate.
+
+**But species and dimension do not simply multiply, and treating them as
+though they do is the model's first real simplification.** `pace_of_life` is a
+*scalar*: it scales every ability's recovery together, which makes the
+species-by-dimension matrix rank-one and leaves it unable to say the thing one
+most wants it to say — that a kind might mend its body quickly and its mind
+slowly. Would a goblin recover from thinking as fast as from lifting? Would an
+elf? A rank-one model answers "in the same ratio as each other, always," which
+is not an answer.
+
+Authoring the full matrix is the obvious repair and the wrong one: a handful of
+kinds against a handful of abilities is dozens of numbers, each unexplained.
+The interaction has a physical driver, so it can be derived like everything
+else. **A dimension names the system an effort draws on** — muscle, metabolism,
+whatever cognition turns out to cost — **and a species differs in its
+allocation to those systems.** That is one new per-species physiological
+vector, not a matrix, and it is meaningful data about a creature's build rather
+than a tuning knob. Hornvale carries no such vector today: there is no brain
+mass, no tissue budget, no encephalization anywhere in `domains/species`, and
+cognition is explicitly an unbuilt wave.
+
+Two interactions, though, are available *now*, for free, and they are the
+diegetic ones:
+
+- **Thermal strategy against dimension.** An ectotherm's realized metabolic
+  rate "couples to ambient temperature" — the type's own documentation says
+  so. Physical recovery therefore tracks the weather for a cold-blooded kind
+  and does not for a warm-blooded one, while there is no reason a cognitive
+  stock must couple the same way. A lizardfolk sluggish to mend in winter, and
+  no less sharp for it, is an interaction with no authored number behind it.
+- **The mass exponent, per dimension.** Recovery of a mass-scaled stock rides
+  the ¾-power metabolic law; a stock that is not mass-scaled has no reason to.
+  The exponent itself is the interaction term.
+
+And the life-history model already contains a principled answer to which
+recoveries a long-lived kind should slow. `LifeSchedule::Paced` stretches
+lifespan, maturity and reproductive tempo by its factor — and explicitly
+leaves the basal metabolic rate unmoved. An elf's slowness is therefore in its
+life-history clock, not in its metabolism, so anything keyed to that clock
+stretches and anything keyed to metabolism does not. The asymmetry falls out
+of a distinction the code has already drawn for other reasons.
+
+**Learning is not one rate, and a skill is not the only thing that moves.**
+Two anatomically distinct systems learn, and they disagree about everything
+that matters here. Declarative learning — hippocampal — takes facts and rules,
+can acquire in a single trial, is consciously reportable, and fades. Procedural
+learning — basal ganglia and cerebellum — takes sequences and motor patterns,
+needs thousands of repetitions, cannot be verbalised, and is close to
+permanent. The evidence is a dissociation rather than a correlation: densely
+amnesic patients improve at mirror-drawing across sessions while retaining no
+memory of ever having sat down to it. Learning proceeded with the declarative
+system destroyed, which is not something one scale can do.
+
+So the acquisition rate is a short vector, one entry per system, and the
+dimension under training selects the entry — two numbers, not one per skill.
+Intellect gates the declarative entry and has little to say about the other,
+which is why the reasoner and the tumbler improve at such different speeds
+without either being the better learner.
+
+A third mechanism hides behind the word "training". Explosive power is not
+learned at all: its early gains are neural recruitment and its later ones are
+tissue, and unlike a skill it **reverses when practice stops**. That is not
+demand falling — it is the **ceiling moving**. The vocabulary needs all three:
+a skill lowers demand, training raises capacity, and a stock refills toward
+whatever the capacity currently is.
+
+The dividend is that forgetting need never be authored. A skill's blend of the
+two learning systems *is* its retention curve, so the scholar loses a language
+unspoken for twenty years and the swordsman does not lose the sword, from one
+number rather than a table. It also sharpens the fatigue claim above:
+*procedural* expertise resists exhaustion, while declarative recall degrades
+under it, so a tired duellist stays competent and a tired scholar goes patchy.
+Few skills are purely one system — vocabulary is declarative where phonology is
+procedural, chess openings declarative where pattern recognition is not — so
+the blend is a proportion, not a category. Hornvale already keeps a decay of
+this shape one scale up: `memory_half_life` in
+`windows/worldgen/src/knownness.rs` scales cultural forgetting by generation
+length. The individual case is the same instrument, needing two half-lives
+where the cultural one needed a single.
+
+The honest limit: charisma, or willpower, names no tissue and no metabolic
+law. Where an ability has no physical driver, its recovery is authored
+content, and saying so is better than deriving it from something that only
+sounds like a mechanism.
+
+**The individual draw is log-normal, and saying "three octaves" is what makes
+that so.** An octave is a doubling; a range stated in octaves is a statement
+in log space, so "normally distributed across about three octaves" already
+*describes* a normal distribution over the base-2 logarithm of the rate — a
+log-normal on the rate itself. That is also the right shape on the merits: a
+rate is strictly positive, so a normal on the rate has support below zero and
+needs a truncation that biases its own mean, and multiplicative biological
+traits are empirically log-normal in any case. Drawing the logarithm with a
+standard deviation of half an octave puts three standard deviations at ±1.5
+octaves, which makes a three-octave span the 99.7% interval rather than a
+hope; clamping there makes it exact. Because `pace_of_life` is already a
+normalised multiplier, the species term and the individual term compose by
+addition in log space.
+
+**What does not exist yet.** There is no Gaussian draw anywhere in the kernel
+or the domains — `octave` appears only as an fbm noise-band label. Adding one
+is a determinism-contract change: it needs its own stream labels, and its
+transcendentals must route through `kernel/src/math.rs` like every other, so
+that the draw is bit-identical across platforms.
+
+**Two cautions.** The first is arithmetic: a cost curve that diverges as
+headroom reaches zero puts a singularity at precisely the most
+dramatically-important point, which is a poor place for floating-point
+behaviour to get interesting. Keeping ceilings and demands as integers makes
+headroom exact, the same reasoning that makes `WorldTime` an integer tick
+count. The second is design: if cost already falls with headroom, letting
+recovery *also* scale with the ceiling compounds the two, and a high capacity
+stops being much better and becomes categorically different. Which of the two
+carries the variance is a choice to make deliberately rather than discover.
 
 ## Intellectual lineage
 
