@@ -8,8 +8,8 @@ use hornvale_climate::{Biome, BiomeExpr, GeneratedClimate};
 use hornvale_kernel::{NearestVertexIndex, Seed, Vertex, World};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyCorridorKind, SkyEcology, SkyEventKind, SkyPropagationDetail,
-    SkyStocks, SkyWorld, SkyWorldConfig, SkyWorldDetail, WorldComponents,
+    BuildDepth, SettlementPins, SkyCorridorKind, SkyEcology, SkyEventKind, SkyFields,
+    SkyPropagationDetail, SkyStocks, SkyWorld, SkyWorldConfig, SkyWorldDetail, WorldComponents,
     build_world_to_with_artifacts, climate_from, propagation_at,
     render_skyworld_diagnostic_readout, render_skyworld_png, render_skyworld_readout,
     skyworld_from, trajectory_at,
@@ -59,6 +59,195 @@ fn generate(fixture: &Fixture) -> SkyWorld {
 
 fn generate_with(fixture: &Fixture, config: SkyWorldConfig) -> SkyWorld {
     skyworld_from(&fixture.world, &fixture.terrain, &fixture.climate, config)
+}
+
+mod seams {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct SurfaceSample {
+        is_ocean: bool,
+        elevation_m: f64,
+        mean_temperature_c: f64,
+        moisture: f64,
+        storm_propensity: f64,
+        current: [f64; 3],
+        prevailing_wind: [f64; 3],
+        biome_expr: BiomeExpr,
+        unrest: f64,
+        has_boundary: bool,
+        tectonic_feature_count: usize,
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct SkyworldSample {
+        fields: SkyFields,
+        territory_count: usize,
+        projected: BTreeSet<Vertex>,
+    }
+
+    fn sample_surface(fixture: &Fixture, vertex: Vertex) -> SurfaceSample {
+        let tectonic_feature_count = fixture
+            .terrain
+            .features()
+            .all()
+            .filter(|feature| feature.extent.contains(&vertex))
+            .count();
+        let prevailing_wind = fixture.climate.band_count().map_or([0.0; 3], |bands| {
+            hornvale_climate::prevailing_wind(fixture.terrain.geosphere(), vertex, bands)
+        });
+        SurfaceSample {
+            is_ocean: fixture.terrain.is_ocean(vertex),
+            elevation_m: fixture.terrain.elevation_at(vertex).get(),
+            mean_temperature_c: fixture.climate.mean_temperature_at(vertex).get(),
+            moisture: fixture.climate.moisture_at(vertex),
+            storm_propensity: fixture.climate.storm_propensity_at(vertex),
+            current: fixture.climate.current_at(vertex),
+            prevailing_wind,
+            biome_expr: fixture.climate.biome_expr_at(vertex),
+            unrest: fixture.terrain.unrest_at(vertex),
+            has_boundary: fixture.terrain.boundary_at(vertex).is_some(),
+            tectonic_feature_count,
+        }
+    }
+
+    fn sample_skyworld(fixture: &Fixture) -> SkyworldSample {
+        let skyworld = generate(fixture);
+        SkyworldSample {
+            fields: skyworld.fields,
+            territory_count: skyworld.territories.len(),
+            projected: projected(&skyworld),
+        }
+    }
+
+    fn ascending_vertices(fixture: &Fixture) -> Vec<Vertex> {
+        let mut vertices: Vec<Vertex> = fixture.terrain.geosphere().vertices().collect();
+        vertices.sort_unstable();
+        vertices
+    }
+
+    fn changed_surface_vertex(
+        before: &Fixture,
+        after: &Fixture,
+    ) -> (Vertex, SurfaceSample, SurfaceSample) {
+        ascending_vertices(before)
+            .into_iter()
+            .zip(ascending_vertices(after))
+            .map(|(vertex, other)| {
+                assert_eq!(vertex, other, "the pin changed the surface index space");
+                (
+                    vertex,
+                    sample_surface(before, vertex),
+                    sample_surface(after, vertex),
+                )
+            })
+            .find(|(_, before, after)| before != after)
+            .expect("VACUOUS: terrain pin did not change any sampled surface source")
+    }
+
+    #[test]
+    fn surface_axis_is_a_read_only_substrate() {
+        let fixture = fixture(42);
+        let skyworld = sample_skyworld(&fixture);
+        let vertices = ascending_vertices(&fixture);
+        let land = vertices
+            .iter()
+            .copied()
+            .find(|&vertex| !fixture.terrain.is_ocean(vertex))
+            .expect("VACUOUS: fixture has no land vertex");
+        let ocean = vertices
+            .iter()
+            .copied()
+            .find(|&vertex| fixture.terrain.is_ocean(vertex))
+            .expect("VACUOUS: fixture has no ocean vertex");
+
+        for vertex in [land, ocean] {
+            let surface = sample_surface(&fixture, vertex);
+            assert_eq!(surface.is_ocean, fixture.terrain.is_ocean(vertex));
+            assert_eq!(surface.biome_expr, fixture.climate.biome_expr_at(vertex));
+            assert!(
+                surface.tectonic_feature_count <= fixture.terrain.features().all().count(),
+                "surface feature sampling invented a terrain feature"
+            );
+        }
+        assert_ne!(land, ocean, "VACUOUS: land and ocean selected one vertex");
+        assert!(
+            !skyworld.projected.is_empty(),
+            "VACUOUS: no Skyworld territory records the sampled substrate"
+        );
+    }
+
+    #[test]
+    fn environment_axes_have_non_vacuous_sources() {
+        let sparse = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                plates: Some(2),
+                ..TerrainPins::default()
+            },
+        );
+        let active = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                plates: Some(64),
+                ..TerrainPins::default()
+            },
+        );
+
+        let (vertex, before, after) = changed_surface_vertex(&sparse, &active);
+        assert_ne!(
+            before, after,
+            "VACUOUS: intended source perturbation did not change at {vertex:?}"
+        );
+        assert!(
+            before.unrest != after.unrest
+                || before.has_boundary != after.has_boundary
+                || before.tectonic_feature_count != after.tectonic_feature_count,
+            "the plate-count perturbation changed only non-tectonic source axes"
+        );
+    }
+
+    #[test]
+    fn skyworld_outputs_change_only_through_dependent_axes() {
+        let sparse = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                plates: Some(2),
+                ..TerrainPins::default()
+            },
+        );
+        let active = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                plates: Some(64),
+                ..TerrainPins::default()
+            },
+        );
+        let (vertex, before, after) = changed_surface_vertex(&sparse, &active);
+        assert_ne!(
+            before, after,
+            "VACUOUS: intended source perturbation did not change at {vertex:?}"
+        );
+
+        let sparse_skyworld = sample_skyworld(&sparse);
+        let active_skyworld = sample_skyworld(&active);
+        assert_ne!(
+            sparse_skyworld, active_skyworld,
+            "Skyworld ignored the changed terrain/climate substrate"
+        );
+        assert_eq!(
+            sparse_skyworld.fields.pressure, active_skyworld.fields.pressure,
+            "a terrain/climate perturbation rewrote the world-seeded pressure axis"
+        );
+        assert_eq!(
+            sparse_skyworld.fields.aether, active_skyworld.fields.aether,
+            "a terrain/climate perturbation rewrote the world-seeded aether axis"
+        );
+        assert_eq!(
+            sparse_skyworld.fields.lunar_forcing, active_skyworld.fields.lunar_forcing,
+            "a terrain/climate perturbation rewrote astronomical forcing"
+        );
+    }
 }
 
 fn strictly_ordered(vertices: &[Vertex]) -> bool {

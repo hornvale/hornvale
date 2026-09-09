@@ -247,6 +247,43 @@ test.
 
 **Capture:** design package at `docs/superpowers/specs/2026-09-09-skyworld-seams-design.md`.
 
+## #9 [G5] — Does the existing composition boundary need a production wrapper?
+
+**Decision:** retain the direct `skyworld_from(world, terrain, climate,
+config)` typed inputs. Task 1 adds a test-only surface sampler and no
+production `SkySurfaceSample` wrapper.
+
+**Measured ownership:** `GeneratedTerrain` owns land/ocean, elevation, unrest,
+boundary presence, and tectonic feature extents. `GeneratedClimate` owns mean
+temperature, moisture, storm propensity, current, and `BiomeExpr`; the latter
+remains the climate-owned taxonomy, not a Skyworld classification.
+`skyworld_from` reads mean temperature and moisture into global `SkyFields`,
+uses prevailing wind for wind and shear, and reads terrain elevation,
+land/ocean/coastal state, moisture, storm propensity, and edifice state for
+coverage and territory footprints. Propagation reads prevailing wind and ocean
+current. Skyworld then derives territory phenotype, stocks, trajectories, and
+footprints from those inputs; it does not write the surface providers.
+
+**Evidence:** `cargo test -p hornvale-worldgen --test suite -- skyworld::seams`
+passed 3 probes after the test-only sampler was implemented. The deterministic
+`plates=2` → `plates=64` perturbation changed a sampled source tuple and the
+resulting Skyworld output, while world-seeded pressure, aether, and lunar
+forcing remained equal. `cargo test -p hornvale-worldgen --test suite --
+skyworld` passed all 30 Skyworld probes.
+
+**Rejected alternative:** a public read-only wrapper would only rename the
+already explicit terrain and climate references. The sampler proves consumers
+can identify source ownership without duplicating production derivation, so a
+wrapper would add API surface without clarifying cost or ownership.
+
+**Ideonomy pass / overturns:** one implication pass over the direct-input and
+wrapper alternatives. It added the distinction between source ownership and
+Skyworld-derived outputs; no overturn.
+
+**Capture:** Task 1 seam inventory is committed with its focused probes. No
+`BuildDepth`, artifact, save, stream, terrain-domain, or climate-domain change
+was made.
+
 ## Rejected for this campaign
 
 - A universal `sugar` renaming of world concepts.
