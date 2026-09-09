@@ -6693,3 +6693,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-08T23:51:56Z | sluice:clients | 188.433 | 3130.761 | 319.969 | 18.31 | 0 | 4eec2d166 |  | lefford | 40 |
 | 2026-09-09T00:01:34Z | sluice:heavy | 577.160 | 12961.594 | 211.813 | 22.82 | 0 | 4e340af28 |  | lefford | 40 |
 | 2026-09-09T00:38:09Z | gate-commit | 275.759 | 1073.378 | 58.946 | 4.11 | 0 | 40ebeb42b | campaign/the-murrain-across-world | MacBookPro | 10 |
+| 2026-09-09T01:11:01Z | census-tail-chorus | 56.383 | 701.535 | 20.858 | 12.81 | 0 | 9ddda9d72 |  | lefford | 40 |
+| 2026-09-09T01:11:03Z | census-tail-domesday | 1.494 | 1.343 | 0.152 | 1.00 | 0 | 9ddda9d72 |  | lefford | 40 |
+| 2026-09-09T01:11:04Z | census-tail-anomalies | 1.057 | 0.927 | 0.130 | 1.00 | 0 | 9ddda9d72 |  | lefford | 40 |
+| 2026-09-09T01:11:06Z | sluice:artifacts | 300.724 | 1706.834 | 69.082 | 5.91 | 0 | 9ddda9d72 |  | lefford | 40 |
