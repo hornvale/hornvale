@@ -65,7 +65,7 @@ mod seams {
     use super::*;
 
     #[derive(Clone, Debug, PartialEq)]
-    struct SurfaceSample {
+    pub(super) struct SurfaceSample {
         is_ocean: bool,
         elevation_m: f64,
         mean_temperature_c: f64,
@@ -120,7 +120,7 @@ mod seams {
         }
     }
 
-    fn surface_projection(fixture: &Fixture) -> Vec<(Vertex, SurfaceSample)> {
+    pub(super) fn surface_projection(fixture: &Fixture) -> Vec<(Vertex, SurfaceSample)> {
         ascending_vertices(fixture)
             .into_iter()
             .map(|vertex| (vertex, sample_surface(fixture, vertex)))
@@ -1441,4 +1441,159 @@ fn rendering_does_not_mutate_generated_skyworld() {
         let _ = render_skyworld_diagnostic_readout(&skyworld, detail);
     }
     assert_eq!(skyworld, before);
+}
+
+/// Every public read-only lens must leave its substrate, generated overlay,
+/// and ordinary observation intact. This is intentionally one exhaustive
+/// probe: a future cache or lazy detail path must not gain a gap between the
+/// individual purity checks above.
+#[test]
+fn render_and_query_paths_leave_inputs_unchanged() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let surface_before = seams::surface_projection(&fixture);
+    let skyworld_before = skyworld.clone();
+    let details = [
+        SkyWorldDetail::Planet,
+        SkyWorldDetail::Regional,
+        SkyWorldDetail::Habitat,
+    ];
+    let ordinary_before: Vec<_> = details
+        .iter()
+        .copied()
+        .map(|detail| {
+            (
+                detail,
+                render_skyworld_png(&skyworld, &fixture.terrain, detail),
+                render_skyworld_readout(&skyworld, detail),
+                render_skyworld_diagnostic_readout(&skyworld, detail),
+            )
+        })
+        .collect();
+
+    for territory in &skyworld.territories {
+        let fields = skyworld.fields.at_altitude(territory.origin.altitude_m);
+        assert!(
+            fields.pressure.is_finite(),
+            "the fixture supplies queryable fields"
+        );
+        for sample in territory.trajectory.iter().rev() {
+            assert_eq!(
+                trajectory_at(&skyworld, territory.id, sample.time_slice),
+                Some(sample)
+            );
+        }
+        for detail in [
+            SkyPropagationDetail::Local,
+            SkyPropagationDetail::Corridors,
+            SkyPropagationDetail::Events,
+            SkyPropagationDetail::All,
+        ] {
+            assert!(
+                propagation_at(&skyworld, territory.id, detail).is_some(),
+                "the fixture supplies {detail:?} propagation"
+            );
+        }
+    }
+    for detail in details {
+        let _ = render_skyworld_png(&skyworld, &fixture.terrain, detail);
+        let _ = render_skyworld_readout(&skyworld, detail);
+        let _ = render_skyworld_diagnostic_readout(&skyworld, detail);
+    }
+
+    assert_eq!(
+        seams::surface_projection(&fixture),
+        surface_before,
+        "query/detail paths changed terrain, climate, or BiomeExpr inputs"
+    );
+    assert_eq!(
+        skyworld, skyworld_before,
+        "query/detail paths changed Skyworld data"
+    );
+    let ordinary_after: Vec<_> = details
+        .iter()
+        .copied()
+        .map(|detail| {
+            (
+                detail,
+                render_skyworld_png(&skyworld, &fixture.terrain, detail),
+                render_skyworld_readout(&skyworld, detail),
+                render_skyworld_diagnostic_readout(&skyworld, detail),
+            )
+        })
+        .collect();
+    assert_eq!(
+        ordinary_after, ordinary_before,
+        "query/detail paths changed ordinary or diagnostic observation"
+    );
+}
+
+/// Skyworld is a derived, read-only overlay. Its public surface must not grow
+/// a build rung, artifact slot, or serialization path without a deliberate
+/// compatibility decision.
+#[test]
+fn skyworld_contract_has_no_build_or_save_surface() {
+    const WORLDGEN_LIB: &str = include_str!("../../src/lib.rs");
+    const SKYWORLD_SOURCE: &str = include_str!("../../src/skyworld.rs");
+
+    let build_depth = WORLDGEN_LIB
+        .split_once("pub enum BuildDepth {")
+        .expect("BuildDepth remains a public construction contract")
+        .1
+        .split_once("\n}")
+        .expect("BuildDepth enum closes")
+        .0;
+    let variants: Vec<_> = build_depth
+        .lines()
+        .filter_map(|line| {
+            let variant = line.trim().strip_suffix(',')?;
+            variant
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '_')
+                .then_some(variant)
+        })
+        .collect();
+    assert_eq!(variants, ["Astronomy", "Terrain", "Settlements", "Full"]);
+
+    let build_artifacts = WORLDGEN_LIB
+        .split_once("pub struct BuildArtifacts {")
+        .expect("BuildArtifacts remains the build result")
+        .1
+        .split_once("\n}")
+        .expect("BuildArtifacts struct closes")
+        .0;
+    let fields: Vec<_> = build_artifacts
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("pub "))
+        .collect();
+    assert_eq!(
+        fields,
+        [
+            "pub world: World,",
+            "pub terrain: Option<GeneratedTerrain>,",
+            "pub climate: Option<GeneratedClimate>,",
+        ]
+    );
+
+    assert!(
+        WORLDGEN_LIB.contains("pub use skyworld::skyworld_from;")
+            && WORLDGEN_LIB
+                .contains("pub use skyworld_propagation::{propagation_at, trajectory_at};")
+            && WORLDGEN_LIB.contains("pub use skyworld_render::{"),
+        "the public Skyworld surface remains pure derivation, query, and observation"
+    );
+    for save_surface in [
+        "serde",
+        "Serialize",
+        "Deserialize",
+        "to_json",
+        "from_json",
+        "ledger",
+    ] {
+        assert!(
+            !SKYWORLD_SOURCE.contains(save_surface),
+            "Skyworld gained a save surface: {save_surface}"
+        );
+    }
 }
