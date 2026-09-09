@@ -7,6 +7,7 @@
 pub mod anomaly;
 pub mod census;
 pub mod comparators;
+pub mod corpus;
 pub mod detect;
 pub mod render;
 pub mod stats;

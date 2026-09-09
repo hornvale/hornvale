@@ -201,7 +201,20 @@ book/src/laboratory/census-of-coasts-ii.md	none(hand-written prose, never regene
 book/src/laboratory/census-of-coasts-iii.md	none(hand-written prose, never regenerated)
 book/src/laboratory/census-of-coasts-iv.md	none(hand-written prose, never regenerated)
 
-# --- docs/audits/ — 21 tracked, 13 `artifacts`-written by name; 5 exceptions ---
+# --- docs/audits/ — `artifacts` by directory, with named exceptions ---
+# THIS HEADER STATED THREE COUNTS AND NO LONGER DOES. It said "25 tracked, 8
+# `artifacts`-written by name; 8 exceptions", having already been corrected
+# once from 21/13/5 — with the correction's own note explaining that a count
+# stated inside its own document goes wrong the moment a row lands and nothing
+# enforces it. It then went wrong again the same way, and would have gone
+# wrong at the next merge regardless: two branches each adding a row here
+# auto-merge cleanly and leave whichever number one of them wrote. Deleting
+# the numbers is strictly better than refreshing them, because the three
+# commands below already answer the question and cannot rot. Re-derive; do not
+# transcribe, and do not restate the answer here:
+#   git ls-files docs/audits/ | wc -l
+#   grep -v '^#' docs/generated-paths.txt | awk -F'\t' '$1 ~ /^docs\/audits\/.+/ && $2=="artifacts"' | wc -l
+#   grep -v '^#' docs/generated-paths.txt | awk -F'\t' '$1 ~ /^docs\/audits\// && $2 ~ /^none\(/' | wc -l
 docs/audits/	artifacts
 docs/audits/heavy-tier-adjudication.md	none(hand-written one-off campaign finding -- The Governor -- never regenerated)
 docs/audits/land-elevation-attribution.md	none(hand-written one-off campaign finding -- The Glasshouse -- never regenerated)
@@ -239,6 +252,7 @@ docs/audits/the-reticence-report.md	artifacts
 docs/audits/glyph-specimen-sheet.txt	artifacts
 docs/audits/placement-audit-roster.md	artifacts
 docs/audits/plumb-roster.md	artifacts
+docs/audits/regularity-coverage-sugarscape-1996.md	artifacts
 
 # `docs/generated-path-writes.tsv` (Task 4, The Attestation) is Task 1's
 # by-hand write-set measurement made a byproduct of every ordinary run: a

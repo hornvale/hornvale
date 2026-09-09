@@ -71,6 +71,8 @@ mod descent_graph;
 mod diachronic;
 #[path = "suite/dissolve_equivalence.rs"]
 mod dissolve_equivalence;
+#[path = "suite/district.rs"]
+mod district;
 #[path = "suite/doctrine.rs"]
 mod doctrine;
 #[path = "suite/drift_reach_probe.rs"]
@@ -187,6 +189,8 @@ mod range_affinity;
 mod range_identity;
 #[path = "suite/range_readout.rs"]
 mod range_readout;
+#[path = "suite/relation.rs"]
+mod relation;
 #[path = "suite/repose_exposure.rs"]
 mod repose_exposure;
 #[path = "suite/repose_laws.rs"]
@@ -207,6 +211,10 @@ mod species_worlds;
 mod staple_d2_probe;
 #[path = "suite/staple_d3_probe.rs"]
 mod staple_d3_probe;
+#[path = "suite/staple_d3b_probe.rs"]
+mod staple_d3b_probe;
+#[path = "suite/staple_d4_probe.rs"]
+mod staple_d4_probe;
 #[path = "suite/stope_variety_probe.rs"]
 mod stope_variety_probe;
 #[path = "suite/subterranean_energy_probe.rs"]

@@ -1272,6 +1272,30 @@ echo "regenerate-artifacts: the domesday survey" >&2
 HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-domesday -- \
     cargo run -q -p hornvale -- lab domesday
 
+# The Seedbed: does the world GROW the imported macro-regularities? Like every
+# `report` verb, the command prints to stdout and the `>` redirect here is what
+# writes the file.
+#
+# A SERIAL TRAILER BESIDE `lab domesday`, FOR THE SAME REASON, AND IT SAT IN
+# GROUP B+C UNTIL THE CAMPAIGN'S FINAL REVIEW. Its comment there said the
+# report "reads the COMMITTED census off disk and never re-runs a study, so it
+# belongs in the ordinary `artifacts` run rather than behind HV_CENSUS" — which
+# is true, and does not settle ORDER. The Group B+C spawns are reaped well
+# before the HV_CENSUS block runs, so on a census-refresh run the report was
+# authored from the OLD census while the Domesday's claim lines, a few lines
+# above, were authored from the NEW one. The report's numbers and the survey's
+# would then disagree by a whole refresh.
+#
+# The failure was quiet in the worst way: the stale report matches the
+# committed one byte-for-byte, so the delivery's `add -u` stages nothing and
+# the run looks clean — and then
+# `committed_regularity_coverage_matches_the_live_report` reds on the delivery
+# branch's merge gate, against a campaign that changed nothing. It fails
+# closed, but in the wrong place, and the standing rule is that a census
+# delivery SATISFIES every check a regeneration remedies.
+echo "regenerate-artifacts: the regularity coverage report" >&2
+run -p hornvale -- regularities report > docs/audits/regularity-coverage-sugarscape-1996.md
+
 # The anomaly report (The Gnomon, 2026-08-13): the Domesday's transpose, per
 # world rather than per column. Also a pure read over the same COMMITTED
 # census — it never triggers a census itself — so it runs unconditionally

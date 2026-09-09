@@ -475,6 +475,7 @@
 - [The Cruck](./chronicle/the-cruck.md)
 - [The Hidage](./chronicle/the-hidage.md)
 - [The Staple D2](./chronicle/the-staple-d2.md)
+- [The Staple D4](./chronicle/the-staple-d4.md)
 - [The Culvert](./chronicle/the-culvert.md)
 - [The Warrant](./chronicle/the-warrant.md)
 - [The Ken](./chronicle/the-ken.md)
@@ -486,6 +487,7 @@
 - [The Insulator](./chronicle/the-insulator.md)
 - [The Sett](./chronicle/the-sett.md)
 - [The Murrain](./chronicle/the-murrain.md)
+- [The Seedbed](./chronicle/the-seedbed.md)
 
 # Appendix: The Frontier
 

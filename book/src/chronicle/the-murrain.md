@@ -74,6 +74,38 @@ the 1,320-second alarm and 1,650-second refusal. The campaign kept the
 performance question measurable instead of hiding it in an optimistic
 estimate.
 
+## Across committed worlds
+
+The campaign's committed census comparison shows a small aggregate change,
+but not a small event. Across 1,000 committed rows, settlement-count falls
+from 264.673 to 259.942 (-1.8%), total-population from 7383.817 to 7219.338
+(-2.2%), and mean-population from 26.892 to 26.782 (-0.4%). Peoples-placed is
+essentially unchanged, 14.905 to 14.914 (+0.1%). Kobold-settlement-count falls
+from 41.001 to 38.108 (-7.1%). These are aggregate effects: useful for the
+scale of the change, but not a description of any one world.
+
+The per-world distribution is much wider. Total population has a median
+change of -0.74%, with p5 at -41.1%, p95 at +68.2%, and a worst case of -66.1%
+(seed 880). Settlement-count has a median of -1.44%, p5 at -43.0%, p95 at
++77.7%, and a worst case of -67.7% (seed 464). Kobold-settlement-count has a
+median change of 0%, p5 at -93.2%, and a worst case of -97.7% (seed 165).
+The plague is therefore a redistribution and restructuring event: some worlds
+lose roughly two thirds of their population while others gain substantially,
+and the aggregate nearly cancels. Kobold percentages have a particularly
+small-denominator trap; an apparent +1300% upper-tail value can be only 1 to
+14 settlements, so it must not be read as a comparable population effect.
+
+Seed 42 is not an across-world outlier. Its total-population change of -10.7%
+is at the 37th percentile, and its settlement change of -21.3% is at the 26th
+percentile. Seed 42 also supplies the campaign's local view of redistribution
+between peoples: living occupations fall from 390 to 307 without any people
+going extinct; kobold living occupations fall from 130 to 22 and drow from 24
+to 5, while bugbear, human, and hobgoblin occupations expand into the vacancy.
+That local drow observation is not an across-world drow result. The committed
+census has no drow column, so this chronicle does not invent a drow proxy or
+claim a 1,000-world drow series. A future drow measurement, if needed, is a
+separate census-design question.
+
 ## What remains deliberately human
 
 The household lattice is still absent, so within-community mixing is
