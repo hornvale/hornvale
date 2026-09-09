@@ -15255,7 +15255,10 @@ mod tests {
             // independent exposure reading. The precondition remains
             // nonempty and the mutation still exercises the river and
             // karst/wetland gates.
-            vec!["river", "ford", "valley", "marsh", "spring"],
+            // THE UNDERWORLD re-pin: "valley" leaves again after the four
+            // newly admitted peoples re-place the seed-7 settlement set;
+            // the remaining four concepts still exercise the mutation.
+            vec!["river", "ford", "marsh", "spring"],
             "seed 7 goblins must root these toponymic concepts for this test to bite"
         );
         for concept in &rooted {
