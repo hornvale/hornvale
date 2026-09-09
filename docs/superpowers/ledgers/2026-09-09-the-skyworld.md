@@ -284,6 +284,35 @@ Skyworld-derived outputs; no overturn.
 `BuildDepth`, artifact, save, stream, terrain-domain, or climate-domain change
 was made.
 
+## #10 [G5] — Do the existing environmental derivations propagate independently?
+
+**Decision:** retain the existing pure Skyworld derivations unchanged. Task 2
+adds a one-axis-at-a-time test matrix over radiation, aether, surface climate,
+tectonic features, and altitude while preserving the read-only surface
+projection.
+
+**Why:** the focused seam filter passed all seven probes on the first run.
+Radiation and aether independently change only their respective altitude
+fields; terrain-derived climate changes reach temperature and moisture while
+world-seeded aether remains stable; and the `plates=2` versus `plates=64`
+fixtures change tectonic-feature count and derived coverage without adding a
+fixed placement rule. An implementation change would therefore widen the
+composition root without correcting an observed missing dependency.
+
+**Alternatives discarded:** a Skyworld-local climate pin or replacement
+`BiomeExpr` would duplicate climate ownership; direct tectonic placement would
+turn environmental scoring into authored geography; a production seam wrapper
+would repeat Task 1's rejected abstraction.
+
+**Ideonomy passes / overturns:** one dependency-separation pass over surface,
+high-sky, and tectonic axes; no overturn. It confirmed that altitude fields
+are the independent high-sky input surface, while terrain pins remain the
+appropriate source of climate and tectonic perturbations.
+
+**Capture:** no `skyworld.rs`, `BuildDepth`, save fact, stream, domain, biome,
+organism, lifecycle, or census change was required. The matrix remains in the
+test-only seam sampler.
+
 ## Rejected for this campaign
 
 - A universal `sugar` renaming of world concepts.

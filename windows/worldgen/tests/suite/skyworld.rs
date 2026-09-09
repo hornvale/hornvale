@@ -320,6 +320,161 @@ mod seams {
             "a terrain/climate perturbation rewrote astronomical forcing"
         );
     }
+
+    #[test]
+    fn radiation_and_aether_are_independently_perturbable() {
+        let fixture = fixture(42);
+        let fields = generate(&fixture).fields;
+        let altitude_m = 8_000.0;
+
+        let mut less_radiation = fields;
+        less_radiation.high_sky_radiation *= 0.5;
+        assert_ne!(
+            fields.high_sky_radiation, less_radiation.high_sky_radiation,
+            "VACUOUS: radiation perturbation did not change its source"
+        );
+        let baseline = fields.at_altitude(altitude_m);
+        let radiation_limited = less_radiation.at_altitude(altitude_m);
+        assert_ne!(
+            baseline.high_sky_radiation, radiation_limited.high_sky_radiation,
+            "radiation perturbation did not reach the high-sky field"
+        );
+        assert_eq!(
+            baseline.aether, radiation_limited.aether,
+            "radiation perturbation changed the independent aether field"
+        );
+
+        let mut less_aether = fields;
+        less_aether.aether *= 0.5;
+        assert_ne!(
+            fields.aether, less_aether.aether,
+            "VACUOUS: aether perturbation did not change its source"
+        );
+        let aether_limited = less_aether.at_altitude(altitude_m);
+        assert_ne!(
+            baseline.aether, aether_limited.aether,
+            "aether perturbation did not reach the high-sky field"
+        );
+        assert_eq!(
+            baseline.high_sky_radiation, aether_limited.high_sky_radiation,
+            "aether perturbation changed the independent radiation field"
+        );
+    }
+
+    #[test]
+    fn surface_climate_axes_feed_distinct_overlay_values() {
+        let sparse = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                ocean_fraction: Some(0.05),
+                ..TerrainPins::default()
+            },
+        );
+        let oceanic = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                ocean_fraction: Some(0.95),
+                ..TerrainPins::default()
+            },
+        );
+        let (_, before, after) = changed_surface_vertex_where(&sparse, &oceanic, |_| true);
+        assert_ne!(
+            before, after,
+            "VACUOUS: ocean-fraction perturbation did not change a climate source"
+        );
+        assert!(
+            before.mean_temperature_c != after.mean_temperature_c
+                || before.moisture != after.moisture
+                || before.storm_propensity != after.storm_propensity
+                || before.current != after.current
+                || before.prevailing_wind != after.prevailing_wind,
+            "ocean-fraction perturbation changed no sampled climate axis"
+        );
+
+        let sparse_skyworld = sample_skyworld(&sparse);
+        let oceanic_skyworld = sample_skyworld(&oceanic);
+        assert_ne!(
+            sparse_skyworld.fields.temperature_c, oceanic_skyworld.fields.temperature_c,
+            "changed surface temperature did not reach the Skyworld field"
+        );
+        assert_ne!(
+            sparse_skyworld.fields.moisture, oceanic_skyworld.fields.moisture,
+            "changed surface moisture did not reach the Skyworld field"
+        );
+        assert_eq!(
+            sparse_skyworld.fields.aether, oceanic_skyworld.fields.aether,
+            "surface climate perturbation changed world-seeded aether"
+        );
+    }
+
+    #[test]
+    fn tectonic_features_affect_distribution_without_authored_placement() {
+        let sparse = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                plates: Some(2),
+                ..TerrainPins::default()
+            },
+        );
+        let active = fixture_with_terrain_pins(
+            42,
+            TerrainPins {
+                plates: Some(64),
+                ..TerrainPins::default()
+            },
+        );
+        let sparse_features = sparse.terrain.features().all().count();
+        let active_features = active.terrain.features().all().count();
+        assert_ne!(
+            sparse_features, active_features,
+            "VACUOUS: plate perturbation did not change tectonic feature sources"
+        );
+
+        let sparse_skyworld = generate(&sparse);
+        let active_skyworld = generate(&active);
+        assert_ne!(
+            projected(&sparse_skyworld).len(),
+            projected(&active_skyworld).len(),
+            "tectonic feature coverage did not reach derived Skyworld distribution"
+        );
+        assert_eq!(
+            sparse_skyworld.fields.aether, active_skyworld.fields.aether,
+            "tectonic coverage perturbation changed the world-seeded aether field"
+        );
+        assert_eq!(
+            sparse_skyworld.fields.lunar_forcing, active_skyworld.fields.lunar_forcing,
+            "tectonic coverage perturbation changed astronomical forcing"
+        );
+    }
+
+    #[test]
+    fn perturbations_preserve_surface_projection() {
+        let fixture = fixture(42);
+        let before: Vec<(Vertex, SurfaceSample)> = ascending_vertices(&fixture)
+            .into_iter()
+            .map(|vertex| (vertex, sample_surface(&fixture, vertex)))
+            .collect();
+        let fields = generate(&fixture).fields;
+        let altitude_m = 8_000.0;
+        assert_ne!(
+            fields.altitude_m, altitude_m,
+            "VACUOUS: altitude perturbation did not change its source"
+        );
+        let elevated = fields.at_altitude(altitude_m);
+        assert_ne!(
+            fields.high_sky_radiation, elevated.high_sky_radiation,
+            "altitude perturbation did not change its dependent radiation field"
+        );
+
+        let after: Vec<(Vertex, SurfaceSample)> = ascending_vertices(&fixture)
+            .into_iter()
+            .map(|vertex| (vertex, sample_surface(&fixture, vertex)))
+            .collect();
+        assert_eq!(
+            before, after,
+            "Skyworld altitude derivation mutated the surface projection"
+        );
+    }
 }
 
 fn strictly_ordered(vertices: &[Vertex]) -> bool {
