@@ -49,6 +49,10 @@ Ruling: reject export for every capability state other than `existing`, and make
 - **Evidence:** 30 focused tests passed; independent exports produced identical frame-000 SHA-256 values; formatting and diff checks passed.
 - **Review:** Re-review approved with no remaining findings.
 
+## Review ruling — Task 5, round 1
+
+Ruling: set pilot durations to the governing 30-second minimum (`900` frames at `30` fps), but leave every package in draft until exact video and copy review has occurred. The first batch cannot claim completion from deterministic packet tests alone; the current renderer/assembly path must produce inspectable package artifacts before a package can become `reviewed`, and Nathan alone can make it `approved`.
+
 ## Review ruling — Task 3, round 1
 
 Ruling: strengthen the client boundary before accepting the renderer. Add runtime packet validation, preserve `u64` seed identity as a string, use locale-independent ordering, and provide an actual browser/visual inspection harness for phone and laptop targets. The cost is a stricter client input contract and a small harness; the benefit is that a “rendered” observation is tested as an actual presentation rather than only as an abstract object.
