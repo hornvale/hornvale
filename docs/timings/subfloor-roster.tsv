@@ -1335,8 +1335,10 @@ hornvale-lab::hornvale_lab$domesday::anomaly::tests::a_world_with_no_flagged_col
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::categorical_and_flag_columns_are_never_evaluable
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::evaluable_columns_measured_surface_on_the_292_column_census
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::exclusion_reasons_carry_the_exact_documented_wording
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_matches_the_same_worlds_entry_in_rank
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::for_seed_returns_none_for_an_unknown_seed
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::rank_orders_most_anomalous_first
+hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_agrees_with_for_seed_on_a_census_row
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::score_row_scores_against_an_uncontaminated_index
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::structural_columns_are_neither_evaluable_nor_excluded
 hornvale-lab::hornvale_lab$domesday::anomaly::tests::tail_depth_averages_ranks_across_ties
@@ -4326,7 +4328,6 @@ hornvale::suite$provision::declared_absent_row_carries_its_reason
 hornvale::suite$provision::declared_but_unserved_token_is_not_served
 hornvale::suite$provision::feels_toward_does_not_resolve
 hornvale::suite$regularity_corpus::a_corpus_parses_its_items_criteria_and_verdicts
-hornvale::suite$regularity_corpus::a_deferred_item_whose_registry_row_settled_is_stale
 hornvale::suite$regularity_corpus::a_doc_anchor_into_generated_prose_resolves
 hornvale::suite$regularity_corpus::a_doc_anchor_into_hand_written_prose_is_refused
 hornvale::suite$regularity_corpus::a_lost_regularity_is_red
