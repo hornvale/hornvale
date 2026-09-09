@@ -454,11 +454,11 @@ fn the_heavy_roster_is_exactly_this_fixture() {
 /// outside **both**: outside `preregistration_guard`'s path filter, and
 /// outside this file's adjudication unless its reason happens to carry a
 /// token. Four of the seven blind spots listed above are exactly that case.
-const EXPECTED_UNTOKENISED: [&str; 38] = [
+const EXPECTED_UNTOKENISED: [&str; 40] = [
     "...",
-    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5417 over 120 pairs; ninth canonical reading, incomparable like the seventh and eighth: The Lot grew the evaluable surface 170 -> 176 columns (excluded unchanged at 52) with six lot-* metrics and moved no shared column on any of 1,000 rows; ablating the lot family reproduces The Warp's exact 170-column surface and its 66/120 - the six new columns displaced ONE hit (pantheon 6 -> 5) and nothing else moved, the first re-read since The Winze whose ablation is non-null in exactly one direction. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)",
+    "PREREGISTERED, cannot adjudicate at n=120: awaits TOOL-anomaly-ranking-concentrates-injection (recall@10 = 0.5333 over 120 pairs; tenth canonical reading, incomparable like the seventh, eighth, and ninth: The Murrain added five census columns and re-authored all six scored arms and both baselines; the scorer is unchanged, so this re-read is not comparable to the six-epoch series. The six comparable readings remain within one SE of the 0.60 bar; the battery still separates nothing)",
     "PREREGISTERED, not met: awaits BIO-gause-distinctness-vacuous (the corrected climate collapsed all three arms of the cv-ratio instrument - real 0.9945, goblin-niche-substituted 0.9964, width-only 0.9964 against 0.9747 when last authored - so the real gap 0.0055 no longer clears the 0.007 floor and the statistic can no longer separate human from a goblin-substituted human; lowering the floor would retune away the very vacuity it exists to announce)",
-    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), and to 9/60 = 0.150 at The Winze's close (mechanism measured, not assumed: the breach hazard, NOT the working's placement - see the witness), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 9 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)",
+    "PREREGISTERED, not met: awaits BIO-raid-partition-order-statistic (decision 0138; drow fell to 14/60 = 0.233 under the 0.30 raider floor when The Glasshouse corrected the climate, to 12/60 = 0.200 at The Underworld's close, to 10/60 = 0.167 at The Granary's close (named at The Governor's close, 2026-08-28: eeaa011fd, BAKE stream epoch v2 -> v3), to 9/60 = 0.150 at The Winze's close (mechanism measured, not assumed: the breach hazard, NOT the working's placement), and to 7/60 = 0.117 at The Murrain's close (history/bake/v4 and epidemic-before-raid population reduction), denominator held at 60 throughout, and the floor's stated mechanism - that the raid branch stopped running - is refuted by 7 live re-seats, so the floor is reading a post-epoch world at a pre-epoch scale)",
     "PREREGISTERED, not met: awaits BIO-rung-weighted-concentration (a stronghold-only axis reads relocation one rung down as suppression)",
     "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)",
     "PREREGISTERED, not met: awaits CLIM-shelf-single-rung-threshold (an unmeasured 5% ceiling on shelf-only ocean vertices; measured 5.85%, unremarkable against Earth's ~7-8% shelf fraction)",
@@ -485,6 +485,8 @@ const EXPECTED_UNTOKENISED: [&str; 38] = [
     "readout: chronicle evidence, run manually with --nocapture",
     "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate",
     "regenerates the committed repose exposure fixture; run by hand - the drift check above is the gate",
+    "retired: The Fetch intentionally changes the pre-flip errand timeline",
+    "retired: current-relative water belief bypasses the home-keyed RouteMemo",
     "runs the full gathering census; the fixture is drift-checked in CI",
     "runs the full live census sweep; the fixture is drift-checked in CI",
     "runs the full ~450s (debug) census; fixtures are drift-checked in CI",

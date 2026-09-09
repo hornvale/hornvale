@@ -51,27 +51,27 @@ Stageable 0 of 36 (1 inapplicable).
 |---|---|---|
 | Supplication (polti-01-supplication) | opponent, receiver, subject | blocked — missing `predicate:compels`, `predicate:threatens`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:holds-office`, `predicate:office-over`, `predicate:office-rank`, `predicate:utterance-force`, `predicate:uttered-to` |
 | Deliverance (polti-02-deliverance) | object, opponent, subject | blocked — missing `predicate:guarded-by`, `predicate:held-captive-by`, `predicate:released-by`, `predicate:compels`, `predicate:threatens`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:executioner-of`, `predicate:judged-by`, `predicate:sanctioned-with`, `predicate:verdict` |
-| Crime Pursued by Vengeance (polti-03-crime-pursued-by-vengeance) | opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by`, `predicate:struck-by`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class` |
-| Vengeance Taken for Kindred upon Kindred (polti-04-vengeance-for-kin-upon-kin) | object, opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by`, `predicate:struck-by`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class` |
+| Crime Pursued by Vengeance (polti-03-crime-pursued-by-vengeance) | opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class` |
+| Vengeance Taken for Kindred upon Kindred (polti-04-vengeance-for-kin-upon-kin) | object, opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class` |
 | Pursuit (polti-05-pursuit) | opponent, subject | blocked — missing `predicate:flees-from`, `predicate:pursues`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:executioner-of`, `predicate:judged-by`, `predicate:sanctioned-with`, `predicate:verdict` |
 | Disaster (polti-06-disaster) | opponent, sender, subject | blocked — missing `predicate:at-war-with`, `predicate:conflict-outcome`, `predicate:utterance-force`, `predicate:uttered-to` |
 | Falling Prey to Cruelty or Misfortune (polti-07-falling-prey-to-cruelty-or-misfortune) | opponent, subject | blocked — missing `predicate:compels`, `predicate:threatens`, `predicate:feels-toward`, `predicate:caste-of-person`, `predicate:outranks`, `predicate:subordinate-to` |
 | Revolt (polti-08-revolt) | opponent, subject | blocked — missing `predicate:at-war-with`, `predicate:conflict-outcome`, `predicate:conspires-with`, `predicate:plot-against`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:holds-office`, `predicate:office-over`, `predicate:office-rank`, `predicate:caste-of-person`, `predicate:outranks`, `predicate:subordinate-to`, `predicate:heir-of`, `predicate:office-vacant`, `predicate:succeeded-by` |
-| Daring Enterprise (polti-09-daring-enterprise) | helper, object, opponent, subject | blocked — missing `predicate:conspires-with`, `predicate:plot-against`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by`, `predicate:struck-by`, `predicate:coveted-by`, `predicate:held-by-person`, `predicate:is-holding` |
-| Abduction (polti-10-abduction) | object, opponent, subject | blocked — missing `predicate:guarded-by`, `predicate:held-captive-by`, `predicate:released-by`, `predicate:feels-toward`, `predicate:flees-from`, `predicate:pursues`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by`, `predicate:struck-by` |
+| Daring Enterprise (polti-09-daring-enterprise) | helper, object, opponent, subject | blocked — missing `predicate:conspires-with`, `predicate:plot-against`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by`, `predicate:coveted-by`, `predicate:held-by-person`, `predicate:is-holding` |
+| Abduction (polti-10-abduction) | object, opponent, subject | blocked — missing `predicate:guarded-by`, `predicate:held-captive-by`, `predicate:released-by`, `predicate:feels-toward`, `predicate:flees-from`, `predicate:pursues`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:slain-by` |
 | The Enigma (polti-11-the-enigma) | object, opponent, subject | blocked — missing `predicate:believes-falsely`, `predicate:ignorant-of`, `predicate:knows-that`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:revealed-to`, `predicate:revealer-of`, `predicate:found-by`, `predicate:seeks`, `predicate:whereabouts-unknown`, `predicate:utterance-force`, `predicate:uttered-to` |
 | Obtaining (polti-12-obtaining) | opponent, receiver, subject | blocked — missing `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:holds-office`, `predicate:office-over`, `predicate:office-rank`, `predicate:coveted-by`, `predicate:held-by-person`, `predicate:is-holding`, `predicate:utterance-force`, `predicate:uttered-to` |
 | Enmity of Kinsmen (polti-13-enmity-of-kinsmen) | opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:acts-to-bring-about`, `predicate:intends` |
 | Rivalry of Kinsmen (polti-14-rivalry-of-kinsmen) | object, opponent, subject | blocked — missing `predicate:desire-requited`, `predicate:desires`, `predicate:feels-toward`, `predicate:coveted-by`, `predicate:held-by-person`, `predicate:is-holding` |
-| Murderous Adultery (polti-15-murderous-adultery) | helper, object, subject | blocked — missing `predicate:conspires-with`, `predicate:plot-against`, `predicate:asserted-falsely`, `predicate:deceives`, `predicate:evidence-forged-by`, `predicate:desire-requited`, `predicate:desires`, `predicate:slain-by`, `predicate:struck-by`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class`, `predicate:bond-dissolved`, `predicate:bond-recognized-by`, `predicate:bonded-to` |
-| Madness (polti-16-madness) | object, subject | blocked — missing `predicate:feels-toward`, `predicate:affliction-of`, `predicate:reason-impaired`, `predicate:slain-by`, `predicate:struck-by`, `predicate:regrets`, `predicate:self-reproach-for` |
+| Murderous Adultery (polti-15-murderous-adultery) | helper, object, subject | blocked — missing `predicate:conspires-with`, `predicate:plot-against`, `predicate:asserted-falsely`, `predicate:deceives`, `predicate:evidence-forged-by`, `predicate:desire-requited`, `predicate:desires`, `predicate:slain-by`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class`, `predicate:bond-dissolved`, `predicate:bond-recognized-by`, `predicate:bonded-to` |
+| Madness (polti-16-madness) | object, subject | blocked — missing `predicate:feels-toward`, `predicate:affliction-of`, `predicate:reason-impaired`, `predicate:slain-by`, `predicate:regrets`, `predicate:self-reproach-for` |
 | Fatal Imprudence (polti-17-fatal-imprudence) | object, subject | blocked — missing `predicate:believes-falsely`, `predicate:ignorant-of`, `predicate:knows-that`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:coveted-by`, `predicate:held-by-person`, `predicate:is-holding`, `predicate:regrets`, `predicate:self-reproach-for` |
 | Involuntary Crimes of Love (polti-18-involuntary-crimes-of-love) | object, sender, subject | blocked — missing `predicate:believes-falsely`, `predicate:ignorant-of`, `predicate:knows-that`, `predicate:desire-requited`, `predicate:desires`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class`, `predicate:revealed-to`, `predicate:revealer-of`, `predicate:regrets`, `predicate:self-reproach-for` |
-| Slaying of a Kinsman Unrecognized (polti-19-slaying-of-a-kinsman-unrecognized) | object, sender, subject | blocked — missing `predicate:presents-as`, `predicate:recognized-as`, `predicate:unrecognized-by`, `predicate:slain-by`, `predicate:struck-by`, `predicate:revealed-to`, `predicate:revealer-of`, `predicate:regrets`, `predicate:self-reproach-for` |
+| Slaying of a Kinsman Unrecognized (polti-19-slaying-of-a-kinsman-unrecognized) | object, sender, subject | blocked — missing `predicate:presents-as`, `predicate:recognized-as`, `predicate:unrecognized-by`, `predicate:slain-by`, `predicate:revealed-to`, `predicate:revealer-of`, `predicate:regrets`, `predicate:self-reproach-for` |
 | Self-Sacrificing for an Ideal (polti-20-self-sacrifice-for-an-ideal) | object, sender, subject | blocked — missing `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:relinquished-for`, `predicate:relinquishes`, `predicate:sworn-to`, `predicate:vow-binds`, `predicate:vow-broken` |
 | Self-Sacrifice for Kindred (polti-21-self-sacrifice-for-kindred) | object, receiver, subject | blocked — missing `predicate:feels-toward`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:relinquished-for`, `predicate:relinquishes` |
 | All Sacrificed for a Passion (polti-22-all-sacrificed-for-a-passion) | object, opponent, subject | blocked — missing `predicate:desire-requited`, `predicate:desires`, `predicate:feels-toward`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:relinquished-for`, `predicate:relinquishes`, `predicate:dishonoured-by`, `predicate:standing-of` |
-| Necessity of Sacrificing Loved Ones (polti-23-necessity-of-sacrificing-loved-ones) | object, sender, subject | blocked — missing `predicate:feels-toward`, `predicate:slain-by`, `predicate:struck-by`, `predicate:relinquished-for`, `predicate:relinquishes`, `predicate:sworn-to`, `predicate:vow-binds`, `predicate:vow-broken` |
+| Necessity of Sacrificing Loved Ones (polti-23-necessity-of-sacrificing-loved-ones) | object, sender, subject | blocked — missing `predicate:feels-toward`, `predicate:slain-by`, `predicate:relinquished-for`, `predicate:relinquishes`, `predicate:sworn-to`, `predicate:vow-binds`, `predicate:vow-broken` |
 | Rivalry of Superior and Inferior (polti-24-rivalry-of-superior-and-inferior) | object, opponent, subject | blocked — missing `predicate:desire-requited`, `predicate:desires`, `predicate:acts-to-bring-about`, `predicate:intends`, `predicate:holds-office`, `predicate:office-over`, `predicate:office-rank`, `predicate:caste-of-person`, `predicate:outranks`, `predicate:subordinate-to`, `predicate:dishonoured-by`, `predicate:standing-of` |
 | Adultery (polti-25-adultery) | helper, object, subject | blocked — missing `predicate:believes-falsely`, `predicate:ignorant-of`, `predicate:knows-that`, `predicate:asserted-falsely`, `predicate:deceives`, `predicate:evidence-forged-by`, `predicate:desire-requited`, `predicate:desires`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class`, `predicate:bond-dissolved`, `predicate:bond-recognized-by`, `predicate:bonded-to` |
 | Crimes of Love (polti-26-crimes-of-love) | object, subject | blocked — missing `predicate:desire-requited`, `predicate:desires`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class`, `predicate:dishonoured-by`, `predicate:standing-of` |
@@ -84,7 +84,7 @@ Stageable 0 of 36 (1 inapplicable).
 | Erroneous Judgement (polti-33-erroneous-judgement) | object, opponent, sender, subject | blocked — missing `predicate:believes-falsely`, `predicate:ignorant-of`, `predicate:knows-that`, `predicate:asserted-falsely`, `predicate:deceives`, `predicate:evidence-forged-by`, `predicate:executioner-of`, `predicate:judged-by`, `predicate:sanctioned-with`, `predicate:verdict`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class`, `predicate:revealed-to`, `predicate:revealer-of` |
 | Remorse (polti-34-remorse) | object, opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:norm-holds-in`, `predicate:transgresses`, `predicate:transgression-class`, `predicate:regrets`, `predicate:self-reproach-for`, `predicate:utterance-force`, `predicate:uttered-to` |
 | Recovery of a Lost One (polti-35-recovery-of-a-lost-one) | object, subject | blocked — missing `predicate:feels-toward`, `predicate:presents-as`, `predicate:recognized-as`, `predicate:unrecognized-by`, `predicate:found-by`, `predicate:seeks`, `predicate:whereabouts-unknown` |
-| Loss of Loved Ones (polti-36-loss-of-loved-ones) | object, opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:slain-by`, `predicate:struck-by`, `predicate:executioner-of`, `predicate:judged-by`, `predicate:sanctioned-with`, `predicate:verdict` |
+| Loss of Loved Ones (polti-36-loss-of-loved-ones) | object, opponent, subject | blocked — missing `predicate:feels-toward`, `predicate:slain-by`, `predicate:executioner-of`, `predicate:judged-by`, `predicate:sanctioned-with`, `predicate:verdict` |
 
 ## Leverage
 
@@ -139,7 +139,7 @@ that is the difference.
 
 ## Supply
 
-357 served tokens no situation in this corpus requires.
+401 served tokens no situation in this corpus requires.
 
 **Demand-side only.** Spec §4 L2.4 asks for tokens no situation requires
 *and no readout consumes*; the second half is not implemented. So this list
@@ -360,6 +360,11 @@ missing half before this list can serve it.
 - `concept:temperate-forest` (climate)
 - `concept:temperate-grassland` (climate)
 - `concept:temperate-rainforest` (climate)
+- `concept:the-consumption` (species)
+- `concept:the-flux` (species)
+- `concept:the-marsh-fever` (species)
+- `concept:the-pest` (species)
+- `concept:the-pox` (species)
 - `concept:think` (language)
 - `concept:thorn-scrub` (climate)
 - `concept:threshold` (thing)
@@ -408,12 +413,25 @@ missing half before this list can serve it.
 - `phenomenon:tide`
 - `predicate:anchor-mass-earth`
 - `predicate:anchor-orbit-au`
+- `predicate:association`
+- `predicate:association-ended`
+- `predicate:association-form`
 - `predicate:breakup-age`
 - `predicate:brightening-per-gyr`
+- `predicate:care`
+- `predicate:care-ended`
+- `predicate:custody`
+- `predicate:custody-ended`
 - `predicate:day-length-std`
 - `predicate:deity-epithet`
 - `predicate:deity-epithet-ipa`
 - `predicate:deity-name-ipa`
+- `predicate:dependency`
+- `predicate:dependency-ended`
+- `predicate:descent`
+- `predicate:descent-ended`
+- `predicate:die`
+- `predicate:dissolve`
 - `predicate:eccentricity-mean`
 - `predicate:figure-count`
 - `predicate:figure-members`
@@ -422,6 +440,10 @@ missing half before this list can serve it.
 - `predicate:fossil-shoreline`
 - `predicate:founding-solstice-azimuth-degrees`
 - `predicate:frost-retreat`
+- `predicate:gender-identity`
+- `predicate:gender-identity-ended`
+- `predicate:gender-recognition`
+- `predicate:gender-recognition-ended`
 - `predicate:genesis-note`
 - `predicate:greenhouse-forcing-k`
 - `predicate:hab-zone-inner-au`
@@ -432,6 +454,8 @@ missing half before this list can serve it.
 - `predicate:is-a`
 - `predicate:is-neighbor`
 - `predicate:is-occupation`
+- `predicate:membership`
+- `predicate:membership-ended`
 - `predicate:moon-age-gyr`
 - `predicate:moon-angular-size-rel`
 - `predicate:moon-count`
@@ -462,17 +486,33 @@ missing half before this list can serve it.
 - `predicate:occ-site`
 - `predicate:occ-tech`
 - `predicate:ocean-fraction`
+- `predicate:origin`
+- `predicate:origin-ended`
+- `predicate:outbreak-deaths`
 - `predicate:person-founded`
+- `predicate:person-social-provenance`
 - `predicate:plate-count`
 - `predicate:pole-star-north`
 - `predicate:pole-star-south`
+- `predicate:recognition`
+- `predicate:recognition-ended`
+- `predicate:recognition-interpretation`
+- `predicate:reproductive-role`
+- `predicate:reproductive-role-ended`
+- `predicate:residence`
+- `predicate:residence-ended`
 - `predicate:retrograde-spin`
 - `predicate:rifted-from`
 - `predicate:scenario-pin`
 - `predicate:sea-level-m`
 - `predicate:sentiment`
+- `predicate:separate`
 - `predicate:settlement-pin`
+- `predicate:sex-trait`
+- `predicate:sex-trait-ended`
 - `predicate:sky-provider`
+- `predicate:social-role`
+- `predicate:social-role-ended`
 - `predicate:species-activity-cycle`
 - `predicate:species-deliberation-latency`
 - `predicate:species-exotic-manner`
@@ -501,6 +541,10 @@ missing half before this list can serve it.
 - `predicate:terrain-note`
 - `predicate:terrain-pin`
 - `predicate:tidally-locked`
+- `predicate:transfer`
+- `predicate:transfer-ended`
+- `predicate:transitioned`
+- `predicate:transitioned-ended`
 - `predicate:wanderer-class`
 - `predicate:wanderer-count`
 - `predicate:wanderer-orbit-au`

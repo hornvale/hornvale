@@ -1,24 +1,23 @@
-# The Counterpart — stage tracker
-
-Detailed plan: [implementation plan](docs/superpowers/plans/2026-09-05-the-counterpart.md).
-
-## Stage 1: Freeze observations and independent questions
-**Goal**: Reviewed raw probe, reused measurement machinery and independent checker.
-**Success Criteria**: Frozen four-question roster; complete raw output retention; checker independently derives expected ownership; stage gate green.
-**Tests**: Focused Rust probe, existing/new Python process tests, hand-derived checker cases, canonical stage gate.
+## Stage 1: Name the population layers
+**Goal**: Add a worldgen readout that distinguishes historical occupation records, present living occupations, and their occupied settlement columns.
+**Success Criteria**: A deterministic seed-42 test reports each quantity separately; no caller uses an ambiguous `settled_columns` label.
+**Tests**: Historical records include plague-ended occupations; present counts include only living occupations; column counts are derived from the corresponding occupation set.
 **Status**: Complete
 
-## Stage 2: Compose independent specimens and compare suggestions
-**Goal**: Independent owner records, source bundle, complete runner and honest three-way shadow comparison.
-**Success Criteria**: Real non-no-op safe pair and qualified interaction or explicit feasibility failure; all questions run; replay inputs and failures retained; stage gate green.
-**Tests**: Comparator fallback/scoring, real Git reconstruction, incomplete/tampered attempt rejection, unreserved real-source panel, canonical stage gate.
+## Stage 2: Reconcile the delve witness
+**Goal**: Make the delve-seating regression assert the historical or present quantity it actually intends to protect, with provenance tied to the new readout.
+**Success Criteria**: The anti-vacuity and seating assertions remain intact, and the test message identifies the measured layer.
+**Tests**: Seed-42 delve seating test; focused worldgen suite.
 **Status**: Complete
 
-## Stage 3: Challenge, replay and prepare G6
-**Goal**: Frozen reserved challenge, supported-host evidence, independent replay and reviewable findings.
-**Success Criteria**: Original misses retained; primary/comparative results separated; reviewed final stage/census receipts and G6 package ready.
-**Tests**: Reserved real-source challenge, Mac/Linux CLI qualification, independent replay, focused final checks and canonical stage gate.
+## Stage 3: Connect projections explicitly
+**Goal**: Document and test the boundary between the authoritative population substrate and Lot projections, including composite and materialized individuals.
+**Success Criteria**: Projection metadata names its source cohort and causal status; population readouts do not treat projected people as substrate counts.
+**Tests**: Existing Lot projection tests plus one cross-layer contract test.
+**Status**: Complete
+
+## Stage 4: Verification and handoff
+**Goal**: Run focused tests, local commit gate, and prepare a stage resubmission only after the semantics are green.
+**Success Criteria**: Tests and audits pass; held request is superseded by a commit whose fixture changes are explained by the layer contract.
+**Tests**: Focused worldgen/Lot tests, `make gate-commit`.
 **Status**: In Progress
-Independent reserved authorship, full12 primary/independent replay, comparison
-and narrative package are complete. Stage3 gate, whole-branch review, census
-and G6 remain pending.

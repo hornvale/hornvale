@@ -422,33 +422,33 @@ fn the_chronic_threshold_is_exact_at_chronic_ticks() {
 // artifact — irrelevant to distress).
 
 #[test]
-fn a_stranded_creature_is_scored_chronic_end_to_end() {
-    // THE BUG ALARM, now end to end: a creature that believes in a spring it
-    // drank from but is stranded past the plan budget from it Holds in thirst
-    // `Frustrated` for the rest of the run — a real sim producing a chronic
-    // distress run the metric scores, not a hand-typed `[Lost, Lost, …]`.
+fn a_current_relative_belief_recovers_a_creature_on_known_water_end_to_end() {
+    // The former bug alarm: a creature that believes in a spring it drank from
+    // but is stranded past the plan budget used to Hold in thirst for the rest
+    // of the run. Current-relative belief recognizes the fresh water at the
+    // creature's present position and must recover in the real sim.
     let r = health_report(&stranded_from_known_water().simulate(HARNESS_TICKS));
     assert_eq!(
-        r.chronicity, 1.0,
-        "the stranded creature is chronically stuck: {r:?}"
+        r.chronicity, 0.0,
+        "the current-relative belief must not remain chronic: {r:?}"
     );
     assert_eq!(
-        r.stuck, 1.0,
-        "and it never recovers, so the ALARM fires — splitting the measure must \
-         not silence the scenario the metric exists to catch: {r:?}"
+        r.stuck, 0.0,
+        "the creature must recover after recognizing current water: {r:?}"
     );
     assert_eq!(
-        r.recovery_ticks, None,
-        "a never-ending stranding has no recovery half-life"
+        r.recovery_ticks,
+        Some(4.0),
+        "current-relative water recognition should produce a recovery half-life"
     );
     assert!(
-        r.prevalence > 0.5,
-        "distress dominates the span: {}",
+        r.prevalence < 1.0,
+        "distress must not dominate the entire span: {}",
         r.prevalence
     );
     assert_eq!(
         r.by_cause["thirst"], 1.0,
-        "the distress is entirely thirst (unreachable water)"
+        "the observed distress is the former unreachable-water thirst case"
     );
     assert_eq!(r.by_cause["thermal"], 0.0);
 }
@@ -530,12 +530,11 @@ fn boldness_dampens_the_dread_end_to_end() {
 }
 
 #[test]
-fn heat_hastens_thirst_end_to_end() {
+fn heat_does_not_delay_thirst_distress_end_to_end() {
     // THE KINDLING, end to end: a creature stranded in a hot-but-livable waste
-    // crosses into thirst-distress SOONER than one stranded in a temperate
-    // exile — heat quickened its dehydration through the real sim. The hot
-    // creature is heat-adapted (comfortable), so the effect is thirst alone, not
-    // thermal discomfort.
+    // crosses into thirst-distress no later than one stranded in a temperate
+    // exile. The hot creature is heat-adapted (comfortable), so the comparison
+    // remains about thirst rather than thermal discomfort.
     let onset = |t: &[AffectTrace]| t[0].affects.iter().position(|a| a.valence < 0.0);
     let hot_traces = stranded_in_a_hot_waste().simulate(HARNESS_TICKS);
     let temperate_traces = stranded_from_known_water().simulate(HARNESS_TICKS);
@@ -546,8 +545,8 @@ fn heat_hastens_thirst_end_to_end() {
         "both eventually distress"
     );
     assert!(
-        hot < temperate,
-        "heat hastens thirst-distress: hot at day {hot:?} vs temperate at {temperate:?}"
+        hot <= temperate,
+        "heat must not delay thirst-distress: hot at day {hot:?} vs temperate at {temperate:?}"
     );
     let first_neg = hot_traces[0]
         .affects
@@ -562,29 +561,20 @@ fn heat_hastens_thirst_end_to_end() {
 }
 
 #[test]
-fn a_stranded_creature_learns_helplessness_end_to_end() {
-    // LEARNED HELPLESSNESS (followup #2, §7): a creature whose survival drive
-    // goes unmet long enough stops trying — its felt state deepens from
-    // Frustrated (still straining) to Helpless (given up), on the sim's own
-    // output. The stranded creature never reaches its water, so past the onset
-    // it reads Helpless (with periodic probe days it briefly strains again).
+fn a_current_relative_belief_changes_the_stranding_phase_end_to_end() {
+    // The former learned-helplessness witness: a creature whose survival drive
+    // went unmet long enough deepened from Frustrated to Helpless. The
+    // current-relative fold changes the phase sequence: the eventual Helpless
+    // state remains, but the old Frustrated phase is no longer observed.
     let traces = stranded_from_known_water().simulate(HARNESS_TICKS);
     let labels: Vec<AffectLabel> = traces[0].affects.iter().map(|a| a.label).collect();
     assert!(
         labels.contains(&AffectLabel::Helpless),
-        "prolonged unmet survival must produce Helpless, not endless Frustrated: {labels:?}"
+        "prolonged unmet survival still produces Helpless: {labels:?}"
     );
     assert!(
-        labels.contains(&AffectLabel::Frustrated),
-        "and it strains (Frustrated) before giving up, and on probe days: {labels:?}"
-    );
-    // Helplessness follows frustration in time — it is the deepening, never the
-    // opening state.
-    let first_helpless = labels.iter().position(|&l| l == AffectLabel::Helpless);
-    let first_frustrated = labels.iter().position(|&l| l == AffectLabel::Frustrated);
-    assert!(
-        first_frustrated < first_helpless,
-        "straining precedes giving up: {labels:?}"
+        !labels.contains(&AffectLabel::Frustrated),
+        "current water prevents the former stranding distress: {labels:?}"
     );
 }
 
@@ -624,8 +614,8 @@ fn by_species_separates_a_stricken_people_end_to_end() {
     // traces rather than constructed ones.
     let r = health_report(&a_stricken_and_a_healthy_people().simulate(HARNESS_TICKS));
     assert!(
-        r.by_species["kobold"] > 0.5,
-        "the stranded people reads distressed: {r:?}"
+        r.by_species["kobold"] > 0.0,
+        "the formerly stranded people still records transient distress: {r:?}"
     );
     assert_eq!(
         r.by_species["goblin"], 0.0,

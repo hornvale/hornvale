@@ -328,29 +328,16 @@ fn emitter_bearing_world() -> (u64, hornvale_kernel::World) {
 
 /// The seed [`emitter_bearing_world`] lands on today.
 ///
-/// **IT WAS 28 UNTIL THE ABSORPTION OF `2c34f9e4c` AND IT IS 6 NOW, AND THIS
-/// CONSTANT EXISTS SO THAT MOVE IS LOUD.** The assertion beneath the search
-/// fired exactly as its own message asks it to: "that is a finding about the
-/// sim, not a broken test". The finding is that WHICH worlds replay an
-/// emitter's affect at a past visit day is not what it was, because The Roll
-/// changed who is on the roll at all — a session ticks the settlement's whole
-/// roll now, so the emitter-scan population a walk builds is a different
-/// population, and the halo pre-filter and terrain shortcut that used to keep
-/// seed 42's replay count at zero now let a great many more rooms through on
-/// the seeds that reach the path at all. The magnitude is worth stating rather
-/// than the fact alone: the eight-wait script that reported **10** past-day
-/// replays on seed 28 reports **2,125** on seed 6, over 127 bodies, from 2,565
-/// emitter scans of which 8 find an emitter. This is a re-measurement of a
-/// different world, not a like-for-like ratio, and the search — not the
-/// constant — is still what selects it.
+/// **The search lands on seed 6 on this tree, and this constant exists so
+/// that a future move is loud.** The search remains the authority; the
+/// constant records the currently measured landing seed for the sibling
+/// witnesses and makes a world-selection change fail explicitly.
 ///
 /// **The script is two waits now, not eight** (see [`EMITTER_SCRIPT_WAITS`]),
-/// and the seed did not move with it — which is the one thing that had to be
-/// checked before cutting it. On the two-wait script seed 6 reports **342**
-/// past-day replays over 127 bodies, from 453 emitter scans of which 3 find an
-/// emitter, with 186 shunned rooms and 6 dread entries. Read that against the
-/// eight-wait line above as two measurements of different scripts, exactly as
-/// the paragraph at the bottom of this doc insists.
+/// and the seed remains 6 on this tree — which is the one thing that had to
+/// be checked before cutting it. The witness prints the current replay,
+/// emitter-scan, and digest counts; older wait-count measurements are not
+/// silently reused.
 ///
 /// The paragraphs below are the pre-absorption record and are kept because the
 /// reasoning is what makes the search a search. Their COUNTS are pre-Roll and

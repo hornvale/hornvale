@@ -17,9 +17,12 @@ pub mod condense;
 pub mod flow;
 pub mod footprint;
 pub mod founder;
+pub mod groups;
+pub mod kinship;
 pub mod niche;
 pub mod render;
 pub mod reproductive;
+pub mod social;
 pub mod stack_condense;
 pub use byproducts::{Byproducts, byproducts};
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
@@ -28,6 +31,14 @@ pub use condense::{Condensation, condense};
 pub use flow::{Flow, flow};
 pub use footprint::home_range;
 pub use founder::condense_tagged;
+pub use groups::{
+    ContextRule, GroupBasis, GroupKey, GroupMember, GroupProjection, SocialContext, derive_groups,
+};
+pub use kinship::{
+    CareKind, CareProjection, InheritanceClaim, KinshipKind, KinshipRelation, ProjectionBounds,
+    ProjectionError, ProjectionEvent, ProjectionRelationKind, derive_care, derive_inheritance,
+    derive_kinship,
+};
 pub use render::{density_ppm, refugia_ppm, stack_density_ppm, strife_ppm};
 pub use reproductive::{
     CareBurdenDistribution, HybridOutcome, HybridOutcomeDistribution, IndependenceOutcome,
@@ -35,6 +46,14 @@ pub use reproductive::{
     ReproductivePopulationInput, ReproductivePopulationSummary, ReproductivePossibility,
     ReproductiveRole, ReproductiveTypicality, RoleAvailabilityDistribution, SocialSubstrateInput,
     SurvivalDistribution, social_substrate_input, summarize_reproduction,
+};
+pub use social::{
+    AssociationDistribution, BiologicalCareTopology, BiologicalDevelopmentSite,
+    BiologicalTransitionCapability, CareTopology, CompatibilityRelation, DescentDistribution,
+    DescentMode, DescentRelation, InheritanceDistribution, LifecycleTransition,
+    LifecycleTransitionKind, MigrationDistribution, OffspringOrigin, OffspringPathway,
+    SocialCohortInput, SocialCohortSummary, SocialInputError, summarize_social_cohort,
+    validate_social_cohort,
 };
 pub use stack_condense::StackSettlement;
 

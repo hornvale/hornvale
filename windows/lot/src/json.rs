@@ -67,7 +67,27 @@ struct PickDoc {
 #[derive(Serialize)]
 struct EndingDoc {
     kind: &'static str,
-    cause: Option<&'static str>,
+    cause: Option<String>,
+}
+
+/// The source cohort carried by one projection.
+#[derive(Serialize)]
+struct SourceCohortDoc {
+    people: &'static str,
+    site: u32,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    year: f64,
+}
+
+/// The explicit projection boundary carried by the life payload.
+#[derive(Serialize)]
+struct ProjectionDoc {
+    kind: &'static str,
+    source_cohort: SourceCohortDoc,
+    selection_lens: &'static str,
+    materiality: &'static str,
+    sampling_bias: &'static str,
+    consequences_write_back: bool,
 }
 
 /// Why a slot has no value — the two kinds kept distinct, because the
@@ -132,6 +152,7 @@ struct LifeDoc<'a> {
     age_at_death: f64,
     matured: bool,
     ending: EndingDoc,
+    projection: ProjectionDoc,
     moved_to: Option<usize>,
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field")]
     moved_year: Option<f64>,
@@ -205,7 +226,8 @@ pub fn life_json(ctx: &LotContext, life: &Life, story: &Story) -> String {
         death_year: life.death_year,
         age_at_death: life.age_at_death,
         matured: life.matured,
-        ending: ending_doc(&life.ending),
+        ending: ending_doc(life),
+        projection: projection_doc(&life.projection),
         moved_to: life.moved_to,
         moved_year: life.moved_year,
         shape: shape_name(&ctx.occupations[life.occ].shape),
@@ -225,20 +247,62 @@ pub fn life_json(ctx: &LotContext, life: &Life, story: &Story) -> String {
 }
 
 /// The document form of one ending.
-fn ending_doc(ending: &Ending) -> EndingDoc {
-    match ending {
+fn ending_doc(life: &Life) -> EndingDoc {
+    match &life.ending {
         Ending::Alive => EndingDoc {
             kind: "alive",
             cause: None,
         },
         Ending::Hazard => EndingDoc {
             kind: "hazard",
-            cause: None,
+            cause: life.cause.as_ref().map(crate::draw::DeathCause::label),
+        },
+        Ending::Outbreak(kind) => EndingDoc {
+            kind: "outbreak",
+            cause: Some(kind.0.replace('-', " ")),
         },
         Ending::CommunityFate(cause) => EndingDoc {
             kind: "community-fate",
-            cause: Some(cause_name(*cause)),
+            cause: Some(life.cause.as_ref().map_or_else(
+                || cause_name(*cause).to_string(),
+                crate::draw::DeathCause::label,
+            )),
         },
+    }
+}
+
+fn projection_doc(projection: &crate::projection::Projection) -> ProjectionDoc {
+    use crate::projection::{ProjectionKind, ProjectionMateriality, SamplingBias, SelectionLens};
+    ProjectionDoc {
+        kind: match projection.kind {
+            ProjectionKind::Aggregate => "aggregate",
+            ProjectionKind::Composite => "composite",
+            ProjectionKind::MaterializedIndividual => "materialized-individual",
+            ProjectionKind::SalientCharacter => "salient-character",
+        },
+        source_cohort: SourceCohortDoc {
+            people: projection.source_cohort.people.0,
+            site: projection.source_cohort.site.0,
+            year: projection.source_cohort.year,
+        },
+        selection_lens: match projection.selection_lens {
+            SelectionLens::PopulationWeighted => "population-weighted",
+            SelectionLens::Representative => "representative",
+            SelectionLens::Salient => "salient",
+        },
+        materiality: match projection.materiality {
+            ProjectionMateriality::AggregateState => "aggregate-state",
+            ProjectionMateriality::Analytical => "analytical",
+            ProjectionMateriality::InWorld => "in-world",
+            ProjectionMateriality::MaterializedIndividual => "materialized-individual",
+        },
+        sampling_bias: match projection.sampling_bias {
+            SamplingBias::None => "none",
+            SamplingBias::PopulationWeighted => "population-weighted",
+            SamplingBias::Representative => "representative",
+            SamplingBias::SalienceWeighted => "salience-weighted",
+        },
+        consequences_write_back: projection.consequences_write_back(),
     }
 }
 
@@ -445,6 +509,14 @@ struct OddsDoc {
     background_share: f64,
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     senescent_share: f64,
+    causes: Vec<CauseOddsDoc>,
+}
+
+#[derive(Serialize)]
+struct CauseOddsDoc {
+    cause: String,
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    share: f64,
 }
 
 /// One occupation's mortality profile as `lot/odds/v1`.
@@ -460,6 +532,14 @@ pub fn odds_json(odds: &Odds) -> String {
         infant_share: odds.infant_share,
         background_share: odds.background_share,
         senescent_share: odds.senescent_share,
+        causes: odds
+            .causes
+            .iter()
+            .map(|row| CauseOddsDoc {
+                cause: row.cause.label(),
+                share: row.share,
+            })
+            .collect(),
     })
 }
 

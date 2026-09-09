@@ -669,9 +669,13 @@ gen_chart_reference() {
 # shorter arc than before: bronze at the base, then iron, then classical, with
 # no neolithic layer left. The standing sixth was founded in 800 by
 # Venggomnjen and holds 84 souls.
+# RE-READ 2026-09-06 (The Murrain, Task 2): history/bake/v4 changes the
+# seed-42 epoch. Vertex 10626 now carries one living human layer, founded in
+# 1775; the camera remains on a non-empty real column, and the framing below
+# states only facts present in the live render.
 history_site=10626
 gen_history() {
-    printf '# The Contested Clearing of Seed 42\n\n'
+    printf '# A Living Clearing of Seed 42\n\n'
     # shellcheck disable=SC2016  # markdown code spans: the backticks are literal
     printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
     printf 'of every people that ever settled one vertex, oldest layer deepest, and the\n'
@@ -680,26 +684,10 @@ gen_history() {
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
     printf '(structures, residue) derived on demand and never committed.\n\n'
     printf 'This is a real clearing on the world of seed 42 — vertex %s — and\n' "$history_site"
-    printf 'twelve kobold steadings have risen on it, one settling atop the ruins\n'
-    printf 'of the last, from the year 200 down to the present. No other people\n'
-    printf 'ever touched this ground: it is a people with only itself to fight,\n'
-    printf 'and it has fought itself here for eighteen centuries. Seven of the\n'
-    printf 'eleven completed layers ended at kobold hands; four were not\n'
-    printf 'evictions at all — the occupants drove rival kobolds off better\n'
-    printf 'ground nearby (once off vertex 2666, three times off vertex 10628) and\n'
-    printf 'carried the settlement onto the land they had taken, so the layer\n'
-    printf 'closes on a departure rather than a defeat.\n\n'
-    printf 'The cold is in this column, but never as an ending. Not one layer\n'
-    printf 'fell to ice. Every layer instead *arrived* fleeing it — all twelve,\n'
-    printf 'the deepest included, driven off one of four neighbouring clearings\n'
-    printf '(2666 and 10628 most often, 10627 and 10638 once each). No one ever\n'
-    printf 'broke this soil by choice: it has been a refuge from its first layer\n'
-    printf 'to its last. Read bottom to top, the column carries a complete\n'
-    printf 'technological arc — two neolithic layers at the base, then bronze,\n'
-    printf 'iron, and six classical layers on top, the whole craft history of a\n'
-    printf 'people in one stack of earth. The twelfth was founded in the year\n'
-    printf '1875 and stands yet: some 24 souls, two huts and a granary, and no\n'
-    printf 'ruin yet to read.\n\n'
+    printf 'one human steading has risen on it. Settlers came from vertex 10638\n'
+    printf 'in the year 1775, and the layer still stands after 225 years. At its\n'
+    printf 'height some 12 souls raised two huts and a granary. There is no ruin\n'
+    printf 'to read yet — only a living settlement and smoke on the air.\n\n'
     printf '```text\n'
     run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
@@ -1190,7 +1178,8 @@ reap
 echo "regenerate-artifacts: GROUP D — lab studies (serial)" >&2
 
 echo "regenerate-artifacts: the chorus study (C4/LANG-41, 50 seeds; live, not a census)" >&2
-run_release -p hornvale -- lab run studies/the-chorus.study.json
+HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-chorus -- \
+    cargo run -q --release -p hornvale -- lab run studies/the-chorus.study.json
 
 # Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
 # skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.
@@ -1264,8 +1253,22 @@ done
 # §4.5), so it runs unconditionally here, independent of the HV_CENSUS gate
 # above. Serial (not parallelised): it reads the schema the backfill loop
 # just wrote.
+# TIMED SEPARATELY (2026-09-07). `census` minus the two study rows left a
+# 221-318 s remainder across five runs with a 96.6 s spread and no trend, so
+# four perf changes across two campaigns were safe, byte-identical and
+# UNMEASURABLE — the effect each sought was smaller than the noise in the only
+# number that could see it. These two are the tail's serial trailers by their
+# own comments above, each reading 1000 worlds, which fits the tail's observed
+# cpu_ratio of 4.5-7.4 against the studies' ~36.
+#
+# NOTE THE EXPANDED `cargo run` RATHER THAN THE `run` HELPER: run() is a shell
+# FUNCTION (line 208), and scripts/timed.sh executes `time "$@"`, which cannot
+# invoke one. The existing census-study rows above expand it for the same
+# reason. Writing `timed.sh ... -- run -p hornvale ...` looks right and fails
+# at runtime.
 echo "regenerate-artifacts: the domesday survey" >&2
-run -p hornvale -- lab domesday
+HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-domesday -- \
+    cargo run -q -p hornvale -- lab domesday
 
 # The anomaly report (The Gnomon, 2026-08-13): the Domesday's transpose, per
 # world rather than per column. Also a pure read over the same COMMITTED
@@ -1274,7 +1277,8 @@ run -p hornvale -- lab domesday
 # reads the schema the backfill loop above just wrote, so it cannot be
 # spawned into Group B+C.
 echo "regenerate-artifacts: the anomaly report" >&2
-run -p hornvale -- lab anomalies
+HV_CENSUS_WAITED_S=0 bash scripts/timed.sh census-tail-anomalies -- \
+    cargo run -q -p hornvale -- lab anomalies
 
 echo "regenerate-artifacts: done." >&2
 

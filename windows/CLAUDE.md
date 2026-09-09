@@ -71,7 +71,7 @@ cannot drift apart. Read the root `CLAUDE.md` "Architecture" and
 | `locale` | a `Facet` as an observable place |
 | `vessel` | possession: walking the locale mesh through a verb loop |
 | `lab` | the measurement instrument — studies over generated worlds |
-| `lot` | one life drawn from a world's person-years, told from the ledger alone; a slot it cannot fill is a counted silence (decisions 0796–0798) |
+| `lot` | one life drawn from a world's person-years, told from the ledger alone; a slot it cannot fill is a counted silence; disease causes and composite projections are views of the worldgen population substrate, not a second population authority (decisions 0796–0798, 0856–0859) |
 
 Subdirectories with extra guidance: `worldgen/` (the composition root and the
 `BuildDepth` ladder) and `lab/` (studies vs metrics, census regeneration).

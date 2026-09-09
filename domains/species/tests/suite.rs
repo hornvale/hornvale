@@ -19,6 +19,8 @@ mod instance_lens;
 mod life_history_golden;
 #[path = "suite/metabolic_pairs.rs"]
 mod metabolic_pairs;
+#[path = "suite/pathogens.rs"]
+mod pathogens;
 #[path = "suite/potency_assay.rs"]
 mod potency_assay;
 #[path = "suite/reproduction.rs"]

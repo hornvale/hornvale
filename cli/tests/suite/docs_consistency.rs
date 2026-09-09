@@ -2231,7 +2231,10 @@ fn unmatched_plan_slugs() -> BTreeSet<String> {
 /// raise this constant with a one-line note of which plan and why. A fall
 /// means a plan was deleted, renamed into a matching pair, or the matcher
 /// improved — investigate before lowering it.
-const EXPECTED_UNMATCHED_PLAN_COUNT: usize = 54;
+/// The population-layer follow-up plan (`2026-09-08-population-layers`) is
+/// intentionally recorded here as a plan without a new spec: it continues
+/// the active Murrain design rather than opening a separate campaign.
+const EXPECTED_UNMATCHED_PLAN_COUNT: usize = 55;
 
 #[test]
 fn the_unmatched_plan_count_has_not_moved() {

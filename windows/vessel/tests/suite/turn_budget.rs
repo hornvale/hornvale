@@ -265,10 +265,10 @@ fn a_chamber_wait_derives_a_shadowcast_on_each_side_of_its_tick() {
     );
 }
 
-/// **THE ROUTE MEMO IS SESSION-LIVED, not merely used** (The Culvert, Task 7
-/// fix round 1). After a first `wait` has warmed it, SEVEN further waits add
-/// ZERO `plan_to_room` searches: a warm memo asked the same `(home, dest)`
-/// questions answers them from its map.
+/// The old session-lived water-belief memo witness is retired by The Fetch:
+/// current-relative belief intentionally uses direct searches and does not
+/// populate the home-keyed `RouteMemo`. The Culvert's actor-relative sweep
+/// and the direct `RouteMemo` unit tests cover the remaining contracts.
 ///
 /// # Why this test exists at all, and what it catches that nothing else does
 ///
@@ -310,6 +310,7 @@ fn a_chamber_wait_derives_a_shadowcast_on_each_side_of_its_tick() {
 /// Restored by copy from a pre-mutation file, re-verified by grep, and re-run
 /// on a rebuilt binary.
 #[test]
+#[ignore = "retired: current-relative water belief bypasses the home-keyed RouteMemo"]
 fn the_route_memo_survives_between_waits() {
     let world = common::build(42).expect("seed 42 builds");
     let (mut session, _) = Session::start(&world, &PossessOpts::default()).expect("starts");

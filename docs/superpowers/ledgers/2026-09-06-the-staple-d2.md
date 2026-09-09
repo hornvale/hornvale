@@ -1,0 +1,238 @@
+# The Staple D2 — decision ledger
+
+Campaign: **The Staple D2** — voluntary local exchange beside tribute.
+Branch: `campaign/the-staple-d2`. Decision block: **0886–0895**.
+Spec: `docs/superpowers/specs/2026-09-06-the-staple-d2-design.md`.
+Status: G3 approved; implementation active (Task 1 complete).
+
+## Entries
+
+#1 [G1] — **What is D2's first mechanism?** · **Decision: two typed,
+non-convertible subsistence commodities exchanged bilaterally over local
+reachability.** One aggregate stock would model redistribution or aid, not
+reciprocal exchange. Ideonomy: 1 pass, no overturn; the pass exposed the
+one-stock dead mechanism. Capture: spec §§3–4.
+
+#2 [Q] — **What is the stock family?** · **Decision: population, two typed
+subsistence stocks, and existing non-edible `stores`; units are fungible only
+within type.** Cross-type conversion is a later campaign. Ideonomy: 1 pass,
+no overturn. Capture: spec §3.
+
+#3 [Q] — **How are exchange promises represented?** · **Decision: D2
+exercises only immediate delivery; typed obligations remain the extensible
+future family.** Failed and partial attempts have explicit outcomes but do
+not create debt. Ideonomy: 1 pass, no overturn. Capture: spec §§3–4.
+
+#4 [Q] — **How is scarce stock allocated?** · **Decision: reserve local
+projected need, then simultaneous deterministic pro-rata clearing. Funded
+acyclic chains may continue; unfunded cycles cannot settle.** Ideonomy: 1
+pass, no overturn. Capture: spec §3.
+
+#5 [Q] — **What is the probe?** · **Decision: paired control/treatment over
+200 seeds, with separate world and attempt denominators. Dead poles are zero
+activation and more than half the treatment worlds breaching each existing
+demographic bar.** Outcome rates are descriptive. Ideonomy: 1 pass, no
+overturn. Capture: spec §4; decision 0826.
+
+#6 [Q] — **What is committed versus derived?** · **Decision: exchange
+outcomes are derived study traces and aggregate census candidates; only
+irreducible stock inputs and pins become durable simulation state.** Ideonomy:
+1 pass, no overturn. Capture: spec §§3–4.
+
+#7 [G3] — **Which existing bars define instability?** · **Decision: use the
+history gate's settlement-count sane band `40..=400`, collapse-share ceiling
+`0.05`, and alive-at-now floor `50`; count only treatment-only breaches against
+the paired control.** These are existing guardrails, not new population
+targets. G3 approval received 2026-09-06. Ideonomy: 1 pass, no overturn.
+Capture: spec §4; `windows/worldgen/tests/suite/history_tumult.rs`.
+
+#8 [G4] — **Plan review before execution.** · **Decision: proceed with the
+five-stage plan at `docs/superpowers/plans/2026-09-06-the-staple-d2.md`.**
+Self-review found and corrected the Task 1 dependency inversion: the probe
+fixture freezes the report contract before production exchange code; Task 4
+is the integrated treatment. It also replaced the vague one-hop reference
+with the verified `traversable_neighbors` helper and named the exact existing
+bars. Ideonomy: 0 passes — this is a review gate, not a design choice.
+Capture: `IMPLEMENTATION_PLAN.md`; the plan.
+
+#9 [Q] — **What is the exchange bundle ratio?** · **Decision: D2 uses one
+fixed 1:1 typed bundle ratio, inherited from the complementary half-and-half
+basket. There is no ratio schedule, quote, or price discovery in this rung.**
+Ideonomy negation surfaced the deferred opposite (variable, negotiated or
+market-set ratio) as a later mechanism, not a reason to leave Task 3's
+interface undefined. Capture: spec §3; plan Task 3.
+
+## Task 1 — probe contract frozen
+
+The executable fixture now treats the 200 worlds and the attempt population as
+different denominators. An empty outcome set reports `NoExchangeAttempts`;
+failed attempts with no settlement produce a valid report with
+`activation_worlds == 0`. Every reported status carries its own non-zero
+attempt denominator, and only a bar passed by the paired control can count as
+a treatment-only breach. No ideonomy pass was run: this implements the
+G4-approved report contract and records measured behavior rather than making a
+new design choice.
+
+The fixed roster `1..=200` was built as 200 same-seed control/disabled-treatment
+pairs through separate fixture boundaries. The explicit probe passed
+`200 / 200` byte-identical ledger comparisons in `949.31s`; because production
+exchange does not exist yet, it then reached the separately represented zero-
+attempt result. Stock residual shape and finiteness checks execute before that
+result, so the empty outcome cannot bypass the conservation surface.
+
+### Task 1 review — fix round 1
+
+The reviewer found two high-severity defects: the conservation check rejected
+non-finite residuals but accepted finite nonzero residuals, and the disabled
+treatment arm called the same builder as control rather than exercising an
+explicit disabled-treatment boundary. Ruling: fix both before Task 1 can be
+marked complete. Cost if wrong: the probe could certify stock creation or a
+disconnected control switch while all assertions remained green.
+
+Fix result: the reducer now rejects every non-finite or finite nonzero
+per-resource residual before outcome reporting. Control and disabled treatment
+own separate world-builder boundaries, and the observation seam serializes and
+compares their ledger bytes. A focused test mutates only the disabled ledger
+and proves the mismatch reaches `DisabledControlChanged`; the fixed 200-seed
+test remains unchanged and was not rerun because its prior 949.31s evidence is
+already recorded above. Ideonomy: 0 passes — this fix executes the review's
+specified contract and introduces no design choice.
+
+Task 1 is complete at `3bf26e0dc`. The scoped reviewer re-ran the focused
+contract tests (9 passed, 0 failed, 1 ignored) and found no remaining
+findings. The expensive 200-seed fixture is covered by the earlier recorded
+949.31s run; it was deliberately not repeated during review. The probe is
+now an accepted executable contract for the production state and clearing
+tasks that follow.
+
+### Task 2 review — fix round 1
+
+The scoped reviewer found one high-severity defect: computing resource B as
+`total - A` does not guarantee that `A + B` is bit-exactly `total` for every
+valid floating-point total and authored share. The existing single-case test
+was favorable and could not protect the exact-zero conservation contract that
+Task 4 will consume. Ruling: repair the partition or weaken the contract only
+with an explicit design decision; do not mark Task 2 complete while the
+reviewer's counterexample remains possible. Cost if wrong: the integrated
+probe could report stock creation from roundoff under the preregistered exact
+conservation criterion.
+
+Fix round 1 repaired the reviewer counterexample by multiplying the majority
+component first and using Sterbenz-exact subtraction for the remainder; the
+regression covers the original value, representative biomes, subnormal
+boundaries, `f64::MAX`, and a two-million-value finite sweep. Re-review found
+one medium edge: the debug contract admitted negative zero as non-negative,
+but bit-exact reconstruction canonicalized it to positive zero. Ruling: make
+the valid non-negative domain explicit by canonicalizing zero at the helper
+boundary and add a signed-zero regression; do not weaken the bit-exact
+conservation property. Cost if wrong: a future zero-valued production path
+could trip its own exact conservation assertion despite carrying no stock.
+
+Fix round 2 canonicalized signed zero at the partition boundary and added a
+non-vacuous `-0.0` regression. The final scoped reviewer reports CLEAN: the
+original counterexample, representative positive values, subnormal and large
+finite values, and signed zero all satisfy the exact-zero conservation
+property; no Task 2 requirement regressed. Task 2 is complete at
+`8da7001c8`. Implementer evidence: focused 8-test suite passed, clippy passed,
+and gate-commit passed 1300/1300 with no Task 1 probe or census rerun.
+
+### Task 3 review — fix round 1
+
+The reviewer found three high/medium defects. First, clearing A and B
+independently allowed one-way redistribution, violating the pinned 1:1
+reciprocal bundle. Second, pooling an entire connected component and inventing
+shortest relay paths bypassed the declared conductance-positive one-hop
+counterparty rule and created relay deliveries without attempts. Third, the
+reported conservation residual was tautological: every delivery was added
+once to both `sent` and `received`, so it could never detect creation,
+double-spending, or unfunded forwarding. Ruling: replace component pooling
+with explicit declared counterparty matching, enforce bundle funding in the
+same atomic settlement, and calculate residuals from opening surpluses versus
+outgoing deliveries and requester receipts. Cost if wrong: the study would
+measure aid and invented routing while reporting a false conservation proof.
+
+Fix round 1 repaired those three contracts and made the direct reciprocal
+matching and mutation-sensitive accounting explicit. Re-review found one
+remaining high defect: the purported acyclic-chain test still used two
+independent opening-funded swaps, while the implementation freezes capacity
+from opening stock and cannot let an already-declared incoming delivery fund a
+downstream direct request. Ruling: add genuine incoming-funded chain
+propagation over direct declared one-hop proposals, with deterministic
+topological settlement and cycle handling, and replace the vacuous chain
+fixture. Cost if wrong: D2 would reject the exact non-local dependence the
+metaplan names while passing a same-phase pair test.
+
+Fix round 2 added genuine incoming-funded acyclic propagation: the middle
+community has zero opening capacity for the forwarded resource, receives it
+through one declared direct bundle, and then forwards it through a separate
+declared direct bundle. The final reviewer reports CLEAN. The 85-test focused
+suite covers reciprocal bundles, direct one-hop eligibility, funded chains,
+funded and unfunded cycles, six statuses, reordered input, purity, and the
+mutation-sensitive conservation residual. Task 3 is complete at
+`e2ed8eaa9`; no 200-seed probe or census was run.
+
+### Task 4 probe — invalid first run
+
+The first integrated 200-seed run completed after `1416.48s` and reported
+activation `178/200`, but its paired demographic comparison is invalid: the
+disabled/control path passed a doubled-pressure factor (`1.0`) instead of the
+identity shortfall (`0.0`). Its control identity count was `200/200`, but the
+control worlds were not the existing demographic control. The run is retained
+as an invalid measurement record, not as a verdict; the implementation is
+correcting the argument before one replacement probe is run.
+
+### Task 4 probe — valid authorized replacement
+
+After the disabled path was corrected to pass the identity shortfall `0.0`,
+the controller authorized exactly one replacement of the invalid measurement.
+That replacement completed in `1378.30s` over exactly `200` paired worlds and
+is the authoritative Task 4 result; it does not overwrite the invalid run
+above.
+
+- Control identity: `200/200` worlds.
+- Activation: `178/200` worlds.
+- Attempts: `3,239,066`; proposed `3,239,066/3,239,066`; accepted
+  `163,146/3,239,066`; settled `81,573/3,239,066`; partial
+  `81,573/3,239,066`; refused `1,905,072/3,239,066`; impossible
+  `1,170,848/3,239,066`.
+- Conservation residuals: nonzero in `0/200` treatment worlds.
+- Treatment-only bars, each against its own 200-world denominator:
+  settlement count `6/200`, collapse share `1/200`, alive at now `0/200`.
+- `zero_activation=false`; `crosses_instability_pole=false`.
+
+Verdict under the preregistered bars: D2 activates and does not cross the
+instability pole. Every treatment-only bar remains below its preregistered
+majority threshold (`>100/200`). The invalid first run remains solely the
+record of the control-identity defect and is not part of this verdict.
+
+## Deferred minors and follow-ups
+
+- The specialization input and shortfall insertion point were verified against
+  the live tree before dispatch; no stale identifier remained.
+- The bar-source citation is corrected: `history_tumult.rs` carries the
+  settlement band `40..=400` and alive floor `50`, while
+  `history_sundering.rs` owns the approved collapse ceiling `0.05`.
+- The two typed resource names remain implementation concepts, not registry
+  rows, until they stabilize beyond this rung.
+- Aggregate exchange metrics remain derived study output; promotion to the
+  larger census is deferred until query durability and frequency are shown.
+- Census re-baselining and conversion of history-adjacent pins to invariants
+  remain pending the sanctioned close path. This documentation pass does not
+  run a census or alter its fixtures.
+
+### Task 5 documentation close
+
+The close pass converted the typed partition, disabled-control identity,
+runtime phase ordering, and exact treatment-only bar directions into explicit
+invariant claims in the executable tests. Each ordering fixture requires the
+events it orders to be nonzero, and the control compares independently built
+boundaries, so the guards cannot pass vacuously. The chronicle and
+retrospective name the outcome of every deferred minor; no deferred item was
+silently dropped.
+
+## G3 review questions
+
+1. Is D2's two-commodity production split acceptable as the smallest genuine
+   exchange mechanism? **Approved at G3.**
+2. Does the climate-to-city ownership sentence belong in the metaplan now,
+   or remain an open D2 design consequence until the probe is measured?

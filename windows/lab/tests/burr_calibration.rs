@@ -129,13 +129,11 @@ const DICTIONARY: &str = "../../book/src/reference/dictionary-generated.md";
 /// untouched. Re-pinned deliberately, per this test's own instruction. Never
 /// tuned.
 ///
-/// **THE WINZE T2b (spec amendment E): 0.798234552332913 ->
-/// 0.8004956629491945.** The working ring scan moves where mining camps are
-/// founded, so every world's settlement history moves and the corpus this
-/// classifier reads is re-drawn. A readout, not a target: nothing in this
-/// campaign touches the classifier or the typological stages the baseline is
-/// about.
-const BASELINE: f64 = 0.8004956629491945;
+/// **The Murrain: 0.8004956629491945 -> 0.8012779552715655.** The epidemic
+/// phase changes deterministic history, so the corpus this classifier reads
+/// is re-drawn. A readout, not a target: nothing in this campaign touches the
+/// classifier or the typological stages the baseline is about.
+const BASELINE: f64 = 0.8012779552715655;
 
 /// The chance floor for an 18-way assignment. Reported alongside the baseline
 /// because an accuracy figure without its denominator is not interpretable.

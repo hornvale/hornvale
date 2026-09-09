@@ -137,6 +137,10 @@ mod lantern_probe;
 mod lot_probe;
 #[path = "suite/mines_exist.rs"]
 mod mines_exist;
+#[path = "suite/murrain_population.rs"]
+mod murrain_population;
+#[path = "suite/murrain_probe.rs"]
+mod murrain_probe;
 #[path = "suite/name_pattern.rs"]
 mod name_pattern;
 #[path = "suite/niche_breadth_probe.rs"]
@@ -159,6 +163,8 @@ mod person_promotion;
 mod pin_enumeration;
 #[path = "suite/plat_reading_probe.rs"]
 mod plat_reading_probe;
+#[path = "suite/population_layers.rs"]
+mod population_layers;
 #[path = "suite/portolan_resolution.rs"]
 mod portolan_resolution;
 #[path = "suite/profile.rs"]
@@ -191,12 +197,20 @@ mod repose_exposure;
 mod repose_laws;
 #[path = "suite/reproductive.rs"]
 mod reproductive;
+#[path = "suite/social_projection.rs"]
+mod social_projection;
+#[path = "suite/social_readout.rs"]
+mod social_readout;
 #[path = "suite/soil_attribution_probe.rs"]
 mod soil_attribution_probe;
 #[path = "suite/solitary_tongue.rs"]
 mod solitary_tongue;
 #[path = "suite/species_worlds.rs"]
 mod species_worlds;
+#[path = "suite/staple_d2_probe.rs"]
+mod staple_d2_probe;
+#[path = "suite/staple_d3_probe.rs"]
+mod staple_d3_probe;
 #[path = "suite/stope_variety_probe.rs"]
 mod stope_variety_probe;
 #[path = "suite/subterranean_energy_probe.rs"]

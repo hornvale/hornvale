@@ -15,3 +15,5 @@ mod descent;
 mod flesh;
 #[path = "suite/record.rs"]
 mod record;
+#[path = "suite/social.rs"]
+mod social;

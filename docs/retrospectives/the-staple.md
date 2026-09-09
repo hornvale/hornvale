@@ -118,6 +118,35 @@ instrument that produced them.
   machinery can be proven against hamlet-scale settlements is asserted and
   unmeasured (§6). Both were flagged in the G3 package.
 
+## D3 close — the diagnostic witness found the other dead pole
+
+The Staple D3 continuation did not ship the downhill flow. Its first probe
+scaffold correctly found that the public integration boundary had no return
+witness; an endpoint-label proxy was removed after review. Nathan then
+approved an emitted, zero-impact diagnostic sidecar. The sidecar was tested at
+the bake boundary for immutability and determinism, and its classification
+reads only continuous protection, goods, and legitimacy components.
+
+The first fixed-roster run failed its required denominator because seed 1 had
+no relation. The repair pooled standing relations across the unchanged
+`1..=200` roster and named empty seeds instead of selecting them. The fresh
+run found `empty_seeds=[195]`, `N=17,740`, `C=17,740`, `C/N=1.0`, all bands high,
+and zero diagnostic residuals. This is the preregistered uniform-relabeling
+dead pole. It is not production conservation evidence because the sidecar
+applies no outflow.
+
+The process lesson is sharper than “run the probe”: a denominator guard can
+be correct while its placement quietly changes a pooled criterion into a
+per-seed criterion. Name the aggregation unit before treating a red run as a
+world result. The interrupted session also left stale probe processes; they
+were identified by their explicit commands and terminated before the approved
+rerun.
+
+The D3 deferred minors are closed here: no production flow, epoch, census,
+re-baseline, history-pin migration, specialization, city rung, or precinct
+implementation follows a uniform relabeling. The diagnostic witness and its
+negative result remain committed for a future redesign.
+
 ## R3 — The district boundary
 
 R3 was architectural implementation, but it stayed deliberately below the

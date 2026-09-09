@@ -204,6 +204,11 @@ taiga: Qe /qe/
 temperate-forest: Na /na/
 temperate-grassland: Noo /noo/
 temperate-rainforest: Daenao /daenao/
+the-consumption: Neatoo /neatoo/
+the-flux: Doonea /doonea/
+the-marsh-fever: Nanoe /nanoe/
+the-pest: Naedo /naedo/
+the-pox: Paedoo /paedoo/
 think: Peo /peo/
 thorn-scrub: Nako /nako/
 threshold: Teane /teane/

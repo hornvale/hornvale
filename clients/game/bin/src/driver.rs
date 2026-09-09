@@ -189,6 +189,40 @@ const DELVE_SUCCESS_PREFIX: &str = "You worm down into the dark.";
 const FLOOR_PLATE_CONTENT_HEIGHT: u16 =
     hornvale_game_core::spread::content_height(hornvale_game_core::MIN_HEIGHT);
 
+/// Memo keys one drawn box can add to [`Driver::rose_mesh_memo`]: its own
+/// facet, and that facet's grid-level ancestor (The Sett, Task 9).
+///
+/// `plate::terrain_at_facet` consults
+/// [`hornvale_kernel::Facet::corner_weights_memo`] at exactly those two
+/// addresses per box and nowhere else, so a plate of `n` boxes can grow the
+/// memo by at most `2n` entries. Measured on the 12x6 window
+/// `facet_reading.rs` draws: 34 entries for 72 boxes — well under the
+/// bound, because neighbouring boxes share both addresses.
+const ROSE_MESH_KEYS_PER_BOX: u64 = 2;
+
+/// How many whole plates' worth of mesh entries [`Driver::rose_mesh_memo`]
+/// may hold before it is emptied (The Sett, Task 9).
+///
+/// **The cap is a MULTIPLE OF THE LIVE PLATE, not a fixed number of
+/// entries**, and that is the one design choice here worth an argument. A
+/// fixed cap has to be sized for some assumed terminal: pick it for the
+/// 104x56 reference (a 64x52 plate, **3,328** boxes) and a player on a
+/// 300x100 terminal overflows it inside a single frame, so the memo is
+/// emptied on every redraw and silently returns to the un-memoised cost
+/// Task 9 exists to remove — with nothing to say so, since the answers stay
+/// byte-identical either way. Scaling by the plate makes the memo able to
+/// hold the frame it is about to draw plus three more, at every terminal
+/// size, so a clear can never happen more often than once per four plates
+/// of genuinely new ground.
+///
+/// Four rather than one because the walker moves and the plate does not
+/// jump: Task 1 measured the raster's frame-to-frame stability at 100%, so
+/// a step exposes one column or row and reuses the rest. Four plates is a
+/// few hundred steps of headroom at the reference size, and 26,624 entries
+/// there — a `BTreeMap` of a few megabytes, against a `TileCache` that
+/// holds 320 tiles of 32x32 each.
+const ROSE_MESH_PLATES_KEPT: u64 = 4;
+
 /// Why a [`Driver`] could not start.
 ///
 /// Each variant wraps the real typed error from the layer that failed
@@ -577,6 +611,36 @@ pub struct Driver {
     // here, so making three read-only queries advertise mutation to reach
     // it would buy nothing.
     reflectance_cache: plate::ReflectanceCache,
+    /// The walk view's memo over [`hornvale_locale::heading_rose`], carried
+    /// across redraws (The Sett, Task 3) — beside [`Self::reflectance_cache`]
+    /// for the same reason that one is here: the raster is rebuilt every
+    /// redraw and the rose is a pure function of its facet, so a memo that
+    /// died with the frame would pay the whole chain again for a picture that
+    /// mostly did not move. Measured (ledger S7/S8): 114.16 ms unmemoised per
+    /// redraw, 11.31 ms cold and 1.04 ms warm with this.
+    ///
+    /// It is a cost instrument and never a correctness one —
+    /// [`crate::rose::RoseMemo`]'s own doc, and `tests/rose.rs`'s
+    /// `the_raster_is_deterministic_and_the_memo_changes_nothing`.
+    rose_memo: crate::rose::RoseMemo,
+    /// The walk view's mesh memo — the graph arm's equivalent of the one
+    /// [`crate::tiles::TileCache`] owns for the Mercator arm, and a separate
+    /// field because that one is private to the tile cache and the graph arm
+    /// draws no tiles. Long-lived for the same reason: it memoises
+    /// nearest-vertex corner resolution per facet, which a fresh
+    /// `RoomMeshMemo` per redraw would throw away every frame.
+    ///
+    /// **It carries TWO addresses per box since The Sett's Task 9** — the
+    /// grid-level ancestor and the box's own facet, the second for The
+    /// Hachure's bilinear height blend, which until that task recomputed
+    /// four nearest-vertex scans on every box of every frame (ledger S21:
+    /// 65.3% of a 9.712 ms walk-band redraw). That is what makes this field
+    /// accumulate a session's worth of entries rather than a mesh's worth,
+    /// and so what makes [`Driver::bound_rose_mesh_memo`] necessary:
+    /// [`hornvale_kernel::RoomMeshMemo`] is append-only and never evicts, so
+    /// an owner that keeps one for the life of the process has to bound it
+    /// itself.
+    rose_mesh_memo: hornvale_kernel::RoomMeshMemo,
 }
 
 /// What [`Driver::noun_prompt`] saves for `Esc` to restore.
@@ -1136,6 +1200,8 @@ impl Driver {
             walk_scene: None,
             calendar,
             reflectance_cache: plate::ReflectanceCache::new(),
+            rose_memo: crate::rose::RoseMemo::new(),
+            rose_mesh_memo: hornvale_kernel::RoomMeshMemo::default(),
         };
         driver.refresh();
         Ok(driver)
@@ -1408,6 +1474,91 @@ impl Driver {
         )
     }
 
+    /// Empty [`Self::rose_mesh_memo`] once it holds more than
+    /// [`ROSE_MESH_PLATES_KEPT`] plates' worth of entries (The Sett, Task
+    /// 9).
+    ///
+    /// **Why the driver bounds it and the kernel does not.**
+    /// [`hornvale_kernel::RoomMeshMemo`] is append-only by design — its own
+    /// doc says nothing ever invalidates an entry, because a key already
+    /// carries everything its derivation reads — and it is the KERNEL's,
+    /// shared with `windows/locale`, `windows/worldgen` and `windows/lab`.
+    /// Giving it eviction would be a kernel-layer change with four
+    /// consumers, to solve a problem only this client has: every other
+    /// holder scopes a memo to a tick or a session and drops it, while this
+    /// one is a `Driver` field that lives as long as the process. The
+    /// unbounded growth is a property of THIS owner's lifetime, so the bound
+    /// belongs to this owner.
+    ///
+    /// **Why wholesale, and not [`crate::tiles::TileCache`]'s two radii.**
+    /// That precedent was read and does not transfer: `TileCache` owns its
+    /// own `BTreeMap` and evicts with a `retain` over keys it can measure a
+    /// distance on. `RoomMeshMemo` exposes no key iteration, no removal and
+    /// no length — [`hornvale_kernel::RoomMeshMemo::corner_weights_lookup`]
+    /// and the four counters are its whole read surface — so selective
+    /// eviction is not merely more complex out here, it is **not
+    /// expressible** without changing the kernel type. Replacing the whole
+    /// memo is the only bound available above that layer, and it is a
+    /// correct one: the memo is a pure cache, so emptying it costs one cold
+    /// frame (Task 7 measured a cold walk-band frame at 41-43 ms) and
+    /// changes no answer.
+    ///
+    /// **How the size is known without a `len()`.**
+    /// [`hornvale_kernel::RoomMeshMemo::corner_weights_misses`] counts the
+    /// calls that filled a fresh entry, and nothing ever removes one, so for
+    /// a memo this driver owns from empty the miss count **is** the entry
+    /// count. Replacing the memo resets both together, which is what makes
+    /// the reading stay true across a clear: the counters are per-generation
+    /// here, not per-process.
+    ///
+    /// A degenerate plate (zero boxes) gives a cap of zero and empties the
+    /// memo on every call. That is harmless rather than a special case:
+    /// a plate with no boxes fills nothing, so there is never anything to
+    /// throw away.
+    fn bound_rose_mesh_memo(&mut self, plate_width: u16, plate_height: u16) {
+        if self.rose_mesh_memo.corner_weights_misses()
+            > Self::rose_mesh_memo_cap(plate_width, plate_height)
+        {
+            self.rose_mesh_memo = hornvale_kernel::RoomMeshMemo::default();
+        }
+    }
+
+    /// `(hits, misses)` on [`Self::rose_mesh_memo`]'s corner-weight half
+    /// since it was last emptied (The Sett, Task 9).
+    ///
+    /// The `misses` half is also the memo's ENTRY COUNT — nothing ever
+    /// removes an entry, so every miss is one more key — which is what
+    /// [`Self::bound_rose_mesh_memo`] reads to decide whether to empty it,
+    /// and the reason both numbers reset together when it does. A reader
+    /// watching these across redraws therefore sees exactly two things: the
+    /// hit rate the memoised height blend buys, and the moment the bound
+    /// fires.
+    ///
+    /// Public for the cost readout (`examples/sett_raster_bench.rs`) and for
+    /// `tests/driver.rs`, which is the only way either can observe a private
+    /// field's behaviour without timing anything.
+    pub fn rose_mesh_memo_counters(&self) -> (u64, u64) {
+        (
+            self.rose_mesh_memo.corner_weights_hits(),
+            self.rose_mesh_memo.corner_weights_misses(),
+        )
+    }
+
+    /// The entry cap [`Self::bound_rose_mesh_memo`] applies to a
+    /// `plate_width` x `plate_height` plate (The Sett, Task 9) —
+    /// [`ROSE_MESH_PLATES_KEPT`] plates of [`ROSE_MESH_KEYS_PER_BOX`] keys
+    /// each.
+    ///
+    /// Public for the same reason as [`Self::rose_mesh_memo_counters`]: a
+    /// test that asserted against its own copy of this arithmetic would pass
+    /// while the driver used a different number.
+    pub fn rose_mesh_memo_cap(plate_width: u16, plate_height: u16) -> u64 {
+        u64::from(plate_width)
+            * u64::from(plate_height)
+            * ROSE_MESH_KEYS_PER_BOX
+            * ROSE_MESH_PLATES_KEPT
+    }
+
     /// The world plate to hand [`hornvale_game_core::render_with`] for a
     /// `w`-by-`h` redraw — `Some` exactly when the band is one whose plate
     /// is the raster ([`Self::raster_is_drawn`]), `None` otherwise.
@@ -1469,6 +1620,23 @@ impl Driver {
             return None;
         }
         let (plate_width, plate_height) = Self::world_plate_dims(w, h);
+        // THE WALKER'S OWN VIEW IS A GRAPH, NOT A PROJECTION (The Sett, Task
+        // 3). Built BEFORE `plate_light` and the `Spectral` below, because
+        // this borrows `self.rose_memo` mutably and those borrow the session
+        // and the reflectance cache; taking them in this order keeps all
+        // three disjoint without a clone of anything but the anchor facet.
+        let walk_raster = self.drawing_the_walk_view().then(|| {
+            let anchor = self.session.position();
+            crate::rose::RoseRaster::build(&anchor, plate_width, plate_height, &mut self.rose_memo)
+        });
+        // BEFORE the draw, never after (The Sett, Task 9): a memo cleared
+        // after a redraw would throw away the very entries the NEXT redraw
+        // is about to ask for, which is the frame-to-frame reuse the whole
+        // change exists to buy. Cleared here, the cold frame is the one that
+        // was going to pay for new ground anyway.
+        if walk_raster.is_some() {
+            self.bound_rose_mesh_memo(plate_width, plate_height);
+        }
         // THE LIVE SESSION'S OWN PATH (The Wash, Task 6). `main.rs`'s
         // `redraw` calls this method and never `world_plate`, so this is the
         // call that decides what a player actually sees — it is threaded
@@ -1484,6 +1652,51 @@ impl Driver {
             season,
             cache: Some(&mut self.reflectance_cache),
         };
+        // THE SEAM, CHOSEN ONCE (The Sett, Task 4). Every layer of this
+        // redraw — the terrain raster, the feature layer, the perception
+        // layer, and the watercourses inside the terrain layer — places
+        // through THIS value, so the plate and the marks on it cannot come
+        // from two different pictures. `Placement`'s own doc says why a
+        // layer choosing its own would be right in one focus and wrong in
+        // the other, with nothing to show it until someone opened the map.
+        let placement = match walk_raster.as_ref() {
+            Some(raster) => plate::Placement::Graph(raster),
+            None => plate::Placement::Mercator {
+                f: &self.frame,
+                win: &self.window,
+            },
+        };
+        if let Some(raster) = walk_raster.as_ref() {
+            let mut grid = plate::draw_terrain_layer_from_raster(
+                &self.terrain,
+                &self.geo,
+                &self.nearest,
+                &mut self.rose_mesh_memo,
+                raster,
+                plate::colour_allowed(),
+                &mut spectral,
+            );
+            // THE TWO OVERLAYS PLACE THROUGH THE RASTER NOW (The Sett,
+            // Task 4). Until this task they projected through Mercator onto
+            // a graph-addressed plate and landed in the wrong boxes —
+            // measured: one step south of the seed-42 flagship start, the
+            // settlement just left was drawn on top of the walker rather
+            // than one box north of them. The watercourses are back too,
+            // inside the terrain layer where they have always lived; see
+            // `draw_terrain_layer_from_raster`'s own doc.
+            plate::draw_feature_layer(
+                &mut grid,
+                &self.geo,
+                &placement,
+                plate::colour_allowed(),
+                &self.sites,
+                &self.volcanoes,
+                &self.waterfalls,
+                &self.discovered,
+            );
+            self.compose_perception_layer(&mut grid, &placement);
+            return Some(grid);
+        }
         let mut grid = self.tiles.compose(
             &self.terrain,
             &self.geo,
@@ -1501,8 +1714,7 @@ impl Driver {
         plate::draw_feature_layer(
             &mut grid,
             &self.geo,
-            &self.frame,
-            &self.window,
+            &placement,
             plate::colour_allowed(),
             &self.sites,
             &self.volcanoes,
@@ -1518,7 +1730,7 @@ impl Driver {
         // every frame like the feature layer and for the same reason: it is a
         // handful of projections, and giving it an invalidation key is the
         // defect `CLIENT-tiles-need-the-overlay-split` records.
-        self.compose_perception_layer(&mut grid);
+        self.compose_perception_layer(&mut grid, &placement);
         Some(grid)
     }
 
@@ -1944,6 +2156,35 @@ impl Driver {
         self.on_walk_band
     }
 
+    /// Whether the plate about to be drawn is **the walker's own view** —
+    /// the walk band, at the walk rung, and not the map (The Sett, Task 3).
+    /// That plate is the compass rose iterated outward
+    /// ([`crate::rose::RoseRaster`]); every other plate this client draws is
+    /// still Mercator.
+    ///
+    /// **The band gate is not here, and moving it here would be F5 again.**
+    /// [`Self::raster_is_drawn`] answers whether a plate is drawn at all, and
+    /// its own doc records what happened when that question was asked of the
+    /// FOCUS instead: typing `map` inside a chamber replaced the floor plan
+    /// with the world raster, and [`Self::compose_perception_layer`]
+    /// correctly refuses off the walk band, so nothing marked the player's
+    /// position. This method chooses WHICH raster and never WHETHER one; the
+    /// caller asks `raster_is_drawn` first and this second.
+    ///
+    /// **[`Focus::Cli`] gets the rose raster too**, because a player typing
+    /// into the command line is still walking and is still looking at the
+    /// walk view (ledger, "Ruling 1 [G4]"). Only [`Focus::Map`] is exempt,
+    /// and the exemption is about state rather than taste: the map is a
+    /// geographic instrument with a cursor, a pan and a zoom, all expressed
+    /// as [`Window`] origin moves on a chart the rose raster does not have,
+    /// so making it a graph view would mean giving panning an anchor facet
+    /// this campaign has no need of. The map opens at
+    /// [`plate::map_entry_rung`], which is coarser than the walk rung, so
+    /// this clause bites only on a map zoomed all the way back in.
+    fn drawing_the_walk_view(&self) -> bool {
+        self.at_walk_band_rung() && self.focus != Focus::Map
+    }
+
     /// The active plate's own width and height, in grid columns and rows —
     /// the chamber band's fixed
     /// [`hornvale_game_core::spread::PLATE_WIDTH`] and `self.plate_height`
@@ -2296,6 +2537,21 @@ impl Driver {
     /// [`Self::recentre`] on command thereafter.
     pub fn frame(&self) -> &Frame {
         &self.frame
+    }
+
+    /// The facet the possessed body is standing on right now — the walk
+    /// view's raster anchor ([`crate::rose::RoseRaster::build`]), and the
+    /// facet [`hornvale_locale::heading_rose`] is asked about when an arrow
+    /// key moves.
+    ///
+    /// **`pub` for the same reason [`Self::window`] is** (The Sett, Task 3):
+    /// the campaign's headline assertion — the box left of the mark is where
+    /// the left arrow goes — has to name the observer's own facet to say
+    /// anything, and a test that reconstructed it from a coordinate would be
+    /// asserting against a projection rather than against the address. The
+    /// session already owns this; nothing here derives it.
+    pub fn observer_facet(&self) -> hornvale_kernel::Facet {
+        self.session.position()
     }
 
     /// Recompute `self.strip` for the current band and cursor position. See
@@ -3004,7 +3260,11 @@ impl Driver {
     /// one of them would collapse onto the observer's single tile and the
     /// overlay would claim to place facets it had merged — and off the walk
     /// band because there is no packet to draw.
-    fn compose_perception_layer(&self, dst: &mut hornvale_game_core::Grid) {
+    fn compose_perception_layer(
+        &self,
+        dst: &mut hornvale_game_core::Grid,
+        placement: &plate::Placement<'_>,
+    ) {
         let Some(scene) = self.walk_band_scene() else {
             return;
         };
@@ -3028,13 +3288,7 @@ impl Driver {
         if !self.at_walk_band_rung() {
             perceived.retain(|p| p.here);
         }
-        plate::draw_perception_layer(
-            dst,
-            &self.frame,
-            &self.window,
-            plate::colour_allowed(),
-            &perceived,
-        );
+        plate::draw_perception_layer(dst, placement, plate::colour_allowed(), &perceived);
     }
 
     /// Scroll band B's window so the observer's own facet sits at the middle
@@ -3593,7 +3847,7 @@ mod portolan_tests {
     /// **The roster the map draws from holds all three site kinds, and the
     /// counts are the campaign's own headline.** The Prospect exists because
     /// a world's caves and exotic sites were invisible; before Task 8 this
-    /// client's rosters were 389 settlement vertices and 874 cave vertices
+    /// client's rosters were 307 settlement vertices and 874 cave vertices
     /// in two separate structures, with NO representation of an exotic site
     /// at all — so the 103 asserted here are the sites the map could not
     /// draw at any rung, in any window, however much a reader explored.
@@ -3621,12 +3875,12 @@ mod portolan_tests {
         );
         assert_eq!(
             count(SiteKind::Settlement),
-            389,
+            307,
             "seed 42's settlement-vertex roster moved"
         );
         assert_eq!(
             d.sites.len(),
-            874 + 103 + 389,
+            874 + 103 + 307,
             "the roster holds nothing else"
         );
 
@@ -5085,13 +5339,15 @@ mod portolan_tests {
     /// glyph, and the two disagreeing there is not the Finding 2 defect
     /// this test exists to catch.
     ///
-    /// **Measured on seed 42's default floor plate: 118 of 800 tiles are
-    /// excluded — 14.75% of the plate, not the "12 of 800" an earlier
-    /// version of this doc claimed.** That number was a review-caught
+    /// **Measured on the post-Murrain seed-42 default floor plate: 128 of
+    /// 800 tiles are excluded — 16.00% of the plate.** The pre-Murrain
+    /// measurement was 118; the movement is a consequence of the changed
+    /// settlement/site roster, not a change to the F5 resolver. The earlier
+    /// "12 of 800" version of this doc was a review-caught
     /// mistake, not a rounding difference: 12 is the count of excluded
     /// tiles whose vertex ALSO happens to resolve to ocean — i.e. the
     /// subset that would actually have disagreed and reddened the test —
-    /// mismeasured as the exclusion's own size. The other 106 excluded
+    /// mismeasured as the exclusion's own size. The other 116 excluded
     /// tiles draw a site glyph over non-ocean terrain and would have agreed
     /// anyway; excluding them changes no verdict TODAY, but they are still
     /// genuinely outside what this test can vouch for, which is why
@@ -5099,7 +5355,9 @@ mod portolan_tests {
     /// one — a regression that grew the excluded set (say, a bug drawing
     /// site glyphs far more broadly than the roster warrants) would
     /// otherwise silently shrink the guarantee while `agree == total` kept
-    /// reporting a perfect, and decreasingly meaningful, ratio.
+    /// reporting a perfect, and decreasingly meaningful, ratio. This count
+    /// was re-measured by the test after the Murrain epoch, not copied from
+    /// the old witness.
     #[test]
     fn f5_the_resolved_vertex_always_matches_the_drawn_glyph_after_the_fix() {
         let mut d = test_driver();
@@ -5183,7 +5441,7 @@ mod portolan_tests {
         // PINNED, not merely printed (review fix round 1): an unasserted
         // `excluded` can grow without bound and this test would keep
         // reporting a perfect ratio over a shrinking, decreasingly
-        // meaningful `total`. 118 is this test's own doc's measured figure
+        // meaningful `total`. 128 is this test's own doc's measured figure
         // for seed 42's default floor plate at the coarsest zoom — a
         // golden that moves on a terrain epoch, a site-roster change
         // (caves/exotic/settlements) or a site-glyph vocabulary change,
@@ -5191,7 +5449,7 @@ mod portolan_tests {
         // `the_site_roster_carries_every_kind_and_only_placed_kinds_carry_
         // a_facet`'s own three golden counts.
         assert_eq!(
-            excluded, 118,
+            excluded, 128,
             "the point-site/landform exclusion moved — update this test's own doc \
              (and re-measure, do not just paste the new number) if this is expected"
         );
@@ -6389,13 +6647,30 @@ mod portolan_tests {
     /// this stronger than it was: it shows the centring actually rescues a
     /// corner origin (the negative control below fails without it), instead
     /// of resting on `start` happening to leave one lying around.
+    ///
+    /// **THE NEGATIVE CONTROL MOVED INTO [`Focus::Map`] AT THE SETT'S TASK 4,
+    /// and the reason is a property gained rather than coverage lost.** It
+    /// used to take the corner draw in the default [`Focus::Walk`], where a
+    /// corner origin hid the observer. The walk view is the compass rose now
+    /// ([`crate::rose::RoseRaster`]) and the perception layer places through
+    /// it, so that plate does not read [`Self::window`] AT ALL: the observer
+    /// is at its centre by construction and the control could never fail
+    /// again, whatever the origin. Taking the corner draw with the map
+    /// focused restores exactly the state the control needs — the window is
+    /// what decides a Mercator plate, and only a Mercator plate — and leaves
+    /// the ruling this test is about (band B's origin is centred on arrival)
+    /// asserted on the raster the ruling is about.
     #[test]
     fn band_b_centres_on_the_observer_not_the_arctic_corner() {
         let mut d = test_driver();
         d.resize(120, 40);
+        // The map, so the WINDOW is what decides the picture — see this
+        // test's own doc on why the walk view no longer can be cornered.
+        d.enter_map();
         // The corner, put there on purpose. At `BAND_B_RUNG` this is some
         // eleven thousand rows and two thousand columns from seed 42's
         // observer.
+        d.window.depth = BAND_B_RUNG;
         d.window.origin_row = 0;
         d.window.origin_col = 0;
         let arctic = d
@@ -6419,6 +6694,298 @@ mod portolan_tests {
             (0, 0),
             "the window must actually have moved off the corner"
         );
+    }
+
+    /// **AN OBSERVER INSIDE THE POLAR CLAMP STILL GETS A CENTRED WALK VIEW**
+    /// (The Sett, Task 5; ledger S13, following S11).
+    ///
+    /// [`Self::centre_window_on`] resolves through [`mercator::project`],
+    /// which returns `None` past [`mercator::LAT_CLAMP_DEG`] (85.0), and
+    /// propagates it with `?`. So before this campaign an observer within 5
+    /// degrees of a pole could not have the walk view centred on them at
+    /// all — 512 of 51,200 sampled polar-cap facets, 1.00% of the caps
+    /// (ledger S11) — and the plate kept drawing wherever the window last
+    /// was. Under the rose raster the walk plate's anchor is the observer's
+    /// own facet and no projection is consulted, so the refusal cannot
+    /// reach it. The map keeps Mercator and keeps the refusal, which is
+    /// correct: a geographic chart genuinely cannot draw the pole.
+    ///
+    /// # WHY THIS IS ASSERTED ONE LEVEL BELOW `Driver`, AND WHAT THAT COSTS
+    ///
+    /// The plan specified an observer *at* the pole. **No possession
+    /// reaches one.** Measured on this world, both shipped
+    /// [`PossessTarget`] variants land within four degrees of the equator —
+    /// flagship at latitude -4.0028, most-populous-settlement at -3.9611 —
+    /// and a walk step is one rung-13 facet, about 1.1 km, so the clamp is
+    /// some eight thousand `go n`s away. A fixture that pretended otherwise
+    /// would be asserting about a driver state no seed produces.
+    ///
+    /// So the property is asserted where it is actually decided: at
+    /// [`plate::Placement`], the seam every overlay — the observer's own
+    /// mark included — places through, chosen once in
+    /// [`Self::world_plate_for_redraw`]. The same polar facet is asked the
+    /// same question of both variants. What this does NOT cover is the
+    /// composition above it; [`Self::world_plate_for_redraw`]'s choice of
+    /// variant is
+    /// [`twenty_steps_leave_the_mark_exactly_centred_despite_a_scrolled_window`]'s
+    /// subject, on a facet a driver really occupies.
+    ///
+    /// **Non-vacuity, asserted before anything else:** the clamp must really
+    /// refuse the chosen position, or a latitude it never rejected would
+    /// pass this test with nothing proved. Asserted twice over, at
+    /// `mercator::project` itself and at `centre_window_on`, whose refusal
+    /// is the one S13 is about — and the ordinary-latitude control beside it
+    /// is what stops "the window did not move" from being true of every
+    /// call.
+    #[test]
+    fn an_observer_inside_the_polar_clamp_still_gets_a_centred_walk_view() {
+        let mut d = test_driver();
+        let (w, h) = (200u16, 50u16);
+        d.resize(w, h);
+
+        // REACHABILITY, stated as an assertion rather than as prose: the
+        // shipped possession targets are nowhere near the clamp, which is
+        // why this test builds its polar facet instead of walking to one.
+        let here = d.observer_facet().coord();
+        assert!(
+            here.latitude.abs() < 10.0,
+            "seed 42's flagship is meant to be equatorial (measured -4.0028); at \
+             {:.4} degrees this test's account of why it cannot walk to the pole \
+             needs re-measuring",
+            here.latitude
+        );
+
+        // The north polar cap's own centre facet at the walk rung, built by
+        // descending the quadtree to the middle of face 4 — latitude
+        // 89.9922, inside the clamp by five degrees.
+        let depth = BAND_B_RUNG;
+        let middle = 1i64 << (depth - 1);
+        let mut path = Vec::with_capacity(depth as usize);
+        for level in (0..depth).rev() {
+            let hx = ((middle >> level) & 1) as u8;
+            let hy = ((middle >> level) & 1) as u8;
+            path.push((hx << 1) | hy);
+        }
+        let polar = Facet { face: 4, path };
+        let at_pole = polar.coord();
+        assert!(
+            at_pole.latitude > mercator::LAT_CLAMP_DEG,
+            "NON-VACUITY: this facet must sit past the clamp, or the refusal \
+             below is not a refusal — got {:.4} degrees against a clamp of {}",
+            at_pole.latitude,
+            mercator::LAT_CLAMP_DEG
+        );
+
+        // NON-VACUITY ONE: the projection itself refuses it.
+        let (virtual_w, virtual_h) = plate::virtual_dims(BAND_B_RUNG);
+        assert_eq!(
+            mercator::project(
+                d.frame(),
+                at_pole.latitude,
+                at_pole.longitude,
+                virtual_w,
+                virtual_h
+            ),
+            None,
+            "NON-VACUITY: mercator::project must refuse the chosen position"
+        );
+
+        // NON-VACUITY TWO — and the refusal S13 actually names. The window
+        // is put somewhere known; centring on the pole must leave it there,
+        // while centring on the observer's own ordinary latitude must move
+        // it. Without the second half, "the window did not move" would be
+        // satisfied by a `centre_window_on` that did nothing at all.
+        d.window.depth = BAND_B_RUNG;
+        d.window.origin_row = 1_000;
+        d.window.origin_col = 2_000;
+        let parked = (d.window.origin_row, d.window.origin_col);
+        assert_eq!(
+            d.centre_window_on(at_pole.latitude, at_pole.longitude, w, h),
+            None,
+            "centre_window_on must propagate the projection's refusal"
+        );
+        assert_eq!(
+            (d.window.origin_row, d.window.origin_col),
+            parked,
+            "a refused centring leaves the window exactly where it was — this is \
+             the state the walk view used to keep drawing from"
+        );
+        assert_eq!(
+            d.centre_window_on(here.latitude, here.longitude, w, h),
+            Some(()),
+            "CONTROL: an ordinary latitude must still centre"
+        );
+        assert_ne!(
+            (d.window.origin_row, d.window.origin_col),
+            parked,
+            "CONTROL: the ordinary centring must actually move the window, or \
+             the refusal above proves nothing about the pole in particular"
+        );
+
+        // THE DELIVERY. The same facet, the same question, of both
+        // placements: the chart cannot answer it and the rose raster puts it
+        // at the plate's own centre.
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let mut memo = crate::rose::RoseMemo::new();
+        let raster = crate::rose::RoseRaster::build(&polar, plate_w, plate_h, &mut memo);
+        let chart = plate::Placement::Mercator {
+            f: d.frame(),
+            win: d.window(),
+        };
+        let graph = plate::Placement::Graph(&raster);
+        let (pw, ph) = (u32::from(plate_w), u32::from(plate_h));
+        assert_eq!(
+            chart.box_of_facet(&polar, pw, ph),
+            None,
+            "the chart still refuses the pole, which is correct and is the map's \
+             own behaviour (G4 ruling 1)"
+        );
+        assert_eq!(
+            raster.centre(),
+            (plate_w / 2, plate_h / 2),
+            "the anchor's box is the plate's own middle"
+        );
+        assert_eq!(
+            raster.facet_at(plate_w / 2, plate_h / 2),
+            Some(&polar),
+            "the walk view must DRAW a polar observer at the middle of their own \
+             plate — the refusal cannot reach a raster that consults no projection"
+        );
+
+        // AND THE FOLD, STATED RATHER THAN GLOSSED. `box_of_facet` is the
+        // INVERSE, and at the pole the picture is genuinely many-to-one: the
+        // meridian chain reverses there, so stepping north from the pole and
+        // north again returns to it, and the pole is drawn in every other box
+        // of the centre column — 12 boxes of this 100x46 plate. That is
+        // decision #4's ratified polar fold (ledger S10: it clears 16 facets
+        // out, 0.176 degrees), not a defect of this task.
+        //
+        // **The ROW is no longer the fold's to decide, and this assertion
+        // used to say it was.** `RoseRaster::box_of` resolved a repeated
+        // facet to the first box in row-major order, which named row 1 of
+        // this plate for the facet every other contract here puts at row 23,
+        // so a polar observer's own `@` drew near the top of their plate
+        // while `facet_at(centre)` correctly held them. Ledger decision #5
+        // replaced that scan order with a rule — nearest the centre, ties
+        // row-major — so the whole box is pinned below, not the column
+        // alone.
+        let repeats = (0..plate_h)
+            .flat_map(|row| (0..plate_w).map(move |col| (col, row)))
+            .filter(|&(col, row)| raster.facet_at(col, row) == Some(&polar))
+            .count();
+        assert!(
+            repeats > 1,
+            "NON-VACUITY: the row is only ambiguous because the pole repeats; at \
+             {repeats} occurrence(s) this comment would be describing a fold that \
+             is not there"
+        );
+        assert_eq!(
+            graph
+                .box_of_facet(&polar, pw, ph)
+                .expect("the graph must place what the chart refuses"),
+            (u32::from(plate_h / 2), u32::from(plate_w / 2)),
+            "the mark must be placed in the plate's own middle box, the same box \
+             the raster DRAWS the observer in, however many other boxes the fold \
+             repeats them into"
+        );
+    }
+
+    /// **THE MARK IS CENTRED BY CONSTRUCTION** (The Sett, Task 5).
+    ///
+    /// [`Self::follow_the_walker`]'s own doc records the measurement that
+    /// made it exist: the observer drifted about one plate row per 1.6
+    /// steps, from row 23 to row 18 in eight `go n`s. That was a Mercator
+    /// plate read through a STORED [`Window`], so the mark's position was
+    /// only ever as good as the last re-centring. Under the rose raster the
+    /// anchor IS the observer, so the per-turn re-centring cannot be what
+    /// holds the mark in the middle — and this asserts the stronger thing,
+    /// that twenty steps leave it exactly centred **with the window
+    /// deliberately scrolled away between every one of them**.
+    ///
+    /// **The per-turn centring stays and this test must not be read as
+    /// licence to remove it.** It is what puts the MAP on the observer when
+    /// [`Self::enter_map`] opens it, and the map is still Mercator at every
+    /// rung. What changed is that the walk view no longer depends on it.
+    ///
+    /// # THE POSITIVE CONTROL IS THE OLD BEHAVIOUR, RUN IN-TEST
+    ///
+    /// This assertion passes on arrival: Task 3 put the walk plate on the
+    /// rose raster and Task 4 put every overlay on the same seam, so by the
+    /// time it was written the property was already delivered. An assertion
+    /// nobody has seen fail is an open question about whether it can, so the
+    /// old behaviour is executed on every iteration rather than described:
+    /// [`Focus::Map`] is the one focus [`Self::drawing_the_walk_view`]
+    /// exempts, so taking the same draw there — same rung, same scrolled
+    /// window, same session — is exactly the Mercator plate the walk view
+    /// used to be. It must place the mark SOMEWHERE, and somewhere that is
+    /// not the centre; the `assert_ne!` is what stops the control decaying
+    /// into a restatement of the assertion it is controlling.
+    ///
+    /// Non-vacuity: the scroll must actually move [`Window::origin_col`],
+    /// asserted before the mark is read, and the control's mark must
+    /// actually be drawn — a no-op scroll, or a control that drew no `@` at
+    /// all, would leave this passing against the behaviour it exists to
+    /// exclude.
+    #[test]
+    fn twenty_steps_leave_the_mark_exactly_centred_despite_a_scrolled_window() {
+        let mut d = test_driver();
+        let (w, h) = (200u16, 50u16);
+        d.resize(w, h);
+        let (plate_w, plate_h) = Driver::world_plate_dims(w, h);
+        let centre = (plate_w / 2, plate_h / 2);
+
+        /// How far the window is shoved off the observer between steps.
+        /// Small enough that the Mercator control still draws the mark
+        /// (otherwise the control would prove only that the observer had
+        /// left the chart), large enough that it cannot land on the centre.
+        /// type-audit: bare-ok(count)
+        const SHOVE: u32 = 7;
+
+        let mark = |d: &mut Driver| -> Option<(u16, u16)> {
+            let p = d.world_plate_for_redraw(w, h)?;
+            (0..p.height())
+                .flat_map(|y| (0..p.width()).map(move |x| (x, y)))
+                .find(|&(x, y)| p.get(x, y).is_some_and(|c| c.glyph == Some('@')))
+        };
+
+        for step in 0..20 {
+            d.handle("go n");
+            // The shove, applied AFTER the step's own re-centring so the
+            // window really is somewhere the observer is not.
+            let before = d.window.origin_col;
+            d.window.origin_col = before.wrapping_add(SHOVE);
+            d.window.origin_row = d.window.origin_row.saturating_add(SHOVE);
+            assert_ne!(
+                d.window.origin_col, before,
+                "NON-VACUITY at step {step}: the shove must move the window, or a \
+                 plate that read it would look centred anyway"
+            );
+
+            // POSITIVE CONTROL: the same draw in the one focus that still
+            // projects. This IS the pre-Sett walk view.
+            d.focus = Focus::Map;
+            let projected = mark(&mut d);
+            d.focus = Focus::Walk;
+            assert!(
+                projected.is_some(),
+                "CONTROL at step {step}: the projected plate must draw the mark \
+                 somewhere, or it witnesses a departed observer rather than a \
+                 mis-centred one"
+            );
+            assert_ne!(
+                projected,
+                Some(centre),
+                "CONTROL at step {step}: the projected plate must put the mark off \
+                 centre, or this test cannot tell the two pictures apart"
+            );
+
+            assert_eq!(
+                mark(&mut d),
+                Some(centre),
+                "step {step}: the walk view must hold the mark at the plate's own \
+                 centre {centre:?} whatever the window says"
+            );
+        }
     }
 
     /// A COARSE rung draws the OBSERVER and no marks — the coarsest rung's

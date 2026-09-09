@@ -1197,8 +1197,7 @@ pub fn draw_with(
     draw_feature_layer(
         &mut grid,
         geo,
-        f,
-        win,
+        &Placement::Mercator { f, win },
         colour_allowed,
         sites,
         volcanoes,
@@ -1307,6 +1306,17 @@ fn river_threshold(depth: u32) -> f64 {
 /// so a river has exactly the terrain layer's cache key and its
 /// never-invalidated lifetime (decision 0289). Drawing it inside
 /// [`draw_terrain_layer`] makes it free on redraw instead of merely cheap.
+///
+/// **TWO ARMS SINCE THE SETT'S TASK 4, and only the SELECTION is shared.**
+/// This function chooses which lines are drawn — a pure function of the rung
+/// ([`river_threshold`]) and of each line's own magnitude — and then hands
+/// the chosen line to whichever painter the [`Placement`] names:
+/// [`draw_polyline_on_chart`] (unchanged, the DDA) or
+/// [`walk_polyline_on_raster`] (new, a walk on the sphere). Only the graph
+/// arm rides no cache: the rose raster is rebuilt every redraw by
+/// construction, so a river on it costs its walk each frame. Measured on the
+/// seed-42 flagship's 40x20 walk plate: 2 of 11,202 segments survive the
+/// cap reject, and they paint 41 of the plate's 800 boxes.
 #[allow(clippy::too_many_arguments)]
 // `illum` (The Newel, B6) pushes this to 8 — the river line now answers to
 // the same illuminant the terrain layer around it already does; see
@@ -1315,14 +1325,12 @@ fn rasterize_rivers(
     dst: &mut Grid,
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
-    f: &Frame,
-    win: &Window,
+    placement: &Placement<'_>,
     colour_allowed: bool,
     obs: &crate::observer::TerminalObserver,
     illum: &hornvale_kernel::color::Illuminant,
 ) {
     let net = terrain.channels();
-    let (virtual_w, virtual_h) = virtual_dims(win.depth);
     // The land denominator the threshold is a fraction OF. Counted here rather
     // than taken as a constant so the threshold survives a mesh change.
     let land = geo
@@ -1330,8 +1338,18 @@ fn rasterize_rivers(
         .filter(|&v| !terrain.is_ocean(v))
         .count()
         .max(1) as f64;
-    let threshold = river_threshold(win.depth) * land;
-    let (w, h) = (i64::from(dst.width()), i64::from(dst.height()));
+    let threshold = river_threshold(placement.depth()) * land;
+    // The graph arm's own bounding cap, resolved once per plate rather than
+    // per line — see `walk_polyline_on_raster`.
+    let cap = match placement {
+        Placement::Graph(raster) => RasterCap::of(raster),
+        Placement::Mercator { .. } => None,
+    };
+    // A graph placement whose raster has no extent paints nothing wherever
+    // it is asked, so there is no polyline loop worth running.
+    if matches!(placement, Placement::Graph(_)) && cap.is_none() {
+        return;
+    }
 
     for (line, polyline) in net.polylines.iter().enumerate() {
         // SELECTION: the line's own magnitude, as its largest upstream count.
@@ -1348,41 +1366,318 @@ fn rasterize_rivers(
             continue;
         }
 
-        for pair in polyline.points.windows(2) {
-            let Some(a) = plate_position(f, win, virtual_w, virtual_h, pair[0]) else {
-                continue;
-            };
-            let Some(b) = plate_position(f, win, virtual_w, virtual_h, pair[1]) else {
-                continue;
-            };
-            // THE SEAM, ANCHORED ON THE WINDOW AND NOT ON THE FIRST
-            // ENDPOINT — and the difference is a bug the tile cache's own
-            // byte-identity test caught.
-            //
-            // `plate_position` wraps a column into `[0, virtual_w)` relative
-            // to the window's origin, so a point just LEFT of the window
-            // reads as nearly a whole chart to its right. Anchoring the
-            // segment on its first endpoint then dragged the second one
-            // across the planet: a segment entering a 32-wide tile from the
-            // left had `a` at 244 and `b` at 11, which read as a 233-column
-            // straddle, pushed `b` to 267, and the whole segment was rejected
-            // as off-tile. A full-plate draw at origin 0 never wraps, so it
-            // kept the river and the composed one lost it — cached `~`
-            // against uncached `\"` at rung 6.
-            //
-            // So bring each endpoint to its representative NEAREST THE
-            // WINDOW's own middle first, then close the segment on that.
-            let ax = near_window(a.0, virtual_w, w);
-            let bx0 = near_window(b.0, virtual_w, w);
-            let half = i64::from(virtual_w) / 2;
-            let mut bx = bx0;
-            if bx - ax > half {
-                bx -= i64::from(virtual_w);
-            } else if ax - bx > half {
-                bx += i64::from(virtual_w);
+        match (placement, cap.as_ref()) {
+            (Placement::Graph(raster), Some(cap)) => {
+                walk_polyline_on_raster(dst, raster, cap, polyline, colour_allowed, obs, illum);
             }
-            draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed, obs, illum);
+            _ => draw_polyline_on_chart(dst, placement, polyline, colour_allowed, obs, illum),
         }
+    }
+}
+
+/// [`rasterize_rivers`]'s CHART arm: one polyline walked in chart space, as
+/// it has been since The Hachure's Stage 2 — every segment's endpoints
+/// projected individually, then an integer DDA between them.
+///
+/// Unchanged, and lifted out only so the graph arm can sit beside it rather
+/// than inside it. Both of its corrections are chart constructs and neither
+/// has a graph analogue; [`walk_polyline_on_raster`]'s own doc says what
+/// became of each.
+fn draw_polyline_on_chart(
+    dst: &mut Grid,
+    placement: &Placement<'_>,
+    polyline: &hornvale_kernel::SphericalPolyline,
+    colour_allowed: bool,
+    obs: &crate::observer::TerminalObserver,
+    illum: &hornvale_kernel::color::Illuminant,
+) {
+    let Placement::Mercator { f, win } = placement else {
+        return;
+    };
+    let (virtual_w, virtual_h) = virtual_dims(win.depth);
+    let (w, h) = (i64::from(dst.width()), i64::from(dst.height()));
+    for pair in polyline.points.windows(2) {
+        let Some(a) = plate_position(f, win, virtual_w, virtual_h, pair[0]) else {
+            continue;
+        };
+        let Some(b) = plate_position(f, win, virtual_w, virtual_h, pair[1]) else {
+            continue;
+        };
+        // THE SEAM, ANCHORED ON THE WINDOW AND NOT ON THE FIRST
+        // ENDPOINT — and the difference is a bug the tile cache's own
+        // byte-identity test caught.
+        //
+        // `plate_position` wraps a column into `[0, virtual_w)` relative
+        // to the window's origin, so a point just LEFT of the window
+        // reads as nearly a whole chart to its right. Anchoring the
+        // segment on its first endpoint then dragged the second one
+        // across the planet: a segment entering a 32-wide tile from the
+        // left had `a` at 244 and `b` at 11, which read as a 233-column
+        // straddle, pushed `b` to 267, and the whole segment was rejected
+        // as off-tile. A full-plate draw at origin 0 never wraps, so it
+        // kept the river and the composed one lost it — cached `~`
+        // against uncached `\"` at rung 6.
+        //
+        // So bring each endpoint to its representative NEAREST THE
+        // WINDOW's own middle first, then close the segment on that.
+        let ax = near_window(a.0, virtual_w, w);
+        let bx0 = near_window(b.0, virtual_w, w);
+        let half = i64::from(virtual_w) / 2;
+        let mut bx = bx0;
+        if bx - ax > half {
+            bx -= i64::from(virtual_w);
+        } else if ax - bx > half {
+            bx += i64::from(virtual_w);
+        }
+        draw_segment(dst, (ax, a.1), (bx, b.1), w, h, colour_allowed, obs, illum);
+    }
+}
+
+/// The bounding spherical cap a graph-addressed plate covers, plus the step
+/// [`walk_polyline_on_raster`] walks a segment at — both read off the raster
+/// itself so neither can disagree with the picture that is actually drawn.
+///
+/// **Derived, never a constant.** A rose raster's angular size is its box
+/// count times a facet's own arc, and a facet's arc depends on the rung; the
+/// walk band is one rung today and this module has no business assuming it
+/// will stay one. So the cap is measured from the drawn facets' own
+/// centroids and the step from the cap.
+struct RasterCap {
+    /// The cap's axis: the anchor facet's own centroid, a unit vector.
+    axis: [f64; 3],
+    /// The cap's angular radius as a CHORD length, which is what the reject
+    /// below compares in. Chord length is monotone in angle, so a chord test
+    /// and an angle test agree, and the chord one costs no `acos`.
+    /// type-audit: bare-ok(ratio)
+    chord: f64,
+    /// How far apart two consecutive samples of a segment are, in radians —
+    /// about a third of a facet, so no facet the line crosses is stepped
+    /// over.
+    /// type-audit: bare-ok(ratio)
+    step_rad: f64,
+}
+
+impl RasterCap {
+    /// The cap covering every facet `raster` draws, or `None` for a raster
+    /// with no extent at all — a zero-sized plate, or one whose every chain
+    /// was refused.
+    ///
+    /// **The `None` is a LOOP BOUND, not tidiness.** [`RasterCap::step_rad`]
+    /// is a fraction of the cap's own radius, so a zero radius makes the
+    /// step subnormal and `arc / step_rad` saturate `u32` — a four-billion
+    /// iteration walk over a plate that can paint nothing, since every
+    /// `box_of` on such a raster answers `None`. With a real cap the bound
+    /// is `π / step_rad`, about 63,000 on the shipped walk rung, and the
+    /// longest segment the reject below actually keeps there is ~0.018 rad,
+    /// about 400 samples.
+    ///
+    /// Walks the drawn facets' centroids rather than the four corners: a
+    /// refused bearing ends its chain, so a corner box can be blank while
+    /// the boxes beside it are not, and a corner-only cap would then be too
+    /// small and silently clip a river.
+    fn of(raster: &crate::rose::RoseRaster) -> Option<Self> {
+        let (cc, cr) = raster.centre();
+        let axis = raster
+            .facet_at(cc, cr)
+            .map(Facet::centroid)
+            .unwrap_or([0.0, 0.0, 1.0]);
+        let mut chord_sq = 0.0f64;
+        for row in 0..raster.height() {
+            for col in 0..raster.width() {
+                let Some(f) = raster.facet_at(col, row) else {
+                    continue;
+                };
+                let c = f.centroid();
+                let d = [c[0] - axis[0], c[1] - axis[1], c[2] - axis[2]];
+                chord_sq = chord_sq.max(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+            }
+        }
+        let chord = chord_sq.sqrt();
+        if chord <= 0.0 {
+            return None;
+        }
+        // A THIRD OF A FACET, derived: the cap's radius spans about half the
+        // plate's diagonal, so dividing it by the longer side is already
+        // about half a facet, and a further third of that is comfortably
+        // finer than one.
+        let boxes = f64::from(raster.width().max(raster.height()).max(1));
+        Some(Self {
+            axis,
+            chord,
+            step_rad: chord / (boxes * 3.0),
+        })
+    }
+
+    /// Whether the segment `a`-`b` can possibly touch this cap.
+    ///
+    /// **Conservative by the triangle inequality, in chord space.** If the
+    /// nearest point `p` of the arc is inside the cap then
+    /// `|a - axis| <= |a - p| + |p - axis| <= |a - b| + chord`, because `p`
+    /// lies on the arc between `a` and `b` and chord length grows with arc
+    /// angle. So a segment failing that test cannot reach the cap, and one
+    /// passing it may still miss — which costs samples, never correctness.
+    ///
+    /// Measured on the seed-42 flagship's 40x20 walk plate: **2 of the
+    /// network's 11,202 segments survive this**, so the whole cost of the
+    /// graph arm is two square roots per segment plus a few hundred samples.
+    fn may_touch(&self, a: [f64; 3], b: [f64; 3]) -> bool {
+        let da = [
+            a[0] - self.axis[0],
+            a[1] - self.axis[1],
+            a[2] - self.axis[2],
+        ];
+        let dab = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+        let to_a = (da[0] * da[0] + da[1] * da[1] + da[2] * da[2]).sqrt();
+        let along = (dab[0] * dab[0] + dab[1] * dab[1] + dab[2] * dab[2]).sqrt();
+        to_a <= along + self.chord
+    }
+}
+
+/// [`rasterize_rivers`]'s GRAPH arm: one polyline painted onto a rose raster
+/// by WALKING IT ON THE SPHERE and addressing each sample, rather than by
+/// projecting its endpoints and interpolating between them (The Sett,
+/// Task 4).
+///
+/// # Why the DDA could not simply be re-pointed
+///
+/// The chart arm interpolates in box space between two projected endpoints.
+/// A graph raster has no box for a point outside it — there is no "column
+/// 400 of a 40-wide plate", because a box is a compass chain and a chain
+/// either lands somewhere or does not — so a DDA has nothing to anchor on
+/// unless BOTH endpoints are on the plate. Measured on the seed-42 flagship's
+/// 40x20 walk plate: **0 of the 11,202 segments have both endpoints on it**,
+/// and the near ones are ~0.018 rad long against a plate radius of ~0.0036 —
+/// five plate radii per segment. A both-endpoints DDA would draw nothing, at
+/// this rung, ever.
+///
+/// Walking the great circle instead keeps the property
+/// [`rasterize_rivers`]'s own doc rests on — *"no per-tile sample can
+/// guarantee connectivity; it is a property of the line, not of any point on
+/// it"* — because consecutive samples are a third of a facet apart and so
+/// land in the same facet or an adjacent one, and adjacent facets are
+/// adjacent boxes by the rose's own construction.
+///
+/// # What became of the chart arm's two corrections
+///
+/// Neither survives here, and in both cases because the OPERAND is absent
+/// rather than because a different policy was chosen:
+///
+/// - **the antimeridian seam correction** (`near_window`, and the `half`
+///   straddle fix-up after it) exists because [`plate_position`] reduces a
+///   column modulo `virtual_w`, so a point just left of the window reads as
+///   nearly a whole chart to its right. Nothing here is reduced modulo
+///   anything: each sample is addressed independently by
+///   [`Facet::containing`] and looked up, so there is no second
+///   representative to choose between and no straddle to close.
+/// - **the polar-clamp skip** exists because `mercator::project` answers
+///   `None` above ±85° and [`plate_position`] passes that on, silently
+///   splitting a line that crosses the clamp. [`Facet::containing`] is
+///   defined at every point of the sphere, the poles included, so no sample
+///   is ever skipped and no line is ever split. This is the same defect
+///   class as the observer's own `@` vanishing near a pole (ledger S11,
+///   S13); the graph arm simply does not have it.
+///
+/// # What it inherits and does not fix
+///
+/// A polyline's points are the channel network's own, at the grid rung —
+/// ~0.018 rad apart, against a walk facet ~0.00016 rad across. So a segment
+/// drawn here is a great-circle CHORD between two points about a hundred
+/// facets apart, and the boxes it paints are the facets that chord runs
+/// through rather than the ones the water does. That fiction is the chart
+/// arm's too (it draws the same chord as a straight chart line) and it is
+/// not this task's to remove: the sim has no finer channel geometry to
+/// offer. What changes here is only that the boxes painted are the boxes
+/// that hold those facets.
+fn walk_polyline_on_raster(
+    dst: &mut Grid,
+    raster: &crate::rose::RoseRaster,
+    cap: &RasterCap,
+    polyline: &hornvale_kernel::SphericalPolyline,
+    colour_allowed: bool,
+    obs: &crate::observer::TerminalObserver,
+    illum: &hornvale_kernel::color::Illuminant,
+) {
+    let depth = raster.depth();
+    for pair in polyline.points.windows(2) {
+        let (a, b) = (pair[0], pair[1]);
+        if !cap.may_touch(a, b) {
+            continue;
+        }
+        let dot = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0);
+        let arc = hornvale_kernel::math::acos(dot);
+        // Integer step count from the exact arc, so two runs on two machines
+        // cannot disagree about how many samples a segment gets — the same
+        // reason `draw_segment` interpolates on an integer index rather than
+        // on an accumulated float.
+        let steps = (arc / cap.step_rad).ceil().max(1.0) as u32;
+        for i in 0..=steps {
+            let t = f64::from(i) / f64::from(steps);
+            let q = [
+                a[0] + (b[0] - a[0]) * t,
+                a[1] + (b[1] - a[1]) * t,
+                a[2] + (b[2] - a[2]) * t,
+            ];
+            let n = (q[0] * q[0] + q[1] * q[1] + q[2] * q[2]).sqrt();
+            if n == 0.0 {
+                // The chord passes through the centre: the two endpoints are
+                // antipodal and the great circle between them is not unique.
+                // A channel polyline never has one, and inventing a side
+                // would be a fabricated line rather than a missing one.
+                continue;
+            }
+            let u = [q[0] / n, q[1] / n, q[2] / n];
+            let facet = Facet::containing(u, depth);
+            let Some((col, row)) = raster.box_of(&facet) else {
+                continue;
+            };
+            dst.set(col, row, river_box(colour_allowed, obs, illum));
+        }
+    }
+}
+
+/// One drawn box of watercourse — the ONE place a river's box is
+/// constructed, shared by [`draw_segment`] (the chart arm's DDA) and
+/// [`walk_polyline_on_raster`] (the graph arm's walk).
+///
+/// Extracted at The Sett's Task 4 for the same reason [`terrain_box`] was
+/// extracted at Task 3: the two arms paint the identical box off the
+/// identical light, and two spellings of that would be two places for the
+/// glyph and the observed ink to drift apart.
+fn river_box(
+    colour_allowed: bool,
+    obs: &crate::observer::TerminalObserver,
+    illum: &hornvale_kernel::color::Illuminant,
+) -> Cell {
+    // The struct below is `hornvale_game_core`'s own frozen name for
+    // a chart SQUARE — an area, not a vertex — so it is counted in
+    // `docs/audits/lexicon-inventory.tsv` rather than waived on its
+    // own line. A per-line waiver cannot work here: `cargo fmt`
+    // moves a trailing comment onto the following line, and the
+    // waiver then silently stops applying. This comment avoids
+    // spelling the word for the same reason — the tokenizer counts
+    // comments too.
+    Cell {
+        glyph: Some(RIVER_GLYPH),
+        weight: Weight::Normal,
+        // Through the OBSERVER, like every other colour this layer
+        // claims (`color_for`'s own doc). `river_reflectance` is an
+        // invented client-side spectrum, not a sim reading — a
+        // river has no reflectance to sense any more than an ocean
+        // does — but "the observer decides what reaches this
+        // terminal, under the plate's own light" is one rule or it
+        // is none. It was none of the way to `NO_COLOR` until spec
+        // H5's second arm found 54 of 1,920 tiles still coloured
+        // under a `ColorDepth::None` observer, and it was none of
+        // the way to the CLOCK until The Newel's B6 found the whole
+        // wet channel byte-identical from a sun 80 degrees up to
+        // one 60 degrees below the horizon. On every shipped
+        // NO_COLOR path this changes nothing: `NO_COLOR` sets
+        // `colour_allowed` false AND the depth to `None`, and
+        // `Ink::resolve` already forced `Plain` there.
+        ink: Ink::resolve(obs.observe(&river_reflectance(), illum), colour_allowed),
+        // Terrain, not chart: a river is the world's own fixed
+        // geometry, the same channel the relief underneath it came off.
+        source: Source::World,
     }
 }
 
@@ -1468,41 +1763,7 @@ fn draw_segment(
         if x < 0 || y < 0 || x >= w || y >= h {
             continue;
         }
-        dst.set(
-            x as u16,
-            y as u16,
-            // The struct below is `hornvale_game_core`'s own frozen name for
-            // a chart SQUARE — an area, not a vertex — so it is counted in
-            // `docs/audits/lexicon-inventory.tsv` rather than waived on its
-            // own line. A per-line waiver cannot work here: `cargo fmt`
-            // moves a trailing comment onto the following line, and the
-            // waiver then silently stops applying. This comment avoids
-            // spelling the word for the same reason — the tokenizer counts
-            // comments too.
-            Cell {
-                glyph: Some(RIVER_GLYPH),
-                weight: Weight::Normal,
-                // Through the OBSERVER, like every other colour this layer
-                // claims (`color_for`'s own doc). `river_reflectance` is an
-                // invented client-side spectrum, not a sim reading — a
-                // river has no reflectance to sense any more than an ocean
-                // does — but "the observer decides what reaches this
-                // terminal, under the plate's own light" is one rule or it
-                // is none. It was none of the way to `NO_COLOR` until spec
-                // H5's second arm found 54 of 1,920 tiles still coloured
-                // under a `ColorDepth::None` observer, and it was none of
-                // the way to the CLOCK until The Newel's B6 found the whole
-                // wet channel byte-identical from a sun 80 degrees up to
-                // one 60 degrees below the horizon. On every shipped
-                // NO_COLOR path this changes nothing: `NO_COLOR` sets
-                // `colour_allowed` false AND the depth to `None`, and
-                // `Ink::resolve` already forced `Plain` there.
-                ink: Ink::resolve(obs.observe(&river_reflectance(), illum), colour_allowed),
-                // Terrain, not chart: a river is the world's own fixed
-                // geometry, the same channel the relief underneath it came off.
-                source: Source::World,
-            },
-        );
+        dst.set(x as u16, y as u16, river_box(colour_allowed, obs, illum));
     }
 }
 
@@ -1551,25 +1812,13 @@ pub(crate) fn draw_terrain_layer(
                 spectral.season,
                 spectral.cache.as_deref_mut(),
             );
-            // TERRAIN ONLY. Sites are PROJECTED by `draw_feature_layer` —
-            // see its doc for why asking each screen cell "is your
-            // representative a site?" dropped 37.8% of caves.
-            //
-            // TWO CHANNELS, TWO QUANTITIES: the glyph is elevation order
-            // (0389), the ink is the ground's own substance under the
-            // plate's light. `color_for` answering `None` is a legal,
-            // modelled outcome and the tile still draws — see its doc.
-            let glyph = glyph_for(tile.water, tile.band);
-            let color = color_for(&tile, spectral.illuminant, spectral.observer);
+            // Both channels, and the "terrain only" rule, are stated once on
+            // [`terrain_box`] now (The Sett, Task 3) — the two arms of this
+            // layer share that construction rather than spelling it twice.
             grid.set(
                 col as u16,
                 row as u16,
-                Cell {
-                    glyph: Some(glyph),
-                    weight: Weight::Normal,
-                    ink: Ink::resolve(color, colour_allowed),
-                    source: Source::World,
-                },
+                terrain_box(&tile, colour_allowed, spectral),
             );
         }
     }
@@ -1583,8 +1832,7 @@ pub(crate) fn draw_terrain_layer(
         &mut grid,
         terrain,
         geo,
-        f,
-        win,
+        &Placement::Mercator { f, win },
         colour_allowed,
         spectral.observer,
         spectral.illuminant,
@@ -1592,13 +1840,137 @@ pub(crate) fn draw_terrain_layer(
     grid
 }
 
+/// The terrain layer for a GRAPH-addressed plate: box `(col, row)` is drawn
+/// from whatever facet [`crate::rose::RoseRaster`] put there, read at that
+/// facet's own [`Facet::centroid`] (The Sett, Task 3).
+///
+/// **A SIBLING of [`draw_terrain_layer`], deliberately, and not a branch
+/// inside it.** That function has two callers — [`draw_with`] and
+/// [`crate::tiles::TileCache`]'s per-tile painter — and its parameter list is
+/// an interface statement rather than an accident: it reads only `(frame,
+/// win.depth, win.origin_col, win.origin_row, w, h, colour_allowed)` plus the
+/// fixed terrain, which is exactly what makes a tile keyed on `(frame, rung,
+/// tile)` sound. Its own doc records the measured defect that key protects
+/// (`CLIENT-tiles-need-the-overlay-split`: one shared pass invalidated the
+/// whole tile pyramid on every discovery). Threading a raster through it
+/// would weaken that for a caller that can never use one — a chart tile has
+/// no anchor facet and no rose chain.
+///
+/// **The grid's size is the raster's own**, never a second pair of
+/// dimensions: the raster was built at [`crate::driver::Driver`]'s plate
+/// dims, so asking it is the one-copy discipline `Driver::world_plate_dims`
+/// already states for the Mercator half.
+///
+/// **A box no chain reached stays unmarked paper.** `RoseRaster::facet_at`
+/// answers `None` past a refused bearing — one word at the 24 cube-corner
+/// facets — and nothing fills it: not a repeat, not a seeded draw, not a
+/// substitute glyph (ledger decision #4). [`Grid::new`] already gives every
+/// box `glyph: None`, so the blank is the absence of a write rather than a
+/// drawn space.
+///
+/// **THE WATERCOURSES ARE DRAWN HERE (The Sett, Task 4), and were absent for
+/// exactly one task.** Task 3 left [`rasterize_rivers`] uncalled on this arm
+/// on purpose: it placed through [`mercator::project`], so on this raster it
+/// would have painted watercourses into boxes that do not hold the facets
+/// they run through, and a plate with correct ground and no rivers is a
+/// smaller wrong than one with correct ground and misplaced water. It places
+/// through [`Placement`] now — [`walk_polyline_on_raster`] walks each line on
+/// the sphere and addresses every sample — so the call is back, at the same
+/// point in the same order its Mercator sibling makes it.
+///
+/// The `season`/`at` contract [`terrain_at_facet`] states binds this caller
+/// exactly as it binds [`terrain_at_tile`]; `spectral` carries both.
+pub(crate) fn draw_terrain_layer_from_raster(
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    memo: &mut RoomMeshMemo,
+    raster: &crate::rose::RoseRaster,
+    colour_allowed: bool,
+    spectral: &mut Spectral<'_>,
+) -> Grid {
+    let mut grid = Grid::new(raster.width(), raster.height());
+    for row in 0..raster.height() {
+        for col in 0..raster.width() {
+            let Some(facet) = raster.facet_at(col, row) else {
+                continue;
+            };
+            // THE CENTROID IS THE READING POINT, and the choice is named
+            // rather than defaulted: `terrain_at_facet`'s own doc records
+            // that a graph-addressed raster has no finer point to offer,
+            // where a projected one hands over the tile's own centre.
+            let tile = terrain_at_facet(
+                terrain,
+                geo,
+                index,
+                memo,
+                facet,
+                facet.centroid(),
+                spectral.ctx,
+                spectral.at,
+                spectral.season,
+                spectral.cache.as_deref_mut(),
+            );
+            grid.set(col, row, terrain_box(&tile, colour_allowed, spectral));
+        }
+    }
+    // THE LINE LAYER, THROUGH THE SEAM (The Sett, Task 4). It sits here for
+    // exactly the reason it sits inside [`draw_terrain_layer`]: a river is
+    // the world's own fixed geometry, drawn under every overlay, and the
+    // ordering — after the relief loop, so a river paints over the ground it
+    // runs across — is the same. What is different is only the placement:
+    // `walk_polyline_on_raster` walks the line on the sphere and addresses
+    // each sample, where the chart arm projects and interpolates. Task 3
+    // left this call out deliberately and said so; this is the task that
+    // puts it back.
+    rasterize_rivers(
+        &mut grid,
+        terrain,
+        geo,
+        &Placement::Graph(raster),
+        colour_allowed,
+        spectral.observer,
+        spectral.illuminant,
+    );
+    grid
+}
+
+/// One drawn box of ground, from a reading — the ONE place a `TileTerrain`
+/// becomes a painted box, shared by [`draw_terrain_layer`] (Mercator) and
+/// [`draw_terrain_layer_from_raster`] (the walk view's rose).
+///
+/// **Two channels, two quantities**: the glyph is elevation order (decision
+/// 0389), the ink is the ground's own substance under the plate's light.
+/// [`color_for`] answering `None` is a legal, modelled outcome and the box
+/// still draws — see its own doc.
+///
+/// **TERRAIN ONLY.** Sites are placed by [`draw_feature_layer`], never by
+/// asking each drawn box "is your representative a site?" — see that
+/// function's doc for the 37.8% of caves that question dropped.
+///
+/// Extracted at The Sett's Task 3 rather than copied: the graph arm paints
+/// exactly the two channels the Mercator arm does, off exactly the same
+/// reading, and two spellings of that would be two places for the elevation
+/// glyph and the observed ink to drift apart.
+fn terrain_box(tile: &TileTerrain, colour_allowed: bool, spectral: &Spectral<'_>) -> Cell {
+    Cell {
+        glyph: Some(glyph_for(tile.water, tile.band)),
+        weight: Weight::Normal,
+        ink: Ink::resolve(
+            color_for(tile, spectral.illuminant, spectral.observer),
+            colour_allowed,
+        ),
+        source: Source::World,
+    }
+}
+
 /// Where a VIRTUAL chart tile lands on a `win`-scrolled plate, as
 /// `(screen row, screen col)` — or `None` when it is above or left of the
 /// window.
 ///
 /// **The ONE copy of this arithmetic** (Task 6, fix round 1's M1). It was
-/// written twice — [`draw_feature_layer`]'s own `place` closure and
-/// [`perception_tile_on_screen`] — line for line, while the second one's doc
+/// written twice — [`draw_feature_layer`]'s own `place` closure and the
+/// perception layer's own placement — line for line, while the second one's doc
 /// invoked the one-copy discipline. The duplication was not merely untidy:
 /// the reviewer found it by accident because a single mutation hit both
 /// sites at once, so the copies were actively weakening the mutation
@@ -1622,42 +1994,174 @@ fn tile_on_screen(
     Some((drow, dcol))
 }
 
-/// Where the coordinate `g` lands on a `width`x`height` `dst`, or `None` if
-/// the projection puts it above the polar clamp or [`tile_on_screen`] puts it
-/// off the window (above/left) or off the drawn plate (right/bottom).
+/// Where a thing on the sphere lands on the drawn plate — **the ONE place
+/// that question is answered** (The Sett, Task 4).
 ///
-/// **Factored out at Task 7, not written twice.** [`draw_feature_layer`]'s
-/// own `place` closure needs this to decide where to paint; its
-/// viewport-relative settlement ranking (see that function's own doc) needs
-/// the SAME answer BEFORE any glyph is chosen, to know which settlements
-/// are even candidates for the comparison. Two copies of "is this thing
-/// on screen, and where" is exactly the shape Task 6's fix round 1 already
-/// paid down once for [`tile_on_screen`] itself (see that function's own
-/// doc on the mutation it cost).
+/// [`tile_on_screen`]'s own doc already records what a second copy of this
+/// arithmetic costs: it was written twice, and a single mutation hit both
+/// sites at once, so the copies were actively weakening the mutation
+/// evidence for each other. This type is the same discipline one level up.
+/// The plate is drawn by TWO rasters now — a Mercator chart for the map and
+/// the compass rose for the walk view — and every overlay has to place onto
+/// whichever one is underneath it.
 ///
-/// **It took a bare [`Vertex`] until The Prospect's Task 8** and resolved it
-/// through `Geosphere::coord` itself. That made the vertex the only place a
-/// mark could be drawn, which is precisely the defect that task closed: a
-/// PLACED site (a cave, an exotic site) stands on a facet up to ~40
-/// walk-facet edges from its warranting vertex, so the position has to be
-/// the caller's — [`MapSite::coord`] — and this function's job is only the
-/// projection. A vertex-borne mark (a volcano's anchor, a waterfall) passes
-/// `geo.coord(vertex)` at the call site and reads exactly as it did.
-fn project_onto_screen(
-    f: &Frame,
-    win: &Window,
+/// **All three overlays must be handed the SAME variant the terrain raster
+/// was drawn with**, chosen once per redraw in
+/// [`crate::driver::Driver::world_plate_for_redraw`].
+/// [`draw_feature_layer`] and [`draw_perception_layer`] gate on the BAND,
+/// not the focus, so at the walk rung they draw over the rose raster in
+/// [`hornvale_game_core::Focus::Walk`]/[`hornvale_game_core::Focus::Cli`]
+/// and over the Mercator raster in [`hornvale_game_core::Focus::Map`]. A
+/// layer that chose its own placement would be right in one focus and wrong
+/// in the other, and nothing would show it until someone opened the map.
+///
+/// **What still places through [`Placement::Mercator`] unconditionally, and
+/// why that is correct rather than missed.** The whole cursor and strip
+/// chain — [`perceived_at`], `Driver::resolve_walk_band`,
+/// `Driver::world_view_tile` — is reachable only while the map is focused
+/// (`Driver::refresh_strip`'s own callers are map gestures), and the map is
+/// a Mercator instrument by ruling. Those paths take a `Frame` and a
+/// `Window` and build this variant themselves.
+#[derive(Debug, Clone, Copy)]
+pub enum Placement<'a> {
+    /// The map: project through Mercator onto `win`'s chart.
+    Mercator {
+        /// The projection's central line.
+        f: &'a Frame,
+        /// Which tile of the virtual chart the drawn plate's origin sits at.
+        win: &'a Window,
+    },
+    /// The walk view: look the facet up in the rose raster's inverse map.
+    Graph(&'a crate::rose::RoseRaster),
+}
+
+impl Placement<'_> {
+    /// The mesh rung the plate underneath is drawn at — `win.depth` for a
+    /// chart, the raster's own anchor depth for a graph.
+    ///
+    /// [`rasterize_rivers`] reads it to pick its selection threshold, which
+    /// is a function of the rung and of nothing else
+    /// ([`river_threshold`]); asking the placement is what stops that
+    /// threshold and the plate it is drawn onto from coming apart.
+    /// type-audit: bare-ok(count)
+    pub fn depth(&self) -> u32 {
+        match self {
+            Placement::Mercator { win, .. } => win.depth,
+            Placement::Graph(raster) => raster.depth(),
+        }
+    }
+
+    /// Where the coordinate `g` lands on a `width`x`height` plate, as
+    /// `(screen row, screen col)`, or `None` if it is off the drawn plate.
+    ///
+    /// **The [`Placement::Mercator`] arm IS the old free function
+    /// `project_onto_screen`, moved rather than rewritten**, and its `None`
+    /// still means one of three things: the projection puts `g` above the
+    /// polar clamp, [`tile_on_screen`] puts it off the window (above/left),
+    /// or it lands off the drawn plate (right/bottom).
+    ///
+    /// **The [`Placement::Graph`] arm addresses rather than projects.** It
+    /// asks which facet at the raster's own depth CONTAINS `g`
+    /// ([`Facet::containing`]) and then looks that facet up, so there is no
+    /// clamp to be above and no chart to be off — only the raster's own
+    /// window of facets to be outside. A caller holding a [`Facet`] should
+    /// call [`Placement::box_of_facet`] instead and skip the addressing
+    /// entirely.
+    ///
+    /// **It took a bare [`Vertex`] until The Prospect's Task 8** and
+    /// resolved it through `Geosphere::coord` itself. That made the vertex
+    /// the only place a mark could be drawn, which is precisely the defect
+    /// that task closed: a PLACED site (a cave, an exotic site) stands on a
+    /// facet up to ~40 walk-facet edges from its warranting vertex, so the
+    /// position has to be the caller's — [`MapSite::coord`] — and this
+    /// function's job is only the placement. A vertex-borne mark (a
+    /// volcano's anchor, a waterfall) passes `geo.coord(vertex)` at the call
+    /// site and reads exactly as it did.
+    /// type-audit: bare-ok(count: width), bare-ok(count: height), bare-ok(index: return)
+    pub fn box_of_coord(&self, g: GeoCoord, width: u32, height: u32) -> Option<(u32, u32)> {
+        match self {
+            Placement::Mercator { f, win } => {
+                let (virtual_w, virtual_h) = virtual_dims(win.depth);
+                let (plate_row, plate_col) =
+                    mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)?;
+                let (drow, dcol) = tile_on_screen(win, virtual_w, plate_row, plate_col)?;
+                if dcol >= width || drow >= height {
+                    return None;
+                }
+                Some((drow, dcol))
+            }
+            Placement::Graph(raster) => {
+                let p = hornvale_kernel::math::unit_sphere_from_lat_lon(g.latitude, g.longitude);
+                self.box_of_facet(&Facet::containing(p, raster.depth()), width, height)
+            }
+        }
+    }
+
+    /// Where `facet` lands on a `width`x`height` plate, as `(screen row,
+    /// screen col)`, or `None` if it is off the drawn plate.
+    ///
+    /// **The two arms are not the same question asked twice.** For
+    /// [`Placement::Mercator`] a facet has no address on the chart at all —
+    /// only a position — so this is exactly
+    /// `box_of_coord(facet.coord(), ..)`, and the round trip through a
+    /// coordinate is the honest statement of what a projected raster can
+    /// know. For [`Placement::Graph`] the facet IS the address and the
+    /// answer is a map lookup, with no coordinate anywhere in it. That the
+    /// walk band's own marks are addressed by facet and were being
+    /// projected through a map is the clearest single statement of what The
+    /// Sett is fixing.
+    /// type-audit: bare-ok(count: width), bare-ok(count: height), bare-ok(index: return)
+    pub fn box_of_facet(&self, facet: &Facet, width: u32, height: u32) -> Option<(u32, u32)> {
+        match self {
+            Placement::Mercator { .. } => self.box_of_coord(facet.coord(), width, height),
+            Placement::Graph(raster) => {
+                let (col, row) = raster.box_of(facet)?;
+                let (drow, dcol) = (u32::from(row), u32::from(col));
+                // The raster is built at the plate's own dimensions, so this
+                // bound can only bite where a caller draws onto a SMALLER
+                // `dst` than the raster was built for. Checked anyway, and
+                // for the reason `draw_feature_layer`'s own doc gives:
+                // `Grid::set` silently DROPS an out-of-range write, so a
+                // disagreement between the two would lose exactly the marks
+                // nearest the edge, invisibly.
+                if dcol >= width || drow >= height {
+                    return None;
+                }
+                Some((drow, dcol))
+            }
+        }
+    }
+}
+
+/// Where `site` lands on a `width`x`height` plate — **the ONE answer both
+/// [`draw_feature_layer`]'s viewport-relative settlement ranking and its
+/// painting pass read** (The Sett, Task 4).
+///
+/// The ranking filters on "would this settlement actually be drawn HERE"
+/// before any glyph is chosen, and the painting pass then places the same
+/// site again. Two placements that disagreed would mean the map and its own
+/// legend disagreeing about which settlements are "here" — the same
+/// one-copy discipline [`tile_on_screen`] records the mutation cost of.
+///
+/// **A PLACED site is placed by its FACET, not by its coordinate**, and on a
+/// graph raster that is the difference between an address and a search:
+/// [`MapSite::placed`] already holds the facet `hornvale_worldgen::
+/// site_facet_for` minted, so asking [`Placement::box_of_facet`] is exact,
+/// while re-addressing its centroid would ask [`Facet::containing`] to
+/// recover an answer the roster was already carrying. A settlement has no
+/// placed facet by construction (see [`MapSite::placed`]'s own doc), so it
+/// goes through the coordinate.
+fn site_box(
+    placement: &Placement<'_>,
+    geo: &Geosphere,
+    site: &MapSite,
     width: u32,
     height: u32,
-    g: GeoCoord,
 ) -> Option<(u32, u32)> {
-    let (virtual_w, virtual_h) = virtual_dims(win.depth);
-    let (plate_row, plate_col) =
-        mercator::project(f, g.latitude, g.longitude, virtual_w, virtual_h)?;
-    let (drow, dcol) = tile_on_screen(win, virtual_w, plate_row, plate_col)?;
-    if dcol >= width || drow >= height {
-        return None;
+    match &site.placed {
+        Some(facet) => placement.box_of_facet(facet, width, height),
+        None => placement.box_of_coord(site.coord(geo), width, height),
     }
-    Some((drow, dcol))
 }
 
 /// LAYER TWO: every placed point site, drawn onto `dst` by PROJECTING
@@ -1669,7 +2173,7 @@ fn project_onto_screen(
 /// "show placed sites on the world map... just don't show their labels").**
 /// Before this, this layer drew nothing until the possession had entered the
 /// site, which is precisely why seed 42's map — 874 caves, 103 exotic sites,
-/// 389 settlement vertices — read as ~1% coverage of undifferentiated forest
+/// 307 settlement vertices — read as ~1% coverage of undifferentiated forest
 /// no matter how much of the world had actually been explored: the KIND a
 /// site is (its glyph) is drawn like any other terrain fact now, ground
 /// truth the same way a relief band or a river channel already is. What
@@ -1709,7 +2213,12 @@ fn project_onto_screen(
 ///
 /// **`dst` is drawn ONTO, never replaced**, so this composes over whatever
 /// the terrain layer painted (or, at Task 5, over a tile served from a
-/// cache). It writes only the cells its own discovered sites project into.
+/// cache). It writes only the BOXES its own roster PLACES into, and all
+/// three emphasised words are corrections made at The Sett's Task 4: this
+/// sentence used the banned vertex-sense word for a chart square, said
+/// "project" (nothing here has projected since this layer took a
+/// [`Placement`]), and said "discovered sites" (nothing but the volcano loop
+/// has been gated on discovery since The Prospect's Gate A ungating).
 ///
 /// **The window's SIZE is read from `dst` itself, and there is deliberately
 /// no `w`/`h` parameter to disagree with it** (fix round 1, Minor 1).
@@ -1799,8 +2308,7 @@ fn project_onto_screen(
 pub fn draw_feature_layer(
     dst: &mut Grid,
     geo: &Geosphere,
-    f: &Frame,
-    win: &Window,
+    placement: &Placement<'_>,
     colour_allowed: bool,
     sites: &[MapSite],
     volcanoes: &BTreeSet<Vertex>,
@@ -1825,7 +2333,7 @@ pub fn draw_feature_layer(
     let mut in_frame: Vec<(Vertex, u64)> = sites
         .iter()
         .filter(|site| site.kind == SiteKind::Settlement)
-        .filter(|site| project_onto_screen(f, win, width, height, site.coord(geo)).is_some())
+        .filter(|site| site_box(placement, geo, site, width, height).is_some())
         .map(|site| (site.vertex, site.population))
         .collect();
     // Population descending, ties broken by vertex ascending — total and
@@ -1848,31 +2356,40 @@ pub fn draw_feature_layer(
     // stays gated on the SAME discovery fact `Driver::update_discovery`
     // already records for any landscape feature, independent of this
     // ungating.
-    let place =
-        |at: GeoCoord, gate: Option<FeatureId>, glyph: char, color: [u8; 3], grid: &mut Grid| {
-            if let Some(id) = gate
-                && !discovered.contains(id)
-            {
-                return;
-            }
-            let Some((drow, dcol)) = project_onto_screen(f, win, width, height, at) else {
-                return;
-            };
-            grid.set(
-                dcol as u16,
-                drow as u16,
-                Cell {
-                    glyph: Some(glyph),
-                    weight: Weight::Normal,
-                    ink: Ink::resolve(Some(color), colour_allowed),
-                    source: Source::World,
-                },
-            );
+    // `at` is ALREADY PLACED, and that is Task 4's own one-copy discipline
+    // rather than a style choice: the settlement ranking above and this
+    // painting pass must read one answer, so the box is resolved at the call
+    // site — through [`site_box`] for a roster entry, through the placement
+    // directly for a vertex-borne mark — and this closure never places
+    // anything itself.
+    let place = |at: Option<(u32, u32)>,
+                 gate: Option<FeatureId>,
+                 glyph: char,
+                 color: [u8; 3],
+                 grid: &mut Grid| {
+        if let Some(id) = gate
+            && !discovered.contains(id)
+        {
+            return;
+        }
+        let Some((drow, dcol)) = at else {
+            return;
         };
+        grid.set(
+            dcol as u16,
+            drow as u16,
+            Cell {
+                glyph: Some(glyph),
+                weight: Weight::Normal,
+                ink: Ink::resolve(Some(color), colour_allowed),
+                source: Source::World,
+            },
+        );
+    };
 
     for &vertex in waterfalls {
         place(
-            geo.coord(vertex),
+            placement.box_of_coord(geo.coord(vertex), width, height),
             None,
             WATERFALL_GLYPH,
             WATERFALL_COLOR,
@@ -1885,7 +2402,7 @@ pub fn draw_feature_layer(
             vertex,
         });
         place(
-            geo.coord(vertex),
+            placement.box_of_coord(geo.coord(vertex), width, height),
             Some(id),
             VOLCANO_GLYPH,
             VOLCANO_COLOR,
@@ -1919,7 +2436,13 @@ pub fn draw_feature_layer(
         // discovery AGAINST (Gate B, the cursor readout and the walk-band
         // prose's own naming, both untouched by this change); it is simply
         // no longer what gates the glyph.
-        place(site.coord(geo), None, glyph, color, dst);
+        place(
+            site_box(placement, geo, site, width, height),
+            None,
+            glyph,
+            color,
+            dst,
+        );
     }
 }
 
@@ -2026,12 +2549,28 @@ fn mark_glyph(kind: &str) -> char {
 /// a facet 1.87 km across. This route is chosen because it is EXACT AND
 /// ALREADY IN THE TREE, not because the other one is impossible.
 ///
-/// So this layer projects the SAME coordinate through the SAME function the
-/// raster does: `room` unpacks to a [`Facet`]
-/// ([`hornvale_kernel::FacetId::unpack`]), whose [`Facet::coord`] goes
-/// through [`mercator::project`]. Agreement is by construction — one
-/// projection, not two that have to agree — and there is no arithmetic here
-/// for a future edit to get subtly wrong.
+/// So this layer places the SAME facet through the SAME seam the raster
+/// underneath was drawn with: `room` unpacks to a [`Facet`]
+/// ([`hornvale_kernel::FacetId::unpack`]) and [`Placement::box_of_facet`]
+/// answers it. Agreement is by construction — one placement, not two that
+/// have to agree — and there is no arithmetic here for a future edit to get
+/// subtly wrong.
+///
+/// **AND THE FACET IS NOW AN ADDRESS RATHER THAN A POSITION (The Sett,
+/// Task 4).** Until this task the seam did not exist and the answer was
+/// always `mercator::project(facet.coord())` — correct over a Mercator
+/// raster, and wrong over the walk view's rose raster, which had been drawn
+/// by compass chain since Task 3. **That the walk band's own marks are
+/// addressed by facet and were being projected through a map is the
+/// clearest single statement of what The Sett is fixing**, and it is
+/// measurable rather than theoretical: one step south of the seed-42
+/// flagship start the settlement just left projected onto the observer's own
+/// box, where the collision rule below dropped it, so the crowd the walker
+/// had stepped away from was drawn nowhere at all
+/// (`a_neighbouring_mark_draws_in_its_own_box`). Over a
+/// [`Placement::Graph`] no coordinate enters the placement at all, which
+/// also removes the polar-clamp `None` that made the observer's own `@`
+/// vanish near a pole (ledger S11, S13).
 ///
 /// ## What it paints, and what it deliberately does not
 ///
@@ -2068,18 +2607,14 @@ fn mark_glyph(kind: &str) -> char {
 /// round 1, Minor 1).
 pub(crate) fn draw_perception_layer(
     dst: &mut Grid,
-    f: &Frame,
-    win: &Window,
+    placement: &Placement<'_>,
     colour_allowed: bool,
     perceived: &[Perceived<'_>],
 ) {
     let width = u32::from(dst.width());
     let height = u32::from(dst.height());
-    let (virtual_w, virtual_h) = virtual_dims(win.depth);
 
-    for ((drow, dcol), index) in
-        perception_boxes(f, win, virtual_w, virtual_h, width, height, perceived)
-    {
+    for ((drow, dcol), index) in perception_boxes(placement, width, height, perceived) {
         let won = &perceived[index];
         let (glyph, weight, color) = if won.here {
             (HERE_GLYPH, Weight::Bold, HERE_COLOR)
@@ -2136,10 +2671,7 @@ type BoxRank = (bool, bool, u32, usize);
 /// [`draw_perception_layer`]'s doc: observer, then marked-over-unmarked,
 /// then smallest `salience`, then document order.
 fn perception_boxes(
-    f: &Frame,
-    win: &Window,
-    virtual_w: u32,
-    virtual_h: u32,
+    placement: &Placement<'_>,
     width: u32,
     height: u32,
     perceived: &[Perceived<'_>],
@@ -2149,13 +2681,18 @@ fn perception_boxes(
         if !seen.here && seen.mark.is_none() {
             continue;
         }
-        let Some((drow, dcol)) = perception_tile_on_screen(f, win, virtual_w, virtual_h, seen.room)
-        else {
+        // THE PACKET IS ADDRESSED BY FACET AND IS NOW PLACED BY ONE (The
+        // Sett, Task 4). `room` unpacks to a `Facet`, which
+        // `Placement::box_of_facet` answers by lookup on a graph raster and
+        // by projecting the facet's own coordinate on a chart — the second
+        // being exactly what the layer did before this seam, and still
+        // does for the map-focused resolver below.
+        let Ok(facet) = FacetId(seen.room).unpack() else {
             continue;
         };
-        if dcol >= width || drow >= height {
+        let Some((drow, dcol)) = placement.box_of_facet(&facet, width, height) else {
             continue;
-        }
+        };
         let rank = (
             !seen.here,
             seen.mark.is_none(),
@@ -2176,6 +2713,15 @@ fn perception_boxes(
 /// the picture drew at `(row, col)` of a `width`x`height` plate. `bin`'s
 /// band-B resolver's own entry point; see [`perception_boxes`] for why the
 /// resolver asks this rather than re-deriving the placement.
+///
+/// **It takes a `Frame` and a `Window` and builds [`Placement::Mercator`]
+/// itself, and that is correct rather than a seam this task missed (The
+/// Sett, Task 4).** Its one caller is `Driver::resolve_walk_band`, reached
+/// only through `Driver::refresh_strip`, whose own callers are every one a
+/// MAP gesture — a cursor key, a zoom, a re-centre, a resize while the map
+/// is focused. The map is a Mercator instrument by ruling (see
+/// [`Placement`]'s own doc), so this path is asking about the only raster it
+/// can ever be looking at.
 pub(crate) fn perceived_at(
     f: &Frame,
     win: &Window,
@@ -2185,33 +2731,9 @@ pub(crate) fn perceived_at(
     row: u32,
     col: u32,
 ) -> Option<usize> {
-    let (virtual_w, virtual_h) = virtual_dims(win.depth);
-    perception_boxes(f, win, virtual_w, virtual_h, width, height, perceived)
+    perception_boxes(&Placement::Mercator { f, win }, width, height, perceived)
         .get(&(row, col))
         .copied()
-}
-
-/// Where a packed room id lands on a `win`-scrolled plate, as
-/// `(screen row, screen col)` — `None` when the facet does not unpack, is
-/// above the projection's polar clamp, or sits above/left of the window.
-///
-/// **Shared by [`draw_perception_layer`] (which paints there) and `bin`'s
-/// own band-B tests (which assert it), so the two can never disagree about
-/// where a facet went** — the same one-copy discipline `core`'s own chart
-/// keeps behind its single `boxes_of`.
-///
-/// The window offset comes from [`tile_on_screen`], shared with
-/// [`draw_feature_layer`] rather than written a second time here — see that
-/// function's doc for what the duplication cost before M1 removed it.
-pub(crate) fn perception_tile_on_screen(
-    f: &Frame,
-    win: &Window,
-    virtual_w: u32,
-    virtual_h: u32,
-    room: u64,
-) -> Option<(u32, u32)> {
-    let (plate_row, plate_col) = perception_tile(f, virtual_w, virtual_h, room)?;
-    tile_on_screen(win, virtual_w, plate_row, plate_col)
 }
 
 /// The VIRTUAL chart tile a packed room id occupies — the absolute
@@ -2219,6 +2741,16 @@ pub(crate) fn perception_tile_on_screen(
 /// before the window's origin is subtracted. `None` when the id does not
 /// unpack to a facet, or when the facet is above the projection's polar
 /// clamp and so is on no chart at all.
+///
+/// **`#[cfg(test)]` since The Sett's Task 4**, and the gate is the honest
+/// record of what happened to it. Production placed the perception layer
+/// through this and through `perception_tile_on_screen` above it; both are
+/// [`Placement`]'s job now, and the second is deleted outright. This one
+/// survives because five assertions across this module and `driver.rs` need
+/// the ABSOLUTE chart tile — before the window's origin is subtracted —
+/// which no production caller ever wanted and [`Placement`] deliberately
+/// does not expose.
+#[cfg(test)]
 pub(crate) fn perception_tile(
     f: &Frame,
     virtual_w: u32,
@@ -2695,6 +3227,87 @@ pub const LAYERS: &[crate::rate::LayerDecl] = &[
 ///    vertices, memoized;
 /// 3. the tile's class is the nearest of those four corners.
 ///
+/// **Step 1 is all this function still does itself** (The Sett, Task 2).
+/// Steps 2 and 3 — and every reading after them — are [`terrain_at_facet`],
+/// which this calls with the facet AND the point that resolved it. There is
+/// one copy of the reading and it is that one; the separation exists so a
+/// graph-addressed raster (the walk band's compass rose) can reach the
+/// reading without a projection to unproject through.
+///
+/// **The doc that belongs to the reading moved with it.** The retired
+/// "same answer, not an approximation" premise, the four dot products, the
+/// deliberately-unused corner weights, the coarser-than-the-grid fallback,
+/// and the **`season`/`at` contract every caller of either function must
+/// satisfy** are all stated on [`terrain_at_facet`] now, because that is the
+/// item they describe. This one adds only the Mercator half: `row`/`col`
+/// name a box on `win`, and the point handed on is that box's own centre.
+#[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
+pub fn terrain_at_tile(
+    terrain: &GeneratedTerrain,
+    geo: &Geosphere,
+    index: &NearestVertexIndex,
+    memo: &mut RoomMeshMemo,
+    f: &Frame,
+    win: &Window,
+    virtual_w: u32,
+    virtual_h: u32,
+    row: u32,
+    col: u32,
+    ctx: Option<&hornvale_locale::LocaleContext>,
+    at: WorldTime,
+    season: u32,
+    reflectance_cache: Option<&mut ReflectanceCache>,
+) -> TileTerrain {
+    let plate_row = win.origin_row + row;
+    let plate_col = win.origin_col + col;
+    let (lat, lon) = mercator::unproject(f, plate_row, plate_col, virtual_w, virtual_h);
+    let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
+    let facet = Facet::containing(pos, win.depth);
+    // THE POINT IS PASSED ON, NOT RE-DERIVED THERE. `terrain_at_facet` uses
+    // it twice more after the facet is known — as the grid-level fallback
+    // address, and in the dot products that pick the quad corner nearest it
+    // — and the tile's own centre is a strictly finer thing to compare
+    // against than the facet's centroid (see the weights paragraph on that
+    // function). Which point a caller means is the CALLER's choice; this one
+    // means the tile's centre.
+    terrain_at_facet(
+        terrain,
+        geo,
+        index,
+        memo,
+        &facet,
+        pos,
+        ctx,
+        at,
+        season,
+        reflectance_cache,
+    )
+}
+
+/// Everything [`terrain_at_tile`] reads once the facet is known — the
+/// reading, separated from the addressing (The Sett, Task 2).
+///
+/// `facet` is the address; `at_position` is the point INSIDE it the reading
+/// is taken at. The two are separate parameters because the reading uses the
+/// point twice more after the address is settled, and the two callers on the
+/// ladder do not want the same point:
+///
+/// - [`terrain_at_tile`] passes the point it already unprojected — the
+///   tile's own centre — because a projected raster HAS one and it is
+///   strictly finer than the facet's centre;
+/// - a graph-addressed raster has no such point and passes
+///   [`Facet::centroid`].
+///
+/// **Collapsing `at_position` to `facet.centroid()` here would be a silent
+/// behaviour change, not a simplification.** The point decides which of the
+/// grid-level quad's four corners is nearest (below), and at
+/// [`BAND_B_RUNG`] that quad spans 128 facets on a side, so the two
+/// candidates lie in the same quad but can fall either side of its diagonal
+/// midlines — where the resolved [`TileTerrain::vertex`], and with it
+/// `ocean`, `water` and the snapped elevation fallback, flips.
+/// `clients/game/bin/tests/facet_reading.rs` measures how often, and holds
+/// the two readers to an exact identity when they ARE handed the same point.
+///
 /// **THE "SAME ANSWER, NOT AN APPROXIMATION" CLAIM BELOW RESTS ON A PREMISE
 /// THE PAVEMENT RETIRED, and this paragraph is a pointer, not a verdict.** It
 /// argued that a point inside a grid-level TRIANGLE has its nearest mesh
@@ -2731,8 +3344,8 @@ pub const LAYERS: &[crate::rate::LayerDecl] = &[
 /// comparing against it costs four dot products rather than a memo key per
 /// tile.
 ///
-/// A rung COARSER than the grid has no ancestor at the grid level, so the
-/// tile's own centre is re-addressed at the grid level instead. Nothing on
+/// A rung COARSER than the grid has no ancestor at the grid level, so
+/// `at_position` is re-addressed at the grid level instead. Nothing on
 /// the shipped ladder reaches there ([`GLOBE_RUNG`] is the floor and is the
 /// grid level itself); `driver.rs`'s rung-5 disclosure test does.
 ///
@@ -2756,29 +3369,19 @@ pub const LAYERS: &[crate::rate::LayerDecl] = &[
 /// cache's own "never serves a stale season" guarantee cannot see, because
 /// nothing here can tell a correctly-derived bucket from a wrong one; both
 /// are just a `u32`.
-#[allow(clippy::too_many_arguments)] // mirrors `draw_with`'s own allow, one level down
-pub fn terrain_at_tile(
+#[allow(clippy::too_many_arguments)] // mirrors `terrain_at_tile`'s own allow, one level up
+pub fn terrain_at_facet(
     terrain: &GeneratedTerrain,
     geo: &Geosphere,
     index: &NearestVertexIndex,
     memo: &mut RoomMeshMemo,
-    f: &Frame,
-    win: &Window,
-    virtual_w: u32,
-    virtual_h: u32,
-    row: u32,
-    col: u32,
+    facet: &Facet,
+    at_position: [f64; 3],
     ctx: Option<&hornvale_locale::LocaleContext>,
     at: WorldTime,
     season: u32,
     reflectance_cache: Option<&mut ReflectanceCache>,
 ) -> TileTerrain {
-    let plate_row = win.origin_row + row;
-    let plate_col = win.origin_col + col;
-    let (lat, lon) = mercator::unproject(f, plate_row, plate_col, virtual_w, virtual_h);
-    let pos = hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon);
-    let facet = Facet::containing(pos, win.depth);
-
     // The address terrain is actually defined on. `GeneratedTerrain` lives
     // on the vertices of the `Geosphere` it was generated against and has
     // nothing finer to disclose, so every rung at or below the grid resolves
@@ -2792,20 +3395,22 @@ pub fn terrain_at_tile(
     let grid_level = geo.depth();
     let addr = match facet.ancestor(grid_level) {
         Some(anc) => anc,
-        None => Facet::containing(pos, grid_level),
+        None => Facet::containing(at_position, grid_level),
     };
     let corners = addr
         .corner_weights_memo(geo, index, memo)
         .expect("a facet AT the grid's own level is never coarser than the grid");
 
-    // The nearest of the quad's four corners to the tile's own centre.
+    // The nearest of the quad's four corners to `at_position` — the
+    // tile's own centre when a projected raster asked, the facet's centroid
+    // when a graph-addressed one did.
     // Ties break to the lower `Vertex`, the same direction
     // `NearestVertexIndex`'s own scan breaks them.
     let mut vertex = corners[0].0;
     let mut best = f64::NEG_INFINITY;
     for &(candidate, _weight) in &corners {
         let q = geo.position(candidate);
-        let d = q[0] * pos[0] + q[1] * pos[1] + q[2] * pos[2];
+        let d = q[0] * at_position[0] + q[1] * at_position[1] + q[2] * at_position[2];
         // Exact-equality tie detection is intentional, exactly as
         // `NearestVertexIndex::scan_at` does it: it selects the vertex a
         // strict-`>` first hit in ascending order would have.
@@ -2839,7 +3444,26 @@ pub fn terrain_at_tile(
     // `virtual_dims` deliberately still honours; there the snapped reading is
     // the only one available and is the right answer, since the tile is
     // coarser than the sample.
-    let height_asl = match facet.corner_weights(geo, index) {
+    //
+    // **THROUGH THE MEMO, LIKE THE ANCESTOR LOOKUP FORTY-SIX LINES ABOVE
+    // (The Sett, Task 9).** This was a bare `facet.corner_weights(geo,
+    // index)` until Task 7 priced it: four `NearestVertexIndex` scans per
+    // box per frame, **6.821 ms of a 9.712 ms walk-band redraw — 65.3%**
+    // (ledger S21). The `TileCache` amortised it to once per tile fill on
+    // the Mercator arm, so the cost is not one the rose raster introduced —
+    // the graph arm keeps no tiles to hide it behind, and removing the cache
+    // is what made it visible.
+    //
+    // The ANSWER cannot move: `corner_weights_memo` is a cache of a pure
+    // function of `(Facet, Geosphere::level())`, byte-identical to its
+    // recomputing sibling by construction and pinned by the kernel's
+    // `corner_weights_memo_bit_equals_recomputation`. Only the number of
+    // expensive calls changes, which is what
+    // `facet_reading.rs`'s `a_second_draw_reuses_the_first_draws_corner_weights`
+    // counts. The memo is caller-owned and unbounded, so **whoever holds one
+    // across frames has to bound it** — `Driver::rose_mesh_memo` does, in
+    // `Driver::bound_rose_mesh_memo`.
+    let height_asl = match facet.corner_weights_memo(geo, index, memo) {
         Some(weights) => {
             let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
             let blended: f64 = weights
@@ -2909,7 +3533,7 @@ pub fn terrain_at_tile(
                 None => {
                     cache.misses += 1;
                     let r = ctx.and_then(|ctx| {
-                        ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()
+                        ctx.reflectance_at_facet_cached(facet, at, Some(memo)).ok()
                     });
                     if let Some(r) = r {
                         cache.store.insert(key, r);
@@ -2920,12 +3544,19 @@ pub fn terrain_at_tile(
         }
         // No cache supplied, or `pack()` refused: exactly the pre-Task-4
         // behaviour, always fresh.
-        _ => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(&facet, at, Some(memo)).ok()),
+        _ => ctx.and_then(|ctx| ctx.reflectance_at_facet_cached(facet, at, Some(memo)).ok()),
     };
 
     TileTerrain {
         ocean: terrain.is_ocean(vertex),
-        facet,
+        // THE ONE COST THE EXTRACTION ADDS, named rather than left to be
+        // found: `terrain_at_tile` used to MOVE the facet it had just built
+        // into the return, and now clones a borrowed one — a `Vec<u8>` of
+        // `depth` bytes per tile. Taking it by value instead would only move
+        // the same clone to the graph-addressed caller, which holds its
+        // facets in a raster it must not consume. Nothing about the reading
+        // changes; `facet_reading.rs`'s identity is on the VALUE.
+        facet: facet.clone(),
         vertex,
         height_asl,
         band,
@@ -4645,8 +5276,9 @@ mod tests {
         );
         let before = memo.corner_weights_misses();
         assert_eq!(
-            before, 1,
-            "the first tile of a cold memo costs exactly one miss"
+            before, 2,
+            "the first tile of a cold memo costs exactly two misses: its \
+             grid-level ancestor, and its OWN facet for the height blend"
         );
         let _ = terrain_at_tile(
             &terrain,
@@ -4664,30 +5296,75 @@ mod tests {
             0,
             None,
         );
-        // BOUNDED, not zero: tiles (0,0) and (0,1) are not guaranteed to
-        // share a grid-level ancestor, and a cold ancestor costs exactly one
-        // miss. An exact-zero assertion would flake on an ancestor boundary
-        // rather than fail on a real regression. One miss is three vertex
-        // scans; the OLD path ran 49 unmemoised ones per tile, so this still
-        // discriminates by more than an order of magnitude.
+        // BOUNDED, not zero: tile (0,1) has its own facet, which is cold,
+        // and it is not guaranteed to share tile (0,0)'s grid-level
+        // ancestor, which would then be cold too. An exact-zero assertion
+        // would flake on an ancestor boundary rather than fail on a real
+        // regression. One miss is four vertex scans; the OLD path ran 49
+        // unmemoised ones per tile, so this still discriminates by more than
+        // an order of magnitude.
+        //
+        // **The bound was 1 until The Sett's Task 9 and the second address
+        // is new to the COUNTER, not to the work** — see
+        // `a_band_b_plate_costs_far_fewer_searches_than_it_has_tiles` for
+        // the full finding.
         assert!(
-            memo.corner_weights_misses() - before <= 1,
+            memo.corner_weights_misses() - before <= 2,
             "the finest rung took {} memo misses for one tile; direct addressing costs \
-             at most 1",
+             at most 2",
             memo.corner_weights_misses() - before
         );
     }
 
-    /// **The whole plate's search count is bounded by the mesh, not by the
-    /// screen** — the H1 mechanism at plate scale rather than tile scale.
-    /// One 64x32 band-B plate covers a handful of grid-level facets, so it
-    /// costs a handful of misses; the path this replaces cost `64 * 32 * 49
-    /// = 100,352` unmemoised searches for the same picture.
+    /// **The whole plate's ANCESTOR search count is bounded by the mesh,
+    /// not by the screen, and every other search is paid once per facet
+    /// rather than once per draw** — the H1 mechanism at plate scale rather
+    /// than tile scale. One 64x32 band-B plate covers a handful of
+    /// grid-level facets, so the ancestor half costs a handful of misses;
+    /// the path this replaces cost `64 * 32 * 49 = 100,352` unmemoised
+    /// searches for the same picture.
     ///
-    /// Asserted against the plate's own tile count, never a hardcoded
-    /// number: a bound that says "fewer than one miss per hundred tiles" is
-    /// a claim about the MECHANISM, and it fails loudly if a future change
-    /// reintroduces a per-tile search.
+    /// # This test was WRONG for the whole of The Hachure, and green (The
+    /// # Sett, Task 9)
+    ///
+    /// It used to assert a single number — total `corner_weights` misses —
+    /// against `misses * 100 < tiles`, and read that as "the plate's search
+    /// count is bounded by the mesh". That was true of the searches it could
+    /// SEE. The Hachure then added a bilinear height blend at the tile's own
+    /// rung ([`terrain_at_facet`]'s `height_asl`), resolved through the bare
+    /// `Facet::corner_weights` rather than the memo — so from that campaign
+    /// onwards every tile ran four `NearestVertexIndex` scans that this
+    /// counter never counted. On this very fixture the number it reported
+    /// was **2 misses — 8 scans**; the plate was actually running
+    /// **8 + 4 x 2,048 = 8,200**, a factor of **1,025**. The assertion did
+    /// not fail, because the expensive path had stopped being counted, not
+    /// stopped happening. Ledger S21 priced the same line at 65.3% of a
+    /// walk-band redraw.
+    ///
+    /// (Four scans, not the three the sibling test's comment said until this
+    /// task: [`hornvale_kernel::Facet::corner_weights`] resolves a QUAD's
+    /// corners and has since The Pavement.)
+    ///
+    /// So the mechanism claim is now made in the three parts it always had,
+    /// and the two that were invisible are the ones that matter:
+    ///
+    /// 1. **The ancestor half is bounded by the mesh** — the original H1
+    ///    claim, unweakened, but now counted on its own rather than on a
+    ///    total that could hide a per-tile term inside it.
+    /// 2. **The blend half is one search per distinct FACET**, which at
+    ///    [`BAND_B_RUNG`] is about one per tile. That is The Hachure's
+    ///    design and not a regression: the blend is defined at the tile's
+    ///    own rung, so there is nothing coarser to amortise it against
+    ///    within a single draw.
+    /// 3. **A REDRAW of the same plate costs nothing at all.** This is the
+    ///    assertion that would have caught the defect, and the one Task 9
+    ///    buys: the second pass below must take zero misses. Before Task 9
+    ///    it would have taken zero misses too — and still run 8,192 scans —
+    ///    which is exactly why parts 1 and 2 are asserted against an
+    ///    independently enumerated key set rather than against each other.
+    ///
+    /// Every bound is asserted against the plate's own tile count or against
+    /// a set this test builds itself, never a hardcoded number.
     #[test]
     fn a_band_b_plate_costs_far_fewer_searches_than_it_has_tiles() {
         let (terrain, geo) = test_world();
@@ -4722,16 +5399,86 @@ mod tests {
             }
         }
         let misses = memo.corner_weights_misses();
+        let hits = memo.corner_weights_hits();
         let tiles = u64::from(w * h);
+
+        // The two addresses every tile resolves, enumerated here rather than
+        // read back off the memo — the memo cannot tell them apart, and a
+        // total that cannot be split is what hid the defect above.
+        let mut facets: BTreeSet<Facet> = BTreeSet::new();
+        let mut ancestors: BTreeSet<Facet> = BTreeSet::new();
+        for row in 0..h {
+            for col in 0..w {
+                let (lat, lon) =
+                    mercator::unproject(&f, win.origin_row + row, win.origin_col + col, vw, vh);
+                let facet = Facet::containing(
+                    hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
+                    win.depth,
+                );
+                let ancestor = facet
+                    .ancestor(geo.depth())
+                    .expect("BAND_B_RUNG is finer than the grid level");
+                facets.insert(facet);
+                ancestors.insert(ancestor);
+            }
+        }
+        let ancestors = ancestors.len() as u64;
+        let facets = facets.len() as u64;
+
+        // 1. The ancestor half: bounded by the mesh, not the screen.
         assert!(
-            misses * 100 < tiles,
-            "a {w}x{h} band-B plate took {misses} memo misses over {tiles} tiles; \
-             direct addressing must cost far fewer searches than it has tiles"
+            ancestors * 100 < tiles,
+            "a {w}x{h} band-B plate spans {ancestors} grid-level facets over {tiles} \
+             tiles; the ancestor address must cost far fewer searches than it has tiles"
+        );
+        // 2. The blend half: once per distinct facet, never once per tile
+        // read. Both halves together are the whole miss count, so a third,
+        // uncounted search reappearing anywhere in the reading fails here.
+        assert_eq!(
+            misses,
+            ancestors + facets,
+            "a {w}x{h} plate spanning {facets} facets in {ancestors} grid quads took \
+             {misses} misses; the reading resolves exactly those two addresses"
         );
         assert_eq!(
-            memo.corner_weights_hits() + misses,
-            tiles,
-            "every tile must consult the memo exactly once"
+            hits + misses,
+            2 * tiles,
+            "every tile must consult the memo exactly twice: its grid ancestor, and \
+             its own facet for the height blend"
+        );
+
+        // 3. The redraw costs nothing. This is Task 9's claim at plate
+        // scale, and the assertion the old single-number bound could not
+        // make.
+        for row in 0..h {
+            for col in 0..w {
+                let _ = terrain_at_tile(
+                    &terrain,
+                    &geo,
+                    &index,
+                    &mut memo,
+                    &f,
+                    &win,
+                    vw,
+                    vh,
+                    row,
+                    col,
+                    None,
+                    WorldTime::GENESIS,
+                    0,
+                    None,
+                );
+            }
+        }
+        assert_eq!(
+            memo.corner_weights_misses(),
+            misses,
+            "redrawing the same plate must take no further searches at all"
+        );
+        assert_eq!(
+            memo.corner_weights_hits() - hits,
+            2 * tiles,
+            "and every one of the redraw's consults must be a hit"
         );
     }
 
@@ -5065,8 +5812,7 @@ mod tests {
         draw_feature_layer(
             &mut overlaid,
             &geo,
-            &f,
-            &win,
+            &Placement::Mercator { f: &f, win: &win },
             false,
             &caves,
             &BTreeSet::new(),
@@ -5192,8 +5938,7 @@ mod tests {
             draw_feature_layer(
                 &mut undiscovered_grid,
                 &geo,
-                &f,
-                &win,
+                &Placement::Mercator { f: &f, win: &win },
                 false,
                 roster,
                 &BTreeSet::new(),
@@ -5225,8 +5970,7 @@ mod tests {
             draw_feature_layer(
                 &mut discovered_grid,
                 &geo,
-                &f,
-                &win,
+                &Placement::Mercator { f: &f, win: &win },
                 false,
                 roster,
                 &BTreeSet::new(),
@@ -5303,8 +6047,7 @@ mod tests {
         draw_feature_layer(
             &mut by_hand,
             &geo,
-            &f,
-            &win,
+            &Placement::Mercator { f: &f, win: &win },
             false,
             &caves,
             &BTreeSet::new(),
@@ -5399,9 +6142,14 @@ mod tests {
         let w = (boxes.iter().map(|b| b.1).max().unwrap() - origin_col + 1) as u16;
         let h = (boxes.iter().map(|b| b.0).max().unwrap() - origin_row + 1) as u16;
         let mut grid = Grid::new(w, h);
-        draw_perception_layer(&mut grid, &f, &win, true, &perceived);
+        draw_perception_layer(
+            &mut grid,
+            &Placement::Mercator { f: &f, win: &win },
+            true,
+            &perceived,
+        );
         // The screen position of a virtual tile, spelled out here rather
-        // than taken from `perception_tile_on_screen`: this test is checking
+        // than taken from the layer's own placement: this test is checking
         // WHAT WAS PAINTED WHERE, so the expected position has to come from
         // somewhere other than the function that decided it.
         let at = |b: (u32, u32)| {
@@ -5460,7 +6208,12 @@ mod tests {
         // mark there is, in either order.
         for perceived in [vec![here, loud], vec![loud, here]] {
             let mut grid = Grid::new(2, 2);
-            draw_perception_layer(&mut grid, &f, &win, true, &perceived);
+            draw_perception_layer(
+                &mut grid,
+                &Placement::Mercator { f: &f, win: &win },
+                true,
+                &perceived,
+            );
             assert_eq!(
                 grid.get(0, 0).unwrap().glyph,
                 Some(HERE_GLYPH),
@@ -5472,7 +6225,12 @@ mod tests {
         // a magnitude.
         for perceived in [vec![quiet, loud], vec![loud, quiet]] {
             let mut grid = Grid::new(2, 2);
-            draw_perception_layer(&mut grid, &f, &win, true, &perceived);
+            draw_perception_layer(
+                &mut grid,
+                &Placement::Mercator { f: &f, win: &win },
+                true,
+                &perceived,
+            );
             assert_eq!(
                 grid.get(0, 0).unwrap().glyph,
                 Some(SETTLEMENT_MINOR_GLYPH),

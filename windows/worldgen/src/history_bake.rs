@@ -25,8 +25,8 @@
 //! Determinism: every arithmetic op stays in full `f64` precision (quantize
 //! only at the emit boundary, which is Task 4 — not here); the genesis draws
 //! derive per-people streams under `history/genesis/<people>`; the epoch
-//! dynamics draw sequentially from one `history/bake/v3` stream in commit
-//! order (bumped from `history/bake` by The Contour — decision 0006, an
+//! dynamics draw sequentially from one `history/bake/v4` stream in commit
+//! order (bumped from `history/bake/v3` by The Murrain — decision 0006, an
 //! epoch suffix, never a rename);
 //! neighbour candidates sort by `f64::total_cmp`. Same seed ⇒ byte-identical
 //! `records`.
@@ -39,7 +39,8 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Band, Geosphere, KindId, Seed, Stream, Vertex, VertexMap};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::ConnectionGraph;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::rc::Rc;
 
 /// The conductance-positive graph neighbours of `vertex` (`conductance > 0.0` —
 /// ocean-touching adjacency edges are stored at exactly 0.0). Ascending and
@@ -546,6 +547,28 @@ const STORE_WEIGHT: f64 = 0.5;
 /// plumb: pending(wave-1)
 const STORE_DECAY: f64 = 0.95;
 
+/// The denominator floor for the diagnostic return ratios. It makes the
+/// closing readout total when a relation's assessment or observed population
+/// is zero; it does not alter either stock.
+/// type-audit: bare-ok(ratio: diagnostic denominator floor)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR: f64 = 1.0;
+/// A patron's portfolio-normalized store share must cover one quarter of a
+/// subordinate's present population before the diagnostic witness names Fort.
+/// type-audit: bare-ok(ratio: diagnostic Fort threshold)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_PROTECTION_FORT_MIN: f64 = 0.25;
+/// A patron's portfolio-normalized store share must cover a full assessment
+/// before the diagnostic witness names Trade.
+/// type-audit: bare-ok(ratio: diagnostic Trade threshold)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_GOODS_TRADE_MIN: f64 = 1.0;
+/// A subordinate must be at least as populous as when the relation was last
+/// observed before the diagnostic witness names Cult.
+/// type-audit: bare-ok(ratio: diagnostic Cult threshold)
+/// plumb: pending(wave-1)
+const DIAGNOSTIC_RETURN_LEGITIMACY_CULT_MIN: f64 = 1.0;
+
 /// The sub-year grain at which a community's granary integrates (The Granary
 /// T3, spec §3.2–3.4). Twelve phases ≈ monthly resolution: coarse enough that
 /// the epoch loop's cost stays negligible (twelve curve samples per community
@@ -854,7 +877,7 @@ pub struct BakeOccupation {
 /// rules read (the raid rule's durable inhibition, and the subordinate's
 /// concealment). Years are bare `f64` (absolute, no wall-clock). Not `Copy`:
 /// the authored maps are owned, and the config is always passed by reference.
-/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: disposition_spread), bare-ok(ratio: in_group_radius), bare-ok(ratio: time_horizon)
+/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: disposition_spread), bare-ok(ratio: in_group_radius), bare-ok(ratio: time_horizon), bare-ok(count: lifespans)
 #[derive(Clone, Debug, PartialEq)]
 pub struct BakeConfig {
     /// The year the ancient world is seeded at (inclusive).
@@ -863,6 +886,9 @@ pub struct BakeConfig {
     pub end_year: f64,
     /// The step between epochs, in years.
     pub epoch_years: f64,
+    /// The Staple D2 treatment boundary. Disabled is the default and preserves
+    /// the pre-D2 epoch path and every sequential draw.
+    pub exchange_treatment: ExchangeTreatment,
     /// Each people's authored `threat_response` (flee 0 ↔ stand 1) — species
     /// data, looked up by the composition root and handed in here because the
     /// bake reads only kernel types.
@@ -943,6 +969,10 @@ pub struct BakeConfig {
     /// factor; both counts are stated there in full so neither has to be
     /// re-derived from this one.)
     pub time_horizon: BTreeMap<KindId, f64>,
+    /// Epidemic catalogue rows with era-specific niche fits.
+    pub epidemics: Vec<crate::plague_bake::EpidemicKind>,
+    /// Authored/allometric lifespan by settling people, in years.
+    pub lifespans: BTreeMap<KindId, f64>,
 }
 
 impl BakeConfig {
@@ -954,12 +984,50 @@ impl BakeConfig {
             start_year: 0.0,
             end_year: 2000.0,
             epoch_years: 25.0,
+            exchange_treatment: ExchangeTreatment::Disabled,
             disposition: BTreeMap::new(),
             disposition_spread: BTreeMap::new(),
             in_group_radius: BTreeMap::new(),
             time_horizon: BTreeMap::new(),
+            epidemics: Vec::new(),
+            lifespans: BTreeMap::new(),
         }
     }
+}
+
+/// Explicit switch for the D2 local-exchange treatment. Keeping `Disabled`
+/// as a named value (and the default) makes the unchanged control path visible
+/// at every low-level bake call.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ExchangeTreatment {
+    /// Preserve the pre-D2 history path exactly.
+    #[default]
+    Disabled,
+    /// Run typed production, direct exchange, consumption, and pressure adaptation.
+    Enabled,
+}
+
+/// Derived whole-bake D2 study counts. Attempts are the denominator; status
+/// counts may overlap because a settled attempt is also proposed and accepted.
+/// type-audit: bare-ok(count: attempts), bare-ok(count: proposed), bare-ok(count: accepted), bare-ok(count: settled), bare-ok(count: partial), bare-ok(count: refused), bare-ok(count: impossible), bare-ok(ratio: conservation_residuals)
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ExchangeCensus {
+    /// Typed request attempts across every treatment phase.
+    pub attempts: u64,
+    /// Attempts that reached proposal.
+    pub proposed: u64,
+    /// Proposed attempts funded above zero.
+    pub accepted: u64,
+    /// Accepted attempts delivered in full.
+    pub settled: u64,
+    /// Accepted attempts delivered below their request.
+    pub partial: u64,
+    /// Possible attempts that delivered nothing.
+    pub refused: u64,
+    /// Attempts with no traversable direct counterparty.
+    pub impossible: u64,
+    /// Accumulated stock-creation residual by typed resource.
+    pub conservation_residuals: [f64; 2],
 }
 
 /// The whole baked skeleton: every occupation record ever opened (alive and
@@ -978,8 +1046,30 @@ pub struct History {
     /// nothing here — exactly as a dead occupation leaves a ruin rather than a
     /// settlement.
     pub tribute: Vec<TributeRelation>,
+    /// Dated epidemic events in bake commit order.
+    pub outbreaks: Vec<OutbreakEvent>,
+    /// Read-only, relation-local D3 diagnostic witnesses for standing tribute
+    /// relations. This sidecar is intentionally not part of the save-facing
+    /// `tribute` relation shape and `history_emit` does not consume it.
+    pub diagnostic_returns: Vec<DiagnosticReturnWitness>,
     /// Event tallies, counted as the bake resolves each epoch.
     tally: BakeCensus,
+    exchange: ExchangeCensus,
+}
+
+/// One paired epidemic event before its occupation handle is translated to a
+/// ledger entity.
+/// type-audit: bare-ok(count: year), bare-ok(count: deaths)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OutbreakEvent {
+    /// Occupation struck by the wave.
+    pub occupation: BakeId,
+    /// Pathogen kind from the authored catalogue.
+    pub pathogen: KindId,
+    /// Bake year of the event.
+    pub year: f64,
+    /// Excess deaths caused by the outbreak.
+    pub deaths: f64,
 }
 
 /// A standing tribute relation as it stood at `now`, carried out of the bake
@@ -1001,6 +1091,88 @@ pub struct TributeRelation {
     /// community, and this day is never earlier than the founding of either
     /// entity the emitted fact names.
     pub since: f64,
+}
+
+/// The diagnostic D3 return classification. These names describe a
+/// continuous return vector; no `Function` label is accepted as an input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiagnosticReturnClass {
+    /// No diagnostic component crosses its named threshold.
+    None,
+    /// The legitimacy component crossed its threshold.
+    Cult,
+    /// The goods component crossed its threshold.
+    Trade,
+    /// The protection component crossed its threshold.
+    Fort,
+}
+
+/// The greatest component's diagnostic magnitude band.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DiagnosticReturnBand {
+    /// No component reaches the Fort threshold.
+    Low,
+    /// At least one component reaches the Fort threshold but none reaches one.
+    Medium,
+    /// At least one component reaches one.
+    High,
+}
+
+/// One read-only, relation-local D3 return observation at the bake's `now`.
+///
+/// Every component is a dimensionless ratio. `conservation_residual` is zero
+/// in this diagnostic-only stage because it does not apply an outflow.
+/// type-audit: bare-ok(ratio: protection), bare-ok(ratio: goods), bare-ok(ratio: legitimacy), bare-ok(ratio: conservation_residual)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DiagnosticReturnWitness {
+    /// The standing relation's paying community.
+    pub subordinate: BakeId,
+    /// The standing relation's collecting community.
+    pub patron: BakeId,
+    /// Portfolio share relative to the subordinate's present population.
+    pub protection: f64,
+    /// Portfolio share relative to this relation's assessment.
+    pub goods: f64,
+    /// Present subordinate population relative to the last observed value.
+    pub legitimacy: f64,
+    /// The greatest-component magnitude band.
+    pub band: DiagnosticReturnBand,
+    /// The explicit diagnostic class derived from the continuous vector.
+    pub classification: DiagnosticReturnClass,
+    /// The diagnostic stage's no-outflow conservation reading.
+    pub conservation_residual: f64,
+}
+
+/// Derive the diagnostic class from continuous return components only.
+///
+/// Precedence is Fort, then Trade, then Cult, as recorded in the Staple D3
+/// campaign ledger before this witness was implemented.
+/// type-audit: bare-ok(ratio: protection), bare-ok(ratio: goods), bare-ok(ratio: legitimacy)
+pub fn classify_diagnostic_return(
+    protection: f64,
+    goods: f64,
+    legitimacy: f64,
+) -> DiagnosticReturnClass {
+    if protection >= DIAGNOSTIC_RETURN_PROTECTION_FORT_MIN {
+        DiagnosticReturnClass::Fort
+    } else if goods >= DIAGNOSTIC_RETURN_GOODS_TRADE_MIN {
+        DiagnosticReturnClass::Trade
+    } else if legitimacy >= DIAGNOSTIC_RETURN_LEGITIMACY_CULT_MIN {
+        DiagnosticReturnClass::Cult
+    } else {
+        DiagnosticReturnClass::None
+    }
+}
+
+fn diagnostic_return_band(protection: f64, goods: f64, legitimacy: f64) -> DiagnosticReturnBand {
+    let magnitude = protection.max(goods).max(legitimacy);
+    if magnitude >= DIAGNOSTIC_RETURN_GOODS_TRADE_MIN {
+        DiagnosticReturnBand::High
+    } else if magnitude >= DIAGNOSTIC_RETURN_PROTECTION_FORT_MIN {
+        DiagnosticReturnBand::Medium
+    } else {
+        DiagnosticReturnBand::Low
+    }
 }
 
 /// A tally of the events a bake resolved — the falsification instrument. Under
@@ -1141,6 +1313,11 @@ pub fn census(h: &History) -> BakeCensus {
     h.tally
 }
 
+/// Read the derived D2 exchange study counts off a baked history.
+pub fn exchange_census(h: &History) -> ExchangeCensus {
+    h.exchange
+}
+
 /// The cascade-size histogram off a baked history (bin `i` = sizes
 /// `[2^i, 2^(i+1))`). Filled by [`BakeCensus::record_cascade`], which
 /// [`Bake::maybe_raid`] calls for every raid whose displaced loser had to evict
@@ -1168,8 +1345,712 @@ impl History {
             records,
             now,
             tribute: Vec::new(),
+            outbreaks: Vec::new(),
+            diagnostic_returns: Vec::new(),
             tally: BakeCensus::default(),
+            exchange: ExchangeCensus::default(),
         }
+    }
+}
+
+/// One of D2's two complementary subsistence resources. A quantity of one
+/// resource can satisfy demand only for that same variant.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum SubsistenceResource {
+    A,
+    B,
+}
+
+/// A community's two typed subsistence stocks. Each quantity is measured in
+/// one-person-phase units: one unit supplies one person's baseline
+/// subsistence for one phase when matched to the same resource type.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct SubsistenceInventory {
+    quantities: [f64; 2],
+}
+
+impl SubsistenceInventory {
+    fn new(a: f64, b: f64) -> Self {
+        Self { quantities: [a, b] }
+    }
+
+    fn amount(self, resource: SubsistenceResource) -> f64 {
+        match resource {
+            SubsistenceResource::A => self.quantities[0],
+            SubsistenceResource::B => self.quantities[1],
+        }
+    }
+}
+
+/// The resource-A share of every fixed complementary demand basket. Resource
+/// B receives the exact complement, so one full basket totals one
+/// person-phase unit.
+/// plumb: pending(wave-1)
+const SUBSISTENCE_A_BASKET_SHARE: f64 = 0.5;
+
+/// Split existing non-negative total production, measured in person-phase
+/// units, into typed stock from a community's already-derived seasonal curve.
+/// The curve amplitude is an existing deterministic biome/climate input in
+/// `[0, 1]`; bounding it here keeps the partition valid even if a future
+/// authored curve violates that documented range. The majority component is
+/// multiplied first and the minority is its remainder from `total`: because
+/// the majority lies between `total / 2` and `total`, Sterbenz subtraction is
+/// exact, and adding the two stored `f64` components reconstructs `total`
+/// bit-for-bit. Signed zero is canonicalized at the boundary so the finite
+/// non-negative domain has one zero representation.
+fn partition_subsistence_production(total: f64, curve: Curve) -> SubsistenceInventory {
+    debug_assert!(total.is_finite() && total >= 0.0);
+    let total = if total == 0.0 { 0.0 } else { total };
+    let a_share = curve.amplitude().clamp(0.0, 1.0);
+    let inventory = if a_share <= 0.5 {
+        let b = total * (1.0 - a_share);
+        SubsistenceInventory::new(total - b, b)
+    } else {
+        let a = total * a_share;
+        SubsistenceInventory::new(a, total - a)
+    };
+    debug_assert_eq!(
+        (inventory.amount(SubsistenceResource::A) + inventory.amount(SubsistenceResource::B))
+            .to_bits(),
+        total.to_bits(),
+    );
+    inventory
+}
+
+/// The fixed complementary basket required by `population` for one phase.
+/// Its two components sum to `population`: one person therefore demands one
+/// person-phase unit in total, and both types are required.
+fn subsistence_basket_demand(population: f64) -> SubsistenceInventory {
+    debug_assert!(population.is_finite() && population >= 0.0);
+    let a = population * SUBSISTENCE_A_BASKET_SHARE;
+    SubsistenceInventory::new(a, population - a)
+}
+
+/// Carry opening stock and current production forward component by component.
+fn carry_subsistence_inventory(
+    opening: SubsistenceInventory,
+    production: SubsistenceInventory,
+) -> SubsistenceInventory {
+    SubsistenceInventory::new(
+        opening.amount(SubsistenceResource::A) + production.amount(SubsistenceResource::A),
+        opening.amount(SubsistenceResource::B) + production.amount(SubsistenceResource::B),
+    )
+}
+
+/// Demand not covered by same-typed stock, component by component.
+fn typed_subsistence_shortfall(
+    available: SubsistenceInventory,
+    demand: SubsistenceInventory,
+) -> SubsistenceInventory {
+    SubsistenceInventory::new(
+        (demand.amount(SubsistenceResource::A) - available.amount(SubsistenceResource::A)).max(0.0),
+        (demand.amount(SubsistenceResource::B) - available.amount(SubsistenceResource::B)).max(0.0),
+    )
+}
+
+/// Consume a demand basket without allowing either resource to substitute for
+/// the other. Returns `(remaining_inventory, shortfall)`.
+fn consume_subsistence(
+    available: SubsistenceInventory,
+    demand: SubsistenceInventory,
+) -> (SubsistenceInventory, SubsistenceInventory) {
+    let shortfall = typed_subsistence_shortfall(available, demand);
+    let remaining = SubsistenceInventory::new(
+        (available.amount(SubsistenceResource::A) - demand.amount(SubsistenceResource::A)).max(0.0),
+        (available.amount(SubsistenceResource::B) - demand.amount(SubsistenceResource::B)).max(0.0),
+    );
+    (remaining, shortfall)
+}
+
+/// Maximum multiplier the D2 typed-basket adapter may apply to the existing
+/// population-only pressure. The treatment can at most double pressure;
+/// stores remain outside both the base term and this adapter.
+/// plumb: pending(wave-1)
+const SUBSISTENCE_PRESSURE_MAX_MULTIPLIER: f64 = 2.0;
+
+/// Adapt the existing population-only pressure from the worst same-typed
+/// basket shortfall. A fully satisfied basket is exact identity. Each typed
+/// ratio is clamped to `[0, 1]`, then linearly spans `[1, 2]`, making the
+/// adapter monotone and bounded even for a malformed over-range shortfall.
+fn adapt_pressure_for_subsistence_shortfall(
+    base_pressure: f64,
+    shortfall: SubsistenceInventory,
+    demand: SubsistenceInventory,
+) -> f64 {
+    debug_assert!(base_pressure >= 0.0 && !base_pressure.is_nan());
+    let ratio = subsistence_shortfall_ratio(shortfall, demand);
+    base_pressure * (1.0 + ratio * (SUBSISTENCE_PRESSURE_MAX_MULTIPLIER - 1.0))
+}
+
+fn subsistence_shortfall_ratio(
+    shortfall: SubsistenceInventory,
+    demand: SubsistenceInventory,
+) -> f64 {
+    [SubsistenceResource::A, SubsistenceResource::B]
+        .into_iter()
+        .map(|resource| {
+            let needed = demand.amount(resource);
+            if needed > 0.0 {
+                (shortfall.amount(resource) / needed).clamp(0.0, 1.0)
+            } else {
+                0.0
+            }
+        })
+        .fold(0.0_f64, f64::max)
+}
+
+/// One community's immutable inputs to a current-phase exchange clearing.
+/// Demand is derived inside the clearing from `projected_population`, keeping
+/// the fixed half-A, half-B basket ratio out of the caller's hands.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct ExchangeCommunitySnapshot {
+    id: BakeId,
+    site: Vertex,
+    projected_population: f64,
+    opening_stock: SubsistenceInventory,
+}
+
+/// A derived step or terminal outcome in one typed exchange attempt.
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ExchangeStatus {
+    Proposed,
+    Accepted,
+    Settled,
+    Partial,
+    Refused,
+    Impossible,
+}
+
+/// One community's request for one typed resource and its clearing result.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct ExchangeAttempt {
+    requester: BakeId,
+    counterparty: Option<BakeId>,
+    resource: SubsistenceResource,
+    requested: f64,
+    delivered: f64,
+    statuses: Vec<ExchangeStatus>,
+}
+
+/// One funded, atomic, typed movement across a traversable one-hop link.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct SubsistenceDelivery {
+    from: BakeId,
+    to: BakeId,
+    resource: SubsistenceResource,
+    quantity: f64,
+}
+
+/// The pure result of one simultaneous current-phase exchange clearing.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq)]
+struct ExchangeClearing {
+    deliveries: Vec<SubsistenceDelivery>,
+    attempts: Vec<ExchangeAttempt>,
+    conservation_residuals: [f64; 2],
+}
+
+fn subsistence_resource_index(resource: SubsistenceResource) -> usize {
+    match resource {
+        SubsistenceResource::A => 0,
+        SubsistenceResource::B => 1,
+    }
+}
+
+/// Community-to-community exchange links, ordered by [`BakeId`]. A delivery
+/// can cross only a conductance-positive one-hop graph edge; an empty vertex
+/// between two communities is not a carrier and therefore not a link.
+fn local_exchange_adjacency(
+    graph: &ConnectionGraph,
+    snapshots: &[ExchangeCommunitySnapshot],
+) -> Vec<Vec<usize>> {
+    let mut communities_at: BTreeMap<Vertex, Vec<usize>> = BTreeMap::new();
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        communities_at.entry(snapshot.site).or_default().push(index);
+    }
+
+    snapshots
+        .iter()
+        .map(|snapshot| {
+            let mut adjacent = Vec::new();
+            for site in traversable_neighbors(graph, snapshot.site) {
+                if let Some(indices) = communities_at.get(&site) {
+                    adjacent.extend(indices.iter().copied());
+                }
+            }
+            adjacent.sort_unstable();
+            adjacent.dedup();
+            adjacent
+        })
+        .collect()
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct DirectExchangeProposal {
+    a_supplier: BakeId,
+    b_supplier: BakeId,
+    a_requested: f64,
+    b_requested: f64,
+}
+
+fn exchange_capacity(snapshot: &ExchangeCommunitySnapshot, offered: SubsistenceResource) -> f64 {
+    let requested = match offered {
+        SubsistenceResource::A => SubsistenceResource::B,
+        SubsistenceResource::B => SubsistenceResource::A,
+    };
+    let demand = subsistence_basket_demand(snapshot.projected_population);
+    let surplus = (snapshot.opening_stock.amount(offered) - demand.amount(offered)).max(0.0);
+    let shortfall = (demand.amount(requested) - snapshot.opening_stock.amount(requested)).max(0.0);
+    surplus.min(shortfall)
+}
+
+fn exchange_statuses(requested: f64, delivered: f64, possible: bool) -> Vec<ExchangeStatus> {
+    let mut statuses = vec![ExchangeStatus::Proposed];
+    if !possible {
+        statuses.push(ExchangeStatus::Impossible);
+    } else if delivered == 0.0 {
+        statuses.push(ExchangeStatus::Refused);
+    } else {
+        statuses.push(ExchangeStatus::Accepted);
+        statuses.push(if delivered == requested {
+            ExchangeStatus::Settled
+        } else {
+            ExchangeStatus::Partial
+        });
+    }
+    statuses
+}
+
+fn pro_rata_direct_requests(total: f64, counterparties: &[(usize, f64)]) -> Vec<(usize, f64)> {
+    let mut remaining_total = total;
+    let mut remaining_weight: f64 = counterparties.iter().map(|(_, weight)| weight).sum();
+    let mut requests = Vec::with_capacity(counterparties.len());
+    for (position, &(counterparty, weight)) in counterparties.iter().enumerate() {
+        let requested = if position + 1 == counterparties.len() {
+            remaining_total
+        } else {
+            (remaining_total * weight / remaining_weight).min(remaining_total)
+        };
+        requests.push((counterparty, requested));
+        remaining_total = if requested == remaining_total {
+            0.0
+        } else {
+            remaining_total - requested
+        };
+        remaining_weight -= weight;
+    }
+    requests
+}
+
+#[derive(Clone, Copy, Debug)]
+struct ExchangeFlowEdge {
+    to: usize,
+    reverse: usize,
+    residual: f64,
+}
+
+fn add_exchange_flow_edge(graph: &mut [Vec<ExchangeFlowEdge>], from: usize, to: usize, cap: f64) {
+    let forward = graph[from].len();
+    let reverse = graph[to].len();
+    graph[from].push(ExchangeFlowEdge {
+        to,
+        reverse,
+        residual: cap,
+    });
+    graph[to].push(ExchangeFlowEdge {
+        to: from,
+        reverse: forward,
+        residual: 0.0,
+    });
+}
+
+/// Fund declared A-forward/B-backward bundle paths from immutable opening
+/// surplus at their endpoints. Each augmentation is a simple source-to-sink
+/// path over declared direct proposals: A propagates forward along the path
+/// and the matching B propagates backward. A proposal cycle without an
+/// opening-funded A source and B sink therefore has no augmenting path and
+/// settles nothing.
+fn fund_declared_exchange_paths(
+    snapshots: &[ExchangeCommunitySnapshot],
+    proposals: &[DirectExchangeProposal],
+) -> Vec<f64> {
+    let after_offset = snapshots.len();
+    let proposal_offset = snapshots.len() * 2;
+    let source = proposal_offset + proposals.len() * 2;
+    let sink = source + 1;
+    let mut graph = vec![Vec::new(); sink + 1];
+    let indices: BTreeMap<BakeId, usize> = snapshots
+        .iter()
+        .enumerate()
+        .map(|(index, snapshot)| (snapshot.id, index))
+        .collect();
+
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        let demand = subsistence_basket_demand(snapshot.projected_population);
+        let a_surplus = (snapshot.opening_stock.amount(SubsistenceResource::A)
+            - demand.amount(SubsistenceResource::A))
+        .max(0.0);
+        let b_surplus = (snapshot.opening_stock.amount(SubsistenceResource::B)
+            - demand.amount(SubsistenceResource::B))
+        .max(0.0);
+        add_exchange_flow_edge(&mut graph, source, index, a_surplus);
+        add_exchange_flow_edge(&mut graph, after_offset + index, sink, b_surplus);
+    }
+
+    let mut proposal_edges = Vec::with_capacity(proposals.len());
+    for (proposal_index, proposal) in proposals.iter().enumerate() {
+        let from = indices[&proposal.a_supplier];
+        let to = indices[&proposal.b_supplier];
+        let proposal_in = proposal_offset + proposal_index * 2;
+        let proposal_out = proposal_in + 1;
+        let capacity = proposal.a_requested.min(proposal.b_requested);
+        add_exchange_flow_edge(&mut graph, from, proposal_in, capacity);
+        add_exchange_flow_edge(&mut graph, after_offset + from, proposal_in, capacity);
+        let shared_edge = graph[proposal_in].len();
+        add_exchange_flow_edge(&mut graph, proposal_in, proposal_out, capacity);
+        add_exchange_flow_edge(&mut graph, proposal_out, after_offset + to, capacity);
+        proposal_edges.push((proposal_in, shared_edge));
+    }
+
+    loop {
+        let mut parent = vec![None; graph.len()];
+        let mut queue = VecDeque::from([source]);
+        parent[source] = Some((source, usize::MAX));
+        while let Some(from) = queue.pop_front() {
+            for (edge_index, edge) in graph[from].iter().enumerate() {
+                if edge.residual > 0.0 && parent[edge.to].is_none() {
+                    parent[edge.to] = Some((from, edge_index));
+                    if edge.to == sink {
+                        break;
+                    }
+                    queue.push_back(edge.to);
+                }
+            }
+            if parent[sink].is_some() {
+                break;
+            }
+        }
+        if parent[sink].is_none() {
+            break;
+        }
+
+        let mut quantity = f64::INFINITY;
+        let mut at = sink;
+        while at != source {
+            let (from, edge_index) = parent[at].expect("reached nodes have a parent");
+            quantity = quantity.min(graph[from][edge_index].residual);
+            at = from;
+        }
+        debug_assert!(quantity.is_finite() && quantity > 0.0);
+
+        at = sink;
+        while at != source {
+            let (from, edge_index) = parent[at].expect("reached nodes have a parent");
+            let reverse = graph[from][edge_index].reverse;
+            graph[from][edge_index].residual -= quantity;
+            graph[at][reverse].residual += quantity;
+            at = from;
+        }
+    }
+
+    proposal_edges
+        .into_iter()
+        .zip(proposals)
+        .map(|((from, edge), proposal)| {
+            proposal.a_requested.min(proposal.b_requested) - graph[from][edge].residual
+        })
+        .collect()
+}
+
+/// Snapshot-dependent stock-creation residual. For each community and typed
+/// resource, immutable opening surplus plus incoming receipts must cover all
+/// outgoing deliveries. This is opening/final stock accounting with an
+/// inventory floor at zero: unlike a global sent/received equality, it detects
+/// an overdraw while allowing an already-arrived unit to fund a downstream
+/// declared proposal.
+fn exchange_conservation_residuals(
+    snapshots: &[ExchangeCommunitySnapshot],
+    deliveries: &[SubsistenceDelivery],
+) -> [f64; 2] {
+    let mut opening_surplus = BTreeMap::new();
+    for snapshot in snapshots {
+        let demand = subsistence_basket_demand(snapshot.projected_population);
+        opening_surplus.insert(
+            snapshot.id,
+            [
+                (snapshot.opening_stock.amount(SubsistenceResource::A)
+                    - demand.amount(SubsistenceResource::A))
+                .max(0.0),
+                (snapshot.opening_stock.amount(SubsistenceResource::B)
+                    - demand.amount(SubsistenceResource::B))
+                .max(0.0),
+            ],
+        );
+    }
+
+    let mut balances = opening_surplus.clone();
+    let mut residuals = [0.0; 2];
+    for delivery in deliveries {
+        let index = subsistence_resource_index(delivery.resource);
+        if let Some(balance) = balances.get_mut(&delivery.from) {
+            balance[index] -= delivery.quantity;
+        } else {
+            residuals[index] += delivery.quantity;
+        }
+        if let Some(balance) = balances.get_mut(&delivery.to) {
+            balance[index] += delivery.quantity;
+        } else {
+            residuals[index] += delivery.quantity;
+        }
+    }
+    for balance in balances.values() {
+        for resource_index in 0..2 {
+            residuals[resource_index] += (-balance[resource_index]).max(0.0);
+        }
+    }
+    residuals
+}
+
+fn generated_direct_exchange_proposals(
+    snapshots: &[ExchangeCommunitySnapshot],
+    adjacency: &[Vec<usize>],
+) -> Vec<DirectExchangeProposal> {
+    let capacities: Vec<[f64; 2]> = snapshots
+        .iter()
+        .map(|snapshot| {
+            [
+                exchange_capacity(snapshot, SubsistenceResource::A),
+                exchange_capacity(snapshot, SubsistenceResource::B),
+            ]
+        })
+        .collect();
+    let mut a_requests: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    let mut b_requests: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    for (index, neighbors) in adjacency.iter().enumerate() {
+        if capacities[index][0] > 0.0 {
+            let counterparties: Vec<(usize, f64)> = neighbors
+                .iter()
+                .copied()
+                .filter_map(|neighbor| {
+                    (capacities[neighbor][1] > 0.0).then_some((neighbor, capacities[neighbor][1]))
+                })
+                .collect();
+            for (counterparty, requested) in
+                pro_rata_direct_requests(capacities[index][0], &counterparties)
+            {
+                b_requests.insert((index, counterparty), requested);
+            }
+        }
+        if capacities[index][1] > 0.0 {
+            let counterparties: Vec<(usize, f64)> = neighbors
+                .iter()
+                .copied()
+                .filter_map(|neighbor| {
+                    (capacities[neighbor][0] > 0.0).then_some((neighbor, capacities[neighbor][0]))
+                })
+                .collect();
+            for (counterparty, requested) in
+                pro_rata_direct_requests(capacities[index][1], &counterparties)
+            {
+                a_requests.insert((counterparty, index), requested);
+            }
+        }
+    }
+
+    let mut proposals = Vec::new();
+    for (&(a_supplier, b_supplier), &a_requested) in &a_requests {
+        if let Some(&b_requested) = b_requests.get(&(a_supplier, b_supplier)) {
+            proposals.push(DirectExchangeProposal {
+                a_supplier: snapshots[a_supplier].id,
+                b_supplier: snapshots[b_supplier].id,
+                a_requested,
+                b_requested,
+            });
+        }
+    }
+    proposals
+}
+
+/// Clear a sorted set of already-declared direct one-hop bundle proposals.
+/// Every settled proposal is one A-forward/B-backward edge. Funding can
+/// propagate over a chain of those declarations, but clearing never invents
+/// an undeclared relay edge and never treats a cycle of promises as stock.
+fn clear_declared_local_exchange(
+    graph: &ConnectionGraph,
+    snapshots: &[ExchangeCommunitySnapshot],
+    proposals: &[DirectExchangeProposal],
+) -> ExchangeClearing {
+    let mut snapshots = snapshots.to_vec();
+    snapshots.sort_by_key(|snapshot| snapshot.id);
+    let adjacency = local_exchange_adjacency(graph, &snapshots);
+    let indices: BTreeMap<BakeId, usize> = snapshots
+        .iter()
+        .enumerate()
+        .map(|(index, snapshot)| (snapshot.id, index))
+        .collect();
+    let mut proposals = proposals.to_vec();
+    proposals.sort_by_key(|proposal| (proposal.a_supplier, proposal.b_supplier));
+    debug_assert!(proposals.windows(2).all(|pair| {
+        (pair[0].a_supplier, pair[0].b_supplier) != (pair[1].a_supplier, pair[1].b_supplier)
+    }));
+
+    let (possible, impossible): (Vec<_>, Vec<_>) = proposals.into_iter().partition(|proposal| {
+        let Some(&a_supplier) = indices.get(&proposal.a_supplier) else {
+            return false;
+        };
+        let Some(&b_supplier) = indices.get(&proposal.b_supplier) else {
+            return false;
+        };
+        proposal.a_requested.is_finite()
+            && proposal.a_requested >= 0.0
+            && proposal.b_requested.is_finite()
+            && proposal.b_requested >= 0.0
+            && adjacency[a_supplier].binary_search(&b_supplier).is_ok()
+    });
+    let settled = fund_declared_exchange_paths(&snapshots, &possible);
+
+    let mut deliveries = Vec::with_capacity(possible.len() * 2);
+    for (proposal, &quantity) in possible.iter().zip(&settled) {
+        if quantity == 0.0 {
+            continue;
+        }
+        deliveries.push(SubsistenceDelivery {
+            from: proposal.a_supplier,
+            to: proposal.b_supplier,
+            resource: SubsistenceResource::A,
+            quantity,
+        });
+        deliveries.push(SubsistenceDelivery {
+            from: proposal.b_supplier,
+            to: proposal.a_supplier,
+            resource: SubsistenceResource::B,
+            quantity,
+        });
+    }
+    deliveries.sort_by_key(|delivery| (delivery.from, delivery.to, delivery.resource));
+
+    let mut attempts = Vec::with_capacity((possible.len() + impossible.len()) * 2);
+    for (proposal, &delivered) in possible.iter().zip(&settled) {
+        attempts.push(ExchangeAttempt {
+            requester: proposal.b_supplier,
+            counterparty: Some(proposal.a_supplier),
+            resource: SubsistenceResource::A,
+            requested: proposal.a_requested,
+            delivered,
+            statuses: exchange_statuses(proposal.a_requested, delivered, true),
+        });
+        attempts.push(ExchangeAttempt {
+            requester: proposal.a_supplier,
+            counterparty: Some(proposal.b_supplier),
+            resource: SubsistenceResource::B,
+            requested: proposal.b_requested,
+            delivered,
+            statuses: exchange_statuses(proposal.b_requested, delivered, true),
+        });
+    }
+    for proposal in impossible {
+        attempts.push(ExchangeAttempt {
+            requester: proposal.b_supplier,
+            counterparty: Some(proposal.a_supplier),
+            resource: SubsistenceResource::A,
+            requested: proposal.a_requested,
+            delivered: 0.0,
+            statuses: exchange_statuses(proposal.a_requested, 0.0, false),
+        });
+        attempts.push(ExchangeAttempt {
+            requester: proposal.a_supplier,
+            counterparty: Some(proposal.b_supplier),
+            resource: SubsistenceResource::B,
+            requested: proposal.b_requested,
+            delivered: 0.0,
+            statuses: exchange_statuses(proposal.b_requested, 0.0, false),
+        });
+    }
+
+    for (index, snapshot) in snapshots.iter().enumerate() {
+        let demand = subsistence_basket_demand(snapshot.projected_population);
+        for resource in [SubsistenceResource::A, SubsistenceResource::B] {
+            let requested =
+                (demand.amount(resource) - snapshot.opening_stock.amount(resource)).max(0.0);
+            if requested == 0.0
+                || attempts
+                    .iter()
+                    .any(|attempt| attempt.requester == snapshot.id && attempt.resource == resource)
+            {
+                continue;
+            }
+            attempts.push(ExchangeAttempt {
+                requester: snapshot.id,
+                counterparty: None,
+                resource,
+                requested,
+                delivered: 0.0,
+                statuses: exchange_statuses(requested, 0.0, !adjacency[index].is_empty()),
+            });
+        }
+    }
+    attempts.sort_by_key(|attempt| (attempt.requester, attempt.counterparty, attempt.resource));
+
+    let conservation_residuals = exchange_conservation_residuals(&snapshots, &deliveries);
+    debug_assert_eq!(conservation_residuals, [0.0, 0.0]);
+    ExchangeClearing {
+        deliveries,
+        attempts,
+        conservation_residuals,
+    }
+}
+
+/// Clear one immutable current-phase snapshot without touching stores,
+/// populations, inventories, or random streams.
+///
+/// A community first reserves its own fixed complementary basket. Its direct
+/// one-hop proposals may offer only the remaining stock, and only to a
+/// counterparty that offers the opposite typed surplus. Each party distributes
+/// its opening-funded bundle capacity among eligible counterparties in
+/// proportion to their capacities. The declarations are then settled as equal
+/// A-for-B deliveries by the same path-funding engine used for acyclic chains.
+#[allow(dead_code)]
+fn clear_local_exchange(
+    graph: &ConnectionGraph,
+    snapshots: &[ExchangeCommunitySnapshot],
+) -> ExchangeClearing {
+    let mut snapshots = snapshots.to_vec();
+    snapshots.sort_by_key(|snapshot| snapshot.id);
+    debug_assert!(snapshots.windows(2).all(|pair| pair[0].id != pair[1].id));
+    debug_assert!(snapshots.iter().all(|snapshot| {
+        snapshot.projected_population.is_finite()
+            && snapshot.projected_population >= 0.0
+            && [SubsistenceResource::A, SubsistenceResource::B]
+                .into_iter()
+                .all(|resource| {
+                    let amount = snapshot.opening_stock.amount(resource);
+                    amount.is_finite() && amount >= 0.0
+                })
+    }));
+
+    let adjacency = local_exchange_adjacency(graph, &snapshots);
+    let proposals = generated_direct_exchange_proposals(&snapshots, &adjacency);
+    clear_declared_local_exchange(graph, &snapshots, &proposals)
+}
+
+/// Convert the completed bake into its durable history, preserving the exact
+/// production crossing used by [`bake`]. The test fixture below calls this
+/// seam after exercising the real outbreak application sequence.
+fn history_from_bake(bake: Bake<'_>, now: f64, tribute: Vec<TributeRelation>) -> History {
+    let diagnostic_returns = bake.diagnostic_returns_at_now();
+    History {
+        records: bake.records,
+        now,
+        tribute,
+        outbreaks: bake.outbreaks,
+        diagnostic_returns,
+        tally: bake.tally,
+        exchange: bake.exchange,
     }
 }
 
@@ -1236,6 +2117,10 @@ struct Community {
     /// successful extractor does not starve itself on its own tribute (spec
     /// §4.2a). Lost with the community when it closes.
     stores: f64,
+    /// Live typed subsistence stock, separate from non-edible [`Self::stores`].
+    /// Each phase carries opening stock through production and direct exchange,
+    /// then consumes the fixed complementary basket.
+    subsistence: SubsistenceInventory,
     /// The community's seasonal harvest curve (The Granary T2): a pure
     /// multiplier over day-of-year keyed on its SITE's latitude and biome
     /// class, computed once at [`Bake::open`] and never recomputed — a
@@ -1490,8 +2375,17 @@ struct Bake<'a> {
     /// Each people's authored `time_horizon`, borrowed off the [`BakeConfig`]
     /// — the patron's discount rate [`Bake::target_stock`] reads.
     time_horizon: &'a BTreeMap<KindId, f64>,
+    /// Explicit D2 treatment switch, copied from the config once.
+    exchange_treatment: ExchangeTreatment,
+    epidemics: &'a [crate::plague_bake::EpidemicKind],
+    lifespans: &'a BTreeMap<KindId, f64>,
+    last_struck: BTreeMap<(BakeId, KindId), f64>,
+    persistent: BTreeSet<(BakeId, KindId)>,
+    /// Lazily derived epidemic graph data, one entry per era graph.
+    epidemic_graphs: Vec<Option<Rc<EpidemicGraph>>>,
     /// Every occupation record, in commit order.
     records: Vec<BakeOccupation>,
+    outbreaks: Vec<OutbreakEvent>,
     /// Every community's live state, in commit order (dead ones retained).
     communities: Vec<Community>,
     /// The single alive community per occupied **place** — a vertex *and* a rung
@@ -1577,10 +2471,97 @@ struct Bake<'a> {
     epoch_growth: Vec<f64>,
     /// The running event tally.
     tally: BakeCensus,
+    /// Derived D2 study trace reduced during the treatment bake.
+    exchange: ExchangeCensus,
     /// The bake's epoch length in years (`cfg.epoch_years`), borrowed once at
     /// construction so [`Bake::live_an_epoch`] reads the same number [`bake`]'s
     /// own epoch loop steps by, rather than a second literal.
     epoch_years: f64,
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum D2EpochEvent {
+    Production {
+        phase: usize,
+        community: usize,
+        added: [f64; 2],
+    },
+    Clearing {
+        phase: usize,
+        deliveries: usize,
+    },
+    Consumption {
+        phase: usize,
+        community: usize,
+        removed: [f64; 2],
+        shortfall_ratio: f64,
+    },
+    Growth {
+        community: usize,
+        shortfall_ratio: f64,
+        population_delta: f64,
+    },
+    Tribute {
+        collected: f64,
+    },
+}
+
+#[cfg(test)]
+std::thread_local! {
+    static D2_EPOCH_TRACE: std::sync::Mutex<Option<Vec<D2EpochEvent>>> =
+        const { std::sync::Mutex::new(None) };
+}
+
+#[cfg(test)]
+fn record_d2_epoch_event(event: D2EpochEvent) {
+    D2_EPOCH_TRACE.with(|trace| {
+        if let Some(events) = trace.lock().expect("D2 epoch trace lock").as_mut() {
+            events.push(event);
+        }
+    });
+}
+
+#[cfg(test)]
+fn capture_d2_epoch_events(run: impl FnOnce()) -> Vec<D2EpochEvent> {
+    D2_EPOCH_TRACE.with(|trace| {
+        let mut trace = trace.lock().expect("D2 epoch trace lock");
+        assert!(trace.is_none(), "D2 epoch tracing must not nest");
+        *trace = Some(Vec::new());
+    });
+    run();
+    D2_EPOCH_TRACE.with(|trace| {
+        trace
+            .lock()
+            .expect("D2 epoch trace lock")
+            .take()
+            .expect("D2 epoch tracing was enabled")
+    })
+}
+
+/// Reachability components for the current epidemic graph. Each vertex maps
+/// to a component ID, while the member vertices are stored exactly once.
+/// Keeping the reverse index separate avoids cloning a large connected
+/// component once per vertex.
+struct EpidemicComponents {
+    by_vertex: BTreeMap<Vertex, usize>,
+    members: Vec<Vec<Vertex>>,
+}
+
+/// The immutable graph data reused by every plague phase in one era.
+struct EpidemicGraph {
+    adjacency: Vec<(u32, Vec<u32>)>,
+    components: EpidemicComponents,
+}
+
+/// The two observable boundaries returned by the production epoch helper.
+/// Keeping these here lets H-M3 compare the epidemic result before raids while
+/// still driving the same helper the real bake uses.
+#[allow(dead_code)]
+struct EpochTrace {
+    growth_population: BTreeMap<usize, f64>,
+    epidemic_population: BTreeMap<usize, f64>,
+    stream_after_growth: Stream,
 }
 
 /// The outcome of [`Bake::relocate`]ing a homeless people.
@@ -2740,6 +3721,7 @@ impl<'a> Bake<'a> {
             tech_offset,
             disposition: self.drawn_disposition(people, site, year),
             stores: 0.0,
+            subsistence: SubsistenceInventory::default(),
             curve,
         });
         // Keep the growth buffer exactly parallel to `communities`: a community
@@ -2931,6 +3913,62 @@ impl<'a> Bake<'a> {
     fn begin_epoch(&mut self) {
         self.epoch_growth.clear();
         self.epoch_growth.resize(self.communities.len(), 0.0);
+    }
+
+    /// Run the complete runtime epoch in its load-bearing order. Keeping this
+    /// sequence in one method lets focused fixtures exercise the same path as
+    /// [`bake`], including tribute and end-of-epoch accrual.
+    fn run_epoch(&mut self, year: f64, era: &EraClimate) {
+        // Last epoch's increments are spent: nothing may be taxed twice.
+        self.begin_epoch();
+        let snapshot: Vec<usize> = (0..self.communities.len())
+            .filter(|&i| self.communities[i].alive)
+            .collect();
+        if self.exchange_treatment == ExchangeTreatment::Enabled {
+            let shortfall_ratios = self.exchange_phases(&snapshot, era);
+            for &idx in &snapshot {
+                #[cfg(test)]
+                let before = self.communities[idx].population;
+                self.step_community_with_subsistence_shortfall(
+                    idx,
+                    era,
+                    year,
+                    shortfall_ratios[idx],
+                );
+                #[cfg(test)]
+                record_d2_epoch_event(D2EpochEvent::Growth {
+                    community: idx,
+                    shortfall_ratio: shortfall_ratios[idx],
+                    population_delta: self.communities[idx].population - before,
+                });
+            }
+        } else {
+            for &idx in &snapshot {
+                self.step_community(idx, era, year);
+            }
+        }
+        self.plague_phase(&snapshot, era, year);
+        // The Granary T4: predation runs after every snapshot community has
+        // grown. Anything opened this epoch waits for the next snapshot.
+        self.raid_phases(&snapshot, era, year);
+        // Existing vassal answers bracket tribute: revolt before collection,
+        // flight after it. Typed exchange and consumption have already fed
+        // this epoch's pressure and growth above.
+        self.settle_revolts();
+        #[cfg(test)]
+        let collected_before = self.tally.tribute_collected;
+        let fleeing = self.collect_tribute(year, era);
+        #[cfg(test)]
+        record_d2_epoch_event(D2EpochEvent::Tribute {
+            collected: self.tally.tribute_collected - collected_before,
+        });
+        self.resolve_flights(fleeing, era, year);
+        // The Lot's draw weight is credited once, at epoch end.
+        for idx in 0..self.communities.len() {
+            if self.communities[idx].alive {
+                self.live_an_epoch(idx);
+            }
+        }
     }
 
     /// Each patron collects from each of its subordinates: it demands what its
@@ -3202,6 +4240,49 @@ impl<'a> Bake<'a> {
     /// alive; that is the whole of the coupling between entries, and it is why
     /// the order — while deterministic — is stated rather than left to be
     /// inferred.
+    /// Read one diagnostic return witness for every relation still standing at
+    /// `now`. This is deliberately a closing read over immutable borrows: it
+    /// neither clears stores nor changes a community, relation, tally, stream,
+    /// or epoch result.
+    fn diagnostic_returns_at_now(&self) -> Vec<DiagnosticReturnWitness> {
+        let mut holdings: BTreeMap<usize, usize> = BTreeMap::new();
+        for relation in self.tribute.values() {
+            *holdings.entry(relation.patron).or_insert(0) += 1;
+        }
+
+        self.tribute
+            .iter()
+            .map(|(&subordinate, relation)| {
+                let patron = relation.patron;
+                let portfolio = holdings
+                    .get(&patron)
+                    .copied()
+                    .expect("every standing relation contributes to its patron portfolio");
+                let share = self.communities[patron].stores / portfolio as f64;
+                let protection = share
+                    / self.communities[subordinate]
+                        .population
+                        .max(DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR);
+                let goods = share / relation.assessment.max(DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR);
+                let legitimacy = self.communities[subordinate].population
+                    / relation
+                        .last_seen_population
+                        .max(DIAGNOSTIC_RETURN_DENOMINATOR_FLOOR);
+
+                DiagnosticReturnWitness {
+                    subordinate: self.communities[subordinate].id,
+                    patron: self.communities[patron].id,
+                    protection,
+                    goods,
+                    legitimacy,
+                    band: diagnostic_return_band(protection, goods, legitimacy),
+                    classification: classify_diagnostic_return(protection, goods, legitimacy),
+                    conservation_residual: 0.0,
+                }
+            })
+            .collect()
+    }
+
     fn resolve_flights(&mut self, fleeing: Vec<usize>, era: &EraClimate, year: f64) {
         for sub in fleeing {
             self.take_flight(sub, era, year);
@@ -3543,7 +4624,8 @@ impl<'a> Bake<'a> {
     /// [`crate::streams::SETTLEMENT_BREACH`], keyed on the working's own
     /// `(vertex, band, year)` — the same shape [`Bake::working_stream`] uses,
     /// and for the reason that label's doc records with a measurement: a
-    /// conditional draw taken sequentially off `history/bake/v3` re-orders
+    /// conditional draw taken sequentially off the historical `history/bake/v3`
+    /// stream re-orders
     /// every world's whole history, so the reshuffle rather than the mechanism
     /// would be what moved. This draw fires once per living working per epoch,
     /// far more often than the working draw does, so on the sequential stream
@@ -3598,6 +4680,178 @@ impl<'a> Bake<'a> {
             .stream()
     }
 
+    /// Run D2's typed stock phases over the epoch-start population snapshot.
+    /// Each phase produces from the existing effective-capacity and harvest
+    /// curve signals, clears direct exchange, then consumes the fixed basket.
+    /// The returned average shortfall ratio is applied only after all twelve
+    /// phases, when the existing pressure/growth path runs.
+    fn exchange_phases(&mut self, snapshot: &[usize], era: &EraClimate) -> Vec<f64> {
+        let shares: Vec<[f64; PHASES_PER_YEAR]> = self
+            .communities
+            .iter()
+            .map(|community| phase_shares(community.curve))
+            .collect();
+        let mut shortfall_sum = vec![0.0; self.communities.len()];
+
+        // Ascending phase number is the treatment's explicit temporal order;
+        // indexing every community's frozen curve by that shared clock is the
+        // point of this outer range.
+        #[allow(clippy::needless_range_loop)]
+        for phase in 0..PHASES_PER_YEAR {
+            self.produce_subsistence_phase(snapshot, era, &shares, phase);
+            self.clear_subsistence_phase(snapshot, phase);
+            self.consume_subsistence_phase(snapshot, phase, &mut shortfall_sum);
+        }
+
+        shortfall_sum
+            .into_iter()
+            .map(|sum| sum / PHASES_PER_YEAR as f64)
+            .collect()
+    }
+
+    fn produce_subsistence_phase(
+        &mut self,
+        snapshot: &[usize],
+        era: &EraClimate,
+        shares: &[[f64; PHASES_PER_YEAR]],
+        phase: usize,
+    ) {
+        for &idx in snapshot {
+            if !self.communities[idx].alive {
+                continue;
+            }
+            #[cfg(test)]
+            let before = self.communities[idx].subsistence.quantities;
+            let community = &self.communities[idx];
+            let total = self.eff_capacity(era, community.site, community.people_idx)
+                * PHASES_PER_YEAR as f64
+                * shares[idx][phase];
+            let production = partition_subsistence_production(total, community.curve);
+            self.communities[idx].subsistence =
+                carry_subsistence_inventory(community.subsistence, production);
+            #[cfg(test)]
+            {
+                let after = self.communities[idx].subsistence.quantities;
+                record_d2_epoch_event(D2EpochEvent::Production {
+                    phase,
+                    community: idx,
+                    added: [after[0] - before[0], after[1] - before[1]],
+                });
+            }
+        }
+    }
+
+    fn clear_subsistence_phase(&mut self, snapshot: &[usize], _phase: usize) {
+        let exchange_snapshot: Vec<ExchangeCommunitySnapshot> = snapshot
+            .iter()
+            .copied()
+            .filter(|&idx| self.communities[idx].alive)
+            .map(|idx| {
+                let community = &self.communities[idx];
+                ExchangeCommunitySnapshot {
+                    id: community.id,
+                    site: community.site,
+                    projected_population: community.population,
+                    opening_stock: community.subsistence,
+                }
+            })
+            .collect();
+        let clearing = clear_local_exchange(&self.graphs[self.cur_graph], &exchange_snapshot);
+        #[cfg(test)]
+        let delivery_count = clearing.deliveries.len();
+        self.record_exchange_clearing(&clearing);
+        self.apply_subsistence_deliveries(&clearing.deliveries);
+        #[cfg(test)]
+        record_d2_epoch_event(D2EpochEvent::Clearing {
+            phase: _phase,
+            deliveries: delivery_count,
+        });
+    }
+
+    fn consume_subsistence_phase(
+        &mut self,
+        snapshot: &[usize],
+        _phase: usize,
+        shortfall_sum: &mut [f64],
+    ) {
+        for &idx in snapshot {
+            if !self.communities[idx].alive {
+                continue;
+            }
+            let demand = subsistence_basket_demand(self.communities[idx].population);
+            #[cfg(test)]
+            let before = self.communities[idx].subsistence.quantities;
+            let (remaining, shortfall) =
+                consume_subsistence(self.communities[idx].subsistence, demand);
+            self.communities[idx].subsistence = remaining;
+            let shortfall_ratio = subsistence_shortfall_ratio(shortfall, demand);
+            shortfall_sum[idx] += shortfall_ratio;
+            #[cfg(test)]
+            record_d2_epoch_event(D2EpochEvent::Consumption {
+                phase: _phase,
+                community: idx,
+                removed: [
+                    before[0] - remaining.quantities[0],
+                    before[1] - remaining.quantities[1],
+                ],
+                shortfall_ratio,
+            });
+        }
+    }
+
+    fn record_exchange_clearing(&mut self, clearing: &ExchangeClearing) {
+        self.exchange.attempts += clearing.attempts.len() as u64;
+        for attempt in &clearing.attempts {
+            for status in &attempt.statuses {
+                match status {
+                    ExchangeStatus::Proposed => self.exchange.proposed += 1,
+                    ExchangeStatus::Accepted => self.exchange.accepted += 1,
+                    ExchangeStatus::Settled => self.exchange.settled += 1,
+                    ExchangeStatus::Partial => self.exchange.partial += 1,
+                    ExchangeStatus::Refused => self.exchange.refused += 1,
+                    ExchangeStatus::Impossible => self.exchange.impossible += 1,
+                }
+            }
+        }
+        for (total, residual) in self
+            .exchange
+            .conservation_residuals
+            .iter_mut()
+            .zip(clearing.conservation_residuals)
+        {
+            *total += residual;
+        }
+    }
+
+    fn apply_subsistence_deliveries(&mut self, deliveries: &[SubsistenceDelivery]) {
+        let indices: BTreeMap<BakeId, usize> = self
+            .communities
+            .iter()
+            .enumerate()
+            .filter(|(_, community)| community.alive)
+            .map(|(idx, community)| (community.id, idx))
+            .collect();
+        let mut incoming = vec![[0.0; 2]; self.communities.len()];
+        let mut outgoing = vec![[0.0; 2]; self.communities.len()];
+        for delivery in deliveries {
+            let resource = subsistence_resource_index(delivery.resource);
+            outgoing[indices[&delivery.from]][resource] += delivery.quantity;
+            incoming[indices[&delivery.to]][resource] += delivery.quantity;
+        }
+        for (&id, &idx) in &indices {
+            let opening = self.communities[idx].subsistence;
+            let updated = SubsistenceInventory::new(
+                opening.amount(SubsistenceResource::A) + incoming[idx][0] - outgoing[idx][0],
+                opening.amount(SubsistenceResource::B) + incoming[idx][1] - outgoing[idx][1],
+            );
+            debug_assert!(
+                updated.quantities.iter().all(|amount| *amount >= 0.0),
+                "exchange overdraw for {id:?}: {updated:?}"
+            );
+            self.communities[idx].subsistence = updated;
+        }
+    }
+
     /// Resolve one community for one epoch (migrate / collapse / grow / raid).
     /// Newly opened communities are processed the following epoch.
     ///
@@ -3606,6 +4860,16 @@ impl<'a> Bake<'a> {
     /// vertex turned hostile evicts its community to a vacant refuge or kills
     /// it — a climate eviction never starts a fight, and never cascades.
     fn step_community(&mut self, idx: usize, era: &EraClimate, year: f64) {
+        self.step_community_with_subsistence_shortfall(idx, era, year, 0.0);
+    }
+
+    fn step_community_with_subsistence_shortfall(
+        &mut self,
+        idx: usize,
+        era: &EraClimate,
+        year: f64,
+        shortfall_ratio: f64,
+    ) {
         if !self.communities[idx].alive {
             return;
         }
@@ -3630,7 +4894,11 @@ impl<'a> Bake<'a> {
         // The result is that "the cold drove them on" survives the mask's
         // deletion, but as a consequence of the land going poor rather than of a
         // constant declaring the vertex uninhabitable to everyone alike.
-        let pressure = self.pressure_of(idx, era);
+        let pressure = adapt_pressure_for_subsistence_shortfall(
+            self.pressure_of(idx, era),
+            SubsistenceInventory::new(shortfall_ratio, shortfall_ratio),
+            SubsistenceInventory::new(1.0, 1.0),
+        );
         if pressure >= COLLAPSE_PRESSURE {
             let (record, pop, lineage, offset, migrant_id) = {
                 let c = &self.communities[idx];
@@ -3685,6 +4953,443 @@ impl<'a> Bake<'a> {
         // then, so a target whose granary bottoms out mid-year becomes
         // beatable exactly when its hoard is gone, not at the epoch boundary.
         self.grow(idx, era, year, pressure);
+    }
+
+    /// Resolve one production epoch in its load-bearing order: growth,
+    /// epidemic, then raids. The same helper is used by the world bake and by
+    /// the live H-M3 fixture, so the fixture cannot silently reproduce an
+    /// ordering that production does not execute.
+    #[cfg(test)]
+    fn resolve_epoch(&mut self, snapshot: &[usize], era: &EraClimate, year: f64) -> EpochTrace {
+        for &idx in snapshot {
+            self.step_community(idx, era, year);
+        }
+        let growth_population = snapshot
+            .iter()
+            .map(|&idx| (idx, self.communities[idx].population))
+            .collect();
+        let stream_after_growth = self.stream.clone();
+        self.plague_phase(snapshot, era, year);
+        let epidemic_population = snapshot
+            .iter()
+            .map(|&idx| (idx, self.communities[idx].population))
+            .collect();
+        self.raid_phases(snapshot, era, year);
+        EpochTrace {
+            growth_population,
+            epidemic_population,
+            stream_after_growth,
+        }
+    }
+
+    /// Resolve reservoir spillovers and their graph waves after growth and
+    /// before conflict. Spillover draws are unconditional over the epoch's
+    /// snapshot × epidemic catalogue, preserving one explicit draw order even
+    /// when an earlier wave closes a later origin.
+    fn plague_phase(&mut self, snapshot: &[usize], era: &EraClimate, year: f64) {
+        // The graph is immutable for every phase in an era. Build its
+        // deterministic adjacency and reachability components once; rebuilding
+        // them for every origin and every phase made the seed-42 history path
+        // quadratic in the number of living communities.
+        let graph = self.epidemic_graph();
+        let adjacency_refs: Vec<(u32, &[u32])> = graph
+            .adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+        let components = &graph.components;
+        // Persistence is component-level, not lineage-level. Reconcile each
+        // connected component once per kind, propagate its marker to every
+        // host community while the host-weighted component clears CCS, and
+        // attack only communities present in this epoch's snapshot.
+        let snapshot_set: BTreeSet<usize> = snapshot.iter().copied().collect();
+        for epidemic in self.epidemics {
+            let mut seen_components = BTreeSet::new();
+            for &origin_idx in snapshot {
+                if !self.communities[origin_idx].alive {
+                    continue;
+                }
+                let members =
+                    self.epidemic_component(components, self.communities[origin_idx].site);
+                let component_key = members
+                    .iter()
+                    .map(|&idx| self.communities[idx].site)
+                    .min()
+                    .unwrap_or(self.communities[origin_idx].site);
+                if !seen_components.insert(component_key) {
+                    continue;
+                }
+                let host_population = self.host_population(&members, epidemic);
+                let marked = members.iter().any(|&idx| {
+                    let c = &self.communities[idx];
+                    self.persistent.contains(&(c.lineage, epidemic.kind))
+                });
+                if !marked {
+                    continue;
+                }
+                if !hornvale_epidemiology::persists(host_population, epidemic.ccs) {
+                    self.clear_persistence(&members, epidemic.kind);
+                    continue;
+                }
+                self.propagate_persistence(&members, epidemic.kind, epidemic);
+                for idx in members {
+                    if !snapshot_set.contains(&idx) || !self.communities[idx].alive {
+                        continue;
+                    }
+                    let people = self.records[self.communities[idx].record].core.people;
+                    let host_weight = self.host_weight(epidemic, people);
+                    if host_weight == 0.0 {
+                        continue;
+                    }
+                    // Recurrence is the specified fixed A_max arm: unlike a
+                    // spillover wave, it consumes no additional attack draw.
+                    let attack = epidemic.attack_max;
+                    let susceptible = (self.epoch_years / 30.0).min(1.0) * host_weight;
+                    self.apply_outbreak(
+                        idx,
+                        era,
+                        year,
+                        crate::plague_bake::OutbreakInput {
+                            kind: epidemic.kind,
+                            susceptible,
+                            attack,
+                            fatality: epidemic.fatality,
+                        },
+                    );
+                }
+            }
+        }
+        for &origin in snapshot {
+            for epidemic_idx in 0..self.epidemics.len() {
+                let spill = self.stream.next_f64();
+                if !self.communities[origin].alive {
+                    continue;
+                }
+                let site = self.communities[origin].site;
+                let epidemic = &self.epidemics[epidemic_idx];
+                let fit = *epidemic.fit_by_era[self.cur_graph].get(site);
+                if spill >= crate::plague_bake::SPILLOVER_RATE * epidemic.spillover_weight * fit {
+                    continue;
+                }
+
+                let kind = epidemic.kind;
+                let attack_max = epidemic.attack_max;
+                let fatality = epidemic.fatality;
+                let immunizing = epidemic.immunizing;
+                let hosts = epidemic.hosts.clone();
+                let targets = self.epidemic_targets(&adjacency_refs, site);
+                for idx in targets {
+                    if !self.communities[idx].alive {
+                        continue;
+                    }
+                    let attack = self.stream.next_f64() * attack_max;
+                    let (lineage, people) = {
+                        let c = &self.communities[idx];
+                        (c.lineage, self.records[c.record].core.people)
+                    };
+                    let host_weight = hosts.get(&people).copied().unwrap_or(0.0).clamp(0.0, 1.0);
+                    let susceptible = if immunizing {
+                        let lifespan = self.lifespans.get(&people).copied().unwrap_or(30.0);
+                        crate::plague_bake::susceptible_share(
+                            year,
+                            self.last_struck.get(&(lineage, kind)).copied(),
+                            lifespan,
+                        ) * host_weight
+                    } else {
+                        host_weight
+                    };
+                    self.apply_outbreak(
+                        idx,
+                        era,
+                        year,
+                        crate::plague_bake::OutbreakInput {
+                            kind,
+                            susceptible,
+                            attack,
+                            fatality,
+                        },
+                    );
+                }
+                self.record_persistence(components, site, kind, &hosts);
+            }
+        }
+    }
+
+    fn host_weight(&self, epidemic: &crate::plague_bake::EpidemicKind, people: KindId) -> f64 {
+        epidemic
+            .hosts
+            .get(&people)
+            .copied()
+            .unwrap_or(0.0)
+            .clamp(0.0, 1.0)
+    }
+
+    fn epidemic_graph(&mut self) -> Rc<EpidemicGraph> {
+        let graph_index = self.cur_graph;
+        while self.epidemic_graphs.len() <= graph_index {
+            self.epidemic_graphs.push(None);
+        }
+        if self.epidemic_graphs[graph_index].is_none() {
+            let adjacency = Self::epidemic_adjacency_for(self.geo, &self.graphs[graph_index]);
+            let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+                .iter()
+                .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+                .collect();
+            let components =
+                Self::epidemic_components_for(self.geo.vertex_count(), &adjacency_refs);
+            self.epidemic_graphs[graph_index] = Some(Rc::new(EpidemicGraph {
+                adjacency,
+                components,
+            }));
+        }
+        Rc::clone(self.epidemic_graphs[graph_index].as_ref().unwrap())
+    }
+
+    #[cfg(test)]
+    fn epidemic_adjacency(&self) -> Vec<(u32, Vec<u32>)> {
+        Self::epidemic_adjacency_for(self.geo, self.cur())
+    }
+
+    fn epidemic_adjacency_for(geo: &Geosphere, graph: &ConnectionGraph) -> Vec<(u32, Vec<u32>)> {
+        (0..geo.vertex_count())
+            .map(|raw| {
+                let vertex = Vertex(raw as u32);
+                (
+                    vertex.0,
+                    traversable_neighbors(graph, vertex)
+                        .into_iter()
+                        .map(|v| v.0)
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn epidemic_wave_vertices(
+        adjacency: &[(u32, &[u32])],
+        origin: Vertex,
+        radius: u32,
+    ) -> BTreeSet<Vertex> {
+        hornvale_epidemiology::wave_reach(origin.0, adjacency, radius)
+            .into_iter()
+            .map(Vertex)
+            .collect()
+    }
+
+    #[cfg(test)]
+    fn epidemic_components(&self, adjacency: &[(u32, &[u32])]) -> EpidemicComponents {
+        Self::epidemic_components_for(self.geo.vertex_count(), adjacency)
+    }
+
+    fn epidemic_components_for(
+        vertex_count: usize,
+        adjacency: &[(u32, &[u32])],
+    ) -> EpidemicComponents {
+        let neighbours: BTreeMap<u32, &[u32]> = adjacency.iter().copied().collect();
+        let mut unassigned: BTreeSet<Vertex> =
+            (0..vertex_count).map(|raw| Vertex(raw as u32)).collect();
+        let mut by_vertex = BTreeMap::new();
+        let mut members = Vec::new();
+        while let Some(&origin) = unassigned.first() {
+            let mut reached = BTreeSet::from([origin]);
+            let mut frontier = vec![origin.0];
+            while let Some(vertex) = frontier.pop() {
+                let Some(next) = neighbours.get(&vertex) else {
+                    continue;
+                };
+                for &neighbour in *next {
+                    let neighbour = Vertex(neighbour);
+                    if reached.insert(neighbour) {
+                        frontier.push(neighbour.0);
+                    }
+                }
+            }
+            for &vertex in &reached {
+                unassigned.remove(&vertex);
+            }
+            let component_members: Vec<Vertex> = reached.into_iter().collect();
+            let component_id = members.len();
+            for &vertex in &component_members {
+                by_vertex.insert(vertex, component_id);
+            }
+            members.push(component_members);
+        }
+        EpidemicComponents { by_vertex, members }
+    }
+
+    fn epidemic_component(&self, components: &EpidemicComponents, origin: Vertex) -> Vec<usize> {
+        let reached = components
+            .by_vertex
+            .get(&origin)
+            .and_then(|&component| components.members.get(component))
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+        let mut members: Vec<usize> = self
+            .communities
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.alive && reached.binary_search(&c.site).is_ok())
+            .map(|(idx, _)| idx)
+            .collect();
+        members.sort_by_key(|&idx| (self.communities[idx].site, idx));
+        members
+    }
+
+    fn host_population(
+        &self,
+        members: &[usize],
+        epidemic: &crate::plague_bake::EpidemicKind,
+    ) -> f64 {
+        members
+            .iter()
+            .map(|&idx| {
+                let c = &self.communities[idx];
+                let people = self.records[c.record].core.people;
+                c.population * self.host_weight(epidemic, people)
+            })
+            .sum()
+    }
+
+    fn clear_persistence(&mut self, members: &[usize], kind: KindId) {
+        for &idx in members {
+            self.persistent
+                .remove(&(self.communities[idx].lineage, kind));
+        }
+    }
+
+    fn propagate_persistence(
+        &mut self,
+        members: &[usize],
+        kind: KindId,
+        epidemic: &crate::plague_bake::EpidemicKind,
+    ) {
+        for &idx in members {
+            let c = &self.communities[idx];
+            let people = self.records[c.record].core.people;
+            if self.host_weight(epidemic, people) > 0.0 {
+                self.persistent.insert((c.lineage, kind));
+            }
+        }
+    }
+
+    fn record_persistence(
+        &mut self,
+        components: &EpidemicComponents,
+        origin: Vertex,
+        kind: KindId,
+        hosts: &BTreeMap<KindId, f64>,
+    ) {
+        let members = self.epidemic_component(components, origin);
+        let host_population: f64 = members
+            .iter()
+            .map(|&idx| {
+                let c = &self.communities[idx];
+                c.population
+                    * hosts
+                        .get(&self.records[c.record].core.people)
+                        .copied()
+                        .unwrap_or(0.0)
+                        .clamp(0.0, 1.0)
+            })
+            .sum();
+        let Some(epidemic) = self.epidemics.iter().find(|e| e.kind == kind) else {
+            return;
+        };
+        if hornvale_epidemiology::persists(host_population, epidemic.ccs) {
+            self.propagate_persistence(&members, kind, epidemic);
+        } else {
+            self.clear_persistence(&members, kind);
+        }
+    }
+
+    fn apply_outbreak(
+        &mut self,
+        idx: usize,
+        era: &EraClimate,
+        year: f64,
+        input: crate::plague_bake::OutbreakInput,
+    ) {
+        let (record, lineage, people, population, old_site, pidx, offset, id) = {
+            let c = &self.communities[idx];
+            (
+                c.record,
+                c.lineage,
+                self.records[c.record].core.people,
+                c.population,
+                c.site,
+                c.people_idx,
+                c.tech_offset,
+                c.id,
+            )
+        };
+        let outcome = hornvale_epidemiology::outbreak(
+            population,
+            input.susceptible,
+            input.attack,
+            input.fatality,
+            crate::plague_bake::PLAGUE_FRACTION,
+        );
+        self.communities[idx].population = outcome.population_after;
+        let occupation = self.records[record].community;
+        if let Some(position) = self.outbreaks.iter().position(|event| {
+            event.occupation == occupation && event.pathogen == input.kind && event.year == year
+        }) {
+            if outcome.ends_as_plague {
+                // The closing application owns the emitted event position;
+                // retain its identity through ledger emission.
+                let mut event = self.outbreaks.remove(position);
+                event.deaths += outcome.deaths;
+                self.outbreaks.push(event);
+            } else {
+                self.outbreaks[position].deaths += outcome.deaths;
+            }
+        } else {
+            self.outbreaks.push(OutbreakEvent {
+                occupation: self.records[record].community,
+                pathogen: input.kind,
+                year,
+                deaths: outcome.deaths,
+            });
+        }
+        self.last_struck.insert((lineage, input.kind), year);
+        if outcome.ends_as_plague {
+            let destination = if outcome.population_after >= VIABLE_MIN {
+                self.nearest_dest(era, old_site, pidx)
+            } else {
+                None
+            };
+            let carried = destination.map(|_| self.lift_portfolio(idx));
+            self.close(idx, year, CauseOfEnd::Plague, Ended::Nature);
+            if let (Some(dest), Some(portfolio)) = (destination, carried) {
+                let new_idx = self.open(
+                    people,
+                    dest,
+                    year,
+                    outcome.population_after,
+                    Founding::From(id),
+                    Some(lineage),
+                    offset,
+                );
+                self.carry_portfolio_to(new_idx, portfolio, year);
+                self.touch(new_idx, year);
+            }
+        }
+    }
+
+    /// Living communities within the epidemic radius, ordered by vertex and
+    /// then by bake index. Graph traversal cannot cross a disconnected component.
+    fn epidemic_targets(&self, adjacency: &[(u32, &[u32])], origin: Vertex) -> Vec<usize> {
+        let reached =
+            Self::epidemic_wave_vertices(adjacency, origin, crate::plague_bake::WAVE_RADIUS);
+        let mut targets: Vec<usize> = self
+            .communities
+            .iter()
+            .enumerate()
+            .filter(|(_, community)| community.alive && reached.contains(&community.site))
+            .map(|(idx, _)| idx)
+            .collect();
+        targets.sort_by_key(|&idx| (self.communities[idx].site, idx));
+        targets
     }
 
     /// Run the epoch's conflict checks at sub-year resolution (The Granary
@@ -4403,7 +6108,14 @@ pub fn bake(
         disposition_spread: &cfg.disposition_spread,
         in_group_radius: &cfg.in_group_radius,
         time_horizon: &cfg.time_horizon,
+        exchange_treatment: cfg.exchange_treatment,
+        epidemics: &cfg.epidemics,
+        lifespans: &cfg.lifespans,
+        last_struck: BTreeMap::new(),
+        persistent: BTreeSet::new(),
+        epidemic_graphs: Vec::new(),
         records: Vec::new(),
+        outbreaks: Vec::new(),
         communities: Vec::new(),
         node_index: BTreeMap::new(),
         next_id: 1,
@@ -4411,6 +6123,7 @@ pub fn bake(
         tribute: BTreeMap::new(),
         epoch_growth: Vec::new(),
         tally: BakeCensus::default(),
+        exchange: ExchangeCensus::default(),
         epoch_years: cfg.epoch_years,
     };
 
@@ -4502,39 +6215,7 @@ pub fn bake(
         let era_idx = bake.era_index_for(era_years, year);
         bake.cur_graph = era_idx;
         let era = eras[era_idx].clone();
-        // Last epoch's increments are spent: nothing may be taxed twice.
-        bake.begin_epoch();
-        let snapshot: Vec<usize> = (0..bake.communities.len())
-            .filter(|&i| bake.communities[i].alive)
-            .collect();
-        for idx in &snapshot {
-            bake.step_community(*idx, &era, year);
-        }
-        // The Granary T4: predation now runs as its own 12-phase pass over
-        // the same snapshot (re-borrowed), stamped within the year (see
-        // `raid_phases`). Snapshot indices only — anything opened this epoch
-        // waits, as before.
-        bake.raid_phases(&snapshot, &era, year);
-        // Tribute is collected once the whole world has stepped, so there is
-        // growth to tax and so no subordinate's remittance depends on whether
-        // its patron happened to be stepped before or after it. Spec §4.3d's
-        // two vassal answers bracket it, and the bracket IS the rule: a vassal
-        // strong enough to refuse refuses before it is milked, and one that
-        // pays a burden it could never regrow leaves after it has paid.
-        // `collect_tribute`'s own doc carries the argument for both positions.
-        bake.settle_revolts();
-        let fleeing = bake.collect_tribute(year, &era);
-        bake.resolve_flights(fleeing, &era, year);
-        // The Lot's draw weight (occ-person-years), accrued ONCE per epoch,
-        // here, at the end — not inside `grow` or beside any `open` call.
-        // See [`Bake::live_an_epoch`]'s doc for why a per-site accrual
-        // double-counted and under-counted at once across a same-epoch
-        // handoff, and why this single end-of-epoch pass is the fix.
-        for idx in 0..bake.communities.len() {
-            if bake.communities[idx].alive {
-                bake.live_an_epoch(idx);
-            }
-        }
+        bake.run_epoch(year, &era);
         year += cfg.epoch_years;
     }
 
@@ -4584,17 +6265,105 @@ pub fn bake(
             since: t.since,
         })
         .collect();
-
     // No final person-years sweep is needed here: the epoch loop above runs
     // `while year < end_year`, so its last iteration's own end-of-epoch
     // accrual pass already credits every community still alive at
     // `end_year`. A sweep here would double-credit that epoch.
-    History {
-        records: bake.records,
-        now,
-        tribute,
-        tally: bake.tally,
+    history_from_bake(bake, now, tribute)
+}
+
+/// Build the interleaved epidemic fixture through the real bake-to-history
+/// crossing: pathogen A is nonlethal, pathogen B is nonlethal, and pathogen A
+/// closes the occupation. The returned history carries the bake's moved
+/// aggregate event order for end-to-end consumer tests.
+pub fn interleaved_rehit_history(site: Vertex) -> History {
+    let geo = Geosphere::new(1);
+    let biomes = VertexMap::from_fn(&geo, |_| hornvale_culture::BiomeClass::Grassland);
+    let graphs = vec![ConnectionGraph::new(geo.vertex_count())];
+    let capacities = vec![vec![
+        hornvale_kernel::ecology::CapacityMap::new(VertexMap::from_fn(&geo, |_| 100.0))
+            .expect("fixture capacity is non-negative"),
+    ]];
+    let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+    let prospectivity = VertexMap::from_fn(&geo, |_| 0.0);
+    let refugia = VertexMap::from_fn(&geo, |_| false);
+    let peoples = vec![KindId("goblin")];
+    let seating = vec![VertexMap::from_fn(&geo, |_| Band::Surface)];
+    let empty = BTreeMap::new();
+    let era = EraClimate {
+        day: hornvale_kernel::WorldTime::GENESIS,
+        ice: VertexMap::from_fn(&geo, |_| false),
+        habitable: VertexMap::from_fn(&geo, |_| true),
+        sea_level: hornvale_kernel::ReferenceElevation::new(0.0)
+            .expect("zero is a valid reference elevation"),
+        ice_fraction: 0.0,
+    };
+    let mut bake = Bake {
+        geo: &geo,
+        biomes: &biomes,
+        graphs: &graphs,
+        cur_graph: 0,
+        caps_by_era: &capacities,
+        peoples: &peoples,
+        river_prox: &river_prox,
+        prospectivity: &prospectivity,
+        refugia: &refugia,
+        seed: Seed(1),
+        disposition: &empty,
+        disposition_spread: &empty,
+        in_group_radius: &empty,
+        time_horizon: &empty,
+        exchange_treatment: ExchangeTreatment::Disabled,
+        epidemics: &[],
+        lifespans: &empty,
+        last_struck: BTreeMap::new(),
+        persistent: BTreeSet::new(),
+        epidemic_graphs: Vec::new(),
+        seating: &seating,
+        records: Vec::new(),
+        outbreaks: Vec::new(),
+        communities: Vec::new(),
+        node_index: BTreeMap::new(),
+        next_id: 1,
+        stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+        tribute: BTreeMap::new(),
+        epoch_growth: Vec::new(),
+        tally: BakeCensus::default(),
+        exchange: ExchangeCensus::default(),
+        epoch_years: 25.0,
+    };
+    let occupation = bake.open(
+        KindId("goblin"),
+        site,
+        0.0,
+        100.0,
+        Founding::Genesis(site),
+        None,
+        0.0,
+    );
+    // Give the constructed occupation the same nonzero person-year substrate
+    // a stepped bake would accrue, so the downstream Lot draw can place lives
+    // in this exact fixture without replacing the bake's event path.
+    for _ in 0..800 {
+        bake.live_an_epoch(occupation);
     }
+    let apply = |bake: &mut Bake<'_>, kind, attack, fatality| {
+        bake.apply_outbreak(
+            occupation,
+            &era,
+            50.0,
+            crate::plague_bake::OutbreakInput {
+                kind,
+                susceptible: 1.0,
+                attack,
+                fatality,
+            },
+        );
+    };
+    apply(&mut bake, KindId("the-pest"), 0.1, 1.0);
+    apply(&mut bake, KindId("the-pox"), 0.1, 1.0);
+    apply(&mut bake, KindId("the-pest"), 1.0, 0.5);
+    history_from_bake(bake, 2500.0, Vec::new())
 }
 
 #[cfg(test)]
@@ -4686,8 +6455,15 @@ mod tests {
                 disposition_spread: no_spread(),
                 in_group_radius: no_radius(),
                 time_horizon: strips_to_the_floor(),
+                exchange_treatment: ExchangeTreatment::Disabled,
+                epidemics: &[],
+                lifespans: &BTreeMap::new(),
+                last_struck: BTreeMap::new(),
+                persistent: BTreeSet::new(),
+                epidemic_graphs: Vec::new(),
                 seating: surface_seating(),
                 records: Vec::new(),
+                outbreaks: Vec::new(),
                 communities: Vec::new(),
                 node_index: BTreeMap::new(),
                 next_id: 1,
@@ -4695,6 +6471,7 @@ mod tests {
                 tribute: BTreeMap::new(),
                 epoch_growth: Vec::new(),
                 tally: BakeCensus::default(),
+                exchange: ExchangeCensus::default(),
                 epoch_years: 25.0,
             };
             bake.working_site(&era, from, 0)
@@ -4886,8 +6663,15 @@ mod tests {
             disposition_spread: no_spread(),
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
+            exchange_treatment: ExchangeTreatment::Disabled,
+            epidemics: &[],
+            lifespans: &BTreeMap::new(),
+            last_struck: BTreeMap::new(),
+            persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
+            outbreaks: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
             next_id: 1,
@@ -4895,6 +6679,7 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            exchange: ExchangeCensus::default(),
             epoch_years: 25.0,
         };
 
@@ -5029,8 +6814,15 @@ mod tests {
             disposition_spread: no_spread(),
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
+            exchange_treatment: ExchangeTreatment::Disabled,
+            epidemics: &[],
+            lifespans: &BTreeMap::new(),
+            last_struck: BTreeMap::new(),
+            persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
+            outbreaks: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
             next_id: 1,
@@ -5038,6 +6830,7 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            exchange: ExchangeCensus::default(),
             epoch_years: 25.0,
         };
 
@@ -5372,8 +7165,15 @@ mod tests {
             disposition_spread,
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
+            exchange_treatment: ExchangeTreatment::Disabled,
+            epidemics: &[],
+            lifespans: no_radius(),
+            last_struck: BTreeMap::new(),
+            persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
+            outbreaks: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
             next_id: 1,
@@ -5381,8 +7181,544 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            exchange: ExchangeCensus::default(),
             epoch_years: 25.0,
         }
+    }
+
+    #[test]
+    fn epidemic_persistence_is_host_weighted_component_wide_and_events_aggregate_by_kind() {
+        let geo = fixture_geo();
+        let mut graph = ConnectionGraph::new(geo.vertex_count());
+        for (from, to) in [(0, 1), (1, 2), (2, 3)] {
+            graph.add_edge(
+                Vertex(from),
+                Edge {
+                    to: Vertex(to),
+                    kind: EdgeKind::Adjacency,
+                    conductance: 1.0,
+                },
+            );
+        }
+        let graphs = vec![graph];
+        let caps = caps_from_fn(
+            geo,
+            |vertex| {
+                if vertex == Vertex(1) { 200.0 } else { 100.0 }
+            },
+        );
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
+        let people = KindId("goblin");
+        let kind = KindId("red-fever");
+        let epidemic = crate::plague_bake::EpidemicKind {
+            kind,
+            hosts: BTreeMap::from([(people, 0.5), (KindId("kobold"), 0.25)]),
+            fit_by_era: vec![VertexMap::from_fn(geo, |_| 1.0)],
+            attack_max: 0.1,
+            fatality: 0.1,
+            spillover_weight: 1_000.0,
+            immunizing: true,
+            ccs: 150.0,
+        };
+        bake.epidemics = std::slice::from_ref(&epidemic);
+        let mut indices = Vec::new();
+        for site in [0, 1, 2, 3, 10] {
+            indices.push(bake.open(
+                people,
+                Vertex(site),
+                0.0,
+                100.0,
+                Founding::Genesis(Vertex(site)),
+                None,
+                0.0,
+            ));
+        }
+        let non_host = bake.open(
+            KindId("kobold"),
+            Vertex(2),
+            0.0,
+            100.0,
+            Founding::Genesis(Vertex(2)),
+            None,
+            0.0,
+        );
+        let absent_host = bake.open(
+            KindId("human"),
+            Vertex(1),
+            0.0,
+            100.0,
+            Founding::Genesis(Vertex(1)),
+            None,
+            0.0,
+        );
+        let mut snapshot = indices.clone();
+        snapshot.extend([non_host, absent_host]);
+
+        let era = era_at(0.0);
+        let adjacency = bake.epidemic_adjacency();
+        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+        let targets: Vec<_> = snapshot
+            .iter()
+            .map(|&idx| bake.epidemic_targets(&adjacency_refs, bake.communities[idx].site))
+            .collect();
+        let mut expected_stream = bake.stream.clone();
+        for target in &targets {
+            assert!(expected_stream.next_f64() < 1_000.0 * crate::plague_bake::SPILLOVER_RATE);
+            for _ in target {
+                expected_stream.next_f64();
+            }
+        }
+        bake.plague_phase(&snapshot, &era, 0.0);
+        let cached_graph = Rc::as_ptr(
+            bake.epidemic_graphs[0]
+                .as_ref()
+                .expect("the first plague phase caches the era graph"),
+        );
+        assert_eq!(bake.stream.next_f64(), expected_stream.next_f64());
+        for &idx in &indices[..4] {
+            assert!(
+                bake.persistent
+                    .contains(&(bake.communities[idx].lineage, kind))
+            );
+        }
+        assert!(
+            bake.persistent
+                .contains(&(bake.communities[non_host].lineage, kind))
+        );
+        assert!(
+            !bake
+                .persistent
+                .contains(&(bake.communities[absent_host].lineage, kind))
+        );
+        assert!(
+            !bake
+                .persistent
+                .contains(&(bake.communities[indices[4]].lineage, kind))
+        );
+
+        // Persistence came from the live spillover. Recurrence attacks the
+        // partial host at fixed A_max, while only the unconditional spillover
+        // draws advance the stream.
+        let partial_before = bake.communities[non_host].population;
+        bake.epidemics = &[];
+        let mut recurrence_epidemic = epidemic.clone();
+        recurrence_epidemic.spillover_weight = 0.0;
+        bake.epidemics = std::slice::from_ref(&recurrence_epidemic);
+        let mut recurrence_stream = bake.stream.clone();
+        for _ in &snapshot {
+            recurrence_stream.next_f64();
+        }
+        bake.plague_phase(&snapshot, &era, 25.0);
+        assert_eq!(
+            Rc::as_ptr(
+                bake.epidemic_graphs[0]
+                    .as_ref()
+                    .expect("the repeated plague phase keeps the era graph"),
+            ),
+            cached_graph,
+            "repeated plague phases reuse the immutable era graph",
+        );
+        let expected_partial = partial_before
+            * (1.0
+                - (25.0 / 30.0)
+                    * 0.25
+                    * recurrence_epidemic.attack_max
+                    * recurrence_epidemic.fatality);
+        assert!((bake.communities[non_host].population - expected_partial).abs() < 1e-12);
+        assert_eq!(bake.stream.next_f64(), recurrence_stream.next_f64());
+
+        // Exactly CCS, then below CCS, clears the marker for every host that
+        // was propagated, including the partial host.
+        for &idx in &indices[..4] {
+            bake.communities[idx].population = 60.0;
+        }
+        bake.communities[non_host].population = 120.0;
+        let members = indices[..4]
+            .iter()
+            .copied()
+            .chain([non_host, absent_host])
+            .collect::<Vec<_>>();
+        assert_eq!(bake.host_population(&members, &recurrence_epidemic), 150.0);
+        bake.plague_phase(&snapshot, &era, 50.0);
+        assert!(snapshot.iter().all(|&idx| {
+            !bake
+                .persistent
+                .contains(&(bake.communities[idx].lineage, kind))
+        }));
+        bake.communities[indices[0]].population = 59.0;
+        bake.plague_phase(&snapshot, &era, 75.0);
+        assert!(snapshot.iter().all(|&idx| {
+            !bake
+                .persistent
+                .contains(&(bake.communities[idx].lineage, kind))
+        }));
+
+        let before = bake.outbreaks.len();
+        bake.apply_outbreak(
+            indices[0],
+            &era,
+            1.0,
+            crate::plague_bake::OutbreakInput {
+                kind,
+                susceptible: 1.0,
+                attack: 0.1,
+                fatality: 0.1,
+            },
+        );
+        let same_kind_deaths = bake.outbreaks.last().unwrap().deaths;
+        let second_kind_deaths = bake.communities[indices[0]].population * 0.1 * 0.1;
+        bake.apply_outbreak(
+            indices[0],
+            &era,
+            1.0,
+            crate::plague_bake::OutbreakInput {
+                kind,
+                susceptible: 1.0,
+                attack: 0.1,
+                fatality: 0.1,
+            },
+        );
+        assert_eq!(
+            bake.outbreaks.last().unwrap().deaths,
+            same_kind_deaths + second_kind_deaths
+        );
+        bake.apply_outbreak(
+            indices[0],
+            &era,
+            1.0,
+            crate::plague_bake::OutbreakInput {
+                kind: KindId("blue-fever"),
+                susceptible: 1.0,
+                attack: 0.1,
+                fatality: 0.1,
+            },
+        );
+        assert_eq!(bake.outbreaks.len(), before + 2);
+    }
+
+    #[test]
+    fn epidemic_component_cache_stores_members_once_per_component() {
+        let geo = fixture_geo();
+        let graphs = vec![full_land_graph(geo)];
+        let capacity = caps_from_fn(geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let adjacency = bake.epidemic_adjacency();
+        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+
+        let components = bake.epidemic_components(&adjacency_refs);
+
+        assert_eq!(
+            components.members.len(),
+            1,
+            "the all-land globe is connected"
+        );
+        assert_eq!(components.by_vertex.len(), geo.vertex_count());
+        assert_eq!(components.members[0].len(), geo.vertex_count());
+    }
+
+    #[test]
+    fn overlapping_live_spillovers_consume_all_attacks_and_aggregate_once() {
+        let geo = fixture_geo();
+        let mut graph = ConnectionGraph::new(geo.vertex_count());
+        for (from, to) in [(0, 1), (1, 2)] {
+            graph.add_edge(
+                Vertex(from),
+                Edge {
+                    to: Vertex(to),
+                    kind: EdgeKind::Adjacency,
+                    conductance: 1.0,
+                },
+            );
+        }
+        let graphs = vec![graph];
+        let caps = caps_from_fn(geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let people = KindId("goblin");
+        let epidemic = crate::plague_bake::EpidemicKind {
+            kind: KindId("overlap-fever"),
+            hosts: BTreeMap::from([(people, 1.0)]),
+            fit_by_era: vec![VertexMap::from_fn(geo, |_| 1.0)],
+            attack_max: 0.1,
+            fatality: 0.1,
+            spillover_weight: 1_000.0,
+            immunizing: false,
+            ccs: f64::MAX,
+        };
+        let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
+        bake.epidemics = std::slice::from_ref(&epidemic);
+        let snapshot = (0..3)
+            .map(|site| {
+                bake.open(
+                    people,
+                    Vertex(site),
+                    0.0,
+                    100.0,
+                    Founding::Genesis(Vertex(site)),
+                    None,
+                    0.0,
+                )
+            })
+            .collect::<Vec<_>>();
+        let adjacency = bake.epidemic_adjacency();
+        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+        let targets: Vec<_> = snapshot
+            .iter()
+            .map(|&idx| bake.epidemic_targets(&adjacency_refs, bake.communities[idx].site))
+            .collect();
+        let mut expected_stream = bake.stream.clone();
+        let mut expected_deaths = 0.0;
+        let mut expected_target_deaths = 0.0;
+        let mut expected_population = vec![100.0; snapshot.len()];
+        for target in &targets {
+            assert!(expected_stream.next_f64() < 1_000.0 * crate::plague_bake::SPILLOVER_RATE);
+            for &idx in target {
+                let attack = expected_stream.next_f64() * epidemic.attack_max;
+                let population = expected_population[idx];
+                let deaths = population * attack * epidemic.fatality;
+                expected_population[idx] -= deaths;
+                expected_deaths += deaths;
+                if idx == snapshot[1] {
+                    expected_target_deaths += deaths;
+                }
+            }
+        }
+        bake.plague_phase(&snapshot, &era_at(0.0), 0.0);
+        assert_eq!(bake.stream.next_f64(), expected_stream.next_f64());
+        let events: Vec<_> = bake
+            .outbreaks
+            .iter()
+            .filter(|event| event.pathogen == epidemic.kind)
+            .collect();
+        assert_eq!(events.len(), 3);
+        let target_event = events
+            .iter()
+            .find(|event| event.occupation == bake.records[snapshot[1]].community)
+            .unwrap();
+        let target_deaths = 100.0 - bake.communities[snapshot[1]].population;
+        assert!((target_event.deaths - expected_target_deaths).abs() < 1e-12);
+        assert!((target_event.deaths - target_deaths).abs() < 1e-12);
+        assert!(expected_deaths > target_deaths);
+    }
+
+    #[test]
+    fn an_interleaved_rehit_moves_the_closing_event_to_bake_order_end() {
+        let geo = fixture_geo();
+        let graphs = vec![ConnectionGraph::new(geo.vertex_count())];
+        let caps = caps_from_fn(geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
+        let occupation = bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            100.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        let era = era_at(0.0);
+        let apply = |bake: &mut Bake<'_>, kind, attack, fatality| {
+            bake.apply_outbreak(
+                occupation,
+                &era,
+                1200.0,
+                crate::plague_bake::OutbreakInput {
+                    kind,
+                    susceptible: 1.0,
+                    attack,
+                    fatality,
+                },
+            );
+        };
+        apply(&mut bake, KindId("the-pest"), 0.1, 1.0);
+        apply(&mut bake, KindId("the-pox"), 0.1, 1.0);
+        apply(&mut bake, KindId("the-pest"), 1.0, 0.5);
+
+        assert_eq!(bake.outbreaks.len(), 2);
+        assert_eq!(bake.outbreaks[0].pathogen, KindId("the-pox"));
+        assert_eq!(bake.outbreaks[1].pathogen, KindId("the-pest"));
+        assert!(
+            bake.records[bake.communities[occupation].record].core.cause
+                == Some(CauseOfEnd::Plague)
+        );
+        assert_eq!(bake.outbreaks[1].year, 1200.0);
+        assert!(bake.outbreaks[1].deaths > bake.outbreaks[0].deaths);
+    }
+
+    #[test]
+    fn live_spillover_wave_and_plague_boundary_follow_the_epoch_order() {
+        let geo = fixture_geo();
+        let mut graph = ConnectionGraph::new(geo.vertex_count());
+        for (from, to) in [(0, 1), (1, 2), (2, 3), (4, 5), (6, 7)] {
+            graph.add_edge(
+                Vertex(from),
+                Edge {
+                    to: Vertex(to),
+                    kind: EdgeKind::Adjacency,
+                    conductance: 1.0,
+                },
+            );
+        }
+        let graphs = vec![graph];
+        let caps = caps_from_fn(
+            geo,
+            |vertex| {
+                if vertex == Vertex(1) { 200.0 } else { 100.0 }
+            },
+        );
+        let river_prox = VertexMap::from_fn(geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(geo, |_| false);
+        let people = KindId("goblin");
+        let raider_people = KindId("kobold");
+        let epidemic = crate::plague_bake::EpidemicKind {
+            kind: KindId("live-fever"),
+            hosts: BTreeMap::from([(people, 1.0)]),
+            fit_by_era: vec![VertexMap::from_fn(geo, |vertex| {
+                if vertex == Vertex(0) { 1.0 } else { 0.0 }
+            })],
+            attack_max: 0.1,
+            fatality: 0.1,
+            // Force the live spillover arm without changing its draw order.
+            spillover_weight: 1_000.0,
+            immunizing: false,
+            ccs: f64::MAX,
+        };
+        let mut bake = hand_bake(&graphs, &caps, &river_prox, &refugia, no_disposition());
+        bake.epidemics = std::slice::from_ref(&epidemic);
+        let mut indices = Vec::new();
+        for (site, kind, population) in [
+            (0, raider_people, 150.0),
+            (1, people, 100.0),
+            (2, people, 10.0),
+            (3, people, 10.0),
+            (4, people, 10.0),
+        ] {
+            indices.push(bake.open(
+                kind,
+                Vertex(site),
+                0.0,
+                population,
+                Founding::Genesis(Vertex(site)),
+                None,
+                0.0,
+            ));
+        }
+        bake.communities[indices[0]].disposition = Some(1.0);
+        let era = era_at(0.0);
+        bake.begin_epoch();
+        let adjacency = bake.epidemic_adjacency();
+        let adjacency_refs: Vec<(u32, &[u32])> = adjacency
+            .iter()
+            .map(|(vertex, neighbours)| (*vertex, neighbours.as_slice()))
+            .collect();
+        let targets = bake.epidemic_targets(&adjacency_refs, Vertex(0));
+        let trace = bake.resolve_epoch(&indices, &era, 0.0);
+        assert!(trace.growth_population.contains_key(&indices[0]));
+        let mut expected_stream = trace.stream_after_growth.clone();
+        for &idx in &indices {
+            let spill = expected_stream.next_f64();
+            if idx == indices[0] {
+                assert!(spill < 1_000.0 * crate::plague_bake::SPILLOVER_RATE);
+                for _ in &targets {
+                    expected_stream.next_f64();
+                }
+            }
+        }
+        assert_eq!(bake.stream.next_f64(), expected_stream.next_f64());
+        for &idx in &indices[..3] {
+            let host_weight = if idx == indices[0] { 0.0 } else { 1.0 };
+            let attack = if idx == indices[0] {
+                0.0
+            } else {
+                // The production target order is ascending site order.
+                let mut draws = trace.stream_after_growth.clone();
+                draws.next_f64();
+                let position = targets.iter().position(|&target| target == idx).unwrap();
+                for _ in 0..position {
+                    draws.next_f64();
+                }
+                draws.next_f64() * epidemic.attack_max
+            };
+            let expected =
+                trace.growth_population[&idx] * (1.0 - host_weight * attack * epidemic.fatality);
+            assert!((trace.epidemic_population[&idx] - expected).abs() < 1e-12);
+        }
+        assert_eq!(
+            trace.epidemic_population[&indices[3]],
+            trace.growth_population[&indices[3]]
+        );
+        assert_eq!(
+            trace.epidemic_population[&indices[4]],
+            trace.growth_population[&indices[4]]
+        );
+        assert!(
+            bake.tally.raided > 0,
+            "raids must see the epidemic-reduced target"
+        );
+
+        let victim = bake.open(
+            people,
+            Vertex(7),
+            0.0,
+            100.0,
+            Founding::Genesis(Vertex(7)),
+            None,
+            0.0,
+        );
+        bake.apply_outbreak(
+            victim,
+            &era,
+            1.0,
+            crate::plague_bake::OutbreakInput {
+                kind: epidemic.kind,
+                susceptible: 1.0,
+                attack: 0.5,
+                fatality: 0.6,
+            },
+        );
+        assert!(!bake.communities[victim].alive);
+        assert!(
+            bake.communities
+                .iter()
+                .any(|c| c.alive && c.site != Vertex(7) && (c.population - 70.0).abs() < 1e-12)
+        );
+
+        let epsilon = bake.open(
+            people,
+            Vertex(9),
+            0.0,
+            100.0,
+            Founding::Genesis(Vertex(9)),
+            None,
+            0.0,
+        );
+        bake.apply_outbreak(
+            epsilon,
+            &era,
+            2.0,
+            crate::plague_bake::OutbreakInput {
+                kind: epidemic.kind,
+                susceptible: 1.0,
+                attack: 0.5,
+                fatality: 0.6 - 1e-6,
+            },
+        );
+        assert!(bake.communities[epsilon].alive);
     }
 
     /// A uniform, fully habitable [`EraClimate`] at `day` over a one-vertex
@@ -5438,6 +7774,93 @@ mod tests {
             let geo = Geosphere::new(1);
             VertexMap::from_fn(&geo, |_| 0.0)
         })
+    }
+
+    #[test]
+    fn diagnostic_return_read_preserves_bake_state_and_is_deterministic() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let patron_site = geo
+            .neighbors(Vertex(0))
+            .iter()
+            .next()
+            .copied()
+            .expect("fixture globe has a patron site");
+        let subordinate = bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            12.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        let patron = bake.open(
+            KindId("goblin"),
+            patron_site,
+            0.0,
+            20.0,
+            Founding::Genesis(patron_site),
+            None,
+            0.0,
+        );
+        bake.communities[subordinate].stores = 7.5;
+        bake.communities[patron].stores = 23.0;
+        bake.records[subordinate].core.function = Function::Trade;
+        bake.records[patron].core.function = Function::Fort;
+        bake.tribute.insert(
+            subordinate,
+            Tribute {
+                patron,
+                assessment: 4.0,
+                since: 0.0,
+                last_seen_population: 10.0,
+            },
+        );
+        bake.tally.tribute_collected = 3.25;
+        bake.exchange.attempts = 2;
+        bake.epoch_growth[subordinate] = 1.5;
+
+        let snapshot = || {
+            (
+                bake.records.clone(),
+                bake.communities
+                    .iter()
+                    .map(|community| (community.population, community.stores))
+                    .collect::<Vec<_>>(),
+                bake.tribute
+                    .iter()
+                    .map(|(&subordinate, tribute)| {
+                        (
+                            subordinate,
+                            tribute.patron,
+                            tribute.assessment,
+                            tribute.since,
+                            tribute.last_seen_population,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+                bake.tally,
+                bake.exchange,
+                bake.epoch_growth.clone(),
+            )
+        };
+        let before = snapshot();
+        let first = bake.diagnostic_returns_at_now();
+        let after = snapshot();
+        let second = bake.diagnostic_returns_at_now();
+
+        assert_eq!(first, second, "diagnostic witness must be deterministic");
+        assert_eq!(before, after, "diagnostic read must not alter bake state");
+        assert_eq!(
+            first.len(),
+            1,
+            "fixture must exercise one standing relation"
+        );
     }
 
     /// The northernmost and southernmost vertices of the fixture globe — the pair
@@ -5536,8 +7959,15 @@ mod tests {
             disposition_spread: no_spread(),
             in_group_radius: no_radius(),
             time_horizon: strips_to_the_floor(),
+            exchange_treatment: ExchangeTreatment::Disabled,
+            epidemics: &[],
+            lifespans: &BTreeMap::new(),
+            last_struck: BTreeMap::new(),
+            persistent: BTreeSet::new(),
+            epidemic_graphs: Vec::new(),
             seating: surface_seating(),
             records: Vec::new(),
+            outbreaks: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
             next_id: 1,
@@ -5545,6 +7975,7 @@ mod tests {
             tribute: BTreeMap::new(),
             epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
+            exchange: ExchangeCensus::default(),
             epoch_years: 25.0,
         };
 
@@ -5613,6 +8044,1177 @@ mod tests {
             before_pressure.to_bits(),
             after_pressure.to_bits(),
             "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
+    }
+
+    /// claim: invariant(forall-valid-production) — typed A plus typed B is
+    /// bit-identical to the pre-D2 total; neither resource may be created or
+    /// lost by partitioning. The fixture includes the rounded-complement
+    /// counterexample, so this cannot pass on a favorable value alone.
+    #[test]
+    fn subsistence_partition_preserves_existing_total_production_exactly() {
+        let reviewer_total: f64 = 510.827605197663;
+        let naive_a = reviewer_total * 0.35;
+        let naive_b = reviewer_total - naive_a;
+        assert_ne!(
+            (naive_a + naive_b).to_bits(),
+            reviewer_total.to_bits(),
+            "reviewer fixture must expose the rounded-complement defect"
+        );
+
+        for (total, biome) in [
+            (37.5, BiomeClass::Grassland),
+            (reviewer_total, BiomeClass::Cold),
+            (0.125, BiomeClass::Forest),
+            (1.0e12, BiomeClass::Arid),
+        ] {
+            let curve = Curve::new(LatDeg::new(45.0).unwrap(), biome);
+            let production = partition_subsistence_production(total, curve);
+            let a = production.amount(SubsistenceResource::A);
+            let b = production.amount(SubsistenceResource::B);
+
+            assert!(
+                a > 0.0 && b > 0.0,
+                "fixture must exercise both resources for {total} at {biome:?}"
+            );
+            assert_ne!(
+                a.to_bits(),
+                b.to_bits(),
+                "non-uniform climate input must produce a non-uniform split"
+            );
+            assert_eq!(
+                (a + b).to_bits(),
+                total.to_bits(),
+                "typed partition must exactly conserve {total} at {biome:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn subsistence_partition_canonicalizes_negative_zero() {
+        let curve = Curve::new(LatDeg::new(45.0).unwrap(), BiomeClass::Cold);
+
+        let production = partition_subsistence_production(-0.0, curve);
+        let total =
+            production.amount(SubsistenceResource::A) + production.amount(SubsistenceResource::B);
+
+        assert_eq!(
+            total.to_bits(),
+            0.0_f64.to_bits(),
+            "the finite non-negative domain must expose one canonical zero"
+        );
+    }
+
+    #[test]
+    fn subsistence_resources_cannot_cover_each_others_demand() {
+        let available = SubsistenceInventory::new(9.0, 0.0);
+        let demand = SubsistenceInventory::new(0.0, 3.0);
+
+        let (remaining, shortfall) = consume_subsistence(available, demand);
+
+        assert!(
+            available.amount(SubsistenceResource::A) > demand.amount(SubsistenceResource::B),
+            "fixture must hold more aggregate stock than aggregate demand"
+        );
+        assert_eq!(
+            remaining.amount(SubsistenceResource::A).to_bits(),
+            9.0_f64.to_bits(),
+            "resource A must not be consumed to satisfy resource B demand"
+        );
+        assert_eq!(
+            shortfall.amount(SubsistenceResource::B).to_bits(),
+            3.0_f64.to_bits(),
+            "resource B demand must remain short despite surplus resource A"
+        );
+    }
+
+    #[test]
+    fn unconsumed_subsistence_inventory_carries_losslessly() {
+        let opening = SubsistenceInventory::new(4.25, 7.5);
+        let production = SubsistenceInventory::new(1.75, 0.0);
+
+        let after_production = carry_subsistence_inventory(opening, production);
+        let carried =
+            carry_subsistence_inventory(after_production, SubsistenceInventory::default());
+
+        assert!(
+            opening.amount(SubsistenceResource::A) > 0.0
+                && opening.amount(SubsistenceResource::B) > 0.0,
+            "fixture must carry nonzero quantities of both resources"
+        );
+        assert_eq!(
+            after_production.amount(SubsistenceResource::A).to_bits(),
+            6.0_f64.to_bits(),
+            "resource A production must accrue to resource A"
+        );
+        assert_eq!(
+            after_production.amount(SubsistenceResource::B).to_bits(),
+            opening.amount(SubsistenceResource::B).to_bits(),
+            "resource A production must not alter resource B stock"
+        );
+        assert_eq!(
+            carried, after_production,
+            "a phase with no production or consumption must preserve both stocks exactly"
+        );
+    }
+
+    #[test]
+    fn a_full_subsistence_basket_has_zero_typed_shortfall() {
+        let demand = subsistence_basket_demand(8.0);
+        let shortfall = typed_subsistence_shortfall(demand, demand);
+
+        assert!(
+            demand.amount(SubsistenceResource::A) > 0.0
+                && demand.amount(SubsistenceResource::B) > 0.0,
+            "a complementary basket must demand nonzero quantities of both resources"
+        );
+        assert_eq!(
+            (demand.amount(SubsistenceResource::A) + demand.amount(SubsistenceResource::B))
+                .to_bits(),
+            8.0_f64.to_bits(),
+            "one person must demand exactly one person-phase unit per phase"
+        );
+        assert_eq!(
+            shortfall,
+            SubsistenceInventory::default(),
+            "same-typed stock equal to the full basket must leave no shortfall"
+        );
+    }
+
+    #[test]
+    fn subsistence_consumption_never_spends_non_edible_stores() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.open(
+            KindId("goblin"),
+            Vertex(0),
+            0.0,
+            10.0,
+            Founding::Genesis(Vertex(0)),
+            None,
+            0.0,
+        );
+        bake.communities[0].stores = 23.75;
+        bake.communities[0].subsistence = SubsistenceInventory::new(6.0, 5.0);
+        let before_inventory = bake.communities[0].subsistence;
+        let before_stores = bake.communities[0].stores;
+
+        let (remaining, shortfall) = consume_subsistence(
+            bake.communities[0].subsistence,
+            SubsistenceInventory::new(2.0, 3.0),
+        );
+        bake.communities[0].subsistence = remaining;
+
+        assert_ne!(
+            bake.communities[0].subsistence, before_inventory,
+            "fixture must actually consume typed inventory"
+        );
+        assert_eq!(
+            shortfall,
+            SubsistenceInventory::default(),
+            "fixture starts with enough same-typed stock to consume fully"
+        );
+        assert_eq!(
+            bake.communities[0].stores.to_bits(),
+            before_stores.to_bits(),
+            "subsistence consumption must not touch accumulated non-edible wealth"
+        );
+    }
+
+    /// claim: invariant(forall-demand) — a typed shortfall is monotone in
+    /// each same-typed deficit, full satisfaction is the pressure identity,
+    /// and the adapter is bounded above by its named multiplier. The tests
+    /// include nonzero and over-range fixtures, so the assertions cannot pass
+    /// vacuously on an empty basket.
+    #[test]
+    fn full_subsistence_satisfaction_is_pressure_identity() {
+        let demand = SubsistenceInventory::new(40.0, 40.0);
+        let shortfall = SubsistenceInventory::default();
+        let base_pressure = 0.625;
+
+        assert_eq!(
+            adapt_pressure_for_subsistence_shortfall(base_pressure, shortfall, demand).to_bits(),
+            base_pressure.to_bits(),
+            "a fully satisfied nonzero basket must leave the existing pressure bit-identical"
+        );
+    }
+
+    #[test]
+    fn increasing_typed_shortfall_cannot_reduce_pressure() {
+        let demand = SubsistenceInventory::new(50.0, 50.0);
+        let base_pressure = 0.5;
+        let readings = [
+            SubsistenceInventory::new(0.0, 0.0),
+            SubsistenceInventory::new(10.0, 0.0),
+            SubsistenceInventory::new(10.0, 25.0),
+            SubsistenceInventory::new(50.0, 50.0),
+        ]
+        .map(|shortfall| {
+            adapt_pressure_for_subsistence_shortfall(base_pressure, shortfall, demand)
+        });
+
+        assert!(
+            readings.windows(2).all(|pair| pair[0] <= pair[1]),
+            "more same-typed basket shortfall lowered pressure: {readings:?}"
+        );
+        assert!(
+            readings[3] > readings[0],
+            "the monotonicity fixture must exercise a real nonzero pressure increase"
+        );
+    }
+
+    #[test]
+    fn subsistence_shortfall_pressure_adapter_is_bounded() {
+        let demand = SubsistenceInventory::new(50.0, 50.0);
+        let base_pressure = 0.75;
+        let adapted = adapt_pressure_for_subsistence_shortfall(
+            base_pressure,
+            SubsistenceInventory::new(500.0, f64::MAX),
+            demand,
+        );
+
+        assert!(
+            adapted.is_finite(),
+            "the bounded adapter produced {adapted}"
+        );
+        assert_eq!(
+            adapted.to_bits(),
+            (base_pressure * SUBSISTENCE_PRESSURE_MAX_MULTIPLIER).to_bits(),
+            "even an impossible over-range fixture must stop at the explicit multiplier cap"
+        );
+    }
+
+    /// claim: invariant(disabled-control) — the disabled wrapper supplies
+    /// exactly zero shortfall and therefore preserves the legacy growth
+    /// result bit-for-bit. Both arms exercise positive growth.
+    #[test]
+    fn disabled_step_uses_the_zero_shortfall_identity() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 100.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut disabled = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let mut explicit_identity =
+            hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let site = Vertex(0);
+        let open = |bake: &mut Bake<'_>| {
+            bake.open(
+                KindId("goblin"),
+                site,
+                0.0,
+                20.0,
+                Founding::Genesis(site),
+                None,
+                0.0,
+            )
+        };
+        let disabled_idx = open(&mut disabled);
+        let identity_idx = open(&mut explicit_identity);
+
+        disabled.step_community(disabled_idx, &era_at(0.0), 0.0);
+        explicit_identity.step_community_with_subsistence_shortfall(
+            identity_idx,
+            &era_at(0.0),
+            0.0,
+            0.0,
+        );
+
+        assert_eq!(
+            disabled.communities[disabled_idx].population.to_bits(),
+            explicit_identity.communities[identity_idx]
+                .population
+                .to_bits(),
+            "the disabled wrapper must supply exact zero shortfall to preserve legacy growth"
+        );
+        assert!(
+            disabled.epoch_growth[disabled_idx] > 0.0,
+            "the identity fixture must exercise nonzero growth"
+        );
+        assert_eq!(
+            disabled.epoch_growth[disabled_idx].to_bits(),
+            explicit_identity.epoch_growth[identity_idx].to_bits(),
+        );
+    }
+
+    /// Mutation target: deleting typed production, or moving clearing or
+    /// consumption across it, must remove the first funded delivery or invert
+    /// the observed event positions. Moving growth before consumption must
+    /// either invert those positions or hand growth a ratio other than the
+    /// average produced by the twelve real consumption steps.
+    /// claim: invariant(runtime-phase-order) — for a funded phase, production
+    /// precedes clearing, clearing precedes consumption, every real
+    /// consumption precedes pressure/growth, and all consumption precedes the
+    /// existing tribute collection. Preconditions require nonzero events in
+    /// every asserted edge, preventing a vacuous ordering pass.
+    #[test]
+    fn runtime_epoch_produces_then_clears_then_consumes_before_growth() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let left_site = Vertex(0);
+        let right_site = traversable_neighbors(&graphs[0], left_site)
+            .first()
+            .copied()
+            .expect("the full-land fixture has a direct neighbor");
+        let growth_site = geo
+            .vertices()
+            .find(|site| *site != left_site && *site != right_site)
+            .expect("the fixture has a third site for the nonzero growth marker");
+        let capacity = caps_from_fn(&geo, |site| {
+            if site == left_site || site == right_site {
+                5.0
+            } else {
+                200.0
+            }
+        });
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
+        let left = bake.open(
+            KindId("goblin"),
+            left_site,
+            0.0,
+            20.0,
+            Founding::Genesis(left_site),
+            None,
+            0.0,
+        );
+        let right = bake.open(
+            KindId("kobold"),
+            right_site,
+            0.0,
+            20.0,
+            Founding::Genesis(right_site),
+            None,
+            0.0,
+        );
+        let growth = bake.open(
+            KindId("goblin"),
+            growth_site,
+            0.0,
+            20.0,
+            Founding::Genesis(growth_site),
+            None,
+            0.0,
+        );
+        bake.communities[left].curve = Curve::new(LatDeg::new(-45.0).unwrap(), BiomeClass::Arid);
+        bake.communities[right].curve =
+            Curve::new(LatDeg::new(-45.0).unwrap(), BiomeClass::Grassland);
+        bake.communities[left].subsistence = SubsistenceInventory::new(0.0, 100.0);
+        bake.communities[right].subsistence = SubsistenceInventory::new(100.0, 0.0);
+
+        let events = capture_d2_epoch_events(|| bake.run_epoch(0.0, &era_at(0.0)));
+        let (clearing_position, funded_phase) = events
+            .iter()
+            .enumerate()
+            .find_map(|(position, event)| match event {
+                D2EpochEvent::Clearing { phase, deliveries } if *deliveries > 0 => {
+                    Some((position, *phase))
+                }
+                _ => None,
+            })
+            .unwrap_or_else(|| {
+                panic!("the complementary-stock fixture must execute a funded clearing: {events:?}")
+            });
+
+        for community in [left, right] {
+            let (production_position, added) = events
+                .iter()
+                .enumerate()
+                .find_map(|(position, event)| match event {
+                    D2EpochEvent::Production {
+                        phase,
+                        community: observed,
+                        added,
+                    } if *phase == funded_phase && *observed == community => {
+                        Some((position, *added))
+                    }
+                    _ => None,
+                })
+                .expect("the funded phase must observe production for both counterparties");
+            assert!(
+                added[0] + added[1] > 0.0,
+                "deleting production must leave an observable zero accrual for community {community}"
+            );
+            assert!(
+                production_position < clearing_position,
+                "production must precede the funded clearing in phase {funded_phase}: {events:?}"
+            );
+
+            let (consumption_position, removed) = events
+                .iter()
+                .enumerate()
+                .find_map(|(position, event)| match event {
+                    D2EpochEvent::Consumption {
+                        phase,
+                        community: observed,
+                        removed,
+                        ..
+                    } if *phase == funded_phase && *observed == community => {
+                        Some((position, *removed))
+                    }
+                    _ => None,
+                })
+                .expect("the funded phase must consume both counterparties' baskets");
+            assert!(
+                removed[0] + removed[1] > 0.0,
+                "consumption must remove real typed stock for community {community}"
+            );
+            assert!(
+                clearing_position < consumption_position,
+                "funded clearing must precede consumption in phase {funded_phase}: {events:?}"
+            );
+
+            let consumed_ratios: Vec<f64> = events
+                .iter()
+                .filter_map(|event| match event {
+                    D2EpochEvent::Consumption {
+                        community: observed,
+                        shortfall_ratio,
+                        ..
+                    } if *observed == community => Some(*shortfall_ratio),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(
+                consumed_ratios.len(),
+                PHASES_PER_YEAR,
+                "every phase must consume exactly once for community {community}"
+            );
+            let average_shortfall = consumed_ratios.iter().sum::<f64>() / PHASES_PER_YEAR as f64;
+            let (growth_position, growth_shortfall) = events
+                .iter()
+                .enumerate()
+                .find_map(|(position, event)| match event {
+                    D2EpochEvent::Growth {
+                        community: observed,
+                        shortfall_ratio,
+                        ..
+                    } if *observed == community => Some((position, *shortfall_ratio)),
+                    _ => None,
+                })
+                .expect("the runtime epoch must pressure/grow every snapshot community");
+            let last_consumption = events
+                .iter()
+                .rposition(|event| {
+                    matches!(event, D2EpochEvent::Consumption { community: observed, .. } if *observed == community)
+                })
+                .expect("the community must carry a final consumption event");
+            assert!(
+                last_consumption < growth_position,
+                "all consumption must precede pressure/growth for community {community}: {events:?}"
+            );
+            assert_eq!(
+                growth_shortfall.to_bits(),
+                average_shortfall.to_bits(),
+                "growth must receive the exact average emitted by real typed consumption"
+            );
+        }
+        assert!(
+            events.iter().any(|event| {
+                matches!(
+                    event,
+                    D2EpochEvent::Growth {
+                        community,
+                        shortfall_ratio,
+                        population_delta,
+                    } if *community == growth && *shortfall_ratio > 0.0 && *population_delta != 0.0
+                )
+            }),
+            "the separate high-capacity community must exercise nonzero consumed shortfall and nonzero growth: {events:?}"
+        );
+    }
+
+    /// claim: invariant(runtime-tribute-order) — existing tribute collection
+    /// occurs after funded exchange, typed consumption, and growth. The
+    /// fixture requires positive clearing, consumption, growth, and tribute,
+    /// so an empty trace cannot satisfy the ordering assertion.
+    ///
+    /// Mutation target: moving tribute collection before typed exchange,
+    /// consumption, or growth must invert the runtime trace; bypassing the
+    /// runtime loop cannot satisfy this fixture because only `run_epoch` is
+    /// invoked after the relation is installed.
+    #[test]
+    fn runtime_epoch_collects_existing_tribute_after_exchange_and_growth() {
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = caps_from_fn(&geo, |_| 200.0);
+        let river_prox = VertexMap::from_fn(&geo, |_| 0.0);
+        let refugia = VertexMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.exchange_treatment = ExchangeTreatment::Enabled;
+        let patron_site = Vertex(0);
+        let subordinate_site = traversable_neighbors(&graphs[0], patron_site)
+            .first()
+            .copied()
+            .expect("the full-land fixture has a direct neighbor");
+        let patron = bake.open(
+            KindId("goblin"),
+            patron_site,
+            0.0,
+            60.0,
+            Founding::Genesis(patron_site),
+            None,
+            0.0,
+        );
+        let subordinate = bake.open(
+            KindId("kobold"),
+            subordinate_site,
+            0.0,
+            30.0,
+            Founding::Genesis(subordinate_site),
+            None,
+            0.0,
+        );
+        bake.communities[patron].curve = Curve::new(LatDeg::new(0.0).unwrap(), BiomeClass::Arid);
+        bake.communities[subordinate].curve =
+            Curve::new(LatDeg::new(0.0).unwrap(), BiomeClass::Grassland);
+        bake.communities[patron].subsistence = SubsistenceInventory::new(0.0, 100.0);
+        bake.communities[subordinate].subsistence = SubsistenceInventory::new(100.0, 0.0);
+        bake.tribute.insert(
+            subordinate,
+            Tribute {
+                patron,
+                assessment: 1.0,
+                since: 0.0,
+                last_seen_population: 30.0,
+            },
+        );
+        let events = capture_d2_epoch_events(|| bake.run_epoch(0.0, &era_at(0.0)));
+
+        let funded_clearing = events
+            .iter()
+            .position(|event| matches!(event, D2EpochEvent::Clearing { deliveries, .. } if *deliveries > 0))
+            .expect("the tribute fixture must execute funded exchange");
+        let last_consumption = events
+            .iter()
+            .rposition(|event| matches!(event, D2EpochEvent::Consumption { removed, .. } if removed[0] + removed[1] > 0.0))
+            .expect("the tribute fixture must consume real typed stock");
+        let last_growth = events
+            .iter()
+            .rposition(|event| matches!(event, D2EpochEvent::Growth { population_delta, .. } if *population_delta != 0.0))
+            .expect("the tribute fixture must execute nonzero growth");
+        let (tribute_position, collected) = events
+            .iter()
+            .enumerate()
+            .find_map(|(position, event)| match event {
+                D2EpochEvent::Tribute { collected } => Some((position, *collected)),
+                _ => None,
+            })
+            .expect("the runtime epoch must reach existing tribute collection");
+
+        assert!(
+            collected > 0.0,
+            "the relation must remit a real positive quantity, not merely reach collection"
+        );
+        assert!(
+            funded_clearing < last_consumption
+                && last_consumption < last_growth
+                && last_growth < tribute_position,
+            "runtime order must be exchange -> consumption -> growth -> tribute: {events:?}"
+        );
+    }
+
+    fn exchange_graph(node_count: usize, edges: &[(u32, u32)]) -> ConnectionGraph {
+        let mut graph = ConnectionGraph::new(node_count);
+        for &(from, to) in edges {
+            graph.add_edge(
+                Vertex(from),
+                Edge {
+                    to: Vertex(to),
+                    kind: EdgeKind::Adjacency,
+                    conductance: 1.0,
+                },
+            );
+        }
+        graph
+    }
+
+    fn exchange_snapshot(
+        id: u64,
+        site: u32,
+        projected_population: f64,
+        a: f64,
+        b: f64,
+    ) -> ExchangeCommunitySnapshot {
+        ExchangeCommunitySnapshot {
+            id: BakeId(id),
+            site: Vertex(site),
+            projected_population,
+            opening_stock: SubsistenceInventory::new(a, b),
+        }
+    }
+
+    fn exchange_attempt(
+        clearing: &ExchangeClearing,
+        requester: u64,
+        counterparty: Option<u64>,
+        resource: SubsistenceResource,
+    ) -> &ExchangeAttempt {
+        clearing
+            .attempts
+            .iter()
+            .find(|attempt| {
+                attempt.requester == BakeId(requester)
+                    && attempt.counterparty == counterparty.map(BakeId)
+                    && attempt.resource == resource
+            })
+            .unwrap_or_else(|| {
+                panic!("missing {resource:?} request for {requester} against {counterparty:?}")
+            })
+    }
+
+    fn delivered(
+        clearing: &ExchangeClearing,
+        from: u64,
+        to: u64,
+        resource: SubsistenceResource,
+    ) -> f64 {
+        clearing
+            .deliveries
+            .iter()
+            .filter(|delivery| {
+                delivery.from == BakeId(from)
+                    && delivery.to == BakeId(to)
+                    && delivery.resource == resource
+            })
+            .map(|delivery| delivery.quantity)
+            .sum()
+    }
+
+    #[test]
+    fn bilateral_exchange_delivers_the_fixed_complementary_bundle() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+            exchange_snapshot(1, 0, 4.0, 4.0, 0.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert_eq!(
+            delivered(&clearing, 1, 2, SubsistenceResource::A),
+            2.0,
+            "the A specialist must deliver its two-unit surplus"
+        );
+        assert_eq!(
+            delivered(&clearing, 2, 1, SubsistenceResource::B),
+            2.0,
+            "the B specialist must deliver its two-unit surplus"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 1, Some(2), SubsistenceResource::B).statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Settled,
+            ],
+            "a fully funded proposal must expose its complete derived status path"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 2, Some(1), SubsistenceResource::A).statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Settled,
+            ]
+        );
+    }
+
+    #[test]
+    fn competing_requests_share_scarce_stock_pro_rata() {
+        let graph = exchange_graph(3, &[(0, 1), (0, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(10, 0, 4.0, 5.0, 0.0),
+            exchange_snapshot(20, 1, 2.0, 0.0, 2.0),
+            exchange_snapshot(30, 2, 6.0, 0.0, 6.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        for (requester, requested, expected) in [(20, 1.0, 0.5), (30, 3.0, 1.5)] {
+            let attempt = exchange_attempt(&clearing, requester, Some(10), SubsistenceResource::A);
+            assert_eq!(attempt.requested, requested);
+            assert_eq!(attempt.delivered, expected);
+            assert_eq!(
+                attempt.statuses,
+                vec![
+                    ExchangeStatus::Proposed,
+                    ExchangeStatus::Accepted,
+                    ExchangeStatus::Partial,
+                ]
+            );
+            assert_eq!(
+                delivered(&clearing, 10, requester, SubsistenceResource::A),
+                expected,
+                "unequal nonzero requests must receive proportional shares of scarce stock"
+            );
+            assert_eq!(
+                delivered(&clearing, requester, 10, SubsistenceResource::B),
+                expected,
+                "every allocated A unit must carry one matching B unit in the same direct exchange"
+            );
+        }
+    }
+
+    #[test]
+    fn surplus_without_matching_consideration_cannot_become_one_way_aid() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 0.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 0.0, 1.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "A may move only when the same atomic attempt returns the matching quantity of B"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 2, None, SubsistenceResource::A).statuses,
+            vec![ExchangeStatus::Proposed, ExchangeStatus::Refused]
+        );
+    }
+
+    #[test]
+    fn fractional_bundle_quantities_clear_without_roundoff_loss() {
+        let graph = exchange_graph(3, &[(0, 2), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 0.2, 0.2, 0.0),
+            exchange_snapshot(2, 1, 0.4, 0.4, 0.0),
+            exchange_snapshot(3, 2, 2.0, 0.0, 2.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let first = exchange_attempt(&clearing, 3, Some(1), SubsistenceResource::A);
+        let second = exchange_attempt(&clearing, 3, Some(2), SubsistenceResource::A);
+
+        assert_eq!(delivered(&clearing, 1, 3, SubsistenceResource::A), 0.1);
+        assert_eq!(delivered(&clearing, 2, 3, SubsistenceResource::A), 0.2);
+        assert_eq!(delivered(&clearing, 3, 1, SubsistenceResource::B), 0.1);
+        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::B), 0.2);
+        assert_eq!(
+            (first.delivered + second.delivered).to_bits(),
+            (0.1_f64 + 0.2).to_bits()
+        );
+        assert_eq!(
+            first.statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Partial,
+            ],
+            "fractional direct proposals must preserve the quantity actually exchanged"
+        );
+    }
+
+    #[test]
+    fn a_nonzero_but_inadequate_delivery_is_partial() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let attempt = exchange_attempt(&clearing, 2, Some(1), SubsistenceResource::A);
+
+        assert_eq!(attempt.requested, 2.0);
+        assert_eq!(attempt.delivered, 1.0);
+        assert_eq!(delivered(&clearing, 1, 2, SubsistenceResource::A), 1.0);
+        assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::B), 1.0);
+        assert_eq!(
+            attempt.statuses,
+            vec![
+                ExchangeStatus::Proposed,
+                ExchangeStatus::Accepted,
+                ExchangeStatus::Partial,
+            ]
+        );
+    }
+
+    #[test]
+    fn incoming_stock_funds_a_declared_acyclic_chain() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 0.0, 2.0),
+        ];
+        let proposals = vec![
+            DirectExchangeProposal {
+                a_supplier: BakeId(1),
+                b_supplier: BakeId(2),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+            DirectExchangeProposal {
+                a_supplier: BakeId(2),
+                b_supplier: BakeId(3),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+        ];
+
+        let clearing = clear_declared_local_exchange(&graph, &snapshots, &proposals);
+
+        assert_eq!(delivered(&clearing, 1, 2, SubsistenceResource::A), 1.0);
+        assert_eq!(delivered(&clearing, 2, 1, SubsistenceResource::B), 1.0);
+        assert_eq!(
+            delivered(&clearing, 2, 3, SubsistenceResource::A),
+            1.0,
+            "the middle has no opening A surplus, so its downstream A delivery must be incoming-funded"
+        );
+        assert_eq!(delivered(&clearing, 3, 2, SubsistenceResource::B), 1.0);
+        assert_eq!(
+            exchange_capacity(&snapshots[1], SubsistenceResource::A),
+            0.0,
+            "the fixture must not accidentally opening-fund the middle's downstream A leg"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 2, Some(1), SubsistenceResource::A)
+                .statuses
+                .last(),
+            Some(&ExchangeStatus::Settled),
+            "the upstream bundle must be an explicit direct proposal"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 3, Some(2), SubsistenceResource::A)
+                .statuses
+                .last(),
+            Some(&ExchangeStatus::Settled),
+            "the downstream bundle must be an explicit direct proposal"
+        );
+        assert_eq!(clearing.conservation_residuals, [0.0, 0.0]);
+
+        let mut reordered = snapshots.clone();
+        reordered.reverse();
+        assert_eq!(
+            clearing,
+            clear_declared_local_exchange(&graph, &reordered, &proposals),
+            "declared chain settlement must be keyed by BakeId rather than snapshot position"
+        );
+
+        let mut overdrawn = clearing.deliveries.clone();
+        let downstream = overdrawn
+            .iter_mut()
+            .find(|delivery| {
+                delivery.from == BakeId(2)
+                    && delivery.to == BakeId(3)
+                    && delivery.resource == SubsistenceResource::A
+            })
+            .expect("fixture must contain the incoming-funded downstream A delivery");
+        assert_eq!(downstream.quantity, 1.0, "mutation target must be live");
+        downstream.quantity = 2.0;
+        assert_eq!(
+            exchange_conservation_residuals(&snapshots, &overdrawn),
+            [1.0, 0.0],
+            "immutable opening stock plus the one-unit incoming receipt cannot fund two outgoing A units"
+        );
+    }
+
+    #[test]
+    fn a_two_hop_source_cannot_deliver_through_a_non_proposing_relay() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 0.0, 2.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "a balanced middle settlement is not an implicit carrier or counterparty"
+        );
+        assert_eq!(
+            exchange_attempt(&clearing, 1, None, SubsistenceResource::A).statuses,
+            vec![ExchangeStatus::Proposed, ExchangeStatus::Refused]
+        );
+    }
+
+    #[test]
+    fn opening_surpluses_fund_a_reciprocal_cycle() {
+        let graph = exchange_graph(4, &[(0, 1), (1, 2), (2, 3), (3, 0)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 2.0, 0.0, 2.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
+            exchange_snapshot(4, 3, 2.0, 0.0, 2.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        for (a_supplier, b_supplier) in [(1, 2), (3, 2), (3, 4), (1, 4)] {
+            assert_eq!(
+                delivered(&clearing, a_supplier, b_supplier, SubsistenceResource::A),
+                0.5
+            );
+            assert_eq!(
+                delivered(&clearing, b_supplier, a_supplier, SubsistenceResource::B),
+                0.5,
+                "each funded direct cycle edge must settle as an equal reciprocal bundle"
+            );
+            assert_eq!(
+                exchange_attempt(
+                    &clearing,
+                    b_supplier,
+                    Some(a_supplier),
+                    SubsistenceResource::A,
+                )
+                .statuses
+                .last(),
+                Some(&ExchangeStatus::Settled)
+            );
+            assert_eq!(
+                exchange_attempt(
+                    &clearing,
+                    a_supplier,
+                    Some(b_supplier),
+                    SubsistenceResource::B,
+                )
+                .statuses
+                .last(),
+                Some(&ExchangeStatus::Settled)
+            );
+        }
+    }
+
+    #[test]
+    fn reserved_stock_cannot_fund_a_reciprocal_cycle() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2), (2, 0)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 1.0, 1.0),
+            exchange_snapshot(2, 1, 2.0, 1.0, 1.0),
+            exchange_snapshot(3, 2, 2.0, 1.0, 1.0),
+        ];
+        let proposals = vec![
+            DirectExchangeProposal {
+                a_supplier: BakeId(1),
+                b_supplier: BakeId(2),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+            DirectExchangeProposal {
+                a_supplier: BakeId(2),
+                b_supplier: BakeId(3),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+            DirectExchangeProposal {
+                a_supplier: BakeId(3),
+                b_supplier: BakeId(1),
+                a_requested: 1.0,
+                b_requested: 1.0,
+            },
+        ];
+
+        let clearing = clear_declared_local_exchange(&graph, &snapshots, &proposals);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "stock reserved for each community's own basket is not an exchange offer"
+        );
+        assert_eq!(
+            clearing.attempts.len(),
+            6,
+            "all three declared bundles must report both typed attempts"
+        );
+        for attempt in &clearing.attempts {
+            assert!(
+                attempt.counterparty.is_some(),
+                "the refused cycle must retain its direct declarations"
+            );
+            assert_eq!(attempt.delivered, 0.0);
+            assert_eq!(
+                attempt.statuses,
+                vec![ExchangeStatus::Proposed, ExchangeStatus::Refused],
+                "a closed promise cycle with no opening surplus at any node must not manufacture stock"
+            );
+        }
+    }
+
+    #[test]
+    fn a_request_across_a_non_traversable_edge_is_impossible() {
+        let mut graph = ConnectionGraph::new(2);
+        graph.add_edge(
+            Vertex(0),
+            Edge {
+                to: Vertex(1),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.0,
+            },
+        );
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 0.0, 1.0),
+            exchange_snapshot(2, 1, 0.0, 1.0, 0.0),
+        ];
+        let proposals = vec![DirectExchangeProposal {
+            a_supplier: BakeId(2),
+            b_supplier: BakeId(1),
+            a_requested: 1.0,
+            b_requested: 1.0,
+        }];
+
+        let clearing = clear_declared_local_exchange(&graph, &snapshots, &proposals);
+        let attempt = exchange_attempt(&clearing, 1, Some(2), SubsistenceResource::A);
+
+        assert!(
+            clearing.deliveries.is_empty(),
+            "zero-conductance adjacency must not carry stock"
+        );
+        assert_eq!(attempt.delivered, 0.0);
+        assert_eq!(
+            attempt.statuses,
+            vec![ExchangeStatus::Proposed, ExchangeStatus::Impossible]
+        );
+    }
+
+    #[test]
+    fn clearing_is_identical_under_snapshot_reordering() {
+        let graph = exchange_graph(4, &[(0, 1), (1, 2), (1, 3)]);
+        let snapshots = vec![
+            exchange_snapshot(40, 3, 2.0, 0.0, 2.0),
+            exchange_snapshot(10, 0, 4.0, 4.0, 0.0),
+            exchange_snapshot(30, 2, 2.0, 0.0, 2.0),
+            exchange_snapshot(20, 1, 2.0, 0.0, 2.0),
+        ];
+        let mut reordered = snapshots.clone();
+        reordered.reverse();
+
+        let canonical = clear_local_exchange(&graph, &snapshots);
+        let reversed = clear_local_exchange(&graph, &reordered);
+
+        assert!(
+            !canonical.deliveries.is_empty() && !canonical.attempts.is_empty(),
+            "the identity fixture must exercise real proposals and deliveries"
+        );
+        assert_eq!(canonical, reversed);
+    }
+
+    #[test]
+    fn every_typed_delivery_conserves_each_resource() {
+        let graph = exchange_graph(3, &[(0, 1), (1, 2)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 2.0, 2.0, 0.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+            exchange_snapshot(3, 2, 2.0, 2.0, 0.0),
+        ];
+
+        let clearing = clear_local_exchange(&graph, &snapshots);
+
+        assert!(
+            clearing
+                .deliveries
+                .iter()
+                .any(|delivery| delivery.resource == SubsistenceResource::A)
+                && clearing
+                    .deliveries
+                    .iter()
+                    .any(|delivery| delivery.resource == SubsistenceResource::B),
+            "the conservation fixture must move nonzero quantities of both resources"
+        );
+        for delivery in &clearing.deliveries {
+            let attempt = exchange_attempt(
+                &clearing,
+                delivery.to.0,
+                Some(delivery.from.0),
+                delivery.resource,
+            );
+            assert_eq!(
+                attempt.delivered, delivery.quantity,
+                "every delivery must be the funded result of its named direct proposal"
+            );
+            let reciprocal_resource = match delivery.resource {
+                SubsistenceResource::A => SubsistenceResource::B,
+                SubsistenceResource::B => SubsistenceResource::A,
+            };
+            assert_eq!(
+                delivered(
+                    &clearing,
+                    delivery.to.0,
+                    delivery.from.0,
+                    reciprocal_resource,
+                ),
+                delivery.quantity,
+                "every typed delivery must carry an equal reciprocal delivery in the same bundle"
+            );
+        }
+        for resource in [SubsistenceResource::A, SubsistenceResource::B] {
+            let mut balances: BTreeMap<BakeId, f64> = snapshots
+                .iter()
+                .map(|snapshot| (snapshot.id, snapshot.opening_stock.amount(resource)))
+                .collect();
+            let opening_total: f64 = balances.values().sum();
+            let mut moved = 0.0;
+            for delivery in clearing
+                .deliveries
+                .iter()
+                .filter(|delivery| delivery.resource == resource)
+            {
+                moved += delivery.quantity;
+                *balances.get_mut(&delivery.from).unwrap() -= delivery.quantity;
+                *balances.get_mut(&delivery.to).unwrap() += delivery.quantity;
+            }
+            let closing_total: f64 = balances.values().sum();
+            assert!(moved > 0.0, "fixture must move {resource:?}");
+            assert!(
+                balances.values().all(|balance| *balance >= 0.0),
+                "no hop may spend stock that neither opened nor arrived"
+            );
+            assert_eq!(
+                closing_total.to_bits(),
+                opening_total.to_bits(),
+                "applying every {resource:?} debit and credit must preserve total stock"
+            );
+            let expected = match resource {
+                SubsistenceResource::A => [(BakeId(1), 1.0), (BakeId(2), 2.0), (BakeId(3), 1.0)],
+                SubsistenceResource::B => [(BakeId(1), 1.0), (BakeId(2), 2.0), (BakeId(3), 1.0)],
+            };
+            assert_eq!(
+                balances,
+                BTreeMap::from(expected),
+                "funded direct exchanges must leave each community's reserved basket intact"
+            );
+        }
+        assert_eq!(
+            clearing.conservation_residuals,
+            [0.0, 0.0],
+            "the clearing trace must expose exact-zero residuals for both resources"
+        );
+    }
+
+    #[test]
+    fn snapshot_accounting_detects_a_delivery_that_overdraws_opening_surplus() {
+        let graph = exchange_graph(2, &[(0, 1)]);
+        let snapshots = vec![
+            exchange_snapshot(1, 0, 4.0, 4.0, 0.0),
+            exchange_snapshot(2, 1, 4.0, 0.0, 4.0),
+        ];
+        let clearing = clear_local_exchange(&graph, &snapshots);
+        let mut mutated = clearing.deliveries.clone();
+        let target = mutated
+            .iter_mut()
+            .find(|delivery| {
+                delivery.from == BakeId(1)
+                    && delivery.to == BakeId(2)
+                    && delivery.resource == SubsistenceResource::A
+            })
+            .expect("fixture must contain the A half of its reciprocal exchange");
+        assert_eq!(target.quantity, 2.0, "mutation target must be live");
+        target.quantity = 3.0;
+
+        assert_eq!(
+            exchange_conservation_residuals(&snapshots, &mutated),
+            [1.0, 0.0],
+            "spending one unit beyond immutable opening surplus must surface as one created A unit"
         );
     }
 

@@ -147,8 +147,8 @@
 //! 1. **liveness** — the seeds that used to die build to `Full` depth, which is
 //!    the depth the panic used to fire at;
 //! 2. **the size of the cut** — how many founders each seed loses, so a later
-//!    change that silently alters promotion coverage reddens here. Nineteen
-//!    of the twenty-one rows now read **zero**, and they are the campaign's
+//!    change that silently alters promotion coverage reddens here. Twenty-one
+//!    of the twenty-four rows now read **zero**, and they are the campaign's
 //!    headline: they
 //!    are seeds that used to lose a founder and no longer do, so a regression
 //!    that reintroduces the collisions is visible rather than silent;
@@ -160,8 +160,8 @@
 //! before the widening. It is here so that a future absorption that re-exposes
 //! it is visible rather than surprising.
 //!
-//! Cost: twenty-one `BuildDepth::Settlements` builds and two `Full` builds, ~2 s
-//! each on an optimized dev profile — cheap enough for the commit gate, which
+//! Cost: twenty-four `BuildDepth::Settlements` builds and three `Full` builds,
+//! ~2 s each on an optimized dev profile — cheap enough for the commit gate, which
 //! is where a liveness guard belongs.
 //!
 use hornvale_astronomy::SkyPins;
@@ -179,15 +179,11 @@ use std::collections::{BTreeMap, BTreeSet};
 /// The whole positive set of the current 0-2999 sweep: every seed in the range
 /// whose world drops a founder to a handle collision.
 ///
-/// **One row as of The Winze T4** (1416.16 s, ten threads, `--release`), down
-/// from T2b's `[1162, 2655]`. It is a NAMED CONST rather than an inline array
-/// literal at each of the two call sites so that clippy's `single_element_loop`
-/// does not force the loop open the moment the set happens to hold one seed —
-/// which would make re-pinning the next epoch a structural edit instead of a
-/// one-line one, and this set has turned over on all eight placement epochs so
-/// far. See `a_dropped_founder_is_not_backfilled` for the sweep and its
-/// harness.
-const POSITIVE_SET: &[u64] = &[2655];
+/// **Three rows after The Murrain** (1047.96 s, release profile), from T4's
+/// `[2655]`. It is a NAMED CONST rather than an inline array literal at each
+/// of the two call sites so that re-pinning the next epoch remains a one-line
+/// edit. See `a_dropped_founder_is_not_backfilled` for the sweep and harness.
+const POSITIVE_SET: &[u64] = &[552, 1074, 1292];
 
 fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
@@ -234,7 +230,8 @@ fn build(seed: u64, depth: BuildDepth) -> hornvale_kernel::World {
 /// 302), and fewer occupations are fewer chances for two of them to collide.
 /// **BOTH positives are built here, not three of six** — there is no third.
 ///
-/// claim: structural(seed: [1057, 2852]) — two named worlds, built once each.
+/// claim: structural(seed: [552, 1074, 1292]) — three named worlds, built once
+/// each.
 /// No search: the seeds come from a completed 0–2999 sweep, not from this
 /// test.
 #[test]
@@ -243,11 +240,9 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
     // whole set cleared, fresh 0-2999 sweep, rate unmoved at 2 in 3000. See
     // `a_dropped_founder_is_not_backfilled` for the sweep and its harness.
     //
-    // THE WINZE T4: [1162, 2655] -> [2655]. Eighth placement epoch (the breach
-    // hazard ends some workings early), fresh 0-2999 sweep, rate DOWN to 1 in
-    // 3000. 1162 cleared; 2655 is the first seed to survive an epoch since
-    // 1892's four-epoch run, so this pin is as continuous as the measurement
-    // allows. There is no second positive to build.
+    // THE MURRAIN: [2655] -> [552, 1074, 1292]. Ninth placement epoch,
+    // fresh 0-2999 sweep, rate UP to 3 in 3000. 2655 cleared and three new
+    // positives appeared; all three are built here.
     for &seed in POSITIVE_SET {
         let w = build(seed, BuildDepth::Full);
         let people = w.ledger.find("is-person").count();
@@ -302,22 +297,23 @@ fn a_colliding_seed_builds_to_full_depth_instead_of_panicking() {
 /// 2871 all clear — including 1892, whose four-epoch survival this file has
 /// been narrating since The Glasshouse — and 2208 is the only newcomer. Every
 /// cleared seed is kept as a zero row by the standing convention, so the table
-/// is twenty-one rows now, of which two are the live positive set and nineteen
-/// are the record of what seven epochs cleared.
+/// is twenty-four rows now, of which three are the live positive set and
+/// twenty-one are the record of what prior epochs cleared.
 ///
 /// **THE COMPLETENESS GAP IS CLOSED (The Winze T2b).** The two paragraphs
 /// above recorded, twice, that "these are the whole of the positive set over
 /// 0–2999" was inherited from a sweep run before an epoch rather than measured
 /// after one. A fresh full sweep now runs from inside this file
-/// (`the_shipped_handles_full_sweep_writes_its_positive_set`, 1129.93 s, ten
-/// threads) and was run on this tree: `[1162, 2655]`, one drop each, and the
+/// (`the_shipped_handles_full_sweep_writes_its_positive_set`, 1047.96 s,
+/// release profile) and was run on this tree: `[552, 1074, 1292]`, one drop
+/// each, and the
 /// completeness claim below is that sweep's own output rather than an
 /// inheritance. It will lapse again at the next settlement-replacing epoch,
 /// which is what the `#[ignore]`d harness is for.
 ///
-/// claim: structural(seed: [20, 42, 238, 514, 1057, 1162, 1412, 1439, 1505,
-/// 1738, 1741, 1866, 1892, 2031, 2078, 2634, 2655, 2793, 2852, 2871, 2898]) —
-/// twenty-one named worlds with pinned per-seed values. Not a sweep and not a
+/// claim: structural(seed: [20, 42, 238, 514, 552, 1057, 1074, 1162, 1292,
+/// 1412, 1439, 1505, 1738, 1741, 1866, 1892, 2031, 2078, 2634, 2655, 2793,
+/// 2852, 2871, 2898]) — twenty-four named worlds with pinned per-seed values. Not a sweep and not a
 /// search: the enumeration is the whole of a completed 0–2999 sweep's positive
 /// set plus two controls and every superseded row, so nothing here scans for
 /// an instance.
@@ -332,7 +328,7 @@ fn the_dropped_founders_are_pinned_per_seed() {
     // re-established since Task 9's genus repair re-placed every world — see
     // this test's own docs. The rows below are exact; "no other seed in
     // 0-2999 drops a founder" is not currently checked by anything.
-    let expected: [(u64, usize); 21] = [
+    let expected: [(u64, usize); 24] = [
         (20, 0),
         (42, 0),
         (238, 0),
@@ -355,9 +351,12 @@ fn the_dropped_founders_are_pinned_per_seed() {
         // reason the module header gives: a seed that used to lose a founder
         // and no longer does makes a regression visible rather than silent.
         (1162, 0),
-        // The Winze T4's fresh 0-2999 sweep: the whole positive set is this
-        // one row. Rate 1 in 3000, and 2655 is the survivor of T2b's pair.
-        (2655, 1),
+        // The Murrain's fresh 0-2999 sweep: these are the whole positive set,
+        // one drop each. Rate 3 in 3000; 2655 cleared under this placement.
+        (552, 1),
+        (1074, 1),
+        (1292, 1),
+        (2655, 0),
         (2634, 0),
         (2793, 0),
         (2871, 0),
@@ -491,9 +490,9 @@ fn the_dropped_founders_are_pinned_per_seed() {
 /// twelve seeds end by breaching, and a delving that ends is an occupation
 /// that stops accumulating.
 ///
-/// claim: structural(seed: [2655]) — one named world, built once. No search:
-/// the seed is the whole of a completed 0-2999 sweep's positive set, not
-/// something this test scans for.
+/// claim: structural(seed: [552, 1074, 1292]) — three named worlds, built
+/// once each. No search: the seeds are the whole of a completed 0–2999 sweep's
+/// positive set, not something this test scans for.
 #[test]
 fn a_dropped_founder_is_not_backfilled() {
     for &seed in POSITIVE_SET {
