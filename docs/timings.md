@@ -6912,3 +6912,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T20:50:23Z | sluice:clients | 211.429 | 3353.439 | 305.325 | 17.30 | 0 | 062e2dd9c |  | lefford | 40 |
 | 2026-09-09T21:00:12Z | sluice:heavy | 588.777 | 12958.498 | 195.346 | 22.34 | 0 | c1ca0f6e2 |  | lefford | 40 |
 | 2026-09-09T21:24:49Z | gate-commit | 79.001 | 65.620 | 7.429 | 0.92 | 0 | 21efd8d07 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:32:43Z | gate-commit | 446.461 | 848.107 | 53.988 | 2.02 | 0 | 21efd8d07 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:48Z | census-tail-chorus | 61.806 | 201.659 | 7.649 | 3.39 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:49Z | census-tail-domesday | 0.524 | 0.411 | 0.044 | 0.87 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:50Z | census-tail-anomalies | 0.334 | 0.263 | 0.034 | 0.89 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:38:55Z | rebaseline | 347.708 | 495.807 | 23.469 | 1.49 | 0 | c592612bd | campaign/underworld-peoples | MacBookPro | 10 |
