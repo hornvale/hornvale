@@ -1556,6 +1556,42 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         source.split_whitespace().collect()
     }
 
+    fn root_skyworld_reexports(source: &str) -> Vec<String> {
+        let mut reexports = Vec::new();
+        let mut grouped: Option<String> = None;
+
+        for line in source.lines().map(str::trim) {
+            if let Some(declaration) = grouped.as_mut() {
+                declaration.push_str(line);
+                if line == "};" {
+                    reexports.push(compact(declaration));
+                    grouped = None;
+                }
+                continue;
+            }
+
+            if !line.starts_with("pub use skyworld") {
+                continue;
+            }
+
+            if line.ends_with(';') {
+                reexports.push(compact(line));
+            } else {
+                assert!(
+                    line.ends_with('{'),
+                    "Skyworld root re-export must be standalone or braced: {line}"
+                );
+                grouped = Some(line.to_string());
+            }
+        }
+
+        assert!(
+            grouped.is_none(),
+            "Skyworld grouped root re-export must close before the end of lib.rs"
+        );
+        reexports
+    }
+
     let build_depth = WORLDGEN_LIB
         .split_once("pub enum BuildDepth {")
         .expect("BuildDepth remains a public construction contract")
@@ -1589,36 +1625,22 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         ]
     );
 
+    let root_skyworld_reexports = root_skyworld_reexports(WORLDGEN_LIB);
     assert_eq!(
-        compact(source_body(WORLDGEN_LIB, "pub use skyworld::{")),
-        concat!(
-            "SkyAdjacency,SkyCorridor,SkyCorridorKind,SkyEcology,SkyEnergy,SkyEvent,SkyEventKind,",
-            "SkyExchangeMode,SkyFields,SkyFootprint,SkyLifecycle,SkyLineage,SkyMobility,SkyPhenotype,",
-            "SkyPosition,SkyPropagation,SkyPropagationDetail,SkyStability,SkyStocks,SkySubstrate,",
-            "SkyTerritory,SkyTrajectorySample,SkyWater,SkyWorld,SkyWorldConfig,"
-        ),
-        "root exports gained an unreviewed Skyworld value or save surface"
-    );
-    assert_eq!(
-        compact(source_body(WORLDGEN_LIB, "pub use skyworld_render::{")),
-        "SkyWorldDetail,render_skyworld_diagnostic_readout,render_skyworld_png,render_skyworld_readout,",
-        "root exports gained an unreviewed Skyworld observation surface"
-    );
-    let standalone_root_exports: Vec<_> = WORLDGEN_LIB
-        .lines()
-        .map(str::trim)
-        .filter(|line| {
-            (line.starts_with("pub use skyworld::") && !line.starts_with("pub use skyworld::{"))
-                || line.starts_with("pub use skyworld_propagation::")
-        })
-        .collect();
-    assert_eq!(
-        standalone_root_exports,
+        root_skyworld_reexports,
         [
-            "pub use skyworld::skyworld_from;",
-            "pub use skyworld_propagation::{propagation_at, trajectory_at};",
+            "pubuseskyworld::skyworld_from;",
+            concat!(
+                "pubuseskyworld::{",
+                "SkyAdjacency,SkyCorridor,SkyCorridorKind,SkyEcology,SkyEnergy,SkyEvent,SkyEventKind,",
+                "SkyExchangeMode,SkyFields,SkyFootprint,SkyLifecycle,SkyLineage,SkyMobility,SkyPhenotype,",
+                "SkyPosition,SkyPropagation,SkyPropagationDetail,SkyStability,SkyStocks,SkySubstrate,",
+                "SkyTerritory,SkyTrajectorySample,SkyWater,SkyWorld,SkyWorldConfig,};"
+            ),
+            "pubuseskyworld_propagation::{propagation_at,trajectory_at};",
+            "pubuseskyworld_render::{SkyWorldDetail,render_skyworld_diagnostic_readout,render_skyworld_png,render_skyworld_readout,};",
         ],
-        "the root surface must expose exactly the approved standalone Skyworld constructor and propagation queries"
+        "the root surface must expose exactly the approved Skyworld constructor, value, propagation, and render re-exports"
     );
     assert!(
         !WORLDGEN_LIB
