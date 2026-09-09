@@ -1451,6 +1451,10 @@ fn rendering_does_not_mutate_generated_skyworld() {
 fn render_and_query_paths_leave_inputs_unchanged() {
     let fixture = fixture(42);
     let skyworld = generate(&fixture);
+    assert!(
+        !skyworld.territories.is_empty(),
+        "VACUOUS: the fixture supplies no territory for query-path coverage"
+    );
     let surface_before = seams::surface_projection(&fixture);
     let skyworld_before = skyworld.clone();
     let details = [
@@ -1535,6 +1539,22 @@ fn render_and_query_paths_leave_inputs_unchanged() {
 fn skyworld_contract_has_no_build_or_save_surface() {
     const WORLDGEN_LIB: &str = include_str!("../../src/lib.rs");
     const SKYWORLD_SOURCE: &str = include_str!("../../src/skyworld.rs");
+    const PROPAGATION_SOURCE: &str = include_str!("../../src/skyworld_propagation.rs");
+    const RENDER_SOURCE: &str = include_str!("../../src/skyworld_render.rs");
+
+    fn source_body<'a>(source: &'a str, declaration: &str) -> &'a str {
+        source
+            .split_once(declaration)
+            .unwrap_or_else(|| panic!("missing source declaration: {declaration}"))
+            .1
+            .split_once("\n}")
+            .unwrap_or_else(|| panic!("source declaration does not close: {declaration}"))
+            .0
+    }
+
+    fn compact(source: &str) -> String {
+        source.split_whitespace().collect()
+    }
 
     let build_depth = WORLDGEN_LIB
         .split_once("pub enum BuildDepth {")
@@ -1555,17 +1575,10 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         .collect();
     assert_eq!(variants, ["Astronomy", "Terrain", "Settlements", "Full"]);
 
-    let build_artifacts = WORLDGEN_LIB
-        .split_once("pub struct BuildArtifacts {")
-        .expect("BuildArtifacts remains the build result")
-        .1
-        .split_once("\n}")
-        .expect("BuildArtifacts struct closes")
-        .0;
-    let fields: Vec<_> = build_artifacts
+    let fields: Vec<_> = source_body(WORLDGEN_LIB, "pub struct BuildArtifacts {")
         .lines()
         .map(str::trim)
-        .filter(|line| line.starts_with("pub "))
+        .filter(|line| !line.is_empty() && !line.starts_with("///"))
         .collect();
     assert_eq!(
         fields,
@@ -1576,24 +1589,45 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         ]
     );
 
+    assert_eq!(
+        compact(source_body(WORLDGEN_LIB, "pub use skyworld::{")),
+        concat!(
+            "SkyAdjacency,SkyCorridor,SkyCorridorKind,SkyEcology,SkyEnergy,SkyEvent,SkyEventKind,",
+            "SkyExchangeMode,SkyFields,SkyFootprint,SkyLifecycle,SkyLineage,SkyMobility,SkyPhenotype,",
+            "SkyPosition,SkyPropagation,SkyPropagationDetail,SkyStability,SkyStocks,SkySubstrate,",
+            "SkyTerritory,SkyTrajectorySample,SkyWater,SkyWorld,SkyWorldConfig,"
+        ),
+        "root exports gained an unreviewed Skyworld value or save surface"
+    );
+    assert_eq!(
+        compact(source_body(WORLDGEN_LIB, "pub use skyworld_render::{")),
+        "SkyWorldDetail,render_skyworld_diagnostic_readout,render_skyworld_png,render_skyworld_readout,",
+        "root exports gained an unreviewed Skyworld observation surface"
+    );
     assert!(
         WORLDGEN_LIB.contains("pub use skyworld::skyworld_from;")
             && WORLDGEN_LIB
                 .contains("pub use skyworld_propagation::{propagation_at, trajectory_at};")
-            && WORLDGEN_LIB.contains("pub use skyworld_render::{"),
+            && !WORLDGEN_LIB
+                .lines()
+                .any(|line| line.trim_start().starts_with("pub use skyworld")
+                    && line.contains("save")),
         "the public Skyworld surface remains pure derivation, query, and observation"
     );
-    for save_surface in [
-        "serde",
-        "Serialize",
-        "Deserialize",
-        "to_json",
-        "from_json",
-        "ledger",
-    ] {
-        assert!(
-            !SKYWORLD_SOURCE.contains(save_surface),
-            "Skyworld gained a save surface: {save_surface}"
-        );
+    for source in [SKYWORLD_SOURCE, PROPAGATION_SOURCE, RENDER_SOURCE] {
+        for save_surface in [
+            "serde",
+            "Serialize",
+            "Deserialize",
+            "to_json",
+            "from_json",
+            "save_",
+            "commit(",
+        ] {
+            assert!(
+                !source.contains(save_surface),
+                "Skyworld module gained a save surface: {save_surface}"
+            );
+        }
     }
 }

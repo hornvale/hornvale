@@ -156,7 +156,8 @@
 
 **Goal:** Turn the measured seam into a small reusable contract for future Waterworld and Underworld overlays while keeping those realms unimplemented and all deferred worldbuilding ideas discoverable.
 
-**Status:** Not Started
+**Status:** Complete — final contract and immutability probes captured in
+`7e9e6be81` and hardened in its review fix round.
 
 **Files:**
 - Modify: `windows/worldgen/tests/suite/skyworld.rs` with final immutability and contract probes
@@ -169,9 +170,9 @@
 - Consumes: Tasks 1–3’s probes and measured counts, existing `SkyWorld`/render APIs, and the approved seam spec.
 - Produces: a ledger-backed contract consisting of surface substrate, ambient prerequisite fields, aggregate stocks, movement/adjacency, bounded propagation channels, and ordinary/diagnostic observation; realm-specific dimensions remain explicit (vents/currents, cave energy, aether bands, and projection rules).
 
-- [ ] **Step 1: Write the final contract and immutability probes.** Add `render_and_query_paths_leave_inputs_unchanged` and `skyworld_contract_has_no_build_or_save_surface`. Assert that terrain/climate values, `BiomeExpr`, generated Skyworld data, and ordinary output remain unchanged after all query/detail paths; inspect the public exports and `BuildDepth`/`BuildArtifacts` source to ensure no new rung or fact was introduced.
+- [x] **Step 1: Write the final contract and immutability probes.** Add `render_and_query_paths_leave_inputs_unchanged` and `skyworld_contract_has_no_build_or_save_surface`. Assert that terrain/climate values, `BiomeExpr`, generated Skyworld data, and ordinary output remain unchanged after all query/detail paths; inspect the public exports and `BuildDepth`/`BuildArtifacts` source to ensure no new rung or fact was introduced.
 
-- [ ] **Step 2: Run the complete focused suite and documentation consistency test.**
+- [x] **Step 2: Run the complete focused suite and documentation consistency test.**
 
   Run: `cargo test -p hornvale-worldgen --test suite -- skyworld`
 
@@ -181,15 +182,15 @@
 
   Expected: reconciliation, spec, plan, ledger, registry, and generated-document checks pass.
 
-- [ ] **Step 3: Update the ledger with evidence and explicit non-results.** Record actual command output/counts, the four-layer ownership table, the smallest cross-realm contract, any rejected wrapper/cache/abstraction, and follow-ups for lifecycle, co-evolution, tethering, species, and Waterworld transfer. Do not claim a census or realm implementation.
+- [x] **Step 3: Update the ledger with evidence and explicit non-results.** Record actual command output/counts, the four-layer ownership table, the smallest cross-realm contract, any rejected wrapper/cache/abstraction, and follow-ups for lifecycle, co-evolution, tethering, species, and Waterworld transfer. Do not claim a census or realm implementation.
 
-- [ ] **Step 4: Run the local commit gate and inspect the diff.**
+- [x] **Step 4: Run the local commit gate and inspect the diff.**
 
   Run: `make gate-commit`
 
   Expected: formatting, clippy, type/placement/plumb audits, report freshness, and the sub-floor tier pass. Review the diff manually; preserve valid trailing empty TSV columns in the reconciliation file.
 
-- [ ] **Step 5: Commit the completed seam-audit slice.**
+- [x] **Step 5: Commit the completed seam-audit slice.**
 
   ```bash
   git add windows/worldgen/tests/suite/skyworld.rs docs/superpowers/ledgers/2026-09-09-the-skyworld.md docs/audits/campaign-reconciliation.tsv docs/superpowers/specs/2026-09-09-skyworld-seams-design.md book/src/frontier/idea-registry.md
