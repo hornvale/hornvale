@@ -211,6 +211,29 @@ impl RepoFacts {
         })
     }
 
+    /// Whether decision `number` (a four-digit code) is in force.
+    ///
+    /// Public so a sibling corpus family resolves a `decision:` anchor
+    /// through THIS gathered state rather than re-parsing
+    /// `docs/digest/decisions-in-force.md` a second time — one semantics for
+    /// "in force", in one place. See `crate::regularities::audit`.
+    /// type-audit: bare-ok(identifier-text: number), bare-ok(flag: return)
+    pub fn decision_in_force(&self, number: &str) -> bool {
+        self.in_force.contains(number)
+    }
+
+    /// The idea-registry row `row`'s NORMALIZED status, or `None` when the
+    /// registry has no such row.
+    ///
+    /// Normalized at gather time (see `normalize_status`), so a caller
+    /// comparing against `shipped` gets the same answer this module's own
+    /// `DEFERRAL_FALSIFYING_STATUSES` check does. Public for the same reason
+    /// [`RepoFacts::decision_in_force`] is.
+    /// type-audit: bare-ok(identifier-text: row), bare-ok(identifier-text: return)
+    pub fn registry_status(&self, row: &str) -> Option<&str> {
+        self.registry.get(row).map(String::as_str)
+    }
+
     /// How `spec` (`<crate>::<fn>`) resolves against the live repo. A cheap
     /// text search, not a compile — the resolver never shells out to
     /// `cargo`. See [`TestResolution`] for what each outcome means.
@@ -855,7 +878,14 @@ fn audit_item(item: &Item, facts: &RepoFacts) -> Option<Finding> {
 /// registry already names an enforced or tested capability, not an
 /// aspiration (`SOC-dense-settlement`: "`Bake::vacant_habitable` enforces
 /// it"; `CLIENT-two-tier-position`: "Now tested, not argued").
-const DEFERRAL_FALSIFYING_STATUSES: [&str; 4] = ["shipped", "ratified", "rejected", "refuted"];
+///
+/// **Public, rather than mirrored.** `crate::regularities` needs the same
+/// set, and a second copy of it is the drift shape this repository keeps
+/// paying for: the two would agree on the day they were written and silently
+/// diverge the first time this reasoning is revisited. One set, in the module
+/// that reasons about it.
+/// type-audit: bare-ok(identifier-text)
+pub const DEFERRAL_FALSIFYING_STATUSES: [&str; 4] = ["shipped", "ratified", "rejected", "refuted"];
 
 /// The repair a `StaleDeferred` finding should suggest, keyed by the
 /// registry row's actual (normalized) status — the repairs genuinely

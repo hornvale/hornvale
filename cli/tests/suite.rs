@@ -70,6 +70,10 @@ mod no_entity_id_values_in_prose;
 mod prose_is_not_a_contract;
 #[path = "suite/provision.rs"]
 mod provision;
+#[path = "suite/regularity_corpus.rs"]
+mod regularity_corpus;
+#[path = "suite/regularity_coverage.rs"]
+mod regularity_coverage;
 #[path = "suite/release_determinism.rs"]
 mod release_determinism;
 #[path = "suite/repertory_corpus.rs"]

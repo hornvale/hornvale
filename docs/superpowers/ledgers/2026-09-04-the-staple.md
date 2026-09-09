@@ -296,3 +296,18 @@ ideonomy passes / overturns: 0 — precedent-resolved with a stated conflict, pe
 the autopilot's clarifying-question rule. ·
 Capture: `book/src/chronicle/the-staple.md` + SUMMARY; `docs/retrospectives/the-staple.md`
 + README row; `book/src/open-questions.md` gradient entry.
+
+## R3 — district substrate
+
+#9 [Q] — **R3 lands the smallest evidence-backed district substrate.** ·
+**Decision:** districts are pure, basis-specific projections over typed relation
+views; they do not create population facts, persons, households, or canon. ·
+**Evidence:** commits `a5c7c6c7c`, `40f2dccf2`, `aa3c04a23`, `09e7c4a3f`,
+`27ab0c6a6`, `53c5c0f39`, `344bdbca4`, and `3ba8c91d5`; 27 focused probes
+and the full worldgen suite pass. · **Alternatives discarded:** a universal
+household-shaped district class; fuzzy identity by overlapping members; and
+importing Brattice pattern semantics into worldgen. · **Scope:** relation
+envelopes, spatial/presence/access/exchange views, deterministic district graph
+projection, temporal continuity/recurrence/dissolution/recomposition,
+aggregate pattern readout, and synthetic probes. Household, kinship, lifecycle,
+gender, and institutional interpretation remain outside R3.

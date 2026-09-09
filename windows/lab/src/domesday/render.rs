@@ -13,6 +13,15 @@
 //! `"no metrics"` appears on the page), rather than silently omitting the
 //! page or inventing a placeholder metric.
 //!
+//! **The claim line (spec §5) is the one addition to that budget, and it is
+//! not an authored sentence:** [`claim_line`] assembles a criterion, a
+//! measurement and a verdict for a metric some frozen corpus in
+//! `regularities/` scores, from that corpus's own parameters and from the
+//! census being rendered. Its numbers are read at render time exactly like
+//! every other number on the page; what it adds is that a reader outside
+//! the program can disagree with it. A metric no corpus scores gains no
+//! such line — see [`render_claims`].
+//!
 //! **Grouping (spec §4.4's D2 ⊆ D4 observation):** a metric that trips more
 //! than one detector is rendered ONCE, as one heading under which every
 //! detector that fired is listed — never as several independent-looking
@@ -22,6 +31,7 @@
 
 use crate::domesday::anomaly::{REPORT_SIZE, TAIL_DEPTH_BAR, TOP_WORLDS, WorldAnomaly};
 use crate::domesday::census::{Census, Column};
+use crate::domesday::corpus::{ScoredCorpus, ScoredItem};
 use crate::domesday::detect::{DECLARED_DETECTORS, Finding};
 use crate::domesday::stats::{categorical, numeric};
 use crate::metrics::Domain;
@@ -404,10 +414,264 @@ fn redact_registry_citations(doc: &str) -> String {
     tidy_punctuation(&out)
 }
 
+/// The label every claim line opens with.
+///
+/// Public because it is the only thing a test can assert the ABSENCE of: the
+/// words "predicted" and "measured" already occur inside several metric doc
+/// strings this survey embeds (`weft-legibility-mi-spring`'s among them), so
+/// "the page carries no claim" cannot be checked by grepping for either of
+/// them. This marker occurs nowhere else in the corpus of generated prose.
+/// type-audit: bare-ok(identifier-text)
+pub const CLAIM_MARKER: &str = "**Frozen claim** —";
+
+/// A measured number, as a claim line states it.
+///
+/// Six decimal places on the quantized value: quantization because this is
+/// an emit boundary like every other float on these pages (decision 0033),
+/// and six places because that is what `hornvale::regularities`' own
+/// `measure` mode prints, so the number a reader sees here is spelled the
+/// same as the number the resolver reports.
+///
+/// **Public so a test can state what a page WILL print without transcribing
+/// today's census into itself.** Three assertions in
+/// `cli/tests/suite/regularity_coverage.rs` carried this number as a literal
+/// (`measured -0.577645.`) and went red on the canonical box when an
+/// unrelated campaign moved the `rank-size-slope` column — a snapshot of one
+/// day's census sitting inside guards whose subject is the corpus, not the
+/// census. Those assertions call this instead.
+/// type-audit: bare-ok(ratio: measured), bare-ok(prose: return)
+pub fn measured_text(measured: f64) -> String {
+    format!("{:.6}", quantize(measured))
+}
+
+/// The heading of the per-page section that glosses what a frozen claim is
+/// and names the corpora behind the page's claims.
+///
+/// Public so the claim lines can link to it and a test can assert its
+/// presence and absence, and so the anchor below cannot drift from it
+/// silently.
+/// type-audit: bare-ok(identifier-text)
+pub const CLAIMS_SECTION_TITLE: &str = "Frozen claims";
+
+/// The in-page anchor mdBook derives from [`CLAIMS_SECTION_TITLE`]
+/// (lower-cased, spaces to hyphens). Asserted against the title itself in
+/// this module's tests, so renaming the section without the anchor breaks
+/// the build rather than the link.
+/// type-audit: bare-ok(identifier-text)
+pub const CLAIMS_SECTION_ANCHOR: &str = "#frozen-claims";
+
+/// The one authored paragraph the claims section is permitted, held as data
+/// on the same pattern as [`framing_line`].
+///
+/// It exists because "Frozen claim" is a term of art this survey invented,
+/// and a marker a reader cannot look up is decoration. It states no number:
+/// every number in a claim comes from the corpus or the census.
+///
+/// **It deliberately makes no blindness claim.** An earlier version said a
+/// frozen claim is "a prediction an imported corpus made about this
+/// population *before* any of it was measured", which is a UNIFORM claim
+/// this page cannot support: one of the founding corpus's four scored items
+/// discloses that it is not a blind test. A false uniform assurance is worse
+/// on this surface than on any other, because this is the surface a reader
+/// is invited to catch us on. Blindness is stated by
+/// [`blindness_sentence`] instead, derived per page from what the items
+/// actually disclose.
+const CLAIMS_PREAMBLE: &str = "\
+Some metrics above carry a **frozen claim**: a prediction an imported \
+corpus made about this population, printed beside what the committed census \
+says today. The corpus is data this survey only reads — the corpus supplies \
+the regularity, its source and the criterion, and the survey supplies the \
+measurement and re-states the recorded verdict. Every part of a claim line \
+is derived from one of those two, so a corpus that changes moves the line.";
+
+/// What this page may honestly say about whether its claims were
+/// preregistered blind, given what its own items disclose.
+///
+/// Two branches, both derived, neither hard-coded to today's corpus:
+///
+/// - **no disclosure anywhere** — the page states blindness plainly,
+///   because on that page it is true;
+/// - **one or more disclosures** — the page says so and NAMES the items,
+///   so a reader who scrolled straight to a verdict can find out which one
+///   is not blind.
+///
+/// The naming half is what makes this more than a hedge. "Some of these may
+/// not be blind" would technically avoid the falsehood while telling a
+/// reader nothing they could act on; a named item is checkable.
+fn blindness_sentence(scored: &[&ScoredItem]) -> String {
+    let disclosed: Vec<&&ScoredItem> = scored
+        .iter()
+        .filter(|item| item.disclosure.is_some())
+        .collect();
+    if disclosed.is_empty() {
+        return "Every criterion on this page was authored before its statistic was \
+                looked at."
+            .to_string();
+    }
+    let names = disclosed
+        .iter()
+        .map(|item| format!("`{}`", item.id))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "Criteria here were authored before their statistics were looked at, with \
+         {} declared exception(s) — {} — each of which states its own disclosure on \
+         its claim line above. Do not read this page as a page of blind predictions \
+         without checking which.",
+        disclosed.len(),
+        names
+    )
+}
+
+/// The claim line printed under a scored metric's statistics.
+///
+/// The whole point of spec §5. The stats table above it is a number nobody
+/// can be *wrong* about; this is a sentence someone outside the program can
+/// catch us on — it states the regularity, cites where the source states it,
+/// names the corpus and item, gives the criterion that corpus froze BEFORE
+/// anything was measured, the number today's census produces, and the
+/// verdict.
+///
+/// **Every part of it is derived.** The title, source, corpus id, item id
+/// and verdict come from the frozen corpus file; the criterion prose is
+/// assembled from that file's own parameters
+/// ([`crate::domesday::corpus::Criterion::prose`]); the number comes from
+/// the census being rendered. Nothing here is a literal that happens to be
+/// true today — a transcribed verdict would go on printing `FLAT` after a
+/// future census made it `grown`, which is the failure the regularity
+/// family exists to catch.
+///
+/// The title and source are emitted VERBATIM, never through
+/// [`redact_registry_citations`]: that redactor matches on shape with no
+/// prefix allowlist and would delete `II-3` out of
+/// `Ch. II, 'Emergence'; Animation II-3`. The Book's own registry guard
+/// filters by real registry prefixes and is untroubled by it.
+/// type-audit: bare-ok(ratio: measured), bare-ok(prose: return)
+pub fn claim_line(item: &ScoredItem, measured: f64) -> String {
+    claim_sentence(item, &measured_text(measured))
+}
+
+/// The claim line for a statistic no world in this census reports.
+///
+/// Says `absent` where the number would go rather than falling silent: an
+/// item whose statistic has gone unreportable is a louder fact than one
+/// whose median moved, and dropping the line would hide it behind a page
+/// that still looks complete.
+///
+/// **The narrower silence this does NOT cover:** a statistic that vanishes
+/// from the census as a COLUMN takes its claim line off the page entirely,
+/// because the metric it hung under is no longer rendered. That is caught
+/// by `hornvale regularities check` (a `Dangling` finding naming the column)
+/// and not by anything on the page.
+/// type-audit: bare-ok(prose: return)
+pub fn claim_line_unmeasured(item: &ScoredItem) -> String {
+    claim_sentence(item, "absent (no world reported a value)")
+}
+
+/// The shared body of the two claim lines: everything except how the
+/// measurement is spelled.
+///
+/// One function rather than two format strings, so the measured and absent
+/// arms cannot drift into stating the criterion two different ways.
+///
+/// A disclosed item carries its disclosure HERE, after the verdict, in bold
+/// — not only in the page's closing gloss. A reader who scrolls to a metric,
+/// reads `FLAT` and moves on must not be able to miss that this particular
+/// claim was not a blind test; a pointer they have to follow is a pointer
+/// most readers will not follow.
+fn claim_sentence(item: &ScoredItem, measured: &str) -> String {
+    format!(
+        "*{}* (`{}` `{}`; {}). Predicted {}; measured {measured}. {}.{}",
+        item.title,
+        item.corpus,
+        item.id,
+        item.source,
+        item.criterion.prose(),
+        item.verdict.shouted(),
+        match &item.disclosure {
+            Some(reason) => format!(" **{reason}**"),
+            None => String::new(),
+        }
+    )
+}
+
+/// Every claim line `metric` is entitled to, in corpus order, or the empty
+/// string when no frozen corpus scores it.
+///
+/// The empty string is the common case by a wide margin — the founding
+/// corpus scores four of the census's several hundred columns — and it is
+/// the load-bearing one: a metric no corpus scores must gain no claim, so
+/// that a claim on a page always means a corpus really did freeze one.
+fn render_claims(c: &Census, metric: &str, corpora: &[ScoredCorpus]) -> String {
+    let mut out = String::new();
+    for item in scored_for(corpora, metric) {
+        let line = match item.measured(c) {
+            Some(measured) => claim_line(item, measured),
+            None => claim_line_unmeasured(item),
+        };
+        out.push_str(&format!(
+            "\n{CLAIM_MARKER} {line} ([what this is]({CLAIMS_SECTION_ANCHOR}))\n"
+        ));
+    }
+    out
+}
+
+/// Every scored item across every corpus that names `metric`, in corpus
+/// order then item order.
+fn scored_for<'a>(corpora: &'a [ScoredCorpus], metric: &str) -> Vec<&'a ScoredItem> {
+    corpora
+        .iter()
+        .flat_map(|corpus| corpus.items.iter())
+        .filter(|item| item.statistic == metric)
+        .collect()
+}
+
+/// The page's closing section: what a frozen claim is, and the provenance
+/// of every corpus that actually scored one of THIS page's metrics.
+///
+/// Empty when the page carries no claim, which keeps the gloss where the
+/// thing it glosses is. A corpus that scores nothing on this domain
+/// contributes nothing here even though the caller was handed it — the
+/// section is derived from what the page shows, not from what was loaded.
+fn render_claims_section(cols: &[&Column], corpora: &[ScoredCorpus]) -> String {
+    let scoring: Vec<&ScoredCorpus> = corpora
+        .iter()
+        .filter(|corpus| {
+            corpus
+                .items
+                .iter()
+                .any(|item| cols.iter().any(|col| col.name == item.statistic))
+        })
+        .collect();
+    if scoring.is_empty() {
+        return String::new();
+    }
+    // Blindness is stated over the items this PAGE shows, not over every
+    // item loaded: a disclosure on a metric that lives on another domain's
+    // page is that page's business, and naming it here would send a reader
+    // looking for a claim line that is not present.
+    let shown: Vec<&ScoredItem> = scoring
+        .iter()
+        .flat_map(|corpus| corpus.items.iter())
+        .filter(|item| cols.iter().any(|col| col.name == item.statistic))
+        .collect();
+    let mut out = format!(
+        "## {CLAIMS_SECTION_TITLE}\n\n{CLAIMS_PREAMBLE}\n\n{}\n\n",
+        blindness_sentence(&shown)
+    );
+    for corpus in scoring {
+        out.push_str(&format!(
+            "### `{}`\n\nFrozen corpus: `{}`\n\n{}\n\n",
+            corpus.corpus, corpus.path, corpus.provenance
+        ));
+    }
+    out
+}
+
 /// Render one metric's heading, doc line, and statistics block, dispatching
 /// on `col.kind` (spec §4.2's per-kind table). The doc line is redacted of
 /// any registry citation first — see [`redact_registry_citations`].
-fn render_metric(c: &Census, col: &Column) -> String {
+fn render_metric(c: &Census, col: &Column, corpora: &[ScoredCorpus]) -> String {
     let stats = match col.kind.as_str() {
         "numeric" | "integer" => render_numeric_stats(c, col),
         "categorical" => render_categorical_stats(c, col),
@@ -415,9 +679,10 @@ fn render_metric(c: &Census, col: &Column) -> String {
         other => format!("(unrecognized metric kind {other:?}; cannot render statistics)\n"),
     };
     format!(
-        "### `{}`\n\n{}\n\n{stats}\n",
+        "### `{}`\n\n{}\n\n{stats}{}\n",
         col.name,
-        redact_registry_citations(&col.doc)
+        redact_registry_citations(&col.doc),
+        render_claims(c, &col.name, corpora)
     )
 }
 
@@ -471,8 +736,19 @@ fn render_findings_for_domain(c: &Census, domain: &str, findings: &[Finding]) ->
 /// the domain (or a "no metrics" notice if it has none — spec §4.6a: a gap
 /// in the world is rendered, never quietly patched over), then its
 /// findings.
+///
+/// `corpora` is every frozen corpus in `regularities/`, each carrying the
+/// items it scores across all domains; a metric takes the ones naming it and
+/// the rest render nothing. A corpus that scores nothing on this page also
+/// contributes no provenance block. Passing an empty slice is legal and
+/// yields the survey exactly as it read before spec §5.
 /// type-audit: bare-ok(identifier-text: domain), bare-ok(artifact: return)
-pub fn render_domain(c: &Census, domain: &str, findings: &[Finding]) -> String {
+pub fn render_domain(
+    c: &Census,
+    domain: &str,
+    findings: &[Finding],
+    corpora: &[ScoredCorpus],
+) -> String {
     let cols = domain_columns(c, domain);
     let mut out = format!(
         "{HEADER}\n\n# {} — The Domesday\n\n{}\n\n",
@@ -492,11 +768,13 @@ pub fn render_domain(c: &Census, domain: &str, findings: &[Finding]) -> String {
 
     out.push_str("## Metrics\n\n");
     for col in &cols {
-        out.push_str(&render_metric(c, col));
+        out.push_str(&render_metric(c, col, corpora));
     }
 
     out.push_str("## Weaknesses found here\n\n");
     out.push_str(&render_findings_for_domain(c, domain, findings));
+
+    out.push_str(&render_claims_section(&cols, corpora));
 
     out
 }
@@ -676,7 +954,7 @@ mod tests {
 
     #[test]
     fn a_domain_page_carries_the_generated_header_and_only_computed_numbers() {
-        let page = render_domain(&census(), "climate", &[]);
+        let page = render_domain(&census(), "climate", &[], &[]);
         assert!(
             page.starts_with("<!-- GENERATED FILE — do not edit."),
             "header required"
@@ -710,7 +988,7 @@ mod tests {
         // twelve, `demography` named explicitly) and `domains()` above both
         // contradict. Fixed here rather than transcribed.
         for d in domains() {
-            let page = render_domain(&c, d, &[]);
+            let page = render_domain(&c, d, &[], &[]);
             assert!(page.len() > 200, "{d} rendered nothing at all");
             // A domain with NO metrics must still render, announcing the gap.
             // An absence that announces itself is a finding; a missing
@@ -785,14 +1063,14 @@ mod tests {
         // Every other domain still renders its (empty-of-worlds but
         // present) metric section, never the "no metrics" branch.
         for d in &other_domains {
-            let page = render_domain(&c, d, &[]);
+            let page = render_domain(&c, d, &[], &[]);
             assert!(
                 !page.contains("no metrics"),
                 "{d} has a column and must not claim it has none: {page}"
             );
         }
 
-        let page = render_domain(&c, "hydrology", &[]);
+        let page = render_domain(&c, "hydrology", &[], &[]);
         assert!(
             page.starts_with(HEADER),
             "the no-metrics page must still carry the generated header: {page}"
@@ -834,7 +1112,7 @@ mod tests {
         let cmps = load_comparators(&repo_root().join("studies/comparators.json")).unwrap();
         let exps = load_expectations(&repo_root().join("studies/expectations.json")).unwrap();
         let findings = detect(&c, &cmps, &exps);
-        let page = render_domain(&c, "biology", &findings);
+        let page = render_domain(&c, "biology", &findings, &[]);
         // The metrics section and the findings section each get their own
         // `### <metric>` heading by design (a statistics table and a
         // weakness list are different things), so the page-wide count is 2.
@@ -878,7 +1156,7 @@ mod tests {
         );
 
         for d in domains() {
-            let page = render_domain(&c, d, &findings);
+            let page = render_domain(&c, d, &findings, &[]);
             assert!(
                 !page.contains("no census metric measures any quantity"),
                 "{d}'s page must not carry a D8 crate-coverage finding"
@@ -972,7 +1250,7 @@ mod tests {
             .iter()
             .find(|col| col.kind == "flag")
             .expect("at least one flag metric exists");
-        let page = render_metric(&c, flag_col);
+        let page = render_metric(&c, flag_col, &[]);
         assert!(page.contains("`true`"), "true row must render");
         assert!(page.contains("`false`"), "false row must render");
     }
@@ -1001,7 +1279,7 @@ mod tests {
                 .map(|v| BTreeMap::from([("m".to_string(), (*v).to_string())]))
                 .collect(),
         };
-        let page = render_metric(&c, &make_col());
+        let page = render_metric(&c, &make_col(), &[]);
         assert!(
             page.contains("mode: `2` (3 worlds)"),
             "exact mode must be reported: {page}"
@@ -1120,7 +1398,7 @@ mod tests {
         let exps = load_expectations(&repo_root().join("studies/expectations.json")).unwrap();
         let findings = detect(&c, &cmps, &exps);
         for d in domains() {
-            let page = render_domain(&c, d, &findings);
+            let page = render_domain(&c, d, &findings, &[]);
             for citation in [
                 "SKY-21", "MAP-10", "MAP-22", "BIO-2", "CAP-2", "MEM-7", "LANG-41",
             ] {

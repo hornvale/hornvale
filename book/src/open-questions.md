@@ -5627,6 +5627,51 @@ Unscored against any standing bet: nothing in this chapter's own text stakes a
 claim the readout moves, and the accounting above is filed as a new axis rather
 than a re-score of an existing one.
 
+### A preregistered threshold can be external and still unreachable (2026-09-08)
+
+[The Seedbed](./chronicle/the-seedbed.md) sharpens this chapter's own criterion
+for what makes a bet self-scorable. The claim above is that the bets below are
+scorable "because their metrics are measured against something outside the
+generator — Earth's shoreline development index, a null control, **a
+preregistered threshold**". This campaign froze ten preregistered thresholds
+against an outside catalogue, blind, before any evaluation code existed, and
+then measured them. The result argues that an external anchor is necessary and
+not sufficient.
+
+Six of the ten were removed before measurement because they **could not fail**.
+One was satisfied by the regularity's own negation. One asserted a bound below a
+live domain invariant, so it could not have reddened without a terrain test
+reddening first. One measured sample size wearing seasonality's clothes: the
+statistic is a circular mean resultant length, genuinely zero under a uniform
+phase distribution, so any positive value reads as signal — true of the
+*population* value and false of the *estimate*, whose expectation is 0.886/√n
+and does not fall below the authored bound until n ≈ 78, on a metric whose own
+floor admits worlds with five.
+
+Of the four that survived to be measured, **two of the three passes had no
+reachable failing side on the population scored** — one had a maximum of 0.4229
+against a ceiling of 0.5. Every one of the six removals and both weak passes had
+defensible provenance for its number. Provenance was the thing being checked.
+
+The tempting reading — *prefer thresholds imported from outside empirical laws*
+— is wrong, and the campaign's own data refutes it: a passing item also took
+both its poles from the source, at nearly the same band width as the failing
+one. What differed is **where the band sat relative to the data's mass**, which
+is exactly what a blind author cannot know and therefore cannot be the rule.
+
+What a blind author *can* do is argue from the mechanism. The discipline this
+adds to the chapter is a **preregistered reachability check**: state the value
+the statistic must take to redden, and argue from the world's machinery that a
+plausible world produces it. That is authorable without seeing any data, and it
+would have caught all six removals before the freeze.
+
+This sits beside the entry above it rather than replacing it. That one records a
+threshold **written wider than the argument that justified it**; this one
+records thresholds written **narrower than the world could reach** — the same
+failure of denominator discipline seen from the other side. Both are cases where
+the preregistration was real, external, and honestly frozen, and still could not
+grade anything.
+
 ### A preregistered floor over a wider population than its own argument (2026-09-06)
 
 [The Warrant](./chronicle/the-warrant.md) moves the *historiography worth
