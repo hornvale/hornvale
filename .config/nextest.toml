@@ -238,6 +238,16 @@ priority = 100
 filter = 'test(/the_blast_radius_readout$/) | test(/is_the_raid_proxy_ambiguous_or_is_its_population_stale$/) | test(/zero_dispersion_collapses_between_settlement_variance$/) | test(/the_cascade_distribution_is_adjudicated$/) | test(/cascade_sizes_are_measured_and_the_shape_adjudicated$/)'
 threads-required = 30
 
+# The health null control is a four-seed bounded panel. Giving it its own
+# width keeps the reservation equal to its maximum worker fan-out instead of
+# placing it in the 30-slot sized-sweep class merely to satisfy the roster
+# guard. Like sized-sweep, this bounded reservation neither drains the runner
+# nor needs front-loading.
+[[profile.default.overrides]]
+# class: four-seed-sweep
+filter = 'test(/the_null_control_holds_across_a_seed_sweep$/)'
+threads-required = 4
+
 # UNUSED since The Sexton (Task 3): `make gate` (the only caller of the
 # duration alarm now that `make ci` is an alias for it, see the Makefile's
 # `gate-run`) deliberately runs the DEFAULT profile, not this one — running

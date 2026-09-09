@@ -22,6 +22,7 @@ use hornvale_lab::synthetic::{
     stranded_in_a_hot_waste,
 };
 use hornvale_vessel::liveness::{Affect, AffectLabel, DriveKind};
+use hornvale_worldgen::seed_sweep;
 
 /// The span the harness scenarios simulate — matches `health.rs`'s
 /// `HEALTH_TICKS` so a scenario's chronic run spans the same window a real
@@ -116,6 +117,8 @@ fn the_null_control_reads_no_chronic_distress() {
 
 /// claim: invariant(forall-seed) — off-gate (heavy:); the breadth-check
 /// twin of the always-run flagship control, over seeds 0/1/2/7
+///
+/// nextest: four-seed-sweep
 #[test]
 #[ignore = "heavy: live-worldgen battery; deferred from the commit gate to the heavy set (decision 0132)"]
 fn the_null_control_holds_across_a_seed_sweep() {
@@ -152,16 +155,34 @@ fn the_null_control_holds_across_a_seed_sweep() {
     // be able to tell "quiet because healthy" from "quiet because there was
     // nobody to read" — so the population's non-emptiness and its recovery are
     // asserted too, matching the seed-42 control beside this one.
-    let mut report = Vec::new();
-    for seed in [0u64, 1, 2, 7] {
+    struct SeedReadout {
+        sampled_any_creatures: bool,
+        report: HealthReport,
+    }
+
+    let seeds = [0u64, 1, 2, 7];
+    // Each world is a pure function of its seed. `map_seeds` returns rows in
+    // seed order, so assertions and report emission stay on this caller thread
+    // and remain byte-identical to the serial loop this replaces. Set
+    // `HV_SEED_SWEEP_THREADS=1` to reproduce the old execution shape exactly.
+    let per_seed: Vec<SeedReadout> = seed_sweep::map_seeds(seeds, |seed| {
         let traces = simulate_world(&world(seed));
+        let report = health_report(&traces);
+        SeedReadout {
+            sampled_any_creatures: !traces.is_empty(),
+            report,
+        }
+    });
+
+    let mut report = Vec::new();
+    for (seed, readout) in seeds.into_iter().zip(per_seed) {
         assert!(
-            !traces.is_empty(),
+            readout.sampled_any_creatures,
             "seed {seed} sampled NO creatures: `simulate_world` returned an empty \
              population (a failed locale build or no settlement), which would read \
              stuck 0.0 vacuously and pass this control without measuring anything"
         );
-        let r = health_report(&traces);
+        let r = readout.report;
         report.push(format!(
             "seed {seed}: stuck {:.4} chronicity {:.4} prevalence {:.4} recovery {:?}",
             r.stuck, r.chronicity, r.prevalence, r.recovery_ticks
