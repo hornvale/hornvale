@@ -34,7 +34,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.18772295 | 0.19983292 | 0.19983292 | 0.20258981 | 0.22079772 | 0.20067353 |
+| 0.18772295 | 0.19983292 | 0.19983292 | 0.20258981 | 0.22079772 | 0.20069453 |
 
 ### `chorus-distortion`
 
@@ -44,7 +44,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.38095238 | 0.39298246 | 0.39298246 | 0.39298246 | 0.42735043 | 0.39470864 |
+| 0.38095238 | 0.39298246 | 0.39298246 | 0.39298246 | 0.42735043 | 0.39471642 |
 
 ### `chorus-param-spread`
 
@@ -54,7 +54,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.10066667 | 0.16304762 | 0.16304762 | 0.16304762 | 0.17054945 | 0.1623974 |
+| 0.10066667 | 0.16304762 | 0.16304762 | 0.16304762 | 0.17054945 | 0.16239845 |
 
 ### `chorus-recoverability`
 
@@ -64,7 +64,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.79411765 | 0.86507937 | 0.87368421 | 0.87368421 | 0.92222222 | 0.86546318 |
+| 0.79411765 | 0.86507937 | 0.87368421 | 0.87368421 | 0.92222222 | 0.86540704 |
 
 ### `chorus-sky-calibration`
 
@@ -84,7 +84,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0027280106 | 0.0037399542 | 0.0037399542 | 0.0042365046 | 0.0070778646 | 0.0039878452 |
+| 0.0027280106 | 0.0037399542 | 0.0037399542 | 0.0042365046 | 0.0070778646 | 0.003989865 |
 
 ### `clean-outgroup-kobold`
 
@@ -278,7 +278,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 10 | 17 | 29 | 159 | 21.781 |
+| 0 | 10 | 17 | 29 | 159 | 21.858 |
 
 ### `homophony-count-goblin`
 
@@ -288,7 +288,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 4 | 8 | 49 | 5.906 |
+| 0 | 1 | 4 | 8 | 49 | 5.885 |
 
 ### `homophony-count-hobgoblin`
 
@@ -298,7 +298,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 1 | 3 | 9 | 53 | 6.234 |
+| 0 | 1 | 4 | 9 | 53 | 6.225 |
 
 ### `homophony-count-kobold`
 
@@ -308,7 +308,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0 | 4 | 10 | 70 | 6.354 |
+| 0 | 0 | 4 | 10 | 70 | 6.382 |
 
 ### `homophony-merger-share-bugbear`
 
@@ -324,7 +324,7 @@ n = 997 present, 3 absent (of 1000 worlds)
 
 Fraction of goblin colliding surface forms that are MERGERS (colliding roots carry ≥2 distinct proto-forms — the cascade or nativization made the collision after the proto) rather than draw-collisions (one shared proto); Absent if goblin has no collision (an undefined ratio, never reported as 0)
 
-n = 787 present, 213 absent (of 1000 worlds)
+n = 785 present, 215 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -344,7 +344,7 @@ n = 752 present, 248 absent (of 1000 worlds)
 
 Fraction of kobold colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if kobold has no collision
 
-n = 671 present, 329 absent (of 1000 worlds)
+n = 670 present, 330 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
@@ -580,7 +580,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `homophony-merger-share-goblin`
 
-- **D2**: min == median == max == 1 across 787 worlds
+- **D2**: min == median == max == 1 across 785 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `homophony-merger-share-hobgoblin`
@@ -590,7 +590,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `homophony-merger-share-kobold`
 
-- **D2**: min == median == max == 1 across 671 worlds
+- **D2**: min == median == max == 1 across 670 worlds
 - **D4**: median 1 equals the min (1 .. 1)
 
 ### `tone-count-goblin`

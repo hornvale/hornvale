@@ -6718,3 +6718,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T13:42:51Z | gate-commit | 108.480 | 76.904 | 19.538 | 0.89 | 0 | eced09c3a | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-09T16:17:19Z | gate-commit | 46.661 | 71.875 | 17.803 | 1.92 | 0 | 14e52b05d | campaign/the-wanderers | MacBookPro | 10 |
 | 2026-09-09T16:19:08Z | gate-commit | 47.665 | 71.444 | 19.082 | 1.90 | 0 | 14e52b05d | campaign/the-wanderers | MacBookPro | 10 |
+| 2026-09-09T17:16:01Z | census-tail-chorus | 57.277 | 720.492 | 21.838 | 12.96 | 0 | cc1b54965 |  | lefford | 40 |
+| 2026-09-09T17:27:40Z | census-study-the-census | 699.001 | 26546.666 | 149.395 | 38.19 | 0 | cc1b54965 |  | lefford | 40 |
+| 2026-09-09T17:33:16Z | census-study-the-meeting | 336.338 | 12210.532 | 113.535 | 36.64 | 0 | cc1b54965 |  | lefford | 40 |
+| 2026-09-09T17:33:18Z | census-tail-domesday | 1.145 | 1.004 | 0.137 | 1.00 | 0 | cc1b54965 |  | lefford | 40 |
+| 2026-09-09T17:33:19Z | census-tail-anomalies | 0.540 | 0.473 | 0.067 | 1.00 | 0 | cc1b54965 |  | lefford | 40 |
+| 2026-09-09T17:33:21Z | census | 1364.038 | 41061.672 | 362.020 | 30.37 | 0 | cc1b54965 |  | lefford | 40 |
+| 2026-09-09T17:53:58Z | gnomon-injection | 405.266 | 4591.416 | 154.401 | 11.71 | 817 | cc1b54965 |  | lefford | 40 |
