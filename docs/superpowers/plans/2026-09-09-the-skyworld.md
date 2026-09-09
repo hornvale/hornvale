@@ -135,7 +135,7 @@
 **Interfaces:**
 
 - Consumes: Stage 1 `SkyWorld`, `SkyTerritory`, world time, existing prevailing winds/ocean currents where applicable, and `ResourceAxis`/`ResourceKind` semantics from `hornvale-kernel::ecology`.
-- Produces: `SkyStocks::productivity`, `SkyTrajectorySample`, `SkyFootprint`, `SkyPropagation::{LocalKernel, Corridor, Event}`, `SkyAdjacency`, `trajectory_at(territory_id, time_slice)`, and `propagation_at(territory_id, detail)`.
+- Produces: the expanded `SkyStocks` beginning with `SkyStocks::plankton` as the productivity value, `SkyTrajectorySample`, `SkyFootprint`, the existing `SkyPropagation` struct's explicit `local`, `corridors`, and `events` channels, `SkyAdjacency`, `trajectory_at(territory_id, time_slice)`, and `propagation_at(territory_id, detail)`.
 
 - [ ] **Step 1: Write failing orchard-chain tests.** Assert that zero aether, zero high-sky radiation, or zero moisture independently prevents sky-plankton productivity; assert that positive values produce plankton, fungal/root support, soil fertility, canopy biomass, flowers, pollination, and fruit in dependency order; assert that stock quantities remain finite and bounded.
 
@@ -151,7 +151,7 @@
 
 - [ ] **Step 5: Implement coarse deterministic movement.** Sample existing wind/current-like fields along a trajectory using the movement stream, with lunar and stellar forcing as modulation rather than a fluid solver. Store only requested trajectory samples; derive the physical projection at each sample from the geosphere’s nearest vertices. Use explicit vertex/id ordering and `f64::total_cmp` where a choice depends on floating-point scores.
 
-- [ ] **Step 6: Implement the three bounded propagation forms.** Use a bounded local kernel for immediate exchange/influence; use ordered wind corridors for seeds, spores, plankton, and routes; represent blooms, storms, and collapses as sparse event records. Do not broadcast a territory’s influence to every planet cell. Make the propagation API return the selected form explicitly so consumers cannot confuse a corridor with a dense field.
+- [ ] **Step 6: Implement the three bounded propagation forms.** Use the existing `SkyPropagation` struct's `local` channel for a bounded local kernel, its `corridors` channel for ordered wind corridors carrying seeds, spores, plankton, and routes, and its `events` channel for sparse bloom, storm, and collapse records. Do not broadcast a territory’s influence to every planet cell. Keep the channels explicit so consumers cannot confuse a corridor with a dense field.
 
 - [ ] **Step 7: Run focused tests and a small scaling probe.**
 
