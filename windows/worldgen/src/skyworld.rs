@@ -519,6 +519,20 @@ pub(crate) fn sky_forcing(world: &World) -> f64 {
     total_tide / (1.0 + total_tide)
 }
 
+/// Apply the per-vertex edifice bias to an already-derived environment score.
+///
+/// The boolean is deliberately supplied by the caller so the score's tectonic
+/// contribution remains independently testable from terrain generation.
+fn score_distribution_environment(
+    non_tectonic_environment: f64,
+    has_edifice: bool,
+    draw: f64,
+) -> (f64, f64) {
+    let volcanic_bias = if has_edifice { 0.25 } else { 0.0 };
+    let environment = (non_tectonic_environment + volcanic_bias).clamp(0.0, 1.0);
+    (environment + draw * 0.45, environment)
+}
+
 fn distribution_score(
     world: &World,
     terrain: &GeneratedTerrain,
@@ -544,14 +558,12 @@ fn distribution_score(
     let climate_bias =
         climate.moisture_at(vertex) * 0.20 + climate.storm_propensity_at(vertex) * 0.15;
     let coastal_bias = if coastal { 0.25 } else { 0.0 };
-    let volcanic_bias = if crate::hazard::has_edifice(terrain, vertex) {
-        0.25
-    } else {
-        0.0
-    };
-    let environment = (terrain_bias + elevation_bias + climate_bias + coastal_bias + volcanic_bias)
-        .clamp(0.0, 1.0);
-    let score = environment + draw.next_f64() * 0.45;
+    let non_tectonic_environment = terrain_bias + elevation_bias + climate_bias + coastal_bias;
+    let (score, environment) = score_distribution_environment(
+        non_tectonic_environment,
+        crate::hazard::has_edifice(terrain, vertex),
+        draw.next_f64(),
+    );
     let altitude = 4_000.0 + 8_000.0 * draw.next_f64();
     if scores.len() <= vertex.0 as usize {
         scores.resize(vertex.0 as usize + 1, 0.0);
@@ -842,5 +854,19 @@ fn stocks_from_fields(fields: &SkyFields, orchard: bool) -> SkyStocks {
         detritus: canopy_biomass * ORCHARD_DETRITUS_FRACTION,
         seed_spore_reserve: fruit * ORCHARD_SEED_SPORE_FRACTION,
         animal_forage: fruit * ORCHARD_ANIMAL_FORAGE_FRACTION,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn edifice_bias_adds_to_the_distribution_score() {
+        let without_edifice = score_distribution_environment(0.50, false, 0.0);
+        let with_edifice = score_distribution_environment(0.50, true, 0.0);
+
+        assert_eq!(without_edifice, (0.50, 0.50));
+        assert_eq!(with_edifice, (0.75, 0.75));
     }
 }
