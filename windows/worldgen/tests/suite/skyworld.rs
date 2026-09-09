@@ -1556,48 +1556,54 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         source.split_whitespace().collect()
     }
 
-    fn root_skyworld_reexports(source: &str) -> Vec<String> {
-        const RELATED_MODULE_TOKENS: [&str; 3] = ["skyworld", "propagation", "render"];
-
-        let mut reexports = Vec::new();
-        let mut grouped: Option<String> = None;
+    fn pub_use_declarations(source: &str) -> Vec<String> {
+        let mut declarations = Vec::new();
+        let mut declaration: Option<String> = None;
 
         for line in source.lines().map(str::trim) {
-            if let Some(declaration) = grouped.as_mut() {
-                declaration.push_str(line);
-                if line == "};" {
-                    reexports.push(compact(declaration));
-                    grouped = None;
+            if let Some(current) = declaration.as_mut() {
+                current.push_str(line);
+                if line.ends_with(';') {
+                    declarations.push(compact(
+                        &declaration
+                            .take()
+                            .expect("an active pub use declaration is present"),
+                    ));
                 }
                 continue;
             }
 
-            if !line.starts_with("pub use")
-                || !RELATED_MODULE_TOKENS
-                    .iter()
-                    .any(|token| line.contains(token))
-            {
-                continue;
-            }
-
-            if line.ends_with(';') {
-                reexports.push(compact(line));
-            } else {
-                // The current root uses multiline braced re-exports; retain
-                // the whole declaration so additions and aliases are exact.
-                assert!(
-                    line.ends_with('{'),
-                    "Skyworld root re-export must be standalone or braced: {line}"
-                );
-                grouped = Some(line.to_string());
+            if line.starts_with("pub use") {
+                declaration = Some(line.to_string());
+                if line.ends_with(';') {
+                    declarations.push(compact(
+                        &declaration
+                            .take()
+                            .expect("a standalone pub use declaration is present"),
+                    ));
+                }
             }
         }
 
         assert!(
-            grouped.is_none(),
-            "Skyworld grouped root re-export must close before the end of lib.rs"
+            declaration.is_none(),
+            "a root pub use declaration must close before the end of lib.rs"
         );
-        reexports
+        declarations
+    }
+
+    fn root_skyworld_reexports(source: &str) -> Vec<String> {
+        const SKY_MODULE_PATHS: [&str; 3] =
+            ["skyworld::", "skyworld_propagation::", "skyworld_render::"];
+
+        pub_use_declarations(source)
+            .into_iter()
+            .filter(|declaration| {
+                SKY_MODULE_PATHS
+                    .iter()
+                    .any(|module_path| declaration.contains(module_path))
+            })
+            .collect()
     }
 
     let build_depth = WORLDGEN_LIB
@@ -1660,6 +1666,9 @@ fn skyworld_contract_has_no_build_or_save_surface() {
             pub use crate::skyworld_propagation::{
                 propagation_at as propagate_overlay,
             };
+            pub use unrelated_render::{
+                render_readout,
+            };
             "#,
         ),
         [
@@ -1667,7 +1676,7 @@ fn skyworld_contract_has_no_build_or_save_surface() {
             "pubuseself::skyworld_render::{render_skyworld_readoutasrender_overlay,};",
             "pubusecrate::skyworld_propagation::{propagation_ataspropagate_overlay,};",
         ],
-        "the source matcher must collect Skyworld root re-exports with alternate paths and aliases"
+        "the source matcher must collect only Skyworld root re-exports with alternate paths and aliases"
     );
     assert!(
         !WORLDGEN_LIB
