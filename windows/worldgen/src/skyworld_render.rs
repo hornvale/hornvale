@@ -35,6 +35,8 @@ fn mark(
 }
 
 fn pixels(skyworld: &SkyWorld, terrain: &GeneratedTerrain, detail: SkyWorldDetail) -> Vec<u8> {
+    #[cfg(test)]
+    crate::skyworld::record_raster();
     let geo = terrain.geosphere();
     let base = VertexMap::from_fn(geo, |vertex| {
         if terrain.is_ocean(vertex) {
@@ -138,6 +140,8 @@ fn pixels(skyworld: &SkyWorld, terrain: &GeneratedTerrain, detail: SkyWorldDetai
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(HEIGHT) * 180.0;
         for px in 0..WIDTH {
             let longitude = (f64::from(px) + 0.5) / f64::from(WIDTH) * 360.0 - 180.0;
+            #[cfg(test)]
+            crate::skyworld::record_raster_pixel();
             out.extend_from_slice(colors.get(index.nearest(geo, latitude, longitude)));
         }
     }

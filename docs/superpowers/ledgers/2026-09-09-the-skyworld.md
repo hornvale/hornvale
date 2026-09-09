@@ -362,6 +362,40 @@ and that the existing direct references already establish ownership.
 `detail_changes_materialization_not_generation` are unit probes; the focused
 integration cost probe records the active territory/sample/pixel counts.
 
+## #12 [G5] — Is bounded Skyworld work measured at actual loops?
+
+**Decision:** replace Task 3's returned-state/`println!` cost claim with a
+crate-test-only `SkyWorldWork` counter. It increments at each surface scan,
+territory construction, trajectory-sample construction, raster invocation,
+and raster pixel loop body. The counter is compiled only under `cfg(test)`,
+has crate visibility solely for the propagation and renderer modules, and
+neither changes runtime output nor exposes an API.
+
+**Evidence:** the new unit probe first red-compiled with missing
+`reset_skyworld_work`/`skyworld_work` helpers. Its green run independently
+asserts the seed-42 fixture's zero-territory configuration performs zero
+territory and trajectory work with 81,924 surface visits; its active
+two-territory configurations construct exactly four (two-sample) and sixteen
+(eight-sample) trajectory samples, each with 122,886 surface visits; and
+three detail renders execute exactly three rasters and 98,304 pixel loop
+bodies. These are counter values from generation/render loops, not sums of
+the returned sparse state. The existing terrain/climate reconstruction
+counters and their zero-call probes remain unchanged.
+
+**Alternatives discarded:** summing `SkyWorld` records cannot observe
+discarded intermediates; a public runtime diagnostic or cache API would widen
+the production surface; a general allocation counter would measure unrelated
+work and make the deterministic test host-sensitive.
+
+**Ideonomy passes / overturns:** one combination pass crossing the work
+observable's materiality (returned data, loop execution, runtime API) with
+its reversibility (test-only, runtime, saved). It selected loop execution ×
+test-only as the only narrow, direct, reversible seam; no overturn.
+
+**Capture:** `skyworld::tests::bounded_work_counts_generation_and_rendering_at_their_loops`
+is the deterministic report: it asserts every ledger count directly, with no
+`println!` measurement claim remaining.
+
 - A universal `sugar` renaming of world concepts.
 - Individual plankton or full atmospheric particles.
 - A single scalar habitat health value.

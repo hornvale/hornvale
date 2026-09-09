@@ -258,6 +258,8 @@ fn derive_trajectory(
         );
         let exchange = expand_footprint(context.terrain, &physical, EXCHANGE_RINGS);
         let influence = expand_footprint(context.terrain, &exchange, config.propagation_radius);
+        #[cfg(test)]
+        crate::skyworld::record_trajectory_sample();
         samples.push(SkyTrajectorySample {
             time_slice,
             position: SkyPosition {

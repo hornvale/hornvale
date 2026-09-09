@@ -381,6 +381,78 @@ pub struct SkyWorld {
     pub territories: Vec<SkyTerritory>,
 }
 
+/// Test-only count of work performed at Skyworld's generation and raster loops.
+///
+/// This records loop bodies, rather than retained `SkyWorld` state, so the
+/// bounded-work probes also reject work that a future implementation might
+/// discard before returning.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct SkyWorldWork {
+    pub(crate) surface_vertices: usize,
+    pub(crate) territories: usize,
+    pub(crate) trajectory_samples: usize,
+    pub(crate) rasters: usize,
+    pub(crate) raster_pixels: usize,
+}
+
+#[cfg(test)]
+thread_local! {
+    static SKYWORLD_WORK: std::cell::Cell<SkyWorldWork> = const { // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
+        std::cell::Cell::new(SkyWorldWork { // lexicon: std::cell::Cell diagnostic counter idiom, not the mesh sense
+            surface_vertices: 0,
+            territories: 0,
+            trajectory_samples: 0,
+            rasters: 0,
+            raster_pixels: 0,
+        })
+    };
+}
+
+#[cfg(test)]
+pub(crate) fn reset_skyworld_work() {
+    SKYWORLD_WORK.with(|work| work.set(SkyWorldWork::default()));
+}
+
+#[cfg(test)]
+pub(crate) fn skyworld_work() -> SkyWorldWork {
+    SKYWORLD_WORK.with(|work| work.get())
+}
+
+#[cfg(test)]
+fn record_skyworld_work(update: impl FnOnce(&mut SkyWorldWork)) {
+    SKYWORLD_WORK.with(|work| {
+        let mut current = work.get();
+        update(&mut current);
+        work.set(current);
+    });
+}
+
+#[cfg(test)]
+fn record_surface_vertex() {
+    record_skyworld_work(|work| work.surface_vertices += 1);
+}
+
+#[cfg(test)]
+fn record_territory() {
+    record_skyworld_work(|work| work.territories += 1);
+}
+
+#[cfg(test)]
+pub(crate) fn record_trajectory_sample() {
+    record_skyworld_work(|work| work.trajectory_samples += 1);
+}
+
+#[cfg(test)]
+pub(crate) fn record_raster() {
+    record_skyworld_work(|work| work.rasters += 1);
+}
+
+#[cfg(test)]
+pub(crate) fn record_raster_pixel() {
+    record_skyworld_work(|work| work.raster_pixels += 1);
+}
+
 impl SkyWorld {
     /// Generate the compact additive overlay from an already-built world,
     /// terrain, and climate. The world must carry the generated astronomy
@@ -460,13 +532,21 @@ fn derive_fields(
     let mean_temperature = terrain
         .geosphere()
         .vertices()
-        .map(|v| climate.mean_temperature_at(v).get())
+        .map(|v| {
+            #[cfg(test)]
+            record_surface_vertex();
+            climate.mean_temperature_at(v).get()
+        })
         .sum::<f64>()
         / terrain.geosphere().vertex_count() as f64;
     let mean_moisture = terrain
         .geosphere()
         .vertices()
-        .map(|v| climate.moisture_at(v))
+        .map(|v| {
+            #[cfg(test)]
+            record_surface_vertex();
+            climate.moisture_at(v)
+        })
         .sum::<f64>()
         / terrain.geosphere().vertex_count() as f64;
     let wind = climate
@@ -606,6 +686,8 @@ fn derive_territories(
     let mut ocean = Vec::new();
     let mut environment_total = 0.0;
     for vertex in terrain.geosphere().vertices() {
+        #[cfg(test)]
+        record_surface_vertex();
         let (score, environment) =
             distribution_score(world, terrain, climate, &mut scores, &mut altitudes, vertex);
         environment_total += environment;
@@ -718,6 +800,8 @@ fn make_territory(
     altitude: f64,
     orchard: bool,
 ) -> SkyTerritory {
+    #[cfg(test)]
+    record_territory();
     projected.sort();
     let surface = projected[0];
     let key = format!("territory/{}", surface.0);
@@ -1016,5 +1100,77 @@ mod tests {
             "detail selection changed generated SkyWorld state"
         );
         assert_substrate_was_not_reconstructed("detail selection");
+    }
+
+    #[test]
+    fn bounded_work_counts_generation_and_rendering_at_their_loops() {
+        let (world, terrain, climate) = fixture();
+        let inactive = SkyWorldConfig {
+            max_projected_fraction: 0.0,
+            ..config()
+        };
+        let short = SkyWorldConfig {
+            trajectory_samples: 2,
+            ..config()
+        };
+        let long = SkyWorldConfig {
+            trajectory_samples: 8,
+            ..config()
+        };
+
+        reset_skyworld_work();
+        let no_territories = skyworld_from(&world, &terrain, &climate, inactive);
+        let inactive_work = skyworld_work();
+        assert!(no_territories.territories.is_empty());
+        assert_eq!(inactive_work.territories, 0);
+        assert_eq!(inactive_work.trajectory_samples, 0);
+        assert_eq!(
+            inactive_work.surface_vertices,
+            terrain.geosphere().vertex_count() * 2
+        );
+        assert_eq!(inactive_work.surface_vertices, 81_924);
+
+        reset_skyworld_work();
+        let short_world = skyworld_from(&world, &terrain, &climate, short);
+        let short_work = skyworld_work();
+        assert!(!short_world.territories.is_empty());
+        assert!(short_work.territories > inactive_work.territories);
+        assert_eq!(short_work.territories, short_world.territories.len());
+        assert_eq!(short_work.territories, 2);
+        assert_eq!(
+            short_work.trajectory_samples,
+            short_world.territories.len() * 2
+        );
+        assert_eq!(short_work.trajectory_samples, 4);
+
+        reset_skyworld_work();
+        let long_world = skyworld_from(&world, &terrain, &climate, long);
+        let long_work = skyworld_work();
+        assert_eq!(long_work.territories, long_world.territories.len());
+        assert_eq!(long_work.territories, short_work.territories);
+        assert_eq!(
+            long_work.trajectory_samples,
+            long_world.territories.len() * 8
+        );
+        assert_eq!(long_work.trajectory_samples, 16);
+        assert_eq!(
+            long_work.surface_vertices,
+            terrain.geosphere().vertex_count() * 3
+        );
+        assert_eq!(long_work.surface_vertices, 122_886);
+        assert_eq!(long_work.surface_vertices, short_work.surface_vertices);
+
+        reset_skyworld_work();
+        for detail in [
+            crate::SkyWorldDetail::Planet,
+            crate::SkyWorldDetail::Regional,
+            crate::SkyWorldDetail::Habitat,
+        ] {
+            let _ = render_skyworld_png(&long_world, &terrain, detail);
+        }
+        let render_work = skyworld_work();
+        assert_eq!(render_work.rasters, 3);
+        assert_eq!(render_work.raster_pixels, 3 * 256 * 128);
+        assert_eq!(render_work.raster_pixels, 98_304);
     }
 }
