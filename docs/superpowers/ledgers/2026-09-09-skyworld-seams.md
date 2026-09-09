@@ -32,6 +32,26 @@ planet-by-time atmospheric simulation would violate the bounded-work goal.
 
 **Plan:** `docs/superpowers/plans/2026-09-09-skyworld-seams.md`.
 
+## #2 [G5] — Does the environmental propagation matrix prove its dependencies?
+
+**Decision:** accept the propagation matrix after two review-driven fix
+rounds. Surface/climate perturbations now prove source inequality before
+checking dependent overlay outputs; the preservation probe regenerates both
+fixtures and verifies terrain, climate, and `BiomeExpr` remain intact.
+
+The tectonic probe initially remained correlational because plate-count
+fixtures changed elevation, coast, climate, and edifices together. The final
+fix extracts the pure score contribution, passes the real per-vertex
+`has_edifice` flag from production, and unit-tests the documented `0.25`
+increase directly. This makes the test fail if the edifice bias is removed.
+
+**Evidence:** all 34 Skyworld integration tests and the edifice unit test pass
+after The Staple D4 was incorporated from `origin/main`; the merged-tree
+commit gate also passed. No Skyworld production API, BuildDepth rung, save
+fact, stream roster, or cross-realm implementation was added.
+
+**Capture:** Task 2 commits `b5c9b39d3`, `a410a2bfb`, and `4d9f3005b`.
+
 ## Deferred
 
 - No organisms, species, lifecycle mutation, tethering, mutable atmosphere,

@@ -78,7 +78,7 @@
 
 **Goal:** Demonstrate that stable changes in surface and atmospheric inputs reach only the Skyworld quantities that should depend on them, without introducing a second biome taxonomy or authored placement rules.
 
-**Status:** Not Started
+**Status:** Complete — commits `b5c9b39d3`, `a410a2bfb`, and `4d9f3005b`; scoped review approved after two fix rounds.
 
 **Files:**
 - Modify: `windows/worldgen/tests/suite/skyworld.rs`
