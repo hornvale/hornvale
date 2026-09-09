@@ -173,6 +173,24 @@ Deno.test("packet parsing refuses non-finite time values", async () => {
   );
 });
 
+Deno.test("packet parsing accepts only safe uint32 frame indexes", async () => {
+  const packet = JSON.parse(await fixtureText()) as Record<string, unknown>;
+  for (const frameIndex of [0, 4294967295]) {
+    assertEquals(
+      parseObservationFramePacket(JSON.stringify({ ...packet, frame_index: frameIndex }))
+        .frame_index,
+      frameIndex,
+    );
+  }
+  for (const frameIndex of [-1, 1.5, 4294967296, Number.MAX_SAFE_INTEGER + 1]) {
+    assertThrows(
+      () => parseObservationFramePacket(JSON.stringify({ ...packet, frame_index: frameIndex })),
+      ObservationFrameError,
+      "frame_index",
+    );
+  }
+});
+
 Deno.test("browser preview output exists at phone and laptop sizes with supplied evidence", async () => {
   // Catches a renderer that only returns state without a browser-inspectable visual surface.
   const packet = await fixture();

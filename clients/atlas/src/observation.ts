@@ -112,8 +112,11 @@ export function parseObservationFramePacket(input: string): FramePacket {
   const spatial = record(doc.spatial, "spatial");
   const worldSeed = canonicalU64(doc.world_seed);
   const frameIndex = doc.frame_index;
-  if (typeof frameIndex !== "number" || !Number.isInteger(frameIndex) || frameIndex < 0) {
-    throw new ObservationFrameError("frame_index must be a non-negative integer");
+  if (
+    typeof frameIndex !== "number" || !Number.isSafeInteger(frameIndex) || frameIndex < 0 ||
+    frameIndex > 4294967295
+  ) {
+    throw new ObservationFrameError("frame_index must be a safe uint32 integer");
   }
   if (
     (typeof doc.time_day !== "number" && doc.time_day !== null) ||
