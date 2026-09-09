@@ -6838,3 +6838,6 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T14:08:01Z | census-tail-domesday | 0.789 | 0.486 | 0.042 | 0.67 | 0 | eb5a63674 | campaign/skyworld | MacBookPro | 10 |
 | 2026-09-09T14:08:02Z | census-tail-anomalies | 0.568 | 0.340 | 0.038 | 0.67 | 0 | eb5a63674 | campaign/skyworld | MacBookPro | 10 |
 | 2026-09-09T14:08:05Z | rebaseline | 338.898 | 493.074 | 23.220 | 1.52 | 0 | eb5a63674 | campaign/skyworld | MacBookPro | 10 |
+| 2026-09-09T14:51:58Z | gate-commit | 44.118 | 80.647 | 23.453 | 2.36 | 0 | d302a12da | campaign/skyworld | MacBookPro | 10 |
+| 2026-09-09T15:01:11Z | gate-commit | 108.594 | 141.592 | 148.259 | 2.67 | 0 | d302a12da | campaign/skyworld | MacBookPro | 10 |
+| 2026-09-09T15:02:28Z | gate-commit | 44.882 | 74.166 | 20.662 | 2.11 | 0 | d302a12da | campaign/skyworld | MacBookPro | 10 |

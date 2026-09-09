@@ -82,6 +82,38 @@ kernels, corridors, itineraries, events, and broadcasts.
 **Capture:** performance, determinism, and testing requirements are in §§5,
 7, and 8 of the design spec.
 
+## #4 [Q] — What does Stage 1 store for trajectory and propagation?
+
+**Ruling:** keep the brief's `trajectory`, `exchange`, and `influence` fields
+in the public overlay model, but generate no trajectory samples, expanded
+exchange envelope, corridors, or events in Stage 1. `trajectory` and
+`SkyPropagation` therefore begin empty, while `exchange` begins as the
+physical footprint; the later movement/propagation stage owns every derived
+addition.
+
+**Why:** the task brief makes those fields part of the intended interface,
+while the implementer dispatch explicitly forbids implementing orchard
+trajectories or propagation in this stage. Storage without derived behavior
+preserves the interface and the stage boundary. If this ruling is wrong, the
+cost is a small additive initialization change in the later stage, not a
+changed draw or surface-biome epoch.
+
+**Alternatives discarded:** omitting the fields would contradict the brief's
+public type shape and force a later structural API change; deriving even a
+one-sample route or influence kernel now would cross the explicit Stage 1
+scope; optional renderer-owned state would violate the overlay's ownership
+rule.
+
+**Ideonomy passes / overturns:** one abstraction-lift matrix pass over
+informational versus active state and externally driven versus autonomous
+behavior; no overturn. The pass exposed the useful boundary as
+"storage present / autonomous derivation absent," rather than treating type
+existence and simulation behavior as one decision.
+
+**Capture:** this ruling is local to Stage 1 and recorded here; no speculative
+follow-up was created because the approved plan already assigns the absent
+behavior to later tasks.
+
 ## Follow-ups
 
 - Run the first Skyworld implementation as a pressure test of the existing
