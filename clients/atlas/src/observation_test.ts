@@ -1,4 +1,7 @@
+/// <reference lib="dom" />
+
 import { assert, assertEquals, assertThrows } from "@std/assert";
+import { parseHTML } from "npm:linkedom@0.18.12";
 import {
   type FramePacket,
   ObservationFrameError,
@@ -7,6 +10,7 @@ import {
   renderObservationFrameHtml,
   renderObservationPreview,
 } from "./observation.ts";
+import { mountObservationPreview } from "./observation_preview.ts";
 
 const PHONE = { width: 390, height: 844 };
 const LAPTOP = { width: 1440, height: 900 };
@@ -47,7 +51,7 @@ Deno.test("legend values come only from supplied labels", async () => {
   assert(!rendered.includes("iron deposit"));
   assertEquals(
     state.legend.map(({ key }) => key),
-    ["material", "object", "primary_axis", "scale", "zebra", "äther"],
+    ["count_unit", "material", "object", "primary_axis", "scale", "zebra", "äther"],
   );
 });
 
@@ -81,6 +85,13 @@ Deno.test("unknown frame schemas and missing source digests are refused", async 
       parseObservationFramePacket(JSON.stringify({ ...packet, schema: "observation/frame/v2" })),
     ObservationFrameError,
     "schema",
+  );
+  const missingCountUnit = JSON.parse(await fixtureText()) as Record<string, unknown>;
+  (missingCountUnit.labels as Record<string, unknown>).count_unit = undefined;
+  assertThrows(
+    () => parseObservationFramePacket(JSON.stringify(missingCountUnit)),
+    ObservationFrameError,
+    "labels.count_unit",
   );
   assertThrows(
     () => parseObservationFramePacket(JSON.stringify({ ...packet, source_digest: "" })),
@@ -165,7 +176,6 @@ Deno.test("packet parsing refuses non-finite time values", async () => {
 Deno.test("browser preview output exists at phone and laptop sizes with supplied evidence", async () => {
   // Catches a renderer that only returns state without a browser-inspectable visual surface.
   const packet = await fixture();
-  packet.labels.count_unit = "chambers";
   packet.time_day = 12.5;
   for (const viewport of [PHONE, LAPTOP]) {
     const output = renderObservationFrameHtml(packet, viewport);
@@ -189,7 +199,6 @@ Deno.test("browser preview output exists at phone and laptop sizes with supplied
 Deno.test("preview exposes independently inspectable phone and laptop frame states", async () => {
   // Catches a preview that only tests text fragments instead of both rendered frame outputs.
   const packet = await fixture();
-  packet.labels.count_unit = "chambers";
   const preview = renderObservationPreview(packet);
 
   assertEquals(preview.phone.state.layout, "phone");
@@ -205,6 +214,40 @@ Deno.test("preview exposes independently inspectable phone and laptop frame stat
   assertEquals(preview.laptop.state.provenance.worldRevision, packet.world_revision);
   assertEquals(preview.laptop.state.provenance.sourceDigest, packet.source_digest);
   assert(preview.laptop.html.length > 0);
+});
+
+Deno.test("browser mount is exercised through a DOM-capable harness", async () => {
+  // Catches a preview entry that is exported but never mounts inspectable browser frames.
+  const { document } = parseHTML('<div id="preview"></div>') as unknown as { document: Document };
+  const root = document.getElementById("preview")!;
+  const previousDocument = globalThis.document;
+  globalThis.document = document;
+  try {
+    mountObservationPreview(root, await fixtureText());
+  } finally {
+    globalThis.document = previousDocument;
+  }
+
+  const sections = root.querySelectorAll("section");
+  assertEquals(sections.length, 2);
+  assertEquals(sections[0].getAttribute("aria-label"), "Phone observation preview");
+  assertEquals(sections[1].getAttribute("aria-label"), "Laptop observation preview");
+  for (const section of sections) {
+    const iframe = section.querySelector("iframe")!;
+    assert(iframe.srcdoc.length > 0);
+    const frame = (parseHTML(iframe.srcdoc) as unknown as { document: Document }).document;
+    assertEquals(
+      frame.querySelector("h1")?.textContent,
+      "How the underworld gathers into chambers",
+    );
+    assertEquals(frame.querySelector("[data-map] pre")?.textContent?.includes("vertex 30"), true);
+    assertEquals(
+      frame.querySelector('[aria-label="Observation"] p')?.textContent,
+      "Chambers gather into connected cave systems across depth bands.",
+    );
+    assertEquals(frame.querySelector("header p")?.textContent?.includes("chambers"), true);
+    assertEquals(frame.querySelector("[data-provenance]")?.textContent?.includes("revision"), true);
+  }
 });
 
 Deno.test("comparison metadata never enters public render state", async () => {

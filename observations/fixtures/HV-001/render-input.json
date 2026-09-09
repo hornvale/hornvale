@@ -6,6 +6,7 @@
   "time_day": null,
   "title": "How the underworld gathers into chambers",
   "labels": {
+    "count_unit": "chambers",
     "object": "geography",
     "observation_sentence": "Chambers gather into connected cave systems across depth bands.",
     "primary_axis": "spatial arrangement",

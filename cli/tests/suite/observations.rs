@@ -28,6 +28,7 @@ fn valid_manifest() -> EpisodeManifest {
         phenomenon: "drainage basins".to_string(),
         visual_grammar: VisualGrammar::Spatial,
         observation_sentence: "Ridges divide the world's drainage basins.".to_string(),
+        count_unit: "basins".to_string(),
         world_revision: "test-revision".to_string(),
         seed: 42,
         time_window: Some(TimeWindow {
@@ -73,6 +74,7 @@ fn manifest_json(overrides: &[(&str, serde_json::Value)]) -> String {
         "phenomenon": "drainage basins",
         "visual_grammar": "spatial",
         "observation_sentence": "Ridges divide the world's drainage basins.",
+        "count_unit": "basins",
         "world_revision": "test-revision",
         "seed": 42,
         "time_window": { "start_day": 0.0, "end_day": 1.0 },
@@ -119,6 +121,12 @@ fn observations_missing_object_or_scale_is_refused() {
         let error = read_error(field, &[(field, serde_json::Value::Null)]);
         assert!(error.contains(field), "{field} error was: {error}");
     }
+}
+
+#[test]
+fn observations_missing_count_unit_is_refused() {
+    let error = read_error("count-unit", &[("count_unit", serde_json::Value::Null)]);
+    assert!(error.contains("count_unit"), "error was: {error}");
 }
 
 #[test]
@@ -495,6 +503,7 @@ fn observations_export_is_contiguous_identified_and_byte_deterministic() {
         assert_eq!(packet["episode_id"], "HV-001");
         assert_eq!(packet["world_seed"], "42");
         assert_eq!(packet["world_revision"], "test-revision");
+        assert_eq!(packet["labels"]["count_unit"], "basins");
         assert!(
             packet["source_digest"]
                 .as_str()
@@ -694,7 +703,13 @@ fn observations_hv_001_fixture_is_producer_backed_and_contains_no_client_classif
         .collect();
     assert_eq!(
         label_keys,
-        ["object", "observation_sentence", "primary_axis", "scale"],
+        [
+            "count_unit",
+            "object",
+            "observation_sentence",
+            "primary_axis",
+            "scale"
+        ],
         "renderer labels must remain authored manifest fields"
     );
     let spatial_keys: Vec<_> = packet["spatial"]

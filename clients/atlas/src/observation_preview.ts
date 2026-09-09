@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 import { parseObservationFramePacket, renderObservationPreview } from "./observation.ts";
 
 const PHONE = { width: 390, height: 844 };
@@ -16,6 +18,7 @@ export function mountObservationPreview(root: HTMLElement, packetText: string): 
 function frame(title: string, width: number, height: number, source: string): HTMLElement {
   const section = document.createElement("section");
   section.dataset.viewport = title.toLowerCase();
+  section.setAttribute("aria-label", `${title} observation preview`);
   const heading = document.createElement("h2");
   heading.textContent = `${title} preview`;
   const iframe = document.createElement("iframe");

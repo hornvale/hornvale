@@ -37,7 +37,7 @@ export interface RenderState {
   title: string;
   objectLabel: string;
   scaleLabel: string;
-  countUnitLabel?: string;
+  countUnitLabel: string;
   legend: Array<{ key: string; value: string }>;
   map: {
     bounds: Bounds;
@@ -125,7 +125,7 @@ export function parseObservationFramePacket(input: string): FramePacket {
   for (const [key, value] of Object.entries(labels)) {
     labelValues[key] = text(value, `labels.${key}`);
   }
-  for (const key of ["object", "scale", "primary_axis", "observation_sentence"]) {
+  for (const key of ["object", "scale", "primary_axis", "observation_sentence", "count_unit"]) {
     text(labelValues[key], `labels.${key}`);
   }
   return {

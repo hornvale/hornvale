@@ -118,7 +118,7 @@ pub struct Approval {
 }
 
 /// One internal observation episode and its reproducibility record.
-/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(identifier-text: object), bare-ok(identifier-text: scale), bare-ok(identifier-text: primary_axis), bare-ok(identifier-text: phenomenon), bare-ok(prose: observation_sentence), bare-ok(identifier-text: world_revision), bare-ok(count: seed), bare-ok(count: frame_count), bare-ok(render-internal: frame_rate), bare-ok(identifier-text: source_commands), bare-ok(artifact: controlled_inputs), bare-ok(artifact: comparison_reference), bare-ok(artifact: lead_time), bare-ok(identifier-text: source_data), bare-ok(identifier-text: render_output), bare-ok(prose: caption_draft)
+/// type-audit: bare-ok(identifier-text: id), bare-ok(prose: title), bare-ok(identifier-text: object), bare-ok(identifier-text: scale), bare-ok(identifier-text: primary_axis), bare-ok(identifier-text: phenomenon), bare-ok(prose: observation_sentence), bare-ok(identifier-text: count_unit), bare-ok(identifier-text: world_revision), bare-ok(count: seed), bare-ok(count: frame_count), bare-ok(render-internal: frame_rate), bare-ok(identifier-text: source_commands), bare-ok(artifact: controlled_inputs), bare-ok(artifact: comparison_reference), bare-ok(artifact: lead_time), bare-ok(identifier-text: source_data), bare-ok(identifier-text: render_output), bare-ok(prose: caption_draft)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EpisodeManifest {
@@ -138,6 +138,8 @@ pub struct EpisodeManifest {
     pub visual_grammar: VisualGrammar,
     /// Bounded statement of what the rendered evidence shows.
     pub observation_sentence: String,
+    /// Unit counted or observed by the episode's claim.
+    pub count_unit: String,
     /// Revision that produced the observed world.
     pub world_revision: String,
     /// Deterministic world identity.
@@ -472,6 +474,7 @@ pub fn validate_manifest(manifest: &EpisodeManifest) -> Result<(), ObservationEr
             "observation_sentence",
             manifest.observation_sentence.as_str(),
         ),
+        ("count_unit", manifest.count_unit.as_str()),
         ("world_revision", manifest.world_revision.as_str()),
     ] {
         require_text(field, value)?;
@@ -692,6 +695,7 @@ pub fn export_frames(
         ("object".to_string(), manifest.object.clone()),
         ("scale".to_string(), manifest.scale.clone()),
         ("primary_axis".to_string(), manifest.primary_axis.clone()),
+        ("count_unit".to_string(), manifest.count_unit.clone()),
         (
             "observation_sentence".to_string(),
             manifest.observation_sentence.clone(),

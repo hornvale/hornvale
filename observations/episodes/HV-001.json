@@ -7,6 +7,7 @@
   "phenomenon": "chamber lattice",
   "visual_grammar": "spatial",
   "observation_sentence": "Chambers gather into connected cave systems across depth bands.",
+  "count_unit": "chambers",
   "world_revision": "ed8e6f3369f2b45097d702a5c28cc84f1ae35f56",
   "seed": 42,
   "time_window": null,
