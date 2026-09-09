@@ -315,8 +315,12 @@ pub fn d4_recurrence_class(profiles: &[D4PortfolioProfile]) -> D4RecurrenceClass
     // than one distinct profile. Phase identity remains part of the cycle;
     // this is not an all-window average or a cross-phase relabeling.
     for period in 1..=(signatures.len() / 2) {
-        if signatures.len() % period == 0
-            && (period..signatures.len()).all(|index| {
+        if signatures.len() >= period * 2
+            && (period * 2..signatures.len()).all(|index| {
+                signatures[index] == signatures[index % period]
+                    && profiles[index].phase == profiles[index % period].phase
+            })
+            && (period..(period * 2)).all(|index| {
                 signatures[index] == signatures[index % period]
                     && profiles[index].phase == profiles[index % period].phase
             })
@@ -503,6 +507,10 @@ mod tests {
         );
         assert_eq!(
             d4_recurrence_class(&[a0.clone(), b.clone(), a0.clone(), b.clone()]),
+            D4RecurrenceClass::Seasonal
+        );
+        assert_eq!(
+            d4_recurrence_class(&[a0.clone(), b.clone(), a0.clone(), b.clone(), a0.clone()]),
             D4RecurrenceClass::Seasonal
         );
         assert_eq!(

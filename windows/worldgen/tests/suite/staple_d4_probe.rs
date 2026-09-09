@@ -26,7 +26,7 @@ struct Input {
     witnesses: Vec<DiagnosticPortfolioWitness>,
     sources: Vec<(BakeId, Vertex, [f64; 2])>,
     treatment: ExchangeTreatment,
-    structural: StructuralVacuity,
+    structural: Option<StructuralVacuity>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -49,15 +49,21 @@ struct Branches {
     incomplete: Vec<BakeId>,
     axis_debt: Vec<D4AxisDebt>,
     structural_vacuity: bool,
+    structural_debt: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 struct Joined {
     community: BakeId,
     site: Vertex,
-    profiles: Vec<D4PortfolioProfile>,
-    observations: Vec<DiagnosticPortfolioValues>,
+    profiles: Vec<ObservedProfile>,
     source: [f64; 2],
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct ObservedProfile {
+    observed: DiagnosticPortfolioValues,
+    profile: D4PortfolioProfile,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -165,9 +171,15 @@ fn summarize(input: &Input) -> Report {
         .filter(|id| !live.contains_key(id))
         .copied()
         .collect();
-    branches.structural_vacuity = input.structural.isolated
-        || input.structural.hub_dominant
-        || input.structural.single_type_dominant;
+    let structural_debt = input.structural.is_none();
+    let structural = input.structural.unwrap_or_default();
+    if structural_debt {
+        branches.structural_debt = true;
+        add_debt(&mut branches, D4AxisDebt::Access);
+        add_debt(&mut branches, D4AxisDebt::Capability);
+    }
+    branches.structural_vacuity =
+        structural.isolated || structural.hub_dominant || structural.single_type_dominant;
     if branches.structural_vacuity {
         add_debt(&mut branches, D4AxisDebt::Access);
         add_debt(&mut branches, D4AxisDebt::Capability);
@@ -202,11 +214,18 @@ fn summarize(input: &Input) -> Report {
             branches.site_mismatch.push(community);
             continue;
         }
-        let profiles: Vec<_> = witness.phases.iter().map(profile).collect();
+        let profiles: Vec<_> = witness
+            .phases
+            .iter()
+            .map(|phase| ObservedProfile {
+                observed: phase.portfolio,
+                profile: profile(phase),
+            })
+            .collect();
         if profiles.is_empty()
             || profiles
                 .iter()
-                .any(|p| p.completeness != D4Completeness::Complete)
+                .any(|p| p.profile.completeness != D4Completeness::Complete)
         {
             branches.incomplete.push(community);
             add_debt(&mut branches, D4AxisDebt::Temporal);
@@ -216,7 +235,6 @@ fn summarize(input: &Input) -> Report {
             community,
             site: sites[0],
             profiles,
-            observations: witness.phases.iter().map(|phase| phase.portfolio).collect(),
             source,
         });
     }
@@ -228,7 +246,7 @@ fn summarize(input: &Input) -> Report {
                 && unit
                     .profiles
                     .iter()
-                    .all(|p| p.completeness == D4Completeness::Complete)
+                    .all(|p| p.profile.completeness == D4Completeness::Complete)
         })
         .collect();
     let mut regime_groups = BTreeMap::<Vec<String>, usize>::new();
@@ -236,7 +254,7 @@ fn summarize(input: &Input) -> Report {
         let signature = unit
             .profiles
             .iter()
-            .filter_map(d4_profile_signature)
+            .filter_map(|observed| d4_profile_signature(&observed.profile))
             .map(|signature| format!("{signature:?}"))
             .collect::<Vec<_>>();
         *regime_groups.entry(signature).or_default() += 1;
@@ -247,7 +265,14 @@ fn summarize(input: &Input) -> Report {
     } else {
         let recurrences: Vec<_> = adequate
             .iter()
-            .map(|unit| d4_recurrence_class(&unit.profiles))
+            .map(|unit| {
+                let profiles = unit
+                    .profiles
+                    .iter()
+                    .map(|observed| observed.profile.clone())
+                    .collect::<Vec<_>>();
+                d4_recurrence_class(&profiles)
+            })
             .collect();
         if recurrences
             .iter()
@@ -285,13 +310,14 @@ fn summarize(input: &Input) -> Report {
         differentiation_is_vacuous: adequate.iter().any(|unit| {
             unit.profiles
                 .iter()
-                .any(|profile| profile.raw.coercive_transfer != [0.0; 2])
+                .any(|observed| observed.profile.raw.coercive_transfer != [0.0; 2])
         }) || branches.structural_vacuity,
         recurrence,
         some_units_underpowered: !branches.incomplete.is_empty()
             || !branches.missing_witness.is_empty()
             || !branches.missing_source.is_empty()
-            || !branches.duplicate_source.is_empty(),
+            || !branches.duplicate_source.is_empty()
+            || branches.structural_debt,
     };
     let invalid_join = input.denominator != input.live.len() as u64
         || !branches.duplicate_live.is_empty()
@@ -354,7 +380,7 @@ fn fixture(phases: &[u16]) -> Input {
             })
             .collect(),
         treatment: ExchangeTreatment::Enabled,
-        structural: StructuralVacuity::default(),
+        structural: Some(StructuralVacuity::default()),
     }
 }
 
@@ -389,7 +415,7 @@ fn input_from_build(seed: u64, built: &ExchangeTreatmentBuild) -> Input {
         witnesses: built.history.diagnostic_portfolios.clone(),
         sources,
         treatment: ExchangeTreatment::Enabled,
-        structural: StructuralVacuity::default(),
+        structural: None,
     }
 }
 
@@ -433,6 +459,11 @@ fn typed_dependencies_and_mechanisms_remain_distinct() {
         input.witnesses[0].phases[0].portfolio.protection_access,
         Some([0.0; 2])
     );
+    let report = summarize(&input);
+    assert_eq!(
+        report.joined[0].profiles[0].observed.protection_access,
+        Some([0.0; 2])
+    );
 }
 
 #[test]
@@ -445,6 +476,10 @@ fn missing_mechanisms_and_vacuity_cannot_clear_positive_branch() {
     let report = summarize(&missing);
     assert!(report.branches.axis_debt.contains(&D4AxisDebt::Mechanism));
     assert_eq!(report.verdict, D4RegimeVerdict::MixedOrUnderpowered);
+    assert_eq!(
+        report.joined[0].profiles[0].observed.protection_access,
+        None
+    );
     let mut zero = fixture(&[0, 0]);
     for witness in &mut zero.witnesses {
         for phase in &mut witness.phases {
@@ -512,9 +547,9 @@ fn duplicate_missing_disabled_and_site_mismatch_inputs_are_explicit() {
 #[test]
 fn structural_vacuity_controls_are_non_clearing() {
     for mutate in [
-        |input: &mut Input| input.structural.isolated = true,
-        |input: &mut Input| input.structural.hub_dominant = true,
-        |input: &mut Input| input.structural.single_type_dominant = true,
+        |input: &mut Input| input.structural.as_mut().unwrap().isolated = true,
+        |input: &mut Input| input.structural.as_mut().unwrap().hub_dominant = true,
+        |input: &mut Input| input.structural.as_mut().unwrap().single_type_dominant = true,
     ] {
         let mut input = fixture(&[0, 0]);
         mutate(&mut input);
@@ -549,6 +584,9 @@ fn live_sidecar_is_deterministic_and_save_inert() {
         report.joined.len() + report.branches.missing_source.len()
     );
     assert_eq!(report.verdict, D4RegimeVerdict::MixedOrUnderpowered);
+    assert!(report.branches.structural_debt);
+    assert!(report.branches.axis_debt.contains(&D4AxisDebt::Access));
+    assert!(report.branches.axis_debt.contains(&D4AxisDebt::Capability));
     assert!(
         first
             .history
@@ -579,8 +617,8 @@ fn equal_normalized_profiles_with_different_raw_scale_are_not_distinct_by_scale(
     let report = summarize(&input);
     assert_eq!(report.verdict, D4RegimeVerdict::SeasonalRegime);
     assert_eq!(
-        d4_profile_signature(&report.joined[0].profiles[0]),
-        d4_profile_signature(&report.joined[1].profiles[0])
+        d4_profile_signature(&report.joined[0].profiles[0].profile),
+        d4_profile_signature(&report.joined[1].profiles[0].profile)
     );
 }
 

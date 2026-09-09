@@ -1232,6 +1232,24 @@ probe's live seed-11 build was deterministic and its diagnostic sidecar was
 save-inert under emitted ledger-byte comparison. No census or fixed-roster
 report was run.
 
+## #42 [Task 4 final re-review] — Partial cycles and live structural debt remain
+
+The final re-review found three residual gaps. Seasonal detection required a
+complete multiple of the cycle length and rejected a valid partial observation
+such as `A@0, B@1, A@0, B@1, A@0`. The live constructor supplied default-false
+structural vacuity flags, so isolation, hub dominance, and single-type axes
+were neither measured nor debt-bearing. Finally, optional channel absence was
+retained beside, rather than inside, the report profile, leaving consumers to
+join two fields to distinguish unavailable from observed zero.
+
+**Ruling:** permit a repeated cycle with at least two complete periods plus a
+matching prefix, represent absent live structural observations explicitly as
+debt, and make each reported profile carry its original optional observation
+and numeric projection as one record. Re-review is required after this pass.
+
+**Evidence:** delayed final re-review; no files were changed and no prohibited
+census, fixed-roster report, stage, or merge was run.
+
 ## #40 [Task 4 corrective pass] — Seasonal cycles and structural joins are explicit
 
 The corrective pass recognizes repeated multi-phase cycles while retaining
@@ -1361,3 +1379,26 @@ The earlier #35 closure is superseded by #36 and this ruling.
 **Evidence:** the corrective focused D4/D2/D3B suite passed 35/35 after adding
 mixed voluntary/coercive, partial-join, and debt-preservation coverage. No
 census or ignored fixed-roster report was run.
+
+## #43 [Task 4 re-review resolution] — Gradient-sufficiency measurement is conservative
+
+The final corrective pass closes the three residual Task 4 gaps. Seasonal
+recurrence accepts a repeated cycle with a matching partial prefix while still
+requiring two complete periods, so a short rotating window cannot pass by
+vacuity. Live builds no longer receive default structural observations:
+missing isolation, hub, and single-type controls are explicit structural debt
+and keep the result underpowered. Each joined phase now retains the original
+optional diagnostic observation beside its numeric profile, so unavailable
+channels cannot be confused with measured zeroes. Orphan source rows remain
+denominator-invalid, and all three structural controls are tested as
+non-clearing.
+
+**Ruling:** Task 4's falsifier remains measurement-only and conservative. It
+must establish usable local value gradients before any specialization reading;
+partial temporal coverage, absent live structural controls, unavailable
+optional channels, and malformed joins cannot clear either dead pole. No
+`Function` labels or persistent specialization state are introduced.
+
+**Evidence:** D4 library tests passed 11/11; focused D4/D2/D3B suite passed
+36/36 after the corrective assertions. No census, ignored fixed-roster report,
+stage gate, or merge was run.
