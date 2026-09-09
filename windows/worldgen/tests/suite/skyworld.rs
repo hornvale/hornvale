@@ -120,6 +120,59 @@ mod seams {
         }
     }
 
+    fn projected_at(skyworld: &SkyWorld, vertex: Vertex) -> bool {
+        skyworld
+            .territories
+            .iter()
+            .any(|territory| territory.physical.projected.contains(&vertex))
+    }
+
+    fn assert_non_vacuous_denominators(fixture: &Fixture, skyworld: &SkyWorld) {
+        let samples: Vec<SurfaceSample> = ascending_vertices(fixture)
+            .into_iter()
+            .map(|vertex| sample_surface(fixture, vertex))
+            .collect();
+        assert!(
+            skyworld
+                .territories
+                .iter()
+                .any(|territory| territory.origin.altitude_m > 0.0),
+            "VACUOUS: no territory supplies a positive altitude denominator"
+        );
+        assert!(
+            samples.iter().any(|sample| sample.moisture > 0.0),
+            "VACUOUS: sampled climate has no moisture denominator"
+        );
+        assert!(
+            samples
+                .iter()
+                .any(|sample| sample.mean_temperature_c.is_finite()),
+            "VACUOUS: sampled climate has no finite temperature denominator"
+        );
+        assert!(
+            samples.iter().any(|sample| {
+                sample.prevailing_wind[0] != 0.0
+                    || sample.prevailing_wind[1] != 0.0
+                    || sample.prevailing_wind[2] != 0.0
+            }),
+            "VACUOUS: sampled climate has no prevailing-wind denominator"
+        );
+        assert!(
+            samples
+                .iter()
+                .any(|sample| sample.tectonic_feature_count > 0),
+            "VACUOUS: sampled terrain has no environmental feature denominator"
+        );
+        assert!(
+            skyworld.fields.high_sky_radiation > 0.0,
+            "VACUOUS: Skyworld has no high-sky-radiation denominator"
+        );
+        assert!(
+            skyworld.fields.aether > 0.0,
+            "VACUOUS: Skyworld has no aether denominator"
+        );
+    }
+
     fn ascending_vertices(fixture: &Fixture) -> Vec<Vertex> {
         let mut vertices: Vec<Vertex> = fixture.terrain.geosphere().vertices().collect();
         vertices.sort_unstable();
@@ -129,6 +182,14 @@ mod seams {
     fn changed_surface_vertex(
         before: &Fixture,
         after: &Fixture,
+    ) -> (Vertex, SurfaceSample, SurfaceSample) {
+        changed_surface_vertex_where(before, after, |_| true)
+    }
+
+    fn changed_surface_vertex_where(
+        before: &Fixture,
+        after: &Fixture,
+        accepts: impl Fn(Vertex) -> bool,
     ) -> (Vertex, SurfaceSample, SurfaceSample) {
         ascending_vertices(before)
             .into_iter()
@@ -141,13 +202,14 @@ mod seams {
                     sample_surface(after, vertex),
                 )
             })
-            .find(|(_, before, after)| before != after)
-            .expect("VACUOUS: terrain pin did not change any sampled surface source")
+            .find(|(vertex, before, after)| before != after && accepts(*vertex))
+            .expect("VACUOUS: terrain pin changed no sampled source with the requested output")
     }
 
     #[test]
     fn surface_axis_is_a_read_only_substrate() {
         let fixture = fixture(42);
+        let generated = generate(&fixture);
         let skyworld = sample_skyworld(&fixture);
         let vertices = ascending_vertices(&fixture);
         let land = vertices
@@ -175,6 +237,7 @@ mod seams {
             !skyworld.projected.is_empty(),
             "VACUOUS: no Skyworld territory records the sampled substrate"
         );
+        assert_non_vacuous_denominators(&fixture, &generated);
     }
 
     #[test]
@@ -223,14 +286,23 @@ mod seams {
                 ..TerrainPins::default()
             },
         );
-        let (vertex, before, after) = changed_surface_vertex(&sparse, &active);
+        let sparse_generated = generate(&sparse);
+        let active_generated = generate(&active);
+        let (vertex, before, after) = changed_surface_vertex_where(&sparse, &active, |vertex| {
+            projected_at(&sparse_generated, vertex) != projected_at(&active_generated, vertex)
+        });
         assert_ne!(
             before, after,
             "VACUOUS: intended source perturbation did not change at {vertex:?}"
         );
-
         let sparse_skyworld = sample_skyworld(&sparse);
         let active_skyworld = sample_skyworld(&active);
+        let sparse_projection = projected_at(&sparse_generated, vertex);
+        let active_projection = projected_at(&active_generated, vertex);
+        assert_ne!(
+            sparse_projection, active_projection,
+            "the changed source vertex did not reach a changed Skyworld footprint"
+        );
         assert_ne!(
             sparse_skyworld, active_skyworld,
             "Skyworld ignored the changed terrain/climate substrate"
