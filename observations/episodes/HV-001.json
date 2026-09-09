@@ -1,0 +1,25 @@
+{
+  "id": "HV-001",
+  "title": "Where the high country gathers water",
+  "object": "geography",
+  "scale": "world",
+  "primary_axis": "spatial arrangement",
+  "phenomenon": "drainage basins",
+  "visual_grammar": "spatial",
+  "observation_sentence": "Ridges divide the world's drainage basins.",
+  "world_revision": "ed8e6f3369f2b45097d702a5c28cc84f1ae35f56",
+  "seed": 42,
+  "time_window": null,
+  "frame_count": 120,
+  "frame_rate": 30.0,
+  "source_commands": [
+    "cargo run -p hornvale -- map --world world.json --field elevation"
+  ],
+  "evidence_status": "draft",
+  "approval": null,
+  "capability_state": "existing",
+  "comparison_reference": null,
+  "caption_draft": [
+    "The ridges are doing more than looking dramatic."
+  ]
+}

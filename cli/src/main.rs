@@ -2,8 +2,8 @@
 #![warn(missing_docs)]
 
 use hornvale::{
-    attest, audio, concepts, dictionary, flag_value, phonology, proto, regularities, repl, streams,
-    systems, tropes,
+    attest, audio, concepts, dictionary, flag_value, observations, phonology, proto, regularities,
+    repl, streams, systems, tropes,
 };
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{EntityId, Facet, FacetId, Seed, World, WorldTime, math};
@@ -134,6 +134,8 @@ usage:
                           `unmeasured` item — a read that asserts nothing and writes
                           nothing; default corpus:
                           regularities/sugarscape-1996.regularity.json)
+  hornvale observations validate --manifest <PATH>
+                          validate one internal observation episode manifest
   hornvale streams                         dump the stream manifest as markdown
   hornvale underworld --seed <N>           dump one seed's chamber lattice as text (the underworld
                                             witness: chamber counts by band and by rock, plus the
@@ -217,6 +219,7 @@ fn main() -> ExitCode {
         Some("tropes") => cmd_tropes(&args),
         Some("systems") => cmd_systems(&args),
         Some("regularities") => cmd_regularities(&args),
+        Some("observations") => cmd_observations(&args),
         Some("streams") => cmd_streams(),
         Some("underworld") => cmd_underworld(&args),
         Some("circuit") => cmd_circuit(&args),
@@ -240,6 +243,32 @@ fn main() -> ExitCode {
             eprintln!("error: {message}");
             ExitCode::FAILURE
         }
+    }
+}
+
+/// Validate one internal observation episode manifest without rendering it.
+fn cmd_observations(args: &[String]) -> Result<(), String> {
+    match args.get(1).map(String::as_str) {
+        Some("validate") => {
+            let path = flag_value(args, "--manifest").ok_or_else(|| {
+                "observations validate: --manifest <PATH> is required".to_string()
+            })?;
+            let manifest = observations::read_manifest(std::path::Path::new(path))
+                .map_err(|error| error.to_string())?;
+            println!(
+                "validated observation {}: object={} scale={} axis={} frames={}",
+                manifest.id,
+                manifest.object,
+                manifest.scale,
+                manifest.primary_axis,
+                manifest.frame_count
+            );
+            Ok(())
+        }
+        Some(other) => Err(format!(
+            "observations: unknown mode '{other}' (expected validate)"
+        )),
+        None => Err("observations: mode is required (expected validate)".to_string()),
     }
 }
 
