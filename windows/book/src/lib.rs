@@ -4752,11 +4752,12 @@ mod tests {
                 "hobgoblin",
                 "human",
                 "kobold",
+                "svirfneblin",
                 "wood-elf",
             ],
-            "seed-1: ten of the fifteen placed peoples are organized; \
-             desert-dwarf, desert-elf, gnoll, sea-elf and snow-elf are \
-             folk-only"
+            "seed-1: eleven of the nineteen placed peoples are organized; \
+             desert-dwarf, desert-elf, duergar, gnoll, kuo-toa, \
+             mountain-dwarf, sea-elf and snow-elf are folk-only"
         );
         assert_eq!(
             peoples.len(),
@@ -5217,6 +5218,7 @@ mod tests {
                 "The Bazap are desert dwarfs — neighbors.".to_string(),
                 "The Ruašre are desert elfs — neighbors.".to_string(),
                 "The Roašror are drows — neighbors.".to_string(),
+                "The Dazha are duergars — neighbors.".to_string(),
                 "The Wakdao are gnolls — neighbors.".to_string(),
                 "The Qwootoqo are goblins — ourselves.".to_string(),
                 "The Dazha are gully dwarfs — neighbors.".to_string(),
@@ -5225,8 +5227,11 @@ mod tests {
                 "The Dweowbaw are hobgoblins — neighbors.".to_string(),
                 "The Naavea are humans — neighbors.".to_string(),
                 "The Ngongo are kobolds — neighbors.".to_string(),
+                "The Wodbog are kuo toas — neighbors.".to_string(),
+                "The Dazhaf are mountain dwarfs — neighbors.".to_string(),
                 "The Šzuašzez are sea elfs — neighbors.".to_string(),
                 "The Šroašror are snow elfs — neighbors.".to_string(),
+                "The Kxsonkxzo are svirfneblins — neighbors.".to_string(),
                 "The Sruasrer are wood elfs — neighbors.".to_string(),
                 "Booko is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
@@ -5806,12 +5811,13 @@ mod tests {
                 "In truth, the Bao's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Roašror's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Qwootoqo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
-                "In truth, the Dazha's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Xabxat's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Šdoašded's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Dashav's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Dweowbaw's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Naavea's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Ngongo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
+                "In truth, the Kxsonkxzo's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the Sruasrer's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.".to_string(),
                 "In truth, the darkenings of the first hundred years number 6472.".to_string(),
             ],
@@ -6351,6 +6357,7 @@ mod tests {
                 "The Bazap are desert dwarfs.".to_string(),
                 "The Ruašre are desert elfs.".to_string(),
                 "The Roašror are drows.".to_string(),
+                "The Dazha are duergars.".to_string(),
                 "The Wakdao are gnolls.".to_string(),
                 "The Qwootoqo are goblins.".to_string(),
                 "The Dazha are gully dwarfs.".to_string(),
@@ -6359,8 +6366,11 @@ mod tests {
                 "The Dweowbaw are hobgoblins.".to_string(),
                 "The Naavea are humans.".to_string(),
                 "The Ngongo are kobolds.".to_string(),
+                "The Wodbog are kuo toas.".to_string(),
+                "The Dazhaf are mountain dwarfs.".to_string(),
                 "The Šzuašzez are sea elfs.".to_string(),
                 "The Šroašror are snow elfs.".to_string(),
+                "The Kxsonkxzo are svirfneblins.".to_string(),
                 "The Sruasrer are wood elfs.".to_string(),
             ]
         );
