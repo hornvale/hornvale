@@ -1159,3 +1159,7 @@ git commit -m "feat(domesday): render the criterion and verdict beside the numbe
 ## Closing the campaign
 
 Definition of Done adds a chronicle entry (`book/src/chronicle/the-seedbed.md`), a freshness sweep, a retrospective (`docs/retrospectives/the-seedbed.md`), and the `campaign-reconciliation.tsv` row moved from `active` to its close disposition. Use the `closing-a-campaign` skill; do not hand-roll it.
+
+---
+
+**Status: COMPLETE.** All 8 tasks executed, reviewed, and merged. See the campaign ledger and retrospective for the nine plan-text defects this document contributed and how each was caught.

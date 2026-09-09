@@ -293,3 +293,7 @@ do not re-author the corpus to raise the score.
    metric.
 6. The committed coverage report is drift-checked and declared in
    `docs/generated-paths.txt`.
+
+---
+
+**Status: COMPLETE.** Shipped as decision 0908; see [the chronicle](../../../book/src/chronicle/the-seedbed.md) and [the retrospective](../../retrospectives/the-seedbed.md). The first measurement recorded 2 of 3 independent claims grown; `sug-wealth-skew` is FLAT.

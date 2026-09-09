@@ -74,6 +74,23 @@ editing:
   `cli/tests/suite/sentence_corpus.rs` and nothing in `domains/language`
   reads a corpus file — and the same freeze-before-measurement discipline
   (decision 0016).
+- `regularities/` — the **fourth** sibling (decision 0908, The Seedbed), and
+  the one whose verdict can DECAY. `tropes/` asks whether a world can
+  represent a situation, `systems/` whether the program implements a
+  capability, `sentences/` whether the grammar can produce an utterance —
+  all three measure static reach and all three RATCHET. This one asks
+  whether the world **grows** a macro-regularity, resolving against
+  measurement over the committed census, and a grown regularity is emergent:
+  an ordinary retune of the history bake can destroy it while every other
+  gate stays green. Hence a **two-way** guard — an authored `grown` that
+  measures flat AND an authored `flat` that measures grown are both RED —
+  and a stale-deferral check, because here a stale `deferred` withholds an
+  item from measurement rather than merely misreporting it. Its terminal
+  anchor is `doc:`, admissible only against a path
+  `docs/generated-paths.txt` gives a generator; hand-written prose is
+  refused. Same data/code split as its siblings (0011), same freeze before
+  measurement (0016) — made STRUCTURAL here by authoring the corpus in a
+  task that runs before any evaluation code exists.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 `make doctor` prints the live self-map — layering, gate targets, artifact
