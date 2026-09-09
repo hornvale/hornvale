@@ -573,6 +573,95 @@ fn observations_export_refuses_needs_simulation_extension() {
 }
 
 #[test]
+fn observations_export_refuses_every_non_existing_capability_state_by_name() {
+    for (tag, state) in [
+        ("observation-surface", "needs_observation_surface"),
+        ("renderer", "needs_renderer"),
+        ("simulation-extension", "needs_simulation_extension"),
+    ] {
+        let manifest = temp_manifest(
+            tag,
+            &manifest_json(&[
+                ("frame_count", serde_json::json!(1)),
+                (
+                    "source_commands",
+                    serde_json::json!(["cargo run -p hornvale -- underworld --seed 42"]),
+                ),
+                ("capability_state", serde_json::json!(state)),
+            ]),
+        );
+        let output_dir = temp_output_dir(tag);
+        let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+            .args(["observations", "export", "--manifest"])
+            .arg(&manifest)
+            .arg("--out")
+            .arg(&output_dir)
+            .output()
+            .expect("run observations export for unsupported capability state");
+
+        assert!(!out.status.success(), "{state} was accepted");
+        let stderr = String::from_utf8(out.stderr).expect("utf-8 stderr");
+        assert!(stderr.contains(state), "{state} was not named: {stderr}");
+        assert!(!output_dir.exists(), "{state} created output");
+        std::fs::remove_file(manifest).expect("remove temporary manifest");
+    }
+}
+
+#[test]
+fn observations_export_reconciles_owned_frames_without_touching_unrelated_files() {
+    let manifest = temp_manifest(
+        "stale-frames",
+        &manifest_json(&[
+            ("frame_count", serde_json::json!(3)),
+            (
+                "source_commands",
+                serde_json::json!(["cargo run -p hornvale -- underworld --seed 42"]),
+            ),
+        ]),
+    );
+    let output_dir = temp_output_dir("stale-frames-output");
+    let first = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&manifest)
+        .arg("--out")
+        .arg(&output_dir)
+        .output()
+        .expect("run initial observations export");
+    assert!(first.status.success(), "initial export failed: {first:?}");
+    std::fs::write(output_dir.join("notes.txt"), "unrelated").expect("write unrelated file");
+
+    let manifest_one = temp_manifest(
+        "stale-frames-one",
+        &manifest_json(&[
+            ("frame_count", serde_json::json!(1)),
+            (
+                "source_commands",
+                serde_json::json!(["cargo run -p hornvale -- underworld --seed 42"]),
+            ),
+        ]),
+    );
+    let second = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&manifest_one)
+        .arg("--out")
+        .arg(&output_dir)
+        .output()
+        .expect("rerun observations export with fewer frames");
+    assert!(second.status.success(), "rerun export failed: {second:?}");
+    assert!(output_dir.join("frame-000.json").is_file());
+    assert!(!output_dir.join("frame-001.json").exists());
+    assert!(!output_dir.join("frame-002.json").exists());
+    assert_eq!(
+        std::fs::read_to_string(output_dir.join("notes.txt")).expect("read unrelated file"),
+        "unrelated"
+    );
+
+    std::fs::remove_file(manifest).expect("remove first temporary manifest");
+    std::fs::remove_file(manifest_one).expect("remove second temporary manifest");
+    std::fs::remove_dir_all(output_dir).expect("remove stale frame export");
+}
+
+#[test]
 fn observations_hv_001_fixture_is_producer_backed_and_contains_no_client_classification() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()

@@ -651,16 +651,36 @@ fn underworld_source(manifest: &EpisodeManifest) -> Result<String, ObservationEr
     ))
 }
 
+fn capability_state_name(state: CapabilityState) -> &'static str {
+    match state {
+        CapabilityState::Existing => "existing",
+        CapabilityState::NeedsObservationSurface => "needs_observation_surface",
+        CapabilityState::NeedsRenderer => "needs_renderer",
+        CapabilityState::NeedsSimulationExtension => "needs_simulation_extension",
+    }
+}
+
+fn is_owned_frame(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.strip_prefix("frame-"))
+        .and_then(|name| name.strip_suffix(".json"))
+        .is_some_and(|index| !index.is_empty() && index.chars().all(|c| c.is_ascii_digit()))
+}
+
 /// Build one authoritative source once and atomically emit its frame packets.
 pub fn export_frames(
     manifest: &EpisodeManifest,
     out_dir: &Path,
 ) -> Result<ExportReport, ObservationError> {
     validate_manifest(manifest)?;
-    if manifest.capability_state == CapabilityState::NeedsSimulationExtension {
+    if manifest.capability_state != CapabilityState::Existing {
         return Err(invalid(
             "capability_state",
-            "needs_simulation_extension cannot be exported",
+            format!(
+                "{} cannot be exported",
+                capability_state_name(manifest.capability_state)
+            ),
         ));
     }
 
@@ -709,6 +729,30 @@ pub fn export_frames(
         path: out_dir.to_path_buf(),
         reason: format!("create output directory: {error}"),
     })?;
+    let entries = std::fs::read_dir(out_dir).map_err(|error| ObservationError::Export {
+        episode_id: manifest.id.clone(),
+        frame_index: None,
+        path: out_dir.to_path_buf(),
+        reason: format!("read output directory: {error}"),
+    })?;
+    for entry in entries {
+        let path = entry
+            .map_err(|error| ObservationError::Export {
+                episode_id: manifest.id.clone(),
+                frame_index: None,
+                path: out_dir.to_path_buf(),
+                reason: format!("read output entry: {error}"),
+            })?
+            .path();
+        if is_owned_frame(&path) {
+            std::fs::remove_file(&path).map_err(|error| ObservationError::Export {
+                episode_id: manifest.id.clone(),
+                frame_index: None,
+                path: path.clone(),
+                reason: format!("remove stale frame: {error}"),
+            })?;
+        }
+    }
     let mut output_paths = Vec::with_capacity(serialized.len());
     for (frame_index, bytes) in serialized.into_iter().enumerate() {
         let frame_index = frame_index as u32;
