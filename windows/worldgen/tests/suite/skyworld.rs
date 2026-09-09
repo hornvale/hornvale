@@ -1557,6 +1557,8 @@ fn skyworld_contract_has_no_build_or_save_surface() {
     }
 
     fn root_skyworld_reexports(source: &str) -> Vec<String> {
+        const RELATED_MODULE_TOKENS: [&str; 3] = ["skyworld", "propagation", "render"];
+
         let mut reexports = Vec::new();
         let mut grouped: Option<String> = None;
 
@@ -1570,13 +1572,19 @@ fn skyworld_contract_has_no_build_or_save_surface() {
                 continue;
             }
 
-            if !line.starts_with("pub use skyworld") {
+            if !line.starts_with("pub use")
+                || !RELATED_MODULE_TOKENS
+                    .iter()
+                    .any(|token| line.contains(token))
+            {
                 continue;
             }
 
             if line.ends_with(';') {
                 reexports.push(compact(line));
             } else {
+                // The current root uses multiline braced re-exports; retain
+                // the whole declaration so additions and aliases are exact.
                 assert!(
                     line.ends_with('{'),
                     "Skyworld root re-export must be standalone or braced: {line}"
@@ -1625,9 +1633,9 @@ fn skyworld_contract_has_no_build_or_save_surface() {
         ]
     );
 
-    let root_skyworld_reexports = root_skyworld_reexports(WORLDGEN_LIB);
+    let root_reexports = root_skyworld_reexports(WORLDGEN_LIB);
     assert_eq!(
-        root_skyworld_reexports,
+        root_reexports,
         [
             "pubuseskyworld::skyworld_from;",
             concat!(
@@ -1641,6 +1649,25 @@ fn skyworld_contract_has_no_build_or_save_surface() {
             "pubuseskyworld_render::{SkyWorldDetail,render_skyworld_diagnostic_readout,render_skyworld_png,render_skyworld_readout,};",
         ],
         "the root surface must expose exactly the approved Skyworld constructor, value, propagation, and render re-exports"
+    );
+    assert_eq!(
+        root_skyworld_reexports(
+            r#"
+            pub use crate::skyworld::skyworld_from as overlay_from;
+            pub use self::skyworld_render::{
+                render_skyworld_readout as render_overlay,
+            };
+            pub use crate::skyworld_propagation::{
+                propagation_at as propagate_overlay,
+            };
+            "#,
+        ),
+        [
+            "pubusecrate::skyworld::skyworld_fromasoverlay_from;",
+            "pubuseself::skyworld_render::{render_skyworld_readoutasrender_overlay,};",
+            "pubusecrate::skyworld_propagation::{propagation_ataspropagate_overlay,};",
+        ],
+        "the source matcher must collect Skyworld root re-exports with alternate paths and aliases"
     );
     assert!(
         !WORLDGEN_LIB
