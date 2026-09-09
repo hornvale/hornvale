@@ -1,15 +1,20 @@
-//! The compact Stage 1 Skyworld overlay.
+//! The compact Skyworld overlay.
 //!
 //! This module owns the cross-domain draw because coverage combines terrain,
 //! climate, and astronomy inputs. It leaves the fixed surface biome maps
-//! untouched. Trajectory and propagation carriers are present for the public
-//! model, but their behavior belongs to later Skyworld stages.
+//! untouched. Aggregate orchard stocks, sampled trajectories, temporal
+//! adjacency, and bounded propagation remain sparse additions to that surface.
 
 use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::math;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Stream, Vertex, World};
 use hornvale_terrain::GeneratedTerrain;
+
+pub use crate::skyworld_propagation::{
+    SkyAdjacency, SkyCorridor, SkyCorridorKind, SkyEvent, SkyEventKind, SkyPropagation,
+    SkyPropagationDetail, SkyTrajectorySample,
+};
 
 /// plumb: pending(wave-1)
 const HARD_COVERAGE_FRACTION: f64 = 0.10;
@@ -36,9 +41,17 @@ const ORCHARD_SOIL_FRACTION: f64 = 0.75;
 /// plumb: pending(wave-1)
 const ORCHARD_CANOPY_FRACTION: f64 = 0.80;
 /// plumb: pending(wave-1)
+const ORCHARD_FLOWER_FRACTION: f64 = 0.70;
+/// plumb: pending(wave-1)
 const ORCHARD_POLLINATION_FRACTION: f64 = 0.60;
 /// plumb: pending(wave-1)
 const ORCHARD_FRUIT_FRACTION: f64 = 0.50;
+/// plumb: pending(wave-1)
+const ORCHARD_DETRITUS_FRACTION: f64 = 0.20;
+/// plumb: pending(wave-1)
+const ORCHARD_SEED_SPORE_FRACTION: f64 = 0.40;
+/// plumb: pending(wave-1)
+const ORCHARD_ANIMAL_FORAGE_FRACTION: f64 = 0.65;
 
 /// Configuration for the compact Skyworld generation slice.
 /// type-audit: bare-ok(ratio: max_projected_fraction), bare-ok(count: trajectory_samples), bare-ok(count: propagation_radius)
@@ -47,9 +60,9 @@ pub struct SkyWorldConfig {
     /// Requested projected-vertex fraction, bounded by the global ten-percent
     /// Skyworld ceiling.
     pub max_projected_fraction: f64,
-    /// Number reserved for a later trajectory derivation.
+    /// Number of coarse trajectory samples to materialize.
     pub trajectory_samples: u16,
-    /// Radius reserved for a later propagation derivation.
+    /// Number of local influence rings beyond the exchange envelope.
     pub propagation_radius: u16,
 }
 
@@ -276,8 +289,14 @@ pub struct SkyLineage {
     pub current: SkyLifecycle,
 }
 
-/// Initial fixed-vector ecological stocks for a sky territory.
-/// type-audit: bare-ok(ratio: plankton), bare-ok(ratio: root_support), bare-ok(ratio: soil_fertility), bare-ok(ratio: canopy_biomass), bare-ok(ratio: cloud_water), bare-ok(ratio: pollination), bare-ok(ratio: fruit)
+/// Fixed-vector ecological stocks for a sky territory.
+///
+/// Aether, high-sky radiation, and moisture are ambient
+/// [`hornvale_kernel::ecology::ResourceKind::Field`] prerequisites. Every
+/// quantity here is a bounded [`hornvale_kernel::ecology::ResourceKind::Stock`]
+/// derived from those fields and the preceding aggregate stock; no individual
+/// organism is materialized.
+/// type-audit: bare-ok(ratio: plankton), bare-ok(ratio: root_support), bare-ok(ratio: soil_fertility), bare-ok(ratio: canopy_biomass), bare-ok(ratio: flowers), bare-ok(ratio: cloud_water), bare-ok(ratio: pollination), bare-ok(ratio: fruit), bare-ok(ratio: detritus), bare-ok(ratio: seed_spore_reserve), bare-ok(ratio: animal_forage)
 #[derive(Clone, Debug, PartialEq)]
 pub struct SkyStocks {
     /// Sky-plankton productivity stock.
@@ -288,12 +307,28 @@ pub struct SkyStocks {
     pub soil_fertility: f64,
     /// Canopy biomass.
     pub canopy_biomass: f64,
+    /// Flower stock supported by the canopy.
+    pub flowers: f64,
     /// Cloud water.
     pub cloud_water: f64,
-    /// Pollination readiness.
+    /// Pollination capacity supported by flowers.
     pub pollination: f64,
     /// Fruit stock.
     pub fruit: f64,
+    /// Dead organic matter available to decomposers.
+    pub detritus: f64,
+    /// Combined seed and spore reserve.
+    pub seed_spore_reserve: f64,
+    /// Aggregate animal forage.
+    pub animal_forage: f64,
+}
+
+impl SkyStocks {
+    /// Derive a mature orchard's stock chain from its three visible ambient
+    /// field prerequisites.
+    pub fn from_orchard_fields(fields: &SkyFields) -> SkyStocks {
+        stocks_from_fields(fields, true)
+    }
 }
 
 /// A position in the additive sky layer.
@@ -313,17 +348,6 @@ pub struct SkyFootprint {
     pub projected: Vec<Vertex>,
 }
 
-/// Empty Stage 1 carriers for later influence derivation.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct SkyPropagation {
-    /// Immediate local influence vertices, empty until propagation is implemented.
-    pub local: Vec<Vertex>,
-    /// Ordered corridor influence vertices, empty until propagation is implemented.
-    pub corridors: Vec<Vec<Vertex>>,
-    /// Ordered sparse events, empty until propagation is implemented.
-    pub events: Vec<Vertex>,
-}
-
 /// One compact mobile territory in the additive sky layer.
 /// type-audit: bare-ok(identifier-text: id)
 #[derive(Clone, Debug, PartialEq)]
@@ -338,13 +362,13 @@ pub struct SkyTerritory {
     pub stocks: SkyStocks,
     /// Genesis position.
     pub origin: SkyPosition,
-    /// Later trajectory samples; empty in Stage 1.
-    pub trajectory: Vec<SkyPosition>,
+    /// Requested coarse trajectory samples in ascending time order.
+    pub trajectory: Vec<SkyTrajectorySample>,
     /// Physical body footprint.
     pub physical: SkyFootprint,
-    /// Initial exchange footprint.
+    /// Genesis exchange footprint.
     pub exchange: SkyFootprint,
-    /// Later local, corridor, and event influence; empty in Stage 1.
+    /// Explicit local, corridor, and event influence channels.
     pub influence: SkyPropagation,
 }
 
@@ -373,7 +397,15 @@ impl SkyWorld {
             "Skyworld inputs must share one geosphere"
         );
         let fields = derive_fields(world, terrain, climate);
-        let territories = derive_territories(world, terrain, climate, &fields, &config);
+        let mut territories = derive_territories(world, terrain, climate, &fields, &config);
+        crate::skyworld_propagation::derive_movement_and_propagation(
+            world,
+            terrain,
+            climate,
+            &fields,
+            &config,
+            &mut territories,
+        );
         SkyWorld {
             fields,
             territories,
@@ -476,7 +508,7 @@ fn derive_fields(
     }
 }
 
-fn sky_forcing(world: &World) -> f64 {
+pub(crate) fn sky_forcing(world: &World) -> f64 {
     let sky = crate::sky_of(world).expect("Skyworld requires a built generated-sky world");
     let total_tide = sky
         .system()
@@ -755,25 +787,7 @@ fn make_territory(
         flexibility: phenotype_draw.next_f64(),
         recovery: phenotype_draw.next_f64(),
     };
-    let productivity = local_fields
-        .aether
-        .min(local_fields.high_sky_radiation)
-        .min(local_fields.moisture)
-        .clamp(0.0, 1.0);
-    let root_support = productivity * ORCHARD_ROOT_FRACTION;
-    let soil_fertility = root_support * ORCHARD_SOIL_FRACTION;
-    let canopy_biomass = soil_fertility * ORCHARD_CANOPY_FRACTION;
-    let pollination = canopy_biomass * ORCHARD_POLLINATION_FRACTION;
-    let fruit = pollination * ORCHARD_FRUIT_FRACTION;
-    let stocks = SkyStocks {
-        plankton: productivity,
-        root_support: if orchard { root_support } else { 0.0 },
-        soil_fertility: if orchard { soil_fertility } else { 0.0 },
-        canopy_biomass: if orchard { canopy_biomass } else { 0.0 },
-        cloud_water: local_fields.moisture,
-        pollination: if orchard { pollination } else { 0.0 },
-        fruit: if orchard { fruit } else { 0.0 },
-    };
+    let stocks = stocks_from_fields(&local_fields, orchard);
     let lineage = SkyLineage {
         origin: SkyLifecycle::WindBloom,
         current: if orchard {
@@ -797,5 +811,36 @@ fn make_territory(
         exchange: physical.clone(),
         physical,
         influence: SkyPropagation::default(),
+    }
+}
+
+fn stocks_from_fields(fields: &SkyFields, orchard: bool) -> SkyStocks {
+    let plankton = fields
+        .aether
+        .min(fields.high_sky_radiation)
+        .min(fields.moisture)
+        .clamp(0.0, 1.0);
+    let root_support = if orchard {
+        plankton * ORCHARD_ROOT_FRACTION
+    } else {
+        0.0
+    };
+    let soil_fertility = root_support * ORCHARD_SOIL_FRACTION;
+    let canopy_biomass = soil_fertility * ORCHARD_CANOPY_FRACTION;
+    let flowers = canopy_biomass * ORCHARD_FLOWER_FRACTION;
+    let pollination = flowers * ORCHARD_POLLINATION_FRACTION;
+    let fruit = pollination * ORCHARD_FRUIT_FRACTION;
+    SkyStocks {
+        plankton,
+        root_support,
+        soil_fertility,
+        canopy_biomass,
+        flowers,
+        cloud_water: fields.moisture.clamp(0.0, 1.0),
+        pollination,
+        fruit,
+        detritus: canopy_biomass * ORCHARD_DETRITUS_FRACTION,
+        seed_spore_reserve: fruit * ORCHARD_SEED_SPORE_FRACTION,
+        animal_forage: fruit * ORCHARD_ANIMAL_FORAGE_FRACTION,
     }
 }

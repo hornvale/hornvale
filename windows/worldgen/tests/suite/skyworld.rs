@@ -8,8 +8,9 @@ use hornvale_climate::{Biome, BiomeExpr, GeneratedClimate};
 use hornvale_kernel::{Seed, Vertex, World};
 use hornvale_terrain::{GeneratedTerrain, TerrainPins};
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyEcology, SkyWorld, SkyWorldConfig, WorldComponents,
-    build_world_to_with_artifacts, climate_from, skyworld_from,
+    BuildDepth, SettlementPins, SkyCorridorKind, SkyEcology, SkyEventKind, SkyPropagationDetail,
+    SkyStocks, SkyWorld, SkyWorldConfig, WorldComponents, build_world_to_with_artifacts,
+    climate_from, propagation_at, skyworld_from, trajectory_at,
 };
 
 struct Fixture {
@@ -52,6 +53,14 @@ fn config() -> SkyWorldConfig {
 
 fn generate(fixture: &Fixture) -> SkyWorld {
     skyworld_from(&fixture.world, &fixture.terrain, &fixture.climate, config())
+}
+
+fn generate_with(fixture: &Fixture, config: SkyWorldConfig) -> SkyWorld {
+    skyworld_from(&fixture.world, &fixture.terrain, &fixture.climate, config)
+}
+
+fn strictly_ordered(vertices: &[Vertex]) -> bool {
+    vertices.windows(2).all(|pair| pair[0] < pair[1])
 }
 
 fn projected(skyworld: &SkyWorld) -> BTreeSet<Vertex> {
@@ -353,7 +362,7 @@ fn aether_and_radiation_remain_independent_altitude_inputs() {
 }
 
 #[test]
-fn stage_one_seeds_an_orchard_chain_without_deriving_later_behaviors() {
+fn orchard_territories_derive_task_two_movement_and_influence() {
     let fixture = fixture(42);
     let skyworld = generate(&fixture);
     let orchard = skyworld
@@ -369,17 +378,349 @@ fn stage_one_seeds_an_orchard_chain_without_deriving_later_behaviors() {
     assert!(orchard.stocks.pollination > 0.0);
     assert!(orchard.stocks.fruit > 0.0);
     assert!(
-        orchard.trajectory.is_empty(),
-        "Stage 1 must not derive orchard trajectories"
+        !orchard.trajectory.is_empty(),
+        "Task 2 must derive the requested orchard trajectory samples"
     );
     assert!(
-        orchard.influence.local.is_empty()
-            && orchard.influence.corridors.is_empty()
-            && orchard.influence.events.is_empty(),
-        "Stage 1 must not derive propagation"
+        !orchard.influence.local.is_empty()
+            && !orchard.influence.corridors.is_empty()
+            && !orchard.influence.events.is_empty(),
+        "Task 2 must keep local, corridor, and event propagation explicit"
     );
-    assert_eq!(
+    assert_ne!(
         orchard.exchange, orchard.physical,
-        "before exchange derivation, the exchange envelope begins at the body"
+        "Task 2 must separate exchange from the physical body"
     );
+}
+
+/// Removing any one ambient `Field` prerequisite must break the plankton
+/// productivity link instead of leaving an unexplained fruit stock.
+#[test]
+fn orchard_productivity_requires_aether_radiation_and_moisture_independently() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let orchard = skyworld
+        .territories
+        .iter()
+        .find(|territory| territory.phenotype.ecology == SkyEcology::OrchardBearing)
+        .expect("the fixture contains its canonical orchard");
+    let fields = skyworld.fields.at_altitude(orchard.origin.altitude_m);
+
+    for without in ["aether", "radiation", "moisture"] {
+        let mut limited = fields;
+        match without {
+            "aether" => limited.aether = 0.0,
+            "radiation" => limited.high_sky_radiation = 0.0,
+            "moisture" => limited.moisture = 0.0,
+            _ => unreachable!(),
+        }
+        let stocks = SkyStocks::from_orchard_fields(&limited);
+        assert_eq!(
+            stocks.plankton, 0.0,
+            "zero {without} did not stop plankton productivity"
+        );
+        assert_eq!(
+            [
+                stocks.root_support,
+                stocks.soil_fertility,
+                stocks.canopy_biomass,
+                stocks.flowers,
+                stocks.pollination,
+                stocks.fruit,
+                stocks.detritus,
+                stocks.seed_spore_reserve,
+                stocks.animal_forage,
+            ],
+            [0.0; 9],
+            "zero {without} left a downstream orchard stock"
+        );
+    }
+}
+
+/// Breaking any multiplier or dependency link must violate this hand-ordered
+/// mature-orchard chain; no expectation is derived by the production helper.
+#[test]
+fn orchard_stocks_expose_a_bounded_dependency_chain() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let orchard = skyworld
+        .territories
+        .iter()
+        .find(|territory| territory.phenotype.ecology == SkyEcology::OrchardBearing)
+        .expect("the fixture contains its canonical orchard");
+    let fields = skyworld.fields.at_altitude(orchard.origin.altitude_m);
+    let stocks = SkyStocks::from_orchard_fields(&fields);
+    let chain = [
+        stocks.plankton,
+        stocks.root_support,
+        stocks.soil_fertility,
+        stocks.canopy_biomass,
+        stocks.flowers,
+        stocks.pollination,
+        stocks.fruit,
+    ];
+
+    assert!(chain.iter().all(|value| *value > 0.0));
+    assert!(
+        chain.windows(2).all(|pair| pair[0] > pair[1]),
+        "each aggregate stock must be bounded by its prerequisite: {chain:?}"
+    );
+    let all_stocks = [
+        stocks.plankton,
+        stocks.root_support,
+        stocks.soil_fertility,
+        stocks.canopy_biomass,
+        stocks.flowers,
+        stocks.pollination,
+        stocks.fruit,
+        stocks.cloud_water,
+        stocks.detritus,
+        stocks.seed_spore_reserve,
+        stocks.animal_forage,
+    ];
+    assert!(
+        all_stocks
+            .iter()
+            .all(|value| value.is_finite() && (0.0..=1.0).contains(value)),
+        "the fixed stock vector escaped its finite unit bounds: {all_stocks:?}"
+    );
+}
+
+/// Dropping the `(territory, time)` key or consulting query order must change
+/// this result and fail the cache-independence comparison.
+#[test]
+fn trajectory_queries_are_deterministic_ordered_and_cache_independent() {
+    let fixture = fixture(42);
+    let first = generate(&fixture);
+    let second = generate(&fixture);
+    assert!(
+        !first.territories.is_empty(),
+        "VACUOUS: no trajectories exist"
+    );
+
+    for territory in &first.territories {
+        assert_eq!(
+            territory.trajectory.len(),
+            usize::from(config().trajectory_samples)
+        );
+        assert!(
+            territory
+                .trajectory
+                .windows(2)
+                .all(|pair| pair[0].time_slice < pair[1].time_slice),
+            "trajectory samples are not in ascending time order"
+        );
+        let rebuilt = second
+            .territories
+            .iter()
+            .find(|candidate| candidate.id == territory.id)
+            .expect("a regenerated world retains territory identity");
+        for sample in territory.trajectory.iter().rev() {
+            assert_eq!(
+                trajectory_at(&first, territory.id, sample.time_slice),
+                Some(sample)
+            );
+            assert_eq!(
+                trajectory_at(&second, rebuilt.id, sample.time_slice),
+                Some(sample),
+                "a regenerated/query-reordered sample changed"
+            );
+        }
+    }
+}
+
+/// Removing seed or movement-profile input from the trajectory derivation
+/// makes these two world identities collapse to one path.
+#[test]
+fn trajectory_changes_with_world_identity_or_movement_profile() {
+    let first = generate(&fixture(42));
+    let second = generate(&fixture(43));
+    let first_path: Vec<_> = first
+        .territories
+        .first()
+        .expect("seed 42 produces a territory")
+        .trajectory
+        .iter()
+        .map(|sample| sample.position)
+        .collect();
+    let second_path: Vec<_> = second
+        .territories
+        .first()
+        .expect("seed 43 produces a territory")
+        .trajectory
+        .iter()
+        .map(|sample| sample.position)
+        .collect();
+
+    assert_ne!(first_path, second_path);
+}
+
+/// Collapsing physical, exchange, and influence footprints into one set must
+/// fail these strict subset checks.
+#[test]
+fn trajectory_samples_keep_three_world_footprints_distinct_and_ordered() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let territory = skyworld
+        .territories
+        .iter()
+        .min_by_key(|territory| territory.physical.projected.len())
+        .expect("the fixture contains an isolated territory");
+
+    for sample in &territory.trajectory {
+        let physical: BTreeSet<_> = sample.physical.projected.iter().copied().collect();
+        let exchange: BTreeSet<_> = sample.exchange.projected.iter().copied().collect();
+        let influence: BTreeSet<_> = sample.influence.projected.iter().copied().collect();
+        assert!(strictly_ordered(&sample.physical.projected));
+        assert!(strictly_ordered(&sample.exchange.projected));
+        assert!(strictly_ordered(&sample.influence.projected));
+        assert!(physical.is_subset(&exchange) && physical != exchange);
+        assert!(exchange.is_subset(&influence) && exchange != influence);
+    }
+}
+
+/// A stale vertical projection or an all-territory lateral broadcast must fail
+/// these current-sample and candidate-membership checks.
+#[test]
+fn trajectory_adjacency_is_vertical_now_and_lateral_only_when_reachable() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let territory_ids: BTreeSet<_> = skyworld
+        .territories
+        .iter()
+        .map(|territory| territory.id)
+        .collect();
+
+    for territory in &skyworld.territories {
+        for sample in &territory.trajectory {
+            assert_eq!(sample.adjacency.vertical, sample.position.surface);
+            assert!(
+                sample
+                    .adjacency
+                    .lateral_territories
+                    .iter()
+                    .all(|id| *id != territory.id && territory_ids.contains(id))
+            );
+            assert!(
+                sample
+                    .adjacency
+                    .lateral_corridors
+                    .iter()
+                    .all(|index| usize::from(*index) < territory.influence.corridors.len())
+            );
+            assert!(
+                !sample.adjacency.lateral_corridors.is_empty(),
+                "VACUOUS: no reachable corridor candidate was exposed"
+            );
+        }
+    }
+}
+
+/// Merging propagation channels or omitting their semantic records must fail
+/// the detail-filter and cargo/event-kind assertions.
+#[test]
+fn propagation_keeps_local_corridor_and_event_shapes_separate() {
+    let fixture = fixture(42);
+    let skyworld = generate(&fixture);
+    let territory = skyworld
+        .territories
+        .first()
+        .expect("the fixture contains a territory");
+
+    let local = propagation_at(&skyworld, territory.id, SkyPropagationDetail::Local)
+        .expect("the territory has local propagation");
+    assert!(!local.local.is_empty());
+    assert!(local.corridors.is_empty() && local.events.is_empty());
+
+    let corridors = propagation_at(&skyworld, territory.id, SkyPropagationDetail::Corridors)
+        .expect("the territory has corridor propagation");
+    assert!(corridors.local.is_empty() && corridors.events.is_empty());
+    assert!(!corridors.corridors.is_empty());
+    let cargo: BTreeSet<_> = corridors
+        .corridors
+        .iter()
+        .flat_map(|corridor| corridor.carries.iter().copied())
+        .collect();
+    assert_eq!(
+        cargo,
+        BTreeSet::from([
+            SkyCorridorKind::Seeds,
+            SkyCorridorKind::Spores,
+            SkyCorridorKind::Plankton,
+            SkyCorridorKind::Route,
+        ])
+    );
+
+    let events = propagation_at(&skyworld, territory.id, SkyPropagationDetail::Events)
+        .expect("the territory has sparse event propagation");
+    assert!(events.local.is_empty() && events.corridors.is_empty());
+    assert!(!events.events.is_empty());
+    assert!(events.events.iter().all(|event| matches!(
+        event.kind,
+        SkyEventKind::Bloom | SkyEventKind::Storm | SkyEventKind::Collapse
+    )));
+}
+
+/// Materializing a planet-by-time grid or ignoring the requested sample count
+/// must fail these exact linear-work bounds.
+#[test]
+fn bounded_work_scales_with_active_territories_and_requested_samples() {
+    let fixture = fixture(42);
+    let short = generate_with(
+        &fixture,
+        SkyWorldConfig {
+            trajectory_samples: 2,
+            ..config()
+        },
+    );
+    let long = generate_with(
+        &fixture,
+        SkyWorldConfig {
+            trajectory_samples: 8,
+            ..config()
+        },
+    );
+    assert_eq!(short.territories.len(), long.territories.len());
+    let short_samples: usize = short
+        .territories
+        .iter()
+        .map(|territory| territory.trajectory.len())
+        .sum();
+    let long_samples: usize = long
+        .territories
+        .iter()
+        .map(|territory| territory.trajectory.len())
+        .sum();
+    assert_eq!(short_samples, short.territories.len() * 2);
+    assert_eq!(long_samples, long.territories.len() * 8);
+
+    let materialized_work = long_samples
+        + long
+            .territories
+            .iter()
+            .map(|territory| {
+                territory.influence.local.len()
+                    + territory
+                        .influence
+                        .corridors
+                        .iter()
+                        .map(|corridor| corridor.projected.len())
+                        .sum::<usize>()
+                    + territory.influence.events.len()
+            })
+            .sum::<usize>();
+    let dense_planet_time = fixture.terrain.geosphere().vertex_count() * 8;
+    assert!(
+        materialized_work < dense_planet_time,
+        "{materialized_work} sparse records reached the {dense_planet_time}-vertex dense grid"
+    );
+    assert!(long.territories.iter().all(|territory| {
+        territory.influence.events.len() <= 1
+            && territory.influence.corridors.len() <= 1
+            && territory
+                .influence
+                .corridors
+                .iter()
+                .all(|corridor| corridor.projected.len() <= territory.trajectory.len())
+    }));
 }

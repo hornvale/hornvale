@@ -114,6 +114,45 @@ existence and simulation behavior as one decision.
 follow-up was created because the approved plan already assigns the absent
 behavior to later tasks.
 
+## #5 [G5] — What is materialized for a Task 2 trajectory query?
+
+**Ruling:** materialize exactly `SkyWorldConfig::trajectory_samples` coarse
+samples per active territory at generation, beginning at genesis and advancing
+by one exact `WorldTime` standard day. `trajectory_at` is an exact keyed lookup
+over those ordered samples and consumes no randomness. Each sample owns its
+physical, exchange, influence, and adjacency readouts; the territory-level
+physical, exchange, and local channels describe the genesis sample, while its
+corridor and sparse event channels summarize the sampled route. Keep
+`SkyPropagation` as the existing struct, enriching the `corridors` and `events`
+entries with typed records rather than replacing the three-channel shape.
+
+**Why:** the approved design requires cache-independent query order, bounded
+work, explicit temporal adjacency, and no all-cells/all-ticks integration. The
+configuration provides a sample count but no cadence or retained derivation
+context, so an exact finite vector is the smallest honest contract. Per-slice
+movement variation uses labels derived beneath the existing movement stream;
+it cannot perturb Stage 1's sequential mobility draw. Bloom, storm, and
+collapse entries are readouts only and never mutate lifecycle state. If this
+ruling is wrong, the cost is an additive cadence/configuration change and
+trajectory readout epoch, not a surface-biome or lifecycle mutation.
+
+**Alternatives discarded:** retaining terrain, climate, and draw context inside
+`SkyWorld` for arbitrary lazy queries would enlarge the compact overlay and
+make cache behavior load-bearing; integrating every tick would violate bounded
+work; storing only positions would force later renderers to recompute footprint
+and adjacency semantics; replacing propagation with an enum would contradict
+the Stage 1 public shape and make simultaneous channels impossible.
+
+**Ideonomy passes / overturns:** one dimension-identification pass rendered as
+a cardinality/longevity tree; no overturn. It separated finite configured
+samples lasting with the generated overlay from unbounded lazy samples and a
+dense permanent time field, and confirmed the finite branch as the only one
+that preserves both compactness and cache independence.
+
+**Capture:** the ruling is implemented in `skyworld_propagation.rs`; a future
+need for non-daily samples is captured below as an explicit-cadence extension,
+not as permission for opportunistic caching.
+
 ## Follow-ups
 
 - Run the first Skyworld implementation as a pressure test of the existing
@@ -126,6 +165,8 @@ behavior to later tasks.
   internals.
 - Preserve mutable atmospheric profiles as a later modifier layer over the
   stable generated baseline.
+- Add an explicit trajectory-sample cadence to `SkyWorldConfig` if a later
+  consumer needs non-daily slices; keep queries finite and generation-owned.
 - Add a follow-up campaign for the multi-fragment sky archipelago: splitting,
   merging, inherited traits, recombination, and hybrid habitats.
 - Add a follow-up campaign for tethering: natural anchors first, then
