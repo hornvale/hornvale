@@ -14,7 +14,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.18976045 | 9.8061221 | 18.180146 | 25.453434 | 45.238175 | 18.081944 |
+| 0.1895623 | 9.8151855 | 18.176133 | 25.467942 | 45.431826 | 18.126524 |
 
 ### `cold-built-room-share`
 
@@ -24,7 +24,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 0.065502183 | 0.19033896 | 0.375 | 1 | 0.25820078 |
+| 0 | 0.075539568 | 0.18742946 | 0.38928571 | 0.99428571 | 0.26315123 |
 
 ### `composition-variance`
 
@@ -34,96 +34,94 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.35610433 | 0.41516969 | 0.42875465 | 0.43906381 | 0.47702178 | 0.42700472 |
+| 0.35497502 | 0.41468311 | 0.42850948 | 0.4386439 | 0.47735811 | 0.42658001 |
 
 ### `flagship-biome`
 
 The goblin flagship settlement's committed biome; Absent if there is no goblin flagship
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `temperate-forest` | 516 | 51.6% |
-| `taiga` | 222 | 22.2% |
-| `tropical-seasonal-forest` | 214 | 21.4% |
+| `temperate-forest` | 521 | 52.2% |
+| `taiga` | 224 | 22.4% |
+| `tropical-seasonal-forest` | 217 | 21.7% |
 | `alpine` | 11 | 1.1% |
-| `tropical-rainforest` | 11 | 1.1% |
-| `temperate-rainforest` | 10 | 1.0% |
-| `savanna` | 5 | 0.5% |
-| `epipelagic` | 3 | 0.3% |
-| `kelp-forest` | 3 | 0.3% |
+| `temperate-rainforest` | 7 | 0.7% |
+| `tropical-rainforest` | 7 | 0.7% |
+| `epipelagic` | 4 | 0.4% |
+| `savanna` | 4 | 0.4% |
 | `upwelling` | 2 | 0.2% |
-| `coral-reef` | 1 | 0.1% |
-| `hydrothermal-vent` | 1 | 0.1% |
-| `shrubland` | 1 | 0.1% |
+| `kelp-forest` | 1 | 0.1% |
+| `tundra` | 1 | 0.1% |
 
 ### `flagship-coastal`
 
 Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if there is no goblin flagship
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 189 | 18.9% |
-| `false` | 811 | 81.1% |
+| `true` | 173 | 17.3% |
+| `false` | 826 | 82.7% |
 
 ### `flagship-structure-size`
 
 Number of castes present in the goblin flagship settlement's emergent structure (a stratification proxy, matched against the same community religion's pantheon-verticality reasons about); Absent if there is no goblin flagship
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 2 | 3 | 3 | 3 | 3 | 2.948 |
+| 2 | 3 | 3 | 3 | 3 | 2.956957 |
 
 ### `flagship-subsistence`
 
 The goblin flagship settlement's committed subsistence mode (the pantheon's community, spec §6); Absent if there is no goblin flagship or no committed subsistence
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `farming` | 978 | 97.8% |
-| `fishing` | 12 | 1.2% |
-| `foraging` | 10 | 1.0% |
+| `farming` | 980 | 98.1% |
+| `foraging` | 11 | 1.1% |
+| `fishing` | 8 | 0.8% |
 
 ### `goblin-flagship-coastal`
 
 Whether the goblin flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if goblins placed no settlement
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 189 | 18.9% |
-| `false` | 811 | 81.1% |
+| `true` | 173 | 17.3% |
+| `false` | 826 | 82.7% |
 
 ### `goblin-flagship-roles`
 
 The goblin flagship's committed role ladder, comma-joined, lowest to highest; Absent if goblins placed no settlement
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `farmer,shaman,chief` | 948 | 94.8% |
-| `farmer,chief` | 30 | 3.0% |
-| `fisher,chief` | 12 | 1.2% |
-| `forager,chief` | 10 | 1.0% |
+| `farmer,shaman,chief` | 956 | 95.7% |
+| `farmer,chief` | 24 | 2.4% |
+| `forager,chief` | 11 | 1.1% |
+| `fisher,chief` | 8 | 0.8% |
 
 ### `goblin-flagship-surplus`
 
 The goblin flagship vertex's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement
 
-n = 1000 present, 0 absent (of 1000 worlds)
+n = 999 present, 1 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.046595215 | 0.48208633 | 0.51105296 | 0.5352195 | 0.81 | 0.50224872 |
+| 0.0061360004 | 0.48128597 | 0.51153935 | 0.53408095 | 0.81 | 0.50267552 |
 
 ### `goblin-settlement-count`
 
@@ -133,41 +131,40 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1 | 4 | 10 | 26 | 137 | 17.14 |
+| 0 | 4 | 10 | 25 | 136 | 17.631 |
 
 ### `kobold-flagship-coastal`
 
 Whether the kobold flagship settlement's vertex borders an ocean vertex, recomputed from the terrain provider; Absent if kobolds placed no settlement
 
-n = 981 present, 19 absent (of 1000 worlds)
+n = 983 present, 17 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `true` | 6 | 0.6% |
-| `false` | 975 | 99.4% |
+| `true` | 9 | 0.9% |
+| `false` | 974 | 99.1% |
 
 ### `kobold-flagship-roles`
 
 The kobold flagship's committed role ladder, comma-joined, lowest to highest; Absent if kobolds placed no settlement
 
-n = 981 present, 19 absent (of 1000 worlds)
+n = 983 present, 17 absent (of 1000 worlds)
 
 | value | count | share |
 |---|---|---|
-| `digger,keeper,elders` | 677 | 69.0% |
-| `digger,elders` | 300 | 30.6% |
-| `digger,warden,elders` | 2 | 0.2% |
-| `digger,warden,keeper,elders` | 2 | 0.2% |
+| `digger,keeper,elders` | 687 | 69.9% |
+| `digger,elders` | 293 | 29.8% |
+| `digger,warden,keeper,elders` | 3 | 0.3% |
 
 ### `kobold-flagship-surplus`
 
 The kobold flagship vertex's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if kobolds placed no settlement
 
-n = 981 present, 19 absent (of 1000 worlds)
+n = 983 present, 17 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.011989176 | 0.37966328 | 0.44723682 | 0.48727283 | 0.675 | 0.40107787 |
+| 0.0071005807 | 0.38193861 | 0.44417224 | 0.48714295 | 0.63 | 0.4006984 |
 
 ### `kobold-settlement-count`
 
@@ -177,7 +174,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0 | 7 | 27 | 60 | 191 | 38.108 |
+| 0 | 7 | 30.5 | 61 | 240 | 40.824 |
 
 ### `largest-holding-share`
 
@@ -187,7 +184,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 0.0046137466 | 0.0087736991 | 0.011061973 | 0.014807163 | 0.074398249 | 0.013476212 |
+| 0.0046330301 | 0.0078167116 | 0.0095295505 | 0.012132241 | 0.03968254 | 0.010665391 |
 
 ### `per-cell-diversity`
 
@@ -197,7 +194,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 1.36282 | 1.6545201 | 1.8507802 | 2.0216296 | 2.6162405 | 1.8437287 |
+| 1.3611725 | 1.647525 | 1.8448769 | 2.0110785 | 2.6063699 | 1.8364458 |
 
 ### `pop-weighted-abs-latitude`
 
@@ -207,7 +204,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 6.4895428 | 12.546923 | 15.520091 | 19.965327 | 57.541575 | 17.443212 |
+| 7.0988252 | 13.247148 | 16.130066 | 19.558199 | 53.175473 | 17.566463 |
 
 ### `rank-size-slope`
 
@@ -217,7 +214,7 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| -1.0179198 | -0.62928238 | -0.58339281 | -0.53414205 | -0.33220686 | -0.58478095 |
+| -0.92805749 | -0.60305843 | -0.55303245 | -0.50507902 | -0.3204694 | -0.55392577 |
 
 ### `settlement-count`
 
@@ -227,13 +224,13 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 | min | p25 | median | p75 | max | mean |
 |---|---|---|---|---|---|
-| 30 | 192 | 262 | 329 | 606 | 259.942 |
+| 61 | 231 | 303 | 373 | 629 | 304.922 |
 
 ## Weaknesses found here
 
 ### `flagship-coastal`
 
-- **D1**: "false" holds 811/1000 worlds (81.1%), at or above the 80% threshold
+- **D1**: "false" holds 826/999 worlds (82.7%), at or above the 80% threshold
 
 ### `flagship-structure-size`
 
@@ -242,27 +239,27 @@ n = 1000 present, 0 absent (of 1000 worlds)
 
 ### `flagship-subsistence`
 
-- **D1**: "farming" holds 978/1000 worlds (97.8%), at or above the 80% threshold
+- **D1**: "farming" holds 980/999 worlds (98.1%), at or above the 80% threshold
 
 ### `goblin-flagship-coastal`
 
-- **D1**: "false" holds 811/1000 worlds (81.1%), at or above the 80% threshold
+- **D1**: "false" holds 826/999 worlds (82.7%), at or above the 80% threshold
 
 ### `goblin-flagship-roles`
 
-- **D1**: "farmer,shaman,chief" holds 948/1000 worlds (94.8%), at or above the 80% threshold
+- **D1**: "farmer,shaman,chief" holds 956/999 worlds (95.7%), at or above the 80% threshold
 
 ### `kobold-flagship-coastal`
 
-- **D1**: "false" holds 975/981 worlds (99.4%), at or above the 80% threshold
+- **D1**: "false" holds 974/983 worlds (99.1%), at or above the 80% threshold
 
 ### `pop-weighted-abs-latitude`
 
-- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.134 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mean-land-temperature-c, but observed r = +0.130 (1000 pairs) is weak (positive)
 
 ### `settlement-count`
 
-- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.148 (1000 pairs) is weak (positive)
-- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.078 (1000 pairs) is none
-- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.016 (1000 pairs) is none
+- **D5 strength**: declared strong tracking habitable-fraction, but observed r = +0.222 (1000 pairs) is weak (positive)
+- **D5 strength**: declared moderate tracking mountain-coverage, but observed |r| = 0.021 (1000 pairs) is none
+- **D5 strength**: declared moderate tracking ocean-fraction, but observed |r| = 0.058 (1000 pairs) is none
 

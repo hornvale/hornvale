@@ -6740,3 +6740,10 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T18:13:35Z | gate-commit | 35.427 | 66.883 | 18.022 | 2.40 | 0 | de9ea12ac | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T20:05:24Z | gate-commit | 37.471 | 68.121 | 18.411 | 2.31 | 0 | a9a76a872 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T20:06:08Z | gate-commit | 36.606 | 67.733 | 18.086 | 2.34 | 0 | a9a76a872 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T21:45:03Z | census-tail-chorus | 61.377 | 819.757 | 23.950 | 13.75 | 0 | 21efd8d07 |  | lefford | 40 |
+| 2026-09-09T21:58:28Z | census-study-the-census | 804.942 | 30265.041 | 197.337 | 37.84 | 0 | 21efd8d07 |  | lefford | 40 |
+| 2026-09-09T22:04:12Z | census-study-the-meeting | 344.744 | 12361.182 | 138.718 | 36.26 | 0 | 21efd8d07 |  | lefford | 40 |
+| 2026-09-09T22:04:14Z | census-tail-domesday | 1.104 | 0.962 | 0.143 | 1.00 | 0 | 21efd8d07 |  | lefford | 40 |
+| 2026-09-09T22:04:15Z | census-tail-anomalies | 0.573 | 0.503 | 0.070 | 1.00 | 0 | 21efd8d07 |  | lefford | 40 |
+| 2026-09-09T22:04:17Z | census | 1504.038 | 45188.994 | 442.424 | 30.34 | 0 | 21efd8d07 |  | lefford | 40 |
+| 2026-09-09T22:11:30Z | gnomon-injection | 428.269 | 5013.182 | 160.774 | 12.08 | 0 | 21efd8d07 |  | lefford | 40 |
