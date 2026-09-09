@@ -93,7 +93,7 @@
 [[profile.default.overrides]]
 # class: scatter-sweep
 # class: front-loaded
-filter = 'test(/census_budget_and_spacing_hold_across_seeds$/) | test(/the_mires_preregistered_readout$/) | test(/the_fares_preregistered_readout$/) | test(/the_fares_exploratory_readout$/) | test(/every_plan_is_solvable_across_the_sanctioned_sweep$/)'
+filter = 'test(/census_budget_and_spacing_hold_across_seeds$/) | test(/the_mires_preregistered_readout$/) | test(/the_fares_preregistered_readout$/) | test(/the_fares_exploratory_readout$/) | test(/every_plan_is_solvable_across_the_sanctioned_sweep$/) | test(/locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix$/)'
 threads-required = "num-cpus"
 # `priority = 100` (The Governor, Task 1): FRONT-LOAD the barrier this class
 # already pays. `threads-required = "num-cpus"` reserves the whole runner,
