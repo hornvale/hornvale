@@ -171,8 +171,8 @@ const GAP: &str = "—";
 /// `| ... | ... |` shape but carries wrong *content* — a shifted column, a
 /// corrupted word — still counts as a seen row and parses without error.
 /// This function has no way to know a cell's content is wrong, only that its  // lexicon: a MARKDOWN TABLE cell — the area sense, unrelated to mesh geometry
-/// shape is intact. That is Task 3's job: `the_baseline_roster_is_eighteen_
-/// tongues` catches a roster that gained or lost a tongue, and
+/// shape is intact. That is Task 3's job: `the_roster_is_twenty_two_tongues`
+/// catches a roster that gained or lost a tongue, and
 /// `the_baseline_sits_between_chance_and_certainty` catches an accuracy
 /// figure a content-level corruption would produce.
 ///

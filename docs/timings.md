@@ -6719,3 +6719,7 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-09T12:43:05Z | census-tail-domesday | 0.312 | 0.267 | 0.031 | 0.96 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T12:43:05Z | census-tail-anomalies | 0.258 | 0.215 | 0.028 | 0.94 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
 | 2026-09-09T12:43:07Z | rebaseline | 154.951 | 472.216 | 21.655 | 3.19 | 0 | dadc4be06 | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:34:11Z | gate-commit | 53.277 | 56.930 | 7.975 | 1.22 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:37:25Z | gate-commit | 97.553 | 58.876 | 14.126 | 0.75 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:39:04Z | gate-commit | 46.185 | 68.291 | 16.663 | 1.84 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
+| 2026-09-09T13:40:24Z | gate-commit | 63.997 | 82.081 | 20.577 | 1.60 | 0 | 9e133f78b | campaign/underworld-peoples | MacBookPro | 10 |
