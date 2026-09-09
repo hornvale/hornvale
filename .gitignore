@@ -93,3 +93,7 @@ book/src/laboratory/generated/gnomon-injection/
 # until one is committed from the machine that creates them. None is tracked
 # and none is on disk as of 2026-08-29; this is preventive, not a cleanup.
 .DS_Store
+
+# Observation films and their local render inputs are derived review output.
+# Manifests and small deterministic fixtures remain committed under observations/.
+observations/render-output/
