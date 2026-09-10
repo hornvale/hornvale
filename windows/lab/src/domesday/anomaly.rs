@@ -919,6 +919,12 @@ mod tests {
         // epidemic/Lot columns vary across the 1000 worlds and land
         // EVALUABLE; the remaining new column is structurally absent and does
         // not enter either surface.
+        // THE WANDERERS (2026-09-10, goldens delivered as 270b9f8a): the
+        // refreshed values move evaluable 180 -> 181 and excluded 52 -> 51
+        // without changing the 292-column metric surface. The existing
+        // `first-day-occ-tech-neolithic` column now varies enough to leave the
+        // excluded rails, so this witness records the measured surface rather
+        // than treating the prior classification as a permanent schema fact.
         // The test's NAME carries the census's metric-column count (290 CSV
         // columns less `seed`, `pin_set` and `refusal`);
         // `docs/timings/subfloor-roster.tsv`
@@ -928,12 +934,12 @@ mod tests {
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            180,
+            181,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            52,
+            51,
             "excluded count moved — re-measure and update this"
         );
     }

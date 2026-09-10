@@ -954,7 +954,8 @@ mod tests {
 
     #[test]
     fn a_domain_page_carries_the_generated_header_and_only_computed_numbers() {
-        let page = render_domain(&census(), "climate", &[], &[]);
+        let c = census();
+        let page = render_domain(&c, "climate", &[], &[]);
         assert!(
             page.starts_with("<!-- GENERATED FILE — do not edit."),
             "header required"
@@ -968,15 +969,18 @@ mod tests {
         // restated a hardcoded figure would fail. It therefore tracks the
         // census and moves whenever the census does.
         //
-        // THE GLASSHOUSE (Stage B, k = 0.30): `-11.9` -> `-3.6`. That is not
-        // drift, it is the campaign's headline arriving in a test that was
-        // never pointed at it. `mean-land-temperature-c`'s median over 1000
-        // worlds moves -11.99 -> -3.649 (spinning: -10.49 -> -2.868), and
-        // ice-dominant worlds fall 651/1000 -> 187/1000. The re-centring this
-        // campaign exists for is +8.34 K at the median and a 71% cut in ice
-        // dominance. Read `book/src/domesday/climate.md` for the rendered
-        // figure this assertion is checking against.
-        assert!(page.contains("-3.6"), "the median is read, not restated");
+        // THE GLASSHOUSE (Stage B, k = 0.30): this used to pin a
+        // hand-transcribed median (`-3.6`). That proved only that one day's
+        // census was still present. Derive the expected rendered value from
+        // the same census passed to the renderer so the witness remains about
+        // computed-vs-authored output across legitimate census refreshes.
+        let median = numeric(&c, "mean-land-temperature-c")
+            .expect("mean-land-temperature-c has census values")
+            .median;
+        assert!(
+            page.contains(&quantize(median).to_string()),
+            "the median is read, not restated"
+        );
     }
 
     #[test]
