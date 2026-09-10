@@ -7,6 +7,8 @@ use crate::{
 pub struct ObservationMirror {
     initial: std::sync::Arc<Initial>,
     next: u64,
+    retired_before: u64,
+    generation: u64,
     pending: Option<(u64, i64)>,
     current: Option<Reply>,
 }
@@ -15,6 +17,8 @@ impl ObservationMirror {
         Ok(Self {
             initial: std::sync::Arc::new(documents::initial(json)?),
             next: 0,
+            retired_before: 0,
+            generation: 0,
             pending: None,
             current: None,
         })
@@ -30,12 +34,26 @@ impl ObservationMirror {
     }
     pub fn accept(&mut self, json: &str) -> Result<bool, ViewError> {
         let reply = documents::reply(json)?;
+        if reply.request_id < self.retired_before {
+            return Ok(false);
+        }
         if reply.binding != self.initial.binding {
             return Err(ViewError::Binding(
                 "reply belongs to another source binding".into(),
             ));
         }
+        if reply.request_id >= self.next {
+            return Err(ViewError::Document("reply was never requested".into()));
+        }
         let Some((id, ticks)) = self.pending else {
+            if let Some(current) = &self.current
+                && reply.request_id == current.request_id
+                && serde_json::to_value(&reply)? != serde_json::to_value(current)?
+            {
+                return Err(ViewError::Document(
+                    "reply conflicts with committed observation".into(),
+                ));
+            }
             return Ok(false);
         };
         if reply.request_id < id {
@@ -70,7 +88,13 @@ impl ObservationMirror {
             .as_array()
             .expect("validated inventory")
             .len();
-        if !(0..expected_stars).all(|index| {
+        if !(0..expected_wanderers).all(|index| {
+            reply
+                .astronomy
+                .bodies
+                .iter()
+                .any(|b| b.id == format!("wanderer:{index}") && b.kind == "wanderer")
+        }) || !(0..expected_stars).all(|index| {
             reply
                 .astronomy
                 .bodies
@@ -124,9 +148,21 @@ impl ObservationMirror {
     }
     pub fn reset(&mut self, json: &str) -> Result<(), ViewError> {
         let next = self.next;
+        let generation = self
+            .generation
+            .checked_add(1)
+            .ok_or_else(|| ViewError::Range("reset generation overflow".into()))?;
         *self = Self::new(json)?;
         self.next = next;
+        self.retired_before = next;
+        self.generation = generation;
         Ok(())
+    }
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+    pub fn pending_ticks(&self) -> Option<i64> {
+        self.pending.map(|(_, ticks)| ticks)
     }
     pub fn current_ticks(&self) -> Option<i64> {
         self.current.as_ref().map(|r| r.ticks)

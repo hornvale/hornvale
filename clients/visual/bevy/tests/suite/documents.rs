@@ -40,6 +40,9 @@ fn declared_binary_topology_discriminants_are_accepted() {
     for topology in ["single", "wide-binary", "close-binary"] {
         let mut v = original.clone();
         v["system"]["stellar"]["topology"] = serde_json::json!(topology);
+        if topology != "single" {
+            v["system"]["stellar"]["companion"] = serde_json::json!({"star":v["system"]["stellar"]["primary"],"orbit":{"semi_major_axis_au":1.0,"period_days":365.0,"phase_offset":0.0}});
+        }
         assert!(documents::initial(&v.to_string()).is_ok());
     }
 }
@@ -89,4 +92,19 @@ fn rejects_finite_overflow_sized_physical_geometry() {
         bad["astronomy"]["bodies"][index]["radius_km"] = serde_json::json!(1e300);
         assert!(documents::reply(&bad.to_string()).is_err(), "body {index}");
     }
+}
+
+#[test]
+fn consumed_catalog_inventory_must_be_consistent() {
+    let original: serde_json::Value =
+        serde_json::from_str(include_str!("../fixtures/initial.json")).unwrap();
+    let mut missing = original.clone();
+    missing["system"]["moons"].as_array_mut().unwrap().pop();
+    assert!(documents::initial(&missing.to_string()).is_err());
+    let mut secondary = original.clone();
+    secondary["system"]["stellar"]["topology"] = serde_json::json!("wide-binary");
+    assert!(documents::initial(&secondary.to_string()).is_err());
+    let mut indices = original.clone();
+    indices["moons"]["moons"][0]["index"] = serde_json::json!(99);
+    assert!(documents::initial(&indices.to_string()).is_err());
 }

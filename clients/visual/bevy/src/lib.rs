@@ -33,3 +33,10 @@ pub use camera::CameraPose;
 mod renderer;
 pub use bevy;
 pub use renderer::{Renderer, VisualPlugin};
+
+mod timeline;
+pub use timeline::{FilmClock, FrameSample, HISTORY_RESET_POLICY, PresentationTimeline};
+
+pub mod lifecycle;
+
+mod scene;

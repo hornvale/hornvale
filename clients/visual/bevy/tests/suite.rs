@@ -6,3 +6,6 @@ mod coordinates;
 mod documents;
 #[path = "suite/surface.rs"]
 mod surface;
+
+#[path = "suite/timeline.rs"]
+mod timeline;

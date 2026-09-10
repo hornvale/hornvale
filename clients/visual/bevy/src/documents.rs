@@ -117,6 +117,35 @@ pub fn initial(json: &str) -> Result<Initial, ViewError> {
             && v.system["stellar"]["primary"].is_object(),
         "incomplete system inventory",
     )?;
+    // Consumed catalog fields: topology, native ordered body inventory and moon
+    // appearance. Orbital elements, stellar class/luminosity and world calendar
+    // fields remain source provenance; this view never evaluates them.
+    let secondary = v.system["stellar"].get("companion");
+    check(
+        if v.system["stellar"]["topology"] == "single" {
+            secondary.is_none_or(Value::is_null)
+        } else {
+            secondary.is_some_and(|c| c["star"].is_object() && c["orbit"].is_object())
+        },
+        "stellar secondary disagrees with topology",
+    )?;
+    check(
+        v.system["moons"]
+            .as_array()
+            .is_some_and(|a| a.len() == v.moons.moons.len() && a.iter().all(Value::is_object))
+            && v.system["wanderers"]
+                .as_array()
+                .is_some_and(|a| a.iter().all(Value::is_object)),
+        "inconsistent system body inventory",
+    )?;
+    check(
+        v.moons
+            .moons
+            .iter()
+            .enumerate()
+            .all(|(index, m)| usize::try_from(m.index) == Ok(index)),
+        "moon indices must match native catalog order",
+    )?;
     let mut ids = BTreeSet::new();
     for m in &v.moons.moons {
         check(

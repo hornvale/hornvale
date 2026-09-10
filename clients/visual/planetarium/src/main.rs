@@ -45,7 +45,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         return Err("invalid draft film".into());
     }
     std::fs::create_dir(&output)?;
-    let (bridge, initial) = Bridge::open(world.clone(), revision.clone())?;
+    let (mut bridge, initial) = Bridge::open(world.clone(), revision.clone())?;
     std::fs::write(output.join("initial.json"), &initial)?;
     let mut mirror = ObservationMirror::new(&initial)?;
     let request = mirror.request(pilot.start_ticks)?;
@@ -115,7 +115,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     std::fs::write(
         output.join("draft.json"),
         serde_json::to_vec_pretty(
-            &serde_json::json!({"schema":"planetarium/draft-evidence/v1","world":world,"binding":mirror.initial().binding,"declared_source_revision":revision,"working_tree_status":String::from_utf8_lossy(&status.stdout),"film":pilot,"executable_sha256":executable_sha256,"font_sha256":font_sha256,"appearance":{"render_mode":"synchronous, pipelined rendering disabled; fixed exposure, no temporal history","caption_height_fraction":0.06,"surface_reconstruction":"3x3 convex scalar filter + bilinear source sampling; normalized valid-ocean ice coverage; no new extrema","water_roughness":0.24,"land_roughness":0.86,"ice_roughness":0.65,"reflectance":0.35,"solar_photometric_reference_lux":127000,"point_light_range_render_units":1e9,"point_source_radius":0,"cloud_layer":"not rendered; source climate remains static","km_per_unit":1000,"sea_radius_reference":"bulk radius at sea surface; positive elevation-minus-sea relief 1:1","atmosphere":"cosmetic Earth scattering with 0.18 optical-density multiplier, 80km shell","exposure_ev100":13.3,"tonemapping":"AcesFitted","moon":"source albedo/tint with static cosmetic maria variation; no physical spin","shadows":"disabled, no finite stellar disc"},"frames":records}),
+            &serde_json::json!({"schema":"planetarium/draft-evidence/v1","world":world,"binding":mirror.initial().binding,"declared_source_revision":revision,"working_tree_status":String::from_utf8_lossy(&status.stdout),"film":pilot,"executable_sha256":executable_sha256,"font_sha256":font_sha256,"appearance":{"render_mode":"synchronous, pipelined rendering disabled; fixed exposure, no temporal history","history_reset_policy":hornvale_bevy_view::HISTORY_RESET_POLICY,"caption_height_fraction":0.06,"surface_reconstruction":"3x3 convex scalar filter + bilinear source sampling; normalized valid-ocean ice coverage; no new extrema","water_roughness":0.24,"land_roughness":0.86,"ice_roughness":0.65,"reflectance":0.35,"solar_photometric_reference_lux":127000,"point_light_range_render_units":1e9,"point_source_radius":0,"cloud_layer":"not rendered; source climate remains static","km_per_unit":1000,"sea_radius_reference":"bulk radius at sea surface; positive elevation-minus-sea relief 1:1","atmosphere":"cosmetic Earth scattering with 0.18 optical-density multiplier, 80km shell","exposure_ev100":13.3,"tonemapping":"AcesFitted","moon":"source albedo/tint with static cosmetic maria variation; no physical spin","shadows":"disabled, no finite stellar disc"},"frames":records}),
         )?,
     )?;
     Ok(())
