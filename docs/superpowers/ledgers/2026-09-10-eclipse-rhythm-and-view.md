@@ -65,3 +65,57 @@ Plan self-review found no placeholders, unresolved type-name mismatch, or requir
 **Alternatives discarded:** Retaining the `expect` leaves a reachable panic in a query surface. Clamping would silently change the requested window and violate exact bounds.
 
 **Capture actions:** Task 2 fix round adds lower and upper boundary tests and propagates conversion errors before event enumeration.
+
+## #5 [G5] — CLI v3 error/report review findings
+
+**Question:** Do all native eclipse query failures identify the v3 contract, and does the task retain its required verification evidence?
+
+**Decision:** Prefix missing-window CLI errors with `scene/eclipses/v3:` and add both missing-flag assertions. Preserve the worker's required Task 3 report with red/green and gate output before the task is accepted.
+
+**Why:** The observer and WASM paths already emitted versioned errors, but the native parser's missing `--from`/`--until` branch still returned an unversioned message. The implementation worker also omitted the SDD report, leaving the review package without the required test evidence.
+
+**Alternatives discarded:** Treating the missing report as clerical would weaken the required review record. Leaving parser errors unversioned makes clients distinguish failures inconsistently.
+
+**Capture actions:** Task 3 fix round updates the parser tests/error envelope and writes the report as a scratch SDD artifact; no product scope expands.
+
+## #6 [G5] — stale generated artifact review findings
+
+**Question:** Do the committed almanac and scene examples agree with the v3 producer and the new almanac vocabulary?
+
+**Decision:** Regenerate the locked seed-42 almanac and scene examples using the active artifact commands, then repair the campaign spec's dead v2 reference.
+
+**Why:** Review found `almanac-seed-42-locked.md` still carried the former compact recurrence prose and `scene-eclipses-seed-42.json` still declared `scene/eclipses/v2`, despite the v2 reference being removed and the generators now emitting the v3 contract.
+
+**Alternatives discarded:** Leaving either artifact stale would make committed examples contradict the code and documentation. Hand-editing generated output would bypass the prescribed generator and weaken artifact provenance.
+
+**Capture actions:** Task 4 fix round runs the existing non-census artifact regeneration path once, inspects the complete diff, and updates only the dead spec link alongside required generated output.
+
+## Task 5 — local artifact review and verification
+
+The one full non-census artifact run exited 0. Its timing records are
+`census-tail-chorus` (`95.603s`, rc 0) and `rebaseline` (`280.714s`, rc 0),
+both at `0cea68974`. The complete remaining content diff contained only seven
+eclipse-count lines in `book/src/gallery/generated/the-lot-seed-42.md`; that
+Lot exhibit output is outside this campaign and was restored byte-for-byte to
+the branch's committed version. The required Eclipse almanac and scene
+fixtures had already been producer-refreshed and committed in `0cea68974`, so
+the full run produced no further Eclipse contract output. No census ran.
+
+Focused verification after resolving the artifact drift exited 0:
+
+- `cargo test -p hornvale-astronomy`: 286 unit and 45 integration tests passed.
+- `cargo test -p hornvale-scene eclipses`: 6 unit and 1 fixture test passed.
+- `cargo test -p hornvale-almanac eclipse_`: 6 focused tests passed.
+- `HV_TEST_OK=1 cargo test -p hornvale --test suite scene_eclipses_cli -- --nocapture`: 7 focused CLI tests passed.
+
+The required local gates also exited 0:
+
+- `make quick`: `29.777s`; formatter, clippy, type audit, placement audit, and plumb checks passed.
+- `make world-check`: `65.444s`; native/WASM system, tile, region, and eclipse scenes were byte-identical, observer normalization/error envelopes passed, and the WASM measured 468,547 bytes gzipped (1,233,557 raw) against the 524,288-byte limit.
+- `make gate-commit`: `59.210s`; all four argv-safe subfloor chunks passed, with the terminal chunk reporting 445 passed and 5,831 skipped.
+- `cargo nextest run -p hornvale --test suite -E 'test(docs_consistency)'`: 41 passed and 393 skipped after the reconciliation and plan-status edits.
+- `make docs-tests`: all 75 prose-subject tests passed and 359 were skipped.
+
+Task 5's campaign review and G6/Sluice work remain pending. This worker was
+explicitly instructed not to spawn subagents and not to submit, push, merge,
+or close the campaign.

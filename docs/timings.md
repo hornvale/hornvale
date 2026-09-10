@@ -7085,3 +7085,8 @@ measurable at the rung a player actually holds a key down to reach.
 | 2026-09-10T19:28:32Z | gate-commit | 58.303 | 113.819 | 46.418 | 2.75 | 0 | f5e6faf94 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-10T19:29:48Z | gate-commit | 43.477 | 73.468 | 21.739 | 2.19 | 0 | f5e6faf94 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
 | 2026-09-10T19:40:10Z | gate-commit | 78.321 | 81.370 | 24.188 | 1.35 | 0 | da0f23763 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:50:32Z | census-tail-chorus | 95.603 | 177.483 | 13.806 | 2.00 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T19:50:32Z | rebaseline | 280.714 | 447.666 | 27.619 | 1.69 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T21:25:14Z | quick | 29.777 | 26.868 | 0.746 | 0.93 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T21:26:27Z | world-check | 65.444 | 63.496 | 2.291 | 1.01 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |
+| 2026-09-10T21:27:31Z | gate-commit | 59.210 | 74.426 | 22.164 | 1.63 | 0 | 0cea68974 | campaign/eclipse-rhythm-view | MacBookPro | 10 |

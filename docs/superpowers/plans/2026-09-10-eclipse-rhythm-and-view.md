@@ -38,25 +38,25 @@
 **Goal:** Make recurrence and observer results explicit, pure astronomy outputs.
 **Success Criteria:** Existing Eclipse Seasons tests remain green; new APIs cover Saros/exeligmos relationships and all observer boundary cases.
 **Tests:** `cargo test -p hornvale-astronomy --lib eclipses::tests` plus focused integration tests.
-**Status:** Not Started
+**Status:** Complete
 
 ### Stage 2: Scene contract
 **Goal:** Emit `scene/eclipses/v3` with recurrence records, geographic regions, and optional observer results.
 **Success Criteria:** Native scene output has a stable v3 shape, exact ticks, explicit null/absent semantics, and no world mutation.
 **Tests:** `cargo test -p hornvale-scene --lib eclipses`; scene JSON shape and determinism tests.
-**Status:** Not Started
+**Status:** Complete
 
 ### Stage 3: Surfaces
 **Goal:** Wire v3 through CLI, WASM, almanac, and reference documentation.
 **Success Criteria:** Native and WASM queries agree byte-for-byte; almanac and reference output describe the same fields and vocabulary.
 **Tests:** CLI scene tests, `clients/world-wasm` checks, almanac tests, and native/WASM smoke.
-**Status:** Not Started
+**Status:** Complete
 
 ### Stage 4: Artifacts and verification
 **Goal:** Re-pin only contract-bearing output and complete repository gates.
 **Success Criteria:** Required fixtures and bundles are regenerated from the implementation, docs audits pass, and no census regeneration is performed without a measured schema change.
 **Tests:** `make quick`, relevant local client checks, `make gate-commit`; queued stage/merge gates after review.
-**Status:** Not Started
+**Status:** In Progress
 
 ---
 
@@ -70,12 +70,12 @@
 - Consumes: existing `EclipseEvent`, `GroundTrack`, `EclipseSight`, `Calendar`, `StarSystem`, `StdDays`, and `StdInstant`.
 - Produces: a public recurrence summary containing the existing cycle fields plus explicit three-return exeligmos data, and one public observer result that distinguishes solar sight tier, lunar visibility, day/night side, and region.
 
-- [ ] **Step 1: Add failing behavior tests** for exeligmos = three selected-cycle periods, node-slip accumulation across three returns, per-moon recurrence ordering, solar track boundary/longitude-wrap visibility, long-duration tracks exceeding 180° and one full rotation, lunar night-side visibility, poles, retrograde rotation, and locked worlds.
-- [ ] **Step 2: Run the focused astronomy tests** and confirm the new assertions fail against the current API while the existing Eclipse Seasons tests remain green.
-- [ ] **Step 3: Implement the smallest pure API** over the existing helpers. Preserve `best_cycle`’s bounded search and its distinction between true Luna calibration inputs and generated-world approximations. Validate observer latitude in `[-90, 90]`, normalize longitude to the existing `[-180, 180)` convention, and route solar/lunar events through one result type without duplicating day-side logic.
-- [ ] **Step 4: Run the focused tests and the astronomy crate test suite**; inspect that no stream or generated-world code changed. Preserve the timing ledger row produced by the repository's timed commands.
-- [ ] **Step 5: Regenerate `docs/audits/type-audit-report.md` with the repository's prescribed report command, inspect that its changes are limited to the new public API audit entries, and include it with the domain commit.**
-- [ ] **Step 6: Commit** with a message explaining that the existing eclipse physics is being exposed as structured rhythm and observer data.
+- [x] **Step 1: Add failing behavior tests** for exeligmos = three selected-cycle periods, node-slip accumulation across three returns, per-moon recurrence ordering, solar track boundary/longitude-wrap visibility, long-duration tracks exceeding 180° and one full rotation, lunar night-side visibility, poles, retrograde rotation, and locked worlds.
+- [x] **Step 2: Run the focused astronomy tests** and confirm the new assertions fail against the current API while the existing Eclipse Seasons tests remain green.
+- [x] **Step 3: Implement the smallest pure API** over the existing helpers. Preserve `best_cycle`’s bounded search and its distinction between true Luna calibration inputs and generated-world approximations. Validate observer latitude in `[-90, 90]`, normalize longitude to the existing `[-180, 180)` convention, and route solar/lunar events through one result type without duplicating day-side logic.
+- [x] **Step 4: Run the focused tests and the astronomy crate test suite**; inspect that no stream or generated-world code changed. Preserve the timing ledger row produced by the repository's timed commands.
+- [x] **Step 5: Regenerate `docs/audits/type-audit-report.md` with the repository's prescribed report command, inspect that its changes are limited to the new public API audit entries, and include it with the domain commit.**
+- [x] **Step 6: Commit** with a message explaining that the existing eclipse physics is being exposed as structured rhythm and observer data.
 
 ### Task 2: `scene/eclipses/v3` producer
 
@@ -88,11 +88,11 @@
 - Consumes: Task 1 recurrence and observer APIs; existing `eclipses_scene` world/window conversion and `SceneError` handling.
 - Produces: `ECLIPSES_SCHEMA = "scene/eclipses/v3"`, v3 serializable types, and an `eclipses_scene` producer that accepts an optional observer query and emits recurrence records plus per-event observation results.
 
-- [ ] **Step 1: Extend scene tests first** to assert the v3 schema, exact tick bounds, recurrence arrays, track/null behavior, omitted observer behavior, supplied observer behavior, invalid coordinates, and no mutation/draw consumption.
-- [ ] **Step 2: Run the scene tests** and capture the expected red failures from the v2-only types and signature.
-- [ ] **Step 3: Implement v3 types and mapping** using explicit `i64` ticks for wire times and `f64_field` quantizers for emitted floats. Represent absent observer input distinctly from a supplied observer whose event result is unseen. Keep event order day-ascending with moon index tie-break. Keep physical region fields separate from the observer result.
-- [ ] **Step 4: Regenerate the scene fixture from the producer and run the scene unit/integration tests**; compare JSON output twice for byte identity.
-- [ ] **Step 5: Commit** the scene contract and its reference page together so the wire shape and documentation cannot drift.
+- [x] **Step 1: Extend scene tests first** to assert the v3 schema, exact tick bounds, recurrence arrays, track/null behavior, omitted observer behavior, supplied observer behavior, invalid coordinates, and no mutation/draw consumption.
+- [x] **Step 2: Run the scene tests** and capture the expected red failures from the v2-only types and signature.
+- [x] **Step 3: Implement v3 types and mapping** using explicit `i64` ticks for wire times and `f64_field` quantizers for emitted floats. Represent absent observer input distinctly from a supplied observer whose event result is unseen. Keep event order day-ascending with moon index tie-break. Keep physical region fields separate from the observer result.
+- [x] **Step 4: Regenerate the scene fixture from the producer and run the scene unit/integration tests**; compare JSON output twice for byte identity.
+- [x] **Step 5: Commit** the scene contract and its reference page together so the wire shape and documentation cannot drift.
 
 ### Task 3: CLI and WASM query surfaces
 
@@ -105,11 +105,11 @@
 - Consumes: Task 2 `eclipses_scene`/`eclipses_json` and v3 schema.
 - Produces: native eclipse query flags for optional latitude/longitude and an explicit observer-aware WASM export with finite/range validation at the ABI boundary.
 
-- [ ] **Step 1: Add CLI and WASM contract tests** for no observer, valid observer, longitude normalization, invalid latitude, invalid/non-finite values, and native/WASM JSON equivalence.
-- [ ] **Step 2: Run the focused surface tests** and confirm they fail before wiring the new arguments and v3 tag.
-- [ ] **Step 3: Wire the CLI parser and WASM entry point** to pass typed observer input into the scene producer. Keep seed and pins in their existing constructors; do not encode observer coordinates in pins or arbitrary JSON. Update help text and error envelopes to name v3.
-- [ ] **Step 4: Run CLI tests and the world-WASM local check**, including the byte-identity smoke against native output.
-- [ ] **Step 5: Commit** the query-surface changes separately from the domain and scene commits.
+- [x] **Step 1: Add CLI and WASM contract tests** for no observer, valid observer, longitude normalization, invalid latitude, invalid/non-finite values, and native/WASM JSON equivalence.
+- [x] **Step 2: Run the focused surface tests** and confirm they fail before wiring the new arguments and v3 tag.
+- [x] **Step 3: Wire the CLI parser and WASM entry point** to pass typed observer input into the scene producer. Keep seed and pins in their existing constructors; do not encode observer coordinates in pins or arbitrary JSON. Update help text and error envelopes to name v3.
+- [x] **Step 4: Run CLI tests and the world-WASM local check**, including the byte-identity smoke against native output.
+- [x] **Step 5: Commit** the query-surface changes separately from the domain and scene commits.
 
 ### Task 4: Almanac and documentation alignment
 
@@ -122,11 +122,11 @@
 - Consumes: Task 1 recurrence/observer outputs and Task 2 v3 field vocabulary.
 - Produces: almanac text that identifies moon/family recurrence, states the exeligmos relationship honestly, and renders observer sight results when context supplies coordinates.
 
-- [ ] **Step 1: Add almanac tests** for multiple moons, no-event windows, generated-world non-Saros wording, exeligmos output, and observer tiers including unseen.
-- [ ] **Step 2: Run the almanac tests** and confirm the new expectations fail against the current compact Eclipse Seasons prose.
-- [ ] **Step 3: Render the structured data through the existing almanac context** without introducing cultural interpretation or a second physical calculation. Keep no-event fallback text truthful for both solar and lunar families.
-- [ ] **Step 4: Update the scene reference and frontier rows** so v3, observer semantics, and deferred astronomy seams agree; run link and prose consistency checks.
-- [ ] **Step 5: Commit** almanac and reference changes with the vocabulary they document.
+- [x] **Step 1: Add almanac tests** for multiple moons, no-event windows, generated-world non-Saros wording, exeligmos output, and observer tiers including unseen.
+- [x] **Step 2: Run the almanac tests** and confirm the new expectations fail against the current compact Eclipse Seasons prose.
+- [x] **Step 3: Render the structured data through the existing almanac context** without introducing cultural interpretation or a second physical calculation. Keep no-event fallback text truthful for both solar and lunar families.
+- [x] **Step 4: Update the scene reference and frontier rows** so v3, observer semantics, and deferred astronomy seams agree; run link and prose consistency checks.
+- [x] **Step 5: Commit** almanac and reference changes with the vocabulary they document.
 
 ### Task 5: Artifact review and campaign verification
 
@@ -138,8 +138,8 @@
 - Consumes: completed Tasks 1–4 and their committed contracts.
 - Produces: reviewed generated artifacts, a current campaign ledger, and evidence for local and queued gates.
 
-- [ ] **Step 1: Run the artifact-producing commands once**, inspect the complete diff, and classify every changed file as required contract output, expected almanac/reference output, or unexplained drift.
-- [ ] **Step 2: Re-run only the relevant focused checks** after resolving any artifact drift; do not rebaseline census goldens unless an actual census metric or world-generating behavior changed.
-- [ ] **Step 3: Run `make quick`, the affected CLI/client checks, and `make gate-commit`; record exit codes and material output in the campaign ledger.**
+- [x] **Step 1: Run the artifact-producing commands once**, inspect the complete diff, and classify every changed file as required contract output, expected almanac/reference output, or unexplained drift.
+- [x] **Step 2: Re-run only the relevant focused checks** after resolving any artifact drift; do not rebaseline census goldens unless an actual census metric or world-generating behavior changed.
+- [x] **Step 3: Run `make quick`, the affected CLI/client checks, and `make gate-commit`; record exit codes and material output in the campaign ledger.**
 - [ ] **Step 4: Request code review and resolve findings through the subagent review loop.**
 - [ ] **Step 5: Submit the completed branch to the Sluice stage/merge process only after the campaign-close review and required canonical checks.**
