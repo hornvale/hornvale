@@ -2,8 +2,9 @@
 
 **Campaign:** Skyworld Seams · **Branch:** `campaign/skyworld`
 **Parent campaign:** `docs/superpowers/ledgers/2026-09-09-the-skyworld.md`
-**Status:** Tasks 1–4 complete with broad-review corrections; awaiting
-the campaign's normal review and close process.
+**Status:** Tasks 1–4 complete through `c1a20ce71`; broad review approved
+in the closing handoff. Local close artifacts prepared; canonical submission
+and merge remain pending.
 
 This ledger records the follow-up seam-audit campaign separately from the
 parent Skyworld implementation ledger. The parent ledger retains the broader
@@ -222,7 +223,71 @@ The existing timing override records this run separately so the pre-existing
 
 **Explicit non-results:** no census, new realm, lifecycle mutation, organisms,
 species, tethering, save fact, build rung, public runtime diagnostic API, or
-new seeded draw. Campaign review and close remain pending.
+new seeded draw. Broad review is approved; #6 records local close preparation.
+
+## #6 [G6 preparation] — What survives the close?
+
+The closing handoff approves the broad review of `c1a20ce71`. The dedicated
+ledger and parent ledger were read end to end, including all post-G3 entries.
+The retained direct-input boundary and rejected wrapper/cache/universal realm
+are captured in spec §§3, 6 and 10 and the chronicle; the full input matrix
+and measured limits remain in #5. Approval does not imply a canonical gate.
+
+**Backfilled deferred minor:** Task 3's scratch review recorded that exact
+printed counts were neither independently asserted nor durable evidence.
+`2a398be5e` fixed that, and `c1a20ce71` extended the counters. The explicit
+minor disposition was missing from the contemporaneous ledger; it is now
+**fixed**, with the process miss recorded in the retrospective's “Scratch
+routing and deferred minors” section. The root-export review chain likewise
+survives there rather than only in scratch diffs.
+
+**Durable routing:** `docs/retrospectives/skyworld-seams.md` names every
+scratch review outcome and routes broader follow-ups to permanent registry
+IDs. `book/src/chronicle/skyworld-seams.md` carries the product account and
+measurement limits. No scratch-only ruling is a prerequisite to reading the
+result. Local task briefs now point to the completed plan and this record.
+
+The routing audit's concrete locations are in
+`docs/retrospectives/skyworld-seams.md`: Task 1 source/selection failures at
+line 12, Task 2 isolation and production-extraction corrections at line 18,
+Task 3 work evidence at line 28, Task 4 source-contract fixes at line 39,
+D4 reintegration at line 48, and scratch/minor/follow-up dispositions from
+line 64. These locations carry the outcomes, not just links to scratch.
+
+Close-walk disposition:
+
+1. Local `git merge-tree --write-tree origin/main HEAD` succeeds; D4's
+   reintegration at `b8c8d7393` and its chronicle were reviewed. Canonical
+   compatibility must be checked again at submission.
+2. Scratch and both durable ledgers reviewed; minor and follow-up routing is
+   recorded above and in the retrospective.
+3. Chronicle, SUMMARY, retrospective, architecture freshness and registry
+   updates prepared. Confidence Gradient re-score is N/A: its consumer-cost
+   and ecosystem bets are unchanged. The unrelated population/Lot
+   `IMPLEMENTATION_PLAN.md` remains untouched. The seam plan is complete;
+   the parent canonical stage remains explicitly pending.
+4. No golden re-pin is needed for these documentation changes. Implementation
+   report freshness and golden checks remain part of the local gate.
+5. Seed-42 world fixture has no campaign delta. Refreeze is deferred to the
+   actual merge boundary; no fixture is silently re-authored here.
+6. Gate and headline preparation only. Push, enqueue, nudge and merge are
+   excluded by the closing-preparation assignment.
+7. Process lessons are durable in the retrospective; no separate private
+   memory is needed to recover them.
+8. Worktree removal and release are excluded by the assignment; the worktree
+   remains allocated to `campaign/skyworld`.
+
+**Fresh close verification:** `cargo test -p hornvale-worldgen --lib --test
+suite -- skyworld` passed 10 unit and 35 integration tests; `cargo test -p
+hornvale --test suite -- docs_consistency` passed 41 tests after fixing
+duplicate close-artifact ownership in reconciliation. The local
+`HV_TIMINGS_LEDGER=/tmp/skyworld-close.0rqp7j/timings.md timeout --foreground
+3600s make gate-commit` exited 0 in 39.554 s; formatting, workspace Clippy,
+audits/report freshness and all four subfloor chunks passed (1,425 / 1,394 /
+1,305 / 362 executions). Log: `/tmp/skyworld-close.0rqp7j/gate-commit.log`.
+`docs/timings.md` retained SHA-1 `000bb3a06f45d5b41b9b345127ffdcaeca7bb398`
+and remains unstaged. Reconciliation's trailing empty TSV columns are schema
+delimiters, not whitespace to trim. No canonical job was run by this closer.
 
 ## Follow-ups
 

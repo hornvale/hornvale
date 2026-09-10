@@ -1,7 +1,7 @@
 # Skyworld Seams — design
 
 **Campaign:** The Skyworld Seams · **Branch:** `campaign/skyworld`
-**Status:** G3 approved; Tasks 1–4 complete, including broad-review input, work-counter, and source-contract corrections; awaiting the campaign's normal review and close process
+**Status:** G3 approved; Tasks 1–4 complete through `c1a20ce71`; broad review approved. Local close artifacts prepared under `skyworld-seams`; canonical submission and merge pending (seam ledger #6).
 
 ## 1. Purpose
 

@@ -1,7 +1,7 @@
 # The Skyworld — design
 
 **Campaign:** The Skyworld · **Branch:** `campaign/skyworld`  
-**Status:** G3 approved; Tasks 1–3 implemented and reviewed; Task 4 canonical stage submission remains pending
+**Status:** G3 approved; Tasks 1–3 and Task 4 local integration complete; seam-audit broad review approved through `c1a20ce71`. Close artifacts prepared under `skyworld-seams`; Task 4 canonical stage submission and merge remain pending.
 **Predecessors:** The Stratum, The Wanderers, The Seedbed, and the existing
 climate/resource basis.
 

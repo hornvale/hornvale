@@ -4,6 +4,13 @@ Campaign: **The Skyworld** — a generated and rendered mobile habitat overlay.
 Branch: `campaign/skyworld`. Autopilot is engaged; G3 spec review and G6
 close remain hard stops.
 
+**Current status:** parent implementation and local integration work complete;
+seam audit through `c1a20ce71` has broad-review approval. Close artifacts are
+prepared under `skyworld-seams`; canonical stage/submission and merge remain
+pending. Dedicated seam ledger #6 and `docs/retrospectives/skyworld-seams.md`
+record the close and route the follow-ups below. Historical gate statements
+in individual entries describe their original task boundary.
+
 ## #1 [G1] — What is the Skyworld's foundational architecture?
 
 **Decision:** use a sparse, seeded Skyworld habitat overlay over the existing
@@ -319,8 +326,6 @@ coupled; source-module probes now supply the independent evidence.
 later `cfg(test)` probes. No `BuildDepth`, save fact, stream, domain, biome,
 organism, lifecycle, or census change was required.
 
-## Rejected for this campaign
-
 ## #11 [G5] — Does Skyworld reconstruct its already-built substrate?
 
 **Decision:** retain the direct `skyworld_from(world, terrain, climate,
@@ -398,6 +403,8 @@ visits, adjacency comparisons, renderer surface-map visits, overlay marks,
 occupied-set visits, and stamp candidates. The dedicated seam ledger #5 is
 the current measurement and scope record; the earlier surface/pixel totals
 alone did not account for those loops.
+
+## Rejected for this campaign
 
 - A universal `sugar` renaming of world concepts.
 - Individual plankton or full atmospheric particles.

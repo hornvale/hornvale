@@ -1,5 +1,10 @@
 # The Skyworld Implementation Plan
 
+**Status:** implementation and local integration complete; seam-audit broad
+review approved through `c1a20ce71`. Close artifacts are prepared under
+`skyworld-seams`. Task 4's canonical submission remains pending; no local
+completion statement substitutes for that gate.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a deterministic, generated, and rendered Skyworld overlay whose first specimen is a free-drifting mature orchard descended from a biological sky reef.
@@ -240,21 +245,21 @@
 - Modify: `docs/audits/campaign-reconciliation.tsv` at the campaign boundary when the plan and implementation records are complete
 - Modify: `book/src/frontier/idea-registry.md` only when an implementation result changes a registered idea’s status
 
-- [ ] **Step 1: Add cross-seed and edge-case probes.** Cover a world with minimal valid sky coverage, a world with ocean-dominant activation, a world with land-dominant activation, a world with both clustered and isolated territories, repeated trajectory queries, and detail changes that must not change the underlying generated data.
+- [x] **Step 1: Add cross-seed and edge-case probes.** Cover a world with minimal valid sky coverage, a world with ocean-dominant activation, a world with land-dominant activation, a world with both clustered and isolated territories, repeated trajectory queries, and detail changes that must not change the underlying generated data.
 
-- [ ] **Step 2: Run the focused and worldgen suites.**
+- [x] **Step 2: Run the focused and worldgen suites.**
 
   Run: `cargo nextest run -p hornvale-worldgen --test suite -- skyworld`
 
   Expected: all Skyworld tests pass with nonempty denominators for coverage and activation probes.
 
-- [ ] **Step 3: Run documentation and formatting checks.**
+- [x] **Step 3: Run documentation and formatting checks.**
 
   Run: `cargo test -p hornvale --test suite -- docs_consistency`
 
   Expected: all documentation links, registry rows, reconciliation rows, and campaign record paths pass.
 
-- [ ] **Step 4: Run the local commit gate and inspect the diff.**
+- [x] **Step 4: Run the local commit gate and inspect the diff.**
 
   Run: `make gate-commit`
 
@@ -270,7 +275,7 @@
 
   Do not run an expensive stage gate locally or bypass the queue.
 
-- [ ] **Step 6: Record the implementation result and stop for review.** Update the ledger with measured coverage, timing, determinism, and any rejected seam; update the reconciliation row only with paths that the current repository audit population accepts. The campaign remains open for the next approved slice until the Skyworld implementation and rendering behavior have been reviewed.
+- [x] **Step 6: Record the implementation result and stop for review.** Parent ledger #7 records the local result; the successor seam audit through `c1a20ce71` has broad-review approval. Close artifacts live under `skyworld-seams`. Step 5 remains pending and is excluded from this local closing-preparation assignment.
 
 ---
 

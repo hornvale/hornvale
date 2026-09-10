@@ -1,5 +1,9 @@
 # Skyworld Seams Implementation Plan
 
+**Status:** Tasks 1–4 complete through `c1a20ce71`; broad review approved.
+Local close artifacts are prepared under `skyworld-seams`; canonical
+submission and merge remain pending. See dedicated seam ledger #6.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Prove and, only where necessary, tighten the read-only terrain/climate-to-Skyworld boundary so the next Skyworld slice has measured ownership, deterministic environment-axis propagation, and bounded construction cost.
@@ -232,5 +236,6 @@ Run both test locations with:
 The dedicated seam ledger #5 records actual counts and limits: fixed surface
 and index work, sample-dependent footprint traversal, territory-pair adjacency,
 and detail-dependent overlay marks. It does not claim a universal complexity
-bound, a census, or another realm implementation. Campaign review/close remains
-pending.
+bound, a census, or another realm implementation. Broad review is approved;
+local close preparation is recorded in dedicated seam ledger #6. Push and
+canonical submission remain pending.
