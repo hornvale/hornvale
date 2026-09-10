@@ -154,15 +154,55 @@ Hornvale eclipse observation.
 
 ## 6. Architecture and observation seam
 
-Proposed home: `clients/planetarium/`, an independent Cargo workspace with pinned
-dependencies and its own checks. Three small crates have structural roles:
+Proposed home: `clients/visual/`, an independent Cargo workspace with pinned
+dependencies and its own checks. Planetarium is its first application; reusable
+libraries have names and responsibilities independent of that application.
+This does not require a separately published package or another repository.
 
-- `source`: the native Hornvale driver. Owns one initialized world/context and
-  exposes load and observation requests. It renders nothing.
-- `view`: Bevy presentation and capture. It accepts serialized observation
-  documents; its dependency graph contains no Hornvale simulation crate.
-- `app`: composition root connecting source requests/replies and the view.
-  The view cannot obtain a world or call a domain evaluator through this root.
+```text
+clients/visual/
+  source/       hornvale-visual-source  — native observation library
+  bevy/         hornvale-bevy-view      — reusable Bevy presentation library
+  planetarium/  hornvale-planetarium    — first application and film direction
+```
+
+- `hornvale-visual-source` owns one initialized Hornvale world/context and
+  exposes load and observation requests. It has no Bevy dependency and renders
+  nothing. Reusable native source lifecycle and query handling belong here;
+  authoritative observations remain in the simulation's windows/domain layers.
+- `hornvale-bevy-view` accepts serialized observation documents; its dependency
+  graph contains no Hornvale simulation crate or Planetarium application. It
+  owns the reusable data-to-entity mapping, world/body identity handling,
+  coordinate conversion, time-request plumbing, materials, camera primitives,
+  selection and capture mechanisms that the pilot actually requires.
+- `hornvale-planetarium` is the composition root connecting source requests and
+  replies with the view. It owns the pilot's chosen seed/interval, astronomical
+  scene composition, authored shots, caption text, controls layout and film
+  definition. Neither library depends on this application.
+
+Keep reusable astronomical visuals as cohesive modules in the Bevy library;
+reuse does not require every module to be dimension-neutral. A later sprite
+renderer can share observation/identity/time plumbing while supplying different
+geometry and materials. An orthographic 3D treatment can reuse 3D components
+where appropriate. No 2D backend, universal scene model, general plugin host or
+additional fine-grained crate split is required by this campaign. Introduce
+further abstractions when a second concrete use exposes the need.
+
+Library tests must instantiate the source or view without depending on the
+Planetarium application. The dependency check enforces both directions:
+application → libraries is allowed; libraries → application and Bevy view →
+simulation are forbidden. This verifies structural reuse without building a
+second product merely to prove it.
+
+Reusability does not make observation authority universal. The pilot uses an
+unrestricted scientific observation source. A future situated game must use
+its own session/observer-limited producer and display mirror, following the
+existing native-game precedent (0114/0115); it must not fetch Planetarium's
+world truth and rely on hiding it in the UI. The renderer has no implicit
+world-data source. Cache and entity bindings include source/observation-scope
+identity, and switching that scope discards incompatible state. Gameplay
+commands, consequences and permitted time controls remain the future game's
+own composition and source contract.
 
 This extends the native driver/serializer pattern of decision 0114. A small
 public driver API and dependency checks enforce the separation. The application
@@ -191,8 +231,9 @@ element-evaluation precedent with direct reuse of the native implementation.
 Both paths must agree on the same world/time before rendering is trusted.
 
 Requests and replies carry an identity so an old asynchronous reply cannot
-replace a newer scrubbed time or a different world. Caching is keyed by world
-binding and exact query. Interactive scheduling may wait or coalesce requests;
+replace a newer scrubbed time, a different world or a different observation
+scope. Caching is keyed by source/scope identity, world binding and exact query.
+Interactive scheduling may wait or coalesce requests;
 it may not silently extrapolate a missing physical result. Export waits for
 the exact requested observation.
 
@@ -250,6 +291,7 @@ Two independent obligations govern acceptance.
 
 Semantic/technical checks cover world binding, units, exact time, body identity,
 source/evaluated-geometry correspondence, backward and out-of-order scrubbing,
+world/scope-switch invalidation, library independence from Planetarium,
 source isolation from the renderer, fixed frame count, capture completion and
 package hash verification. The same query order must not change semantic bytes.
 Cross-host GPU pixel byte identity is not promised. Repeat-render variability

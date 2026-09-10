@@ -151,6 +151,11 @@ an alternate astronomical world.
 
 ## Follow-ups
 
+- G3 review refinement: the shared visual libraries live under `clients/visual/`;
+  Planetarium is the first application in that workspace. Further 2D/2.5D/3D
+  renderers, gameplay adapters and additional library splits are demand-driven,
+  not added to this pilot's implementation scope (ruling #5 below).
+
 - Preserve the climate → plants → herbivores → peoples proposal for a later film
   campaign. Audit every causal link before claiming it; the user supplied it as
   a vision, not as an assertion of current end-to-end capability.
@@ -229,3 +234,39 @@ the preceding conversation. Prompt summary: three cinematic stills of an
 invented glacial world at orbital, regional and valley scales, high-color
 terrain, aggregate flow ribbons, and the caption "As the ice advances, life
 moves." It is an aesthetic reference only; no pixels assert Hornvale behavior.
+
+## #5 [Q] — reusable library ownership beyond Planetarium
+
+- Question: Nathan asked whether the Bevy/Hornvale connection belongs outside
+  Planetarium-specific crates, given eventual 2D, 2.5D or 3D gameplay.
+- Decision: refine §6 to one independent `clients/visual/` Cargo workspace with
+  `hornvale-visual-source` and `hornvale-bevy-view` reusable libraries and the
+  `hornvale-planetarium` application. Preserve the three structural roles from
+  the previous draft; give them durable library ownership rather than an
+  application-specific home. No package publication or separate repo is needed.
+- Why: the accepted film-to-client direction, Nathan's review question,
+  decisions 0022/0023's toolchain separation, and 0114/0115's native driver and
+  display-mirror boundaries. Current `clients/game` already separates its native
+  driver from a renderer whose manifest contains no simulation dependencies.
+- Alternatives discarded: hiding shared code inside the Planetarium application
+  and extracting it only after coupling has grown; a universal 2D/3D abstraction
+  designed without another consumer; another repository/public package before
+  release/version independence is needed; reusing an unrestricted scientific
+  source as a situated game's authority.
+- Ideonomy passes / overturns: two passes of cross-domain re-instantiation,
+  using direction and complexity. The abstract structure is reusable facilities
+  serving individual productions; a theater's stock equipment and production's
+  staging expose the split between accumulated capabilities and per-show
+  choices. Applied back to Hornvale, the inventory is:
+  - shared source library: native lifetime, query/request handling;
+  - shared Bevy library: presentation mechanisms, including astronomy modules;
+  - production application: chosen observations, scene assembly and direction;
+  - future game: its own allowed observations, inputs and consequences.
+  The first pass refined ownership and made scope-bound caches explicit. The
+  convergence pass compared a minimal shared library with a full generic engine
+  framework and found no further material improvement: implement only the pilot's
+  needed mechanisms and test independence from its application. One ownership
+  refinement, no engine or pilot-scope overturn.
+- Capture actions: spec §6 and cache/verification requirements updated; existing
+  RENDER-film-to-client already captures the wider direction, so no duplicate
+  registry row. G3 remains pending; this question is not spec approval.
