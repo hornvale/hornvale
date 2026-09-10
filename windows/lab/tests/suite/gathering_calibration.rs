@@ -203,9 +203,11 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // campaign's change, not a surprise. Still a DRIFT TRIPWIRE and still not
     // evidence for the Earth-contingent gradient claim (decision 0106's
     // circularity rule), exactly as the paragraph above says.
+    // The Underworld Peoples delivery merge re-measurement moves the witness
+    // again to 18.1265; the preregistered floor remains unchanged.
     assert!(
-        (mean - 18.0819).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.0819)"
+        (mean - 18.1265).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~18.1265)"
     );
 }
 
@@ -461,9 +463,11 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // 85ef1edd, goldens c90072b9): epidemic-history population work changes
     // which settlement populations carry the latitude weighting, moving the
     // measured mean to 17.4432. The below-uniform-sphere claim remains true.
+    // The Underworld Peoples delivery merge re-measurement moves the witness
+    // to 17.5665; the directional claim remains true.
     assert!(
-        (mean - 17.4432).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.4432)"
+        (mean - 17.5665).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~17.5665)"
     );
 }
 

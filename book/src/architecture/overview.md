@@ -42,6 +42,12 @@ way) and the **Laboratory** (`lab`), a batch harness that sweeps thousands
 of seeds and publishes measured distributions as drift-checked artifacts.
 A window may depend on a domain, or on another window — never the reverse.
 
+[Skyworld Seams](../chronicle/skyworld-seams.md) exercises that composition
+boundary with a mobile habitat overlay. `skyworld_from` borrows generated
+terrain and climate, derives finite habitat trajectories and aggregate stocks,
+and exposes pure observation lenses. The surface biome taxonomy, build-depth
+ladder, and saved world facts remain separate from this derived overlay.
+
 **The Game** — the eventual thin skin: a player character as a situated,
 restricted, sensory view of the same query surface every other window uses.
 Room descriptions will be focalized renderings of the same queries the REPL

@@ -928,12 +928,12 @@ mod tests {
         let (evaluable, excluded) = evaluable_columns(&c);
         assert_eq!(
             evaluable.len(),
-            180,
+            181,
             "evaluable count moved — re-measure and update this"
         );
         assert_eq!(
             excluded.len(),
-            52,
+            51,
             "excluded count moved — re-measure and update this"
         );
     }
