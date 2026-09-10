@@ -49,7 +49,7 @@ existing terrain/climate providers, `Seed`/`Stream`/`StreamLabel`, ordered
 - At close, create the chronicle/retrospective and update frontier registry
   follow-ups through the closing skill.
 
-## Stage 1: Temporal seam inventory and non-vacuous red probes
+### Task 1: Stage 1 — Temporal seam inventory and non-vacuous red probes
 
 **Goal:** Prove the current merged Waterworld seam and expose a behavioral red
 for time-sensitive reads before implementing succession.
@@ -91,7 +91,7 @@ static overlay does not yet change with time, not because a symbol is missing.
 - [ ] Record witness counts and the red/green commands in the ledger.
 - [ ] Commit: `test(the-vent): establish temporal Waterworld seam`.
 
-## Stage 2: Deterministic succession and independent field propagation
+### Task 2: Stage 2 — Deterministic succession and independent field propagation
 
 **Goal:** Derive five vent states, bounded migration, and independent local
 chemistry/temperature consequences from stable seeded source parameters.
@@ -131,7 +131,7 @@ rewriting substrate; stream order is stable and audited.
 - [ ] Record stream compatibility and state witness counts in the ledger.
 - [ ] Commit: `feat(the-vent): add deterministic vent succession`.
 
-## Stage 3: Bounded stocks and current-mediated redistribution
+### Task 3: Stage 3 — Bounded stocks and current-mediated redistribution
 
 **Goal:** Make local and transported aggregate consequences measurable while
 keeping temporal work and memory bounded.
@@ -171,7 +171,7 @@ counters measure actual loops and scale with configured bounds.
   and assert stable inputs and returned values are unchanged/equal.
 - [ ] Commit: `feat(the-vent): add bounded temporal stocks and transport`.
 
-## Stage 4: Observation, performance evidence, documentation, and close
+### Task 4: Stage 4 — Observation, performance evidence, documentation, and close
 
 **Goal:** Expose present consequences and inferred causes honestly, verify the
 campaign gates, and prepare Sluice submissions.
