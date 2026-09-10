@@ -27,3 +27,26 @@ pub fn render_position(
     }
     Ok(p)
 }
+
+/// Supported physical radii start at one metre; radius plus terrain/atmosphere
+/// must not exceed 1e6 km. Scaled mesh radii are bounded to 1e-6..=1e7 units.
+/// Source datum/elevation inputs are separately bounded to +/-1e9 metres.
+pub fn render_radius(radius_km: f64, relief_km: f64, km_per_unit: f64) -> Result<f32, ViewError> {
+    let outer = radius_km + relief_km;
+    let scaled = outer / km_per_unit;
+    if !radius_km.is_finite()
+        || radius_km < 0.001
+        || !relief_km.is_finite()
+        || relief_km < 0.0
+        || !outer.is_finite()
+        || outer > 1e6
+        || !km_per_unit.is_finite()
+        || km_per_unit <= 0.0
+        || !(1e-6..=1e7).contains(&scaled)
+    {
+        return Err(ViewError::Range(
+            "physical geometry outside supported radius/relief/scale interval".into(),
+        ));
+    }
+    Ok(scaled as f32)
+}

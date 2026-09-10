@@ -80,3 +80,20 @@ fn source_longitude_seam_and_poles_reconstruct_continuously() {
         surface::sample(&t, &t.elevation_m, 0.25, 0.0)
     );
 }
+
+#[test]
+fn physical_geometry_limits_include_scaled_radius_and_relief() {
+    use hornvale_bevy_view::coordinates::render_radius;
+    assert!(render_radius(0.001, 0.0, 1000.0).is_ok());
+    assert!(render_radius(999_920.0, 80.0, 1000.0).is_ok());
+    for (radius, relief, scale) in [
+        (1e300, 0.0, 1000.0),
+        (7000.0, 1e300, 1000.0),
+        (999_921.0, 80.0, 1000.0),
+        (0.0001, 0.0, 1000.0),
+        (7000.0, 0.0, 1e-300),
+        (7000.0, 0.0, 1e300),
+    ] {
+        assert!(render_radius(radius, relief, scale).is_err());
+    }
+}

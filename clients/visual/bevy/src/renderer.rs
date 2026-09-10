@@ -102,6 +102,7 @@ impl Renderer {
         let reply = mirror
             .current()
             .ok_or_else(|| ViewError::Document("render requires an accepted observation".into()))?;
+        crate::documents::geometry(mirror.initial(), &reply.astronomy, KM_PER_UNIT)?;
         let mut app = App::new();
         app.add_plugins(
             DefaultPlugins
@@ -380,6 +381,14 @@ impl Renderer {
         let camera = pose.transform(KM_PER_UNIT)?;
         let mut transforms = std::collections::BTreeMap::new();
         for body in &reply.astronomy.bodies {
+            if let Some(radius) = body.radius_km {
+                let relief = if body.id == "anchor" {
+                    mirror.initial().tiles.max_relief_km()
+                } else {
+                    0.0
+                };
+                pose.validate_body(body.position_km, radius + relief)?;
+            }
             let position =
                 Vec3::from_array(render_position(body.position_km, pose.eye_km, KM_PER_UNIT)?);
             let rotation = body

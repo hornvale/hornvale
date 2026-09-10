@@ -160,3 +160,39 @@ Task 5 owns interactive controls and authored visual refinement; later tasks
 own verified capture packaging and performance. For the current draft a
 binding change requires a new Renderer, so capture cannot cross bindings.
 The controller owns the Stage 1 queue submission and independent review.
+
+## Task 3 review fixes
+
+Independent review found three boundary/evidence gaps. Replies now require
+exactly one light per stellar body, and mirror acceptance requires the native
+`star:0` / `star:1` catalog inventory appropriate to the initial topology.
+A missing binary light returns an error without replacing the accepted snapshot.
+
+Physical geometry is checked before app/assets creation and mirror acceptance:
+radii must be at least 0.001 km; radius plus terrain (or the atmosphere shell)
+must not exceed 1e6 km. Source elevation and sea datum are bounded to ±1e9 m,
+so reconstruction/subtraction cannot overflow. Scaled radii must remain within
+1e-6–1e7 render units. These are client support limits, not altered source values.
+
+The actual camera support is now explicitly orbital: center distance must be
+at least twice the outer body radius, including maximum positive source relief.
+The renderer checks this before publishing a pending scene. Task 5 inspection
+and dolly controls must enforce this limit; near-surface rendering needs further
+precision work. An expanded CPU probe found 69120 pixels of Y error with a
+camera 0.2 km above a 999999.8 km body at FOV 0.005, after accounting for near
+clipping. That unsupported near-surface case now returns `ViewError::Range`.
+
+The qualified CPU test exercises real `CameraPose::transform`, f32 quaternion,
+body transform, view and Bevy projection matrices in both screen axes against
+an f64 reference. It covers rotated and nearly-up-aligned views, origins through
+1e12 km, relative coordinates through 2e10 km, FOV 0.005–2.5, physical radius
+limits, actual moon/globe radii, and the twice-radius orbital boundary.
+Across 6342 visible samples the maximum measured error is 0.101748006 pixels,
+below 0.25 at 3840×2160. A regression separately rejects the close-surface case.
+
+These changes add validation and CPU evidence; accepted geometry, lighting and
+camera calculations are unchanged. All preserved still/movie observations were
+checked against the new limits: minimum center/outer-radius ratios are
+3.4976302888 (still) and 66.9378071599 (movie). The existing witnesses remain
+valid dirty-build evidence with their original executable hash; no artifact was
+overwritten or relabeled as a render of the validation-fix binary.

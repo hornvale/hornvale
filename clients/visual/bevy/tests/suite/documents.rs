@@ -68,3 +68,25 @@ fn rejects_tile_array_and_unit_corruption() {
     v["tiles"]["schema"] = serde_json::json!("scene/tiles-feet/v1");
     assert!(documents::initial(&v.to_string()).is_err());
 }
+
+#[test]
+fn rejects_finite_overflow_sized_physical_geometry() {
+    let initial: serde_json::Value =
+        serde_json::from_str(include_str!("../fixtures/initial.json")).unwrap();
+    for pointer in [
+        "/moons/moons/0/radius_km",
+        "/tiles/elevation_m/0",
+        "/tiles/sea_level_m",
+    ] {
+        let mut bad = initial.clone();
+        *bad.pointer_mut(pointer).unwrap() = serde_json::json!(1e300);
+        assert!(documents::initial(&bad.to_string()).is_err(), "{pointer}");
+    }
+    let reply: serde_json::Value =
+        serde_json::from_str(include_str!("../fixtures/reply.json")).unwrap();
+    for index in [0, 2] {
+        let mut bad = reply.clone();
+        bad["astronomy"]["bodies"][index]["radius_km"] = serde_json::json!(1e300);
+        assert!(documents::reply(&bad.to_string()).is_err(), "body {index}");
+    }
+}

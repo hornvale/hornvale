@@ -11,6 +11,28 @@ pub struct CameraPose {
     pub focus_distance_km: f64,
 }
 impl CameraPose {
+    /// The f32 scene is qualified for orbital views, not surface landings.
+    /// Keep the center at least two outer radii away to bound subtraction error
+    /// between a camera-relative body translation and mesh-local vertices.
+    pub fn validate_body(
+        &self,
+        position_km: [f64; 3],
+        outer_radius_km: f64,
+    ) -> Result<(), ViewError> {
+        let delta = std::array::from_fn::<_, 3, _>(|i| position_km[i] - self.eye_km[i]);
+        let distance = delta.iter().map(|x| x * x).sum::<f64>().sqrt();
+        if !outer_radius_km.is_finite()
+            || outer_radius_km <= 0.0
+            || !distance.is_finite()
+            || distance < 2.0 * outer_radius_km
+        {
+            return Err(ViewError::Range(
+                "orbital camera requires center distance >= twice outer body radius".into(),
+            ));
+        }
+        Ok(())
+    }
+
     pub fn transform(&self, scale: f64) -> Result<Transform, ViewError> {
         if !(0.005..=2.5).contains(&self.vertical_fov_radians)
             || !self.focus_distance_km.is_finite()

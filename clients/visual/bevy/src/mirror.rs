@@ -70,7 +70,13 @@ impl ObservationMirror {
             .as_array()
             .expect("validated inventory")
             .len();
-        if reply.astronomy.seed != self.initial.tiles.seed
+        if !(0..expected_stars).all(|index| {
+            reply
+                .astronomy
+                .bodies
+                .iter()
+                .any(|b| b.id == format!("star:{index}") && b.kind == "star")
+        }) || reply.astronomy.seed != self.initial.tiles.seed
             || reply
                 .astronomy
                 .bodies
@@ -111,6 +117,7 @@ impl ObservationMirror {
                 }
             }
         }
+        documents::geometry(&self.initial, &reply.astronomy, 1000.0)?;
         self.current = Some(reply);
         self.pending = None;
         Ok(true)

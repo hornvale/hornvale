@@ -1,5 +1,5 @@
 //! Strict typed edges around additive native scene documents.
-use crate::{Binding, ViewError};
+use crate::{Binding, ViewError, coordinates::render_radius};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeSet;
@@ -121,7 +121,7 @@ pub fn initial(json: &str) -> Result<Initial, ViewError> {
     for m in &v.moons.moons {
         check(
             ids.insert(m.index)
-                && positive(m.radius_km)
+                && render_radius(m.radius_km, 0.0, 1000.0).is_ok()
                 && [m.albedo, m.cratering, m.maria_fraction]
                     .iter()
                     .chain(m.tint.iter())
@@ -154,7 +154,10 @@ pub fn initial(json: &str) -> Result<Initial, ViewError> {
     )?;
     check(
         t.sea_level_m.is_finite()
-            && t.elevation_m.iter().all(|x| x.is_finite())
+            && t.sea_level_m.abs() <= 1e9
+            && t.elevation_m
+                .iter()
+                .all(|x| x.is_finite() && x.abs() <= 1e9)
             && t.moisture.iter().chain(&t.t_mean_c).all(|x| x.is_finite())
             && t.biome.iter().all(|x| *x < t.biome_legend.len())
             && t.snow_fraction
@@ -220,7 +223,9 @@ pub fn reply(json: &str) -> Result<Reply, ViewError> {
             },
             "invalid body kind, ID, or unavailable radius",
         )?;
-        check(b.radius_km.is_none_or(positive), "invalid body radius")?;
+        if let Some(radius) = b.radius_km {
+            render_radius(radius, if b.kind == "anchor" { 80.0 } else { 0.0 }, 1000.0)?;
+        }
         if let Some(cols) = b.body_to_frame {
             let [x, y, z] = cols;
             let determinant = x[0] * (y[1] * z[2] - y[2] * z[1])
@@ -260,6 +265,42 @@ pub fn reply(json: &str) -> Result<Reply, ViewError> {
             "invalid light",
         )?;
     }
-    check(!a.lights.is_empty(), "missing source illumination")?;
+    check(
+        !a.lights.is_empty()
+            && a.bodies
+                .iter()
+                .filter(|b| b.kind == "star")
+                .all(|b| lights.contains(&b.id)),
+        "incomplete stellar illumination inventory",
+    )?;
     Ok(v)
+}
+
+/// Bound all globe geometry before reconstruction or creation of GPU assets.
+/// The convex reconstruction cannot exceed the largest input elevation.
+pub fn geometry(initial: &Initial, astronomy: &Astronomy, scale: f64) -> Result<(), ViewError> {
+    let relief = initial.tiles.max_relief_km();
+    for body in &astronomy.bodies {
+        if let Some(radius) = body.radius_km {
+            render_radius(
+                radius,
+                if body.id == "anchor" {
+                    relief.max(80.0)
+                } else {
+                    0.0
+                },
+                scale,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+impl Tiles {
+    pub fn max_relief_km(&self) -> f64 {
+        self.elevation_m
+            .iter()
+            .map(|e| (e - self.sea_level_m).max(0.0) / 1000.0)
+            .fold(0.0_f64, f64::max)
+    }
 }
