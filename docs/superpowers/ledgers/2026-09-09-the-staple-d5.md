@@ -92,3 +92,16 @@ test. The final Task 2 reviewer did not return a written verdict after bounded
 finish requests; the implementation remains supported by the focused probe
 and commit-gate outputs, with that review limitation retained as an open
 process note rather than silently promoted to approval.
+
+## #6 [G5] — final local verification before G6
+
+**Result:** The combined D4/D5 focused suite passes 19/19, docs consistency
+passes 75/75, and the latest commit hook passed formatting, clippy, all three
+audits, and every sub-floor chunk. The fixed-roster D5 measurement, census,
+stage gate, merge, and campaign close were not run.
+
+**Open process note:** Task 1 has an approved final review. Task 2's first
+review found missing live joins; those findings were fixed and independently
+verified in the corrected probe runs plus the full gate, but the requested
+final review seat never returned a written report after bounded finish
+requests. This remains explicitly reported for G6.
