@@ -1,7 +1,7 @@
 # Eclipse Rhythm and View — Design
 
 **Date:** 2026-09-10  
-**Status:** Draft for G3 review  
+**Status:** G3 approved; implementation and final local review complete; canonical Sluice gate pending.
 **Parent work:** Eclipse Seasons, already shipped on `main`  
 **Related references:** `2026-07-14-eclipse-seasons-design.md`, `2026-07-18-the-shadow-track-design.md`, `book/src/reference/scene-eclipses-v3.md`
 

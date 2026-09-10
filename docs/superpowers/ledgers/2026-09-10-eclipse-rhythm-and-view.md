@@ -102,6 +102,16 @@ Plan self-review found no placeholders, unresolved type-name mismatch, or requir
 
 **Capture actions:** A cross-slice fix worker will update the smallest shared domain/scene/almanac contracts and their tests, then regenerate affected examples and repeat the focused and campaign-wide review. Deferred astronomy seams remain deferred.
 
+## #8 [G5] — final review status finding
+
+**Question:** Does the committed design document state its actual campaign status after approval and implementation?
+
+**Decision:** Replace the stale “Draft for G3 review” label with an approved/implemented status that still makes the pending canonical gate explicit.
+
+**Why:** Final re-review found no remaining behavioral or contract issue, but the spec header still contradicted the G4 approval, shipped local implementation, and reconciliation state.
+
+**Capture actions:** Update the status line, run the prose/documentation checks and commit gate, then request final campaign-close review. No product behavior changes.
+
 ## Task 5 — local artifact review and verification
 
 The one full non-census artifact run exited 0. Its timing records are
@@ -128,9 +138,9 @@ The required local gates also exited 0:
 - `cargo nextest run -p hornvale --test suite -E 'test(docs_consistency)'`: 41 passed and 393 skipped after the reconciliation and plan-status edits.
 - `make docs-tests`: all 75 prose-subject tests passed and 359 were skipped.
 
-Task 5's campaign review and G6/Sluice work remain pending. This worker was
-explicitly instructed not to spawn subagents and not to submit, push, merge,
-or close the campaign.
+Task 5's local campaign review is complete; G6 and the canonical Sluice gate
+remain pending. This worker was explicitly instructed not to spawn subagents
+and not to submit, push, merge, or close the campaign.
 
 ### Ledger #7 integrated fix evidence
 
