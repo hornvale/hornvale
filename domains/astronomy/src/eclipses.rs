@@ -422,7 +422,7 @@ pub fn eclipse_observer_result(
             let track = ground_track(system, calendar, event)?;
             (
                 EclipseVisibility::Solar(solar_sight_in_region(
-                    event, latitude, longitude, side, track,
+                    calendar, event, latitude, longitude, side, track,
                 )),
                 EclipseRegion::GroundTrack(track),
             )
@@ -460,33 +460,36 @@ fn eclipse_side(calendar: &Calendar, day: StdInstant, longitude: f64) -> Eclipse
     }
 }
 
-fn longitude_in_track(longitude: f64, track: GroundTrack) -> bool {
-    let sweep = longitude_delta_deg(track.start_lon_deg, track.end_lon_deg);
-    let offset = longitude_delta_deg(track.start_lon_deg, longitude);
-    if sweep >= 0.0 {
-        (0.0..=sweep).contains(&offset)
-    } else {
-        (sweep..=0.0).contains(&offset)
+fn longitude_in_track(calendar: &Calendar, longitude: f64, track: GroundTrack) -> bool {
+    let Some(day_length) = calendar.day_length() else {
+        return longitude_delta_deg(track.start_lon_deg, longitude).abs() <= f64::EPSILON;
+    };
+    let sweep_deg = track.duration_days / day_length.0 * 360.0;
+    if sweep_deg >= 360.0 {
+        return true;
     }
+    let direction = if calendar.is_retrograde() { 1.0 } else { -1.0 };
+    let offset_deg = (direction * (longitude - track.start_lon_deg)).rem_euclid(360.0);
+    offset_deg <= sweep_deg + f64::EPSILON
 }
 
 fn solar_sight_in_region(
+    calendar: &Calendar,
     event: &EclipseEvent,
     latitude: f64,
     longitude: f64,
     side: EclipseSide,
     track: GroundTrack,
 ) -> EclipseSight {
-    if side == EclipseSide::Night {
-        return EclipseSight::Unseen;
-    }
     if (latitude - track.center_lat_deg).abs() <= track.half_width_deg
-        && longitude_in_track(longitude, track)
+        && longitude_in_track(calendar, longitude, track)
     {
         match event.kind {
             EclipseKind::Total => EclipseSight::WholeSun,
             EclipseKind::Annular => EclipseSight::BurningRing,
         }
+    } else if side == EclipseSide::Night {
+        EclipseSight::Unseen
     } else {
         EclipseSight::Bitten
     }
@@ -514,6 +517,7 @@ pub fn solar_eclipse_sight(
         return EclipseSight::Unseen;
     };
     solar_sight_in_region(
+        calendar,
         event,
         latitude,
         longitude,
@@ -1317,6 +1321,76 @@ mod tests {
             night.visibility,
             EclipseVisibility::Solar(EclipseSight::Unseen)
         );
+    }
+
+    /// Directed track membership must retain a sweep longer than the
+    /// shortest signed arc. A four-hour day can carry the shadow beyond 180°;
+    /// a one-hour day carries it through a full turn and covers every
+    /// longitude. Track endpoints remain central tiers even when the
+    /// midpoint day-side classifier puts an endpoint on the night side.
+    #[test]
+    fn observer_result_follows_long_directed_sweeps() {
+        use crate::anchor::Rotation;
+        use hornvale_kernel::units::TickSpan;
+
+        let (mut system, _) = luna_sol();
+        system.moons[0].angular_diameter_rel = 2.0;
+        let solar_event = |system: &StarSystem, calendar: &Calendar| {
+            eclipse_events(system, calendar, StdInstant(0.0), StdInstant(365.25 * 10.0))
+                .into_iter()
+                .find(|event| event.body == EclipseBody::Solar)
+                .expect("the enlarged moon has a solar eclipse")
+        };
+
+        system.anchor.rotation = Rotation::Spinning {
+            day: TickSpan::from_std_days(1.0 / 6.0).unwrap(),
+            retrograde: false,
+        };
+        let four_hour_calendar = crate::calendar::calendar_of(&system);
+        let solar = solar_event(&system, &four_hour_calendar);
+        let track = ground_track(&system, &four_hour_calendar, &solar).unwrap();
+        let four_hour_sweep =
+            track.duration_days / four_hour_calendar.day_length().unwrap().0 * 360.0;
+        assert!(
+            four_hour_sweep > 180.0,
+            "four-hour sweep: {four_hour_sweep}"
+        );
+        for longitude in [track.start_lon_deg, track.end_lon_deg] {
+            let result = eclipse_observer_result(
+                &system,
+                &four_hour_calendar,
+                &solar,
+                track.center_lat_deg,
+                longitude,
+            )
+            .unwrap();
+            assert!(matches!(
+                result.visibility,
+                EclipseVisibility::Solar(EclipseSight::WholeSun | EclipseSight::BurningRing)
+            ));
+        }
+
+        system.anchor.rotation = Rotation::Spinning {
+            day: TickSpan::from_std_days(1.0 / 24.0).unwrap(),
+            retrograde: false,
+        };
+        let one_hour_calendar = crate::calendar::calendar_of(&system);
+        let one_hour_track = ground_track(&system, &one_hour_calendar, &solar).unwrap();
+        let one_turn_sweep =
+            one_hour_track.duration_days / one_hour_calendar.day_length().unwrap().0 * 360.0;
+        assert!(one_turn_sweep > 360.0, "one-hour sweep: {one_turn_sweep}");
+        let result = eclipse_observer_result(
+            &system,
+            &one_hour_calendar,
+            &solar,
+            one_hour_track.center_lat_deg,
+            one_hour_track.start_lon_deg + 137.0,
+        )
+        .unwrap();
+        assert!(matches!(
+            result.visibility,
+            EclipseVisibility::Solar(EclipseSight::WholeSun | EclipseSight::BurningRing)
+        ));
     }
 
     /// The unified result keeps the lunar night hemisphere distinct from a
