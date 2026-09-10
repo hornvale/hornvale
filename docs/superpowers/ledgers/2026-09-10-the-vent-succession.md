@@ -353,3 +353,12 @@ observation-loop counters. `make docs-tests` reported 75 passed, 0 failed.
 The stream manifest diff and generated audit freshness checks exited 0. The
 implementation commit was `c1354be25`; its required `make gate-commit`
 completed with 1,425 sub-floor tests passed and `wall=228.694s ... rc=0`.
+
+The final observation review found that ordinary output omitted the present
+vent-consequence level and that the diagnostic local/transported split was
+using an uncounted second stock traversal. The correction reports locally
+influenced samples in both views, derives the diagnostic split during the
+single counted stock traversal, and adds a regression assertion. The final
+focused suite remained 32/32 green; `make docs-tests` remained 75/75 green;
+the final gate passed with 1,425 sub-floor tests and
+`wall=58.028s ... rc=0` in commit `68c0beb9f`.
