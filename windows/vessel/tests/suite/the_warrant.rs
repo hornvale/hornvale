@@ -548,8 +548,8 @@ fn the_rendered_recount_names_its_errands_and_never_the_bare_producer() {
             .filter(|l| l.contains("an agent's position on a day"))
             .count();
         assert!(
-            step_lines >= 1,
-            "seed {seed}: the walk must produce at least one step, or every \
+            step_lines >= 2,
+            "seed {seed}: the walk must produce at least two steps, or every \
              assertion below is vacuous:\n{stepped}"
         );
 
