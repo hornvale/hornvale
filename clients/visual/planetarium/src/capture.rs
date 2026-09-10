@@ -2,7 +2,7 @@
     clippy::disallowed_types,
     reason = "Instant measures capture stage deadlines and performance, never source time"
 )]
-//! Fresh source observations and durable frame records, before Task 7 packaging.
+//! Fresh source observations, durable frame records and verified study publication.
 use crate::{
     bridge::Bridge,
     live::positions,
@@ -60,22 +60,11 @@ fn capture(
     frames: u32,
     start: &Instant,
 ) -> Result<(), Box<dyn Error>> {
-    let status = std::process::Command::new("git")
-        .args(["status", "--porcelain"])
-        .output()?;
-    let head = std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .output()?;
-    if !status.status.success() || !head.status.success() {
-        return Err("cannot establish capture source provenance".into());
-    }
-    let diff = std::process::Command::new("git")
-        .args(["diff", "HEAD", "--", "clients/visual"])
-        .output()?;
-    if !diff.status.success() {
-        return Err("cannot record capture source diff".into());
-    }
-    write(output.join("development-source.patch"), &diff.stdout)?;
+    let source = crate::provenance::source_state(&std::env::current_dir()?)?;
+    write(
+        output.join("development-source.patch"),
+        source.patch.as_bytes(),
+    )?;
     std::fs::create_dir(output.join("source"))?;
     write(output.join("source/world.json"), &std::fs::read(&world)?)?;
     json(output.join("film.json"), &film)?;
@@ -86,43 +75,32 @@ fn capture(
         warmup_frames: 3,
         timeout_seconds: 120,
     };
-    let files = std::process::Command::new("git")
-        .args([
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            "clients/visual",
-        ])
-        .output()?;
-    if !files.status.success() {
-        return Err("cannot inventory capture source files".into());
-    }
-    let source_files = files
-        .stdout
-        .split(|b| *b == 0)
-        .filter(|p| !p.is_empty())
-        .map(|p| {
-            let path = std::str::from_utf8(p)?;
-            Ok(serde_json::json!({"path":path,"sha256":hash(&std::fs::read(path)?)}))
-        })
-        .collect::<Result<Vec<_>, Box<dyn Error>>>()?;
-    json(output.join("source-files.json"), &source_files)?;
-    json(
-        output.join("provenance.json"),
-        &serde_json::json!({
-            "schema":"planetarium/capture-provenance/v1", "purpose":"development qualification; not final package",
-            "head":String::from_utf8_lossy(&head.stdout).trim(), "working_tree_status":String::from_utf8_lossy(&status.stdout),
-            "executable_sha256":hash(&std::fs::read(std::env::current_exe()?)?), "source_patch_sha256":hash(&diff.stdout),
-            "source_revision":revision, "settings":settings, "full_film_frames":film.frames,
-            "font_sha256":hash(include_bytes!("../assets/LibreBaskerville-Regular.ttf")),
-            "presentation_seed":film.presentation_seed, "view_settings":film.settings, "history":hornvale_bevy_view::HISTORY_RESET_POLICY,
-            "readback":"Bevy Screenshot::image; RGBA8 sRGB tightly packed top-to-bottom, PNG RGB8 lossless",
-            "window":"none; independent image target"
-        }),
+    json(output.join("source-files.json"), &source.files)?;
+    std::fs::create_dir(output.join("assets"))?;
+    write(
+        output.join("assets/LibreBaskerville-Regular.ttf"),
+        include_bytes!("../assets/LibreBaskerville-Regular.ttf"),
     )?;
+    let clean = crate::provenance::BUILD_CLEAN
+        && source.status.is_empty()
+        && source.head == crate::provenance::BUILD_REVISION
+        && source.head == revision;
+    let mut provenance = serde_json::json!({
+        "schema":"planetarium/capture-provenance/v1",
+        "purpose":if clean { "clean pinned study" } else { "dirty or unpinned development study" },
+        "head":source.head, "working_tree_status":source.status,
+        "rendering_source_tree_clean":clean, "build_revision":crate::provenance::BUILD_REVISION,
+        "build_tree_clean":crate::provenance::BUILD_CLEAN, "rustc":crate::provenance::RUSTC,
+        "os":format!("{} {}",std::env::consts::OS,std::env::consts::ARCH),
+        "renderer":"Bevy 0.19.1; hornvale-bevy-view 0.1.0",
+        "executable_sha256":hash(&std::fs::read(std::env::current_exe()?)?), "source_patch_sha256":hash(source.patch.as_bytes()),
+        "source_revision":revision, "settings":settings, "full_film_frames":film.frames,
+        "font_sha256":hash(include_bytes!("../assets/LibreBaskerville-Regular.ttf")),
+        "presentation_seed":film.presentation_seed, "view_settings":film.settings, "history":hornvale_bevy_view::HISTORY_RESET_POLICY,
+        "cosmetic_treatments":["seeded descriptor-conditioned pigment, craters and maria", "cosmetic moon orientation where native spin is unavailable", "interpolated terrain mesh and biome materials", "water roughness and reflectance", "cloud shell and opacity", "atmospheric scattering", "ACES fitted tonemapping and exposure", "depth of field", "Libre Baskerville caption overlay"],
+        "readback":"Bevy Screenshot::image; RGBA8 sRGB tightly packed top-to-bottom, PNG RGB8 lossless",
+        "window":"none; independent image target"
+    });
     let mut machine = CaptureMachine::new(settings)?;
     machine.check_timeout(start.elapsed().as_millis() as u64)?;
     let initial_budget =
@@ -166,6 +144,10 @@ fn capture(
         if renderer.is_none() {
             let mut r = Renderer::new(&mirror, film.width, film.height)?;
             r.set_caption_font(include_bytes!("../assets/LibreBaskerville-Regular.ttf").to_vec())?;
+            let (gpu, backend) = r.adapter_identity();
+            provenance["gpu"] = serde_json::json!(gpu);
+            provenance["backend"] = serde_json::json!(backend);
+            json(output.join("provenance.json"), &provenance)?;
             renderer = Some(r);
         }
         let r = renderer.as_mut().unwrap();
@@ -175,7 +157,7 @@ fn capture(
         let capture_start = Instant::now();
         r.capture_acknowledged(&mut machine, &output.join(&file), start)?;
         let capture_seconds = capture_start.elapsed().as_secs_f64();
-        let record = serde_json::json!({"frame":frame,"request_id":mirror.current().unwrap().request_id,"ticks":ticks,"camera":camera,"caption":caption,"file":file,"png_sha256":hash(&std::fs::read(output.join(&file))?),"observation_file":observation_file,"observation_sha256":hash(reply.as_bytes()),"capture_seconds":capture_seconds,"frame_seconds":frame_start.elapsed().as_secs_f64(),"elapsed_seconds":start.elapsed().as_secs_f64()});
+        let record = serde_json::json!({"frame":frame,"presentation_time":{"numerator":frame,"denominator":film.fps},"request_id":mirror.current().unwrap().request_id,"ticks":ticks,"camera":camera,"caption":caption,"file":file,"png_sha256":hash(&std::fs::read(output.join(&file))?),"observation_file":observation_file,"observation_sha256":hash(reply.as_bytes()),"capture_seconds":capture_seconds,"frame_seconds":frame_start.elapsed().as_secs_f64(),"elapsed_seconds":start.elapsed().as_secs_f64()});
         serde_json::to_writer(&mut records, &record)?;
         records.write_all(b"\n")?;
         records.flush()?;
@@ -192,8 +174,20 @@ fn capture(
         output.join("capture.json"),
         &serde_json::json!({"schema":"planetarium/capture-result/v1","state":machine.state(),"frames_written":frames,"full_film":frames == film.frames,"elapsed_seconds":start.elapsed().as_secs_f64(),"package_complete":false}),
     )?;
+    if frames == film.frames {
+        if clean {
+            let end = crate::provenance::source_state(&std::env::current_dir()?)?;
+            if !end.status.is_empty() || end.head != crate::provenance::BUILD_REVISION {
+                return Err(
+                    "source tree changed during clean capture; refusing package completion".into(),
+                );
+            }
+        }
+        crate::package::finish_package(output)?;
+        println!("COMPLETE {}", output.display());
+    }
     println!(
-        "CAPTURE FILES WRITTEN {} ({frames} frames; package not complete)",
+        "CAPTURE FILES WRITTEN {} ({frames} frames; see COMPLETE for package status)",
         output.display()
     );
     Ok(())

@@ -29,6 +29,11 @@ fn run() -> Result<(), Box<dyn Error>> {
             .cloned()
             .ok_or_else(|| format!("missing value for {name}").into())
     };
+    if args.get(1).map(String::as_str) == Some("verify") {
+        planetarium::package::verify_package(&PathBuf::from(arg("--out")?))?;
+        println!("VERIFIED study package");
+        return Ok(());
+    }
     let world = PathBuf::from(arg("--world")?);
     let revision = arg("--revision")?;
     let film: FilmDefinition = serde_json::from_slice(&std::fs::read(arg("--film")?)?)?;

@@ -59,6 +59,16 @@ pub struct Renderer {
     pub height: u32,
 }
 impl Renderer {
+    /// Identity reported by the adapter actually selected by Bevy.
+    pub fn adapter_identity(&self) -> (String, String) {
+        let info = self
+            .apps
+            .main
+            .world()
+            .resource::<bevy::render::renderer::RenderAdapterInfo>();
+        (info.name.clone(), format!("{:?}", info.backend))
+    }
+
     pub fn new(mirror: &ObservationMirror, width: u32, height: u32) -> Result<Self, ViewError> {
         if width == 0 || height == 0 || width > 7680 || height > 4320 {
             return Err(ViewError::Range("unsupported render dimensions".into()));
