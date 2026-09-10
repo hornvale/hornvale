@@ -1098,14 +1098,40 @@ terminal isolation are independent requirements; their combination bounds the
 caller's wait without claiming control over all computation or the OS:
 
 ```text
-                 bounded wait + terminal isolation
-                 /                              
-          bounded wait                    terminal isolation
-                 \                              /
-                         neither guarantee
+Both guarantees -> bounded wait -> neither guarantee
+Both guarantees -> terminal isolation -> neither guarantee
 ```
 
 Capture actions: carry this ruling into Task6 implementation/review; preserve
 prior successful captures as development evidence and run a fresh qualification
 with the final timeout-aware binary. No existing pixels or source records are
 relabelled.
+
+
+## Task 6 — complete with provenance portability follow-up
+
+Task6 is complete over385df541d..28156c1fa. Independent spec and quality review
+passed the development qualification, with one P3 carried into Task7: git
+inventory commands in capture.rs use a caller-relative clients/visual pathspec.
+The review ran that command from clients/visual and observed exit0 with empty
+stdout while HEAD succeeded. Final provenance must anchor commands to the actual
+repository root and reject an unexpectedly empty inventory. This is not a
+failure of the qualified root-directory captures; their inventories are present.
+
+The final implementation includes ledger20 source deadlines. Its63 scoped CPU
+tests, fmt/clippy/build and normal commit gate passed (45.905s). Root independently
+decoded all300 final-binary PNGs in `task6-full-300-02`, checked dimensions, hashes,
+world/source binding, request IDs and ticks, and compared every astronomy object
+to the previously independently qualified native source. All300 PNGs also match
+run01 byte for byte. Final capture took88.74swall, with maximumRSS749305856bytes
+and peakfootprint1076644992bytes; no causal speedup claim is made from this run.
+Detailed measurements and permanent paths are in
+[the capture audit](../../audits/the-planetarium/capture.md).
+
+Capture supplies frame files, not package completion. These development runs
+remain labeled dirty and retain their actual binary/source hashes. Task7 owns
+fresh clean-build provenance, encoding, independent package verification and
+COMPLETE; G6 owns final visual acceptance. No additional design ruling was needed
+at this verification boundary; ledger20 records the two-pass timeout decision.
+The Task5 compressed-action maintenance minor was addressed in the touched CLI
+and recording code. Manual drag input and final moon detail remain Task9 items.

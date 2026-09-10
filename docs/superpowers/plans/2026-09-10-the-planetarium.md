@@ -12,7 +12,7 @@
 
 **Ledger:** [Decisions and evidence](../ledgers/2026-09-10-the-planetarium.md)
 
-**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete after independent fix review; Stage 2 canonical request follows. Final visual acceptance and merge remain G6.
+**Status:** Execution in progress. Tasks 1–3 implemented and independently reviewed; actual early GPU witnesses recorded. Stage 1 canonical report green; Task 4 complete; Task 5 complete; Stage 2 canonical request running; Task 6 capture complete after independent review. Final visual acceptance and merge remain G6.
 
 ## Global Constraints
 
@@ -492,7 +492,7 @@ A cut has a declared boundary and resets render history.
 **Goal:** Capture every exact frame from the same scene and assemble a package that cannot mistake a partial or mismatched render for success.
 **Success Criteria:** 300 correct PNGs, MP4, per-frame source/camera records and hash verification; interruption/encoding failures remain incomplete.
 **Tests:** Tasks 6–7; small GPU runs followed by the full study.
-**Status:** Not Started
+**Status:** In Progress
 
 ### Task 6: make GPU capture an acknowledged frame pipeline
 
@@ -518,13 +518,13 @@ Every callback carries the frame ID it was issued for; only a matching outstandi
 frame can advance. Capture completion here means all frame files written; the
 package completion marker belongs to Task 7 after encode and verification.
 
-- [ ] Write a CPU transition test feeding readbacks in the wrong order; a duplicate/obsolete acknowledgment cannot advance the next frame. Add failed/missing-readback/timeout tests, plus an asset readiness failure that never writes frame zero.
-- [ ] Replace the early draft capture loop with the explicit state machine. Use an image target at requested dimensions independent of window size. Qualify the built-in Screenshot::image route first; use the tagged manual copy-buffer example only if observed limitations require it. Document the evidence for that switch.
-- [ ] Keep one GPU readback outstanding. Hold source tick/camera/caption constant until warmup and readback complete. Decode/validate width, height, format/row padding and row orientation. Write `frames/000000.png` through `frames/000299.png` without overwriting existing files; flush/close each file before acknowledging it.
-- [ ] Qualify assets/shader pipelines, missing asset errors, fixed exposure, history reset and warmup. A timeout fails the run with frame/stage details. Use deterministic presentation-noise seeds. Disable temporal effects initially if they cannot yet be reset reliably; restore only after a repeat-render witness.
-- [ ] Run a small GPU capture with a diagnostic corner-color image and frame counter to verify color channels/orientation/frame correspondence, then capture two seconds of the actual scene. The diagnostic is a separate test scene, never substituted for study footage.
-- [ ] Export the full 300 frames at 4K. Observe the process until termination and inspect file counts, dimensions and representative frames before encoding. Record wall time, per-frame capture time and peak memory; do not change output resolution to obtain a passing result.
-- [ ] Commit the capture implementation and measured GPU report after CPU/gate checks. A window-hosted capture is acceptable if its independent output target is demonstrated; a GPU-unavailable result is an explicit unmet acceptance condition.
+- [x] Write a CPU transition test feeding readbacks in the wrong order; a duplicate/obsolete acknowledgment cannot advance the next frame. Add failed/missing-readback/timeout tests, plus an asset readiness failure that never writes frame zero.
+- [x] Replace the early draft capture loop with the explicit state machine. Use an image target at requested dimensions independent of window size. Qualify the built-in Screenshot::image route first; use the tagged manual copy-buffer example only if observed limitations require it. Document the evidence for that switch.
+- [x] Keep one GPU readback outstanding. Hold source tick/camera/caption constant until warmup and readback complete. Decode/validate width, height, format/row padding and row orientation. Write `frames/000000.png` through `frames/000299.png` without overwriting existing files; flush/close each file before acknowledging it.
+- [x] Qualify assets/shader pipelines, missing asset errors, fixed exposure, history reset and warmup. A timeout fails the run with frame/stage details. Use deterministic presentation-noise seeds. Disable temporal effects initially if they cannot yet be reset reliably; restore only after a repeat-render witness.
+- [x] Run a small GPU capture with a diagnostic corner-color image and frame counter to verify color channels/orientation/frame correspondence, then capture two seconds of the actual scene. The diagnostic is a separate test scene, never substituted for study footage.
+- [x] Export the full 300 frames at 4K. Observe the process until termination and inspect file counts, dimensions and representative frames before encoding. Record wall time, per-frame capture time and peak memory; do not change output resolution to obtain a passing result.
+- [x] Commit the capture implementation and measured GPU report after CPU/gate checks. A window-hosted capture is acceptable if its independent output target is demonstrated; a GPU-unavailable result is an explicit unmet acceptance condition.
 
 ### Task 7: package, encode and independently verify the study
 
