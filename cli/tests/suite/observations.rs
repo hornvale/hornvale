@@ -530,6 +530,147 @@ fn observations_export_is_contiguous_identified_and_byte_deterministic() {
 }
 
 #[test]
+fn observations_export_neighbors_preserves_the_authoritative_scene_and_refuses_systems() {
+    // Catches the observation adapter either rebuilding a different sky or
+    // accepting an unadapted scene kind as though it had a packet contract.
+    let manifest = temp_manifest(
+        "neighbors-export",
+        &manifest_json(&[
+            ("id", serde_json::json!("HV-009")),
+            ("title", serde_json::json!("The notable stars of seed 42")),
+            ("object", serde_json::json!("notable stellar neighborhood")),
+            ("scale", serde_json::json!("astronomical neighborhood")),
+            (
+                "primary_axis",
+                serde_json::json!("apparent brightness and sky position"),
+            ),
+            ("phenomenon", serde_json::json!("notable neighbor stars")),
+            ("count_unit", serde_json::json!("stars")),
+            ("frame_count", serde_json::json!(2)),
+            (
+                "source_commands",
+                serde_json::json!([
+                    "cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-42.json"
+                ]),
+            ),
+            (
+                "source_data",
+                serde_json::json!(["hornvale scene/neighbors/v1 stdout"]),
+            ),
+        ]),
+    );
+    let first = temp_output_dir("neighbors-export-first");
+    let second = temp_output_dir("neighbors-export-second");
+
+    let source = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args([
+            "scene",
+            "neighbors",
+            "--world",
+            "cli/tests/fixtures/world-seed-42.json",
+        ])
+        .current_dir(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .expect("workspace root"),
+        )
+        .output()
+        .expect("run the authoritative neighbor scene producer");
+    assert!(
+        source.status.success(),
+        "neighbor scene producer failed: {source:?}"
+    );
+    let source = String::from_utf8(source.stdout).expect("neighbor scene output is utf-8");
+
+    for output_dir in [&first, &second] {
+        let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+            .args(["observations", "export", "--manifest"])
+            .arg(&manifest)
+            .arg("--out")
+            .arg(output_dir)
+            .output()
+            .expect("export neighbor observation packets");
+        assert!(out.status.success(), "neighbor export failed: {out:?}");
+    }
+
+    for (index, name) in ["frame-000.json", "frame-001.json"].iter().enumerate() {
+        let first_bytes = std::fs::read(first.join(name)).expect("read first neighbor packet");
+        assert_eq!(
+            first_bytes,
+            std::fs::read(second.join(name)).expect("read repeated neighbor packet"),
+            "repeated neighbor export changed {name}"
+        );
+        let packet: serde_json::Value =
+            serde_json::from_slice(&first_bytes).expect("neighbor packet is JSON");
+        assert_eq!(packet["episode_id"], "HV-009");
+        assert_eq!(packet["frame_index"], index);
+        assert_eq!(packet["world_seed"], "42");
+        assert_eq!(packet["labels"]["object"], "notable stellar neighborhood");
+        assert_eq!(packet["labels"]["scale"], "astronomical neighborhood");
+        assert_eq!(
+            packet["labels"]["primary_axis"],
+            "apparent brightness and sky position"
+        );
+        assert_eq!(packet["labels"]["count_unit"], "stars");
+        assert_eq!(
+            packet["spatial"]["source"],
+            "hornvale scene/neighbors/v1 stdout"
+        );
+        assert_eq!(
+            packet["spatial"]["readout"].as_str(),
+            Some(source.trim_end())
+        );
+
+        let scene: serde_json::Value =
+            serde_json::from_str(packet["spatial"]["readout"].as_str().expect("readout text"))
+                .expect("readout remains the producer's scene JSON");
+        assert_eq!(scene["schema"], "scene/neighbors/v1");
+        assert_eq!(scene["seed"], 42);
+        assert_eq!(scene["neighbors"].as_array().map(Vec::len), Some(5));
+        assert_eq!(scene["neighbors"][0]["index"], 0);
+        assert_eq!(scene["neighbors"][0]["class_name"], "red giant");
+        assert_eq!(scene["neighbors"][0]["distance_ly"], 68.232281);
+        assert_eq!(scene["neighbors"][0]["ra_deg"], 81.841371);
+        assert_eq!(scene["neighbors"][0]["dec_deg"], -65.242947);
+        assert_eq!(scene["stars"].as_array().map(Vec::len), Some(148));
+    }
+
+    let system_manifest = temp_manifest(
+        "system-export",
+        &manifest_json(&[(
+            "source_commands",
+            serde_json::json!([
+                "cargo run -p hornvale -- scene system --world cli/tests/fixtures/world-seed-42.json"
+            ]),
+        )]),
+    );
+    let system_output = temp_output_dir("system-export-output");
+    let system = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&system_manifest)
+        .arg("--out")
+        .arg(&system_output)
+        .output()
+        .expect("attempt unsupported system export");
+    assert!(
+        !system.status.success(),
+        "system scene was accepted without an adapter"
+    );
+    let system_stderr = String::from_utf8(system.stderr).expect("system refusal is utf-8");
+    assert!(system_stderr.contains("source_commands"), "{system_stderr}");
+    assert!(system_stderr.contains("scene neighbors"), "{system_stderr}");
+    assert!(
+        !system_output.exists(),
+        "refused system export created output"
+    );
+
+    std::fs::remove_file(manifest).expect("remove neighbor manifest");
+    std::fs::remove_file(system_manifest).expect("remove system manifest");
+    std::fs::remove_dir_all(first).expect("remove first neighbor export");
+    std::fs::remove_dir_all(second).expect("remove repeated neighbor export");
+}
+
+#[test]
 fn observations_export_missing_manifest_does_not_create_output_directory() {
     let manifest = temp_output_dir("missing-manifest").join("absent.json");
     let output_dir = temp_output_dir("missing-manifest-output");
@@ -725,4 +866,67 @@ fn observations_hv_001_fixture_is_producer_backed_and_contains_no_client_classif
     );
 
     std::fs::remove_dir_all(output_dir).expect("remove fixture export");
+}
+
+#[test]
+fn observations_hv_009_neighbor_fixture_is_producer_backed() {
+    // Catches the public-scale record drifting from its admitted astronomical
+    // scene, including its unit and source identity.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("workspace root");
+    let manifest_path = root.join("observations/episodes/HV-009.json");
+    let expected_path = root.join("observations/fixtures/HV-009/expected-frame-000.json");
+    let output_dir = temp_output_dir("neighbor-fixture-export");
+
+    let manifest = read_manifest(&manifest_path).expect("committed neighbor manifest validates");
+    assert_eq!(manifest.id, "HV-009");
+    assert_eq!(manifest.object, "notable stellar neighborhood");
+    assert_eq!(manifest.scale, "astronomical neighborhood");
+    assert_eq!(
+        manifest.primary_axis,
+        "apparent brightness and sky position"
+    );
+    assert_eq!(manifest.count_unit, "stars");
+    assert_eq!(
+        manifest.source_commands,
+        ["cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-42.json"]
+    );
+
+    let out = Command::new(env!("CARGO_BIN_EXE_hornvale"))
+        .args(["observations", "export", "--manifest"])
+        .arg(&manifest_path)
+        .arg("--out")
+        .arg(&output_dir)
+        .output()
+        .expect("export committed neighbor manifest");
+    assert!(
+        out.status.success(),
+        "neighbor fixture export failed: {out:?}"
+    );
+
+    let expected = std::fs::read(&expected_path).expect("read committed neighbor frame fixture");
+    let actual = std::fs::read(output_dir.join("frame-000.json"))
+        .expect("read freshly exported neighbor frame");
+    assert_eq!(actual, expected, "neighbor fixture drifted from producer");
+
+    let packet: serde_json::Value =
+        serde_json::from_slice(&actual).expect("neighbor fixture is valid JSON");
+    assert_eq!(packet["world_seed"], "42");
+    assert_eq!(packet["labels"]["count_unit"], "stars");
+    assert_eq!(
+        packet["spatial"]["source"],
+        "hornvale scene/neighbors/v1 stdout"
+    );
+    let scene: serde_json::Value = serde_json::from_str(
+        packet["spatial"]["readout"]
+            .as_str()
+            .expect("neighbor readout is text"),
+    )
+    .expect("neighbor readout is scene JSON");
+    assert_eq!(scene["schema"], "scene/neighbors/v1");
+    assert_eq!(scene["seed"], 42);
+    assert_eq!(scene["neighbors"].as_array().map(Vec::len), Some(5));
+
+    std::fs::remove_dir_all(output_dir).expect("remove neighbor fixture export");
 }

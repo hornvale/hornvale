@@ -1,0 +1,36 @@
+{
+  "id": "HV-009",
+  "title": "The notable stars of seed 42",
+  "object": "notable stellar neighborhood",
+  "scale": "astronomical neighborhood",
+  "primary_axis": "apparent brightness and sky position",
+  "phenomenon": "notable neighbor stars",
+  "visual_grammar": "spatial",
+  "observation_sentence": "Five notable neighbor stars stand at fixed positions in seed 42's night sky.",
+  "count_unit": "stars",
+  "world_revision": "953cbf0de1672ec5ecf75de964daba3f43f0b700",
+  "seed": 42,
+  "time_window": null,
+  "frame_count": 900,
+  "frame_rate": 30.0,
+  "source_commands": [
+    "cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-42.json"
+  ],
+  "evidence_status": "draft",
+  "capability_state": "existing",
+  "controlled_inputs": {
+    "seed": 42
+  },
+  "comparison_reference": null,
+  "lead_time": null,
+  "source_data": [
+    "hornvale scene/neighbors/v1 stdout"
+  ],
+  "render_output": null,
+  "caption_draft": [
+    "Five other stars are close enough to stand out in this world's night sky.",
+    "These are seed 42's notable neighbors, placed by apparent brightness and position rather than a hand-drawn constellation."
+  ],
+  "editorial_status": "draft",
+  "approval": null
+}

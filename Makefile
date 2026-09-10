@@ -879,6 +879,14 @@ observation-check: ## Validate/export observation fixtures and test local film a
 	cargo run --quiet -p hornvale -- observations export --manifest observations/episodes/HV-001.json --out "$$tmp/frames"; \
 	cmp "$$tmp/frames/frame-000.json" observations/fixtures/HV-001/expected-frame-000.json; \
 	cmp observations/fixtures/HV-001/expected-frame-000.json observations/fixtures/HV-001/render-input.json; \
+	cargo run --quiet -p hornvale -- observations validate --manifest observations/episodes/HV-009.json; \
+	cargo run --quiet -p hornvale -- observations export --manifest observations/episodes/HV-009.json --out "$$tmp/neighbors-first"; \
+	cargo run --quiet -p hornvale -- observations export --manifest observations/episodes/HV-009.json --out "$$tmp/neighbors-second"; \
+	diff -qr "$$tmp/neighbors-first" "$$tmp/neighbors-second"; \
+	cmp "$$tmp/neighbors-first/frame-000.json" observations/fixtures/HV-009/expected-frame-000.json; \
+	cmp observations/fixtures/HV-009/expected-frame-000.json observations/fixtures/HV-009/render-input.json; \
+	HV_OBSERVATION_FFMPEG=hornvale-no-ffmpeg bash scripts/observation-film.sh --manifest observations/episodes/HV-009.json --frames "$$tmp/neighbors-first" --out "$$tmp/neighbors-film"; \
+	test -s "$$tmp/neighbors-film/HV-009.sha256"; \
 	shellcheck scripts/observation-film.sh scripts/test-observation-film.sh; \
 	bash scripts/test-observation-film.sh
 

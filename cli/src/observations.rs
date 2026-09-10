@@ -612,20 +612,6 @@ fn time_day(manifest: &EpisodeManifest, frame_index: u32) -> Option<f64> {
 }
 
 fn underworld_source(manifest: &EpisodeManifest) -> Result<String, ObservationError> {
-    let expected_command = format!(
-        "cargo run -p hornvale -- underworld --seed {}",
-        manifest.seed
-    );
-    if manifest.source_commands.as_slice() != [expected_command] {
-        return Err(invalid(
-            "source_commands",
-            format!(
-                "export currently requires exactly 'cargo run -p hornvale -- underworld --seed {}'",
-                manifest.seed
-            ),
-        ));
-    }
-
     let components =
         world_builder::WorldComponents::assemble().map_err(|error| ObservationError::Build {
             episode_id: manifest.id.clone(),
@@ -653,6 +639,64 @@ fn underworld_source(manifest: &EpisodeManifest) -> Result<String, ObservationEr
         Seed(manifest.seed),
         &terrain,
         &overrides,
+    ))
+}
+
+fn neighbors_source(manifest: &EpisodeManifest) -> Result<String, ObservationError> {
+    let components =
+        world_builder::WorldComponents::assemble().map_err(|error| ObservationError::Build {
+            episode_id: manifest.id.clone(),
+            reason: error.to_string(),
+        })?;
+    let artifacts = world_builder::build_world_to_with_artifacts(
+        Seed(manifest.seed),
+        &hornvale_astronomy::SkyPins::default(),
+        &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
+        &components,
+        world_builder::BuildDepth::Astronomy,
+    )
+    .map_err(|error| ObservationError::Build {
+        episode_id: manifest.id.clone(),
+        reason: error.to_string(),
+    })?;
+    let scene = hornvale_scene::neighbors_scene(&artifacts.world).map_err(|error| {
+        ObservationError::Build {
+            episode_id: manifest.id.clone(),
+            reason: error.to_string(),
+        }
+    })?;
+    Ok(hornvale_scene::neighbors_json(&scene))
+}
+
+fn spatial_source(manifest: &EpisodeManifest) -> Result<SpatialObservation, ObservationError> {
+    let underworld_command = format!(
+        "cargo run -p hornvale -- underworld --seed {}",
+        manifest.seed
+    );
+    let neighbors_command = format!(
+        "cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-{}.json",
+        manifest.seed
+    );
+    if manifest.source_commands.as_slice() == [underworld_command] {
+        return Ok(SpatialObservation {
+            source: "hornvale underworld stdout".to_string(),
+            readout: underworld_source(manifest)?,
+        });
+    }
+    if manifest.source_commands.as_slice() == [neighbors_command] {
+        return Ok(SpatialObservation {
+            source: "hornvale scene/neighbors/v1 stdout".to_string(),
+            readout: neighbors_source(manifest)?,
+        });
+    }
+    Err(invalid(
+        "source_commands",
+        format!(
+            "export currently requires exactly 'cargo run -p hornvale -- underworld --seed {}' or \
+             'cargo run -p hornvale -- scene neighbors --world cli/tests/fixtures/world-seed-{}.json'",
+            manifest.seed, manifest.seed
+        ),
     ))
 }
 
@@ -689,8 +733,11 @@ pub fn export_frames(
         ));
     }
 
-    let source = underworld_source(manifest)?;
-    let source_digest = format!("fnv1a64:{:016x}", hornvale_lab::fnv1a64(source.as_bytes()));
+    let spatial = spatial_source(manifest)?;
+    let source_digest = format!(
+        "fnv1a64:{:016x}",
+        hornvale_lab::fnv1a64(spatial.readout.as_bytes())
+    );
     let labels = BTreeMap::from([
         ("object".to_string(), manifest.object.clone()),
         ("scale".to_string(), manifest.scale.clone()),
@@ -712,10 +759,7 @@ pub fn export_frames(
             time_day: time_day(manifest, frame_index),
             title: manifest.title.clone(),
             labels: labels.clone(),
-            spatial: SpatialObservation {
-                source: "hornvale underworld stdout".to_string(),
-                readout: source.clone(),
-            },
+            spatial: spatial.clone(),
             source_digest: source_digest.clone(),
             schema: "observation/frame/v1".to_string(),
         };
